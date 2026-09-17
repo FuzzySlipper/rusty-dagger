@@ -29,7 +29,7 @@ public sealed class DaggerfallRewardReactionTests
     }
 
     [Fact]
-    public void Daggerfall_actor_construction_uses_one_engine_pair_for_health_only()
+    public void Daggerfall_actor_construction_shares_health_maximum_with_its_track()
     {
         DaggerfallDefinitions definitions = LoadDefinitions();
         DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
@@ -38,11 +38,12 @@ public sealed class DaggerfallRewardReactionTests
             player.PlayerInitialVitals,
             DaggerfallActorIdentity.PlayerEntityId);
 
-        ExactStatTrackState health = mechanics.ReadStatTrack(TrackId.Parse("health"));
-        Assert.Equal(player.PlayerInitialVitals.HealthMaximum, health.Read().Stat.Value.Raw);
-        Assert.Equal(player.PlayerInitialVitals.HealthMaximum, health.Read().TrackCurrent.Raw);
-        Assert.Throws<MechanicsException>(() => mechanics.ReadStatTrack(TrackId.Parse("stamina")));
-        Assert.Equal(player.PlayerInitialVitals.StaminaMaximum, mechanics.ReadTrack(TrackId.Parse("stamina")).Current.Raw);
+        Stat healthMaximum = mechanics.ReadStat(StatId.Parse("health-maximum"));
+        Track health = mechanics.ReadTrack(TrackId.Parse("health"));
+        Assert.Same(healthMaximum, health.Maximum);
+        Assert.Equal(player.PlayerInitialVitals.HealthMaximum, healthMaximum.Value);
+        Assert.Equal(player.PlayerInitialVitals.HealthMaximum, health.Current);
+        Assert.Equal(player.PlayerInitialVitals.StaminaMaximum, mechanics.ReadTrack(TrackId.Parse("stamina")).Current);
     }
 
     [Fact]
@@ -107,7 +108,7 @@ public sealed class DaggerfallRewardReactionTests
     }
 
     [Fact]
-    public void Exact_xp_threshold_applies_one_keyed_health_source_and_preserves_health_distance()
+    public void Xp_threshold_applies_one_keyed_health_source_and_preserves_health_distance()
     {
         DaggerfallDefinitions definitions = LoadDefinitions();
         DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
@@ -125,11 +126,10 @@ public sealed class DaggerfallRewardReactionTests
 
         Assert.Equal(500, progression.Experience);
         Assert.Equal(2, progression.Level);
-        Assert.Equal(107, mechanics.ReadStat(StatId.Parse("health-maximum")).Value.Raw);
-        Assert.Equal(77, mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
-        ExactStatTrackState health = mechanics.ReadStatTrack(TrackId.Parse("health"));
-        ExactSource source = Assert.Single(health.Sources);
-        Assert.Equal("daggerfall.player.level-up.2.health", ((IntrinsicSourceIdentity)source.Identity).Instance.Value);
+        Assert.Equal(107d, mechanics.ReadStat(StatId.Parse("health-maximum")).Value);
+        Assert.Equal(77d, mechanics.ReadTrack(TrackId.Parse("health")).Current);
+        StatDecision source = Assert.Single(mechanics.ReadStat(StatId.Parse("health-maximum")).Explain().Decisions);
+        Assert.Equal("daggerfall.player.level-up.2.health", ((IntrinsicSourceIdentity)source.Source).Instance.Value);
         KeyedRngRequest roll = Assert.Single(recorder.Requests);
         Assert.Equal(CombatRandomKey.PlayerScope, roll.Scope);
         Assert.Equal("player.level-up.2.hp-roll", roll.Key);
@@ -156,12 +156,12 @@ public sealed class DaggerfallRewardReactionTests
 
         Assert.Equal(1_000, progression.Experience);
         Assert.Equal(3, progression.Level);
-        Assert.Equal(110, mechanics.ReadStat(StatId.Parse("health-maximum")).Value.Raw);
-        Assert.Equal(60, mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+        Assert.Equal(110d, mechanics.ReadStat(StatId.Parse("health-maximum")).Value);
+        Assert.Equal(60d, mechanics.ReadTrack(TrackId.Parse("health")).Current);
         Assert.Equal(
             ["daggerfall.player.level-up.2.health", "daggerfall.player.level-up.3.health"],
-            mechanics.ReadStatTrack(TrackId.Parse("health")).Sources
-                .Select(source => ((IntrinsicSourceIdentity)source.Identity).Instance.Value)
+            mechanics.ReadStat(StatId.Parse("health-maximum")).Explain().Decisions
+                .Select(source => ((IntrinsicSourceIdentity)source.Source).Instance.Value)
                 .OrderBy(value => value));
         Assert.Equal(["player.level-up.2.hp-roll", "player.level-up.3.hp-roll"], recorder.Requests.Select(request => request.Key));
     }
@@ -191,7 +191,7 @@ public sealed class DaggerfallRewardReactionTests
         reactions.React(death, facts);
         Assert.Equal(500, progression.Experience);
         Assert.Equal(2, progression.Level);
-        Assert.Single(mechanics.ReadStatTrack(TrackId.Parse("health")).Sources);
+        Assert.Single(mechanics.ReadStat(StatId.Parse("health-maximum")).Explain().Decisions);
         List<IProductFact> delivered = [];
         facts.Deliver(delivered.Add);
         Assert.Single(delivered.OfType<ExperienceAwardedFact>());
@@ -231,8 +231,8 @@ public sealed class DaggerfallRewardReactionTests
         Assert.Empty(recorder.Requests);
         Assert.Empty(inventory.Read().Stacks);
         Assert.Empty(inventory.Read().UniqueItems);
-        Assert.Empty(mechanics.ReadStatTrack(TrackId.Parse("health")).Sources);
-        Assert.Equal(100, mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+        Assert.Empty(mechanics.ReadStat(StatId.Parse("health-maximum")).Explain().Decisions);
+        Assert.Equal(100d, mechanics.ReadTrack(TrackId.Parse("health")).Current);
         Assert.Equal(int.MaxValue, progression.Experience);
         Assert.Equal(1, progression.Level);
         List<IProductFact> delivered = [];
@@ -284,17 +284,20 @@ public sealed class DaggerfallRewardReactionTests
 
     private static ActorMechanicsState CreatePlayerMechanics(DaggerfallActorDefinition player, int healthCurrent = 100)
     {
-        ExactStatDefinition endurance = new(StatId.Parse("endurance"), ExactValue.Zero, new ExactValue(10_000));
-        ExactStatDefinition healthMaximum = new(StatId.Parse("health-maximum"), ExactValue.Zero, new ExactValue(10_000));
-        ExactTrackDefinition health = new(
-            TrackId.Parse("health"),
-            ExactValue.Zero,
-            new ExactTrackMaximum.FromStat(healthMaximum.Id));
+        StatId enduranceId = StatId.Parse("endurance");
+        StatId healthMaximumId = StatId.Parse("health-maximum");
+        Stat healthMaximum = new(100, 0, 10_000, quantum: 1, rounding: MidpointRounding.ToZero, integerRounding: MidpointRounding.ToZero);
         return new ActorMechanicsState(
             new EntityId(DaggerfallActorIdentity.PlayerEntityId),
-            [(endurance, new ExactValue(player.Stats.Endurance))],
-            Array.Empty<ExactTrack>(),
-            [new ExactStatTrackState(healthMaximum, new ExactValue(100), Array.Empty<ExactSource>(), health, new ExactValue(healthCurrent))]);
+            [(enduranceId, new Stat(player.Stats.Endurance, 0, 10_000, quantum: 1, rounding: MidpointRounding.ToZero, integerRounding: MidpointRounding.ToZero)), (healthMaximumId, healthMaximum)],
+            [(TrackId.Parse("health"), new Track(
+                healthMaximum,
+                healthCurrent,
+                0,
+                TrackMaximumChangePolicy.PreserveMissingAmount,
+                quantum: 1,
+                rounding: MidpointRounding.ToZero,
+                integerRounding: MidpointRounding.ToZero))]);
     }
 
     private class RecordingRandomProxy : RandomMinimumProxy
@@ -328,7 +331,7 @@ public sealed class DaggerfallRewardReactionTests
                 if (!_staled)
                 {
                     _staled = true;
-                    Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(80));
+                    Mechanics.ReadTrack(TrackId.Parse("health")).SetCurrent(80);
                 }
             }
 

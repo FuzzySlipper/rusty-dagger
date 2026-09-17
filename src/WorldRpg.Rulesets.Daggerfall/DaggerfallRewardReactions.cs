@@ -25,7 +25,8 @@ internal sealed class DaggerfallRewardReactions(ProgressionState progression, Ac
         ProgressionAwardPlan? progressionPlan = PlanProgression(fact.ActorId, actor);
         if (progressionPlan is not null)
         {
-            progressionPlan.HealthCandidate?.Publish();
+            if (progressionPlan.HealthSources is not null)
+                ApplyHealthSources(progressionPlan.HealthSources);
             progression.AdvanceTo(progressionPlan.NextExperience, progressionPlan.NextLevel);
             facts.Append(new ExperienceAwardedFact(fact.ActorId, actor.Rewards.ExperienceReward));
             _experienceAwarded.Add(fact.ActorId);
@@ -41,18 +42,16 @@ internal sealed class DaggerfallRewardReactions(ProgressionState progression, Ac
         progression.AdvanceTo(experience, level);
         if (level == 1) return;
 
-        int endurance = checked((int)playerMechanics.ReadStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).Value.Raw);
-        ExactStatTrackState health = playerMechanics.ReadStatTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
-        List<ExactSource> sources = health.Sources.ToList();
+        int endurance = playerMechanics.ReadStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).ValueInt;
+        Stat healthMaximum = playerMechanics.ReadStat(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value));
+        List<StatSource> sources = [.. healthMaximum.Sources];
         for (int restoredLevel = 2; restoredLevel <= level; restoredLevel++)
         {
             int gain = DaggerfallLevelUpHealthSource.RollGain(random, playerDefinition, endurance, restoredLevel);
-            ExactSource source = DaggerfallLevelUpHealthSource.Create(playerMechanics.Entity, restoredLevel, gain);
+            StatSource source = DaggerfallLevelUpHealthSource.Create(playerMechanics.Entity, restoredLevel, gain);
             if (sources.All(existing => existing.Identity != source.Identity)) sources.Add(source);
         }
-        ExactStatTrackChangeCandidate candidate = health.PrepareSourceChange(
-            health.Base, sources, ExactStatTrackCurrentPolicy.PreserveDistanceFromMaximum, health.Revision);
-        candidate.Publish();
+        ApplyHealthSources(sources);
     }
 
     private ProgressionAwardPlan? PlanProgression(long defeatedActorId, DaggerfallActorDefinition defeated)
@@ -65,8 +64,8 @@ internal sealed class DaggerfallRewardReactions(ProgressionState progression, Ac
         if (nextLevel == progression.Level)
             return new ProgressionAwardPlan(nextExperience, nextLevel, null);
 
-        int endurance = checked((int)playerMechanics.ReadStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).Value.Raw);
-        List<ExactSource> expectedSources = [];
+        int endurance = playerMechanics.ReadStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).ValueInt;
+        List<StatSource> expectedSources = [];
         for (int level = checked(progression.Level + 1); ; level++)
         {
             int gain = DaggerfallLevelUpHealthSource.RollGain(random, playerDefinition, endurance, level);
@@ -74,12 +73,12 @@ internal sealed class DaggerfallRewardReactions(ProgressionState progression, Ac
             if (level == nextLevel) break;
         }
 
-        ExactStatTrackState health = playerMechanics.ReadStatTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
-        List<ExactSource> prospectiveSources = health.Sources.ToList();
+        Stat healthMaximum = playerMechanics.ReadStat(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value));
+        List<StatSource> prospectiveSources = [.. healthMaximum.Sources];
         bool changed = false;
-        foreach (ExactSource expected in expectedSources)
+        foreach (StatSource expected in expectedSources)
         {
-            ExactSource? existing = prospectiveSources.SingleOrDefault(source => source.Identity == expected.Identity);
+            StatSource? existing = prospectiveSources.SingleOrDefault(source => source.Identity == expected.Identity);
             if (existing is null)
             {
                 prospectiveSources.Add(expected);
@@ -91,34 +90,42 @@ internal sealed class DaggerfallRewardReactions(ProgressionState progression, Ac
                 throw new MechanicsException($"Daggerfall level-up source {expected.Identity} already exists with different policy.");
         }
 
-        ExactStatTrackChangeCandidate? candidate = null;
         if (changed)
         {
-            ExactStatTrackSnapshot before = health.Read();
+            Track health = playerMechanics.ReadTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
             long expectedGain = expectedSources
-                .Where(source => !health.Sources.Any(existing => existing.Identity == source.Identity))
-                .Select(source => ((ExactStatContribution.Add)source.Contributions[0].Contribution).Amount.Raw)
-                .Aggregate(0L, (total, gain) => checked(total + gain));
-            ExactValue expectedMaximum = before.Stat.Value.CheckedAdd(new ExactValue(expectedGain));
-            ExactValue expectedCurrent = before.TrackCurrent.CheckedAdd(new ExactValue(expectedGain));
-            candidate = health.PrepareSourceChange(
-                health.Base,
-                prospectiveSources,
-                ExactStatTrackCurrentPolicy.PreserveDistanceFromMaximum,
-                health.Revision);
-            if (candidate.Preview.After.Stat.Value != expectedMaximum
-                || candidate.Preview.After.TrackCurrent != expectedCurrent)
+                .Where(source => !healthMaximum.Sources.Any(existing => existing.Identity == source.Identity))
+                .Aggregate(0L, (total, source) => checked(total + checked((long)Math.Round(((StatContribution.Add)source.Contributions[0].Contribution).Amount, MidpointRounding.ToZero))));
+            double expectedMaximum = healthMaximum.Value + expectedGain;
+            double expectedCurrent = health.Current + expectedGain;
+            Stat planned = healthMaximum.Copy();
+            Track plannedHealth = new(
+                planned,
+                health.Current,
+                health.Minimum,
+                health.MaximumChangePolicy,
+                health.Quantum,
+                health.Rounding,
+                health.IntegerRounding);
+            planned.SetSources(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value), prospectiveSources);
+            if (planned.Value != expectedMaximum || plannedHealth.Current != expectedCurrent)
             {
                 throw new MechanicsException("Daggerfall level-up health gain was constrained before it could raise maximum and current equally.");
             }
         }
-        return new ProgressionAwardPlan(nextExperience, nextLevel, candidate);
+        return new ProgressionAwardPlan(nextExperience, nextLevel, changed ? prospectiveSources.ToArray() : null);
+    }
+
+    private void ApplyHealthSources(IReadOnlyList<StatSource> sources)
+    {
+        Stat healthMaximum = playerMechanics.ReadStat(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value));
+        healthMaximum.SetSources(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value), sources);
     }
 
     private sealed record ProgressionAwardPlan(
         int NextExperience,
         int NextLevel,
-        ExactStatTrackChangeCandidate? HealthCandidate);
+        StatSource[]? HealthSources);
 }
 
 /// <summary>Daggerfall's durable, per-level health-max source policy.</summary>
@@ -127,19 +134,19 @@ internal static class DaggerfallLevelUpHealthSource
     private const string Definition = "daggerfall.player.level-up.health";
     private const string Group = "daggerfall.player.level-up.health";
 
-    internal static ExactSource Create(Rusty.Engine.Entities.EntityId player, int level, int gain)
+    internal static StatSource Create(Rusty.Engine.Entities.EntityId player, int level, int gain)
     {
         if (level < 2) throw new ArgumentOutOfRangeException(nameof(level));
         if (gain < 1) throw new ArgumentOutOfRangeException(nameof(gain));
-        return new ExactSource(
+        return new StatSource(
             new IntrinsicSourceIdentity(player, SourceInstanceId.Parse($"daggerfall.player.level-up.{level}.health")),
             SourceDefinitionId.Parse(Definition),
             priority: 0,
-            [new ExactStatContributionDefinition(
+            [new StatContributionDefinition(
                 StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value),
                 StackingGroupId.Parse(Group),
                 MechanicsStackingPolicy.Sum,
-                new ExactStatContribution.Add(new ExactValue(gain)))]);
+                new StatContribution.Add(gain))]);
     }
 
     /// <summary>One keyed, ruleset-owned level-up gain shared by restore validation and source reconstruction.</summary>
@@ -162,7 +169,7 @@ internal static class DaggerfallLevelUpHealthSource
         return DaggerfallFormulaPolicy.HitPointsPerLevelUp(roll, endurance, DaggerfallFormulaPolicy.Experimental);
     }
 
-    internal static bool Matches(ExactSource actual, ExactSource expected) =>
+    internal static bool Matches(StatSource actual, StatSource expected) =>
         actual.Identity == expected.Identity
         && actual.Definition == expected.Definition
         && actual.Priority == expected.Priority

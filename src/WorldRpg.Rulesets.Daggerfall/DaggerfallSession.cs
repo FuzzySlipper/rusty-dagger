@@ -751,7 +751,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
     }
 
     private static long ReadTrack(ActorMechanicsState mechanics, DaggerfallTrackId track) =>
-        mechanics.ReadTrack(TrackId.Parse(track.Value)).Current.Raw;
+        mechanics.ReadTrack(TrackId.Parse(track.Value)).ValueInt64;
 
     /// <summary>
     /// Writes the saved tracks, reduced to the bounds this session actually resolves.
@@ -769,16 +769,19 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
 
     private void ApplyTrack(ActorMechanicsState mechanics, DaggerfallTrackId track, long value, string owner)
     {
-        ActorTrackRead read = mechanics.ReadTrack(TrackId.Parse(track.Value));
-        long reduced = Math.Clamp(value, read.Bounds.Minimum.Raw, read.Bounds.Maximum.Raw);
+        Track read = mechanics.ReadTrack(TrackId.Parse(track.Value));
+        long minimum = checked((long)Math.Round(read.Minimum, MidpointRounding.ToZero));
+        long maximum = read.Maximum.ValueInt64;
+        long reduced = Math.Clamp(value, minimum, maximum);
         if (reduced != value)
         {
             _restoreNotices.Add(new SaveRestoreNotice("track-reduced-to-resolved-bounds",
-                $"Saved {owner} {track.Value} {value} is outside the bounds this session resolves ({read.Bounds.Minimum.Raw} to {read.Bounds.Maximum.Raw}) and was reduced to {reduced}."));
+                $"Saved {owner} {track.Value} {value} is outside the bounds this session resolves ({minimum} to {maximum}) and was reduced to {reduced}."));
         }
 
-        mechanics.SetTrack(TrackId.Parse(track.Value), new ExactValue(reduced));
+        read.SetCurrent(reduced);
     }
+
 
     private void ApplyInventory(DaggerfallInventorySave saved)
     {

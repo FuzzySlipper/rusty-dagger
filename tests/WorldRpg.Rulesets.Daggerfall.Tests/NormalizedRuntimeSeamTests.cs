@@ -47,15 +47,15 @@ public sealed class NormalizedRuntimeSeamTests
         perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1d, 1d, PerceptionPairKind.Visible, 1d));
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
-        long before = session.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+        double before = session.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).Current;
         ProductInputEvent pressed = Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack");
         session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d), [pressed, pressed]);
-        long after = session.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+        double after = session.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).Current;
         Assert.True(after < before);
-        Assert.Equal(85, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("stamina")).Current.Raw);
+        Assert.Equal(85d, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("stamina")).Current);
         session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 2, 1, 1, 100, 60, 3, 0, 1d / 60d),
             [Input(InputEventKind.MappedDigital, InputEdge.Held, x: 1, phase: InputPhase.Held, intent: "attack")]);
-        Assert.Equal(after, session.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+        Assert.Equal(after, session.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).Current);
     }
 
     [Fact]
@@ -80,13 +80,13 @@ public sealed class NormalizedRuntimeSeamTests
         DaggerfallMeleeTargetingModule targeting = new(perception.Service, targetingSpatial, session.State.Actors, authored, DaggerfallTuning.Defaults.MeleeTargeting);
         CombatModule combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.ActorInventories, definitions, authored, targeting);
 
-        long staminaBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("stamina")).Current.Raw;
+        double staminaBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("stamina")).Current;
         FactBuffer<IProductFact> facts = new();
         combat.TryPlayerMelee(session.State.PlayerControl, ForwardLook(), 7, 13, .125, facts);
         List<IProductFact> emptySpace = [];
         facts.Deliver(emptySpace.Add);
 
-        Assert.Equal(staminaBefore - 5, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("stamina")).Current.Raw);
+        Assert.Equal(staminaBefore - 5, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("stamina")).Current);
         Assert.Equal(new PlayerAttackStartedFact(7, 13), Assert.Single(emptySpace.OfType<PlayerAttackStartedFact>()));
         Assert.Contains(new AttackRejectedFact(AttackRejection.NoTargetInReach), emptySpace);
         Assert.Equal(new CombatCooldown(DaggerfallActorIdentity.PlayerEntityId, 6), Assert.Single(combat.CaptureCooldowns(7, 13)));
@@ -95,7 +95,7 @@ public sealed class NormalizedRuntimeSeamTests
         List<IProductFact> coolingDown = [];
         facts.Deliver(coolingDown.Add);
         Assert.Equal([new AttackRejectedFact(AttackRejection.Cooldown)], coolingDown);
-        Assert.Equal(staminaBefore - 5, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("stamina")).Current.Raw);
+        Assert.Equal(staminaBefore - 5, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("stamina")).Current);
 
         combat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 8, 20, .125), facts);
         List<IProductFact> materialImmune = [];
@@ -373,14 +373,14 @@ public sealed class NormalizedRuntimeSeamTests
         perception.Receipt = Receipt([.. inputs.Project.Actors.Values.Select(placement =>
             new PerceptionPair(checked((ulong)placement.EntityId), (ulong)DaggerfallActorIdentity.PlayerEntityId, 0.5d, 1d, PerceptionPairKind.Visible, 1d))]);
         using DaggerfallSession session = new(engine.Context, withoutPolicies, inputs, DaggerfallTuning.Defaults);
-        long healthBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+        double healthBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current;
         appearance.AdvanceReceiptForAll = CrossedMarker(1);
 
         session.Update(new ProductUpdate(OuterUpdate(1), []));
 
         Assert.All(session.LastEnemyBehavior.Values, evidence =>
             Assert.Equal(EnemyBehaviorState.Idle, evidence.State));
-        Assert.Equal(healthBefore, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+        Assert.Equal(healthBefore, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current);
     }
 
     /// <summary>
@@ -1810,9 +1810,9 @@ public sealed class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
-        long healthBefore = session.State.Actors.All[2000].Mechanics.ReadTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current.Raw;
+        double healthBefore = session.State.Actors.All[2000].Mechanics.ReadTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current;
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
-        Assert.True(session.State.Actors.All[2000].Mechanics.ReadTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current.Raw < healthBefore);
+        Assert.True(session.State.Actors.All[2000].Mechanics.ReadTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current < healthBefore);
     }
 
     [Fact]
@@ -1828,11 +1828,11 @@ public sealed class NormalizedRuntimeSeamTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
         var stamina = Rusty.Engine.Mechanics.TrackId.Parse("stamina");
-        session.State.Actors.Player.Mechanics.SetTrack(stamina, Rusty.Engine.Mechanics.ExactValue.Zero);
+        session.State.Actors.Player.Mechanics.ReadTrack(stamina).SetCurrent(0);
 
         for (int step = 0; step < 8; step++) session.Update(new ProductUpdateState(.125f));
 
-        Assert.Equal(5, session.State.Actors.Player.Mechanics.ReadTrack(stamina).Current.Raw);
+        Assert.Equal(5d, session.State.Actors.Player.Mechanics.ReadTrack(stamina).Current);
     }
 
     [Fact]
@@ -1964,11 +1964,11 @@ public sealed class NormalizedRuntimeSeamTests
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
         using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, payload, RandomMinimum.Create());
-        long before = resumed.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+        double before = resumed.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).Current;
 
         resumed.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 2, 1, .125));
 
-        Assert.Equal(before, resumed.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+        Assert.Equal(before, resumed.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).Current);
     }
 
     [Fact]
@@ -3027,7 +3027,7 @@ public sealed class NormalizedRuntimeSeamTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
 
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
-        long healthBefore = session.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+        double healthBefore = session.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).Current;
         session.Update(AttackUpdate());
 
         DaggerfallMeleeTargetingEvidence evidence = Assert.IsType<DaggerfallMeleeTargetingEvidence>(session.LastMeleeTargeting);
@@ -3038,7 +3038,7 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(2.25d, evidence.Request.Observers.Span[0].MaximumDistance);
         Assert.Equal(.5d, evidence.Request.Observers.Span[0].MinimumFacingCosine);
         Assert.Equal(1, evidence.Receipt.Pairs.Length);
-        Assert.True(session.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw < healthBefore);
+        Assert.True(session.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).Current < healthBefore);
     }
 
     [Fact]
@@ -3054,7 +3054,7 @@ public sealed class NormalizedRuntimeSeamTests
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
-        session.State.Actors.All[2000].Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(1), ExactTrackSetPolicy.ClampToBounds);
+        session.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
         CorpseContainer corpse = session.Corpses[2000];
         Assert.True(corpse.IsRegistered);
@@ -3251,7 +3251,7 @@ public sealed class NormalizedRuntimeSeamTests
         double separation = definitions.Actions.Values.Where(action => action.Interpretation == "fixed-melee").Max(action => action.Reach!.Value) + 1d;
         Assert.True(separation < shotReach, "the fixture's separation must sit between melee reach and the archer's shot");
 
-        long healthBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+        double healthBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current;
         // The archer sees the player at that separation, facing them, with the line clear.
         perception.Receipt = Receipt(new PerceptionPair(checked((ulong)archer), 1, separation, 1d, PerceptionPairKind.Visible, 1d));
         // The swing is decided on the admitted step and lands when its authored damage frame is reached.
@@ -3262,7 +3262,7 @@ public sealed class NormalizedRuntimeSeamTests
         // navigation was asked for, which is what "without closing" means here.
         Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[archer].State);
         Assert.Null(session.LastEnemyBehavior[archer].Navigation);
-        long healthAfterShot = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+        double healthAfterShot = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current;
         Assert.True(healthAfterShot < healthBefore, "the archer's shot must damage the player at that separation");
         // The line names the attacker, so the player can tell which of the enemies in front of them is
         // doing it: a hit the player took reads as the actor that landed it.
@@ -3279,7 +3279,7 @@ public sealed class NormalizedRuntimeSeamTests
         // chasing: a ranged attacker that walks into melee is a melee attacker.
         appearance.AdvanceReceiptForAll = null;
         session.Update(new ProductUpdate(OuterUpdate(2), []));
-        Assert.Equal(healthAfterShot, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+        Assert.Equal(healthAfterShot, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current);
         perception.Receipt = Receipt(new PerceptionPair(checked((ulong)archer), 1, shotReach + 1d, 1d, PerceptionPairKind.Visible, 1d));
         session.Update(new ProductUpdate(OuterUpdate(3), []));
         Assert.NotEqual(EnemyBehaviorState.Attack, session.LastEnemyBehavior[archer].State);
@@ -3306,19 +3306,19 @@ public sealed class NormalizedRuntimeSeamTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
 
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
-        long healthBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+        double healthBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current;
         // The swing is decided on the admitted step and lands when its authored damage
         // frame is reached, so the update that carries the crossing is the one that hurts.
         appearance.AdvanceReceiptForAll = CrossedMarker(1);
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[2000].State);
-        long healthAfterAttack = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+        double healthAfterAttack = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current;
         Assert.True(healthAfterAttack < healthBefore);
 
         // The same swing cannot land twice, and a frame that never crosses lands nothing.
         appearance.AdvanceReceiptForAll = null;
         session.Update(new ProductUpdate(OuterUpdate(2), []));
-        Assert.Equal(healthAfterAttack, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+        Assert.Equal(healthAfterAttack, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current);
 
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 0d, PerceptionPairKind.FacingRejected, 0d));
         session.Update(new ProductUpdateState(.125f));
@@ -3328,7 +3328,7 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(EnemyBehaviorState.Idle, session.LastEnemyBehavior[2000].State);
 
         ActorState rat = session.State.Actors.All[2000];
-        rat.Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(-999), ExactTrackSetPolicy.ClampToBounds);
+        rat.Mechanics.ReadTrack(TrackId.Parse("health")).SetCurrent(-999, clamp: true);
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
         session.Update(new ProductUpdateState(.125f));
         Assert.Equal(EnemyBehaviorState.Dead, session.LastEnemyBehavior[2000].State);
@@ -3400,7 +3400,7 @@ public sealed class NormalizedRuntimeSeamTests
                 new PerceptionPair(1, 2000, 1d, .8d, PerceptionPairKind.Visible, 1d));
             Assert.Equal(2000, targeting.Select(session.State.PlayerControl, ForwardLook(), 2.25d));
 
-            session.State.Actors.All[2008].Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(0), ExactTrackSetPolicy.ClampToBounds);
+            session.State.Actors.All[2008].Mechanics.ReadTrack(TrackId.Parse("health")).SetCurrent(0, clamp: true);
             perception.Receipt = Receipt(new PerceptionPair(1, 2008, .5d, .8d, PerceptionPairKind.Visible, 1d));
             Assert.Null(targeting.Select(session.State.PlayerControl, ForwardLook(), 2.25d));
         }
@@ -3514,25 +3514,25 @@ public sealed class NormalizedRuntimeSeamTests
 
         // Ordinary play recovers stamina over admitted world time, which is the calibration: without
         // it the held-back assertion below would pass on a mechanic that never runs at all.
-        long maximum = mechanics.ReadTrack(stamina).Bounds.Maximum.Raw;
-        mechanics.SetTrack(stamina, new ExactValue(1), ExactTrackSetPolicy.ClampToBounds);
+        double maximum = mechanics.ReadTrack(stamina).MaximumValue;
+        mechanics.ReadTrack(stamina).SetCurrent(1, clamp: true);
         // Recovery is per second against an integer track, so one step of a sixtieth recovers less
         // than one unit: the calibration has to give the mechanic enough admitted time to show.
         for (ulong step = 1; step <= 120; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
-        long recovered = mechanics.ReadTrack(stamina).Current.Raw;
+        double recovered = mechanics.ReadTrack(stamina).Current;
         Assert.True(recovered > 1, $"ordinary play should recover stamina, but it stayed at {recovered}");
 
         // A modal holds the world still, so the same amount of admitted time recovers nothing.
-        mechanics.SetTrack(stamina, new ExactValue(1), ExactTrackSetPolicy.ClampToBounds);
+        mechanics.ReadTrack(stamina).SetCurrent(1, clamp: true);
         session.ApplyProductMode(ProductMode.Modal);
         for (ulong step = 121; step <= 240; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
-        Assert.Equal(1, mechanics.ReadTrack(stamina).Current.Raw);
+        Assert.Equal(1d, mechanics.ReadTrack(stamina).Current);
 
         // And ordinary play resumes it, so the gate is a gate rather than a stopped mechanic.
         session.ApplyProductMode(ProductMode.Playing);
         for (ulong step = 241; step <= 360; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
-        Assert.True(mechanics.ReadTrack(stamina).Current.Raw > 1);
-        Assert.True(mechanics.ReadTrack(stamina).Current.Raw <= maximum);
+        Assert.True(mechanics.ReadTrack(stamina).Current > 1);
+        Assert.True(mechanics.ReadTrack(stamina).Current <= maximum);
     }
 
     /// <summary>A session that has not swung, so its weapon is ready.</summary>
@@ -3564,7 +3564,7 @@ public sealed class NormalizedRuntimeSeamTests
         appearance = new AppearanceFake(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
-        session.State.Actors.All[2000].Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(1), ExactTrackSetPolicy.ClampToBounds);
+        session.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
         CorpseContainer corpse = session.Corpses[2000];
         session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5)]);
@@ -3583,8 +3583,12 @@ public sealed class NormalizedRuntimeSeamTests
 
     private static ActorMechanicsState DefeatedMechanics(ulong entityId)
     {
-        ExactTrackDefinition health = new(TrackId.Parse("health"), ExactValue.Zero, new ExactTrackMaximum.Fixed(new ExactValue(100)));
-        return new ActorMechanicsState(new EntityId(entityId), [], [new ExactTrack(health, ExactValue.Zero)]);
+        return new ActorMechanicsState(new EntityId(entityId), [], [(TrackId.Parse("health"), new Track(
+            100,
+            0,
+            quantum: 1,
+            rounding: MidpointRounding.ToZero,
+            integerRounding: MidpointRounding.ToZero))]);
     }
 
     private static PerceptionReadoutLeaseReceipt Receipt(params PerceptionPair[] pairs) => new(pairs, ReadOnlyMemory<PerceptionAggregate>.Empty, checked((uint)pairs.Length), false, 0, 1, 1, checked((uint)pairs.Length), checked((ulong)pairs.Length), 0, 0, 0, 0);
@@ -4054,7 +4058,7 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Contains(decided, fact => fact is EnemyAttackStartedFact);
 
         // The player is defeated before the damage frame is reached.
-        session.State.Actors.Player.Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(0), ExactTrackSetPolicy.ClampToBounds);
+        session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).SetCurrent(0, clamp: true);
         combat.ApplyImpacts([new AttackImpactNotice(2000, DaggerfallActorIdentity.PlayerEntityId, 77, 400, Expired: false)], 77, facts);
         List<IProductFact> impacts = [];
         facts.Deliver(impacts.Add);
@@ -4062,12 +4066,12 @@ public sealed class NormalizedRuntimeSeamTests
         // A defeated target is dropped, not struck for zero: the clamp would otherwise
         // still publish a hit fact for an impact that changed nothing.
         Assert.DoesNotContain(impacts, fact => fact is AttackHitFact or AttackMissedFact);
-        Assert.Equal(0, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+        Assert.Equal(0d, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current);
 
         // The swing is consumed by the dropped impact rather than left blocking its
         // attacker: a same-generation retry past the cooldown is accepted only if the
         // pending entry for this exact (generation, attacker) key is gone.
-        session.State.Actors.Player.Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(100), ExactTrackSetPolicy.ClampToBounds);
+        session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).SetCurrent(100, clamp: true);
         Assert.True(combat.TryBeginEnemyAttack(2000, DaggerfallActorIdentity.PlayerEntityId, 77, 1_000, .125, facts));
     }
 
@@ -4129,7 +4133,7 @@ public sealed class NormalizedRuntimeSeamTests
         long archer = Assert.Single(inputs.Project.Actors.Values, placement => placement.ActorId == new DaggerfallActorId("archer")).EntityId;
         session.State.ActorInventories[archer].Consume(new WorldRpg.Kit.Inventory.InventoryConsume(
             "test.empty-quiver", $"test.quiver.{archer}", new WorldRpg.Kit.Inventory.InventoryItemId("arrow"), 12));
-        long playerHealthBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+        double playerHealthBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current;
 
         Assert.False(combat.TryBeginEnemyAttack(archer, DaggerfallActorIdentity.PlayerEntityId, 77, 400, .125, facts));
         List<IProductFact> decided = [];
@@ -4141,9 +4145,9 @@ public sealed class NormalizedRuntimeSeamTests
 
         // No pending impact exists behind the refusal, so the player is never damaged by a
         // shot that was never made, and every later attempt is refused the same way.
-        Assert.Equal(playerHealthBefore, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+        Assert.Equal(playerHealthBefore, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current);
         Assert.False(combat.TryBeginEnemyAttack(archer, DaggerfallActorIdentity.PlayerEntityId, 78, 401, .125, facts));
-        Assert.Equal(playerHealthBefore, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+        Assert.Equal(playerHealthBefore, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current);
     }
 
     [Fact]
@@ -4298,7 +4302,7 @@ public sealed class NormalizedRuntimeSeamTests
         long healthBefore = PlayerHealth(session);
         session.Update(new ProductUpdate(OuterUpdate(1), []));
 
-        session.State.Actors.All[2000].Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(-999), ExactTrackSetPolicy.ClampToBounds);
+        session.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).SetCurrent(-999, clamp: true);
         appearance.AdvanceReceiptForAll = CrossedMarker(1);
         session.Update(new ProductUpdate(OuterUpdate(2), []));
 
@@ -4412,22 +4416,22 @@ public sealed class NormalizedRuntimeSeamTests
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
-        long healthBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+        double healthBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current;
 
         // The update that decides the swing carries no damage: nothing has been struck
         // until the authored damage frame is reached.
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[2000].State);
-        Assert.Equal(healthBefore, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+        Assert.Equal(healthBefore, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current);
 
         appearance.AdvanceReceiptForAll = CrossedMarker(1);
         session.Update(new ProductUpdate(OuterUpdate(2), []));
-        long healthAfterImpact = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+        double healthAfterImpact = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current;
         Assert.True(healthAfterImpact < healthBefore);
 
         // The same frame cannot land a second time.
         session.Update(new ProductUpdate(OuterUpdate(3), []));
-        Assert.Equal(healthAfterImpact, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+        Assert.Equal(healthAfterImpact, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current);
     }
 
     [Fact]
@@ -4445,7 +4449,7 @@ public sealed class NormalizedRuntimeSeamTests
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
-        long healthBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+        double healthBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current;
 
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         // Losing sight cancels the swing; a crossing from the already-playing animation
@@ -4455,7 +4459,7 @@ public sealed class NormalizedRuntimeSeamTests
         session.Update(new ProductUpdate(OuterUpdate(2), []));
 
         Assert.Equal(EnemyBehaviorState.Idle, session.LastEnemyBehavior[2000].State);
-        Assert.Equal(healthBefore, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+        Assert.Equal(healthBefore, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current);
     }
 
     /// <summary>
@@ -4545,7 +4549,7 @@ public sealed class NormalizedRuntimeSeamTests
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
-        session.State.Actors.All[2000].Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(1), ExactTrackSetPolicy.ClampToBounds);
+        session.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
         CorpseContainer corpse = session.Corpses[2000];
         Assert.True(corpse.IsRegistered);
@@ -4651,7 +4655,7 @@ public sealed class NormalizedRuntimeSeamTests
         perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
         Ui("{\"action\":\"loot\"}", 7);
         LootPresentation reopened = Assert.IsType<LootPresentation>(session.OpenLoot);
-        session.State.Actors.Player.Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(0), ExactTrackSetPolicy.ClampToBounds);
+        session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).SetCurrent(0, clamp: true);
         Assert.Equal(ProductMode.Dead, session.PendingModeRequest);
         session.ApplyProductMode(ProductMode.Dead);
         int stepsBeforeDeath = spatial.StepCalls;
@@ -4687,7 +4691,7 @@ public sealed class NormalizedRuntimeSeamTests
         return (new DaggerfallSession(engine.Context, definitions, inputs, DaggerfallTuning.Defaults), appearance, perception);
     }
 
-    private static long PlayerHealth(DaggerfallSession session) => session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+    private static long PlayerHealth(DaggerfallSession session) => session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).ValueInt64;
 
     private static ProductUpdateFacts OuterUpdate(ulong simulationStep) => new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, simulationStep, simulationStep, 60, 1, 0, 1d / 60d);
 

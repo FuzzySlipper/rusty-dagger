@@ -18,43 +18,43 @@ public sealed class DaggerfallStaminaRecoveryModuleTests
     {
         using ActorMechanicsState player = PlayerMechanics();
         DaggerfallStaminaRecoveryModule recovery = new(new DaggerfallStaminaRecoveryTuning(5d, 2d));
-        player.SpendTrack(Stamina, new ExactValue(10));
+        player.ReadTrack(Stamina).Spend(10);
         recovery.React(new PlayerAttackStartedFact(7, 13));
 
         recovery.Update(player, 1.5d);
-        Assert.Equal(80, player.ReadTrack(Stamina).Current.Raw);
+        Assert.Equal(80d, player.ReadTrack(Stamina).Current);
         recovery.React(new AttackRejectedFact(AttackRejection.Cooldown));
         recovery.Update(player, .5d);
-        Assert.Equal(80, player.ReadTrack(Stamina).Current.Raw);
+        Assert.Equal(80d, player.ReadTrack(Stamina).Current);
         recovery.Update(player, .2d);
-        Assert.Equal(81, player.ReadTrack(Stamina).Current.Raw);
+        Assert.Equal(81d, player.ReadTrack(Stamina).Current);
         recovery.Update(player, .8d);
-        Assert.Equal(85, player.ReadTrack(Stamina).Current.Raw);
+        Assert.Equal(85d, player.ReadTrack(Stamina).Current);
 
-        player.SetTrack(Stamina, new ExactValue(90));
+        player.ReadTrack(Stamina).SetCurrent(90);
         recovery.Update(player, 20d);
-        player.SpendTrack(Stamina, new ExactValue(5));
+        player.ReadTrack(Stamina).Spend(5);
         recovery.Update(player, .1d);
-        Assert.Equal(85, player.ReadTrack(Stamina).Current.Raw);
+        Assert.Equal(85d, player.ReadTrack(Stamina).Current);
 
-        player.SetTrack(Stamina, ExactValue.Zero);
+        player.ReadTrack(Stamina).SetCurrent(0);
         recovery.React(new PlayerAttackStartedFact(7, 14));
         recovery.Update(player, 2d);
-        Assert.Equal(0, player.ReadTrack(Stamina).Current.Raw);
+        Assert.Equal(0d, player.ReadTrack(Stamina).Current);
         recovery.React(new AttackRejectedFact(AttackRejection.Cooldown));
         recovery.Update(player, 1d);
-        Assert.Equal(5, player.ReadTrack(Stamina).Current.Raw);
+        Assert.Equal(5d, player.ReadTrack(Stamina).Current);
 
-        player.SetTrack(Health, ExactValue.Zero);
+        player.ReadTrack(Health).SetCurrent(0);
         recovery.Update(player, 20d);
-        Assert.Equal(5, player.ReadTrack(Stamina).Current.Raw);
+        Assert.Equal(5d, player.ReadTrack(Stamina).Current);
     }
 
     [Fact]
     public void Recovery_checkpoint_restores_partial_delay_and_fractional_carry()
     {
         using ActorMechanicsState player = PlayerMechanics();
-        player.SetTrack(Stamina, ExactValue.Zero);
+        player.ReadTrack(Stamina).SetCurrent(0);
         DaggerfallStaminaRecoveryModule recovery = new(new DaggerfallStaminaRecoveryTuning(5d, 2d));
         recovery.React(new PlayerAttackStartedFact(7, 13));
         recovery.Update(player, 1d);
@@ -62,14 +62,14 @@ public sealed class DaggerfallStaminaRecoveryModuleTests
         recovery.Update(player, .5d);
         recovery.Restore(delayed);
         recovery.Update(player, 1d);
-        Assert.Equal(0, player.ReadTrack(Stamina).Current.Raw);
+        Assert.Equal(0d, player.ReadTrack(Stamina).Current);
 
         recovery.Update(player, .1d);
         var fractional = recovery.Capture();
         recovery.React(new PlayerAttackStartedFact(7, 14));
         recovery.Restore(fractional);
         recovery.Update(player, .1d);
-        Assert.Equal(1, player.ReadTrack(Stamina).Current.Raw);
+        Assert.Equal(1d, player.ReadTrack(Stamina).Current);
     }
 
     private static ActorMechanicsState PlayerMechanics()

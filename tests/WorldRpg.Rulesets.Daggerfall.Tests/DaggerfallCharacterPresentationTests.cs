@@ -16,7 +16,7 @@ public sealed class DaggerfallCharacterPresentationTests
     public void Sheet_reads_current_modeled_values_resources_progression_and_actual_equipment()
     {
         using Fixture f = new();
-        f.Player.Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(42));
+        f.Player.Mechanics.ReadTrack(TrackId.Parse("health")).SetCurrent(42);
         f.Progression.AdvanceTo(250, 2);
 
         CharacterSheetPresentation sheet = f.Presentation.Read(f.Player, f.Progression);
