@@ -130,8 +130,8 @@ public sealed class ActorNavigationAndCameraTests
         42,
         new ActorMechanicsState(
             new EntityId(42),
-            Array.Empty<(ExactStatDefinition Definition, ExactValue Base)>(),
-            [new ExactTrack(new ExactTrackDefinition(TrackId.Parse("health"), ExactValue.Zero, new ExactTrackMaximum.Fixed(new ExactValue(1))), new ExactValue(1))]),
+            [],
+            [(TrackId.Parse("health"), new Track(1))]),
         pose,
         "health");
 

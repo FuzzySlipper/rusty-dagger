@@ -4,21 +4,13 @@ using WorldRpg.Kit.Actors;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
-/// <summary>
-/// Product-owned Daggerfall mechanics definitions and actor construction.
-/// The managed Engine value types enforce exact stat/track invariants; this
-/// state chooses the identities, bases, and vitality policy for this ruleset.
-/// </summary>
+/// <summary>Product-owned Daggerfall mechanics definitions and actor construction.</summary>
 internal sealed class DaggerfallMechanicsState
 {
     private const long MinimumStatValue = 0;
     private const long MaximumStatValue = 10_000;
 
-    /// <summary>
-    /// Creates one actor's managed stat and track state from authored policy.
-    /// The returned state owns its mutable current track values and must be
-    /// disposed with the actor that owns it.
-    /// </summary>
+    /// <summary>Creates one actor's shared stat and track state from authored policy.</summary>
     internal ActorMechanicsState CreateActor(
         DaggerfallActorDefinition definition,
         DaggerfallVitalValues vitals,
@@ -31,60 +23,51 @@ internal sealed class DaggerfallMechanicsState
         }
 
         ValidateVitals(vitals);
+        List<(StatId Id, Stat Value)> stats = [];
+        foreach ((DaggerfallStatId id, int value) in definition.Stats.Values)
+        {
+            stats.Add(Stat(id, value));
+        }
+
+        Stat staminaMaximum = AddStat(stats, DaggerfallMechanicsIds.StaminaMaximum, vitals.StaminaMaximum);
+        Stat magickaMaximum = AddStat(stats, DaggerfallMechanicsIds.MagickaMaximum, vitals.MagickaMaximum);
+        Stat healthMaximum = AddStat(stats, DaggerfallMechanicsIds.HealthMaximum, vitals.HealthMaximum);
         return new ActorMechanicsState(
             new EntityId(entityId),
-            InitialStats(definition, vitals),
-            InitialTracks(vitals),
-            [InitialHealth(vitals)]);
+            stats,
+            [
+                (TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value), new Track(
+                    staminaMaximum, vitals.StaminaMaximum, MinimumStatValue, quantum: 1,
+                    rounding: MidpointRounding.ToZero, integerRounding: MidpointRounding.ToZero)),
+                (TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value), new Track(
+                    magickaMaximum, vitals.MagickaMaximum, MinimumStatValue, quantum: 1,
+                    rounding: MidpointRounding.ToZero, integerRounding: MidpointRounding.ToZero)),
+                (TrackId.Parse(DaggerfallMechanicsIds.Health.Value), new Track(
+                    healthMaximum,
+                    vitals.HealthMaximum,
+                    MinimumStatValue,
+                    TrackMaximumChangePolicy.PreserveMissingAmount,
+                    quantum: 1,
+                    rounding: MidpointRounding.ToZero,
+                    integerRounding: MidpointRounding.ToZero)),
+            ]);
     }
 
-    private static IEnumerable<(ExactStatDefinition Definition, ExactValue Base)> InitialStats(
-        DaggerfallActorDefinition actor,
-        DaggerfallVitalValues vitals)
+    private static (StatId Id, Stat Value) Stat(DaggerfallStatId id, int value) =>
+        (StatId.Parse(id.Value), new Stat(
+            value,
+            MinimumStatValue,
+            MaximumStatValue,
+            quantum: 1,
+            rounding: MidpointRounding.ToZero,
+            integerRounding: MidpointRounding.ToZero));
+
+    private static Stat AddStat(List<(StatId Id, Stat Value)> stats, DaggerfallStatId id, int value)
     {
-        foreach ((DaggerfallStatId id, int value) in actor.Stats.Values)
-        {
-            yield return Stat(id, value);
-        }
-        yield return Stat(DaggerfallMechanicsIds.StaminaMaximum, vitals.StaminaMaximum);
-        yield return Stat(DaggerfallMechanicsIds.MagickaMaximum, vitals.MagickaMaximum);
+        (StatId stat, Stat result) = Stat(id, value);
+        stats.Add((stat, result));
+        return result;
     }
-
-    private static (ExactStatDefinition Definition, ExactValue Base) Stat(
-        DaggerfallStatId id,
-        int value)
-    {
-        return (
-            new ExactStatDefinition(
-                StatId.Parse(id.Value),
-                new ExactValue(MinimumStatValue),
-                new ExactValue(MaximumStatValue)),
-            new ExactValue(value));
-    }
-
-    private static IEnumerable<ExactTrack> InitialTracks(DaggerfallVitalValues vitals)
-    {
-        yield return Track(DaggerfallMechanicsIds.Stamina, DaggerfallMechanicsIds.StaminaMaximum, vitals.StaminaMaximum);
-        yield return Track(DaggerfallMechanicsIds.Magicka, DaggerfallMechanicsIds.MagickaMaximum, vitals.MagickaMaximum);
-    }
-
-    private static ExactStatTrackState InitialHealth(DaggerfallVitalValues vitals)
-    {
-        (ExactStatDefinition stat, ExactValue baseValue) = Stat(DaggerfallMechanicsIds.HealthMaximum, vitals.HealthMaximum);
-        ExactTrackDefinition track = TrackDefinition(DaggerfallMechanicsIds.Health, DaggerfallMechanicsIds.HealthMaximum);
-        return new ExactStatTrackState(stat, baseValue, Array.Empty<ExactSource>(), track, baseValue);
-    }
-
-    private static ExactTrack Track(DaggerfallTrackId id, DaggerfallStatId maximum, int current)
-    {
-        ExactValue value = new(current);
-        return new ExactTrack(TrackDefinition(id, maximum), value, new ExactTrackBounds(new ExactValue(MinimumStatValue), value));
-    }
-
-    private static ExactTrackDefinition TrackDefinition(DaggerfallTrackId id, DaggerfallStatId maximum) => new(
-        TrackId.Parse(id.Value),
-        new ExactValue(MinimumStatValue),
-        new ExactTrackMaximum.FromStat(StatId.Parse(maximum.Value)));
 
     private static void ValidateVitals(DaggerfallVitalValues vitals)
     {

@@ -165,19 +165,15 @@ internal sealed class CombatModule
             return;
         }
         int damage = Math.Max(1, checked(rawDamage + StrengthModifier(attacker) + attack.DamageBonus));
-        ActorTrackRead targetHealth = target.Mechanics.ReadTrack(TrackId.Parse(HealthTrack));
-        ExactTrackSetReceipt change = target.Mechanics.SetTrack(
-            TrackId.Parse(HealthTrack),
-            new ExactValue(checked(targetHealth.Current.Raw - damage)),
-            ExactTrackSetPolicy.ClampToBounds);
-        // A failed managed mutation reaches here with no optimistic hit fact or cooldown.
-        // Daggerfall owns the policy; the managed track owns its bounds and mutation invariants.
+        Track targetHealth = target.Mechanics.ReadTrack(TrackId.Parse(HealthTrack));
+        int before = targetHealth.ValueInt;
+        targetHealth.SetCurrent(checked(before - damage), clamp: true);
         LatchCooldown(request, attack);
-        int applied = checked((int)(change.Before.Raw - change.After.Raw));
+        int applied = checked(before - targetHealth.ValueInt);
         facts.Append(new AttackHitFact(attacker.Id, target.Id, applied, body, false, request.Generation, request.SimulationStep));
         if (applied > 0) facts.Append(new ActorDamagedFact(target.Id, applied));
-        bool defeated = change.After <= change.Bounds.Minimum;
-        if (defeated && change.Before > change.Bounds.Minimum) facts.Append(new ActorDiedFact(target.Id, attacker.Id, applied, request.Generation, request.SimulationStep));
+        bool defeated = targetHealth.Current <= targetHealth.Minimum;
+        if (defeated && before > targetHealth.Minimum) facts.Append(new ActorDiedFact(target.Id, attacker.Id, applied, request.Generation, request.SimulationStep));
     }
 
     /// <summary>
@@ -261,16 +257,14 @@ internal sealed class CombatModule
                 continue;
             }
 
-            ActorTrackRead targetHealth = target.Mechanics.ReadTrack(TrackId.Parse(HealthTrack));
-            ExactTrackSetReceipt change = target.Mechanics.SetTrack(
-                TrackId.Parse(HealthTrack),
-                new ExactValue(checked(targetHealth.Current.Raw - pending.Damage)),
-                ExactTrackSetPolicy.ClampToBounds);
-            int applied = checked((int)(change.Before.Raw - change.After.Raw));
+            Track targetHealth = target.Mechanics.ReadTrack(TrackId.Parse(HealthTrack));
+            int before = targetHealth.ValueInt;
+            targetHealth.SetCurrent(checked(before - pending.Damage), clamp: true);
+            int applied = checked(before - targetHealth.ValueInt);
             facts.Append(new AttackHitFact(pending.AttackerId, pending.TargetId, applied, pending.Body, true, notice.Generation, notice.SimulationStep));
             if (applied > 0) facts.Append(new ActorDamagedFact(pending.TargetId, applied));
-            bool defeated = change.After <= change.Bounds.Minimum;
-            if (defeated && change.Before > change.Bounds.Minimum) facts.Append(new ActorDiedFact(pending.TargetId, pending.AttackerId, applied, notice.Generation, notice.SimulationStep));
+            bool defeated = targetHealth.Current <= targetHealth.Minimum;
+            if (defeated && before > targetHealth.Minimum) facts.Append(new ActorDiedFact(pending.TargetId, pending.AttackerId, applied, notice.Generation, notice.SimulationStep));
         }
     }
 
@@ -344,15 +338,13 @@ internal sealed class CombatModule
 
     private bool SpendPlayerStamina(Combatant player, int staminaCost, FactBuffer<IProductFact> facts)
     {
-        ActorTrackRead stamina = player.Mechanics.ReadTrack(TrackId.Parse(StaminaTrack));
-        if (stamina.Current.Raw < staminaCost)
+        Track stamina = player.Mechanics.ReadTrack(TrackId.Parse(StaminaTrack));
+        if (stamina.Current < staminaCost)
         {
             facts.Append(new AttackRejectedFact(AttackRejection.InsufficientStamina));
             return false;
         }
-        ExactTrackMutationReceipt spent = player.Mechanics.SpendTrack(TrackId.Parse(StaminaTrack), new ExactValue(staminaCost));
-        if (spent.AppliedAmount.Raw == staminaCost) return true;
-        // A surprising partial receipt has no fake local rollback.
+        if (stamina.TrySpend(staminaCost)) return true;
         facts.Append(new AttackRejectedFact(AttackRejection.StaminaSpendNotAccepted));
         return false;
     }
@@ -365,7 +357,7 @@ internal sealed class CombatModule
         return false;
     }
 
-    private static bool IsDefeated(Combatant combatant) => combatant.Mechanics.ReadTrack(TrackId.Parse(HealthTrack)).Current.Raw <= 0;
+    private static bool IsDefeated(Combatant combatant) => combatant.Mechanics.ReadTrack(TrackId.Parse(HealthTrack)).Current <= 0;
     private static DaggerfallAttackDefinition ResolveFixedAttack(DaggerfallActorDefinition actor, DaggerfallActionDefinition action, double cooldown) => action.AttackRangeIndex is int index
         ? new DaggerfallAttackDefinition(action.Skill, actor.Attacks[index].MinimumDamage, actor.Attacks[index].MaximumDamage, cooldown, Reach: action.Reach)
         : new DaggerfallAttackDefinition(action.Skill, action.MinimumDamage!.Value, action.MaximumDamage!.Value, cooldown, Reach: action.Reach);
@@ -392,7 +384,8 @@ internal sealed class CombatModule
     private int HitChance(Combatant attacker, Combatant target, string skill) => DaggerfallFormulaPolicy.CalculateHitChance(ReadStat(attacker, new DaggerfallStatId(skill)), target.Definition.Armor, ReadStat(attacker, DaggerfallMechanicsIds.Luck), ReadStat(target, DaggerfallMechanicsIds.Luck), ReadStat(attacker, DaggerfallMechanicsIds.Agility), ReadStat(target, DaggerfallMechanicsIds.Agility), ReadStat(target, DaggerfallMechanicsIds.Dodging));
     internal static int CalculateHitChance(int skill, int struckArmor, int attackerLuck, int targetLuck, int attackerAgility, int targetAgility, int targetDodge) => DaggerfallFormulaPolicy.CalculateHitChance(skill, struckArmor, attackerLuck, targetLuck, attackerAgility, targetAgility, targetDodge);
     private int StrengthModifier(Combatant attacker) => DaggerfallFormulaPolicy.DamageModifier(ReadStat(attacker, DaggerfallMechanicsIds.Strength));
-    private static int ReadStat(Combatant actor, DaggerfallStatId stat) => checked((int)actor.Mechanics.ReadStat(StatId.Parse(stat.Value)).Base.Raw);
+    private static int ReadStat(Combatant actor, DaggerfallStatId stat) =>
+        actor.Mechanics.ReadStat(StatId.Parse(stat.Value)).ValueInt;
     private int Draw(ExplicitMeleeRequest request, long attacker, long target, int salt, int minimum, int maximum, bool enemy) => checked((int)_random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, enemy ? CombatRandomKey.EnemyScope : CombatRandomKey.PlayerScope, CombatRandomKey.For(request.Generation, request.SimulationStep, attacker, target, salt), minimum, maximum)).Value);
     private static ulong RequiredSteps(double cooldown, double fixedDelta) => checked((ulong)Math.Max(1d, Math.Ceiling(cooldown / fixedDelta)));
     private void LatchPlayerCooldown(ulong generation, ulong simulationStep, double fixedDeltaSeconds, DaggerfallAttackDefinition attack) => _readyAtStep[(generation, PlayerId)] = checked(simulationStep + RequiredSteps(attack.CooldownSeconds, fixedDeltaSeconds));

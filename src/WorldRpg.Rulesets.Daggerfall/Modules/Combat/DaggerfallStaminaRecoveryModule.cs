@@ -38,7 +38,7 @@ internal sealed class DaggerfallStaminaRecoveryModule(DaggerfallStaminaRecoveryT
     {
         ArgumentNullException.ThrowIfNull(player);
         if (!double.IsFinite(fixedDeltaSeconds) || fixedDeltaSeconds <= 0d) throw new ArgumentOutOfRangeException(nameof(fixedDeltaSeconds));
-        if (player.ReadTrack(HealthTrack).Current.Raw <= 0) return;
+        if (player.ReadTrack(HealthTrack).Current <= 0) return;
 
         double recoverableSeconds = fixedDeltaSeconds;
         if (_quietSeconds > 0d)
@@ -52,8 +52,8 @@ internal sealed class DaggerfallStaminaRecoveryModule(DaggerfallStaminaRecoveryT
             _quietSeconds = 0d;
         }
 
-        ActorTrackRead stamina = player.ReadTrack(StaminaTrack);
-        if (stamina.Current >= stamina.Bounds.Maximum)
+        Track stamina = player.ReadTrack(StaminaTrack);
+        if (stamina.Current >= stamina.MaximumValue)
         {
             _recoveryCarry = 0d;
             return;
@@ -63,8 +63,8 @@ internal sealed class DaggerfallStaminaRecoveryModule(DaggerfallStaminaRecoveryT
         long requested = checked((long)Math.Floor(_recoveryCarry));
         if (requested <= 0) return;
 
-        ExactTrackMutationReceipt receipt = player.RestoreTrack(StaminaTrack, new ExactValue(requested));
-        if (receipt.After >= receipt.Bounds.Maximum)
+        stamina.Restore(requested);
+        if (stamina.Current >= stamina.MaximumValue)
             _recoveryCarry = 0d;
         else
             _recoveryCarry -= requested;

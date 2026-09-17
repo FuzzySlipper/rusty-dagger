@@ -100,14 +100,15 @@ internal sealed class DaggerfallCharacterPresentation(
 
     private CharacterStatPresentation[] Stats(PlayerActorState player, IReadOnlyList<DaggerfallStatId> ids) => ids
         .Where(id => playerDefinition.Stats.Values.ContainsKey(id))
-        .Select(id => new CharacterStatPresentation(id.Value, Label(id.Value), player.Mechanics.ReadStat(StatId.Parse(id.Value)).Value.Raw))
+        .Select(id => new CharacterStatPresentation(id.Value, Label(id.Value), player.Mechanics.ReadStat(StatId.Parse(id.Value)).ValueInt64))
         .ToArray();
 
     private static CharacterResourcePresentation Resource(PlayerActorState player, DaggerfallHudResourceDefinition resource)
     {
-        ActorTrackRead value = player.Mechanics.ReadTrack(TrackId.Parse(resource.Track.Value));
-        return new CharacterResourcePresentation(resource.Id, resource.Label, value.Current.Raw, value.Bounds.Maximum.Raw);
+        Track value = player.Mechanics.ReadTrack(TrackId.Parse(resource.Track.Value));
+        return new CharacterResourcePresentation(resource.Id, resource.Label, value.ValueInt64, value.Maximum.ValueInt64);
     }
+
 
     private CharacterEquipmentPresentation[] Equipment() => equipment.Read().Assignments
         .GroupBy(assignment => assignment.Item.EntityId)
