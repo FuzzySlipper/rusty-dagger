@@ -249,9 +249,7 @@ public sealed class MechanicsEquipmentCoordinator : IDisposable
             throw new ArgumentException("At least one equipment slot is required.", nameof(slots));
         }
 
-        return EquipmentService.Equip(
-            _world,
-            _owner,
+        return _world.Equip(_owner,
             RequireEntity(item),
             slots.Select(RequireSlot));
     }
@@ -260,7 +258,7 @@ public sealed class MechanicsEquipmentCoordinator : IDisposable
     {
         ThrowIfDisposed();
         change.Validate();
-        return EquipmentService.Unequip(_world, _owner, RequireEntity(item));
+        return _world.Unequip(_owner, RequireEntity(item));
     }
 
     public EquipmentMutationReceipt Swap(
@@ -277,9 +275,7 @@ public sealed class MechanicsEquipmentCoordinator : IDisposable
             throw new ArgumentException("At least one equipment slot is required.", nameof(incomingSlots));
         }
 
-        return EquipmentService.Swap(
-            _world,
-            _owner,
+        return _world.Swap(_owner,
             RequireEntity(outgoing),
             RequireEntity(incoming),
             incomingSlots.Select(RequireSlot));
