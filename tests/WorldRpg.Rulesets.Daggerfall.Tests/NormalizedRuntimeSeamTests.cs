@@ -1393,6 +1393,56 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Failed_outer_update_restores_staged_appearance_and_reraises()
+    {
+        static ProductInputEvent Ui(string json) => Input(InputEventKind.DirectDigital) with
+        {
+            ValueKind = InputValueKind.ProductPayload,
+            PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+            PayloadData = Encoding.UTF8.GetBytes(json),
+        };
+
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        PrivateersHoldAppearance sessionAppearance = (PrivateersHoldAppearance)typeof(DaggerfallSession)
+            .GetField("_appearance", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(session)!;
+
+        // Baseline success on a fresh weapon: no swing staged yet.
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+        AppearanceFact[] snapshotBefore = appearance.Snapshots[^1];
+        SpritePlayback playbackBefore = Viewmodel(sessionAppearance).Playback!;
+        int playbacksBefore = appearance.CreatedPlaybacks.Count;
+        int disposedBefore = appearance.DisposedPlaybacks;
+
+        // The next admitted update stages a weapon strike, then its publish throws
+        // inside the outer try. The session must restore native appearance state
+        // and reraise. No second Update follows: a thrown product callback is
+        // terminal for the runtime incarnation, so this pins cleanup, not recovery.
+        appearance.FailPublishAt = appearance.PublishCalls + 1;
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(
+            () => session.Update(new ProductUpdate(OuterUpdate(2), [Ui("{\"action\":\"attack\"}")])));
+        Assert.Equal("Injected presentation publish failure.", failure.Message);
+
+        AppearanceFact[] restored = appearance.Snapshots[^1];
+        Assert.Equal(snapshotBefore.Select(fact => fact.ObjectId), restored.Select(fact => fact.ObjectId));
+        Assert.Equal(snapshotBefore.Select(fact => fact.Appearance), restored.Select(fact => fact.Appearance));
+        Assert.Same(playbackBefore, Viewmodel(sessionAppearance).Playback);
+        Assert.True(appearance.CreatedPlaybacks.Count > playbacksBefore, "The failed update should have staged new appearance playback before its publish threw.");
+        Assert.True(appearance.DisposedPlaybacks > disposedBefore, "Restore should release playback staged by the failed update.");
+        foreach (SpritePlayback staged in appearance.CreatedPlaybacks.Skip(playbacksBefore))
+            Assert.Contains(staged.Handle, appearance.DisposedPlaybackHandles);
+    }
+
+    [Fact]
     public void Retired_playback_is_lagged_to_next_update_and_engine_rollback_keeps_it_retryable()
     {
         List<string> releases = [];

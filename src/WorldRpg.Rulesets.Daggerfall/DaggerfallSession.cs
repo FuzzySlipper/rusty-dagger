@@ -43,7 +43,6 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
     private readonly HashSet<ulong> _authoredEntityIds;
     private PendingCorpseLoot? _pendingLoot;
     private readonly FactBuffer<IProductFact> _facts = new();
-    private FactBuffer<IProductFact>.FactTransaction? _outerFacts;
     private readonly DaggerfallRewardReactions _rewards;
     private readonly DaggerfallOutcomePresentation _outcomes;
     private readonly DaggerfallHudProjection _hud;
@@ -375,7 +374,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
     public RulesetSavePayload CaptureSave()
     {
         if (_disposed) throw new ObjectDisposedException(nameof(DaggerfallSession));
-        if (_outerFacts is not null || _pendingLoot is not null)
+        if (_pendingLoot is not null)
             throw new InvalidOperationException("Daggerfall state can only be captured at a quiescent admitted-update boundary.");
         PlayerControlState control = State.PlayerControl;
         WorldPoint playerPosition = control.Position
@@ -460,8 +459,6 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
     {
         _appearance.BeginAdmittedUpdate();
         PrivateersHoldAppearance.PresentationCheckpoint mediaCheckpoint = _appearance.Checkpoint();
-        DaggerfallStaminaRecoveryModule.Checkpoint staminaCheckpoint = _staminaRecovery.Capture();
-        _outerFacts = _facts.BeginTransaction();
         PendingCorpseLoot? committedBoundaryLoot;
         try
         {
@@ -479,25 +476,19 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
             PublishPresentation();
         }
         _appearance.CompleteAdmittedUpdate();
-        FactBuffer<IProductFact>.FactTransaction transaction = _outerFacts;
-        _outerFacts = null;
-        transaction.Commit();
         committedBoundaryLoot = _pendingLoot;
         _pendingLoot = null;
         }
         catch (Exception failure)
         {
-            _staminaRecovery.Restore(staminaCheckpoint);
+            // A thrown product callback is terminal for this runtime incarnation:
+            // Engine discards staged output and requires a fresh process rather
+            // than a same-instance retry. There is no fact/stamina replay here,
+            // only disposal of partial loot intent and native appearance cleanup.
             _pendingLoot = null;
-            FactBuffer<IProductFact>.FactTransaction? transaction = _outerFacts;
-            _outerFacts = null;
-            List<Exception> failures = [failure];
-            try { transaction?.Rollback(); }
-            catch (Exception rollbackFailure) { failures.Add(rollbackFailure); }
             try { _appearance.Restore(mediaCheckpoint); }
-            catch (Exception restoreFailure) { failures.Add(restoreFailure); }
-            if (failures.Count == 1) throw;
-            throw new AggregateException(failures);
+            catch (Exception restoreFailure) { throw new AggregateException(failure, restoreFailure); }
+            throw;
         }
 
         if (committedBoundaryLoot is { } pending)
@@ -964,8 +955,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
 
     private void DeliverFacts()
     {
-        if (_outerFacts is { } transaction) transaction.Deliver(React);
-        else _facts.Deliver(React);
+        _facts.Deliver(React);
     }
     internal IReadOnlyDictionary<long, EnemyBehaviorEvidence> LastEnemyBehavior => _enemyBehavior.LastEvidence;
     internal LootPresentation? OpenLoot => _lootUi.Read();
