@@ -1370,7 +1370,7 @@ internal static class DaggerfallBaseContent
             DaggerfallItemKind kind = Text(item, "kind", diagnostics) switch { "fungible" => DaggerfallItemKind.Fungible, "unique" => DaggerfallItemKind.Unique, _ => InvalidItemKind(diagnostics) };
             DaggerfallEquipmentDefinition? equipment = item.TryGetProperty("equipment", out JsonElement equipmentValue) && equipmentValue.ValueKind != JsonValueKind.Null ? ReadEquipment(Object(equipmentValue, "item.equipment", diagnostics), diagnostics) : null;
             if (!ValidId(id.Value)) diagnostics.Add($"Item id '{id.Value}' is invalid.");
-            if (maximum < 1 || (ulong)maximum > ManagedInventoryLimits.MaximumStackQuantity) diagnostics.Add($"Item '{id.Value}' maximumQuantity is outside the Engine stack range.");
+            if (maximum < 1) diagnostics.Add($"Item '{id.Value}' maximumQuantity must be positive.");
             if (kind == DaggerfallItemKind.Unique && maximum != 1) diagnostics.Add($"Unique item '{id.Value}' maximumQuantity must be exactly 1.");
             if (equipment is not null && kind != DaggerfallItemKind.Unique) diagnostics.Add($"Equipable item '{id.Value}' must be unique.");
             if (weight is < 0 or > 1_000_000 || itemValue is < 0 or > 10_000_000) diagnostics.Add($"Item '{id.Value}' value or weight is outside the supported range.");
@@ -1385,11 +1385,11 @@ internal static class DaggerfallBaseContent
         string[] classifications = Array(value, "classifications", diagnostics).Select(entry => entry.ValueKind == JsonValueKind.String ? entry.GetString() ?? string.Empty : InvalidClassification(diagnostics)).ToArray();
         int requiredSlots = Integer(value, "requiredSlots", diagnostics);
         string? exclusiveGroup = value.TryGetProperty("exclusiveGroup", out JsonElement group) && group.ValueKind != JsonValueKind.Null ? Text(value, "exclusiveGroup", diagnostics) : null;
-        if (classifications.Length < 1 || classifications.Length > ManagedInventoryLimits.MaximumClassificationsPerItem || classifications.Any(classification => !ValidId(classification)) || classifications.Distinct(StringComparer.Ordinal).Count() != classifications.Length)
+        if (classifications.Length < 1 || classifications.Any(classification => !ValidId(classification)) || classifications.Distinct(StringComparer.Ordinal).Count() != classifications.Length)
             diagnostics.Add("Equipment classifications must be distinct stable identifiers.");
-        if (requiredSlots < 1 || requiredSlots > ManagedInventoryLimits.MaximumEquipmentSlotsPerItem) diagnostics.Add($"Equipment requiredSlots must be between 1 and {ManagedInventoryLimits.MaximumEquipmentSlotsPerItem}.");
+        if (requiredSlots < 1 || requiredSlots > ushort.MaxValue) diagnostics.Add($"Equipment requiredSlots must be between 1 and {ushort.MaxValue}.");
         if (exclusiveGroup is not null && !ValidId(exclusiveGroup)) diagnostics.Add("Equipment exclusiveGroup must be a stable identifier when present.");
-        return new(System.Array.AsReadOnly(classifications), requiredSlots > 0 && requiredSlots <= ManagedInventoryLimits.MaximumEquipmentSlotsPerItem ? checked((ushort)requiredSlots) : (ushort)1, exclusiveGroup);
+        return new(System.Array.AsReadOnly(classifications), requiredSlots > 0 && requiredSlots <= ushort.MaxValue ? checked((ushort)requiredSlots) : (ushort)1, exclusiveGroup);
     }
 
     private static Dictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition> ReadEquipmentSlots(JsonElement root, DaggerfallContentDiagnostics diagnostics)
@@ -1400,7 +1400,7 @@ internal static class DaggerfallBaseContent
             JsonElement slot = Object(value, "equipment slot", diagnostics);
             DaggerfallEquipmentSlotId id = new(Text(slot, "id", diagnostics));
             string[] classifications = Array(slot, "allowedClassifications", diagnostics).Select(entry => entry.ValueKind == JsonValueKind.String ? entry.GetString() ?? string.Empty : InvalidClassification(diagnostics)).ToArray();
-            if (!ValidId(id.Value) || classifications.Length > ManagedInventoryLimits.MaximumClassificationsPerItem || classifications.Any(classification => !ValidId(classification)) || classifications.Distinct(StringComparer.Ordinal).Count() != classifications.Length)
+            if (!ValidId(id.Value) || classifications.Any(classification => !ValidId(classification)) || classifications.Distinct(StringComparer.Ordinal).Count() != classifications.Length)
                 diagnostics.Add($"Equipment slot '{id.Value}' must have distinct stable allowed classifications.");
             if (!slots.TryAdd(id, new(id, System.Array.AsReadOnly(classifications)))) diagnostics.Add($"Duplicate equipment slot '{id.Value}'.");
         }
