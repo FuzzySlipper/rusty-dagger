@@ -33,7 +33,7 @@ public sealed class WorldRpgSaveStoreTests
     public void Store_rejects_corrupt_envelopes_as_a_typed_format_failure()
     {
         InMemoryPersistenceService persistence = new();
-        persistence.Put("worldrpg-test", "slot", WorldRpgSaveStore.SchemaVersion, "not-json"u8.ToArray());
+        persistence.Put("worldrpg-test", "slot", "not-json"u8.ToArray());
         using WorldRpgSaveStore store = new(Engine(persistence), "worldrpg-test");
 
         Assert.Throws<WorldRpgSaveFormatException>(() => store.Load("slot"));
@@ -41,10 +41,10 @@ public sealed class WorldRpgSaveStoreTests
 
     [Theory]
     [MemberData(nameof(InvalidEnvelopeJson))]
-    public void Store_rejects_structurally_incomplete_schema_one_envelopes(string payload)
+    public void Store_rejects_structurally_incomplete_envelopes(string payload)
     {
         InMemoryPersistenceService persistence = new();
-        persistence.Put("worldrpg-test", "slot", WorldRpgSaveStore.SchemaVersion, System.Text.Encoding.UTF8.GetBytes(payload));
+        persistence.Put("worldrpg-test", "slot", System.Text.Encoding.UTF8.GetBytes(payload));
         using WorldRpgSaveStore store = new(Engine(persistence), "worldrpg-test");
 
         Assert.Throws<WorldRpgSaveFormatException>(() => store.Load("slot"));
@@ -54,7 +54,7 @@ public sealed class WorldRpgSaveStoreTests
     public void Resume_reports_corrupt_storage_without_selecting_or_constructing_a_session()
     {
         InMemoryPersistenceService persistence = new();
-        persistence.Put("worldrpg-test", "slot", WorldRpgSaveStore.SchemaVersion, System.Text.Encoding.UTF8.GetBytes(NullComposition));
+        persistence.Put("worldrpg-test", "slot", System.Text.Encoding.UTF8.GetBytes(NullComposition));
         IEngineContext engine = Engine(persistence);
         using WorldRpgSaveStore store = new(engine, "worldrpg-test");
         ProductCreateContext context = new(engine, new ProductContent(Array.Empty<ProductContentFile>()), EmptyInput());
@@ -64,20 +64,6 @@ public sealed class WorldRpgSaveStoreTests
         Assert.False(result.IsResumed);
         Assert.Null(result.Product);
         Assert.Contains(result.Diagnostics, value => value.Code == "corrupt");
-    }
-
-    [Fact]
-    public void Resume_reports_an_unsupported_engine_storage_schema_before_selection()
-    {
-        InMemoryPersistenceService persistence = new();
-        persistence.Put("worldrpg-test", "slot", WorldRpgSaveStore.SchemaVersion + 1, "{}"u8.ToArray());
-        IEngineContext engine = Engine(persistence);
-        using WorldRpgSaveStore store = new(engine, "worldrpg-test");
-
-        WorldRpgResumeResult result = WorldRpgProduct.TryResume(new ProductCreateContext(engine, new ProductContent(Array.Empty<ProductContentFile>()), EmptyInput()), store, "slot");
-
-        Assert.False(result.IsResumed);
-        Assert.Contains(result.Diagnostics, value => value.Code == "storage-schema");
     }
 
     [Fact]
@@ -236,7 +222,7 @@ public sealed class WorldRpgSaveStoreTests
         private readonly Dictionary<ulong, Entry?> _blobs = [];
         private ulong _nextBlob;
 
-        internal void Put(string scope, string key, uint schemaVersion, byte[] payload) => _values[(scope, key)] = new(schemaVersion, 1, payload.ToArray());
+        internal void Put(string scope, string key, byte[] payload) => _values[(scope, key)] = new(1, payload.ToArray());
         public PersistenceStore OpenStore(PersistenceOpenRequest request) => new(new PersistenceStoreHandle(1), static () => { });
         public PersistenceSaveReceipt Save(PersistenceSaveRequest request)
         {
@@ -245,10 +231,10 @@ public sealed class WorldRpgSaveStoreTests
             bool present = _values.TryGetValue(key, out Entry? existing);
             if ((request.RevisionGuard == PersistenceRevisionGuard.Absent && present)
                 || (request.RevisionGuard == PersistenceRevisionGuard.Exact && (!present || existing!.Revision != request.ExpectedRevision)))
-                return new PersistenceSaveReceipt(PersistenceSaveOutcome.RevisionConflict, existing?.Revision ?? 0, existing?.SchemaVersion ?? 0);
+                return new PersistenceSaveReceipt(PersistenceSaveOutcome.RevisionConflict, existing?.Revision ?? 0);
             ulong revision = present ? checked(existing!.Revision + 1) : 1;
-            _values[key] = new(request.SchemaVersion, revision, request.Payload.ToArray());
-            return new PersistenceSaveReceipt(revision, request.SchemaVersion);
+            _values[key] = new(revision, request.Payload.ToArray());
+            return new PersistenceSaveReceipt(revision);
         }
         public PersistenceBlob Load(PersistenceLoadRequest request)
         {
@@ -260,11 +246,11 @@ public sealed class WorldRpgSaveStoreTests
         public PersistenceBlobInfo DescribeBlob(PersistenceBlob blob)
         {
             Entry? value = Require(blob);
-            return value is null ? new(false, 0, 0, 0) : new(true, value.SchemaVersion, value.Revision, checked((nuint)value.Payload.Length));
+            return value is null ? new(false, 0, 0) : new(true, value.Revision, checked((nuint)value.Payload.Length));
         }
         public void CopyBlob(PersistenceCopyBlobRequest request) => Require(request.Blob)?.Payload.CopyTo(request.Destination);
         public ReadOnlyMemory<byte> ReadBlobBytes(PersistenceBlob blob) => Require(blob)?.Payload.ToArray() ?? [];
         private Entry? Require(PersistenceBlob blob) => _blobs.TryGetValue(blob.Handle.Value, out Entry? value) ? value : throw new InvalidOperationException("Unknown persistence blob.");
-        private sealed record Entry(uint SchemaVersion, ulong Revision, byte[] Payload);
+        private sealed record Entry(ulong Revision, byte[] Payload);
     }
 }

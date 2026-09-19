@@ -109,10 +109,6 @@ public sealed class WorldRpgProduct : IEngineProduct
         {
             return new(null, 0, [new("corrupt", error.Message)]);
         }
-        catch (WorldRpgSaveSchemaException error)
-        {
-            return new(null, 0, [new("storage-schema", error.Message)]);
-        }
         catch (OverflowException)
         {
             return new(null, 0, [new("corrupt", "The persisted WorldRpg save payload length is invalid.")]);

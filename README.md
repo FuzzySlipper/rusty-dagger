@@ -31,7 +31,9 @@ Ownership:
 Code-bearing rulesets are compiled into the product. Content packs, validated
 typed tuning profiles, and game bundles are loaded at runtime. Do not introduce
 dynamic managed plug-in loading, reflection discovery, runtime C# compilation,
-generic command buses, service locators, or a replacement gameplay DSL.
+generic command buses, ambient dependency lookup, or a replacement gameplay DSL.
+Named explicitly composed Kit services and typed participant-contributed
+RuleEvents are appropriate for modular gameplay.
 
 Reusable mechanisms, and mechanisms whose placement is genuinely uncertain,
 begin in WorldRpg.Kit. Daggerfall retains only its identities, formulas, attack
@@ -58,6 +60,23 @@ For every task, identify:
 - whether the change is code, tuning, content, import, or infrastructure;
 - dependency changes;
 - focused proof for the owning mechanism and ruleset policy.
+
+## Current refactor direction
+
+Campaign #8327 adopts the current Engine capabilities and the design in Dagger
+Board #146. A substantial reusable Kit is the goal: composed actor facades over
+canonical class components, named services, typed interaction rules and simple
+notifications. Dagger supplies game-specific policies and content meaning.
+Ordinary gameplay uses direct live state; save capture is an explicit boundary.
+Only the current product schema is supported during development, with no
+migration or historical-save preservation requirement.
+
+The new SDK/runtime pair is adopted. Actor/domain restructuring and removal of
+remaining product content/save schema machinery are subsequent campaign tasks;
+existing legacy code is not the recommended pattern. See the
+[code and ownership map](docs/code-migration-map.md) and
+[combat behavior baseline](docs/combat-behavior-baseline.md).
+Older coverage-task reconciliation follows this campaign as a separate effort.
 
 ## Ownership
 
