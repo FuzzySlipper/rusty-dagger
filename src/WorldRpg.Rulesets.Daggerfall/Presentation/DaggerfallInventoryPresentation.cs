@@ -69,7 +69,7 @@ internal sealed class DaggerfallInventoryPresentation(
                         InventoryItemPresentation incoming = before.Items.Single(value => value.Key == occupant);
                         Assign(incoming, item.EquippedSlots[0], before);
                     }
-                    else equipment.Unequip(Unique(item), new EquipmentChange("daggerfall.ui.unequip", item.Key));
+                    else equipment.Unequip(Unique(item));
                     Read();
                     _layout.Move(item.Key, target);
                 }
@@ -102,11 +102,10 @@ internal sealed class DaggerfallInventoryPresentation(
                 || definition.Equipment.ExclusiveGroup is string group && definitions.Items[new DaggerfallItemId(value.Definition)].Equipment?.ExclusiveGroup == group)).ToArray();
         if (outgoing.Length > 1) throw new ArgumentException("Unequip the conflicting items first.");
         SlotId[] target = slots.Select(value => new SlotId(value)).ToArray();
-        EquipmentChange change = new("daggerfall.ui.equip", item.Key);
         if (item.EquippedSlots.Length > 0)
-            equipment.Reassign(Unique(item), target, outgoing.Select(Unique).ToArray(), change);
-        else if (outgoing.Length == 1) equipment.Swap(Unique(outgoing[0]), Unique(item), target, change);
-        else equipment.Equip(Unique(item), target, change);
+            equipment.Reassign(Unique(item), target, outgoing.Select(Unique).ToArray());
+        else if (outgoing.Length == 1) equipment.Swap(Unique(outgoing[0]), Unique(item), target);
+        else equipment.Equip(Unique(item), target);
         return outgoing.FirstOrDefault()?.Key;
     }
 

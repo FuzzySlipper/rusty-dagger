@@ -17,7 +17,8 @@ public sealed class ActorNavigationAndCameraTests
         Assert.Throws<ArgumentOutOfRangeException>(() => new ActorPose(new WorldPoint(float.NaN, 0f, 0f), 0f));
         Assert.Throws<ArgumentOutOfRangeException>(() => new ActorPose(new WorldPoint(0f, 0f, 0f), float.PositiveInfinity));
 
-        using ActorState actor = CreateActor(new ActorPose(new WorldPoint(1f, 2f, 3f), .25f));
+        using ActorsState actors = CreateActors(new ActorPose(new WorldPoint(1f, 2f, 3f), .25f));
+        ActorState actor = actors.Get(42);
         ActorPose next = new(new WorldPoint(4f, 5f, 6f), -.5f);
         actor.ApplyPose(next);
 
@@ -32,7 +33,8 @@ public sealed class ActorNavigationAndCameraTests
         using SpatialSession session = new(new SpatialSessionHandle(7), () => { });
         SpatialDouble spatial = SpatialDouble.Create();
         spatial.Receipt = Receipt(NavigationPathOutcome.Reached, new Vector3(3f, 2f, 1f));
-        using ActorState actor = CreateActor(new ActorPose(new WorldPoint(1f, 2f, 3f), 0f));
+        using ActorsState actors = CreateActors(new ActorPose(new WorldPoint(1f, 2f, 3f), 0f));
+        ActorState actor = actors.Get(42);
         ActorNavigationCoordinator navigation = new(spatial.Service, session);
         ActorNavigationRequest request = new(new WorldPoint(8f, 9f, 10f), 2.5f, 17);
 
@@ -57,7 +59,8 @@ public sealed class ActorNavigationAndCameraTests
         using SpatialSession session = new(new SpatialSessionHandle(8), () => { });
         SpatialDouble spatial = SpatialDouble.Create();
         spatial.Receipt = Receipt((NavigationPathOutcome)0, new Vector3(2f, 1f, -3f));
-        using ActorState actor = CreateActor(new ActorPose(new WorldPoint(0f, 1f, 0f), 1f));
+        using ActorsState actors = CreateActors(new ActorPose(new WorldPoint(0f, 1f, 0f), 1f));
+        ActorState actor = actors.Get(42);
 
         new ActorNavigationCoordinator(spatial.Service, session).Evaluate(actor, new ActorNavigationRequest(new WorldPoint(20f, 1f, -30f), 1f, 32));
 
@@ -87,7 +90,8 @@ public sealed class ActorNavigationAndCameraTests
         SpatialDouble spatial = SpatialDouble.Create();
         spatial.Receipt = Receipt(outcome, new Vector3(99f, 99f, 99f));
         ActorPose before = new(new WorldPoint(1f, 2f, 3f), .75f);
-        using ActorState actor = CreateActor(before);
+        using ActorsState actors = CreateActors(before);
+        ActorState actor = actors.Get(42);
 
         new ActorNavigationCoordinator(spatial.Service, session).Evaluate(actor, new ActorNavigationRequest(new WorldPoint(4f, 5f, 6f), 1f, 8));
 
@@ -100,7 +104,8 @@ public sealed class ActorNavigationAndCameraTests
         using SpatialSession session = new(new SpatialSessionHandle(10), () => { });
         SpatialDouble spatial = SpatialDouble.Create();
         spatial.Receipt = Receipt(NavigationPathOutcome.Reached, new Vector3(2f, 9f, -4f));
-        using ActorState actor = CreateActor(new ActorPose(new WorldPoint(2f, 1f, -4f), -.75f));
+        using ActorsState actors = CreateActors(new ActorPose(new WorldPoint(2f, 1f, -4f), -.75f));
+        ActorState actor = actors.Get(42);
 
         new ActorNavigationCoordinator(spatial.Service, session).Evaluate(actor, new ActorNavigationRequest(new WorldPoint(2f, 9f, -4f), 1f, 8));
 
@@ -126,14 +131,13 @@ public sealed class ActorNavigationAndCameraTests
     private static NavigationStepReceipt Receipt(NavigationPathOutcome outcome, Vector3 waypoint) => new(
         outcome, waypoint, default, 0, 0, 0, 0, 0, 0);
 
-    private static ActorState CreateActor(ActorPose pose) => new(
-        42,
-        new ActorMechanicsState(
-            new EntityId(42),
-            [],
-            [(TrackId.Parse("health"), new Track(1))]),
-        pose,
-        "health");
+    private static ActorsState CreateActors(ActorPose pose)
+    {
+        ActorsState actors = new();
+        actors.CreatePlayer(1, new EntityTypeId("player"), new StatsComponent(), "health");
+        actors.CreateActor(42, new EntityTypeId("test"), new StatsComponent(), pose, "health");
+        return actors;
+    }
 
     private class SpatialDouble : DispatchProxy
     {

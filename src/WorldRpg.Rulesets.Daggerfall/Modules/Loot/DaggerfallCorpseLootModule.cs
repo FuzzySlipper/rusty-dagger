@@ -63,6 +63,10 @@ internal sealed class DaggerfallCorpseLootModule
         _tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
     }
 
+    private EntityId CreateCorpseOwner(long actorId) => _actors.Entities.Create(
+        new WorldRpg.Kit.World.DurableIdentityReference(WorldRpg.Kit.World.DurableIdentityKind.Container, checked((ulong)actorId)),
+        new EntityTypeId("daggerfall.corpse"));
+
     internal IReadOnlyDictionary<long, CorpseContainer> Corpses => _corpses;
     internal CorpseLootEvidence? LastEvidence { get; private set; }
     internal CorpseLootCommitEvidence? LastCommit { get; private set; }
@@ -77,7 +81,7 @@ internal sealed class DaggerfallCorpseLootModule
             value.Validate();
             if (!_actors.TryGet(value.ActorId, out ActorState? actor) || !actor.IsDefeated)
                 throw new ArgumentException($"Saved corpse '{value.ActorId}' does not correspond to a defeated authored actor.", nameof(saved));
-            EntityId owner = new(checked((ulong)value.ActorId));
+            EntityId owner = CreateCorpseOwner(value.ActorId);
             CorpseContainer corpse = new(value.ActorId, owner, value.OriginatingSequence, [], value.IsRegistered, value.IsRegistered, value.IsInteractable);
             if (value.IsRegistered)
             {
@@ -86,8 +90,7 @@ internal sealed class DaggerfallCorpseLootModule
                     .Select(stack => new InventoryContainerSeed(new InventoryItemId(stack.ItemId), stack.Quantity))
                     .Concat(value.UniqueItems.Select(unique => new InventoryContainerSeed(
                         new InventoryItemId(unique.ItemId),
-                        UniqueIdentity: $"daggerfall.restore.corpse.{value.ActorId}.{unique.EntityId}",
-                        UniqueEntityId: unique.EntityId)))
+                        UniqueItem: new DurableIdentityReference(DurableIdentityKind.Item, unique.EntityId))))
                     .ToList();
                 if (seeds.Count > 0) _containers.Seed(owner, seeds);
             }
@@ -121,11 +124,9 @@ internal sealed class DaggerfallCorpseLootModule
             return;
         }
 
-        // Actor ids are already validated as non-zero Mechanics ids at session
-        // composition.  An enemy has no inventory registered yet, so the same
-        // stable id is safe as its durable corpse owner in this InventoryStore.
+        // A corpse is a distinct container, even when the actor already has a quiver.
         IReadOnlyList<InventoryContainerSeed> seeds = GenerateSeeds(fact, actor);
-        EntityId owner = new(checked((ulong)fact.ActorId));
+        EntityId owner = CreateCorpseOwner(fact.ActorId);
         // Donor RemoveLootContainer disables interaction but preserves the
         // corpse marker. Even an empty generated corpse is targetable once so
         // the player receives a truthful semantic result.
@@ -167,7 +168,7 @@ internal sealed class DaggerfallCorpseLootModule
         PerceptionQueryRequest request = new(
             _spatial.Session,
             new PerceptionObserver[] { new((ulong)DaggerfallActorIdentity.PlayerEntityId, position.ToVector(), look.Forward, _tuning.MaximumDistance, _tuning.MinimumFacingCosine, 1d) },
-            eligible.Select(corpse => new PerceptionTarget((ulong)corpse.ActorId, _actors.All[corpse.ActorId].Position.ToVector())).ToArray(),
+            eligible.Select(corpse => new PerceptionTarget((ulong)corpse.ActorId, _actors.Get(corpse.ActorId).Position.ToVector())).ToArray(),
             ReadOnlyMemory<SpatialEntityCollider>.Empty,
             DaggerfallPerceptionQueryDefaults.AnyProjectionIdentity,
             DaggerfallPerceptionQueryDefaults.FirstPairCursor,
@@ -290,8 +291,7 @@ internal sealed class DaggerfallCorpseLootModule
             DurableIdentityReference identity = _uniqueItems.AllocateReference();
             seeds.Add(new InventoryContainerSeed(
                 new InventoryItemId(drop.ItemId),
-                UniqueIdentity: $"daggerfall.loot.a{fact.ActorId}.g{fact.OriginatingGeneration}.s{fact.OriginatingSequence}.{ordinal}",
-                UniqueEntityId: identity.Value));
+                UniqueItem: identity));
         }
         return seeds;
     }

@@ -3,6 +3,7 @@ using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.Progression;
+using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
@@ -16,7 +17,7 @@ public sealed class DaggerfallCharacterPresentationTests
     public void Sheet_reads_current_modeled_values_resources_progression_and_actual_equipment()
     {
         using Fixture f = new();
-        f.Player.Mechanics.ReadTrack(TrackId.Parse("health")).SetCurrent(42);
+        f.Player.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(42);
         f.Progression.AdvanceTo(250, 2);
 
         CharacterSheetPresentation sheet = f.Presentation.Read(f.Player, f.Progression);
@@ -59,6 +60,7 @@ public sealed class DaggerfallCharacterPresentationTests
     private sealed class Fixture : IDisposable
     {
         private readonly MechanicsEquipmentCoordinator equipment;
+        private readonly ActorsState actors;
         internal readonly PlayerActorState Player;
         internal readonly ProgressionState Progression = new();
         internal readonly DaggerfallCharacterPresentation Presentation;
@@ -69,25 +71,32 @@ public sealed class DaggerfallCharacterPresentationTests
             DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
             var items = definitions.Items.Values.ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallSession.ToManagedItem);
             var slots = definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerfallSession.ToManagedSlot);
-            EntityId owner = new(1);
+            actors = new ActorsState();
+            Player = actors.CreatePlayer(1, new EntityTypeId(player.Id.Value),
+                new DaggerfallMechanicsState().CreateStats(player, player.PlayerInitialVitals), "health");
+            EntityId owner = Player.Actor.Entity;
             InventoryStore world = new();
             world.RegisterInventory(new InventoryState(owner));
             world.RegisterEquipment(new EquipmentState(owner));
-            equipment = new MechanicsEquipmentCoordinator(world, owner, items, slots);
+            InventoryComponent inventory = new(world, owner);
+            EquipmentComponent equipmentComponent = new(world, owner);
+            Player.Actor.Add(inventory);
+            Player.Actor.Add(equipmentComponent);
+            equipment = new MechanicsEquipmentCoordinator(inventory, equipmentComponent, actors.Entities, items, slots);
             foreach (DaggerfallLoadoutEntry entry in player.Loadout.Where(entry => entry.UniqueEntityId is not null))
             {
-                WorldRpg.Kit.Inventory.UniqueInventoryItem item = equipment.Materialize(new UniqueItemMaterialization("test", entry.UniqueEntityId!.Value, new InventoryItemId(entry.ItemId.Value)));
+                WorldRpg.Kit.Inventory.UniqueInventoryItem item = equipment.Materialize(
+                    new DurableIdentityReference(DurableIdentityKind.Item, entry.UniqueEntityId!.Value),
+                    new InventoryItemId(entry.ItemId.Value));
                 if (entry.EquipSlot is DaggerfallEquipmentSlotId slot)
-                    equipment.Equip(item, [new SlotId(slot.Value)], new EquipmentChange("test", "test"));
+                    equipment.Equip(item, [new SlotId(slot.Value)]);
             }
-            Player = new PlayerActorState(new DaggerfallMechanicsState().CreateActor(player, player.PlayerInitialVitals, 1), "health");
             Presentation = new DaggerfallCharacterPresentation(definitions, player, equipment);
         }
 
         public void Dispose()
         {
-            Player.Dispose();
-            equipment.Dispose();
+            actors.Dispose();
         }
     }
 

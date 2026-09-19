@@ -172,7 +172,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
 
     private uint ResourceRow(UiValueBuilder builder, PlayerActorState player, DaggerfallHudResourceDefinition resource)
     {
-        Track value = player.Mechanics.ReadTrack(TrackId.Parse(resource.Track.Value));
+        Track value = player.Stats.GetTrack(TrackId.Parse(resource.Track.Value));
         return builder.Object(("id", builder.String(resource.Id)), ("label", builder.String(resource.Label)), ("current", builder.Number(value.ValueInt64)), ("maximum", builder.Number(value.Maximum.ValueInt64)));
     }
 

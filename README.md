@@ -71,8 +71,10 @@ Ordinary gameplay uses direct live state; save capture is an explicit boundary.
 Only the current product schema is supported during development, with no
 migration or historical-save preservation requirement.
 
-The new SDK/runtime pair is adopted. Actor/domain restructuring and removal of
-remaining product content/save schema machinery are subsequent campaign tasks;
+The SDK/runtime pair, canonical actor/stat components and inventory/equipment
+workflows are adopted. See [actors and live mechanics](docs/actors-and-mechanics.md).
+Further domain restructuring and removal of product content/save schema machinery
+are subsequent campaign tasks;
 existing legacy code is not the recommended pattern. See the
 [code and ownership map](docs/code-migration-map.md) and
 [combat behavior baseline](docs/combat-behavior-baseline.md).

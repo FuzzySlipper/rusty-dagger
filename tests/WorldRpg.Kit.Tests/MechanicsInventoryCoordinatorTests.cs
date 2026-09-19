@@ -1,8 +1,8 @@
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Inventory;
+using WorldRpg.Kit.World;
 using Xunit;
-using EngineEquipmentSlotId = Rusty.Engine.Mechanics.EquipmentSlotId;
 using KitEquipmentSlotId = WorldRpg.Kit.Inventory.EquipmentSlotId;
 using KitUniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 
@@ -11,165 +11,159 @@ namespace WorldRpg.Kit.Tests;
 public sealed class MechanicsInventoryCoordinatorTests
 {
     [Fact]
-    public void Grant_and_consume_use_the_managed_inventory_world()
+    public void Grant_and_consume_update_the_attached_live_inventory_component()
     {
-        EntityId owner = new(7);
-        InventoryStore world = CreateWorld(owner);
-        ItemDefinition gold = Fungible("gold", maximumQuantity: 100);
-        MechanicsInventoryCoordinator inventory = new(
-            world,
-            owner,
-            new Dictionary<InventoryItemId, ItemDefinition>
-            {
-                [new InventoryItemId("gold")] = gold,
-            });
+        OwnerState owner = CreateOwner();
+        ItemDefinition gold = Fungible("gold", 100);
+        MechanicsInventoryCoordinator inventory = new(owner.Inventory, owner.Entities,
+            new Dictionary<InventoryItemId, ItemDefinition> { [new InventoryItemId("gold")] = gold });
 
-        InventoryMutationReceipt granted = inventory.Grant(
-            new InventoryGrant("reward", "actor:9", new InventoryItemId("gold"), 3));
-        InventoryMutationReceipt consumed = inventory.Consume(
-            new InventoryConsume("consume", "actor:9", new InventoryItemId("gold"), 2));
+        inventory.Grant(new InventoryGrant(new InventoryItemId("gold"), 3));
+        InventoryMutationReceipt consumed = inventory.Consume(new InventoryConsume(new InventoryItemId("gold"), 2));
 
-        Assert.Equal(InventoryMutationKind.Grant, granted.Kind);
-        Assert.Equal(3UL, granted.AfterQuantity);
-        Assert.Equal(InventoryMutationKind.Consume, consumed.Kind);
+        Assert.Same(owner.Inventory, owner.Entities.Store.Get<InventoryComponent>(owner.Entity));
         Assert.Equal(1UL, consumed.AfterQuantity);
-        Assert.True(inventory.Read().Stacks.Single() is { Quantity: 1 } stack
-            && stack.Definition == gold.Id);
+        Assert.True(owner.Inventory.TryGetQuantity(gold.Id, out ulong quantity));
+        Assert.Equal(1UL, quantity);
     }
 
     [Fact]
-    public void Invalid_or_unknown_inventory_requests_stop_before_managed_mutation()
+    public void Atomic_grant_leaves_canonical_inventory_empty_and_destroys_new_items_when_it_fails()
     {
-        EntityId owner = new(7);
-        InventoryStore world = CreateWorld(owner);
-        MechanicsInventoryCoordinator inventory = new(
-            world,
-            owner,
-            new Dictionary<InventoryItemId, ItemDefinition>());
-
-        Assert.Throws<ArgumentOutOfRangeException>(() => inventory.Consume(
-            new InventoryConsume("consume", "test", new InventoryItemId("gold"), 0)));
-        Assert.Throws<InvalidOperationException>(() => inventory.Grant(
-            new InventoryGrant("reward", "test", new InventoryItemId("gold"), 1)));
-        Assert.Empty(inventory.Read().Stacks);
-    }
-
-    [Fact]
-    public void Atomic_grants_publish_all_items_or_none()
-    {
-        EntityId owner = new(7);
-        InventoryStore world = CreateWorld(owner);
-        ItemDefinition gold = Fungible("gold", maximumQuantity: 100);
-        ItemDefinition sword = UniqueEquipment("sword");
-        MechanicsInventoryCoordinator inventory = new(
-            world,
-            owner,
+        OwnerState owner = CreateOwner();
+        ItemDefinition gold = Fungible("gold", 100);
+        ItemDefinition sword = UniqueEquipment("sword", requiredSlots: 1);
+        MechanicsInventoryCoordinator inventory = new(owner.Inventory, owner.Entities,
             new Dictionary<InventoryItemId, ItemDefinition>
             {
                 [new InventoryItemId("gold")] = gold,
                 [new InventoryItemId("sword")] = sword,
             });
+        DurableIdentityReference swordId = new(DurableIdentityKind.Item, 44);
 
         Assert.Throws<InvalidOperationException>(() => inventory.GrantAtomic(
         [
             new InventoryAtomicGrant(new InventoryItemId("gold"), 3),
-            new InventoryAtomicGrant(new InventoryItemId("missing"), 1),
+            new InventoryAtomicGrant(new InventoryItemId("sword"), UniqueItem: swordId),
+            new InventoryAtomicGrant(new InventoryItemId("missing")),
         ]));
-        Assert.Empty(inventory.Read().Stacks);
-        Assert.Empty(inventory.Read().UniqueItems);
 
-        Assert.Throws<InvalidOperationException>(() => inventory.GrantAtomic(
-        [
-            new InventoryAtomicGrant(new InventoryItemId("sword"), Identity: "loot:sword", EntityId: 44),
-            new InventoryAtomicGrant(new InventoryItemId("missing"), 1),
-        ]));
-        Assert.Empty(inventory.Read().UniqueItems);
+        Assert.Empty(owner.Inventory.Stacks);
+        Assert.Empty(owner.Inventory.UniqueItems);
+        Assert.False(owner.Entities.TryResolve(swordId, out _));
 
         inventory.GrantAtomic(
         [
             new InventoryAtomicGrant(new InventoryItemId("gold"), 3),
-            new InventoryAtomicGrant(new InventoryItemId("sword"), Identity: "loot:sword", EntityId: 44),
+            new InventoryAtomicGrant(new InventoryItemId("sword"), UniqueItem: swordId),
         ]);
         inventory.GrantAtomic([new InventoryAtomicGrant(new InventoryItemId("gold"), 2)]);
-        Assert.Equal(5UL, inventory.Read().Stacks.Single().Quantity);
-        Assert.Equal(new EntityId(44), inventory.Read().UniqueItems.Single().Entity);
+
+        Assert.Equal(5UL, Assert.Single(owner.Inventory.Stacks).Quantity);
+        EntityId runtimeSword = Assert.Single(owner.Inventory.UniqueItems).Entity;
+        Assert.Equal(swordId, inventory.GetDurableItemId(runtimeSword));
     }
 
     [Fact]
-    public void Materialize_equip_unequip_and_swap_use_managed_item_and_equipment_state()
+    public void Invalid_typed_inventory_requests_leave_the_live_component_unchanged()
     {
-        EntityId owner = new(7);
-        InventoryStore world = CreateWorld(owner);
-        ItemDefinition sword = UniqueEquipment("sword");
-        ItemDefinition dagger = UniqueEquipment("dagger");
-        EquipmentSlotDefinition hand = new(
-            EngineEquipmentSlotId.Parse("hand"),
-            [ItemClassificationId.Parse("blade")]);
-        MechanicsEquipmentCoordinator equipment = new(
-            world,
-            owner,
-            new Dictionary<InventoryItemId, ItemDefinition>
-            {
-                [new InventoryItemId("sword")] = sword,
-                [new InventoryItemId("dagger")] = dagger,
-            },
-            new Dictionary<KitEquipmentSlotId, EquipmentSlotDefinition>
-            {
-                [new KitEquipmentSlotId("hand")] = hand,
-            });
+        OwnerState owner = CreateOwner();
+        MechanicsInventoryCoordinator inventory = new(owner.Inventory, owner.Entities,
+            new Dictionary<InventoryItemId, ItemDefinition>());
 
-        KitUniqueInventoryItem swordItem = equipment.Materialize(
-            new UniqueItemMaterialization("runtime-sword", 44, new InventoryItemId("sword")));
-        KitUniqueInventoryItem daggerItem = equipment.Materialize(
-            new UniqueItemMaterialization("runtime-dagger", 45, new InventoryItemId("dagger")));
-
-        EquipmentMutationReceipt equipped = equipment.Equip(
-            swordItem,
-            [new KitEquipmentSlotId("hand")],
-            new EquipmentChange("equip", "test"));
-        EquipmentRead equippedView = equipment.Read();
-
-        Assert.Equal(EquipmentMutationKind.Equip, equipped.Kind);
-        Assert.True(equippedView.TryGet(new KitEquipmentSlotId("hand"), out KitUniqueInventoryItem equippedItem));
-        Assert.Equal(swordItem, equippedItem);
-        Assert.Contains(
-            world.Read(owner).UniqueItems,
-            item => item.Entity == new EntityId(45) && item.Definition == dagger.Id);
-
-        EquipmentMutationReceipt unequipped = equipment.Unequip(
-            swordItem,
-            new EquipmentChange("unequip", "test"));
-        Assert.Equal(EquipmentMutationKind.Unequip, unequipped.Kind);
-
-        equipment.Equip(swordItem, [new KitEquipmentSlotId("hand")], new EquipmentChange("equip", "test"));
-        EquipmentMutationReceipt swapped = equipment.Swap(
-            swordItem,
-            daggerItem,
-            [new KitEquipmentSlotId("hand")],
-            new EquipmentChange("swap", "test"));
-
-        Assert.Equal(EquipmentMutationKind.Swap, swapped.Kind);
-        Assert.Equal(swordItem.EntityId, swapped.ReplacedItem!.Value.Value);
-        Assert.True(equipment.Read().TryGet(new KitEquipmentSlotId("hand"), out KitUniqueInventoryItem swappedItem));
-        Assert.Equal(daggerItem, swappedItem);
+        Assert.Throws<ArgumentOutOfRangeException>(() => inventory.Consume(new InventoryConsume(new InventoryItemId("gold"), 0)));
+        Assert.Throws<InvalidOperationException>(() => inventory.Grant(new InventoryGrant(new InventoryItemId("gold"), 1)));
+        Assert.Empty(owner.Inventory.Stacks);
     }
 
-    private static InventoryStore CreateWorld(EntityId owner)
+    [Fact]
+    public void Same_definition_items_keep_distinct_runtime_entities_and_equip_across_multiple_slots()
     {
-        InventoryStore world = new();
-        world.RegisterInventory(new InventoryState(owner));
-        world.RegisterEquipment(new EquipmentState(owner));
-        return world;
+        OwnerState owner = CreateOwner(withEquipment: true);
+        ItemDefinition greatsword = UniqueEquipment("greatsword", requiredSlots: 2);
+        var items = new Dictionary<InventoryItemId, ItemDefinition> { [new InventoryItemId("greatsword")] = greatsword };
+        var slots = new Dictionary<KitEquipmentSlotId, EquipmentSlotDefinition>
+        {
+            [new KitEquipmentSlotId("left")] = Slot("left"),
+            [new KitEquipmentSlotId("right")] = Slot("right"),
+        };
+        MechanicsEquipmentCoordinator equipment = new(owner.Inventory, owner.Equipment!, owner.Entities, items, slots);
+        DurableIdentityReference firstId = new(DurableIdentityKind.Item, 44);
+        DurableIdentityReference secondId = new(DurableIdentityKind.Item, 45);
+
+        KitUniqueInventoryItem first = equipment.Materialize(firstId, new InventoryItemId("greatsword"));
+        KitUniqueInventoryItem second = equipment.Materialize(secondId, new InventoryItemId("greatsword"));
+        Assert.Throws<InvalidOperationException>(() => equipment.Equip(new(9999, new InventoryItemId("greatsword")),
+            [new KitEquipmentSlotId("left"), new KitEquipmentSlotId("right")]));
+        equipment.Equip(first, [new KitEquipmentSlotId("left"), new KitEquipmentSlotId("right")]);
+
+        Assert.NotEqual(first.EntityId, second.EntityId);
+        Assert.NotEqual(firstId.Value, first.EntityId);
+        Assert.Equal([first.EntityId, first.EntityId], equipment.Read().Assignments.Select(value => value.Item.EntityId));
+        equipment.Unequip(first);
+        Assert.Empty(equipment.Read().Assignments);
+
+        Assert.Throws<InvalidOperationException>(() => equipment.Equip(new(9999, new InventoryItemId("greatsword")),
+            [new KitEquipmentSlotId("left"), new KitEquipmentSlotId("right")]));
+        equipment.Equip(first, [new KitEquipmentSlotId("left"), new KitEquipmentSlotId("right")]);
+        EquipmentMutationReceipt swapped = equipment.Swap(first, second, [new KitEquipmentSlotId("left"), new KitEquipmentSlotId("right")]);
+        Assert.Equal(EquipmentMutationKind.Swap, swapped.Kind);
+        Assert.Equal(new EntityId(first.EntityId), swapped.ReplacedItem);
+        Assert.Equal([second.EntityId, second.EntityId], equipment.Read().Assignments.Select(value => value.Item.EntityId));
+    }
+
+    [Fact]
+    public void Transfer_updates_the_destination_attached_inventory_facade()
+    {
+        OwnerState source = CreateOwner(withEquipment: true);
+        OwnerState destination = CreateOwner(source.Entities, source.Store, actorId: 2, withEquipment: true);
+        ItemDefinition sword = UniqueEquipment("sword", requiredSlots: 1);
+        MechanicsEquipmentCoordinator equipment = new(source.Inventory, source.Equipment!, source.Entities,
+            new Dictionary<InventoryItemId, ItemDefinition> { [new InventoryItemId("sword")] = sword },
+            new Dictionary<KitEquipmentSlotId, EquipmentSlotDefinition> { [new KitEquipmentSlotId("hand")] = Slot("hand") });
+        KitUniqueInventoryItem item = equipment.Materialize(new DurableIdentityReference(DurableIdentityKind.Item, 44), new InventoryItemId("sword"));
+
+        source.Inventory.TransferUnique(new EntityId(item.EntityId), destination.Entity);
+
+        Assert.Empty(source.Inventory.UniqueItems);
+        Assert.Equal((ulong)item.EntityId, Assert.Single(destination.Inventory.UniqueItems).Entity.Value);
+        Assert.Same(destination.Inventory, destination.Entities.Store.Get<InventoryComponent>(destination.Entity));
+
+        MechanicsEquipmentCoordinator destinationEquipment = new(destination.Inventory, destination.Equipment!, destination.Entities,
+            new Dictionary<InventoryItemId, ItemDefinition> { [new InventoryItemId("sword")] = sword },
+            new Dictionary<KitEquipmentSlotId, EquipmentSlotDefinition> { [new KitEquipmentSlotId("hand")] = Slot("hand") });
+        destinationEquipment.Equip(new KitUniqueInventoryItem(item.EntityId, new InventoryItemId("sword")), [new KitEquipmentSlotId("hand")]);
+        Assert.Equal(item.EntityId, Assert.Single(destinationEquipment.Read().Assignments).Item.EntityId);
+    }
+
+    private static OwnerState CreateOwner(EntityDirectory? entities = null, InventoryStore? store = null, ulong actorId = 1,
+        bool withEquipment = false)
+    {
+        EntityDirectory directory = entities ?? new EntityDirectory();
+        InventoryStore inventoryStore = store ?? new InventoryStore();
+        EntityId entity = directory.Create(new DurableIdentityReference(DurableIdentityKind.Actor, actorId), new EntityTypeId("actor"));
+        inventoryStore.RegisterInventory(new InventoryState(entity));
+        InventoryComponent inventory = new(inventoryStore, entity);
+        directory.Store.Add(entity, inventory);
+        EquipmentComponent? equipment = null;
+        if (withEquipment)
+        {
+            inventoryStore.RegisterEquipment(new EquipmentState(entity));
+            equipment = new EquipmentComponent(inventoryStore, entity);
+            directory.Store.Add(entity, equipment);
+        }
+        return new OwnerState(directory, inventoryStore, entity, inventory, equipment);
     }
 
     private static ItemDefinition Fungible(string id, ulong maximumQuantity) =>
         new(ItemDefinitionId.Parse(id), ItemKind.Fungible, maximumQuantity);
 
-    private static ItemDefinition UniqueEquipment(string id) =>
-        new(
-            ItemDefinitionId.Parse(id),
-            ItemKind.Unique,
-            maximumQuantity: 1,
-            classifications: [ItemClassificationId.Parse("blade")],
-            equipment: new ItemEquipmentPolicy(requiredSlots: 1));
+    private static ItemDefinition UniqueEquipment(string id, int requiredSlots) =>
+        new(ItemDefinitionId.Parse(id), ItemKind.Unique, maximumQuantity: 1,
+            classifications: [ItemClassificationId.Parse("blade")], equipment: new ItemEquipmentPolicy(checked((ushort)requiredSlots)));
+
+    private static EquipmentSlotDefinition Slot(string id) => new(Rusty.Engine.Mechanics.EquipmentSlotId.Parse(id), [ItemClassificationId.Parse("blade")]);
+
+    private sealed record OwnerState(EntityDirectory Entities, InventoryStore Store, EntityId Entity,
+        InventoryComponent Inventory, EquipmentComponent? Equipment);
 }
