@@ -19,6 +19,7 @@ an evolving mainline product path, not a spike or a compatibility exercise.
 - Dagger checkout: `/home/dev/rusty-dagger`
 - paired Engine checkout: `/home/dev/rusty-engine`
 - Dagger Den project: `rusty-dagger`
+- current intended gameplay design: [WorldRpg gameplay design](docs/gameplay-design.md)
 - current shared boundary brief: `[doc: rusty-engine/downstream-csharp-agent-brief]`
 - structure history: Board post #139 and completed campaigns #7322 / #7533
 - coverage direction and task planning: `docs/daggerfall-coverage-plan.md`
@@ -89,6 +90,12 @@ every authored value. Keep compact structural constants local and promote a
 value only when it is genuinely adjustable or authored data.
 
 ## Gameplay composition direction
+
+Read [WorldRpg gameplay design](docs/gameplay-design.md) before gameplay or
+persistence work. It promotes Board #146 to current repository guidance, records
+the landed owners, and replaces the post's historical sequencing and survey.
+Use it to interpret older task implementation wording while preserving required
+gameplay behavior and explicit current user/task decisions.
 
 The substantial reusable Kit shapes concrete rules and content. Kit owns actor
 conventions, targeting/current target, inventory/equipment workflows, attack
