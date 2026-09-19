@@ -1,15 +1,17 @@
 # Actors and live mechanics
 
-`WorldRpg.Kit/Actors/ActorsState.cs` is the actor entry point. It owns one session
-`EntityDirectory`, whose `EntityStore` holds the attached class components.
-`CreatePlayer` and `CreateActor` construct entities explicitly. `PlayerActorState`
-and `ActorState` compose Engine `Actor`; wrapping an existing entity adds nothing
-and does not own its lifetime.
+`WorldRpg.Kit/Actors/ActorsState.cs` owns one session `EntityDirectory`, whose
+`EntityStore` holds the attached class components. `DaggerActorFactory` is the
+Daggerfall assembly seam: it creates the player and authored actors from admitted
+definitions, then wires their inventories and equipment. `PlayerActorState` and
+`ActorState` compose Engine `Actor`; wrapping an existing entity adds nothing and
+does not own its lifetime.
 
 Named properties (`Stats`, `Effects`, `Inventory`, `Equipment`, and player
 `Progression`) read the actual attached objects. The generic actor factory
-attaches stats, effects and defeat-track metadata; NPCs also have a pose, and
-players have progression. Dagger's session factory explicitly registers and
+attaches stats, effects, targeting, attack state and defeat-track metadata; NPCs
+also have a pose, and players have progression. Dagger behavior assembly adds
+pursuit memory to its NPCs. Dagger's session factory explicitly registers and
 attaches inventory/equipment for the player and every placed actor. A facade
 property requires that its component has been attached; use Engine `TryGet<T>`
 for an optional capability on a differently assembled entity.
@@ -44,12 +46,13 @@ Dagger decides which admitted actions delay stamina recovery and when recovery
 is allowed. `EffectsComponent` is attached for discoverable effect state; this
 refactor does not implement the pending spell/effect gameplay backlog.
 
-For explicit save capture use Engine `StatsComponentCapture`. Rebuild authored
-sources with the new runtime owner in its callback **before tracks are rebuilt**;
-retain returned modifier handles when later removal is required. Aliases and
-shared maximums must remain shared. Current Dagger restore already reconstructs
-level-up sources before applying saved track currents; the broader current-schema
-save rewrite remains #8339.
+`DaggerSessionPersistence` captures and restores the current source-generated
+payload. It rebuilds authored sources before applying saved track currents, so
+aliases and shared maximums remain shared. The payload has no schema version,
+migration negotiation, compatibility fingerprint, or unknown-field preservation.
+It keeps meaningful state and relationships, including charged combat cooldowns;
+held input, AI/perception work, native continuation, presentation, and an
+in-flight attack are reconstructed or transient after restore.
 
 ## Inventory and equipment
 
@@ -66,3 +69,14 @@ Engine's optional inventory edit where the gameplay operation must succeed as a
 whole. A failed construction removes its newly allocated entities. Queries read
 the live facades after publication; do not retain an `EquipmentState` snapshot
 and expect later assignments to appear in it.
+
+## Named gameplay services
+
+`DaggerfallState.Kit` is the Dagger session's discoverable route to the named
+Kit owners: actors, targeting, attack capabilities and execution, combat
+resolution, inventory, and equipment. Kit's `Combat`, `Targeting`, `Ai`, and
+`Loot` namespaces provide the reusable mechanisms; `DaggerCombatRules` supplies
+Daggerfall eligibility, formulas, timing, and authored meaning. Direct reads and
+actions use those owners. Typed facts and RuleEvents remain available where an
+interaction has real contributors; ordinary gameplay does not require a
+proposal/acceptance or replay protocol.

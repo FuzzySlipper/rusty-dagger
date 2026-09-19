@@ -82,12 +82,10 @@ public sealed record DaggerfallRaceWithoutMedia(string Race, int DonorRaceId, st
 /// The character presentation section of the pack: every race's paper-doll layers as data a
 /// character or social consumer resolves, plus the races the corpus supplies no media for.
 /// </summary>
-/// <param name="SchemaVersion">Shape version of this section.</param>
 /// <param name="Layers">Every published layer, ordered by race then layer.</param>
 /// <param name="RacesWithoutMedia">Races no supplied media draws.</param>
 /// <param name="Sources">Inventory identities this section was built from.</param>
 public sealed record DaggerfallCharacterPresentation(
-    int SchemaVersion,
     IReadOnlyList<DaggerfallCharacterLayer> Layers,
     IReadOnlyList<DaggerfallFactionFace> Faces,
     IReadOnlyList<DaggerfallCareerPortrait> Careers,
@@ -96,8 +94,6 @@ public sealed record DaggerfallCharacterPresentation(
     IReadOnlyList<DaggerfallRaceWithoutMedia> RacesWithoutMedia,
     IReadOnlyList<string> Sources)
 {
-    public const int CurrentSchemaVersion = 1;
-
     /// <summary>
     /// Checks the section against the canvases the publication actually emitted.
     /// </summary>
@@ -112,11 +108,6 @@ public sealed record DaggerfallCharacterPresentation(
     public void Validate(IReadOnlySet<string> publishedMediaIds)
     {
         ArgumentNullException.ThrowIfNull(publishedMediaIds);
-        if (SchemaVersion != CurrentSchemaVersion)
-        {
-            throw new ArgumentOutOfRangeException(nameof(SchemaVersion), SchemaVersion, $"Character presentation schema must be {CurrentSchemaVersion}.");
-        }
-
         foreach (DaggerfallCharacterLayer layer in Layers)
         {
             NormalizedImportDocument.RequireLogicalId(layer.Race, nameof(layer.Race));
@@ -359,7 +350,6 @@ public static class DaggerfallCharacterPresentationBuilder
         }
 
         return new DaggerfallCharacterPresentation(
-            DaggerfallCharacterPresentation.CurrentSchemaVersion,
             [.. layers.OrderBy(layer => layer.DonorRaceId).ThenBy(layer => layer.Layer, StringComparer.Ordinal)],
             faces,
             careerPortraits,

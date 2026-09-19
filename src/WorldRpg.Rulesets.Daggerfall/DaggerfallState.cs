@@ -1,3 +1,5 @@
+using WorldRpg.Kit;
+using WorldRpg.Rulesets.Daggerfall.Facts;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
@@ -9,8 +11,10 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>Named session services; actor-local state lives on the canonical entities.</summary>
 internal sealed class DaggerfallState(PlayerControlState playerControl, ActorsState actors,
     MechanicsInventoryCoordinator inventory, MechanicsEquipmentCoordinator equipment,
-    MechanicsInventoryContainerCoordinator containers, IReadOnlyDictionary<InventoryItemId, ItemDefinition> items)
+    MechanicsInventoryContainerCoordinator containers, IReadOnlyDictionary<InventoryItemId, ItemDefinition> items,
+    IReadOnlyDictionary<WorldRpg.Kit.Inventory.EquipmentSlotId, EquipmentSlotDefinition> slots)
 {
+    internal GameplayServices<IProductFact> Kit { get; set; } = null!;
     internal PlayerControlState PlayerControl { get; } = playerControl;
     internal ActorsState Actors { get; } = actors;
     internal ProgressionState Progression => Actors.Player.Progression;
@@ -19,6 +23,11 @@ internal sealed class DaggerfallState(PlayerControlState playerControl, ActorsSt
     internal MechanicsInventoryContainerCoordinator Containers { get; } = containers;
     internal MechanicsInventoryCoordinator? InventoryFor(long durableActorId) =>
         Actors.TryGet(durableActorId, out var actor) ? new(actor.Inventory, Actors.Entities, items) : null;
+    internal MechanicsEquipmentCoordinator EquipmentFor(long durableActorId)
+    {
+        ActorState actor = Actors.Get(durableActorId);
+        return new(actor.Inventory, actor.Equipment, Actors.Entities, items, slots);
+    }
     internal IEnumerable<KeyValuePair<long, MechanicsInventoryCoordinator>> ActorInventories =>
         Actors.All.Select(actor => new KeyValuePair<long, MechanicsInventoryCoordinator>(actor.DurableId, new(actor.Inventory, Actors.Entities, items)));
 }

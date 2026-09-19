@@ -1,3 +1,4 @@
+using WorldRpg.Kit.Targeting;
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
@@ -11,7 +12,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 internal sealed class DaggerfallOutcomePresentation(
     PresentationState presentation,
     IReadOnlyDictionary<long, DaggerfallActorDefinition> actors,
-    Func<DaggerfallMeleeTargetingEvidence?>? meleeEvidence = null)
+    Func<TargetingEvidence?>? meleeEvidence = null)
 {
     // Whether the published line reports something that happened rather than something that did not.
     private bool _lineIsResult;

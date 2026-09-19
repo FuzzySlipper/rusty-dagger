@@ -34,7 +34,7 @@ internal sealed class DaggerfallLootPresentation(DaggerfallCorpseLootModule loot
     internal PendingCorpseLoot? Open(PlayerControlState player, LookReceipt look)
     {
         PendingCorpseLoot? prepared = loot.PrepareLoot(player, look);
-        _actor = prepared?.Container.ActorId;
+        _actor = prepared?.ActorId;
         if (prepared is null) { Message = "No eligible loot within reach. Aim at a nearby corpse."; return null; }
         _opening++;
         Message = prepared.IsEmpty ? "Empty. This container remains open until Exit." : "Choose an item to take. Stack buttons take one unit.";
@@ -64,7 +64,7 @@ internal sealed class DaggerfallLootPresentation(DaggerfallCorpseLootModule loot
         {
             Selection = selection,
             ExpectedWorldRevision = contents.StoreRevision,
-            Facts = [new LootAwardedFact(prepared.Container.ActorId, item.Definition, 1, prepared.Container.OriginatingSequence)],
+            Facts = [new LootAwardedFact(prepared.ActorId, item.Definition, 1, prepared.Corpse.OriginatingSequence)],
         };
     }
 

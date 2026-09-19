@@ -75,7 +75,6 @@ public sealed record DungeonActorMediaManifest(
 /// no playback and only references generated artifacts by logical media ID.
 /// </summary>
 public sealed record ClassicMediaManifestSidecar(
-    int SchemaVersion,
     NormalizedMediaManifest Media,
     IReadOnlyList<ClassicWeaponMediaManifest> WeaponMedia,
     IReadOnlyList<ClassicEffectManifest> Effects,
@@ -84,9 +83,7 @@ public sealed record ClassicMediaManifestSidecar(
     IReadOnlyList<ClassicInventoryIconManifest> InventoryIcons,
     ClassicFontManifest Font,
     IReadOnlyList<ClassicAuthoredUiAssetManifest> AuthoredUiAssets)
-{
-    public const int CurrentSchemaVersion = 2;
-}
+{ }
 
 /// <summary>
 /// Joins spatial normalization with independently generated dungeon and
@@ -187,10 +184,9 @@ public sealed record Arena2MediaBundlePublication(
         {
             ArgumentNullException.ThrowIfNull(dungeon);
             ArgumentNullException.ThrowIfNull(classic);
-            if (dungeon.SchemaVersion != DungeonMediaManifestSidecar.CurrentSchemaVersion
-                || classic.SchemaVersion != ClassicMediaManifestSidecar.CurrentSchemaVersion)
+            if (dungeon.SchemaVersion != DungeonMediaManifestSidecar.CurrentSchemaVersion)
             {
-                throw new InvalidOperationException("A persisted media sidecar schema version is not supported.");
+                throw new InvalidOperationException("A persisted dungeon media sidecar schema version is not supported.");
             }
 
             IReadOnlyDictionary<string, NormalizedMediaDescriptor> dungeonMedia = ValidatePersistedMedia(dungeon.Media, "dungeon");
@@ -577,7 +573,6 @@ public sealed record Arena2MediaBundlePublication(
     }
 
     private static ClassicMediaManifestSidecar CreateClassicSidecar(Arena2ClassicMediaPublication publication) => new(
-        ClassicMediaManifestSidecar.CurrentSchemaVersion,
         CanonicalizeMedia(publication.MediaManifest),
         publication.WeaponMedia.OrderBy(weapon => weapon.ResourceId, StringComparer.Ordinal).Select(weapon => new ClassicWeaponMediaManifest(
             weapon.ResourceId,

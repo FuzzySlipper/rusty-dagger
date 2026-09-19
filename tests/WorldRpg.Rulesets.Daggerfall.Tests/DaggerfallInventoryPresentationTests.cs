@@ -96,8 +96,8 @@ public sealed class DaggerfallInventoryPresentationTests
             DirectoryInfo? directory = new(AppContext.BaseDirectory);
             while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "content/worldrpg/payloads/daggerfall.base.json"))) directory = directory.Parent;
             var definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(directory!.FullName, "content/worldrpg/payloads/daggerfall.base.json")));
-            var items = definitions.Items.Values.ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallSession.ToManagedItem);
-            var slots = definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerfallSession.ToManagedSlot);
+            var items = definitions.Items.Values.ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
+            var slots = definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
             InventoryStore world = new();
             EntityId owner = Entities.Create(new(DurableIdentityKind.Actor, 1), new("test.player"));
             world.RegisterInventory(new InventoryState(owner));

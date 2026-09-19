@@ -61,24 +61,24 @@ For every task, identify:
 - dependency changes;
 - focused proof for the owning mechanism and ruleset policy.
 
-## Current refactor direction
+## Current gameplay shape
 
-Campaign #8327 adopts the current Engine capabilities and the design in Dagger
-Board #146. A substantial reusable Kit is the goal: composed actor facades over
-canonical class components, named services, typed interaction rules and simple
-notifications. Dagger supplies game-specific policies and content meaning.
-Ordinary gameplay uses direct live state; save capture is an explicit boundary.
-Only the current product schema is supported during development, with no
-migration or historical-save preservation requirement.
+The Kit uses composed actors over canonical class components and named Combat,
+Targeting, Ai, Loot, inventory/equipment, and progression services.
+`DaggerActorFactory` assembles Daggerfall actors, while `DaggerfallState.Kit`
+provides the session's discoverable gameplay owners. `DaggerCombatRules` supplies
+Daggerfall formulas, eligibility, timing, and content meaning. Ordinary gameplay
+uses direct live state; typed RuleEvents and notifications serve interactions with
+real contributors.
 
-The SDK/runtime pair, canonical actor/stat components and inventory/equipment
-workflows are adopted. See [actors and live mechanics](docs/actors-and-mechanics.md).
-Further domain restructuring and removal of product content/save schema machinery
-are subsequent campaign tasks;
-existing legacy code is not the recommended pattern. See the
-[code and ownership map](docs/code-migration-map.md) and
+`DaggerSessionPersistence` captures current source-generated state through the
+Host persistence API. It carries charged cooldowns but rebuilds or drops held
+input, AI/perception work, native continuation, presentation, and an in-flight
+attack. There is no save UI yet. Development supports one current schema only:
+no versions, migration paths, compatibility fingerprints, or unknown-field
+preservation. See [actors and live mechanics](docs/actors-and-mechanics.md), the
+[code and ownership map](docs/code-migration-map.md), and the historical
 [combat behavior baseline](docs/combat-behavior-baseline.md).
-Older coverage-task reconciliation follows this campaign as a separate effort.
 
 ## Ownership
 

@@ -1,12 +1,10 @@
 {
   "kind": "worldrpg.game-bundle",
-  "schemaVersion": 1,
   "id": "daggerfall.privateers-hold",
-  "version": 1,
   "ruleset": "daggerfall",
   "contentPacks": [
-    { "id": "daggerfall.base", "version": 1 },
-    { "id": "daggerfall.privateers-hold", "version": 1 }
+    { "id": "daggerfall.base" },
+    { "id": "daggerfall.privateers-hold" }
   ],
-  "tuning": { "id": "daggerfall.defaults", "version": 1 }
+  "tuning": { "id": "daggerfall.defaults" }
 }

@@ -1,3 +1,4 @@
+using WorldRpg.Kit.Combat;
 using System.Numerics;
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Facts;
@@ -46,7 +47,6 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private readonly List<RenderResource> ownedResources = [];
     private readonly List<IDisposable> priorRetired = [];
     private readonly List<IDisposable> nextRetired = [];
-    private AppearanceFact[] lastPublishedSnapshot = [];
     private Appearance? world;
     private readonly AuthoredWorldAppearance worldAppearance;
     private bool disposed;
@@ -67,11 +67,9 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         worldAppearance = inputs.WorldAppearance;
         try
         {
-            VerifyContent(content, inputs.StaticMesh);
             world = appearance.CreateStaticMeshFromContent(new StaticMeshContentAppearanceRequest(inputs.StaticMesh.Path, worldAppearance.Tint));
             foreach (NormalizedMaterial material in inputs.Materials)
             {
-                VerifyContent(content, new ContentArtifact(material.TexturePath, material.TextureSha256));
                 RenderResourceInfo texture = appearance.OpenResource(new RenderResourceRequest(material.TexturePath, TextureFilter.Nearest, TextureWrap.Repeat));
                 ownedResources.Add(texture.Handle);
                 materials.Add(appearance.CreateMaterial(new MaterialRequest(new Color(1F, 1F, 1F, 1F), texture.Handle, 1F, new Color(1F, 1F, 1F, 1F), Vector3.Zero, 0F, false)));
@@ -85,8 +83,6 @@ internal sealed class PrivateersHoldAppearance : IDisposable
             AdmitClassicTextures();
             foreach (NormalizedAudioClip clip in inputs.Audio)
             {
-                VerifyContent(content, new ContentArtifact(clip.Path, clip.Sha256));
-
                 // An opened clip is an owned Engine resource now, so it is retained for the lifetime of
                 // this appearance and released with it rather than discarded after the emit.
                 if (audio is not null) audioClips.Add(clip.Id, audio.OpenClip(new AudioClipRequest(clip.Path)));
@@ -114,9 +110,6 @@ internal sealed class PrivateersHoldAppearance : IDisposable
             facts.Add(new AppearanceFact(weapon.EntityId, false, 0, weapon.Transform, weapon.Appearance, true, RenderLayer.Viewmodel));
         }
         AppearanceFact[] snapshot = [.. facts];
-        // Record before publication: an Engine callback may stage this exact
-        // snapshot and then report a later failure in the same admitted update.
-        lastPublishedSnapshot = snapshot;
         appearance.PublishSnapshot(snapshot);
     }
 
@@ -169,43 +162,6 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         priorRetired.AddRange(nextRetired);
         nextRetired.Clear();
     }
-    internal PresentationCheckpoint Checkpoint() => new(actors.ToDictionary(pair => pair.Key, pair => ActorSnapshot.From(pair.Value)), ViewmodelSnapshot.From(viewmodel), effects.Select(EffectSnapshot.From).ToArray(), deliveredEvents.ToHashSet(), priorRetired.ToArray(), nextRetired.ToArray(), lastPublishedSnapshot.ToArray(), weaponDrawn, appliedImpacts.ToHashSet(), attackImpacts.ToArray());
-    internal void Restore(PresentationCheckpoint checkpoint)
-    {
-        // A failing update may already have staged a snapshot containing
-        // discarded effect/viewmodel appearances. Restore the checkpoint's
-        // Engine-visible snapshot before releasing any discarded wrappers.
-        // That ordering keeps Engine ownership and managed disposal coherent.
-        appearance.PublishSnapshot(checkpoint.PublishedSnapshot.ToArray());
-        lastPublishedSnapshot = checkpoint.PublishedSnapshot.ToArray();
-        DisposeRetiredIntermediates(checkpoint);
-        deliveredEvents.Clear();
-        deliveredEvents.UnionWith(checkpoint.Events);
-        appliedImpacts.Clear();
-        appliedImpacts.UnionWith(checkpoint.AppliedImpacts);
-        attackImpacts.Clear();
-        attackImpacts.AddRange(checkpoint.PendingImpacts);
-        foreach ((long id, ActorSnapshot snapshot) in checkpoint.Actors)
-        {
-            if (!actors.TryGetValue(id, out ActorVisual? visual)) continue;
-            // Only products created in this discarded Engine call are released;
-            // checkpoint references remain reachable committed wrappers.
-            if (visual.Playback is { } currentPlayback && !ReferenceEquals(currentPlayback, snapshot.Playback)) currentPlayback.Dispose();
-            if (visual.Live is { } currentLive && !ReferenceEquals(currentLive, snapshot.Live)) currentLive.Dispose();
-            snapshot.Apply(visual);
-        }
-        if (viewmodel is { } currentWeapon && !ReferenceEquals(currentWeapon, checkpoint.Viewmodel?.Visual)) currentWeapon.Dispose();
-        else if (viewmodel is { } retainedWeapon && checkpoint.Viewmodel is { } weaponSnapshot && !ReferenceEquals(retainedWeapon.Playback, weaponSnapshot.Playback)) retainedWeapon.Playback?.Dispose();
-        weaponDrawn = checkpoint.WeaponDrawn;
-        viewmodel = checkpoint.Viewmodel?.Visual;
-        checkpoint.Viewmodel?.Apply(viewmodel!);
-        foreach (EffectVisual effect in effects.Where(current => checkpoint.Effects.All(snapshot => !ReferenceEquals(snapshot.Visual, current))).ToArray()) effect.Dispose();
-        effects.Clear();
-        foreach (EffectSnapshot snapshot in checkpoint.Effects) { snapshot.Apply(); effects.Add(snapshot.Visual); }
-        priorRetired.Clear(); priorRetired.AddRange(checkpoint.PriorRetired);
-        nextRetired.Clear(); nextRetired.AddRange(checkpoint.NextRetired);
-    }
-
     /// <summary>Interprets Daggerfall combat facts while Engine owns playback timing and frame staging.</summary>
     internal void React(IProductFact fact) => React(fact, null);
 
@@ -370,13 +326,6 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 
-    private static void VerifyContent(IContentService content, ContentArtifact artifact)
-    {
-        using ContentReference reference = content.ResolveReference(new ContentResolveRequest(artifact.Path, artifact.Sha256));
-        ReadOnlyMemory<ContentReferenceInfo> info = content.ReadReferenceInfo(reference);
-        if (info.Length != 1 || info.Span[0].Path != artifact.Path || info.Span[0].Sha256 != artifact.Sha256) throw new InvalidOperationException($"Engine content did not preserve identity for '{artifact.Path}'.");
-    }
-
     private void AdmitClassicTextures()
     {
         foreach (NormalizedClassicEffect effect in classicEffects.Values.OrderBy(effect => effect.Name, StringComparer.Ordinal))
@@ -387,35 +336,10 @@ internal sealed class PrivateersHoldAppearance : IDisposable
 
     private void AdmitClassicTexture(ContentArtifact artifact)
     {
-        VerifyContent(content, artifact);
         RenderResourceInfo texture = appearance.OpenResource(new RenderResourceRequest(artifact.Path));
         ownedResources.Add(texture.Handle);
         if (!classicTextures.TryAdd(artifact.Path, texture))
             throw new InvalidOperationException($"Classic presentation repeats normalized texture path '{artifact.Path}'.");
-    }
-
-    private void DisposeRetiredIntermediates(PresentationCheckpoint checkpoint)
-    {
-        HashSet<IDisposable> checkpointOwned = new(ReferenceEqualityComparer.Instance);
-        foreach (ActorSnapshot actor in checkpoint.Actors.Values)
-        {
-            if (actor.Live is not null) checkpointOwned.Add(actor.Live);
-            if (actor.Playback is not null) checkpointOwned.Add(actor.Playback);
-        }
-        if (checkpoint.Viewmodel is { } weapon)
-        {
-            checkpointOwned.Add(weapon.Visual);
-            if (weapon.Playback is not null) checkpointOwned.Add(weapon.Playback);
-        }
-        foreach (EffectSnapshot effect in checkpoint.Effects) checkpointOwned.Add(effect.Visual);
-        foreach (IDisposable value in checkpoint.PriorRetired) checkpointOwned.Add(value);
-        foreach (IDisposable value in checkpoint.NextRetired) checkpointOwned.Add(value);
-
-        HashSet<IDisposable> released = new(ReferenceEqualityComparer.Instance);
-        foreach (IDisposable value in priorRetired.Concat(nextRetired))
-        {
-            if (!checkpointOwned.Contains(value) && released.Add(value)) value.Dispose();
-        }
     }
 
     private static void Dispose(IDisposable value, ref List<Exception>? failures)
@@ -451,7 +375,6 @@ internal sealed class PrivateersHoldAppearance : IDisposable
 
     private (SpriteAtlas Atlas, Appearance Appearance) CreateSprite(IContentService content, NormalizedActorSprite sprite)
     {
-        VerifyContent(content, new ContentArtifact(sprite.TexturePath, sprite.TextureSha256));
         RenderResourceInfo texture = appearance.OpenResource(new RenderResourceRequest(sprite.TexturePath));
         ownedResources.Add(texture.Handle);
         SpriteAtlasFrame[] frames = SpriteAtlasAdapter.ToAtlasFrames(sprite.AtlasWidth, sprite.AtlasHeight,
@@ -533,7 +456,6 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         SpritePlayback? playback = null;
         try
         {
-            VerifyContent(content, new ContentArtifact(effect.TexturePath, effect.TextureSha256));
             RenderResourceInfo texture = classicTextures[effect.TexturePath];
             SpriteAtlasFrame[] frames = SpriteAtlasAdapter.ToAtlasFrames(effect.AtlasWidth, effect.AtlasHeight,
                 effect.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height)).ToArray());
@@ -561,7 +483,6 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         Appearance? visual = null;
         try
         {
-            VerifyContent(content, new ContentArtifact(weapon.TexturePath, weapon.TextureSha256));
             RenderResourceInfo texture = classicTextures[weapon.TexturePath];
             SpriteAtlasFrame[] frames = SpriteAtlasAdapter.ToAtlasFrames(weapon.AtlasWidth, weapon.AtlasHeight,
                 weapon.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height)).ToArray());
@@ -810,21 +731,5 @@ internal sealed class PrivateersHoldAppearance : IDisposable
 
     internal readonly record struct PresentationEventIdentity(ulong Generation, ulong SimulationStep, long Attacker, long Target, string Outcome);
     internal readonly record struct AppearanceOuterUpdate(ulong Generation, ulong ControlRevision, ulong SimulationStep, uint AdmittedStepCount);
-    internal sealed record PresentationCheckpoint(IReadOnlyDictionary<long, ActorSnapshot> Actors, ViewmodelSnapshot? Viewmodel, IReadOnlyList<EffectSnapshot> Effects, IReadOnlySet<PresentationEventIdentity> Events, IReadOnlyList<IDisposable> PriorRetired, IReadOnlyList<IDisposable> NextRetired, IReadOnlyList<AppearanceFact> PublishedSnapshot, bool WeaponDrawn, IReadOnlySet<PresentationEventIdentity> AppliedImpacts, IReadOnlyList<AttackImpactNotice> PendingImpacts);
-    internal sealed record ActorSnapshot(Appearance? Live, SpritePlayback? Playback, string State, bool Defeated, bool Completed, ulong Marker, uint PlaybackFrame, NormalizedSpriteState? ActiveState, IReadOnlyList<int> SourceFrames, int Orientation, ActiveAttackPresentation? ActiveAttack, AppearanceOuterUpdate? LastOuterUpdate)
-    {
-        internal static ActorSnapshot From(ActorVisual visual) => new(visual.Live, visual.Playback, visual.State, visual.Defeated, visual.CompletedOuterUpdate, visual.LastMarkerCrossing, visual.LastPlaybackFrameIndex, visual.ActiveState, visual.SourceFrameIndices, visual.Orientation, visual.ActiveAttack, visual.LastOuterUpdate);
-        internal void Apply(ActorVisual visual) { visual.Live = Live; visual.Playback = Playback; visual.State = State; visual.Defeated = Defeated; visual.CompletedOuterUpdate = Completed; visual.LastMarkerCrossing = Marker; visual.LastPlaybackFrameIndex = PlaybackFrame; visual.ActiveState = ActiveState; visual.SourceFrameIndices = SourceFrames; visual.Orientation = Orientation; visual.ActiveAttack = ActiveAttack; visual.LastOuterUpdate = LastOuterUpdate; }
-    }
-    internal sealed record ViewmodelSnapshot(ViewmodelVisual Visual, SpritePlayback? Playback, Transform Transform, bool Strike, bool Completed, AppearanceOuterUpdate? LastOuterUpdate)
-    {
-        internal static ViewmodelSnapshot? From(ViewmodelVisual? visual) => visual is null ? null : new(visual, visual.Playback, visual.Transform, visual.Strike, visual.CompletedOuterUpdate, visual.LastOuterUpdate);
-        internal void Apply(ViewmodelVisual visual) { visual.Playback = Playback; visual.Transform = Transform; visual.Strike = Strike; visual.CompletedOuterUpdate = Completed; visual.LastOuterUpdate = LastOuterUpdate; }
-    }
-    internal sealed record EffectSnapshot(EffectVisual Visual, bool Completed, AppearanceOuterUpdate? LastOuterUpdate)
-    {
-        internal static EffectSnapshot From(EffectVisual visual) => new(visual, visual.CompletedOuterUpdate, visual.LastOuterUpdate);
-        internal void Apply() { Visual.CompletedOuterUpdate = Completed; Visual.LastOuterUpdate = LastOuterUpdate; }
-    }
     internal readonly record struct ActiveAttackPresentation(PresentationEventIdentity Identity, string HitCue, bool ImpactReported = false);
 }

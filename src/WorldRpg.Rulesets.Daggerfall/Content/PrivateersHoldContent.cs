@@ -1,10 +1,9 @@
 using System.Collections.ObjectModel;
 using System.Buffers.Binary;
 using System.Numerics;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using Rusty.Engine;
+using WorldRpg.Kit;
 using WorldRpg.Kit.Controls;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
@@ -12,8 +11,6 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// <summary>Reads authored Privateer's Hold scenario facts; no project entity names participate in runtime selection.</summary>
 internal static class PrivateersHoldContent
 {
-    private const int SchemaVersion = 1;
-
     internal static PrivateersHoldInputs Read(ProductContent content, ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions)
     {
         DaggerfallContentDiagnostics diagnostics = new();
@@ -23,8 +20,7 @@ internal static class PrivateersHoldContent
             JsonElement root = DaggerfallBaseContent.Object(document.RootElement, "root", diagnostics);
             DaggerfallBaseContent.RejectDuplicateProperties(root, "root", diagnostics);
             if (DaggerfallBaseContent.Text(root, "ruleset", diagnostics) != DaggerfallRuleset.Identity.Value) diagnostics.Add("Privateer's Hold payload must identify ruleset 'daggerfall'.");
-            if (DaggerfallBaseContent.Integer(root, "schemaVersion", diagnostics) != SchemaVersion) diagnostics.Add($"Privateer's Hold payload schemaVersion must be {SchemaVersion}.");
-            AdmittedFiles files = AdmittedFiles.Copy(content, diagnostics);
+            AdmittedFiles files = AdmittedFiles.From(content);
             ScenarioStart start = ReadStart(DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "startingState", diagnostics), "startingState", diagnostics), diagnostics);
             // A starting site the published locations do not carry would leave the session standing at a
             // location nothing can name, so it is refused against the section that does carry them. The
@@ -76,10 +72,6 @@ internal static class PrivateersHoldContent
         ContentSha256 meshHash = RequireArtifact(artifacts, meshPath, diagnostics);
         ContentSha256 mediaHash = RequireArtifact(artifacts, mediaPath, diagnostics);
         ContentSha256 classicMediaHash = RequireArtifact(artifacts, classicMediaPath, diagnostics);
-        VerifyAdmittedArtifact(files, spatialPath, spatialHash, diagnostics);
-        VerifyAdmittedArtifact(files, meshPath, meshHash, diagnostics);
-        VerifyAdmittedArtifact(files, mediaPath, mediaHash, diagnostics);
-        VerifyAdmittedArtifact(files, classicMediaPath, classicMediaHash, diagnostics);
         ulong gridId = UnsignedInteger(world, "navigationGridId", diagnostics);
         AuthoredWorldAppearance worldAppearance = ReadWorldAppearance(DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(world, "appearance", diagnostics), "world.appearance", diagnostics), diagnostics);
         Dictionary<long, AuthoredActor> actors = ReadNormalizedPlacements(root, definitions, diagnostics);
@@ -142,12 +134,12 @@ internal static class PrivateersHoldContent
 
     private static Dictionary<string, ContentSha256> ReadImportArtifacts(AdmittedFiles files, string manifestPath, string publicationRoot, DaggerfallContentDiagnostics diagnostics)
     {
-        byte[]? bytes = files.GetExactlyOne(manifestPath);
+        ReadOnlyMemory<byte>? bytes = files.GetExactlyOne(manifestPath);
         if (bytes is null) { diagnostics.Add($"Generated import manifest '{manifestPath}' must occur exactly once in admitted content."); return []; }
         Dictionary<string, ContentSha256> artifacts = new(StringComparer.Ordinal);
         try
         {
-            using JsonDocument document = JsonDocument.Parse(bytes);
+            using JsonDocument document = JsonDocument.Parse(bytes.Value);
             foreach (JsonElement artifact in DaggerfallBaseContent.Array(DaggerfallBaseContent.Object(document.RootElement, "import manifest", diagnostics), "artifacts", diagnostics))
             {
                 JsonElement value = DaggerfallBaseContent.Object(artifact, "import artifact", diagnostics);
@@ -168,16 +160,6 @@ internal static class PrivateersHoldContent
         return default;
     }
 
-    private static void VerifyAdmittedArtifact(AdmittedFiles files, string path, ContentSha256 expected, DaggerfallContentDiagnostics diagnostics)
-    {
-        byte[]? bytes = files.GetExactlyOne(path);
-        if (bytes is null) { diagnostics.Add($"Generated artifact '{path}' must occur exactly once in admitted content."); return; }
-        if (ContentHash(Convert.ToHexString(SHA256.HashData(bytes)), diagnostics) != expected)
-        {
-            diagnostics.Add($"Generated artifact '{path}' does not match its manifest content digest.");
-        }
-    }
-
     private static ContentSha256 ContentHash(string hex, DaggerfallContentDiagnostics diagnostics)
     {
         try
@@ -194,7 +176,7 @@ internal static class PrivateersHoldContent
     }
 
     private static (IReadOnlyList<NormalizedMaterial> Materials, IReadOnlyDictionary<int, NormalizedActorSprite> Sprites) ReadDungeonMedia(
-        byte[]? bytes,
+        ReadOnlyMemory<byte>? bytes,
         string publicationRoot,
         IReadOnlyDictionary<string, ContentSha256> artifacts,
         DaggerfallDefinitions definitions,
@@ -203,7 +185,7 @@ internal static class PrivateersHoldContent
         if (bytes is null) { diagnostics.Add("Generated dungeon media manifest is unavailable."); return ([], new Dictionary<int, NormalizedActorSprite>()); }
         try
         {
-            using JsonDocument document = JsonDocument.Parse(bytes);
+            using JsonDocument document = JsonDocument.Parse(bytes.Value);
             JsonElement root = DaggerfallBaseContent.Object(document.RootElement, "dungeon media manifest", diagnostics);
             Dictionary<string, MediaResource> resources = [];
             JsonElement media = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "media", diagnostics), "dungeon media", diagnostics);
@@ -433,15 +415,14 @@ internal static class PrivateersHoldContent
 
     private sealed record MediaResource(string Path, ContentSha256 Hash, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames);
 
-    private static (IReadOnlyList<NormalizedAudioClip> Audio, NormalizedClassicPresentation Presentation) ReadClassicPresentation(AdmittedFiles files, byte[]? bytes, string publicationRoot, IReadOnlyDictionary<string, ContentSha256> artifacts, DaggerfallContentDiagnostics diagnostics)
+    private static (IReadOnlyList<NormalizedAudioClip> Audio, NormalizedClassicPresentation Presentation) ReadClassicPresentation(AdmittedFiles files, ReadOnlyMemory<byte>? bytes, string publicationRoot, IReadOnlyDictionary<string, ContentSha256> artifacts, DaggerfallContentDiagnostics diagnostics)
     {
         if (bytes is null) { diagnostics.Add("Generated classic media manifest is unavailable."); return ([], NormalizedClassicPresentation.Empty); }
         try
         {
-            using JsonDocument document = JsonDocument.Parse(bytes);
+            using JsonDocument document = JsonDocument.Parse(bytes.Value);
             JsonElement root = DaggerfallBaseContent.Object(document.RootElement, "classic media manifest", diagnostics);
             DaggerfallBaseContent.RejectDuplicateProperties(root, "classic media manifest", diagnostics);
-            if (DaggerfallBaseContent.Integer(root, "schemaVersion", diagnostics) != 2) diagnostics.Add("Classic media manifest schemaVersion must be 2.");
             Dictionary<string, ClassicMediaResource> resources = [];
             JsonElement media = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "media", diagnostics), "classic media", diagnostics);
             DaggerfallBaseContent.RejectDuplicateProperties(media, "classic media", diagnostics);
@@ -462,7 +443,7 @@ internal static class PrivateersHoldContent
                 int atlasWidth = DaggerfallBaseContent.Integer(resource, "atlasWidth", diagnostics);
                 int atlasHeight = DaggerfallBaseContent.Integer(resource, "atlasHeight", diagnostics);
                 if (!ValidLogicalId(id) || !ValidLogicalPath(relativePath) || !KnownClassicMediaKind(kind) || byteLength <= 0 || string.IsNullOrWhiteSpace(mimeType) || sourceWidth < 0 || sourceHeight < 0
-                    || atlasWidth < 0 || atlasHeight < 0 || files.GetExactlyOne(path) is not byte[] artifactBytes || artifactBytes.LongLength != byteLength)
+                    || atlasWidth < 0 || atlasHeight < 0 || files.GetExactlyOne(path) is not ReadOnlyMemory<byte> artifactBytes || artifactBytes.Length != byteLength)
                     diagnostics.Add($"Classic media descriptor '{id}' does not match the canonical importer contract.");
                 List<NormalizedAtlasFrame> frames = [];
                 foreach (JsonElement frameValue in DaggerfallBaseContent.Array(resource, "frames", diagnostics))
@@ -849,24 +830,11 @@ internal static class PrivateersHoldContent
 
 internal sealed class AdmittedFiles
 {
-    private readonly IReadOnlyDictionary<string, IReadOnlyList<byte[]>> _files;
-    private AdmittedFiles(IReadOnlyDictionary<string, IReadOnlyList<byte[]>> files) => _files = files;
-    internal static AdmittedFiles Copy(ProductContent content, DaggerfallContentDiagnostics diagnostics)
-    {
-        Dictionary<string, List<byte[]>> copied = new(StringComparer.Ordinal);
-        foreach (ProductContentFile file in content.Files.Span)
-        {
-            if (file.Path.IsEmpty) continue;
-            string path;
-            try { path = new UTF8Encoding(false, true).GetString(file.Path.Span); }
-            catch (DecoderFallbackException) { diagnostics.Add("Admitted content contains a non-UTF8 path."); continue; }
-            if (!copied.TryGetValue(path, out List<byte[]>? values)) copied[path] = values = [];
-            values.Add(file.Bytes.ToArray());
-        }
-        return new(new ReadOnlyDictionary<string, IReadOnlyList<byte[]>>(copied.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<byte[]>)Array.AsReadOnly(pair.Value.ToArray()), StringComparer.Ordinal)));
-    }
-    internal bool ContainsExactlyOne(string path) => _files.TryGetValue(path, out IReadOnlyList<byte[]>? values) && values.Count == 1;
-    internal byte[]? GetExactlyOne(string path) => ContainsExactlyOne(path) ? _files[path][0].ToArray() : null;
+    private readonly ProductContent _content;
+    private AdmittedFiles(ProductContent content) => _content = content;
+    internal static AdmittedFiles From(ProductContent content) => new(content ?? throw new ArgumentNullException(nameof(content)));
+    internal bool ContainsExactlyOne(string path) => _content.TryReadFile(path, out _);
+    internal ReadOnlyMemory<byte>? GetExactlyOne(string path) => _content.TryReadFile(path, out ProductContentFile file) ? file.Bytes : null;
 }
 
 internal sealed record ScenarioStart(WorldPoint Position, PlayerInitialLook Look, DaggerfallSiteId? Site);

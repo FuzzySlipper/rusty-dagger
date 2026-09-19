@@ -1,0 +1,171 @@
+using WorldRpg.Kit.Combat;
+using WorldRpg.Kit.Targeting;
+using Rusty.Engine;
+using System.Numerics;
+using Rusty.Engine.Entities;
+using Rusty.Engine.Mechanics;
+using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.World;
+using WorldRpg.Rulesets.Daggerfall.Facts;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
+using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
+using WorldRpg.Kit;
+using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.Facts;
+using WorldRpg.Kit.Inventory;
+using WorldRpg.Kit.Presentation;
+using WorldRpg.Kit.Progression;
+using WorldRpg.Kit.World;
+using KitEquipmentSlotId = WorldRpg.Kit.Inventory.EquipmentSlotId;
+using KitUniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
+
+namespace WorldRpg.Rulesets.Daggerfall;
+
+internal sealed record DaggerActorAssembly(DaggerfallState State, Dictionary<long, DaggerfallActorDefinition> Definitions, DaggerfallActorDefinition PlayerDefinition);
+
+/// <summary>Explicit entity/component construction from admitted Dagger definitions or current saves.</summary>
+internal static class DaggerActorFactory
+{
+    private const ulong PlayerMechanicsEntityId = (ulong)DaggerfallActorIdentity.PlayerEntityId;
+    internal static DaggerActorAssembly Create(IRandomService random, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallSavePayload? saved)
+    {
+        ActorsState actors = new();
+        try
+        {
+            DaggerfallMechanicsState mechanics = new();
+            DaggerfallActorDefinition playerDefinition = definitions.RequireActor(new DaggerfallActorId("player"));
+            ValidateInitialEntityIds(inputs, playerDefinition.Loadout);
+            Dictionary<InventoryItemId, ItemDefinition> itemDefinitions = definitions.Items.Values
+                .ToDictionary(item => new InventoryItemId(item.Id.Value), ToManagedItem);
+            Dictionary<KitEquipmentSlotId, EquipmentSlotDefinition> equipmentSlots = definitions.EquipmentSlots.Values
+                .ToDictionary(slot => new KitEquipmentSlotId(slot.Id.Value), ToManagedSlot);
+            PlayerActorState player = actors.CreatePlayer(checked((long)PlayerMechanicsEntityId),
+                new EntityTypeId(playerDefinition.Id.Value), mechanics.CreateStats(playerDefinition, playerDefinition.PlayerInitialVitals), playerDefinition.Combat.Health.Value);
+            EntityId playerEntity = player.Actor.Entity;
+            if (saved is not null) RestoreStats(player.Actor, saved.Player.Stats);
+            InventoryStore inventoryStore = new();
+            inventoryStore.RegisterInventory(new InventoryState(playerEntity));
+            inventoryStore.RegisterEquipment(new EquipmentState(playerEntity));
+            player.Actor.Add(new InventoryComponent(inventoryStore, playerEntity));
+            player.Actor.Add(new EquipmentComponent(inventoryStore, playerEntity));
+            MechanicsInventoryCoordinator inventory = new(player.Inventory, actors.Entities, itemDefinitions);
+            MechanicsInventoryContainerCoordinator containers = new(inventoryStore, actors.Entities, itemDefinitions);
+            MechanicsEquipmentCoordinator equipmentCoordinator = new(player.Inventory, player.Equipment, actors.Entities, itemDefinitions, equipmentSlots);
+            foreach (DaggerfallLoadoutEntry entry in playerDefinition.Loadout.Where(entry => saved is null && definitions.Items[entry.ItemId].IsFungible))
+            {
+                inventory.Grant(new InventoryGrant(new InventoryItemId(entry.ItemId.Value),
+                    entry.Quantity));
+            }
+            foreach (DaggerfallLoadoutEntry entry in playerDefinition.Loadout.Where(entry => saved is null && !definitions.Items[entry.ItemId].IsFungible))
+            {
+                KitUniqueInventoryItem item = equipmentCoordinator.Materialize(
+                    new DurableIdentityReference(DurableIdentityKind.Item, entry.UniqueEntityId!.Value),
+                    new InventoryItemId(entry.ItemId.Value));
+                if (entry.EquipSlot is DaggerfallEquipmentSlotId slot)
+                {
+                    equipmentCoordinator.Equip(
+                        item,
+                        [new KitEquipmentSlotId(slot.Value)]);
+                }
+            }
+            Dictionary<long, DaggerfallActorDefinition> authored = [];
+            foreach (AuthoredActor source in inputs.Project.Actors.Values)
+            {
+                if (!definitions.Actors.TryGetValue(source.ActorId, out DaggerfallActorDefinition? definition))
+                    throw new InvalidOperationException($"Privateer's Hold placement '{source.EntityId}' refers to missing actor '{source.ActorId.Value}'.");
+                ActorState actor = actors.CreateActor(source.EntityId, new EntityTypeId(definition.Id.Value),
+                    mechanics.CreateStats(definition, InitialVitals(random, definition, source.EntityId)),
+                    new ActorPose(source.Position, 0f), definition.Combat.Health.Value);
+                if (saved is not null) RestoreStats(actor.Actor, saved.Actors.Single(value => value.EntityId == source.EntityId).Stats);
+                authored.Add(source.EntityId, definition);
+                inventoryStore.RegisterInventory(new InventoryState(actor.Actor.Entity));
+                inventoryStore.RegisterEquipment(new EquipmentState(actor.Actor.Entity));
+                actor.Actor.Add(new InventoryComponent(inventoryStore, actor.Actor.Entity));
+                actor.Actor.Add(new EquipmentComponent(inventoryStore, actor.Actor.Entity));
+                // A placed actor whose definition declares a loadout carries it in a managed
+                // inventory over the session's inventory store: today that is the ranged actors'
+                // quiver, which a shot draws from and the save persists. A unique loadout entry
+                // would need an equipped placement, which no placed actor has yet, so one is
+                // refused rather than half-granted.
+                if (definition.Loadout.Count > 0)
+                {
+                    if (definitions.Items.Where(item => definition.Loadout.Any(entry => entry.ItemId == item.Key)).Any(item => item.Value.IsFungible is false))
+                        throw new InvalidOperationException($"Placed actor '{source.ActorId.Value}' loadout carries a unique item, which placed actors do not equip yet.");
+                    MechanicsInventoryCoordinator actorInventory = new(actor.Inventory, actors.Entities, itemDefinitions);
+                    if (saved is null)
+                    {
+                        foreach (DaggerfallLoadoutEntry entry in definition.Loadout.Where(entry => definitions.Items[entry.ItemId].IsFungible))
+                        {
+                            actorInventory.Grant(new InventoryGrant(new InventoryItemId(entry.ItemId.Value),
+                                entry.Quantity));
+                        }
+                    }
+                }
+            }
+            DaggerfallState state = new(new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians), actors, inventory, equipmentCoordinator, containers, itemDefinitions, equipmentSlots);
+            authored.Add(DaggerfallActorIdentity.PlayerEntityId, playerDefinition);
+            return new(state, authored, playerDefinition);
+        }
+        catch { actors.Dispose(); throw; }
+    }
+    private static void RestoreStats(Actor actor, DaggerfallStatsSave saved)
+    {
+        DaggerfallRestoredStats restored = DaggerfallStatsSaveBoundary.Restore(saved, actor.Entity);
+        actor.Replace(restored.Component);
+        actor.Add(restored);
+    }
+
+    internal static ItemDefinition ToManagedItem(DaggerfallItemDefinition item)
+    {
+        ItemEquipmentPolicy? equipment = item.Equipment is null
+            ? null
+            : new ItemEquipmentPolicy(
+                item.Equipment.RequiredSlots,
+                item.Equipment.ExclusiveGroup is { } group ? EquipmentExclusivityId.Parse(group) : null);
+        // Weight is authored item metadata for every catalog entry.  The current
+        // reference session does not register a carrying-capacity policy, so this
+        // is a cost declaration rather than a claim that encumbrance is enforced.
+        IEnumerable<ItemCapacityCost>? capacity = item.Weight > 0
+            ? [new ItemCapacityCost(CapacityMetricId.Parse("weight"), checked((ulong)item.Weight))]
+            : null;
+        return new ItemDefinition(
+            ItemDefinitionId.Parse(item.Id.Value),
+            item.IsFungible ? ItemKind.Fungible : ItemKind.Unique,
+            item.MaximumQuantity,
+            item.Equipment?.Classifications.Select(ItemClassificationId.Parse),
+            capacity,
+            equipment);
+    }
+
+    internal static EquipmentSlotDefinition ToManagedSlot(DaggerfallEquipmentSlotDefinition slot) =>
+        new(Rusty.Engine.Mechanics.EquipmentSlotId.Parse(slot.Id.Value), slot.AllowedClassifications.Select(ItemClassificationId.Parse));
+
+    /// <summary>
+    /// Applies the enemy swings whose authored damage frame was reached in the sprite
+    /// playback this update consumed. The presentation reports the beat; the ruleset
+    /// owns what it means, and a swing that expired or lost its target applies nothing.
+    /// </summary>
+    private static DaggerfallVitalValues InitialVitals(IRandomService random, DaggerfallActorDefinition definition, long entityId)
+    {
+        if (definition.Id.Value == "player") return definition.PlayerInitialVitals;
+        int health = checked((int)random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, CombatRandomKey.EnemyScope, CombatRandomKey.InitialHealth(entityId, definition.Id.Value), definition.Health.Minimum, definition.Health.Maximum)).Value);
+        return new DaggerfallVitalValues(health, 0, 0);
+    }
+
+    private static void ValidateInitialEntityIds(PrivateersHoldInputs inputs, IReadOnlyList<DaggerfallLoadoutEntry> loadout)
+    {
+        HashSet<ulong> ids = [PlayerMechanicsEntityId];
+        foreach (AuthoredActor actor in inputs.Project.Actors.Values)
+        {
+            if (actor.EntityId <= 0 || !ids.Add(checked((ulong)actor.EntityId)))
+                throw new InvalidOperationException($"Initial Mechanics entity id '{actor.EntityId}' collides with another player, placement, or item entity.");
+        }
+        foreach (DaggerfallLoadoutEntry item in loadout)
+            if (item.UniqueEntityId is ulong entityId && !ids.Add(entityId))
+                throw new InvalidOperationException($"Initial Mechanics entity id '{entityId}' collides with another player, placement, or item entity.");
+    }
+
+}

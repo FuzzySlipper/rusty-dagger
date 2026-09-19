@@ -57,17 +57,14 @@ internal sealed record DaggerfallAttackDefinition(string Skill, int MinimumDamag
 internal sealed record DaggerfallRewardPolicy(int ExperienceReward);
 internal sealed record DaggerfallLoadoutEntry(DaggerfallItemId ItemId, ulong Quantity, ulong? UniqueEntityId, DaggerfallEquipmentSlotId? EquipSlot);
 /// <summary>
-/// The published locations: the section's shape version, the location records themselves, and how many
-/// dungeons and gaps it records.
+/// The published locations, their records, and how many dungeons and gaps they carry.
 /// </summary>
-/// <param name="SchemaVersion">The section's shape version.</param>
 /// <param name="Keys">Every (region, index) the section carries, which is what a dungeon must name.</param>
 /// <param name="Records">Every location the section publishes, in the order it publishes them.</param>
 /// <param name="Dungeons">How many dungeons it publishes.</param>
 /// <param name="RegionGaps">How many regions it records as having no usable tables.</param>
 /// <param name="Regions">How many regions it records table provenance for, which is every region group.</param>
 internal sealed record DaggerfallLocationSet(
-    int SchemaVersion,
     IReadOnlyCollection<(int Region, int Index)> Keys,
     IReadOnlyList<DaggerfallSiteRecord> Records,
     int Dungeons,

@@ -11,7 +11,6 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// <summary>Reads the normalized, immutable daggerfall.base payload.</summary>
 internal static class DaggerfallBaseContent
 {
-    internal const int SchemaVersion = 2;
     private const int MaximumAuthoredDamage = 100_000;
     private const int MaximumAuthoredArmor = 1_000;
     private const int MaximumAuthoredLootGold = 1_000_000;
@@ -25,7 +24,6 @@ internal static class DaggerfallBaseContent
             JsonElement root = Object(document.RootElement, "root", diagnostics);
             RejectDuplicateProperties(root, "root", diagnostics);
             if (Text(root, "ruleset", diagnostics) != DaggerfallRuleset.Identity.Value) diagnostics.Add("Base payload must identify ruleset 'daggerfall'.");
-            if (Integer(root, "schemaVersion", diagnostics) != SchemaVersion) diagnostics.Add($"Base payload schemaVersion must be {SchemaVersion}.");
             DaggerfallVocabulary vocabulary = ReadVocabulary(root, diagnostics);
             Dictionary<string, DaggerfallActionDefinition> actions = ReadActions(root, diagnostics);
             Dictionary<DaggerfallItemId, DaggerfallItemDefinition> items = ReadItems(root, diagnostics);
@@ -79,13 +77,7 @@ internal static class DaggerfallBaseContent
         if (!root.TryGetProperty("characterPresentation", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
         {
             diagnostics.Add("Base payload must publish a characterPresentation section.");
-            return new DaggerfallCharacterPresentationSet(0, new Dictionary<string, DaggerfallRaceLayers>(StringComparer.Ordinal), [], new Dictionary<string, DaggerfallCareerPortraitDefinition>(StringComparer.Ordinal), [], [], []);
-        }
-
-        int schemaVersion = Integer(section, "schemaVersion", diagnostics);
-        if (schemaVersion != CharacterPresentationSchemaVersion)
-        {
-            diagnostics.Add($"Published character presentation must declare schemaVersion {CharacterPresentationSchemaVersion}.");
+            return new DaggerfallCharacterPresentationSet(new Dictionary<string, DaggerfallRaceLayers>(StringComparer.Ordinal), [], new Dictionary<string, DaggerfallCareerPortraitDefinition>(StringComparer.Ordinal), [], [], []);
         }
 
         List<string> files = [];
@@ -235,7 +227,7 @@ internal static class DaggerfallBaseContent
             careersWithout.Add(new DaggerfallCareerWithoutPortrait(Text(entry, "careerId", diagnostics), Text(entry, "reason", diagnostics)));
         }
 
-        return new DaggerfallCharacterPresentationSet(schemaVersion, races, [.. faces.OrderBy(face => face.Index)], careers, careersWithout, without, files);
+        return new DaggerfallCharacterPresentationSet(races, [.. faces.OrderBy(face => face.Index)], careers, careersWithout, without, files);
     }
 
     /// <summary>
@@ -296,13 +288,7 @@ internal static class DaggerfallBaseContent
         if (!root.TryGetProperty("locations", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
         {
             diagnostics.Add("Base payload must publish a locations section.");
-            return new DaggerfallLocationSet(0, [], [], 0, 0, 0);
-        }
-
-        int schemaVersion = Integer(section, "schemaVersion", diagnostics);
-        if (schemaVersion != LocationSchemaVersion)
-        {
-            diagnostics.Add($"Published locations must declare schemaVersion {LocationSchemaVersion}.");
+            return new DaggerfallLocationSet([], [], 0, 0, 0);
         }
 
         List<DaggerfallSiteRecord> records = [];
@@ -448,7 +434,7 @@ internal static class DaggerfallBaseContent
             }
         }
 
-        return new DaggerfallLocationSet(schemaVersion, [.. keys], [.. records], dungeons, gaps, regions);
+        return new DaggerfallLocationSet([.. keys], [.. records], dungeons, gaps, regions);
     }
 
     /// <summary>
@@ -642,9 +628,6 @@ internal static class DaggerfallBaseContent
             diagnostics.Add("Base payload publishes no text section; every text lookup resolves to nothing until it is republished.");
             return new DaggerfallTextSet(new Dictionary<DaggerfallTextKey, DaggerfallTextValue>(), [], []);
         }
-
-        int schemaVersion = Integer(section, "schemaVersion", diagnostics);
-        if (schemaVersion != TextSchemaVersion) diagnostics.Add($"Published text must declare schemaVersion {TextSchemaVersion}.");
 
         // A source is the language and family its values inherit, so two sources claiming one path would
         // leave a value naming it with no one language and no one family.
@@ -1600,11 +1583,6 @@ internal static class DaggerfallBaseContent
         DaggerfallContentDiagnostics diagnostics)
     {
         JsonElement value = Object(Property(root, "catalogs", diagnostics), "catalogs", diagnostics);
-        if (Integer(value, "schemaVersion", diagnostics) != CatalogSchemaVersion)
-        {
-            diagnostics.Add($"Published catalogs must declare schemaVersion {CatalogSchemaVersion}.");
-        }
-
         IReadOnlyList<string> sources = ReadTexts(value, "sources", diagnostics);
         IReadOnlyList<DaggerfallCatalogKey> attributes = ReadCatalogKeys(value, "attributes", sources, diagnostics);
         IReadOnlyList<DaggerfallCatalogKey> skills = ReadCatalogKeys(value, "skills", sources, diagnostics);
@@ -2098,11 +2076,6 @@ internal static class DaggerfallBaseContent
     /// within. The two have to agree or the reach is a number the perception query never resolves.
     /// </summary>
     private const double MaximumRangedReach = 12d;
-
-    private const int CatalogSchemaVersion = 1;
-    private const int CharacterPresentationSchemaVersion = 1;
-    private const int LocationSchemaVersion = 1;
-    private const int TextSchemaVersion = 1;
 
     internal static JsonElement Object(JsonElement value, string name, DaggerfallContentDiagnostics diagnostics)
     {

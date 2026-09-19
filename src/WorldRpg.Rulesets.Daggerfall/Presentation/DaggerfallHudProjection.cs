@@ -165,10 +165,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("bundle", builder.String(identity.Bundle.Value)),
         ("ruleset", builder.String(identity.Ruleset.Value)),
         ("contentPacks", builder.Array(identity.ContentPacks.Select(pack => builder.String(pack.Value)).ToArray())),
-        ("tuning", builder.String(identity.Tuning.Value)),
-        ("fingerprint", builder.String(identity.Fingerprint)),
-        ("contentFingerprint", builder.String(identity.ContentFingerprint)),
-        ("tuningFingerprint", builder.String(identity.TuningFingerprint)));
+        ("tuning", builder.String(identity.Tuning.Value)));
 
     private uint ResourceRow(UiValueBuilder builder, PlayerActorState player, DaggerfallHudResourceDefinition resource)
     {

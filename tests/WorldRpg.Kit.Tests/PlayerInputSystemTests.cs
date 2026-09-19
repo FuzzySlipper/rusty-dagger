@@ -141,7 +141,7 @@ public sealed class PlayerInputSystemTests
     }
 
     [Fact]
-    public void Out_of_limit_look_diagnosis_leaves_prepared_input_uncommitted()
+    public void Out_of_limit_look_diagnosis_leaves_input_state_unchanged()
     {
         InputActionId action = new("test.activate");
         PlayerInputSystem input = new(TestTuning(), new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD), [new InputActionBinding(action, "activate"u8.ToArray())]);
@@ -163,69 +163,15 @@ public sealed class PlayerInputSystemTests
     }
 
     [Fact]
-    public void Prepared_input_is_owner_bound_and_single_use()
-    {
-        InputActionId action = new("test.activate");
-        PlayerInputSystem first = new(TestTuning(), new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD), [new InputActionBinding(action, "activate"u8.ToArray())]);
-        PlayerInputSystem second = new(TestTuning(), new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD), [new InputActionBinding(action, "activate"u8.ToArray())]);
-        PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), 0f, 0f);
-        ProductUpdateState preparedFor = new(1f);
-        preparedFor.Add(Input(InputEventKind.Key, InputEdge.Pressed, key: KeyboardControl.KeyW));
-        preparedFor.Add(Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "activate"));
-        PreparedPlayerInput candidate = first.Prepare(player, preparedFor);
-
-        Assert.Throws<InvalidOperationException>(() => second.Commit(candidate, player, preparedFor));
-        Assert.Equal(Vector2.Zero, preparedFor.PlanarIntent);
-        Assert.False(preparedFor.IsRequested(action));
-        Assert.Equal(0f, player.YawRadians);
-
-        first.Commit(candidate, player, preparedFor);
-        Assert.Equal(new Vector2(0f, 1f), preparedFor.PlanarIntent);
-        Assert.True(preparedFor.IsRequested(action));
-        ProductUpdateState replay = new(1f);
-        Assert.Throws<InvalidOperationException>(() => first.Commit(candidate, player, replay));
-        Assert.Equal(Vector2.Zero, replay.PlanarIntent);
-        Assert.False(replay.IsRequested(action));
-    }
-
-    [Fact]
-    public void Prepared_input_rejects_an_out_of_order_commit()
-    {
-        InputActionId action = new("test.activate");
-        PlayerInputSystem input = new(TestTuning(), new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD), [new InputActionBinding(action, "activate"u8.ToArray())]);
-        PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), 0f, 0f);
-        ProductUpdateState firstUpdate = new(1f);
-        firstUpdate.Add(Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "activate"));
-        ProductUpdateState secondUpdate = new(1f);
-        secondUpdate.Add(Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "activate"));
-        PreparedPlayerInput first = input.Prepare(player, firstUpdate);
-        PreparedPlayerInput second = input.Prepare(player, secondUpdate);
-
-        input.Commit(first, player, firstUpdate);
-        Assert.True(firstUpdate.IsRequested(action));
-
-        Assert.Throws<InvalidOperationException>(() => input.Commit(second, player, secondUpdate));
-        Assert.False(secondUpdate.IsRequested(action));
-        Assert.Equal(0f, player.YawRadians);
-        Assert.Equal(0f, player.PitchRadians);
-    }
-
-    [Fact]
-    public void Prepared_input_rejects_a_changed_or_different_source_player_before_commit()
+    public void Input_application_uses_the_current_player_state()
     {
         PlayerInputSystem input = new(TestTuning(), new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD));
         PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), .25f, -.25f);
         ProductUpdateState update = new(1f);
-        PreparedPlayerInput candidate = input.Prepare(player, update);
-
         player.YawRadians = .5f;
-        Assert.Throws<InvalidOperationException>(() => input.EnsureCommittable(candidate, player));
-        Assert.Throws<InvalidOperationException>(() => input.Commit(candidate, player, update));
+        input.Apply(player, update);
         Assert.Equal(Vector2.Zero, update.PlanarIntent);
         Assert.Equal(.5f, player.YawRadians);
-
-        PlayerControlState differentPlayer = new(new WorldPoint(0f, 0f, 0f), .25f, -.25f);
-        Assert.Throws<InvalidOperationException>(() => input.EnsureCommittable(candidate, differentPlayer));
     }
 
     [Theory]

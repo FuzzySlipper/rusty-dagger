@@ -111,7 +111,6 @@ public static class DaggerfallCatalogBuilder
         }
 
         DaggerfallCatalogs catalogs = new(
-            DaggerfallCatalogs.CurrentSchemaVersion,
             attributes,
             skills,
             resistances,

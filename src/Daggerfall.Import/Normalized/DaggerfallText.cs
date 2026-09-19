@@ -318,27 +318,18 @@ public sealed record DaggerfallTextMacro(string Symbol, int Records, TextMacroDi
 /// The published text of the supplied classic sources: what a lookup resolves, what the corpus spells
 /// its values with, and which families the contract declares but does not fill.
 /// </summary>
-/// <param name="SchemaVersion">Shape version of this section.</param>
 /// <param name="Sources">Every source the records were read from.</param>
 /// <param name="PendingKinds">Families this contract declares keys for and does not fill.</param>
 /// <param name="Records">Every text value the sources carry, in source order.</param>
 /// <param name="Macros">The distinct macro symbols the values carry, in symbol order.</param>
 public sealed record DaggerfallText(
-    int SchemaVersion,
     IReadOnlyList<DaggerfallTextSource> Sources,
     IReadOnlyList<DaggerfallTextPendingKind> PendingKinds,
     IReadOnlyList<DaggerfallTextRecord> Records,
     IReadOnlyList<DaggerfallTextMacro> Macros)
 {
-    public const int CurrentSchemaVersion = 1;
-
     public void Validate()
     {
-        if (SchemaVersion != CurrentSchemaVersion)
-        {
-            throw new InvalidOperationException($"Text schema must be {CurrentSchemaVersion} but is {SchemaVersion}.");
-        }
-
         ArgumentNullException.ThrowIfNull(Sources);
         ArgumentNullException.ThrowIfNull(PendingKinds);
         ArgumentNullException.ThrowIfNull(Records);
@@ -509,7 +500,6 @@ public static class DaggerfallTextBuilder
         }
 
         DaggerfallText published = new(
-            DaggerfallText.CurrentSchemaVersion,
             [new DaggerfallTextSource(DaggerfallTextKind.Resource, family.Id, label, language, bytes.LongLength, catalog.HeaderLength, catalog.Records.Count)],
             [
                 // The families whose keys this contract declares and whose records their own tasks

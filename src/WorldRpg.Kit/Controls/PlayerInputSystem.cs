@@ -62,58 +62,6 @@ internal sealed class HeldPlayerInput
     }
 }
 
-/// <summary>A fully diagnosed input interpretation that has not changed persistent product state.</summary>
-public sealed class PreparedPlayerInput
-{
-    private readonly PlayerInputSystem _owner;
-    private readonly HeldPlayerInput _held;
-    private readonly HashSet<InputActionId> _actions;
-    private readonly PlayerControlState _player;
-    private readonly ulong _ownerRevision;
-    private readonly float _startingYawRadians;
-    private readonly float _startingPitchRadians;
-
-    private bool _consumed;
-
-    internal PreparedPlayerInput(PlayerInputSystem owner, PlayerControlState player, ulong ownerRevision, float startingYawRadians, float startingPitchRadians, HeldPlayerInput held, HashSet<InputActionId> actions, Vector2 planarIntent, float yawRadians, float pitchRadians)
-    {
-        _owner = owner;
-        _player = player;
-        _ownerRevision = ownerRevision;
-        _startingYawRadians = startingYawRadians;
-        _startingPitchRadians = startingPitchRadians;
-        _held = held;
-        _actions = actions;
-        PlanarIntent = planarIntent;
-        YawRadians = yawRadians;
-        PitchRadians = pitchRadians;
-    }
-
-    public Vector2 PlanarIntent { get; }
-    public float YawRadians { get; }
-    public float PitchRadians { get; }
-
-    internal void EnsureCommittableBy(PlayerInputSystem owner, PlayerControlState player)
-    {
-        if (!ReferenceEquals(_owner, owner)) throw new InvalidOperationException("Prepared input belongs to a different input system.");
-        if (!ReferenceEquals(_player, player)) throw new InvalidOperationException("Prepared input belongs to a different player state.");
-        if (_ownerRevision != owner.Revision) throw new InvalidOperationException("Prepared input is stale relative to input interpreter state.");
-        if (player.YawRadians != _startingYawRadians || player.PitchRadians != _startingPitchRadians) throw new InvalidOperationException("Prepared input is stale relative to player look state.");
-        if (_consumed) throw new InvalidOperationException("Prepared input was already consumed.");
-    }
-
-    internal void CommitTo(PlayerInputSystem owner, HeldPlayerInput held, ProductUpdateState update, PlayerControlState player)
-    {
-        EnsureCommittableBy(owner, player);
-        _consumed = true;
-        held.CopyFrom(_held);
-        player.YawRadians = YawRadians;
-        player.PitchRadians = PitchRadians;
-        update.PlanarIntent = PlanarIntent;
-        foreach (InputActionId action in _actions) update.Request(action);
-    }
-}
-
 public sealed class PlayerInputSystem
 {
     private readonly HeldPlayerInput _held = new();
@@ -121,10 +69,6 @@ public sealed class PlayerInputSystem
     private readonly PlayerControlBindings _controls;
     private readonly ControllerInputTuning? _controller;
     private readonly InputActionBinding[] _bindings;
-    private ulong _revision;
-
-    internal ulong Revision => _revision;
-
     public PlayerInputSystem(PlayerControlTuning tuning, PlayerControlBindings controls, IEnumerable<InputActionBinding>? bindings = null, ControllerInputTuning? controller = null)
     {
         _tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
@@ -133,8 +77,8 @@ public sealed class PlayerInputSystem
         _bindings = bindings?.ToArray() ?? [];
     }
 
-    /// <summary>Interprets one admitted input slice without changing held state, player state, or semantic actions.</summary>
-    public PreparedPlayerInput Prepare(PlayerControlState player, ProductUpdateState update)
+    /// <summary>Interprets and applies one admitted input slice before its dependent Engine movement proposal.</summary>
+    public void Apply(PlayerControlState player, ProductUpdateState update)
     {
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(update);
@@ -147,10 +91,8 @@ public sealed class PlayerInputSystem
         // Direct axes and digital movement describe this slice only; keyboard and mapped directions
         // are held, and a controller axis stays where it was left until a later event moves it.
         Vector2 sliceIntent = update.PlanarIntent;
-        float startingYawRadians = player.YawRadians;
-        float startingPitchRadians = player.PitchRadians;
-        float yawRadians = startingYawRadians;
-        float pitchRadians = startingPitchRadians;
+        float yawRadians = player.YawRadians;
+        float pitchRadians = player.PitchRadians;
 
         foreach (ProductInputEvent input in update.Inputs)
         {
@@ -204,25 +146,11 @@ public sealed class PlayerInputSystem
             pitchRadians = receipt.After.PitchRadians;
         }
 
-        return new PreparedPlayerInput(this, player, _revision, startingYawRadians, startingPitchRadians, held, actions, Combine(sliceIntent, ControllerMoveIntent(held.Axes)), yawRadians, pitchRadians);
-    }
-
-    /// <summary>Commits an already prepared candidate after the enclosing spatial proposal has succeeded.</summary>
-    public void Commit(PreparedPlayerInput candidate, PlayerControlState player, ProductUpdateState update)
-    {
-        ArgumentNullException.ThrowIfNull(candidate);
-        ArgumentNullException.ThrowIfNull(player);
-        ArgumentNullException.ThrowIfNull(update);
-        candidate.CommitTo(this, _held, update, player);
-        AdvanceRevision();
-    }
-
-    /// <summary>Rejects a foreign, stale, or consumed candidate before another owner attempts a dependent Engine proposal.</summary>
-    public void EnsureCommittable(PreparedPlayerInput candidate, PlayerControlState player)
-    {
-        ArgumentNullException.ThrowIfNull(candidate);
-        ArgumentNullException.ThrowIfNull(player);
-        candidate.EnsureCommittableBy(this, player);
+        _held.CopyFrom(held);
+        player.YawRadians = yawRadians;
+        player.PitchRadians = pitchRadians;
+        update.PlanarIntent = Combine(sliceIntent, ControllerMoveIntent(held.Axes));
+        foreach (InputActionId action in actions) update.Request(action);
     }
 
     /// <summary>Resolves the current view basis from committed product look state without changing it.</summary>
@@ -236,29 +164,15 @@ public sealed class PlayerInputSystem
         return Look.Integrate(request);
     }
 
-    /// <summary>Convenience path for callers that do not need to coordinate an Engine character proposal.</summary>
-    public void Apply(PlayerControlState player, ProductUpdateState update) => Commit(Prepare(player, update), player, update);
-
     /// <summary>
     /// Drops held movement keys, mapped-direction intent, and controller state without interpreting
     /// an input slice.
     /// </summary>
-    /// <remarks>
-    /// This is what a focus or mode change needs: a key that was held when play paused, a modal
-    /// opened or the player died must not keep moving the character after focus returns, and a
-    /// release the interpreter never sees would otherwise leave the key held forever. A stick is
-    /// dropped for the same reason — a pad left deflected through a mode change must not keep turning
-    /// the camera — and it re-engages on its next event rather than on the state it held before. The
-    /// revision advances, so input prepared against the previous focus is rejected as stale
-    /// instead of being committed after the change.
-    /// </remarks>
+    /// <remarks>A focus or mode change cannot wait for a missed device release: clearing the held values prevents a paused key or stick from moving the player when play resumes.</remarks>
     public void Neutralize()
     {
         _held.Clear();
-        AdvanceRevision();
     }
-
-    private void AdvanceRevision() => _revision = checked(_revision + 1);
 
     private bool IsMovementKey(KeyboardControl key) => key == _controls.Forward || key == _controls.Backward || key == _controls.Left || key == _controls.Right;
 

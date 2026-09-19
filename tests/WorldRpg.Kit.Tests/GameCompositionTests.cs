@@ -7,19 +7,18 @@ namespace WorldRpg.Kit.Tests;
 public sealed class GameCompositionTests
 {
     [Fact]
-    public void Resolver_orders_dependencies_and_fingerprints_the_selected_immutable_payloads()
+    public void Resolver_orders_dependencies_and_admits_the_current_payloads_once()
     {
-        ProductContent first = Content(
-            ("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","schemaVersion":1,"id":"test.bundle","version":1,"ruleset":"test","contentPacks":[{"id":"test.base","version":1},{"id":"test.world","version":1}],"tuning":{"id":"test.tuning","version":1}}"""),
-            ("worldrpg/content-packs/test.base.pack.json", """{"kind":"worldrpg.content-pack","schemaVersion":1,"id":"test.base","version":1,"ruleset":"test","dependencies":[],"payload":"payload/base.json"}"""),
-            ("worldrpg/content-packs/test.world.pack.json", """{"kind":"worldrpg.content-pack","schemaVersion":1,"id":"test.world","version":1,"ruleset":"test","dependencies":[{"id":"test.base","version":1}],"payload":"payload/world.json"}"""),
-            ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","schemaVersion":1,"id":"test.tuning","version":1,"ruleset":"test","payload":"payload/tuning.json"}"""),
+        ProductContent content = Content(
+            ("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"test","contentPacks":[{"id":"test.base"},{"id":"test.world"}],"tuning":{"id":"test.tuning"}}"""),
+            ("worldrpg/content-packs/test.base.pack.json", """{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"test","dependencies":[],"payload":"payload/base.json"}"""),
+            ("worldrpg/content-packs/test.world.pack.json", """{"kind":"worldrpg.content-pack","id":"test.world","ruleset":"test","dependencies":[{"id":"test.base"}],"payload":"payload/world.json"}"""),
+            ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"test","payload":"payload/tuning.json"}"""),
             ("payload/base.json", "base"),
             ("payload/world.json", "world"),
             ("payload/tuning.json", "tuning"));
 
-        ResolvedGameComposition composition = GameCompositionResolver.Resolve(first, new GameBundleId("test.bundle")).RequireComposition();
-        ResolvedGameComposition repeat = GameCompositionResolver.Resolve(first, new GameBundleId("test.bundle")).RequireComposition();
+        ResolvedGameComposition composition = GameCompositionResolver.Resolve(content, new GameBundleId("test.bundle")).RequireComposition();
 
         Assert.Equal(["test.base", "test.world"], composition.ContentPacks.Select(pack => pack.Id.Value));
         Assert.Equal("test", composition.Ruleset.Value);
@@ -27,66 +26,22 @@ public sealed class GameCompositionTests
         Assert.Equal("test.bundle", composition.Identity.Bundle.Value);
         Assert.Equal("test", composition.Identity.Ruleset.Value);
         Assert.Equal(["test.base", "test.world"], composition.Identity.ContentPacks.Select(pack => pack.Value));
+        Assert.Equal(["test.base", "test.world"], composition.Identity.ContentPackIdentities.Select(pack => pack.Id.Value));
         Assert.Equal("test.tuning", composition.Identity.Tuning.Value);
-        Assert.Equal(1, composition.Identity.BundleSchemaVersion);
-        Assert.Equal(1, composition.Identity.BundleVersion);
-        Assert.Equal([("test.base", 1, 1), ("test.world", 1, 1)], composition.Identity.ContentPackIdentities.Select(pack => (pack.Id.Value, pack.SchemaVersion, pack.Version)));
-        Assert.Equal(1, composition.Identity.TuningSchemaVersion);
-        Assert.Equal(1, composition.Identity.TuningVersion);
-        Assert.Equal(composition.Fingerprint, composition.Identity.Fingerprint);
-        Assert.Equal(composition.ContentFingerprint, composition.Identity.ContentFingerprint);
-        Assert.Equal(composition.TuningFingerprint, composition.Identity.TuningFingerprint);
-        Assert.Equal(1, composition.Bundle.SchemaVersion);
-        Assert.Equal(1, composition.ContentPacks[0].SchemaVersion);
-        Assert.Equal(1, composition.Tuning.SchemaVersion);
-        Assert.Equal(composition.Fingerprint, repeat.Fingerprint);
-        Assert.Matches("^[0-9a-f]{64}$", composition.Fingerprint);
-        Assert.Matches("^[0-9a-f]{64}$", composition.ContentFingerprint);
-        Assert.Matches("^[0-9a-f]{64}$", composition.TuningFingerprint);
-    }
-
-    [Fact]
-    public void Save_identity_rejects_changed_bundle_pack_and_tuning_versions_before_session_construction()
-    {
-        ResolvedGameComposition composition = GameCompositionResolver.Resolve(Content(
-            ("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","schemaVersion":1,"id":"test.bundle","version":1,"ruleset":"test","contentPacks":[{"id":"test.base","version":1}],"tuning":{"id":"test.tuning","version":1}}"""),
-            ("worldrpg/content-packs/test.base.pack.json", """{"kind":"worldrpg.content-pack","schemaVersion":1,"id":"test.base","version":1,"ruleset":"test","dependencies":[],"payload":"payload/base.json"}"""),
-            ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","schemaVersion":1,"id":"test.tuning","version":1,"ruleset":"test","payload":"payload/tuning.json"}"""),
-            ("payload/base.json", "base"), ("payload/tuning.json", "tuning")), new GameBundleId("test.bundle")).RequireComposition();
-
-        SaveCompositionIdentity saved = new(
-            new ResolvedBundleIdentity(composition.Identity.Bundle, composition.Identity.BundleSchemaVersion, 2),
-            composition.Identity.Ruleset,
-            [new ResolvedContentPackIdentity(new ContentPackId("test.base"), 1, 2)],
-            new ResolvedTuningIdentity(composition.Identity.Tuning, composition.Identity.TuningSchemaVersion, 2),
-            composition.Identity.Fingerprint,
-            composition.Identity.ContentFingerprint,
-            composition.Identity.TuningFingerprint);
-
-        IReadOnlyList<SaveCompatibilityDiagnostic> diagnostics = saved.CheckCompatible(composition.Identity);
-
-        Assert.Contains(diagnostics, value => value.Code == "bundle");
-        Assert.Contains(diagnostics, value => value.Code == "content-packs");
-        Assert.Contains(diagnostics, value => value.Code == "tuning");
+        Assert.Equal("world", Encoding.UTF8.GetString(composition.Content.ReadBytes("payload/world.json").Span));
     }
 
     [Theory]
     [InlineData("missing", "Content pack 'test.missing' is missing.")]
     [InlineData("cycle", "Content pack dependency cycle includes 'test.base'.")]
-    [InlineData("version", "requires version 2")]
     public void Resolver_reports_invalid_dependency_graphs(string variant, string expectedDiagnostic)
     {
-        string dependency = variant switch
-        {
-            "missing" => "{\"id\":\"test.missing\",\"version\":1}",
-            "cycle" => "{\"id\":\"test.world\",\"version\":1}",
-            _ => "{\"id\":\"test.base\",\"version\":2}",
-        };
+        string dependency = variant == "missing" ? "{\"id\":\"test.missing\"}" : "{\"id\":\"test.world\"}";
         ProductContent content = Content(
-            ("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","schemaVersion":1,"id":"test.bundle","version":1,"ruleset":"test","contentPacks":[{"id":"test.base","version":1}],"tuning":{"id":"test.tuning","version":1}}"""),
-            ("worldrpg/content-packs/test.base.pack.json", $$"""{"kind":"worldrpg.content-pack","schemaVersion":1,"id":"test.base","version":1,"ruleset":"test","dependencies":[{{dependency}}],"payload":"payload/base.json"}"""),
-            ("worldrpg/content-packs/test.world.pack.json", """{"kind":"worldrpg.content-pack","schemaVersion":1,"id":"test.world","version":1,"ruleset":"test","dependencies":[{"id":"test.base","version":1}],"payload":"payload/world.json"}"""),
-            ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","schemaVersion":1,"id":"test.tuning","version":1,"ruleset":"test","payload":"payload/tuning.json"}"""),
+            ("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"test","contentPacks":[{"id":"test.base"}],"tuning":{"id":"test.tuning"}}"""),
+            ("worldrpg/content-packs/test.base.pack.json", $$"""{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"test","dependencies":[{{dependency}}],"payload":"payload/base.json"}"""),
+            ("worldrpg/content-packs/test.world.pack.json", """{"kind":"worldrpg.content-pack","id":"test.world","ruleset":"test","dependencies":[{"id":"test.base"}],"payload":"payload/world.json"}"""),
+            ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"test","payload":"payload/tuning.json"}"""),
             ("payload/base.json", "base"),
             ("payload/world.json", "world"),
             ("payload/tuning.json", "tuning"));
@@ -101,10 +56,10 @@ public sealed class GameCompositionTests
     public void Resolver_rejects_duplicate_descriptors_and_mismatched_tuning_ruleset()
     {
         ProductContent content = Content(
-            ("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","schemaVersion":1,"id":"test.bundle","version":1,"ruleset":"test","contentPacks":[{"id":"test.base","version":1}],"tuning":{"id":"test.tuning","version":1}}"""),
-            ("worldrpg/bundles/test-copy.bundle.json", """{"kind":"worldrpg.game-bundle","schemaVersion":1,"id":"test.bundle","version":1,"ruleset":"test","contentPacks":[{"id":"test.base","version":1}],"tuning":{"id":"test.tuning","version":1}}"""),
-            ("worldrpg/content-packs/test.base.pack.json", """{"kind":"worldrpg.content-pack","schemaVersion":1,"id":"test.base","version":1,"ruleset":"other","dependencies":[],"payload":"payload/base.json"}"""),
-            ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","schemaVersion":1,"id":"test.tuning","version":1,"ruleset":"other","payload":"payload/tuning.json"}"""),
+            ("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"test","contentPacks":[{"id":"test.base"}],"tuning":{"id":"test.tuning"}}"""),
+            ("worldrpg/bundles/test-copy.bundle.json", """{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"test","contentPacks":[{"id":"test.base"}],"tuning":{"id":"test.tuning"}}"""),
+            ("worldrpg/content-packs/test.base.pack.json", """{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"other","dependencies":[],"payload":"payload/base.json"}"""),
+            ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"other","payload":"payload/tuning.json"}"""),
             ("payload/base.json", "base"),
             ("payload/tuning.json", "tuning"));
 
@@ -116,20 +71,20 @@ public sealed class GameCompositionTests
     }
 
     [Theory]
-    [InlineData("bundle", "schemaVersion")]
+    [InlineData("bundle", "ruleset")]
     [InlineData("pack", "ruleset")]
     [InlineData("tuning", "payload")]
-    public void Resolver_reports_required_descriptor_fields_without_leaking_lookup_exceptions(string descriptor, string missingProperty)
+    public void Resolver_reports_required_current_descriptor_fields(string descriptor, string missingProperty)
     {
         string bundle = descriptor == "bundle"
-            ? """{"kind":"worldrpg.game-bundle","id":"test.bundle","version":1,"ruleset":"test","contentPacks":[{"id":"test.base","version":1}],"tuning":{"id":"test.tuning","version":1}}"""
-            : """{"kind":"worldrpg.game-bundle","schemaVersion":1,"id":"test.bundle","version":1,"ruleset":"test","contentPacks":[{"id":"test.base","version":1}],"tuning":{"id":"test.tuning","version":1}}""";
+            ? """{"kind":"worldrpg.game-bundle","id":"test.bundle","contentPacks":[{"id":"test.base"}],"tuning":{"id":"test.tuning"}}"""
+            : """{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"test","contentPacks":[{"id":"test.base"}],"tuning":{"id":"test.tuning"}}""";
         string pack = descriptor == "pack"
-            ? """{"kind":"worldrpg.content-pack","schemaVersion":1,"id":"test.base","version":1,"dependencies":[],"payload":"payload/base.json"}"""
-            : """{"kind":"worldrpg.content-pack","schemaVersion":1,"id":"test.base","version":1,"ruleset":"test","dependencies":[],"payload":"payload/base.json"}""";
+            ? """{"kind":"worldrpg.content-pack","id":"test.base","dependencies":[],"payload":"payload/base.json"}"""
+            : """{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"test","dependencies":[],"payload":"payload/base.json"}""";
         string tuning = descriptor == "tuning"
-            ? """{"kind":"worldrpg.tuning-profile","schemaVersion":1,"id":"test.tuning","version":1,"ruleset":"test"}"""
-            : """{"kind":"worldrpg.tuning-profile","schemaVersion":1,"id":"test.tuning","version":1,"ruleset":"test","payload":"payload/tuning.json"}""";
+            ? """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"test"}"""
+            : """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"test","payload":"payload/tuning.json"}""";
 
         GameCompositionResolution resolution = GameCompositionResolver.Resolve(Content(
             ("worldrpg/bundles/test.bundle.json", bundle),
@@ -143,15 +98,14 @@ public sealed class GameCompositionTests
     }
 
     [Fact]
-    public void Resolver_exposes_defensive_collections_and_payload_copies_after_fingerprinting()
+    public void Resolver_keeps_admitted_payloads_and_collections_stable_for_live_callers()
     {
         ResolvedGameComposition composition = GameCompositionResolver.Resolve(Content(
-            ("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","schemaVersion":1,"id":"test.bundle","version":1,"ruleset":"test","contentPacks":[{"id":"test.base","version":1}],"tuning":{"id":"test.tuning","version":1}}"""),
-            ("worldrpg/content-packs/test.base.pack.json", """{"kind":"worldrpg.content-pack","schemaVersion":1,"id":"test.base","version":1,"ruleset":"test","dependencies":[],"payload":"payload/base.json"}"""),
-            ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","schemaVersion":1,"id":"test.tuning","version":1,"ruleset":"test","payload":"payload/tuning.json"}"""),
+            ("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"test","contentPacks":[{"id":"test.base"}],"tuning":{"id":"test.tuning"}}"""),
+            ("worldrpg/content-packs/test.base.pack.json", """{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"test","dependencies":[],"payload":"payload/base.json"}"""),
+            ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"test","payload":"payload/tuning.json"}"""),
             ("payload/base.json", "base"), ("payload/tuning.json", "tuning")), new GameBundleId("test.bundle")).RequireComposition();
 
-        string fingerprint = composition.Fingerprint;
         Assert.False(composition.ContentPacks is ContentPack[]);
         Assert.False(composition.Bundle.ContentPacks is ContentPackReference[]);
         byte[] packPayload = composition.ContentPacks[0].Payload.ToArray();
@@ -161,7 +115,6 @@ public sealed class GameCompositionTests
 
         Assert.Equal("base", Encoding.UTF8.GetString(composition.ContentPacks[0].Payload.Span));
         Assert.Equal("tuning", Encoding.UTF8.GetString(composition.Tuning.Payload.Span));
-        Assert.Equal(fingerprint, composition.Fingerprint);
     }
 
     private static ProductContent Content(params (string Path, string Value)[] files) => new(files.Select(file => new ProductContentFile(Encoding.UTF8.GetBytes(file.Path), Encoding.UTF8.GetBytes(file.Value))).ToArray());

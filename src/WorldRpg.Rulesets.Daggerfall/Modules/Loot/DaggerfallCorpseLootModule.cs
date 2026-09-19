@@ -5,6 +5,7 @@ using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Facts;
 using WorldRpg.Kit.Inventory;
+using WorldRpg.Kit.Loot;
 using WorldRpg.Kit.Progression;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -35,7 +36,7 @@ internal sealed class DaggerfallCorpseLootModule
     private readonly DaggerfallUniqueItemAllocator _uniqueItems;
     private readonly ProgressionState _progression;
     private readonly DaggerfallLootInteractionTuning _tuning;
-    private readonly Dictionary<long, CorpseContainer> _corpses = [];
+    private readonly CorpseLootCoordinator _corpseLoot;
 
     internal DaggerfallCorpseLootModule(
         IPerceptionService perception,
@@ -61,13 +62,16 @@ internal sealed class DaggerfallCorpseLootModule
         _uniqueItems = uniqueItems ?? throw new ArgumentNullException(nameof(uniqueItems));
         _progression = progression ?? throw new ArgumentNullException(nameof(progression));
         _tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
+        _corpseLoot = new CorpseLootCoordinator(_actors.Entities, _containers);
     }
 
-    private EntityId CreateCorpseOwner(long actorId) => _actors.Entities.Create(
-        new WorldRpg.Kit.World.DurableIdentityReference(WorldRpg.Kit.World.DurableIdentityKind.Container, checked((ulong)actorId)),
-        new EntityTypeId("daggerfall.corpse"));
-
-    internal IReadOnlyDictionary<long, CorpseContainer> Corpses => _corpses;
+    internal IReadOnlyDictionary<long, CorpseContainer> Corpses => _actors.All
+        .Select(actor => actor.Actor.TryGet<CorpseLootComponent>(out CorpseLootComponent? corpse) && corpse is not null
+            ? new CorpseContainer(actor.DurableId, corpse.Owner, corpse.OriginatingSequence, [], corpse.HasRegisteredInventory, corpse.HasRegisteredInventory, corpse.IsInteractable)
+            : null)
+        .Where(corpse => corpse is not null)
+        .Cast<CorpseContainer>()
+        .ToDictionary(corpse => corpse.ActorId);
     internal CorpseLootEvidence? LastEvidence { get; private set; }
     internal CorpseLootCommitEvidence? LastCommit { get; private set; }
 
@@ -75,35 +79,28 @@ internal sealed class DaggerfallCorpseLootModule
     internal void Restore(IReadOnlyList<DaggerfallCorpseSave> saved)
     {
         ArgumentNullException.ThrowIfNull(saved);
-        if (_corpses.Count != 0) throw new InvalidOperationException("Corpse state can only be restored into a fresh session.");
         foreach (DaggerfallCorpseSave value in saved.OrderBy(corpse => corpse.ActorId))
         {
             value.Validate();
             if (!_actors.TryGet(value.ActorId, out ActorState? actor) || !actor.IsDefeated)
                 throw new ArgumentException($"Saved corpse '{value.ActorId}' does not correspond to a defeated authored actor.", nameof(saved));
-            EntityId owner = CreateCorpseOwner(value.ActorId);
-            CorpseContainer corpse = new(value.ActorId, owner, value.OriginatingSequence, [], value.IsRegistered, value.IsRegistered, value.IsInteractable);
-            if (value.IsRegistered)
-            {
-                _containers.RegisterOwner(owner);
-                List<InventoryContainerSeed> seeds = value.Stacks
-                    .Select(stack => new InventoryContainerSeed(new InventoryItemId(stack.ItemId), stack.Quantity))
-                    .Concat(value.UniqueItems.Select(unique => new InventoryContainerSeed(
-                        new InventoryItemId(unique.ItemId),
-                        UniqueItem: new DurableIdentityReference(DurableIdentityKind.Item, unique.EntityId))))
-                    .ToList();
-                if (seeds.Count > 0) _containers.Seed(owner, seeds);
-            }
-            _corpses.Add(value.ActorId, corpse);
+            if (actor.Actor.TryGet<CorpseLootComponent>(out _))
+                throw new InvalidOperationException("Corpse state can only be restored into a fresh session.");
+            CorpseLootComponent corpse = _corpseLoot.Restore(
+                CorpseIdentity(value.ActorId),
+                CorpseType,
+                value.OriginatingSequence,
+                value.IsRegistered,
+                value.IsInteractable,
+                RestoreSeeds(value));
+            actor.Actor.Add(corpse);
         }
     }
 
     /// <summary>
-    /// Creates and seeds a corpse-owned Engine inventory exactly once. This is
-    /// idempotent reconciliation, not FactBuffer rollback: actor Mechanics has
-    /// already committed by the time its death fact is reacted. A later
-    /// presentation failure replays the fact against the same tracked owner,
-    /// seeds, and keyed random result without duplicating Engine contents.
+    /// Creates and seeds a corpse-owned Engine inventory exactly once after
+    /// actor mechanics has applied a death. Repeated death notifications keep
+    /// the same actor-attached component and never duplicate its contents.
     /// </summary>
     internal void Create(ActorDiedFact fact)
     {
@@ -112,37 +109,14 @@ internal sealed class DaggerfallCorpseLootModule
             || !state.IsDefeated
             || !_definitions.TryGetValue(fact.ActorId, out DaggerfallActorDefinition? actor)) return;
 
-        if (_corpses.TryGetValue(fact.ActorId, out CorpseContainer? existing))
-        {
-            if (!existing.IsRegistered && existing.Seeds.Count > 0)
-            {
-                _containers.RegisterOwner(existing.Owner);
-                existing = existing with { IsRegistered = true };
-                _corpses[fact.ActorId] = existing;
-            }
-            if (existing.IsRegistered && !existing.IsSeeded) SeedRegistered(existing, existing.Seeds);
-            return;
-        }
+        if (state.Actor.TryGet<CorpseLootComponent>(out _)) return;
 
         // A corpse is a distinct container, even when the actor already has a quiver.
         IReadOnlyList<InventoryContainerSeed> seeds = GenerateSeeds(fact, actor);
-        EntityId owner = CreateCorpseOwner(fact.ActorId);
         // Donor RemoveLootContainer disables interaction but preserves the
         // corpse marker. Even an empty generated corpse is targetable once so
         // the player receives a truthful semantic result.
-        CorpseContainer corpse = new(fact.ActorId, owner, fact.OriginatingSequence, seeds, IsRegistered: false, IsSeeded: false, IsInteractable: true);
-        _corpses.Add(fact.ActorId, corpse);
-        if (seeds.Count > 0)
-        {
-            // Generated contents and their unique identities are fully
-            // validated before this product reserves an Engine inventory owner.
-            // The Engine API intentionally has no unregister operation, so an
-            // empty corpse does not create a needless registered owner.
-            _containers.RegisterOwner(owner);
-            corpse = corpse with { IsRegistered = true };
-            _corpses[fact.ActorId] = corpse;
-            SeedRegistered(corpse, seeds);
-        }
+        state.Actor.Add(_corpseLoot.Create(CorpseIdentity(fact.ActorId), CorpseType, fact.OriginatingSequence, seeds));
     }
 
     /// <summary>Reads Engine visibility and prepares, but does not publish, an explicit loot action.</summary>
@@ -155,9 +129,16 @@ internal sealed class DaggerfallCorpseLootModule
             return null;
         }
 
-        CorpseContainer[] eligible = _corpses.Values
-            .Where(corpse => corpse.IsInteractable && (targetActorId is null || corpse.ActorId == targetActorId))
-            .OrderBy(corpse => corpse.ActorId)
+        (ActorState Actor, CorpseLootComponent Corpse)[] eligible = _actors.All
+            .Where(actor => actor.Actor.TryGet<CorpseLootComponent>(out CorpseLootComponent? corpse)
+                && corpse is { IsInteractable: true } && (targetActorId is null || actor.DurableId == targetActorId))
+            .Select(actor =>
+            {
+                if (!actor.Actor.TryGet<CorpseLootComponent>(out CorpseLootComponent? corpse) || corpse is null)
+                    throw new InvalidOperationException("Eligible corpse lost its component before the query was assembled.");
+                return (Actor: actor, Corpse: corpse);
+            })
+            .OrderBy(value => value.Actor.DurableId)
             .ToArray();
         if (eligible.Length == 0)
         {
@@ -168,7 +149,7 @@ internal sealed class DaggerfallCorpseLootModule
         PerceptionQueryRequest request = new(
             _spatial.Session,
             new PerceptionObserver[] { new((ulong)DaggerfallActorIdentity.PlayerEntityId, position.ToVector(), look.Forward, _tuning.MaximumDistance, _tuning.MinimumFacingCosine, 1d) },
-            eligible.Select(corpse => new PerceptionTarget((ulong)corpse.ActorId, _actors.Get(corpse.ActorId).Position.ToVector())).ToArray(),
+            eligible.Select(value => new PerceptionTarget((ulong)value.Actor.DurableId, value.Actor.Position.ToVector())).ToArray(),
             ReadOnlyMemory<SpatialEntityCollider>.Empty,
             DaggerfallPerceptionQueryDefaults.AnyProjectionIdentity,
             DaggerfallPerceptionQueryDefaults.FirstPairCursor,
@@ -178,30 +159,33 @@ internal sealed class DaggerfallCorpseLootModule
             .Where(pair => pair.Observer == (ulong)DaggerfallActorIdentity.PlayerEntityId
                 && pair.Kind == PerceptionPairKind.Visible
                 && pair.Target <= long.MaxValue
-                && _corpses.TryGetValue((long)pair.Target, out CorpseContainer? corpse)
-                && corpse.IsInteractable)
+                && _actors.TryGet((long)pair.Target, out ActorState actor)
+                && actor.Actor.TryGet<CorpseLootComponent>(out CorpseLootComponent? corpse)
+                && corpse is { IsInteractable: true })
             .OrderBy(pair => pair.Distance)
             .ThenBy(pair => pair.Target)
             .Select(pair => (long?)pair.Target)
             .FirstOrDefault();
         LastEvidence = new CorpseLootEvidence(request, receipt, selected);
-        if (selected is not long actorId || !_corpses.TryGetValue(actorId, out CorpseContainer? container)) return null;
+        if (selected is not long actorId || !_actors.TryGet(actorId, out ActorState selectedActor)
+            || !selectedActor.Actor.TryGet<CorpseLootComponent>(out CorpseLootComponent? corpse)
+            || corpse is null) return null;
 
-        if (!container.IsRegistered)
-            return new PendingCorpseLoot(container, [], IsEmpty: true);
+        if (!corpse.HasRegisteredInventory)
+            return new PendingCorpseLoot(actorId, corpse, [], IsEmpty: true);
 
         // All fallible fact shaping happens before the later Engine publish.
-        InventoryView contents = _containers.Read(container.Owner);
+        InventoryView contents = _corpseLoot.Read(corpse)!;
         LootAwardedFact[] facts = contents.Stacks
             .OrderBy(stack => stack.Definition.Value, StringComparer.Ordinal)
-            .Select(stack => new LootAwardedFact(actorId, stack.Definition.Value, stack.Quantity, container.OriginatingSequence))
+            .Select(stack => new LootAwardedFact(actorId, stack.Definition.Value, stack.Quantity, corpse.OriginatingSequence))
             .Concat(contents.UniqueItems
                 .OrderBy(item => item.Entity.Value)
-                .Select(item => new LootAwardedFact(actorId, item.Definition.Value, 1, container.OriginatingSequence)))
+                .Select(item => new LootAwardedFact(actorId, item.Definition.Value, 1, corpse.OriginatingSequence)))
             .ToArray();
         return facts.Length == 0
-            ? new PendingCorpseLoot(container, [], IsEmpty: true)
-            : new PendingCorpseLoot(container, facts, IsEmpty: false);
+            ? new PendingCorpseLoot(actorId, corpse, [], IsEmpty: true)
+            : new PendingCorpseLoot(actorId, corpse, facts, IsEmpty: false);
     }
 
     /// <summary>
@@ -213,19 +197,21 @@ internal sealed class DaggerfallCorpseLootModule
     {
         ArgumentNullException.ThrowIfNull(pending);
         ArgumentNullException.ThrowIfNull(facts);
-        if (!_corpses.TryGetValue(pending.Container.ActorId, out CorpseContainer? current)
-            || current != pending.Container
+        if (!_actors.TryGet(pending.ActorId, out ActorState actor)
+            || !actor.Actor.TryGet<CorpseLootComponent>(out CorpseLootComponent? current)
+            || current is null
+            || !ReferenceEquals(current, pending.Corpse)
             || !current.IsInteractable)
         {
-            LastCommit = new CorpseLootCommitEvidence(pending.Container.ActorId, false, "The prepared loot action is no longer current.");
+            LastCommit = new CorpseLootCommitEvidence(pending.ActorId, false, "The prepared loot action is no longer current.");
             return CorpseLootCommitResult.Rejected;
         }
 
         if (pending.IsEmpty)
         {
-            _corpses[current.ActorId] = current with { IsInteractable = false };
-            facts.Append(new CorpseSearchedEmptyFact(current.ActorId));
-            LastCommit = new CorpseLootCommitEvidence(pending.Container.ActorId, true, null);
+            _corpseLoot.TransferAll(current, _playerOwner);
+            facts.Append(new CorpseSearchedEmptyFact(pending.ActorId));
+            LastCommit = new CorpseLootCommitEvidence(pending.ActorId, true, null);
             return CorpseLootCommitResult.Committed;
         }
         try
@@ -233,34 +219,36 @@ internal sealed class DaggerfallCorpseLootModule
             // The transfer is the sole Engine publication. All code after it
             // is deterministic local bookkeeping and preconstructed facts.
             if (pending.Selection is { } selection)
-                _containers.Transfer(current.Owner, _playerOwner, selection, pending.ExpectedWorldRevision!.Value);
-            else _containers.TransferAll(current.Owner, _playerOwner, pending.ExpectedWorldRevision);
+                _corpseLoot.Transfer(current, _playerOwner, selection, pending.ExpectedWorldRevision!.Value);
+            else _corpseLoot.TransferAll(current, _playerOwner, pending.ExpectedWorldRevision);
         }
         catch (Exception rejection) when (rejection is MechanicsException or InvalidOperationException)
         {
-            LastCommit = new CorpseLootCommitEvidence(pending.Container.ActorId, false, rejection.Message);
+            LastCommit = new CorpseLootCommitEvidence(pending.ActorId, false, rejection.Message);
             return CorpseLootCommitResult.Rejected;
         }
-        InventoryView remaining = _containers.Read(current.Owner);
-        bool emptied = remaining.Stacks.Count == 0 && remaining.UniqueItems.Count == 0;
-        _corpses[current.ActorId] = current with { IsInteractable = !emptied };
+        bool emptied = !current.IsInteractable;
         foreach (LootAwardedFact fact in pending.Facts) facts.Append(fact);
-        if (emptied) facts.Append(new CorpseLootedFact(current.ActorId));
-        LastCommit = new CorpseLootCommitEvidence(pending.Container.ActorId, true, null);
+        if (emptied) facts.Append(new CorpseLootedFact(pending.ActorId));
+        LastCommit = new CorpseLootCommitEvidence(pending.ActorId, true, null);
         return CorpseLootCommitResult.Committed;
     }
 
     internal InventoryView? ReadContents(long actorId) =>
-        _corpses.TryGetValue(actorId, out CorpseContainer? corpse) && corpse.IsRegistered ? _containers.Read(corpse.Owner) : null;
+        _actors.TryGet(actorId, out ActorState actor) && actor.Actor.TryGet<CorpseLootComponent>(out CorpseLootComponent? corpse) && corpse is not null
+            ? _corpseLoot.Read(corpse) : null;
 
     internal string ContainerName(long actorId) => _definitions[actorId].Id.Value;
 
-    private void SeedRegistered(CorpseContainer corpse, IReadOnlyList<InventoryContainerSeed> seeds)
-    {
-        if (seeds.Count == 0) return;
-        _containers.Seed(corpse.Owner, seeds);
-        _corpses[corpse.ActorId] = corpse with { IsSeeded = true, IsInteractable = true };
-    }
+    private static readonly EntityTypeId CorpseType = new("daggerfall.corpse");
+    private static DurableIdentityReference CorpseIdentity(long actorId) => new(DurableIdentityKind.Container, checked((ulong)actorId));
+
+    private static IReadOnlyList<InventoryContainerSeed> RestoreSeeds(DaggerfallCorpseSave value) => value.Stacks
+        .Select(stack => new InventoryContainerSeed(new InventoryItemId(stack.ItemId), stack.Quantity))
+        .Concat(value.UniqueItems.Select(unique => new InventoryContainerSeed(
+            new InventoryItemId(unique.ItemId),
+            UniqueItem: new DurableIdentityReference(DurableIdentityKind.Item, unique.EntityId))))
+        .ToArray();
 
     private IReadOnlyList<InventoryContainerSeed> GenerateSeeds(ActorDiedFact fact, DaggerfallActorDefinition actor)
     {
@@ -301,7 +289,7 @@ internal sealed class DaggerfallCorpseLootModule
 internal sealed record CorpseContainer(long ActorId, EntityId Owner, ulong OriginatingSequence, IReadOnlyList<InventoryContainerSeed> Seeds, bool IsRegistered, bool IsSeeded, bool IsInteractable);
 
 /// <summary>Prevalidated product policy waiting for the outer Engine publication boundary.</summary>
-internal sealed record PendingCorpseLoot(CorpseContainer Container, IReadOnlyList<LootAwardedFact> Facts, bool IsEmpty,
+internal sealed record PendingCorpseLoot(long ActorId, CorpseLootComponent Corpse, IReadOnlyList<LootAwardedFact> Facts, bool IsEmpty,
     InventoryContainerSelection? Selection = null, ulong? ExpectedWorldRevision = null);
 
 internal enum CorpseLootCommitResult { Committed, Rejected }

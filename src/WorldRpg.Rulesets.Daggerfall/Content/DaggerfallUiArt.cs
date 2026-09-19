@@ -1,6 +1,3 @@
-using System.Buffers.Binary;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using Rusty.Engine;
 
@@ -18,6 +15,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// </remarks>
 internal sealed class DaggerfallUiArt
 {
+    private const string RevisionId = "daggerfall.ui-art";
     /// <summary>The published group inventory that names every artifact of the UI content group.</summary>
     internal const string InventoryPath = "worldrpg/media/classic-media-inventory.json";
 
@@ -53,13 +51,13 @@ internal sealed class DaggerfallUiArt
     /// </summary>
     private const uint MaximumReadBytes = 1024 * 1024;
 
-    private DaggerfallUiArt(string revision, IReadOnlyList<(string Id, string Image)> images)
+    private DaggerfallUiArt(IReadOnlyList<(string Id, string Image)> images)
     {
-        Revision = revision;
+        Revision = RevisionId;
         Images = images;
     }
 
-    /// <summary>A digest over the resolved identities and their bytes, so a consumer can tell whether its copy is current.</summary>
+    /// <summary>Session-stable UI-art identity used by a reconnecting DOM to request the current image block.</summary>
     internal string Revision { get; }
 
     /// <summary>Every resolved image as a data URL, ordered by media identity.</summary>
@@ -80,7 +78,6 @@ internal sealed class DaggerfallUiArt
         ArgumentNullException.ThrowIfNull(itemIcons);
         Dictionary<string, InventoryEntry> inventory = ReadInventory(content);
         List<(string Id, string Image)> images = [];
-        StringBuilder revisionSource = new();
         foreach (string id in AlwaysShown.Concat(itemIcons).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
         {
             if (!inventory.TryGetValue(id, out InventoryEntry entry))
@@ -90,10 +87,9 @@ internal sealed class DaggerfallUiArt
 
             byte[] bytes = ReadArtifact(content, id, entry);
             images.Add((id, $"data:image/png;base64,{Convert.ToBase64String(bytes)}"));
-            revisionSource.Append(id).Append(' ').Append(Convert.ToHexStringLower(SHA256.HashData(bytes))).Append('\n');
         }
 
-        return new DaggerfallUiArt(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(revisionSource.ToString()))), images);
+        return new DaggerfallUiArt(images);
     }
 
     /// <summary>Reads the generated inventory by name and indexes it by the media identity it states.</summary>
@@ -105,7 +101,7 @@ internal sealed class DaggerfallUiArt
         {
             using JsonDocument document = JsonDocument.Parse(bytes);
             JsonElement root = document.RootElement;
-            if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("schemaVersion", out JsonElement version) || version.GetInt32() != 1
+            if (root.ValueKind != JsonValueKind.Object
                 || !root.TryGetProperty("artifacts", out JsonElement artifacts) || artifacts.ValueKind != JsonValueKind.Array)
             {
                 throw new InvalidOperationException($"The admitted content inventory '{InventoryPath}' is not the published shape.");
@@ -117,13 +113,12 @@ internal sealed class DaggerfallUiArt
                 string mediaId = mediaIdElement.GetString()!;
                 string path = artifact.GetProperty("path").GetString()!;
                 long byteLength = artifact.GetProperty("byteLength").GetInt64();
-                ContentSha256 hash = Sha256(artifact.GetProperty("sha256").GetString()!);
                 if (string.IsNullOrWhiteSpace(mediaId) || string.IsNullOrWhiteSpace(path) || byteLength <= 0)
                 {
                     throw new InvalidOperationException($"The admitted content inventory states media '{mediaId}' without a usable path or length.");
                 }
 
-                if (!entries.TryAdd(mediaId, new InventoryEntry(path, hash, byteLength)))
+                if (!entries.TryAdd(mediaId, new InventoryEntry(path, byteLength)))
                 {
                     throw new InvalidOperationException($"The admitted content inventory names media '{mediaId}' twice.");
                 }
@@ -143,7 +138,7 @@ internal sealed class DaggerfallUiArt
         byte[] bytes;
         try
         {
-            bytes = ReadAdmittedFile(content, entry.Path, entry.Hash);
+            bytes = ReadAdmittedFile(content, entry.Path);
         }
         catch (Exception exception) when (exception is InvalidOperationException or EngineCallException)
         {
@@ -158,18 +153,14 @@ internal sealed class DaggerfallUiArt
         return bytes;
     }
 
-    private static byte[] ReadAdmittedFile(IContentService content, string path) => ReadAdmittedFile(content, path, null);
-
-    /// <summary>Reads one admitted file by name, optionally resolving the exact content identity first.</summary>
-    private static byte[] ReadAdmittedFile(IContentService content, string path, ContentSha256? hash)
+    /// <summary>Reads one admitted file by name. Its bounded reference read supplies the byte length.</summary>
+    private static byte[] ReadAdmittedFile(IContentService content, string path)
     {
-        using ContentReference reference = hash is { } expected
-            ? content.ResolveReference(new ContentResolveRequest(path, expected))
-            : content.OpenReference(new ContentOpenRequest(path));
+        using ContentReference reference = content.OpenReference(new ContentOpenRequest(path));
         ReadOnlyMemory<ContentReferenceInfo> info = content.ReadReferenceInfo(reference);
-        if (info.Length != 1 || info.Span[0].Path != path || (hash is { } stated && info.Span[0].Sha256 != stated))
+        if (info.Length != 1)
         {
-            throw new InvalidOperationException($"Admitted content did not preserve identity for '{path}'.");
+            throw new InvalidOperationException($"Admitted content returned no readable reference for '{path}'.");
         }
 
         ulong length = info.Span[0].ByteLength;
@@ -196,16 +187,5 @@ internal sealed class DaggerfallUiArt
         return bytes;
     }
 
-    private static ContentSha256 Sha256(string hex)
-    {
-        byte[] bytes = Convert.FromHexString(hex);
-        if (bytes.Length != 32) throw new InvalidOperationException("A published artifact digest must be a SHA-256 value.");
-        return new ContentSha256(
-            BinaryPrimitives.ReadUInt64BigEndian(bytes.AsSpan(0, 8)),
-            BinaryPrimitives.ReadUInt64BigEndian(bytes.AsSpan(8, 8)),
-            BinaryPrimitives.ReadUInt64BigEndian(bytes.AsSpan(16, 8)),
-            BinaryPrimitives.ReadUInt64BigEndian(bytes.AsSpan(24, 8)));
-    }
-
-    private readonly record struct InventoryEntry(string Path, ContentSha256 Hash, long ByteLength);
+    private readonly record struct InventoryEntry(string Path, long ByteLength);
 }

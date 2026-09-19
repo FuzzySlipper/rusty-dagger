@@ -7,6 +7,7 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
 /// <summary>The small Daggerfall player-action wire contract, consumed during admitted updates.</summary>
 internal static class DaggerfallUiAction
 {
+    internal const string BeginAction = "begin";
     internal static DaggerfallPlayerUiAction? Parse(ReadOnlySpan<byte> payload)
     {
         if (payload.IsEmpty || payload.Length > 1024) return null;

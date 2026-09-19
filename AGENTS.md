@@ -40,11 +40,9 @@ ordinary product entry. The immutable `Rusty.Engine` SDK generates CoreCLR and
 NativeAOT composition beneath ignored `obj` output. The ruleset's current
 `Modules/` placement is a migration fact rather than an architecture boundary.
 
-The foundation campaign #7322 and C# migration campaign #7533 are complete.
-Campaign #8327 now owns adoption of composed actors, typed rules and current-state
-persistence (design: Board #146). Reconcile the older coverage backlog only in a
-separate effort after that campaign; do not restart prior migration/proof sequences.
-`docs/code-migration-map.md` records disposition.
+The foundation and C# migration campaigns are complete. The current product uses
+composed actors, typed rules, and current-state persistence. Reconcile older
+coverage work separately; `docs/code-migration-map.md` records disposition.
 
 | Owner | Responsibility |
 | --- | --- |
@@ -92,13 +90,12 @@ value only when it is genuinely adjustable or authored data.
 
 ## Gameplay composition direction
 
-The substantial reusable Kit is the goal; Daggerfall proves it with concrete
-rules and content. Kit owns actor conventions, targeting/current target,
-inventory/equipment workflows, attack execution, reusable effects/progression,
-AI coordination, corpse/loot machinery and typed resolution/notifications.
-Dagger supplies formulas, eligibility, capacities, timing policy and content
-meaning. Move existing mixed modules as their campaign tasks land, rather than
-claiming these boundaries are already fully implemented.
+The substantial reusable Kit shapes concrete rules and content. Kit owns actor
+conventions, targeting/current target, inventory/equipment workflows, attack
+execution, reusable effects/progression, AI coordination, corpse/loot machinery,
+and typed resolution/notifications. Dagger supplies formulas, eligibility,
+capacities, timing policy, and content meaning. `DaggerActorFactory` assembles
+actors and `DaggerfallState.Kit` provides the named session services.
 
 Compose Engine `Actor` in Kit/Dagger facades with named properties such as
 `Stats`, `Inventory`, `Equipment` and `Targeting` over the actual attached
@@ -135,10 +132,8 @@ Use direct safe named C# Engine APIs. The packaged SDK supplies managed
 `EntityStore`, optional composed `Actor`, creation-time `EntityTypeId` metadata,
 and ordinary class components. Mechanics uses one `Stat` (double-backed with
 integer/float accessors), `Track` sharing its maximum Stat, and `StatsComponent`;
-reuse the inventory, equipment and effects facades where they fit. These are
-available capabilities, not a claim that every current Dagger caller has already
-adopted them. See `docs/actors-and-mechanics.md` for current canonical ownership.
-The remaining domain migrations belong to campaign #8327.
+reuse the inventory, equipment and effects facades where they fit. Dagger's
+current owners are documented in `docs/actors-and-mechanics.md`.
 
 Use generated safe services for native Look, Spatial, Appearance, Random, UI,
 Content/ContentStore, Persistence, Animation, Audio and CameraView mechanisms.
@@ -231,11 +226,10 @@ concrete collision is a real hard stop; a merely potential one is not.
 
 Only the current product schema exists during development. Breaking development
 saves is acceptable. Do not introduce schema versions, migration branches,
-historical readers, compatibility fingerprints or unknown-section preservation.
+historical readers, compatibility fingerprints, or unknown-section preservation.
 Plan serialization around meaningful values and relationships, not preservation
 of old builds. Report malformed current data or missing definitions clearly; do
-not silently drop state and call the load successful. Existing legacy schema and
-save gates are being removed by #8338/#8339; they are not implementation patterns.
+not silently drop state and call the load successful.
 
 Rescoping during implementation is expected, but the deferred requirement must
 move to a concrete receiving task — that task's required behavior and verification,
