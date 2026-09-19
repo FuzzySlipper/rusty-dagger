@@ -57,8 +57,8 @@ internal sealed class DaggerfallEnemyBehaviorModule
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
         _combat = combat ?? throw new ArgumentNullException(nameof(combat));
         _tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
-        foreach (ActorState actor in _actors.All.Values)
-            _instances.Add(actor.EntityId, States.CreateInstance(Idle));
+        foreach (ActorState actor in _actors.All)
+            _instances.Add(actor.DurableId, States.CreateInstance(Idle));
     }
 
     internal IReadOnlyDictionary<long, EnemyBehaviorEvidence> LastEvidence { get; private set; } = new Dictionary<long, EnemyBehaviorEvidence>();
@@ -70,9 +70,9 @@ internal sealed class DaggerfallEnemyBehaviorModule
         if (player.Position is not WorldPoint playerPosition) return;
 
         Dictionary<long, EnemyBehaviorEvidence> evidence = [];
-        foreach (ActorState actor in _actors.All.Values.OrderBy(value => value.EntityId))
+        foreach (ActorState actor in _actors.All.OrderBy(value => value.DurableId))
         {
-            StateMachineInstance current = _instances[actor.EntityId];
+            StateMachineInstance current = _instances[actor.DurableId];
             EnemyBehaviorState desired;
             PerceptionReadoutLeaseReceipt? visibility = null;
             NavigationStepReceipt? navigation = null;
@@ -85,7 +85,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
             {
                 visibility = QueryPlayer(actor, playerPosition);
                 PerceptionPair[] pairs = visibility.Value.Pairs.ToArray()
-                    .Where(value => value.Observer == checked((ulong)actor.EntityId) && value.Target == (ulong)DaggerfallActorIdentity.PlayerEntityId)
+                    .Where(value => value.Observer == checked((ulong)actor.DurableId) && value.Target == (ulong)DaggerfallActorIdentity.PlayerEntityId)
                     .OrderBy(value => value.Distance).ToArray();
                 PerceptionPair pair = pairs.FirstOrDefault();
                 bool visible = pairs.Length == 1 && pair.Kind == PerceptionPairKind.Visible;
@@ -97,7 +97,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
                 // an archer shoots from where a bow carries. An actor with no authored attack has no reach
                 // and never enters the attack state, which is the honest outcome for one the corpus places
                 // without a policy rather than a silent miss the player cannot tell from a bad roll.
-                double? reach = _combat.ReachOf(actor.EntityId);
+                double? reach = _combat.ReachOf(actor.DurableId);
                 desired = !visible || reach is null ? EnemyBehaviorState.Idle
                     : pair.Distance <= reach.Value ? EnemyBehaviorState.Attack
                     : EnemyBehaviorState.Chase;
@@ -121,24 +121,24 @@ internal sealed class DaggerfallEnemyBehaviorModule
             if (previous != desired)
             {
                 StateMachineTransitionReceipt transition = States.Transition(current, current.Current, ToValue(desired), current.Revision);
-                _instances[actor.EntityId] = transition.Instance;
-                facts.Append(new EnemyBehaviorTransitionFact(actor.EntityId, previous, desired, generation, simulationStep));
+                _instances[actor.DurableId] = transition.Instance;
+                facts.Append(new EnemyBehaviorTransitionFact(actor.DurableId, previous, desired, generation, simulationStep));
             }
 
-            StateMachineInstance after = _instances[actor.EntityId];
+            StateMachineInstance after = _instances[actor.DurableId];
             if (desired == EnemyBehaviorState.Attack)
             {
                 // The swing is decided here and lands when its authored damage frame is
                 // reached; this module keeps owning reach and visibility throughout.
-                _combat.TryBeginEnemyAttack(actor.EntityId, DaggerfallActorIdentity.PlayerEntityId, generation, simulationStep, deltaSeconds, facts);
+                _combat.TryBeginEnemyAttack(actor.DurableId, DaggerfallActorIdentity.PlayerEntityId, generation, simulationStep, deltaSeconds, facts);
             }
             else
             {
                 // Leaving the attack state, losing sight or dying cancels the swing
                 // before its damage frame rather than letting it land late.
-                _combat.InterruptPendingAttack(actor.EntityId, generation);
+                _combat.InterruptPendingAttack(actor.DurableId, generation);
             }
-            evidence.Add(actor.EntityId, new EnemyBehaviorEvidence(actor.EntityId, ToState(after.Current), visibility, navigation));
+            evidence.Add(actor.DurableId, new EnemyBehaviorEvidence(actor.DurableId, ToState(after.Current), visibility, navigation));
         }
         LastEvidence = evidence;
     }
@@ -148,7 +148,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
         Vector3 forward = new(MathF.Sin(actor.HeadingYawRadians), 0f, -MathF.Cos(actor.HeadingYawRadians));
         return _perception.QueryVisibility(new PerceptionQueryRequest(
             _spatial.Session,
-            new[] { new PerceptionObserver(checked((ulong)actor.EntityId), actor.Position.ToVector(), forward, _tuning.DetectionDistance, _tuning.MinimumFacingCosine, 1d) },
+            new[] { new PerceptionObserver(checked((ulong)actor.DurableId), actor.Position.ToVector(), forward, _tuning.DetectionDistance, _tuning.MinimumFacingCosine, 1d) },
             new[] { new PerceptionTarget((ulong)DaggerfallActorIdentity.PlayerEntityId, player.ToVector()) },
             ReadOnlyMemory<SpatialEntityCollider>.Empty,
             DaggerfallPerceptionQueryDefaults.AnyProjectionIdentity,

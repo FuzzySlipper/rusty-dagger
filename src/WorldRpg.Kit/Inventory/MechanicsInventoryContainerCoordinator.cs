@@ -1,6 +1,7 @@
 using System.Collections.Frozen;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
+using WorldRpg.Kit.World;
 
 namespace WorldRpg.Kit.Inventory;
 
@@ -8,22 +9,18 @@ namespace WorldRpg.Kit.Inventory;
 public sealed record InventoryContainerSeed(
     InventoryItemId Item,
     ulong Quantity = 1,
-    string? UniqueIdentity = null,
-    ulong? UniqueEntityId = null)
+    DurableIdentityReference? UniqueItem = null)
 {
     public InventoryContainerSeed Validate()
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(Item.Value);
         ArgumentOutOfRangeException.ThrowIfZero(Quantity);
-
-        bool unique = UniqueIdentity is not null || UniqueEntityId is not null;
-        if (unique && (string.IsNullOrWhiteSpace(UniqueIdentity) || UniqueEntityId is null || UniqueEntityId == 0))
+        if (UniqueItem is DurableIdentityReference identity)
         {
-            throw new ArgumentException(
-                "Unique inventory seeds require a non-empty identity and non-zero entity id.",
-                nameof(UniqueEntityId));
+            identity.Validate();
+            if (identity.Kind != DurableIdentityKind.Item || Quantity != 1)
+                throw new ArgumentException("Unique inventory seeds require one durable item identity and quantity one.", nameof(UniqueItem));
         }
-
         return this;
     }
 }
@@ -103,44 +100,52 @@ public sealed class InventoryContainerTransferReceipt
 /// The Engine remains the contents, capacity, containment, and publication
 /// authority; this class only maps product item identities and groups caller
 /// approved container operations into one candidate publication. Definition
-/// mappings and unique materialization provenance are scoped to this coordinator
-/// instance; callers recreate any provenance required across persisted sessions.
+/// mappings remain product-facing while the Engine owns inventory state.
 /// </summary>
 public sealed class MechanicsInventoryContainerCoordinator
 {
-    private readonly InventoryStore _world;
+    private readonly InventoryStore _store;
+    private readonly EntityDirectory _entities;
     private readonly FrozenDictionary<InventoryItemId, ItemDefinition> _definitions;
     private readonly FrozenDictionary<ItemDefinitionId, InventoryItemId> _definitionIds;
-    private readonly HashSet<string> _materializedUniqueIdentities = new(StringComparer.Ordinal);
 
     public MechanicsInventoryContainerCoordinator(
         InventoryStore world,
+        EntityDirectory entities,
         IReadOnlyDictionary<InventoryItemId, ItemDefinition> definitions)
     {
-        _world = world ?? throw new ArgumentNullException(nameof(world));
+        _store = world ?? throw new ArgumentNullException(nameof(world));
+        _entities = entities ?? throw new ArgumentNullException(nameof(entities));
         ArgumentNullException.ThrowIfNull(definitions);
         Dictionary<InventoryItemId, ItemDefinition> snapshot = SnapshotDefinitions(definitions);
         _definitions = snapshot.ToFrozenDictionary();
         _definitionIds = snapshot.ToFrozenDictionary(entry => entry.Value.Id, entry => entry.Key);
     }
 
+    public EntityDirectory Entities => _entities;
+
     /// <summary>Registers one durable inventory owner. Empty owners intentionally remain registered.</summary>
     public void RegisterOwner(EntityId owner)
     {
         RequireOwner(owner, nameof(owner));
-        _world.RegisterInventory(new InventoryState(owner));
+        if (!_entities.Store.IsAlive(owner))
+            throw new InvalidOperationException($"Inventory owner {owner.Value} is not a live Engine entity.");
+        if (_entities.Store.Has<InventoryComponent>(owner))
+            throw new InvalidOperationException($"Inventory owner {owner.Value} already has an inventory component.");
+        _store.RegisterInventory(new InventoryState(owner));
+        _entities.Store.Add(owner, new InventoryComponent(_store, owner));
     }
 
     /// <summary>Returns the Engine's copied read model for one registered owner.</summary>
     public InventoryView Read(EntityId owner)
     {
         RequireRegistered(owner, nameof(owner));
-        return _world.Read(owner);
+        return _store.Read(owner);
     }
 
     /// <summary>
     /// Materializes mixed fungible and unique contents on one detached candidate.
-    /// Unique source identities are committed only after Engine publication succeeds.
+    /// Newly created unique entities are destroyed if the candidate cannot publish.
     /// </summary>
     public InventoryContainerSeedReceipt Seed(EntityId owner, IEnumerable<InventoryContainerSeed> seeds)
     {
@@ -154,32 +159,35 @@ public sealed class MechanicsInventoryContainerCoordinator
         }
 
         ValidateSeeds(values);
-        InventoryView beforeView = _world.Read(owner);
-        ulong worldRevisionBefore = _world.Revision;
-        InventoryEdit candidate = _world.Prepare(worldRevisionBefore);
-        foreach (InventoryContainerSeed seed in values)
+        InventoryView beforeView = _store.Read(owner);
+        ulong worldRevisionBefore = _store.Revision;
+        List<DurableIdentityReference> created = [];
+        try
         {
-            ItemDefinition definition = RequireDefinition(seed.Item);
-            if (seed.UniqueEntityId is ulong uniqueEntityId)
+            using InventoryEdit candidate = _store.Prepare(worldRevisionBefore);
+            foreach (InventoryContainerSeed seed in values)
             {
-                candidate.MaterializeUnique(new ItemState(new EntityId(uniqueEntityId), definition), owner);
+                ItemDefinition definition = RequireDefinition(seed.Item);
+                if (seed.UniqueItem is DurableIdentityReference identity)
+                {
+                    EntityId item = CreateItemEntity(identity, definition);
+                    created.Add(identity);
+                    candidate.MaterializeUnique(new ItemState(item, definition), owner);
+                }
+                else candidate.Grant(owner, definition, seed.Quantity);
             }
-            else
-            {
-                candidate.Grant(owner, definition, seed.Quantity);
-            }
+            candidate.Publish();
+        }
+        catch
+        {
+            foreach (DurableIdentityReference identity in created) _entities.Destroy(identity);
+            throw;
         }
 
-        candidate.Publish();
-        foreach (InventoryContainerSeed seed in values.Where(seed => seed.UniqueIdentity is not null))
-        {
-            _materializedUniqueIdentities.Add(seed.UniqueIdentity!);
-        }
-
-        InventoryView afterView = _world.Read(owner);
+        InventoryView afterView = _store.Read(owner);
         return new InventoryContainerSeedReceipt(
             worldRevisionBefore,
-            _world.Revision,
+            _store.Revision,
             Summarize(beforeView),
             Summarize(afterView));
     }
@@ -210,16 +218,16 @@ public sealed class MechanicsInventoryContainerCoordinator
             throw new ArgumentException("A container transfer requires distinct owners.", nameof(destination));
         }
 
-        InventoryView sourceBeforeView = _world.Read(source);
-        InventoryView destinationBeforeView = _world.Read(destination);
+        InventoryView sourceBeforeView = _store.Read(source);
+        InventoryView destinationBeforeView = _store.Read(destination);
         InventoryStack[] stacks = sourceBeforeView.Stacks
             .OrderBy(stack => stack.Definition.Value, StringComparer.Ordinal)
             .ToArray();
         Rusty.Engine.Mechanics.UniqueInventoryItem[] uniqueItems = sourceBeforeView.UniqueItems
             .OrderBy(item => item.Entity.Value)
             .ToArray();
-        ulong worldRevisionBefore = _world.Revision;
-        InventoryEdit candidate = _world.Prepare(expectedWorldRevision ?? worldRevisionBefore);
+        ulong worldRevisionBefore = _store.Revision;
+        InventoryEdit candidate = _store.Prepare(expectedWorldRevision ?? worldRevisionBefore);
         if (selection is not null)
         {
             ItemDefinition definition = RequireDefinition(selection.Item);
@@ -248,11 +256,11 @@ public sealed class MechanicsInventoryContainerCoordinator
         }
 
         candidate.Publish();
-        InventoryView sourceAfterView = _world.Read(source);
-        InventoryView destinationAfterView = _world.Read(destination);
+        InventoryView sourceAfterView = _store.Read(source);
+        InventoryView destinationAfterView = _store.Read(destination);
         return new InventoryContainerTransferReceipt(
             worldRevisionBefore,
-            _world.Revision,
+            _store.Revision,
             Summarize(sourceBeforeView),
             Summarize(sourceAfterView),
             Summarize(destinationBeforeView),
@@ -263,24 +271,19 @@ public sealed class MechanicsInventoryContainerCoordinator
 
     private void ValidateSeeds(IEnumerable<InventoryContainerSeed> seeds)
     {
-        var identities = new HashSet<string>(StringComparer.Ordinal);
-        var entities = new HashSet<ulong>();
+        var identities = new HashSet<DurableIdentityReference>();
         foreach (InventoryContainerSeed seed in seeds)
         {
             ItemDefinition definition = RequireDefinition(seed.Item);
-            if (seed.UniqueEntityId is ulong entityId)
+            if (seed.UniqueItem is DurableIdentityReference identity)
             {
                 if (definition.Kind != ItemKind.Unique || seed.Quantity != 1)
                 {
                     throw new InvalidOperationException($"Unique seed '{seed.Item.Value}' has an invalid item shape.");
                 }
-                if (!identities.Add(seed.UniqueIdentity!) || _materializedUniqueIdentities.Contains(seed.UniqueIdentity!))
+                if (!identities.Add(identity))
                 {
-                    throw new InvalidOperationException($"Unique inventory identity '{seed.UniqueIdentity}' was already materialized.");
-                }
-                if (!entities.Add(entityId))
-                {
-                    throw new InvalidOperationException($"Unique inventory entity '{entityId}' appears more than once in the seed.");
+                    throw new InvalidOperationException($"Unique inventory identity '{identity}' appears more than once in the seed.");
                 }
             }
             else if (definition.Kind != ItemKind.Fungible)
@@ -329,10 +332,27 @@ public sealed class MechanicsInventoryContainerCoordinator
             ? item
             : throw new InvalidOperationException($"Managed inventory definition '{definition.Value}' is not mapped by this coordinator.");
 
+    public DurableIdentityReference GetDurableItemId(EntityId item)
+    {
+        DurableIdentityReference identity = _entities.IdentityOf(item);
+        identity.Validate();
+        if (identity.Kind != DurableIdentityKind.Item)
+            throw new ArgumentException("An inventory item requires a durable item identity.", nameof(item));
+        return identity;
+    }
+
+    private EntityId CreateItemEntity(DurableIdentityReference identity, ItemDefinition definition)
+    {
+        identity.Validate();
+        if (identity.Kind != DurableIdentityKind.Item)
+            throw new ArgumentException("An inventory item requires a durable item identity.", nameof(identity));
+        return _entities.Create(identity, new EntityTypeId(definition.Id.Value));
+    }
+
     private void RequireRegistered(EntityId owner, string parameterName)
     {
         RequireOwner(owner, parameterName);
-        if (!_world.TryGetInventory(owner, out _))
+        if (!_store.TryGetInventory(owner, out _))
         {
             throw new InvalidOperationException($"Inventory owner {owner.Value} is not registered.");
         }

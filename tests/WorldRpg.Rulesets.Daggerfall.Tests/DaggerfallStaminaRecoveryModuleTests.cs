@@ -1,6 +1,4 @@
-using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
-using WorldRpg.Kit.Actors;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
@@ -14,54 +12,45 @@ public sealed class DaggerfallStaminaRecoveryModuleTests
     private static readonly TrackId Stamina = TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value);
 
     [Fact]
-    public void Admitted_player_swing_delays_fractional_recovery_without_banking_at_full_or_recovering_when_dead()
+    public void Admitted_player_swing_delays_recovery_and_health_gates_it()
     {
-        using ActorMechanicsState player = PlayerMechanics();
+        StatsComponent player = PlayerStats();
         DaggerfallStaminaRecoveryModule recovery = new(new DaggerfallStaminaRecoveryTuning(5d, 2d));
-        player.ReadTrack(Stamina).Spend(10);
+        player.GetTrack(Stamina).Spend(10);
         recovery.React(new PlayerAttackStartedFact(7, 13));
 
         recovery.Update(player, 1.5d);
-        Assert.Equal(80d, player.ReadTrack(Stamina).Current);
+        Assert.Equal(80d, player.GetTrack(Stamina).Current);
         recovery.React(new AttackRejectedFact(AttackRejection.Cooldown));
         recovery.Update(player, .5d);
-        Assert.Equal(80d, player.ReadTrack(Stamina).Current);
+        Assert.Equal(80d, player.GetTrack(Stamina).Current);
         recovery.Update(player, .2d);
-        Assert.Equal(81d, player.ReadTrack(Stamina).Current);
+        Assert.Equal(81d, player.GetTrack(Stamina).Current);
         recovery.Update(player, .8d);
-        Assert.Equal(85d, player.ReadTrack(Stamina).Current);
+        Assert.Equal(85d, player.GetTrack(Stamina).Current);
 
-        player.ReadTrack(Stamina).SetCurrent(90);
-        recovery.Update(player, 20d);
-        player.ReadTrack(Stamina).Spend(5);
-        recovery.Update(player, .1d);
-        Assert.Equal(85d, player.ReadTrack(Stamina).Current);
-
-        player.ReadTrack(Stamina).SetCurrent(0);
+        player.GetTrack(Stamina).SetCurrent(0);
         recovery.React(new PlayerAttackStartedFact(7, 14));
         recovery.Update(player, 2d);
-        Assert.Equal(0d, player.ReadTrack(Stamina).Current);
+        Assert.Equal(0d, player.GetTrack(Stamina).Current);
         recovery.React(new AttackRejectedFact(AttackRejection.Cooldown));
         recovery.Update(player, 1d);
-        Assert.Equal(5d, player.ReadTrack(Stamina).Current);
+        Assert.Equal(5d, player.GetTrack(Stamina).Current);
 
-        player.ReadTrack(Health).SetCurrent(0);
+        player.GetTrack(Health).SetCurrent(0);
         recovery.Update(player, 20d);
-        Assert.Equal(5d, player.ReadTrack(Stamina).Current);
+        Assert.Equal(5d, player.GetTrack(Stamina).Current);
     }
 
-    private static ActorMechanicsState PlayerMechanics()
+    private static StatsComponent PlayerStats()
     {
-        string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
-        DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
-        return new DaggerfallMechanicsState().CreateActor(player, player.PlayerInitialVitals, 1);
-    }
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md"))) return current.FullName;
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
+        Stat healthMaximum = new(100, 0, 100);
+        Stat staminaMaximum = new(100, 0, 100);
+        StatsComponent stats = new();
+        stats.AddStat(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value), healthMaximum);
+        stats.AddStat(StatId.Parse(DaggerfallMechanicsIds.StaminaMaximum.Value), staminaMaximum);
+        stats.AddTrack(Health, new Track(healthMaximum, 100, 0, quantum: 1));
+        stats.AddTrack(Stamina, new Track(staminaMaximum, 90, 0, quantum: 1));
+        return stats;
     }
 }

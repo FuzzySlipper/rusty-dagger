@@ -137,7 +137,8 @@ and ordinary class components. Mechanics uses one `Stat` (double-backed with
 integer/float accessors), `Track` sharing its maximum Stat, and `StatsComponent`;
 reuse the inventory, equipment and effects facades where they fit. These are
 available capabilities, not a claim that every current Dagger caller has already
-adopted them. The remaining domain migrations belong to campaign #8327.
+adopted them. See `docs/actors-and-mechanics.md` for current canonical ownership.
+The remaining domain migrations belong to campaign #8327.
 
 Use generated safe services for native Look, Spatial, Appearance, Random, UI,
 Content/ContentStore, Persistence, Animation, Audio and CameraView mechanisms.

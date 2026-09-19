@@ -1,6 +1,4 @@
-using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
-using WorldRpg.Kit.Actors;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
@@ -11,17 +9,11 @@ internal sealed class DaggerfallMechanicsState
     private const long MaximumStatValue = 10_000;
 
     /// <summary>Creates one actor's shared stat and track state from authored policy.</summary>
-    internal ActorMechanicsState CreateActor(
+    internal StatsComponent CreateStats(
         DaggerfallActorDefinition definition,
-        DaggerfallVitalValues vitals,
-        ulong entityId)
+        DaggerfallVitalValues vitals)
     {
         ArgumentNullException.ThrowIfNull(definition);
-        if (entityId == 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(entityId), "Actor entities must be non-zero.");
-        }
-
         ValidateVitals(vitals);
         List<(StatId Id, Stat Value)> stats = [];
         foreach ((DaggerfallStatId id, int value) in definition.Stats.Values)
@@ -32,9 +24,9 @@ internal sealed class DaggerfallMechanicsState
         Stat staminaMaximum = AddStat(stats, DaggerfallMechanicsIds.StaminaMaximum, vitals.StaminaMaximum);
         Stat magickaMaximum = AddStat(stats, DaggerfallMechanicsIds.MagickaMaximum, vitals.MagickaMaximum);
         Stat healthMaximum = AddStat(stats, DaggerfallMechanicsIds.HealthMaximum, vitals.HealthMaximum);
-        return new ActorMechanicsState(
-            new EntityId(entityId),
-            stats,
+        StatsComponent result = new();
+        foreach (var (id, stat) in stats) result.AddStat(id, stat);
+        (TrackId Id, Track Value)[] tracks =
             [
                 (TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value), new Track(
                     staminaMaximum, vitals.StaminaMaximum, MinimumStatValue, quantum: 1,
@@ -50,7 +42,9 @@ internal sealed class DaggerfallMechanicsState
                     quantum: 1,
                     rounding: MidpointRounding.ToZero,
                     integerRounding: MidpointRounding.ToZero)),
-            ]);
+            ];
+        foreach (var (id, track) in tracks) result.AddTrack(id, track);
+        return result;
     }
 
     private static (StatId Id, Stat Value) Stat(DaggerfallStatId id, int value) =>

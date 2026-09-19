@@ -101,11 +101,11 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         if (disposed) return;
         List<AppearanceFact> facts = [];
         if (world is { } staticWorld) facts.Add(new AppearanceFact(1, false, 0, worldAppearance.Transform, staticWorld, worldAppearance.Visible, worldAppearance.Layer));
-        foreach (ActorState actor in actors.All.Values)
+        foreach (ActorState actor in actors.All)
         {
-            if (!this.actors.TryGetValue(actor.EntityId, out ActorVisual? visual)) continue;
+            if (!this.actors.TryGetValue(actor.DurableId, out ActorVisual? visual)) continue;
             Appearance? chosen = actor.IsDefeated ? visual.Corpse : visual.Live;
-            if (chosen is not null) facts.Add(new AppearanceFact(checked((ulong)actor.EntityId), false, 0, new Transform(actor.Position.ToVector(), Quaternion.Identity, Vector3.One), chosen, true, RenderLayer.Scene));
+            if (chosen is not null) facts.Add(new AppearanceFact(checked((ulong)actor.DurableId), false, 0, new Transform(actor.Position.ToVector(), Quaternion.Identity, Vector3.One), chosen, true, RenderLayer.Scene));
         }
         foreach (EffectVisual effect in effects)
             facts.Add(new AppearanceFact(effect.EntityId, false, 0, new Transform(effect.Position.ToVector(), Quaternion.Identity, Vector3.One), effect.Appearance, true, RenderLayer.Scene));
@@ -128,9 +128,9 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     internal void UpdateDirections(ActorsState actorState, WorldPoint viewpoint)
     {
         if (disposed) return;
-        foreach (ActorState actor in actorState.All.Values)
+        foreach (ActorState actor in actorState.All)
         {
-            if (!actors.TryGetValue(actor.EntityId, out ActorVisual? visual)
+            if (!actors.TryGetValue(actor.DurableId, out ActorVisual? visual)
                 || visual.Live is null
                 || visual.ActiveState is null
                 || visual.SourceFrameIndices.Count == 0) continue;
@@ -504,7 +504,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
 
     private void SpawnBlood(AttackHitFact hit, PresentationEventIdentity identity, ActorsState actors)
     {
-        if (!actors.All.TryGetValue(hit.TargetId, out ActorState? target)) return;
+        if (!actors.TryGet(hit.TargetId, out ActorState? target)) return;
         WorldPoint position = target.Position;
         string[] names = ["blood0", "blood1", "blood2"];
         int ordinal = random is null ? 0 : checked((int)random.DrawKeyed(new KeyedRngRequest(

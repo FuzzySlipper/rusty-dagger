@@ -19,7 +19,7 @@ internal sealed class CombatModule
     private readonly IRandomService _random;
     private readonly ActorsState _actors;
     private readonly MechanicsEquipmentCoordinator _equipment;
-    private readonly IReadOnlyDictionary<long, MechanicsInventoryCoordinator> _actorInventories;
+    private readonly Func<long, MechanicsInventoryCoordinator?> _actorInventories;
     private readonly IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> _items;
     private readonly IReadOnlyDictionary<string, int> _weaponMaterialRanks;
     private readonly IReadOnlyDictionary<string, DaggerfallActionDefinition> _actions;
@@ -32,7 +32,7 @@ internal sealed class CombatModule
     // action with different ammunition would move this name onto the authored action.
     private const string ArrowItemId = "arrow";
 
-    internal CombatModule(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment, IReadOnlyDictionary<long, MechanicsInventoryCoordinator> actorInventories, DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity, DaggerfallMeleeTargetingModule targeting)
+    internal CombatModule(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment, Func<long, MechanicsInventoryCoordinator?> actorInventories, DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity, DaggerfallMeleeTargetingModule targeting)
     {
         _random = random;
         _actors = actors;
@@ -165,7 +165,7 @@ internal sealed class CombatModule
             return;
         }
         int damage = Math.Max(1, checked(rawDamage + StrengthModifier(attacker) + attack.DamageBonus));
-        Track targetHealth = target.Mechanics.ReadTrack(TrackId.Parse(HealthTrack));
+        Track targetHealth = target.Stats.GetTrack(TrackId.Parse(HealthTrack));
         int before = targetHealth.ValueInt;
         targetHealth.SetCurrent(checked(before - damage), clamp: true);
         LatchCooldown(request, attack);
@@ -257,7 +257,7 @@ internal sealed class CombatModule
                 continue;
             }
 
-            Track targetHealth = target.Mechanics.ReadTrack(TrackId.Parse(HealthTrack));
+            Track targetHealth = target.Stats.GetTrack(TrackId.Parse(HealthTrack));
             int before = targetHealth.ValueInt;
             targetHealth.SetCurrent(checked(before - pending.Damage), clamp: true);
             int applied = checked(before - targetHealth.ValueInt);
@@ -284,7 +284,7 @@ internal sealed class CombatModule
     /// </summary>
     private bool TrySpendArrow(long shooterId, FactBuffer<IProductFact> facts)
     {
-        if (!_actorInventories.TryGetValue(shooterId, out MechanicsInventoryCoordinator? quiver))
+        if (_actorInventories(shooterId) is not MechanicsInventoryCoordinator quiver)
         {
             // A ranged actor without a managed quiver is a composition defect its owner has to
             // see, not an empty quiver the player could misread as a bad roll.
@@ -296,7 +296,7 @@ internal sealed class CombatModule
             facts.Append(new AttackRejectedFact(AttackRejection.EmptyQuiver, shooterId));
             return false;
         }
-        quiver.Consume(new InventoryConsume("daggerfall.arrow-drawn", $"daggerfall.quiver.{shooterId}", new InventoryItemId(ArrowItemId), 1));
+        quiver.Consume(new InventoryConsume(new InventoryItemId(ArrowItemId), 1));
         return true;
     }
 
@@ -338,7 +338,7 @@ internal sealed class CombatModule
 
     private bool SpendPlayerStamina(Combatant player, int staminaCost, FactBuffer<IProductFact> facts)
     {
-        Track stamina = player.Mechanics.ReadTrack(TrackId.Parse(StaminaTrack));
+        Track stamina = player.Stats.GetTrack(TrackId.Parse(StaminaTrack));
         if (stamina.Current < staminaCost)
         {
             facts.Append(new AttackRejectedFact(AttackRejection.InsufficientStamina));
@@ -351,13 +351,13 @@ internal sealed class CombatModule
 
     private bool TryResolve(long id, out Combatant combatant)
     {
-        if (id == PlayerId && _definitions.TryGetValue(PlayerId, out DaggerfallActorDefinition? player)) { combatant = new(id, _actors.Player.Mechanics, player); return true; }
-        if (_actors.TryGet(id, out ActorState actor) && _definitions.TryGetValue(id, out DaggerfallActorDefinition? definition)) { combatant = new(id, actor.Mechanics, definition); return true; }
+        if (id == PlayerId && _definitions.TryGetValue(PlayerId, out DaggerfallActorDefinition? player)) { combatant = new(id, _actors.Player.Stats, player); return true; }
+        if (_actors.TryGet(id, out ActorState actor) && _definitions.TryGetValue(id, out DaggerfallActorDefinition? definition)) { combatant = new(id, actor.Stats, definition); return true; }
         combatant = default;
         return false;
     }
 
-    private static bool IsDefeated(Combatant combatant) => combatant.Mechanics.ReadTrack(TrackId.Parse(HealthTrack)).Current <= 0;
+    private static bool IsDefeated(Combatant combatant) => combatant.Stats.GetTrack(TrackId.Parse(HealthTrack)).Current <= 0;
     private static DaggerfallAttackDefinition ResolveFixedAttack(DaggerfallActorDefinition actor, DaggerfallActionDefinition action, double cooldown) => action.AttackRangeIndex is int index
         ? new DaggerfallAttackDefinition(action.Skill, actor.Attacks[index].MinimumDamage, actor.Attacks[index].MaximumDamage, cooldown, Reach: action.Reach)
         : new DaggerfallAttackDefinition(action.Skill, action.MinimumDamage!.Value, action.MaximumDamage!.Value, cooldown, Reach: action.Reach);
@@ -385,12 +385,12 @@ internal sealed class CombatModule
     internal static int CalculateHitChance(int skill, int struckArmor, int attackerLuck, int targetLuck, int attackerAgility, int targetAgility, int targetDodge) => DaggerfallFormulaPolicy.CalculateHitChance(skill, struckArmor, attackerLuck, targetLuck, attackerAgility, targetAgility, targetDodge);
     private int StrengthModifier(Combatant attacker) => DaggerfallFormulaPolicy.DamageModifier(ReadStat(attacker, DaggerfallMechanicsIds.Strength));
     private static int ReadStat(Combatant actor, DaggerfallStatId stat) =>
-        actor.Mechanics.ReadStat(StatId.Parse(stat.Value)).ValueInt;
+        actor.Stats.GetStat(StatId.Parse(stat.Value)).ValueInt;
     private int Draw(ExplicitMeleeRequest request, long attacker, long target, int salt, int minimum, int maximum, bool enemy) => checked((int)_random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, enemy ? CombatRandomKey.EnemyScope : CombatRandomKey.PlayerScope, CombatRandomKey.For(request.Generation, request.SimulationStep, attacker, target, salt), minimum, maximum)).Value);
     private static ulong RequiredSteps(double cooldown, double fixedDelta) => checked((ulong)Math.Max(1d, Math.Ceiling(cooldown / fixedDelta)));
     private void LatchPlayerCooldown(ulong generation, ulong simulationStep, double fixedDeltaSeconds, DaggerfallAttackDefinition attack) => _readyAtStep[(generation, PlayerId)] = checked(simulationStep + RequiredSteps(attack.CooldownSeconds, fixedDeltaSeconds));
     private void LatchCooldown(ExplicitMeleeRequest request, DaggerfallAttackDefinition attack) => _readyAtStep[(request.Generation, request.AttackerId)] = checked(request.SimulationStep + RequiredSteps(attack.CooldownSeconds, request.FixedDeltaSeconds));
-    private readonly record struct Combatant(long Id, ActorMechanicsState Mechanics, DaggerfallActorDefinition Definition);
+    private readonly record struct Combatant(long Id, StatsComponent Stats, DaggerfallActorDefinition Definition);
 }
 
 internal readonly record struct CombatCooldown(long AttackerId, ulong RemainingSteps);

@@ -55,7 +55,9 @@ it does not restrict the Kit to a small foundation. Target ownership is:
 Engine already provides `EntityStore`, `Actor`, creation-time `EntityTypeId`,
 class components, one `Stat` with integer/float accessors and shared-maximum
 `Track`, mechanics facades/capture helpers, and current-byte/JSON persistence.
-Dagger adoption proceeds domain by domain; do not create parallel mechanisms.
+Dagger now uses these actor/stat/inventory/equipment capabilities through the
+[canonical actor and mechanics owners](actors-and-mechanics.md). Further domain
+adoption proceeds through the campaign; do not create parallel mechanisms.
 
 Direct live mutation is normal. Wrapping actors does not construct them;
 factories do. Distinguish runtime IDs, type metadata and durable identity.

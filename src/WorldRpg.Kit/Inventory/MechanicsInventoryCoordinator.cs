@@ -1,71 +1,50 @@
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
+using WorldRpg.Kit.World;
 
 namespace WorldRpg.Kit.Inventory;
 
 public readonly record struct InventoryItemId(string Value);
 public readonly record struct EquipmentSlotId(string Value);
+/// <summary>A live runtime item reference. Save its directory identity, not this session-local number.</summary>
 public readonly record struct UniqueInventoryItem(ulong EntityId, InventoryItemId Definition);
 
-public sealed record InventoryGrant(string Operation, string SourceInstance, InventoryItemId Item, ulong Quantity)
+public sealed record InventoryGrant(InventoryItemId Item, ulong Quantity)
 {
     public InventoryGrant Validate()
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(Operation);
-        ArgumentException.ThrowIfNullOrWhiteSpace(SourceInstance);
         ArgumentException.ThrowIfNullOrWhiteSpace(Item.Value);
         ArgumentOutOfRangeException.ThrowIfZero(Quantity);
         return this;
     }
 }
 
-public sealed record InventoryConsume(string Operation, string SourceInstance, InventoryItemId Item, ulong Quantity)
+public sealed record InventoryConsume(InventoryItemId Item, ulong Quantity)
 {
     public InventoryConsume Validate()
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(Operation);
-        ArgumentException.ThrowIfNullOrWhiteSpace(SourceInstance);
         ArgumentException.ThrowIfNullOrWhiteSpace(Item.Value);
         ArgumentOutOfRangeException.ThrowIfZero(Quantity);
         return this;
     }
 }
 
-public sealed record EquipmentChange(string Operation, string SourceInstance)
-{
-    public EquipmentChange Validate()
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(Operation);
-        ArgumentException.ThrowIfNullOrWhiteSpace(SourceInstance);
-        return this;
-    }
-}
-
-public sealed record UniqueItemMaterialization(string Identity, ulong EntityId, InventoryItemId Definition)
-{
-    public UniqueItemMaterialization Validate()
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(Identity);
-        ArgumentOutOfRangeException.ThrowIfZero(EntityId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(Definition.Value);
-        return this;
-    }
-}
-
-/// <summary>One fungible or unique item admitted as part of one atomic grant.</summary>
+/// <summary>One fungible or durable unique item admitted as part of one atomic grant.</summary>
 public sealed record InventoryAtomicGrant(
     InventoryItemId Item,
     ulong Quantity = 1,
-    string? Identity = null,
-    ulong? EntityId = null)
+    DurableIdentityReference? UniqueItem = null)
 {
     public InventoryAtomicGrant Validate()
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(Item.Value);
         ArgumentOutOfRangeException.ThrowIfZero(Quantity);
-        bool unique = EntityId is not null || Identity is not null;
-        if (unique && (EntityId is null || EntityId == 0 || string.IsNullOrWhiteSpace(Identity)))
-            throw new ArgumentException("Unique atomic grants require both an identity and entity id.", nameof(EntityId));
+        if (UniqueItem is DurableIdentityReference identity)
+        {
+            identity.Validate();
+            if (identity.Kind != DurableIdentityKind.Item || Quantity != 1)
+                throw new ArgumentException("Unique atomic grants require one durable item identity and quantity one.", nameof(UniqueItem));
+        }
         return this;
     }
 }
@@ -73,10 +52,7 @@ public sealed record InventoryAtomicGrant(
 public sealed record EquipmentAssignment(EquipmentSlotId Slot, UniqueInventoryItem Item);
 
 /// <summary>A copied managed equipment view joined to its contained item definitions.</summary>
-public sealed class EquipmentRead(
-    IReadOnlyList<EquipmentAssignment> assignments,
-    ulong revision,
-    ulong relationshipStateRevision)
+public sealed class EquipmentRead(IReadOnlyList<EquipmentAssignment> assignments, ulong revision, ulong relationshipStateRevision)
 {
     public IReadOnlyList<EquipmentAssignment> Assignments { get; } = Array.AsReadOnly(assignments.ToArray());
     public ulong Revision { get; } = revision;
@@ -86,261 +62,204 @@ public sealed class EquipmentRead(
     {
         foreach (EquipmentAssignment assignment in Assignments)
         {
-            if (assignment.Slot == slot)
-            {
-                item = assignment.Item;
-                return true;
-            }
+            if (assignment.Slot == slot) { item = assignment.Item; return true; }
         }
-
         item = default;
         return false;
     }
 }
 
-/// <summary>
-/// Thin product coordinator over the managed Engine inventory mechanism. Item
-/// definitions remain owned by the ruleset; the Engine helper owns stack and
-/// capacity invariants.
-/// </summary>
+/// <summary>Typed product coordination over one live Engine inventory component.</summary>
 public sealed class MechanicsInventoryCoordinator
 {
-    private readonly InventoryStore _world;
-    private readonly EntityId _owner;
     private readonly IReadOnlyDictionary<InventoryItemId, ItemDefinition> _items;
 
-    public MechanicsInventoryCoordinator(
-        InventoryStore world,
-        EntityId owner,
+    public MechanicsInventoryCoordinator(InventoryComponent component, EntityDirectory entities,
         IReadOnlyDictionary<InventoryItemId, ItemDefinition> items)
     {
-        _world = world ?? throw new ArgumentNullException(nameof(world));
-        _owner = owner;
+        Component = component ?? throw new ArgumentNullException(nameof(component));
+        Entities = entities ?? throw new ArgumentNullException(nameof(entities));
         _items = items ?? throw new ArgumentNullException(nameof(items));
     }
 
-    public InventoryView Read() => _world.Read(_owner);
+    public InventoryComponent Component { get; }
+    public EntityDirectory Entities { get; }
+    public InventoryView Read() => Component.View();
 
     public InventoryMutationReceipt Grant(InventoryGrant grant)
     {
         grant.Validate();
-        return _world.Grant(_owner, RequireDefinition(grant.Item), grant.Quantity);
+        return Component.Grant(RequireDefinition(grant.Item), grant.Quantity);
     }
 
-    /// <summary>
-    /// Applies fungible grants and unique materializations against one
-    /// detached Engine inventory candidate, publishing only after every item
-    /// validates. This keeps multi-drop rewards atomic without becoming a
-    /// second inventory authority.
-    /// </summary>
+    /// <summary>Publishes all requested grants together, or retains none of their newly materialized item entities.</summary>
     public void GrantAtomic(IEnumerable<InventoryAtomicGrant> grants)
     {
         ArgumentNullException.ThrowIfNull(grants);
         InventoryAtomicGrant[] values = grants.Select(grant => grant.Validate()).ToArray();
         if (values.Length == 0) throw new ArgumentException("At least one atomic grant is required.", nameof(grants));
-        InventoryEdit candidate = _world.Prepare();
-        foreach (InventoryAtomicGrant grant in values)
+
+        List<DurableIdentityReference> created = [];
+        try
         {
-            ItemDefinition definition = RequireDefinition(grant.Item);
-            if (grant.EntityId is ulong entityId)
+            using InventoryEdit candidate = Component.Store.Prepare();
+            foreach (InventoryAtomicGrant grant in values)
             {
-                if (definition.Kind != ItemKind.Unique || grant.Quantity != 1)
-                    throw new InvalidOperationException($"Atomic unique grant '{grant.Item.Value}' has an invalid item shape.");
-                candidate.MaterializeUnique(
-                    new ItemState(new EntityId(entityId), definition),
-                    _owner);
+                ItemDefinition definition = RequireDefinition(grant.Item);
+                if (grant.UniqueItem is DurableIdentityReference identity)
+                {
+                    if (definition.Kind != ItemKind.Unique)
+                        throw new InvalidOperationException($"Atomic unique grant '{grant.Item.Value}' requires a unique item definition.");
+                    EntityId item = CreateItemEntity(identity, definition);
+                    created.Add(identity);
+                    candidate.MaterializeUnique(new ItemState(item, definition), Component.Owner);
+                }
+                else
+                {
+                    if (definition.Kind != ItemKind.Fungible)
+                        throw new InvalidOperationException($"Atomic stack grant '{grant.Item.Value}' requires a fungible item definition.");
+                    candidate.Grant(Component.Owner, definition, grant.Quantity);
+                }
             }
-            else
-            {
-                if (definition.Kind != ItemKind.Fungible)
-                    throw new InvalidOperationException($"Atomic stack grant '{grant.Item.Value}' requires a fungible item.");
-                candidate.Grant(_owner, definition, grant.Quantity);
-            }
+            candidate.Publish();
         }
-        candidate.Publish();
+        catch
+        {
+            foreach (DurableIdentityReference identity in created) Entities.Destroy(identity);
+            throw;
+        }
     }
 
     public InventoryMutationReceipt Consume(InventoryConsume consume)
     {
         consume.Validate();
-        return _world.Consume(_owner, RequireDefinition(consume.Item), consume.Quantity);
+        return Component.Consume(RequireDefinition(consume.Item), consume.Quantity);
+    }
+
+    public DurableIdentityReference GetDurableItemId(EntityId item) => RequireItemIdentity(Entities.IdentityOf(item));
+
+    private EntityId CreateItemEntity(DurableIdentityReference identity, ItemDefinition definition) =>
+        Entities.Create(RequireItemIdentity(identity), new EntityTypeId(definition.Id.Value));
+
+    private static DurableIdentityReference RequireItemIdentity(DurableIdentityReference identity)
+    {
+        identity.Validate();
+        if (identity.Kind != DurableIdentityKind.Item)
+            throw new ArgumentException("An inventory item requires a durable item identity.", nameof(identity));
+        return identity;
     }
 
     private ItemDefinition RequireDefinition(InventoryItemId id) => _items.TryGetValue(id, out ItemDefinition? definition)
-        ? definition
-        : throw new InvalidOperationException($"Managed inventory does not define item '{id.Value}'.");
+        ? definition : throw new InvalidOperationException($"Managed inventory does not define item '{id.Value}'.");
 }
 
-/// <summary>
-/// Thin typed coordination over managed unique-item containment and equipment.
-/// It keeps only ruleset-facing identity conversion; InventoryStore remains the
-/// state owner and validates every relationship mutation atomically.
-/// </summary>
-public sealed class MechanicsEquipmentCoordinator : IDisposable
+/// <summary>Typed coordination over live inventory and equipment components for one owner.</summary>
+public sealed class MechanicsEquipmentCoordinator
 {
-    private readonly InventoryStore _world;
-    private readonly EntityId _owner;
     private readonly IReadOnlyDictionary<InventoryItemId, ItemDefinition> _items;
     private readonly IReadOnlyDictionary<EquipmentSlotId, EquipmentSlotDefinition> _slots;
-    private readonly Dictionary<ulong, InventoryItemId> _knownItems = [];
-    private bool _disposed;
 
-    public MechanicsEquipmentCoordinator(
-        InventoryStore world,
-        EntityId owner,
-        IReadOnlyDictionary<InventoryItemId, ItemDefinition> items,
+    public MechanicsEquipmentCoordinator(InventoryComponent inventory, EquipmentComponent component,
+        EntityDirectory entities, IReadOnlyDictionary<InventoryItemId, ItemDefinition> items,
         IReadOnlyDictionary<EquipmentSlotId, EquipmentSlotDefinition> slots)
     {
-        _world = world ?? throw new ArgumentNullException(nameof(world));
-        _owner = owner;
+        Inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
+        Component = component ?? throw new ArgumentNullException(nameof(component));
+        Entities = entities ?? throw new ArgumentNullException(nameof(entities));
         _items = items ?? throw new ArgumentNullException(nameof(items));
         _slots = slots ?? throw new ArgumentNullException(nameof(slots));
+        if (!ReferenceEquals(Inventory.Store, Component.Store) || Inventory.Owner != Component.Owner)
+            throw new ArgumentException("Inventory and equipment components must belong to the same store owner.");
     }
+
+    public InventoryComponent Inventory { get; }
+    public EquipmentComponent Component { get; }
+    public EntityDirectory Entities { get; }
 
     public EquipmentRead Read()
     {
-        ThrowIfDisposed();
-        InventoryView inventory = _world.Read(_owner);
-        if (!_world.TryGetEquipment(_owner, out EquipmentState? equipment) || equipment is null)
-        {
-            throw new InvalidOperationException($"Managed equipment is not registered for owner {_owner.Value}.");
-        }
-
-        Dictionary<ulong, InventoryItemId> contained = inventory.UniqueItems
+        Dictionary<ulong, InventoryItemId> contained = Inventory.UniqueItems
             .ToDictionary(item => item.Entity.Value, item => new InventoryItemId(item.Definition.Value));
         List<EquipmentAssignment> assignments = [];
-        foreach (Rusty.Engine.Mechanics.EquipmentAssignment assignment in equipment.Assignments)
+        foreach (Rusty.Engine.Mechanics.EquipmentAssignment assignment in Component.Assignments)
         {
-            assignments.Add(new EquipmentAssignment(
-                new EquipmentSlotId(assignment.Slot.Value),
+            assignments.Add(new EquipmentAssignment(new EquipmentSlotId(assignment.Slot.Value),
                 new UniqueInventoryItem(assignment.Item.Value, RequireContained(contained, assignment.Item))));
         }
-
-        return new EquipmentRead(assignments, equipment.Revision, inventory.StoreRevision);
+        return new EquipmentRead(assignments, Component.Revision, Inventory.Store.Revision);
     }
 
-    public UniqueInventoryItem Materialize(UniqueItemMaterialization item)
+    /// <summary>Creates one live Engine item from its durable item identity and admits it to this inventory.</summary>
+    public UniqueInventoryItem Materialize(DurableIdentityReference itemId, InventoryItemId definitionId)
     {
-        ThrowIfDisposed();
-        item.Validate();
-        ItemDefinition definition = RequireDefinition(item.Definition);
+        ItemDefinition definition = RequireDefinition(definitionId);
         if (definition.Kind != ItemKind.Unique)
-        {
-            throw new InvalidOperationException($"Item '{item.Definition.Value}' is not a unique item definition.");
-        }
+            throw new InvalidOperationException($"Item '{definitionId.Value}' is not a unique item definition.");
 
-        EntityId entity = new(item.EntityId);
-        _world.MaterializeUnique(new ItemState(entity, definition), _owner);
-        UniqueInventoryItem result = new(item.EntityId, item.Definition);
-        _knownItems.Add(item.EntityId, item.Definition);
-        return result;
+        EntityId item = Entities.Create(RequireItemIdentity(itemId), new EntityTypeId(definition.Id.Value));
+        try { Inventory.MaterializeUnique(new ItemState(item, definition)); }
+        catch { Entities.Destroy(itemId); throw; }
+        return new UniqueInventoryItem(item.Value, definitionId);
     }
 
-    public EquipmentMutationReceipt Equip(
-        UniqueInventoryItem item,
-        IReadOnlyList<EquipmentSlotId> slots,
-        EquipmentChange change)
+    public EquipmentMutationReceipt Equip(UniqueInventoryItem item, IReadOnlyList<EquipmentSlotId> slots)
     {
-        ThrowIfDisposed();
-        change.Validate();
         ArgumentNullException.ThrowIfNull(slots);
-        if (slots.Count == 0)
-        {
-            throw new ArgumentException("At least one equipment slot is required.", nameof(slots));
-        }
-
-        return _world.Equip(_owner,
-            RequireEntity(item),
-            slots.Select(RequireSlot));
+        if (slots.Count == 0) throw new ArgumentException("At least one equipment slot is required.", nameof(slots));
+        return Component.Equip(RequireEntity(item), slots.Select(RequireSlot));
     }
 
-    public EquipmentMutationReceipt Unequip(UniqueInventoryItem item, EquipmentChange change)
-    {
-        ThrowIfDisposed();
-        change.Validate();
-        return _world.Unequip(_owner, RequireEntity(item));
-    }
+    public EquipmentMutationReceipt Unequip(UniqueInventoryItem item) => Component.Unequip(RequireEntity(item));
 
-    public EquipmentMutationReceipt Swap(
-        UniqueInventoryItem outgoing,
-        UniqueInventoryItem incoming,
-        IReadOnlyList<EquipmentSlotId> incomingSlots,
-        EquipmentChange change)
+    public EquipmentMutationReceipt Swap(UniqueInventoryItem outgoing, UniqueInventoryItem incoming,
+        IReadOnlyList<EquipmentSlotId> incomingSlots)
     {
-        ThrowIfDisposed();
-        change.Validate();
         ArgumentNullException.ThrowIfNull(incomingSlots);
-        if (incomingSlots.Count == 0)
-        {
-            throw new ArgumentException("At least one equipment slot is required.", nameof(incomingSlots));
-        }
-
-        return _world.Swap(_owner,
-            RequireEntity(outgoing),
-            RequireEntity(incoming),
-            incomingSlots.Select(RequireSlot));
+        if (incomingSlots.Count == 0) throw new ArgumentException("At least one equipment slot is required.", nameof(incomingSlots));
+        return Component.Swap(RequireEntity(outgoing), RequireEntity(incoming), incomingSlots.Select(RequireSlot));
     }
 
-    /// <summary>Moves an already equipped item and any explicit replacement in one Engine candidate.</summary>
+    /// <summary>Moves an equipped item and explicitly selected replacements through one Engine candidate.</summary>
     public EquipmentMutationReceipt Reassign(UniqueInventoryItem item, IReadOnlyList<EquipmentSlotId> slots,
-        IReadOnlyList<UniqueInventoryItem> replaced, EquipmentChange change)
+        IReadOnlyList<UniqueInventoryItem> replaced)
     {
-        ThrowIfDisposed();
-        change.Validate();
-        InventoryEdit candidate = _world.Prepare();
-        candidate.Unequip(_owner, RequireEntity(item));
-        foreach (UniqueInventoryItem outgoing in replaced) candidate.Unequip(_owner, RequireEntity(outgoing));
-        EquipmentMutationReceipt receipt = candidate.Equip(_owner, RequireEntity(item), slots.Select(RequireSlot));
+        ArgumentNullException.ThrowIfNull(slots);
+        ArgumentNullException.ThrowIfNull(replaced);
+        if (slots.Count == 0) throw new ArgumentException("At least one equipment slot is required.", nameof(slots));
+        using InventoryEdit candidate = Inventory.Store.Prepare();
+        candidate.Unequip(Inventory.Owner, RequireEntity(item));
+        foreach (UniqueInventoryItem outgoing in replaced) candidate.Unequip(Inventory.Owner, RequireEntity(outgoing));
+        EquipmentMutationReceipt receipt = candidate.Equip(Inventory.Owner, RequireEntity(item), slots.Select(RequireSlot));
         candidate.Publish();
         return receipt;
     }
 
-    public void Dispose()
-    {
-        if (_disposed) return;
-        _disposed = true;
-        _knownItems.Clear();
-    }
+    public DurableIdentityReference GetDurableItemId(EntityId item) => RequireItemIdentity(Entities.IdentityOf(item));
 
     private EntityId RequireEntity(UniqueInventoryItem item)
     {
-        if (!_knownItems.TryGetValue(item.EntityId, out InventoryItemId definition))
-        {
-            InventoryView current = _world.Read(_owner);
-            UniqueInventoryItem? observed = current.UniqueItems
-                .Where(value => value.Entity.Value == item.EntityId)
-                .Select(value => (UniqueInventoryItem?)new UniqueInventoryItem(value.Entity.Value, new InventoryItemId(value.Definition.Value)))
-                .SingleOrDefault();
-            if (observed is UniqueInventoryItem found)
-            {
-                definition = found.Definition;
-                _knownItems[item.EntityId] = definition;
-            }
-        }
-        if (definition != item.Definition)
-        {
-            throw new InvalidOperationException($"Unique item {item.EntityId} is not known to this coordinator.");
-        }
-
-        return new EntityId(item.EntityId);
+        EntityId entity = new(item.EntityId);
+        if (!Inventory.Contains(entity) || !Inventory.Store.TryGetItem(entity, out ItemState? found)
+            || found is null || !string.Equals(found.Definition.Id.Value, item.Definition.Value, StringComparison.Ordinal))
+            throw new InvalidOperationException($"Unique item {item.EntityId} is not contained by this inventory with definition '{item.Definition.Value}'.");
+        return entity;
     }
 
     private ItemDefinition RequireDefinition(InventoryItemId id) => _items.TryGetValue(id, out ItemDefinition? definition)
-        ? definition
-        : throw new InvalidOperationException($"Managed inventory does not define item '{id.Value}'.");
+        ? definition : throw new InvalidOperationException($"Managed inventory does not define item '{id.Value}'.");
 
     private EquipmentSlotDefinition RequireSlot(EquipmentSlotId id) => _slots.TryGetValue(id, out EquipmentSlotDefinition? slot)
-        ? slot
-        : throw new InvalidOperationException($"Managed equipment does not define slot '{id.Value}'.");
+        ? slot : throw new InvalidOperationException($"Managed equipment does not define slot '{id.Value}'.");
 
-    private static InventoryItemId RequireContained(
-        IReadOnlyDictionary<ulong, InventoryItemId> contained,
-        EntityId item) => contained.TryGetValue(item.Value, out InventoryItemId definition)
-        ? definition
-        : throw new InvalidOperationException($"Managed equipment assignment refers to item {item.Value} outside its owner's inventory.");
+    private static InventoryItemId RequireContained(IReadOnlyDictionary<ulong, InventoryItemId> contained, EntityId item) =>
+        contained.TryGetValue(item.Value, out InventoryItemId definition)
+            ? definition : throw new InvalidOperationException($"Managed equipment assignment refers to item {item.Value} outside its owner's inventory.");
 
-    private void ThrowIfDisposed()
+    private static DurableIdentityReference RequireItemIdentity(DurableIdentityReference identity)
     {
-        if (_disposed) throw new ObjectDisposedException(nameof(MechanicsEquipmentCoordinator));
+        identity.Validate();
+        if (identity.Kind != DurableIdentityKind.Item)
+            throw new ArgumentException("An inventory item requires a durable item identity.", nameof(identity));
+        return identity;
     }
 }

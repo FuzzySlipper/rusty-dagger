@@ -54,10 +54,10 @@ internal sealed class DaggerfallMeleeTargetingModule
         }
 
         double maximumDistance = ResolveMaximumDistance(actionReach);
-        PerceptionTarget[] targets = _actors.All.Values
+        PerceptionTarget[] targets = _actors.All
             .Where(IsEligible)
-            .OrderBy(actor => actor.EntityId)
-            .Select(actor => new PerceptionTarget(checked((ulong)actor.EntityId), actor.Position.ToVector()))
+            .OrderBy(actor => actor.DurableId)
+            .Select(actor => new PerceptionTarget(checked((ulong)actor.DurableId), actor.Position.ToVector()))
             .ToArray();
         PerceptionObserver[] observers =
         [
@@ -92,10 +92,9 @@ internal sealed class DaggerfallMeleeTargetingModule
         return selected;
     }
 
-    private bool IsEligible(ActorState actor) => actor.EntityId != PlayerId
-        && actor.EntityId > 0
-        && actor.Mechanics.Entity.Value == (ulong)actor.EntityId
-        && _definitions.ContainsKey(actor.EntityId)
+    private bool IsEligible(ActorState actor) => actor.DurableId != PlayerId
+        && actor.DurableId > 0
+        && _definitions.ContainsKey(actor.DurableId)
         && !actor.IsDefeated;
 
     private bool IsEligibleTarget(long entityId) => _actors.TryGet(entityId, out ActorState actor) && IsEligible(actor);
