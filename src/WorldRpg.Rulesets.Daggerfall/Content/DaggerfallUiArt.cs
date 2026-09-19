@@ -15,7 +15,6 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// </remarks>
 internal sealed class DaggerfallUiArt
 {
-    private const string RevisionId = "daggerfall.ui-art";
     /// <summary>The published group inventory that names every artifact of the UI content group.</summary>
     internal const string InventoryPath = "worldrpg/media/classic-media-inventory.json";
 
@@ -53,11 +52,13 @@ internal sealed class DaggerfallUiArt
 
     private DaggerfallUiArt(IReadOnlyList<(string Id, string Image)> images)
     {
-        Revision = RevisionId;
+        // A new admitted image block invalidates retained DOM art, including across runtime restarts.
+        // This token identifies the publication; it does not hash or verify the image bytes.
+        Revision = Guid.NewGuid().ToString("N");
         Images = images;
     }
 
-    /// <summary>Session-stable UI-art identity used by a reconnecting DOM to request the current image block.</summary>
+    /// <summary>Publication-stable UI-art identity used by a reconnecting DOM to request the current image block.</summary>
     internal string Revision { get; }
 
     /// <summary>Every resolved image as a data URL, ordered by media identity.</summary>

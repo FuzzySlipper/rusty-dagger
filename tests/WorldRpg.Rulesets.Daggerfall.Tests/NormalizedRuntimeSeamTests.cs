@@ -1962,6 +1962,7 @@ public sealed class NormalizedRuntimeSeamTests
         WorldPoint savedPosition;
         ulong savedStackQuantity;
         ulong savedNpcUniqueId;
+        HashSet<ulong> savedUniqueIds;
         DaggerfallSession sourceSession;
         using (WorldRpgSaveStore store = new(sourceEngine.Context, "daggerfall-host-save"))
         using (WorldRpgProduct sourceProduct = new(new ProductCreateContext(sourceEngine.Context, FullContent(root), input), sourceRuleset, new GameBundleId("daggerfall.privateers-hold")))
@@ -1988,6 +1989,7 @@ public sealed class NormalizedRuntimeSeamTests
 
             PersistenceSaveReceipt receipt = sourceProduct.Save(store, "slot", PersistenceRevisionGuard.Absent);
             Assert.Equal(PersistenceSaveOutcome.Saved, receipt.Outcome);
+            savedUniqueIds = [.. CapturedUniqueItemIds(DaggerfallSavePayload.Read(store.Load("slot").State!.Payload))];
         }
 
         ContentFake resumedContent = new(releases);
@@ -2025,7 +2027,66 @@ public sealed class NormalizedRuntimeSeamTests
         _ = restoredMaximum.AddModifier(1);
         Assert.Equal(savedMaximum + 1, restoredHealth.MaximumValue);
         Assert.Same(restoredMaximum, restoredHealth.Maximum);
+        Assert.DoesNotContain(restoredSession.UniqueItemAllocator.AllocateReference().Value, savedUniqueIds);
         Assert.Equal(0, resumedSpatial.StepCalls);
+    }
+
+    [Fact]
+    public void Host_resume_refuses_unique_items_that_are_unissued_or_tombstoned_in_the_saved_ledger()
+    {
+        string root = RepositoryRoot();
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSavePayload valid = CapturedSave(root);
+        DaggerfallUniqueSave tombstoned = Assert.IsType<DaggerfallUniqueSave>(valid.Inventory.UniqueItems.FirstOrDefault());
+        DurableIdentityAllocator ledger = DurableIdentityAllocator.Restore(valid.RestoredIdentities());
+        ulong unissued = ledger.NextIdentity(DurableIdentityKind.Item);
+        DaggerfallSavePayload forged = valid with
+        {
+            Inventory = valid.Inventory with
+            {
+                UniqueItems = [.. valid.Inventory.UniqueItems, new DaggerfallUniqueSave("iron-tanto", unissued)],
+            },
+        };
+        KindAllocatorState[] removedKinds = valid.Identities.Kinds.Select(state => state.Kind == DurableIdentityKind.Item
+            ? state with
+            {
+                Reserved = state.Reserved.Where(value => value != tombstoned.EntityId).ToArray(),
+                Removed = [.. state.Removed, tombstoned.EntityId],
+            }
+            : state).ToArray();
+        DaggerfallSavePayload removed = valid with { Identities = new DurableIdentityState(removedKinds) };
+        ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
+
+        foreach ((DaggerfallSavePayload rejected, string classification) in new[]
+        {
+            (forged, nameof(DurableIdentityClassification.NeverIssued)),
+            (removed, nameof(DurableIdentityClassification.Removed)),
+        })
+        {
+            InMemoryPersistenceService persistence = new();
+            List<string> releases = [];
+            ContentFake content = new(releases);
+            PopulateContent(content, inputs);
+            SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+            EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), persistence: persistence);
+            using WorldRpgSaveStore store = new(engine.Context, "daggerfall-host-save");
+            store.Save("slot", new GameSaveEnvelope(DaggerfallSavePayload.Encode(rejected)), PersistenceRevisionGuard.Absent);
+            CapturingDaggerfallRuleset ruleset = new();
+
+            WorldRpgResumeResult result = WorldRpgProduct.TryResume(
+                new ProductCreateContext(engine.Context, FullContent(root), input),
+                store,
+                "slot",
+                ruleset,
+                new GameBundleId("daggerfall.privateers-hold"));
+
+            Assert.False(result.IsResumed);
+            Assert.Null(result.Product);
+            WorldRpgSaveDiagnostic diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == "payload");
+            Assert.Contains(classification, diagnostic.Message, StringComparison.Ordinal);
+            Assert.Null(ruleset.Session);
+            Assert.Equal(0, spatial.StepCalls);
+        }
     }
 
     private static DaggerfallSavePayload CapturedSave(string root)
@@ -2042,6 +2103,11 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     private static DaggerfallSavePayload RoundTrip(DaggerfallSavePayload value) => DaggerfallSavePayload.Read(DaggerfallSavePayload.Encode(value));
+
+    private static IEnumerable<ulong> CapturedUniqueItemIds(DaggerfallSavePayload saved) =>
+        saved.Inventory.UniqueItems.Select(item => item.EntityId)
+            .Concat(saved.Corpses.SelectMany(corpse => corpse.UniqueItems).Select(item => item.EntityId))
+            .Concat(saved.ActorInventories.SelectMany(actor => actor.Inventory.UniqueItems).Select(item => item.EntityId));
 
 
     [Fact]
@@ -2770,7 +2836,7 @@ public sealed class NormalizedRuntimeSeamTests
         screen["sha256"] = Convert.ToHexStringLower(SHA256.HashData(edited));
         republished.Add(DaggerfallUiArt.InventoryPath, Encoding.UTF8.GetBytes(inventory.ToJsonString()));
         DaggerfallUiArt changedArt = DaggerfallUiArt.Read(republished, icons);
-        Assert.Equal(baseline.Revision, changedArt.Revision);
+        Assert.NotEqual(baseline.Revision, changedArt.Revision);
         Assert.NotEqual(
             baseline.Images.Single(image => image.Id == "screen.death").Image,
             changedArt.Images.Single(image => image.Id == "screen.death").Image);

@@ -93,6 +93,7 @@ internal sealed record DaggerfallSavePayload(
         }
         if (!actorInventories.SetEquals(savedActorIds))
             throw new ArgumentException("Current save must carry one actor inventory section for every saved actor.");
+        RequireLiveUniqueItems(uniqueItems);
 
         HashSet<(int Region, int Index)> locations = [.. definitions.Locations.Records.Select(value => (value.Region, value.Index))];
         RequireSite(Site.Active, locations, "active site");
@@ -188,6 +189,18 @@ internal sealed record DaggerfallSavePayload(
         DaggerfallSiteId site = id.Require();
         if (!locations.Contains((site.Region, site.Index)))
             throw new ArgumentException($"Saved {owner} {site} is not defined by the selected content.");
+    }
+
+    /// <summary>Every materialized unique item must already be live in the persisted item ledger.</summary>
+    private void RequireLiveUniqueItems(IEnumerable<ulong> uniqueItems)
+    {
+        DurableIdentityAllocator identities = DurableIdentityAllocator.Restore(RestoredIdentities());
+        foreach (ulong itemId in uniqueItems)
+        {
+            DurableIdentityClassification classification = identities.Classify(new DurableIdentityReference(DurableIdentityKind.Item, itemId));
+            if (classification != DurableIdentityClassification.Live)
+                throw new ArgumentException($"Saved unique item '{itemId}' is {classification} in the persisted item identity ledger.");
+        }
     }
 
     private static void ValidateInventory(DaggerfallInventorySave inventory, DaggerfallDefinitions definitions, HashSet<ulong> allUnique, string owner, bool requireEquipment)
