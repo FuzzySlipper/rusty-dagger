@@ -39,6 +39,39 @@ composition seam. Daggerfall-specific values stay in the ruleset or content;
 adjustable policy is exposed through typed tuning and authored values stay in
 content packs.
 
+## Active gameplay refactor
+
+Campaign #8327 implements Board #146 after upstream actor/persistence delivery.
+The table above describes current code placement, including mixed Dagger modules;
+it does not restrict the Kit to a small foundation. Target ownership is:
+
+- Kit: composed actor facades and canonical attached components; named targeting,
+  inventory/equipment, attack lifecycle, effects/progression and AI/loot services;
+  typed participant-contributed RuleEvents and post-change notifications.
+- Dagger: formulas, eligibility, capacities, timing choices, definitions and
+  content/presentation meaning, supplied by explicit policies and resolvers.
+- Host: selection and lifecycle, with no Dagger gameplay interpretation.
+
+Engine already provides `EntityStore`, `Actor`, creation-time `EntityTypeId`,
+class components, one `Stat` with integer/float accessors and shared-maximum
+`Track`, mechanics facades/capture helpers, and current-byte/JSON persistence.
+Dagger adoption proceeds domain by domain; do not create parallel mechanisms.
+
+Direct live mutation is normal. Wrapping actors does not construct them;
+factories do. Distinguish runtime IDs, type metadata and durable identity.
+Typed resolution may apply state directly; no required transaction/replay
+protocol or ambient service registry. UI projections remain useful read models.
+
+Current-schema serialization preserves meaningful state and relationships,
+including shared stats/tracks and distinct item instances. Old development saves
+may break. Existing product schema/fingerprint checks and historical readers are
+legacy work for #8338/#8339, not requirements for new code. Real data decode and
+resource lifetime checks retain their purpose.
+
+See [the source-backed combat baseline](combat-behavior-baseline.md) before
+changing timing or save treatment. Coverage backlog reconciliation is excluded
+from this campaign and happens separately afterward.
+
 ## Retained evidence and content
 
 `content/worldrpg/**` is the active loaded content boundary. The adjacent

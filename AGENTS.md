@@ -41,8 +41,10 @@ NativeAOT composition beneath ignored `obj` output. The ruleset's current
 `Modules/` placement is a migration fact rather than an architecture boundary.
 
 The foundation campaign #7322 and C# migration campaign #7533 are complete.
-Use the coverage plan for subsequent work; do not restart their migration or
-first-contact proof sequence. `docs/code-migration-map.md` records disposition.
+Campaign #8327 now owns adoption of composed actors, typed rules and current-state
+persistence (design: Board #146). Reconcile the older coverage backlog only in a
+separate effort after that campaign; do not restart prior migration/proof sequences.
+`docs/code-migration-map.md` records disposition.
 
 | Owner | Responsibility |
 | --- | --- |
@@ -57,8 +59,10 @@ first-contact proof sequence. `docs/code-migration-map.md` records disposition.
 Rulesets are **compiled** into the SDK-generated product composition. Content packs, typed tuning
 profiles, and game bundles are **loaded**. Adding code-bearing ruleset semantics
 requires a product rebuild; changing valid content/tuning does not. Do not add
-runtime assembly loading, reflection discovery, `Assembly.Load`, service
-locators, generic command buses, a new gameplay DSL, or a universal plug-in ABI.
+runtime assembly loading, reflection discovery, `Assembly.Load`, ambient
+`Resolve<T>()` lookup, generic command buses, a new gameplay DSL, or a universal
+plug-in ABI. Named explicitly composed Kit services and typed RuleEvents are
+encouraged where they make gameplay ownership and contribution discoverable.
 
 ## Kit, Daggerfall, and tuning rules
 
@@ -86,6 +90,38 @@ Do not solve this with magic numbers hidden in call sites or a const field for
 every authored value. Keep compact structural constants local and promote a
 value only when it is genuinely adjustable or authored data.
 
+## Gameplay composition direction
+
+The substantial reusable Kit is the goal; Daggerfall proves it with concrete
+rules and content. Kit owns actor conventions, targeting/current target,
+inventory/equipment workflows, attack execution, reusable effects/progression,
+AI coordination, corpse/loot machinery and typed resolution/notifications.
+Dagger supplies formulas, eligibility, capacities, timing policy and content
+meaning. Move existing mixed modules as their campaign tasks land, rather than
+claiming these boundaries are already fully implemented.
+
+Compose Engine `Actor` in Kit/Dagger facades with named properties such as
+`Stats`, `Inventory`, `Equipment` and `Targeting` over the actual attached
+components. Explicit factories construct entities; wrapping an entity never
+silently creates components. Keep runtime EntityId, kind/origin TypeId and
+product durable identity distinct. No reflection scanning, duplicate actor graph
+or Unity-style cache/rebinding machinery.
+
+Use direct methods for simple reads/actions, typed RuleEvents for interactions
+with real participant contributions, and typed notifications for completed
+changes. Explicitly compose base rules and contributors. Application rules may
+mutate through canonical Kit owners; ordinary gameplay does not require
+proposal/acceptance, snapshots, receipts, revision guards or rollback. Preserve
+real gameplay eligibility, update ordering and native lifetime requirements.
+Optional diagnostics must not become mandatory replay/audit work.
+
+Engine `ProductStateStore` stores current bytes without product-schema policy;
+`JsonProductStateCodec` accepts source-generated `JsonTypeInfo` for AOT-safe JSON.
+Capture meaningful state at explicit save boundaries. Rebuild shared mechanics
+references and restore authored stat inputs before tracks using the Engine
+capture/rebuild helpers. Do not serialize native handles or infer product
+identity from runtime entity IDs.
+
 ## Engine boundary
 
 > The product decides. The Engine guarantees.
@@ -95,18 +131,18 @@ catalogs, content meaning, policy, and ordering within each Engine-admitted
 update. Engine owns reusable host lifecycle/admission, input, rendering and
 resources, spatial mechanisms, and published service families.
 
-Use direct safe named C# Engine APIs. The current product uses the Mechanics
-stats/tracks substrate (catalogs, entity binding, reads, and guarded mutations),
-plus Look, Spatial, Appearance, Random, and UI. Mechanics also already publishes
-safe item, inventory, and equipment catalog/lifecycle/equip operations; use that
-substrate through Kit coordination while Daggerfall retains item definitions and
-policy. Daggerfall
-definitions, formulas, and policy remain in the ruleset. Other capabilities are
-usable only when their safe generated C# contract is verified. The generated
-surface also includes Content/ContentStore, Persistence, Rules (StandardExact and
-StandardContinuous), Animation, Audio, and CameraView; this is boundary routing,
-not an API catalog. Reverify each contract when it is used, and keep product
-semantics and policy in the ruleset.
+Use direct safe named C# Engine APIs. The packaged SDK supplies managed
+`EntityStore`, optional composed `Actor`, creation-time `EntityTypeId` metadata,
+and ordinary class components. Mechanics uses one `Stat` (double-backed with
+integer/float accessors), `Track` sharing its maximum Stat, and `StatsComponent`;
+reuse the inventory, equipment and effects facades where they fit. These are
+available capabilities, not a claim that every current Dagger caller has already
+adopted them. The remaining domain migrations belong to campaign #8327.
+
+Use generated safe services for native Look, Spatial, Appearance, Random, UI,
+Content/ContentStore, Persistence, Animation, Audio and CameraView mechanisms.
+Reverify the actual packaged contract when using a capability; this list is
+boundary routing, not an API catalog. Dagger owns definitions, formulas and policy.
 
 Do not write downstream Rust or move product logic into Rust. Ordinary safe
 product code must not use `unsafe`, pointers, `Native*`, `GCHandle`, raw
@@ -124,7 +160,7 @@ substitute a fake proof path or parallel host.
 There is one Engine-admitted update. Host/ruleset code may use the optional
 `Rusty.Engine.Application` phases when it simplifies the product or implement
 `IEngineProduct.Update` directly; it must not create a second loop, clock,
-timer, thread, browser authority, ECS, scheduler, service locator, or renderer.
+timer, thread, browser authority, parallel ECS, scheduler, or renderer.
 Product game-time/calendar state and explicit rest/travel time advancement are
 allowed inside admitted updates; they do not establish an independent clock.
 
@@ -192,11 +228,13 @@ recoverable, warn and report the actual observed value instead. Keep hard stops
 for data loss, an ownership-boundary violation, or a silently wrong artifact. A
 concrete collision is a real hard stop; a merely potential one is not.
 
-This applies to schemas and version numbers in particular. A version difference
-that leaves the meaning recoverable is a warning, not a refusal: read the older
-shape, report the drift and the observed values, and keep rejection for a version
-whose meaning genuinely cannot be recovered. That includes a version that changed
-without its meaning changing, where the older bytes remain valid input.
+Only the current product schema exists during development. Breaking development
+saves is acceptable. Do not introduce schema versions, migration branches,
+historical readers, compatibility fingerprints or unknown-section preservation.
+Plan serialization around meaningful values and relationships, not preservation
+of old builds. Report malformed current data or missing definitions clearly; do
+not silently drop state and call the load successful. Existing legacy schema and
+save gates are being removed by #8338/#8339; they are not implementation patterns.
 
 Rescoping during implementation is expected, but the deferred requirement must
 move to a concrete receiving task — that task's required behavior and verification,

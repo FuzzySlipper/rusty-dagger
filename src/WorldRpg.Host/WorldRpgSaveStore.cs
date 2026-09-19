@@ -10,7 +10,6 @@ namespace WorldRpg.Host;
 /// <summary>Host-owned Engine persistence composition for compiled WorldRpg rulesets.</summary>
 public sealed class WorldRpgSaveStore : IDisposable
 {
-    public const uint SchemaVersion = 1;
     private readonly ProductStateStore<GameSaveEnvelope> _state;
 
     public WorldRpgSaveStore(IEngineContext engine, string scope)
@@ -18,24 +17,13 @@ public sealed class WorldRpgSaveStore : IDisposable
         _state = new ProductStateStore<GameSaveEnvelope>(engine, scope, new EnvelopeCodec());
     }
 
-    public ProductStateLoad<GameSaveEnvelope> Load(string key)
-    {
-        try
-        {
-            return _state.Load(key);
-        }
-        catch (InvalidOperationException error) when (IsUnsupportedStorageSchema(error))
-        {
-            throw new WorldRpgSaveSchemaException("The persisted WorldRpg save uses an unsupported storage schema version.", error);
-        }
-    }
+    public ProductStateLoad<GameSaveEnvelope> Load(string key) => _state.Load(key);
     public PersistenceSaveReceipt Save(string key, GameSaveEnvelope value, PersistenceRevisionGuard guard = PersistenceRevisionGuard.Any, ulong expectedRevision = 0) =>
         _state.Save(key, value ?? throw new ArgumentNullException(nameof(value)), guard, expectedRevision);
     public void Dispose() => _state.Dispose();
 
     private sealed class EnvelopeCodec : IProductStateCodec<GameSaveEnvelope>
     {
-        public uint SchemaVersion => WorldRpgSaveStore.SchemaVersion;
         public void Encode(in GameSaveEnvelope state, IBufferWriter<byte> destination)
         {
             ArgumentNullException.ThrowIfNull(state);
@@ -135,10 +123,6 @@ public sealed class WorldRpgSaveStore : IDisposable
     }
 
     private static WorldRpgSaveFormatException Invalid(string message) => new($"The persisted WorldRpg save envelope is invalid: {message}");
-
-    private static bool IsUnsupportedStorageSchema(InvalidOperationException error) =>
-        error.Message.StartsWith("No finite migration path from schema ", StringComparison.Ordinal)
-        || error.Message.StartsWith("No migration from schema ", StringComparison.Ordinal);
 }
 
 /// <summary>Corrupt or unsupported product envelope data rejected before a session is created.</summary>
@@ -146,12 +130,6 @@ public sealed class WorldRpgSaveFormatException : InvalidOperationException
 {
     public WorldRpgSaveFormatException(string message) : base(message) { }
     public WorldRpgSaveFormatException(string message, Exception innerException) : base(message, innerException) { }
-}
-
-/// <summary>An Engine-persisted product schema with no declared migration path.</summary>
-public sealed class WorldRpgSaveSchemaException : InvalidOperationException
-{
-    public WorldRpgSaveSchemaException(string message, Exception innerException) : base(message, innerException) { }
 }
 
 [JsonSourceGenerationOptions(WriteIndented = false)]
