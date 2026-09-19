@@ -4,7 +4,7 @@ namespace WorldRpg.Kit.Facts;
 public interface IWorldRpgFact;
 
 /// <summary>
-/// Delivers a stable snapshot. Facts appended by a reaction wait for the next admitted update.
+/// Delivers each stable batch once. Facts appended by a reaction wait for the next delivery.
 /// </summary>
 public sealed class FactBuffer<TFact> where TFact : IWorldRpgFact
 {
@@ -18,32 +18,9 @@ public sealed class FactBuffer<TFact> where TFact : IWorldRpgFact
 
     public void Deliver(Action<TFact> react)
     {
-        FactDelivery delivery = Prepare();
-        try { delivery.Deliver(react); delivery.Commit(); }
-        catch { delivery.Rollback(); throw; }
-    }
-
-    /// <summary>Retains one stable batch until its owner explicitly commits or rolls it back.</summary>
-    public FactDelivery Prepare()
-    {
         List<TFact> stable = _pending;
         _pending = [];
-        return new FactDelivery(this, stable);
-    }
-
-    public sealed class FactDelivery
-    {
-        private readonly FactBuffer<TFact> owner;
-        private readonly List<TFact> facts;
-        private bool completed;
-        internal FactDelivery(FactBuffer<TFact> owner, List<TFact> facts) { this.owner = owner; this.facts = facts; }
-        public void Deliver(Action<TFact> react)
-        {
-            ArgumentNullException.ThrowIfNull(react);
-            if (completed) throw new InvalidOperationException("Fact delivery is complete.");
-            foreach (TFact fact in facts) react(fact);
-        }
-        public void Commit() { if (!completed) completed = true; }
-        public void Rollback() { if (!completed) { owner._pending.InsertRange(0, facts); completed = true; } }
+        ArgumentNullException.ThrowIfNull(react);
+        foreach (TFact fact in stable) react(fact);
     }
 }

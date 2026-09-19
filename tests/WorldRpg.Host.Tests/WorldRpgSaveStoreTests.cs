@@ -13,20 +13,25 @@ public sealed class WorldRpgSaveStoreTests
     public void Store_roundtrips_a_typed_envelope_and_honors_the_engine_revision_guard()
     {
         InMemoryPersistenceService persistence = new();
-        using WorldRpgSaveStore store = new(Engine(persistence), "worldrpg-test");
         GameSaveEnvelope saved = Envelope();
+        PersistenceSaveReceipt first;
+        using (WorldRpgSaveStore store = new(Engine(persistence), "worldrpg-test"))
+        {
+            first = store.Save("slot", saved, PersistenceRevisionGuard.Absent);
+        }
 
-        PersistenceSaveReceipt first = store.Save("slot", saved, PersistenceRevisionGuard.Absent);
-        ProductStateLoad<GameSaveEnvelope> loaded = store.Load("slot");
+        // The next host lifetime gets a new ProductStateStore and decodes the persisted current DTO.
+        using WorldRpgSaveStore reopened = new(Engine(persistence), "worldrpg-test");
+        ProductStateLoad<GameSaveEnvelope> loaded = reopened.Load("slot");
 
         Assert.True(loaded.Present);
         Assert.Equal(first.Revision, loaded.Revision);
         Assert.Equal("test", loaded.State!.Payload.Ruleset.Value);
         Assert.Equal([1, 2, 3], loaded.State.Payload.Bytes.ToArray());
-        PersistenceSaveReceipt conflict = store.Save("slot", saved, PersistenceRevisionGuard.Exact, first.Revision + 1);
+        PersistenceSaveReceipt conflict = reopened.Save("slot", saved, PersistenceRevisionGuard.Exact, first.Revision + 1);
         Assert.Equal(PersistenceSaveOutcome.RevisionConflict, conflict.Outcome);
         Assert.Equal(first.Revision, conflict.Revision);
-        Assert.Equal(first.Revision, store.Load("slot").Revision);
+        Assert.Equal(first.Revision, reopened.Load("slot").Revision);
     }
 
     [Fact]
@@ -54,7 +59,7 @@ public sealed class WorldRpgSaveStoreTests
     public void Resume_reports_corrupt_storage_without_selecting_or_constructing_a_session()
     {
         InMemoryPersistenceService persistence = new();
-        persistence.Put("worldrpg-test", "slot", System.Text.Encoding.UTF8.GetBytes(NullComposition));
+        persistence.Put("worldrpg-test", "slot", System.Text.Encoding.UTF8.GetBytes("{\"Ruleset\":null,\"Payload\":[]}"));
         IEngineContext engine = Engine(persistence);
         using WorldRpgSaveStore store = new(engine, "worldrpg-test");
         ProductCreateContext context = new(engine, new ProductContent(Array.Empty<ProductContentFile>()), EmptyInput());
@@ -88,8 +93,8 @@ public sealed class WorldRpgSaveStoreTests
         using WorldRpgSaveStore store = new(engine, "worldrpg-test");
         store.Save("slot", Envelope());
         ProductContent content = Content(
-            ("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","schemaVersion":1,"id":"test.bundle","version":1,"ruleset":"unknown","contentPacks":[],"tuning":{"id":"test.tuning","version":1}}"""),
-            ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","schemaVersion":1,"id":"test.tuning","version":1,"ruleset":"unknown","payload":"payload/tuning.json"}"""),
+            ("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"unknown","contentPacks":[],"tuning":{"id":"test.tuning"}}"""),
+            ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"unknown","payload":"payload/tuning.json"}"""),
             ("payload/tuning.json", "{}"));
 
         WorldRpgResumeResult result = WorldRpgProduct.TryResume(new ProductCreateContext(engine, content, EmptyInput()), store, "slot", bundle: new GameBundleId("test.bundle"));
@@ -99,21 +104,18 @@ public sealed class WorldRpgSaveStoreTests
     }
 
     [Fact]
-    public void Resume_reports_a_restore_notice_without_blocking_the_resume()
+    public void Resume_constructs_a_fresh_session_from_a_current_state_payload()
     {
         InMemoryPersistenceService persistence = new();
         IEngineContext engine = Engine(persistence);
         using WorldRpgSaveStore store = new(engine, "worldrpg-test");
         ProductContent content = Content(
-            ("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","schemaVersion":1,"id":"test.bundle","version":1,"ruleset":"test","contentPacks":[{"id":"test.pack","version":1}],"tuning":{"id":"test.tuning","version":1}}"""),
-            ("worldrpg/content-packs/test.pack.json", """{"kind":"worldrpg.content-pack","schemaVersion":1,"id":"test.pack","version":1,"ruleset":"test","dependencies":[],"payload":"payload/pack.json"}"""),
-            ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","schemaVersion":1,"id":"test.tuning","version":1,"ruleset":"test","payload":"payload/tuning.json"}"""),
+            ("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"test","contentPacks":[{"id":"test.pack"}],"tuning":{"id":"test.tuning"}}"""),
+            ("worldrpg/content-packs/test.pack.json", """{"kind":"worldrpg.content-pack","id":"test.pack","ruleset":"test","dependencies":[],"payload":"payload/pack.json"}"""),
+            ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"test","payload":"payload/tuning.json"}"""),
             ("payload/pack.json", "{}"),
             ("payload/tuning.json", "{}"));
-        // The saved envelope has to carry the fingerprints the selected content resolves
-        // to, so the save is written from that resolved identity rather than a literal.
-        ResolvedGameComposition composition = GameCompositionResolver.Resolve(content, new GameBundleId("test.bundle")).RequireComposition();
-        store.Save("slot", new GameSaveEnvelope(new SaveCompositionIdentity(composition.Identity), new RulesetSavePayload(new RulesetId("test"), 1, [1, 2, 3])));
+        store.Save("slot", new GameSaveEnvelope(new RulesetSavePayload(new RulesetId("test"), [1, 2, 3])));
 
         WorldRpgResumeResult result = WorldRpgProduct.TryResume(
             new ProductCreateContext(engine, content, EmptyInput()),
@@ -122,13 +124,9 @@ public sealed class WorldRpgSaveStoreTests
             ruleset: new ReportingRuleset(),
             bundle: new GameBundleId("test.bundle"));
 
-        // A restore that had to report something still resumes; the report rides the one
-        // resume channel as a non-blocking entry, and IsComplete is the stricter question.
         Assert.True(result.IsResumed, string.Join("; ", result.Diagnostics.Select(value => $"{value.Code}: {value.Message}")));
-        Assert.False(result.IsComplete);
-        WorldRpgSaveDiagnostic entry = Assert.Single(result.Diagnostics);
-        Assert.Equal("restored-with-gaps", entry.Code);
-        Assert.False(entry.IsBlocking);
+        Assert.True(result.IsComplete);
+        Assert.Empty(result.Diagnostics);
         using WorldRpgProduct? product = result.Product;
         Assert.NotNull(product);
 
@@ -143,16 +141,14 @@ public sealed class WorldRpgSaveStoreTests
     {
         public RulesetId Id => new("test");
 
-        public IGameSession CreateSession(GameSessionContext context) => new ReportingSession([]);
+        public IGameSession CreateSession(GameSessionContext context) => new ReportingSession();
 
         public IGameSession CreateSession(GameSessionContext context, RulesetSavePayload saved) =>
-            new ReportingSession([new SaveRestoreNotice("restored-with-gaps", "One saved actor was left out of the restore.")]);
+            new ReportingSession();
     }
 
-    private sealed class ReportingSession(IReadOnlyList<SaveRestoreNotice> notices) : IRestoringGameSession
+    private sealed class ReportingSession : IGameSession
     {
-        public IReadOnlyList<SaveRestoreNotice> RestoreNotices => notices;
-
         public void PublishInitial()
         {
         }
@@ -166,29 +162,17 @@ public sealed class WorldRpgSaveStoreTests
 
     public static IEnumerable<object[]> InvalidEnvelopeJson =>
     [
-        [NullComposition],
-        ["""{"Ruleset":"test","RulesetSchemaVersion":1,"Payload":[]}"""],
-        [EnvelopeJson("null")],
-        [EnvelopeJson("[null]")],
-        [EnvelopeJson("[]", ruleset: "null")],
-        [EnvelopeJson("[]", payload: "null")],
-        [EnvelopeJson("[]", bundle: "null")],
-        [EnvelopeJson("[]", tuning: "\"\"")],
+        ["{}"],
+        ["null"],
+        ["""{"Ruleset":"test"}"""],
+        ["""{"Ruleset":null,"Payload":[]}"""],
+        ["""{"Ruleset":"","Payload":[]}"""],
+        ["""{"Ruleset":"test","Payload":null}"""],
+        ["""{"Ruleset":"test","Payload":[]}"""],
     ];
 
-    private const string NullComposition = """{"Composition":null,"Ruleset":"test","RulesetSchemaVersion":1,"Payload":[]}""";
-
-    private static string EnvelopeJson(string packs, string ruleset = "\"test\"", string payload = "[]", string bundle = "\"bundle\"", string tuning = "\"tuning\"") =>
-        $$"""{"Composition":{"Bundle":{{bundle}},"BundleSchemaVersion":1,"BundleVersion":1,"Ruleset":"test","ContentPacks":{{packs}},"Tuning":{{tuning}},"TuningSchemaVersion":1,"TuningVersion":1,"Fingerprint":"a","ContentFingerprint":"b","TuningFingerprint":"c"},"Ruleset":{{ruleset}},"RulesetSchemaVersion":1,"Payload":{{payload}}}""";
-
     private static GameSaveEnvelope Envelope() => new(
-        new SaveCompositionIdentity(
-            new ResolvedBundleIdentity(new GameBundleId("test.bundle"), 1, 1),
-            new RulesetId("test"),
-            [new ResolvedContentPackIdentity(new ContentPackId("test.pack"), 1, 1)],
-            new ResolvedTuningIdentity(new TuningProfileId("test.tuning"), 1, 1),
-            "fingerprint", "content", "tuning"),
-        new RulesetSavePayload(new RulesetId("test"), 1, [1, 2, 3]));
+        new RulesetSavePayload(new RulesetId("test"), [1, 2, 3]));
 
     private static IEngineContext Engine(IPersistenceService persistence)
     {

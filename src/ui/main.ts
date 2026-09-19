@@ -53,9 +53,6 @@ interface CompositionIdentity {
   readonly ruleset: string;
   readonly contentPacks: readonly string[];
   readonly tuning: string;
-  readonly fingerprint: string;
-  readonly contentFingerprint: string;
-  readonly tuningFingerprint: string;
 }
 
 /** Snapshots between repeated requests for art this DOM has not received. */
@@ -474,14 +471,7 @@ function isCompositionIdentity(value: unknown): value is CompositionIdentity {
     && 'bundle' in value && typeof value.bundle === 'string'
     && 'ruleset' in value && typeof value.ruleset === 'string'
     && 'contentPacks' in value && Array.isArray(value.contentPacks) && value.contentPacks.every((pack) => typeof pack === 'string')
-    && 'tuning' in value && typeof value.tuning === 'string'
-    && 'fingerprint' in value && isFingerprint(value.fingerprint)
-    && 'contentFingerprint' in value && isFingerprint(value.contentFingerprint)
-    && 'tuningFingerprint' in value && isFingerprint(value.tuningFingerprint);
-}
-
-function isFingerprint(value: unknown): value is string {
-  return typeof value === 'string' && /^[0-9a-f]{64}$/.test(value);
+    && 'tuning' in value && typeof value.tuning === 'string';
 }
 
 function diagnosticRows(identity: CompositionIdentity): readonly HTMLElement[] {
@@ -490,9 +480,6 @@ function diagnosticRows(identity: CompositionIdentity): readonly HTMLElement[] {
     diagnosticRow('Ruleset', identity.ruleset),
     diagnosticRow('Packs', identity.contentPacks.join(' → ')),
     diagnosticRow('Tuning', identity.tuning),
-    diagnosticRow('Composition', identity.fingerprint),
-    diagnosticRow('Content', identity.contentFingerprint),
-    diagnosticRow('Tuning profile', identity.tuningFingerprint),
   ];
 }
 

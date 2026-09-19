@@ -78,10 +78,7 @@ internal sealed record DaggerfallTuning(
                 controls.GetProperty("invertHorizontal").GetBoolean(),
                 controls.GetProperty("invertVertical").GetBoolean(),
                 controls.GetProperty("wrapYaw").GetBoolean()),
-            // A payload that predates the controller block keeps working: the layout the shell
-            // delivers is a default rather than something every payload has to restate, and only a
-            // payload that actually rebinds the pad has to carry the block.
-            root.TryGetProperty("controllerInput", out JsonElement controllerInput) ? ReadControllerInput(controllerInput) : Defaults.ControllerInput,
+            ReadControllerInput(root.GetProperty("controllerInput")),
             new SpatialTuning(
                 spatial.GetProperty("collisionVoxelSize").GetDouble(),
                 checked((uint)spatial.GetProperty("collisionChunkSize").GetInt32()),
@@ -101,8 +98,8 @@ internal sealed record DaggerfallTuning(
                 enemyBehavior.GetProperty("minimumFacingCosine").GetDouble(),
                 enemyBehavior.GetProperty("chaseSpeedUnitsPerSecond").GetSingle(),
                 checked((uint)enemyBehavior.GetProperty("navigationMaximumVisited").GetInt32()),
-                enemyBehavior.TryGetProperty("spawnGroundProbeLift", out JsonElement lift) ? lift.GetSingle() : Defaults.EnemyBehavior.SpawnGroundProbeLift,
-                enemyBehavior.TryGetProperty("spawnGroundProbeDistance", out JsonElement distance) ? distance.GetDouble() : Defaults.EnemyBehavior.SpawnGroundProbeDistance),
+                enemyBehavior.GetProperty("spawnGroundProbeLift").GetSingle(),
+                enemyBehavior.GetProperty("spawnGroundProbeDistance").GetDouble()),
             new DaggerfallLootInteractionTuning(
                 lootInteraction.GetProperty("maximumDistance").GetDouble(),
                 lootInteraction.GetProperty("minimumFacingCosine").GetDouble()),

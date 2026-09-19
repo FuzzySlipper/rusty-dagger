@@ -5,6 +5,17 @@ existing behavior, not a new design requirement. Later tasks should preserve it
 or explicitly record a gameplay decision. The relevant seam tests ran as part
 of pair-adoption verification; this is not a browser playthrough report.
 
+## Final policy and owners
+
+The table below remains historical evidence. Current Dagger sessions route
+attacks through `DaggerfallState.Kit`: Kit owns attack execution and targeting,
+while `DaggerCombatRules` supplies Daggerfall admission, formulas, and effects.
+Kit Ai and Loot mechanisms coordinate behavior and corpse handling around those
+rules. `DaggerSessionPersistence` saves a charged cooldown, but held input,
+AI/perception work, native continuation, presentation, and an in-flight attack
+are transient or rebuilt after restore. The Host exposes persistence APIs; there
+is no save UI yet.
+
 Paths below are relative to `src/WorldRpg.Rulesets.Daggerfall/` unless stated.
 
 | Concern | Current behavior | Source owners |
@@ -33,6 +44,5 @@ Paths below are relative to `src/WorldRpg.Rulesets.Daggerfall/` unless stated.
 - Relative cooldown restore and save during an enemy swing.
 
 Preserve the distinction between calculated damage and actual health lost when
-moving application into Kit rules. Gameplay refactoring belongs to #8334–#8336;
-current-state save reconstruction belongs to #8339. This baseline does not
-require historical-save compatibility or replay machinery.
+changing Kit combat rules. This baseline does not require historical-save
+compatibility or replay machinery.

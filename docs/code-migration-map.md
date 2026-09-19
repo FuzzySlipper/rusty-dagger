@@ -26,12 +26,12 @@ browser, or local-Engine substitute.
 | Owner | Active responsibility |
 | --- | --- |
 | Rusty Engine | Admitted host lifecycle and update, input, rendering/resources, spatial mechanisms, and published service families. |
-| `WorldRpg.Kit` | Typed composition and reusable or placement-uncertain world-RPG mechanisms, including Engine-backed controls, actor lifetime, spatial stepping, bounded facts, progression, UI values, and inventory/equipment coordination. |
+| `WorldRpg.Kit` | Typed composition and reusable world-RPG mechanisms: controls, actor lifetime, spatial stepping, bounded facts, progression, UI values, inventory/equipment, and the named Combat, Targeting, Ai, and Loot services. |
 | `WorldRpg.Host` | Ordinary product entry, lifecycle, explicit built-in ruleset/default selection, and session construction. The immutable SDK generates CoreCLR and NativeAOT composition beneath ignored `obj` output. |
 | `WorldRpg.Rulesets.Daggerfall` | Daggerfall identities, formulas, attack/reward policy, content interpretation, presentation meaning, save behavior, and session composition. |
 | `Daggerfall.Import` and `.Tool` | Offline Arena2/DFUnity decoding, normalized import/publication, provenance, and differential validation. It has no runtime entity, renderer, scheduler, or encounter authority. |
 | `src/ui` and `src/sprite-ui` | Thin DOM rendering of Engine-delivered projections and semantic actions. The sprite workbench uses Engine content, appearance, and playback rather than a UI renderer or timer. |
-| `content/worldrpg/**` | Versioned Daggerfall packs, tuning, bundle selection, normalized Privateer's Hold publication, hashes, and source provenance. |
+| `content/worldrpg/**` | Daggerfall packs, tuning, bundle selection, normalized Privateer's Hold publication, and source provenance. Source-format hashes may remain importer evidence; they are not runtime compatibility checks. |
 
 `WorldRpg.Kit` never names Daggerfall, Arena2, Privateer's Hold, or DFUnity.
 The Host may select a built-in Daggerfall bundle only at its explicit
@@ -39,14 +39,12 @@ composition seam. Daggerfall-specific values stay in the ruleset or content;
 adjustable policy is exposed through typed tuning and authored values stay in
 content packs.
 
-## Active gameplay refactor
+## Gameplay ownership
 
-Campaign #8327 implements Board #146 after upstream actor/persistence delivery.
-The table above describes current code placement, including mixed Dagger modules;
-it does not restrict the Kit to a small foundation. Target ownership is:
+The product uses a substantial Kit rather than a thin foundation. Ownership is:
 
-- Kit: composed actor facades and canonical attached components; named targeting,
-  inventory/equipment, attack lifecycle, effects/progression and AI/loot services;
+- Kit: composed actor facades and canonical attached components; named Combat,
+  Targeting, Ai, Loot, inventory/equipment, effects, and progression services;
   typed participant-contributed RuleEvents and post-change notifications.
 - Dagger: formulas, eligibility, capacities, timing choices, definitions and
   content/presentation meaning, supplied by explicit policies and resolvers.
@@ -55,24 +53,25 @@ it does not restrict the Kit to a small foundation. Target ownership is:
 Engine already provides `EntityStore`, `Actor`, creation-time `EntityTypeId`,
 class components, one `Stat` with integer/float accessors and shared-maximum
 `Track`, mechanics facades/capture helpers, and current-byte/JSON persistence.
-Dagger now uses these actor/stat/inventory/equipment capabilities through the
-[canonical actor and mechanics owners](actors-and-mechanics.md). Further domain
-adoption proceeds through the campaign; do not create parallel mechanisms.
+Dagger assembles them through `DaggerActorFactory`; `DaggerfallState.Kit` is the
+discoverable session route to its named gameplay services. See the [canonical
+actor and mechanics owners](actors-and-mechanics.md).
 
 Direct live mutation is normal. Wrapping actors does not construct them;
 factories do. Distinguish runtime IDs, type metadata and durable identity.
 Typed resolution may apply state directly; no required transaction/replay
 protocol or ambient service registry. UI projections remain useful read models.
 
-Current-schema serialization preserves meaningful state and relationships,
-including shared stats/tracks and distinct item instances. Old development saves
-may break. Existing product schema/fingerprint checks and historical readers are
-legacy work for #8338/#8339, not requirements for new code. Real data decode and
-resource lifetime checks retain their purpose.
+`DaggerSessionPersistence` uses the current source-generated schema only. It
+preserves meaningful state and relationships, including shared stats/tracks,
+distinct items, and charged cooldowns; development saves may break. It has no
+schema-version negotiation, migrations, compatibility fingerprints, or
+unknown-section preservation. Input, AI/perception, native continuation,
+presentation, and an in-flight attack are transient or rebuilt on restore.
+The Host has a persistence API; a save UI is not yet a product feature.
 
 See [the source-backed combat baseline](combat-behavior-baseline.md) before
-changing timing or save treatment. Coverage backlog reconciliation is excluded
-from this campaign and happens separately afterward.
+changing timing or save treatment.
 
 ## Retained evidence and content
 

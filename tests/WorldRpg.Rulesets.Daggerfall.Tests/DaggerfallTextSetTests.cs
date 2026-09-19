@@ -231,15 +231,6 @@ public sealed class DaggerfallTextSetTests
     }
 
     [Fact]
-    public void Rejects_a_section_whose_schema_version_it_does_not_know()
-    {
-        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
-            Payload(payload => Text(payload)["schemaVersion"] = 2)));
-
-        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("must declare schemaVersion 1", StringComparison.Ordinal));
-    }
-
-    [Fact]
     public void Rejects_a_section_that_publishes_one_key_twice()
     {
         // Two values under one key leave one of them unreachable through every lookup the set offers.

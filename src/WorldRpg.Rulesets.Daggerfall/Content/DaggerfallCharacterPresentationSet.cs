@@ -104,7 +104,6 @@ internal sealed record DaggerfallRaceWithoutMedia(string RaceId, int DonorRaceId
 /// "not looked up".
 /// </remarks>
 internal sealed class DaggerfallCharacterPresentationSet(
-    int schemaVersion,
     IReadOnlyDictionary<string, DaggerfallRaceLayers> races,
     IReadOnlyList<DaggerfallFactionFaceDefinition> factionFaces,
     IReadOnlyDictionary<string, DaggerfallCareerPortraitDefinition> careers,
@@ -112,9 +111,6 @@ internal sealed class DaggerfallCharacterPresentationSet(
     IReadOnlyList<DaggerfallRaceWithoutMedia> racesWithoutMedia,
     IReadOnlyList<string> files)
 {
-    /// <summary>The section's shape version.</summary>
-    internal int SchemaVersion { get; } = schemaVersion;
-
     /// <summary>Every race the pack publishes layers for, by catalog race identity.</summary>
     internal IReadOnlyDictionary<string, DaggerfallRaceLayers> Races { get; } = races;
 

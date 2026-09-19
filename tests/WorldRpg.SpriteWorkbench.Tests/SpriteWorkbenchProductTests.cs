@@ -1032,7 +1032,6 @@ public sealed class SpriteWorkbenchProductTests
                 [new(DungeonActorSpriteState.Move, new(6F, true), new(6F, true), 0, 3, layouts)], null, actor.Id);
             DungeonMediaManifestSidecar dungeon = new(1, new([actor]), [], [], [actorManifest]);
             ClassicMediaManifestSidecar classic = new(
-                ClassicMediaManifestSidecar.CurrentSchemaVersion,
                 new([weapon, effect, font]),
                 [new ClassicWeaponMediaManifest(weapon.Id, Enum.GetValues<ClassicDaggerWeaponAction>().Select((action, index) => new ClassicWeaponActionManifest(action, index, index, 1, ClassicWeaponScreenAlignment.Right, 0F, new(10F, true), 0, 0)).ToArray())],
                 Enum.GetValues<ClassicEffect>().Select((effectValue, index) => new ClassicEffectManifest(effectValue, effect.Id, index, new(10F, false))).ToArray(),

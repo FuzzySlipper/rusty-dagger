@@ -86,10 +86,10 @@ public sealed class WorldRpgProductModeTests
         Assert.Equal(ProductMode.Playing, ruleset.LastApplied);
 
         // The replacement is built from the composition the product resolved, not from a default or
-        // a second resolution: same identity fingerprint and bundle as the session it replaced.
-        Assert.NotNull(ruleset.ReplacedComposition);
-        Assert.Equal(ruleset.FirstComposition!.Identity.Fingerprint, ruleset.ReplacedComposition!.Identity.Fingerprint);
-        Assert.Equal(ruleset.FirstComposition.Identity.Bundle, ruleset.ReplacedComposition.Identity.Bundle);
+        // a second resolution: the same selected bundle reaches the replacement session.
+        ResolvedGameComposition first = Assert.IsType<ResolvedGameComposition>(ruleset.FirstComposition);
+        ResolvedGameComposition replacement = Assert.IsType<ResolvedGameComposition>(ruleset.ReplacedComposition);
+        Assert.Equal(first.Identity.Bundle, replacement.Identity.Bundle);
     }
 
     [Fact]
@@ -349,7 +349,7 @@ public sealed class WorldRpgProductModeTests
         }
     }
 
-    private sealed class ModeRecordingSession(ModeRecordingRuleset owner) : IGameSession, IModeAwareGameSession
+    private sealed class ModeRecordingSession(ModeRecordingRuleset owner) : IGameSession, IModeAwareGameSession, IEntryScreenSession
     {
         internal ProductMode? LastApplied { get; private set; }
 
@@ -361,6 +361,13 @@ public sealed class WorldRpgProductModeTests
         public ProductMode? PendingModeRequest => owner.Request;
 
         public void ApplyProductMode(ProductMode mode) => LastApplied = mode;
+
+        public bool RequestsBegin(ReadOnlySpan<ProductInputEvent> input)
+        {
+            foreach (ProductInputEvent inputEvent in input)
+                if (inputEvent.PayloadData.Span.SequenceEqual("{\"action\":\"begin\"}"u8)) return true;
+            return false;
+        }
 
         public void PublishInitial()
         {
@@ -412,9 +419,9 @@ public sealed class WorldRpgProductModeTests
 
     private static ProductContentFile[] ContentFiles() =>
     [
-        File("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","schemaVersion":1,"id":"test.bundle","version":1,"ruleset":"test","contentPacks":[{"id":"test.pack","version":1}],"tuning":{"id":"test.tuning","version":1}}"""),
-        File("worldrpg/content-packs/test.pack.json", """{"kind":"worldrpg.content-pack","schemaVersion":1,"id":"test.pack","version":1,"ruleset":"test","dependencies":[],"payload":"payload/pack.json"}"""),
-        File("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","schemaVersion":1,"id":"test.tuning","version":1,"ruleset":"test","payload":"payload/tuning.json"}"""),
+        File("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"test","contentPacks":[{"id":"test.pack"}],"tuning":{"id":"test.tuning"}}"""),
+        File("worldrpg/content-packs/test.pack.json", """{"kind":"worldrpg.content-pack","id":"test.pack","ruleset":"test","dependencies":[],"payload":"payload/pack.json"}"""),
+        File("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"test","payload":"payload/tuning.json"}"""),
         File("payload/pack.json", "{}"),
         File("payload/tuning.json", "{}"),
     ];

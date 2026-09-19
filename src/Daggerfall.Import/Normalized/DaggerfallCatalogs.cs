@@ -208,7 +208,6 @@ public sealed record DaggerfallPendingCatalog(string Id, int OwnerTask, string R
 /// provenance, and refers to other keys rather than to source bytes.
 /// </summary>
 public sealed record DaggerfallCatalogs(
-    int SchemaVersion,
     IReadOnlyList<DaggerfallIndexedKey> Attributes,
     IReadOnlyList<DaggerfallIndexedKey> Skills,
     IReadOnlyList<DaggerfallIndexedKey> Resistances,
@@ -220,8 +219,6 @@ public sealed record DaggerfallCatalogs(
     IReadOnlyList<DaggerfallPendingCatalog> Pending,
     IReadOnlyList<string> Sources)
 {
-    public const int CurrentSchemaVersion = 1;
-
     /// <summary>
     /// The eight classic attributes a career record carries a value for. The product
     /// vocabulary carries a ninth, <c>reflexes</c>, which the donor adds and the classic
@@ -249,7 +246,6 @@ public sealed record DaggerfallCatalogs(
     public void Validate(IReadOnlySet<string> inventoryRecordIds)
     {
         ArgumentNullException.ThrowIfNull(inventoryRecordIds);
-        NormalizedImportDocument.RequireSchemaVersion(SchemaVersion, nameof(SchemaVersion));
         ArgumentNullException.ThrowIfNull(Attributes);
         ArgumentNullException.ThrowIfNull(Skills);
         ArgumentNullException.ThrowIfNull(Resistances);

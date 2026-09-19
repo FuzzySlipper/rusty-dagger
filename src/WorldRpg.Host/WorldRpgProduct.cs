@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Rusty.Engine;
 using Rusty.Engine.Persistence;
 using WorldRpg.Kit;
@@ -10,15 +9,6 @@ public sealed class WorldRpgProduct : IEngineProduct
 {
     /// <summary>How many recent mode decisions are kept for diagnosis.</summary>
     public const int ModeHistoryLimit = 16;
-
-    /// <summary>
-    /// The action a client sends to leave the entry screen.
-    /// </summary>
-    /// <remarks>
-    /// The client and the product have to agree on this word, so it is stated once here and the DOM's own
-    /// table is checked against it rather than the two being written out separately and drifting.
-    /// </remarks>
-    public const string EntryScreenAction = "begin";
 
     private readonly ProductCreateContext _context;
     private readonly ResolvedGameComposition _composition;
@@ -92,7 +82,7 @@ public sealed class WorldRpgProduct : IEngineProduct
         if (_shutdown) throw new ObjectDisposedException(nameof(WorldRpgProduct));
         if (_session is not ISaveableGameSession saveable)
             throw new InvalidOperationException("The selected compiled ruleset does not support save capture.");
-        return store.Save(key, new GameSaveEnvelope(SaveCompositionIdentity.From(_compositionIdentity), saveable.CaptureSave()), guard, expectedRevision);
+        return store.Save(key, new GameSaveEnvelope(saveable.CaptureSave()), guard, expectedRevision);
     }
 
     /// <summary>Loads and admits a save before any ruleset session is constructed or Engine state is mutated.</summary>
@@ -135,24 +125,17 @@ public sealed class WorldRpgProduct : IEngineProduct
         {
             return new(null, loaded.Revision, [new("selection", $"Selected ruleset '{selected.Id.Value}' does not match bundle ruleset '{composition.Ruleset.Value}'.")]);
         }
-        List<WorldRpgSaveDiagnostic> diagnostics = loaded.State.Composition.CheckCompatible(composition.Identity)
-            .Select(value => new WorldRpgSaveDiagnostic(value.Code, value.Message)).ToList();
         if (loaded.State.Payload.Ruleset != composition.Ruleset)
-            diagnostics.Add(new("payload-ruleset", "The saved payload ruleset does not match the selected bundle ruleset."));
-        if (diagnostics.Count > 0) return new(null, loaded.Revision, diagnostics);
+            return new(null, loaded.Revision, [new("payload-ruleset", "The saved payload ruleset does not match the selected bundle ruleset.")]);
         if (selected is not ISaveableGameRuleset saveable)
             return new(null, loaded.Revision, [new("unsupported", "The selected compiled ruleset does not support save resume.")]);
         try
         {
             IGameSession session = saveable.CreateSession(new GameSessionContext(context.Engine, composition), loaded.State.Payload);
-            // A restore that had to report something still resumes: its notices ride the
-            // one resume channel as non-blocking entries, exactly as composition
-            // diagnostics already do.
-            IReadOnlyList<SaveRestoreNotice> notices = session is IRestoringGameSession restoring ? restoring.RestoreNotices : [];
             return new(
                 new WorldRpgProduct(context, selected, composition, session),
                 loaded.Revision,
-                [.. notices.Select(value => new WorldRpgSaveDiagnostic(value.Code, value.Message, IsBlocking: false))]);
+                []);
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException)
         {
@@ -284,7 +267,9 @@ public sealed class WorldRpgProduct : IEngineProduct
         // A modal or a death still forwards the update, because the presentation that shows them
         // has to keep publishing; the session decides what the mode means for its own world.
         if (!_started || _shutdown || _mode == ProductMode.Paused) return ProductUpdateResult.None;
-        bool begin = _mode == ProductMode.Title && RequestsEntryScreenAction(update.Input);
+        bool begin = _mode == ProductMode.Title
+            && _session is IEntryScreenSession entry
+            && entry.RequestsBegin(update.Input);
 
         // Settle what the session asked for before it runs again: a resumed save whose player is
         // already dead asks for death on the first look, and that must land before the world takes
@@ -301,61 +286,6 @@ public sealed class WorldRpgProduct : IEngineProduct
         // unrecognized action. The transition publishes the presentation it changed.
         if (begin) Apply(ProductMode.Playing, "the entry screen asked for ordinary play", closesEntryScreen: true);
         return result;
-    }
-
-    /// <summary>
-    /// Whether an admitted input slice carries the entry screen's own action.
-    /// </summary>
-    /// <remarks>
-    /// This is the same wire the ruleset reads player actions from, and the same contract string, because
-    /// the Engine delivers one kind of semantic action rather than one per consumer. The product reads one
-    /// action name here and passes the slice through unchanged, so the ruleset still sees everything the
-    /// entry screen sent and decides for itself that it means nothing in the mode it is in.
-    /// </remarks>
-    private static bool RequestsEntryScreenAction(ReadOnlySpan<ProductInputEvent> input)
-    {
-        foreach (ProductInputEvent inputEvent in input)
-        {
-            if (inputEvent.ValueKind != InputValueKind.ProductPayload
-                || !inputEvent.PayloadContract.Span.SequenceEqual(EntryScreenActionContract)) continue;
-            if (IsEntryScreenAction(inputEvent.PayloadData.Span)) return true;
-        }
-
-        return false;
-    }
-
-    /// <summary>The payload contract a UI semantic action arrives under.</summary>
-    private static ReadOnlySpan<byte> EntryScreenActionContract => "dagger.ui.action.v1"u8;
-
-    /// <summary>
-    /// Whether an action payload names the entry screen's action, without interpreting the rest of it.
-    /// </summary>
-    /// <remarks>
-    /// A payload that does not parse, names another action, or carries fields this does not expect is not
-    /// the entry screen's action, so the product leaves the mode alone and the ruleset reports it - which
-    /// is where a malformed action already lands today.
-    /// </remarks>
-    private static bool IsEntryScreenAction(ReadOnlySpan<byte> payload)
-    {
-        if (payload.IsEmpty || payload.Length > 1024) return false;
-        try
-        {
-            using JsonDocument document = JsonDocument.Parse(payload.ToArray());
-            JsonElement root = document.RootElement;
-            if (root.ValueKind != JsonValueKind.Object) return false;
-            bool named = false;
-            bool begin = false;
-            foreach (JsonProperty property in root.EnumerateObject())
-            {
-                if (property.Name != "action" || property.Value.ValueKind != JsonValueKind.String) continue;
-                if (named) return false;
-                named = true;
-                begin = property.Value.ValueEquals(EntryScreenAction);
-            }
-
-            return named && begin && root.EnumerateObject().Count() == 1;
-        }
-        catch (JsonException) { return false; }
     }
 
     /// <summary>

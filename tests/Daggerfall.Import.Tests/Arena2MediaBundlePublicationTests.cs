@@ -47,7 +47,8 @@ public sealed class Arena2MediaBundlePublicationTests
         Assert.EndsWith("\n", dungeonJson, StringComparison.Ordinal);
         Assert.EndsWith("\n", classicJson, StringComparison.Ordinal);
         Assert.Contains("\"schemaVersion\": 1", dungeonJson, StringComparison.Ordinal);
-        Assert.Contains("\"schemaVersion\": 2", classicJson, StringComparison.Ordinal);
+        Assert.Contains("\"media\":", classicJson, StringComparison.Ordinal);
+        Assert.Contains("\"weaponMedia\":", classicJson, StringComparison.Ordinal);
         Assert.DoesNotContain("encounter", dungeonJson, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("encounter", classicJson, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("\"bytes\"", dungeonJson, StringComparison.OrdinalIgnoreCase);

@@ -392,7 +392,6 @@ public sealed class SpriteAuthoringTests
             [new("sprite/fixture", 1, 1, new(0.5F, 0.5F), new(1F, 1F), new(12F, true), new(5F, false), [new(0, 0, 0, 0, false, billboard.Frames[0], new(1F, 1F))], billboard.Id)],
             [actorManifest]);
         ClassicMediaManifestSidecar classic = new(
-            ClassicMediaManifestSidecar.CurrentSchemaVersion,
             new([weapon, effect, font]),
             [new ClassicWeaponMediaManifest(weapon.Id, Enum.GetValues<ClassicDaggerWeaponAction>().Select((action, index) => new ClassicWeaponActionManifest(action, index, index, 1, ClassicWeaponScreenAlignment.Right, 0F, new(10F, true), 0, 0)).ToArray())],
             Enum.GetValues<ClassicEffect>().Select((value, index) => new ClassicEffectManifest(value, effect.Id, index, new(10F, false))).ToArray(),

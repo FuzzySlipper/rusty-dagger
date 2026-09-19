@@ -103,7 +103,7 @@ public sealed class NormalizedPrivateersHoldContentTests
     }
 
     [Fact]
-    public void RejectsAClosureWhoseSpatialArtifactDoesNotMatchTheImportDigest()
+    public void AdmitsANamedSpatialArtifactWithoutRehashingTheImportDigest()
     {
         string root = RepositoryRoot();
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
@@ -116,7 +116,8 @@ public sealed class NormalizedPrivateersHoldContentTests
         bytes[0] ^= 1;
         changed[index] = new ProductContentFile(changed[index].Path, bytes);
 
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(new ProductContent(changed), payload, definitions));
+        PrivateersHoldInputs inputs = PrivateersHoldContent.Read(new ProductContent(changed), payload, definitions);
+        Assert.Equal("worldrpg/imports/privateers-hold/spatial/privateer-s-hold/collision-navigation.json", inputs.SpatialArtifact.Path);
     }
 
     [Fact]

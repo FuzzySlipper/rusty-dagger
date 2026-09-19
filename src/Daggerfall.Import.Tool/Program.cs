@@ -1139,7 +1139,6 @@ internal static class Program
 
         JsonObject inventory = new()
         {
-            ["schemaVersion"] = 1,
             ["generator"] = "daggerfall-import-tool classic-media",
             ["unreadableFamilies"] = unreadable,
             ["artifacts"] = new JsonArray([.. published

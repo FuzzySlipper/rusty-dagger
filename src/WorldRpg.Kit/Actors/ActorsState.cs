@@ -1,8 +1,11 @@
+using WorldRpg.Kit.Ai;
+using WorldRpg.Kit.Combat;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.World;
 using WorldRpg.Kit.Progression;
+using WorldRpg.Kit.Targeting;
 
 namespace WorldRpg.Kit.Actors;
 
@@ -37,6 +40,8 @@ public sealed class ActorsState : IDisposable
         EntityId entity = Entities.Create(Identity(id), type);
         Actor actor = new(Store, entity);
         actor.Add(stats);
+        actor.Add(new TargetingComponent());
+        actor.Add(new AttackState());
         actor.Add(new EffectsComponent(entity));
         actor.Add(new ActorVitals(TrackId.Parse(defeatTrack)));
         return actor;
@@ -60,6 +65,8 @@ public sealed class PlayerActorState(Actor actor)
     public ProgressionState Progression => Actor.Get<ProgressionState>();
     public Actor Actor { get; } = actor;
     public long DurableId => checked((long)Actor.Get<DurableEntityIdentity>().Identity.Value);
+    public AttackState Attack => Actor.Get<AttackState>();
+    public TargetingComponent Targeting => Actor.Get<TargetingComponent>();
     public StatsComponent Stats => Actor.Get<StatsComponent>();
     public EffectsComponent Effects => Actor.Get<EffectsComponent>();
     public InventoryComponent Inventory => Actor.Get<InventoryComponent>();
@@ -99,8 +106,11 @@ public readonly record struct ActorPose
 /// <summary>Live named access to the components of one existing actor.</summary>
 public sealed class ActorState(Actor actor)
 {
+    public PursuitMemoryComponent Pursuit => Actor.Get<PursuitMemoryComponent>();
     public Actor Actor { get; } = actor;
     public long DurableId => checked((long)Actor.Get<DurableEntityIdentity>().Identity.Value);
+    public AttackState Attack => Actor.Get<AttackState>();
+    public TargetingComponent Targeting => Actor.Get<TargetingComponent>();
     public StatsComponent Stats => Actor.Get<StatsComponent>();
     public EffectsComponent Effects => Actor.Get<EffectsComponent>();
     public InventoryComponent Inventory => Actor.Get<InventoryComponent>();

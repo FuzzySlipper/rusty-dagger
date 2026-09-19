@@ -69,8 +69,8 @@ public sealed class DaggerfallCharacterPresentationTests
         {
             DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
             DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
-            var items = definitions.Items.Values.ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallSession.ToManagedItem);
-            var slots = definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerfallSession.ToManagedSlot);
+            var items = definitions.Items.Values.ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
+            var slots = definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
             actors = new ActorsState();
             Player = actors.CreatePlayer(1, new EntityTypeId(player.Id.Value),
                 new DaggerfallMechanicsState().CreateStats(player, player.PlayerInitialVitals), "health");

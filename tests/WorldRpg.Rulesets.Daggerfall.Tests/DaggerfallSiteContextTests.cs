@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -97,7 +98,6 @@ public sealed class DaggerfallSiteContextTests
         static DaggerfallSiteRecord Record(int region, int index) =>
             new(new DaggerfallSiteId(region, index), $"Shared {region}", index, 0, DaggerfallSiteKind.HomeFarms, false);
         DaggerfallLocationSet scrambled = new(
-            1,
             [(2, 5), (0, 9), (2, 1), (0, 3)],
             [Record(2, 5), Record(0, 9), Record(2, 1), Record(0, 3)],
             0,
@@ -250,7 +250,7 @@ public sealed class DaggerfallSiteContextTests
         Assert.True(before.IsDiscovered(active));
         Assert.True(before.IsDiscovered(revealed));
 
-        DaggerfallSavePayload read = DaggerfallSavePayload.Read(DaggerfallSavePayload.Encode(Payload(before.Capture()))).Payload;
+        DaggerfallSavePayload read = DaggerfallSavePayload.Read(DaggerfallSavePayload.Encode(Payload(before.Capture())));
         DaggerfallSiteSave section = Assert.IsType<DaggerfallSiteSave>(read.Site);
 
         DaggerfallSiteContext after = new(definitions.Locations, ToId(section.Active), ToId(section.ReturnAnchor), section.Discovered.Select(id => id.Require()));
@@ -268,68 +268,13 @@ public sealed class DaggerfallSiteContextTests
     public void Round_trips_a_save_that_records_the_player_at_no_site()
     {
         // A section that records no active site is a fact the save states, and it has to survive as one:
-        // collapsing it into an absent section would make a resumed session believe its save predated
-        // site persistence and start the player at the bundle's own site instead.
+        // collapsing it into an absent section would make a resumed session invent a site on load.
         DaggerfallSavePayload read = DaggerfallSavePayload.Read(
-            DaggerfallSavePayload.Encode(Payload(new DaggerfallSiteSave(null, null, [])))).Payload;
+            DaggerfallSavePayload.Encode(Payload(new DaggerfallSiteSave(null, null, []))));
         DaggerfallSiteSave section = Assert.IsType<DaggerfallSiteSave>(read.Site);
         Assert.Null(section.Active);
         Assert.Null(section.ReturnAnchor);
         Assert.Empty(section.Discovered);
-    }
-
-    [Fact]
-    public void Reports_a_save_written_before_the_session_persisted_its_site()
-    {
-        DaggerfallSaveRead read = DaggerfallSavePayload.Read(DaggerfallSavePayload.Encode(Payload(null)));
-        Assert.Null(read.Payload.Site);
-        SaveRestoreNotice notice = Assert.Single(read.Notices, value => value.Code == "site-section-absent");
-        Assert.Contains("starts at the bundle's own starting site", notice.Message, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Reports_the_absent_site_on_every_schema_that_can_lack_one()
-    {
-        // The fallback is the same on all three paths - the session starts at the bundle's site - so the
-        // reporting has to be too: a restore that silently defaults where a newer schema explains itself
-        // is the asymmetry this pins. Every older schema necessarily predates site persistence.
-
-        // Schema 2 reads as the current shape, so relabelling the current bytes and dropping the member
-        // is exactly the shape its read has to handle.
-        JsonObject calendarless = JsonNode.Parse(System.Text.Encoding.UTF8.GetString(DaggerfallSavePayload.Encode(Payload(null)).Bytes.Span))!.AsObject();
-        calendarless["SchemaVersion"] = DaggerfallSavePayload.CalendarlessSchemaVersion;
-        Assert.True(calendarless.Remove("Site"));
-        AssertAbsentSiteIsReported(new RulesetSavePayload(
-            DaggerfallRuleset.Identity,
-            DaggerfallSavePayload.CalendarlessSchemaVersion,
-            System.Text.Encoding.UTF8.GetBytes(calendarless.ToJsonString())));
-
-        // Schema 1 has its own shape, and the read refuses a schema-1 label on bytes that never carried
-        // schema-1 fields - correctly, as a misread rather than a migration - so it is built as schema 1
-        // rather than relabelled.
-        DaggerfallSavePayloadV1 legacy = new(
-            DaggerfallSavePayload.MigratableSchemaVersion,
-            new DaggerfallPlayerSave(0f, 0f, 0f, 0f, 0f, 10, 10, 10),
-            [],
-            0,
-            1,
-            new DaggerfallInventorySave([], [], []),
-            [],
-            1UL,
-            [],
-            [],
-            null);
-        AssertAbsentSiteIsReported(new RulesetSavePayload(
-            DaggerfallRuleset.Identity,
-            DaggerfallSavePayload.MigratableSchemaVersion,
-            JsonSerializer.SerializeToUtf8Bytes(legacy, DaggerfallSaveJsonContext.Default.DaggerfallSavePayloadV1)));
-    }
-
-    private static void AssertAbsentSiteIsReported(RulesetSavePayload payload)
-    {
-        DaggerfallSaveRead read = DaggerfallSavePayload.Read(payload);
-        Assert.Null(read.Payload.Site);
-        Assert.Contains(read.Notices, notice => notice.Code == "site-section-absent");
     }
 
     [Fact]
@@ -344,15 +289,14 @@ public sealed class DaggerfallSiteContextTests
         {
             JsonObject payload = RoundTrippable();
             payload["Site"]!["Active"] = JsonNode.Parse(shape);
-            ArgumentException error = Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Read(Encoded(payload)));
-            Assert.Contains("must name both a region and an index", error.Message, StringComparison.Ordinal);
-            Assert.Contains("absent", error.Message, StringComparison.Ordinal);
+            ArgumentException error = Assert.ThrowsAny<ArgumentException>(() => DaggerfallSavePayload.Read(Encoded(payload)));
+            Assert.Contains("must name a non-negative region and index", error.Message, StringComparison.Ordinal);
         }
 
         // A site that does name both members is still read, including the one at the origin.
         JsonObject origin = RoundTrippable();
         origin["Site"]!["Active"] = JsonNode.Parse("""{"Region":0,"Index":0}""");
-        Assert.Equal(new DaggerfallSiteIdSave(0, 0), DaggerfallSavePayload.Read(Encoded(origin)).Payload.Site!.Active);
+        Assert.Equal(new DaggerfallSiteIdSave(0, 0), DaggerfallSavePayload.Read(Encoded(origin)).Site.Active);
     }
 
     [Fact]
@@ -365,7 +309,7 @@ public sealed class DaggerfallSiteContextTests
         payload["Site"]!["Active"] = null;
         payload["Site"]!["ReturnAnchor"] = JsonNode.Parse("""{"Region":17,"Index":4}""");
         ArgumentException error = Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Read(Encoded(payload)));
-        Assert.Contains("returning has nowhere to return from", error.Message, StringComparison.Ordinal);
+        Assert.Contains("requires an active site", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -377,8 +321,8 @@ public sealed class DaggerfallSiteContextTests
         {
             JsonObject payload = RoundTrippable();
             payload["Site"] = JsonNode.Parse(shape);
-            ArgumentException error = Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Read(Encoded(payload)));
-            Assert.Contains("must record the sites play revealed", error.Message, StringComparison.Ordinal);
+            ArgumentException error = Assert.ThrowsAny<ArgumentException>(() => DaggerfallSavePayload.Read(Encoded(payload)));
+            Assert.Contains("Discovered", error.Message, StringComparison.Ordinal);
         }
     }
 
@@ -414,17 +358,17 @@ public sealed class DaggerfallSiteContextTests
         // with, so the section is refused before anything resolves a site through it.
         foreach ((string field, string shape, string expected) in new[]
         {
-            ("Discovered", """[{"Region":17,"Index":4},{"Region":17,"Index":4}]""", "must record each revealed site once"),
+            ("Discovered", """[{"Region":17,"Index":4},{"Region":17,"Index":4}]""", "record each discovered site once"),
             ("Discovered", """[{"Region":-1,"Index":0}]""", "non-negative region and index"),
             ("Discovered", """[{"Region":0,"Index":-1}]""", "non-negative region and index"),
-            ("Discovered", "[null]", "names nothing"),
+            ("Discovered", "[null]", "Value cannot be null"),
             ("Active", """{"Region":-1,"Index":0}""", "non-negative region and index"),
             ("ReturnAnchor", """{"Region":0,"Index":-1}""", "non-negative region and index"),
         })
         {
             JsonObject payload = RoundTrippable();
             payload["Site"]![field] = JsonNode.Parse(shape);
-            ArgumentException error = Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Read(Encoded(payload)));
+            ArgumentException error = Assert.ThrowsAny<ArgumentException>(() => DaggerfallSavePayload.Read(Encoded(payload)));
             Assert.Contains(expected, error.Message, StringComparison.Ordinal);
         }
     }
@@ -453,12 +397,11 @@ public sealed class DaggerfallSiteContextTests
         JsonNode.Parse(System.Text.Encoding.UTF8.GetString(DaggerfallSavePayload.Encode(Payload(new DaggerfallSiteSave(null, null, []))).Bytes.Span))!.AsObject();
 
     private static RulesetSavePayload Encoded(JsonObject payload) =>
-        new(DaggerfallRuleset.Identity, DaggerfallSavePayload.CurrentSchemaVersion, System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()));
+        new(DaggerfallRuleset.Identity, System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()));
 
     /// <summary>A save whose only interesting state is the site section it is given.</summary>
     private static DaggerfallSavePayload Payload(DaggerfallSiteSave? site) => new(
-        DaggerfallSavePayload.CurrentSchemaVersion,
-        new DaggerfallPlayerSave(0f, 0f, 0f, 0f, 0f, 10, 10, 10),
+        new DaggerfallPlayerSave(0f, 0f, 0f, 0f, 0f, EmptyStats()),
         [],
         0,
         1,
@@ -466,10 +409,11 @@ public sealed class DaggerfallSiteContextTests
         [],
         new DurableIdentityState([new KindAllocatorState(DurableIdentityKind.Item, 1, [], [])]),
         [],
-        null,
-        [],
-        null,
-        site);
+        new DaggerfallCalendarSave(1, 1, 1, 0, 0, 0, 0d),
+        site ?? throw new ArgumentNullException(nameof(site)),
+        []);
+
+    private static DaggerfallStatsSave EmptyStats() => new(StatsComponentCapture.Capture(new StatsComponent()), []);
 
     private static DaggerfallSiteContext Context() => new(Read().Locations);
 

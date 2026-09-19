@@ -51,7 +51,6 @@ public sealed class PublishedContentDeliveryTests
     {
         ProductContent content = AdmittedContent();
         JsonElement inventory = JsonDocument.Parse(content.ReadBytes("worldrpg/media/classic-media-inventory.json").ToArray()).RootElement;
-        Assert.Equal(1, inventory.GetProperty("schemaVersion").GetInt32());
         Assert.Equal("daggerfall-import-tool classic-media", inventory.GetProperty("generator").GetString());
 
         // Every entry the inventory lists is present and hashes to what it says, and every published
@@ -614,7 +613,7 @@ public sealed class PublishedContentDeliveryTests
 
         // The action the entry screen sends is the one the product answers, and the wire is one word: a
         // rename on either side leaves the button that does nothing.
-        Assert.Contains($"BEGIN_ACTION = '{WorldRpgProduct.EntryScreenAction}'", source, StringComparison.Ordinal);
+        Assert.Contains($"BEGIN_ACTION = '{DaggerfallUiAction.BeginAction}'", source, StringComparison.Ordinal);
     }
 
     /// <summary>The value a name in the client's table stands for, read from where it is declared.</summary>

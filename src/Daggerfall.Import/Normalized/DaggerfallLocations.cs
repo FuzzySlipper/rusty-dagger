@@ -76,7 +76,6 @@ public sealed record DaggerfallDungeonRecord(
 /// The published locations of every region, for the site and world consumers that place things on
 /// them.
 /// </summary>
-/// <param name="SchemaVersion">Shape version of this section.</param>
 /// <param name="Locations">Every location the corpus's regions describe.</param>
 /// <param name="Dungeons">Every dungeon among them, with its block references.</param>
 /// <param name="RegionsWithoutTables">Region groups the donor discards, with the tables that are empty named.</param>
@@ -84,7 +83,6 @@ public sealed record DaggerfallDungeonRecord(
 /// <param name="Regions">Every region's table provenance, so a fact can be traced to the table it came from.</param>
 /// <param name="Sources">The source identity this section was read from.</param>
 public sealed record DaggerfallLocations(
-    int SchemaVersion,
     IReadOnlyList<DaggerfallLocationMap> Locations,
     IReadOnlyList<DaggerfallDungeonRecord> Dungeons,
     IReadOnlyList<DaggerfallRegionGap> RegionsWithoutTables,
@@ -92,15 +90,8 @@ public sealed record DaggerfallLocations(
     IReadOnlyList<DaggerfallRegionProvenance> Regions,
     IReadOnlyList<string> Sources)
 {
-    public const int CurrentSchemaVersion = 1;
-
     public void Validate()
     {
-        if (SchemaVersion != CurrentSchemaVersion)
-        {
-            throw new InvalidOperationException($"Locations schema must be {CurrentSchemaVersion} but is {SchemaVersion}.");
-        }
-
         // A location whose region or name is missing would resolve to nothing, and a dungeon whose
         // blocks are empty would claim a structure it does not describe.
         foreach (DaggerfallLocationMap location in Locations)
@@ -267,7 +258,6 @@ public static class DaggerfallLocationBuilder
         }
 
         DaggerfallLocations published = new(
-            DaggerfallLocations.CurrentSchemaVersion,
             [.. locations.OrderBy(location => location.Region).ThenBy(location => location.Index)],
             [.. dungeons.OrderBy(dungeon => dungeon.Region).ThenBy(dungeon => dungeon.Index)],
             [.. withoutTables.OrderBy(gap => gap.Region)],
