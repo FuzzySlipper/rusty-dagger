@@ -3808,6 +3808,68 @@ public sealed class NormalizedRuntimeSeamTests
 
     }
 
+    [Fact]
+    public void Host_adopts_the_loot_close_and_resumes_play_through_the_real_session()
+    {
+        // The defect this pins: closing loot asked the session for Playing, but the product
+        // adopted the request without closesModal and refused Modal -> Playing, so gameplay
+        // stayed held. Driving the session alone cannot show it; only the real handshake can.
+        string root = RepositoryRoot();
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
+        CapturingDaggerfallRuleset ruleset = new();
+
+        static ProductInputEvent UiAction(string json) => Input(InputEventKind.DirectDigital) with
+        {
+            ValueKind = InputValueKind.ProductPayload,
+            PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+            PayloadData = Encoding.UTF8.GetBytes(json),
+        };
+
+        using (WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.privateers-hold")))
+        {
+            product.Start();
+            product.Begin();
+            DaggerfallSession session = ruleset.RequireSession();
+
+            // One lootable corpse within reach, mirroring the session-level loot fixture.
+            session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+            session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
+            CorpseContainer corpse = session.Corpses[2000];
+            session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5)]);
+            perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
+
+            // Opening loot through the product puts the product into the modal the session asked for.
+            product.Update(new ProductUpdate(OuterUpdate(1), [UiAction("{\"action\":\"loot\"}")]));
+            Assert.Equal(ProductMode.Modal, product.Mode);
+            LootPresentation opened = Assert.IsType<LootPresentation>(session.OpenLoot);
+
+            // Closing through the interaction's own token returns the product to ordinary play.
+            // The update adopts twice — before and after the session runs — so the trailing entry
+            // is the post-adopt no-op; what matters is that this update caused Modal->Playing.
+            int stepsBeforeClose = spatial.StepCalls;
+            int historyBeforeClose = product.ModeHistory.Count;
+            product.Update(new ProductUpdate(OuterUpdate(2), [UiAction(JsonSerializer.Serialize(new { action = "loot-close", container = opened.Container }))]));
+            Assert.Equal(ProductMode.Playing, product.Mode);
+            ProductModeChange close = product.ModeHistory.Skip(historyBeforeClose).First(change => change.Changed);
+            Assert.Equal(ProductMode.Modal, close.From);
+            Assert.Equal(ProductMode.Playing, close.To);
+            Assert.Null(session.OpenLoot);
+
+            // World advancement and input resume: a held key steps the world with intent again.
+            product.Update(new ProductUpdate(OuterUpdate(3), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
+            Assert.True(spatial.StepCalls > stepsBeforeClose, "ordinary play admits world time again");
+            Assert.NotEqual(Vector2.Zero, spatial.StepRequests[^1].Command.PlanarIntent);
+            product.Shutdown();
+        }
+    }
+
     private static (DaggerfallSession Session, AppearanceFake Appearance, PerceptionFake Perception) VisibleEnemySession(List<string> releases, double distance = 1d)
     {
         string root = RepositoryRoot();

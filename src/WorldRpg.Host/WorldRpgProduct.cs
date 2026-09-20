@@ -296,7 +296,7 @@ public sealed class WorldRpgProduct : IEngineProduct
     private void AdoptSessionRequest()
     {
         if (_session is not IModeAwareGameSession aware || aware.PendingModeRequest is not { } requested) return;
-        Apply(requested, "the ruleset asked for this mode");
+        Apply(requested, "the ruleset asked for this mode", closesModal: aware.PendingModeRequestClosesModal);
     }
 
     /// <summary>

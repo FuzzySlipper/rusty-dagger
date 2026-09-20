@@ -389,6 +389,14 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
     }
 
     /// <summary>
+    /// Whether the pending request closes the owned loot interaction. Ordinary play is only ever
+    /// requested when an open container just closed — the getter above returns Playing exactly in
+    /// that case — so a Playing request is a close by construction rather than a second opinion
+    /// about the mode. Death, modal-open, and silence carry no close.
+    /// </summary>
+    public bool PendingModeRequestClosesModal => PendingModeRequest == ProductMode.Playing;
+
+    /// <summary>
     /// Applies the mode the product decided. A mode change is a focus change, so held movement is
     /// dropped: a key held when play paused, a modal opened or the player died must not keep moving
     /// the character, and a release this interpreter never sees would leave it held forever.
