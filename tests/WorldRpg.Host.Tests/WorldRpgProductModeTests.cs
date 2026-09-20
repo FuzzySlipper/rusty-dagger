@@ -120,6 +120,41 @@ public sealed class WorldRpgProductModeTests
     }
 
     [Fact]
+    public void A_session_close_returns_from_a_modal_while_a_bare_playing_request_does_not()
+    {
+        ModeRecordingRuleset ruleset = new();
+        using WorldRpgProduct product = Product(ruleset);
+        StartInPlay(product);
+        product.EnterModal();
+        Assert.Equal(ProductMode.Modal, product.Mode);
+
+        // A bare playing request is a resume, not a close: the modal stays open.
+        ruleset.Request = ProductMode.Playing;
+        ruleset.RequestClosesModal = false;
+        product.Update(Update(1));
+        Assert.Equal(ProductMode.Modal, product.Mode);
+        Assert.Equal(ProductModeChangeOutcome.Refused, product.ModeHistory[^1].Outcome);
+
+        // The owned interaction closing itself is what returns to ordinary play. The update
+        // adopts twice — before and after the session runs — so the trailing entry is the
+        // post-adopt no-op; what matters is that this update caused an applied Modal->Playing.
+        ruleset.RequestClosesModal = true;
+        int before = product.ModeHistory.Count;
+        product.Update(Update(2));
+        Assert.Equal(ProductMode.Playing, product.Mode);
+        ProductModeChange close = product.ModeHistory.Skip(before).First(change => change.Changed);
+        Assert.Equal(ProductMode.Modal, close.From);
+        Assert.Equal(ProductMode.Playing, close.To);
+        Assert.Equal(ProductMode.Playing, ruleset.LastApplied);
+
+        // The close is consumed: with nothing further asked, the product stays put.
+        ruleset.Request = null;
+        ruleset.RequestClosesModal = false;
+        product.Update(Update(3));
+        Assert.Equal(ProductMode.Playing, product.Mode);
+    }
+
+    [Fact]
     public void A_session_that_cannot_apply_a_mode_is_never_told_the_world_is_held()
     {
         // Pausing is this product's own doing, because it drops the update. A modal and a death
@@ -310,6 +345,8 @@ public sealed class WorldRpgProductModeTests
 
         internal ProductMode? Request { get; set; }
 
+        internal bool RequestClosesModal { get; set; }
+
         internal int Created { get; private set; }
 
         internal ResolvedGameComposition? FirstComposition { get; private set; }
@@ -359,6 +396,8 @@ public sealed class WorldRpgProductModeTests
         internal bool Disposed { get; private set; }
 
         public ProductMode? PendingModeRequest => owner.Request;
+
+        public bool PendingModeRequestClosesModal => owner.RequestClosesModal;
 
         public void ApplyProductMode(ProductMode mode) => LastApplied = mode;
 

@@ -305,6 +305,14 @@ public interface IModeAwareGameSession
     /// which is what keeps one authority over focus, pause and death.
     /// </summary>
     ProductMode? PendingModeRequest { get; }
+
+    /// <summary>
+    /// Whether the pending request is the owned interaction closing itself. A resume does not
+    /// close a modal interaction — only the interaction that owns input ends it — so the product
+    /// can only tell a close from a resume when the session says which one this is. True is only
+    /// meaningful alongside a <see cref="PendingModeRequest"/>; without a request it is ignored.
+    /// </summary>
+    bool PendingModeRequestClosesModal { get; }
 }
 
 
