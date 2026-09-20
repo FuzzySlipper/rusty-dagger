@@ -4018,6 +4018,135 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(modalPublishesBefore + 1, appearance.PublishCalls);
     }
 
+    [Fact]
+    public void Corpse_save_roundtrip_preserves_populated_and_empty_contents_identity_and_allocation()
+    {
+        // The shared contents mapping must carry a populated corpse (stacks + a unique), a looted
+        // registered-empty corpse, and an empty unregistered corpse, with durable identity
+        // agreement into the next allocation.
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake sourceContent = new(releases);
+        PopulateContent(sourceContent, inputs);
+        SpatialFake sourceSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake sourcePerception = PerceptionFake.Create();
+        EngineContextFake source = EngineContextFake.Create(sourceContent, sourceSpatial.Service, new AppearanceFake(releases), sourcePerception.Service);
+        RulesetSavePayload populatedPayload;
+        RulesetSavePayload lootedPayload;
+        static void Ui(DaggerfallSession session, string json, ulong step)
+        {
+            ProductInputEvent action = Input(InputEventKind.DirectDigital) with
+            {
+                ValueKind = InputValueKind.ProductPayload,
+                PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+                PayloadData = Encoding.UTF8.GetBytes(json),
+            };
+            session.Update(new ProductUpdate(OuterUpdate(step), [action]));
+        }
+        using (DaggerfallSession original = new(source.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        {
+            static void Kill(DaggerfallSession session, long target)
+            {
+                session.State.Actors.Get(target).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+                session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, target, 1, 1, .125));
+            }
+            Kill(original, 2000);
+            CorpseContainer thief = original.Corpses[2000];
+            original.State.Containers.Seed(thief.Owner, [
+                new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5),
+                new InventoryContainerSeed(new InventoryItemId("iron-dagger"), 1, new(DurableIdentityKind.Item, 5001))]);
+            // The giant-bat carries no loot table, so its corpse stays unregistered and empty.
+            // It is tougher than the thief: repeat the explicit swing until the death lands.
+            original.State.Actors.Get(2006).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+            ulong swing = 2;
+            while (!original.State.Actors.Get(2006).IsDefeated && swing < 20)
+            {
+                original.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2006, swing, swing, .125));
+                original.Update(new ProductUpdate(OuterUpdate(swing), []));
+                swing++;
+            }
+            Assert.True(original.State.Actors.Get(2006).IsDefeated, "the giant-bat should die within bounded swings");
+            Assert.False(original.Corpses[2006].IsRegistered);
+            populatedPayload = original.CaptureSave();
+
+            // Drain the thief through the panel: the looted save must carry a registered corpse
+            // with empty contents, not an unregistered one.
+            sourcePerception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
+            Ui(original, "{\"action\":\"loot\"}", swing++);
+            Assert.Equal(ProductMode.Modal, original.PendingModeRequest);
+            original.ApplyProductMode(ProductMode.Modal);
+            for (ulong step = swing; step < swing + 30; step++)
+            {
+                LootPresentation current = Assert.IsType<LootPresentation>(original.OpenLoot);
+                if (current.Empty) break;
+                InventoryItemPresentation first = current.Items[0];
+                Ui(original, JsonSerializer.Serialize(new { action = "loot-take", container = current.Container, revision = current.Revision, item = first.Key }), step);
+                if (step == swing + 29) Assert.Fail("draining the corpse did not reach the empty state");
+            }
+            LootPresentation drained = Assert.IsType<LootPresentation>(original.OpenLoot);
+            Assert.True(drained.Empty);
+            Assert.False(original.Corpses[2000].IsInteractable);
+            lootedPayload = original.CaptureSave();
+        }
+
+        DaggerfallSavePayload captured = DaggerfallSavePayload.Read(populatedPayload);
+        DaggerfallCorpseSave savedThief = captured.Corpses.Single(corpse => corpse.ActorId == 2000);
+        Assert.True(savedThief.IsRegistered);
+        // The thief's loot table generates gold on top of the seeded stack; the save carries both.
+        Assert.True(savedThief.Stacks.Single(stack => stack.ItemId == "gold-piece").Quantity >= 5UL);
+        Assert.Equal(5001UL, Assert.Single(savedThief.UniqueItems, item => item.ItemId == "iron-dagger").EntityId);
+        DaggerfallCorpseSave savedBat = captured.Corpses.Single(corpse => corpse.ActorId == 2006);
+        Assert.False(savedBat.IsRegistered);
+        Assert.Empty(savedBat.Stacks);
+        Assert.Empty(savedBat.UniqueItems);
+
+        // The looted save keeps the thief registered with empty contents and no interaction.
+        DaggerfallSavePayload looted = DaggerfallSavePayload.Read(lootedPayload);
+        DaggerfallCorpseSave lootedThief = looted.Corpses.Single(corpse => corpse.ActorId == 2000);
+        Assert.True(lootedThief.IsRegistered);
+        Assert.Empty(lootedThief.Stacks);
+        Assert.Empty(lootedThief.UniqueItems);
+        Assert.False(lootedThief.IsInteractable);
+
+        ContentFake resumedContent = new(releases);
+        PopulateContent(resumedContent, inputs);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using (DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, populatedPayload, RandomMinimum.Create()))
+        {
+            InventoryView restoredThief = resumed.State.Containers.Read(resumed.Corpses[2000].Owner);
+            Assert.Equal(
+                savedThief.Stacks.Single(stack => stack.ItemId == "gold-piece").Quantity,
+                restoredThief.Stacks.Single(stack => stack.Definition.Value == "gold-piece").Quantity);
+            var restoredDagger = Assert.Single(restoredThief.UniqueItems, item => item.Definition.Value == "iron-dagger");
+            Assert.Equal(5001UL, resumed.State.Actors.Entities.IdentityOf(restoredDagger.Entity).Value);
+            Assert.False(resumed.Corpses[2006].IsRegistered);
+
+            // The next generated unique must not reuse a restored live identity.
+            Assert.NotEqual(5001UL, resumed.UniqueItemAllocator.AllocateReference().Value);
+        }
+
+        ContentFake lootedContent = new(releases);
+        PopulateContent(lootedContent, inputs);
+        SpatialFake lootedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake lootedEngine = EngineContextFake.Create(lootedContent, lootedSpatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
+        using DaggerfallSession lootedSession = DaggerfallSession.Restore(lootedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, lootedPayload, RandomMinimum.Create());
+
+        // The looted corpse restores registered and empty rather than unregistered or reseeded.
+        Assert.True(lootedSession.Corpses[2000].IsRegistered);
+        Assert.False(lootedSession.Corpses[2000].IsInteractable);
+        InventoryView restoredLooted = lootedSession.State.Containers.Read(lootedSession.Corpses[2000].Owner);
+        Assert.Empty(restoredLooted.Stacks);
+        Assert.Empty(restoredLooted.UniqueItems);
+        Assert.False(lootedSession.Corpses[2006].IsRegistered);
+
+        // The next generated unique still allocates cleanly after the looted restore.
+        _ = lootedSession.UniqueItemAllocator.AllocateReference();
+    }
+
     private static (DaggerfallSession Session, AppearanceFake Appearance, PerceptionFake Perception) VisibleEnemySession(List<string> releases, double distance = 1d)
     {
         string root = RepositoryRoot();

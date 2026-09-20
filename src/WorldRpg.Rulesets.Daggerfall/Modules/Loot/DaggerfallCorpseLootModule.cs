@@ -67,7 +67,7 @@ internal sealed class DaggerfallCorpseLootModule
 
     internal IReadOnlyDictionary<long, CorpseContainer> Corpses => _actors.All
         .Select(actor => actor.Actor.TryGet<CorpseLootComponent>(out CorpseLootComponent? corpse) && corpse is not null
-            ? new CorpseContainer(actor.DurableId, corpse.Owner, corpse.OriginatingSequence, [], corpse.HasRegisteredInventory, corpse.HasRegisteredInventory, corpse.IsInteractable)
+            ? new CorpseContainer(actor.DurableId, corpse.Owner, corpse.OriginatingSequence, corpse.HasRegisteredInventory, corpse.IsInteractable)
             : null)
         .Where(corpse => corpse is not null)
         .Cast<CorpseContainer>()
@@ -286,7 +286,7 @@ internal sealed class DaggerfallCorpseLootModule
 }
 
 /// <summary>Ruleset-owned durable mapping from a defeated actor to its Engine inventory owner.</summary>
-internal sealed record CorpseContainer(long ActorId, EntityId Owner, ulong OriginatingSequence, IReadOnlyList<InventoryContainerSeed> Seeds, bool IsRegistered, bool IsSeeded, bool IsInteractable);
+internal sealed record CorpseContainer(long ActorId, EntityId Owner, ulong OriginatingSequence, bool IsRegistered, bool IsInteractable);
 
 /// <summary>One validated take request: the selection and revision a take applies, if it commits.</summary>
 internal sealed record PendingCorpseLoot(long ActorId, CorpseLootComponent Corpse, IReadOnlyList<LootAwardedFact> Facts, bool IsEmpty,

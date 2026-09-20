@@ -57,16 +57,18 @@ internal sealed class DaggerSessionPersistence
         DaggerfallInventorySave inventorySave = CaptureInventory(State.Inventory, State.Equipment);
         DaggerfallCorpseSave[] corpses = _corpseLoot.Corpses.Values.OrderBy(corpse => corpse.ActorId).Select(corpse =>
         {
-            InventoryView? contents = corpse.IsRegistered ? State.Containers.Read(corpse.Owner) : null;
+            // Corpses never carry equipment: anything worn stays on the actor's own inventory
+            // section, so the corpse save shares the stack/unique contents mapping only.
+            (DaggerfallStackSave[] stacks, DaggerfallUniqueSave[] uniques) = corpse.IsRegistered
+                ? CaptureContents(State.Containers.Read(corpse.Owner))
+                : ([], []);
             return new DaggerfallCorpseSave(
                 corpse.ActorId,
                 corpse.OriginatingSequence,
                 corpse.IsRegistered,
                 corpse.IsInteractable,
-                contents?.Stacks.OrderBy(stack => stack.Definition.Value, StringComparer.Ordinal)
-                    .Select(stack => new DaggerfallStackSave(stack.Definition.Value, stack.Quantity)).ToArray() ?? [],
-                contents?.UniqueItems.OrderBy(item => item.Entity.Value)
-                    .Select(item => new DaggerfallUniqueSave(item.Definition.Value, State.Actors.Entities.IdentityOf(item.Entity).Value)).ToArray() ?? []);
+                stacks,
+                uniques);
         }).ToArray();
         DaggerfallActorInventorySave[] actorInventories = State.ActorInventories.OrderBy(entry => entry.Key)
             .Select(entry => new DaggerfallActorInventorySave(entry.Key, CaptureInventory(entry.Value, State.EquipmentFor(entry.Key)))).ToArray();
@@ -120,14 +122,20 @@ internal sealed class DaggerSessionPersistence
     {
         InventoryView inventory = inventoryOwner.Read();
         EquipmentRead equipped = equipmentOwner.Read();
+        (DaggerfallStackSave[] stacks, DaggerfallUniqueSave[] uniques) = CaptureContents(inventory);
         return new(
-            inventory.Stacks.OrderBy(stack => stack.Definition.Value, StringComparer.Ordinal)
-                .Select(stack => new DaggerfallStackSave(stack.Definition.Value, stack.Quantity)).ToArray(),
-            inventory.UniqueItems.OrderBy(item => item.Entity.Value)
-                .Select(item => new DaggerfallUniqueSave(item.Definition.Value, State.Actors.Entities.IdentityOf(item.Entity).Value)).ToArray(),
+            stacks,
+            uniques,
             equipped.Assignments.OrderBy(assignment => assignment.Slot.Value, StringComparer.Ordinal)
                 .Select(assignment => new DaggerfallEquipmentSave(assignment.Slot.Value, State.Actors.Entities.IdentityOf(new EntityId(assignment.Item.EntityId)).Value)).ToArray());
     }
+
+    /// <summary>Shared stack/unique contents mapping for actor inventories and corpse containers.</summary>
+    private (DaggerfallStackSave[] Stacks, DaggerfallUniqueSave[] UniqueItems) CaptureContents(InventoryView contents) => (
+        contents.Stacks.OrderBy(stack => stack.Definition.Value, StringComparer.Ordinal)
+            .Select(stack => new DaggerfallStackSave(stack.Definition.Value, stack.Quantity)).ToArray(),
+        contents.UniqueItems.OrderBy(item => item.Entity.Value)
+            .Select(item => new DaggerfallUniqueSave(item.Definition.Value, State.Actors.Entities.IdentityOf(item.Entity).Value)).ToArray());
 
     private static void ApplyInventory(DaggerfallInventorySave saved, MechanicsInventoryCoordinator inventory, MechanicsEquipmentCoordinator equipment)
     {
