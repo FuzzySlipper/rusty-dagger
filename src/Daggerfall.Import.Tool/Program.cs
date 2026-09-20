@@ -1456,6 +1456,10 @@ internal static class Program
         AdmittedArena2Sources sources = new(options.Arena2Directory);
         LoadRequiredDungeonSources(sources);
         LoadClassicMediaSources(sources);
+        // Discovery rides typed missing-source data, never diagnostic wording. Each retry loads at
+        // least one previously unrequested source; a repeated request means the requirement does
+        // not resolve, so the loop always terminates instead of spinning.
+        HashSet<string> resolvedOnDemand = new(StringComparer.Ordinal);
         while (true)
         {
             try
@@ -1482,22 +1486,27 @@ internal static class Program
                     sources.TextureLeaves()));
                 return Arena2MediaBundlePublication.Create(result, dungeonMedia, classicMedia, geometry).Plan;
             }
-            catch (InvalidOperationException exception) when (TryRequiredTexture(exception.Message, out string? textureName))
+            catch (MissingArena2SourceException missing)
             {
-                sources.LoadDungeon(textureName!);
+                LoadOnDemand(sources, resolvedOnDemand, missing.SourceName);
             }
-            catch (InvalidOperationException exception) when (TryRequiredDungeonMediaTexture(exception.Message, out string? textureName))
+            catch (MissingDungeonMediaTexturesException mismatch)
+                when (mismatch.UnneededTextureNames.Count == 0 && mismatch.MissingTextureNames.Count != 0)
             {
-                sources.LoadDungeon(textureName!);
-            }
-            catch (InvalidOperationException exception) when (TryMissingDungeonMediaTextures(exception.Message, out IReadOnlyList<string>? textureNames))
-            {
-                foreach (string textureName in textureNames!)
+                foreach (string textureName in mismatch.MissingTextureNames)
                 {
-                    sources.LoadDungeon(textureName);
+                    LoadOnDemand(sources, resolvedOnDemand, textureName);
                 }
             }
         }
+    }
+
+    /// <summary>Loads one on-demand source, refusing to retry a requirement that never resolves.</summary>
+    private static void LoadOnDemand(AdmittedArena2Sources sources, HashSet<string> resolvedOnDemand, string sourceName)
+    {
+        sources.LoadDungeon(sourceName);
+        if (!resolvedOnDemand.Add(sourceName))
+            throw new InvalidOperationException($"Dungeon source '{sourceName}' is still required after loading it on demand.");
     }
 
     private static void LoadRequiredDungeonSources(AdmittedArena2Sources sources)
@@ -1551,77 +1560,6 @@ internal static class Program
     private static bool IsTextureLeaf(string value) => value.Length == "TEXTURE.000".Length
         && value.StartsWith("TEXTURE.", StringComparison.Ordinal)
         && value[8..].All(char.IsAsciiDigit);
-
-    private static bool TryRequiredTexture(string message, out string? textureName)
-    {
-        const string prefix = "Dungeon normalization requires logical source '";
-        textureName = null;
-        if (!message.StartsWith(prefix, StringComparison.Ordinal) || !message.EndsWith("'.", StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        string candidate = message[prefix.Length..^2];
-        if (!IsTextureLeaf(candidate))
-        {
-            return false;
-        }
-
-        textureName = candidate;
-        return true;
-    }
-
-    private static bool TryRequiredDungeonMediaTexture(string message, out string? textureName)
-    {
-        const string prefix = "Arena2 dungeon media requires ";
-        textureName = null;
-        if (!message.StartsWith(prefix, StringComparison.Ordinal) || !message.EndsWith(".", StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        string candidate = message[prefix.Length..^1];
-        if (!IsTextureLeaf(candidate))
-        {
-            return false;
-        }
-
-        textureName = candidate;
-        return true;
-    }
-
-    private static bool TryMissingDungeonMediaTextures(string message, out IReadOnlyList<string>? textureNames)
-    {
-        const string prefix = "Arena2 dungeon media texture closure does not match normalized references. Missing: [";
-        const string separator = "]. Unneeded: [";
-        textureNames = null;
-        if (!message.StartsWith(prefix, StringComparison.Ordinal) || !message.EndsWith("].", StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        int separatorIndex = message.IndexOf(separator, prefix.Length, StringComparison.Ordinal);
-        if (separatorIndex < 0)
-        {
-            return false;
-        }
-
-        string unneeded = message[(separatorIndex + separator.Length)..^2];
-        if (unneeded.Length != 0)
-        {
-            return false;
-        }
-
-        string missing = message[prefix.Length..separatorIndex];
-        string[] names = missing.Length == 0 ? [] : missing.Split(", ", StringSplitOptions.None);
-        if (names.Length == 0 || names.Any(name => !IsTextureLeaf(name)))
-        {
-            return false;
-        }
-
-        textureNames = names.OrderBy(name => name, StringComparer.Ordinal).ToArray();
-        return true;
-    }
 
     /// <summary>
     /// Reads the tracked authored UI input through two explicit caller paths.

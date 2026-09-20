@@ -82,7 +82,7 @@ public sealed class Arena2DungeonMediaSourceSet
     {
         Arena2DungeonMediaSource source = textures.TryGetValue(archive, out Arena2DungeonMediaSource? value)
             ? value
-            : throw new InvalidOperationException($"Arena2 dungeon media requires TEXTURE.{archive:000}.");
+            : throw new MissingArena2SourceException($"TEXTURE.{archive:000}", $"Arena2 dungeon media requires TEXTURE.{archive:000}.");
         return TextureArchive.Parse(source.Bytes.Span, source.Label);
     }
 
@@ -931,9 +931,10 @@ public sealed record Arena2DungeonMediaPublication(
         IReadOnlySet<ushort> supplied = sources.TextureArchives;
         if (!supplied.SetEquals(requiredArchives))
         {
-            string missing = string.Join(", ", requiredArchives.Except(supplied).OrderBy(value => value).Select(value => $"TEXTURE.{value:000}"));
-            string unneeded = string.Join(", ", supplied.Except(requiredArchives).OrderBy(value => value).Select(value => $"TEXTURE.{value:000}"));
-            throw new InvalidOperationException($"Arena2 dungeon media texture closure does not match normalized references. Missing: [{missing}]. Unneeded: [{unneeded}].");
+            string[] missing = requiredArchives.Except(supplied).OrderBy(value => value).Select(value => $"TEXTURE.{value:000}").ToArray();
+            string[] unneeded = supplied.Except(requiredArchives).OrderBy(value => value).Select(value => $"TEXTURE.{value:000}").ToArray();
+            throw new MissingDungeonMediaTexturesException(missing, unneeded,
+                $"Arena2 dungeon media texture closure does not match normalized references. Missing: [{string.Join(", ", missing)}]. Unneeded: [{string.Join(", ", unneeded)}].");
         }
     }
 

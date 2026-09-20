@@ -64,6 +64,15 @@ public sealed class DungeonNormalizerTests
     }
 
     [Fact]
+    public void Missing_logical_source_reports_its_typed_name_for_loader_discovery()
+    {
+        // The retry coordinator discovers lazy sources from this data, never from the message.
+        DungeonLogicalSourceSet set = new(CreateSources());
+        MissingArena2SourceException missing = Assert.Throws<MissingArena2SourceException>(() => set.Require("TEXTURE.999"));
+        Assert.Equal("TEXTURE.999", missing.SourceName);
+    }
+
+    [Fact]
     public void Reports_a_missing_mesh_number_once_however_often_the_block_places_it()
     {
         // The same number placed twice is one fact about the archive rather than two: the pack names the
