@@ -32,3 +32,8 @@ proves it matters.
   primitive before its consumer. A primitive may precede its consumer; it may not
   be a stub, a hardcoded example, or a partial adapter.
 - Broader interactive or browser evaluation as a completion requirement.
+- A demand for defensive validation, verification, or audit machinery as the
+  meaning of "complete". Completeness here means the specified behavior through
+  the required shared operations — direct mutation through the owning service
+  satisfies it. Ceremony requests belong to the runtime-trust lane, which
+  rejects them by default.

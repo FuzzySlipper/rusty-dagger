@@ -13,18 +13,26 @@ source-backed findings; the root agent reconciles them and decides.
 
 ## Lane roster
 
-Two lanes run on **every** task:
+Three lanes run on **every** task (the third is a temporary counterbalance —
+see its lane file for the sunset rule):
 
 | Lane | Packet |
 | --- | --- |
 | Engine reuse — upstream reinvention | [lanes/engine-reuse.md](lanes/engine-reuse.md) |
-| Existing product reuse — repo-local reinvention | [lanes/existing-product-reuse.md](lanes/existing-product-reuse.md) |
+| Existing product reuse — repo-local reinvention, placement, and mechanism shape | [lanes/existing-product-reuse.md](lanes/existing-product-reuse.md) |
+| Runtime trust — validation ceremony on trusted paths | [lanes/runtime-trust.md](lanes/runtime-trust.md) |
 
-Both are always on for the same reason: agents skip capabilities that already
+The reuse lanes are always on because agents skip capabilities that already
 exist. New code gets written for something the Engine already guarantees, or for
-something rusty-dagger already owns, instead of extending it.
+something rusty-dagger already owns, instead of extending it. Runtime trust is
+always on for the opposite failure: agents add checking the runtime does not
+need. Import-side validation gravity (bounds, provenance, digests) leaks into
+trusted single-player runtime paths as propose/validate/mutate steps, repeated
+hash admission, revision guards, snapshots, and rollback. The recent refactors
+removed that machinery; this lane holds the removal until runtime gravity is
+established (see `docs/gameplay-design.md` and rusty-engine Board post 147).
 
-Optional lanes. Pick to a total of two to four reviewers, and pick lanes whose
+Optional lanes. Pick to a total of three to four reviewers, and pick lanes whose
 questions can disagree with each other:
 
 | Lane | Use when |
@@ -36,7 +44,7 @@ questions can disagree with each other:
 | [Test claims](lanes/test-claims.md) | the change adds or edits tests, or claims verification |
 
 Do not open a lane that repeats another lane's question in different words. Do
-not run the full roster to be safe: a trivial task is two reviewers, and a task
+not run the full roster to be safe: a trivial task is three reviewers, and a task
 that changes a boundary, a save contract, or an ownership seam is four.
 
 ## Choosing the reviewer tool
@@ -44,7 +52,7 @@ that changes a boundary, a save contract, or an ownership seam is four.
 | Tool | Context | Use for |
 | --- | --- | --- |
 | `subagent_review` | fresh; does not see the conversation | adversarial and requirement lanes, where anchoring on the root agent's reasoning would weaken the check |
-| `subagent_audit` | inherits the root agent's completed turns | lanes that need the change's rationale — reuse, ownership, interoperability |
+| `subagent_audit` | inherits the root agent's completed turns | lanes that need the change's rationale — reuse, ownership, interoperability, runtime trust |
 
 Open every reviewer for a round in one message, one reviewer per lane, and keep
 working while they run. Their reports arrive as settlement notices. Do not wait

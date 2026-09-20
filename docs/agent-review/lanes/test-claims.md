@@ -34,3 +34,7 @@ implementation that the suite would not notice.
 - A request for a different test framework, layout, or naming style.
 - Absent broad integration or browser suites. Focused compilation and semantic
   checks appropriate to the change are the standard here.
+- A demand for new tests that pin validation ceremony nobody wants — hash
+  checks on admitted content, proposal/acceptance audit trails, revision
+  guards, or rollback around ordinary gameplay. That is a runtime-trust
+  question, and the answer is deletion, not coverage.

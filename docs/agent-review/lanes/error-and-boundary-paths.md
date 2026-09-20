@@ -6,6 +6,14 @@
 
 Does the change handle the boundary and failure paths its inputs actually reach?
 
+Scope this lane to boundaries the change actually touches. Trusted
+first-party runtime paths — admitted content, attached live state, Engine
+services, current-schema saves — are not hostile inputs. Do not demand
+hashing, revalidation, proposal/acceptance, revision guards, snapshots, or
+rollback for ordinary gameplay; that question belongs to the runtime-trust
+lane, which rejects it by default. The import/offline boundary is where
+strict checking belongs.
+
 ## Basis required for an actionable finding
 
 Name all three:
@@ -35,3 +43,7 @@ this lane can carry, and `bash` is available for it.
 - A defensive check for a state the type system or the caller already excludes.
 - A request for broad input validation unrelated to what this change reads.
 - An upstream Engine failure the product correctly surfaces and stops on.
+- A demand for revalidation, hashing, compatibility fingerprints, schema
+  versions, proposal/acceptance, or snapshot/rollback on a trusted runtime
+  path. Report that as a runtime-trust concern only if the change ADDS such
+  machinery; never request it from this lane.
