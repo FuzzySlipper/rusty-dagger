@@ -2224,7 +2224,8 @@ public sealed class NormalizedRuntimeSeamTests
         actors.Player.Actor.Add(equipmentComponent);
         MechanicsEquipmentCoordinator equipment = new(inventory, equipmentComponent, actors.Entities, items,
             definitions.EquipmentSlots.Values.ToDictionary(slot => new WorldRpg.Kit.Inventory.EquipmentSlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot));
-        DaggerfallInventoryPresentation inventoryUi = new(new MechanicsInventoryCoordinator(inventory, actors.Entities, items), equipment, definitions,
+        DaggerfallEquipmentMoves inventoryMoves = new(new MechanicsInventoryCoordinator(inventory, actors.Entities, items), equipment, definitions);
+        DaggerfallInventoryPresentation inventoryUi = new(inventoryMoves, definitions,
             new Dictionary<string, string>());
         DaggerfallLootPresentation panel = new(loot, inventoryUi);
         PlayerControlState player = new(new WorldPoint(0, 0, 0), 0, 0);

@@ -162,6 +162,7 @@ Start new work from the current owners, not a stale filename in a task:
 | Target selection | Kit `TargetingService`, `DaggerTargetingPolicy` |
 | Attack lifecycle and rules | Kit `AttackExecution` / `CombatResolution`, `DaggerCombatRules` |
 | Pursuit / corpse loot | Kit `PursuitCoordinator` / `CorpseLootCoordinator`, Dagger policy modules |
+| Equipment moves | `DaggerfallEquipmentMoves` + `DaggerfallEquipmentPolicy` over Kit inventory/equipment coordinators |
 | Saves | `DaggerSessionPersistence`, `DaggerfallSavePayload`, Host `WorldRpgSaveStore` |
 | Content admission | `GameCompositionResolver`, `DaggerfallRuleset` |
 | Host / UI actions | Host lifecycle and selection; ruleset `IEntryScreenSession` interpretation |
