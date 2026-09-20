@@ -47,6 +47,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
     private readonly DaggerfallRewardReactions _rewards;
     private readonly DaggerfallOutcomePresentation _outcomes;
     private readonly DaggerfallHudProjection _hud;
+    private readonly DaggerfallEquipmentMoves _equipmentMoves;
     private readonly DaggerfallInventoryPresentation _inventoryUi;
     private readonly DaggerfallLootPresentation _lootUi;
     private readonly DaggerfallCharacterPresentation _characterUi;
@@ -174,7 +175,8 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
                 State.Progression,
                 tuning.LootInteraction);
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored, () => State.Kit.Targeting.LastEvidence);
-            _inventoryUi = new DaggerfallInventoryPresentation(inventory, equipmentCoordinator, definitions, inputs.ClassicPresentation.InventoryIcons);
+            _equipmentMoves = new DaggerfallEquipmentMoves(inventory, equipmentCoordinator, definitions);
+            _inventoryUi = new DaggerfallInventoryPresentation(_equipmentMoves, definitions, inputs.ClassicPresentation.InventoryIcons);
             _lootUi = new DaggerfallLootPresentation(_corpseLoot, _inventoryUi);
             _characterUi = new DaggerfallCharacterPresentation(definitions, playerDefinition, equipmentCoordinator);
             // The DOM's art comes from admitted content by media identity, so a session reads the
@@ -565,6 +567,9 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
     }
     internal IReadOnlyDictionary<long, EnemyBehaviorEvidence> LastEnemyBehavior => _enemyBehavior.LastEvidence;
     internal LootPresentation? OpenLoot => _lootUi.Read();
+
+    /// <summary>Typed equipment moves over live state: the same operations the UI adapter uses.</summary>
+    internal DaggerfallEquipmentMoves EquipmentMoves => _equipmentMoves;
     internal CorpseLootEvidence? LastCorpseLoot => _corpseLoot.LastEvidence;
     internal CorpseLootCommitEvidence? LastCorpseLootCommit => _corpseLoot.LastCommit;
     internal IReadOnlyDictionary<long, CorpseContainer> Corpses => _corpseLoot.Corpses;

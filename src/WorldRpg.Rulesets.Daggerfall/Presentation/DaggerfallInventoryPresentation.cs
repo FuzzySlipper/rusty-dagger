@@ -1,9 +1,7 @@
 using System.Globalization;
-using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
-using SlotId = WorldRpg.Kit.Inventory.EquipmentSlotId;
-using UniqueItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
@@ -12,30 +10,64 @@ internal sealed record InventoryItemPresentation(string Key, string Definition, 
 internal sealed record EquipmentSlotPresentation(string Id, string Label, string? ItemKey);
 internal sealed record InventoryPresentation(string Revision, InventoryItemPresentation[] Items, EquipmentSlotPresentation[] Slots, string Message);
 
-/// <summary>Daggerfall presentation and drop policy; quantities and equipment remain Engine facts.</summary>
+/// <summary>Daggerfall inventory projection and UI-action translation; quantities and equipment remain Engine facts.</summary>
 internal sealed class DaggerfallInventoryPresentation(
-    MechanicsInventoryCoordinator inventory,
-    MechanicsEquipmentCoordinator equipment,
+    DaggerfallEquipmentMoves moves,
     DaggerfallDefinitions definitions,
     IReadOnlyDictionary<string, string> icons)
 {
-    internal const int GridCapacity = 50;
-    private readonly InventoryGridLayout _layout = new(GridCapacity);
-    private string _message = "Drag items between the grid and compatible equipment slots.";
+    internal string Message { get; private set; } = "Drag items between the grid and compatible equipment slots.";
 
     internal InventoryPresentation Read()
     {
-        InventoryView current = inventory.Read();
-        EquipmentRead equipped = equipment.Read();
+        Rusty.Engine.Mechanics.InventoryView current = moves.ReadInventory();
+        EquipmentRead equipped = moves.ReadEquipment();
         var items = current.UniqueItems.Select(item => (Key: UniqueKey(item.Entity.Value), Definition: item.Definition.Value, Quantity: 1UL,
                 Slots: equipped.Assignments.Where(assignment => assignment.Item.EntityId == item.Entity.Value).Select(assignment => assignment.Slot.Value).ToArray()))
             .Concat(current.Stacks.Select(stack => (Key: StackKey(stack.Definition.Value), Definition: stack.Definition.Value, Quantity: stack.Quantity, Slots: Array.Empty<string>())))
             .OrderBy(item => item.Key, StringComparer.Ordinal).ToArray();
-        _layout.Reconcile(items.Where(item => item.Slots.Length == 0).Select(item => item.Key));
-        return new InventoryPresentation($"{current.StoreRevision}:{_layout.Revision}", items.Select(item =>
-            DescribeItem(item.Key, item.Definition, item.Quantity, item.Slots.Length == 0 ? _layout.Position(item.Key) : null, item.Slots)).ToArray(),
+        moves.ReconcileLayout();
+        return new InventoryPresentation($"{current.StoreRevision}:{moves.LayoutRevision}", items.Select(item =>
+            DescribeItem(item.Key, item.Definition, item.Quantity, item.Slots.Length == 0 ? moves.GridPosition(item.Key) : null, item.Slots)).ToArray(),
             definitions.EquipmentSlots.Values.Select(slot => new EquipmentSlotPresentation(slot.Id.Value, Label(slot.Id.Value),
-                equipped.TryGet(new SlotId(slot.Id.Value), out UniqueItem item) ? UniqueKey(item.EntityId) : null)).ToArray(), _message);
+                equipped.TryGet(new EquipmentSlotId(slot.Id.Value), out UniqueInventoryItem item) ? UniqueKey(item.EntityId) : null)).ToArray(), Message);
+    }
+
+    /// <summary>
+    /// Translates one semantic UI action into a typed equipment move and renders the outcome. The
+    /// gameplay decision lives in <see cref="DaggerfallEquipmentMoves"/>; this only speaks UI keys.
+    /// Staleness is handled per item against the fresh read and the coordinators' containment checks,
+    /// not by rejecting the whole action on a revision mismatch.
+    /// </summary>
+    internal void Move(DaggerfallPlayerUiAction action)
+    {
+        InventoryPresentation before = Read();
+        InventoryItemPresentation? row = action.Item is null ? null : before.Items.SingleOrDefault(item => item.Key == action.Item);
+        if (row is null) { Message = "That item is no longer in your inventory."; return; }
+        EquipmentMoveResult result;
+        if (action.TargetGrid is int target)
+        {
+            result = TryParseUnique(row, out UniqueInventoryItem unique)
+                ? moves.MoveToGrid(unique, target)
+                : moves.MoveStackToGrid(new InventoryItemId(row.Definition), target);
+        }
+        else if (action.TargetEquipment is string slot)
+        {
+            // Stacks cannot take equipment slots; the rejection below keeps the previous wording.
+            result = TryParseUnique(row, out UniqueInventoryItem unique)
+                ? moves.MoveToSlot(unique, new EquipmentSlotId(slot))
+                : new EquipmentMoveResult(EquipmentMoveOutcome.Incompatible, "The item does not fit this equipment slot.");
+        }
+        else { Message = "Choose an inventory or equipment destination."; return; }
+        Message = result.Outcome switch
+        {
+            EquipmentMoveOutcome.Applied => "Inventory updated.",
+            EquipmentMoveOutcome.UnknownItem => "That item is no longer in your inventory.",
+            EquipmentMoveOutcome.InvalidDestination => "Choose a valid inventory slot.",
+            EquipmentMoveOutcome.Incompatible or EquipmentMoveOutcome.ConflictsNeedClearing or EquipmentMoveOutcome.Rejected
+                => $"Cannot place that item there. {result.Detail}",
+            _ => $"Cannot place that item there. {result.Detail}",
+        };
     }
 
     internal InventoryItemPresentation DescribeItem(string key, string itemId, ulong quantity, int? gridSlot = null, string[]? equippedSlots = null)
@@ -43,82 +75,21 @@ internal sealed class DaggerfallInventoryPresentation(
         DaggerfallItemDefinition definition = definitions.Items[new DaggerfallItemId(itemId)];
         return new InventoryItemPresentation(key, itemId, Label(itemId), quantity.ToString(CultureInfo.InvariantCulture),
             definition.Weight, definition.Value, Details(definition), icons.GetValueOrDefault(itemId), gridSlot, equippedSlots ?? [],
-            definitions.EquipmentSlots.Keys.Select(slot => slot.Value).Where(slot => Compatible(definition, slot)).ToArray());
+            definitions.EquipmentSlots.Keys.Select(slot => slot.Value).Where(slot => DaggerfallEquipmentPolicy.IsCompatible(definitions, definition, slot)).ToArray());
     }
 
-    internal void Move(DaggerfallPlayerUiAction action)
+    private static bool TryParseUnique(InventoryItemPresentation row, out UniqueInventoryItem item)
     {
-        InventoryPresentation before = Read();
-        if (action.Revision != before.Revision) { _message = "Inventory changed. Choose the item again."; return; }
-        InventoryItemPresentation? item = before.Items.SingleOrDefault(item => item.Key == action.Item);
-        if (item is null) { _message = "That item is no longer in your inventory."; return; }
-        try
-        {
-            if (action.TargetGrid is int target)
-            {
-                if (target < 0 || target >= GridCapacity) { _message = "Choose a valid inventory slot."; return; }
-                if (item.EquippedSlots.Length == 0)
-                {
-                    _layout.Place(item.Key, target);
-                }
-                else
-                {
-                    string? occupant = _layout.At(target);
-                    if (occupant is not null)
-                    {
-                        InventoryItemPresentation incoming = before.Items.Single(value => value.Key == occupant);
-                        Assign(incoming, item.EquippedSlots[0], before);
-                    }
-                    else equipment.Unequip(Unique(item));
-                    Read();
-                    _layout.Move(item.Key, target);
-                }
-            }
-            else if (action.TargetEquipment is string slot)
-            {
-                int? previousGrid = item.GridSlot;
-                string? replaced = Assign(item, slot, before);
-                Read();
-                if (replaced is not null && previousGrid is int targetGrid && _layout.Position(replaced) is not null)
-                    _layout.Move(replaced, targetGrid);
-            }
-            else { _message = "Choose an inventory or equipment destination."; return; }
-            _message = "Inventory updated.";
-        }
-        catch (Exception error) when (error is MechanicsException or ArgumentException or InvalidOperationException)
-        {
-            // Engine candidates reject atomically; layout changes only follow accepted mutations.
-            _message = "Cannot place that item there. " + error.Message;
-        }
+        item = default;
+        if (!row.Key.StartsWith("unique:", StringComparison.Ordinal)
+            || !ulong.TryParse(row.Key.AsSpan("unique:".Length), System.Globalization.NumberStyles.Integer, CultureInfo.InvariantCulture, out ulong entity))
+            return false;
+        item = new UniqueInventoryItem(entity, new InventoryItemId(row.Definition));
+        return true;
     }
 
-    private string? Assign(InventoryItemPresentation item, string slot, InventoryPresentation before)
-    {
-        DaggerfallItemDefinition definition = definitions.Items[new DaggerfallItemId(item.Definition)];
-        if (!Compatible(definition, slot)) throw new ArgumentException("The item does not fit this equipment slot.");
-        string[] slots = definition.Equipment!.RequiredSlots == 2 ? ["right-hand", "left-hand"] : [slot];
-        InventoryItemPresentation[] outgoing = before.Items.Where(value => value.Key != item.Key && value.EquippedSlots.Length > 0
-            && (value.EquippedSlots.Intersect(slots).Any()
-                || definition.Equipment.ExclusiveGroup is string group && definitions.Items[new DaggerfallItemId(value.Definition)].Equipment?.ExclusiveGroup == group)).ToArray();
-        if (outgoing.Length > 1) throw new ArgumentException("Unequip the conflicting items first.");
-        SlotId[] target = slots.Select(value => new SlotId(value)).ToArray();
-        if (item.EquippedSlots.Length > 0)
-            equipment.Reassign(Unique(item), target, outgoing.Select(Unique).ToArray());
-        else if (outgoing.Length == 1) equipment.Swap(Unique(outgoing[0]), Unique(item), target);
-        else equipment.Equip(Unique(item), target);
-        return outgoing.FirstOrDefault()?.Key;
-    }
-
-    private bool Compatible(DaggerfallItemDefinition item, string slot)
-    {
-        if (item.IsFungible || item.Equipment is null || !definitions.EquipmentSlots.TryGetValue(new DaggerfallEquipmentSlotId(slot), out var target)) return false;
-        // Empty classifications are unimplemented Daggerfall accessory slots, not universal item sockets.
-        if (!target.AllowedClassifications.Intersect(item.Equipment.Classifications).Any()) return false;
-        return item.Equipment.RequiredSlots == 1 || item.Equipment.RequiredSlots == 2 && slot == "right-hand";
-    }
-    private static UniqueItem Unique(InventoryItemPresentation item) => new(ulong.Parse(item.Key.AsSpan("unique:".Length), CultureInfo.InvariantCulture), new InventoryItemId(item.Definition));
-    internal static string UniqueKey(ulong entity) => $"unique:{entity.ToString(CultureInfo.InvariantCulture)}";
-    internal static string StackKey(string definition) => $"stack:{definition}";
+    internal static string UniqueKey(ulong entity) => DaggerfallEquipmentMoves.LayoutKey(entity);
+    internal static string StackKey(string definition) => DaggerfallEquipmentMoves.LayoutKey(new InventoryItemId(definition));
     internal static string Label(string id) => CultureInfo.InvariantCulture.TextInfo.ToTitleCase(id.Replace('-', ' '));
     private static string Details(DaggerfallItemDefinition item) => item.Weapon is { } weapon
         ? $"Damage {weapon.MinimumDamage}–{weapon.MaximumDamage}; {Label(weapon.Material)}; {Label(weapon.Skill)}"
