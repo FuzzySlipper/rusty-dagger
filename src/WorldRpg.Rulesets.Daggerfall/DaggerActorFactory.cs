@@ -155,7 +155,20 @@ internal static class DaggerActorFactory
         return new DaggerfallVitalValues(health, 0, 0);
     }
 
-    private static void ValidateInitialEntityIds(PrivateersHoldInputs inputs, IReadOnlyList<DaggerfallLoadoutEntry> loadout)
+    private static void ValidateInitialEntityIds(PrivateersHoldInputs inputs, IReadOnlyList<DaggerfallLoadoutEntry> loadout) =>
+        _ = AdmittedAuthoredEntityIds(inputs, loadout);
+
+    /// <summary>
+    /// The authored entity ids admitted for one construction: the player, every placement actor,
+    /// and every loadout unique item. This is one global numeric namespace because every entry
+    /// here materializes as a runtime <see cref="EntityId"/> — and the unique-item allocator draws
+    /// future runtime ids from the same space, so its reservations are this same set. Typed
+    /// durable kinds may share numbers elsewhere (a corpse container shares its actor's number
+    /// under a different kind), but anything taking a runtime entity joins this check, which is
+    /// why cross-kind sharing is rejected here rather than allowed. Actor construction and the
+    /// allocator both take this set; neither rebuilds it.
+    /// </summary>
+    internal static HashSet<ulong> AdmittedAuthoredEntityIds(PrivateersHoldInputs inputs, IReadOnlyList<DaggerfallLoadoutEntry> loadout)
     {
         HashSet<ulong> ids = [PlayerMechanicsEntityId];
         foreach (AuthoredActor actor in inputs.Project.Actors.Values)
@@ -166,6 +179,7 @@ internal static class DaggerActorFactory
         foreach (DaggerfallLoadoutEntry item in loadout)
             if (item.UniqueEntityId is ulong entityId && !ids.Add(entityId))
                 throw new InvalidOperationException($"Initial Mechanics entity id '{entityId}' collides with another player, placement, or item entity.");
+        return ids;
     }
 
 }

@@ -109,17 +109,6 @@ internal sealed record DaggerfallSavePayload(
 
     internal DurableIdentityState RestoredIdentities() => Identities.Validate().RequireKinds(PersistedKinds);
 
-    internal static HashSet<ulong> ContentEntityIds(PrivateersHoldInputs inputs, IReadOnlyList<DaggerfallLoadoutEntry> loadout)
-    {
-        ArgumentNullException.ThrowIfNull(inputs);
-        ArgumentNullException.ThrowIfNull(loadout);
-        HashSet<ulong> ids = [(ulong)DaggerfallActorIdentity.PlayerEntityId];
-        foreach (AuthoredActor actor in inputs.Project.Actors.Values) ids.Add(checked((ulong)actor.EntityId));
-        foreach (DaggerfallLoadoutEntry entry in loadout)
-            if (entry.UniqueEntityId is ulong entityId) ids.Add(entityId);
-        return ids;
-    }
-
     internal DaggerfallSavePayload Validate()
     {
         ArgumentNullException.ThrowIfNull(Player);

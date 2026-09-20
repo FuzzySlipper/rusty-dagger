@@ -170,7 +170,7 @@ public sealed class MechanicsInventoryContainerCoordinator
                 ItemDefinition definition = RequireDefinition(seed.Item);
                 if (seed.UniqueItem is DurableIdentityReference identity)
                 {
-                    EntityId item = CreateItemEntity(identity, definition);
+                    EntityId item = _entities.CreateItemEntity(identity, new EntityTypeId(definition.Id.Value));
                     created.Add(identity);
                     candidate.MaterializeUnique(new ItemState(item, definition), owner);
                 }
@@ -339,14 +339,6 @@ public sealed class MechanicsInventoryContainerCoordinator
         if (identity.Kind != DurableIdentityKind.Item)
             throw new ArgumentException("An inventory item requires a durable item identity.", nameof(item));
         return identity;
-    }
-
-    private EntityId CreateItemEntity(DurableIdentityReference identity, ItemDefinition definition)
-    {
-        identity.Validate();
-        if (identity.Kind != DurableIdentityKind.Item)
-            throw new ArgumentException("An inventory item requires a durable item identity.", nameof(identity));
-        return _entities.Create(identity, new EntityTypeId(definition.Id.Value));
     }
 
     private void RequireRegistered(EntityId owner, string parameterName)
