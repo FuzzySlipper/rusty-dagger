@@ -44,3 +44,18 @@ export function heldRevision(): string {
 export function image(id: string | null): string | null {
   return id === null ? null : images.get(id) ?? null;
 }
+
+let lastReportedMissing = '\0unset';
+
+/**
+ * Reports missing frame art only when the missing set changes and is non-empty. Steady-state
+ * renders stay silent (a hidden panel re-renders every snapshot; mounted panels repaint on
+ * every projection), while newly missing art still warns once. Callers keep their
+ * data-art-missing attributes current on every render regardless.
+ */
+export function reportMissingArt(context: string, missing: readonly string[]): void {
+  const key = [...missing].sort().join('\0');
+  if (key === lastReportedMissing) return;
+  lastReportedMissing = key;
+  if (missing.length !== 0) console.warn(`${context} frame art is not published by this session: ${[...missing].sort().join(', ')}`);
+}

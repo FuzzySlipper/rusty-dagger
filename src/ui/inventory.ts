@@ -1,4 +1,4 @@
-import { image } from './art.js';
+import { image, reportMissingArt } from './art.js';
 
 export interface InventoryProjection {
   readonly revision: string;
@@ -445,11 +445,13 @@ function applyAuthoredArt(element: HTMLElement): void {
   element.style.setProperty('--inventory-slot-art', art('inventory.skin.grid-slot-slate.v1'));
   if (missing.length === 0) {
     element.removeAttribute('data-art-missing');
-    return;
+  } else {
+    element.setAttribute('data-art-missing', missing.join(' '));
   }
-
-  element.setAttribute('data-art-missing', missing.join(' '));
-  console.warn(`inventory frame art is not published by this session: ${missing.join(', ')}`);
+  // The attribute above stays current on every paint; the console report fires only when the
+  // missing set changes, so mount-before-art and steady-state repaints stay silent after the
+  // first report while newly missing art still warns.
+  reportMissingArt('inventory', missing);
 }
 
 function emptyMark(): HTMLElement {
