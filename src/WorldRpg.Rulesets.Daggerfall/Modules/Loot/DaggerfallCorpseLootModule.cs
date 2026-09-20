@@ -189,9 +189,9 @@ internal sealed class DaggerfallCorpseLootModule
     }
 
     /// <summary>
-    /// Attempts the single Engine publication after the admitted update has
-    /// already committed. A Mechanics admission rejection leaves this corpse
-    /// untouched for a later explicit retry; programming errors still escape.
+    /// Applies one validated take request during the admitted update: the Engine transfer commits
+    /// first, and only then do its completed-change facts append. A Mechanics admission rejection
+    /// leaves this corpse untouched for a later explicit retry; programming errors still escape.
     /// </summary>
     internal CorpseLootCommitResult TryCommitLoot(PendingCorpseLoot pending, FactBuffer<IProductFact> facts)
     {
@@ -216,8 +216,8 @@ internal sealed class DaggerfallCorpseLootModule
         }
         try
         {
-            // The transfer is the sole Engine publication. All code after it
-            // is deterministic local bookkeeping and preconstructed facts.
+            // The transfer commits first. All code after it is deterministic local bookkeeping and
+            // completed-change facts, which is why a rejection appends nothing.
             if (pending.Selection is { } selection)
                 _corpseLoot.Transfer(current, _playerOwner, selection, pending.ExpectedWorldRevision!.Value);
             else _corpseLoot.TransferAll(current, _playerOwner, pending.ExpectedWorldRevision);
@@ -288,7 +288,7 @@ internal sealed class DaggerfallCorpseLootModule
 /// <summary>Ruleset-owned durable mapping from a defeated actor to its Engine inventory owner.</summary>
 internal sealed record CorpseContainer(long ActorId, EntityId Owner, ulong OriginatingSequence, IReadOnlyList<InventoryContainerSeed> Seeds, bool IsRegistered, bool IsSeeded, bool IsInteractable);
 
-/// <summary>Prevalidated product policy waiting for the outer Engine publication boundary.</summary>
+/// <summary>One validated take request: the selection and revision a take applies, if it commits.</summary>
 internal sealed record PendingCorpseLoot(long ActorId, CorpseLootComponent Corpse, IReadOnlyList<LootAwardedFact> Facts, bool IsEmpty,
     InventoryContainerSelection? Selection = null, ulong? ExpectedWorldRevision = null);
 

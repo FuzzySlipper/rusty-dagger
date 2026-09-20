@@ -3871,6 +3871,87 @@ public sealed class NormalizedRuntimeSeamTests
         }
     }
 
+    [Fact]
+    public void Loot_takes_apply_deliver_and_publish_inside_the_modal_update()
+    {
+        // The deferred defect this pins: a take prepared its transfer and facts, but the facts
+        // waited for a playing step while the published presentation still showed the item.
+        // A take must now move the item, deliver its facts, and republish within the same modal
+        // update, with the panel still open and the world still held.
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
+        CorpseContainer corpse = session.Corpses[2000];
+        Assert.True(corpse.IsRegistered);
+        session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5)]);
+        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
+
+        static ulong PlayerGold(DaggerfallSession session) => session.State.Inventory.Read().Stacks
+            .Where(stack => stack.Definition.Value == "gold-piece").Select(stack => stack.Quantity).Aggregate(0UL, (a, b) => a + b);
+        static ulong CorpseGold(LootPresentation loot) => loot.Items.Where(item => item.Definition == "gold-piece")
+            .Select(item => ulong.Parse(item.Quantity, CultureInfo.InvariantCulture)).Aggregate(0UL, (a, b) => a + b);
+        void Ui(string json, ulong step)
+        {
+            ProductInputEvent action = Input(InputEventKind.DirectDigital) with
+            {
+                ValueKind = InputValueKind.ProductPayload,
+                PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+                PayloadData = Encoding.UTF8.GetBytes(json),
+            };
+            session.Update(new ProductUpdate(OuterUpdate(step), [action]));
+        }
+
+        Ui("{\"action\":\"loot\"}", 2);
+        Assert.Equal(ProductMode.Modal, session.PendingModeRequest);
+        session.ApplyProductMode(ProductMode.Modal);
+        LootPresentation opened = Assert.IsType<LootPresentation>(session.OpenLoot);
+        ulong playerBefore = PlayerGold(session);
+        ulong corpseBefore = CorpseGold(opened);
+        Assert.True(corpseBefore > 0, "the corpse should hold loot to take");
+        int stepsBefore = spatial.StepCalls;
+
+        // One take moves one unit, delivers its facts, and republishes: the panel stays open,
+        // the world takes no step, and the outcome line carries the delivered fact.
+        string take = JsonSerializer.Serialize(new { action = "loot-take", container = opened.Container, revision = opened.Revision, item = "stack:gold-piece" });
+        Ui(take, 3);
+        Assert.Equal(playerBefore + 1, PlayerGold(session));
+        LootPresentation afterTake = Assert.IsType<LootPresentation>(session.OpenLoot);
+        Assert.Equal(opened.Container, afterTake.Container);
+        Assert.Equal(corpseBefore - 1, CorpseGold(afterTake));
+        Assert.Equal(stepsBefore, spatial.StepCalls);
+        Assert.Contains("looted", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
+
+        // Replaying the same take is refused as stale: no duplicate transfer, no world step.
+        Ui(take, 4);
+        Assert.Equal(playerBefore + 1, PlayerGold(session));
+        Assert.Equal(corpseBefore - 1, CorpseGold(Assert.IsType<LootPresentation>(session.OpenLoot)));
+        Assert.Equal(stepsBefore, spatial.StepCalls);
+        Assert.Contains("Loot changed", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
+
+        // Draining the container through the panel ends in the empty state, still modal.
+        for (ulong step = 5; step < 30; step++)
+        {
+            LootPresentation current = Assert.IsType<LootPresentation>(session.OpenLoot);
+            if (current.Empty) break;
+            InventoryItemPresentation first = current.Items[0];
+            Ui(JsonSerializer.Serialize(new { action = "loot-take", container = current.Container, revision = current.Revision, item = first.Key }), step);
+            if (step == 29) Assert.Fail("draining the corpse did not reach the empty state");
+        }
+        LootPresentation drained = Assert.IsType<LootPresentation>(session.OpenLoot);
+        Assert.True(drained.Empty);
+        Assert.Equal(ProductMode.Modal, session.Mode);
+        Assert.Equal(stepsBefore, spatial.StepCalls);
+    }
+
     private static (DaggerfallSession Session, AppearanceFake Appearance, PerceptionFake Perception) VisibleEnemySession(List<string> releases, double distance = 1d)
     {
         string root = RepositoryRoot();

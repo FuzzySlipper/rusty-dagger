@@ -42,7 +42,6 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
     private readonly DaggerfallUniqueItemAllocator _uniqueItems;
     private readonly DaggerSessionPersistence _persistence;
     private readonly HashSet<ulong> _authoredEntityIds;
-    private PendingCorpseLoot? _pendingLoot;
     private readonly FactBuffer<IProductFact> _facts = new();
     private readonly DaggerfallRewardReactions _rewards;
     private readonly DaggerfallOutcomePresentation _outcomes;
@@ -214,7 +213,6 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
     public RulesetSavePayload CaptureSave()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        if (_pendingLoot is not null) throw new InvalidOperationException("Save after the admitted update completes its loot transfer.");
         return _persistence.Capture(_latestUpdateGeneration, _latestSimulationStep);
     }
 
@@ -223,7 +221,6 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
     public ProductUpdateResult Update(ProductUpdate update)
     {
         _appearance.BeginAdmittedUpdate();
-        PendingCorpseLoot? committedBoundaryLoot;
         try
         {
         Update(update.Facts, update.Input);
@@ -240,27 +237,18 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
             PublishPresentation();
         }
         _appearance.CompleteAdmittedUpdate();
-        committedBoundaryLoot = _pendingLoot;
-        _pendingLoot = null;
         }
         catch (Exception failure)
         {
             // A thrown product callback is terminal for this runtime incarnation:
             // Engine discards staged output and requires a fresh process rather
             // than a same-instance retry. There is no fact/stamina replay here,
-            // only disposal of partial loot intent and native appearance cleanup.
-            _pendingLoot = null;
+            // only native appearance cleanup.
             try { _appearance.Dispose(); }
             catch (Exception cleanupFailure) { throw new AggregateException(failure, cleanupFailure); }
             throw;
         }
 
-        if (committedBoundaryLoot is { } pending)
-        {
-            CorpseLootCommitResult result = _corpseLoot.TryCommitLoot(pending, _facts);
-            _lootUi.Complete(result);
-            Presentation.SetOutcome(_lootUi.Message);
-        }
         return ProductUpdateResult.None;
     }
 
@@ -316,7 +304,15 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
                 case "loot-take":
                     if (playing || modal)
                     {
-                        _pendingLoot ??= _lootUi.PrepareTake(action!, State.PlayerControl, _input.ResolveCurrentLook(State.PlayerControl));
+                        // A valid take applies at once: the transfer commits, its completed-change
+                        // facts deliver at the boundary below even while the modal holds the world,
+                        // and the published presentation already reflects the result.
+                        if (_lootUi.PrepareTake(action!, State.PlayerControl, _input.ResolveCurrentLook(State.PlayerControl)) is { } take)
+                        {
+                            CorpseLootCommitResult result = _corpseLoot.TryCommitLoot(take, _facts);
+                            _lootUi.Complete(result);
+                            Presentation.SetOutcome(_lootUi.Message);
+                        }
                     }
                     break;
                 default: Presentation.SetOutcome("Unrecognized player UI action."); break;
@@ -326,6 +322,9 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
         if (!playing)
         {
             Presentation.SetOutcome(ModalMessage());
+            // Reactions to modal-own actions (a loot take above) deliver here rather than waiting
+            // for a playing step: the batch is stable and reentrant appends wait for the next one.
+            DeliverFacts();
             PublishPresentation();
             return;
         }
@@ -441,7 +440,10 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
         if (update.IsRequested(DaggerfallInput.Attack) && _appearance.CanStartPlayerAttack) State.Kit.Attacks.TryPlayerMelee(State.PlayerControl, currentLook, generation, simulationStep, update.DeltaSeconds, _facts);
         if (update.IsRequested(DaggerfallInput.Interact))
         {
-            _pendingLoot ??= _lootUi.Open(State.PlayerControl, currentLook);
+            // An empty search commits at once; a corpse with contents stays open for explicit takes.
+            // The completed-change facts deliver with the rest of this step below.
+            if (_lootUi.Open(State.PlayerControl, currentLook) is { IsEmpty: true } empty)
+                _corpseLoot.TryCommitLoot(empty, _facts);
             Presentation.SetOutcome(_lootUi.Message);
         }
         // A panel button asks the DOM for a panel during ordinary play, which is where the keyboard's
