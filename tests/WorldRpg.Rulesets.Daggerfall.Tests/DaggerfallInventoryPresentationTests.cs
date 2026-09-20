@@ -4,6 +4,7 @@ using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
 using SlotId = WorldRpg.Kit.Inventory.EquipmentSlotId;
@@ -123,6 +124,56 @@ public sealed class DaggerfallInventoryPresentationTests
     }
 
     [Fact]
+    public void Exclusive_group_membership_evicts_across_slots_through_the_adapter()
+    {
+        using Fixture f = new();
+        var before = f.Ui.Read();
+        Assert.Equal(f.Key(1001), before.Slots.Single(slot => slot.Id == "right-hand").ItemKey);
+        // Every hand item shares the "hands" group, so taking the left hand with the dagger evicts
+        // the sword from the right: the conflict is by group, not by slot overlap. Dropping the
+        // group clause would leave both equipped and this test fails.
+        f.Ui.Move(new("inventory-move", before.Revision, f.Key(1002), TargetEquipment: "left-hand"));
+        var moved = f.Ui.Read();
+        Assert.Equal(f.Key(1002), moved.Slots.Single(slot => slot.Id == "left-hand").ItemKey);
+        Assert.Null(moved.Slots.Single(slot => slot.Id == "right-hand").ItemKey);
+        Assert.NotNull(Item(moved, f.Key(1001)).GridSlot);
+    }
+
+    [Fact]
+    public void Policy_reports_slot_and_group_conflicts_deduped_per_item()
+    {
+        using Fixture f = new();
+        DaggerfallItemDefinition dagger = f.Definitions.Items[new DaggerfallItemId(Item(f.Ui.Read(), f.Key(1002)).Definition)];
+        UniqueItem bow = new(900, new InventoryItemId("iron-short-bow"));
+        UniqueItem sword = new(901, new InventoryItemId("iron-longsword"));
+        UniqueItem daggerItem = new(902, new InventoryItemId(Item(f.Ui.Read(), f.Key(1002)).Definition));
+        EquipmentRead equipped = new(
+            [new(new SlotId("left-hand"), bow), new(new SlotId("right-hand"), bow), new(new SlotId("right-hand"), sword)],
+            0, 0);
+        // The bow matches twice (left-hand slot overlap plus the shared "hands" group on the
+        // right) but displaces once; the sword matches by group. Three assignments, two items.
+        IReadOnlyList<UniqueItem> conflicts = DaggerfallEquipmentPolicy.ConflictingEquipped(
+            f.Definitions, equipped, daggerItem, dagger, [new SlotId("left-hand")]);
+        Assert.Equal(2, conflicts.Count);
+        Assert.Contains(bow, conflicts);
+        Assert.Contains(sword, conflicts);
+    }
+
+    [Fact]
+    public void Equipped_item_dropped_on_a_stack_cell_is_refused_without_exception()
+    {
+        using Fixture f = new();
+        var before = f.Ui.Read();
+        int goldSlot = Item(before, "stack:gold-piece").GridSlot!.Value;
+        // The sword starts equipped; dropping it on the gold stack's cell refuses gracefully.
+        // The previous implementation threw FormatException out of Move on this input.
+        f.Ui.Move(new("inventory-move", before.Revision, f.Key(1001), goldSlot));
+        Assert.Contains("Stacked items cannot be equipped", f.Ui.Read().Message);
+        Assert.Equal(f.Key(1001), f.Ui.Read().Slots.Single(slot => slot.Id == "right-hand").ItemKey);
+        Assert.Equal(goldSlot, Item(f.Ui.Read(), "stack:gold-piece").GridSlot);
+    }
+
+    [Fact]
     public void Failed_engine_reassignment_does_not_publish_the_temporary_unequip()
     {
         using Fixture f = new();
@@ -144,6 +195,7 @@ public sealed class DaggerfallInventoryPresentationTests
         internal readonly MechanicsEquipmentCoordinator Equipment;
         internal readonly DaggerfallEquipmentMoves Moves;
         internal readonly DaggerfallInventoryPresentation Ui;
+        internal readonly DaggerfallDefinitions Definitions;
         internal Fixture()
         {
             DirectoryInfo? directory = new(AppContext.BaseDirectory);
@@ -162,6 +214,7 @@ public sealed class DaggerfallInventoryPresentationTests
             Inventory = new(inventory, Entities, items);
             Equipment = new(inventory, equipment, Entities, items, slots);
             Moves = new(Inventory, Equipment, definitions);
+            Definitions = definitions;
             foreach (var entry in definitions.RequireActor(new("player")).Loadout)
             {
                 if (entry.UniqueEntityId is ulong entity)
