@@ -97,6 +97,8 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
         <button data-action="inventory">Inventory &amp; equipment · I</button>
         <button data-action="character">Character · C</button>
         <button data-action="loot">Search aimed loot · F</button>
+        <button data-action="save-game">Save game</button>
+        <button data-action="load-game">Load game</button>
         <button data-action="debug">Engine debug console</button>
         <button data-action="diagnostics">Composition diagnostics</button>
         <button data-action="tools">Sprite animation tool</button>
@@ -238,6 +240,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     else if (action === 'back') showHome();
     else if (action === 'menu') dismiss();
     else if (action === 'loot') claim('loot');
+    else if (action === 'save-game' || action === 'load-game') claim(action);
     else if (action === 'diagnostics' || action === 'tools' || action === 'inventory' || action === 'character' || action === 'debug') showPanel(action);
   };
   const onMenuClick = (event: MouseEvent): void =>

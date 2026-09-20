@@ -10,10 +10,23 @@ public sealed class WorldRpgProduct : IEngineProduct
     /// <summary>How many recent mode decisions are kept for diagnosis.</summary>
     public const int ModeHistoryLimit = 16;
 
+    /// <summary>The ordinary menu save slot: one honest save the player-facing menu writes and reads.</summary>
+    private const string SaveSlotKey = "slot";
+
+    /// <summary>Engine persistence scope for ordinary menu saves.</summary>
+    private const string SaveStoreScope = "worldrpg.saves";
+
+    /// <summary>
+    /// The ordinary menu save store, opened on first save/load request rather than construction
+    /// so products whose sessions never ask never touch persistence.
+    /// </summary>
+    private WorldRpgSaveStore SaveStore => _saveStore ??= new WorldRpgSaveStore(_context.Engine, SaveStoreScope);
+
     private readonly ProductCreateContext _context;
     private readonly ResolvedGameComposition _composition;
     private readonly IGameRuleset _ruleset;
     private readonly List<ProductModeChange> _modeHistory = [];
+    private WorldRpgSaveStore? _saveStore;
     private IGameSession _session;
     private readonly ResolvedCompositionIdentity _compositionIdentity;
     private bool _started;
@@ -256,6 +269,7 @@ public sealed class WorldRpgProduct : IEngineProduct
     {
         if (_shutdown) return;
         _session.Dispose();
+        _saveStore?.Dispose();
         _shutdown = true;
     }
 
@@ -277,6 +291,7 @@ public sealed class WorldRpgProduct : IEngineProduct
         AdoptSessionRequest();
         ProductUpdateResult result = _session.Update(update);
         AdoptSessionRequest();
+        HonorSaveRequests();
 
         // The entry screen's own action leaves that mode after the session has run, not before: the
         // session is still in the entry-screen mode for that update, so it interprets no gameplay input
@@ -297,6 +312,94 @@ public sealed class WorldRpgProduct : IEngineProduct
     {
         if (_session is not IModeAwareGameSession aware || aware.PendingModeRequest is not { } requested) return;
         Apply(requested, "the ruleset asked for this mode", closesModal: aware.PendingModeRequestClosesModal);
+    }
+
+    /// <summary>
+    /// Honors ordinary save/load menu requests the session asked for. Saving captures through the
+    /// existing API and reports the outcome; loading replaces the session from the stored payload
+    /// the way a restart replaces it, keeping the current session on any failure.
+    /// </summary>
+    private void HonorSaveRequests()
+    {
+        if (_session is not ISaveRequestingGameSession requesting) return;
+        if (requesting.TakeSaveRequest())
+        {
+            try
+            {
+                PersistenceSaveReceipt receipt = Save(SaveStore, SaveSlotKey);
+                requesting.ReportSaveOutcome($"Game saved (revision {receipt.Revision}).");
+            }
+            catch (Exception error)
+            {
+                requesting.ReportSaveOutcome($"Save failed: {error.Message}");
+            }
+        }
+
+        if (requesting.TakeLoadRequest()) LoadSavedGame(requesting);
+    }
+
+    private void LoadSavedGame(ISaveRequestingGameSession requesting)
+    {
+        ProductStateLoad<GameSaveEnvelope> loaded;
+        try
+        {
+            loaded = SaveStore.Load(SaveSlotKey);
+        }
+        catch (Exception error)
+        {
+            requesting.ReportSaveOutcome($"Load failed: {error.Message}");
+            return;
+        }
+
+        if (!loaded.Present || loaded.State is null)
+        {
+            requesting.ReportSaveOutcome("No saved game.");
+            return;
+        }
+
+        if (loaded.State.Payload.Ruleset != _composition.Ruleset)
+        {
+            requesting.ReportSaveOutcome("Load failed: the saved game is for a different ruleset.");
+            return;
+        }
+
+        if (_ruleset is not ISaveableGameRuleset saveable)
+        {
+            requesting.ReportSaveOutcome("Load failed: the selected compiled ruleset does not support save resume.");
+            return;
+        }
+
+        IGameSession replacement;
+        try
+        {
+            replacement = saveable.CreateSession(new GameSessionContext(_context.Engine, _composition), loaded.State.Payload);
+        }
+        catch (Exception error)
+        {
+            requesting.ReportSaveOutcome($"Load failed: {error.Message}");
+            return;
+        }
+
+        try
+        {
+            replacement.PublishInitial();
+        }
+        catch (Exception error)
+        {
+            replacement.Dispose();
+            requesting.ReportSaveOutcome($"Load failed: {error.Message}");
+            return;
+        }
+
+        IGameSession previous = _session;
+        _session = replacement;
+        previous.Dispose();
+        _started = true;
+        ProductMode from = _mode;
+        _mode = ProductMode.Playing;
+        if (_session is IModeAwareGameSession aware) aware.ApplyProductMode(ProductMode.Playing);
+        Record(new(from, ProductMode.Playing, from == ProductMode.Playing ? ProductModeChangeOutcome.AlreadyInMode : ProductModeChangeOutcome.Applied, "the product loaded a saved game"));
+        if (replacement is ISaveRequestingGameSession resumed) resumed.ReportSaveOutcome("Game loaded.");
     }
 
     /// <summary>

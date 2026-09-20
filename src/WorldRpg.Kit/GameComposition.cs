@@ -315,6 +315,26 @@ public interface IModeAwareGameSession
     bool PendingModeRequestClosesModal { get; }
 }
 
+/// <summary>
+/// Optional session seam for ordinary save/load menu requests. The session interprets the
+/// player-facing actions and asks, because only the ruleset knows whether the action means
+/// anything in the current mode; the product owns the store and any session replacement, and
+/// reports the outcome back for the session to present. A session that does not implement this
+/// ignores save/load actions, which is why the seam is optional rather than part of
+/// <see cref="IGameSession"/>.
+/// </summary>
+public interface ISaveRequestingGameSession : IGameSession
+{
+    /// <summary>Takes a pending save request, if the session asked for one since the last take.</summary>
+    bool TakeSaveRequest();
+
+    /// <summary>Takes a pending load request, if the session asked for one since the last take.</summary>
+    bool TakeLoadRequest();
+
+    /// <summary>Presents the product's save/load outcome after it honored a request.</summary>
+    void ReportSaveOutcome(string message);
+}
+
 
 /// <summary>Opaque current-state save bytes plus the compiled ruleset that interprets them.</summary>
 public sealed class RulesetSavePayload
