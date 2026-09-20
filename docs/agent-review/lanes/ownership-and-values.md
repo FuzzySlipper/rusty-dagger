@@ -27,3 +27,5 @@ Name all three:
   Privateer's Hold, or DFUnity vocabulary.
 - A rename that moves Daggerfall vocabulary somewhere without changing who owns
   the decision.
+- A demand for validation, verification, or audit machinery as the "correct
+  owner" for a value. That is a runtime-trust question, not an ownership one.

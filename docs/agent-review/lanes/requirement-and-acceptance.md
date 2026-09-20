@@ -26,6 +26,11 @@ the root agent can tell a checked clause from an unchecked one.
 - A wording preference about the task description itself.
 - An acceptance criterion the change satisfies through a different mechanism than
   the description implied, when the delivery method was not itself required.
+- A demand that a satisfied clause be re-delivered through proposal/acceptance,
+  revision guards, snapshots, or an audit trail. Direct mutation through the
+  owning service satisfies a clause unless the clause itself requires stronger
+  machinery. Ceremony requests belong to the runtime-trust lane, which rejects
+  them by default.
 
 ## Note
 
