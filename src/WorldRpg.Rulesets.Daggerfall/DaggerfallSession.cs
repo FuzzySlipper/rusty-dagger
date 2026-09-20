@@ -25,7 +25,7 @@ using KitUniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Concrete Daggerfall composition of catalog policy, module state, and named Engine capabilities.</summary>
-internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession
+internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, ISaveRequestingGameSession
 {
 
     /// <summary>Admitted world seconds a panel request stands before the DOM is assumed not to need it.</summary>
@@ -301,6 +301,10 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
                 case "character": break;
                 case "loot": if (playing) firstStep.Request(DaggerfallInput.Interact); break;
                 case "loot-close": if (playing || modal) _lootUi.Close(action!.Container); break;
+                // Ordinary save/load menu requests: the product owns the store and any session
+                // replacement, so the session only asks and presents the reported outcome.
+                case "save-game": if (playing || modal) _saveRequested = true; break;
+                case "load-game": if (playing || modal) _loadRequested = true; break;
                 case "loot-take":
                     if (playing || modal)
                     {
@@ -402,6 +406,28 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
     /// about the mode. Death, modal-open, and silence carry no close.
     /// </summary>
     public bool PendingModeRequestClosesModal => PendingModeRequest == ProductMode.Playing;
+
+    private bool _saveRequested;
+    private bool _loadRequested;
+
+    /// <summary>
+    /// Takes a pending ordinary save request. The menu action is only meaningful where the world
+    /// has state worth keeping, so requests from other modes are dropped with the action itself.
+    /// </summary>
+    public bool TakeSaveRequest() => TakeRequest(ref _saveRequested);
+
+    /// <summary>Takes a pending ordinary load request, with the same mode rule as saving.</summary>
+    public bool TakeLoadRequest() => TakeRequest(ref _loadRequested);
+
+    private static bool TakeRequest(ref bool requested)
+    {
+        if (!requested) return false;
+        requested = false;
+        return true;
+    }
+
+    /// <summary>Presents the product's save/load outcome after it honored a request.</summary>
+    public void ReportSaveOutcome(string message) => Presentation.SetOutcome(message);
 
     /// <summary>
     /// Applies the mode the product decided. A mode change is a focus change, so held movement is

@@ -2033,6 +2033,84 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Ordinary_save_and_load_menu_actions_roundtrip_changed_state_through_the_product()
+    {
+        // 8342 acceptance through ordinary controls: real input changes state, the menu save
+        // action persists it through the product's own store, more input changes state again,
+        // and the menu load action restores the saved point with honest outcome feedback.
+        static ProductInputEvent Ui(string json) => Input(InputEventKind.DirectDigital) with
+        {
+            ValueKind = InputValueKind.ProductPayload,
+            PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+            PayloadData = Encoding.UTF8.GetBytes(json),
+        };
+
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        InMemoryPersistenceService persistence = new();
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1d, 1d, PerceptionPairKind.Visible, 1d));
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service, persistence: persistence);
+        ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
+        CapturingDaggerfallRuleset ruleset = new();
+        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.privateers-hold"));
+        product.Start();
+        product.Begin();
+        DaggerfallSession session = ruleset.RequireSession();
+        TrackId staminaId = TrackId.Parse("stamina");
+
+        // Loading with no save in the slot is an honest outcome, not a failure.
+        product.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"load-game\"}")]));
+        product.Update(new ProductUpdate(OuterUpdate(2), []));
+        Assert.Contains("No saved game.", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
+
+        // Ordinary held-key input steps the world: the spatial answer moves the player, so
+        // position is the cooldown-free proof that gameplay input changed world state.
+        static WorldPoint PlayerPos(DaggerfallSession target) => target.State.PlayerControl.Position
+            ?? throw new InvalidOperationException("The player has no position.");
+        WorldPoint positionBefore = PlayerPos(session);
+        product.Update(new ProductUpdate(
+            new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 3, 3, 60, 3, 0, 1d / 60d),
+            [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
+        WorldPoint positionStepped = PlayerPos(session);
+        Assert.True(positionStepped.X > positionBefore.X);
+
+        // The menu save action persists through the product's own store. The saved position is
+        // read after the capturing update, so nothing simulated later can skew the comparison.
+        product.Update(new ProductUpdate(OuterUpdate(4), [Ui("{\"action\":\"save-game\"}")]));
+        WorldPoint savedPosition = PlayerPos(session);
+        product.Update(new ProductUpdate(OuterUpdate(5), []));
+        Assert.Contains("Game saved (revision 1).", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
+
+        // More ordinary input moves state past the save point.
+        product.Update(new ProductUpdate(
+            new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 6, 6, 60, 3, 0, 1d / 60d),
+            [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
+        Assert.True(PlayerPos(session).X > savedPosition.X);
+
+        // The menu load action restores the saved point through a product session replacement.
+        // The replacement carries the captured position exactly; the next update surfaces the
+        // outcome while the new session keeps stepping, so position is pinned before that step.
+        product.Update(new ProductUpdate(OuterUpdate(7), [Ui("{\"action\":\"load-game\"}")]));
+        DaggerfallSession restored = ruleset.RequireSession();
+        Assert.NotSame(session, restored);
+        Assert.Equal(savedPosition, PlayerPos(restored));
+        product.Update(new ProductUpdate(OuterUpdate(8), []));
+        Assert.Contains("Game loaded.", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
+
+        // The restored session keeps simulating through the same ordinary controls.
+        product.Update(new ProductUpdate(
+            new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 9, 9, 60, 3, 0, 1d / 60d),
+            [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
+        Assert.True(PlayerPos(restored).X > savedPosition.X);
+    }
+
+    [Fact]
     public void Host_resume_refuses_unique_items_that_are_unissued_or_tombstoned_in_the_saved_ledger()
     {
         string root = RepositoryRoot();
