@@ -17,17 +17,23 @@ public sealed class CanaryRulesetTests
         ProductCreateContext context = new(EngineContextDouble.Create(), CanaryContent(), EmptyInputConfiguration());
         ProductUpdate update = new(AdmittedRealtimeFacts(), ReadOnlySpan<ProductInputEvent>.Empty);
 
+        CanarySession session;
         using (WorldRpgProduct product = new(context, ruleset, CanaryRuleset.Bundle))
         {
+            session = Assert.IsType<CanarySession>(ruleset.CreatedSession);
             product.Start();
+            int publishedAtStart = session.InitialPublishCount;
 
+            // An admitted update publishes through the session update, never by
+            // re-publishing initial state: the initial count is unchanged by Update.
             Assert.Equal(ProductUpdateResult.None, product.Update(update));
+            Assert.Equal(publishedAtStart, session.InitialPublishCount);
+
+            Assert.Equal((uint)1, session.AppliedStepCount);
+            Assert.NotEqual(0, session.Hud.Nodes.Length);
+            Assert.False(session.IsDisposed);
         }
 
-        CanarySession session = Assert.IsType<CanarySession>(ruleset.CreatedSession);
-        Assert.Equal(2, session.InitialPublishCount);
-        Assert.Equal((uint)1, session.AppliedStepCount);
-        Assert.NotEqual(0, session.Hud.Nodes.Length);
         Assert.True(session.IsDisposed);
     }
 
@@ -40,15 +46,18 @@ public sealed class CanaryRulesetTests
         CanarySession session = Assert.IsType<CanarySession>(ruleset.CreatedSession);
 
         product.Start();
+        int publishedAtStart = session.InitialPublishCount;
         product.Attach();
 
-        Assert.Equal(3, session.InitialPublishCount);
+        // Attach republishes the current session for the newly attached client.
+        Assert.Equal(publishedAtStart + 1, session.InitialPublishCount);
         Assert.False(session.IsDisposed);
 
         product.Shutdown();
         product.Attach();
 
-        Assert.Equal(3, session.InitialPublishCount);
+        // After shutdown there is nothing to republish to and no restart.
+        Assert.Equal(publishedAtStart + 1, session.InitialPublishCount);
         Assert.True(session.IsDisposed);
     }
 
