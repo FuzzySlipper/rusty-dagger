@@ -341,9 +341,15 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
         // One admitted update owns one input slice. Later catch-up steps derive
         // only committed held keyboard/mapped-direction intent; direct axes,
         // direct digital movement, pointer deltas, and semantic actions do not replay.
-        Update(firstStep, facts.Generation, facts.SimulationStep);
+        // Simulation and reactions run per step; the final publication below (and the outer
+        // update's, after animation impacts) happens once, not once per step.
+        SimulateStep(firstStep, facts.Generation, facts.SimulationStep);
+        DeliverFacts();
         for (uint step = 1; step < facts.AdmittedStepCount; step++)
-            Update(new ProductUpdateState(deltaSeconds), facts.Generation, checked(facts.SimulationStep + step));
+        {
+            SimulateStep(new ProductUpdateState(deltaSeconds), facts.Generation, checked(facts.SimulationStep + step));
+            DeliverFacts();
+        }
     }
 
     /// <summary>
@@ -422,9 +428,19 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
         _ => string.Empty,
     };
 
-    internal void Update(ProductUpdateState update) => Update(update, 0, 0);
+    internal void Update(ProductUpdateState update)
+    {
+        SimulateStep(update, 0, 0);
+        DeliverFacts();
+        PublishPresentation();
+    }
 
-    private void Update(ProductUpdateState update, ulong generation, ulong simulationStep)
+    /// <summary>
+    /// One simulation step: input, world time, and reactions. Publication is the caller's:
+    /// the admitted update publishes once after all its steps, and direct callers publish
+    /// with the step.
+    /// </summary>
+    private void SimulateStep(ProductUpdateState update, ulong generation, ulong simulationStep)
     {
         _latestUpdateGeneration = generation;
         _latestSimulationStep = simulationStep;
@@ -455,8 +471,6 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
         if (update.IsRequested(DaggerfallInput.Inventory)) RequestPanel(DaggerfallPanel.Inventory);
         if (update.IsRequested(DaggerfallInput.Character)) RequestPanel(DaggerfallPanel.Character);
         if (update.IsRequested(DaggerfallInput.Menu)) RequestPanel(DaggerfallPanel.Menu);
-        DeliverFacts();
-        PublishPresentation();
     }
 
     public bool RequestsBegin(ReadOnlySpan<ProductInputEvent> input)
