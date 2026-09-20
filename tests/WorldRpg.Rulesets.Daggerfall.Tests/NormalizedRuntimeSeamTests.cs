@@ -148,7 +148,8 @@ public sealed class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance);
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
-        session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d), []);
+        // The outer update owns final publication: simulation completes first, then one snapshot.
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d), []));
 
         AppearanceFact[] snapshot = appearance.Snapshots.Last();
         foreach (AuthoredActor actor in inputs.Project.Actors.Values)
@@ -3973,6 +3974,48 @@ public sealed class NormalizedRuntimeSeamTests
         InvalidOperationException rejected = Assert.Throws<InvalidOperationException>(() =>
             DaggerActorFactory.AdmittedAuthoredEntityIds(inputs, [.. player.Loadout, duplicated]));
         Assert.Contains("collides", rejected.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Multi_step_outer_update_steps_each_catch_up_step_but_publishes_once()
+    {
+        // Structural evidence for publish-once: three admitted steps advance the world three
+        // times, but graphics/UI publication happens exactly once, after animation impacts.
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, PerceptionFake.Create().Service);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+
+        static ProductUpdateFacts ThreeSteps(ulong step) =>
+            new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, step, step, 60, 3, 0, 1d / 60d);
+
+        int stepsBefore = spatial.StepCalls;
+        int publishesBefore = appearance.PublishCalls;
+        session.Update(new ProductUpdate(ThreeSteps(1),
+            [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
+        Assert.Equal(stepsBefore + 3, spatial.StepCalls);
+        Assert.Equal(publishesBefore + 1, appearance.PublishCalls);
+        Assert.NotEqual(Vector2.Zero, spatial.StepRequests[^1].Command.PlanarIntent);
+
+        // A held world still publishes its single presentation per outer update, with no steps.
+        // (The mode transition above publishes on its own; only the update's publication counts.)
+        session.ApplyProductMode(ProductMode.Modal);
+        int modalPublishesBefore = appearance.PublishCalls;
+        session.Update(new ProductUpdate(ThreeSteps(4), []));
+        Assert.Equal(stepsBefore + 3, spatial.StepCalls);
+        Assert.Equal(modalPublishesBefore + 1, appearance.PublishCalls);
+
+        // An update with no admitted steps publishes nothing and steps nothing.
+        ProductUpdateFacts noSteps = new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 7, 7, 60, 0, 0, 1d / 60d);
+        session.Update(new ProductUpdate(noSteps, []));
+        Assert.Equal(stepsBefore + 3, spatial.StepCalls);
+        Assert.Equal(modalPublishesBefore + 1, appearance.PublishCalls);
     }
 
     private static (DaggerfallSession Session, AppearanceFake Appearance, PerceptionFake Perception) VisibleEnemySession(List<string> releases, double distance = 1d)
