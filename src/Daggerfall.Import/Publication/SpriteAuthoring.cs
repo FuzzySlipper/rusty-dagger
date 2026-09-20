@@ -738,7 +738,20 @@ public static class SpritePublicationReader
     /// Import-level value so callers can obtain its bytes from an Engine
     /// content snapshot without giving Import an Engine dependency.
     /// </summary>
-    public static SpritePublicationSnapshot Read(IReadOnlyList<SpritePublicationFile> files)
+    public static SpritePublicationSnapshot Read(IReadOnlyList<SpritePublicationFile> files) =>
+        ReadCore(files, verifyContentDigests: true);
+
+    /// <summary>
+    /// Reads Engine-admitted publication files for a runtime host. Structural decoding is
+    /// identical to <see cref="Read(IReadOnlyList{SpritePublicationFile})"/> — same required files,
+    /// quotas, manifest validation, and catalog build — but content digests are not re-verified:
+    /// Engine admission already identifies immutable content, and strict integrity verification
+    /// stays in the offline publication paths.
+    /// </summary>
+    public static SpritePublicationSnapshot ReadAdmitted(IReadOnlyList<SpritePublicationFile> files) =>
+        ReadCore(files, verifyContentDigests: false);
+
+    private static SpritePublicationSnapshot ReadCore(IReadOnlyList<SpritePublicationFile> files, bool verifyContentDigests)
     {
         IReadOnlyDictionary<string, ReadOnlyMemory<byte>> source = Index(files);
         ReadOnlyMemory<byte> manifestBytes = Require(source, ImportPublicationManifestSerializer.ManifestRelativePath);
@@ -751,8 +764,8 @@ public static class SpritePublicationReader
         try
         {
             manifest.Validate();
-            ValidateManifestArtifact(manifest, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath, dungeonBytes.Span);
-            ValidateManifestArtifact(manifest, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, classicBytes.Span);
+            ValidateManifestArtifact(manifest, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath, dungeonBytes.Span, verifyContentDigests);
+            ValidateManifestArtifact(manifest, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, classicBytes.Span, verifyContentDigests);
             catalog = SpriteInspectionCatalogBuilder.Create(manifest, dungeon, classic);
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or NullReferenceException or OverflowException)
@@ -760,14 +773,14 @@ public static class SpritePublicationReader
             throw new FormatException("The sprite publication metadata violates the canonical contract.", exception);
         }
 
-        VerifyMediaArtifacts(source, [.. dungeon.Media.Resources, .. classic.Media.Resources]);
+        VerifyMediaArtifacts(source, [.. dungeon.Media.Resources, .. classic.Media.Resources], verifyContentDigests);
         return new(catalog, SpriteAuthoringBasis.Compute(manifest, catalog), manifest);
     }
 
     /// <summary>
     /// Reads a generated publication from the filesystem for offline Import
     /// tooling. Runtime consumers should instead pass the Engine-admitted
-    /// file snapshot to <see cref="Read(IReadOnlyList{SpritePublicationFile})"/>.
+    /// file snapshot to <see cref="ReadAdmitted(IReadOnlyList{SpritePublicationFile})"/>.
     /// </summary>
     public static SpritePublicationSnapshot Read(string publicationDirectory)
     {
@@ -781,8 +794,8 @@ public static class SpritePublicationReader
         try
         {
             manifest.Validate();
-            ValidateManifestArtifact(manifest, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath, dungeonBytes);
-            ValidateManifestArtifact(manifest, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, classicBytes);
+            ValidateManifestArtifact(manifest, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath, dungeonBytes, verifyContentDigests: true);
+            ValidateManifestArtifact(manifest, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, classicBytes, verifyContentDigests: true);
             _ = SpriteInspectionCatalogBuilder.Create(manifest, dungeon, classic);
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or NullReferenceException or OverflowException)
@@ -850,11 +863,12 @@ public static class SpritePublicationReader
         }
     }
 
-    private static void ValidateManifestArtifact(CanonicalImportManifest manifest, string relativePath, ReadOnlySpan<byte> bytes)
+    private static void ValidateManifestArtifact(CanonicalImportManifest manifest, string relativePath, ReadOnlySpan<byte> bytes, bool verifyContentDigests)
     {
         ImportPublicationManifestArtifact artifact = manifest.Artifacts.SingleOrDefault(value => StringComparer.Ordinal.Equals(value.RelativePath, relativePath))
             ?? throw new FormatException($"The publication manifest does not contain '{relativePath}'.");
-        if (artifact.ByteLen != bytes.Length || artifact.ContentHash != ContentDigest.Compute(bytes))
+        if (artifact.ByteLen != bytes.Length
+            || (verifyContentDigests && artifact.ContentHash != ContentDigest.Compute(bytes)))
         {
             throw new FormatException($"The publication file '{relativePath}' does not match its manifest digest.");
         }
@@ -895,7 +909,7 @@ public static class SpritePublicationReader
         return bytes;
     }
 
-    private static void VerifyMediaArtifacts(IReadOnlyDictionary<string, ReadOnlyMemory<byte>> source, IReadOnlyList<NormalizedMediaDescriptor> descriptors)
+    private static void VerifyMediaArtifacts(IReadOnlyDictionary<string, ReadOnlyMemory<byte>> source, IReadOnlyList<NormalizedMediaDescriptor> descriptors, bool verifyContentDigests)
     {
         long total = 0;
         foreach (NormalizedMediaDescriptor descriptor in descriptors)
@@ -911,7 +925,7 @@ public static class SpritePublicationReader
                 throw new FormatException($"Published media artifact '{descriptor.RelativePath}' is missing or has the wrong length.");
             }
 
-            if (ContentDigest.Compute(bytes.Span) != descriptor.ContentDigest)
+            if (verifyContentDigests && ContentDigest.Compute(bytes.Span) != descriptor.ContentDigest)
             {
                 throw new FormatException($"Published media artifact '{descriptor.RelativePath}' does not match its descriptor digest.");
             }

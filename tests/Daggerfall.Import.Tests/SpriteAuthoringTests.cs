@@ -366,6 +366,61 @@ public sealed class SpriteAuthoringTests
         }
     }
 
+    [Fact]
+    public void Admitted_read_skips_digest_reverification_but_keeps_structural_checks()
+    {
+        Fixture fixture = CreateFixture();
+        byte[] dungeon = Serialize(fixture.Dungeon);
+        byte[] classic = Serialize(fixture.Classic);
+        CanonicalImportManifest manifest = fixture.Manifest with
+        {
+            Artifacts =
+            [
+                Artifact("media/dungeon/actor.png", fixture.ActorDigest, 3),
+                Artifact("media/dungeon/billboard.png", fixture.BillboardDigest, 3),
+                Artifact("media/classic/weapon.png", fixture.WeaponDigest, 3),
+                Artifact("media/classic/effect.png", fixture.EffectDigest, 3),
+                Artifact("media/classic/font.bin", fixture.FontDigest, 3),
+                Artifact(Arena2MediaBundlePublication.DungeonMediaManifestRelativePath, ContentDigest.Compute(dungeon), dungeon.Length),
+                Artifact(Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, ContentDigest.Compute(classic), classic.Length),
+            ],
+        };
+        SpritePublicationFile[] files =
+        [
+            new(ImportPublicationManifestSerializer.ManifestRelativePath, ImportPublicationManifestSerializer.Serialize(manifest)),
+            new(Arena2MediaBundlePublication.DungeonMediaManifestRelativePath, dungeon),
+            new(Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, classic),
+            new("media/dungeon/actor.png", "act"u8.ToArray()),
+            new("media/dungeon/billboard.png", "bb!"u8.ToArray()),
+            new("media/classic/weapon.png", "wep"u8.ToArray()),
+            new("media/classic/effect.png", "fx!"u8.ToArray()),
+            new("media/classic/font.bin", "fnt"u8.ToArray()),
+        ];
+        SpritePublicationSnapshot strict = SpritePublicationReader.Read(files);
+        SpritePublicationSnapshot admitted = SpritePublicationReader.ReadAdmitted(files);
+        Assert.Equal(strict.Catalog.Entries.Count, admitted.Catalog.Entries.Count);
+        Assert.Equal(strict.AuthoringBasisDigest, admitted.AuthoringBasisDigest);
+
+        // Same-length tampered media fails the strict digest check but resolves admittedly:
+        // the runtime does not rehash Engine-admitted bytes.
+        SpritePublicationFile[] tampered = files.Select(file =>
+            file.RelativePath == "media/dungeon/actor.png" ? file with { Bytes = "ACT"u8.ToArray() } : file).ToArray();
+        Assert.Throws<FormatException>(() => SpritePublicationReader.Read(tampered));
+        Assert.Equal(4, SpritePublicationReader.ReadAdmitted(tampered).Catalog.Entries.Count);
+
+        // Structural failures still reject admitted reads: missing manifest, malformed sidecar,
+        // missing media, and wrong media length are shape, not integrity re-verification.
+        Assert.Throws<FormatException>(() => SpritePublicationReader.ReadAdmitted(
+            files.Where(file => file.RelativePath != ImportPublicationManifestSerializer.ManifestRelativePath).ToArray()));
+        Assert.Throws<FormatException>(() => SpritePublicationReader.ReadAdmitted(files.Select(file =>
+            file.RelativePath == Arena2MediaBundlePublication.DungeonMediaManifestRelativePath
+                ? file with { Bytes = "not json"u8.ToArray() } : file).ToArray()));
+        Assert.Throws<FormatException>(() => SpritePublicationReader.ReadAdmitted(
+            files.Where(file => file.RelativePath != "media/dungeon/actor.png").ToArray()));
+        Assert.Throws<FormatException>(() => SpritePublicationReader.ReadAdmitted(files.Select(file =>
+            file.RelativePath == "media/dungeon/actor.png" ? file with { Bytes = "toolong"u8.ToArray() } : file).ToArray()));
+    }
+
     private static Fixture CreateFixture()
     {
         ContentDigest actorDigest = ContentDigest.Compute("act"u8);
