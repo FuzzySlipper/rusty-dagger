@@ -21,7 +21,13 @@ internal sealed class DaggerfallEnemyBehaviorModule
 {
     private readonly ActorsState _actors;
     private readonly PursuitCoordinator<IProductFact> _pursuit;
-    private readonly DaggerfallEnemyBehaviorTuning _tuning;
+    /// <summary>
+    /// Fixed pursuit configuration admitted once at composition. Detection, chase, and query
+    /// bounds come from module tuning and never change per actor or per update; only the target,
+    /// pose, and timeline inputs vary per call. Validated here, not per frame.
+    /// </summary>
+    private readonly PursuitTuning _pursuitTuning;
+    private readonly PursuitPerceptionOptions _perceptionOptions;
 
     internal DaggerfallEnemyBehaviorModule(
         IPerceptionService perception,
@@ -32,7 +38,9 @@ internal sealed class DaggerfallEnemyBehaviorModule
         DaggerfallEnemyBehaviorTuning tuning)
     {
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
-        _tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
+        DaggerfallEnemyBehaviorTuning admitted = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
+        _pursuitTuning = new PursuitTuning(admitted.DetectionDistance, admitted.MinimumFacingCosine, admitted.ChaseSpeedUnitsPerSecond, admitted.NavigationMaximumVisited).Validate();
+        _perceptionOptions = new PursuitPerceptionOptions(DaggerfallPerceptionQueryDefaults.AnyProjectionIdentity, DaggerfallPerceptionQueryDefaults.FirstPairCursor, DaggerfallPerceptionQueryDefaults.CompleteQueryPageSize).Validate();
         _pursuit = new PursuitCoordinator<IProductFact>(perception, spatial, navigation, combat);
         foreach (ActorState actor in _actors.All)
             _actors.Store.Add(actor.Actor.Entity, new PursuitMemoryComponent());
@@ -53,8 +61,8 @@ internal sealed class DaggerfallEnemyBehaviorModule
                 actor,
                 actor.Pursuit,
                 new PursuitTarget(DaggerfallActorIdentity.PlayerEntityId, playerPosition),
-                new PursuitTuning(_tuning.DetectionDistance, _tuning.MinimumFacingCosine, _tuning.ChaseSpeedUnitsPerSecond, _tuning.NavigationMaximumVisited),
-                new PursuitPerceptionOptions(DaggerfallPerceptionQueryDefaults.AnyProjectionIdentity, DaggerfallPerceptionQueryDefaults.FirstPairCursor, DaggerfallPerceptionQueryDefaults.CompleteQueryPageSize),
+                _pursuitTuning,
+                _perceptionOptions,
                 generation,
                 simulationStep,
                 deltaSeconds,
