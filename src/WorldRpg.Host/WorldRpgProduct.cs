@@ -393,12 +393,35 @@ public sealed class WorldRpgProduct : IEngineProduct
 
         IGameSession previous = _session;
         _session = replacement;
-        previous.Dispose();
-        _started = true;
-        ProductMode from = _mode;
-        _mode = ProductMode.Playing;
-        if (_session is IModeAwareGameSession aware) aware.ApplyProductMode(ProductMode.Playing);
-        Record(new(from, ProductMode.Playing, from == ProductMode.Playing ? ProductModeChangeOutcome.AlreadyInMode : ProductModeChangeOutcome.Applied, "the product loaded a saved game"));
+        try
+        {
+            previous.Dispose();
+            _started = true;
+            ProductMode from = _mode;
+            _mode = ProductMode.Playing;
+            if (_session is IModeAwareGameSession aware) aware.ApplyProductMode(ProductMode.Playing);
+            Record(new(from, ProductMode.Playing, from == ProductMode.Playing ? ProductModeChangeOutcome.AlreadyInMode : ProductModeChangeOutcome.Applied, "the product loaded a saved game"));
+        }
+        catch (Exception error)
+        {
+            // The replacement is constructed and published; only adopting it can still fail here.
+            // Put the current session back so a failing dispose or mode apply cannot strand the
+            // product on a half-adopted session, and report instead of throwing out of the update.
+            _session = previous;
+            try
+            {
+                replacement.Dispose();
+            }
+            catch (Exception disposeError)
+            {
+                requesting.ReportSaveOutcome($"Load failed: {error.Message}; discarding the replacement also failed: {disposeError.Message}");
+                return;
+            }
+
+            requesting.ReportSaveOutcome($"Load failed: {error.Message}");
+            return;
+        }
+
         if (replacement is ISaveRequestingGameSession resumed) resumed.ReportSaveOutcome("Game loaded.");
     }
 
