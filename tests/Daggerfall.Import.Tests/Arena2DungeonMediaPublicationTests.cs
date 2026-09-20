@@ -219,7 +219,7 @@ public sealed class Arena2DungeonMediaPublicationTests
     {
         Arena2DungeonMediaSource[] sources = CreateSources();
         Arena2DungeonMediaSourceSet extra = new([.. sources, new Arena2DungeonMediaSource("TEXTURE.003", CreateTextureArchive(1))]);
-        Assert.Throws<InvalidOperationException>(() => Arena2DungeonMediaPublication.Create(Arena2DungeonMediaRequest.Create(CreateDungeon(), extra)));
+        Assert.Throws<MissingDungeonMediaTexturesException>(() => Arena2DungeonMediaPublication.Create(Arena2DungeonMediaRequest.Create(CreateDungeon(), extra)));
 
         Arena2DungeonMediaSource[] malformedSources = CreateSources();
         Replace(malformedSources, "TEXTURE.255", [1]);
@@ -228,6 +228,26 @@ public sealed class Arena2DungeonMediaPublicationTests
 
         Arena2DungeonMediaQuotas tinyAtlas = Arena2DungeonMediaQuotas.Default with { MaximumAtlasDimension = 1 };
         Assert.Throws<InvalidOperationException>(() => Arena2DungeonMediaPublication.Create(new(CreateDungeon(), new(CreateSources()), tinyAtlas)));
+    }
+
+    [Fact]
+    public void Texture_closure_mismatch_reports_typed_missing_and_unneeded_names()
+    {
+        // The retry coordinator discovers lazy texture sources from these lists, never from the message.
+        Arena2DungeonMediaSource[] sources = CreateSources();
+        Arena2DungeonMediaSourceSet extra = new([.. sources, new Arena2DungeonMediaSource("TEXTURE.003", CreateTextureArchive(1))]);
+        MissingDungeonMediaTexturesException mismatch = Assert.Throws<MissingDungeonMediaTexturesException>(
+            () => Arena2DungeonMediaPublication.Create(Arena2DungeonMediaRequest.Create(CreateDungeon(), extra)));
+        Assert.Empty(mismatch.MissingTextureNames);
+        Assert.Equal(["TEXTURE.003"], mismatch.UnneededTextureNames);
+
+        // Multiple missing archives arrive as one sorted discovery list for a single retry.
+        Arena2DungeonMediaSourceSet shortSources = new(CreateSources()
+            .Where(source => source.Label is not "arena2/TEXTURE.002" and not "arena2/TEXTURE.401").ToArray());
+        MissingDungeonMediaTexturesException shortMismatch = Assert.Throws<MissingDungeonMediaTexturesException>(
+            () => Arena2DungeonMediaPublication.Create(Arena2DungeonMediaRequest.Create(CreateDungeon(), shortSources)));
+        Assert.Equal(["TEXTURE.002", "TEXTURE.401"], shortMismatch.MissingTextureNames);
+        Assert.Empty(shortMismatch.UnneededTextureNames);
     }
 
     [Fact]

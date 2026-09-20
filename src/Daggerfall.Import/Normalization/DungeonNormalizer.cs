@@ -74,7 +74,7 @@ public sealed class DungeonLogicalSourceSet
         ArgumentException.ThrowIfNullOrWhiteSpace(leafName);
         return byLeafName.TryGetValue(leafName, out DungeonLogicalSource? source)
             ? source
-            : throw new InvalidOperationException($"Dungeon normalization requires logical source '{leafName}'.");
+            : throw new MissingArena2SourceException(leafName, $"Dungeon normalization requires logical source '{leafName}'.");
     }
 
     public bool TryGet(string leafName, out DungeonLogicalSource? source)
