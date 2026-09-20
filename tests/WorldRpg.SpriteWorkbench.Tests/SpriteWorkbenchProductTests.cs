@@ -14,12 +14,14 @@ namespace WorldRpg.SpriteWorkbench.Tests;
 public sealed class SpriteWorkbenchProductTests
 {
     [Fact]
-    public void Creation_verifies_content_preloads_engine_sprite_resources_and_publishes_projection()
+    public void Creation_preloads_engine_sprite_resources_without_readmission_identity_checks_and_publishes_projection()
     {
         using Harness harness = Harness.Create();
 
-        Assert.Equal(harness.Publication.Catalog.Entries.Count, harness.Content.OpenRequests.Count);
-        Assert.Equal(harness.Publication.Catalog.Entries.Count, harness.Content.ReadInfoRequests.Count);
+        // Admitted content is trusted: creation opens no content references and reads no admission
+        // records. Previews still open their graphics resources from the admitted closure paths.
+        Assert.Empty(harness.Content.OpenRequests);
+        Assert.Empty(harness.Content.ReadInfoRequests);
         Assert.Equal(harness.Publication.Catalog.Entries.Count, harness.Appearance.OpenResourceRequests.Count);
         Assert.Equal(harness.Publication.Catalog.Entries.Count, harness.Appearance.AtlasRequests.Count);
         Assert.Equal(harness.Publication.Catalog.Entries.Count, harness.Appearance.SpriteRequests.Count);

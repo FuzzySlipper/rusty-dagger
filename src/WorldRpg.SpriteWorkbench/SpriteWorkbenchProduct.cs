@@ -323,7 +323,9 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
             Pivot = entry.AuthoredValues.Pivot ?? new NormalizedVector2(0, 0),
             DisplaySize = entry.AuthoredValues.DisplaySize ?? new NormalizedVector2(1, 1),
         } };
-        VerifyAdmittedContent(entry);
+        // The entry's closure comes from the admitted publication, and Engine content is immutable
+        // after admission: opening the resource by its admitted path is the identity check. A
+        // missing resource still fails here; nothing rehashes trusted bytes per preview.
         RenderResourceInfo resource = engine.Graphics.OpenResource(new(entry.Closure.RelativePath));
         SpriteAtlas atlas = engine.Graphics.CreateSpriteAtlas(new(resource.Handle, SpriteAtlasAdapter.ToAtlasFrames(entry.Atlas.Width, entry.Atlas.Height,
             entry.Frames.Select(frame => new WorldRpg.Kit.Presentation.NormalizedSpriteFrame(checked((uint)frame.FrameIndex), frame.X, frame.Y, frame.Width, frame.Height,
@@ -382,16 +384,6 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
         if (values.Count == 0)
             values.Add(new("frame", (entry.AuthoredValues.Sequence ?? entry.Frames.Select(frame => frame.FrameIndex).ToArray()).Select(frame => checked((uint)frame)).ToArray(), entry.AuthoredValues.FramesPerSecond ?? 1D, entry.AuthoredValues.Loop ?? true, 0));
         return values;
-    }
-
-    private void VerifyAdmittedContent(SpriteInspectionEntry entry)
-    {
-        using ContentReference reference = engine.Content.OpenReference(new(entry.Closure.RelativePath));
-        ReadOnlySpan<ContentReferenceInfo> readout = engine.Content.ReadReferenceInfo(reference).Span;
-        if (readout.Length != 1) throw new InvalidOperationException($"Engine content admission did not return one record for '{entry.Id}'.");
-        ContentReferenceInfo info = readout[0];
-        if (info.Path != entry.Closure.RelativePath || info.ByteLength != (ulong)entry.Closure.ByteLength || info.Sha256 != ToEngineDigest(entry.Closure.ContentDigest))
-            throw new InvalidOperationException($"Engine content admission does not match normalized sprite '{entry.Id}'.");
     }
 
     private void PublishProjection()
@@ -497,12 +489,6 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
         ("fps", fps is null ? builder.Null() : builder.Number(fps.Value)), ("loop", loop is null ? builder.Null() : builder.Number(loop.Value ? 1 : 0)),
         ("frameSequence", builder.Array((sequence ?? []).Select(value => builder.Number(value)).ToArray())));
 
-    private static ContentSha256 ToEngineDigest(ContentDigest digest)
-    {
-        byte[] bytes = Convert.FromHexString(digest.Value);
-        return new(BinaryPrimitives.ReadUInt64BigEndian(bytes), BinaryPrimitives.ReadUInt64BigEndian(bytes.AsSpan(8)), BinaryPrimitives.ReadUInt64BigEndian(bytes.AsSpan(16)), BinaryPrimitives.ReadUInt64BigEndian(bytes.AsSpan(24)));
-    }
-
     private Dictionary<string, SpriteAuthoredOverlay> LoadSavedOverlays()
     {
         string path = SpriteAuthoredOverlayStore.ResolveRelativePath(configuration.AuthoringRoot, configuration.OverlayPath);
@@ -521,8 +507,10 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
     /// </summary>
     private static AdmittedWorkbenchContent ReadAdmittedContent(ProductContent content)
     {
-        Dictionary<string, byte[]> filesByPath = new(StringComparer.Ordinal);
-        byte[]? configurationBytes = null;
+        // Borrowed views over Engine-admitted immutable bytes: the admitted snapshot outlives this
+        // read, and nothing below retains the views past the decoded catalog.
+        Dictionary<string, ReadOnlyMemory<byte>> filesByPath = new(StringComparer.Ordinal);
+        ReadOnlyMemory<byte>? configurationBytes = null;
         foreach (ProductContentFile file in content.Files.Span)
         {
             string path;
@@ -535,7 +523,7 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
                 throw new FormatException("Engine content contains an invalid sprite workbench path.", error);
             }
 
-            if (!filesByPath.TryAdd(path, file.Bytes.ToArray()))
+            if (!filesByPath.TryAdd(path, file.Bytes))
             {
                 throw new FormatException($"Engine content contains duplicate sprite workbench path '{path}'.");
             }
@@ -546,17 +534,17 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
             }
         }
 
-        if (configurationBytes is null)
+        if (configurationBytes is not { } configuration)
         {
             throw new FormatException($"Engine content must contain '{SpriteWorkbenchConfiguration.ContentPath}'.");
         }
 
-        SpriteWorkbenchConfiguration value = SpriteWorkbenchConfiguration.Read(configurationBytes);
+        SpriteWorkbenchConfiguration value = SpriteWorkbenchConfiguration.Read(configuration.Span);
         SpritePublicationFile[] publicationFiles = filesByPath
             .Where(pair => !StringComparer.Ordinal.Equals(pair.Key, SpriteWorkbenchConfiguration.ContentPath))
             .Select(pair => new SpritePublicationFile(pair.Key, pair.Value))
             .ToArray();
-        return new(value, SpritePublicationReader.Read(publicationFiles));
+        return new(value, SpritePublicationReader.ReadAdmitted(publicationFiles));
     }
 
     private Preview RequireCurrent(SpriteWorkbenchIntent intent)
