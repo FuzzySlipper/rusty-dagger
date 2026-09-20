@@ -157,7 +157,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
                 playerDefinition,
                 _random,
                 authored);
-            _authoredEntityIds = DaggerfallSavePayload.ContentEntityIds(inputs, playerDefinition.Loadout);
+            _authoredEntityIds = DaggerActorFactory.AdmittedAuthoredEntityIds(inputs, playerDefinition.Loadout);
             _uniqueItems = saved is null
                 ? new DaggerfallUniqueItemAllocator(DaggerfallUniqueItemAllocator.DefaultFirstEntityId, _authoredEntityIds)
                 : DaggerfallUniqueItemAllocator.Restore(saved.RestoredIdentities());

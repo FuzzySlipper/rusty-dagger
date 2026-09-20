@@ -18,6 +18,19 @@ public sealed class EntityDirectory : IDisposable
         return entity;
     }
 
+    /// <summary>
+    /// Creates one live item entity from its durable item identity. The caller owns failure
+    /// cleanup through <see cref="Destroy"/>: grant, equipment, and container paths share this
+    /// construction but keep their own transaction semantics.
+    /// </summary>
+    public EntityId CreateItemEntity(DurableIdentityReference identity, EntityTypeId type)
+    {
+        identity.Validate();
+        if (identity.Kind != DurableIdentityKind.Item)
+            throw new ArgumentException("An inventory item requires a durable item identity.", nameof(identity));
+        return Create(identity, type);
+    }
+
     public EntityId Resolve(DurableIdentityReference identity) =>
         TryResolve(identity, out EntityId entity) ? entity : throw new KeyNotFoundException($"No live entity for {identity}.");
 

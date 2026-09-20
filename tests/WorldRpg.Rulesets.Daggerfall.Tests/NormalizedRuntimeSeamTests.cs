@@ -3952,6 +3952,29 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(stepsBefore, spatial.StepCalls);
     }
 
+    [Fact]
+    public void Admitted_authored_entity_ids_cover_construction_and_allocator_inputs_and_reject_duplicates()
+    {
+        // One helper now serves actor construction validation and allocator reservations. The
+        // deleted payload copy silently dropped duplicate loadout ids from the reservation set
+        // while construction threw; this pins the unified strict behavior.
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
+
+        HashSet<ulong> admitted = DaggerActorFactory.AdmittedAuthoredEntityIds(inputs, player.Loadout);
+        Assert.Contains((ulong)DaggerfallActorIdentity.PlayerEntityId, admitted);
+        Assert.Equal(
+            1 + inputs.Project.Actors.Values.Count() + player.Loadout.Count(entry => entry.UniqueEntityId is not null),
+            admitted.Count);
+
+        DaggerfallLoadoutEntry duplicated = player.Loadout.First(entry => entry.UniqueEntityId is not null);
+        InvalidOperationException rejected = Assert.Throws<InvalidOperationException>(() =>
+            DaggerActorFactory.AdmittedAuthoredEntityIds(inputs, [.. player.Loadout, duplicated]));
+        Assert.Contains("collides", rejected.Message, StringComparison.Ordinal);
+    }
+
     private static (DaggerfallSession Session, AppearanceFake Appearance, PerceptionFake Perception) VisibleEnemySession(List<string> releases, double distance = 1d)
     {
         string root = RepositoryRoot();

@@ -110,7 +110,7 @@ public sealed class MechanicsInventoryCoordinator
                 {
                     if (definition.Kind != ItemKind.Unique)
                         throw new InvalidOperationException($"Atomic unique grant '{grant.Item.Value}' requires a unique item definition.");
-                    EntityId item = CreateItemEntity(identity, definition);
+                    EntityId item = Entities.CreateItemEntity(identity, new EntityTypeId(definition.Id.Value));
                     created.Add(identity);
                     candidate.MaterializeUnique(new ItemState(item, definition), Component.Owner);
                 }
@@ -137,9 +137,6 @@ public sealed class MechanicsInventoryCoordinator
     }
 
     public DurableIdentityReference GetDurableItemId(EntityId item) => RequireItemIdentity(Entities.IdentityOf(item));
-
-    private EntityId CreateItemEntity(DurableIdentityReference identity, ItemDefinition definition) =>
-        Entities.Create(RequireItemIdentity(identity), new EntityTypeId(definition.Id.Value));
 
     private static DurableIdentityReference RequireItemIdentity(DurableIdentityReference identity)
     {
@@ -196,7 +193,7 @@ public sealed class MechanicsEquipmentCoordinator
         if (definition.Kind != ItemKind.Unique)
             throw new InvalidOperationException($"Item '{definitionId.Value}' is not a unique item definition.");
 
-        EntityId item = Entities.Create(RequireItemIdentity(itemId), new EntityTypeId(definition.Id.Value));
+        EntityId item = Entities.CreateItemEntity(itemId, new EntityTypeId(definition.Id.Value));
         try { Inventory.MaterializeUnique(new ItemState(item, definition)); }
         catch { Entities.Destroy(itemId); throw; }
         return new UniqueInventoryItem(item.Value, definitionId);
