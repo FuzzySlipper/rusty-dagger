@@ -157464,8 +157464,8 @@
       "digest": "66847e6af3a8d4e5bec76892d1bd68eae9ef40f2a99a6da9845b750494dcf95d",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-019.file.WEAPON01.CIF",
@@ -157500,8 +157500,8 @@
       "digest": "aed79afe12e94867203f1ee66b2e9cf52fccbd53ba13f1fc5fa9a8f706843ae6",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-019.file.WEAPON04.CIF",
@@ -157596,8 +157596,8 @@
       "digest": "0fa7db84d2846cb6b9ffb84a7ecbbbd765103f3e63569d7d0e0dcb0bcf6c3ec1",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-020.file.BANK00I0.IMG",
@@ -163179,9 +163179,9 @@
       "familyId": "CNT-019",
       "documentedDisposition": "current-partial",
       "discovered": 12,
-      "imported": 9,
+      "imported": 12,
       "requiredPending": 0,
-      "unused": 3,
+      "unused": 0,
       "duplicate": 0,
       "excluded": 0,
       "malformed": 0,

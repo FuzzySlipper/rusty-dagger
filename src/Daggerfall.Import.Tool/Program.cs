@@ -1972,7 +1972,10 @@ internal static class Program
             Require("TEXTURE.216").Bytes.ToArray(),
             Require("TEXTURE.234").Bytes.ToArray(),
             Require("TEXTURE.245").Bytes.ToArray(),
-            Require("FONT0003.FNT").Bytes.ToArray());
+            Require("FONT0003.FNT").Bytes.ToArray(),
+            Require("WEAPON00.CIF").Bytes.ToArray(),
+            Require("WEAPON03.CIF").Bytes.ToArray(),
+            Require("WEAPON11.CIF").Bytes.ToArray());
 
         public void LoadDungeon(string fileName)
         {
@@ -2030,8 +2033,10 @@ internal static class Program
     private static readonly string[] ClassicMediaSourceNames =
     [
         "ART_PAL.COL",
+        "WEAPON00.CIF",
         "WEAPON01.CIF",
         "WEAPON02.CIF",
+        "WEAPON03.CIF",
         "WEAPON04.CIF",
         "WEAPON05.CIF",
         "WEAPON06.CIF",
@@ -2039,6 +2044,7 @@ internal static class Program
         "WEAPON08.CIF",
         "WEAPON09.CIF",
         "WEAPON10.CIF",
+        "WEAPON11.CIF",
         "DAGGER.SND",
         "MAIN00I0.IMG",
         "MAIN03I0.IMG",

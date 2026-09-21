@@ -52,7 +52,13 @@ public sealed record Arena2ClassicMediaInputs(
     byte[] Texture216,
     byte[] Texture234,
     byte[] Texture245,
-    byte[] Font0003Fnt);
+    byte[] Font0003Fnt,
+    // The three weapon archives outside the original nine-input closure, appended here rather than
+    // in numeric order so the existing positions above stay stable: every parameter is a byte array,
+    // so an insertion in the middle would misorder silently instead of failing to compile.
+    byte[] Weapon00Cif,
+    byte[] Weapon03Cif,
+    byte[] Weapon11Cif);
 
 /// <summary>Quotas for bounded, deterministic classic-media regeneration.</summary>
 public sealed record Arena2ClassicMediaPublicationOptions(
@@ -546,6 +552,22 @@ public sealed record Arena2ClassicMediaPublication(
         new(ClassicDaggerWeaponAction.StrikeUp, 6, ClassicWeaponScreenAlignment.Left, 0F, false, 5),
     ];
 
+    /// <summary>
+    /// The donor's werecreature strikes, in its alignment changes. The archive carries a wield image
+    /// plus six five-frame records exactly like the general weapons; only the alignments and offsets
+    /// differ, which is why this table exists separately rather than reusing the general one.
+    /// </summary>
+    private static readonly WeaponActionSource[] WerecreatureWeaponActionSources =
+    [
+        new(ClassicDaggerWeaponAction.Idle, 0, ClassicWeaponScreenAlignment.Center, 0.02F, true, 1),
+        new(ClassicDaggerWeaponAction.StrikeDown, 1, ClassicWeaponScreenAlignment.Right, 0.2F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeDownLeft, 2, ClassicWeaponScreenAlignment.Right, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeLeft, 3, ClassicWeaponScreenAlignment.Right, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeRight, 4, ClassicWeaponScreenAlignment.Right, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeDownRight, 5, ClassicWeaponScreenAlignment.Left, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeUp, 6, ClassicWeaponScreenAlignment.Left, 0.2F, false, 5),
+    ];
+
     private static readonly WeaponActionSource[] BowWeaponActionSources =
     [
         new(ClassicDaggerWeaponAction.Idle, 0, ClassicWeaponScreenAlignment.Right, 0F, true, 1),
@@ -557,10 +579,18 @@ public sealed record Arena2ClassicMediaPublication(
         new(ClassicDaggerWeaponAction.StrikeUp, 0, ClassicWeaponScreenAlignment.Right, 0F, false, 4),
     ];
 
+    /// <summary>
+    /// Every weapon archive the corpus carries, in file order. The donor names a consumer for nine of
+    /// them through its weapon-type mapping plus the werecreature form; WEAPON00.CIF and WEAPON03.CIF
+    /// are longblade-shaped archives no donor reader addresses, so they follow the general action
+    /// layout their record and frame counts match and keep file-derived identities no item references.
+    /// </summary>
     private static readonly WeaponMediaSource[] WeaponMediaSources =
     [
+        new("WEAPON00.CIF", "weapon.00", GeneralWeaponActionSources),
         new("WEAPON01.CIF", "weapon.staff", StaffWeaponActionSources),
         new("WEAPON02.CIF", "weapon.dagger.steel", DaggerWeaponActionSources),
+        new("WEAPON03.CIF", "weapon.03", GeneralWeaponActionSources),
         new("WEAPON04.CIF", "weapon.longblade", GeneralWeaponActionSources),
         new("WEAPON05.CIF", "weapon.mace", GeneralWeaponActionSources),
         new("WEAPON06.CIF", "weapon.flail", GeneralWeaponActionSources),
@@ -568,6 +598,7 @@ public sealed record Arena2ClassicMediaPublication(
         new("WEAPON08.CIF", "weapon.axe", GeneralWeaponActionSources),
         new("WEAPON09.CIF", "weapon.bow", BowWeaponActionSources),
         new("WEAPON10.CIF", "weapon.unarmed", UnarmedWeaponActionSources),
+        new("WEAPON11.CIF", "weapon.werecreature", WerecreatureWeaponActionSources),
     ];
 
     internal static void ValidateCanonicalWeaponAction(string resourceId, ClassicWeaponActionManifest action)
@@ -1635,6 +1666,9 @@ public sealed record Arena2ClassicMediaPublication(
             Texture234 = inputs.Texture234;
             Texture245 = inputs.Texture245;
             Font0003Fnt = inputs.Font0003Fnt;
+            Weapon00Cif = inputs.Weapon00Cif;
+            Weapon03Cif = inputs.Weapon03Cif;
+            Weapon11Cif = inputs.Weapon11Cif;
             LogicalSources = logicalSources;
         }
 
@@ -1647,6 +1681,9 @@ public sealed record Arena2ClassicMediaPublication(
         public byte[] Weapon08Cif { get; }
         public byte[] Weapon09Cif { get; }
         public byte[] Weapon10Cif { get; }
+        public byte[] Weapon00Cif { get; }
+        public byte[] Weapon03Cif { get; }
+        public byte[] Weapon11Cif { get; }
         public byte[] ArtPalette { get; }
         public byte[] Texture380 { get; }
         public byte[] Palette { get; }
@@ -1688,9 +1725,9 @@ public sealed record Arena2ClassicMediaPublication(
         {
             (string FileName, byte[] Bytes)[] sources =
             [
-                ("WEAPON01.CIF", inputs.Weapon01Cif), ("WEAPON02.CIF", inputs.Weapon02Cif), ("WEAPON04.CIF", inputs.Weapon04Cif),
+                ("WEAPON00.CIF", inputs.Weapon00Cif), ("WEAPON01.CIF", inputs.Weapon01Cif), ("WEAPON02.CIF", inputs.Weapon02Cif), ("WEAPON03.CIF", inputs.Weapon03Cif), ("WEAPON04.CIF", inputs.Weapon04Cif),
                 ("WEAPON05.CIF", inputs.Weapon05Cif), ("WEAPON06.CIF", inputs.Weapon06Cif), ("WEAPON07.CIF", inputs.Weapon07Cif),
-                ("WEAPON08.CIF", inputs.Weapon08Cif), ("WEAPON09.CIF", inputs.Weapon09Cif), ("WEAPON10.CIF", inputs.Weapon10Cif),
+                ("WEAPON08.CIF", inputs.Weapon08Cif), ("WEAPON09.CIF", inputs.Weapon09Cif), ("WEAPON10.CIF", inputs.Weapon10Cif), ("WEAPON11.CIF", inputs.Weapon11Cif),
                 ("ART_PAL.COL", inputs.ArtPalette), ("TEXTURE.380", inputs.Texture380), ("PAL.PAL", inputs.Palette),
                 ("DAGGER.SND", inputs.DaggerSound), ("MAIN00I0.IMG", inputs.Main00I0Img), ("MAIN03I0.IMG", inputs.Main03I0Img),
                 ("MAIN04I0.IMG", inputs.Main04I0Img), ("MAIN05I0.IMG", inputs.Main05I0Img), ("INVE00I0.IMG", inputs.Inve00I0Img), ("DIE_00I0.IMG", inputs.Die00I0Img), ("CHGN00I0.IMG", inputs.Chgn00I0Img), ("PICK02I0.IMG", inputs.Pick02I0Img),
@@ -1719,8 +1756,10 @@ public sealed record Arena2ClassicMediaPublication(
 
         public byte[] RequireWeapon(string fileName) => fileName switch
         {
+            "WEAPON00.CIF" => Weapon00Cif,
             "WEAPON01.CIF" => Weapon01Cif,
             "WEAPON02.CIF" => Weapon02Cif,
+            "WEAPON03.CIF" => Weapon03Cif,
             "WEAPON04.CIF" => Weapon04Cif,
             "WEAPON05.CIF" => Weapon05Cif,
             "WEAPON06.CIF" => Weapon06Cif,
@@ -1728,6 +1767,7 @@ public sealed record Arena2ClassicMediaPublication(
             "WEAPON08.CIF" => Weapon08Cif,
             "WEAPON09.CIF" => Weapon09Cif,
             "WEAPON10.CIF" => Weapon10Cif,
+            "WEAPON11.CIF" => Weapon11Cif,
             _ => throw new ArgumentOutOfRangeException(nameof(fileName), "The requested source is not an admitted classic weapon CIF."),
         };
 

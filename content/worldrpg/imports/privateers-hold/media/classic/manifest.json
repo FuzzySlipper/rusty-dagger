@@ -7074,6 +7074,1414 @@
         "generatedFrames": null
       },
       {
+        "id": "weapon.00",
+        "kind": "weaponSprite",
+        "relativePath": "media/combat/weapon-00-atlas.png",
+        "contentDigest": "92ec6a4c7b9251421c23cd1b8d36c4010d6b621a196817e59a39ce8e76790a1c",
+        "byteLength": 57273,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 200,
+        "atlasWidth": 3840,
+        "atlasHeight": 600,
+        "frames": [
+          {
+            "id": "weapon.00/00",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/01",
+            "frameIndex": 1,
+            "x": 320,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/02",
+            "frameIndex": 2,
+            "x": 640,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/03",
+            "frameIndex": 3,
+            "x": 960,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/04",
+            "frameIndex": 4,
+            "x": 1280,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/05",
+            "frameIndex": 5,
+            "x": 1600,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/06",
+            "frameIndex": 6,
+            "x": 1920,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/07",
+            "frameIndex": 7,
+            "x": 2240,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/08",
+            "frameIndex": 8,
+            "x": 2560,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/09",
+            "frameIndex": 9,
+            "x": 2880,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/10",
+            "frameIndex": 10,
+            "x": 3200,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/11",
+            "frameIndex": 11,
+            "x": 3520,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/12",
+            "frameIndex": 12,
+            "x": 0,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/13",
+            "frameIndex": 13,
+            "x": 320,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/14",
+            "frameIndex": 14,
+            "x": 640,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/15",
+            "frameIndex": 15,
+            "x": 960,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/16",
+            "frameIndex": 16,
+            "x": 1280,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/17",
+            "frameIndex": 17,
+            "x": 1600,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/18",
+            "frameIndex": 18,
+            "x": 1920,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/19",
+            "frameIndex": 19,
+            "x": 2240,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/20",
+            "frameIndex": 20,
+            "x": 2560,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/21",
+            "frameIndex": 21,
+            "x": 2880,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/22",
+            "frameIndex": 22,
+            "x": 3200,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/23",
+            "frameIndex": 23,
+            "x": 3520,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/24",
+            "frameIndex": 24,
+            "x": 0,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/25",
+            "frameIndex": 25,
+            "x": 320,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/26",
+            "frameIndex": 26,
+            "x": 640,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/27",
+            "frameIndex": 27,
+            "x": 960,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/28",
+            "frameIndex": 28,
+            "x": 1280,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/29",
+            "frameIndex": 29,
+            "x": 1600,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/30",
+            "frameIndex": 30,
+            "x": 1920,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          }
+        ],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": [
+          {
+            "id": "weapon.00/00",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/01",
+            "frameIndex": 1,
+            "x": 320,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/02",
+            "frameIndex": 2,
+            "x": 640,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/03",
+            "frameIndex": 3,
+            "x": 960,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/04",
+            "frameIndex": 4,
+            "x": 1280,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/05",
+            "frameIndex": 5,
+            "x": 1600,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/06",
+            "frameIndex": 6,
+            "x": 1920,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/07",
+            "frameIndex": 7,
+            "x": 2240,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/08",
+            "frameIndex": 8,
+            "x": 2560,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/09",
+            "frameIndex": 9,
+            "x": 2880,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/10",
+            "frameIndex": 10,
+            "x": 3200,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/11",
+            "frameIndex": 11,
+            "x": 3520,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/12",
+            "frameIndex": 12,
+            "x": 0,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/13",
+            "frameIndex": 13,
+            "x": 320,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/14",
+            "frameIndex": 14,
+            "x": 640,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/15",
+            "frameIndex": 15,
+            "x": 960,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/16",
+            "frameIndex": 16,
+            "x": 1280,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/17",
+            "frameIndex": 17,
+            "x": 1600,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/18",
+            "frameIndex": 18,
+            "x": 1920,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/19",
+            "frameIndex": 19,
+            "x": 2240,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/20",
+            "frameIndex": 20,
+            "x": 2560,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/21",
+            "frameIndex": 21,
+            "x": 2880,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/22",
+            "frameIndex": 22,
+            "x": 3200,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/23",
+            "frameIndex": 23,
+            "x": 3520,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/24",
+            "frameIndex": 24,
+            "x": 0,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/25",
+            "frameIndex": 25,
+            "x": 320,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/26",
+            "frameIndex": 26,
+            "x": 640,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/27",
+            "frameIndex": 27,
+            "x": 960,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/28",
+            "frameIndex": 28,
+            "x": 1280,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/29",
+            "frameIndex": 29,
+            "x": 1600,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.00/30",
+            "frameIndex": 30,
+            "x": 1920,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          }
+        ]
+      },
+      {
+        "id": "weapon.03",
+        "kind": "weaponSprite",
+        "relativePath": "media/combat/weapon-03-atlas.png",
+        "contentDigest": "b0dc64ffb1c19e35c6c8b6514f7b51e42eb9a8e7f5e65cd5c8e2f92809cc8101",
+        "byteLength": 47476,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 200,
+        "atlasWidth": 3840,
+        "atlasHeight": 600,
+        "frames": [
+          {
+            "id": "weapon.03/00",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/01",
+            "frameIndex": 1,
+            "x": 320,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/02",
+            "frameIndex": 2,
+            "x": 640,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/03",
+            "frameIndex": 3,
+            "x": 960,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/04",
+            "frameIndex": 4,
+            "x": 1280,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/05",
+            "frameIndex": 5,
+            "x": 1600,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/06",
+            "frameIndex": 6,
+            "x": 1920,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/07",
+            "frameIndex": 7,
+            "x": 2240,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/08",
+            "frameIndex": 8,
+            "x": 2560,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/09",
+            "frameIndex": 9,
+            "x": 2880,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/10",
+            "frameIndex": 10,
+            "x": 3200,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/11",
+            "frameIndex": 11,
+            "x": 3520,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/12",
+            "frameIndex": 12,
+            "x": 0,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/13",
+            "frameIndex": 13,
+            "x": 320,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/14",
+            "frameIndex": 14,
+            "x": 640,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/15",
+            "frameIndex": 15,
+            "x": 960,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/16",
+            "frameIndex": 16,
+            "x": 1280,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/17",
+            "frameIndex": 17,
+            "x": 1600,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/18",
+            "frameIndex": 18,
+            "x": 1920,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/19",
+            "frameIndex": 19,
+            "x": 2240,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/20",
+            "frameIndex": 20,
+            "x": 2560,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/21",
+            "frameIndex": 21,
+            "x": 2880,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/22",
+            "frameIndex": 22,
+            "x": 3200,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/23",
+            "frameIndex": 23,
+            "x": 3520,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/24",
+            "frameIndex": 24,
+            "x": 0,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/25",
+            "frameIndex": 25,
+            "x": 320,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/26",
+            "frameIndex": 26,
+            "x": 640,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/27",
+            "frameIndex": 27,
+            "x": 960,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/28",
+            "frameIndex": 28,
+            "x": 1280,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/29",
+            "frameIndex": 29,
+            "x": 1600,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/30",
+            "frameIndex": 30,
+            "x": 1920,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          }
+        ],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": [
+          {
+            "id": "weapon.03/00",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/01",
+            "frameIndex": 1,
+            "x": 320,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/02",
+            "frameIndex": 2,
+            "x": 640,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/03",
+            "frameIndex": 3,
+            "x": 960,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/04",
+            "frameIndex": 4,
+            "x": 1280,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/05",
+            "frameIndex": 5,
+            "x": 1600,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/06",
+            "frameIndex": 6,
+            "x": 1920,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/07",
+            "frameIndex": 7,
+            "x": 2240,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/08",
+            "frameIndex": 8,
+            "x": 2560,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/09",
+            "frameIndex": 9,
+            "x": 2880,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/10",
+            "frameIndex": 10,
+            "x": 3200,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/11",
+            "frameIndex": 11,
+            "x": 3520,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/12",
+            "frameIndex": 12,
+            "x": 0,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/13",
+            "frameIndex": 13,
+            "x": 320,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/14",
+            "frameIndex": 14,
+            "x": 640,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/15",
+            "frameIndex": 15,
+            "x": 960,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/16",
+            "frameIndex": 16,
+            "x": 1280,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/17",
+            "frameIndex": 17,
+            "x": 1600,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/18",
+            "frameIndex": 18,
+            "x": 1920,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/19",
+            "frameIndex": 19,
+            "x": 2240,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/20",
+            "frameIndex": 20,
+            "x": 2560,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/21",
+            "frameIndex": 21,
+            "x": 2880,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/22",
+            "frameIndex": 22,
+            "x": 3200,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/23",
+            "frameIndex": 23,
+            "x": 3520,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/24",
+            "frameIndex": 24,
+            "x": 0,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/25",
+            "frameIndex": 25,
+            "x": 320,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/26",
+            "frameIndex": 26,
+            "x": 640,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/27",
+            "frameIndex": 27,
+            "x": 960,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/28",
+            "frameIndex": 28,
+            "x": 1280,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/29",
+            "frameIndex": 29,
+            "x": 1600,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.03/30",
+            "frameIndex": 30,
+            "x": 1920,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          }
+        ]
+      },
+      {
         "id": "weapon.axe",
         "kind": "weaponSprite",
         "relativePath": "media/combat/weapon-axe-atlas.png",
@@ -12882,6 +14290,710 @@
         ]
       },
       {
+        "id": "weapon.werecreature",
+        "kind": "weaponSprite",
+        "relativePath": "media/combat/weapon-werecreature-atlas.png",
+        "contentDigest": "e590a06ee813606a0219d29b68dc55e0ae63696f2596ef2740366b5e284daba0",
+        "byteLength": 68862,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 200,
+        "atlasWidth": 3840,
+        "atlasHeight": 600,
+        "frames": [
+          {
+            "id": "weapon.werecreature/00",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/01",
+            "frameIndex": 1,
+            "x": 320,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/02",
+            "frameIndex": 2,
+            "x": 640,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/03",
+            "frameIndex": 3,
+            "x": 960,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/04",
+            "frameIndex": 4,
+            "x": 1280,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/05",
+            "frameIndex": 5,
+            "x": 1600,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/06",
+            "frameIndex": 6,
+            "x": 1920,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/07",
+            "frameIndex": 7,
+            "x": 2240,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/08",
+            "frameIndex": 8,
+            "x": 2560,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/09",
+            "frameIndex": 9,
+            "x": 2880,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/10",
+            "frameIndex": 10,
+            "x": 3200,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/11",
+            "frameIndex": 11,
+            "x": 3520,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/12",
+            "frameIndex": 12,
+            "x": 0,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/13",
+            "frameIndex": 13,
+            "x": 320,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/14",
+            "frameIndex": 14,
+            "x": 640,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/15",
+            "frameIndex": 15,
+            "x": 960,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/16",
+            "frameIndex": 16,
+            "x": 1280,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/17",
+            "frameIndex": 17,
+            "x": 1600,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/18",
+            "frameIndex": 18,
+            "x": 1920,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/19",
+            "frameIndex": 19,
+            "x": 2240,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/20",
+            "frameIndex": 20,
+            "x": 2560,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/21",
+            "frameIndex": 21,
+            "x": 2880,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/22",
+            "frameIndex": 22,
+            "x": 3200,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/23",
+            "frameIndex": 23,
+            "x": 3520,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/24",
+            "frameIndex": 24,
+            "x": 0,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/25",
+            "frameIndex": 25,
+            "x": 320,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/26",
+            "frameIndex": 26,
+            "x": 640,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/27",
+            "frameIndex": 27,
+            "x": 960,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/28",
+            "frameIndex": 28,
+            "x": 1280,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/29",
+            "frameIndex": 29,
+            "x": 1600,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/30",
+            "frameIndex": 30,
+            "x": 1920,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          }
+        ],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": [
+          {
+            "id": "weapon.werecreature/00",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/01",
+            "frameIndex": 1,
+            "x": 320,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/02",
+            "frameIndex": 2,
+            "x": 640,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/03",
+            "frameIndex": 3,
+            "x": 960,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/04",
+            "frameIndex": 4,
+            "x": 1280,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/05",
+            "frameIndex": 5,
+            "x": 1600,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/06",
+            "frameIndex": 6,
+            "x": 1920,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/07",
+            "frameIndex": 7,
+            "x": 2240,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/08",
+            "frameIndex": 8,
+            "x": 2560,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/09",
+            "frameIndex": 9,
+            "x": 2880,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/10",
+            "frameIndex": 10,
+            "x": 3200,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/11",
+            "frameIndex": 11,
+            "x": 3520,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/12",
+            "frameIndex": 12,
+            "x": 0,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/13",
+            "frameIndex": 13,
+            "x": 320,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/14",
+            "frameIndex": 14,
+            "x": 640,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/15",
+            "frameIndex": 15,
+            "x": 960,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/16",
+            "frameIndex": 16,
+            "x": 1280,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/17",
+            "frameIndex": 17,
+            "x": 1600,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/18",
+            "frameIndex": 18,
+            "x": 1920,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/19",
+            "frameIndex": 19,
+            "x": 2240,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/20",
+            "frameIndex": 20,
+            "x": 2560,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/21",
+            "frameIndex": 21,
+            "x": 2880,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/22",
+            "frameIndex": 22,
+            "x": 3200,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/23",
+            "frameIndex": 23,
+            "x": 3520,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/24",
+            "frameIndex": 24,
+            "x": 0,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/25",
+            "frameIndex": 25,
+            "x": 320,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/26",
+            "frameIndex": 26,
+            "x": 640,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/27",
+            "frameIndex": 27,
+            "x": 960,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/28",
+            "frameIndex": 28,
+            "x": 1280,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/29",
+            "frameIndex": 29,
+            "x": 1600,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.werecreature/30",
+            "frameIndex": 30,
+            "x": 1920,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          }
+        ]
+      },
+      {
         "id": "window.bank.panel",
         "kind": "userInterface",
         "relativePath": "media/ui/window-bank-panel.png",
@@ -13184,6 +15296,226 @@
     ]
   },
   "weaponMedia": [
+    {
+      "resourceId": "weapon.00",
+      "actions": [
+        {
+          "action": "idle",
+          "sourceRecordOrdinal": 0,
+          "frameStart": 0,
+          "frameCount": 1,
+          "alignment": "right",
+          "screenOffset": 0,
+          "timing": {
+            "framesPerSecond": 10,
+            "loop": true
+          },
+          "sourceXOffset": 260,
+          "sourceYOffset": 114,
+          "sequence": null
+        },
+        {
+          "action": "strikeDown",
+          "sourceRecordOrdinal": 1,
+          "frameStart": 1,
+          "frameCount": 5,
+          "alignment": "right",
+          "screenOffset": 0,
+          "timing": {
+            "framesPerSecond": 10,
+            "loop": false
+          },
+          "sourceXOffset": 203,
+          "sourceYOffset": 0,
+          "sequence": null
+        },
+        {
+          "action": "strikeDownLeft",
+          "sourceRecordOrdinal": 2,
+          "frameStart": 6,
+          "frameCount": 5,
+          "alignment": "right",
+          "screenOffset": 0,
+          "timing": {
+            "framesPerSecond": 10,
+            "loop": false
+          },
+          "sourceXOffset": 45,
+          "sourceYOffset": 36,
+          "sequence": null
+        },
+        {
+          "action": "strikeLeft",
+          "sourceRecordOrdinal": 3,
+          "frameStart": 11,
+          "frameCount": 5,
+          "alignment": "right",
+          "screenOffset": 0,
+          "timing": {
+            "framesPerSecond": 10,
+            "loop": false
+          },
+          "sourceXOffset": 0,
+          "sourceYOffset": 71,
+          "sequence": null
+        },
+        {
+          "action": "strikeRight",
+          "sourceRecordOrdinal": 4,
+          "frameStart": 16,
+          "frameCount": 5,
+          "alignment": "left",
+          "screenOffset": 0,
+          "timing": {
+            "framesPerSecond": 10,
+            "loop": false
+          },
+          "sourceXOffset": 0,
+          "sourceYOffset": 71,
+          "sequence": null
+        },
+        {
+          "action": "strikeDownRight",
+          "sourceRecordOrdinal": 5,
+          "frameStart": 21,
+          "frameCount": 5,
+          "alignment": "left",
+          "screenOffset": 0,
+          "timing": {
+            "framesPerSecond": 10,
+            "loop": false
+          },
+          "sourceXOffset": 0,
+          "sourceYOffset": 37,
+          "sequence": null
+        },
+        {
+          "action": "strikeUp",
+          "sourceRecordOrdinal": 6,
+          "frameStart": 26,
+          "frameCount": 5,
+          "alignment": "right",
+          "screenOffset": 0,
+          "timing": {
+            "framesPerSecond": 10,
+            "loop": false
+          },
+          "sourceXOffset": 195,
+          "sourceYOffset": 82,
+          "sequence": null
+        }
+      ]
+    },
+    {
+      "resourceId": "weapon.03",
+      "actions": [
+        {
+          "action": "idle",
+          "sourceRecordOrdinal": 0,
+          "frameStart": 0,
+          "frameCount": 1,
+          "alignment": "right",
+          "screenOffset": 0,
+          "timing": {
+            "framesPerSecond": 10,
+            "loop": true
+          },
+          "sourceXOffset": 260,
+          "sourceYOffset": 63,
+          "sequence": null
+        },
+        {
+          "action": "strikeDown",
+          "sourceRecordOrdinal": 1,
+          "frameStart": 1,
+          "frameCount": 5,
+          "alignment": "right",
+          "screenOffset": 0,
+          "timing": {
+            "framesPerSecond": 10,
+            "loop": false
+          },
+          "sourceXOffset": 202,
+          "sourceYOffset": 0,
+          "sequence": null
+        },
+        {
+          "action": "strikeDownLeft",
+          "sourceRecordOrdinal": 2,
+          "frameStart": 6,
+          "frameCount": 5,
+          "alignment": "right",
+          "screenOffset": 0,
+          "timing": {
+            "framesPerSecond": 10,
+            "loop": false
+          },
+          "sourceXOffset": 44,
+          "sourceYOffset": 0,
+          "sequence": null
+        },
+        {
+          "action": "strikeLeft",
+          "sourceRecordOrdinal": 3,
+          "frameStart": 11,
+          "frameCount": 5,
+          "alignment": "right",
+          "screenOffset": 0,
+          "timing": {
+            "framesPerSecond": 10,
+            "loop": false
+          },
+          "sourceXOffset": 0,
+          "sourceYOffset": 55,
+          "sequence": null
+        },
+        {
+          "action": "strikeRight",
+          "sourceRecordOrdinal": 4,
+          "frameStart": 16,
+          "frameCount": 5,
+          "alignment": "left",
+          "screenOffset": 0,
+          "timing": {
+            "framesPerSecond": 10,
+            "loop": false
+          },
+          "sourceXOffset": 0,
+          "sourceYOffset": 55,
+          "sequence": null
+        },
+        {
+          "action": "strikeDownRight",
+          "sourceRecordOrdinal": 5,
+          "frameStart": 21,
+          "frameCount": 5,
+          "alignment": "left",
+          "screenOffset": 0,
+          "timing": {
+            "framesPerSecond": 10,
+            "loop": false
+          },
+          "sourceXOffset": 1,
+          "sourceYOffset": 0,
+          "sequence": null
+        },
+        {
+          "action": "strikeUp",
+          "sourceRecordOrdinal": 6,
+          "frameStart": 26,
+          "frameCount": 5,
+          "alignment": "right",
+          "screenOffset": 0,
+          "timing": {
+            "framesPerSecond": 10,
+            "loop": false
+          },
+          "sourceXOffset": 191,
+          "sourceYOffset": 54,
+          "sequence": null
+        }
+      ]
+    },
     {
       "resourceId": "weapon.axe",
       "actions": [
@@ -14179,6 +16511,116 @@
           },
           "sourceXOffset": 140,
           "sourceYOffset": 59,
+          "sequence": null
+        }
+      ]
+    },
+    {
+      "resourceId": "weapon.werecreature",
+      "actions": [
+        {
+          "action": "idle",
+          "sourceRecordOrdinal": 0,
+          "frameStart": 0,
+          "frameCount": 1,
+          "alignment": "center",
+          "screenOffset": 0.02,
+          "timing": {
+            "framesPerSecond": 10,
+            "loop": true
+          },
+          "sourceXOffset": 0,
+          "sourceYOffset": 143,
+          "sequence": null
+        },
+        {
+          "action": "strikeDown",
+          "sourceRecordOrdinal": 1,
+          "frameStart": 1,
+          "frameCount": 5,
+          "alignment": "right",
+          "screenOffset": 0.2,
+          "timing": {
+            "framesPerSecond": 10,
+            "loop": false
+          },
+          "sourceXOffset": 77,
+          "sourceYOffset": 133,
+          "sequence": null
+        },
+        {
+          "action": "strikeDownLeft",
+          "sourceRecordOrdinal": 2,
+          "frameStart": 6,
+          "frameCount": 5,
+          "alignment": "right",
+          "screenOffset": 0,
+          "timing": {
+            "framesPerSecond": 10,
+            "loop": false
+          },
+          "sourceXOffset": 231,
+          "sourceYOffset": 94,
+          "sequence": null
+        },
+        {
+          "action": "strikeLeft",
+          "sourceRecordOrdinal": 3,
+          "frameStart": 11,
+          "frameCount": 5,
+          "alignment": "right",
+          "screenOffset": 0,
+          "timing": {
+            "framesPerSecond": 10,
+            "loop": false
+          },
+          "sourceXOffset": 188,
+          "sourceYOffset": 131,
+          "sequence": null
+        },
+        {
+          "action": "strikeRight",
+          "sourceRecordOrdinal": 4,
+          "frameStart": 16,
+          "frameCount": 5,
+          "alignment": "right",
+          "screenOffset": 0,
+          "timing": {
+            "framesPerSecond": 10,
+            "loop": false
+          },
+          "sourceXOffset": 191,
+          "sourceYOffset": 134,
+          "sequence": null
+        },
+        {
+          "action": "strikeDownRight",
+          "sourceRecordOrdinal": 5,
+          "frameStart": 21,
+          "frameCount": 5,
+          "alignment": "left",
+          "screenOffset": 0,
+          "timing": {
+            "framesPerSecond": 10,
+            "loop": false
+          },
+          "sourceXOffset": 0,
+          "sourceYOffset": 116,
+          "sequence": null
+        },
+        {
+          "action": "strikeUp",
+          "sourceRecordOrdinal": 6,
+          "frameStart": 26,
+          "frameCount": 5,
+          "alignment": "left",
+          "screenOffset": 0.2,
+          "timing": {
+            "framesPerSecond": 10,
+            "loop": false
+          },
+          "sourceXOffset": 81,
+          "sourceYOffset": 110,
           "sequence": null
         }
       ]
