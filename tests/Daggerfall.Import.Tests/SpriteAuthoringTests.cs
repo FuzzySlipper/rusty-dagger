@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
@@ -308,6 +309,7 @@ public sealed class SpriteAuthoringTests
                     Artifact("media/classic/weapon.png", fixture.WeaponDigest, 3),
                     Artifact("media/classic/effect.png", fixture.EffectDigest, 3),
                     Artifact("media/classic/font.bin", fixture.FontDigest, 3),
+                    Artifact("media/maps/map-fmap0i17.png", ContentDigest.Compute("map"u8), 3),
                     Artifact(Arena2MediaBundlePublication.DungeonMediaManifestRelativePath, ContentDigest.Compute(dungeon), dungeon.Length),
                     Artifact(Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, ContentDigest.Compute(classic), classic.Length),
                 ],
@@ -318,6 +320,7 @@ public sealed class SpriteAuthoringTests
             Write(root, "media/classic/weapon.png", "wep"u8.ToArray());
             Write(root, "media/classic/effect.png", "fx!"u8.ToArray());
             Write(root, "media/classic/font.bin", "fnt"u8.ToArray());
+            Write(root, "media/maps/map-fmap0i17.png", "map"u8.ToArray());
             Write(root, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath, dungeon);
             Write(root, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, classic);
             Write(root, ImportPublicationManifestSerializer.ManifestRelativePath, ImportPublicationManifestSerializer.Serialize(manifest));
@@ -381,6 +384,7 @@ public sealed class SpriteAuthoringTests
                 Artifact("media/classic/weapon.png", fixture.WeaponDigest, 3),
                 Artifact("media/classic/effect.png", fixture.EffectDigest, 3),
                 Artifact("media/classic/font.bin", fixture.FontDigest, 3),
+                Artifact("media/maps/map-fmap0i17.png", ContentDigest.Compute("map"u8), 3),
                 Artifact(Arena2MediaBundlePublication.DungeonMediaManifestRelativePath, ContentDigest.Compute(dungeon), dungeon.Length),
                 Artifact(Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, ContentDigest.Compute(classic), classic.Length),
             ],
@@ -395,6 +399,7 @@ public sealed class SpriteAuthoringTests
             new("media/classic/weapon.png", "wep"u8.ToArray()),
             new("media/classic/effect.png", "fx!"u8.ToArray()),
             new("media/classic/font.bin", "fnt"u8.ToArray()),
+            new("media/maps/map-fmap0i17.png", "map"u8.ToArray()),
         ];
         SpritePublicationSnapshot strict = SpritePublicationReader.Read(files);
         SpritePublicationSnapshot admitted = SpritePublicationReader.ReadAdmitted(files);
@@ -421,6 +426,9 @@ public sealed class SpriteAuthoringTests
             file.RelativePath == "media/dungeon/actor.png" ? file with { Bytes = "toolong"u8.ToArray() } : file).ToArray()));
     }
 
+    private static IReadOnlyList<ClassicMapRegionManifest> EmptyMapRegions() =>
+        Enumerable.Range(0, 62).Select(region => new ClassicMapRegionManifest(region, [])).ToArray();
+
     private static Fixture CreateFixture()
     {
         ContentDigest actorDigest = ContentDigest.Compute("act"u8);
@@ -428,11 +436,13 @@ public sealed class SpriteAuthoringTests
         ContentDigest weaponDigest = ContentDigest.Compute("wep"u8);
         ContentDigest effectDigest = ContentDigest.Compute("fx!"u8);
         ContentDigest fontDigest = ContentDigest.Compute("fnt"u8);
+        ContentDigest mapDigest = ContentDigest.Compute("map"u8);
         NormalizedMediaDescriptor actor = Descriptor("sprite.actor", NormalizedMediaKind.EnemySprite, "media/dungeon/actor.png", actorDigest, 8);
         NormalizedMediaDescriptor billboard = Descriptor("sprite.billboard", NormalizedMediaKind.Billboard, "media/dungeon/billboard.png", billboardDigest, 1) with { Pivot = new(0.5F, 0.5F), FramesPerSecond = 5F, Loop = false };
         NormalizedMediaDescriptor weapon = Descriptor("sprite.weapon", NormalizedMediaKind.WeaponSprite, "media/classic/weapon.png", weaponDigest, 7);
         NormalizedMediaDescriptor effect = Descriptor("sprite.effect", NormalizedMediaKind.EffectSprite, "media/classic/effect.png", effectDigest, 1) with { FramesPerSecond = 10F, Loop = false };
         NormalizedMediaDescriptor font = Descriptor("font.classic", NormalizedMediaKind.Font, "media/classic/font.bin", fontDigest, 1);
+        NormalizedMediaDescriptor map = Descriptor("map.fmap0i17", NormalizedMediaKind.UserInterface, "media/maps/map-fmap0i17.png", mapDigest, 1);
         DungeonMediaFrameLayout[] layouts = Enumerable.Range(0, 8)
             .Select(index => new DungeonMediaFrameLayout(index, 0, index, index, false, actor.Frames[index], new(1F, 1F)))
             .ToArray();
@@ -447,17 +457,19 @@ public sealed class SpriteAuthoringTests
             [new("sprite/fixture", 1, 1, new(0.5F, 0.5F), new(1F, 1F), new(12F, true), new(5F, false), [new(0, 0, 0, 0, false, billboard.Frames[0], new(1F, 1F))], billboard.Id)],
             [actorManifest]);
         ClassicMediaManifestSidecar classic = new(
-            new([weapon, effect, font]),
+            new([weapon, effect, font, map]),
             [new ClassicWeaponMediaManifest(weapon.Id, Enum.GetValues<ClassicDaggerWeaponAction>().Select((action, index) => new ClassicWeaponActionManifest(action, index, index, 1, ClassicWeaponScreenAlignment.Right, 0F, new(10F, true), 0, 0)).ToArray())],
             Enum.GetValues<ClassicEffect>().Select((value, index) => new ClassicEffectManifest(value, effect.Id, index, new(10F, false))).ToArray(),
             [], [], [], new(font.Id, "default", 1, 1, Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, checked((ushort)index))).ToArray()),
-            [new(font.Id, "default", 1, 1, Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, checked((ushort)index))).ToArray())], []);
+            [new(font.Id, "default", 1, 1, Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, checked((ushort)index))).ToArray())],
+            [new("map.fmap0i17", MapArtKind.RegionMap, [17], "DaggerfallTravelMapWindow region map", "arena2/FMAP0I17.IMG", 320, 160, false)],
+            [.. EmptyMapRegions().Where(region => region.Region != 17), new(17, ["map.fmap0i17"])], []);
         CanonicalImportManifest manifest = new(
             1,
             "daggerfall-import",
             1,
             [new("arena2/test", ContentDigest.Compute("source"u8), 6)],
-            [Artifact(actor.RelativePath, actorDigest, 3), Artifact(billboard.RelativePath, billboardDigest, 3), Artifact(weapon.RelativePath, weaponDigest, 3), Artifact(effect.RelativePath, effectDigest, 3), Artifact(font.RelativePath, fontDigest, 3)]);
+            [Artifact(actor.RelativePath, actorDigest, 3), Artifact(billboard.RelativePath, billboardDigest, 3), Artifact(weapon.RelativePath, weaponDigest, 3), Artifact(effect.RelativePath, effectDigest, 3), Artifact(font.RelativePath, fontDigest, 3), Artifact(map.RelativePath, mapDigest, 3)]);
         manifest.Validate();
         return new(manifest, dungeon, classic, actorDigest, billboardDigest, weaponDigest, effectDigest, fontDigest);
     }

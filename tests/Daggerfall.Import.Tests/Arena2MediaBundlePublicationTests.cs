@@ -419,8 +419,13 @@ public sealed class Arena2MediaBundlePublicationTests
                 1,
                 1,
                 Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, 0)).ToArray())],
+            [],
+            EmptyMapRegions(),
             []);
     }
+
+    private static IReadOnlyList<ClassicMapRegionManifest> EmptyMapRegions() =>
+        Enumerable.Range(0, 62).Select(region => new ClassicMapRegionManifest(region, [])).ToArray();
 
     private static IReadOnlyList<ClassicWeaponActionManifest> WeaponActions(Arena2ClassicMediaPublication publication) =>
         publication.WeaponMedia.Single().Actions;

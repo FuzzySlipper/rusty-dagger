@@ -83,6 +83,8 @@ public sealed record ClassicMediaManifestSidecar(
     IReadOnlyList<ClassicInventoryIconManifest> InventoryIcons,
     ClassicFontManifest Font,
     IReadOnlyList<ClassicFontManifest> Fonts,
+    IReadOnlyList<ClassicMapMediaManifest> MapMedia,
+    IReadOnlyList<ClassicMapRegionManifest> MapRegions,
     IReadOnlyList<ClassicAuthoredUiAssetManifest> AuthoredUiAssets)
 { }
 
@@ -384,9 +386,12 @@ public sealed record Arena2MediaBundlePublication(
         ArgumentNullException.ThrowIfNull(sidecar.InventoryIcons);
         ArgumentNullException.ThrowIfNull(sidecar.Font);
         ArgumentNullException.ThrowIfNull(sidecar.Fonts);
+        ArgumentNullException.ThrowIfNull(sidecar.MapMedia);
+        ArgumentNullException.ThrowIfNull(sidecar.MapRegions);
         ArgumentNullException.ThrowIfNull(sidecar.AuthoredUiAssets);
         if (sidecar.Audio.Any(audio => audio is null) || sidecar.UiImages.Any(image => image is null) || sidecar.InventoryIcons.Any(icon => icon is null)
-            || sidecar.Fonts.Any(font => font is null) || sidecar.AuthoredUiAssets.Any(asset => asset is null))
+            || sidecar.Fonts.Any(font => font is null) || sidecar.MapMedia.Any(image => image is null) || sidecar.MapRegions.Any(region => region is null)
+            || sidecar.AuthoredUiAssets.Any(asset => asset is null))
         {
             throw new InvalidOperationException("Persisted classic sidecar lists cannot contain null entries.");
         }
@@ -425,6 +430,35 @@ public sealed record Arena2MediaBundlePublication(
         if (!sidecar.Fonts.Any(font => StringComparer.Ordinal.Equals(font.MediaId, sidecar.Font.MediaId)))
         {
             throw new InvalidOperationException("The persisted default classic font must be one of the persisted classic fonts.");
+        }
+
+        if (sidecar.MapMedia.Select(image => image.MediaId).Distinct(StringComparer.Ordinal).Count() != sidecar.MapMedia.Count)
+        {
+            throw new InvalidOperationException("Persisted classic map images must have unique media IDs.");
+        }
+
+        foreach (ClassicMapMediaManifest image in sidecar.MapMedia)
+        {
+            image.Validate();
+            RequirePersistedDescriptor(media, image.MediaId, NormalizedMediaKind.UserInterface, "classic map image");
+        }
+
+        if (sidecar.MapRegions.Count != 62
+            || sidecar.MapRegions.Select(region => region.Region).Distinct().Count() != sidecar.MapRegions.Count)
+        {
+            throw new InvalidOperationException("Persisted classic map regions must cover the 62 classic regions exactly once.");
+        }
+
+        foreach (ClassicMapRegionManifest region in sidecar.MapRegions)
+        {
+            region.Validate();
+            foreach (string mediaId in region.MediaIds)
+            {
+                if (!sidecar.MapMedia.Any(image => StringComparer.Ordinal.Equals(image.MediaId, mediaId)))
+                {
+                    throw new InvalidOperationException($"Persisted map region {region.Region} names unpublished image '{mediaId}'.");
+                }
+            }
         }
         if (sidecar.AuthoredUiAssets.Select(asset => asset.Id).Distinct(StringComparer.Ordinal).Count() != sidecar.AuthoredUiAssets.Count
             || sidecar.AuthoredUiAssets.Select(asset => asset.RelativePath).Distinct(StringComparer.Ordinal).Count() != sidecar.AuthoredUiAssets.Count)
@@ -600,6 +634,8 @@ public sealed record Arena2MediaBundlePublication(
         publication.InventoryIcons.OrderBy(icon => icon.ItemId, StringComparer.Ordinal).ToArray(),
         publication.Font with { Glyphs = publication.Font.Glyphs.OrderBy(glyph => glyph.GlyphIndex).ToArray() },
         publication.Fonts.OrderBy(font => font.MediaId, StringComparer.Ordinal).Select(font => font with { Glyphs = font.Glyphs.OrderBy(glyph => glyph.GlyphIndex).ToArray() }).ToArray(),
+        publication.MapMedia.OrderBy(image => image.MediaId, StringComparer.Ordinal).ToArray(),
+        publication.MapRegions.OrderBy(region => region.Region).ToArray(),
         publication.AuthoredUiAssets.OrderBy(asset => asset.Id, StringComparer.Ordinal).ToArray());
 
     private static DungeonActorSpriteStateLayout CanonicalizeState(DungeonActorSpriteStateLayout state) => state with
@@ -762,8 +798,11 @@ public sealed record Arena2MediaBundlePublication(
         ValidateClassicReferences(publication.InventoryIcons.Select(icon => icon.MediaId), media, NormalizedMediaKind.UserInterface, "inventory icon");
         ArgumentNullException.ThrowIfNull(publication.Font);
         ArgumentNullException.ThrowIfNull(publication.Fonts);
+        ArgumentNullException.ThrowIfNull(publication.MapMedia);
+        ArgumentNullException.ThrowIfNull(publication.MapRegions);
         ValidateClassicReferences([publication.Font.MediaId], media, NormalizedMediaKind.Font, "font");
         ValidateClassicReferences(publication.Fonts.Select(font => font.MediaId), media, NormalizedMediaKind.Font, "font");
+        ValidateClassicReferences(publication.MapMedia.Select(image => image.MediaId), media, NormalizedMediaKind.UserInterface, "map image");
         if (publication.Fonts.Select(font => font.MediaId).Distinct(StringComparer.Ordinal).Count() != publication.Fonts.Count
             || !publication.Fonts.Any(font => StringComparer.Ordinal.Equals(font.MediaId, publication.Font.MediaId)))
         {
@@ -773,6 +812,34 @@ public sealed record Arena2MediaBundlePublication(
         foreach (ClassicFontManifest font in publication.Fonts)
         {
             font.Validate();
+        }
+
+        if (publication.MapMedia.Select(image => image.MediaId).Distinct(StringComparer.Ordinal).Count() != publication.MapMedia.Count)
+        {
+            throw new InvalidOperationException("Classic map images must carry unique media IDs.");
+        }
+
+        foreach (ClassicMapMediaManifest image in publication.MapMedia)
+        {
+            image.Validate();
+        }
+
+        if (publication.MapRegions.Count != 62
+            || publication.MapRegions.Select(region => region.Region).Distinct().Count() != publication.MapRegions.Count)
+        {
+            throw new InvalidOperationException("Classic map regions must cover the 62 classic regions exactly once.");
+        }
+
+        foreach (ClassicMapRegionManifest region in publication.MapRegions)
+        {
+            region.Validate();
+            foreach (string mediaId in region.MediaIds)
+            {
+                if (!publication.MapMedia.Any(image => StringComparer.Ordinal.Equals(image.MediaId, mediaId)))
+                {
+                    throw new InvalidOperationException($"Classic map region {region.Region} names unpublished image '{mediaId}'.");
+                }
+            }
         }
 
         if (publication.Font.FixedWidth is 0 or > 16 || publication.Font.FixedHeight is 0 or > 16 || publication.Font.Glyphs is null || publication.Font.Glyphs.Count != Arena2FormatConstants.FntGlyphCount

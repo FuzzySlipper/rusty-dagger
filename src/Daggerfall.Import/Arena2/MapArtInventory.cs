@@ -124,6 +124,43 @@ public sealed class MapArtInventory
         return new MapArtInventory([.. records.OrderBy(record => record.FileName, StringComparer.Ordinal)]);
     }
 
+    /// <summary>
+    /// Decodes one map art file to its single image: the headered, headerless or record-sequence
+    /// shape, in that order. A file with no image shape, or with more than one record, is refused
+    /// by name rather than guessed at: the publication renders one image per file.
+    /// </summary>
+    public static IndexedImg DecodeImage(byte[] bytes, string name)
+    {
+        ArgumentNullException.ThrowIfNull(bytes);
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        try
+        {
+            return ImgDecoder.Decode(bytes, name);
+        }
+        catch (Arena2FormatException)
+        {
+        }
+
+        if (ImgDecoder.TryDecodeHeaderless(bytes, name, out IndexedImg? headerless, out _) && headerless is not null)
+        {
+            return headerless;
+        }
+
+        try
+        {
+            IReadOnlyList<IndexedImg> sequence = ImgDecoder.DecodeRecordSequence(bytes, name);
+            if (sequence.Count == 1)
+            {
+                return sequence[0];
+            }
+        }
+        catch (Arena2FormatException)
+        {
+        }
+
+        throw new Arena2FormatException(name, 0, "No single-image decoder claims this file's shape.");
+    }
+
     private static MapArtRecord Read(DocumentedFile documented, byte[] bytes)
     {
         if (UnsupportedFiles.Contains(documented.Name, StringComparer.Ordinal))
@@ -146,30 +183,13 @@ public sealed class MapArtInventory
 
         try
         {
-            IndexedImg image = ImgDecoder.Decode(bytes, documented.Name);
+            IndexedImg image = DecodeImage(bytes, documented.Name);
             return new MapArtRecord(documented.Name, documented.Kind, documented.Regions, documented.Binding, documented.Palette, image.Width, image.Height, 1, MapArtDisposition.Decoded, string.Empty);
         }
         catch (Arena2FormatException)
         {
+            return new MapArtRecord(documented.Name, documented.Kind, documented.Regions, documented.Binding, documented.Palette, 0, 0, 0, MapArtDisposition.Unreadable, "No image decoder claims this file's shape.");
         }
-
-        if (ImgDecoder.TryDecodeHeaderless(bytes, documented.Name, out IndexedImg? headerless, out _)
-            && headerless is not null)
-        {
-            return new MapArtRecord(documented.Name, documented.Kind, documented.Regions, documented.Binding, documented.Palette, headerless.Width, headerless.Height, 1, MapArtDisposition.Decoded, string.Empty);
-        }
-
-        try
-        {
-            IReadOnlyList<IndexedImg> sequence = ImgDecoder.DecodeRecordSequence(bytes, documented.Name);
-            IndexedImg first = sequence[0];
-            return new MapArtRecord(documented.Name, documented.Kind, documented.Regions, documented.Binding, documented.Palette, first.Width, first.Height, sequence.Count, MapArtDisposition.Decoded, string.Empty);
-        }
-        catch (Arena2FormatException)
-        {
-        }
-
-        return new MapArtRecord(documented.Name, documented.Kind, documented.Regions, documented.Binding, documented.Palette, 0, 0, 0, MapArtDisposition.Unreadable, "No image decoder claims this file's shape.");
     }
 
     private sealed record DocumentedFile(string Name, MapArtKind Kind, IReadOnlyList<int> Regions, string Binding, string Palette);

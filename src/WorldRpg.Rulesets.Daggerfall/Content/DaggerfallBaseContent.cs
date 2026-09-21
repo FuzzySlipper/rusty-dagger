@@ -47,10 +47,12 @@ internal static class DaggerfallBaseContent
             DaggerfallBiographiesSet biographies = ReadBiographies(root, text, diagnostics);
             DaggerfallWorldGridsSet grids = ReadWorldGrids(root, diagnostics);
             DaggerfallBooksSet books = ReadBooks(root, text, diagnostics);
+            DaggerfallFactionsSet factions = ReadFactions(root, diagnostics);
+            DaggerfallTerrainSet terrain = ReadTerrain(root, diagnostics);
             ValidateReferences(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, hud, diagnostics);
             ValidateCatalog(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, lootCategoryPools, donorErrata, diagnostics);
             diagnostics.ThrowIfAny();
-            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles, names, rumors, biographies, grids, books);
+            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles, names, rumors, biographies, grids, books, factions, terrain);
         }
         catch (JsonException exception)
         {
@@ -1420,7 +1422,7 @@ internal static class DaggerfallBaseContent
             return new DaggerfallClimateGridDefinition(0, 0, [], []);
         }
 
-        byte[] cells = ReadGridCells(section, "climate", diagnostics);
+        byte[] cells = ReadGridCells(section, "rows", 1001, 500, "climate", diagnostics);
         List<DaggerfallClimateValueDefinition> values = [];
         HashSet<int> seen = [];
         foreach (JsonElement value in Array(section, "values", diagnostics))
@@ -1476,7 +1478,7 @@ internal static class DaggerfallBaseContent
             return new DaggerfallPoliticGridDefinition(0, 0, [], []);
         }
 
-        byte[] cells = ReadGridCells(section, "politic", diagnostics);
+        byte[] cells = ReadGridCells(section, "rows", 1001, 500, "politic", diagnostics);
         List<DaggerfallPoliticValueDefinition> values = [];
         HashSet<int> seen = [];
         foreach (JsonElement value in Array(section, "values", diagnostics))
@@ -1591,10 +1593,205 @@ internal static class DaggerfallBaseContent
         return new DaggerfallBooksSet(new ReadOnlyDictionary<int, DaggerfallBookDefinition>(books));
     }
 
-    private static byte[] ReadGridCells(JsonElement section, string what, DaggerfallContentDiagnostics diagnostics)    {
+    /// <summary>
+    /// Reads the published faction catalog from the pack alone. Every relation the catalog claims
+    /// resolved names a faction the section carries, and every region claim names factions it
+    /// carries: a social consumer holding a reference the catalog cannot answer would read policy
+    /// from a miss.
+    /// </summary>
+    private static DaggerfallFactionsSet ReadFactions(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!root.TryGetProperty("factions", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
+        {
+            diagnostics.Add("Base payload publishes no factions section; faction lookups resolve to nothing until it is republished.");
+            return new DaggerfallFactionsSet(
+                new ReadOnlyDictionary<int, DaggerfallFactionDefinition>(new Dictionary<int, DaggerfallFactionDefinition>()),
+                new ReadOnlyDictionary<int, DaggerfallRegionFactionDefinition>(new Dictionary<int, DaggerfallRegionFactionDefinition>()),
+                new ReadOnlyDictionary<string, int>(new Dictionary<string, int>(StringComparer.Ordinal)));
+        }
+
+        Dictionary<int, DaggerfallFactionDefinition> factions = [];
+        Dictionary<string, int> names = new(StringComparer.Ordinal);
+        foreach (JsonElement faction in Array(section, "factions", diagnostics))
+        {
+            int id = Integer(faction, "id", diagnostics);
+            int filedId = Integer(faction, "filedId", diagnostics);
+            string name = Text(faction, "name", diagnostics);
+            int parent = Integer(faction, "parent", diagnostics);
+            DaggerfallFactionLinkDisposition? parentDisposition = null;
+            if (faction.TryGetProperty("parentDisposition", out JsonElement parentValue)
+                && parentValue.ValueKind == JsonValueKind.String
+                && parentValue.GetString() is string parentName)
+            {
+                if (!TryReadName(parentName, out DaggerfallFactionLinkDisposition parsed))
+                {
+                    diagnostics.Add($"Faction {id} names the parent disposition '{parentName}', which the contract does not declare.");
+                    continue;
+                }
+
+                parentDisposition = parsed;
+            }
+
+            if ((parent == 0) != (parentDisposition is null))
+            {
+                diagnostics.Add($"Faction {id} names parent {parent} with no matching parent disposition.");
+            }
+
+            List<int> children = [.. Array(faction, "children", diagnostics).Select(child => child.GetInt32())];
+            int type = Integer(faction, "type", diagnostics);
+            string typeName = OptionalText(faction, "typeName") ?? string.Empty;
+            // Regions outside the classic range name no region: the donor converts filed values
+            // without a range check, so vampire clans carry 62..70 and region claims cover 0..61.
+            int region = Integer(faction, "region", diagnostics);
+
+            List<int> allies = [.. Array(faction, "allies", diagnostics).Select(ally => ally.GetInt32())];
+            List<int> enemies = [.. Array(faction, "enemies", diagnostics).Select(enemy => enemy.GetInt32())];
+            List<int> flats = [.. Array(faction, "flats", diagnostics).Select(flat => flat.GetInt32())];
+            string allyName = Text(faction, "allyDisposition", diagnostics);
+            string enemyName = Text(faction, "enemyDisposition", diagnostics);
+            if (!TryReadName(allyName, out DaggerfallFactionLinkDisposition allyDisposition)
+                || !TryReadName(enemyName, out DaggerfallFactionLinkDisposition enemyDisposition))
+            {
+                diagnostics.Add($"Faction {id} names a relation disposition the contract does not declare.");
+                continue;
+            }
+
+            if (!factions.TryAdd(id, new DaggerfallFactionDefinition(
+                id, filedId, name, parent, parentDisposition, children, type, typeName, region,
+                Integer(faction, "power", diagnostics), Integer(faction, "flags", diagnostics), Integer(faction, "ruler", diagnostics),
+                allies, allyDisposition, enemies, enemyDisposition, flats,
+                Integer(faction, "face", diagnostics), Integer(faction, "race", diagnostics),
+                Integer(faction, "socialGroup", diagnostics), OptionalText(faction, "socialGroupName") ?? string.Empty,
+                Integer(faction, "guildGroup", diagnostics), OptionalText(faction, "guildGroupName") ?? string.Empty,
+                Integer(faction, "reputation", diagnostics), Integer(faction, "summon", diagnostics),
+                Integer(faction, "minimumFame", diagnostics), Integer(faction, "maximumFame", diagnostics),
+                Integer(faction, "vampire", diagnostics), Integer(faction, "rank", diagnostics))))
+            {
+                diagnostics.Add($"Faction catalog names faction {id} twice, so one of them is unreachable.");
+            }
+
+            names.TryAdd(name, id);
+        }
+
+        if (factions.Count == 0)
+        {
+            diagnostics.Add("The published faction catalog carries no factions.");
+        }
+
+        foreach (DaggerfallFactionDefinition faction in factions.Values)
+        {
+            if (faction.Parent != 0 && !factions.ContainsKey(faction.Parent) && faction.ParentDisposition == DaggerfallFactionLinkDisposition.Resolved)
+            {
+                diagnostics.Add($"Faction {faction.Id} claims a resolved parent no faction carries.");
+            }
+
+            foreach (int ally in faction.Allies)
+            {
+                if (!factions.ContainsKey(ally) && faction.AllyDisposition == DaggerfallFactionLinkDisposition.Resolved)
+                {
+                    diagnostics.Add($"Faction {faction.Id} claims a resolved ally no faction carries.");
+                }
+            }
+
+            foreach (int enemy in faction.Enemies)
+            {
+                if (!factions.ContainsKey(enemy) && faction.EnemyDisposition == DaggerfallFactionLinkDisposition.Resolved)
+                {
+                    diagnostics.Add($"Faction {faction.Id} claims a resolved enemy no faction carries.");
+                }
+            }
+        }
+
+        Dictionary<int, DaggerfallRegionFactionDefinition> regions = [];
+        foreach (JsonElement claimed in Array(section, "regions", diagnostics))
+        {
+            int region = Integer(claimed, "region", diagnostics);
+            List<int> claimants = [.. Array(claimed, "factionIds", diagnostics).Select(entry => entry.GetInt32())];
+            string dispositionName = Text(claimed, "disposition", diagnostics);
+            if (!TryReadName(dispositionName, out DaggerfallRegionFactionDisposition disposition))
+            {
+                diagnostics.Add($"Region {region} names the disposition '{dispositionName}', which the contract does not declare.");
+                continue;
+            }
+
+            if ((disposition == DaggerfallRegionFactionDisposition.Claimed) != (claimants.Count > 0))
+            {
+                diagnostics.Add($"Region {region} claims {claimants.Count} factions as {dispositionName}.");
+            }
+
+            foreach (int claimant in claimants)
+            {
+                if (!factions.ContainsKey(claimant))
+                {
+                    diagnostics.Add($"Region {region} is claimed by faction {claimant} no faction carries.");
+                }
+            }
+
+            if (!regions.TryAdd(region, new DaggerfallRegionFactionDefinition(region, claimants, disposition)))
+            {
+                diagnostics.Add($"Faction catalog claims region {region} twice, so one claim is unreachable.");
+            }
+        }
+
+        if (regions.Count != 62)
+        {
+            diagnostics.Add($"The published faction catalog claims {regions.Count} regions for 62 classic regions.");
+        }
+
+        return new DaggerfallFactionsSet(
+            new ReadOnlyDictionary<int, DaggerfallFactionDefinition>(factions),
+            new ReadOnlyDictionary<int, DaggerfallRegionFactionDefinition>(regions),
+            new ReadOnlyDictionary<string, int>(names));
+    }
+
+    /// <summary>
+    /// Reads the published wilderness terrain from the pack alone. The heightmap tiles rows the
+    /// way the grids do; the cell samples travel as one base-64 span. Every heightmap byte the
+    /// rows carry is data, so a row count or tiling miss is a refusal rather than a partial map.
+    /// </summary>
+    private static DaggerfallTerrainSet ReadTerrain(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!root.TryGetProperty("terrain", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
+        {
+            diagnostics.Add("Base payload publishes no terrain section; terrain lookups resolve to nothing until it is republished.");
+            return new DaggerfallTerrainSet(0, 0, [], []);
+        }
+
+        byte[] heightmap = ReadGridCells(section, "heightmap", 1000, 500, "terrain heightmap", diagnostics);
+        if (heightmap.Length != 500000)
+        {
+            diagnostics.Add($"The published terrain heightmap carries {heightmap.Length} bytes for a 1000 by 500 map.");
+        }
+
+        byte[] samples = [];
+        if (section.TryGetProperty("samples", out JsonElement encoded) && encoded.ValueKind == JsonValueKind.String)
+        {
+            try
+            {
+                samples = Convert.FromBase64String(encoded.GetString() ?? string.Empty);
+            }
+            catch (FormatException)
+            {
+                diagnostics.Add("The published terrain samples are not base-64.");
+            }
+        }
+        else
+        {
+            diagnostics.Add("The published terrain carries no samples.");
+        }
+
+        if (samples.Length != 12500000)
+        {
+            diagnostics.Add($"The published terrain carries {samples.Length} sample bytes for 500000 cells of 25.");
+        }
+
+        return new DaggerfallTerrainSet(1000, 500, heightmap, samples);
+    }
+
+    private static byte[] ReadGridCells(JsonElement section, string rowsKey, int width, int height, string what, DaggerfallContentDiagnostics diagnostics)    {
         List<byte> cells = [];
         HashSet<int> seenRows = [];
-        foreach (JsonElement row in Array(section, "rows", diagnostics))
+        foreach (JsonElement row in Array(section, rowsKey, diagnostics))
         {
             int y = Integer(row, "y", diagnostics);
             if (!seenRows.Add(y))
@@ -1619,17 +1816,17 @@ internal static class DaggerfallBaseContent
                 }
             }
 
-            if (line.Count != 1001)
+            if (line.Count != width)
             {
-                diagnostics.Add($"{what} grid row {y} tiles {line.Count} columns for a 1001-column grid.");
+                diagnostics.Add($"{what} grid row {y} tiles {line.Count} columns for a {width}-column grid.");
             }
 
             cells.AddRange(line);
         }
 
-        if (seenRows.Count != 500)
+        if (seenRows.Count != height)
         {
-            diagnostics.Add($"{what} grid carries {seenRows.Count} rows for a 500-row grid.");
+            diagnostics.Add($"{what} grid carries {seenRows.Count} rows for a {height}-row grid.");
         }
 
         return [.. cells];
