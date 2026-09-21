@@ -46,6 +46,16 @@ internal sealed class DaggerfallLootPresentation(DaggerfallCorpseLootModule loot
         if (container == Token) _actor = null;
     }
 
+    /// <summary>
+    /// Clears an open container for one retiring actor. The mode machine observes the closed
+    /// loot through the ordinary Read-null path and follows back to play, so no stale token
+    /// can outlive the actor it names.
+    /// </summary>
+    internal void CloseActor(long actorId)
+    {
+        if (_actor == actorId) _actor = null;
+    }
+
     internal PendingCorpseLoot? PrepareTake(DaggerfallPlayerUiAction action, PlayerControlState player, LookReceipt look)
     {
         LootPresentation? current = Read();

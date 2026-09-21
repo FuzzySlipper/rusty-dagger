@@ -38,8 +38,9 @@ internal sealed class DaggerSessionPersistence
     {
         State = state; _corpseLoot = corpses; _uniqueItems = uniqueItems; _camera = camera; _time = time; _site = site;
     }
-    internal RulesetSavePayload Capture(ulong? generation, ulong? step)
+    internal RulesetSavePayload Capture(ulong? generation, ulong? step, IReadOnlyDictionary<long, DaggerfallActorId> dynamicActors)
     {
+        ArgumentNullException.ThrowIfNull(dynamicActors);
         PlayerControlState control = State.PlayerControl;
         WorldPoint playerPosition = control.Position
             ?? throw new InvalidOperationException("Daggerfall cannot save without a player position.");
@@ -48,11 +49,24 @@ internal sealed class DaggerSessionPersistence
             control.YawRadians, control.PitchRadians,
             DaggerfallStatsSaveBoundary.Capture(State.Actors.Player.Stats, State.Actors.Player.Actor.Entity));
         DaggerfallActorSave[] actors = State.Actors.All
+            .Where(actor => !dynamicActors.ContainsKey(actor.DurableId))
             .OrderBy(actor => actor.DurableId)
             .Select(actor => new DaggerfallActorSave(
                 actor.DurableId,
                 actor.Position.X, actor.Position.Y, actor.Position.Z, actor.HeadingYawRadians,
                 DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity)))
+            .ToArray();
+        DaggerfallDynamicActorSave[] spawned = dynamicActors
+            .OrderBy(entry => entry.Key)
+            .Select(entry =>
+            {
+                ActorState actor = LiveDynamicActor(entry.Key);
+                return new DaggerfallDynamicActorSave(
+                    entry.Key,
+                    entry.Value.Value,
+                    actor.Position.X, actor.Position.Y, actor.Position.Z, actor.HeadingYawRadians,
+                    DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity));
+            })
             .ToArray();
         DaggerfallInventorySave inventorySave = CaptureInventory(State.Inventory, State.Equipment);
         DaggerfallCorpseSave[] corpses = _corpseLoot.Corpses.Values.OrderBy(corpse => corpse.ActorId).Select(corpse =>
@@ -75,6 +89,7 @@ internal sealed class DaggerSessionPersistence
         return DaggerfallSavePayload.Encode(new DaggerfallSavePayload(
             player,
             actors,
+            spawned,
             State.Progression.Experience,
             State.Progression.Level,
             inventorySave,
@@ -87,6 +102,11 @@ internal sealed class DaggerSessionPersistence
             actorInventories));
     }
 
+    private ActorState LiveDynamicActor(long durableId) =>
+        State.Actors.TryGet(durableId, out ActorState? actor)
+            ? actor
+            : throw new InvalidOperationException($"Daggerfall cannot save dynamic actor {durableId} without a live entity.");
+
     internal void Restore(DaggerfallSavePayload saved)
     {
         // Current-state relationships were resolved before this fresh session was constructed.
@@ -96,6 +116,14 @@ internal sealed class DaggerSessionPersistence
             if (!State.Actors.TryGet(actor.EntityId, out ActorState? current))
                 throw new ArgumentException($"The saved Daggerfall actor '{actor.EntityId}' is not present in the selected content.", nameof(saved));
             current.ApplyPose(new ActorPose(new WorldPoint(actor.X, actor.Y, actor.Z), actor.HeadingRadians));
+        }
+
+        // Dynamic actors were materialized by construction; restore only re-applies their poses.
+        foreach (DaggerfallDynamicActorSave spawned in saved.DynamicActors.OrderBy(actor => actor.EntityId))
+        {
+            if (!State.Actors.TryGet(spawned.EntityId, out ActorState? current))
+                throw new InvalidOperationException($"The saved dynamic actor '{spawned.EntityId}' was not materialized by the selected content.");
+            current.ApplyPose(new ActorPose(new WorldPoint(spawned.X, spawned.Y, spawned.Z), spawned.HeadingRadians));
         }
 
         State.Progression.AdvanceTo(saved.Experience, saved.Level);

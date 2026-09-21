@@ -91,6 +91,20 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         catch { Dispose(); throw; }
     }
 
+    /// <summary>
+    /// Drops one actor's visual when its registration ends. Actors without published sprite media
+    /// never had an entry, so retiring one is a no-op rather than an error.
+    /// </summary>
+    internal void RetireActor(long durableId)
+    {
+        if (actors.Remove(durableId, out ActorVisual? visual) && visual is not null)
+        {
+            List<Exception>? failures = null;
+            visual.Dispose(ref failures);
+            if (failures is { Count: > 0 }) throw new AggregateException(failures);
+        }
+    }
+
     /// <summary>Publishes world and viewport weapon appearances; Engine owns projection and fitting.</summary>
     internal void Publish(ActorsState actors)
     {

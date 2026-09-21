@@ -52,6 +52,97 @@ public sealed class DaggerfallFormulaPolicyTests
     }
 
     [Fact]
+    public void EnemyClassHealthAddsOneInclusiveRollPerLevelToTheDonorBase()
+    {
+        // Donor: 10 plus Random.Range(1, hitPointsPerLevel + 1) per level.
+        Assert.Equal(10, DaggerfallFormulaPolicy.RollEnemyClassMaxHealth(0, 8, (minimum, maximum) => maximum));
+        Assert.Equal(18, DaggerfallFormulaPolicy.RollEnemyClassMaxHealth(1, 8, (minimum, maximum) => maximum));
+        Assert.Equal(11, DaggerfallFormulaPolicy.RollEnemyClassMaxHealth(1, 8, (minimum, maximum) => minimum));
+        int calls = 0;
+        int[] scripted = [2, 5, 8];
+        Assert.Equal(10 + 2 + 5 + 8, DaggerfallFormulaPolicy.RollEnemyClassMaxHealth(3, 8, (minimum, maximum) =>
+        {
+            Assert.Equal(1, minimum);
+            Assert.Equal(8, maximum);
+            return scripted[calls++];
+        }));
+        Assert.Equal(3, calls);
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallFormulaPolicy.RollEnemyClassMaxHealth(-1, 8, (minimum, maximum) => minimum));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallFormulaPolicy.RollEnemyClassMaxHealth(1, 0, (minimum, maximum) => minimum));
+        Assert.Throws<InvalidOperationException>(() => DaggerfallFormulaPolicy.RollEnemyClassMaxHealth(1, 8, (minimum, maximum) => maximum + 1));
+    }
+
+    [Fact]
+    public void EnemyGroupFollowsTheDonorCareerTableIncludingTheClassicMisgroupings()
+    {
+        // Spot-checks across every donor arm, with the donor's own comments preserved:
+        // Horse_Invalid and Dragonling_Alternate group as undead-turned-animals, Dreugh and
+        // Lamia as humanoid despite their undead grouping in classic.
+        Assert.Equal(DaggerfallEnemyGroup.Animals, DaggerfallFormulaPolicy.EnemyGroupFor("monster", 0));
+        Assert.Equal(DaggerfallEnemyGroup.Animals, DaggerfallFormulaPolicy.EnemyGroupFor("monster", 11));
+        Assert.Equal(DaggerfallEnemyGroup.Animals, DaggerfallFormulaPolicy.EnemyGroupFor("monster", 39));
+        Assert.Equal(DaggerfallEnemyGroup.Humanoid, DaggerfallFormulaPolicy.EnemyGroupFor("monster", 1));
+        Assert.Equal(DaggerfallEnemyGroup.Humanoid, DaggerfallFormulaPolicy.EnemyGroupFor("monster", 41));
+        Assert.Equal(DaggerfallEnemyGroup.Undead, DaggerfallFormulaPolicy.EnemyGroupFor("monster", 15));
+        Assert.Equal(DaggerfallEnemyGroup.Undead, DaggerfallFormulaPolicy.EnemyGroupFor("monster", 17));
+        Assert.Equal(DaggerfallEnemyGroup.Daedra, DaggerfallFormulaPolicy.EnemyGroupFor("monster", 25));
+        Assert.Equal(DaggerfallEnemyGroup.None, DaggerfallFormulaPolicy.EnemyGroupFor("monster", 35));
+        Assert.Equal(DaggerfallEnemyGroup.None, DaggerfallFormulaPolicy.EnemyGroupFor("monster", 99));
+        // Class enemies travel the same switch: the pack thief (mobile 138, index 10) meets the
+        // Nymph arm and the pack archer (mobile 141, index 13) meets the Harpy arm.
+        Assert.Equal(DaggerfallEnemyGroup.Humanoid, DaggerfallFormulaPolicy.EnemyGroupFor("enemy-class", 138));
+        Assert.Equal(DaggerfallEnemyGroup.Humanoid, DaggerfallFormulaPolicy.EnemyGroupFor("enemy-class", 141));
+        Assert.Equal(DaggerfallEnemyGroup.None, DaggerfallFormulaPolicy.EnemyGroupFor("player", 0));
+        Assert.Equal(DaggerfallEnemyGroup.None, DaggerfallFormulaPolicy.EnemyGroupFor("civilian", 10));
+
+        DaggerfallDefinitions definitions = LoadDefinitions();
+        Assert.Equal(DaggerfallEnemyGroup.Humanoid, DaggerfallFormulaPolicy.EnemyGroupFor(definitions.RequireActor(new DaggerfallActorId("thief"))));
+        Assert.Equal(DaggerfallEnemyGroup.Animals, DaggerfallFormulaPolicy.EnemyGroupFor(definitions.RequireActor(new DaggerfallActorId("rat"))));
+        Assert.Equal(DaggerfallEnemyGroup.Undead, DaggerfallFormulaPolicy.EnemyGroupFor(definitions.RequireActor(new DaggerfallActorId("lich"))));
+        Assert.Equal(DaggerfallEnemyGroup.Daedra, DaggerfallFormulaPolicy.EnemyGroupFor(definitions.RequireActor(new DaggerfallActorId("daedra-lord"))));
+        Assert.Equal(DaggerfallEnemyGroup.None, DaggerfallFormulaPolicy.EnemyGroupFor(definitions.RequireActor(new DaggerfallActorId("fire-atronach"))));
+    }
+
+    [Fact]
+    public void EnemyLanguageSkillFollowsTheDonorTableWithStreetwiseForRoguishClasses()
+    {
+        Assert.Equal("streetwise", DaggerfallFormulaPolicy.LanguageSkillFor("enemy-class", 138));
+        Assert.Equal("etiquette", DaggerfallFormulaPolicy.LanguageSkillFor("enemy-class", 141));
+        Assert.Equal("etiquette", DaggerfallFormulaPolicy.LanguageSkillFor("enemy-class", 128));
+        Assert.Equal("orcish", DaggerfallFormulaPolicy.LanguageSkillFor("monster", 7));
+        Assert.Equal("harpy", DaggerfallFormulaPolicy.LanguageSkillFor("monster", 13));
+        Assert.Equal("giantish", DaggerfallFormulaPolicy.LanguageSkillFor("monster", 16));
+        Assert.Equal("dragonish", DaggerfallFormulaPolicy.LanguageSkillFor("monster", 34));
+        Assert.Equal("nymph", DaggerfallFormulaPolicy.LanguageSkillFor("monster", 10));
+        Assert.Equal("daedric", DaggerfallFormulaPolicy.LanguageSkillFor("monster", 25));
+        Assert.Equal("spriggan", DaggerfallFormulaPolicy.LanguageSkillFor("monster", 2));
+        Assert.Equal("centaurian", DaggerfallFormulaPolicy.LanguageSkillFor("monster", 8));
+        Assert.Equal("impish", DaggerfallFormulaPolicy.LanguageSkillFor("monster", 1));
+        Assert.Equal("etiquette", DaggerfallFormulaPolicy.LanguageSkillFor("monster", 28));
+        Assert.Null(DaggerfallFormulaPolicy.LanguageSkillFor("monster", 0));
+        Assert.Null(DaggerfallFormulaPolicy.LanguageSkillFor("monster", 35));
+        Assert.Null(DaggerfallFormulaPolicy.LanguageSkillFor("player", 0));
+
+        DaggerfallDefinitions definitions = LoadDefinitions();
+        foreach (string skill in definitions.Actors.Values.Select(actor => DaggerfallFormulaPolicy.LanguageSkillFor(actor)).OfType<string>())
+            Assert.Contains(skill, definitions.Vocabulary.Skills.Select(entry => entry.Value), StringComparer.Ordinal);
+    }
+
+    [Fact]
+    public void EnemyWeightAddsFourTimesCarriedWeightToTheDonorBodyWeight()
+    {
+        Assert.Equal(2, DaggerfallFormulaPolicy.ActorWeightInClassicUnits(2, 0));
+        Assert.Equal(42, DaggerfallFormulaPolicy.ActorWeightInClassicUnits(40, 0.5));
+        Assert.Equal(350, DaggerfallFormulaPolicy.EnemyBaseWeight("enemy-class", null, female: false));
+        Assert.Equal(240, DaggerfallFormulaPolicy.EnemyBaseWeight("enemy-class", null, female: true));
+        Assert.Equal(40, DaggerfallFormulaPolicy.EnemyBaseWeight("monster", 40, female: false));
+        Assert.Throws<ArgumentException>(() => DaggerfallFormulaPolicy.EnemyBaseWeight("monster", null, female: false));
+        Assert.Throws<ArgumentException>(() => DaggerfallFormulaPolicy.EnemyBaseWeight("player", null, female: false));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallFormulaPolicy.ActorWeightInClassicUnits(-1, 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallFormulaPolicy.ActorWeightInClassicUnits(0, -1));
+    }
+
+    [Fact]
     public void FormulaTuningUsesSelectedDivisorsAndAdmitsTheDonorSkillLevelBounds()
     {
         DaggerfallFormulaTuning tuning = new(DamageModifierDivisor: 10);

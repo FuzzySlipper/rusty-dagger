@@ -1,5 +1,7 @@
 namespace WorldRpg.Rulesets.Daggerfall.Policies;
 
+using WorldRpg.Rulesets.Daggerfall.Content;
+
 /// <summary>
 /// Named, compiled Daggerfall formulas.  The donor catalogs are evidence for
 /// these policies; they are not an evaluator or a runtime rules language.
@@ -182,11 +184,147 @@ internal static class DaggerfallFormulaPolicy
         return StruckBodyTable[roll];
     }
 
+    /// <summary>
+    /// Classic enemy-class health: a 10-point base plus one inclusive [1, hitPointsPerLevel]
+    /// roll per level. Donor: <c>FormulaHelper.RollEnemyClassMaxHealth</c>, which draws each
+    /// roll from <c>UnityEngine.Random.Range(1, hitPointsPerLevel + 1)</c>; the caller supplies
+    /// the roll so keyed product RNG stays at the call site.
+    /// </summary>
+    internal static int RollEnemyClassMaxHealth(int level, int hitPointsPerLevel, Func<int, int, int> rollInclusive)
+    {
+        ArgumentNullException.ThrowIfNull(rollInclusive);
+        if (level < 0) throw new ArgumentOutOfRangeException(nameof(level));
+        if (hitPointsPerLevel < 1) throw new ArgumentOutOfRangeException(nameof(hitPointsPerLevel));
+        int maxHealth = EnemyClassBaseHealth;
+        for (int i = 0; i < level; i++)
+        {
+            int roll = rollInclusive(1, hitPointsPerLevel);
+            if (roll < 1 || roll > hitPointsPerLevel)
+                throw new InvalidOperationException($"Enemy class health roll {roll} is outside [1, {hitPointsPerLevel}].");
+            maxHealth = checked(maxHealth + roll);
+        }
+
+        return maxHealth;
+    }
+
+    /// <summary>
+    /// Classic enemy grouping for one actor definition. Donor:
+    /// <c>FormulaHelper.GetEnemyEntityEnemyGroup</c>, which switches on the career index for both
+    /// monsters and class enemies alike — a class enemy therefore lands wherever its class index
+    /// falls among the monster arms (the pack thief reads as Humanoid through the Nymph arm, the
+    /// pack archer through the Harpy arm). That coincidence is replicated rather than repaired:
+    /// both published class enemies group as Humanoid, which is also the semantically honest
+    /// answer their future pacify/charm consumers need.
+    /// </summary>
+    internal static DaggerfallEnemyGroup EnemyGroupFor(DaggerfallActorDefinition actor)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        return actor.MobileId is int mobileId ? EnemyGroupFor(actor.Kind, mobileId) : DaggerfallEnemyGroup.None;
+    }
+
+    internal static DaggerfallEnemyGroup EnemyGroupFor(string kind, int mobileId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(kind);
+        if (kind != DaggerfallActorKinds.EnemyClass && kind != DaggerfallActorKinds.Monster) return DaggerfallEnemyGroup.None;
+        int careerIndex = kind == DaggerfallActorKinds.EnemyClass ? mobileId - EnemyClassMobileBase : mobileId;
+        return careerIndex switch
+        {
+            0 or 3 or 4 or 5 or 6 or 11 or 20 or 34 or 39 or 40 => DaggerfallEnemyGroup.Animals,
+            1 or 2 or 7 or 8 or 9 or 10 or 12 or 13 or 14 or 16 or 21 or 22 or 24 or 41 or 42 => DaggerfallEnemyGroup.Humanoid,
+            15 or 17 or 18 or 19 or 23 or 28 or 30 or 32 or 33 => DaggerfallEnemyGroup.Undead,
+            25 or 26 or 27 or 29 or 31 => DaggerfallEnemyGroup.Daedra,
+            _ => DaggerfallEnemyGroup.None,
+        };
+    }
+
+    /// <summary>
+    /// Classic language skill for one actor definition, as the donor's dialogue eligibility reads
+    /// it. Donor: <c>FormulaHelper.GetEnemyEntityLanguageSkill</c>. A null answer is the donor's
+    /// <c>Skills.None</c>: the actor has no language skill to check.
+    /// </summary>
+    internal static string? LanguageSkillFor(DaggerfallActorDefinition actor)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        return actor.MobileId is int mobileId ? LanguageSkillFor(actor.Kind, mobileId) : null;
+    }
+
+    internal static string? LanguageSkillFor(string kind, int mobileId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(kind);
+        if (kind == DaggerfallActorKinds.EnemyClass)
+        {
+            // Donor note, kept: classic uses Etiquette for every class. The DFU baseline this
+            // task adopts instead gives the six roguish classes Streetwise (DEC-11 provisional).
+            return (mobileId - EnemyClassMobileBase) switch
+            {
+                5 or 7 or 8 or 9 or 10 or 11 => DaggerfallSkills.Streetwise,
+                _ => DaggerfallSkills.Etiquette,
+            };
+        }
+
+        if (kind != DaggerfallActorKinds.Monster) return null;
+        return mobileId switch
+        {
+            7 or 12 or 21 or 24 => DaggerfallSkills.Orcish,
+            13 => DaggerfallSkills.Harpy,
+            16 or 22 => DaggerfallSkills.Giantish,
+            34 or 40 => DaggerfallSkills.Dragonish,
+            10 or 42 => DaggerfallSkills.Nymph,
+            25 or 26 or 27 or 29 or 31 => DaggerfallSkills.Daedric,
+            2 => DaggerfallSkills.Spriggan,
+            8 => DaggerfallSkills.Centaurian,
+            1 or 41 => DaggerfallSkills.Impish,
+            28 or 30 or 32 or 33 => DaggerfallSkills.Etiquette,
+            _ => null,
+        };
+    }
+
+    /// <summary>
+    /// Classic encumbrance weight in quarter-unit steps: the donor's base body weight plus four
+    /// times the carried item weight, truncating any fractional carried weight the way the
+    /// donor's <c>(int)</c> cast does. Donor:
+    /// <c>FormulaHelper.GetEnemyEntityWeightInClassicUnits</c>.
+    /// </summary>
+    internal static int ActorWeightInClassicUnits(int baseWeight, double carriedItemWeight)
+    {
+        if (baseWeight < 0) throw new ArgumentOutOfRangeException(nameof(baseWeight));
+        if (!double.IsFinite(carriedItemWeight) || carriedItemWeight < 0) throw new ArgumentOutOfRangeException(nameof(carriedItemWeight));
+        return checked(baseWeight + (int)(carriedItemWeight * WeightCarriedToClassicUnits));
+    }
+
+    /// <summary>
+    /// The donor's base body weight: a monster weighs what its mobile record states, while a
+    /// class enemy weighs 240 or 350 classic units by gender. The pack carries no gender for
+    /// class enemies, so the caller supplies it; monsters without a mobile weight are rejected
+    /// rather than defaulted.
+    /// </summary>
+    internal static int EnemyBaseWeight(string kind, int? mobileWeight, bool female)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(kind);
+        if (kind == DaggerfallActorKinds.Monster)
+            return mobileWeight ?? throw new ArgumentException("A monster actor needs its mobile weight.", nameof(mobileWeight));
+        if (kind == DaggerfallActorKinds.EnemyClass) return female ? FemaleClassBaseWeight : MaleClassBaseWeight;
+        throw new ArgumentException($"Actor kind '{kind}' has no classic body weight.", nameof(kind));
+    }
+
     private static int FloorDivide(int value, int divisor) => value >= 0 ? value / divisor : -checked(((-value) + divisor - 1) / divisor);
     private static long FloorDivide(long value, long divisor) => value >= 0 ? value / divisor : -checked(((-value) + divisor - 1) / divisor);
     private static int TruncateDivide(int value, int divisor) => value / divisor;
 
     private static readonly int[] StruckBodyTable = [0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 6];
+
+    /// <summary>The donor's class-enemy health base every level roll adds to.</summary>
+    private const int EnemyClassBaseHealth = 10;
+
+    /// <summary>Donor humanoid mobile ids start here; a class enemy's career index is its mobile id minus this base.</summary>
+    private const int EnemyClassMobileBase = 128;
+
+    /// <summary>Classic weight counts carried items at four times their listed weight.</summary>
+    private const int WeightCarriedToClassicUnits = 4;
+
+    /// <summary>Donor base body weights for class enemies by gender, in classic units.</summary>
+    private const int FemaleClassBaseWeight = 240;
+    private const int MaleClassBaseWeight = 350;
 
     internal static IReadOnlyDictionary<string, int> SkillAdvancementMultipliers { get; } = new Dictionary<string, int>(StringComparer.Ordinal)
     {

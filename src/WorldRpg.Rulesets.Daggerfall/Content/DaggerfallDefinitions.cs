@@ -16,6 +16,30 @@ internal static class DaggerfallActorIdentity
     internal const long PlayerEntityId = 1;
 }
 
+/// <summary>Published actor kinds. The pack admits player, monster and enemy-class only.</summary>
+internal static class DaggerfallActorKinds
+{
+    internal const string Player = "player";
+    internal const string Monster = "monster";
+    internal const string EnemyClass = "enemy-class";
+}
+
+/// <summary>Skill keys the enemy language formulas can answer with, in pack vocabulary spelling.</summary>
+internal static class DaggerfallSkills
+{
+    internal const string Etiquette = "etiquette";
+    internal const string Streetwise = "streetwise";
+    internal const string Orcish = "orcish";
+    internal const string Harpy = "harpy";
+    internal const string Giantish = "giantish";
+    internal const string Dragonish = "dragonish";
+    internal const string Nymph = "nymph";
+    internal const string Daedric = "daedric";
+    internal const string Spriggan = "spriggan";
+    internal const string Centaurian = "centaurian";
+    internal const string Impish = "impish";
+}
+
 internal static class DaggerfallMechanicsIds
 {
     internal static readonly DaggerfallStatId Strength = new("strength");
@@ -74,6 +98,20 @@ internal sealed record DaggerfallLocationSet(
 internal sealed record DaggerfallActorDefinition(DaggerfallActorId Id, string Kind, DaggerfallStatBases Stats, DaggerfallVitalRange Health, DaggerfallCombatProfile Combat, DaggerfallRewardPolicy Rewards, int Armor, int? MobileId, int? HitPointsPerLevel, IReadOnlyList<DaggerfallAttackRange> Attacks, string? Team, string? MinimumMaterial, string? LootTableKey, int? Level, int? Weight, string? ActionId, IReadOnlyList<DaggerfallLoadoutEntry> Loadout, DaggerfallActorPresentationDefinition Presentation, bool GroundOnSpawn = false, string? Race = null, string? Career = null)
 {
     internal DaggerfallVitalValues PlayerInitialVitals => DaggerfallVitalValues.Player(Stats);
+}
+
+/// <summary>
+/// Classic enemy grouping by career identity, as the donor's pacify/charm eligibility reads it.
+/// This is the donor <c>DFCareer.EnemyGroups</c> shape in product vocabulary; the pack's finer
+/// <c>Team</c> affinity is separate and stays where it is.
+/// </summary>
+internal enum DaggerfallEnemyGroup
+{
+    None,
+    Animals,
+    Humanoid,
+    Undead,
+    Daedra,
 }
 
 /// <summary>Authored Daggerfall presentation policy layered over normalized imported actor media.</summary>

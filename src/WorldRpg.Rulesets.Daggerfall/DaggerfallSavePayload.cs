@@ -11,6 +11,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed record DaggerfallSavePayload(
     DaggerfallPlayerSave Player,
     DaggerfallActorSave[] Actors,
+    DaggerfallDynamicActorSave[] DynamicActors,
     int Experience,
     int Level,
     DaggerfallInventorySave Inventory,
@@ -22,7 +23,7 @@ internal sealed record DaggerfallSavePayload(
     DaggerfallActorInventorySave[] ActorInventories)
 {
     /// <summary>The dynamic identity kinds owned by the current Daggerfall ruleset.</summary>
-    internal static readonly DurableIdentityKind[] PersistedKinds = [DurableIdentityKind.Item];
+    internal static readonly DurableIdentityKind[] PersistedKinds = [DurableIdentityKind.Actor, DurableIdentityKind.Item];
 
     internal static RulesetSavePayload Encode(DaggerfallSavePayload value)
     {
@@ -73,12 +74,35 @@ internal sealed record DaggerfallSavePayload(
             if (!savedActorIds.Contains(placement.EntityId))
                 throw new ArgumentException($"Current save is missing authored actor {placement.EntityId}.");
         }
+        // Dynamic actors are spawn-time registrations, not content placements: each one names
+        // the definition it was spawned from, and a definition the selected content cannot
+        // explain is reported rather than silently materialized.
+        HashSet<long> dynamicActorIds = [];
+        foreach (DaggerfallDynamicActorSave actor in DynamicActors)
+        {
+            ArgumentNullException.ThrowIfNull(actor);
+            if (actor.EntityId <= 0 || !dynamicActorIds.Add(actor.EntityId))
+                throw new ArgumentException("Saved dynamic actor identities must be positive and unique.");
+            if (savedActorIds.Contains(actor.EntityId))
+                throw new ArgumentException($"Saved dynamic actor {actor.EntityId} collides with an authored actor.");
+            if (string.IsNullOrWhiteSpace(actor.Definition) || !definitions.Actors.ContainsKey(new DaggerfallActorId(actor.Definition)))
+                throw new ArgumentException($"Saved dynamic actor {actor.EntityId} refers to missing definition '{actor.Definition}'.");
+            ValidateStats(actor.Stats, $"dynamic actor {actor.EntityId}");
+        }
+        // A dynamic actor the ledger does not call live is either tombstoned or forged: restoring
+        // it would reissue an identity the save already retired.
+        DurableIdentityAllocator savedLedger = DurableIdentityAllocator.Restore(RestoredIdentities());
+        foreach (long actorId in dynamicActorIds)
+        {
+            if (savedLedger.Classify(new DurableIdentityReference(DurableIdentityKind.Actor, checked((ulong)actorId))) != DurableIdentityClassification.Live)
+                throw new ArgumentException($"Saved dynamic actor {actorId} is not live in the persisted identity ledger.");
+        }
 
         HashSet<ulong> uniqueItems = [];
         ValidateInventory(Inventory, definitions, uniqueItems, "player", requireEquipment: true);
         foreach (DaggerfallCorpseSave corpse in Corpses)
         {
-            if (!savedActorIds.Contains(corpse.ActorId))
+            if (!savedActorIds.Contains(corpse.ActorId) && !dynamicActorIds.Contains(corpse.ActorId))
                 throw new ArgumentException($"Saved corpse refers to missing actor {corpse.ActorId}.");
             corpse.Validate();
             ValidateInventory(new DaggerfallInventorySave(corpse.Stacks, corpse.UniqueItems, []), definitions, uniqueItems, $"corpse {corpse.ActorId}", requireEquipment: false);
@@ -87,11 +111,12 @@ internal sealed record DaggerfallSavePayload(
         foreach (DaggerfallActorInventorySave inventory in ActorInventories)
         {
             inventory.Validate();
-            if (!savedActorIds.Contains(inventory.EntityId) || !actorInventories.Add(inventory.EntityId))
+            if ((!savedActorIds.Contains(inventory.EntityId) && !dynamicActorIds.Contains(inventory.EntityId)) || !actorInventories.Add(inventory.EntityId))
                 throw new ArgumentException($"Saved actor inventory {inventory.EntityId} has no distinct saved actor.");
             ValidateInventory(inventory.Inventory, definitions, uniqueItems, $"actor {inventory.EntityId}", requireEquipment: true);
         }
-        if (!actorInventories.SetEquals(savedActorIds))
+        HashSet<long> allActors = [.. savedActorIds, .. dynamicActorIds];
+        if (!actorInventories.SetEquals(allActors))
             throw new ArgumentException("Current save must carry one actor inventory section for every saved actor.");
         RequireLiveUniqueItems(uniqueItems);
 
@@ -100,7 +125,7 @@ internal sealed record DaggerfallSavePayload(
         RequireSite(Site.ReturnAnchor, locations, "return anchor");
         foreach (DaggerfallSiteIdSave discovered in Site.Discovered)
             RequireSite(discovered, locations, "discovered site");
-        HashSet<long> combatants = [DaggerfallActorIdentity.PlayerEntityId, .. savedActorIds];
+        HashSet<long> combatants = [DaggerfallActorIdentity.PlayerEntityId, .. allActors];
         foreach (DaggerfallCombatCooldownSave cooldown in CombatCooldowns)
             if (!combatants.Contains(cooldown.AttackerId))
                 throw new ArgumentException($"Saved attack cooldown refers to missing actor {cooldown.AttackerId}.");
@@ -113,6 +138,7 @@ internal sealed record DaggerfallSavePayload(
     {
         ArgumentNullException.ThrowIfNull(Player);
         ArgumentNullException.ThrowIfNull(Actors);
+        ArgumentNullException.ThrowIfNull(DynamicActors);
         ArgumentNullException.ThrowIfNull(Inventory);
         ArgumentNullException.ThrowIfNull(Corpses);
         ArgumentNullException.ThrowIfNull(Identities);
@@ -134,6 +160,14 @@ internal sealed record DaggerfallSavePayload(
             if (actor.EntityId <= 0 || !actorIds.Add(actor.EntityId))
                 throw new ArgumentException("Saved actor identities must be positive and unique.");
             ValidateStats(actor.Stats, $"actor {actor.EntityId}");
+        }
+        foreach (DaggerfallDynamicActorSave actor in DynamicActors)
+        {
+            ArgumentNullException.ThrowIfNull(actor);
+            actor.Validate();
+            if (actor.EntityId <= 0 || !actorIds.Add(actor.EntityId))
+                throw new ArgumentException("Saved dynamic actor identities must be positive and unique.");
+            ValidateStats(actor.Stats, $"dynamic actor {actor.EntityId}");
         }
         Inventory.Validate();
         HashSet<long> corpseActors = [];
@@ -329,6 +363,23 @@ internal sealed record DaggerfallActorSave(long EntityId, float X, float Y, floa
     {
         if (!float.IsFinite(X) || !float.IsFinite(Y) || !float.IsFinite(Z) || !float.IsFinite(HeadingRadians))
             throw new ArgumentOutOfRangeException(nameof(X), "Saved actor pose must be finite.");
+        ArgumentNullException.ThrowIfNull(Stats);
+    }
+}
+
+/// <summary>
+/// One dynamically spawned actor: the definition it was registered from plus its pose and full
+/// Engine stat meaning. Authored placement actors need no definition reference because the
+/// selected content already names theirs.
+/// </summary>
+internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definition, float X, float Y, float Z, float HeadingRadians, DaggerfallStatsSave Stats)
+{
+    internal void Validate()
+    {
+        if (!float.IsFinite(X) || !float.IsFinite(Y) || !float.IsFinite(Z) || !float.IsFinite(HeadingRadians))
+            throw new ArgumentOutOfRangeException(nameof(X), "Saved dynamic actor pose must be finite.");
+        if (string.IsNullOrWhiteSpace(Definition))
+            throw new ArgumentException("A saved dynamic actor must name its definition.", nameof(Definition));
         ArgumentNullException.ThrowIfNull(Stats);
     }
 }
