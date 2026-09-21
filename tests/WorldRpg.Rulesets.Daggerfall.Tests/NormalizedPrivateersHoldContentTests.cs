@@ -42,10 +42,17 @@ public sealed class NormalizedPrivateersHoldContentTests
         PrivateersHoldInputs inputs = PrivateersHoldContent.Read(GeneratedContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
         NormalizedClassicPresentation classic = inputs.ClassicPresentation;
-        Assert.Equal(9, classic.Weapons.Count);
+        Assert.Equal(12, classic.Weapons.Count);
         Assert.Equal("weapon.longblade", classic.CompatibleItemVisuals["iron-longsword"]);
         Assert.Equal("weapon.dagger.steel", classic.CompatibleItemVisuals["iron-dagger"]);
         Assert.Equal("weapon.unarmed", classic.UnarmedVisual);
+        // The two spare archives and the werecreature form keep stable identities no item selects:
+        // the donor names no consumer for the spares, and the form is not an item.
+        Assert.DoesNotContain("weapon.00", classic.CompatibleItemVisuals.Values);
+        Assert.DoesNotContain("weapon.03", classic.CompatibleItemVisuals.Values);
+        Assert.DoesNotContain("weapon.werecreature", classic.CompatibleItemVisuals.Values);
+        Assert.Equal("center", classic.Weapons["weapon.werecreature"].Actions["idle"].Alignment);
+        Assert.Equal([0, 1, 2, 3, 4, 5, 6], classic.Weapons["weapon.werecreature"].Actions.Values.Select(action => action.SourceRecordOrdinal).Order());
         Assert.All(definitions.Items.Values.Where(item => item.Weapon is not null), item =>
             Assert.True(classic.Weapons.ContainsKey(classic.CompatibleItemVisuals[item.Id.Value])));
         Assert.All(classic.Weapons.Values, weapon =>

@@ -221,7 +221,7 @@ public sealed class SoundCatalogTests
         Read("BOOK00I0.IMG"), Read("REST00I0.IMG"), Read("SHOP00I0.IMG"), Read("GILD00I0.IMG"), Read("BANK00I0.IMG"),
         Read("REST01I0.IMG"), Read("REST02I0.IMG"), Read("INVE08I0.IMG"), Read("INVE10I0.IMG"), Read("INVE11I0.IMG"),
         Read("INVE12I0.IMG"), Read("INVE14I0.IMG"), Read("GILD01I0.IMG"),
-        Read("TEXTURE.207"), Read("TEXTURE.216"), Read("TEXTURE.234"), Read("TEXTURE.245"), Read("FONT0003.FNT")));
+        Read("TEXTURE.207"), Read("TEXTURE.216"), Read("TEXTURE.234"), Read("TEXTURE.245"), Read("FONT0003.FNT"), Read("WEAPON00.CIF"), Read("WEAPON03.CIF"), Read("WEAPON11.CIF")));
 
     private static byte[] Read(string name) => File.ReadAllBytes(Corpus(name));
 
