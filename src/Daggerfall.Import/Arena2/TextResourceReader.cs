@@ -255,12 +255,27 @@ public static class TextResourceReader
     /// rather than corrected, because the bytes decide where a record ends and a reader that disagreed
     /// with the donor would tokenize text the donor never produces.
     /// </remarks>
-    private static IReadOnlyList<Arena2TextToken> Tokenize(byte[] bytes, int offset, int terminator)
+    private static IReadOnlyList<Arena2TextToken> Tokenize(byte[] bytes, int offset, int terminator) =>
+        TokenizeRange(bytes, offset, terminator + 1);
+
+    /// <summary>
+    /// Tokenizes an explicitly bounded span with the same grammar: runs of characters, named and
+    /// unnamed codes, and a stop at the record terminator wherever the bound puts it. Length-delimited
+    /// sources such as rumor texts carry no terminator of their own, and the donor reads those the
+    /// same way it reads a record — <c>TextFile.ReadTokens</c> loops to the buffer's end and still
+    /// breaks at the end token — so one loop serves both shapes.
+    /// </summary>
+    internal static IReadOnlyList<Arena2TextToken> TokenizeRange(byte[] bytes, int offset, int exclusiveEnd)
     {
+        ArgumentNullException.ThrowIfNull(bytes);
+        if (offset < 0 || exclusiveEnd < offset || exclusiveEnd > bytes.Length)
+        {
+            throw new Arena2FormatException("text", offset, $"token range [{offset}, {exclusiveEnd}) is outside {bytes.Length} bytes");
+        }
+
         List<Arena2TextToken> tokens = [];
-        int stop = terminator + 1;
         int position = offset;
-        while (position < stop)
+        while (position < exclusiveEnd)
         {
             byte value = bytes[position];
             if (value == Terminator)
@@ -271,7 +286,7 @@ public static class TextResourceReader
             if (IsCharacter(value))
             {
                 int start = position;
-                while (position < stop && IsCharacter(bytes[position]))
+                while (position < exclusiveEnd && IsCharacter(bytes[position]))
                 {
                     position++;
                 }
@@ -285,14 +300,14 @@ public static class TextResourceReader
             switch (value)
             {
                 case (byte)Arena2TextCode.FontPrefix:
-                    if (position < stop)
+                    if (position < exclusiveEnd)
                     {
                         x = bytes[position++];
                     }
 
                     break;
                 case (byte)Arena2TextCode.PositionPrefix:
-                    if (position < stop)
+                    if (position < exclusiveEnd)
                     {
                         x = bytes[position++];
                     }

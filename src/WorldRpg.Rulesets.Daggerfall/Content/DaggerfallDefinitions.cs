@@ -149,7 +149,10 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     DaggerfallLocationSet locations,
     DaggerfallTextSet text,
     DaggerfallMagicCatalogSet magic,
-    DaggerfallMobileCatalogSet mobiles)
+    DaggerfallMobileCatalogSet mobiles,
+    DaggerfallNameTablesSet names,
+    DaggerfallRumorCatalogSet rumors,
+    DaggerfallBiographiesSet biographies)
 {
     /// <summary>The normalized reference catalogs a consumer resolves keys through.</summary>
     internal DaggerfallCatalogSet Catalogs { get; } = catalogs;
@@ -165,6 +168,24 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     /// actor this product places and to the behaviour, damage, health and media the donor states for it.
     /// </summary>
     internal DaggerfallMobileCatalogSet Mobiles { get; } = mobiles;
+
+    /// <summary>
+    /// The published name tables, loaded from the pack alone: each bank resolves to its donor
+    /// identity, its composition, and the text keys its fragments read through.
+    /// </summary>
+    internal DaggerfallNameTablesSet Names { get; } = names;
+
+    /// <summary>
+    /// The published rumor catalog, loaded from the pack alone: each record resolves to the
+    /// region, type, faction and quest references its consumers match on, and the text key it reads.
+    /// </summary>
+    internal DaggerfallRumorCatalogSet Rumors { get; } = rumors;
+
+    /// <summary>
+    /// The published biographies, loaded from the pack alone: each questionnaire resolves to its
+    /// questions, answers and effect references with the text keys and link states they carry.
+    /// </summary>
+    internal DaggerfallBiographiesSet Biographies { get; } = biographies;
 
     internal DaggerfallVocabulary Vocabulary { get; } = vocabulary;
     internal IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> Actors { get; } = new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors.ToDictionary());

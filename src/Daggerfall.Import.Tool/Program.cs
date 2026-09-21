@@ -804,11 +804,40 @@ internal static class Program
         }
 
         // The documented inventory decides the logical source identity, so the bytes are read under the
-        // path the repository documents rather than under whatever directory the caller happened to name.
-        string source = Path.Combine(values["--arena2"], TextResourceReader.FileName);
-        DaggerfallText text = DaggerfallTextBuilder.Build(
+        // paths the repository documents rather than under whatever directory the caller happened to name.
+        string arena2 = values["--arena2"];
+        string source = Path.Combine(arena2, TextResourceReader.FileName);
+        List<(string Text, string Label, int ClassIndex, int BiographyIndex)> questionnaires = [];
+        for (int classIndex = 0; classIndex <= 17; classIndex++)
+        {
+            string file = $"BIOG{classIndex:D2}T0.TXT";
+            string label = Path.Combine(arena2, file);
+            if (!File.Exists(label))
+            {
+                throw new ArgumentException($"the arena2 directory carries no {file}, so the biography questionnaires are incomplete");
+            }
+
+            questionnaires.Add((File.ReadAllText(label), label, classIndex, 0));
+        }
+
+        string imageLabel = Path.Combine(arena2, "BIOG00I0.IMG");
+        byte[]? imageBytes = File.Exists(imageLabel) ? File.ReadAllBytes(imageLabel) : null;
+        if (imageBytes is null)
+        {
+            Console.WriteLine("biography backdrop: not supplied, so every questionnaire records an unresolved image link");
+        }
+
+        (DaggerfallText text, DaggerfallNameTables names, DaggerfallRumorCatalog rumors, DaggerfallBiographies biographies) = DaggerfallTextBuilder.BuildAll(
             File.ReadAllBytes(source),
             source,
+            File.ReadAllBytes(Path.Combine(arena2, NameGenReader.FileName)),
+            Path.Combine(arena2, NameGenReader.FileName),
+            File.ReadAllBytes(Path.Combine(arena2, RumorReader.FileName)),
+            Path.Combine(arena2, RumorReader.FileName),
+            File.ReadAllBytes(Path.Combine(arena2, BioDatReader.FileName)),
+            Path.Combine(arena2, BioDatReader.FileName),
+            questionnaires,
+            imageBytes,
             SourceManifestBuilder.ReadInventory(File.ReadAllBytes(values["--inventory"])),
             values["--language"]);
 
@@ -826,6 +855,9 @@ internal static class Program
         }
 
         Console.WriteLine($"  declared key families: {string.Join(", ", text.PendingKinds.Select(pending => $"{pending.Kind.ToString().ToLowerInvariant()} (task #{pending.OwnerTask})"))}");
+        Console.WriteLine($"  names: {names.Banks.Count} banks, {names.Banks.Sum(bank => bank.Sets.Sum(set => set.Parts.Count))} fragments");
+        Console.WriteLine($"  rumors: {rumors.Entries.Count} records, {rumors.Entries.Count(entry => entry.TypeDisposition == DaggerfallRumorTypeDisposition.Unknown)} unknown types");
+        Console.WriteLine($"  biographies: {biographies.Biographies.Count} questionnaires, {biographies.DefaultLines} default lines");
         if (!update)
         {
             Console.WriteLine("pack: not written (rerun with --update to publish this text into it)");
@@ -834,8 +866,11 @@ internal static class Program
 
         JsonNode pack = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
         pack["text"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(text, PublishedJson.Section));
+        pack["names"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(names, PublishedJson.Section));
+        pack["rumors"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(rumors, PublishedJson.Section));
+        pack["biographies"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(biographies, PublishedJson.Section));
         File.WriteAllText(values["--pack"], pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
-        Console.WriteLine($"pack: text updated in {values["--pack"]}");
+        Console.WriteLine($"pack: text, names, rumors and biographies updated in {values["--pack"]}");
         return 0;
     }
 

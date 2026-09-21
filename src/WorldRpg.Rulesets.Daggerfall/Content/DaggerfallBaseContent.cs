@@ -42,10 +42,13 @@ internal static class DaggerfallBaseContent
             DaggerfallMagicCatalogSet magic = ReadMagicCatalog(root, diagnostics);
             DaggerfallLocationSet locations = ReadLocations(root, diagnostics);
             DaggerfallTextSet text = ReadText(root, diagnostics);
+            DaggerfallNameTablesSet names = ReadNameTables(root, text, diagnostics);
+            DaggerfallRumorCatalogSet rumors = ReadRumorCatalog(root, text, diagnostics);
+            DaggerfallBiographiesSet biographies = ReadBiographies(root, text, diagnostics);
             ValidateReferences(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, hud, diagnostics);
             ValidateCatalog(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, lootCategoryPools, donorErrata, diagnostics);
             diagnostics.ThrowIfAny();
-            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles);
+            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles, names, rumors, biographies);
         }
         catch (JsonException exception)
         {
@@ -1020,6 +1023,380 @@ internal static class DaggerfallBaseContent
         }
 
         return new DaggerfallMobileCatalogSet(mobiles, byActor, sources);
+    }
+
+    /// <summary>
+    /// Reads the published name tables from the pack alone. A bank keeps its donor identity and
+    /// composition, and every fragment key must resolve through the text section: a name part with
+    /// no text is a reference the generator cannot honor.
+    /// </summary>
+    private static DaggerfallNameTablesSet ReadNameTables(JsonElement root, DaggerfallTextSet text, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!root.TryGetProperty("names", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
+        {
+            diagnostics.Add("Base payload publishes no names section; generated names resolve to nothing until it is republished.");
+            return new DaggerfallNameTablesSet([]);
+        }
+
+        List<DaggerfallNameBankDefinition> banks = [];
+        HashSet<int> seenBanks = [];
+        foreach (JsonElement bank in Array(section, "banks", diagnostics))
+        {
+            int index = Integer(bank, "bank", diagnostics);
+            string name = Text(bank, "name", diagnostics);
+            string kindName = Text(bank, "kind", diagnostics);
+            if (!TryReadName(kindName, out DaggerfallNameBankKind kind))
+            {
+                diagnostics.Add($"Name bank '{name}' names the composition '{kindName}', which the contract does not declare.");
+            }
+
+            if (!seenBanks.Add(index))
+            {
+                diagnostics.Add($"Name bank {index} is published twice, so one of them is unreachable.");
+            }
+
+            List<DaggerfallNameSetDefinition> sets = [];
+            HashSet<int> seenSets = [];
+            foreach (JsonElement set in Array(bank, "sets", diagnostics))
+            {
+                int setIndex = Integer(set, "set", diagnostics);
+                if (!seenSets.Add(setIndex))
+                {
+                    diagnostics.Add($"Name bank '{name}' set {setIndex} is published twice, so one of them is unreachable.");
+                }
+
+                List<DaggerfallTextKey> keys = [];
+                foreach (JsonElement key in Array(set, "keys", diagnostics))
+                {
+                    DaggerfallTextKey parsed = ParseTextKey(key, DaggerfallTextKind.Name, $"name bank '{name}' set {setIndex}", diagnostics);
+                    if (!text.Values.ContainsKey(parsed))
+                    {
+                        diagnostics.Add($"Name bank '{name}' set {setIndex} names text key '{parsed}', which the section does not carry.");
+                    }
+
+                    keys.Add(parsed);
+                }
+
+                if (keys.Count == 0)
+                {
+                    diagnostics.Add($"Name bank '{name}' set {setIndex} carries no fragments.");
+                }
+
+                sets.Add(new DaggerfallNameSetDefinition(setIndex, keys));
+            }
+
+            if (sets.Count == 0)
+            {
+                diagnostics.Add($"Name bank '{name}' carries no sets.");
+            }
+
+            banks.Add(new DaggerfallNameBankDefinition(index, name, kind, sets));
+        }
+
+        if (banks.Count == 0)
+        {
+            diagnostics.Add("The published name tables carry no bank, so nothing resolves through them.");
+        }
+
+        return new DaggerfallNameTablesSet(banks);
+    }
+
+    /// <summary>
+    /// Reads the published rumor catalog from the pack alone. Each entry keeps the region, type,
+    /// faction and quest references dialogue, faction and quest consumers resolve through, and its
+    /// text key must resolve through the text section.
+    /// </summary>
+    private static DaggerfallRumorCatalogSet ReadRumorCatalog(JsonElement root, DaggerfallTextSet text, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!root.TryGetProperty("rumors", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
+        {
+            diagnostics.Add("Base payload publishes no rumors section; rumor references resolve to nothing until it is republished.");
+            return new DaggerfallRumorCatalogSet([]);
+        }
+
+        List<DaggerfallRumorDefinition> entries = [];
+        HashSet<int> seen = [];
+        foreach (JsonElement entry in Array(section, "entries", diagnostics))
+        {
+            int index = Integer(entry, "index", diagnostics);
+            if (!seen.Add(index))
+            {
+                diagnostics.Add($"Rumor {index} is published twice, so one of them is unreachable.");
+            }
+
+            int type = Integer(entry, "type", diagnostics);
+            string typeName = OptionalText(entry, "typeName");
+            string dispositionName = Text(entry, "typeDisposition", diagnostics);
+            if (!TryReadName(dispositionName, out DaggerfallRumorTypeDisposition disposition))
+            {
+                diagnostics.Add($"Rumor {index} names the type disposition '{dispositionName}', which the contract does not declare.");
+            }
+
+            if (disposition == DaggerfallRumorTypeDisposition.Known && typeName.Length == 0)
+            {
+                diagnostics.Add($"Rumor {index} names a known type with no name.");
+            }
+
+            if (disposition == DaggerfallRumorTypeDisposition.Unknown && typeName.Length != 0)
+            {
+                diagnostics.Add($"Rumor {index} names an unknown type '{typeName}'.");
+            }
+
+            int region = Integer(entry, "region", diagnostics);
+            if (region is < 0 or > 61)
+            {
+                diagnostics.Add($"Rumor {index} circulates in region {region} outside the 62 classic regions.");
+            }
+
+            DaggerfallTextKey textKey = ParseTextKey(Property(entry, "textKey", diagnostics), DaggerfallTextKind.Rumor, $"rumor {index}", diagnostics);
+            if (!text.Values.ContainsKey(textKey))
+            {
+                diagnostics.Add($"Rumor {index} names text key '{textKey}', which the section does not carry.");
+            }
+
+            entries.Add(new DaggerfallRumorDefinition(
+                index,
+                type,
+                typeName,
+                disposition,
+                region,
+                Integer(entry, "flags", diagnostics),
+                Boolean(entry, "isQuestRumor", diagnostics),
+                Boolean(entry, "isSignMessage", diagnostics),
+                Integer(entry, "faction1", diagnostics),
+                Integer(entry, "faction2", diagnostics),
+                Integer(entry, "questId", diagnostics),
+                OptionalText(entry, "questName"),
+                Integer(entry, "npcId", diagnostics),
+                Integer(entry, "timeLimit", diagnostics),
+                textKey));
+        }
+
+        if (entries.Count == 0)
+        {
+            diagnostics.Add("The published rumor catalog carries no rumor, so nothing resolves through it.");
+        }
+
+        return new DaggerfallRumorCatalogSet(entries);
+    }
+
+    /// <summary>
+    /// Reads the published biographies from the pack alone. Each questionnaire keeps its questions,
+    /// answers and effect references with the text keys they resolve through; a structural key with
+    /// no text is a reference character creation cannot honor, while a link the publication marks
+    /// unresolved is the recorded miss itself and only a claimed resolution must cite a value.
+    /// </summary>
+    private static DaggerfallBiographiesSet ReadBiographies(JsonElement root, DaggerfallTextSet text, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!root.TryGetProperty("biographies", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
+        {
+            diagnostics.Add("Base payload publishes no biographies section; biography references resolve to nothing until it is republished.");
+            return new DaggerfallBiographiesSet([], 0);
+        }
+
+        List<DaggerfallBiographyDefinition> biographies = [];
+        HashSet<string> seen = [];
+        foreach (JsonElement biography in Array(section, "biographies", diagnostics))
+        {
+            int classIndex = Integer(biography, "classIndex", diagnostics);
+            int biographyIndex = Integer(biography, "biographyIndex", diagnostics);
+            if (!seen.Add($"{classIndex}-{biographyIndex}"))
+            {
+                diagnostics.Add($"Biography {classIndex}-{biographyIndex} is published twice, so one of them is unreachable.");
+            }
+
+            DaggerfallTextKey backstoryKey = ParseTextKey(Property(biography, "backstoryKey", diagnostics), DaggerfallTextKind.Resource, $"biography {classIndex}-{biographyIndex} backstory", diagnostics);
+            string backstoryDispositionName = Text(biography, "backstoryDisposition", diagnostics);
+            if (!TryReadName(backstoryDispositionName, out DaggerfallBiographyLinkDisposition backstoryDisposition))
+            {
+                diagnostics.Add($"Biography {classIndex}-{biographyIndex} names the link disposition '{backstoryDispositionName}', which the contract does not declare.");
+            }
+
+            if (backstoryDisposition == DaggerfallBiographyLinkDisposition.Resolved && !text.Values.ContainsKey(backstoryKey))
+            {
+                diagnostics.Add($"Biography {classIndex}-{biographyIndex} claims a resolved backstory link to '{backstoryKey}', which the section does not carry.");
+            }
+
+            List<DaggerfallBiographyQuestionDefinition> questions = [];
+            foreach (JsonElement question in Array(biography, "questions", diagnostics))
+            {
+                int number = Integer(question, "number", diagnostics);
+                List<DaggerfallTextKey> textKeys = [];
+                foreach (JsonElement key in Array(question, "textKeys", diagnostics))
+                {
+                    DaggerfallTextKey parsed = ParseTextKey(key, DaggerfallTextKind.Biography, $"biography {classIndex}-{biographyIndex} question {number}", diagnostics);
+                    if (!text.Values.ContainsKey(parsed))
+                    {
+                        diagnostics.Add($"Biography {classIndex}-{biographyIndex} question {number} names text key '{parsed}', which the section does not carry.");
+                    }
+
+                    textKeys.Add(parsed);
+                }
+
+                if (textKeys.Count == 0)
+                {
+                    diagnostics.Add($"Biography {classIndex}-{biographyIndex} question {number} carries no prose keys.");
+                }
+
+                List<DaggerfallBiographyAnswerDefinition> answers = [];
+                HashSet<string> seenLetters = [];
+                foreach (JsonElement answer in Array(question, "answers", diagnostics))
+                {
+                    string letter = Text(answer, "letter", diagnostics);
+                    if (!seenLetters.Add(letter))
+                    {
+                        diagnostics.Add($"Biography {classIndex}-{biographyIndex} question {number} answers '{letter}' twice, so one of them is unreachable.");
+                    }
+
+                    DaggerfallTextKey answerKey = ParseTextKey(Property(answer, "textKey", diagnostics), DaggerfallTextKind.Biography, $"biography {classIndex}-{biographyIndex} question {number} answer '{letter}'", diagnostics);
+                    if (!text.Values.ContainsKey(answerKey))
+                    {
+                        diagnostics.Add($"Biography {classIndex}-{biographyIndex} question {number} answer '{letter}' names text key '{answerKey}', which the section does not carry.");
+                    }
+
+                    List<DaggerfallBiographyEffectDefinition> effects = [];
+                    foreach (JsonElement effect in Array(answer, "effects", diagnostics))
+                    {
+                        effects.Add(ReadBiographyEffect(effect, text, classIndex, biographyIndex, number, letter, diagnostics));
+                    }
+
+                    answers.Add(new DaggerfallBiographyAnswerDefinition(letter, answerKey, effects));
+                }
+
+                if (answers.Count == 0)
+                {
+                    diagnostics.Add($"Biography {classIndex}-{biographyIndex} question {number} carries no answers.");
+                }
+
+                questions.Add(new DaggerfallBiographyQuestionDefinition(number, textKeys, answers));
+            }
+
+            if (questions.Count == 0)
+            {
+                diagnostics.Add($"Biography {classIndex}-{biographyIndex} carries no questions.");
+            }
+
+            JsonElement image = Object(Property(biography, "image", diagnostics), $"biography {classIndex}-{biographyIndex} image", diagnostics);
+            string mediaId = Text(image, "mediaId", diagnostics);
+            string imageSource = Text(image, "source", diagnostics);
+            bool published = Boolean(image, "published", diagnostics);
+            string reason = EmptyAllowedText(image, "reason", diagnostics);
+            if (published == !string.IsNullOrWhiteSpace(reason))
+            {
+                diagnostics.Add($"Biography {classIndex}-{biographyIndex} image '{mediaId}' states a reason exactly when it does not resolve.");
+            }
+
+            List<string> warnings = [];
+            foreach (JsonElement warning in Array(biography, "warnings", diagnostics))
+            {
+                if (warning.ValueKind == JsonValueKind.String && warning.GetString() is { Length: > 0 } stated)
+                {
+                    warnings.Add(stated);
+                }
+                else
+                {
+                    diagnostics.Add($"Biography {classIndex}-{biographyIndex} states an empty warning.");
+                }
+            }
+
+            biographies.Add(new DaggerfallBiographyDefinition(
+                classIndex,
+                biographyIndex,
+                Integer(biography, "backstoryId", diagnostics),
+                Boolean(biography, "backstoryExplicit", diagnostics),
+                backstoryKey,
+                backstoryDisposition,
+                questions,
+                new DaggerfallBiographyImageDefinition(mediaId, imageSource, published, reason),
+                warnings));
+        }
+
+        if (biographies.Count == 0)
+        {
+            diagnostics.Add("The published biographies carry no questionnaire, so nothing resolves through them.");
+        }
+
+        return new DaggerfallBiographiesSet(biographies, Integer(section, "defaultLines", diagnostics));
+    }
+
+    private static DaggerfallBiographyEffectDefinition ReadBiographyEffect(
+        JsonElement effect, DaggerfallTextSet text, int classIndex, int biographyIndex, int number, string letter, DaggerfallContentDiagnostics diagnostics)
+    {
+        string line = Text(effect, "text", diagnostics);
+        string kindName = Text(effect, "kind", diagnostics);
+        if (!TryReadName(kindName, out DaggerfallBiographyEffectKind kind))
+        {
+            diagnostics.Add($"Biography {classIndex}-{biographyIndex} question {number} answer '{letter}' effect '{line}' names the kind '{kindName}', which the contract does not declare.");
+        }
+
+        string first = OptionalText(effect, "first");
+        string second = OptionalText(effect, "second");
+        string third = OptionalText(effect, "third");
+        string macroTarget = OptionalText(effect, "macroTarget");
+        DaggerfallTextKey? target = null;
+        DaggerfallBiographyLinkDisposition? disposition = null;
+        string reason = string.Empty;
+        if (kind == DaggerfallBiographyEffectKind.TextMacro)
+        {
+            target = ParseTextKey(Property(effect, "macroTarget", diagnostics), DaggerfallTextKind.Resource, $"biography {classIndex}-{biographyIndex} question {number} answer '{letter}' effect '{line}'", diagnostics);
+            string dispositionName = Text(effect, "macroTargetDisposition", diagnostics);
+            if (!TryReadName(dispositionName, out DaggerfallBiographyLinkDisposition parsed))
+            {
+                diagnostics.Add($"Biography effect '{line}' names the link disposition '{dispositionName}', which the contract does not declare.");
+            }
+            else
+            {
+                disposition = parsed;
+            }
+
+            reason = EmptyAllowedText(effect, "macroTargetReason", diagnostics);
+            if (disposition == DaggerfallBiographyLinkDisposition.Resolved && (target is null || !text.Values.ContainsKey(target.Value)))
+            {
+                diagnostics.Add($"Biography effect '{line}' claims a resolved link to '{target}', which the section does not carry.");
+            }
+
+            if (reason.Length != 0 && disposition != DaggerfallBiographyLinkDisposition.Unresolved)
+            {
+                diagnostics.Add($"Biography effect '{line}' states a reason without an unresolved link.");
+            }
+        }
+        else if (macroTarget.Length != 0)
+        {
+            diagnostics.Add($"Biography effect '{line}' carries a macro target without being a text macro.");
+        }
+
+        return new DaggerfallBiographyEffectDefinition(line, kind, first, second, third, target, disposition, reason);
+    }
+
+    /// <summary>
+    /// Reads one text reference in the pack's key spelling and checks it names the expected family.
+    /// A reference naming another family resolves elsewhere, so accepting it would answer lookups
+    /// from the wrong family's values.
+    /// </summary>
+    private static DaggerfallTextKey ParseTextKey(JsonElement value, DaggerfallTextKind expected, string what, DaggerfallContentDiagnostics diagnostics)
+    {
+        DaggerfallTextKey fallback = new(expected, "missing");
+        if (value.ValueKind != JsonValueKind.String || value.GetString() is not { } spelled)
+        {
+            diagnostics.Add($"{what} names a text key that is not a string.");
+            return fallback;
+        }
+
+        int separator = spelled.IndexOf(':');
+        if (separator <= 0 || !TryReadName(spelled[..separator], out DaggerfallTextKind kind) || kind != expected)
+        {
+            diagnostics.Add($"{what} names text key '{spelled}', which belongs to no '{expected}' family.");
+            return fallback;
+        }
+
+        string id = spelled[(separator + 1)..];
+        if (id.Length == 0 || id.Any(char.IsWhiteSpace))
+        {
+            diagnostics.Add($"{what} names text key '{spelled}' with no identity.");
+            return fallback;
+        }
+
+        return new DaggerfallTextKey(kind, id);
     }
 
     /// <summary>
