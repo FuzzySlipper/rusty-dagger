@@ -12,7 +12,8 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed class DaggerfallState(PlayerControlState playerControl, ActorsState actors,
     MechanicsInventoryCoordinator inventory, MechanicsEquipmentCoordinator equipment,
     MechanicsInventoryContainerCoordinator containers, IReadOnlyDictionary<InventoryItemId, ItemDefinition> items,
-    IReadOnlyDictionary<WorldRpg.Kit.Inventory.EquipmentSlotId, EquipmentSlotDefinition> slots)
+    IReadOnlyDictionary<WorldRpg.Kit.Inventory.EquipmentSlotId, EquipmentSlotDefinition> slots,
+    InventoryStore inventoryStore)
 {
     internal GameplayServices<IProductFact> Kit { get; set; } = null!;
     internal PlayerControlState PlayerControl { get; } = playerControl;
@@ -21,6 +22,8 @@ internal sealed class DaggerfallState(PlayerControlState playerControl, ActorsSt
     internal MechanicsInventoryCoordinator Inventory { get; } = inventory;
     internal MechanicsEquipmentCoordinator Equipment { get; } = equipment;
     internal MechanicsInventoryContainerCoordinator Containers { get; } = containers;
+    /// <summary>The one managed inventory store every actor inventory and equipment registers in.</summary>
+    internal InventoryStore InventoryStore { get; } = inventoryStore;
     internal MechanicsInventoryCoordinator? InventoryFor(long durableActorId) =>
         Actors.TryGet(durableActorId, out var actor) ? new(actor.Inventory, Actors.Entities, items) : null;
     internal MechanicsEquipmentCoordinator EquipmentFor(long durableActorId)

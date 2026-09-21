@@ -403,11 +403,12 @@ public sealed class DaggerfallSiteContextTests
     private static DaggerfallSavePayload Payload(DaggerfallSiteSave? site) => new(
         new DaggerfallPlayerSave(0f, 0f, 0f, 0f, 0f, EmptyStats()),
         [],
+        [],
         0,
         1,
         new DaggerfallInventorySave([], [], []),
         [],
-        new DurableIdentityState([new KindAllocatorState(DurableIdentityKind.Item, 1, [], [])]),
+        new DurableIdentityState([new KindAllocatorState(DurableIdentityKind.Actor, 1, [], []), new KindAllocatorState(DurableIdentityKind.Item, 1, [], [])]),
         [],
         new DaggerfallCalendarSave(1, 1, 1, 0, 0, 0, 0d),
         site ?? throw new ArgumentNullException(nameof(site)),

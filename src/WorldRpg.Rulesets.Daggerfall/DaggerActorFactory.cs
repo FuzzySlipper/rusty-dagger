@@ -81,10 +81,7 @@ internal static class DaggerActorFactory
                     new ActorPose(source.Position, 0f), definition.Combat.Health.Value);
                 if (saved is not null) RestoreStats(actor.Actor, saved.Actors.Single(value => value.EntityId == source.EntityId).Stats);
                 authored.Add(source.EntityId, definition);
-                inventoryStore.RegisterInventory(new InventoryState(actor.Actor.Entity));
-                inventoryStore.RegisterEquipment(new EquipmentState(actor.Actor.Entity));
-                actor.Actor.Add(new InventoryComponent(inventoryStore, actor.Actor.Entity));
-                actor.Actor.Add(new EquipmentComponent(inventoryStore, actor.Actor.Entity));
+                RegisterActorInventory(actor, inventoryStore);
                 // A placed actor whose definition declares a loadout carries it in a managed
                 // inventory over the session's inventory store: today that is the ranged actors'
                 // quiver, which a shot draws from and the save persists. A unique loadout entry
@@ -105,12 +102,64 @@ internal static class DaggerActorFactory
                     }
                 }
             }
-            DaggerfallState state = new(new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians), actors, inventory, equipmentCoordinator, containers, itemDefinitions, equipmentSlots);
+            DaggerfallState state = new(new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians), actors, inventory, equipmentCoordinator, containers, itemDefinitions, equipmentSlots, inventoryStore);
             authored.Add(DaggerfallActorIdentity.PlayerEntityId, playerDefinition);
+            if (saved is not null) MaterializeDynamicActors(random, actors, mechanics, definitions, saved, authored, inventoryStore);
             return new(state, authored, playerDefinition);
         }
         catch { actors.Dispose(); throw; }
     }
+    /// <summary>
+    /// Rebuilds dynamically spawned actors from the save: fresh runtime entities bound to the same
+    /// durable identities, stats restored from the saved boundary, and definition references
+    /// re-registered so every definition consumer keeps working. Inventories restore through the
+    /// actor inventory sections, never through a loadout re-grant.
+    /// </summary>
+    internal static void MaterializeDynamicActors(
+        IRandomService random,
+        ActorsState actors,
+        DaggerfallMechanicsState mechanics,
+        DaggerfallDefinitions definitions,
+        DaggerfallSavePayload saved,
+        Dictionary<long, DaggerfallActorDefinition> definitionsByActor,
+        InventoryStore inventoryStore)
+    {
+        ArgumentNullException.ThrowIfNull(random);
+        ArgumentNullException.ThrowIfNull(actors);
+        ArgumentNullException.ThrowIfNull(mechanics);
+        ArgumentNullException.ThrowIfNull(definitions);
+        ArgumentNullException.ThrowIfNull(saved);
+        ArgumentNullException.ThrowIfNull(definitionsByActor);
+        ArgumentNullException.ThrowIfNull(inventoryStore);
+        foreach (DaggerfallDynamicActorSave spawned in saved.DynamicActors.OrderBy(value => value.EntityId))
+        {
+            DaggerfallActorDefinition definition = definitions.RequireActor(new DaggerfallActorId(spawned.Definition));
+            // Keyed draws are deterministic per identity, so this construction roll cannot skew
+            // any other roll; the saved boundary replaces the whole component immediately after.
+            ActorState actor = actors.CreateActor(spawned.EntityId, new EntityTypeId(definition.Id.Value),
+                mechanics.CreateStats(definition, InitialVitals(random, definition, spawned.EntityId)),
+                new ActorPose(new WorldPoint(spawned.X, spawned.Y, spawned.Z), spawned.HeadingRadians),
+                definition.Combat.Health.Value);
+            RestoreStats(actor.Actor, spawned.Stats);
+            definitionsByActor.Add(spawned.EntityId, definition);
+            RegisterActorInventory(actor, inventoryStore);
+        }
+    }
+
+    /// <summary>
+    /// Gives one actor its managed inventory and equipment over the session store, the same
+    /// binding authored placement actors are constructed with.
+    /// </summary>
+    internal static void RegisterActorInventory(ActorState actor, InventoryStore inventoryStore)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        ArgumentNullException.ThrowIfNull(inventoryStore);
+        inventoryStore.RegisterInventory(new InventoryState(actor.Actor.Entity));
+        inventoryStore.RegisterEquipment(new EquipmentState(actor.Actor.Entity));
+        actor.Actor.Add(new InventoryComponent(inventoryStore, actor.Actor.Entity));
+        actor.Actor.Add(new EquipmentComponent(inventoryStore, actor.Actor.Entity));
+    }
+
     private static void RestoreStats(Actor actor, DaggerfallStatsSave saved)
     {
         DaggerfallRestoredStats restored = DaggerfallStatsSaveBoundary.Restore(saved, actor.Entity);
@@ -144,11 +193,10 @@ internal static class DaggerActorFactory
         new(Rusty.Engine.Mechanics.EquipmentSlotId.Parse(slot.Id.Value), slot.AllowedClassifications.Select(ItemClassificationId.Parse));
 
     /// <summary>
-    /// Applies the enemy swings whose authored damage frame was reached in the sprite
-    /// playback this update consumed. The presentation reports the beat; the ruleset
-    /// owns what it means, and a swing that expired or lost its target applies nothing.
+    /// Rolls one actor's initial health from its authored range under a spawn-identity key.
+    /// Restore paths discard this roll when the saved boundary replaces the whole component.
     /// </summary>
-    private static DaggerfallVitalValues InitialVitals(IRandomService random, DaggerfallActorDefinition definition, long entityId)
+    internal static DaggerfallVitalValues InitialVitals(IRandomService random, DaggerfallActorDefinition definition, long entityId)
     {
         if (definition.Id.Value == "player") return definition.PlayerInitialVitals;
         int health = checked((int)random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, CombatRandomKey.EnemyScope, CombatRandomKey.InitialHealth(entityId, definition.Id.Value), definition.Health.Minimum, definition.Health.Maximum)).Value);

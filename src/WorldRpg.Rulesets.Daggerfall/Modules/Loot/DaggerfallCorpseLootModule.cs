@@ -83,7 +83,7 @@ internal sealed class DaggerfallCorpseLootModule
         {
             value.Validate();
             if (!_actors.TryGet(value.ActorId, out ActorState? actor) || !actor.IsDefeated)
-                throw new ArgumentException($"Saved corpse '{value.ActorId}' does not correspond to a defeated authored actor.", nameof(saved));
+                throw new ArgumentException($"Saved corpse '{value.ActorId}' does not correspond to a defeated registered actor.", nameof(saved));
             if (actor.Actor.TryGet<CorpseLootComponent>(out _))
                 throw new InvalidOperationException("Corpse state can only be restored into a fresh session.");
             CorpseLootComponent corpse = _corpseLoot.Restore(

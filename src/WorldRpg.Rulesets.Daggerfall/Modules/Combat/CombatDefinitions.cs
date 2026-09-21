@@ -32,4 +32,5 @@ internal static class CombatRandomKey
 
     internal static string For(ulong generation, ulong step, long attacker, long target, int salt) => $"generation:{generation}:step:{step}:attacker:{attacker}:target:{target}:salt:{salt}";
     internal static string InitialHealth(long entityId, string actor) => $"spawn:actor:{entityId}:{actor}:health";
+    internal static string ClassHealth(long entityId, string actor, int rollIndex) => $"spawn:actor:{entityId}:{actor}:class-health:{rollIndex}";
 }

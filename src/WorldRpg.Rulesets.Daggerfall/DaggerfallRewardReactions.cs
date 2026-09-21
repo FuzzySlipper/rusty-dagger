@@ -11,7 +11,7 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-/// <summary>Daggerfall-owned reward policy for defeated authored actors.</summary>
+/// <summary>Daggerfall-owned reward policy for defeated registered actors.</summary>
 internal sealed class DaggerfallRewardReactions(ProgressionState progression, StatsComponent playerMechanics, Rusty.Engine.Entities.EntityId playerEntity, DaggerfallActorDefinition playerDefinition, IRandomService random, IReadOnlyDictionary<long, DaggerfallActorDefinition> actors)
 {
     private readonly HashSet<long> _awarded = [];
@@ -203,6 +203,16 @@ internal sealed class DaggerfallUniqueItemAllocator
         _identities = new DurableIdentityAllocator(LootKind, firstEntityId, reserved, removed);
 
     private DaggerfallUniqueItemAllocator(DurableIdentityAllocator identities) => _identities = identities;
+
+    /// <summary>
+    /// Shares one session ledger with the dynamic actor identities: both kinds persist in the
+    /// same save state through the shared instance this allocator wraps.
+    /// </summary>
+    internal static DaggerfallUniqueItemAllocator Sharing(DurableIdentityAllocator shared)
+    {
+        ArgumentNullException.ThrowIfNull(shared);
+        return new DaggerfallUniqueItemAllocator(shared);
+    }
 
     internal ulong NextEntityId => _identities.NextIdentity(LootKind);
 
