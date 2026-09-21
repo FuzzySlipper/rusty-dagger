@@ -24,7 +24,7 @@ public sealed class DaggerfallTextSetTests
     {
         DaggerfallTextSet text = Definitions().Text;
 
-        Assert.Equal(1408, text.Values.Count);
+        Assert.Equal(3862, text.Values.Count);
         Assert.Equal(DaggerfallTextResolution.Resolved, text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Resource, "0"), out DaggerfallTextValue? value));
         Assert.Equal("local/arena2/TEXT.RSC", value!.Source);
         Assert.Equal("en", value.Language);
@@ -62,7 +62,9 @@ public sealed class DaggerfallTextSetTests
     [Fact]
     public void A_malformed_value_resolves_with_its_reason_rather_than_as_empty_text()
     {
-        DaggerfallDefinitions definitions = Definitions(payload => Malformed(Records(payload)[0]!.AsObject()));
+        DaggerfallDefinitions definitions = Definitions(payload => Malformed(Records(payload)
+            .Select(record => record!.AsObject())
+            .Single(record => record["key"]!.AsObject()["kind"]!.GetValue<string>() == "resource" && record["key"]!.AsObject()["id"]!.GetValue<string>() == "0")));
 
         DaggerfallTextKey key = new(DaggerfallTextKind.Resource, "0");
         Assert.Equal(DaggerfallTextResolution.Malformed, definitions.Text.Resolve(key, out DaggerfallTextValue? value));
@@ -102,14 +104,47 @@ public sealed class DaggerfallTextSetTests
     }
 
     [Fact]
+    public void Resolves_name_rumor_and_biography_keys_through_their_sources()
+    {
+        DaggerfallTextSet text = Definitions().Text;
+
+        // A fragment resolves with the source that states it, not the family that names it.
+        Assert.Equal(DaggerfallTextResolution.Resolved, text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Name, "00-0-00"), out DaggerfallTextValue? fragment));
+        Assert.Equal("local/arena2/NAMEGEN.DAT", fragment!.Source);
+        Assert.Equal("en", fragment.Language);
+        Assert.Equal("Theod", fragment.TextRuns.Single());
+
+        // A rumor text resolves through its position-and-region key.
+        Assert.Equal(DaggerfallTextResolution.Resolved, text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Rumor, "00-00"), out DaggerfallTextValue? rumor));
+        Assert.Equal("local/arena2/RUMOR.DAT", rumor!.Source);
+
+        // Questionnaire prose resolves through the file that states it.
+        Assert.Equal(DaggerfallTextResolution.Resolved, text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Biography, "00-0-q01-l0"), out DaggerfallTextValue? question));
+        Assert.Equal("local/arena2/BIOG00T0.TXT", question!.Source);
+        Assert.Contains("school of magic", question.TextRuns.Single(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(DaggerfallTextResolution.Resolved, text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Biography, "default-00"), out DaggerfallTextValue? backstory));
+        Assert.Equal("local/arena2/BIO.DAT", backstory!.Source);
+
+        // The zero-byte tail is a stated line with no bytes: malformed with its reason, not missing.
+        Assert.Equal(DaggerfallTextResolution.Malformed, text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Biography, "default-33"), out DaggerfallTextValue? tail));
+        Assert.NotEmpty(tail!.Reason);
+
+        // Keys no source states are misses in every family.
+        Assert.Equal(DaggerfallTextResolution.Missing, text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Name, "99-9-99"), out _));
+        Assert.Equal(DaggerfallTextResolution.Missing, text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Rumor, "99-99"), out _));
+        Assert.Equal(DaggerfallTextResolution.Missing, text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Biography, "99-9-q99-l0"), out _));
+    }
+
+    [Fact]
     public void The_declared_families_name_the_tasks_that_supply_them()
     {
         IReadOnlyList<DaggerfallTextPendingKind> pending = Definitions().Text.PendingKinds;
 
-        Assert.Equal(["biography", "book", "name", "rumor"], pending.Select(kind => kind.Kind.ToString().ToLowerInvariant()).Order());
-        Assert.Equal(7951, pending.Single(kind => kind.Kind == DaggerfallTextKind.Book).OwnerTask);
-        Assert.All(pending.Where(kind => kind.Kind != DaggerfallTextKind.Book), kind => Assert.Equal(7941, kind.OwnerTask));
-        Assert.All(pending, kind => Assert.NotEmpty(kind.Reason));
+        // The name, biography and rumor families arrived with task 7941; only books stay pending.
+        DaggerfallTextPendingKind books = Assert.Single(pending);
+        Assert.Equal(DaggerfallTextKind.Book, books.Kind);
+        Assert.Equal(7951, books.OwnerTask);
+        Assert.NotEmpty(books.Reason);
     }
 
     [Fact]
@@ -117,7 +152,7 @@ public sealed class DaggerfallTextSetTests
     {
         // The control for every mutation below: the harness rewrites the payload through JSON, so this
         // states that the rewrite alone is not what a mutation test is observing.
-        Assert.Equal(1408, Definitions(_ => { }).Text.Values.Count);
+        Assert.Equal(3862, Definitions(_ => { }).Text.Values.Count);
     }
 
     [Fact]
@@ -456,7 +491,9 @@ public sealed class DaggerfallTextSetTests
 
     private static JsonArray Macros(JsonObject payload) => Text(payload)["macros"]!.AsArray();
 
-    private static JsonArray Tokens(JsonObject payload) => Records(payload)[0]!.AsObject()["tokens"]!.AsArray();
+    private static JsonArray Tokens(JsonObject payload) => Records(payload)
+        .Select(record => record!.AsObject()["tokens"]!.AsArray())
+        .First(tokens => tokens.Count > 1);
 
     /// <summary>Makes one published value state that its bytes could not be read.</summary>
     private static void Malformed(JsonObject record)

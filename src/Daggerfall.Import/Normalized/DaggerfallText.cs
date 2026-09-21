@@ -517,6 +517,131 @@ public static class DaggerfallTextBuilder
     }
 
     /// <summary>
+    /// Builds the published text with the name, biography and rumor families filled: the text
+    /// resource's own records plus every fragment, line, rumor text, question and answer the
+    /// family sources state. Records order by source path then source ordinal, the same rule the
+    /// text resource build uses, so each source's values stay grouped; the macro index is derived
+    /// from all of them, so one section answers every family. Only the book family stays pending.
+    /// </summary>
+    public static (DaggerfallText Text, DaggerfallNameTables Names, DaggerfallRumorCatalog Rumors, DaggerfallBiographies Biographies) BuildAll(
+        byte[] textBytes,
+        string textLabel,
+        byte[] nameBytes,
+        string nameLabel,
+        byte[] rumorBytes,
+        string rumorLabel,
+        byte[] bioBytes,
+        string bioLabel,
+        IReadOnlyList<(string Text, string Label, int ClassIndex, int BiographyIndex)> questionnaires,
+        byte[]? imageBytes,
+        IReadOnlyList<SourceInventoryRow> inventory,
+        string language)
+    {
+        ArgumentNullException.ThrowIfNull(textBytes);
+        ArgumentNullException.ThrowIfNull(nameBytes);
+        ArgumentNullException.ThrowIfNull(rumorBytes);
+        ArgumentNullException.ThrowIfNull(bioBytes);
+        ArgumentNullException.ThrowIfNull(questionnaires);
+        ArgumentNullException.ThrowIfNull(inventory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(language);
+
+        DaggerfallText baseText = Build(textBytes, textLabel, inventory, language);
+        HashSet<string> resourceIds = baseText.Records
+            .Where(record => record.Key.Kind == DaggerfallTextKind.Resource)
+            .Select(record => record.Key.Id)
+            .ToHashSet(StringComparer.Ordinal);
+
+        (DaggerfallNameTables names, IReadOnlyList<DaggerfallTextRecord> nameRecords) =
+            DaggerfallNameTablesBuilder.Build(nameBytes, nameLabel, inventory, language);
+        (DaggerfallRumorCatalog rumors, IReadOnlyList<DaggerfallTextRecord> rumorRecords) =
+            DaggerfallRumorCatalogBuilder.Build(rumorBytes, rumorLabel, inventory, language);
+        (DaggerfallBiographies biographies, IReadOnlyList<DaggerfallTextRecord> biographyRecords) =
+            DaggerfallBiographiesBuilder.Build(bioBytes, bioLabel, questionnaires, resourceIds, imageBytes, inventory, language);
+
+        List<DaggerfallTextSource> sources = [.. baseText.Sources, names.Source, rumors.Source, .. biographies.Sources];
+        List<DaggerfallTextRecord> records = [.. baseText.Records, .. nameRecords, .. rumorRecords, .. biographyRecords];
+        DaggerfallText published = new(
+            sources,
+            [new DaggerfallTextPendingKind(DaggerfallTextKind.Book, BookOwnerTask, "Supplied book files carry their own metadata, pages and message mappings; this contract declares the key space they resolve through.")],
+            [.. records.OrderBy(record => record.Source, StringComparer.Ordinal).ThenBy(record => record.Index)],
+            [.. MacroIndex(records)]);
+        published.Validate();
+        CheckReferences(names, rumors, biographies, published);
+        return (published, names, rumors, biographies);
+    }
+
+    /// <summary>
+    /// Every reference the metadata publishes resolves to a text value the section carries: a name
+    /// key with no fragment, a rumor key with no text, or a biography key with no prose would leave
+    /// a consumer holding a reference the resolver answers as missing.
+    /// </summary>
+    private static void CheckReferences(
+        DaggerfallNameTables names, DaggerfallRumorCatalog rumors, DaggerfallBiographies biographies, DaggerfallText text)
+    {
+        HashSet<string> keys = text.Records.Select(record => record.Key.ToString()).ToHashSet(StringComparer.Ordinal);
+        foreach (DaggerfallNameBank bank in names.Banks)
+        {
+            foreach (DaggerfallNameSet set in bank.Sets)
+            {
+                foreach (string key in set.Keys)
+                {
+                    if (!keys.Contains(key))
+                    {
+                        throw new InvalidOperationException($"Name bank '{bank.Name}' set {set.Set} cites missing text key '{key}'.");
+                    }
+                }
+            }
+        }
+
+        foreach (DaggerfallRumorEntry entry in rumors.Entries)
+        {
+            if (!keys.Contains(entry.TextKey))
+            {
+                throw new InvalidOperationException($"Rumor {entry.Index} cites missing text key '{entry.TextKey}'.");
+            }
+        }
+
+        foreach (DaggerfallBiography biography in biographies.Biographies)
+        {
+            // An unresolved backstory link is the published miss itself, so only a link the
+            // build claims resolves has to cite a value the section carries.
+            if (biography.BackstoryDisposition == DaggerfallBiographyLinkDisposition.Resolved
+                && !keys.Contains(biography.BackstoryKey))
+            {
+                throw new InvalidOperationException($"Biography {biography.ClassIndex}-{biography.BiographyIndex} cites missing backstory key '{biography.BackstoryKey}'.");
+            }
+
+            foreach (DaggerfallBiographyQuestion question in biography.Questions)
+            {
+                foreach (string key in question.TextKeys)
+                {
+                    if (!keys.Contains(key))
+                    {
+                        throw new InvalidOperationException($"Biography {biography.ClassIndex}-{biography.BiographyIndex} cites missing text key '{key}'.");
+                    }
+                }
+
+                foreach (DaggerfallBiographyAnswer answer in question.Answers)
+                {
+                    if (!keys.Contains(answer.TextKey))
+                    {
+                        throw new InvalidOperationException($"Biography {biography.ClassIndex}-{biography.BiographyIndex} cites missing text key '{answer.TextKey}'.");
+                    }
+
+                    foreach (DaggerfallBiographyEffect effect in answer.Effects)
+                    {
+                        if (effect.MacroTargetDisposition == DaggerfallBiographyLinkDisposition.Resolved
+                            && !keys.Contains(effect.MacroTarget))
+                        {
+                            throw new InvalidOperationException($"Biography effect '{effect.Text}' claims a resolved link to missing '{effect.MacroTarget}'.");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
     /// One read token as the section publishes it: a run keeps its characters, a named code keeps its
     /// name, a code with no name keeps the byte it came from, and only the two prefixes keep the payload
     /// they state.
