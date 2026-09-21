@@ -86,7 +86,14 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
     private string? _panelRequest;
     private ulong _panelRequestRevision;
     private double _panelRequestRemainingSeconds;
+    private int _lastHolidayId;
     private bool _disposed;
+
+    /// <summary>
+    /// The holiday announcement the calendar currently names for the session's site, or null when
+    /// the site is no settlement or no holiday is kept there today.
+    /// </summary>
+    internal World.DaggerfallHolidayAnnouncement? HolidayAnnouncement { get; private set; }
 
     internal DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
         : this(engine, definitions, inputs, tuning, null, null) { }
@@ -533,6 +540,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
         // The world's clock runs on the same admitted duration the message line ages by, scaled by the
         // tuning the corpus authors, so there is one clock and it is this one.
         _time.Advance(deltaSeconds * facts.AdmittedStepCount);
+        AnnounceHoliday();
         AgePanelRequest(deltaSeconds * facts.AdmittedStepCount);
 
         // One admitted update owns one input slice. Later catch-up steps derive
@@ -750,6 +758,34 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
     /// published, the same way a published loot revision is recognised rather than replayed.
     /// </remarks>
     internal DaggerfallPanelRequest? LatestPanelRequest => _panelRequest is null ? null : new DaggerfallPanelRequest(_panelRequest, _panelRequestRevision);
+
+    /// <summary>
+    /// Publishes the holiday announcement when the calendar names a new one for the session's site.
+    /// </summary>
+    /// <remarks>
+    /// The check runs on the first playing update and on every date change after it, which is how a
+    /// session constructed or restored onto a holiday announces once, the way the donor announces on
+    /// entering an eligible location and after loading: the tracking restarts unannounced, so the first observation
+    /// of a kept holiday is itself the entry. A session standing at a dungeon, a graveyard, a coven or
+    /// the player's ship never announces, and leaving a holiday clears the tracking silently rather than reporting the ordinary day.
+    /// </remarks>
+    private void AnnounceHoliday()
+    {
+        World.DaggerfallHolidayAnnouncement? announcement =
+            World.DaggerfallHolidayAnnouncement.ForDate(_time.Calendar, _site.Region, _site.ActiveSite?.Kind);
+        int holidayId = announcement?.HolidayId ?? 0;
+        if (holidayId == _lastHolidayId)
+        {
+            return;
+        }
+
+        _lastHolidayId = holidayId;
+        HolidayAnnouncement = announcement;
+        if (announcement is not null)
+        {
+            Presentation.SetOutcome(string.Concat(_definitions.Text.Require(announcement.TextKey).TextRuns));
+        }
+    }
 
     private void RequestPanel(string panel)
     {
