@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalized;
@@ -10,19 +11,23 @@ namespace Daggerfall.Import.Tests;
 public sealed class NamesBiographiesRumorsPublicationTests
 {
     [Fact]
-    public void Builds_the_supplied_corpus_with_links_and_one_pending_family()
+    public void Builds_the_supplied_corpus_with_links_and_no_pending_family()
     {
-        (DaggerfallText text, DaggerfallNameTables names, DaggerfallRumorCatalog rumors, DaggerfallBiographies biographies) = BuildAll(CorpusBytes());
+        (DaggerfallText text, DaggerfallNameTables names, DaggerfallRumorCatalog rumors, DaggerfallBiographies biographies, DaggerfallBooks books) = BuildAll(CorpusBytes());
 
         // 1408 text-resource records plus every family value: 785 fragments, 34 default lines,
-        // 31 rumor texts, and the questionnaire prose.
-        Assert.Equal(1408 + 785 + 34 + 31 + BiographyProseCount(), text.Records.Count);
-        Assert.Equal(1 + 1 + 1 + 1 + 18, text.Sources.Count);
+        // 31 rumor texts, the questionnaire prose, and the 840 supplied book pages.
+        Assert.Equal(1408 + 785 + 34 + 31 + BiographyProseCount() + 840, text.Records.Count);
+        Assert.Equal(1 + 1 + 1 + 1 + 18 + 90, text.Sources.Count);
+        string[] paths = [.. text.Sources.Select(source => source.Path).OrderBy(path => path, StringComparer.Ordinal)];
         Assert.Equal(
             ["local/arena2/BIO.DAT", "local/arena2/BIOG00T0.TXT", "local/arena2/BIOG01T0.TXT", "local/arena2/BIOG02T0.TXT", "local/arena2/BIOG03T0.TXT", "local/arena2/BIOG04T0.TXT", "local/arena2/BIOG05T0.TXT", "local/arena2/BIOG06T0.TXT", "local/arena2/BIOG07T0.TXT", "local/arena2/BIOG08T0.TXT", "local/arena2/BIOG09T0.TXT", "local/arena2/BIOG10T0.TXT", "local/arena2/BIOG11T0.TXT", "local/arena2/BIOG12T0.TXT", "local/arena2/BIOG13T0.TXT", "local/arena2/BIOG14T0.TXT", "local/arena2/BIOG15T0.TXT", "local/arena2/BIOG16T0.TXT", "local/arena2/BIOG17T0.TXT", "local/arena2/NAMEGEN.DAT", "local/arena2/RUMOR.DAT", "local/arena2/TEXT.RSC"],
-            text.Sources.Select(source => source.Path).OrderBy(path => path, StringComparer.Ordinal));
-        DaggerfallTextPendingKind pending = Assert.Single(text.PendingKinds);
-        Assert.Equal(DaggerfallTextKind.Book, pending.Kind);
+            paths.Where(path => !path.StartsWith("local/arena2/books/", StringComparison.Ordinal)));
+        string[] bookPaths = [.. paths.Where(path => path.StartsWith("local/arena2/books/", StringComparison.Ordinal))];
+        Assert.Equal(90, bookPaths.Length);
+        Assert.Equal(bookPaths.OrderBy(path => path, StringComparer.Ordinal), bookPaths);
+        Assert.Empty(text.PendingKinds);
+        Assert.Equal(112, books.Books.Count);
 
         // The new families carry no macro symbols of their own; the index still agrees both ways
         // because the build derives it from every value.
@@ -65,8 +70,8 @@ public sealed class NamesBiographiesRumorsPublicationTests
     [Fact]
     public void Biography_keys_address_every_prose_line_deterministically()
     {
-        (_, _, _, DaggerfallBiographies biographies) = BuildAll(CorpusBytes());
-        (DaggerfallText text, _, _, _) = BuildAll(CorpusBytes());
+        (_, _, _, DaggerfallBiographies biographies, _) = BuildAll(CorpusBytes());
+        (DaggerfallText text, _, _, _, _) = BuildAll(CorpusBytes());
 
         HashSet<string> keys = text.Records.Select(record => record.Key.ToString()).ToHashSet(StringComparer.Ordinal);
         foreach (DaggerfallBiography biography in biographies.Biographies)
@@ -104,18 +109,18 @@ public sealed class NamesBiographiesRumorsPublicationTests
             corpus.Names, "elsewhere/NAMEGEN.DAT",
             corpus.Rumors, "local/arena2/RUMOR.DAT",
             corpus.Bio, "local/arena2/BIO.DAT",
-            corpus.Questionnaires, corpus.Image, Inventory(), "en"));
+            corpus.Questionnaires, corpus.Image, corpus.Books, Inventory(), "en"));
 
         // A questionnaire whose backstory record the text resource does not carry records the
         // miss instead of refusing the file: the questionnaire exists either way.
         string twelve = string.Join("\n", Enumerable.Range(1, 12).Select(i => $"{i}.\tWhy {i}?\na.\tBecause\n#9999"));
-        (DaggerfallText _, _, _, DaggerfallBiographies biographies) = DaggerfallTextBuilder.BuildAll(
+        (DaggerfallText _, _, _, DaggerfallBiographies biographies, _) = DaggerfallTextBuilder.BuildAll(
             Resource([(9000, "Backstory."u8.ToArray())]), "local/arena2/TEXT.RSC",
             corpus.Names, "local/arena2/NAMEGEN.DAT",
             corpus.Rumors, "local/arena2/RUMOR.DAT",
             corpus.Bio, "local/arena2/BIO.DAT",
             [(twelve, "local/arena2/BIOG00T0.TXT", 0, 0)],
-            corpus.Image, Inventory(), "en");
+            corpus.Image, corpus.Books, Inventory(), "en");
         DaggerfallBiography only = Assert.Single(biographies.Biographies);
         Assert.Equal(DaggerfallBiographyLinkDisposition.Unresolved, only.BackstoryDisposition);
         DaggerfallBiographyEffect macro = only.Questions[0].Answers[0].Effects.Single(effect => effect.Kind == BiogEffectKind.TextMacro);
@@ -123,18 +128,19 @@ public sealed class NamesBiographiesRumorsPublicationTests
         Assert.Equal(DaggerfallBiographyLinkDisposition.Unresolved, macro.MacroTargetDisposition);
     }
 
-    private static (DaggerfallText Text, DaggerfallNameTables Names, DaggerfallRumorCatalog Rumors, DaggerfallBiographies Biographies) BuildAll(CorpusFiles corpus) =>
+    private static (DaggerfallText Text, DaggerfallNameTables Names, DaggerfallRumorCatalog Rumors, DaggerfallBiographies Biographies, DaggerfallBooks Books) BuildAll(CorpusFiles corpus) =>
         DaggerfallTextBuilder.BuildAll(
             corpus.Text, "local/arena2/TEXT.RSC",
             corpus.Names, "local/arena2/NAMEGEN.DAT",
             corpus.Rumors, "local/arena2/RUMOR.DAT",
             corpus.Bio, "local/arena2/BIO.DAT",
-            corpus.Questionnaires, corpus.Image, Inventory(), "en");
+            corpus.Questionnaires, corpus.Image, corpus.Books, Inventory(), "en");
 
     private sealed record CorpusFiles(
         byte[] Text, byte[] Names, byte[] Rumors, byte[] Bio,
         IReadOnlyList<(string Text, string Label, int ClassIndex, int BiographyIndex)> Questionnaires,
-        byte[] Image);
+        byte[] Image,
+        IReadOnlyList<(int BookId, string Label, byte[] Bytes)> Books);
 
     private static CorpusFiles CorpusBytes()
     {
@@ -151,7 +157,21 @@ public sealed class NamesBiographiesRumorsPublicationTests
             File.ReadAllBytes(Corpus("RUMOR.DAT")),
             File.ReadAllBytes(Corpus("BIO.DAT")),
             questionnaires,
-            File.ReadAllBytes(Corpus("BIOG00I0.IMG")));
+            File.ReadAllBytes(Corpus("BIOG00I0.IMG")),
+            ReadCorpusBooks());
+    }
+
+    private static IReadOnlyList<(int BookId, string Label, byte[] Bytes)> ReadCorpusBooks()
+    {
+        string books = Path.Combine(Path.GetDirectoryName(Corpus("TEXT.RSC"))!, "books");
+        List<(int BookId, string Label, byte[] Bytes)> supplied = [];
+        foreach (string path in Directory.EnumerateFiles(books, "BOK*.TXT").Order(StringComparer.Ordinal))
+        {
+            int bookId = int.Parse(Path.GetFileNameWithoutExtension(path)[3..], CultureInfo.InvariantCulture);
+            supplied.Add((bookId, $"local/arena2/books/{Path.GetFileName(path)}", File.ReadAllBytes(path)));
+        }
+
+        return supplied;
     }
 
     private static int BiographyProseCount()

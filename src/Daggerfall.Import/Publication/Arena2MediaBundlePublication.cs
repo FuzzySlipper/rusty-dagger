@@ -82,6 +82,7 @@ public sealed record ClassicMediaManifestSidecar(
     IReadOnlyList<ClassicUiImageManifest> UiImages,
     IReadOnlyList<ClassicInventoryIconManifest> InventoryIcons,
     ClassicFontManifest Font,
+    IReadOnlyList<ClassicFontManifest> Fonts,
     IReadOnlyList<ClassicAuthoredUiAssetManifest> AuthoredUiAssets)
 { }
 
@@ -382,9 +383,10 @@ public sealed record Arena2MediaBundlePublication(
         ArgumentNullException.ThrowIfNull(sidecar.UiImages);
         ArgumentNullException.ThrowIfNull(sidecar.InventoryIcons);
         ArgumentNullException.ThrowIfNull(sidecar.Font);
+        ArgumentNullException.ThrowIfNull(sidecar.Fonts);
         ArgumentNullException.ThrowIfNull(sidecar.AuthoredUiAssets);
         if (sidecar.Audio.Any(audio => audio is null) || sidecar.UiImages.Any(image => image is null) || sidecar.InventoryIcons.Any(icon => icon is null)
-            || sidecar.AuthoredUiAssets.Any(asset => asset is null))
+            || sidecar.Fonts.Any(font => font is null) || sidecar.AuthoredUiAssets.Any(asset => asset is null))
         {
             throw new InvalidOperationException("Persisted classic sidecar lists cannot contain null entries.");
         }
@@ -409,6 +411,21 @@ public sealed record Arena2MediaBundlePublication(
 
         sidecar.Font.Validate();
         RequirePersistedDescriptor(media, sidecar.Font.MediaId, NormalizedMediaKind.Font, "classic font");
+        if (sidecar.Fonts.Select(font => font.MediaId).Distinct(StringComparer.Ordinal).Count() != sidecar.Fonts.Count)
+        {
+            throw new InvalidOperationException("Persisted classic fonts must have unique media IDs.");
+        }
+
+        foreach (ClassicFontManifest font in sidecar.Fonts)
+        {
+            font.Validate();
+            RequirePersistedDescriptor(media, font.MediaId, NormalizedMediaKind.Font, "classic font");
+        }
+
+        if (!sidecar.Fonts.Any(font => StringComparer.Ordinal.Equals(font.MediaId, sidecar.Font.MediaId)))
+        {
+            throw new InvalidOperationException("The persisted default classic font must be one of the persisted classic fonts.");
+        }
         if (sidecar.AuthoredUiAssets.Select(asset => asset.Id).Distinct(StringComparer.Ordinal).Count() != sidecar.AuthoredUiAssets.Count
             || sidecar.AuthoredUiAssets.Select(asset => asset.RelativePath).Distinct(StringComparer.Ordinal).Count() != sidecar.AuthoredUiAssets.Count)
         {
@@ -582,6 +599,7 @@ public sealed record Arena2MediaBundlePublication(
         publication.UiImages.OrderBy(image => image.Image).ThenBy(image => image.MediaId, StringComparer.Ordinal).ToArray(),
         publication.InventoryIcons.OrderBy(icon => icon.ItemId, StringComparer.Ordinal).ToArray(),
         publication.Font with { Glyphs = publication.Font.Glyphs.OrderBy(glyph => glyph.GlyphIndex).ToArray() },
+        publication.Fonts.OrderBy(font => font.MediaId, StringComparer.Ordinal).Select(font => font with { Glyphs = font.Glyphs.OrderBy(glyph => glyph.GlyphIndex).ToArray() }).ToArray(),
         publication.AuthoredUiAssets.OrderBy(asset => asset.Id, StringComparer.Ordinal).ToArray());
 
     private static DungeonActorSpriteStateLayout CanonicalizeState(DungeonActorSpriteStateLayout state) => state with
@@ -743,7 +761,20 @@ public sealed record Arena2MediaBundlePublication(
         ValidateClassicReferences(publication.UiImages.Select(image => image.MediaId), media, NormalizedMediaKind.UserInterface, "UI image");
         ValidateClassicReferences(publication.InventoryIcons.Select(icon => icon.MediaId), media, NormalizedMediaKind.UserInterface, "inventory icon");
         ArgumentNullException.ThrowIfNull(publication.Font);
+        ArgumentNullException.ThrowIfNull(publication.Fonts);
         ValidateClassicReferences([publication.Font.MediaId], media, NormalizedMediaKind.Font, "font");
+        ValidateClassicReferences(publication.Fonts.Select(font => font.MediaId), media, NormalizedMediaKind.Font, "font");
+        if (publication.Fonts.Select(font => font.MediaId).Distinct(StringComparer.Ordinal).Count() != publication.Fonts.Count
+            || !publication.Fonts.Any(font => StringComparer.Ordinal.Equals(font.MediaId, publication.Font.MediaId)))
+        {
+            throw new InvalidOperationException("Classic fonts must carry unique media IDs including the default font.");
+        }
+
+        foreach (ClassicFontManifest font in publication.Fonts)
+        {
+            font.Validate();
+        }
+
         if (publication.Font.FixedWidth is 0 or > 16 || publication.Font.FixedHeight is 0 or > 16 || publication.Font.Glyphs is null || publication.Font.Glyphs.Count != Arena2FormatConstants.FntGlyphCount
             || publication.Font.Glyphs.Select(glyph => glyph.GlyphIndex).Distinct().Count() != publication.Font.Glyphs.Count
             || publication.Font.Glyphs.Any(glyph => glyph.GlyphIndex < 0 || glyph.GlyphIndex >= Arena2FormatConstants.FntGlyphCount || glyph.X < 0 || glyph.Y < 0 || glyph.Advance > 16))

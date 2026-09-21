@@ -19,10 +19,10 @@ public sealed class Arena2ClassicMediaPublicationTests
 
         // Five service screens and their donor companions are thirteen more artifacts and resources:
         // naming an image admits it.
-        Assert.Equal(79, first.Artifacts.Count);
-        Assert.Equal(79, first.MediaManifest.Resources.Count);
+        Assert.Equal(83, first.Artifacts.Count);
+        Assert.Equal(83, first.MediaManifest.Resources.Count);
         // Thirteen more admitted source files, because those images are read as well as named.
-        Assert.Equal(46, first.Sources.Count);
+        Assert.Equal(50, first.Sources.Count);
         Assert.Equal(first.Artifacts.Select(artifact => artifact.RelativePath).OrderBy(path => path, StringComparer.Ordinal), first.Artifacts.Select(artifact => artifact.RelativePath));
         Assert.Equal(first.Artifacts.Select(artifact => artifact.RelativePath), second.Artifacts.Select(artifact => artifact.RelativePath));
         Assert.All(first.Artifacts.Zip(second.Artifacts), pair => Assert.Equal(pair.First.Bytes.ToArray(), pair.Second.Bytes.ToArray()));
@@ -73,6 +73,15 @@ public sealed class Arena2ClassicMediaPublicationTests
         Assert.Equal(25, first.UiImages.Count);
         Assert.Equal(31, first.InventoryIcons.Count);
         Assert.Equal(240, first.Font.Glyphs.Count);
+        // All five font tables publish with the donor's consumer for each; the default face stays
+        // the selected font the profile names.
+        Assert.Equal(5, first.Fonts.Count);
+        Assert.Equal(
+            [("font.classic.0000", "large"), ("font.classic.0001", "title"), ("font.classic.0002", "small"), ("font.classic.0003", "default"), ("font.classic.0004", "unused")],
+            first.Fonts.OrderBy(font => font.MediaId, StringComparer.Ordinal).Select(font => (font.MediaId, font.Use)));
+        Assert.All(first.Fonts, font => Assert.Equal(240, font.Glyphs.Count));
+        Assert.Equal(first.Font.MediaId, first.Fonts.Single(font => font.Use == "default").MediaId);
+        Assert.Equal("font.classic.0003", first.Font.MediaId);
 
         byte[] weapon = Artifact(first, "media/combat/weapon-dagger-steel-atlas.png");
         AssertPng(weapon, 3840, 600);
@@ -427,10 +436,10 @@ public sealed class Arena2ClassicMediaPublicationTests
             Read(arena2, "BOOK00I0.IMG"), Read(arena2, "REST00I0.IMG"), Read(arena2, "SHOP00I0.IMG"), Read(arena2, "GILD00I0.IMG"), Read(arena2, "BANK00I0.IMG"),
             Read(arena2, "REST01I0.IMG"), Read(arena2, "REST02I0.IMG"), Read(arena2, "INVE08I0.IMG"), Read(arena2, "INVE10I0.IMG"), Read(arena2, "INVE11I0.IMG"),
             Read(arena2, "INVE12I0.IMG"), Read(arena2, "INVE14I0.IMG"), Read(arena2, "GILD01I0.IMG"),
-            Read(arena2, "TEXTURE.207"), Read(arena2, "TEXTURE.216"), Read(arena2, "TEXTURE.234"), Read(arena2, "TEXTURE.245"), Read(arena2, "FONT0003.FNT"), Read(arena2, "WEAPON00.CIF"), Read(arena2, "WEAPON03.CIF"), Read(arena2, "WEAPON11.CIF")));
+            Read(arena2, "TEXTURE.207"), Read(arena2, "TEXTURE.216"), Read(arena2, "TEXTURE.234"), Read(arena2, "TEXTURE.245"), Read(arena2, "FONT0003.FNT"), Read(arena2, "WEAPON00.CIF"), Read(arena2, "WEAPON03.CIF"), Read(arena2, "WEAPON11.CIF"), Read(arena2, "FONT0000.FNT"), Read(arena2, "FONT0001.FNT"), Read(arena2, "FONT0002.FNT"), Read(arena2, "FONT0004.FNT")));
 
         Assert.Equal(31, WeaponActions(publication, "weapon.dagger.steel").Sum(action => action.FrameCount));
-        Assert.Equal(79, publication.Artifacts.Count);
+        Assert.Equal(83, publication.Artifacts.Count);
         AssertPng(Artifact(publication, "media/combat/weapon-dagger-steel-atlas.png"), 3840, 600);
         Assert.All(publication.Audio, clip => Assert.Equal(11_025U, clip.SampleRate));
         // All twelve archives decode: the two spares and the werecreature form carry the same
@@ -440,6 +449,15 @@ public sealed class Arena2ClassicMediaPublicationTests
         Assert.Equal(31, WeaponActions(publication, "weapon.03").Sum(action => action.FrameCount));
         Assert.Equal(31, WeaponActions(publication, "weapon.werecreature").Sum(action => action.FrameCount));
         Assert.Equal([0, 1, 2, 3, 4, 5, 6], WeaponActions(publication, "weapon.werecreature").Select(action => action.SourceRecordOrdinal));
+        // All five font tables decode with the fixed metrics the files state and the donor's
+        // consumer for each.
+        Assert.Equal(5, publication.Fonts.Count);
+        Assert.Equal(
+            [("font.classic.0000", "large", 14, 11), ("font.classic.0001", "title", 14, 14), ("font.classic.0002", "small", 5, 5), ("font.classic.0003", "default", 5, 7), ("font.classic.0004", "unused", 5, 6)],
+            publication.Fonts.OrderBy(font => font.MediaId, StringComparer.Ordinal).Select(font => (font.MediaId, font.Use, (int)font.FixedWidth, (int)font.FixedHeight)));
+        Assert.All(publication.Fonts, font => Assert.Equal(240, font.Glyphs.Count));
+        Assert.Equal("font.classic.0003", publication.Font.MediaId);
+        AssertPng(Artifact(publication, "media/fonts/font-classic-0000-atlas.png"), 256, 240);
     }
 
     private static byte[] Artifact(Arena2ClassicMediaPublication publication, string path) => publication.Artifacts.Single(artifact => artifact.RelativePath == path).Bytes.ToArray();
@@ -543,7 +561,12 @@ public sealed class Arena2ClassicMediaPublicationTests
         // spares and the werecreature form, all wield image plus six five-frame records.
         CreateWeaponCif(),
         CreateWeaponCif(),
-        CreateWeaponCif());
+        CreateWeaponCif(),
+        // The four font tables outside the original single-font closure.
+        CreateFont(),
+        CreateFont(),
+        CreateFont(),
+        CreateFont());
 
     private static byte[] Read(string directory, string fileName) => File.ReadAllBytes(Path.Combine(directory, fileName));
 

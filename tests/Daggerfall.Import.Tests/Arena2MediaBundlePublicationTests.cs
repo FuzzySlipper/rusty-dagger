@@ -409,9 +409,16 @@ public sealed class Arena2MediaBundlePublicationTests
             [],
             new ClassicFontManifest(
                 fontMediaId,
+                "default",
                 1,
                 1,
                 Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, 0)).ToArray()),
+            [new ClassicFontManifest(
+                fontMediaId,
+                "default",
+                1,
+                1,
+                Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, 0)).ToArray())],
             []);
     }
 

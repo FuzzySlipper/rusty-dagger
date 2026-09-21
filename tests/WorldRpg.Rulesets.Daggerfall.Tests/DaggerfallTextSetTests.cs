@@ -24,7 +24,7 @@ public sealed class DaggerfallTextSetTests
     {
         DaggerfallTextSet text = Definitions().Text;
 
-        Assert.Equal(3862, text.Values.Count);
+        Assert.Equal(3862 + 840, text.Values.Count);
         Assert.Equal(DaggerfallTextResolution.Resolved, text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Resource, "0"), out DaggerfallTextValue? value));
         Assert.Equal("local/arena2/TEXT.RSC", value!.Source);
         Assert.Equal("en", value.Language);
@@ -136,15 +136,13 @@ public sealed class DaggerfallTextSetTests
     }
 
     [Fact]
-    public void The_declared_families_name_the_tasks_that_supply_them()
+    public void The_declared_families_name_no_pending_supplier()
     {
         IReadOnlyList<DaggerfallTextPendingKind> pending = Definitions().Text.PendingKinds;
 
-        // The name, biography and rumor families arrived with task 7941; only books stay pending.
-        DaggerfallTextPendingKind books = Assert.Single(pending);
-        Assert.Equal(DaggerfallTextKind.Book, books.Kind);
-        Assert.Equal(7951, books.OwnerTask);
-        Assert.NotEmpty(books.Reason);
+        // The name, biography and rumor families arrived with task 7941; the books arrived with
+        // task 7951, so no family stays pending: every declared key resolves to a carried value.
+        Assert.Empty(pending);
     }
 
     [Fact]
@@ -152,7 +150,7 @@ public sealed class DaggerfallTextSetTests
     {
         // The control for every mutation below: the harness rewrites the payload through JSON, so this
         // states that the rewrite alone is not what a mutation test is observing.
-        Assert.Equal(3862, Definitions(_ => { }).Text.Values.Count);
+        Assert.Equal(3862 + 840, Definitions(_ => { }).Text.Values.Count);
     }
 
     [Fact]
@@ -412,7 +410,7 @@ public sealed class DaggerfallTextSetTests
     public void Rejects_a_family_that_is_both_pending_and_carried()
     {
         DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
-            Payload(payload => Text(payload)["pendingKinds"]!.AsArray()[0]!.AsObject()["kind"] = "resource")));
+            Payload(payload => Text(payload)["pendingKinds"]!.AsArray().Add(JsonNode.Parse("""{"kind":"resource","ownerTask":7942,"reason":"test"}""")))));
 
         Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("is published as pending and carried by a source", StringComparison.Ordinal));
     }
