@@ -98,6 +98,16 @@ internal static class Program
                 return RunMapArtCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "factions")
+            {
+                return RunFactionsCommand(args);
+            }
+
+            if (args.Length != 0 && args[0] == "terrain")
+            {
+                return RunTerrainCommand(args);
+            }
+
             if (args.Length != 0 && args[0] == "geometry")
             {
                 return RunGeometryCommand(args);
@@ -1010,6 +1020,104 @@ internal static class Program
         }
 
         return books;
+    }
+
+    /// <summary>
+    /// Reads the classic faction file into the base pack when asked, so a region, temple, guild or
+    /// court resolves to the filed relations and bindings the source states rather than to policy
+    /// inferred from them. Reputation, rank and service behavior stay out: the catalog publishes
+    /// filed values, and the social consumers that read them own what those values do.
+    /// </summary>
+    private static int RunFactionsCommand(IReadOnlyList<string> args)
+    {
+        const string Usage = "usage: daggerfall-import-tool factions --arena2 SOURCE_DIR --pack PACK.json --inventory CSV [--update]";
+        bool update = args.Contains("--update", StringComparer.Ordinal);
+        Dictionary<string, string> values = new(StringComparer.Ordinal);
+        for (int index = 1; index < args.Count; index++)
+        {
+            string argument = args[index];
+            if (argument == "--update") continue;
+            if (!argument.StartsWith("--", StringComparison.Ordinal) || index + 1 >= args.Count || !values.TryAdd(argument, args[++index]))
+            {
+                throw new ArgumentException(Usage);
+            }
+        }
+
+        string[] accepted = ["--arena2", "--pack", "--inventory"];
+        if (values.Count != accepted.Length || accepted.Any(key => !values.ContainsKey(key)))
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        string arena2 = values["--arena2"];
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(values["--inventory"]));
+        string label = Path.Combine(arena2, "FACTION.TXT");
+        byte[] bytes = File.ReadAllBytes(label);
+        DaggerfallFactions factions = DaggerfallFactionsBuilder.Build(File.ReadAllText(label), label, bytes, inventory);
+
+        Console.WriteLine($"factions: {factions.Factions.Count} records, {factions.Regions.Count(region => region.Disposition == DaggerfallRegionFactionDisposition.Claimed)} claimed regions, {factions.DuplicateNames.Count} duplicated names");
+        foreach (DaggerfallFactionNameAlias alias in factions.DuplicateNames)
+        {
+            Console.WriteLine($"  {alias.Name}: [{string.Join(", ", alias.Ids)}] resolves to {alias.ResolvedId}");
+        }
+
+        if (!update)
+        {
+            Console.WriteLine("pack: not written (rerun with --update to publish these factions into it)");
+            return 0;
+        }
+
+        JsonNode pack = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
+        pack["factions"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(factions, PublishedJson.Section));
+        File.WriteAllText(values["--pack"], pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        Console.WriteLine($"pack: factions updated in {values["--pack"]}");
+        return 0;
+    }
+
+    /// <summary>
+    /// Reads the classic wilderness file into the base pack when asked, so an exterior consumer
+    /// resolves a map pixel by the coordinates the source tiles rather than by a second spatial
+    /// system. The heightmap tiles rows; the cell samples travel as one span; the prefix bytes no
+    /// reader consumes stay documented domains rather than republished bytes.
+    /// </summary>
+    private static int RunTerrainCommand(IReadOnlyList<string> args)
+    {
+        const string Usage = "usage: daggerfall-import-tool terrain --arena2 SOURCE_DIR --pack PACK.json --inventory CSV [--update]";
+        bool update = args.Contains("--update", StringComparer.Ordinal);
+        Dictionary<string, string> values = new(StringComparer.Ordinal);
+        for (int index = 1; index < args.Count; index++)
+        {
+            string argument = args[index];
+            if (argument == "--update") continue;
+            if (!argument.StartsWith("--", StringComparison.Ordinal) || index + 1 >= args.Count || !values.TryAdd(argument, args[++index]))
+            {
+                throw new ArgumentException(Usage);
+            }
+        }
+
+        string[] accepted = ["--arena2", "--pack", "--inventory"];
+        if (values.Count != accepted.Length || accepted.Any(key => !values.ContainsKey(key)))
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        string arena2 = values["--arena2"];
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(values["--inventory"]));
+        string label = Path.Combine(arena2, "WOODS.WLD");
+        DaggerfallTerrain terrain = DaggerfallTerrainBuilder.Build(File.ReadAllBytes(label), label, inventory);
+
+        Console.WriteLine($"terrain: {terrain.Heightmap.Count} heightmap rows, {terrain.CellCount} cells from {terrain.CellBase} stride {terrain.CellStride}, {terrain.Prefix.Count} prefix domains");
+        if (!update)
+        {
+            Console.WriteLine("pack: not written (rerun with --update to publish this terrain into it)");
+            return 0;
+        }
+
+        JsonNode pack = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
+        pack["terrain"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(terrain, PublishedJson.Section));
+        File.WriteAllText(values["--pack"], pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        Console.WriteLine($"pack: terrain updated in {values["--pack"]}");
+        return 0;
     }
 
     /// <summary>
@@ -2117,7 +2225,10 @@ internal static class Program
             Require("FONT0000.FNT").Bytes.ToArray(),
             Require("FONT0001.FNT").Bytes.ToArray(),
             Require("FONT0002.FNT").Bytes.ToArray(),
-            Require("FONT0004.FNT").Bytes.ToArray());
+            Require("FONT0004.FNT").Bytes.ToArray(),
+            ReadMapMedia(),
+            Require("FMAP_PAL.COL").Bytes.ToArray(),
+            Require("MAP.PAL").Bytes.ToArray());
 
         public void LoadDungeon(string fileName)
         {
@@ -2143,6 +2254,26 @@ internal static class Program
         private DungeonLogicalSource Require(string fileName) => loaded.TryGetValue(fileName, out DungeonLogicalSource? source)
             ? source
             : throw new InvalidOperationException($"The admitted Arena2 source '{fileName}' was not loaded.");
+
+        /// <summary>
+        /// Reads the supplied map art files in inventory order: the documented set the map
+        /// publication renders, with the stubs and missing screens left to the inventory's
+        /// dispositions rather than to absent bytes.
+        /// </summary>
+        private IReadOnlyList<MapMediaInput> ReadMapMedia()
+        {
+            List<MapMediaInput> files = [];
+            foreach (string name in ClassicMediaSourceNames.Where(name =>
+                name.EndsWith(".IMG", StringComparison.Ordinal)
+                && (name.StartsWith("FMAP", StringComparison.Ordinal) || name.StartsWith("AMAP", StringComparison.Ordinal)
+                || name.StartsWith("TMAP", StringComparison.Ordinal) || name.StartsWith("TRAV", StringComparison.Ordinal)
+                || name.StartsWith("TOWN", StringComparison.Ordinal))).Order(StringComparer.Ordinal))
+            {
+                files.Add(new MapMediaInput(name, Require(name).Bytes.ToArray()));
+            }
+
+            return files;
+        }
 
         private void Load(string fileName)
         {
@@ -2218,6 +2349,78 @@ internal static class Program
         "FONT0001.FNT",
         "FONT0002.FNT",
         "FONT0004.FNT",
+        "FMAP_PAL.COL",
+        "MAP.PAL",
+        "FMAP0I00.IMG",
+        "FMAP0I01.IMG",
+        "FMAP0I05.IMG",
+        "FMAP0I09.IMG",
+        "FMAP0I11.IMG",
+        "FMAP0I16.IMG",
+        "FMAP0I17.IMG",
+        "FMAP0I18.IMG",
+        "FMAP0I19.IMG",
+        "FMAP0I20.IMG",
+        "FMAP0I21.IMG",
+        "FMAP0I22.IMG",
+        "FMAP0I23.IMG",
+        "FMAP0I26.IMG",
+        "FMAP0I32.IMG",
+        "FMAP0I33.IMG",
+        "FMAP0I34.IMG",
+        "FMAP0I35.IMG",
+        "FMAP0I36.IMG",
+        "FMAP0I37.IMG",
+        "FMAP0I38.IMG",
+        "FMAP0I39.IMG",
+        "FMAP0I40.IMG",
+        "FMAP0I41.IMG",
+        "FMAP0I42.IMG",
+        "FMAP0I43.IMG",
+        "FMAP0I44.IMG",
+        "FMAP0I45.IMG",
+        "FMAP0I46.IMG",
+        "FMAP0I47.IMG",
+        "FMAP0I48.IMG",
+        "FMAP0I49.IMG",
+        "FMAP0I50.IMG",
+        "FMAP0I51.IMG",
+        "FMAP0I52.IMG",
+        "FMAP0I53.IMG",
+        "FMAP0I54.IMG",
+        "FMAP0I55.IMG",
+        "FMAP0I56.IMG",
+        "FMAP0I57.IMG",
+        "FMAP0I58.IMG",
+        "FMAP0I59.IMG",
+        "FMAP0I60.IMG",
+        "FMAP0I61.IMG",
+        "FMAPAI00.IMG",
+        "FMAPBI00.IMG",
+        "FMAPAI01.IMG",
+        "FMAPBI01.IMG",
+        "FMAPCI01.IMG",
+        "FMAPDI01.IMG",
+        "FMAPAI16.IMG",
+        "FMAPBI16.IMG",
+        "FMAPCI16.IMG",
+        "FMAPDI16.IMG",
+        "AMAP00I0.IMG",
+        "AMAP01I0.IMG",
+        "TMAP00I0.IMG",
+        "TOWN00I0.IMG",
+        "TRAV00I0.IMG",
+        "TRAV01I0.IMG",
+        "TRAV01I1.IMG",
+        "TRAV02I0.IMG",
+        "TRAV0I00.IMG",
+        "TRAV0I01.IMG",
+        "TRAV0I03.IMG",
+        "TRAV0I04.IMG",
+        "TRAVAI05.IMG",
+        "TRAVBI05.IMG",
+        "TRAVCI05.IMG",
+        "TRAVDI05.IMG",
         "TEXTURE.380",
         "TEXTURE.207",
         "TEXTURE.216",

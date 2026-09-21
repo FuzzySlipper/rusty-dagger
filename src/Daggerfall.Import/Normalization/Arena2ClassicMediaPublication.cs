@@ -62,7 +62,14 @@ public sealed record Arena2ClassicMediaInputs(
     byte[] Font0000Fnt,
     byte[] Font0001Fnt,
     byte[] Font0002Fnt,
-    byte[] Font0004Fnt);
+    byte[] Font0004Fnt,
+    // The map and travel artwork travels as one file list rather than one parameter per file:
+    // sixty-nine decoded files would bury the fixed inputs, and a list keeps the admitted set
+    // exactly the files the tool enumerates. The two palettes stay fixed parameters beside the
+    // art palette because every map image reads through one of the three.
+    IReadOnlyList<MapMediaInput> MapMedia,
+    byte[] FmapPalCol,
+    byte[] MapPalCol);
 
 /// <summary>Quotas for bounded, deterministic classic-media regeneration.</summary>
 public sealed record Arena2ClassicMediaPublicationOptions(
@@ -464,6 +471,73 @@ public sealed record ClassicInventoryIconManifest(string ItemId, string MediaId,
 /// <summary>One glyph's regenerated atlas cell and source advance metric.</summary>
 public sealed record ClassicFontGlyphMetric(int GlyphIndex, int X, int Y, ushort Advance, ushort SourceDataOffset);
 
+/// <summary>One supplied map art file: the name the inventory documents and its bytes.</summary>
+/// <param name="FileName">The file's name.</param>
+/// <param name="Bytes">The file's bytes.</param>
+public sealed record MapMediaInput(string FileName, byte[] Bytes);
+
+/// <summary>One published map or travel image: its identity, shape and source binding.</summary>
+/// <param name="MediaId">The published media identity.</param>
+/// <param name="Kind">The map art family the file belongs to.</param>
+/// <param name="Regions">The regions the image draws, empty when it draws none.</param>
+/// <param name="Binding">The donor call site, or the reason no call site was found.</param>
+/// <param name="SourceFile">The supplied file.</param>
+/// <param name="Width">The image width.</param>
+/// <param name="Height">The image height.</param>
+/// <param name="Cutout">Whether the donor draws the image with index-zero cutout rather than opaque.</param>
+public sealed record ClassicMapMediaManifest(
+    string MediaId,
+    MapArtKind Kind,
+    IReadOnlyList<int> Regions,
+    string Binding,
+    string SourceFile,
+    int Width,
+    int Height,
+    bool Cutout)
+{
+    internal void Validate()
+    {
+        NormalizedImportDocument.RequireLogicalId(MediaId, nameof(MediaId));
+        if (!Enum.IsDefined(Kind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(Kind), Kind, "A published map image names a family the contract does not declare.");
+        }
+
+        NormalizedImportDocument.RequireLogicalPath(SourceFile, nameof(SourceFile));
+        if (Width <= 0 || Height <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(Width), Width, $"Map image '{MediaId}' states no shape.");
+        }
+
+        foreach (int region in Regions)
+        {
+            if (region is < 0 or > 61)
+            {
+                throw new ArgumentOutOfRangeException(nameof(Regions), region, $"Map image '{MediaId}' draws no classic region.");
+            }
+        }
+    }
+}
+
+/// <summary>One classic region with the map images that draw it.</summary>
+/// <param name="Region">The zero-based region.</param>
+/// <param name="MediaIds">The published media identities that draw it, empty when no art does.</param>
+public sealed record ClassicMapRegionManifest(int Region, IReadOnlyList<string> MediaIds)
+{
+    internal void Validate()
+    {
+        if (Region is < 0 or > 61)
+        {
+            throw new ArgumentOutOfRangeException(nameof(Region), Region, "A published map region is outside the 62 classic regions.");
+        }
+
+        foreach (string mediaId in MediaIds)
+        {
+            NormalizedImportDocument.RequireLogicalId(mediaId, nameof(mediaId));
+        }
+    }
+}
+
 /// <summary>Typed, renderer-free classic glyph metrics and generated atlas identity.</summary>
 public sealed record ClassicFontManifest(
     string MediaId,
@@ -510,6 +584,8 @@ public sealed record Arena2ClassicMediaPublication(
     IReadOnlyList<ClassicInventoryIconManifest> InventoryIcons,
     ClassicFontManifest Font,
     IReadOnlyList<ClassicFontManifest> Fonts,
+    IReadOnlyList<ClassicMapMediaManifest> MapMedia,
+    IReadOnlyList<ClassicMapRegionManifest> MapRegions,
     IReadOnlyList<ClassicAuthoredUiAssetManifest> AuthoredUiAssets)
 {
     /// <summary>The logical source path the numeric sound archive is read under, in this publication and by any catalog of it.</summary>
@@ -810,6 +886,11 @@ public sealed record Arena2ClassicMediaPublication(
 
         ClassicFontManifest defaultFont = fonts.SingleOrDefault(font => StringComparer.Ordinal.Equals(font.MediaId, resolved.FontMediaId))
             ?? throw new InvalidOperationException($"The default font '{resolved.FontMediaId}' is not an admitted classic font.");
+        List<ClassicMapMediaManifest> mapMedia = [];
+        List<ClassicMapRegionManifest> mapRegions = [];
+        generated.AddRange(BuildMapMedia(source, artPalette, effectiveOptions, out ClassicMapMediaManifest[] maps, out ClassicMapRegionManifest[] regionMaps));
+        mapMedia.AddRange(maps);
+        mapRegions.AddRange(regionMaps);
         generated.AddRange(BuildAuthoredUi(resolved, effectiveOptions, out ClassicAuthoredUiAssetManifest[] authoredUiAssets));
 
         if (generated.Sum(artifact => artifact.Bytes.LongLength) > effectiveOptions.MaximumTotalArtifactBytes)
@@ -838,7 +919,73 @@ public sealed record Arena2ClassicMediaPublication(
             inventoryIcons,
             defaultFont,
             fonts,
+            mapMedia,
+            mapRegions,
             authoredUiAssets);
+    }
+
+    private static IEnumerable<GeneratedMediaArtifact> BuildMapMedia(
+        SourceBytes source,
+        Arena2Palette artPalette,
+        Arena2ClassicMediaPublicationOptions options,
+        out ClassicMapMediaManifest[] manifests,
+        out ClassicMapRegionManifest[] regions)
+    {
+        Arena2Palette fmapPalette = PaletteDecoder.Decode(source.FmapPalCol, "arena2/FMAP_PAL.COL");
+        Arena2Palette mapPalette = PaletteDecoder.Decode(source.MapPalCol, "arena2/MAP.PAL");
+        MapArtInventory inventory = MapArtInventory.Enumerate(
+            [.. source.MapMedia.Select(file => (file.FileName, $"arena2/{file.FileName}", file.Bytes))],
+            "arena2");
+
+        List<GeneratedMediaArtifact> result = [];
+        List<ClassicMapMediaManifest> semantic = [];
+        foreach (MapArtRecord record in inventory.Records.Where(record => record.Disposition == MapArtDisposition.Decoded))
+        {
+            byte[] bytes = source.MapMedia.Single(file => StringComparer.Ordinal.Equals(file.FileName, record.FileName)).Bytes;
+            IndexedImg image = MapArtInventory.DecodeImage(bytes, $"arena2/{record.FileName}");
+            Arena2Palette palette = record.Palette switch
+            {
+                "FMAP_PAL.COL" => fmapPalette,
+                "MAP.PAL" => mapPalette,
+                _ => artPalette,
+            };
+            // Most map canvases are opaque: the donor draws region maps and travel chrome without
+            // cutout. Five images load through its cutout path instead, so index zero punches
+            // through for exactly those: the automap pair and town caption in the automap windows,
+            // the race-select world map, and the travel popup.
+            PaletteAlphaMode alpha = CutoutMapFiles.Contains(record.FileName) ? PaletteAlphaMode.IndexZeroTransparent : PaletteAlphaMode.Opaque;
+            Rgba32[] colors = palette.ToRgba(image.Pixels.Span, alpha);
+            byte[] rgba = new byte[checked(colors.Length * 4)];
+            for (int index = 0; index < colors.Length; index++)
+            {
+                int target = index * 4;
+                rgba[target] = colors[index].Red;
+                rgba[target + 1] = colors[index].Green;
+                rgba[target + 2] = colors[index].Blue;
+                rgba[target + 3] = colors[index].Alpha;
+            }
+
+            string mediaId = $"map.{Path.GetFileNameWithoutExtension(record.FileName).ToLowerInvariant()}";
+            byte[] png = DeterministicPngEncoder.EncodeRgba8(image.Width, image.Height, rgba);
+            RequireArtifactQuota(png, options, mediaId);
+            result.Add(new(mediaId, NormalizedMediaKind.UserInterface, $"media/maps/{Slug(mediaId)}.png", png, image.Width, image.Height, null, "image/png"));
+            ClassicMapMediaManifest manifest = new(mediaId, record.Kind, record.Regions, record.Binding, $"arena2/{record.FileName}", image.Width, image.Height, alpha == PaletteAlphaMode.IndexZeroTransparent);
+            manifest.Validate();
+            semantic.Add(manifest);
+        }
+
+        List<ClassicMapRegionManifest> regionMaps = [];
+        for (int region = 0; region < 62; region++)
+        {
+            int claimed = region;
+            ClassicMapRegionManifest regionMap = new(region, [.. semantic.Where(image => image.Regions.Contains(claimed)).Select(image => image.MediaId).OrderBy(id => id, StringComparer.Ordinal)]);
+            regionMap.Validate();
+            regionMaps.Add(regionMap);
+        }
+
+        manifests = [.. semantic.OrderBy(image => image.MediaId, StringComparer.Ordinal)];
+        regions = [.. regionMaps];
+        return result;
     }
 
     private static (GeneratedMediaArtifact Artifact, ClassicWeaponActionManifest[] Actions) BuildWeapon(
@@ -1666,6 +1813,14 @@ public sealed record Arena2ClassicMediaPublication(
         IReadOnlyList<int>? FrameSourceRecords = null);
     private sealed record WeaponMediaSource(string FileName, string ResourceId, IReadOnlyList<WeaponActionSource> Actions);
     private sealed record FontSource(string FileName, string MediaId, string Use);
+
+    /// <summary>
+    /// The map art files the donor draws with index-zero cutout rather than opaque: every other
+    /// map canvas covers with index zero.
+    /// </summary>
+    private static readonly HashSet<string> CutoutMapFiles = new(
+        ["AMAP00I0.IMG", "AMAP01I0.IMG", "TMAP00I0.IMG", "TOWN00I0.IMG", "TRAV0I04.IMG"],
+        StringComparer.Ordinal);
     private sealed record EffectSource(ClassicEffect Effect, string MediaId, int SourceRecordOrdinal);
     private sealed record AudioSource(ClassicDaggerAudioClip Clip, string MediaId, int SourceRecordOrdinal);
     private sealed record UiImageSource(ClassicUiImage Image, string MediaId, string FileName, bool IsHeaderless);
@@ -1722,6 +1877,9 @@ public sealed record Arena2ClassicMediaPublication(
             Font0001Fnt = inputs.Font0001Fnt;
             Font0002Fnt = inputs.Font0002Fnt;
             Font0004Fnt = inputs.Font0004Fnt;
+            MapMedia = inputs.MapMedia;
+            FmapPalCol = inputs.FmapPalCol;
+            MapPalCol = inputs.MapPalCol;
             Weapon00Cif = inputs.Weapon00Cif;
             Weapon03Cif = inputs.Weapon03Cif;
             Weapon11Cif = inputs.Weapon11Cif;
@@ -1779,6 +1937,9 @@ public sealed record Arena2ClassicMediaPublication(
         public byte[] Font0001Fnt { get; }
         public byte[] Font0002Fnt { get; }
         public byte[] Font0004Fnt { get; }
+        public IReadOnlyList<MapMediaInput> MapMedia { get; }
+        public byte[] FmapPalCol { get; }
+        public byte[] MapPalCol { get; }
         public IReadOnlyList<LogicalSourceRecord> LogicalSources { get; }
 
         public static SourceBytes From(Arena2ClassicMediaInputs inputs, long maximumSourceBytes)
@@ -1800,6 +1961,8 @@ public sealed record Arena2ClassicMediaPublication(
                 ("INFO00I0.IMG", inputs.Info00I0Img), ("TEXTURE.207", inputs.Texture207), ("TEXTURE.216", inputs.Texture216),
                 ("TEXTURE.234", inputs.Texture234), ("TEXTURE.245", inputs.Texture245), ("FONT0003.FNT", inputs.Font0003Fnt),
                 ("FONT0000.FNT", inputs.Font0000Fnt), ("FONT0001.FNT", inputs.Font0001Fnt), ("FONT0002.FNT", inputs.Font0002Fnt), ("FONT0004.FNT", inputs.Font0004Fnt),
+                ("FMAP_PAL.COL", inputs.FmapPalCol), ("MAP.PAL", inputs.MapPalCol),
+                ..inputs.MapMedia.Select(file => (file.FileName, file.Bytes)),
             ];
             List<LogicalSourceRecord> logicalSources = new(sources.Length);
             foreach ((string fileName, byte[] bytes) in sources)

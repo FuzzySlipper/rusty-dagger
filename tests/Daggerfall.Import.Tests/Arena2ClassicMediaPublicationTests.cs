@@ -21,8 +21,9 @@ public sealed class Arena2ClassicMediaPublicationTests
         // naming an image admits it.
         Assert.Equal(83, first.Artifacts.Count);
         Assert.Equal(83, first.MediaManifest.Resources.Count);
+        Assert.Empty(first.MapMedia);
         // Thirteen more admitted source files, because those images are read as well as named.
-        Assert.Equal(50, first.Sources.Count);
+        Assert.Equal(52, first.Sources.Count);
         Assert.Equal(first.Artifacts.Select(artifact => artifact.RelativePath).OrderBy(path => path, StringComparer.Ordinal), first.Artifacts.Select(artifact => artifact.RelativePath));
         Assert.Equal(first.Artifacts.Select(artifact => artifact.RelativePath), second.Artifacts.Select(artifact => artifact.RelativePath));
         Assert.All(first.Artifacts.Zip(second.Artifacts), pair => Assert.Equal(pair.First.Bytes.ToArray(), pair.Second.Bytes.ToArray()));
@@ -82,6 +83,11 @@ public sealed class Arena2ClassicMediaPublicationTests
         Assert.All(first.Fonts, font => Assert.Equal(240, font.Glyphs.Count));
         Assert.Equal(first.Font.MediaId, first.Fonts.Single(font => font.Use == "default").MediaId);
         Assert.Equal("font.classic.0003", first.Font.MediaId);
+        // The fixture supplies no map art: no images publish and every region maps to nothing,
+        // which is the explicit no-art state rather than a missing table.
+        Assert.Empty(first.MapMedia);
+        Assert.Equal(62, first.MapRegions.Count);
+        Assert.All(first.MapRegions, region => Assert.Empty(region.MediaIds));
 
         byte[] weapon = Artifact(first, "media/combat/weapon-dagger-steel-atlas.png");
         AssertPng(weapon, 3840, 600);
@@ -436,10 +442,11 @@ public sealed class Arena2ClassicMediaPublicationTests
             Read(arena2, "BOOK00I0.IMG"), Read(arena2, "REST00I0.IMG"), Read(arena2, "SHOP00I0.IMG"), Read(arena2, "GILD00I0.IMG"), Read(arena2, "BANK00I0.IMG"),
             Read(arena2, "REST01I0.IMG"), Read(arena2, "REST02I0.IMG"), Read(arena2, "INVE08I0.IMG"), Read(arena2, "INVE10I0.IMG"), Read(arena2, "INVE11I0.IMG"),
             Read(arena2, "INVE12I0.IMG"), Read(arena2, "INVE14I0.IMG"), Read(arena2, "GILD01I0.IMG"),
-            Read(arena2, "TEXTURE.207"), Read(arena2, "TEXTURE.216"), Read(arena2, "TEXTURE.234"), Read(arena2, "TEXTURE.245"), Read(arena2, "FONT0003.FNT"), Read(arena2, "WEAPON00.CIF"), Read(arena2, "WEAPON03.CIF"), Read(arena2, "WEAPON11.CIF"), Read(arena2, "FONT0000.FNT"), Read(arena2, "FONT0001.FNT"), Read(arena2, "FONT0002.FNT"), Read(arena2, "FONT0004.FNT")));
+            Read(arena2, "TEXTURE.207"), Read(arena2, "TEXTURE.216"), Read(arena2, "TEXTURE.234"), Read(arena2, "TEXTURE.245"), Read(arena2, "FONT0003.FNT"), Read(arena2, "WEAPON00.CIF"), Read(arena2, "WEAPON03.CIF"), Read(arena2, "WEAPON11.CIF"), Read(arena2, "FONT0000.FNT"), Read(arena2, "FONT0001.FNT"), Read(arena2, "FONT0002.FNT"), Read(arena2, "FONT0004.FNT"), ReadCorpusMapMedia(arena2), Read(arena2, "FMAP_PAL.COL"), Read(arena2, "MAP.PAL")));
 
         Assert.Equal(31, WeaponActions(publication, "weapon.dagger.steel").Sum(action => action.FrameCount));
-        Assert.Equal(83, publication.Artifacts.Count);
+        Assert.Equal(83 + 67, publication.Artifacts.Count);
+        Assert.Equal(50 + 70 + 2, publication.Sources.Count);
         AssertPng(Artifact(publication, "media/combat/weapon-dagger-steel-atlas.png"), 3840, 600);
         Assert.All(publication.Audio, clip => Assert.Equal(11_025U, clip.SampleRate));
         // All twelve archives decode: the two spares and the werecreature form carry the same
@@ -458,6 +465,26 @@ public sealed class Arena2ClassicMediaPublicationTests
         Assert.All(publication.Fonts, font => Assert.Equal(240, font.Glyphs.Count));
         Assert.Equal("font.classic.0003", publication.Font.MediaId);
         AssertPng(Artifact(publication, "media/fonts/font-classic-0000-atlas.png"), 256, 240);
+        // All sixty-nine decoded map images publish with region bindings; the region table joins
+        // them to normalized regions with the mapless regions explicitly empty.
+        Assert.Equal(67, publication.MapMedia.Count);
+        Assert.Equal(62, publication.MapRegions.Count);
+        ClassicMapRegionManifest seventeen = publication.MapRegions.Single(region => region.Region == 17);
+        Assert.Equal(["map.fmap0i17"], seventeen.MediaIds);
+        ClassicMapMediaManifest fmap = publication.MapMedia.Single(image => image.MediaId == "map.fmap0i17");
+        Assert.Equal(MapArtKind.RegionMap, fmap.Kind);
+        Assert.Equal([17], fmap.Regions);
+        Assert.Equal((320, 160), (fmap.Width, fmap.Height));
+        Assert.False(fmap.Cutout);
+        // The five images the donor draws with index-zero cutout keep it; every other map
+        // canvas covers with index zero.
+        Assert.Equal(
+            ["map.amap00i0", "map.amap01i0", "map.tmap00i0", "map.town00i0", "map.trav0i04"],
+            publication.MapMedia.Where(image => image.Cutout).Select(image => image.MediaId).Order(StringComparer.Ordinal));
+        Assert.Equal(18, publication.MapRegions.Count(region => region.MediaIds.Count == 0));
+        AssertPng(Artifact(publication, "media/maps/map-fmap0i17.png"), 320, 160);
+        // Published artwork carries no coordinates: it illustrates regions rather than placing them.
+        Assert.DoesNotContain(publication.MapMedia, image => image.Binding.Contains("pixel", StringComparison.OrdinalIgnoreCase));
     }
 
     private static byte[] Artifact(Arena2ClassicMediaPublication publication, string path) => publication.Artifacts.Single(artifact => artifact.RelativePath == path).Bytes.ToArray();
@@ -566,9 +593,28 @@ public sealed class Arena2ClassicMediaPublicationTests
         CreateFont(),
         CreateFont(),
         CreateFont(),
-        CreateFont());
+        CreateFont(),
+        // No map art in the fixture: the publication then carries no map images and every
+        // region maps to nothing, which is the explicit no-art state.
+        [],
+        CreatePalette(),
+        CreatePalette());
 
     private static byte[] Read(string directory, string fileName) => File.ReadAllBytes(Path.Combine(directory, fileName));
+
+    private static IReadOnlyList<MapMediaInput> ReadCorpusMapMedia(string directory)
+    {
+        List<MapMediaInput> files = [];
+        foreach (string pattern in new[] { "FMAP*.IMG", "AMAP*.IMG", "TMAP*.IMG", "TRAV*.IMG", "TOWN*.IMG" })
+        {
+            foreach (string path in Directory.EnumerateFiles(directory, pattern).Order(StringComparer.Ordinal))
+            {
+                files.Add(new MapMediaInput(Path.GetFileName(path), File.ReadAllBytes(path)));
+            }
+        }
+
+        return files;
+    }
 
     private static Arena2ClassicMediaProfile AuthoredProfile(params ClassicAuthoredUiAsset[] assets) =>
         new(AuthoredUiManifest: new ClassicAuthoredUiManifestInput("ui-authored-assets.json", [1, 2, 3]), AuthoredUiAssets: assets);

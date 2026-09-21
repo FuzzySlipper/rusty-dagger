@@ -159408,8 +159408,8 @@
       "digest": "d804ffcdb3033e48321db3ddb8b722ed93ab9913afcc60d20e41bd80cfec12e1",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.AMAP01I0.IMG",
@@ -159420,8 +159420,8 @@
       "digest": "3a865bf27744dcc573f2dc60b9962e96260797b969e68f7cd7228ba90532741b",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I00.IMG",
@@ -159432,8 +159432,8 @@
       "digest": "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I01.IMG",
@@ -159444,8 +159444,8 @@
       "digest": "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I05.IMG",
@@ -159456,8 +159456,8 @@
       "digest": "b3422fe92cda4ae63c7e364d944891113801d0018c26189400978341d342d406",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I09.IMG",
@@ -159468,8 +159468,8 @@
       "digest": "1e6888bf89145be4685b825aad5a12cf340cbcb407bce27b571263dc03404339",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I11.IMG",
@@ -159480,8 +159480,8 @@
       "digest": "0b4ba60c28d425292969f18ab031b99c6f680bec42760717a5b957a82558a96e",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I16.IMG",
@@ -159492,8 +159492,8 @@
       "digest": "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I17.IMG",
@@ -159504,8 +159504,8 @@
       "digest": "2704fcb361376554df4d8655814283da0ef131b7fb3019e635e8148468d10dc5",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I18.IMG",
@@ -159516,8 +159516,8 @@
       "digest": "d512ed41a9963a8700dc86f105f076a165b73f3f0cad99c0cc6346484dfaa54c",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I19.IMG",
@@ -159528,8 +159528,8 @@
       "digest": "cbd19317b2b7970b738665d14981d8f84322aa82361d5bfdbcee8bfb8468e6c6",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I20.IMG",
@@ -159540,8 +159540,8 @@
       "digest": "c5bb26b5b78b20c60702696fb305fb7cb99a1acec669bf4649b4e589d5c27b35",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I21.IMG",
@@ -159552,8 +159552,8 @@
       "digest": "7ab70f9a7a0fe072918fcd8d90b1a74c92160853f7a08d180b9780aaf2893b1d",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I22.IMG",
@@ -159564,8 +159564,8 @@
       "digest": "10b8603eb5a1fa4cd8c3c36c569d60929d470d3c264c81cb05dbf5bc2a255736",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I23.IMG",
@@ -159576,8 +159576,8 @@
       "digest": "c86099d005e59320c242fb32d920e777eb76c7b3d360de05714ba3d819700a0c",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I26.IMG",
@@ -159588,8 +159588,8 @@
       "digest": "6a8924b9376d0c3de9690979a5bda3788306e4f5c9c89fc662d2af25da67a63e",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I32.IMG",
@@ -159600,8 +159600,8 @@
       "digest": "6a7157b53048b6671b2bd86a16366e7b95892f180647f31c14b4ad1cbf8b5851",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I33.IMG",
@@ -159612,8 +159612,8 @@
       "digest": "9e6d6d384e8a1461a4ef3fc5f93f445bc30f78ea66868c3808a1eb68e175ba6f",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I34.IMG",
@@ -159624,8 +159624,8 @@
       "digest": "4cb7db58b045b1bfe3824ef167f3af12db42131a282e6ebccf4e6f515abdb386",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I35.IMG",
@@ -159636,8 +159636,8 @@
       "digest": "219271497a1a85d76fdab170b31cbbba6279ff18e87c06dacd7c26804fd5e0fc",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I36.IMG",
@@ -159648,8 +159648,8 @@
       "digest": "9a4c82f4dd30234dd32299f1941a7f43ace04cff9160c89434bf62f63f1fb48b",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I37.IMG",
@@ -159660,8 +159660,8 @@
       "digest": "a904eebe95314eabdce5d8e8f8705a01f51a14491e4efdf09c9d8a68c4e7c45c",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I38.IMG",
@@ -159672,8 +159672,8 @@
       "digest": "f5baf338d1caacec344bc839e5d59f50c20dd98d25d919642f6f2f52a4b99cd8",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I39.IMG",
@@ -159684,8 +159684,8 @@
       "digest": "3cd67e8814d97eb89ac610b32367304370e55f447c4cfbb4b0246244e416692a",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I40.IMG",
@@ -159696,8 +159696,8 @@
       "digest": "011945581a80cad22d69f6bf4a72155862d25f4b7b9ee05797eec7c16da2e598",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I41.IMG",
@@ -159708,8 +159708,8 @@
       "digest": "ce697e99efb60f37a8650a9bc8c4dd6731e97d5892d8f414124004dcca06fa7e",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I42.IMG",
@@ -159720,8 +159720,8 @@
       "digest": "f23765aef15ab2951575190378675fdca1e9590bf12cfdddc3c56d7e2cfb0404",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I43.IMG",
@@ -159732,8 +159732,8 @@
       "digest": "de98cf7995d118db2dec8ae77a60cfd71d67bf80d4a4750818b5fbdd66fe29bb",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I44.IMG",
@@ -159744,8 +159744,8 @@
       "digest": "06787d35716669aae2c201e9f2f7dc95a8ca8e9b74b96258aad714c7d700ae58",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I45.IMG",
@@ -159756,8 +159756,8 @@
       "digest": "63f2f0020bd92ddbd3510c14789474861575403b4518c891b024ad0fc19777c1",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I46.IMG",
@@ -159768,8 +159768,8 @@
       "digest": "1c3c09e65523e03c21b2ab334a59866194c4b0a07589908579014b0c8c97aa58",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I47.IMG",
@@ -159780,8 +159780,8 @@
       "digest": "16c67d0771d2b65908aeca2c7ffb685cac744a2d6f860a83200ae0952a8ce27d",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I48.IMG",
@@ -159792,8 +159792,8 @@
       "digest": "b2e4fdc34a5bed4fff16adddf1166b680bbb9c39e58a377947363aa7c9837784",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I49.IMG",
@@ -159804,8 +159804,8 @@
       "digest": "700785376f8079cf8788b500ec14337d5360dec2ddee789894e3b6594b98aac9",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I50.IMG",
@@ -159816,8 +159816,8 @@
       "digest": "2aaee49e7adf1895b6861903fcb08bec21c782998501aa649cd8fd1f8436cd69",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I51.IMG",
@@ -159828,8 +159828,8 @@
       "digest": "bc8a002b1b2638657af47f435450d7befa72ece0a20c6ed6eb215649f138e41a",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I52.IMG",
@@ -159840,8 +159840,8 @@
       "digest": "64e8f3817e7fde78b2a04ae9ac71d80cd26ebcb0e81d225725ef74665396ea21",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I53.IMG",
@@ -159852,8 +159852,8 @@
       "digest": "786894fdfc78b7ab8460db965adc27f7f0f8c8367a53f94c84d63b65162e63f4",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I54.IMG",
@@ -159864,8 +159864,8 @@
       "digest": "fe240de066e16260187ea640acd0d3a5c22f0dbc2cbb8ece8b1b21bfe60c1a97",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I55.IMG",
@@ -159876,8 +159876,8 @@
       "digest": "c1af8b0afe6304bd4a4145943500375965cac6c43908c9346c3ea7946c8c2d4d",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I56.IMG",
@@ -159888,8 +159888,8 @@
       "digest": "23a13a026fbda8f3fe881a14c5cb602c56698a28e98a9b6a4419d682fdb7c7ef",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I57.IMG",
@@ -159900,8 +159900,8 @@
       "digest": "ac81631c6d207191b9c3f62a0f9f42807aab6a66091388a64a4c743145370e1d",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I58.IMG",
@@ -159912,8 +159912,8 @@
       "digest": "94616e8853789a142e55c3ce32845203d381553cd04a1bc6c8a6a2bfaaf20b11",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I59.IMG",
@@ -159924,8 +159924,8 @@
       "digest": "c501642b593da1c4fabbaffe1979c24e548f16e91066543e8a98e3535272093d",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I60.IMG",
@@ -159936,8 +159936,8 @@
       "digest": "1f58d1bba5860ecb8287006ecef7dc068764c18b8ab56640bc747431cbeb1628",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP0I61.IMG",
@@ -159948,8 +159948,8 @@
       "digest": "c073df952c4a83b045b43b02e3041ba7f6275ac1470aaabbfd2d4e796380948a",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAPAI00.IMG",
@@ -159960,8 +159960,8 @@
       "digest": "916eb4108b3545766c06cceb6692038cd40fd8d9d6fc3198a8840ff11b68ba7f",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAPAI01.IMG",
@@ -159972,8 +159972,8 @@
       "digest": "c791e23843ac57d2bc0750818c6e1d12e75b15c350dd865d6ef855cff5ac5f88",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAPAI16.IMG",
@@ -159984,8 +159984,8 @@
       "digest": "810d1b2c2df31d1db80a9dde1a10ed65dc39e605d408358b18e85c077e45c76a",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAPBI00.IMG",
@@ -159996,8 +159996,8 @@
       "digest": "0cd7003b47d462381aad1328816344bee0fa1776f17ba624685040fc6ae0f053",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAPBI01.IMG",
@@ -160008,8 +160008,8 @@
       "digest": "63f090781dfb7444515a6a8dd761e52c123409a6f6989a556bf17d6b73656d57",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAPBI16.IMG",
@@ -160020,8 +160020,8 @@
       "digest": "bfd5b67b7432996ec740a11dd55d0292a27ffc2a15a46f3116a1a2d96f4ce155",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAPCI01.IMG",
@@ -160032,8 +160032,8 @@
       "digest": "32b5a6357af743262f7d96223b8f5fd9c4eac30cec79c14a3d71b920d9c8e25c",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAPCI16.IMG",
@@ -160044,8 +160044,8 @@
       "digest": "187681b6d4dbee5b30d5b0e9187878d2d1dd01c3b2cf4eadcf9c61f17771c7ba",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAPDI01.IMG",
@@ -160056,8 +160056,8 @@
       "digest": "b1374b7781745206ca302d2791a90555ce89cf46d88dd54b46411acf1d1b1f5f",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAPDI16.IMG",
@@ -160068,8 +160068,8 @@
       "digest": "cc865742b969fa8e4a51e21f57acb9a3b1eb11d9a21a4e98a2da545fce981ae8",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.FMAP_PAL.COL",
@@ -160080,8 +160080,8 @@
       "digest": "32aca196dc282d1941b4e6d3d452533d872b0fab1f7f018e5c233f57e2e8dcf4",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.TMAP00I0.IMG",
@@ -160092,8 +160092,8 @@
       "digest": "741b0c1e00344b962bf1c203ed4d3b0a8efa16e132082ff2f2ea1b94f508aaac",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.TOWN00I0.IMG",
@@ -160104,8 +160104,8 @@
       "digest": "c80ce471fb4f7b2a06b0a063be0e9f92ae9b58b60b535acb162faa1b6c5feeb6",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.TRAV00I0.IMG",
@@ -160116,8 +160116,8 @@
       "digest": "54e5218d0bec832637d452f168f3df082484e33d9fe3c450499c1fc92166c9a0",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.TRAV01I0.IMG",
@@ -160128,8 +160128,8 @@
       "digest": "f242d288f2adbf53ba6f004df9ab4a16e7d2449dc1bc2861940b92ff147bd0dc",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.TRAV01I1.IMG",
@@ -160140,8 +160140,8 @@
       "digest": "b9922dfc31ac7baaa7e06fafa812031d407c988f8fe8a811125da580673dcb22",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.TRAV02I0.IMG",
@@ -160152,8 +160152,8 @@
       "digest": "add9a9d59cac20b11a3bb6c9e7e1bb25f1534f5b1c0b8f488fce86edc3cc8d5c",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.TRAV0I00.IMG",
@@ -160164,8 +160164,8 @@
       "digest": "1a00d8449dea174b4b48ecaefaf6292ce877ef7b672168f4cddb2563116a034a",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.TRAV0I01.IMG",
@@ -160176,8 +160176,8 @@
       "digest": "9ed4084b18cd5ac5066558b5722387e69b4f5943ca2f90005d5434b222b1820b",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.TRAV0I03.IMG",
@@ -160188,8 +160188,8 @@
       "digest": "9615bce0dbad1b832dbd665dec820bc0b031db427331159fb550fdc219431623",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.TRAV0I04.IMG",
@@ -160200,8 +160200,8 @@
       "digest": "4413a118cd70b2f1afa83b119857a30ddbe977864499e826d9915b575a79e4f3",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.TRAVAI05.IMG",
@@ -160212,8 +160212,8 @@
       "digest": "c348033cdc21651b4756ec1df70e1f78b776688895b4ef583afd5263bfcaa83e",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.TRAVBI05.IMG",
@@ -160224,8 +160224,8 @@
       "digest": "36b3056f445f23bb6406f7f8c972544d3fa6e39b92be9ba28b721560046965a2",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.TRAVCI05.IMG",
@@ -160236,8 +160236,8 @@
       "digest": "1a1b308aadb4fd9ed6ec9de18f0db8c60d0a7e62b96e9a1026324545a61286cf",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-022.file.TRAVDI05.IMG",
@@ -160248,8 +160248,8 @@
       "digest": "1dac86f71aeed0ecc2f470da162ca0b2b6812bcfab216970a8422a6da99f8d73",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-023.file.DAGGER.SND",
@@ -161484,8 +161484,8 @@
       "digest": "37780ae5d5669957cd13f528b6766d032f307675911a2dfbe33c3ad7d0a65fb5",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-027.file.MAP100I0.IMG",
@@ -163218,9 +163218,9 @@
       "familyId": "CNT-022",
       "documentedDisposition": "pending-import",
       "discovered": 71,
-      "imported": 0,
+      "imported": 71,
       "requiredPending": 0,
-      "unused": 71,
+      "unused": 0,
       "duplicate": 0,
       "excluded": 0,
       "malformed": 0,
@@ -163283,9 +163283,9 @@
       "familyId": "CNT-027",
       "documentedDisposition": "uninspected",
       "discovered": 183,
-      "imported": 8,
+      "imported": 9,
       "requiredPending": 0,
-      "unused": 175,
+      "unused": 174,
       "duplicate": 0,
       "excluded": 0,
       "malformed": 0,

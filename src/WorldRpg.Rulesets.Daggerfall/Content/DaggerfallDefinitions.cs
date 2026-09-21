@@ -154,7 +154,9 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     DaggerfallRumorCatalogSet rumors,
     DaggerfallBiographiesSet biographies,
     DaggerfallWorldGridsSet grids,
-    DaggerfallBooksSet books)
+    DaggerfallBooksSet books,
+    DaggerfallFactionsSet factions,
+    DaggerfallTerrainSet terrain)
 {
     /// <summary>The normalized reference catalogs a consumer resolves keys through.</summary>
     internal DaggerfallCatalogSet Catalogs { get; } = catalogs;
@@ -201,6 +203,19 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     /// book it names with the text keys its pages read through.
     /// </summary>
     internal DaggerfallBooksSet Books { get; } = books;
+
+    /// <summary>
+    /// The published faction catalog, loaded from the pack alone: each faction resolves to its
+    /// filed relations and bindings, and each politic region resolves to the factions that claim
+    /// it or to the explicit unclaimed region.
+    /// </summary>
+    internal DaggerfallFactionsSet Factions { get; } = factions;
+
+    /// <summary>
+    /// The published wilderness terrain, loaded from the pack alone: each map pixel resolves to
+    /// its height with the cell samples behind it.
+    /// </summary>
+    internal DaggerfallTerrainSet Terrain { get; } = terrain;
 
     internal DaggerfallVocabulary Vocabulary { get; } = vocabulary;
     internal IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> Actors { get; } = new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors.ToDictionary());

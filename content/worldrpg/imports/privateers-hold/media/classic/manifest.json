@@ -28162,6 +28162,1346 @@
         "generatedFrames": null
       },
       {
+        "id": "map.amap00i0",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-amap00i0.png",
+        "contentDigest": "60cd0f2851020b9a820b50e5d263806156246049d8e454528c38ef3a8b4433e3",
+        "byteLength": 13056,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 200,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.amap01i0",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-amap01i0.png",
+        "contentDigest": "d31d40a747cbc9c5b38c18323be409cf69b38ca5774d8c24906dc2ca4530f754",
+        "byteLength": 480,
+        "mimeType": "image/png",
+        "sourceWidth": 27,
+        "sourceHeight": 19,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i05",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i05.png",
+        "contentDigest": "ea119b8c1525615c3314bc5678a4db4f5a5c07b41d72b88c796372f01a051826",
+        "byteLength": 4479,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i09",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i09.png",
+        "contentDigest": "8c9b3156c62695fedef8431a121fb17d8c309f0e5eb45e902a403aea2dc91660",
+        "byteLength": 5336,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i11",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i11.png",
+        "contentDigest": "29a9135360e657d6df499ef9532d2658f1c70444f4da30790405b34d463d8ff2",
+        "byteLength": 3537,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i17",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i17.png",
+        "contentDigest": "3b0449a3f3d99d322af68c48b650792ef00020d118db88640a6ec581c189d5e7",
+        "byteLength": 4426,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i18",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i18.png",
+        "contentDigest": "dc7663e48cc1a065ad50c19a201f725cdeb641efd99ec5c7737195f05d2fdf44",
+        "byteLength": 3954,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i19",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i19.png",
+        "contentDigest": "8068ad41532d99ff5c1fdbdc9eb37a2edf71ec2bcf1f207db77471dce0485905",
+        "byteLength": 2590,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i20",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i20.png",
+        "contentDigest": "ac189c155f398275e34364f8aef517e95db47bb837fcc042ec9f4f2f3337c3c2",
+        "byteLength": 4319,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i21",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i21.png",
+        "contentDigest": "65f666773e96a4682064ba69ddae932ebe5cc9ca5f32d5543a2c8b929d4aefd8",
+        "byteLength": 3800,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i22",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i22.png",
+        "contentDigest": "a475762db4d4c2dbee6715142bebeb012826b3d3a84ed1e0cd4e314ea34257cd",
+        "byteLength": 4905,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i23",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i23.png",
+        "contentDigest": "eca75254b0c6828aa724b7d9df12067646faedc50674aab4d8821331c207632d",
+        "byteLength": 6121,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i26",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i26.png",
+        "contentDigest": "6eb7a71e986f56ba1944d822ab929859ac73a89446a99b49c307833734405a74",
+        "byteLength": 5985,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i32",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i32.png",
+        "contentDigest": "b21f43b997087b6919921f81cfcebb068d69555fd826664ab6348d39ef92ab0f",
+        "byteLength": 3927,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i33",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i33.png",
+        "contentDigest": "33007c6502f76f3b0470fbfe45c01db6b272ecb213df8b1a0ad78fc2924581e8",
+        "byteLength": 5904,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i34",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i34.png",
+        "contentDigest": "dc6a1ce4f1e2a393301c04fbabea77ba055c9b92f19d93384e9c60957bd5cb07",
+        "byteLength": 5868,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i35",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i35.png",
+        "contentDigest": "a83b521d1bd7e6d06e922c7e07478f5582a541a5535fd915494a6220f9ccb5fa",
+        "byteLength": 5028,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i36",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i36.png",
+        "contentDigest": "a62a951f2e68bed00deab1548a4d333fd4e4918564ef69a4d3f20cba56f70a12",
+        "byteLength": 4921,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i37",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i37.png",
+        "contentDigest": "97bc66345baaf1cba35b114601c3a902f0d2589ff764de055ab1528e196ad05e",
+        "byteLength": 4718,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i38",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i38.png",
+        "contentDigest": "c58d5916f9018561a2cf714e2e289127e95419f34d62d3d4589583e8ecf01c9b",
+        "byteLength": 4628,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i39",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i39.png",
+        "contentDigest": "a605de0f2b67464d66791f8011bba028bfcaca64e6304a6f811cf91f9074bc3c",
+        "byteLength": 4282,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i40",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i40.png",
+        "contentDigest": "bf169be79b993bb72de6bf70294727980168f2bf54d81e24a2c023b5cf1d6e81",
+        "byteLength": 4133,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i41",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i41.png",
+        "contentDigest": "24d0020b5f3d07e2cd565a5219e6246ab037a96223e289cfecff2358398920ce",
+        "byteLength": 3739,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i42",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i42.png",
+        "contentDigest": "808b5928b218aa6a21bec76f6f9b63f8e9fd2340d6ffb8122227a8e81140506f",
+        "byteLength": 4256,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i43",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i43.png",
+        "contentDigest": "45cf7bf73d725209b258603c8b10cb13b23798419ca4c7d7252dbaccdc3740f5",
+        "byteLength": 2952,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i44",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i44.png",
+        "contentDigest": "fce9cc28f715ec26827ba0e6df03823c924ccc82090d2de379bdd54861bf00bf",
+        "byteLength": 3494,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i45",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i45.png",
+        "contentDigest": "237630ab9e4601063d24919149bd534a861d201e383868914df1ea9966a2f827",
+        "byteLength": 3549,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i46",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i46.png",
+        "contentDigest": "4946e1af0301d1c8cbd2caf70f2e30ee23b0249e12e5fa8ab42639d6bc1502e1",
+        "byteLength": 4419,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i47",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i47.png",
+        "contentDigest": "7531084ca15c91882e9a7d439e48fafcf0c70a6a528e5d6b95fe8ee0b636cee8",
+        "byteLength": 4112,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i48",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i48.png",
+        "contentDigest": "23b2d7a292bf39a3f765eb82ff90d2e3eccf5a002883e9dcefd750f21370601c",
+        "byteLength": 4471,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i49",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i49.png",
+        "contentDigest": "83e1e73239f013722ace3919854726da3842eef1bd2f3902ae137937b2c7549f",
+        "byteLength": 4547,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i50",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i50.png",
+        "contentDigest": "af8c9e7601dafa2b6a7d62c0432f910c2d129efeeb5c91d46677b7da63141bb9",
+        "byteLength": 5299,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i51",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i51.png",
+        "contentDigest": "058dff9644d2efe3fe8594125a1d8877b26391ce040b4fa70616397c65db1aca",
+        "byteLength": 5251,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i52",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i52.png",
+        "contentDigest": "ee651ec2a01c634b2bf0e12012cf707b211e576d62e33ecb56d3dbde01640d4c",
+        "byteLength": 5337,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i53",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i53.png",
+        "contentDigest": "845f44ab8a727d252f8227b316a2d21af2cbb8a2c269f03aec14d3ed69173569",
+        "byteLength": 3088,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i54",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i54.png",
+        "contentDigest": "f4e8d8af7a20427a85b003f75b8d7846c0796872a52c8c295915d23cabd964e1",
+        "byteLength": 2888,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i55",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i55.png",
+        "contentDigest": "ae45e0f2a1b82df1b76251712f4abc5ee903d02db5e137dba49756a1938b7a8d",
+        "byteLength": 3948,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i56",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i56.png",
+        "contentDigest": "f93db0bc759195bce8cbb7933c089b63ca110ad163b5b899c8af71c0ebce0078",
+        "byteLength": 3891,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i57",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i57.png",
+        "contentDigest": "41b0528190022ee1ceac231f450298833a093c227ec0b7e90f0021b176bc483a",
+        "byteLength": 5348,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i58",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i58.png",
+        "contentDigest": "ed88158abdb313b5e0c1c82074965b60de8f6887a1b5c0040e64b18e2c5d40b6",
+        "byteLength": 4022,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i59",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i59.png",
+        "contentDigest": "95559348ec995c126f6df8a8e9843ecad4043edf40d4ba469200b91a1de77563",
+        "byteLength": 3715,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i60",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i60.png",
+        "contentDigest": "1c9cce7d77d0f27bd5b41a96eac58d060c3d9d53a6a11ae306823cf4155eda19",
+        "byteLength": 4335,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmap0i61",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmap0i61.png",
+        "contentDigest": "4f92bae1c9296fa925b389bf0c66ebda9faf4e9fa5e3ac033c86d82f4716159b",
+        "byteLength": 1626,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmapai00",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmapai00.png",
+        "contentDigest": "239bd4c068b83e8715ca0f77d9087ae324bdecc40f4ecd6803579b74e9438d00",
+        "byteLength": 4483,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmapai01",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmapai01.png",
+        "contentDigest": "8daf7cf9a5897286b915c9657845e7ec21c6c3e71436f03c7a6598b1d271f4c6",
+        "byteLength": 5901,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmapai16",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmapai16.png",
+        "contentDigest": "ecc5d07955c8561ea36538c294691009d8ee2e10c4f0ce93e398ddbbd63e0509",
+        "byteLength": 6313,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmapbi00",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmapbi00.png",
+        "contentDigest": "a6891531527ad5729bf170b703b2e45ab5dbf5667dbb6b122125330cf353f937",
+        "byteLength": 3978,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmapbi01",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmapbi01.png",
+        "contentDigest": "18592b39122683b1a1bc28ed47cb3863672d4824ac805125f4110405bbccfa12",
+        "byteLength": 5301,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmapbi16",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmapbi16.png",
+        "contentDigest": "e9112c2909e03edf79c03d2c5c088b4ba074a2d4a576a597665e6384f00148d7",
+        "byteLength": 6583,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmapci01",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmapci01.png",
+        "contentDigest": "d67a9d7a63638cda57e72a15fb5ce879dfd22951014d5621b1916786c6dbec42",
+        "byteLength": 4373,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmapci16",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmapci16.png",
+        "contentDigest": "5f7279513929f89f1aa2677395f7245698bb7d366f87ef302331890f8832be8e",
+        "byteLength": 5850,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmapdi01",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmapdi01.png",
+        "contentDigest": "8f1084bce2f5f0b6b29bfd64278a8abb144ffe611ab2f289bb84de9e810d372d",
+        "byteLength": 4475,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.fmapdi16",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-fmapdi16.png",
+        "contentDigest": "36f45efe357d1e90435a6ecff9f8386876d89b7fc5883ace1d04df892311627a",
+        "byteLength": 6601,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 160,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.tmap00i0",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-tmap00i0.png",
+        "contentDigest": "567f2028ff86cb07ed6f5275e58f159bb0ce0be437d4c84582351a1aa330cf60",
+        "byteLength": 42568,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 200,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.town00i0",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-town00i0.png",
+        "contentDigest": "ea3cc45452fb15189937db744ab7c110ec1fb8a76fe5132a392a7f38acb9dad7",
+        "byteLength": 1788,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 10,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.trav00i0",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-trav00i0.png",
+        "contentDigest": "22d0aa4efb820cd0dc17444a840c8c5a1403d4badcc3791643d7555849812925",
+        "byteLength": 10828,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 200,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.trav01i0",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-trav01i0.png",
+        "contentDigest": "5f70163c3309de6e4255279b5ccb56f70bed85df71bbd8ecdd022f5e556162c7",
+        "byteLength": 2490,
+        "mimeType": "image/png",
+        "sourceWidth": 179,
+        "sourceHeight": 22,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.trav01i1",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-trav01i1.png",
+        "contentDigest": "0b0f0e2591fdcc7f28a6c165366a84d4ac4d67d00511e65a20d2ae220df90b66",
+        "byteLength": 2225,
+        "mimeType": "image/png",
+        "sourceWidth": 179,
+        "sourceHeight": 22,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.trav02i0",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-trav02i0.png",
+        "contentDigest": "fcbb88685f9700f601d1a3f14a971978dec77cbb8df0054a8cbdf6f9caf60948",
+        "byteLength": 5056,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 200,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.trav0i00",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-trav0i00.png",
+        "contentDigest": "f6975b2fe0092d0dfce19dd0e8def57a9dc0a7024c3cd144fe8afe25c353cc1c",
+        "byteLength": 42265,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 200,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.trav0i01",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-trav0i01.png",
+        "contentDigest": "fa3b2e87d0726b1d459aa638ace12d3ed9dd4d55b97797977579b31308c5f15d",
+        "byteLength": 3235,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 200,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.trav0i03",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-trav0i03.png",
+        "contentDigest": "1c0346bd78ae36c2be749af041059695768eac4611d5686b579164acd4248055",
+        "byteLength": 896,
+        "mimeType": "image/png",
+        "sourceWidth": 45,
+        "sourceHeight": 22,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.trav0i04",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-trav0i04.png",
+        "contentDigest": "5b3502678a5fba4c6477377451b4ff60721fb3b02414c7e18c13f6e66853ae3a",
+        "byteLength": 9208,
+        "mimeType": "image/png",
+        "sourceWidth": 223,
+        "sourceHeight": 96,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.travai05",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-travai05.png",
+        "contentDigest": "111b735cab7b2eae329a072ec849cde02c11c5223e11d203082dd0c1731d8f4f",
+        "byteLength": 500,
+        "mimeType": "image/png",
+        "sourceWidth": 22,
+        "sourceHeight": 20,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.travbi05",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-travbi05.png",
+        "contentDigest": "a7c9d8d669ac64e9a2524a6dc25058706afe5b48546c1e7702cdf088180927e0",
+        "byteLength": 483,
+        "mimeType": "image/png",
+        "sourceWidth": 22,
+        "sourceHeight": 20,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.travci05",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-travci05.png",
+        "contentDigest": "5557a95676fd6d3250e717ed5544421e2261e6da3bae51e5a26b794bfe75540f",
+        "byteLength": 463,
+        "mimeType": "image/png",
+        "sourceWidth": 22,
+        "sourceHeight": 20,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "map.travdi05",
+        "kind": "userInterface",
+        "relativePath": "media/maps/map-travdi05.png",
+        "contentDigest": "7b08010c62f7d7980fe8adeec780ebdfd086718857e27309b0406ae64efa8642",
+        "byteLength": 490,
+        "mimeType": "image/png",
+        "sourceWidth": 22,
+        "sourceHeight": 20,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
         "id": "screen.character-generation",
         "kind": "userInterface",
         "relativePath": "media/ui/screen-character-generation.png",
@@ -48483,6 +49823,1125 @@
           "advance": 0,
           "sourceDataOffset": 8612
         }
+      ]
+    }
+  ],
+  "mapMedia": [
+    {
+      "mediaId": "map.amap00i0",
+      "kind": "automap",
+      "regions": [],
+      "binding": "DaggerfallAutomapWindow and DaggerfallExteriorAutomapWindow native texture",
+      "sourceFile": "arena2/AMAP00I0.IMG",
+      "width": 320,
+      "height": 200,
+      "cutout": true
+    },
+    {
+      "mediaId": "map.amap01i0",
+      "kind": "automap",
+      "regions": [],
+      "binding": "DaggerfallAutomapWindow three-dimensional grid overlay",
+      "sourceFile": "arena2/AMAP01I0.IMG",
+      "width": 27,
+      "height": 19,
+      "cutout": true
+    },
+    {
+      "mediaId": "map.fmap0i05",
+      "kind": "regionMap",
+      "regions": [
+        5
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I05.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i09",
+      "kind": "regionMap",
+      "regions": [
+        9
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I09.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i11",
+      "kind": "regionMap",
+      "regions": [
+        11
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I11.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i17",
+      "kind": "regionMap",
+      "regions": [
+        17
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I17.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i18",
+      "kind": "regionMap",
+      "regions": [
+        18
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I18.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i19",
+      "kind": "regionMap",
+      "regions": [
+        19
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I19.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i20",
+      "kind": "regionMap",
+      "regions": [
+        20
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I20.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i21",
+      "kind": "regionMap",
+      "regions": [
+        21
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I21.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i22",
+      "kind": "regionMap",
+      "regions": [
+        22
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I22.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i23",
+      "kind": "regionMap",
+      "regions": [
+        23
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I23.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i26",
+      "kind": "regionMap",
+      "regions": [
+        26
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I26.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i32",
+      "kind": "regionMap",
+      "regions": [
+        32
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I32.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i33",
+      "kind": "regionMap",
+      "regions": [
+        33
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I33.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i34",
+      "kind": "regionMap",
+      "regions": [
+        34
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I34.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i35",
+      "kind": "regionMap",
+      "regions": [
+        35
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I35.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i36",
+      "kind": "regionMap",
+      "regions": [
+        36
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I36.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i37",
+      "kind": "regionMap",
+      "regions": [
+        37
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I37.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i38",
+      "kind": "regionMap",
+      "regions": [
+        38
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I38.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i39",
+      "kind": "regionMap",
+      "regions": [
+        39
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I39.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i40",
+      "kind": "regionMap",
+      "regions": [
+        40
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I40.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i41",
+      "kind": "regionMap",
+      "regions": [
+        41
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I41.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i42",
+      "kind": "regionMap",
+      "regions": [
+        42
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I42.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i43",
+      "kind": "regionMap",
+      "regions": [
+        43
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I43.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i44",
+      "kind": "regionMap",
+      "regions": [
+        44
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I44.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i45",
+      "kind": "regionMap",
+      "regions": [
+        45
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I45.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i46",
+      "kind": "regionMap",
+      "regions": [
+        46
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I46.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i47",
+      "kind": "regionMap",
+      "regions": [
+        47
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I47.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i48",
+      "kind": "regionMap",
+      "regions": [
+        48
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I48.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i49",
+      "kind": "regionMap",
+      "regions": [
+        49
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I49.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i50",
+      "kind": "regionMap",
+      "regions": [
+        50
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I50.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i51",
+      "kind": "regionMap",
+      "regions": [
+        51
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I51.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i52",
+      "kind": "regionMap",
+      "regions": [
+        52
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I52.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i53",
+      "kind": "regionMap",
+      "regions": [
+        53
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I53.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i54",
+      "kind": "regionMap",
+      "regions": [
+        54
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I54.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i55",
+      "kind": "regionMap",
+      "regions": [
+        55
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I55.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i56",
+      "kind": "regionMap",
+      "regions": [
+        56
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I56.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i57",
+      "kind": "regionMap",
+      "regions": [
+        57
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I57.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i58",
+      "kind": "regionMap",
+      "regions": [
+        58
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I58.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i59",
+      "kind": "regionMap",
+      "regions": [
+        59
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I59.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i60",
+      "kind": "regionMap",
+      "regions": [
+        60
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I60.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmap0i61",
+      "kind": "regionMap",
+      "regions": [
+        61
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAP0I61.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmapai00",
+      "kind": "regionMap",
+      "regions": [
+        0
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAPAI00.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmapai01",
+      "kind": "regionMap",
+      "regions": [
+        1
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAPAI01.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmapai16",
+      "kind": "regionMap",
+      "regions": [
+        16
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAPAI16.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmapbi00",
+      "kind": "regionMap",
+      "regions": [
+        0
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAPBI00.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmapbi01",
+      "kind": "regionMap",
+      "regions": [
+        1
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAPBI01.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmapbi16",
+      "kind": "regionMap",
+      "regions": [
+        16
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAPBI16.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmapci01",
+      "kind": "regionMap",
+      "regions": [
+        1
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAPCI01.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmapci16",
+      "kind": "regionMap",
+      "regions": [
+        16
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAPCI16.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmapdi01",
+      "kind": "regionMap",
+      "regions": [
+        1
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAPDI01.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.fmapdi16",
+      "kind": "regionMap",
+      "regions": [
+        16
+      ],
+      "binding": "DaggerfallTravelMapWindow region map",
+      "sourceFile": "arena2/FMAPDI16.IMG",
+      "width": 320,
+      "height": 160,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.tmap00i0",
+      "kind": "worldMap",
+      "regions": [],
+      "binding": "CreateCharRaceSelect native texture",
+      "sourceFile": "arena2/TMAP00I0.IMG",
+      "width": 320,
+      "height": 200,
+      "cutout": true
+    },
+    {
+      "mediaId": "map.town00i0",
+      "kind": "townCaption",
+      "regions": [],
+      "binding": "DaggerfallExteriorAutomapWindow native caption texture",
+      "sourceFile": "arena2/TOWN00I0.IMG",
+      "width": 320,
+      "height": 10,
+      "cutout": true
+    },
+    {
+      "mediaId": "map.trav00i0",
+      "kind": "worldMap",
+      "regions": [],
+      "binding": "No donor call site found",
+      "sourceFile": "arena2/TRAV00I0.IMG",
+      "width": 320,
+      "height": 200,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.trav01i0",
+      "kind": "travelChrome",
+      "regions": [],
+      "binding": "DaggerfallTravelMapWindow location-filter enabled button",
+      "sourceFile": "arena2/TRAV01I0.IMG",
+      "width": 179,
+      "height": 22,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.trav01i1",
+      "kind": "travelChrome",
+      "regions": [],
+      "binding": "DaggerfallTravelMapWindow location-filter disabled button",
+      "sourceFile": "arena2/TRAV01I1.IMG",
+      "width": 179,
+      "height": 22,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.trav02i0",
+      "kind": "worldMap",
+      "regions": [],
+      "binding": "No donor call site found",
+      "sourceFile": "arena2/TRAV02I0.IMG",
+      "width": 320,
+      "height": 200,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.trav0i00",
+      "kind": "worldMap",
+      "regions": [],
+      "binding": "DaggerfallTravelMapWindow overworld image",
+      "sourceFile": "arena2/TRAV0I00.IMG",
+      "width": 320,
+      "height": 200,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.trav0i01",
+      "kind": "travelChrome",
+      "regions": [],
+      "binding": "DaggerfallTravelMapWindow region picker image",
+      "sourceFile": "arena2/TRAV0I01.IMG",
+      "width": 320,
+      "height": 200,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.trav0i03",
+      "kind": "travelChrome",
+      "regions": [],
+      "binding": "DaggerfallTravelMapWindow find button image",
+      "sourceFile": "arena2/TRAV0I03.IMG",
+      "width": 45,
+      "height": 22,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.trav0i04",
+      "kind": "travelChrome",
+      "regions": [],
+      "binding": "DaggerfallTravelPopUp native texture",
+      "sourceFile": "arena2/TRAV0I04.IMG",
+      "width": 223,
+      "height": 96,
+      "cutout": true
+    },
+    {
+      "mediaId": "map.travai05",
+      "kind": "travelChrome",
+      "regions": [],
+      "binding": "DaggerfallTravelMapWindow down arrow image",
+      "sourceFile": "arena2/TRAVAI05.IMG",
+      "width": 22,
+      "height": 20,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.travbi05",
+      "kind": "travelChrome",
+      "regions": [],
+      "binding": "DaggerfallTravelMapWindow up arrow image",
+      "sourceFile": "arena2/TRAVBI05.IMG",
+      "width": 22,
+      "height": 20,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.travci05",
+      "kind": "travelChrome",
+      "regions": [],
+      "binding": "DaggerfallTravelMapWindow right arrow image",
+      "sourceFile": "arena2/TRAVCI05.IMG",
+      "width": 22,
+      "height": 20,
+      "cutout": false
+    },
+    {
+      "mediaId": "map.travdi05",
+      "kind": "travelChrome",
+      "regions": [],
+      "binding": "DaggerfallTravelMapWindow left arrow image",
+      "sourceFile": "arena2/TRAVDI05.IMG",
+      "width": 22,
+      "height": 20,
+      "cutout": false
+    }
+  ],
+  "mapRegions": [
+    {
+      "region": 0,
+      "mediaIds": [
+        "map.fmapai00",
+        "map.fmapbi00"
+      ]
+    },
+    {
+      "region": 1,
+      "mediaIds": [
+        "map.fmapai01",
+        "map.fmapbi01",
+        "map.fmapci01",
+        "map.fmapdi01"
+      ]
+    },
+    {
+      "region": 2,
+      "mediaIds": []
+    },
+    {
+      "region": 3,
+      "mediaIds": []
+    },
+    {
+      "region": 4,
+      "mediaIds": []
+    },
+    {
+      "region": 5,
+      "mediaIds": [
+        "map.fmap0i05"
+      ]
+    },
+    {
+      "region": 6,
+      "mediaIds": []
+    },
+    {
+      "region": 7,
+      "mediaIds": []
+    },
+    {
+      "region": 8,
+      "mediaIds": []
+    },
+    {
+      "region": 9,
+      "mediaIds": [
+        "map.fmap0i09"
+      ]
+    },
+    {
+      "region": 10,
+      "mediaIds": []
+    },
+    {
+      "region": 11,
+      "mediaIds": [
+        "map.fmap0i11"
+      ]
+    },
+    {
+      "region": 12,
+      "mediaIds": []
+    },
+    {
+      "region": 13,
+      "mediaIds": []
+    },
+    {
+      "region": 14,
+      "mediaIds": []
+    },
+    {
+      "region": 15,
+      "mediaIds": []
+    },
+    {
+      "region": 16,
+      "mediaIds": [
+        "map.fmapai16",
+        "map.fmapbi16",
+        "map.fmapci16",
+        "map.fmapdi16"
+      ]
+    },
+    {
+      "region": 17,
+      "mediaIds": [
+        "map.fmap0i17"
+      ]
+    },
+    {
+      "region": 18,
+      "mediaIds": [
+        "map.fmap0i18"
+      ]
+    },
+    {
+      "region": 19,
+      "mediaIds": [
+        "map.fmap0i19"
+      ]
+    },
+    {
+      "region": 20,
+      "mediaIds": [
+        "map.fmap0i20"
+      ]
+    },
+    {
+      "region": 21,
+      "mediaIds": [
+        "map.fmap0i21"
+      ]
+    },
+    {
+      "region": 22,
+      "mediaIds": [
+        "map.fmap0i22"
+      ]
+    },
+    {
+      "region": 23,
+      "mediaIds": [
+        "map.fmap0i23"
+      ]
+    },
+    {
+      "region": 24,
+      "mediaIds": []
+    },
+    {
+      "region": 25,
+      "mediaIds": []
+    },
+    {
+      "region": 26,
+      "mediaIds": [
+        "map.fmap0i26"
+      ]
+    },
+    {
+      "region": 27,
+      "mediaIds": []
+    },
+    {
+      "region": 28,
+      "mediaIds": []
+    },
+    {
+      "region": 29,
+      "mediaIds": []
+    },
+    {
+      "region": 30,
+      "mediaIds": []
+    },
+    {
+      "region": 31,
+      "mediaIds": []
+    },
+    {
+      "region": 32,
+      "mediaIds": [
+        "map.fmap0i32"
+      ]
+    },
+    {
+      "region": 33,
+      "mediaIds": [
+        "map.fmap0i33"
+      ]
+    },
+    {
+      "region": 34,
+      "mediaIds": [
+        "map.fmap0i34"
+      ]
+    },
+    {
+      "region": 35,
+      "mediaIds": [
+        "map.fmap0i35"
+      ]
+    },
+    {
+      "region": 36,
+      "mediaIds": [
+        "map.fmap0i36"
+      ]
+    },
+    {
+      "region": 37,
+      "mediaIds": [
+        "map.fmap0i37"
+      ]
+    },
+    {
+      "region": 38,
+      "mediaIds": [
+        "map.fmap0i38"
+      ]
+    },
+    {
+      "region": 39,
+      "mediaIds": [
+        "map.fmap0i39"
+      ]
+    },
+    {
+      "region": 40,
+      "mediaIds": [
+        "map.fmap0i40"
+      ]
+    },
+    {
+      "region": 41,
+      "mediaIds": [
+        "map.fmap0i41"
+      ]
+    },
+    {
+      "region": 42,
+      "mediaIds": [
+        "map.fmap0i42"
+      ]
+    },
+    {
+      "region": 43,
+      "mediaIds": [
+        "map.fmap0i43"
+      ]
+    },
+    {
+      "region": 44,
+      "mediaIds": [
+        "map.fmap0i44"
+      ]
+    },
+    {
+      "region": 45,
+      "mediaIds": [
+        "map.fmap0i45"
+      ]
+    },
+    {
+      "region": 46,
+      "mediaIds": [
+        "map.fmap0i46"
+      ]
+    },
+    {
+      "region": 47,
+      "mediaIds": [
+        "map.fmap0i47"
+      ]
+    },
+    {
+      "region": 48,
+      "mediaIds": [
+        "map.fmap0i48"
+      ]
+    },
+    {
+      "region": 49,
+      "mediaIds": [
+        "map.fmap0i49"
+      ]
+    },
+    {
+      "region": 50,
+      "mediaIds": [
+        "map.fmap0i50"
+      ]
+    },
+    {
+      "region": 51,
+      "mediaIds": [
+        "map.fmap0i51"
+      ]
+    },
+    {
+      "region": 52,
+      "mediaIds": [
+        "map.fmap0i52"
+      ]
+    },
+    {
+      "region": 53,
+      "mediaIds": [
+        "map.fmap0i53"
+      ]
+    },
+    {
+      "region": 54,
+      "mediaIds": [
+        "map.fmap0i54"
+      ]
+    },
+    {
+      "region": 55,
+      "mediaIds": [
+        "map.fmap0i55"
+      ]
+    },
+    {
+      "region": 56,
+      "mediaIds": [
+        "map.fmap0i56"
+      ]
+    },
+    {
+      "region": 57,
+      "mediaIds": [
+        "map.fmap0i57"
+      ]
+    },
+    {
+      "region": 58,
+      "mediaIds": [
+        "map.fmap0i58"
+      ]
+    },
+    {
+      "region": 59,
+      "mediaIds": [
+        "map.fmap0i59"
+      ]
+    },
+    {
+      "region": 60,
+      "mediaIds": [
+        "map.fmap0i60"
+      ]
+    },
+    {
+      "region": 61,
+      "mediaIds": [
+        "map.fmap0i61"
       ]
     }
   ],

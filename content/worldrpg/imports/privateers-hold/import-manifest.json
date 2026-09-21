@@ -4,6 +4,16 @@
   "importerVersion": 1,
   "sources": [
     {
+      "sourcePath": "arena2/AMAP00I0.IMG",
+      "contentHash": "d804ffcdb3033e48321db3ddb8b722ed93ab9913afcc60d20e41bd80cfec12e1",
+      "byteLen": 64000
+    },
+    {
+      "sourcePath": "arena2/AMAP01I0.IMG",
+      "contentHash": "3a865bf27744dcc573f2dc60b9962e96260797b969e68f7cd7228ba90532741b",
+      "byteLen": 525
+    },
+    {
       "sourcePath": "arena2/ARCH3D.BSA",
       "contentHash": "a51a9e149168814c4a14dc80bb93d38f153be18dc9754be44bc9c7b25dd46a85",
       "byteLen": 27143532
@@ -47,6 +57,281 @@
       "sourcePath": "arena2/DIE_00I0.IMG",
       "contentHash": "af893c52b2cf9a7b8bcd073fbc6ea1ead04c7d725596d3da490c411fab723b0f",
       "byteLen": 64768
+    },
+    {
+      "sourcePath": "arena2/FMAP0I00.IMG",
+      "contentHash": "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b",
+      "byteLen": 12
+    },
+    {
+      "sourcePath": "arena2/FMAP0I01.IMG",
+      "contentHash": "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b",
+      "byteLen": 12
+    },
+    {
+      "sourcePath": "arena2/FMAP0I05.IMG",
+      "contentHash": "b3422fe92cda4ae63c7e364d944891113801d0018c26189400978341d342d406",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I09.IMG",
+      "contentHash": "1e6888bf89145be4685b825aad5a12cf340cbcb407bce27b571263dc03404339",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I11.IMG",
+      "contentHash": "0b4ba60c28d425292969f18ab031b99c6f680bec42760717a5b957a82558a96e",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I16.IMG",
+      "contentHash": "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b",
+      "byteLen": 12
+    },
+    {
+      "sourcePath": "arena2/FMAP0I17.IMG",
+      "contentHash": "2704fcb361376554df4d8655814283da0ef131b7fb3019e635e8148468d10dc5",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I18.IMG",
+      "contentHash": "d512ed41a9963a8700dc86f105f076a165b73f3f0cad99c0cc6346484dfaa54c",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I19.IMG",
+      "contentHash": "cbd19317b2b7970b738665d14981d8f84322aa82361d5bfdbcee8bfb8468e6c6",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I20.IMG",
+      "contentHash": "c5bb26b5b78b20c60702696fb305fb7cb99a1acec669bf4649b4e589d5c27b35",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I21.IMG",
+      "contentHash": "7ab70f9a7a0fe072918fcd8d90b1a74c92160853f7a08d180b9780aaf2893b1d",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I22.IMG",
+      "contentHash": "10b8603eb5a1fa4cd8c3c36c569d60929d470d3c264c81cb05dbf5bc2a255736",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I23.IMG",
+      "contentHash": "c86099d005e59320c242fb32d920e777eb76c7b3d360de05714ba3d819700a0c",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I26.IMG",
+      "contentHash": "6a8924b9376d0c3de9690979a5bda3788306e4f5c9c89fc662d2af25da67a63e",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I32.IMG",
+      "contentHash": "6a7157b53048b6671b2bd86a16366e7b95892f180647f31c14b4ad1cbf8b5851",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I33.IMG",
+      "contentHash": "9e6d6d384e8a1461a4ef3fc5f93f445bc30f78ea66868c3808a1eb68e175ba6f",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I34.IMG",
+      "contentHash": "4cb7db58b045b1bfe3824ef167f3af12db42131a282e6ebccf4e6f515abdb386",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I35.IMG",
+      "contentHash": "219271497a1a85d76fdab170b31cbbba6279ff18e87c06dacd7c26804fd5e0fc",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I36.IMG",
+      "contentHash": "9a4c82f4dd30234dd32299f1941a7f43ace04cff9160c89434bf62f63f1fb48b",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I37.IMG",
+      "contentHash": "a904eebe95314eabdce5d8e8f8705a01f51a14491e4efdf09c9d8a68c4e7c45c",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I38.IMG",
+      "contentHash": "f5baf338d1caacec344bc839e5d59f50c20dd98d25d919642f6f2f52a4b99cd8",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I39.IMG",
+      "contentHash": "3cd67e8814d97eb89ac610b32367304370e55f447c4cfbb4b0246244e416692a",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I40.IMG",
+      "contentHash": "011945581a80cad22d69f6bf4a72155862d25f4b7b9ee05797eec7c16da2e598",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I41.IMG",
+      "contentHash": "ce697e99efb60f37a8650a9bc8c4dd6731e97d5892d8f414124004dcca06fa7e",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I42.IMG",
+      "contentHash": "f23765aef15ab2951575190378675fdca1e9590bf12cfdddc3c56d7e2cfb0404",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I43.IMG",
+      "contentHash": "de98cf7995d118db2dec8ae77a60cfd71d67bf80d4a4750818b5fbdd66fe29bb",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I44.IMG",
+      "contentHash": "06787d35716669aae2c201e9f2f7dc95a8ca8e9b74b96258aad714c7d700ae58",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I45.IMG",
+      "contentHash": "63f2f0020bd92ddbd3510c14789474861575403b4518c891b024ad0fc19777c1",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I46.IMG",
+      "contentHash": "1c3c09e65523e03c21b2ab334a59866194c4b0a07589908579014b0c8c97aa58",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I47.IMG",
+      "contentHash": "16c67d0771d2b65908aeca2c7ffb685cac744a2d6f860a83200ae0952a8ce27d",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I48.IMG",
+      "contentHash": "b2e4fdc34a5bed4fff16adddf1166b680bbb9c39e58a377947363aa7c9837784",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I49.IMG",
+      "contentHash": "700785376f8079cf8788b500ec14337d5360dec2ddee789894e3b6594b98aac9",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I50.IMG",
+      "contentHash": "2aaee49e7adf1895b6861903fcb08bec21c782998501aa649cd8fd1f8436cd69",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I51.IMG",
+      "contentHash": "bc8a002b1b2638657af47f435450d7befa72ece0a20c6ed6eb215649f138e41a",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I52.IMG",
+      "contentHash": "64e8f3817e7fde78b2a04ae9ac71d80cd26ebcb0e81d225725ef74665396ea21",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I53.IMG",
+      "contentHash": "786894fdfc78b7ab8460db965adc27f7f0f8c8367a53f94c84d63b65162e63f4",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I54.IMG",
+      "contentHash": "fe240de066e16260187ea640acd0d3a5c22f0dbc2cbb8ece8b1b21bfe60c1a97",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I55.IMG",
+      "contentHash": "c1af8b0afe6304bd4a4145943500375965cac6c43908c9346c3ea7946c8c2d4d",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I56.IMG",
+      "contentHash": "23a13a026fbda8f3fe881a14c5cb602c56698a28e98a9b6a4419d682fdb7c7ef",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I57.IMG",
+      "contentHash": "ac81631c6d207191b9c3f62a0f9f42807aab6a66091388a64a4c743145370e1d",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I58.IMG",
+      "contentHash": "94616e8853789a142e55c3ce32845203d381553cd04a1bc6c8a6a2bfaaf20b11",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I59.IMG",
+      "contentHash": "c501642b593da1c4fabbaffe1979c24e548f16e91066543e8a98e3535272093d",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I60.IMG",
+      "contentHash": "1f58d1bba5860ecb8287006ecef7dc068764c18b8ab56640bc747431cbeb1628",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I61.IMG",
+      "contentHash": "c073df952c4a83b045b43b02e3041ba7f6275ac1470aaabbfd2d4e796380948a",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAPAI00.IMG",
+      "contentHash": "916eb4108b3545766c06cceb6692038cd40fd8d9d6fc3198a8840ff11b68ba7f",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAPAI01.IMG",
+      "contentHash": "c791e23843ac57d2bc0750818c6e1d12e75b15c350dd865d6ef855cff5ac5f88",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAPAI16.IMG",
+      "contentHash": "810d1b2c2df31d1db80a9dde1a10ed65dc39e605d408358b18e85c077e45c76a",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAPBI00.IMG",
+      "contentHash": "0cd7003b47d462381aad1328816344bee0fa1776f17ba624685040fc6ae0f053",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAPBI01.IMG",
+      "contentHash": "63f090781dfb7444515a6a8dd761e52c123409a6f6989a556bf17d6b73656d57",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAPBI16.IMG",
+      "contentHash": "bfd5b67b7432996ec740a11dd55d0292a27ffc2a15a46f3116a1a2d96f4ce155",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAPCI01.IMG",
+      "contentHash": "32b5a6357af743262f7d96223b8f5fd9c4eac30cec79c14a3d71b920d9c8e25c",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAPCI16.IMG",
+      "contentHash": "187681b6d4dbee5b30d5b0e9187878d2d1dd01c3b2cf4eadcf9c61f17771c7ba",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAPDI01.IMG",
+      "contentHash": "b1374b7781745206ca302d2791a90555ce89cf46d88dd54b46411acf1d1b1f5f",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAPDI16.IMG",
+      "contentHash": "cc865742b969fa8e4a51e21f57acb9a3b1eb11d9a21a4e98a2da545fce981ae8",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP_PAL.COL",
+      "contentHash": "32aca196dc282d1941b4e6d3d452533d872b0fab1f7f018e5c233f57e2e8dcf4",
+      "byteLen": 776
     },
     {
       "sourcePath": "arena2/FONT0000.FNT",
@@ -137,6 +422,11 @@
       "sourcePath": "arena2/MAIN05I0.IMG",
       "contentHash": "56b28071d389d21c5b5ca2d3df3008d042ba2dbb0744f812eee3e4bcfb45c910",
       "byteLen": 140
+    },
+    {
+      "sourcePath": "arena2/MAP.PAL",
+      "contentHash": "37780ae5d5669957cd13f528b6766d032f307675911a2dfbe33c3ad7d0a65fb5",
+      "byteLen": 768
     },
     {
       "sourcePath": "arena2/MAPS.BSA",
@@ -402,6 +692,76 @@
       "sourcePath": "arena2/TITL00I0.IMG",
       "contentHash": "52119f35c30e9d0f91753aebe1040fb190b7c60970b4392c61846a53e75cb27c",
       "byteLen": 64768
+    },
+    {
+      "sourcePath": "arena2/TMAP00I0.IMG",
+      "contentHash": "741b0c1e00344b962bf1c203ed4d3b0a8efa16e132082ff2f2ea1b94f508aaac",
+      "byteLen": 64000
+    },
+    {
+      "sourcePath": "arena2/TOWN00I0.IMG",
+      "contentHash": "c80ce471fb4f7b2a06b0a063be0e9f92ae9b58b60b535acb162faa1b6c5feeb6",
+      "byteLen": 3212
+    },
+    {
+      "sourcePath": "arena2/TRAV00I0.IMG",
+      "contentHash": "54e5218d0bec832637d452f168f3df082484e33d9fe3c450499c1fc92166c9a0",
+      "byteLen": 64012
+    },
+    {
+      "sourcePath": "arena2/TRAV01I0.IMG",
+      "contentHash": "f242d288f2adbf53ba6f004df9ab4a16e7d2449dc1bc2861940b92ff147bd0dc",
+      "byteLen": 3938
+    },
+    {
+      "sourcePath": "arena2/TRAV01I1.IMG",
+      "contentHash": "b9922dfc31ac7baaa7e06fafa812031d407c988f8fe8a811125da580673dcb22",
+      "byteLen": 3938
+    },
+    {
+      "sourcePath": "arena2/TRAV02I0.IMG",
+      "contentHash": "add9a9d59cac20b11a3bb6c9e7e1bb25f1534f5b1c0b8f488fce86edc3cc8d5c",
+      "byteLen": 64012
+    },
+    {
+      "sourcePath": "arena2/TRAV0I00.IMG",
+      "contentHash": "1a00d8449dea174b4b48ecaefaf6292ce877ef7b672168f4cddb2563116a034a",
+      "byteLen": 64000
+    },
+    {
+      "sourcePath": "arena2/TRAV0I01.IMG",
+      "contentHash": "9ed4084b18cd5ac5066558b5722387e69b4f5943ca2f90005d5434b222b1820b",
+      "byteLen": 64000
+    },
+    {
+      "sourcePath": "arena2/TRAV0I03.IMG",
+      "contentHash": "9615bce0dbad1b832dbd665dec820bc0b031db427331159fb550fdc219431623",
+      "byteLen": 990
+    },
+    {
+      "sourcePath": "arena2/TRAV0I04.IMG",
+      "contentHash": "4413a118cd70b2f1afa83b119857a30ddbe977864499e826d9915b575a79e4f3",
+      "byteLen": 21420
+    },
+    {
+      "sourcePath": "arena2/TRAVAI05.IMG",
+      "contentHash": "c348033cdc21651b4756ec1df70e1f78b776688895b4ef583afd5263bfcaa83e",
+      "byteLen": 452
+    },
+    {
+      "sourcePath": "arena2/TRAVBI05.IMG",
+      "contentHash": "36b3056f445f23bb6406f7f8c972544d3fa6e39b92be9ba28b721560046965a2",
+      "byteLen": 452
+    },
+    {
+      "sourcePath": "arena2/TRAVCI05.IMG",
+      "contentHash": "1a1b308aadb4fd9ed6ec9de18f0db8c60d0a7e62b96e9a1026324545a61286cf",
+      "byteLen": 452
+    },
+    {
+      "sourcePath": "arena2/TRAVDI05.IMG",
+      "contentHash": "1dac86f71aeed0ecc2f470da162ca0b2b6812bcfab216970a8422a6da99f8d73",
+      "byteLen": 452
     },
     {
       "sourcePath": "arena2/WEAPON00.CIF",
@@ -1489,8 +1849,8 @@
     },
     {
       "relativePath": "media/classic/manifest.json",
-      "contentHash": "5b87e6f308b1f3d647ccc2aca594b66e04d1a69e07072456a6010528e804a87f",
-      "byteLen": 1215220,
+      "contentHash": "d7902b2c3d7abcd3a2468cad915356f6afe087b0ffa4675c3c18d62a742d37d2",
+      "byteLen": 1279404,
       "dependsOnPaths": [
         "media/audio/audio-melee-dagger-swing.wav",
         "media/audio/audio-melee-hit-1.wav",
@@ -1519,6 +1879,73 @@
         "media/fonts/font-classic-0002-atlas.png",
         "media/fonts/font-classic-0003-atlas.png",
         "media/fonts/font-classic-0004-atlas.png",
+        "media/maps/map-amap00i0.png",
+        "media/maps/map-amap01i0.png",
+        "media/maps/map-fmap0i05.png",
+        "media/maps/map-fmap0i09.png",
+        "media/maps/map-fmap0i11.png",
+        "media/maps/map-fmap0i17.png",
+        "media/maps/map-fmap0i18.png",
+        "media/maps/map-fmap0i19.png",
+        "media/maps/map-fmap0i20.png",
+        "media/maps/map-fmap0i21.png",
+        "media/maps/map-fmap0i22.png",
+        "media/maps/map-fmap0i23.png",
+        "media/maps/map-fmap0i26.png",
+        "media/maps/map-fmap0i32.png",
+        "media/maps/map-fmap0i33.png",
+        "media/maps/map-fmap0i34.png",
+        "media/maps/map-fmap0i35.png",
+        "media/maps/map-fmap0i36.png",
+        "media/maps/map-fmap0i37.png",
+        "media/maps/map-fmap0i38.png",
+        "media/maps/map-fmap0i39.png",
+        "media/maps/map-fmap0i40.png",
+        "media/maps/map-fmap0i41.png",
+        "media/maps/map-fmap0i42.png",
+        "media/maps/map-fmap0i43.png",
+        "media/maps/map-fmap0i44.png",
+        "media/maps/map-fmap0i45.png",
+        "media/maps/map-fmap0i46.png",
+        "media/maps/map-fmap0i47.png",
+        "media/maps/map-fmap0i48.png",
+        "media/maps/map-fmap0i49.png",
+        "media/maps/map-fmap0i50.png",
+        "media/maps/map-fmap0i51.png",
+        "media/maps/map-fmap0i52.png",
+        "media/maps/map-fmap0i53.png",
+        "media/maps/map-fmap0i54.png",
+        "media/maps/map-fmap0i55.png",
+        "media/maps/map-fmap0i56.png",
+        "media/maps/map-fmap0i57.png",
+        "media/maps/map-fmap0i58.png",
+        "media/maps/map-fmap0i59.png",
+        "media/maps/map-fmap0i60.png",
+        "media/maps/map-fmap0i61.png",
+        "media/maps/map-fmapai00.png",
+        "media/maps/map-fmapai01.png",
+        "media/maps/map-fmapai16.png",
+        "media/maps/map-fmapbi00.png",
+        "media/maps/map-fmapbi01.png",
+        "media/maps/map-fmapbi16.png",
+        "media/maps/map-fmapci01.png",
+        "media/maps/map-fmapci16.png",
+        "media/maps/map-fmapdi01.png",
+        "media/maps/map-fmapdi16.png",
+        "media/maps/map-tmap00i0.png",
+        "media/maps/map-town00i0.png",
+        "media/maps/map-trav00i0.png",
+        "media/maps/map-trav01i0.png",
+        "media/maps/map-trav01i1.png",
+        "media/maps/map-trav02i0.png",
+        "media/maps/map-trav0i00.png",
+        "media/maps/map-trav0i01.png",
+        "media/maps/map-trav0i03.png",
+        "media/maps/map-trav0i04.png",
+        "media/maps/map-travai05.png",
+        "media/maps/map-travbi05.png",
+        "media/maps/map-travci05.png",
+        "media/maps/map-travdi05.png",
         "media/ui/authored/inventory-grid-slot-slate-v1.png",
         "media/ui/authored/inventory-skin-panel-slate-v1.png",
         "media/ui/authored/inventory-titlebar-slate-v1.png",
@@ -2610,6 +3037,408 @@
       "dependsOnPaths": []
     },
     {
+      "relativePath": "media/maps/map-amap00i0.png",
+      "contentHash": "60cd0f2851020b9a820b50e5d263806156246049d8e454528c38ef3a8b4433e3",
+      "byteLen": 13056,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-amap01i0.png",
+      "contentHash": "d31d40a747cbc9c5b38c18323be409cf69b38ca5774d8c24906dc2ca4530f754",
+      "byteLen": 480,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i05.png",
+      "contentHash": "ea119b8c1525615c3314bc5678a4db4f5a5c07b41d72b88c796372f01a051826",
+      "byteLen": 4479,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i09.png",
+      "contentHash": "8c9b3156c62695fedef8431a121fb17d8c309f0e5eb45e902a403aea2dc91660",
+      "byteLen": 5336,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i11.png",
+      "contentHash": "29a9135360e657d6df499ef9532d2658f1c70444f4da30790405b34d463d8ff2",
+      "byteLen": 3537,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i17.png",
+      "contentHash": "3b0449a3f3d99d322af68c48b650792ef00020d118db88640a6ec581c189d5e7",
+      "byteLen": 4426,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i18.png",
+      "contentHash": "dc7663e48cc1a065ad50c19a201f725cdeb641efd99ec5c7737195f05d2fdf44",
+      "byteLen": 3954,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i19.png",
+      "contentHash": "8068ad41532d99ff5c1fdbdc9eb37a2edf71ec2bcf1f207db77471dce0485905",
+      "byteLen": 2590,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i20.png",
+      "contentHash": "ac189c155f398275e34364f8aef517e95db47bb837fcc042ec9f4f2f3337c3c2",
+      "byteLen": 4319,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i21.png",
+      "contentHash": "65f666773e96a4682064ba69ddae932ebe5cc9ca5f32d5543a2c8b929d4aefd8",
+      "byteLen": 3800,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i22.png",
+      "contentHash": "a475762db4d4c2dbee6715142bebeb012826b3d3a84ed1e0cd4e314ea34257cd",
+      "byteLen": 4905,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i23.png",
+      "contentHash": "eca75254b0c6828aa724b7d9df12067646faedc50674aab4d8821331c207632d",
+      "byteLen": 6121,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i26.png",
+      "contentHash": "6eb7a71e986f56ba1944d822ab929859ac73a89446a99b49c307833734405a74",
+      "byteLen": 5985,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i32.png",
+      "contentHash": "b21f43b997087b6919921f81cfcebb068d69555fd826664ab6348d39ef92ab0f",
+      "byteLen": 3927,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i33.png",
+      "contentHash": "33007c6502f76f3b0470fbfe45c01db6b272ecb213df8b1a0ad78fc2924581e8",
+      "byteLen": 5904,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i34.png",
+      "contentHash": "dc6a1ce4f1e2a393301c04fbabea77ba055c9b92f19d93384e9c60957bd5cb07",
+      "byteLen": 5868,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i35.png",
+      "contentHash": "a83b521d1bd7e6d06e922c7e07478f5582a541a5535fd915494a6220f9ccb5fa",
+      "byteLen": 5028,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i36.png",
+      "contentHash": "a62a951f2e68bed00deab1548a4d333fd4e4918564ef69a4d3f20cba56f70a12",
+      "byteLen": 4921,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i37.png",
+      "contentHash": "97bc66345baaf1cba35b114601c3a902f0d2589ff764de055ab1528e196ad05e",
+      "byteLen": 4718,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i38.png",
+      "contentHash": "c58d5916f9018561a2cf714e2e289127e95419f34d62d3d4589583e8ecf01c9b",
+      "byteLen": 4628,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i39.png",
+      "contentHash": "a605de0f2b67464d66791f8011bba028bfcaca64e6304a6f811cf91f9074bc3c",
+      "byteLen": 4282,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i40.png",
+      "contentHash": "bf169be79b993bb72de6bf70294727980168f2bf54d81e24a2c023b5cf1d6e81",
+      "byteLen": 4133,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i41.png",
+      "contentHash": "24d0020b5f3d07e2cd565a5219e6246ab037a96223e289cfecff2358398920ce",
+      "byteLen": 3739,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i42.png",
+      "contentHash": "808b5928b218aa6a21bec76f6f9b63f8e9fd2340d6ffb8122227a8e81140506f",
+      "byteLen": 4256,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i43.png",
+      "contentHash": "45cf7bf73d725209b258603c8b10cb13b23798419ca4c7d7252dbaccdc3740f5",
+      "byteLen": 2952,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i44.png",
+      "contentHash": "fce9cc28f715ec26827ba0e6df03823c924ccc82090d2de379bdd54861bf00bf",
+      "byteLen": 3494,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i45.png",
+      "contentHash": "237630ab9e4601063d24919149bd534a861d201e383868914df1ea9966a2f827",
+      "byteLen": 3549,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i46.png",
+      "contentHash": "4946e1af0301d1c8cbd2caf70f2e30ee23b0249e12e5fa8ab42639d6bc1502e1",
+      "byteLen": 4419,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i47.png",
+      "contentHash": "7531084ca15c91882e9a7d439e48fafcf0c70a6a528e5d6b95fe8ee0b636cee8",
+      "byteLen": 4112,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i48.png",
+      "contentHash": "23b2d7a292bf39a3f765eb82ff90d2e3eccf5a002883e9dcefd750f21370601c",
+      "byteLen": 4471,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i49.png",
+      "contentHash": "83e1e73239f013722ace3919854726da3842eef1bd2f3902ae137937b2c7549f",
+      "byteLen": 4547,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i50.png",
+      "contentHash": "af8c9e7601dafa2b6a7d62c0432f910c2d129efeeb5c91d46677b7da63141bb9",
+      "byteLen": 5299,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i51.png",
+      "contentHash": "058dff9644d2efe3fe8594125a1d8877b26391ce040b4fa70616397c65db1aca",
+      "byteLen": 5251,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i52.png",
+      "contentHash": "ee651ec2a01c634b2bf0e12012cf707b211e576d62e33ecb56d3dbde01640d4c",
+      "byteLen": 5337,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i53.png",
+      "contentHash": "845f44ab8a727d252f8227b316a2d21af2cbb8a2c269f03aec14d3ed69173569",
+      "byteLen": 3088,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i54.png",
+      "contentHash": "f4e8d8af7a20427a85b003f75b8d7846c0796872a52c8c295915d23cabd964e1",
+      "byteLen": 2888,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i55.png",
+      "contentHash": "ae45e0f2a1b82df1b76251712f4abc5ee903d02db5e137dba49756a1938b7a8d",
+      "byteLen": 3948,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i56.png",
+      "contentHash": "f93db0bc759195bce8cbb7933c089b63ca110ad163b5b899c8af71c0ebce0078",
+      "byteLen": 3891,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i57.png",
+      "contentHash": "41b0528190022ee1ceac231f450298833a093c227ec0b7e90f0021b176bc483a",
+      "byteLen": 5348,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i58.png",
+      "contentHash": "ed88158abdb313b5e0c1c82074965b60de8f6887a1b5c0040e64b18e2c5d40b6",
+      "byteLen": 4022,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i59.png",
+      "contentHash": "95559348ec995c126f6df8a8e9843ecad4043edf40d4ba469200b91a1de77563",
+      "byteLen": 3715,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i60.png",
+      "contentHash": "1c9cce7d77d0f27bd5b41a96eac58d060c3d9d53a6a11ae306823cf4155eda19",
+      "byteLen": 4335,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i61.png",
+      "contentHash": "4f92bae1c9296fa925b389bf0c66ebda9faf4e9fa5e3ac033c86d82f4716159b",
+      "byteLen": 1626,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmapai00.png",
+      "contentHash": "239bd4c068b83e8715ca0f77d9087ae324bdecc40f4ecd6803579b74e9438d00",
+      "byteLen": 4483,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmapai01.png",
+      "contentHash": "8daf7cf9a5897286b915c9657845e7ec21c6c3e71436f03c7a6598b1d271f4c6",
+      "byteLen": 5901,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmapai16.png",
+      "contentHash": "ecc5d07955c8561ea36538c294691009d8ee2e10c4f0ce93e398ddbbd63e0509",
+      "byteLen": 6313,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmapbi00.png",
+      "contentHash": "a6891531527ad5729bf170b703b2e45ab5dbf5667dbb6b122125330cf353f937",
+      "byteLen": 3978,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmapbi01.png",
+      "contentHash": "18592b39122683b1a1bc28ed47cb3863672d4824ac805125f4110405bbccfa12",
+      "byteLen": 5301,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmapbi16.png",
+      "contentHash": "e9112c2909e03edf79c03d2c5c088b4ba074a2d4a576a597665e6384f00148d7",
+      "byteLen": 6583,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmapci01.png",
+      "contentHash": "d67a9d7a63638cda57e72a15fb5ce879dfd22951014d5621b1916786c6dbec42",
+      "byteLen": 4373,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmapci16.png",
+      "contentHash": "5f7279513929f89f1aa2677395f7245698bb7d366f87ef302331890f8832be8e",
+      "byteLen": 5850,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmapdi01.png",
+      "contentHash": "8f1084bce2f5f0b6b29bfd64278a8abb144ffe611ab2f289bb84de9e810d372d",
+      "byteLen": 4475,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmapdi16.png",
+      "contentHash": "36f45efe357d1e90435a6ecff9f8386876d89b7fc5883ace1d04df892311627a",
+      "byteLen": 6601,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-tmap00i0.png",
+      "contentHash": "567f2028ff86cb07ed6f5275e58f159bb0ce0be437d4c84582351a1aa330cf60",
+      "byteLen": 42568,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-town00i0.png",
+      "contentHash": "ea3cc45452fb15189937db744ab7c110ec1fb8a76fe5132a392a7f38acb9dad7",
+      "byteLen": 1788,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-trav00i0.png",
+      "contentHash": "22d0aa4efb820cd0dc17444a840c8c5a1403d4badcc3791643d7555849812925",
+      "byteLen": 10828,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-trav01i0.png",
+      "contentHash": "5f70163c3309de6e4255279b5ccb56f70bed85df71bbd8ecdd022f5e556162c7",
+      "byteLen": 2490,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-trav01i1.png",
+      "contentHash": "0b0f0e2591fdcc7f28a6c165366a84d4ac4d67d00511e65a20d2ae220df90b66",
+      "byteLen": 2225,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-trav02i0.png",
+      "contentHash": "fcbb88685f9700f601d1a3f14a971978dec77cbb8df0054a8cbdf6f9caf60948",
+      "byteLen": 5056,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-trav0i00.png",
+      "contentHash": "f6975b2fe0092d0dfce19dd0e8def57a9dc0a7024c3cd144fe8afe25c353cc1c",
+      "byteLen": 42265,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-trav0i01.png",
+      "contentHash": "fa3b2e87d0726b1d459aa638ace12d3ed9dd4d55b97797977579b31308c5f15d",
+      "byteLen": 3235,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-trav0i03.png",
+      "contentHash": "1c0346bd78ae36c2be749af041059695768eac4611d5686b579164acd4248055",
+      "byteLen": 896,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-trav0i04.png",
+      "contentHash": "5b3502678a5fba4c6477377451b4ff60721fb3b02414c7e18c13f6e66853ae3a",
+      "byteLen": 9208,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-travai05.png",
+      "contentHash": "111b735cab7b2eae329a072ec849cde02c11c5223e11d203082dd0c1731d8f4f",
+      "byteLen": 500,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-travbi05.png",
+      "contentHash": "a7c9d8d669ac64e9a2524a6dc25058706afe5b48546c1e7702cdf088180927e0",
+      "byteLen": 483,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-travci05.png",
+      "contentHash": "5557a95676fd6d3250e717ed5544421e2261e6da3bae51e5a26b794bfe75540f",
+      "byteLen": 463,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-travdi05.png",
+      "contentHash": "7b08010c62f7d7980fe8adeec780ebdfd086718857e27309b0406ae64efa8642",
+      "byteLen": 490,
+      "dependsOnPaths": []
+    },
+    {
       "relativePath": "media/ui/authored/inventory-grid-slot-slate-v1.png",
       "contentHash": "fe1d578fe5a8ef7a7fb7b74bdad5fab09458fdb8afe74895cdfe538eb01149d5",
       "byteLen": 103350,
@@ -2965,8 +3794,8 @@
     },
     {
       "relativePath": "normalized.json",
-      "contentHash": "4327c8710108021ddfcedea1b68bad7bc82fea84dc217ea2fe61414824a3f7fb",
-      "byteLen": 7706541,
+      "contentHash": "7abf41e5413b638a3744ad6ce8786d62032211bc46965e8656668976b15f77e9",
+      "byteLen": 7724148,
       "dependsOnPaths": [
         "geometry/index.json",
         "geometry/mesh-41017.json",
