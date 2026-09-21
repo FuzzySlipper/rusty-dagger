@@ -1881,6 +1881,111 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(0, resumedSpatial.StepCalls);
     }
 
+    /// <summary>
+    /// The donor's holiday announcement through the session: restoring onto a kept holiday at a
+    /// settlement announces once on the first playing update, and a dungeon session never announces.
+    /// The donor shows text 8349 + holidayId on entering a city; the session observes the same entry
+    /// on its first tick, the way the donor also announces after loading.
+    /// </summary>
+    [Fact]
+    public void Restoring_onto_a_holiday_at_a_settlement_announces_once()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        // Day 103 of the year is the eighteenth holiday, kept in region 17 alone; Charing is its city.
+        DaggerfallSavePayload saved = CapturedSave(root) with
+        {
+            Calendar = new DaggerfallCalendarSave(405, 3, 12, 12, 0, 0, 0d),
+            Site = new DaggerfallSiteSave(new DaggerfallSiteIdSave(17, 4), null, []),
+        };
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession session = DaggerfallSession.Restore(
+            engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
+
+        Assert.Null(session.HolidayAnnouncement);
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+
+        Assert.NotNull(session.HolidayAnnouncement);
+        Assert.Equal(18, session.HolidayAnnouncement.HolidayId);
+        Assert.Equal(new DaggerfallTextKey(DaggerfallTextKind.Resource, "8367"), session.HolidayAnnouncement.TextKey);
+        string announced = session.Presentation.LastOutcome;
+        Assert.Contains("Day of the Dead", announced, StringComparison.Ordinal);
+        session.Update(new ProductUpdate(OuterUpdate(2), []));
+        Assert.Equal(announced, session.Presentation.LastOutcome);
+        Assert.Equal(18, session.HolidayAnnouncement.HolidayId);
+    }
+
+    /// <summary>
+    /// The clock crossing midnight into a kept holiday announces at a settlement, once, through the
+    /// existing outcome line. The donor's entry-only check cannot observe this; the product's
+    /// continuous clock can, so the announcement follows the date rather than only the border.
+    /// </summary>
+    [Fact]
+    public void Crossing_midnight_into_a_holiday_announces()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        // An hour before midnight on the eve of region 17's eighteenth holiday, at its city.
+        DaggerfallSavePayload saved = CapturedSave(root) with
+        {
+            Calendar = new DaggerfallCalendarSave(405, 3, 11, 23, 0, 0, 0d),
+            Site = new DaggerfallSiteSave(new DaggerfallSiteIdSave(17, 4), null, []),
+        };
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession session = DaggerfallSession.Restore(
+            engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+        Assert.Null(session.HolidayAnnouncement);
+
+        // Two admitted hours cross midnight into the holiday.
+        session.Update(new ProductUpdate(FactsWithDelta(7200d), []));
+        Assert.Equal(18, session.HolidayAnnouncement?.HolidayId);
+        Assert.Contains("Day of the Dead", session.Presentation.LastOutcome, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_dungeon_session_never_announces()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSavePayload saved = CapturedSave(root) with
+        {
+            Calendar = new DaggerfallCalendarSave(405, 3, 12, 12, 0, 0, 0d),
+            Site = new DaggerfallSiteSave(new DaggerfallSiteIdSave(17, 179), null, []),
+        };
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession restored = DaggerfallSession.Restore(
+            engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
+        restored.Update(new ProductUpdate(OuterUpdate(1), []));
+        Assert.Null(restored.HolidayAnnouncement);
+
+        // The fresh bundle session starts in a dungeon on an ordinary day: silent too.
+        using DaggerfallSession fresh = FreshSession();
+        fresh.Update(new ProductUpdate(OuterUpdate(1), []));
+        Assert.Null(fresh.HolidayAnnouncement);
+    }
+
+    private static ProductUpdateFacts FactsWithDelta(double deltaSeconds) =>
+        new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, deltaSeconds);
+
     [Fact]
     public void Current_save_rejects_malformed_bytes_and_missing_content_definitions_before_a_session_is_published()
     {
