@@ -45,10 +45,12 @@ internal static class DaggerfallBaseContent
             DaggerfallNameTablesSet names = ReadNameTables(root, text, diagnostics);
             DaggerfallRumorCatalogSet rumors = ReadRumorCatalog(root, text, diagnostics);
             DaggerfallBiographiesSet biographies = ReadBiographies(root, text, diagnostics);
+            DaggerfallWorldGridsSet grids = ReadWorldGrids(root, diagnostics);
+            DaggerfallBooksSet books = ReadBooks(root, text, diagnostics);
             ValidateReferences(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, hud, diagnostics);
             ValidateCatalog(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, lootCategoryPools, donorErrata, diagnostics);
             diagnostics.ThrowIfAny();
-            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles, names, rumors, biographies);
+            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles, names, rumors, biographies, grids, books);
         }
         catch (JsonException exception)
         {
@@ -1397,6 +1399,240 @@ internal static class DaggerfallBaseContent
         }
 
         return new DaggerfallTextKey(kind, id);
+    }
+
+    /// <summary>
+    /// Reads the published climate and politic grids from the pack alone. Each grid keeps the source
+    /// bytes row by row with the sentinel column tiled, and every cell byte the rows carry must be a
+    /// value the grid names: a byte no interpretation covers would leave a coordinate lookup
+    /// answering from a value nothing accounts for.
+    /// </summary>
+    private static DaggerfallWorldGridsSet ReadWorldGrids(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    {
+        return new DaggerfallWorldGridsSet(ReadClimateGrid(root, diagnostics), ReadPoliticGrid(root, diagnostics));
+    }
+
+    private static DaggerfallClimateGridDefinition ReadClimateGrid(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!root.TryGetProperty("climate", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
+        {
+            diagnostics.Add("Base payload publishes no climate section; climate lookups resolve to nothing until it is republished.");
+            return new DaggerfallClimateGridDefinition(0, 0, [], []);
+        }
+
+        byte[] cells = ReadGridCells(section, "climate", diagnostics);
+        List<DaggerfallClimateValueDefinition> values = [];
+        HashSet<int> seen = [];
+        foreach (JsonElement value in Array(section, "values", diagnostics))
+        {
+            int cell = Integer(value, "value", diagnostics);
+            if (!seen.Add(cell))
+            {
+                diagnostics.Add($"Climate grid names value {cell} twice, so one of them is unreachable.");
+            }
+
+            string name = OptionalText(value, "name");
+            string dispositionName = Text(value, "disposition", diagnostics);
+            if (!TryReadName(dispositionName, out DaggerfallClimateDisposition disposition))
+            {
+                diagnostics.Add($"Climate value {cell} names the disposition '{dispositionName}', which the contract does not declare.");
+                continue;
+            }
+
+            if (disposition == DaggerfallClimateDisposition.Named && name.Length == 0)
+            {
+                diagnostics.Add($"Climate value {cell} is named with no name.");
+            }
+
+            if (disposition == DaggerfallClimateDisposition.Unresolved && name.Length != 0)
+            {
+                diagnostics.Add($"Climate value {cell} is unresolved with the name '{name}'.");
+            }
+
+            values.Add(new DaggerfallClimateValueDefinition(cell, name, disposition));
+        }
+
+        if (values.Count == 0)
+        {
+            diagnostics.Add("The published climate grid names no cell values.");
+        }
+
+        foreach (int carried in cells.Distinct().Order())
+        {
+            if (!seen.Contains(carried))
+            {
+                diagnostics.Add($"Climate grid carries value {carried} no interpretation covers.");
+            }
+        }
+
+        return new DaggerfallClimateGridDefinition(1001, 500, cells, values);
+    }
+
+    private static DaggerfallPoliticGridDefinition ReadPoliticGrid(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!root.TryGetProperty("politic", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
+        {
+            diagnostics.Add("Base payload publishes no politic section; politic lookups resolve to nothing until it is republished.");
+            return new DaggerfallPoliticGridDefinition(0, 0, [], []);
+        }
+
+        byte[] cells = ReadGridCells(section, "politic", diagnostics);
+        List<DaggerfallPoliticValueDefinition> values = [];
+        HashSet<int> seen = [];
+        foreach (JsonElement value in Array(section, "values", diagnostics))
+        {
+            int cell = Integer(value, "value", diagnostics);
+            if (!seen.Add(cell))
+            {
+                diagnostics.Add($"Politic grid names value {cell} twice, so one of them is unreachable.");
+            }
+
+            int region = OptionalInteger(value, "region", diagnostics) ?? -1;
+            string dispositionName = Text(value, "disposition", diagnostics);
+            if (!TryReadName(dispositionName, out DaggerfallPoliticDisposition disposition)
+                || disposition == DaggerfallPoliticDisposition.OutOfBounds)
+            {
+                diagnostics.Add($"Politic value {cell} names the disposition '{dispositionName}', which the contract does not declare.");
+                continue;
+            }
+
+            if (disposition == DaggerfallPoliticDisposition.Region && (region < 0 || region > 61))
+            {
+                diagnostics.Add($"Politic value {cell} names region {region} outside the 62 classic regions.");
+            }
+
+            if (disposition != DaggerfallPoliticDisposition.Region && region != -1)
+            {
+                diagnostics.Add($"Politic value {cell} names no region with index {region}.");
+            }
+
+            values.Add(new DaggerfallPoliticValueDefinition(cell, region, disposition));
+        }
+
+        if (values.Count == 0)
+        {
+            diagnostics.Add("The published politic grid names no cell values.");
+        }
+
+        foreach (int carried in cells.Distinct().Order())
+        {
+            if (!seen.Contains(carried))
+            {
+                diagnostics.Add($"Politic grid carries value {carried} no interpretation covers.");
+            }
+        }
+
+        return new DaggerfallPoliticGridDefinition(1001, 500, cells, values);
+    }
+
+    /// <summary>
+    /// Reads the published book catalog from the pack alone. Every book the catalog claims readable
+    /// resolves its page keys through the text section: a page key with no page would leave a reader
+    /// holding a reference the resolver answers as missing.
+    /// </summary>
+    private static DaggerfallBooksSet ReadBooks(JsonElement root, DaggerfallTextSet text, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!root.TryGetProperty("books", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
+        {
+            diagnostics.Add("Base payload publishes no books section; book messages resolve to nothing until it is republished.");
+            return new DaggerfallBooksSet(new ReadOnlyDictionary<int, DaggerfallBookDefinition>(new Dictionary<int, DaggerfallBookDefinition>()));
+        }
+
+        Dictionary<int, DaggerfallBookDefinition> books = [];
+        HashSet<string> keys = text.Values.Keys.Select(key => key.ToString()).ToHashSet(StringComparer.Ordinal);
+        foreach (JsonElement book in Array(section, "books", diagnostics))
+        {
+            int bookId = Integer(book, "bookId", diagnostics);
+            string fileName = Text(book, "fileName", diagnostics);
+            string title = OptionalText(book, "title") ?? string.Empty;
+            string author = OptionalText(book, "author") ?? string.Empty;
+            bool naughty = book.TryGetProperty("isNaughty", out JsonElement naughtyValue) && naughtyValue.ValueKind == JsonValueKind.True;
+            uint filePrice = book.TryGetProperty("filePrice", out JsonElement priceValue) && priceValue.TryGetUInt32(out uint parsed) ? parsed : 0;
+            int pageCount = Integer(book, "pageCount", diagnostics);
+            List<string> pageKeys = [.. Array(book, "pageKeys", diagnostics).Select(key => key.GetString() ?? string.Empty)];
+            string dispositionName = Text(book, "disposition", diagnostics);
+            if (!TryReadName(dispositionName, out DaggerfallBookDisposition disposition))
+            {
+                diagnostics.Add($"Book {bookId} names the disposition '{dispositionName}', which the contract does not declare.");
+                continue;
+            }
+
+            if (disposition == DaggerfallBookDisposition.Read)
+            {
+                if (pageKeys.Count != pageCount)
+                {
+                    diagnostics.Add($"Book {bookId} publishes {pageKeys.Count} page keys for {pageCount} pages.");
+                }
+
+                foreach (string key in pageKeys)
+                {
+                    if (!keys.Contains(key))
+                    {
+                        diagnostics.Add($"Book {bookId} cites missing text key '{key}'.");
+                    }
+                }
+            }
+            else if (pageKeys.Count != 0)
+            {
+                diagnostics.Add($"Book {bookId} is {dispositionName} with {pageKeys.Count} page keys.");
+            }
+
+            if (!books.TryAdd(bookId, new DaggerfallBookDefinition(bookId, fileName, title, author, naughty, filePrice, pageCount, pageKeys, disposition)))
+            {
+                diagnostics.Add($"Book catalog names book {bookId} twice, so one of them is unreachable.");
+            }
+        }
+
+        if (books.Count == 0)
+        {
+            diagnostics.Add("The published book catalog carries no books.");
+        }
+
+        return new DaggerfallBooksSet(new ReadOnlyDictionary<int, DaggerfallBookDefinition>(books));
+    }
+
+    private static byte[] ReadGridCells(JsonElement section, string what, DaggerfallContentDiagnostics diagnostics)    {
+        List<byte> cells = [];
+        HashSet<int> seenRows = [];
+        foreach (JsonElement row in Array(section, "rows", diagnostics))
+        {
+            int y = Integer(row, "y", diagnostics);
+            if (!seenRows.Add(y))
+            {
+                diagnostics.Add($"{what} grid publishes row {y} twice, so one of them is unreachable.");
+            }
+
+            List<byte> line = [];
+            foreach (JsonElement run in Array(row, "runs", diagnostics))
+            {
+                int count = Integer(run, "count", diagnostics);
+                int value = Integer(run, "value", diagnostics);
+                if (count <= 0 || value is < 0 or > 0xff)
+                {
+                    diagnostics.Add($"{what} grid row {y} carries a run that covers no columns or repeats no byte.");
+                    continue;
+                }
+
+                for (int column = 0; column < count; column++)
+                {
+                    line.Add((byte)value);
+                }
+            }
+
+            if (line.Count != 1001)
+            {
+                diagnostics.Add($"{what} grid row {y} tiles {line.Count} columns for a 1001-column grid.");
+            }
+
+            cells.AddRange(line);
+        }
+
+        if (seenRows.Count != 500)
+        {
+            diagnostics.Add($"{what} grid carries {seenRows.Count} rows for a 500-row grid.");
+        }
+
+        return [.. cells];
     }
 
     /// <summary>

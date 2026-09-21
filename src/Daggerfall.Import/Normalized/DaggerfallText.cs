@@ -517,13 +517,13 @@ public static class DaggerfallTextBuilder
     }
 
     /// <summary>
-    /// Builds the published text with the name, biography and rumor families filled: the text
-    /// resource's own records plus every fragment, line, rumor text, question and answer the
-    /// family sources state. Records order by source path then source ordinal, the same rule the
+    /// Builds the published text with the name, biography, rumor and book families filled: the text
+    /// resource's own records plus every fragment, line, rumor text, question, answer and book page
+    /// the family sources state. Records order by source path then source ordinal, the same rule the
     /// text resource build uses, so each source's values stay grouped; the macro index is derived
-    /// from all of them, so one section answers every family. Only the book family stays pending.
+    /// from all of them, so one section answers every family. No family stays pending.
     /// </summary>
-    public static (DaggerfallText Text, DaggerfallNameTables Names, DaggerfallRumorCatalog Rumors, DaggerfallBiographies Biographies) BuildAll(
+    public static (DaggerfallText Text, DaggerfallNameTables Names, DaggerfallRumorCatalog Rumors, DaggerfallBiographies Biographies, DaggerfallBooks Books) BuildAll(
         byte[] textBytes,
         string textLabel,
         byte[] nameBytes,
@@ -534,6 +534,7 @@ public static class DaggerfallTextBuilder
         string bioLabel,
         IReadOnlyList<(string Text, string Label, int ClassIndex, int BiographyIndex)> questionnaires,
         byte[]? imageBytes,
+        IReadOnlyList<(int BookId, string Label, byte[] Bytes)> books,
         IReadOnlyList<SourceInventoryRow> inventory,
         string language)
     {
@@ -542,6 +543,7 @@ public static class DaggerfallTextBuilder
         ArgumentNullException.ThrowIfNull(rumorBytes);
         ArgumentNullException.ThrowIfNull(bioBytes);
         ArgumentNullException.ThrowIfNull(questionnaires);
+        ArgumentNullException.ThrowIfNull(books);
         ArgumentNullException.ThrowIfNull(inventory);
         ArgumentException.ThrowIfNullOrWhiteSpace(language);
 
@@ -557,26 +559,28 @@ public static class DaggerfallTextBuilder
             DaggerfallRumorCatalogBuilder.Build(rumorBytes, rumorLabel, inventory, language);
         (DaggerfallBiographies biographies, IReadOnlyList<DaggerfallTextRecord> biographyRecords) =
             DaggerfallBiographiesBuilder.Build(bioBytes, bioLabel, questionnaires, resourceIds, imageBytes, inventory, language);
+        (DaggerfallBooks publishedBooks, IReadOnlyList<DaggerfallTextSource> bookSources, IReadOnlyList<DaggerfallTextRecord> bookRecords) =
+            DaggerfallBooksBuilder.Build(books, inventory, language);
 
-        List<DaggerfallTextSource> sources = [.. baseText.Sources, names.Source, rumors.Source, .. biographies.Sources];
-        List<DaggerfallTextRecord> records = [.. baseText.Records, .. nameRecords, .. rumorRecords, .. biographyRecords];
+        List<DaggerfallTextSource> sources = [.. baseText.Sources, names.Source, rumors.Source, .. biographies.Sources, .. bookSources];
+        List<DaggerfallTextRecord> records = [.. baseText.Records, .. nameRecords, .. rumorRecords, .. biographyRecords, .. bookRecords];
         DaggerfallText published = new(
             sources,
-            [new DaggerfallTextPendingKind(DaggerfallTextKind.Book, BookOwnerTask, "Supplied book files carry their own metadata, pages and message mappings; this contract declares the key space they resolve through.")],
+            [],
             [.. records.OrderBy(record => record.Source, StringComparer.Ordinal).ThenBy(record => record.Index)],
             [.. MacroIndex(records)]);
         published.Validate();
-        CheckReferences(names, rumors, biographies, published);
-        return (published, names, rumors, biographies);
+        CheckReferences(names, rumors, biographies, publishedBooks, published);
+        return (published, names, rumors, biographies, publishedBooks);
     }
 
     /// <summary>
     /// Every reference the metadata publishes resolves to a text value the section carries: a name
-    /// key with no fragment, a rumor key with no text, or a biography key with no prose would leave
-    /// a consumer holding a reference the resolver answers as missing.
+    /// key with no fragment, a rumor key with no text, a biography key with no prose, or a book page
+    /// key with no page would leave a consumer holding a reference the resolver answers as missing.
     /// </summary>
     private static void CheckReferences(
-        DaggerfallNameTables names, DaggerfallRumorCatalog rumors, DaggerfallBiographies biographies, DaggerfallText text)
+        DaggerfallNameTables names, DaggerfallRumorCatalog rumors, DaggerfallBiographies biographies, DaggerfallBooks books, DaggerfallText text)
     {
         HashSet<string> keys = text.Records.Select(record => record.Key.ToString()).ToHashSet(StringComparer.Ordinal);
         foreach (DaggerfallNameBank bank in names.Banks)
@@ -636,6 +640,24 @@ public static class DaggerfallTextBuilder
                             throw new InvalidOperationException($"Biography effect '{effect.Text}' claims a resolved link to missing '{effect.MacroTarget}'.");
                         }
                     }
+                }
+            }
+        }
+
+        foreach (DaggerfallBook book in books.Books)
+        {
+            // A book no file is supplied for, or one that does not parse, publishes no pages, so
+            // only a book the build claims readable has to cite values the section carries.
+            if (book.Disposition != DaggerfallBookDisposition.Read)
+            {
+                continue;
+            }
+
+            foreach (string key in book.PageKeys)
+            {
+                if (!keys.Contains(key))
+                {
+                    throw new InvalidOperationException($"Book {book.BookId} cites missing text key '{key}'.");
                 }
             }
         }

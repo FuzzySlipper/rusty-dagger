@@ -49,8 +49,28 @@
       "byteLen": 64768
     },
     {
+      "sourcePath": "arena2/FONT0000.FNT",
+      "contentHash": "88ce9dbef899c783b5a3be1ababa8aeeed93cf8926651ff5572f85e63be15d86",
+      "byteLen": 8644
+    },
+    {
+      "sourcePath": "arena2/FONT0001.FNT",
+      "contentHash": "f5d20e484e8875d994d182e056478be583ab0a5d0abb005f7d374b30bf8cec96",
+      "byteLen": 8644
+    },
+    {
+      "sourcePath": "arena2/FONT0002.FNT",
+      "contentHash": "3769c29579da65c28f77472697c1eb808c61561ca2b2066020355c1b54a22349",
+      "byteLen": 8644
+    },
+    {
       "sourcePath": "arena2/FONT0003.FNT",
       "contentHash": "53d4b92cfcd0d2158d9af2c2d6fa0f97736db571e80b8b2476ceae944673ef54",
+      "byteLen": 8644
+    },
+    {
+      "sourcePath": "arena2/FONT0004.FNT",
+      "contentHash": "c75f65130cf35196477d7cb4b90234f09ac60499e6788b521a144128c4d433e0",
       "byteLen": 8644
     },
     {
@@ -1469,8 +1489,8 @@
     },
     {
       "relativePath": "media/classic/manifest.json",
-      "contentHash": "109eeb26f3699a4b04972c6541c654338080c6702429f0299d2250b49710701f",
-      "byteLen": 486625,
+      "contentHash": "5b87e6f308b1f3d647ccc2aca594b66e04d1a69e07072456a6010528e804a87f",
+      "byteLen": 1215220,
       "dependsOnPaths": [
         "media/audio/audio-melee-dagger-swing.wav",
         "media/audio/audio-melee-hit-1.wav",
@@ -1494,7 +1514,11 @@
         "media/effects/effect-blood-1-atlas.png",
         "media/effects/effect-blood-2-atlas.png",
         "media/effects/effect-sparkle-magic-atlas.png",
+        "media/fonts/font-classic-0000-atlas.png",
+        "media/fonts/font-classic-0001-atlas.png",
+        "media/fonts/font-classic-0002-atlas.png",
         "media/fonts/font-classic-0003-atlas.png",
+        "media/fonts/font-classic-0004-atlas.png",
         "media/ui/authored/inventory-grid-slot-slate-v1.png",
         "media/ui/authored/inventory-skin-panel-slate-v1.png",
         "media/ui/authored/inventory-titlebar-slate-v1.png",
@@ -2556,9 +2580,33 @@
       "dependsOnPaths": []
     },
     {
+      "relativePath": "media/fonts/font-classic-0000-atlas.png",
+      "contentHash": "49af7b4d851f9c11d6a86678505025664fe798a2ff191dcf9ed0d45c8f85d3f2",
+      "byteLen": 2545,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/fonts/font-classic-0001-atlas.png",
+      "contentHash": "e3669c2d60c399b3662c670a1d94a79800b58e3a4e54f9d00abbf3b8db9b6d44",
+      "byteLen": 3628,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/fonts/font-classic-0002-atlas.png",
+      "contentHash": "4311fbf7188c4ae4d354e3a54a0d05a808dc638f464c646dac7afef2117a82cf",
+      "byteLen": 1097,
+      "dependsOnPaths": []
+    },
+    {
       "relativePath": "media/fonts/font-classic-0003-atlas.png",
       "contentHash": "0b4ecb2ac56683ac4eeee614b109d3327328aa1e1ec3914e369eb9845291e581",
       "byteLen": 2376,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/fonts/font-classic-0004-atlas.png",
+      "contentHash": "5b2870d0ebec14e497a045e6cd1e9e6e62053a72280038e1021e0bbf0041a69c",
+      "byteLen": 997,
       "dependsOnPaths": []
     },
     {
@@ -2917,8 +2965,8 @@
     },
     {
       "relativePath": "normalized.json",
-      "contentHash": "683a48588017855a84ba811658920f9627dccc59918a64c61bcc71bdaaaa9899",
-      "byteLen": 7705565,
+      "contentHash": "4327c8710108021ddfcedea1b68bad7bc82fea84dc217ea2fe61414824a3f7fb",
+      "byteLen": 7706541,
       "dependsOnPaths": [
         "geometry/index.json",
         "geometry/mesh-41017.json",

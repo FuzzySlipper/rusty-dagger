@@ -160272,8 +160272,8 @@
       "digest": "88ce9dbef899c783b5a3be1ababa8aeeed93cf8926651ff5572f85e63be15d86",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-024.file.FONT0001.FNT",
@@ -160284,8 +160284,8 @@
       "digest": "f5d20e484e8875d994d182e056478be583ab0a5d0abb005f7d374b30bf8cec96",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-024.file.FONT0002.FNT",
@@ -160296,8 +160296,8 @@
       "digest": "3769c29579da65c28f77472697c1eb808c61561ca2b2066020355c1b54a22349",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-024.file.FONT0003.FNT",
@@ -160320,8 +160320,8 @@
       "digest": "c75f65130cf35196477d7cb4b90234f09ac60499e6788b521a144128c4d433e0",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-025.file.ANIM0000.VID",
@@ -163244,9 +163244,9 @@
       "familyId": "CNT-024",
       "documentedDisposition": "current-partial",
       "discovered": 5,
-      "imported": 1,
+      "imported": 5,
       "requiredPending": 0,
-      "unused": 4,
+      "unused": 0,
       "duplicate": 0,
       "excluded": 0,
       "malformed": 0,

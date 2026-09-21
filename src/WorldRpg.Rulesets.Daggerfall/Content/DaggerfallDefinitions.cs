@@ -152,7 +152,9 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     DaggerfallMobileCatalogSet mobiles,
     DaggerfallNameTablesSet names,
     DaggerfallRumorCatalogSet rumors,
-    DaggerfallBiographiesSet biographies)
+    DaggerfallBiographiesSet biographies,
+    DaggerfallWorldGridsSet grids,
+    DaggerfallBooksSet books)
 {
     /// <summary>The normalized reference catalogs a consumer resolves keys through.</summary>
     internal DaggerfallCatalogSet Catalogs { get; } = catalogs;
@@ -186,6 +188,19 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     /// questions, answers and effect references with the text keys and link states they carry.
     /// </summary>
     internal DaggerfallBiographiesSet Biographies { get; } = biographies;
+
+    /// <summary>
+    /// The published climate and politic grids, loaded from the pack alone: each stored cell resolves
+    /// to the climate and the region or ocean the source states for it. Cells name stored columns
+    /// directly; a consumer porting a donor map-file lookup adds one to the world-pixel X.
+    /// </summary>
+    internal DaggerfallWorldGridsSet Grids { get; } = grids;
+
+    /// <summary>
+    /// The published book catalog, loaded from the pack alone: a classic message resolves to the
+    /// book it names with the text keys its pages read through.
+    /// </summary>
+    internal DaggerfallBooksSet Books { get; } = books;
 
     internal DaggerfallVocabulary Vocabulary { get; } = vocabulary;
     internal IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> Actors { get; } = new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors.ToDictionary());

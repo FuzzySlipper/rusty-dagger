@@ -53,12 +53,16 @@ public sealed record Arena2ClassicMediaInputs(
     byte[] Texture234,
     byte[] Texture245,
     byte[] Font0003Fnt,
-    // The three weapon archives outside the original nine-input closure, appended here rather than
-    // in numeric order so the existing positions above stay stable: every parameter is a byte array,
+    // The four font tables outside the original single-font closure, appended here rather than in
+    // numeric order so the existing positions above stay stable: every parameter is a byte array,
     // so an insertion in the middle would misorder silently instead of failing to compile.
     byte[] Weapon00Cif,
     byte[] Weapon03Cif,
-    byte[] Weapon11Cif);
+    byte[] Weapon11Cif,
+    byte[] Font0000Fnt,
+    byte[] Font0001Fnt,
+    byte[] Font0002Fnt,
+    byte[] Font0004Fnt);
 
 /// <summary>Quotas for bounded, deterministic classic-media regeneration.</summary>
 public sealed record Arena2ClassicMediaPublicationOptions(
@@ -460,9 +464,10 @@ public sealed record ClassicInventoryIconManifest(string ItemId, string MediaId,
 /// <summary>One glyph's regenerated atlas cell and source advance metric.</summary>
 public sealed record ClassicFontGlyphMetric(int GlyphIndex, int X, int Y, ushort Advance, ushort SourceDataOffset);
 
-/// <summary>Typed, renderer-free FONT0003 glyph metrics and generated atlas identity.</summary>
+/// <summary>Typed, renderer-free classic glyph metrics and generated atlas identity.</summary>
 public sealed record ClassicFontManifest(
     string MediaId,
+    string Use,
     ushort FixedWidth,
     ushort FixedHeight,
     IReadOnlyList<ClassicFontGlyphMetric> Glyphs)
@@ -470,6 +475,11 @@ public sealed record ClassicFontManifest(
     internal void Validate()
     {
         NormalizedImportDocument.RequireLogicalId(MediaId, nameof(MediaId));
+        if (string.IsNullOrWhiteSpace(Use))
+        {
+            throw new ArgumentException($"Classic font '{MediaId}' states no consumer use.", nameof(Use));
+        }
+
         if (FixedWidth is 0 or > 16 || FixedHeight is 0 or > 16 || Glyphs is null || Glyphs.Count != Arena2FormatConstants.FntGlyphCount)
         {
             throw new ArgumentOutOfRangeException(nameof(Glyphs), "Classic font metrics must describe all 240 16px glyphs.");
@@ -499,6 +509,7 @@ public sealed record Arena2ClassicMediaPublication(
     IReadOnlyList<ClassicUiImageManifest> UiImages,
     IReadOnlyList<ClassicInventoryIconManifest> InventoryIcons,
     ClassicFontManifest Font,
+    IReadOnlyList<ClassicFontManifest> Fonts,
     IReadOnlyList<ClassicAuthoredUiAssetManifest> AuthoredUiAssets)
 {
     /// <summary>The logical source path the numeric sound archive is read under, in this publication and by any catalog of it.</summary>
@@ -578,6 +589,30 @@ public sealed record Arena2ClassicMediaPublication(
         new(ClassicDaggerWeaponAction.StrikeDownRight, 0, ClassicWeaponScreenAlignment.Right, 0F, false, 7),
         new(ClassicDaggerWeaponAction.StrikeUp, 0, ClassicWeaponScreenAlignment.Right, 0F, false, 4),
     ];
+
+    /// <summary>
+    /// Every font table the corpus carries, in file order, with the donor's consumer for each: the
+    /// large, title, small and default faces the interface reads, and the fifth table the donor
+    /// loads but no interface selects, which keeps its binding explicitly as unused.
+    /// </summary>
+    private static readonly FontSource[] FontSources =
+    [
+        new("FONT0000.FNT", "font.classic.0000", "large"),
+        new("FONT0001.FNT", "font.classic.0001", "title"),
+        new("FONT0002.FNT", "font.classic.0002", "small"),
+        new("FONT0003.FNT", "font.classic.0003", "default"),
+        new("FONT0004.FNT", "font.classic.0004", "unused"),
+    ];
+
+    private static byte[] RequireFont(SourceBytes source, string fileName) => fileName switch
+    {
+        "FONT0000.FNT" => source.Font0000Fnt,
+        "FONT0001.FNT" => source.Font0001Fnt,
+        "FONT0002.FNT" => source.Font0002Fnt,
+        "FONT0003.FNT" => source.Font0003Fnt,
+        "FONT0004.FNT" => source.Font0004Fnt,
+        _ => throw new ArgumentOutOfRangeException(nameof(fileName), "The requested source is not an admitted classic font table."),
+    };
 
     /// <summary>
     /// Every weapon archive the corpus carries, in file order. The donor names a consumer for nine of
@@ -764,8 +799,17 @@ public sealed record Arena2ClassicMediaPublication(
         generated.AddRange(BuildAudio(source.DaggerSound, effectiveOptions, out ClassicAudioManifest[] audio));
         generated.AddRange(BuildUi(source, artPalette, resolved, effectiveOptions, out ClassicUiImageManifest[] uiImages));
         generated.AddRange(BuildInventoryIcons(source, artPalette, resolved, effectiveOptions, out ClassicInventoryIconManifest[] inventoryIcons));
-        (GeneratedMediaArtifact fontArtifact, ClassicFontManifest font) = BuildFont(source.Font0003Fnt, resolved.FontMediaId, effectiveOptions);
-        generated.Add(fontArtifact);
+        List<ClassicFontManifest> fonts = [];
+        foreach (FontSource fontSource in FontSources)
+        {
+            (GeneratedMediaArtifact fontArtifact, ClassicFontManifest font) = BuildFont(
+                RequireFont(source, fontSource.FileName), fontSource.FileName, fontSource.MediaId, fontSource.Use, effectiveOptions);
+            generated.Add(fontArtifact);
+            fonts.Add(font);
+        }
+
+        ClassicFontManifest defaultFont = fonts.SingleOrDefault(font => StringComparer.Ordinal.Equals(font.MediaId, resolved.FontMediaId))
+            ?? throw new InvalidOperationException($"The default font '{resolved.FontMediaId}' is not an admitted classic font.");
         generated.AddRange(BuildAuthoredUi(resolved, effectiveOptions, out ClassicAuthoredUiAssetManifest[] authoredUiAssets));
 
         if (generated.Sum(artifact => artifact.Bytes.LongLength) > effectiveOptions.MaximumTotalArtifactBytes)
@@ -792,7 +836,8 @@ public sealed record Arena2ClassicMediaPublication(
             audio,
             uiImages,
             inventoryIcons,
-            font,
+            defaultFont,
+            fonts,
             authoredUiAssets);
     }
 
@@ -981,13 +1026,15 @@ public sealed record Arena2ClassicMediaPublication(
 
     private static (GeneratedMediaArtifact Artifact, ClassicFontManifest Manifest) BuildFont(
         ReadOnlySpan<byte> fontBytes,
+        string sourceName,
         string mediaId,
+        string use,
         Arena2ClassicMediaPublicationOptions options)
     {
-        FntFont font = FntDecoder.Decode(fontBytes, "arena2/FONT0003.FNT");
+        FntFont font = FntDecoder.Decode(fontBytes, sourceName);
         if (font.Glyphs.Count != Arena2FormatConstants.FntGlyphCount)
         {
-            throw new Arena2FormatException("arena2/FONT0003.FNT", 0, $"classic font requires {Arena2FormatConstants.FntGlyphCount} glyphs");
+            throw new Arena2FormatException(sourceName, 0, $"classic font requires {Arena2FormatConstants.FntGlyphCount} glyphs");
         }
 
         const int columns = 16;
@@ -1027,7 +1074,7 @@ public sealed record Arena2ClassicMediaPublication(
         RequireArtifactQuota(png, options, mediaId);
         NormalizedSpriteAtlas atlas = new(width, height, png, ContentDigest.Compute(png), frames);
         GeneratedMediaArtifact artifact = GeneratedMediaArtifact.FromAtlas(mediaId, NormalizedMediaKind.Font, $"media/fonts/{Slug(mediaId)}-atlas.png", atlas);
-        ClassicFontManifest manifest = new(mediaId, font.FixedWidth, font.FixedHeight, glyphs);
+        ClassicFontManifest manifest = new(mediaId, use, font.FixedWidth, font.FixedHeight, glyphs);
         manifest.Validate();
         return (artifact, manifest);
     }
@@ -1364,6 +1411,10 @@ public sealed record Arena2ClassicMediaPublication(
         NormalizedImportDocument.RequireLogicalId(weaponMediaId, nameof(profile.WeaponMediaId));
         string fontMediaId = profile.FontMediaId ?? "font.classic.0003";
         NormalizedImportDocument.RequireLogicalId(fontMediaId, nameof(profile.FontMediaId));
+        if (!FontSources.Any(source => StringComparer.Ordinal.Equals(source.MediaId, fontMediaId)))
+        {
+            throw new ArgumentException($"The default font '{fontMediaId}' is not an admitted classic font.", nameof(profile));
+        }
         Dictionary<string, ClassicMediaPresentation> presentationMap = IndexUnique(
             presentation,
             item => item.MediaId,
@@ -1614,6 +1665,7 @@ public sealed record Arena2ClassicMediaPublication(
         IReadOnlyList<int>? Sequence = null,
         IReadOnlyList<int>? FrameSourceRecords = null);
     private sealed record WeaponMediaSource(string FileName, string ResourceId, IReadOnlyList<WeaponActionSource> Actions);
+    private sealed record FontSource(string FileName, string MediaId, string Use);
     private sealed record EffectSource(ClassicEffect Effect, string MediaId, int SourceRecordOrdinal);
     private sealed record AudioSource(ClassicDaggerAudioClip Clip, string MediaId, int SourceRecordOrdinal);
     private sealed record UiImageSource(ClassicUiImage Image, string MediaId, string FileName, bool IsHeaderless);
@@ -1666,6 +1718,10 @@ public sealed record Arena2ClassicMediaPublication(
             Texture234 = inputs.Texture234;
             Texture245 = inputs.Texture245;
             Font0003Fnt = inputs.Font0003Fnt;
+            Font0000Fnt = inputs.Font0000Fnt;
+            Font0001Fnt = inputs.Font0001Fnt;
+            Font0002Fnt = inputs.Font0002Fnt;
+            Font0004Fnt = inputs.Font0004Fnt;
             Weapon00Cif = inputs.Weapon00Cif;
             Weapon03Cif = inputs.Weapon03Cif;
             Weapon11Cif = inputs.Weapon11Cif;
@@ -1719,6 +1775,10 @@ public sealed record Arena2ClassicMediaPublication(
         public byte[] Texture234 { get; }
         public byte[] Texture245 { get; }
         public byte[] Font0003Fnt { get; }
+        public byte[] Font0000Fnt { get; }
+        public byte[] Font0001Fnt { get; }
+        public byte[] Font0002Fnt { get; }
+        public byte[] Font0004Fnt { get; }
         public IReadOnlyList<LogicalSourceRecord> LogicalSources { get; }
 
         public static SourceBytes From(Arena2ClassicMediaInputs inputs, long maximumSourceBytes)
@@ -1739,6 +1799,7 @@ public sealed record Arena2ClassicMediaPublication(
                 ("GILD00I0.IMG", inputs.Gild00I0Img), ("BANK00I0.IMG", inputs.Bank00I0Img),
                 ("INFO00I0.IMG", inputs.Info00I0Img), ("TEXTURE.207", inputs.Texture207), ("TEXTURE.216", inputs.Texture216),
                 ("TEXTURE.234", inputs.Texture234), ("TEXTURE.245", inputs.Texture245), ("FONT0003.FNT", inputs.Font0003Fnt),
+                ("FONT0000.FNT", inputs.Font0000Fnt), ("FONT0001.FNT", inputs.Font0001Fnt), ("FONT0002.FNT", inputs.Font0002Fnt), ("FONT0004.FNT", inputs.Font0004Fnt),
             ];
             List<LogicalSourceRecord> logicalSources = new(sources.Length);
             foreach ((string fileName, byte[] bytes) in sources)

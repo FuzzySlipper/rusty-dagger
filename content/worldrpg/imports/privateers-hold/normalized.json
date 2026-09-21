@@ -70,8 +70,36 @@
       },
       {
         "schemaVersion": 1,
+        "sourcePath": "arena2/FONT0000.FNT",
+        "contentDigest": "88ce9dbef899c783b5a3be1ababa8aeeed93cf8926651ff5572f85e63be15d86",
+        "byteLength": 8644,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/FONT0001.FNT",
+        "contentDigest": "f5d20e484e8875d994d182e056478be583ab0a5d0abb005f7d374b30bf8cec96",
+        "byteLength": 8644,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/FONT0002.FNT",
+        "contentDigest": "3769c29579da65c28f77472697c1eb808c61561ca2b2066020355c1b54a22349",
+        "byteLength": 8644,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
         "sourcePath": "arena2/FONT0003.FNT",
         "contentDigest": "53d4b92cfcd0d2158d9af2c2d6fa0f97736db571e80b8b2476ceae944673ef54",
+        "byteLength": 8644,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/FONT0004.FNT",
+        "contentDigest": "c75f65130cf35196477d7cb4b90234f09ac60499e6788b521a144128c4d433e0",
         "byteLength": 8644,
         "sourceSchemaVersion": 1
       },

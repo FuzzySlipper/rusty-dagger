@@ -88,6 +88,16 @@ internal static class Program
                 return RunLocationsCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "climate")
+            {
+                return RunClimateCommand(args);
+            }
+
+            if (args.Length != 0 && args[0] == "map-art")
+            {
+                return RunMapArtCommand(args);
+            }
+
             if (args.Length != 0 && args[0] == "geometry")
             {
                 return RunGeometryCommand(args);
@@ -778,6 +788,109 @@ internal static class Program
     }
 
     /// <summary>
+    /// Reads the climate and politic grids from their PAK files and writes them into the base pack
+    /// when asked, so a terrain, weather or social consumer resolves a map pixel by the coordinates
+    /// the source tiles rather than by a policy inferred from a cell value.
+    /// </summary>
+    private static int RunClimateCommand(IReadOnlyList<string> args)
+    {
+        const string Usage = "usage: daggerfall-import-tool climate --arena2 SOURCE_DIR --pack PACK.json --inventory CSV [--update]";
+        bool update = args.Contains("--update", StringComparer.Ordinal);
+        Dictionary<string, string> values = new(StringComparer.Ordinal);
+        for (int index = 1; index < args.Count; index++)
+        {
+            string argument = args[index];
+            if (argument == "--update") continue;
+            if (!argument.StartsWith("--", StringComparison.Ordinal) || index + 1 >= args.Count || !values.TryAdd(argument, args[++index]))
+            {
+                throw new ArgumentException(Usage);
+            }
+        }
+
+        string[] accepted = ["--arena2", "--pack", "--inventory"];
+        if (values.Count != accepted.Length || accepted.Any(key => !values.ContainsKey(key)))
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        string arena2 = values["--arena2"];
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(values["--inventory"]));
+        // The documented inventory decides the logical source identity, so the bytes are read under the
+        // paths the repository documents rather than under whatever directory the caller happened to name.
+        string climateLabel = Path.Combine(arena2, "CLIMATE.PAK");
+        string politicLabel = Path.Combine(arena2, "POLITIC.PAK");
+        DaggerfallClimateGrid climate = DaggerfallWorldGridsBuilder.BuildClimate(File.ReadAllBytes(climateLabel), climateLabel, inventory);
+        DaggerfallPoliticGrid politic = DaggerfallWorldGridsBuilder.BuildPolitic(File.ReadAllBytes(politicLabel), politicLabel, inventory);
+
+        Console.WriteLine($"climate: {climate.Rows.Count} rows, {climate.Values.Count} distinct values ({climate.Values.Count(value => value.Disposition == DaggerfallClimateDisposition.Named)} named)");
+        Console.WriteLine($"politic: {politic.Rows.Count} rows, {politic.Values.Count} distinct values ({politic.Values.Count(value => value.Disposition == DaggerfallPoliticDisposition.Region)} regions, {politic.Values.Count(value => value.Disposition == DaggerfallPoliticDisposition.Ocean)} ocean, {politic.Values.Count(value => value.Disposition == DaggerfallPoliticDisposition.Unresolved)} unresolved)");
+        if (!update)
+        {
+            Console.WriteLine("pack: not written (rerun with --update to publish these grids into it)");
+            return 0;
+        }
+
+        JsonNode pack = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
+        pack["climate"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(climate, PublishedJson.Section));
+        pack["politic"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(politic, PublishedJson.Section));
+        File.WriteAllText(values["--pack"], pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        Console.WriteLine($"pack: climate and politic updated in {values["--pack"]}");
+        return 0;
+    }
+
+    /// <summary>
+    /// Enumerates the map, automap, travel and town artwork against the documented inventory, so a
+    /// region, call-site or palette binding is a stated source fact rather than a filename a
+    /// consumer would have to know. Pixels stay in the corpus; only the bindings publish.
+    /// </summary>
+    private static int RunMapArtCommand(IReadOnlyList<string> args)
+    {
+        bool check = args.Contains("--inventory", StringComparer.Ordinal);
+        if (args.Count != (check ? 5 : 3) || args[1] != "--arena2" || (check && args[3] != "--inventory"))
+        {
+            throw new ArgumentException("usage: daggerfall-import-tool map-art --arena2 SOURCE_DIR [--inventory INVENTORY.csv]");
+        }
+
+        string arena2 = args[2];
+        List<(string Name, string Path, byte[] Bytes)> sources = [];
+        foreach (string pattern in new[] { "FMAP*.IMG", "AMAP*.IMG", "TMAP*.IMG", "TRAV*.IMG", "TOWN*.IMG", "FMAP_PAL.COL", "MAP.PAL" })
+        {
+            foreach (string path in Directory.EnumerateFiles(arena2, pattern).Order(StringComparer.Ordinal))
+            {
+                sources.Add((Path.GetFileName(path), Path.Combine(arena2, Path.GetFileName(path)).Replace(Path.DirectorySeparatorChar, '/'), File.ReadAllBytes(path)));
+            }
+        }
+
+        MapArtInventory inventory = MapArtInventory.Enumerate(sources, Path.GetFileName(Path.TrimEndingDirectorySeparator(arena2)));
+        Console.WriteLine($"map art: {inventory.Records.Count(record => record.Disposition == MapArtDisposition.Decoded)} decoded, {inventory.Records.Count(record => record.Disposition == MapArtDisposition.Unsupported)} unsupported, {inventory.Records.Count(record => record.Disposition == MapArtDisposition.NotSupplied)} not supplied, {inventory.Records.Count(record => record.Disposition is MapArtDisposition.Malformed or MapArtDisposition.Unreadable)} unreadable");
+        foreach (MapArtRecord record in inventory.Records.Where(record => record.Disposition is MapArtDisposition.Malformed or MapArtDisposition.Unreadable))
+        {
+            Console.WriteLine($"  unreadable {record.FileName}: {record.Note}");
+        }
+
+        if (!check)
+        {
+            return 0;
+        }
+
+        IReadOnlyList<SourceInventoryRow> rows = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(args[4]));
+        HashSet<string> documented = [.. rows
+            .Where(row => row.RowType == "file" && (StringComparer.Ordinal.Equals(row.FamilyId, "CNT-022")
+                || StringComparer.Ordinal.Equals(row.Id, "CNT-027.file.MAP.PAL")))
+            .Select(row => Path.GetFileName(row.PathOrPattern))];
+        string[] supplied = [.. inventory.Records.Where(record => record.Disposition != MapArtDisposition.NotSupplied).Select(record => record.FileName)];
+        string[] missing = [.. supplied.Where(path => !documented.Contains(path))];
+        string[] extra = [.. documented.Where(path => !supplied.Contains(path, StringComparer.Ordinal))];
+        if (missing.Length != 0 || extra.Length != 0)
+        {
+            throw new InvalidOperationException($"The documented inventory and the supplied corpus disagree; supplied but undocumented: [{string.Join(", ", missing)}], documented but not supplied: [{string.Join(", ", extra)}].");
+        }
+
+        Console.WriteLine($"inventory: {documented.Count} documented map art files match the corpus, {inventory.Records.Count(record => record.Disposition == MapArtDisposition.NotSupplied)} region slots without screens");
+        return 0;
+    }
+
+    /// <summary>
     /// Reads the classic text resource into the base pack, so a text consumer resolves a value by the
     /// key the source gives it and reads the macros and variants the value carries rather than a
     /// rendered string this tool would have had to choose.
@@ -827,7 +940,7 @@ internal static class Program
             Console.WriteLine("biography backdrop: not supplied, so every questionnaire records an unresolved image link");
         }
 
-        (DaggerfallText text, DaggerfallNameTables names, DaggerfallRumorCatalog rumors, DaggerfallBiographies biographies) = DaggerfallTextBuilder.BuildAll(
+        (DaggerfallText text, DaggerfallNameTables names, DaggerfallRumorCatalog rumors, DaggerfallBiographies biographies, DaggerfallBooks publishedBooks) = DaggerfallTextBuilder.BuildAll(
             File.ReadAllBytes(source),
             source,
             File.ReadAllBytes(Path.Combine(arena2, NameGenReader.FileName)),
@@ -838,6 +951,7 @@ internal static class Program
             Path.Combine(arena2, BioDatReader.FileName),
             questionnaires,
             imageBytes,
+            ReadBooks(Path.Combine(arena2, "books")),
             SourceManifestBuilder.ReadInventory(File.ReadAllBytes(values["--inventory"])),
             values["--language"]);
 
@@ -858,6 +972,7 @@ internal static class Program
         Console.WriteLine($"  names: {names.Banks.Count} banks, {names.Banks.Sum(bank => bank.Sets.Sum(set => set.Parts.Count))} fragments");
         Console.WriteLine($"  rumors: {rumors.Entries.Count} records, {rumors.Entries.Count(entry => entry.TypeDisposition == DaggerfallRumorTypeDisposition.Unknown)} unknown types");
         Console.WriteLine($"  biographies: {biographies.Biographies.Count} questionnaires, {biographies.DefaultLines} default lines");
+        Console.WriteLine($"  books: {publishedBooks.Books.Count(book => book.Disposition == DaggerfallBookDisposition.Read)} supplied, {publishedBooks.Books.Count(book => book.Disposition != DaggerfallBookDisposition.Read)} without files or unreadable");
         if (!update)
         {
             Console.WriteLine("pack: not written (rerun with --update to publish this text into it)");
@@ -869,9 +984,32 @@ internal static class Program
         pack["names"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(names, PublishedJson.Section));
         pack["rumors"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(rumors, PublishedJson.Section));
         pack["biographies"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(biographies, PublishedJson.Section));
+        pack["books"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(publishedBooks, PublishedJson.Section));
         File.WriteAllText(values["--pack"], pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
-        Console.WriteLine($"pack: text, names, rumors and biographies updated in {values["--pack"]}");
+        Console.WriteLine($"pack: text, names, rumors, biographies and books updated in {values["--pack"]}");
         return 0;
+    }
+
+    /// <summary>
+    /// Reads the supplied book files: identity from the file stem, bytes under the logical path the
+    /// repository documents. A stem that carries no identity is refused rather than published under
+    /// a guessed one.
+    /// </summary>
+    private static IReadOnlyList<(int BookId, string Label, byte[] Bytes)> ReadBooks(string directory)
+    {
+        List<(int BookId, string Label, byte[] Bytes)> books = [];
+        foreach (string path in Directory.EnumerateFiles(directory, "BOK*.TXT").Order(StringComparer.Ordinal))
+        {
+            string stem = Path.GetFileNameWithoutExtension(path);
+            if (stem.Length != 8 || !int.TryParse(stem[3..], NumberStyles.Integer, CultureInfo.InvariantCulture, out int bookId))
+            {
+                throw new InvalidOperationException($"'{stem}' does not carry a book identity, so it cannot be enumerated as a book.");
+            }
+
+            books.Add((bookId, Path.Combine(directory, Path.GetFileName(path)).Replace(Path.DirectorySeparatorChar, '/'), File.ReadAllBytes(path)));
+        }
+
+        return books;
     }
 
     /// <summary>
@@ -1975,7 +2113,11 @@ internal static class Program
             Require("FONT0003.FNT").Bytes.ToArray(),
             Require("WEAPON00.CIF").Bytes.ToArray(),
             Require("WEAPON03.CIF").Bytes.ToArray(),
-            Require("WEAPON11.CIF").Bytes.ToArray());
+            Require("WEAPON11.CIF").Bytes.ToArray(),
+            Require("FONT0000.FNT").Bytes.ToArray(),
+            Require("FONT0001.FNT").Bytes.ToArray(),
+            Require("FONT0002.FNT").Bytes.ToArray(),
+            Require("FONT0004.FNT").Bytes.ToArray());
 
         public void LoadDungeon(string fileName)
         {
@@ -2072,6 +2214,10 @@ internal static class Program
         "INVE14I0.IMG",
         "GILD01I0.IMG",
         "FONT0003.FNT",
+        "FONT0000.FNT",
+        "FONT0001.FNT",
+        "FONT0002.FNT",
+        "FONT0004.FNT",
         "TEXTURE.380",
         "TEXTURE.207",
         "TEXTURE.216",
