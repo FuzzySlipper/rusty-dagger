@@ -414,7 +414,8 @@ public sealed class DaggerfallSiteContextTests
         site ?? throw new ArgumentNullException(nameof(site)),
         [],
         new DaggerfallVariablesSave([]),
-        new DaggerfallNpcSave([]));
+        new DaggerfallNpcSave([]),
+        []);
 
     private static DaggerfallStatsSave EmptyStats() => new(StatsComponentCapture.Capture(new StatsComponent()), []);
 

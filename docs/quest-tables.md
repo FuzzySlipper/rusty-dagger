@@ -37,6 +37,13 @@ Disease IDs remain 0–16, and spell IDs remain sparse, with aliases such as
 `HolyWord` and `HolyTouch` sharing 58. These are source identifiers, not new
 effect implementations.
 
+`ActorItemTables` carries item class/subclass parameters (including all 24
+artifacts), faction/person parameters, and foe IDs. Source names are the primary
+keys; numeric aliases remain legal. `Sorceror` and `Sorcerer` both name foe 131,
+and Knight retains ID 145 alongside the source's missing-MONSTER.BSA warning.
+Disabled faction rows, unresolved `?` values and source comments remain visible
+as data; only active rows enter ordinary name lookups.
+
 The classic catalog retains 187 active and 23 disabled rows in source order,
 including five rows whose quest source is missing. It records group, membership,
 rank/level/reputation threshold meaning, adult and one-time flags, source lines

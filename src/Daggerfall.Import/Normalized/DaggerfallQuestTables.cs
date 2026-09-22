@@ -19,7 +19,7 @@ public sealed record DaggerfallQuestTable(ImportPublicationSource Source, IReadO
 
 public sealed record DaggerfallQuestTables(DaggerfallQuestTable Globals, DaggerfallQuestTable StaticMessages,
     DaggerfallQuestPlaces Places, DaggerfallQuestTable Sounds,
-    DaggerfallQuestTable Diseases, DaggerfallQuestTable Spells);
+    DaggerfallQuestTable Diseases, DaggerfallQuestTable Spells, DaggerfallQuestActorItemTables ActorItemTables);
 
 /// <summary>Offline reader for id/name quest tables, not donor save serialization.</summary>
 public static class DaggerfallQuestTableReader

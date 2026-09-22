@@ -22,7 +22,8 @@ internal sealed record DaggerfallSavePayload(
     DaggerfallSiteSave Site,
     DaggerfallActorInventorySave[] ActorInventories,
     DaggerfallVariablesSave Variables,
-    DaggerfallNpcSave Npcs)
+    DaggerfallNpcSave Npcs,
+    DaggerfallActiveEffectSave[] ActiveEffects)
 {
     /// <summary>The dynamic identity kinds owned by the current Daggerfall ruleset.</summary>
     internal static readonly DurableIdentityKind[] PersistedKinds = [DurableIdentityKind.Actor, DurableIdentityKind.Item];
@@ -131,6 +132,14 @@ internal sealed record DaggerfallSavePayload(
         foreach (DaggerfallCombatCooldownSave cooldown in CombatCooldowns)
             if (!combatants.Contains(cooldown.AttackerId))
                 throw new ArgumentException($"Saved attack cooldown refers to missing actor {cooldown.AttackerId}.");
+        ValidateActiveEffects(ActiveEffects, combatants, uniqueItems);
+        ValidateEffectSourceReferences(
+        [
+            (DaggerfallActorIdentity.PlayerEntityId, Player.Stats),
+            .. Actors.Select(actor => (actor.EntityId, actor.Stats)),
+            .. DynamicActors.Select(actor => (actor.EntityId, actor.Stats)),
+        ],
+        ActiveEffects);
         return this;
     }
 
@@ -152,6 +161,7 @@ internal sealed record DaggerfallSavePayload(
         Variables.Validate();
         ArgumentNullException.ThrowIfNull(Npcs);
         Npcs.Validate();
+        ArgumentNullException.ThrowIfNull(ActiveEffects);
         if (Experience < 0 || Level < 1)
             throw new ArgumentOutOfRangeException(nameof(Experience), "Saved progression must be non-negative and begin at level one.");
         if (!double.IsFinite(Calendar.RemainderSeconds) || Calendar.RemainderSeconds < 0d || Calendar.RemainderSeconds >= 1d)
@@ -198,6 +208,11 @@ internal sealed record DaggerfallSavePayload(
             ArgumentNullException.ThrowIfNull(cooldown);
             if (cooldown.AttackerId <= 0 || cooldown.RemainingSteps == 0 || !cooldownActors.Add(cooldown.AttackerId))
                 throw new ArgumentException("Saved attack cooldowns must name distinct actors and positive remaining steps.");
+        }
+        foreach (DaggerfallActiveEffectSave effect in ActiveEffects)
+        {
+            ArgumentNullException.ThrowIfNull(effect);
+            effect.Validate();
         }
         Identities.Validate().RequireKinds(PersistedKinds);
         Site.Validate();
@@ -265,6 +280,36 @@ internal sealed record DaggerfallSavePayload(
         if (stack.Quantity > definition.MaximumQuantity)
             throw new ArgumentException($"Saved {owner} stack '{stack.ItemId}' exceeds its authored maximum quantity.");
     }
+
+    /// <summary>Every effect-backed stat source must have the active instance that owns its eventual cleanup.</summary>
+    private static void ValidateEffectSourceReferences(
+        IEnumerable<(long ActorId, DaggerfallStatsSave Stats)> actors,
+        IEnumerable<DaggerfallActiveEffectSave> activeEffects)
+    {
+        HashSet<(string Instance, long Target)> active = activeEffects
+            .Select(effect => (effect.Instance, effect.TargetId))
+            .ToHashSet();
+        foreach ((long actorId, DaggerfallStatsSave stats) in actors)
+        foreach (DaggerfallStatSourceSave source in stats.Sources)
+        {
+            if (source.Identity.Kind != DaggerfallStatSourceIdentityKind.Effect) continue;
+            if (!active.Contains((source.Identity.InstanceId, actorId)))
+                throw new ArgumentException($"Saved effect source '{source.Identity.InstanceId}' on actor {actorId} has no matching active effect cleanup owner.");
+        }
+    }
+
+    private static void ValidateActiveEffects(IEnumerable<DaggerfallActiveEffectSave> effects, ISet<long> actors, ISet<ulong> uniqueItems)
+    {
+        HashSet<string> instances = new(StringComparer.Ordinal);
+        foreach (DaggerfallActiveEffectSave effect in effects)
+        {
+            effect.Validate();
+            if (!instances.Add(effect.Instance)) throw new ArgumentException($"Saved effect instance '{effect.Instance}' appears more than once.");
+            if (!actors.Contains(effect.TargetId)) throw new ArgumentException($"Saved effect instance '{effect.Instance}' targets missing actor {effect.TargetId}.");
+            if (effect.CasterId is long caster && !actors.Contains(caster)) throw new ArgumentException($"Saved effect instance '{effect.Instance}' names missing caster {caster}.");
+            if (effect.ItemId is ulong item && !uniqueItems.Contains(item)) throw new ArgumentException($"Saved effect instance '{effect.Instance}' names missing item {item}.");
+        }
+    }
 }
 
 /// <summary>One placed actor's full Engine inventory meaning, including unique instances and equipment.</summary>
@@ -303,6 +348,36 @@ internal sealed record DaggerfallStackSave(string ItemId, ulong Quantity);
 internal sealed record DaggerfallUniqueSave(string ItemId, ulong EntityId);
 internal sealed record DaggerfallEquipmentSave(string SlotId, ulong ItemEntityId);
 internal sealed record DaggerfallCombatCooldownSave(long AttackerId, ulong RemainingSteps);
+
+/// <summary>Stable current-state data for one Daggerfall active effect; compiled policy rebuilds its behavior.</summary>
+internal sealed record DaggerfallActiveEffectSave(
+    string Instance,
+    string EffectKey,
+    string Source,
+    long? CasterId,
+    long TargetId,
+    string Settings,
+    string? Element,
+    ulong? ItemId,
+    uint? RemainingRounds,
+    ushort Stacks,
+    JsonElement State)
+{
+    internal void Validate()
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(Instance);
+        ArgumentException.ThrowIfNullOrWhiteSpace(EffectKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(Source);
+        ArgumentException.ThrowIfNullOrWhiteSpace(Settings);
+        if (TargetId <= 0 || CasterId is <= 0 || ItemId == 0 || Stacks == 0)
+            throw new ArgumentOutOfRangeException(nameof(TargetId), "Saved effect identities and stacks must be positive.");
+        if (State.ValueKind == JsonValueKind.Undefined)
+            throw new ArgumentException("Saved effect state must be explicit.", nameof(State));
+    }
+
+    internal DaggerfallEffectRequest ToRequest() => new(
+        Instance, EffectKey, Source, CasterId, TargetId, Settings, Element, ItemId, Stacks, RemainingRounds, State.Clone());
+}
 
 internal sealed record DaggerfallCorpseSave(long ActorId, ulong OriginatingSequence, bool IsRegistered, bool IsInteractable, DaggerfallStackSave[] Stacks, DaggerfallUniqueSave[] UniqueItems)
 {

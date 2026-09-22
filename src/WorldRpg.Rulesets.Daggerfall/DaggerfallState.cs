@@ -16,6 +16,8 @@ internal sealed class DaggerfallState(PlayerControlState playerControl, ActorsSt
     InventoryStore inventoryStore, DaggerfallVariableStore variables, DaggerfallNpcRegistry npcs)
 {
     internal GameplayServices<IProductFact> Kit { get; set; } = null!;
+    /// <summary>Compiled Daggerfall effect policy over the attached per-actor Engine effect components.</summary>
+    internal DaggerfallEffectLifecycle Effects { get; set; } = null!;
     internal PlayerControlState PlayerControl { get; } = playerControl;
     internal ActorsState Actors { get; } = actors;
     internal ProgressionState Progression => Actors.Player.Progression;

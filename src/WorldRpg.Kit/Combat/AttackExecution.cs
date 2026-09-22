@@ -8,6 +8,8 @@ public readonly record struct AttackRequest(long AttackerId, long? TargetId, ulo
 public readonly record struct AttackOutcome(bool Hit, bool Allowed, int Body, int Damage, int Roll, int Chance);
 public readonly record struct PreparedAttack(double CooldownSeconds, AttackOutcome Outcome);
 public readonly record struct PendingAttack(AttackRequest Request, PreparedAttack Attack);
+/// <summary>A resolved delayed attack whose authored impact has been released for delivery.</summary>
+public readonly record struct DeferredAttackImpact(AttackRequest Request, PreparedAttack Attack);
 public readonly record struct AttackCooldown(long AttackerId, ulong RemainingSteps);
 public readonly record struct AttackImpactNotice(long AttackerId, long TargetId, ulong Generation, ulong SimulationStep, bool Expired);
 public enum AttackRefusal { UnknownActor, TargetDefeated, Cooldown }
@@ -30,7 +32,8 @@ public interface IAttackRules<TFact> where TFact : IWorldRpgFact
 }
 
 /// <summary>Single live owner for readiness, pending impacts and cancellation, over attached actor state.</summary>
-public sealed class AttackExecution<TFact>(ActorsState actors, IAttackRules<TFact> rules) where TFact : IWorldRpgFact
+public sealed class AttackExecution<TFact>(ActorsState actors, IAttackRules<TFact> rules,
+    Func<DeferredAttackImpact, FactBuffer<TFact>, bool>? deferImpact = null) where TFact : IWorldRpgFact
 {
     private AttackState State(long actor) => actors.Get(actor).Actor.Get<AttackState>();
     private bool Exists(long actor) => actors.Entities.TryResolve(ActorsState.Identity(actor), out _);
@@ -76,9 +79,14 @@ public sealed class AttackExecution<TFact>(ActorsState actors, IAttackRules<TFac
             state.Pending = null;
             if (notice.Expired || notice.Generation != generation || Defeated(notice.AttackerId)
                 || !Exists(notice.TargetId) || Defeated(notice.TargetId)) continue;
-            rules.Apply(pending.Request, pending.Attack, facts);
+            DeferredAttackImpact impact = new(pending.Request, pending.Attack);
+            if (deferImpact?.Invoke(impact, facts) == true) continue;
+            rules.Apply(impact.Request, impact.Attack, facts);
         }
     }
+    /// <summary>Applies a deferred release once its ruleset-owned delivery has arrived.</summary>
+    public void ApplyDeferredImpact(DeferredAttackImpact impact, FactBuffer<TFact> facts) =>
+        rules.Apply(impact.Request, impact.Attack, facts);
     public IReadOnlyList<AttackCooldown> CaptureCooldowns(ulong? generation, ulong? step) => AllActors()
         .Select(id => (id, state: State(id)))
         .Select(v => new AttackCooldown(v.id, generation == v.state.Generation && step is ulong now && v.state.ReadyAtStep > now
