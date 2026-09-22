@@ -83,4 +83,10 @@ public sealed class DaggerfallUiActionTests
     [InlineData("{\"action\":\"character-level-commit\",\"attribute\":\"strength\"}", false)]
     public void Level_up_commit_action_has_no_untyped_fields(string json, bool accepted) =>
         Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
+
+    [Theory]
+    [InlineData("{\"action\":\"cinematic-skip\"}", true)]
+    [InlineData("{\"action\":\"cinematic-skip\",\"item\":\"unexpected\"}", false)]
+    public void Cinematic_skip_is_a_small_semantic_action(string json, bool accepted) =>
+        Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
 }

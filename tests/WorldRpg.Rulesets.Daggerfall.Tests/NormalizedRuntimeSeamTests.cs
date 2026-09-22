@@ -2750,6 +2750,25 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Enabled_production_opening_refuses_to_begin_when_its_admitted_cinematic_bundle_is_missing()
+    {
+        string root = RepositoryRoot();
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake engineContent = new(releases);
+        PopulateContent(engineContent, inputs);
+        EngineContextFake engine = EngineContextFake.Create(engineContent,
+            SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+        ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
+        CapturingDaggerfallRuleset ruleset = new(videosEnabled: true);
+        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.privateers-hold"));
+        product.Start();
+        ProductModeChange result = product.Begin();
+        Assert.Equal(ProductMode.Title, product.Mode);
+        Assert.Equal(ProductModeChangeOutcome.Refused, result.Outcome);
+    }
+
+    [Fact]
     public void Ordinary_save_slot_actions_roundtrip_selected_state_through_the_product()
     {
         // 8342 acceptance through ordinary controls: real input changes state, the menu save
@@ -5933,7 +5952,9 @@ public sealed class NormalizedRuntimeSeamTests
     /// <summary>Delegates every session to the compiled Daggerfall ruleset while exposing the real session a test created.</summary>
     private sealed class CapturingDaggerfallRuleset : ISaveableGameRuleset
     {
-        private readonly DaggerfallRuleset _inner = new();
+        // Ordinary integration tests exercise gameplay and persistence, not the Engine video runtime.
+        private readonly DaggerfallRuleset _inner;
+        internal CapturingDaggerfallRuleset(bool videosEnabled = false) => _inner = new(videosEnabled);
         internal DaggerfallSession? Session { get; private set; }
         public RulesetId Id => _inner.Id;
 
@@ -6039,6 +6060,7 @@ public sealed class NormalizedRuntimeSeamTests
         private IPerceptionService perception = null!;
         private ICameraViewService camera = null!;
         private IAudioService audio = null!;
+        private IVideoService video = null!;
         private IRandomService random = null!;
         private IUiService ui = null!;
         private IPersistenceService persistence = null!;
@@ -6055,6 +6077,7 @@ public sealed class NormalizedRuntimeSeamTests
             fake.perception = perception ?? PerceptionFake.Create().Service;
             fake.camera = ServiceProxy<ICameraViewService, CameraServiceFake>.Create();
             fake.audio = ServiceProxy<IAudioService, AudioServiceFake>.Create();
+            fake.video = ServiceProxy<IVideoService, VideoServiceFake>.Create();
             fake.random = random ?? ServiceProxy<IRandomService, RandomServiceFake>.Create();
             fake.ui = UiServiceFake.Create(fake);
             fake.persistence = persistence ?? new InMemoryPersistenceService();
@@ -6070,6 +6093,7 @@ public sealed class NormalizedRuntimeSeamTests
             "get_Perception" => perception,
             "get_CameraView" => camera,
             "get_Audio" => audio,
+            "get_Video" => video,
             "get_Random" => random,
             "get_Ui" => ui,
             "get_Persistence" => persistence,
@@ -6101,6 +6125,18 @@ public sealed class NormalizedRuntimeSeamTests
                 nameof(IAudioService.OpenClip) => new AudioClip(new AudioClipHandle(1), static () => { }),
                 nameof(IAudioService.OpenClipFromContent) => new AudioClip(new AudioClipHandle(1), static () => { }),
                 nameof(IAudioService.Emit) => new AudioSignalHandle(1),
+                _ => throw new NotSupportedException(method?.Name),
+            };
+        }
+
+        private class VideoServiceFake : DispatchProxy
+        {
+            private ulong _nextHandle;
+            protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
+            {
+                nameof(IVideoService.PlayFromContent) => new VideoPlaybackHandle(++_nextHandle),
+                nameof(IVideoService.ReadRealization) => new VideoRealizationReadout(0, 0),
+                nameof(IVideoService.Stop) or nameof(IVideoService.Skip) => null,
                 _ => throw new NotSupportedException(method?.Name),
             };
         }

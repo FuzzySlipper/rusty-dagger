@@ -1,5 +1,6 @@
 using System.Reflection;
 using Rusty.Engine;
+using WorldRpg.Kit;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
@@ -22,6 +23,8 @@ public sealed class DaggerfallCinematicPresentationTests
         presentation.Poll();
         Assert.Null(presentation.ActiveSource);
         Assert.Equal(VideoRealizationFactKind.Completed, presentation.LastResult!.Kind);
+        Assert.Equal(VideoRealizationFactKind.Completed, presentation.TakeResult()!.Kind);
+        Assert.Null(presentation.TakeResult());
         Assert.Equal(1, state.Stops);
     }
 
@@ -57,6 +60,44 @@ public sealed class DaggerfallCinematicPresentationTests
         Assert.Null(state.Presentation.ActiveSource);
     }
 
+    [Fact]
+    public void Opening_plays_the_donor_order_and_each_terminal_result_advances_once()
+    {
+        Harness state = new();
+        DaggerfallOpeningCinematics opening = new(state.Presentation, videosEnabled: true);
+        Assert.Equal(EntryScreenStartupResult.Waiting, opening.Start());
+        Assert.Equal(["anim0000.webm"], state.Paths);
+        state.Facts.Add(new(true, VideoRealizationFactKind.Completed, 1, new(1), VideoFailureCode.None));
+        state.Presentation.Poll();
+        opening.Poll();
+        Assert.Equal(["anim0000.webm", "anim0011.webm"], state.Paths);
+        opening.Skip();
+        opening.Poll();
+        Assert.Equal(["anim0000.webm", "anim0011.webm", "dag2.webm"], state.Paths);
+        state.Facts.Add(new(true, VideoRealizationFactKind.Completed, 2, new(3), VideoFailureCode.None));
+        state.Presentation.Poll();
+        opening.Poll();
+        Assert.True(opening.TakeReady());
+        Assert.False(opening.TakeReady());
+        Assert.False(opening.IsActive);
+        Assert.Equal(EntryScreenStartupResult.ReadyForPlay, opening.Start());
+        opening.Poll();
+        Assert.False(opening.TakeReady());
+        Assert.Equal(3, state.Paths.Count);
+    }
+
+    [Fact]
+    public void Opening_requires_admitted_media_unless_videos_are_explicitly_disabled()
+    {
+        DaggerfallOpeningCinematics missing = new(null, videosEnabled: true);
+        Assert.Equal(EntryScreenStartupResult.Failed, missing.Start());
+        Assert.Contains("unavailable", missing.Failure!.Failure, StringComparison.OrdinalIgnoreCase);
+        DaggerfallOpeningCinematics disabled = new(null, videosEnabled: false);
+        Assert.Equal(EntryScreenStartupResult.ReadyForPlay, disabled.Start());
+        Assert.True(disabled.TakeReady());
+        Assert.False(disabled.TakeReady());
+    }
+
     private sealed class Harness
     {
         internal readonly List<string> Paths = [];
@@ -81,16 +122,24 @@ public sealed class DaggerfallCinematicPresentationTests
             {
                 nameof(IContentService.ListBundles) => (ReadOnlyMemory<ContentBundleInfo>)new[] { new ContentBundleInfo(DaggerfallCinematicPresentation.BundleId, 1, 1) },
                 nameof(IContentService.OpenBundle) => OpenBundle((ContentBundleOpenRequest)args![0]!),
-                nameof(IContentService.ReadBundleFiles) => (ReadOnlyMemory<ContentReferenceInfo>)new[] { new ContentReferenceInfo("anim0011.webm", default, 1) },
+                nameof(IContentService.ReadBundleFiles) => (ReadOnlyMemory<ContentReferenceInfo>)new[]
+                {
+                    new ContentReferenceInfo("anim0000.webm", default, 1),
+                    new ContentReferenceInfo("anim0011.webm", default, 1),
+                    new ContentReferenceInfo("dag2.webm", default, 1),
+                },
                 nameof(IContentService.OpenBundleReference) => OpenReference((ContentBundleReferenceRequest)args![0]!),
                 _ => throw new NotSupportedException(method),
             });
             IEngineContext engine = Proxy.Create<IEngineContext>((method, _) => method == "get_Video" ? video : throw new NotSupportedException(method));
-            DaggerfallCinematicDefinition published = new("ANIM0011.VID", DaggerfallCinematicKind.Vid, 1, "source-digest", DaggerfallCinematicBinding.Bound, "new-game opening", null, "")
-            { Artifact = new("worldrpg/media/cinematics/anim0011.webm", "video/webm", 1, "artifact-digest", 320, 200, 35, 5.562, true) };
+            DaggerfallCinematicDefinition Published(string source) => new(source, DaggerfallCinematicKind.Vid, 1, "source-digest", DaggerfallCinematicBinding.Bound, "new-game opening", null, "")
+            { Artifact = new($"worldrpg/media/cinematics/{Path.GetFileNameWithoutExtension(source).ToLowerInvariant()}.webm", "video/webm", 1, "artifact-digest", 320, 200, 35, 5.562, true) };
+            DaggerfallCinematicDefinition published = Published("ANIM0011.VID");
             DaggerfallCinematicSet catalog = new(new Dictionary<string, DaggerfallCinematicDefinition>
             {
+                ["ANIM0000.VID"] = Published("ANIM0000.VID"),
                 [published.FileName] = published,
+                ["DAG2.VID"] = Published("DAG2.VID"),
                 ["AZURA.FLC"] = new("AZURA.FLC", DaggerfallCinematicKind.Flc, 1, "source-digest", DaggerfallCinematicBinding.Bound, "Daedric summons", 16, "T0C00Y00"),
             });
             Presentation = new(engine, new ProductContent(Array.Empty<ProductContentFile>(), content), catalog);

@@ -123,7 +123,7 @@ internal static class DaggerfallUiAction
             // "begin" is the entry screen's own action, which the product answers: the session accepts the
             // shape so a slice carrying it is a known action it does not act on, rather than an
             // unrecognized one it reports over the screen that asked.
-            return fields.Count == 1 && action is "attack" or "inventory" or "character" or "loot" or "begin" or "save-game" or "load-game"
+            return fields.Count == 1 && action is "attack" or "inventory" or "character" or "loot" or "begin" or "cinematic-skip" or "save-game" or "load-game"
                 ? new(action) : null;
         }
         catch (Exception error) when (error is JsonException or InvalidOperationException) { return null; }
