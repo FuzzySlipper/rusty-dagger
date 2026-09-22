@@ -140,6 +140,16 @@ internal static partial class Program
                 return RunTextCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "internal-strings")
+            {
+                return RunInternalStringsCommand(args);
+            }
+
+            if (args.Length != 0 && args[0] == "building-name-inputs")
+            {
+                return RunBuildingNameInputsCommand(args);
+            }
+
             ToolOptions options = ToolOptions.Parse(args);
             ImportPublicationPlan plan = AttachSourceManifest(BuildPlan(options), options);
             switch (options.Command)
@@ -1014,6 +1024,100 @@ internal static partial class Program
         pack["books"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(publishedBooks, PublishedJson.Section));
         File.WriteAllText(values["--pack"], pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
         Console.WriteLine($"pack: text, names, rumors, biographies and books updated in {values["--pack"]}");
+        return 0;
+    }
+
+    /// <summary>
+    /// Publishes Daggerfall Unity's managed localization table into the existing shared text section.
+    /// The table supplements TEXT.RSC; it is deliberately a focused import so it does not need an
+    /// Arena2 directory merely to update one donor-owned CSV source.
+    /// </summary>
+    private static int RunInternalStringsCommand(IReadOnlyList<string> args)
+    {
+        const string Usage = "usage: daggerfall-import-tool internal-strings --source Internal_Strings.csv --label LOGICAL_PATH --pack PACK.json --language LANG [--update]";
+        bool update = args.Contains("--update", StringComparer.Ordinal);
+        Dictionary<string, string> values = new(StringComparer.Ordinal);
+        for (int index = 1; index < args.Count; index++)
+        {
+            string argument = args[index];
+            if (argument == "--update") continue;
+            if (!argument.StartsWith("--", StringComparison.Ordinal) || index + 1 >= args.Count || !values.TryAdd(argument, args[++index]))
+            {
+                throw new ArgumentException(Usage);
+            }
+        }
+
+        string[] accepted = ["--source", "--label", "--pack", "--language"];
+        if (values.Count != accepted.Length || accepted.Any(key => !values.ContainsKey(key)))
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        string existingJson = File.ReadAllText(values["--pack"]);
+        JsonNode pack = JsonNode.Parse(existingJson)!.AsObject();
+        DaggerfallText existing = JsonSerializer.Deserialize<DaggerfallText>(
+            pack["text"]?.ToJsonString() ?? throw new InvalidOperationException("The target pack carries no text section to extend."),
+            PublishedJson.SectionRead) ?? throw new InvalidOperationException("The target pack's text section could not be read.");
+        DaggerfallText merged = DaggerfallInternalStringsBuilder.Merge(
+            existing,
+            File.ReadAllBytes(values["--source"]),
+            values["--label"],
+            values["--language"]);
+        Console.WriteLine($"internal strings: {merged.Records.Count(record => record.Key.Kind == DaggerfallTextKind.Internal)} records from {values["--label"]}");
+        if (!update)
+        {
+            Console.WriteLine("pack: not written (rerun with --update to publish internal strings into it)");
+            return 0;
+        }
+
+        string updated = TopLevelJsonSectionRewriter.ReplaceOrAppend(existingJson, new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["text"] = JsonSerializer.Serialize(merged, PublishedJson.Section),
+        });
+        File.WriteAllText(values["--pack"], updated);
+        Console.WriteLine($"pack: internal strings updated in {values["--pack"]}");
+        return 0;
+    }
+
+    /// <summary>Publishes the donor MapsFile regionRaces table used by classic %ef building-name expansion.</summary>
+    private static int RunBuildingNameInputsCommand(IReadOnlyList<string> args)
+    {
+        const string Usage = "usage: daggerfall-import-tool building-name-inputs --maps-file MapsFile.cs --label LOGICAL_PATH --pack PACK.json [--update]";
+        bool update = args.Contains("--update", StringComparer.Ordinal);
+        Dictionary<string, string> values = new(StringComparer.Ordinal);
+        for (int index = 1; index < args.Count; index++)
+        {
+            string argument = args[index];
+            if (argument == "--update") continue;
+            if (!argument.StartsWith("--", StringComparison.Ordinal) || index + 1 >= args.Count || !values.TryAdd(argument, args[++index]))
+            {
+                throw new ArgumentException(Usage);
+            }
+        }
+
+        string[] accepted = ["--maps-file", "--label", "--pack"];
+        if (values.Count != accepted.Length || accepted.Any(key => !values.ContainsKey(key)))
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        DaggerfallBuildingNameInputs inputs = DaggerfallBuildingNameInputsBuilder.Build(
+            File.ReadAllBytes(values["--maps-file"]),
+            values["--label"]);
+        Console.WriteLine($"building-name inputs: {inputs.RegionNameBanks.Count} regions from {inputs.Source.Path}");
+        if (!update)
+        {
+            Console.WriteLine("pack: not written (rerun with --update to publish building-name inputs into it)");
+            return 0;
+        }
+
+        string existing = File.ReadAllText(values["--pack"]);
+        string updated = TopLevelJsonSectionRewriter.ReplaceOrAppend(existing, new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["buildingNames"] = JsonSerializer.Serialize(inputs, PublishedJson.Section),
+        });
+        File.WriteAllText(values["--pack"], updated);
+        Console.WriteLine($"pack: building-name inputs updated in {values["--pack"]}");
         return 0;
     }
 

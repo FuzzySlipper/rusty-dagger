@@ -38,7 +38,7 @@ public static class TextMacroScanner
             }
 
             int end = marker + 1;
-            while (end < text.Length && Array.IndexOf(Terminators, text[end]) < 0)
+            while (end < text.Length && !char.IsWhiteSpace(text[end]) && Array.IndexOf(Terminators, text[end]) < 0)
             {
                 end++;
             }

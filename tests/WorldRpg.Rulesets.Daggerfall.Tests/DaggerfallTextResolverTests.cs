@@ -24,12 +24,20 @@ public sealed class DaggerfallTextResolverTests
     public void Covers_every_retained_handled_symbol_in_the_published_macro_inventory()
     {
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(PackPath()));
-        string[] symbols = definitions.Text.Macros.Where(macro => macro.Disposition == DaggerfallTextMacroDisposition.Handled).Select(macro => macro.Symbol).ToArray();
+        // Internal_Strings.csv carries building templates and other donor-managed strings. Their
+        // macros need an actual building/site formula context, so this generic presentation resolver
+        // continues to cover the non-internal text families; BuildingNameService covers %ef/%rt/%cn.
+        HashSet<string> internalSymbols = definitions.Text.Values.Values
+            .Where(value => value.Key.Kind == DaggerfallTextKind.Internal)
+            .SelectMany(value => value.Macros)
+            .ToHashSet(StringComparer.Ordinal);
+        string[] symbols = definitions.Text.Macros.Where(macro => macro.Disposition == DaggerfallTextMacroDisposition.Handled && !internalSymbols.Contains(macro.Symbol)).Select(macro => macro.Symbol).ToArray();
         DaggerfallTextResolver resolver = Resolver(string.Join(' ', symbols));
 
         DaggerfallTextRenderResult rendered = resolver.Resolve(Key, CompleteContext());
 
-        Assert.Equal(141, symbols.Length);
+        Assert.Equal(130, symbols.Length);
+        Assert.Contains(internalSymbols, symbol => symbol == "%ef");
         Assert.True(rendered.IsComplete, string.Join(", ", rendered.Diagnostics.Select(diagnostic => diagnostic.Detail)));
         Assert.DoesNotContain("[missing-context]", rendered.Text, StringComparison.Ordinal);
     }
