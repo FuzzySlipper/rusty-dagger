@@ -9,6 +9,7 @@ using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.Presentation;
+using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
@@ -43,6 +44,14 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private readonly List<AttackImpactNotice> attackImpacts = [];
     private readonly List<SpriteAtlas> atlases = [];
     private readonly List<Material> materials = [];
+    private readonly Dictionary<uint, Material> materialsBySlot = [];
+    private readonly Dictionary<DaggerfallRdbDoorId, Appearance> doorVisuals = [];
+    private readonly Dictionary<DaggerfallRdbDoorId, ulong> doorVisualEntityIds = [];
+    // Door source identities are not Engine entity IDs or durable actor IDs.  Keep their render
+    // identities in this product-only visual range, below effect/viewmodel identities and above
+    // every authored or dynamically allocated gameplay identity.
+    private ulong nextDoorVisualEntityId = (1UL << 52) - 1;
+    private readonly DaggerfallDoorRuntime? doors;
     // Engine resources are owning objects: a render resource opened here is released here, because the
     // materials, atlases and sprites that name it hold non-owning references.
     private readonly List<RenderResource> ownedResources = [];
@@ -52,11 +61,12 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private readonly AuthoredWorldAppearance worldAppearance;
     private bool disposed;
 
-    internal PrivateersHoldAppearance(IContentService content, IGraphicsService appearance, PrivateersHoldInputs inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null)
+    internal PrivateersHoldAppearance(IContentService content, IGraphicsService appearance, PrivateersHoldInputs inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallDoorRuntime? doors = null)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(appearance);
         ArgumentNullException.ThrowIfNull(inputs);
+        this.doors = doors;
         this.appearance = appearance;
         this.content = content;
         this.audio = audio;
@@ -74,9 +84,24 @@ internal sealed class PrivateersHoldAppearance : IDisposable
             {
                 RenderResourceInfo texture = appearance.OpenResource(new RenderResourceRequest(material.TexturePath, TextureFilter.Nearest, TextureWrap.Repeat));
                 ownedResources.Add(texture.Handle);
-                materials.Add(appearance.CreateMaterial(new MaterialRequest(new Color(1F, 1F, 1F, 1F), texture.Handle, 1F, new Color(1F, 1F, 1F, 1F), Vector3.Zero, 0F, false)));
+                Material created = appearance.CreateMaterial(new MaterialRequest(new Color(1F, 1F, 1F, 1F), texture.Handle, 1F, new Color(1F, 1F, 1F, 1F), Vector3.Zero, 0F, false));
+                materials.Add(created);
+                materialsBySlot.Add(material.Slot, created);
             }
             appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(world, inputs.Materials.Select((material, index) => new MeshMaterialBinding(material.Slot, materials[index])).ToArray()));
+            if (inputs.Doors.Count != 0 && doors is null) throw new ArgumentException("Door visuals require the selected door runtime.", nameof(doors));
+            foreach (DaggerfallRdbDoorDefinition door in inputs.Doors)
+            {
+                DaggerfallDoorVisual visual = door.Visual ?? throw new InvalidOperationException($"Selected RDB door '{door.Id}' has no normalized visual.");
+                Appearance created = appearance.CreateStaticMeshFromContent(new StaticMeshContentAppearanceRequest(visual.Path, worldAppearance.Tint));
+                appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, visual.Materials
+                    .Select(binding => materialsBySlot.TryGetValue(binding.WorldMaterialSlot, out Material? material)
+                        ? new MeshMaterialBinding(binding.MeshSlot, material)
+                        : throw new InvalidOperationException($"Door '{door.Id}' refers to missing world material slot {binding.WorldMaterialSlot}."))
+                    .ToArray()));
+                doorVisuals.Add(door.Id, created);
+                doorVisualEntityIds.Add(door.Id, nextDoorVisualEntityId--);
+            }
             foreach ((long entityId, NormalizedActorSprite sprite) in inputs.ActorSprites.OrderBy(pair => pair.Key))
             {
                 ActorVisual visual = CreateActorVisual(content, entityId, sprite);
@@ -115,6 +140,8 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         if (disposed) return;
         List<AppearanceFact> facts = [];
         if (world is { } staticWorld) facts.Add(new AppearanceFact(1, false, 0, worldAppearance.Transform, staticWorld, worldAppearance.Visible, worldAppearance.Layer));
+        if (doors is not null) foreach (DaggerfallDoorView door in doors.All)
+            if (doorVisuals.TryGetValue(door.Id, out Appearance? visual)) facts.Add(new AppearanceFact(doorVisualEntityIds[door.Id], false, 0, door.Pose, visual, true, RenderLayer.Scene));
         foreach (ActorState actor in actors.All)
         {
             if (!this.actors.TryGetValue(actor.DurableId, out ActorVisual? visual)) continue;
@@ -333,6 +360,9 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         nextRetired.Clear(); priorRetired.Clear();
         actors.Clear();
         if (world is { } staticWorld) { world = null; Dispose(staticWorld, ref failures); }
+        foreach (Appearance visual in doorVisuals.Values.Reverse()) Dispose(visual, ref failures);
+        doorVisuals.Clear();
+        doorVisualEntityIds.Clear();
         foreach (SpriteAtlas atlas in atlases.AsEnumerable().Reverse()) Dispose(atlas, ref failures);
         atlases.Clear();
         foreach (Material material in materials.AsEnumerable().Reverse()) Dispose(material, ref failures);

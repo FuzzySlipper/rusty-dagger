@@ -3794,8 +3794,8 @@
     },
     {
       "relativePath": "normalized.json",
-      "contentHash": "7abf41e5413b638a3744ad6ce8786d62032211bc46965e8656668976b15f77e9",
-      "byteLen": 7724148,
+      "contentHash": "5d066bf23865f0927360b4585de52ccff82768efb3aba58d719b576691b68be8",
+      "byteLen": 7752277,
       "dependsOnPaths": [
         "geometry/index.json",
         "geometry/mesh-41017.json",
@@ -3939,6 +3939,64 @@
         "media/dungeon/manifest.json",
         "resources/privateer-s-hold/catalog.json",
         "spatial/privateer-s-hold/collision-navigation.json",
+        "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-0.json",
+        "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-1.json",
+        "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-12.json",
+        "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-13.json",
+        "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-19.json",
+        "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-2.json",
+        "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-20.json",
+        "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-3.json",
+        "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-34.json",
+        "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-45.json",
+        "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-46.json",
+        "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-0.json",
+        "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-11.json",
+        "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-12.json",
+        "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-18.json",
+        "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-2.json",
+        "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-27.json",
+        "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-3.json",
+        "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-35.json",
+        "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-4.json",
+        "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-40.json",
+        "spatial/privateer-s-hold/doors/b0000009-rdb--1-0-0.json",
+        "spatial/privateer-s-hold/doors/b0000009-rdb--1-0-14.json",
+        "spatial/privateer-s-hold/doors/b0000009-rdb--1-0-19.json",
+        "spatial/privateer-s-hold/doors/b0000009-rdb--1-0-3.json",
+        "spatial/privateer-s-hold/doors/b0000009-rdb--1-0-5.json",
+        "spatial/privateer-s-hold/doors/b0000009-rdb--1-0-8.json",
+        "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-0.json",
+        "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-17.json",
+        "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-18.json",
+        "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-2.json",
+        "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-29.json",
+        "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-30.json",
+        "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-37.json",
+        "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-38.json",
+        "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-5.json",
+        "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-9.json",
+        "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-109.json",
+        "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-111.json",
+        "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-113.json",
+        "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-114.json",
+        "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-15.json",
+        "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-150.json",
+        "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-153.json",
+        "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-154.json",
+        "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-195.json",
+        "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-196.json",
+        "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-197.json",
+        "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-199.json",
+        "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-202.json",
+        "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-203.json",
+        "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-30.json",
+        "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-44.json",
+        "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-47.json",
+        "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-48.json",
+        "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-49.json",
+        "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-50.json",
+        "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-52.json",
         "spatial/privateer-s-hold/static-mesh.json"
       ]
     },
@@ -3946,12 +4004,6 @@
       "relativePath": "resources/privateer-s-hold/catalog.json",
       "contentHash": "c53e1551cafa609fb77d30797c70fc477bf9558711d566034ac2dc2b87853da1",
       "byteLen": 115238,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "sources/manifest.json",
-      "contentHash": "308c079c0fd0fda155d76a51575f7aefe1749aa5870f90caf7d4195668394bcb",
-      "byteLen": 6847660,
       "dependsOnPaths": []
     },
     {
@@ -3963,9 +4015,357 @@
       ]
     },
     {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-0.json",
+      "contentHash": "af0e7e34501317becd527b2bf4248f184be7d2936dd2a9c620e39a6d70b082b4",
+      "byteLen": 9785,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-1.json",
+      "contentHash": "41c942851f132665c9a9b8604b00f259239727c6a81e76db2fcde87d853784d2",
+      "byteLen": 9849,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-12.json",
+      "contentHash": "74fd0c0910746d59057927039825fb4f2529559441736d3d13139132e39d951d",
+      "byteLen": 9749,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-13.json",
+      "contentHash": "79ed2392e05f4f9166a531f5cff99a683b690d52fa8ab6c97a4dbfd66b56fa65",
+      "byteLen": 9490,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-19.json",
+      "contentHash": "b28e42ca2cb052b07b001c55b959b872f959af3b4dc232feb2170d5e2bd15a95",
+      "byteLen": 9850,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-2.json",
+      "contentHash": "b91dd4e437c0f7a0c10bbc0291c580034c1306e402a5c3b526cf6a6e119e95fb",
+      "byteLen": 9849,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-20.json",
+      "contentHash": "bee56201275015a9b67250259329b1750503d8b1b795a0ee2ff6676bb3748c4b",
+      "byteLen": 9512,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-3.json",
+      "contentHash": "ea83883cbc17296e1c0c86e82c6187abf4b7c50d666f81911b9be6bd5346fd09",
+      "byteLen": 9511,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-34.json",
+      "contentHash": "a102362958704c66dcfd09cf3f2d308432873cb63e907f88e1db6a2bd6d8a329",
+      "byteLen": 9512,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-45.json",
+      "contentHash": "9618271fcf466752bd807e453592e5f32783e898bae350949d2066d754ca847a",
+      "byteLen": 9850,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-46.json",
+      "contentHash": "2658898efd26e768b6a8f5984393359113e9696a73b0643bad5324998e2e69bd",
+      "byteLen": 9844,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-0.json",
+      "contentHash": "4430a0b7ffee02e7ee6cd40489ef6e14a42b0720a016be9701c55c362d272747",
+      "byteLen": 9845,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-11.json",
+      "contentHash": "59aea22035b06ebfc4895ba6a28de474115243d431d137ea356cbb8da07a0359",
+      "byteLen": 9834,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-12.json",
+      "contentHash": "8cbed7cb1a0109f4d248d5dc6129db5e7dc2af003196e1c7b4ed52e4b2752cde",
+      "byteLen": 9513,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-18.json",
+      "contentHash": "46cb9e70c7c618a6e6a40546b4826176792fddb6a42d0e2494779fd50e1b23fa",
+      "byteLen": 9845,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-2.json",
+      "contentHash": "663ab8793d45dfd4bdfe6643a3eccb14f6c66a13918474423cc04497ae6db731",
+      "byteLen": 9778,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-27.json",
+      "contentHash": "b346ad3084bceb2701a721c4d457f01d814de1bc4b9b69241d1f1f62481df5b5",
+      "byteLen": 9779,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-3.json",
+      "contentHash": "f07f10c673a5783b76697479ca1dc05b77942a4696828d250c7ecdae80e77595",
+      "byteLen": 9845,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-35.json",
+      "contentHash": "44b8691638f9f2470e8b3ff5b07b9bb0be67ecfdf2a1b209934a704c97612891",
+      "byteLen": 9513,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-4.json",
+      "contentHash": "a981070b4f8228a416ff3dd155e182faea53600721d5a1ad9620626adb8b9ca6",
+      "byteLen": 9512,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-40.json",
+      "contentHash": "4d8dc90834cf4f3709e5ab31c3eae202375a476b2dadf8aa021a6b03e0526a6f",
+      "byteLen": 9851,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000009-rdb--1-0-0.json",
+      "contentHash": "2f708e31ce18d8856f1e92b8aec6f4b1446730dc4f851776319ee2a4a5030d76",
+      "byteLen": 9778,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000009-rdb--1-0-14.json",
+      "contentHash": "b5c0dc376b0b2648d0d444157150843ae101b0ebef9dc303b35467272fa06f91",
+      "byteLen": 9851,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000009-rdb--1-0-19.json",
+      "contentHash": "e5f39fbb4572249adae9db7c52f4989883fb098c68a1cefbdf3de2e0eb051cc3",
+      "byteLen": 9851,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000009-rdb--1-0-3.json",
+      "contentHash": "03ab0c10e89e20ad2238e752b0128c3827aee18802939fe0e1dd2e0ad2caf980",
+      "byteLen": 9501,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000009-rdb--1-0-5.json",
+      "contentHash": "8b8bdbcd588d18df0f6f334c8e3d4d95004a0013c71d00c77a755c028741aeb4",
+      "byteLen": 9850,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000009-rdb--1-0-8.json",
+      "contentHash": "9db093fff2f4d8a65b74d050532503d1fc37c24251efc35011371809447721a2",
+      "byteLen": 9778,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-0.json",
+      "contentHash": "9b4413b38e4ce32a8baf1ff05859b9c625e620abac85f6d2a961fbdbb7e24580",
+      "byteLen": 9844,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-17.json",
+      "contentHash": "98d168ab897d342a7090718fafa28a66d64b3d637ae9a78c22c2b27c7d434cfb",
+      "byteLen": 9850,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-18.json",
+      "contentHash": "618a699da07c27197656a89a288d977c91e7d6de061dafe788ea370d06f0ed99",
+      "byteLen": 9759,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-2.json",
+      "contentHash": "255e42e706fd97e8bc3c853049b6e899437cb1678481b7dd4e0e1a48c77448d5",
+      "byteLen": 9783,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-29.json",
+      "contentHash": "44161c8d3a0be5ab054d940848cbbd98fb2d111aafeaf587f62dd7e2668c285a",
+      "byteLen": 9850,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-30.json",
+      "contentHash": "9be98af3d11205c5d806225cb97dafc86bdd9ef5a4fdd8862ae1e449d313e145",
+      "byteLen": 9843,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-37.json",
+      "contentHash": "b5335c0a6d785b6cce8782c8d7a684cc95a53b148b6f0cfe8cc99ea4e9dfea0d",
+      "byteLen": 9832,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-38.json",
+      "contentHash": "673ce6f2a6a8c1553f9438afdf2ea5d9ade1a4a0400c9c25a2de67509b9b3153",
+      "byteLen": 9512,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-5.json",
+      "contentHash": "b37828addb663975f9332f63718a62d8032ca40557f097f7ce54dbe12544ac64",
+      "byteLen": 9832,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-9.json",
+      "contentHash": "38b66037918239af3b7cd7f0f94c5174c78575299371db6071ae70841bac07a6",
+      "byteLen": 9511,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-109.json",
+      "contentHash": "4c1406d2cc8b9dc83d35ff47d10def649c91bdfc773f691679c5c309cb32cb31",
+      "byteLen": 9851,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-111.json",
+      "contentHash": "67e1b33e041628c56d40d13a9986d6c590fcddb1334babeb5e4eba8c41603d32",
+      "byteLen": 9783,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-113.json",
+      "contentHash": "8fb19757061040191327d0944b406f50dc6e21004eca23aa3d61beae0140e769",
+      "byteLen": 9778,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-114.json",
+      "contentHash": "80796fee37c490186941ed3e2b76b3c91a17d62fb17c047060856a0d05a82cab",
+      "byteLen": 9787,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-15.json",
+      "contentHash": "15a184005678b7d5ed666f7f5286b31f5ab876a4a0387e7d44aefec2263883ec",
+      "byteLen": 9446,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-150.json",
+      "contentHash": "3d5d0af71f4ad2880e81f8ec5fc770341d04d2b4125094748c9fbaa23de5603a",
+      "byteLen": 9829,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-153.json",
+      "contentHash": "6fadf9117a58add85e8fa613bdd12a6812106c475ef6173d0b0e8a2e7c898bc2",
+      "byteLen": 9832,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-154.json",
+      "contentHash": "26419befa860950ff8fad3521fe4e1f360b216297f3c395a2e9ad0fe7f6daf85",
+      "byteLen": 9826,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-195.json",
+      "contentHash": "fb6b6f3683dcb2146e222c8b3101f1f11092b568dd87a90b07f8076e6a37c1b7",
+      "byteLen": 9594,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-196.json",
+      "contentHash": "1effb4c3b1e562428cc7aaec9b926f27341a0a4ab5b5e8ecee76ac41790bfd00",
+      "byteLen": 10142,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-197.json",
+      "contentHash": "3c7c7fca24dd6c47d95d6e9dd9dd94488b8d6cf8d55d5e76949867caf2d98d30",
+      "byteLen": 9832,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-199.json",
+      "contentHash": "0920fe2d479d6c785684c5b2384189d4f1022b73a01007d8268f75838df2f578",
+      "byteLen": 10117,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-202.json",
+      "contentHash": "a7ce2c1a1358880ca69a64065e9dddbf329202900739fe8ad0507f3789712d23",
+      "byteLen": 9832,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-203.json",
+      "contentHash": "78470ee73cf012dbcbfddbce956e1a04a756ee511fbf6cca42bdd9408e33ae61",
+      "byteLen": 9782,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-30.json",
+      "contentHash": "557a769642149315901d7f99f6d08aaf8561a188421ece02fc97c8b6f78af041",
+      "byteLen": 9772,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-44.json",
+      "contentHash": "b4c2d4b00b4cb439dc13afc980485ee4cf8bfc81be90f6652ec7592fd9d4ba67",
+      "byteLen": 9803,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-47.json",
+      "contentHash": "cf42d57fd536d2964351cb234be5e26bb1d80d949e48122e552362abd52e0430",
+      "byteLen": 10069,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-48.json",
+      "contentHash": "b94d78a6f48dd92004accb7e5f02fdb5c8cae889c6afdd843c75642924328326",
+      "byteLen": 9945,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-49.json",
+      "contentHash": "0c73a5d6dd60786c24c7fac8ded46cec2d9a9c9757acffd9944ca476ba3c9bd2",
+      "byteLen": 9777,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-50.json",
+      "contentHash": "33bdf18b3407e4e9703873cc378d1ec3b47745fd600e00428a96338d5e067d5f",
+      "byteLen": 9446,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-52.json",
+      "contentHash": "d954a27c3a43894759661ebbc990c0382d9bbe915afd85f37078087af497da2b",
+      "byteLen": 9512,
+      "dependsOnPaths": []
+    },
+    {
       "relativePath": "spatial/privateer-s-hold/static-mesh.json",
-      "contentHash": "59adf556505e03bde3bf6f0abbe7753cb72e0a16638a45f9b466b23587780ff6",
-      "byteLen": 2594304,
+      "contentHash": "ec6da45208b2b790ebd6135faac564b9a8eb4aa0f24a26c95fe690b412e4f9b7",
+      "byteLen": 2434478,
       "dependsOnPaths": []
     }
   ]

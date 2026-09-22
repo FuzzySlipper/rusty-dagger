@@ -15,7 +15,8 @@ public sealed record RdbModelSource(
     string ModelId,
     string Description,
     byte SoundIndex,
-    RdbActionSource? Action);
+    RdbActionSource? Action,
+    uint TriggerFlagStartingLock = 0);
 
 /// <summary>Raw RDB flat source record. Marker and mobile fields retain their source meaning only.</summary>
 public sealed record RdbFlatSource(
@@ -100,6 +101,17 @@ public static class RdbSourceClassification
         ArgumentNullException.ThrowIfNull(model);
         return !StringComparer.Ordinal.Equals(model.ModelId, "72100")
             && model.Description is "DOR" or "DDR" or "NEW" or "CAV";
+    }
+
+    /// <summary>
+    /// Determines whether a model participates in the donor's linked open/close-door action path
+    /// without being an ordinary action door.
+    /// </summary>
+    public static bool HasSpecialDoorAction(RdbModelSource model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        return !HasActionDoorTag(model)
+            && (model.Action?.Flags is 0x12 or 0x14);
     }
 }
 
@@ -310,7 +322,7 @@ public static class RdbDecoder
         int yRotation = reader.ReadInt32();
         int zRotation = reader.ReadInt32();
         ushort modelIndex = reader.ReadUInt16();
-        _ = reader.ReadUInt32();
+        uint triggerFlagStartingLock = reader.ReadUInt32();
         byte soundIndex = reader.ReadByte();
         int actionOffset = reader.ReadInt32();
         if ((uint)modelIndex >= modelIds.Count)
@@ -319,7 +331,7 @@ public static class RdbDecoder
         }
 
         RdbActionSource? action = actionOffset > 0 ? DecodeAction(bytes, source, actionOffset) : null;
-        return new RdbModelSource(x, y, z, xRotation, yRotation, zRotation, modelIndex, modelIds[modelIndex], descriptions[modelIndex], soundIndex, action);
+        return new RdbModelSource(x, y, z, xRotation, yRotation, zRotation, modelIndex, modelIds[modelIndex], descriptions[modelIndex], soundIndex, action, triggerFlagStartingLock);
     }
 
     private static RdbActionSource DecodeAction(ReadOnlySpan<byte> bytes, string source, int offset)

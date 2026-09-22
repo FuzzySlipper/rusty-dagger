@@ -34,11 +34,12 @@ internal sealed class DaggerSessionPersistence
     private readonly DaggerfallWorldTime _time;
     private readonly DaggerfallSiteContext _site;
     private readonly DaggerfallEffectLifecycle _effects;
+    private readonly DaggerfallDoorRuntime _doors;
     internal DaggerSessionPersistence(DaggerfallState state, DaggerfallCorpseLootModule corpses,
         DaggerfallUniqueItemAllocator uniqueItems, FirstPersonCameraSystem camera, DaggerfallWorldTime time, DaggerfallSiteContext site,
-        DaggerfallEffectLifecycle effects)
+        DaggerfallEffectLifecycle effects, DaggerfallDoorRuntime doors)
     {
-        State = state; _corpseLoot = corpses; _uniqueItems = uniqueItems; _camera = camera; _time = time; _site = site; _effects = effects;
+        State = state; _corpseLoot = corpses; _uniqueItems = uniqueItems; _camera = camera; _time = time; _site = site; _effects = effects; _doors = doors;
     }
     internal RulesetSavePayload Capture(ulong? generation, ulong? step, IReadOnlyDictionary<long, DaggerfallActorId> dynamicActors)
     {
@@ -115,6 +116,7 @@ internal sealed class DaggerSessionPersistence
             LevelUp: State.LevelUps.Capture())
         {
             Quests = State.Quests.Capture(),
+            Doors = _doors.Capture(),
         });
     }
 

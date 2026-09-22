@@ -67,6 +67,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private readonly DaggerfallLootPresentation _lootUi;
     private readonly DaggerfallCharacterPresentation _characterUi;
     private readonly PrivateersHoldAppearance _appearance;
+    private readonly DaggerfallDoorRuntime _doors;
 
     private readonly World.DaggerfallWorldTime _time;
     private readonly World.DaggerfallSiteContext _site;
@@ -174,6 +175,10 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             _input = new PlayerInputSystem(tuning.PlayerControl, DaggerfallInput.Controls, DaggerfallInput.Bindings, tuning.ControllerInput);
             _spatial = new SpatialMovementSystem(engine.Spatial, engine.Content, inputs.SpatialArtifact, tuning.Spatial);
             partiallyConstructed.Add(_spatial);
+            // The selected site's normalized RDB doors restore their Engine pose/collider projection
+            // before activation can query them and before the first character step consumes them.
+            _doors = new DaggerfallDoorRuntime(State.Actors.Store, _random, inputs.Doors, saved?.Doors);
+            partiallyConstructed.Add(_doors);
             if (saved is null)
             {
                 foreach (ActorState actor in actors.All.Where(actor => authored[actor.DurableId].GroundOnSpawn))
@@ -257,9 +262,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 compositionIdentity,
                 DaggerfallUiArt.Read(engine.Content, inputs.ClassicPresentation.InventoryIcons.Values));
             partiallyConstructed.Add(_hud);
-            _appearance = new PrivateersHoldAppearance(engine.Content, engine.Graphics, inputs, engine.Audio, tuning.PresentationAudio, _random, audioBundle);
+            _appearance = new PrivateersHoldAppearance(engine.Content, engine.Graphics, inputs, engine.Audio, tuning.PresentationAudio, _random, audioBundle, _doors);
             partiallyConstructed.Add(_appearance);
-            _persistence = new(State, _corpseLoot, _uniqueItems, _camera, _time, _site, State.Effects);
+            _persistence = new(State, _corpseLoot, _uniqueItems, _camera, _time, _site, State.Effects, _doors);
             if (saved is not null) _persistence.Restore(saved);
         }
         catch (Exception constructionFailure)
@@ -274,6 +279,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     internal DaggerfallState State { get; }
     internal PresentationState Presentation { get; }
+    /// <summary>The selected site's one authoritative RDB door owner for activation, spells, and dungeon actions.</summary>
+    internal DaggerfallDoorRuntime Doors => _doors;
 
     /// <summary>Every actor definition by durable identity: authored placements and spawned actors alike.</summary>
     internal IReadOnlyDictionary<long, DaggerfallActorDefinition> DefinitionsByActor => _definitionsByActor;
@@ -797,7 +804,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         _latestSimulationStep = simulationStep;
         State.Kit.AttackExecution.ObserveTimeline(generation, simulationStep);
         _input.Apply(State.PlayerControl, update);
-        _spatial.Step(State.PlayerControl, update, CharacterStepEnvironment.Empty);
+        _doors.Advance(update.DeltaSeconds);
+        _spatial.Step(State.PlayerControl, update, _doors.CharacterEnvironment());
         _camera.Update(State.PlayerControl);
         _enemyBehavior.Update(State.PlayerControl, generation, simulationStep, update.DeltaSeconds, _facts);
         LookReceipt currentLook = _input.ResolveCurrentLook(State.PlayerControl);
@@ -837,7 +845,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     {
         if (_disposed) return;
         _disposed = true;
-        DisposeAll([_hud, _camera, _spatial, _appearance, State.Actors, State.Effects, .. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }]);
+        DisposeAll([_hud, _camera, _spatial, _appearance, State.Actors, _doors, State.Effects, .. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }]);
     }
 
     private static void DisposeAll(IReadOnlyList<IDisposable> values)

@@ -344,14 +344,15 @@ public static class DungeonNormalizer
             }
 
             RdbBlockSource block = RdbDecoder.Decode(blocks.GetPayload(record).Span, blocks.Source);
-            string blockId = $"block/{Slug(reference.SourceName)}/{reference.X}/{reference.Z}";
+            string blockPlacementId = $"{Slug(reference.SourceName)}/{reference.X}/{reference.Z}";
+            string blockId = $"block/{blockPlacementId}";
             AddProvenance(blockId, "rdb-block", blocks.Source, record.Ordinal);
             Arena2ImportPoint origin = Arena2SourceTransform.ToBlockOrigin(reference);
             for (int index = 0; index < block.Lights.Count; index++)
             {
                 RdbLightSource light = block.Lights[index];
                 AddPlacement();
-                string id = $"light/{Slug(reference.SourceName)}/{index}";
+                string id = $"light/{blockPlacementId}/{index}";
                 AddProvenance(id, "rdb-light", blocks.Source, index);
                 NormalizedVector3 position = MeshGeometry.ToRightHanded(Place(light.X, light.Y, light.Z, reference));
                 lights.Add(new(id, position, ToMetres(light.Radius) * LightRangeMultiplier, 1F));
@@ -378,7 +379,7 @@ public static class DungeonNormalizer
                 if (RdbSourceClassification.IsRandomTreasureMarker(flat))
                 {
                     AddPlacement();
-                    string treasurePlacementId = $"treasure/{Slug(reference.SourceName)}/{index}";
+                    string treasurePlacementId = $"treasure/{blockPlacementId}/{index}";
                     string resourceId = $"treasure/dungeon-type-{layout.DungeonType}";
                     treasures.Add(new(treasurePlacementId, resourceId, position));
                     AddProvenance(treasurePlacementId, "rdb-treasure-marker", blocks.Source, index);
@@ -396,7 +397,7 @@ public static class DungeonNormalizer
                     && MobileSourceMetadata.TryGet(new Arena2MobileId(mobileId), out Arena2MobileSource? mobile))
                 {
                     AddPlacement();
-                    string actorPlacementId = $"actor/{Slug(reference.SourceName)}/{index}";
+                    string actorPlacementId = $"actor/{blockPlacementId}/{index}";
                     string resourceId = $"actor/mobile-{mobile.Id.Value}";
                     actors.Add(new(actorPlacementId, resourceId, position));
                     AddProvenance(actorPlacementId, "rdb-mobile-placement", blocks.Source, index);
@@ -411,7 +412,7 @@ public static class DungeonNormalizer
                 AddPlacement();
                 (ushort archiveId, ushort recordId) = RemapTexture(flat.TextureArchive, flat.TextureRecord);
                 TextureInfo texture = ResolveTexture(archiveId, recordId);
-                string id = $"billboard/{Slug(reference.SourceName)}/{index}";
+                string id = $"billboard/{blockPlacementId}/{index}";
                 billboards.Add(new(id, texture.SpriteId, position, new(ToMetres(texture.Width), ToMetres(texture.Height))));
                 AddProvenance(id, "rdb-billboard", blocks.Source, index);
             }
@@ -420,17 +421,22 @@ public static class DungeonNormalizer
             {
                 AddModel();
                 RdbModelSource model = block.Models[index];
-                string modelId = $"model/{Slug(reference.SourceName)}/{index}";
+                string modelId = $"model/{blockPlacementId}/{index}";
                 AddProvenance(modelId, "rdb-model", blocks.Source, index);
-                bool actionDoor = RdbSourceClassification.HasActionDoorTag(model);
+                bool ordinaryActionDoor = RdbSourceClassification.HasActionDoorTag(model);
+                bool specialDoorAction = RdbSourceClassification.HasSpecialDoorAction(model);
+                bool actionDoor = ordinaryActionDoor || specialDoorAction;
                 string? doorId = null;
                 if (actionDoor)
                 {
                     AddPlacement();
-                    doorId = $"door/{Slug(reference.SourceName)}/{index}";
+                    doorId = $"door/{blockPlacementId}/{index}";
                     string doorResourceId = $"door/model-{Slug(model.ModelId)}";
                     Arena2EulerDegrees degrees = Arena2SourceTransform.ToEulerDegrees(model);
-                    doorDrafts.Add(new(doorId, doorResourceId, MeshGeometry.ToRightHanded(Place(model.X, model.Y, model.Z, reference)), new(degrees.X, degrees.Y, degrees.Z)));
+                    doorDrafts.Add(new(doorId, doorResourceId, MeshGeometry.ToRightHanded(Place(model.X, model.Y, model.Z, reference)), new(degrees.X, degrees.Y, degrees.Z),
+                        specialDoorAction ? "special" : "normal",
+                        ordinaryActionDoor ? StartingLockValue(model.TriggerFlagStartingLock, blocks.Source, index) : 0,
+                        model.Action is { } action ? new NormalizedDoorAction(action.Axis, action.Duration, action.Magnitude, action.NextObjectOffset, action.Flags) : null));
                     AddProvenance(doorId, "rdb-action-door", blocks.Source, index);
                 }
 
@@ -535,7 +541,10 @@ public static class DungeonNormalizer
                         ? meshIds.OrderBy(meshId => meshId, StringComparer.Ordinal).ToArray()
                         : [],
                     door.Position,
-                    door.RotationDegrees))
+                    door.RotationDegrees,
+                    Kind: door.Kind,
+                    StartingLockValue: door.StartingLockValue,
+                    Action: door.Action))
                 .ToList();
             List<NormalizedResourceCatalogEntry> resources = ResourceCatalog(resourceCatalogArtifactId, doors);
             NormalizedWorld world = new(
@@ -597,6 +606,15 @@ public static class DungeonNormalizer
         }
 
         private static float ToMetres(int sourceUnits) => sourceUnits * SourceUnitMetres;
+
+        private static int StartingLockValue(uint sourceValue, string source, int modelIndex)
+        {
+            ReadOnlySpan<int> values = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 25, 30, 50, 128, 255];
+            uint selector = sourceValue >> 4;
+            if (selector >= (uint)values.Length)
+                throw new Arena2FormatException(source, modelIndex, $"RDB action-door lock selector {selector} is outside the classic lock table.");
+            return values[(int)selector];
+        }
 
         private List<NormalizedResourceCatalogEntry> ResourceCatalog(string resourceCatalogArtifactId, IReadOnlyList<NormalizedDoorPlacement> doors)
         {
@@ -779,7 +797,7 @@ public static class DungeonNormalizer
 
     private sealed record TextureInfo(ushort Archive, ushort Record, int Width, int Height, string TextureId, string MaterialId, string SpriteId);
 
-    private sealed record DoorDraft(string Id, string DoorResourceId, NormalizedVector3 Position, NormalizedVector3 RotationDegrees);
+    private sealed record DoorDraft(string Id, string DoorResourceId, NormalizedVector3 Position, NormalizedVector3 RotationDegrees, string Kind, int StartingLockValue, NormalizedDoorAction? Action);
 
     private readonly record struct Matrix3(float M11, float M12, float M13, float M21, float M22, float M23, float M31, float M32, float M33)
     {

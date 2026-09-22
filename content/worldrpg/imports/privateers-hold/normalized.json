@@ -1206,8 +1206,472 @@
       "schemaVersion": 1,
       "id": "artifact/dungeon/privateer-s-hold/static-mesh",
       "relativePath": "spatial/privateer-s-hold/static-mesh.json",
-      "contentDigest": "59adf556505e03bde3bf6f0abbe7753cb72e0a16638a45f9b466b23587780ff6",
-      "byteLength": 2594304,
+      "contentDigest": "ec6da45208b2b790ebd6135faac564b9a8eb4aa0f24a26c95fe690b412e4f9b7",
+      "byteLength": 2434478,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000003-rdb-1-0-0",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-0.json",
+      "contentDigest": "af0e7e34501317becd527b2bf4248f184be7d2936dd2a9c620e39a6d70b082b4",
+      "byteLength": 9785,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000003-rdb-1-0-1",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-1.json",
+      "contentDigest": "41c942851f132665c9a9b8604b00f259239727c6a81e76db2fcde87d853784d2",
+      "byteLength": 9849,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000003-rdb-1-0-12",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-12.json",
+      "contentDigest": "74fd0c0910746d59057927039825fb4f2529559441736d3d13139132e39d951d",
+      "byteLength": 9749,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000003-rdb-1-0-13",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-13.json",
+      "contentDigest": "79ed2392e05f4f9166a531f5cff99a683b690d52fa8ab6c97a4dbfd66b56fa65",
+      "byteLength": 9490,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000003-rdb-1-0-19",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-19.json",
+      "contentDigest": "b28e42ca2cb052b07b001c55b959b872f959af3b4dc232feb2170d5e2bd15a95",
+      "byteLength": 9850,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000003-rdb-1-0-2",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-2.json",
+      "contentDigest": "b91dd4e437c0f7a0c10bbc0291c580034c1306e402a5c3b526cf6a6e119e95fb",
+      "byteLength": 9849,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000003-rdb-1-0-20",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-20.json",
+      "contentDigest": "bee56201275015a9b67250259329b1750503d8b1b795a0ee2ff6676bb3748c4b",
+      "byteLength": 9512,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000003-rdb-1-0-3",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-3.json",
+      "contentDigest": "ea83883cbc17296e1c0c86e82c6187abf4b7c50d666f81911b9be6bd5346fd09",
+      "byteLength": 9511,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000003-rdb-1-0-34",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-34.json",
+      "contentDigest": "a102362958704c66dcfd09cf3f2d308432873cb63e907f88e1db6a2bd6d8a329",
+      "byteLength": 9512,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000003-rdb-1-0-45",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-45.json",
+      "contentDigest": "9618271fcf466752bd807e453592e5f32783e898bae350949d2066d754ca847a",
+      "byteLength": 9850,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000003-rdb-1-0-46",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-46.json",
+      "contentDigest": "2658898efd26e768b6a8f5984393359113e9696a73b0643bad5324998e2e69bd",
+      "byteLength": 9844,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000006-rdb-0--1-0",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-0.json",
+      "contentDigest": "4430a0b7ffee02e7ee6cd40489ef6e14a42b0720a016be9701c55c362d272747",
+      "byteLength": 9845,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000006-rdb-0--1-11",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-11.json",
+      "contentDigest": "59aea22035b06ebfc4895ba6a28de474115243d431d137ea356cbb8da07a0359",
+      "byteLength": 9834,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000006-rdb-0--1-12",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-12.json",
+      "contentDigest": "8cbed7cb1a0109f4d248d5dc6129db5e7dc2af003196e1c7b4ed52e4b2752cde",
+      "byteLength": 9513,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000006-rdb-0--1-18",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-18.json",
+      "contentDigest": "46cb9e70c7c618a6e6a40546b4826176792fddb6a42d0e2494779fd50e1b23fa",
+      "byteLength": 9845,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000006-rdb-0--1-2",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-2.json",
+      "contentDigest": "663ab8793d45dfd4bdfe6643a3eccb14f6c66a13918474423cc04497ae6db731",
+      "byteLength": 9778,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000006-rdb-0--1-27",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-27.json",
+      "contentDigest": "b346ad3084bceb2701a721c4d457f01d814de1bc4b9b69241d1f1f62481df5b5",
+      "byteLength": 9779,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000006-rdb-0--1-3",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-3.json",
+      "contentDigest": "f07f10c673a5783b76697479ca1dc05b77942a4696828d250c7ecdae80e77595",
+      "byteLength": 9845,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000006-rdb-0--1-35",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-35.json",
+      "contentDigest": "44b8691638f9f2470e8b3ff5b07b9bb0be67ecfdf2a1b209934a704c97612891",
+      "byteLength": 9513,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000006-rdb-0--1-4",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-4.json",
+      "contentDigest": "a981070b4f8228a416ff3dd155e182faea53600721d5a1ad9620626adb8b9ca6",
+      "byteLength": 9512,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000006-rdb-0--1-40",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000006-rdb-0--1-40.json",
+      "contentDigest": "4d8dc90834cf4f3709e5ab31c3eae202375a476b2dadf8aa021a6b03e0526a6f",
+      "byteLength": 9851,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000009-rdb--1-0-0",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000009-rdb--1-0-0.json",
+      "contentDigest": "2f708e31ce18d8856f1e92b8aec6f4b1446730dc4f851776319ee2a4a5030d76",
+      "byteLength": 9778,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000009-rdb--1-0-14",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000009-rdb--1-0-14.json",
+      "contentDigest": "b5c0dc376b0b2648d0d444157150843ae101b0ebef9dc303b35467272fa06f91",
+      "byteLength": 9851,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000009-rdb--1-0-19",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000009-rdb--1-0-19.json",
+      "contentDigest": "e5f39fbb4572249adae9db7c52f4989883fb098c68a1cefbdf3de2e0eb051cc3",
+      "byteLength": 9851,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000009-rdb--1-0-3",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000009-rdb--1-0-3.json",
+      "contentDigest": "03ab0c10e89e20ad2238e752b0128c3827aee18802939fe0e1dd2e0ad2caf980",
+      "byteLength": 9501,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000009-rdb--1-0-5",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000009-rdb--1-0-5.json",
+      "contentDigest": "8b8bdbcd588d18df0f6f334c8e3d4d95004a0013c71d00c77a755c028741aeb4",
+      "byteLength": 9850,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000009-rdb--1-0-8",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000009-rdb--1-0-8.json",
+      "contentDigest": "9db093fff2f4d8a65b74d050532503d1fc37c24251efc35011371809447721a2",
+      "byteLength": 9778,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000012-rdb-0-1-0",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-0.json",
+      "contentDigest": "9b4413b38e4ce32a8baf1ff05859b9c625e620abac85f6d2a961fbdbb7e24580",
+      "byteLength": 9844,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000012-rdb-0-1-17",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-17.json",
+      "contentDigest": "98d168ab897d342a7090718fafa28a66d64b3d637ae9a78c22c2b27c7d434cfb",
+      "byteLength": 9850,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000012-rdb-0-1-18",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-18.json",
+      "contentDigest": "618a699da07c27197656a89a288d977c91e7d6de061dafe788ea370d06f0ed99",
+      "byteLength": 9759,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000012-rdb-0-1-2",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-2.json",
+      "contentDigest": "255e42e706fd97e8bc3c853049b6e899437cb1678481b7dd4e0e1a48c77448d5",
+      "byteLength": 9783,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000012-rdb-0-1-29",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-29.json",
+      "contentDigest": "44161c8d3a0be5ab054d940848cbbd98fb2d111aafeaf587f62dd7e2668c285a",
+      "byteLength": 9850,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000012-rdb-0-1-30",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-30.json",
+      "contentDigest": "9be98af3d11205c5d806225cb97dafc86bdd9ef5a4fdd8862ae1e449d313e145",
+      "byteLength": 9843,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000012-rdb-0-1-37",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-37.json",
+      "contentDigest": "b5335c0a6d785b6cce8782c8d7a684cc95a53b148b6f0cfe8cc99ea4e9dfea0d",
+      "byteLength": 9832,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000012-rdb-0-1-38",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-38.json",
+      "contentDigest": "673ce6f2a6a8c1553f9438afdf2ea5d9ade1a4a0400c9c25a2de67509b9b3153",
+      "byteLength": 9512,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000012-rdb-0-1-5",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-5.json",
+      "contentDigest": "b37828addb663975f9332f63718a62d8032ca40557f097f7ce54dbe12544ac64",
+      "byteLength": 9832,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/b0000012-rdb-0-1-9",
+      "relativePath": "spatial/privateer-s-hold/doors/b0000012-rdb-0-1-9.json",
+      "contentDigest": "38b66037918239af3b7cd7f0f94c5174c78575299371db6071ae70841bac07a6",
+      "byteLength": 9511,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/s0000999-rdb-0-0-109",
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-109.json",
+      "contentDigest": "4c1406d2cc8b9dc83d35ff47d10def649c91bdfc773f691679c5c309cb32cb31",
+      "byteLength": 9851,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/s0000999-rdb-0-0-111",
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-111.json",
+      "contentDigest": "67e1b33e041628c56d40d13a9986d6c590fcddb1334babeb5e4eba8c41603d32",
+      "byteLength": 9783,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/s0000999-rdb-0-0-113",
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-113.json",
+      "contentDigest": "8fb19757061040191327d0944b406f50dc6e21004eca23aa3d61beae0140e769",
+      "byteLength": 9778,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/s0000999-rdb-0-0-114",
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-114.json",
+      "contentDigest": "80796fee37c490186941ed3e2b76b3c91a17d62fb17c047060856a0d05a82cab",
+      "byteLength": 9787,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/s0000999-rdb-0-0-15",
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-15.json",
+      "contentDigest": "15a184005678b7d5ed666f7f5286b31f5ab876a4a0387e7d44aefec2263883ec",
+      "byteLength": 9446,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/s0000999-rdb-0-0-150",
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-150.json",
+      "contentDigest": "3d5d0af71f4ad2880e81f8ec5fc770341d04d2b4125094748c9fbaa23de5603a",
+      "byteLength": 9829,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/s0000999-rdb-0-0-153",
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-153.json",
+      "contentDigest": "6fadf9117a58add85e8fa613bdd12a6812106c475ef6173d0b0e8a2e7c898bc2",
+      "byteLength": 9832,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/s0000999-rdb-0-0-154",
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-154.json",
+      "contentDigest": "26419befa860950ff8fad3521fe4e1f360b216297f3c395a2e9ad0fe7f6daf85",
+      "byteLength": 9826,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/s0000999-rdb-0-0-195",
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-195.json",
+      "contentDigest": "fb6b6f3683dcb2146e222c8b3101f1f11092b568dd87a90b07f8076e6a37c1b7",
+      "byteLength": 9594,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/s0000999-rdb-0-0-196",
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-196.json",
+      "contentDigest": "1effb4c3b1e562428cc7aaec9b926f27341a0a4ab5b5e8ecee76ac41790bfd00",
+      "byteLength": 10142,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/s0000999-rdb-0-0-197",
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-197.json",
+      "contentDigest": "3c7c7fca24dd6c47d95d6e9dd9dd94488b8d6cf8d55d5e76949867caf2d98d30",
+      "byteLength": 9832,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/s0000999-rdb-0-0-199",
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-199.json",
+      "contentDigest": "0920fe2d479d6c785684c5b2384189d4f1022b73a01007d8268f75838df2f578",
+      "byteLength": 10117,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/s0000999-rdb-0-0-202",
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-202.json",
+      "contentDigest": "a7ce2c1a1358880ca69a64065e9dddbf329202900739fe8ad0507f3789712d23",
+      "byteLength": 9832,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/s0000999-rdb-0-0-203",
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-203.json",
+      "contentDigest": "78470ee73cf012dbcbfddbce956e1a04a756ee511fbf6cca42bdd9408e33ae61",
+      "byteLength": 9782,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/s0000999-rdb-0-0-30",
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-30.json",
+      "contentDigest": "557a769642149315901d7f99f6d08aaf8561a188421ece02fc97c8b6f78af041",
+      "byteLength": 9772,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/s0000999-rdb-0-0-44",
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-44.json",
+      "contentDigest": "b4c2d4b00b4cb439dc13afc980485ee4cf8bfc81be90f6652ec7592fd9d4ba67",
+      "byteLength": 9803,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/s0000999-rdb-0-0-47",
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-47.json",
+      "contentDigest": "cf42d57fd536d2964351cb234be5e26bb1d80d949e48122e552362abd52e0430",
+      "byteLength": 10069,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/s0000999-rdb-0-0-48",
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-48.json",
+      "contentDigest": "b94d78a6f48dd92004accb7e5f02fdb5c8cae889c6afdd843c75642924328326",
+      "byteLength": 9945,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/s0000999-rdb-0-0-49",
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-49.json",
+      "contentDigest": "0c73a5d6dd60786c24c7fac8ded46cec2d9a9c9757acffd9944ca476ba3c9bd2",
+      "byteLength": 9777,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/s0000999-rdb-0-0-50",
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-50.json",
+      "contentDigest": "33bdf18b3407e4e9703873cc378d1ec3b47745fd600e00428a96338d5e067d5f",
+      "byteLength": 9446,
+      "dependsOnArtifactIds": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "artifact/dungeon/privateer-s-hold/static-mesh/door/s0000999-rdb-0-0-52",
+      "relativePath": "spatial/privateer-s-hold/doors/s0000999-rdb-0-0-52.json",
+      "contentDigest": "d954a27c3a43894759661ebbc990c0382d9bbe915afd85f37078087af497da2b",
+      "byteLength": 9512,
       "dependsOnArtifactIds": []
     }
   ],
@@ -1233,7 +1697,7 @@
   "meshes": [
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000003-rdb/0/texture-0-45/action-visual",
+      "id": "mesh/door/b0000003-rdb/1/0/0/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -1452,7 +1916,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000003-rdb/0/texture-374-2/action-visual",
+      "id": "mesh/door/b0000003-rdb/1/0/0/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -1605,7 +2069,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000003-rdb/1/texture-0-45/action-visual",
+      "id": "mesh/door/b0000003-rdb/1/0/1/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -1824,7 +2288,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000003-rdb/1/texture-374-2/action-visual",
+      "id": "mesh/door/b0000003-rdb/1/0/1/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -1977,7 +2441,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000003-rdb/12/texture-0-45/action-visual",
+      "id": "mesh/door/b0000003-rdb/1/0/12/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -2196,7 +2660,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000003-rdb/12/texture-374-2/action-visual",
+      "id": "mesh/door/b0000003-rdb/1/0/12/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -2349,7 +2813,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000003-rdb/13/texture-0-77/action-visual",
+      "id": "mesh/door/b0000003-rdb/1/0/13/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -2568,7 +3032,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000003-rdb/13/texture-374-0/action-visual",
+      "id": "mesh/door/b0000003-rdb/1/0/13/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -2721,7 +3185,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000003-rdb/19/texture-0-45/action-visual",
+      "id": "mesh/door/b0000003-rdb/1/0/19/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -2940,7 +3404,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000003-rdb/19/texture-374-2/action-visual",
+      "id": "mesh/door/b0000003-rdb/1/0/19/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -3093,7 +3557,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000003-rdb/2/texture-0-77/action-visual",
+      "id": "mesh/door/b0000003-rdb/1/0/2/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -3312,7 +3776,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000003-rdb/2/texture-374-0/action-visual",
+      "id": "mesh/door/b0000003-rdb/1/0/2/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -3465,7 +3929,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000003-rdb/20/texture-0-77/action-visual",
+      "id": "mesh/door/b0000003-rdb/1/0/20/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -3684,7 +4148,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000003-rdb/20/texture-374-0/action-visual",
+      "id": "mesh/door/b0000003-rdb/1/0/20/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -3837,7 +4301,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000003-rdb/3/texture-0-77/action-visual",
+      "id": "mesh/door/b0000003-rdb/1/0/3/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -4056,7 +4520,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000003-rdb/3/texture-374-0/action-visual",
+      "id": "mesh/door/b0000003-rdb/1/0/3/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -4209,7 +4673,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000003-rdb/34/texture-0-77/action-visual",
+      "id": "mesh/door/b0000003-rdb/1/0/34/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -4428,7 +4892,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000003-rdb/34/texture-374-0/action-visual",
+      "id": "mesh/door/b0000003-rdb/1/0/34/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -4581,7 +5045,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000003-rdb/45/texture-0-77/action-visual",
+      "id": "mesh/door/b0000003-rdb/1/0/45/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -4800,7 +5264,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000003-rdb/45/texture-374-0/action-visual",
+      "id": "mesh/door/b0000003-rdb/1/0/45/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -4953,7 +5417,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000003-rdb/46/texture-0-77/action-visual",
+      "id": "mesh/door/b0000003-rdb/1/0/46/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -5172,7 +5636,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000003-rdb/46/texture-374-0/action-visual",
+      "id": "mesh/door/b0000003-rdb/1/0/46/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -5325,7 +5789,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000006-rdb/0/texture-0-45/action-visual",
+      "id": "mesh/door/b0000006-rdb/0/-1/0/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -5544,7 +6008,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000006-rdb/0/texture-374-2/action-visual",
+      "id": "mesh/door/b0000006-rdb/0/-1/0/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -5697,7 +6161,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000006-rdb/11/texture-0-45/action-visual",
+      "id": "mesh/door/b0000006-rdb/0/-1/11/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -5916,7 +6380,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000006-rdb/11/texture-374-2/action-visual",
+      "id": "mesh/door/b0000006-rdb/0/-1/11/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -6069,7 +6533,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000006-rdb/12/texture-0-77/action-visual",
+      "id": "mesh/door/b0000006-rdb/0/-1/12/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -6288,7 +6752,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000006-rdb/12/texture-374-0/action-visual",
+      "id": "mesh/door/b0000006-rdb/0/-1/12/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -6441,7 +6905,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000006-rdb/18/texture-0-77/action-visual",
+      "id": "mesh/door/b0000006-rdb/0/-1/18/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -6660,7 +7124,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000006-rdb/18/texture-374-0/action-visual",
+      "id": "mesh/door/b0000006-rdb/0/-1/18/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -6813,7 +7277,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000006-rdb/2/texture-0-45/action-visual",
+      "id": "mesh/door/b0000006-rdb/0/-1/2/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -7032,7 +7496,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000006-rdb/2/texture-374-2/action-visual",
+      "id": "mesh/door/b0000006-rdb/0/-1/2/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -7185,7 +7649,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000006-rdb/27/texture-0-45/action-visual",
+      "id": "mesh/door/b0000006-rdb/0/-1/27/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -7404,7 +7868,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000006-rdb/27/texture-374-2/action-visual",
+      "id": "mesh/door/b0000006-rdb/0/-1/27/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -7557,7 +8021,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000006-rdb/3/texture-0-77/action-visual",
+      "id": "mesh/door/b0000006-rdb/0/-1/3/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -7776,7 +8240,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000006-rdb/3/texture-374-0/action-visual",
+      "id": "mesh/door/b0000006-rdb/0/-1/3/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -7929,7 +8393,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000006-rdb/35/texture-0-77/action-visual",
+      "id": "mesh/door/b0000006-rdb/0/-1/35/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -8148,7 +8612,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000006-rdb/35/texture-374-0/action-visual",
+      "id": "mesh/door/b0000006-rdb/0/-1/35/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -8301,7 +8765,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000006-rdb/4/texture-0-77/action-visual",
+      "id": "mesh/door/b0000006-rdb/0/-1/4/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -8520,7 +8984,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000006-rdb/4/texture-374-0/action-visual",
+      "id": "mesh/door/b0000006-rdb/0/-1/4/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -8673,7 +9137,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000006-rdb/40/texture-0-77/action-visual",
+      "id": "mesh/door/b0000006-rdb/0/-1/40/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -8892,7 +9356,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000006-rdb/40/texture-374-0/action-visual",
+      "id": "mesh/door/b0000006-rdb/0/-1/40/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -9045,7 +9509,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000009-rdb/0/texture-0-77/action-visual",
+      "id": "mesh/door/b0000009-rdb/-1/0/0/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -9264,7 +9728,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000009-rdb/0/texture-374-0/action-visual",
+      "id": "mesh/door/b0000009-rdb/-1/0/0/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -9417,7 +9881,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000009-rdb/14/texture-0-45/action-visual",
+      "id": "mesh/door/b0000009-rdb/-1/0/14/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -9636,7 +10100,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000009-rdb/14/texture-374-2/action-visual",
+      "id": "mesh/door/b0000009-rdb/-1/0/14/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -9789,7 +10253,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000009-rdb/19/texture-0-77/action-visual",
+      "id": "mesh/door/b0000009-rdb/-1/0/19/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -10008,7 +10472,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000009-rdb/19/texture-374-0/action-visual",
+      "id": "mesh/door/b0000009-rdb/-1/0/19/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -10161,7 +10625,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000009-rdb/3/texture-0-77/action-visual",
+      "id": "mesh/door/b0000009-rdb/-1/0/3/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -10380,7 +10844,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000009-rdb/3/texture-374-0/action-visual",
+      "id": "mesh/door/b0000009-rdb/-1/0/3/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -10533,7 +10997,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000009-rdb/5/texture-0-45/action-visual",
+      "id": "mesh/door/b0000009-rdb/-1/0/5/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -10752,7 +11216,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000009-rdb/5/texture-374-2/action-visual",
+      "id": "mesh/door/b0000009-rdb/-1/0/5/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -10905,7 +11369,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000009-rdb/8/texture-0-77/action-visual",
+      "id": "mesh/door/b0000009-rdb/-1/0/8/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -11124,7 +11588,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000009-rdb/8/texture-374-0/action-visual",
+      "id": "mesh/door/b0000009-rdb/-1/0/8/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -11277,7 +11741,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000012-rdb/0/texture-0-45/action-visual",
+      "id": "mesh/door/b0000012-rdb/0/1/0/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -11496,7 +11960,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000012-rdb/0/texture-374-2/action-visual",
+      "id": "mesh/door/b0000012-rdb/0/1/0/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -11649,7 +12113,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000012-rdb/17/texture-0-45/action-visual",
+      "id": "mesh/door/b0000012-rdb/0/1/17/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -11868,7 +12332,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000012-rdb/17/texture-374-2/action-visual",
+      "id": "mesh/door/b0000012-rdb/0/1/17/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -12021,7 +12485,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000012-rdb/18/texture-0-45/action-visual",
+      "id": "mesh/door/b0000012-rdb/0/1/18/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -12240,7 +12704,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000012-rdb/18/texture-374-2/action-visual",
+      "id": "mesh/door/b0000012-rdb/0/1/18/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -12393,7 +12857,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000012-rdb/2/texture-0-45/action-visual",
+      "id": "mesh/door/b0000012-rdb/0/1/2/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -12612,7 +13076,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000012-rdb/2/texture-374-2/action-visual",
+      "id": "mesh/door/b0000012-rdb/0/1/2/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -12765,7 +13229,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000012-rdb/29/texture-0-77/action-visual",
+      "id": "mesh/door/b0000012-rdb/0/1/29/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -12984,7 +13448,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000012-rdb/29/texture-374-0/action-visual",
+      "id": "mesh/door/b0000012-rdb/0/1/29/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -13137,7 +13601,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000012-rdb/30/texture-0-77/action-visual",
+      "id": "mesh/door/b0000012-rdb/0/1/30/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -13356,7 +13820,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000012-rdb/30/texture-374-0/action-visual",
+      "id": "mesh/door/b0000012-rdb/0/1/30/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -13509,7 +13973,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000012-rdb/37/texture-0-77/action-visual",
+      "id": "mesh/door/b0000012-rdb/0/1/37/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -13728,7 +14192,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000012-rdb/37/texture-374-0/action-visual",
+      "id": "mesh/door/b0000012-rdb/0/1/37/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -13881,7 +14345,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000012-rdb/38/texture-0-77/action-visual",
+      "id": "mesh/door/b0000012-rdb/0/1/38/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -14100,7 +14564,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000012-rdb/38/texture-374-0/action-visual",
+      "id": "mesh/door/b0000012-rdb/0/1/38/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -14253,7 +14717,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000012-rdb/5/texture-0-45/action-visual",
+      "id": "mesh/door/b0000012-rdb/0/1/5/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -14472,7 +14936,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000012-rdb/5/texture-374-2/action-visual",
+      "id": "mesh/door/b0000012-rdb/0/1/5/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -14625,7 +15089,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000012-rdb/9/texture-0-77/action-visual",
+      "id": "mesh/door/b0000012-rdb/0/1/9/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -14844,7 +15308,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/b0000012-rdb/9/texture-374-0/action-visual",
+      "id": "mesh/door/b0000012-rdb/0/1/9/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -14997,7 +15461,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/109/texture-0-45/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/109/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -15216,7 +15680,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/109/texture-374-2/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/109/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -15369,7 +15833,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/111/texture-0-45/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/111/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -15588,7 +16052,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/111/texture-374-2/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/111/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -15741,7 +16205,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/113/texture-0-77/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/113/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -15960,7 +16424,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/113/texture-374-0/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/113/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -16113,7 +16577,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/114/texture-0-77/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/114/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -16332,7 +16796,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/114/texture-374-0/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/114/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -16485,7 +16949,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/15/texture-0-45/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/15/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -16704,7 +17168,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/15/texture-374-2/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/15/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -16857,7 +17321,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/150/texture-0-77/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/150/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -17076,7 +17540,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/150/texture-374-0/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/150/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -17229,7 +17693,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/153/texture-0-45/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/153/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -17448,7 +17912,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/153/texture-374-2/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/153/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -17601,7 +18065,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/154/texture-0-77/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/154/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -17820,7 +18284,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/154/texture-374-0/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/154/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -17973,7 +18437,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/195/texture-0-77/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/195/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -18192,7 +18656,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/195/texture-374-0/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/195/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -18345,7 +18809,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/196/texture-0-124/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/196/texture-0-124/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -18564,7 +19028,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/196/texture-19-0/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/196/texture-19-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -18717,7 +19181,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/197/texture-0-77/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/197/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -18936,7 +19400,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/197/texture-374-0/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/197/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -19089,7 +19553,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/199/texture-0-124/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/199/texture-0-124/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -19308,7 +19772,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/199/texture-19-0/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/199/texture-19-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -19461,7 +19925,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/202/texture-0-77/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/202/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -19680,7 +20144,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/202/texture-374-0/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/202/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -19833,7 +20297,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/203/texture-0-77/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/203/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -20052,7 +20516,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/203/texture-374-0/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/203/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -20205,7 +20669,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/30/texture-0-45/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/30/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -20424,7 +20888,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/30/texture-374-2/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/30/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -20577,7 +21041,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/44/texture-0-45/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/44/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -20796,7 +21260,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/44/texture-374-2/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/44/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -20949,7 +21413,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/47/texture-0-124/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/47/texture-0-124/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -21168,7 +21632,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/47/texture-19-0/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/47/texture-19-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -21321,7 +21785,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/48/texture-0-45/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/48/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -21540,7 +22004,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/48/texture-374-2/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/48/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -21693,7 +22157,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/49/texture-0-45/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/49/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -21912,7 +22376,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/49/texture-374-2/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/49/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -22065,7 +22529,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/50/texture-0-45/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/50/texture-0-45/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -22284,7 +22748,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/50/texture-374-2/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/50/texture-374-2/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -22437,7 +22901,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/52/texture-0-77/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/52/texture-0-77/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -22656,7 +23120,7 @@
     },
     {
       "schemaVersion": 1,
-      "id": "mesh/door/s0000999-rdb/52/texture-374-0/action-visual",
+      "id": "mesh/door/s0000999-rdb/0/0/52/texture-374-0/action-visual",
       "artifactId": "artifact/dungeon/privateer-s-hold/static-mesh",
       "vertices": [
         {
@@ -416788,122 +417252,122 @@
     "schemaVersion": 1,
     "visualMeshAssetId": "mesh/privateer-s-hold",
     "meshIds": [
-      "mesh/door/b0000003-rdb/0/texture-0-45/action-visual",
-      "mesh/door/b0000003-rdb/0/texture-374-2/action-visual",
-      "mesh/door/b0000003-rdb/1/texture-0-45/action-visual",
-      "mesh/door/b0000003-rdb/1/texture-374-2/action-visual",
-      "mesh/door/b0000003-rdb/12/texture-0-45/action-visual",
-      "mesh/door/b0000003-rdb/12/texture-374-2/action-visual",
-      "mesh/door/b0000003-rdb/13/texture-0-77/action-visual",
-      "mesh/door/b0000003-rdb/13/texture-374-0/action-visual",
-      "mesh/door/b0000003-rdb/19/texture-0-45/action-visual",
-      "mesh/door/b0000003-rdb/19/texture-374-2/action-visual",
-      "mesh/door/b0000003-rdb/2/texture-0-77/action-visual",
-      "mesh/door/b0000003-rdb/2/texture-374-0/action-visual",
-      "mesh/door/b0000003-rdb/20/texture-0-77/action-visual",
-      "mesh/door/b0000003-rdb/20/texture-374-0/action-visual",
-      "mesh/door/b0000003-rdb/3/texture-0-77/action-visual",
-      "mesh/door/b0000003-rdb/3/texture-374-0/action-visual",
-      "mesh/door/b0000003-rdb/34/texture-0-77/action-visual",
-      "mesh/door/b0000003-rdb/34/texture-374-0/action-visual",
-      "mesh/door/b0000003-rdb/45/texture-0-77/action-visual",
-      "mesh/door/b0000003-rdb/45/texture-374-0/action-visual",
-      "mesh/door/b0000003-rdb/46/texture-0-77/action-visual",
-      "mesh/door/b0000003-rdb/46/texture-374-0/action-visual",
-      "mesh/door/b0000006-rdb/0/texture-0-45/action-visual",
-      "mesh/door/b0000006-rdb/0/texture-374-2/action-visual",
-      "mesh/door/b0000006-rdb/11/texture-0-45/action-visual",
-      "mesh/door/b0000006-rdb/11/texture-374-2/action-visual",
-      "mesh/door/b0000006-rdb/12/texture-0-77/action-visual",
-      "mesh/door/b0000006-rdb/12/texture-374-0/action-visual",
-      "mesh/door/b0000006-rdb/18/texture-0-77/action-visual",
-      "mesh/door/b0000006-rdb/18/texture-374-0/action-visual",
-      "mesh/door/b0000006-rdb/2/texture-0-45/action-visual",
-      "mesh/door/b0000006-rdb/2/texture-374-2/action-visual",
-      "mesh/door/b0000006-rdb/27/texture-0-45/action-visual",
-      "mesh/door/b0000006-rdb/27/texture-374-2/action-visual",
-      "mesh/door/b0000006-rdb/3/texture-0-77/action-visual",
-      "mesh/door/b0000006-rdb/3/texture-374-0/action-visual",
-      "mesh/door/b0000006-rdb/35/texture-0-77/action-visual",
-      "mesh/door/b0000006-rdb/35/texture-374-0/action-visual",
-      "mesh/door/b0000006-rdb/4/texture-0-77/action-visual",
-      "mesh/door/b0000006-rdb/4/texture-374-0/action-visual",
-      "mesh/door/b0000006-rdb/40/texture-0-77/action-visual",
-      "mesh/door/b0000006-rdb/40/texture-374-0/action-visual",
-      "mesh/door/b0000009-rdb/0/texture-0-77/action-visual",
-      "mesh/door/b0000009-rdb/0/texture-374-0/action-visual",
-      "mesh/door/b0000009-rdb/14/texture-0-45/action-visual",
-      "mesh/door/b0000009-rdb/14/texture-374-2/action-visual",
-      "mesh/door/b0000009-rdb/19/texture-0-77/action-visual",
-      "mesh/door/b0000009-rdb/19/texture-374-0/action-visual",
-      "mesh/door/b0000009-rdb/3/texture-0-77/action-visual",
-      "mesh/door/b0000009-rdb/3/texture-374-0/action-visual",
-      "mesh/door/b0000009-rdb/5/texture-0-45/action-visual",
-      "mesh/door/b0000009-rdb/5/texture-374-2/action-visual",
-      "mesh/door/b0000009-rdb/8/texture-0-77/action-visual",
-      "mesh/door/b0000009-rdb/8/texture-374-0/action-visual",
-      "mesh/door/b0000012-rdb/0/texture-0-45/action-visual",
-      "mesh/door/b0000012-rdb/0/texture-374-2/action-visual",
-      "mesh/door/b0000012-rdb/17/texture-0-45/action-visual",
-      "mesh/door/b0000012-rdb/17/texture-374-2/action-visual",
-      "mesh/door/b0000012-rdb/18/texture-0-45/action-visual",
-      "mesh/door/b0000012-rdb/18/texture-374-2/action-visual",
-      "mesh/door/b0000012-rdb/2/texture-0-45/action-visual",
-      "mesh/door/b0000012-rdb/2/texture-374-2/action-visual",
-      "mesh/door/b0000012-rdb/29/texture-0-77/action-visual",
-      "mesh/door/b0000012-rdb/29/texture-374-0/action-visual",
-      "mesh/door/b0000012-rdb/30/texture-0-77/action-visual",
-      "mesh/door/b0000012-rdb/30/texture-374-0/action-visual",
-      "mesh/door/b0000012-rdb/37/texture-0-77/action-visual",
-      "mesh/door/b0000012-rdb/37/texture-374-0/action-visual",
-      "mesh/door/b0000012-rdb/38/texture-0-77/action-visual",
-      "mesh/door/b0000012-rdb/38/texture-374-0/action-visual",
-      "mesh/door/b0000012-rdb/5/texture-0-45/action-visual",
-      "mesh/door/b0000012-rdb/5/texture-374-2/action-visual",
-      "mesh/door/b0000012-rdb/9/texture-0-77/action-visual",
-      "mesh/door/b0000012-rdb/9/texture-374-0/action-visual",
-      "mesh/door/s0000999-rdb/109/texture-0-45/action-visual",
-      "mesh/door/s0000999-rdb/109/texture-374-2/action-visual",
-      "mesh/door/s0000999-rdb/111/texture-0-45/action-visual",
-      "mesh/door/s0000999-rdb/111/texture-374-2/action-visual",
-      "mesh/door/s0000999-rdb/113/texture-0-77/action-visual",
-      "mesh/door/s0000999-rdb/113/texture-374-0/action-visual",
-      "mesh/door/s0000999-rdb/114/texture-0-77/action-visual",
-      "mesh/door/s0000999-rdb/114/texture-374-0/action-visual",
-      "mesh/door/s0000999-rdb/15/texture-0-45/action-visual",
-      "mesh/door/s0000999-rdb/15/texture-374-2/action-visual",
-      "mesh/door/s0000999-rdb/150/texture-0-77/action-visual",
-      "mesh/door/s0000999-rdb/150/texture-374-0/action-visual",
-      "mesh/door/s0000999-rdb/153/texture-0-45/action-visual",
-      "mesh/door/s0000999-rdb/153/texture-374-2/action-visual",
-      "mesh/door/s0000999-rdb/154/texture-0-77/action-visual",
-      "mesh/door/s0000999-rdb/154/texture-374-0/action-visual",
-      "mesh/door/s0000999-rdb/195/texture-0-77/action-visual",
-      "mesh/door/s0000999-rdb/195/texture-374-0/action-visual",
-      "mesh/door/s0000999-rdb/196/texture-0-124/action-visual",
-      "mesh/door/s0000999-rdb/196/texture-19-0/action-visual",
-      "mesh/door/s0000999-rdb/197/texture-0-77/action-visual",
-      "mesh/door/s0000999-rdb/197/texture-374-0/action-visual",
-      "mesh/door/s0000999-rdb/199/texture-0-124/action-visual",
-      "mesh/door/s0000999-rdb/199/texture-19-0/action-visual",
-      "mesh/door/s0000999-rdb/202/texture-0-77/action-visual",
-      "mesh/door/s0000999-rdb/202/texture-374-0/action-visual",
-      "mesh/door/s0000999-rdb/203/texture-0-77/action-visual",
-      "mesh/door/s0000999-rdb/203/texture-374-0/action-visual",
-      "mesh/door/s0000999-rdb/30/texture-0-45/action-visual",
-      "mesh/door/s0000999-rdb/30/texture-374-2/action-visual",
-      "mesh/door/s0000999-rdb/44/texture-0-45/action-visual",
-      "mesh/door/s0000999-rdb/44/texture-374-2/action-visual",
-      "mesh/door/s0000999-rdb/47/texture-0-124/action-visual",
-      "mesh/door/s0000999-rdb/47/texture-19-0/action-visual",
-      "mesh/door/s0000999-rdb/48/texture-0-45/action-visual",
-      "mesh/door/s0000999-rdb/48/texture-374-2/action-visual",
-      "mesh/door/s0000999-rdb/49/texture-0-45/action-visual",
-      "mesh/door/s0000999-rdb/49/texture-374-2/action-visual",
-      "mesh/door/s0000999-rdb/50/texture-0-45/action-visual",
-      "mesh/door/s0000999-rdb/50/texture-374-2/action-visual",
-      "mesh/door/s0000999-rdb/52/texture-0-77/action-visual",
-      "mesh/door/s0000999-rdb/52/texture-374-0/action-visual",
+      "mesh/door/b0000003-rdb/1/0/0/texture-0-45/action-visual",
+      "mesh/door/b0000003-rdb/1/0/0/texture-374-2/action-visual",
+      "mesh/door/b0000003-rdb/1/0/1/texture-0-45/action-visual",
+      "mesh/door/b0000003-rdb/1/0/1/texture-374-2/action-visual",
+      "mesh/door/b0000003-rdb/1/0/12/texture-0-45/action-visual",
+      "mesh/door/b0000003-rdb/1/0/12/texture-374-2/action-visual",
+      "mesh/door/b0000003-rdb/1/0/13/texture-0-77/action-visual",
+      "mesh/door/b0000003-rdb/1/0/13/texture-374-0/action-visual",
+      "mesh/door/b0000003-rdb/1/0/19/texture-0-45/action-visual",
+      "mesh/door/b0000003-rdb/1/0/19/texture-374-2/action-visual",
+      "mesh/door/b0000003-rdb/1/0/2/texture-0-77/action-visual",
+      "mesh/door/b0000003-rdb/1/0/2/texture-374-0/action-visual",
+      "mesh/door/b0000003-rdb/1/0/20/texture-0-77/action-visual",
+      "mesh/door/b0000003-rdb/1/0/20/texture-374-0/action-visual",
+      "mesh/door/b0000003-rdb/1/0/3/texture-0-77/action-visual",
+      "mesh/door/b0000003-rdb/1/0/3/texture-374-0/action-visual",
+      "mesh/door/b0000003-rdb/1/0/34/texture-0-77/action-visual",
+      "mesh/door/b0000003-rdb/1/0/34/texture-374-0/action-visual",
+      "mesh/door/b0000003-rdb/1/0/45/texture-0-77/action-visual",
+      "mesh/door/b0000003-rdb/1/0/45/texture-374-0/action-visual",
+      "mesh/door/b0000003-rdb/1/0/46/texture-0-77/action-visual",
+      "mesh/door/b0000003-rdb/1/0/46/texture-374-0/action-visual",
+      "mesh/door/b0000006-rdb/0/-1/0/texture-0-45/action-visual",
+      "mesh/door/b0000006-rdb/0/-1/0/texture-374-2/action-visual",
+      "mesh/door/b0000006-rdb/0/-1/11/texture-0-45/action-visual",
+      "mesh/door/b0000006-rdb/0/-1/11/texture-374-2/action-visual",
+      "mesh/door/b0000006-rdb/0/-1/12/texture-0-77/action-visual",
+      "mesh/door/b0000006-rdb/0/-1/12/texture-374-0/action-visual",
+      "mesh/door/b0000006-rdb/0/-1/18/texture-0-77/action-visual",
+      "mesh/door/b0000006-rdb/0/-1/18/texture-374-0/action-visual",
+      "mesh/door/b0000006-rdb/0/-1/2/texture-0-45/action-visual",
+      "mesh/door/b0000006-rdb/0/-1/2/texture-374-2/action-visual",
+      "mesh/door/b0000006-rdb/0/-1/27/texture-0-45/action-visual",
+      "mesh/door/b0000006-rdb/0/-1/27/texture-374-2/action-visual",
+      "mesh/door/b0000006-rdb/0/-1/3/texture-0-77/action-visual",
+      "mesh/door/b0000006-rdb/0/-1/3/texture-374-0/action-visual",
+      "mesh/door/b0000006-rdb/0/-1/35/texture-0-77/action-visual",
+      "mesh/door/b0000006-rdb/0/-1/35/texture-374-0/action-visual",
+      "mesh/door/b0000006-rdb/0/-1/4/texture-0-77/action-visual",
+      "mesh/door/b0000006-rdb/0/-1/4/texture-374-0/action-visual",
+      "mesh/door/b0000006-rdb/0/-1/40/texture-0-77/action-visual",
+      "mesh/door/b0000006-rdb/0/-1/40/texture-374-0/action-visual",
+      "mesh/door/b0000009-rdb/-1/0/0/texture-0-77/action-visual",
+      "mesh/door/b0000009-rdb/-1/0/0/texture-374-0/action-visual",
+      "mesh/door/b0000009-rdb/-1/0/14/texture-0-45/action-visual",
+      "mesh/door/b0000009-rdb/-1/0/14/texture-374-2/action-visual",
+      "mesh/door/b0000009-rdb/-1/0/19/texture-0-77/action-visual",
+      "mesh/door/b0000009-rdb/-1/0/19/texture-374-0/action-visual",
+      "mesh/door/b0000009-rdb/-1/0/3/texture-0-77/action-visual",
+      "mesh/door/b0000009-rdb/-1/0/3/texture-374-0/action-visual",
+      "mesh/door/b0000009-rdb/-1/0/5/texture-0-45/action-visual",
+      "mesh/door/b0000009-rdb/-1/0/5/texture-374-2/action-visual",
+      "mesh/door/b0000009-rdb/-1/0/8/texture-0-77/action-visual",
+      "mesh/door/b0000009-rdb/-1/0/8/texture-374-0/action-visual",
+      "mesh/door/b0000012-rdb/0/1/0/texture-0-45/action-visual",
+      "mesh/door/b0000012-rdb/0/1/0/texture-374-2/action-visual",
+      "mesh/door/b0000012-rdb/0/1/17/texture-0-45/action-visual",
+      "mesh/door/b0000012-rdb/0/1/17/texture-374-2/action-visual",
+      "mesh/door/b0000012-rdb/0/1/18/texture-0-45/action-visual",
+      "mesh/door/b0000012-rdb/0/1/18/texture-374-2/action-visual",
+      "mesh/door/b0000012-rdb/0/1/2/texture-0-45/action-visual",
+      "mesh/door/b0000012-rdb/0/1/2/texture-374-2/action-visual",
+      "mesh/door/b0000012-rdb/0/1/29/texture-0-77/action-visual",
+      "mesh/door/b0000012-rdb/0/1/29/texture-374-0/action-visual",
+      "mesh/door/b0000012-rdb/0/1/30/texture-0-77/action-visual",
+      "mesh/door/b0000012-rdb/0/1/30/texture-374-0/action-visual",
+      "mesh/door/b0000012-rdb/0/1/37/texture-0-77/action-visual",
+      "mesh/door/b0000012-rdb/0/1/37/texture-374-0/action-visual",
+      "mesh/door/b0000012-rdb/0/1/38/texture-0-77/action-visual",
+      "mesh/door/b0000012-rdb/0/1/38/texture-374-0/action-visual",
+      "mesh/door/b0000012-rdb/0/1/5/texture-0-45/action-visual",
+      "mesh/door/b0000012-rdb/0/1/5/texture-374-2/action-visual",
+      "mesh/door/b0000012-rdb/0/1/9/texture-0-77/action-visual",
+      "mesh/door/b0000012-rdb/0/1/9/texture-374-0/action-visual",
+      "mesh/door/s0000999-rdb/0/0/109/texture-0-45/action-visual",
+      "mesh/door/s0000999-rdb/0/0/109/texture-374-2/action-visual",
+      "mesh/door/s0000999-rdb/0/0/111/texture-0-45/action-visual",
+      "mesh/door/s0000999-rdb/0/0/111/texture-374-2/action-visual",
+      "mesh/door/s0000999-rdb/0/0/113/texture-0-77/action-visual",
+      "mesh/door/s0000999-rdb/0/0/113/texture-374-0/action-visual",
+      "mesh/door/s0000999-rdb/0/0/114/texture-0-77/action-visual",
+      "mesh/door/s0000999-rdb/0/0/114/texture-374-0/action-visual",
+      "mesh/door/s0000999-rdb/0/0/15/texture-0-45/action-visual",
+      "mesh/door/s0000999-rdb/0/0/15/texture-374-2/action-visual",
+      "mesh/door/s0000999-rdb/0/0/150/texture-0-77/action-visual",
+      "mesh/door/s0000999-rdb/0/0/150/texture-374-0/action-visual",
+      "mesh/door/s0000999-rdb/0/0/153/texture-0-45/action-visual",
+      "mesh/door/s0000999-rdb/0/0/153/texture-374-2/action-visual",
+      "mesh/door/s0000999-rdb/0/0/154/texture-0-77/action-visual",
+      "mesh/door/s0000999-rdb/0/0/154/texture-374-0/action-visual",
+      "mesh/door/s0000999-rdb/0/0/195/texture-0-77/action-visual",
+      "mesh/door/s0000999-rdb/0/0/195/texture-374-0/action-visual",
+      "mesh/door/s0000999-rdb/0/0/196/texture-0-124/action-visual",
+      "mesh/door/s0000999-rdb/0/0/196/texture-19-0/action-visual",
+      "mesh/door/s0000999-rdb/0/0/197/texture-0-77/action-visual",
+      "mesh/door/s0000999-rdb/0/0/197/texture-374-0/action-visual",
+      "mesh/door/s0000999-rdb/0/0/199/texture-0-124/action-visual",
+      "mesh/door/s0000999-rdb/0/0/199/texture-19-0/action-visual",
+      "mesh/door/s0000999-rdb/0/0/202/texture-0-77/action-visual",
+      "mesh/door/s0000999-rdb/0/0/202/texture-374-0/action-visual",
+      "mesh/door/s0000999-rdb/0/0/203/texture-0-77/action-visual",
+      "mesh/door/s0000999-rdb/0/0/203/texture-374-0/action-visual",
+      "mesh/door/s0000999-rdb/0/0/30/texture-0-45/action-visual",
+      "mesh/door/s0000999-rdb/0/0/30/texture-374-2/action-visual",
+      "mesh/door/s0000999-rdb/0/0/44/texture-0-45/action-visual",
+      "mesh/door/s0000999-rdb/0/0/44/texture-374-2/action-visual",
+      "mesh/door/s0000999-rdb/0/0/47/texture-0-124/action-visual",
+      "mesh/door/s0000999-rdb/0/0/47/texture-19-0/action-visual",
+      "mesh/door/s0000999-rdb/0/0/48/texture-0-45/action-visual",
+      "mesh/door/s0000999-rdb/0/0/48/texture-374-2/action-visual",
+      "mesh/door/s0000999-rdb/0/0/49/texture-0-45/action-visual",
+      "mesh/door/s0000999-rdb/0/0/49/texture-374-2/action-visual",
+      "mesh/door/s0000999-rdb/0/0/50/texture-0-45/action-visual",
+      "mesh/door/s0000999-rdb/0/0/50/texture-374-2/action-visual",
+      "mesh/door/s0000999-rdb/0/0/52/texture-0-77/action-visual",
+      "mesh/door/s0000999-rdb/0/0/52/texture-374-0/action-visual",
       "mesh/privateer-s-hold/texture-0-44/static",
       "mesh/privateer-s-hold/texture-0-45/static",
       "mesh/privateer-s-hold/texture-0-74/static",
@@ -417002,7 +417466,7 @@
     },
     "lights": [
       {
-        "id": "light/b0000003-rdb/0",
+        "id": "light/b0000003-rdb/1/0/0",
         "position": {
           "x": 54.4,
           "y": 34.4,
@@ -417012,7 +417476,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000003-rdb/1",
+        "id": "light/b0000003-rdb/1/0/1",
         "position": {
           "x": 99.2,
           "y": 33.600002,
@@ -417022,7 +417486,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000003-rdb/10",
+        "id": "light/b0000003-rdb/1/0/10",
         "position": {
           "x": 86.8,
           "y": 15.2,
@@ -417032,7 +417496,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000003-rdb/2",
+        "id": "light/b0000003-rdb/1/0/2",
         "position": {
           "x": 85.600006,
           "y": 40.8,
@@ -417042,7 +417506,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000003-rdb/3",
+        "id": "light/b0000003-rdb/1/0/3",
         "position": {
           "x": 56,
           "y": 21.6,
@@ -417052,7 +417516,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000003-rdb/4",
+        "id": "light/b0000003-rdb/1/0/4",
         "position": {
           "x": 67.2,
           "y": 15.2,
@@ -417062,7 +417526,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000003-rdb/5",
+        "id": "light/b0000003-rdb/1/0/5",
         "position": {
           "x": 55.2,
           "y": 15.2,
@@ -417072,7 +417536,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000003-rdb/6",
+        "id": "light/b0000003-rdb/1/0/6",
         "position": {
           "x": 64,
           "y": 34.4,
@@ -417082,7 +417546,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000003-rdb/7",
+        "id": "light/b0000003-rdb/1/0/7",
         "position": {
           "x": 76,
           "y": 24.800001,
@@ -417092,7 +417556,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000003-rdb/8",
+        "id": "light/b0000003-rdb/1/0/8",
         "position": {
           "x": 73.6,
           "y": 18.4,
@@ -417102,7 +417566,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000003-rdb/9",
+        "id": "light/b0000003-rdb/1/0/9",
         "position": {
           "x": 80,
           "y": 31.2,
@@ -417112,7 +417576,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000006-rdb/0",
+        "id": "light/b0000006-rdb/0/-1/0",
         "position": {
           "x": 3.2,
           "y": 34.4,
@@ -417122,7 +417586,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000006-rdb/1",
+        "id": "light/b0000006-rdb/0/-1/1",
         "position": {
           "x": 34.4,
           "y": 40.8,
@@ -417132,7 +417596,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000006-rdb/2",
+        "id": "light/b0000006-rdb/0/-1/2",
         "position": {
           "x": 4.8,
           "y": 21.6,
@@ -417142,7 +417606,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000006-rdb/3",
+        "id": "light/b0000006-rdb/0/-1/3",
         "position": {
           "x": 16,
           "y": 15.2,
@@ -417152,7 +417616,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000006-rdb/4",
+        "id": "light/b0000006-rdb/0/-1/4",
         "position": {
           "x": 4,
           "y": 15.2,
@@ -417162,7 +417626,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000006-rdb/5",
+        "id": "light/b0000006-rdb/0/-1/5",
         "position": {
           "x": 12.8,
           "y": 34.4,
@@ -417172,7 +417636,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000006-rdb/6",
+        "id": "light/b0000006-rdb/0/-1/6",
         "position": {
           "x": 36,
           "y": 15.2,
@@ -417182,7 +417646,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000009-rdb/0",
+        "id": "light/b0000009-rdb/-1/0/0",
         "position": {
           "x": -29.6,
           "y": 34.4,
@@ -417192,7 +417656,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000009-rdb/1",
+        "id": "light/b0000009-rdb/-1/0/1",
         "position": {
           "x": -48,
           "y": 34.4,
@@ -417202,7 +417666,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000009-rdb/2",
+        "id": "light/b0000009-rdb/-1/0/2",
         "position": {
           "x": -47.2,
           "y": 15.2,
@@ -417212,7 +417676,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000009-rdb/3",
+        "id": "light/b0000009-rdb/-1/0/3",
         "position": {
           "x": -34.800003,
           "y": 34.4,
@@ -417222,7 +417686,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000009-rdb/4",
+        "id": "light/b0000009-rdb/-1/0/4",
         "position": {
           "x": -15.599998,
           "y": 15.2,
@@ -417232,7 +417696,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000012-rdb/0",
+        "id": "light/b0000012-rdb/0/1/0",
         "position": {
           "x": 3.4,
           "y": 33.600002,
@@ -417242,7 +417706,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000012-rdb/1",
+        "id": "light/b0000012-rdb/0/1/1",
         "position": {
           "x": 23,
           "y": 13.2,
@@ -417252,7 +417716,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000012-rdb/2",
+        "id": "light/b0000012-rdb/0/1/2",
         "position": {
           "x": 7.6,
           "y": 14.8,
@@ -417262,7 +417726,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000012-rdb/3",
+        "id": "light/b0000012-rdb/0/1/3",
         "position": {
           "x": 43.2,
           "y": 14.8,
@@ -417272,7 +417736,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000012-rdb/4",
+        "id": "light/b0000012-rdb/0/1/4",
         "position": {
           "x": 16,
           "y": 34.4,
@@ -417282,7 +417746,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000012-rdb/5",
+        "id": "light/b0000012-rdb/0/1/5",
         "position": {
           "x": 14.8,
           "y": 27.6,
@@ -417292,7 +417756,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000012-rdb/6",
+        "id": "light/b0000012-rdb/0/1/6",
         "position": {
           "x": 2.4,
           "y": 21.2,
@@ -417302,7 +417766,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000012-rdb/7",
+        "id": "light/b0000012-rdb/0/1/7",
         "position": {
           "x": 3.2,
           "y": 14.8,
@@ -417312,7 +417776,7 @@
         "intensity": 1
       },
       {
-        "id": "light/b0000012-rdb/8",
+        "id": "light/b0000012-rdb/0/1/8",
         "position": {
           "x": 28,
           "y": 14.8,
@@ -417322,7 +417786,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/0",
+        "id": "light/s0000999-rdb/0/0/0",
         "position": {
           "x": 15.025001,
           "y": 40.975002,
@@ -417332,7 +417796,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/1",
+        "id": "light/s0000999-rdb/0/0/1",
         "position": {
           "x": 23.65,
           "y": 24.275,
@@ -417342,7 +417806,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/10",
+        "id": "light/s0000999-rdb/0/0/10",
         "position": {
           "x": 38.7,
           "y": 26.45,
@@ -417352,7 +417816,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/11",
+        "id": "light/s0000999-rdb/0/0/11",
         "position": {
           "x": 49,
           "y": 8.35,
@@ -417362,7 +417826,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/12",
+        "id": "light/s0000999-rdb/0/0/12",
         "position": {
           "x": 31.050001,
           "y": 1.95,
@@ -417372,7 +417836,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/13",
+        "id": "light/s0000999-rdb/0/0/13",
         "position": {
           "x": 49.025,
           "y": 44.100002,
@@ -417382,7 +417846,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/14",
+        "id": "light/s0000999-rdb/0/0/14",
         "position": {
           "x": 46.75,
           "y": 34.025,
@@ -417392,7 +417856,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/15",
+        "id": "light/s0000999-rdb/0/0/15",
         "position": {
           "x": 34.7,
           "y": 8,
@@ -417402,7 +417866,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/16",
+        "id": "light/s0000999-rdb/0/0/16",
         "position": {
           "x": 36.825,
           "y": 47.25,
@@ -417412,7 +417876,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/17",
+        "id": "light/s0000999-rdb/0/0/17",
         "position": {
           "x": 38.2,
           "y": 39.775,
@@ -417422,7 +417886,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/18",
+        "id": "light/s0000999-rdb/0/0/18",
         "position": {
           "x": 35.2,
           "y": 13.6,
@@ -417432,7 +417896,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/19",
+        "id": "light/s0000999-rdb/0/0/19",
         "position": {
           "x": 42.65,
           "y": 28.15,
@@ -417442,7 +417906,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/2",
+        "id": "light/s0000999-rdb/0/0/2",
         "position": {
           "x": 8.075,
           "y": 18.475,
@@ -417452,7 +417916,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/20",
+        "id": "light/s0000999-rdb/0/0/20",
         "position": {
           "x": 42.725002,
           "y": 13.825,
@@ -417462,7 +417926,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/21",
+        "id": "light/s0000999-rdb/0/0/21",
         "position": {
           "x": 24.275,
           "y": 24.15,
@@ -417472,7 +417936,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/22",
+        "id": "light/s0000999-rdb/0/0/22",
         "position": {
           "x": 7.9500003,
           "y": 18.35,
@@ -417482,7 +417946,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/23",
+        "id": "light/s0000999-rdb/0/0/23",
         "position": {
           "x": 21.6,
           "y": 8.2,
@@ -417492,7 +417956,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/24",
+        "id": "light/s0000999-rdb/0/0/24",
         "position": {
           "x": 13.275001,
           "y": 20.825,
@@ -417502,7 +417966,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/25",
+        "id": "light/s0000999-rdb/0/0/25",
         "position": {
           "x": 12.775001,
           "y": 34.3,
@@ -417512,7 +417976,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/26",
+        "id": "light/s0000999-rdb/0/0/26",
         "position": {
           "x": 10.25,
           "y": 26.775,
@@ -417522,7 +417986,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/27",
+        "id": "light/s0000999-rdb/0/0/27",
         "position": {
           "x": 2.3500001,
           "y": 47.2,
@@ -417532,7 +417996,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/28",
+        "id": "light/s0000999-rdb/0/0/28",
         "position": {
           "x": 18.800001,
           "y": 32.8,
@@ -417542,7 +418006,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/29",
+        "id": "light/s0000999-rdb/0/0/29",
         "position": {
           "x": 16.300001,
           "y": 1,
@@ -417552,7 +418016,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/3",
+        "id": "light/s0000999-rdb/0/0/3",
         "position": {
           "x": 3.5,
           "y": 8.475,
@@ -417562,7 +418026,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/30",
+        "id": "light/s0000999-rdb/0/0/30",
         "position": {
           "x": 38.875,
           "y": 26.425001,
@@ -417572,7 +418036,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/31",
+        "id": "light/s0000999-rdb/0/0/31",
         "position": {
           "x": 35.675,
           "y": 45.9,
@@ -417582,7 +418046,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/32",
+        "id": "light/s0000999-rdb/0/0/32",
         "position": {
           "x": 34.875,
           "y": 8.575,
@@ -417592,7 +418056,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/33",
+        "id": "light/s0000999-rdb/0/0/33",
         "position": {
           "x": 48.4,
           "y": 14.05,
@@ -417602,7 +418066,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/34",
+        "id": "light/s0000999-rdb/0/0/34",
         "position": {
           "x": 36.100002,
           "y": 14,
@@ -417612,7 +418076,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/35",
+        "id": "light/s0000999-rdb/0/0/35",
         "position": {
           "x": 37.525,
           "y": 1.6,
@@ -417622,7 +418086,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/36",
+        "id": "light/s0000999-rdb/0/0/36",
         "position": {
           "x": 35.375,
           "y": 46.75,
@@ -417632,7 +418096,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/37",
+        "id": "light/s0000999-rdb/0/0/37",
         "position": {
           "x": 42.65,
           "y": 27.625,
@@ -417642,7 +418106,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/38",
+        "id": "light/s0000999-rdb/0/0/38",
         "position": {
           "x": 48.65,
           "y": 8.225,
@@ -417652,7 +418116,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/4",
+        "id": "light/s0000999-rdb/0/0/4",
         "position": {
           "x": 1.475,
           "y": 34.350002,
@@ -417662,7 +418126,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/5",
+        "id": "light/s0000999-rdb/0/0/5",
         "position": {
           "x": 15.975,
           "y": 8.3,
@@ -417672,7 +418136,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/6",
+        "id": "light/s0000999-rdb/0/0/6",
         "position": {
           "x": 14.400001,
           "y": 49.05,
@@ -417682,7 +418146,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/7",
+        "id": "light/s0000999-rdb/0/0/7",
         "position": {
           "x": 1.95,
           "y": 33.425,
@@ -417692,7 +418156,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/8",
+        "id": "light/s0000999-rdb/0/0/8",
         "position": {
           "x": 15.825,
           "y": 14.400001,
@@ -417702,7 +418166,7 @@
         "intensity": 1
       },
       {
-        "id": "light/s0000999-rdb/9",
+        "id": "light/s0000999-rdb/0/0/9",
         "position": {
           "x": 26.275,
           "y": 34.45,
@@ -417714,7 +418178,7 @@
     ],
     "billboards": [
       {
-        "id": "billboard/b0000003-rdb/10",
+        "id": "billboard/b0000003-rdb/1/0/10",
         "spriteResourceId": "sprite/texture-210-11",
         "position": {
           "x": 55.4,
@@ -417727,7 +418191,7 @@
         }
       },
       {
-        "id": "billboard/b0000003-rdb/11",
+        "id": "billboard/b0000003-rdb/1/0/11",
         "spriteResourceId": "sprite/texture-210-13",
         "position": {
           "x": 64,
@@ -417740,7 +418204,7 @@
         }
       },
       {
-        "id": "billboard/b0000003-rdb/12",
+        "id": "billboard/b0000003-rdb/1/0/12",
         "spriteResourceId": "sprite/texture-210-13",
         "position": {
           "x": 75.8,
@@ -417753,7 +418217,7 @@
         }
       },
       {
-        "id": "billboard/b0000003-rdb/13",
+        "id": "billboard/b0000003-rdb/1/0/13",
         "spriteResourceId": "sprite/texture-210-13",
         "position": {
           "x": 73.4,
@@ -417766,7 +418230,7 @@
         }
       },
       {
-        "id": "billboard/b0000003-rdb/14",
+        "id": "billboard/b0000003-rdb/1/0/14",
         "spriteResourceId": "sprite/texture-210-13",
         "position": {
           "x": 80,
@@ -417779,7 +418243,7 @@
         }
       },
       {
-        "id": "billboard/b0000003-rdb/15",
+        "id": "billboard/b0000003-rdb/1/0/15",
         "spriteResourceId": "sprite/texture-210-13",
         "position": {
           "x": 87,
@@ -417792,7 +418256,7 @@
         }
       },
       {
-        "id": "billboard/b0000003-rdb/2",
+        "id": "billboard/b0000003-rdb/1/0/2",
         "spriteResourceId": "sprite/texture-210-11",
         "position": {
           "x": 54.4,
@@ -417805,7 +418269,7 @@
         }
       },
       {
-        "id": "billboard/b0000003-rdb/4",
+        "id": "billboard/b0000003-rdb/1/0/4",
         "spriteResourceId": "sprite/texture-210-11",
         "position": {
           "x": 99.2,
@@ -417818,7 +418282,7 @@
         }
       },
       {
-        "id": "billboard/b0000003-rdb/5",
+        "id": "billboard/b0000003-rdb/1/0/5",
         "spriteResourceId": "sprite/texture-210-11",
         "position": {
           "x": 85.600006,
@@ -417831,7 +418295,7 @@
         }
       },
       {
-        "id": "billboard/b0000003-rdb/8",
+        "id": "billboard/b0000003-rdb/1/0/8",
         "spriteResourceId": "sprite/texture-210-11",
         "position": {
           "x": 55.8,
@@ -417844,7 +418308,7 @@
         }
       },
       {
-        "id": "billboard/b0000003-rdb/9",
+        "id": "billboard/b0000003-rdb/1/0/9",
         "spriteResourceId": "sprite/texture-210-11",
         "position": {
           "x": 67,
@@ -417857,7 +418321,7 @@
         }
       },
       {
-        "id": "billboard/b0000006-rdb/1",
+        "id": "billboard/b0000006-rdb/0/-1/1",
         "spriteResourceId": "sprite/texture-210-11",
         "position": {
           "x": 3.2,
@@ -417870,7 +418334,7 @@
         }
       },
       {
-        "id": "billboard/b0000006-rdb/11",
+        "id": "billboard/b0000006-rdb/0/-1/11",
         "spriteResourceId": "sprite/texture-210-13",
         "position": {
           "x": 35.8,
@@ -417883,7 +418347,7 @@
         }
       },
       {
-        "id": "billboard/b0000006-rdb/3",
+        "id": "billboard/b0000006-rdb/0/-1/3",
         "spriteResourceId": "sprite/texture-210-11",
         "position": {
           "x": 34.4,
@@ -417896,7 +418360,7 @@
         }
       },
       {
-        "id": "billboard/b0000006-rdb/6",
+        "id": "billboard/b0000006-rdb/0/-1/6",
         "spriteResourceId": "sprite/texture-210-11",
         "position": {
           "x": 4.6,
@@ -417909,7 +418373,7 @@
         }
       },
       {
-        "id": "billboard/b0000006-rdb/7",
+        "id": "billboard/b0000006-rdb/0/-1/7",
         "spriteResourceId": "sprite/texture-210-11",
         "position": {
           "x": 15.8,
@@ -417922,7 +418386,7 @@
         }
       },
       {
-        "id": "billboard/b0000006-rdb/8",
+        "id": "billboard/b0000006-rdb/0/-1/8",
         "spriteResourceId": "sprite/texture-210-11",
         "position": {
           "x": 4.2000003,
@@ -417935,7 +418399,7 @@
         }
       },
       {
-        "id": "billboard/b0000006-rdb/9",
+        "id": "billboard/b0000006-rdb/0/-1/9",
         "spriteResourceId": "sprite/texture-210-13",
         "position": {
           "x": 12.8,
@@ -417948,7 +418412,7 @@
         }
       },
       {
-        "id": "billboard/b0000009-rdb/1",
+        "id": "billboard/b0000009-rdb/-1/0/1",
         "spriteResourceId": "sprite/texture-210-11",
         "position": {
           "x": -29.6,
@@ -417961,7 +418425,7 @@
         }
       },
       {
-        "id": "billboard/b0000009-rdb/2",
+        "id": "billboard/b0000009-rdb/-1/0/2",
         "spriteResourceId": "sprite/texture-210-11",
         "position": {
           "x": -48,
@@ -417974,7 +418438,7 @@
         }
       },
       {
-        "id": "billboard/b0000009-rdb/4",
+        "id": "billboard/b0000009-rdb/-1/0/4",
         "spriteResourceId": "sprite/texture-210-11",
         "position": {
           "x": -47,
@@ -417987,7 +418451,7 @@
         }
       },
       {
-        "id": "billboard/b0000009-rdb/5",
+        "id": "billboard/b0000009-rdb/-1/0/5",
         "spriteResourceId": "sprite/texture-210-13",
         "position": {
           "x": -34.800003,
@@ -418000,7 +418464,7 @@
         }
       },
       {
-        "id": "billboard/b0000009-rdb/7",
+        "id": "billboard/b0000009-rdb/-1/0/7",
         "spriteResourceId": "sprite/texture-210-13",
         "position": {
           "x": -15.400002,
@@ -418013,7 +418477,7 @@
         }
       },
       {
-        "id": "billboard/b0000012-rdb/1",
+        "id": "billboard/b0000012-rdb/0/1/1",
         "spriteResourceId": "sprite/texture-210-18",
         "position": {
           "x": 3.4,
@@ -418026,7 +418490,7 @@
         }
       },
       {
-        "id": "billboard/b0000012-rdb/10",
+        "id": "billboard/b0000012-rdb/0/1/10",
         "spriteResourceId": "sprite/texture-210-18",
         "position": {
           "x": 2,
@@ -418039,7 +418503,7 @@
         }
       },
       {
-        "id": "billboard/b0000012-rdb/11",
+        "id": "billboard/b0000012-rdb/0/1/11",
         "spriteResourceId": "sprite/texture-210-19",
         "position": {
           "x": 21.2,
@@ -418052,7 +418516,7 @@
         }
       },
       {
-        "id": "billboard/b0000012-rdb/12",
+        "id": "billboard/b0000012-rdb/0/1/12",
         "spriteResourceId": "sprite/texture-210-19",
         "position": {
           "x": 24.2,
@@ -418065,7 +418529,7 @@
         }
       },
       {
-        "id": "billboard/b0000012-rdb/13",
+        "id": "billboard/b0000012-rdb/0/1/13",
         "spriteResourceId": "sprite/texture-210-18",
         "position": {
           "x": 3.2,
@@ -418078,7 +418542,7 @@
         }
       },
       {
-        "id": "billboard/b0000012-rdb/16",
+        "id": "billboard/b0000012-rdb/0/1/16",
         "spriteResourceId": "sprite/texture-210-18",
         "position": {
           "x": 27.800001,
@@ -418091,7 +418555,7 @@
         }
       },
       {
-        "id": "billboard/b0000012-rdb/2",
+        "id": "billboard/b0000012-rdb/0/1/2",
         "spriteResourceId": "sprite/texture-210-18",
         "position": {
           "x": 3.4,
@@ -418104,7 +418568,7 @@
         }
       },
       {
-        "id": "billboard/b0000012-rdb/3",
+        "id": "billboard/b0000012-rdb/0/1/3",
         "spriteResourceId": "sprite/texture-210-19",
         "position": {
           "x": 21.2,
@@ -418117,7 +418581,7 @@
         }
       },
       {
-        "id": "billboard/b0000012-rdb/4",
+        "id": "billboard/b0000012-rdb/0/1/4",
         "spriteResourceId": "sprite/texture-210-19",
         "position": {
           "x": 24.2,
@@ -418130,7 +418594,7 @@
         }
       },
       {
-        "id": "billboard/b0000012-rdb/5",
+        "id": "billboard/b0000012-rdb/0/1/5",
         "spriteResourceId": "sprite/texture-210-18",
         "position": {
           "x": 7,
@@ -418143,7 +418607,7 @@
         }
       },
       {
-        "id": "billboard/b0000012-rdb/6",
+        "id": "billboard/b0000012-rdb/0/1/6",
         "spriteResourceId": "sprite/texture-210-18",
         "position": {
           "x": 43.2,
@@ -418156,7 +418620,7 @@
         }
       },
       {
-        "id": "billboard/b0000012-rdb/8",
+        "id": "billboard/b0000012-rdb/0/1/8",
         "spriteResourceId": "sprite/texture-210-22",
         "position": {
           "x": 16,
@@ -418169,7 +418633,7 @@
         }
       },
       {
-        "id": "billboard/b0000012-rdb/9",
+        "id": "billboard/b0000012-rdb/0/1/9",
         "spriteResourceId": "sprite/texture-210-18",
         "position": {
           "x": 15.325,
@@ -418182,7 +418646,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/0",
+        "id": "billboard/s0000999-rdb/0/0/0",
         "spriteResourceId": "sprite/texture-210-13",
         "position": {
           "x": 15.675,
@@ -418195,7 +418659,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/10",
+        "id": "billboard/s0000999-rdb/0/0/10",
         "spriteResourceId": "sprite/texture-210-17",
         "position": {
           "x": 3.3500001,
@@ -418208,7 +418672,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/100",
+        "id": "billboard/s0000999-rdb/0/0/100",
         "spriteResourceId": "sprite/texture-210-1",
         "position": {
           "x": 16.15,
@@ -418221,7 +418685,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/108",
+        "id": "billboard/s0000999-rdb/0/0/108",
         "spriteResourceId": "sprite/texture-210-1",
         "position": {
           "x": 35.475002,
@@ -418234,7 +418698,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/109",
+        "id": "billboard/s0000999-rdb/0/0/109",
         "spriteResourceId": "sprite/texture-210-6",
         "position": {
           "x": 36.4,
@@ -418247,7 +418711,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/11",
+        "id": "billboard/s0000999-rdb/0/0/11",
         "spriteResourceId": "sprite/texture-210-20",
         "position": {
           "x": 16,
@@ -418260,7 +418724,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/110",
+        "id": "billboard/s0000999-rdb/0/0/110",
         "spriteResourceId": "sprite/texture-210-6",
         "position": {
           "x": 36.4,
@@ -418273,7 +418737,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/111",
+        "id": "billboard/s0000999-rdb/0/0/111",
         "spriteResourceId": "sprite/texture-210-13",
         "position": {
           "x": 34.65,
@@ -418286,7 +418750,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/112",
+        "id": "billboard/s0000999-rdb/0/0/112",
         "spriteResourceId": "sprite/texture-210-20",
         "position": {
           "x": 48.350002,
@@ -418299,7 +418763,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/113",
+        "id": "billboard/s0000999-rdb/0/0/113",
         "spriteResourceId": "sprite/texture-210-20",
         "position": {
           "x": 36.05,
@@ -418312,7 +418776,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/114",
+        "id": "billboard/s0000999-rdb/0/0/114",
         "spriteResourceId": "sprite/texture-210-17",
         "position": {
           "x": 38.025,
@@ -418325,7 +418789,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/115",
+        "id": "billboard/s0000999-rdb/0/0/115",
         "spriteResourceId": "sprite/texture-213-8",
         "position": {
           "x": 35.5,
@@ -418338,7 +418802,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/116",
+        "id": "billboard/s0000999-rdb/0/0/116",
         "spriteResourceId": "sprite/texture-213-7",
         "position": {
           "x": 36.2,
@@ -418351,7 +418815,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/117",
+        "id": "billboard/s0000999-rdb/0/0/117",
         "spriteResourceId": "sprite/texture-213-7",
         "position": {
           "x": 34.100002,
@@ -418364,7 +418828,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/118",
+        "id": "billboard/s0000999-rdb/0/0/118",
         "spriteResourceId": "sprite/texture-213-9",
         "position": {
           "x": 28.800001,
@@ -418377,7 +418841,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/119",
+        "id": "billboard/s0000999-rdb/0/0/119",
         "spriteResourceId": "sprite/texture-213-10",
         "position": {
           "x": 30.975,
@@ -418390,7 +418854,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/120",
+        "id": "billboard/s0000999-rdb/0/0/120",
         "spriteResourceId": "sprite/texture-213-8",
         "position": {
           "x": 47.600002,
@@ -418403,7 +418867,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/121",
+        "id": "billboard/s0000999-rdb/0/0/121",
         "spriteResourceId": "sprite/texture-203-6",
         "position": {
           "x": 26.025,
@@ -418416,7 +418880,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/122",
+        "id": "billboard/s0000999-rdb/0/0/122",
         "spriteResourceId": "sprite/texture-203-6",
         "position": {
           "x": 26.025,
@@ -418429,7 +418893,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/123",
+        "id": "billboard/s0000999-rdb/0/0/123",
         "spriteResourceId": "sprite/texture-210-6",
         "position": {
           "x": 38.8,
@@ -418442,7 +418906,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/124",
+        "id": "billboard/s0000999-rdb/0/0/124",
         "spriteResourceId": "sprite/texture-210-6",
         "position": {
           "x": 38.8,
@@ -418455,7 +418919,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/125",
+        "id": "billboard/s0000999-rdb/0/0/125",
         "spriteResourceId": "sprite/texture-210-6",
         "position": {
           "x": 38.8,
@@ -418468,7 +418932,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/126",
+        "id": "billboard/s0000999-rdb/0/0/126",
         "spriteResourceId": "sprite/texture-210-19",
         "position": {
           "x": 36.025,
@@ -418481,7 +418945,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/127",
+        "id": "billboard/s0000999-rdb/0/0/127",
         "spriteResourceId": "sprite/texture-210-19",
         "position": {
           "x": 36.025,
@@ -418494,7 +418958,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/128",
+        "id": "billboard/s0000999-rdb/0/0/128",
         "spriteResourceId": "sprite/texture-206-17",
         "position": {
           "x": 38.675,
@@ -418507,7 +418971,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/129",
+        "id": "billboard/s0000999-rdb/0/0/129",
         "spriteResourceId": "sprite/texture-206-14",
         "position": {
           "x": 37.850002,
@@ -418520,7 +418984,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/13",
+        "id": "billboard/s0000999-rdb/0/0/13",
         "spriteResourceId": "sprite/texture-206-8",
         "position": {
           "x": 19.050001,
@@ -418533,7 +418997,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/130",
+        "id": "billboard/s0000999-rdb/0/0/130",
         "spriteResourceId": "sprite/texture-210-6",
         "position": {
           "x": 42.575,
@@ -418546,7 +419010,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/131",
+        "id": "billboard/s0000999-rdb/0/0/131",
         "spriteResourceId": "sprite/texture-210-11",
         "position": {
           "x": 49.225002,
@@ -418559,7 +419023,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/132",
+        "id": "billboard/s0000999-rdb/0/0/132",
         "spriteResourceId": "sprite/texture-206-2",
         "position": {
           "x": 31.6,
@@ -418572,7 +419036,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/14",
+        "id": "billboard/s0000999-rdb/0/0/14",
         "spriteResourceId": "sprite/texture-206-6",
         "position": {
           "x": 17.9,
@@ -418585,7 +419049,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/15",
+        "id": "billboard/s0000999-rdb/0/0/15",
         "spriteResourceId": "sprite/texture-206-5",
         "position": {
           "x": 19.050001,
@@ -418598,7 +419062,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/16",
+        "id": "billboard/s0000999-rdb/0/0/16",
         "spriteResourceId": "sprite/texture-206-4",
         "position": {
           "x": 20.075,
@@ -418611,7 +419075,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/17",
+        "id": "billboard/s0000999-rdb/0/0/17",
         "spriteResourceId": "sprite/texture-206-3",
         "position": {
           "x": 15.825,
@@ -418624,7 +419088,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/18",
+        "id": "billboard/s0000999-rdb/0/0/18",
         "spriteResourceId": "sprite/texture-206-1",
         "position": {
           "x": 17.1,
@@ -418637,7 +419101,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/19",
+        "id": "billboard/s0000999-rdb/0/0/19",
         "spriteResourceId": "sprite/texture-206-0",
         "position": {
           "x": 18.800001,
@@ -418650,7 +419114,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/20",
+        "id": "billboard/s0000999-rdb/0/0/20",
         "spriteResourceId": "sprite/texture-210-17",
         "position": {
           "x": 9.425,
@@ -418663,7 +419127,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/21",
+        "id": "billboard/s0000999-rdb/0/0/21",
         "spriteResourceId": "sprite/texture-210-17",
         "position": {
           "x": 6.6,
@@ -418676,7 +419140,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/22",
+        "id": "billboard/s0000999-rdb/0/0/22",
         "spriteResourceId": "sprite/texture-213-9",
         "position": {
           "x": 22.550001,
@@ -418689,7 +419153,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/23",
+        "id": "billboard/s0000999-rdb/0/0/23",
         "spriteResourceId": "sprite/texture-213-7",
         "position": {
           "x": 22.85,
@@ -418702,7 +419166,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/24",
+        "id": "billboard/s0000999-rdb/0/0/24",
         "spriteResourceId": "sprite/texture-210-9",
         "position": {
           "x": 13.650001,
@@ -418715,7 +419179,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/25",
+        "id": "billboard/s0000999-rdb/0/0/25",
         "spriteResourceId": "sprite/texture-210-18",
         "position": {
           "x": 2.3,
@@ -418728,7 +419192,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/26",
+        "id": "billboard/s0000999-rdb/0/0/26",
         "spriteResourceId": "sprite/texture-210-18",
         "position": {
           "x": 0.375,
@@ -418741,7 +419205,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/27",
+        "id": "billboard/s0000999-rdb/0/0/27",
         "spriteResourceId": "sprite/texture-210-12",
         "position": {
           "x": 2.175,
@@ -418754,7 +419218,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/28",
+        "id": "billboard/s0000999-rdb/0/0/28",
         "spriteResourceId": "sprite/texture-210-3",
         "position": {
           "x": 10.575,
@@ -418767,7 +419231,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/29",
+        "id": "billboard/s0000999-rdb/0/0/29",
         "spriteResourceId": "sprite/texture-210-3",
         "position": {
           "x": 13.675,
@@ -418780,7 +419244,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/30",
+        "id": "billboard/s0000999-rdb/0/0/30",
         "spriteResourceId": "sprite/texture-210-3",
         "position": {
           "x": 15.275001,
@@ -418793,7 +419257,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/31",
+        "id": "billboard/s0000999-rdb/0/0/31",
         "spriteResourceId": "sprite/texture-210-3",
         "position": {
           "x": 18.25,
@@ -418806,7 +419270,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/32",
+        "id": "billboard/s0000999-rdb/0/0/32",
         "spriteResourceId": "sprite/texture-210-3",
         "position": {
           "x": 12.150001,
@@ -418819,7 +419283,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/33",
+        "id": "billboard/s0000999-rdb/0/0/33",
         "spriteResourceId": "sprite/texture-210-3",
         "position": {
           "x": 16.800001,
@@ -418832,7 +419296,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/34",
+        "id": "billboard/s0000999-rdb/0/0/34",
         "spriteResourceId": "sprite/texture-210-11",
         "position": {
           "x": 1.6750001,
@@ -418845,7 +419309,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/36",
+        "id": "billboard/s0000999-rdb/0/0/36",
         "spriteResourceId": "sprite/texture-210-6",
         "position": {
           "x": 26.15,
@@ -418858,7 +419322,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/38",
+        "id": "billboard/s0000999-rdb/0/0/38",
         "spriteResourceId": "sprite/texture-210-6",
         "position": {
           "x": 42.575,
@@ -418871,7 +419335,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/52",
+        "id": "billboard/s0000999-rdb/0/0/52",
         "spriteResourceId": "sprite/texture-206-0",
         "position": {
           "x": 37.975002,
@@ -418884,7 +419348,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/53",
+        "id": "billboard/s0000999-rdb/0/0/53",
         "spriteResourceId": "sprite/texture-210-6",
         "position": {
           "x": 36.25,
@@ -418897,7 +419361,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/54",
+        "id": "billboard/s0000999-rdb/0/0/54",
         "spriteResourceId": "sprite/texture-210-6",
         "position": {
           "x": 36.25,
@@ -418910,7 +419374,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/55",
+        "id": "billboard/s0000999-rdb/0/0/55",
         "spriteResourceId": "sprite/texture-210-17",
         "position": {
           "x": 49.375,
@@ -418923,7 +419387,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/56",
+        "id": "billboard/s0000999-rdb/0/0/56",
         "spriteResourceId": "sprite/texture-210-17",
         "position": {
           "x": 31.6,
@@ -418936,7 +419400,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/57",
+        "id": "billboard/s0000999-rdb/0/0/57",
         "spriteResourceId": "sprite/texture-203-5",
         "position": {
           "x": 31.325,
@@ -418949,7 +419413,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/58",
+        "id": "billboard/s0000999-rdb/0/0/58",
         "spriteResourceId": "sprite/texture-203-5",
         "position": {
           "x": 26.35,
@@ -418962,7 +419426,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/59",
+        "id": "billboard/s0000999-rdb/0/0/59",
         "spriteResourceId": "sprite/texture-210-6",
         "position": {
           "x": 38.8,
@@ -418975,7 +419439,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/60",
+        "id": "billboard/s0000999-rdb/0/0/60",
         "spriteResourceId": "sprite/texture-210-6",
         "position": {
           "x": 38.8,
@@ -418988,7 +419452,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/61",
+        "id": "billboard/s0000999-rdb/0/0/61",
         "spriteResourceId": "sprite/texture-210-6",
         "position": {
           "x": 38.8,
@@ -419001,7 +419465,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/62",
+        "id": "billboard/s0000999-rdb/0/0/62",
         "spriteResourceId": "sprite/texture-210-20",
         "position": {
           "x": 48.45,
@@ -419014,7 +419478,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/63",
+        "id": "billboard/s0000999-rdb/0/0/63",
         "spriteResourceId": "sprite/texture-210-20",
         "position": {
           "x": 46.600002,
@@ -419027,7 +419491,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/64",
+        "id": "billboard/s0000999-rdb/0/0/64",
         "spriteResourceId": "sprite/texture-210-4",
         "position": {
           "x": 35.675,
@@ -419040,7 +419504,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/65",
+        "id": "billboard/s0000999-rdb/0/0/65",
         "spriteResourceId": "sprite/texture-210-4",
         "position": {
           "x": 33.825,
@@ -419053,7 +419517,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/66",
+        "id": "billboard/s0000999-rdb/0/0/66",
         "spriteResourceId": "sprite/texture-210-8",
         "position": {
           "x": 37.175,
@@ -419066,7 +419530,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/67",
+        "id": "billboard/s0000999-rdb/0/0/67",
         "spriteResourceId": "sprite/texture-210-0",
         "position": {
           "x": 38.925,
@@ -419079,7 +419543,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/68",
+        "id": "billboard/s0000999-rdb/0/0/68",
         "spriteResourceId": "sprite/texture-210-0",
         "position": {
           "x": 35.2,
@@ -419092,7 +419556,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/69",
+        "id": "billboard/s0000999-rdb/0/0/69",
         "spriteResourceId": "sprite/texture-210-1",
         "position": {
           "x": 42.4,
@@ -419105,7 +419569,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/76",
+        "id": "billboard/s0000999-rdb/0/0/76",
         "spriteResourceId": "sprite/texture-210-16",
         "position": {
           "x": 24.2,
@@ -419118,7 +419582,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/8",
+        "id": "billboard/s0000999-rdb/0/0/8",
         "spriteResourceId": "sprite/texture-210-16",
         "position": {
           "x": 14.575,
@@ -419131,7 +419595,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/80",
+        "id": "billboard/s0000999-rdb/0/0/80",
         "spriteResourceId": "sprite/texture-210-17",
         "position": {
           "x": 21.075,
@@ -419144,7 +419608,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/81",
+        "id": "billboard/s0000999-rdb/0/0/81",
         "spriteResourceId": "sprite/texture-210-17",
         "position": {
           "x": 9.725,
@@ -419157,7 +419621,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/82",
+        "id": "billboard/s0000999-rdb/0/0/82",
         "spriteResourceId": "sprite/texture-210-17",
         "position": {
           "x": 6.625,
@@ -419170,7 +419634,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/83",
+        "id": "billboard/s0000999-rdb/0/0/83",
         "spriteResourceId": "sprite/texture-210-17",
         "position": {
           "x": 13.025001,
@@ -419183,7 +419647,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/84",
+        "id": "billboard/s0000999-rdb/0/0/84",
         "spriteResourceId": "sprite/texture-213-7",
         "position": {
           "x": 12.900001,
@@ -419196,7 +419660,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/85",
+        "id": "billboard/s0000999-rdb/0/0/85",
         "spriteResourceId": "sprite/texture-213-9",
         "position": {
           "x": 15.95,
@@ -419209,7 +419673,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/86",
+        "id": "billboard/s0000999-rdb/0/0/86",
         "spriteResourceId": "sprite/texture-213-7",
         "position": {
           "x": 9.475,
@@ -419222,7 +419686,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/87",
+        "id": "billboard/s0000999-rdb/0/0/87",
         "spriteResourceId": "sprite/texture-213-8",
         "position": {
           "x": 13.825,
@@ -419235,7 +419699,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/88",
+        "id": "billboard/s0000999-rdb/0/0/88",
         "spriteResourceId": "sprite/texture-210-0",
         "position": {
           "x": 10.2,
@@ -419248,7 +419712,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/89",
+        "id": "billboard/s0000999-rdb/0/0/89",
         "spriteResourceId": "sprite/texture-210-13",
         "position": {
           "x": 2.6000001,
@@ -419261,7 +419725,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/9",
+        "id": "billboard/s0000999-rdb/0/0/9",
         "spriteResourceId": "sprite/texture-210-16",
         "position": {
           "x": 23.800001,
@@ -419274,7 +419738,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/90",
+        "id": "billboard/s0000999-rdb/0/0/90",
         "spriteResourceId": "sprite/texture-206-5",
         "position": {
           "x": 8,
@@ -419287,7 +419751,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/91",
+        "id": "billboard/s0000999-rdb/0/0/91",
         "spriteResourceId": "sprite/texture-206-8",
         "position": {
           "x": 8.85,
@@ -419300,7 +419764,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/92",
+        "id": "billboard/s0000999-rdb/0/0/92",
         "spriteResourceId": "sprite/texture-210-2",
         "position": {
           "x": 22,
@@ -419313,7 +419777,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/93",
+        "id": "billboard/s0000999-rdb/0/0/93",
         "spriteResourceId": "sprite/texture-210-2",
         "position": {
           "x": 19.9,
@@ -419326,7 +419790,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/94",
+        "id": "billboard/s0000999-rdb/0/0/94",
         "spriteResourceId": "sprite/texture-210-2",
         "position": {
           "x": 19.95,
@@ -419339,7 +419803,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/95",
+        "id": "billboard/s0000999-rdb/0/0/95",
         "spriteResourceId": "sprite/texture-210-2",
         "position": {
           "x": 18.9,
@@ -419352,7 +419816,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/96",
+        "id": "billboard/s0000999-rdb/0/0/96",
         "spriteResourceId": "sprite/texture-210-2",
         "position": {
           "x": 17.875,
@@ -419365,7 +419829,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/97",
+        "id": "billboard/s0000999-rdb/0/0/97",
         "spriteResourceId": "sprite/texture-210-2",
         "position": {
           "x": 18.95,
@@ -419378,7 +419842,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/98",
+        "id": "billboard/s0000999-rdb/0/0/98",
         "spriteResourceId": "sprite/texture-210-2",
         "position": {
           "x": 17.825,
@@ -419391,7 +419855,7 @@
         }
       },
       {
-        "id": "billboard/s0000999-rdb/99",
+        "id": "billboard/s0000999-rdb/0/0/99",
         "spriteResourceId": "sprite/texture-210-2",
         "position": {
           "x": 17.35,
@@ -419406,7 +419870,7 @@
     ],
     "actors": [
       {
-        "id": "actor/s0000999-rdb/1",
+        "id": "actor/s0000999-rdb/0/0/1",
         "actorResourceId": "actor/mobile-15",
         "position": {
           "x": 13.5,
@@ -419415,7 +419879,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/103",
+        "id": "actor/s0000999-rdb/0/0/103",
         "actorResourceId": "actor/mobile-15",
         "position": {
           "x": 33.075,
@@ -419424,7 +419888,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/104",
+        "id": "actor/s0000999-rdb/0/0/104",
         "actorResourceId": "actor/mobile-138",
         "position": {
           "x": 31.725,
@@ -419433,7 +419897,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/105",
+        "id": "actor/s0000999-rdb/0/0/105",
         "actorResourceId": "actor/mobile-3",
         "position": {
           "x": 28.375,
@@ -419442,7 +419906,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/106",
+        "id": "actor/s0000999-rdb/0/0/106",
         "actorResourceId": "actor/mobile-138",
         "position": {
           "x": 34.725002,
@@ -419451,7 +419915,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/107",
+        "id": "actor/s0000999-rdb/0/0/107",
         "actorResourceId": "actor/mobile-0",
         "position": {
           "x": 37.125,
@@ -419460,7 +419924,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/2",
+        "id": "actor/s0000999-rdb/0/0/2",
         "actorResourceId": "actor/mobile-138",
         "position": {
           "x": 11.075,
@@ -419469,7 +419933,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/3",
+        "id": "actor/s0000999-rdb/0/0/3",
         "actorResourceId": "actor/mobile-3",
         "position": {
           "x": 3.2250001,
@@ -419478,7 +419942,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/35",
+        "id": "actor/s0000999-rdb/0/0/35",
         "actorResourceId": "actor/mobile-3",
         "position": {
           "x": 31.675001,
@@ -419487,7 +419951,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/39",
+        "id": "actor/s0000999-rdb/0/0/39",
         "actorResourceId": "actor/mobile-0",
         "position": {
           "x": 47.75,
@@ -419496,7 +419960,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/4",
+        "id": "actor/s0000999-rdb/0/0/4",
         "actorResourceId": "actor/mobile-7",
         "position": {
           "x": 20.425001,
@@ -419505,7 +419969,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/40",
+        "id": "actor/s0000999-rdb/0/0/40",
         "actorResourceId": "actor/mobile-0",
         "position": {
           "x": 37.825,
@@ -419514,7 +419978,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/41",
+        "id": "actor/s0000999-rdb/0/0/41",
         "actorResourceId": "actor/mobile-1",
         "position": {
           "x": 41.725002,
@@ -419523,7 +419987,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/42",
+        "id": "actor/s0000999-rdb/0/0/42",
         "actorResourceId": "actor/mobile-0",
         "position": {
           "x": 33.850002,
@@ -419532,7 +419996,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/43",
+        "id": "actor/s0000999-rdb/0/0/43",
         "actorResourceId": "actor/mobile-3",
         "position": {
           "x": 41.525,
@@ -419541,7 +420005,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/44",
+        "id": "actor/s0000999-rdb/0/0/44",
         "actorResourceId": "actor/mobile-15",
         "position": {
           "x": 40.225002,
@@ -419550,7 +420014,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/45",
+        "id": "actor/s0000999-rdb/0/0/45",
         "actorResourceId": "actor/mobile-0",
         "position": {
           "x": 32.675,
@@ -419559,7 +420023,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/46",
+        "id": "actor/s0000999-rdb/0/0/46",
         "actorResourceId": "actor/mobile-0",
         "position": {
           "x": 35.875,
@@ -419568,7 +420032,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/47",
+        "id": "actor/s0000999-rdb/0/0/47",
         "actorResourceId": "actor/mobile-1",
         "position": {
           "x": 41.225002,
@@ -419577,7 +420041,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/48",
+        "id": "actor/s0000999-rdb/0/0/48",
         "actorResourceId": "actor/mobile-3",
         "position": {
           "x": 48.425,
@@ -419586,7 +420050,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/49",
+        "id": "actor/s0000999-rdb/0/0/49",
         "actorResourceId": "actor/mobile-0",
         "position": {
           "x": 26,
@@ -419595,7 +420059,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/5",
+        "id": "actor/s0000999-rdb/0/0/5",
         "actorResourceId": "actor/mobile-141",
         "position": {
           "x": 19.225,
@@ -419604,7 +420068,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/6",
+        "id": "actor/s0000999-rdb/0/0/6",
         "actorResourceId": "actor/mobile-3",
         "position": {
           "x": 3.525,
@@ -419613,7 +420077,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/71",
+        "id": "actor/s0000999-rdb/0/0/71",
         "actorResourceId": "actor/mobile-1",
         "position": {
           "x": 18.775,
@@ -419622,7 +420086,7 @@
         }
       },
       {
-        "id": "actor/s0000999-rdb/72",
+        "id": "actor/s0000999-rdb/0/0/72",
         "actorResourceId": "actor/mobile-0",
         "position": {
           "x": 15.275001,
@@ -419633,7 +420097,7 @@
     ],
     "treasures": [
       {
-        "id": "treasure/s0000999-rdb/101",
+        "id": "treasure/s0000999-rdb/0/0/101",
         "treasureResourceId": "treasure/dungeon-type-2",
         "position": {
           "x": 36.975002,
@@ -419642,7 +420106,7 @@
         }
       },
       {
-        "id": "treasure/s0000999-rdb/37",
+        "id": "treasure/s0000999-rdb/0/0/37",
         "treasureResourceId": "treasure/dungeon-type-2",
         "position": {
           "x": 32.45,
@@ -419651,7 +420115,7 @@
         }
       },
       {
-        "id": "treasure/s0000999-rdb/51",
+        "id": "treasure/s0000999-rdb/0/0/51",
         "treasureResourceId": "treasure/dungeon-type-2",
         "position": {
           "x": 32.125,
@@ -419660,7 +420124,7 @@
         }
       },
       {
-        "id": "treasure/s0000999-rdb/7",
+        "id": "treasure/s0000999-rdb/0/0/7",
         "treasureResourceId": "treasure/dungeon-type-2",
         "position": {
           "x": 8.275001,
@@ -419669,7 +420133,7 @@
         }
       },
       {
-        "id": "treasure/s0000999-rdb/73",
+        "id": "treasure/s0000999-rdb/0/0/73",
         "treasureResourceId": "treasure/dungeon-type-2",
         "position": {
           "x": 11.375,
@@ -419678,7 +420142,7 @@
         }
       },
       {
-        "id": "treasure/s0000999-rdb/75",
+        "id": "treasure/s0000999-rdb/0/0/75",
         "treasureResourceId": "treasure/dungeon-type-2",
         "position": {
           "x": 11.2,
@@ -419687,7 +420151,7 @@
         }
       },
       {
-        "id": "treasure/s0000999-rdb/77",
+        "id": "treasure/s0000999-rdb/0/0/77",
         "treasureResourceId": "treasure/dungeon-type-2",
         "position": {
           "x": 7.9500003,
@@ -419696,7 +420160,7 @@
         }
       },
       {
-        "id": "treasure/s0000999-rdb/78",
+        "id": "treasure/s0000999-rdb/0/0/78",
         "treasureResourceId": "treasure/dungeon-type-2",
         "position": {
           "x": 7.9,
@@ -419707,11 +420171,11 @@
     ],
     "doors": [
       {
-        "id": "door/b0000003-rdb/0",
+        "id": "door/b0000003-rdb/1/0/0",
         "doorResourceId": "door/model-55001",
         "visualMeshIds": [
-          "mesh/door/b0000003-rdb/0/texture-0-45/action-visual",
-          "mesh/door/b0000003-rdb/0/texture-374-2/action-visual"
+          "mesh/door/b0000003-rdb/1/0/0/texture-0-45/action-visual",
+          "mesh/door/b0000003-rdb/1/0/0/texture-374-2/action-visual"
         ],
         "position": {
           "x": 67.8,
@@ -419722,14 +420186,17 @@
           "x": 0,
           "y": 540,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000003-rdb/1",
+        "id": "door/b0000003-rdb/1/0/1",
         "doorResourceId": "door/model-55001",
         "visualMeshIds": [
-          "mesh/door/b0000003-rdb/1/texture-0-45/action-visual",
-          "mesh/door/b0000003-rdb/1/texture-374-2/action-visual"
+          "mesh/door/b0000003-rdb/1/0/1/texture-0-45/action-visual",
+          "mesh/door/b0000003-rdb/1/0/1/texture-374-2/action-visual"
         ],
         "position": {
           "x": 51.2,
@@ -419740,14 +420207,17 @@
           "x": 0,
           "y": 270,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000003-rdb/12",
+        "id": "door/b0000003-rdb/1/0/12",
         "doorResourceId": "door/model-55001",
         "visualMeshIds": [
-          "mesh/door/b0000003-rdb/12/texture-0-45/action-visual",
-          "mesh/door/b0000003-rdb/12/texture-374-2/action-visual"
+          "mesh/door/b0000003-rdb/1/0/12/texture-0-45/action-visual",
+          "mesh/door/b0000003-rdb/1/0/12/texture-374-2/action-visual"
         ],
         "position": {
           "x": 87,
@@ -419758,14 +420228,17 @@
           "x": 0,
           "y": 180,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000003-rdb/13",
+        "id": "door/b0000003-rdb/1/0/13",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/b0000003-rdb/13/texture-0-77/action-visual",
-          "mesh/door/b0000003-rdb/13/texture-374-0/action-visual"
+          "mesh/door/b0000003-rdb/1/0/13/texture-0-77/action-visual",
+          "mesh/door/b0000003-rdb/1/0/13/texture-374-0/action-visual"
         ],
         "position": {
           "x": 85.8,
@@ -419776,14 +420249,17 @@
           "x": 0,
           "y": 0,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000003-rdb/19",
+        "id": "door/b0000003-rdb/1/0/19",
         "doorResourceId": "door/model-55001",
         "visualMeshIds": [
-          "mesh/door/b0000003-rdb/19/texture-0-45/action-visual",
-          "mesh/door/b0000003-rdb/19/texture-374-2/action-visual"
+          "mesh/door/b0000003-rdb/1/0/19/texture-0-45/action-visual",
+          "mesh/door/b0000003-rdb/1/0/19/texture-374-2/action-visual"
         ],
         "position": {
           "x": 51.2,
@@ -419794,14 +420270,17 @@
           "x": 0,
           "y": 270,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000003-rdb/2",
+        "id": "door/b0000003-rdb/1/0/2",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/b0000003-rdb/2/texture-0-77/action-visual",
-          "mesh/door/b0000003-rdb/2/texture-374-0/action-visual"
+          "mesh/door/b0000003-rdb/1/0/2/texture-0-77/action-visual",
+          "mesh/door/b0000003-rdb/1/0/2/texture-374-0/action-visual"
         ],
         "position": {
           "x": 64,
@@ -419812,14 +420291,17 @@
           "x": 0,
           "y": 270,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000003-rdb/20",
+        "id": "door/b0000003-rdb/1/0/20",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/b0000003-rdb/20/texture-0-77/action-visual",
-          "mesh/door/b0000003-rdb/20/texture-374-0/action-visual"
+          "mesh/door/b0000003-rdb/1/0/20/texture-0-77/action-visual",
+          "mesh/door/b0000003-rdb/1/0/20/texture-374-0/action-visual"
         ],
         "position": {
           "x": 73,
@@ -419830,14 +420312,17 @@
           "x": 0,
           "y": 0,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000003-rdb/3",
+        "id": "door/b0000003-rdb/1/0/3",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/b0000003-rdb/3/texture-0-77/action-visual",
-          "mesh/door/b0000003-rdb/3/texture-374-0/action-visual"
+          "mesh/door/b0000003-rdb/1/0/3/texture-0-77/action-visual",
+          "mesh/door/b0000003-rdb/1/0/3/texture-374-0/action-visual"
         ],
         "position": {
           "x": 60.2,
@@ -419848,14 +420333,17 @@
           "x": 0,
           "y": 0,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000003-rdb/34",
+        "id": "door/b0000003-rdb/1/0/34",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/b0000003-rdb/34/texture-0-77/action-visual",
-          "mesh/door/b0000003-rdb/34/texture-374-0/action-visual"
+          "mesh/door/b0000003-rdb/1/0/34/texture-0-77/action-visual",
+          "mesh/door/b0000003-rdb/1/0/34/texture-374-0/action-visual"
         ],
         "position": {
           "x": 60.2,
@@ -419866,14 +420354,17 @@
           "x": 0,
           "y": 0,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000003-rdb/45",
+        "id": "door/b0000003-rdb/1/0/45",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/b0000003-rdb/45/texture-0-77/action-visual",
-          "mesh/door/b0000003-rdb/45/texture-374-0/action-visual"
+          "mesh/door/b0000003-rdb/1/0/45/texture-0-77/action-visual",
+          "mesh/door/b0000003-rdb/1/0/45/texture-374-0/action-visual"
         ],
         "position": {
           "x": 95.8,
@@ -419884,14 +420375,17 @@
           "x": 0,
           "y": 270,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000003-rdb/46",
+        "id": "door/b0000003-rdb/1/0/46",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/b0000003-rdb/46/texture-0-77/action-visual",
-          "mesh/door/b0000003-rdb/46/texture-374-0/action-visual"
+          "mesh/door/b0000003-rdb/1/0/46/texture-0-77/action-visual",
+          "mesh/door/b0000003-rdb/1/0/46/texture-374-0/action-visual"
         ],
         "position": {
           "x": 76.8,
@@ -419902,14 +420396,17 @@
           "x": 0,
           "y": 270,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000006-rdb/0",
+        "id": "door/b0000006-rdb/0/-1/0",
         "doorResourceId": "door/model-55005",
         "visualMeshIds": [
-          "mesh/door/b0000006-rdb/0/texture-0-45/action-visual",
-          "mesh/door/b0000006-rdb/0/texture-374-2/action-visual"
+          "mesh/door/b0000006-rdb/0/-1/0/texture-0-45/action-visual",
+          "mesh/door/b0000006-rdb/0/-1/0/texture-374-2/action-visual"
         ],
         "position": {
           "x": 16.6,
@@ -419920,14 +420417,17 @@
           "x": 0,
           "y": 180,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000006-rdb/11",
+        "id": "door/b0000006-rdb/0/-1/11",
         "doorResourceId": "door/model-55005",
         "visualMeshIds": [
-          "mesh/door/b0000006-rdb/11/texture-0-45/action-visual",
-          "mesh/door/b0000006-rdb/11/texture-374-2/action-visual"
+          "mesh/door/b0000006-rdb/0/-1/11/texture-0-45/action-visual",
+          "mesh/door/b0000006-rdb/0/-1/11/texture-374-2/action-visual"
         ],
         "position": {
           "x": 35.8,
@@ -419938,14 +420438,17 @@
           "x": 0,
           "y": 180,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000006-rdb/12",
+        "id": "door/b0000006-rdb/0/-1/12",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/b0000006-rdb/12/texture-0-77/action-visual",
-          "mesh/door/b0000006-rdb/12/texture-374-0/action-visual"
+          "mesh/door/b0000006-rdb/0/-1/12/texture-0-77/action-visual",
+          "mesh/door/b0000006-rdb/0/-1/12/texture-374-0/action-visual"
         ],
         "position": {
           "x": 34.600002,
@@ -419956,14 +420459,17 @@
           "x": 0,
           "y": 0,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000006-rdb/18",
+        "id": "door/b0000006-rdb/0/-1/18",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/b0000006-rdb/18/texture-0-77/action-visual",
-          "mesh/door/b0000006-rdb/18/texture-374-0/action-visual"
+          "mesh/door/b0000006-rdb/0/-1/18/texture-0-77/action-visual",
+          "mesh/door/b0000006-rdb/0/-1/18/texture-374-0/action-visual"
         ],
         "position": {
           "x": 6.4,
@@ -419974,14 +420480,17 @@
           "x": 0,
           "y": 270,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000006-rdb/2",
+        "id": "door/b0000006-rdb/0/-1/2",
         "doorResourceId": "door/model-55001",
         "visualMeshIds": [
-          "mesh/door/b0000006-rdb/2/texture-0-45/action-visual",
-          "mesh/door/b0000006-rdb/2/texture-374-2/action-visual"
+          "mesh/door/b0000006-rdb/0/-1/2/texture-0-45/action-visual",
+          "mesh/door/b0000006-rdb/0/-1/2/texture-374-2/action-visual"
         ],
         "position": {
           "x": 0,
@@ -419992,14 +420501,17 @@
           "x": 0,
           "y": 270,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000006-rdb/27",
+        "id": "door/b0000006-rdb/0/-1/27",
         "doorResourceId": "door/model-55001",
         "visualMeshIds": [
-          "mesh/door/b0000006-rdb/27/texture-0-45/action-visual",
-          "mesh/door/b0000006-rdb/27/texture-374-2/action-visual"
+          "mesh/door/b0000006-rdb/0/-1/27/texture-0-45/action-visual",
+          "mesh/door/b0000006-rdb/0/-1/27/texture-374-2/action-visual"
         ],
         "position": {
           "x": 0,
@@ -420010,14 +420522,17 @@
           "x": 0,
           "y": 270,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000006-rdb/3",
+        "id": "door/b0000006-rdb/0/-1/3",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/b0000006-rdb/3/texture-0-77/action-visual",
-          "mesh/door/b0000006-rdb/3/texture-374-0/action-visual"
+          "mesh/door/b0000006-rdb/0/-1/3/texture-0-77/action-visual",
+          "mesh/door/b0000006-rdb/0/-1/3/texture-374-0/action-visual"
         ],
         "position": {
           "x": 12.8,
@@ -420028,14 +420543,17 @@
           "x": 0,
           "y": 270,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000006-rdb/35",
+        "id": "door/b0000006-rdb/0/-1/35",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/b0000006-rdb/35/texture-0-77/action-visual",
-          "mesh/door/b0000006-rdb/35/texture-374-0/action-visual"
+          "mesh/door/b0000006-rdb/0/-1/35/texture-0-77/action-visual",
+          "mesh/door/b0000006-rdb/0/-1/35/texture-374-0/action-visual"
         ],
         "position": {
           "x": 9,
@@ -420046,14 +420564,17 @@
           "x": 0,
           "y": 0,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000006-rdb/4",
+        "id": "door/b0000006-rdb/0/-1/4",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/b0000006-rdb/4/texture-0-77/action-visual",
-          "mesh/door/b0000006-rdb/4/texture-374-0/action-visual"
+          "mesh/door/b0000006-rdb/0/-1/4/texture-0-77/action-visual",
+          "mesh/door/b0000006-rdb/0/-1/4/texture-374-0/action-visual"
         ],
         "position": {
           "x": 9,
@@ -420064,14 +420585,17 @@
           "x": 0,
           "y": 0,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000006-rdb/40",
+        "id": "door/b0000006-rdb/0/-1/40",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/b0000006-rdb/40/texture-0-77/action-visual",
-          "mesh/door/b0000006-rdb/40/texture-374-0/action-visual"
+          "mesh/door/b0000006-rdb/0/-1/40/texture-0-77/action-visual",
+          "mesh/door/b0000006-rdb/0/-1/40/texture-374-0/action-visual"
         ],
         "position": {
           "x": 44.600002,
@@ -420082,14 +420606,17 @@
           "x": 0,
           "y": 270,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000009-rdb/0",
+        "id": "door/b0000009-rdb/-1/0/0",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/b0000009-rdb/0/texture-0-77/action-visual",
-          "mesh/door/b0000009-rdb/0/texture-374-0/action-visual"
+          "mesh/door/b0000009-rdb/-1/0/0/texture-0-77/action-visual",
+          "mesh/door/b0000009-rdb/-1/0/0/texture-374-0/action-visual"
         ],
         "position": {
           "x": -34.6,
@@ -420100,14 +420627,17 @@
           "x": 0,
           "y": 180,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000009-rdb/14",
+        "id": "door/b0000009-rdb/-1/0/14",
         "doorResourceId": "door/model-55001",
         "visualMeshIds": [
-          "mesh/door/b0000009-rdb/14/texture-0-45/action-visual",
-          "mesh/door/b0000009-rdb/14/texture-374-2/action-visual"
+          "mesh/door/b0000009-rdb/-1/0/14/texture-0-45/action-visual",
+          "mesh/door/b0000009-rdb/-1/0/14/texture-374-2/action-visual"
         ],
         "position": {
           "x": -51.2,
@@ -420118,14 +420648,17 @@
           "x": 0,
           "y": 270,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000009-rdb/19",
+        "id": "door/b0000009-rdb/-1/0/19",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/b0000009-rdb/19/texture-0-77/action-visual",
-          "mesh/door/b0000009-rdb/19/texture-374-0/action-visual"
+          "mesh/door/b0000009-rdb/-1/0/19/texture-0-77/action-visual",
+          "mesh/door/b0000009-rdb/-1/0/19/texture-374-0/action-visual"
         ],
         "position": {
           "x": -6.5999985,
@@ -420136,14 +420669,17 @@
           "x": 0,
           "y": 270,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000009-rdb/3",
+        "id": "door/b0000009-rdb/-1/0/3",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/b0000009-rdb/3/texture-0-77/action-visual",
-          "mesh/door/b0000009-rdb/3/texture-374-0/action-visual"
+          "mesh/door/b0000009-rdb/-1/0/3/texture-0-77/action-visual",
+          "mesh/door/b0000009-rdb/-1/0/3/texture-374-0/action-visual"
         ],
         "position": {
           "x": -29.4,
@@ -420154,14 +420690,17 @@
           "x": 0,
           "y": 0,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000009-rdb/5",
+        "id": "door/b0000009-rdb/-1/0/5",
         "doorResourceId": "door/model-55001",
         "visualMeshIds": [
-          "mesh/door/b0000009-rdb/5/texture-0-45/action-visual",
-          "mesh/door/b0000009-rdb/5/texture-374-2/action-visual"
+          "mesh/door/b0000009-rdb/-1/0/5/texture-0-45/action-visual",
+          "mesh/door/b0000009-rdb/-1/0/5/texture-374-2/action-visual"
         ],
         "position": {
           "x": -51.2,
@@ -420172,14 +420711,17 @@
           "x": 0,
           "y": 270,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000009-rdb/8",
+        "id": "door/b0000009-rdb/-1/0/8",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/b0000009-rdb/8/texture-0-77/action-visual",
-          "mesh/door/b0000009-rdb/8/texture-374-0/action-visual"
+          "mesh/door/b0000009-rdb/-1/0/8/texture-0-77/action-visual",
+          "mesh/door/b0000009-rdb/-1/0/8/texture-374-0/action-visual"
         ],
         "position": {
           "x": -15.400002,
@@ -420190,14 +420732,17 @@
           "x": 0,
           "y": 180,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000012-rdb/0",
+        "id": "door/b0000012-rdb/0/1/0",
         "doorResourceId": "door/model-55005",
         "visualMeshIds": [
-          "mesh/door/b0000012-rdb/0/texture-0-45/action-visual",
-          "mesh/door/b0000012-rdb/0/texture-374-2/action-visual"
+          "mesh/door/b0000012-rdb/0/1/0/texture-0-45/action-visual",
+          "mesh/door/b0000012-rdb/0/1/0/texture-374-2/action-visual"
         ],
         "position": {
           "x": 16.6,
@@ -420208,14 +420753,17 @@
           "x": 0,
           "y": 180,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000012-rdb/17",
+        "id": "door/b0000012-rdb/0/1/17",
         "doorResourceId": "door/model-55003",
         "visualMeshIds": [
-          "mesh/door/b0000012-rdb/17/texture-0-45/action-visual",
-          "mesh/door/b0000012-rdb/17/texture-374-2/action-visual"
+          "mesh/door/b0000012-rdb/0/1/17/texture-0-45/action-visual",
+          "mesh/door/b0000012-rdb/0/1/17/texture-374-2/action-visual"
         ],
         "position": {
           "x": 6.4,
@@ -420226,14 +420774,17 @@
           "x": 0,
           "y": 270,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000012-rdb/18",
+        "id": "door/b0000012-rdb/0/1/18",
         "doorResourceId": "door/model-55005",
         "visualMeshIds": [
-          "mesh/door/b0000012-rdb/18/texture-0-45/action-visual",
-          "mesh/door/b0000012-rdb/18/texture-374-2/action-visual"
+          "mesh/door/b0000012-rdb/0/1/18/texture-0-45/action-visual",
+          "mesh/door/b0000012-rdb/0/1/18/texture-374-2/action-visual"
         ],
         "position": {
           "x": 0,
@@ -420244,14 +420795,17 @@
           "x": 0,
           "y": 270,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000012-rdb/2",
+        "id": "door/b0000012-rdb/0/1/2",
         "doorResourceId": "door/model-55005",
         "visualMeshIds": [
-          "mesh/door/b0000012-rdb/2/texture-0-45/action-visual",
-          "mesh/door/b0000012-rdb/2/texture-374-2/action-visual"
+          "mesh/door/b0000012-rdb/0/1/2/texture-0-45/action-visual",
+          "mesh/door/b0000012-rdb/0/1/2/texture-374-2/action-visual"
         ],
         "position": {
           "x": 0,
@@ -420262,14 +420816,17 @@
           "x": 0,
           "y": 270,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000012-rdb/29",
+        "id": "door/b0000012-rdb/0/1/29",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/b0000012-rdb/29/texture-0-77/action-visual",
-          "mesh/door/b0000012-rdb/29/texture-374-0/action-visual"
+          "mesh/door/b0000012-rdb/0/1/29/texture-0-77/action-visual",
+          "mesh/door/b0000012-rdb/0/1/29/texture-374-0/action-visual"
         ],
         "position": {
           "x": 6.4,
@@ -420280,14 +420837,17 @@
           "x": 0,
           "y": 270,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000012-rdb/30",
+        "id": "door/b0000012-rdb/0/1/30",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/b0000012-rdb/30/texture-0-77/action-visual",
-          "mesh/door/b0000012-rdb/30/texture-374-0/action-visual"
+          "mesh/door/b0000012-rdb/0/1/30/texture-0-77/action-visual",
+          "mesh/door/b0000012-rdb/0/1/30/texture-374-0/action-visual"
         ],
         "position": {
           "x": 12.8,
@@ -420298,14 +420858,17 @@
           "x": 0,
           "y": 90,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000012-rdb/37",
+        "id": "door/b0000012-rdb/0/1/37",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/b0000012-rdb/37/texture-0-77/action-visual",
-          "mesh/door/b0000012-rdb/37/texture-374-0/action-visual"
+          "mesh/door/b0000012-rdb/0/1/37/texture-0-77/action-visual",
+          "mesh/door/b0000012-rdb/0/1/37/texture-374-0/action-visual"
         ],
         "position": {
           "x": 42.2,
@@ -420316,14 +420879,17 @@
           "x": 0,
           "y": 180,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000012-rdb/38",
+        "id": "door/b0000012-rdb/0/1/38",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/b0000012-rdb/38/texture-0-77/action-visual",
-          "mesh/door/b0000012-rdb/38/texture-374-0/action-visual"
+          "mesh/door/b0000012-rdb/0/1/38/texture-0-77/action-visual",
+          "mesh/door/b0000012-rdb/0/1/38/texture-374-0/action-visual"
         ],
         "position": {
           "x": 28.2,
@@ -420334,14 +420900,17 @@
           "x": 0,
           "y": 0,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000012-rdb/5",
+        "id": "door/b0000012-rdb/0/1/5",
         "doorResourceId": "door/model-55005",
         "visualMeshIds": [
-          "mesh/door/b0000012-rdb/5/texture-0-45/action-visual",
-          "mesh/door/b0000012-rdb/5/texture-374-2/action-visual"
+          "mesh/door/b0000012-rdb/0/1/5/texture-0-45/action-visual",
+          "mesh/door/b0000012-rdb/0/1/5/texture-374-2/action-visual"
         ],
         "position": {
           "x": 35.8,
@@ -420352,14 +420921,17 @@
           "x": 0,
           "y": 180,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/b0000012-rdb/9",
+        "id": "door/b0000012-rdb/0/1/9",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/b0000012-rdb/9/texture-0-77/action-visual",
-          "mesh/door/b0000012-rdb/9/texture-374-0/action-visual"
+          "mesh/door/b0000012-rdb/0/1/9/texture-0-77/action-visual",
+          "mesh/door/b0000012-rdb/0/1/9/texture-374-0/action-visual"
         ],
         "position": {
           "x": 28.2,
@@ -420370,14 +420942,17 @@
           "x": 0,
           "y": 0,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/s0000999-rdb/109",
+        "id": "door/s0000999-rdb/0/0/109",
         "doorResourceId": "door/model-55001",
         "visualMeshIds": [
-          "mesh/door/s0000999-rdb/109/texture-0-45/action-visual",
-          "mesh/door/s0000999-rdb/109/texture-374-2/action-visual"
+          "mesh/door/s0000999-rdb/0/0/109/texture-0-45/action-visual",
+          "mesh/door/s0000999-rdb/0/0/109/texture-374-2/action-visual"
         ],
         "position": {
           "x": 25.65,
@@ -420388,14 +420963,17 @@
           "x": 0,
           "y": -270,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/s0000999-rdb/111",
+        "id": "door/s0000999-rdb/0/0/111",
         "doorResourceId": "door/model-55001",
         "visualMeshIds": [
-          "mesh/door/s0000999-rdb/111/texture-0-45/action-visual",
-          "mesh/door/s0000999-rdb/111/texture-374-2/action-visual"
+          "mesh/door/s0000999-rdb/0/0/111/texture-0-45/action-visual",
+          "mesh/door/s0000999-rdb/0/0/111/texture-374-2/action-visual"
         ],
         "position": {
           "x": 35.8,
@@ -420406,14 +420984,17 @@
           "x": 0,
           "y": -180,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/s0000999-rdb/113",
+        "id": "door/s0000999-rdb/0/0/113",
         "doorResourceId": "door/model-55002",
         "visualMeshIds": [
-          "mesh/door/s0000999-rdb/113/texture-0-77/action-visual",
-          "mesh/door/s0000999-rdb/113/texture-374-0/action-visual"
+          "mesh/door/s0000999-rdb/0/0/113/texture-0-77/action-visual",
+          "mesh/door/s0000999-rdb/0/0/113/texture-374-0/action-visual"
         ],
         "position": {
           "x": 25.6,
@@ -420424,14 +421005,17 @@
           "x": 0,
           "y": 90,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/s0000999-rdb/114",
+        "id": "door/s0000999-rdb/0/0/114",
         "doorResourceId": "door/model-55002",
         "visualMeshIds": [
-          "mesh/door/s0000999-rdb/114/texture-0-77/action-visual",
-          "mesh/door/s0000999-rdb/114/texture-374-0/action-visual"
+          "mesh/door/s0000999-rdb/0/0/114/texture-0-77/action-visual",
+          "mesh/door/s0000999-rdb/0/0/114/texture-374-0/action-visual"
         ],
         "position": {
           "x": 44.8,
@@ -420442,14 +421026,17 @@
           "x": 0,
           "y": 90,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/s0000999-rdb/15",
+        "id": "door/s0000999-rdb/0/0/15",
         "doorResourceId": "door/model-55003",
         "visualMeshIds": [
-          "mesh/door/s0000999-rdb/15/texture-0-45/action-visual",
-          "mesh/door/s0000999-rdb/15/texture-374-2/action-visual"
+          "mesh/door/s0000999-rdb/0/0/15/texture-0-45/action-visual",
+          "mesh/door/s0000999-rdb/0/0/15/texture-374-2/action-visual"
         ],
         "position": {
           "x": 15.400001,
@@ -420460,14 +421047,17 @@
           "x": 0,
           "y": 0,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/s0000999-rdb/150",
+        "id": "door/s0000999-rdb/0/0/150",
         "doorResourceId": "door/model-55002",
         "visualMeshIds": [
-          "mesh/door/s0000999-rdb/150/texture-0-77/action-visual",
-          "mesh/door/s0000999-rdb/150/texture-374-0/action-visual"
+          "mesh/door/s0000999-rdb/0/0/150/texture-0-77/action-visual",
+          "mesh/door/s0000999-rdb/0/0/150/texture-374-0/action-visual"
         ],
         "position": {
           "x": 6.4,
@@ -420478,14 +421068,17 @@
           "x": 0,
           "y": -90,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/s0000999-rdb/153",
+        "id": "door/s0000999-rdb/0/0/153",
         "doorResourceId": "door/model-55005",
         "visualMeshIds": [
-          "mesh/door/s0000999-rdb/153/texture-0-45/action-visual",
-          "mesh/door/s0000999-rdb/153/texture-374-2/action-visual"
+          "mesh/door/s0000999-rdb/0/0/153/texture-0-45/action-visual",
+          "mesh/door/s0000999-rdb/0/0/153/texture-374-2/action-visual"
         ],
         "position": {
           "x": 12.8,
@@ -420496,14 +421089,17 @@
           "x": 0,
           "y": 90,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 2,
+        "action": null
       },
       {
-        "id": "door/s0000999-rdb/154",
+        "id": "door/s0000999-rdb/0/0/154",
         "doorResourceId": "door/model-55004",
         "visualMeshIds": [
-          "mesh/door/s0000999-rdb/154/texture-0-77/action-visual",
-          "mesh/door/s0000999-rdb/154/texture-374-0/action-visual"
+          "mesh/door/s0000999-rdb/0/0/154/texture-0-77/action-visual",
+          "mesh/door/s0000999-rdb/0/0/154/texture-374-0/action-visual"
         ],
         "position": {
           "x": 6.4,
@@ -420514,14 +421110,17 @@
           "x": 0,
           "y": 90,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/s0000999-rdb/195",
+        "id": "door/s0000999-rdb/0/0/195",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/s0000999-rdb/195/texture-0-77/action-visual",
-          "mesh/door/s0000999-rdb/195/texture-374-0/action-visual"
+          "mesh/door/s0000999-rdb/0/0/195/texture-0-77/action-visual",
+          "mesh/door/s0000999-rdb/0/0/195/texture-374-0/action-visual"
         ],
         "position": {
           "x": 26.625,
@@ -420532,14 +421131,17 @@
           "x": 0,
           "y": 135,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/s0000999-rdb/196",
+        "id": "door/s0000999-rdb/0/0/196",
         "doorResourceId": "door/model-55012",
         "visualMeshIds": [
-          "mesh/door/s0000999-rdb/196/texture-0-124/action-visual",
-          "mesh/door/s0000999-rdb/196/texture-19-0/action-visual"
+          "mesh/door/s0000999-rdb/0/0/196/texture-0-124/action-visual",
+          "mesh/door/s0000999-rdb/0/0/196/texture-19-0/action-visual"
         ],
         "position": {
           "x": 29.4,
@@ -420550,14 +421152,17 @@
           "x": 0,
           "y": -180,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/s0000999-rdb/197",
+        "id": "door/s0000999-rdb/0/0/197",
         "doorResourceId": "door/model-55002",
         "visualMeshIds": [
-          "mesh/door/s0000999-rdb/197/texture-0-77/action-visual",
-          "mesh/door/s0000999-rdb/197/texture-374-0/action-visual"
+          "mesh/door/s0000999-rdb/0/0/197/texture-0-77/action-visual",
+          "mesh/door/s0000999-rdb/0/0/197/texture-374-0/action-visual"
         ],
         "position": {
           "x": 25.6,
@@ -420568,14 +421173,17 @@
           "x": 0,
           "y": 90,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/s0000999-rdb/199",
+        "id": "door/s0000999-rdb/0/0/199",
         "doorResourceId": "door/model-55012",
         "visualMeshIds": [
-          "mesh/door/s0000999-rdb/199/texture-0-124/action-visual",
-          "mesh/door/s0000999-rdb/199/texture-19-0/action-visual"
+          "mesh/door/s0000999-rdb/0/0/199/texture-0-124/action-visual",
+          "mesh/door/s0000999-rdb/0/0/199/texture-19-0/action-visual"
         ],
         "position": {
           "x": 38.2,
@@ -420586,14 +421194,17 @@
           "x": 0,
           "y": -90,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/s0000999-rdb/202",
+        "id": "door/s0000999-rdb/0/0/202",
         "doorResourceId": "door/model-55000",
         "visualMeshIds": [
-          "mesh/door/s0000999-rdb/202/texture-0-77/action-visual",
-          "mesh/door/s0000999-rdb/202/texture-374-0/action-visual"
+          "mesh/door/s0000999-rdb/0/0/202/texture-0-77/action-visual",
+          "mesh/door/s0000999-rdb/0/0/202/texture-374-0/action-visual"
         ],
         "position": {
           "x": 25.6,
@@ -420604,14 +421215,17 @@
           "x": 0,
           "y": 90,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/s0000999-rdb/203",
+        "id": "door/s0000999-rdb/0/0/203",
         "doorResourceId": "door/model-55002",
         "visualMeshIds": [
-          "mesh/door/s0000999-rdb/203/texture-0-77/action-visual",
-          "mesh/door/s0000999-rdb/203/texture-374-0/action-visual"
+          "mesh/door/s0000999-rdb/0/0/203/texture-0-77/action-visual",
+          "mesh/door/s0000999-rdb/0/0/203/texture-374-0/action-visual"
         ],
         "position": {
           "x": 42.2,
@@ -420622,14 +421236,17 @@
           "x": 0,
           "y": 180,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/s0000999-rdb/30",
+        "id": "door/s0000999-rdb/0/0/30",
         "doorResourceId": "door/model-55003",
         "visualMeshIds": [
-          "mesh/door/s0000999-rdb/30/texture-0-45/action-visual",
-          "mesh/door/s0000999-rdb/30/texture-374-2/action-visual"
+          "mesh/door/s0000999-rdb/0/0/30/texture-0-45/action-visual",
+          "mesh/door/s0000999-rdb/0/0/30/texture-374-2/action-visual"
         ],
         "position": {
           "x": 6.4,
@@ -420640,14 +421257,17 @@
           "x": 0,
           "y": -90,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/s0000999-rdb/44",
+        "id": "door/s0000999-rdb/0/0/44",
         "doorResourceId": "door/model-55003",
         "visualMeshIds": [
-          "mesh/door/s0000999-rdb/44/texture-0-45/action-visual",
-          "mesh/door/s0000999-rdb/44/texture-374-2/action-visual"
+          "mesh/door/s0000999-rdb/0/0/44/texture-0-45/action-visual",
+          "mesh/door/s0000999-rdb/0/0/44/texture-374-2/action-visual"
         ],
         "position": {
           "x": 0,
@@ -420658,14 +421278,17 @@
           "x": 0,
           "y": -90,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/s0000999-rdb/47",
+        "id": "door/s0000999-rdb/0/0/47",
         "doorResourceId": "door/model-55012",
         "visualMeshIds": [
-          "mesh/door/s0000999-rdb/47/texture-0-124/action-visual",
-          "mesh/door/s0000999-rdb/47/texture-19-0/action-visual"
+          "mesh/door/s0000999-rdb/0/0/47/texture-0-124/action-visual",
+          "mesh/door/s0000999-rdb/0/0/47/texture-19-0/action-visual"
         ],
         "position": {
           "x": 22.6,
@@ -420676,14 +421299,17 @@
           "x": 0,
           "y": 90,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/s0000999-rdb/48",
+        "id": "door/s0000999-rdb/0/0/48",
         "doorResourceId": "door/model-55005",
         "visualMeshIds": [
-          "mesh/door/s0000999-rdb/48/texture-0-45/action-visual",
-          "mesh/door/s0000999-rdb/48/texture-374-2/action-visual"
+          "mesh/door/s0000999-rdb/0/0/48/texture-0-45/action-visual",
+          "mesh/door/s0000999-rdb/0/0/48/texture-374-2/action-visual"
         ],
         "position": {
           "x": 19.2,
@@ -420694,14 +421320,17 @@
           "x": 0,
           "y": 92.98828,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/s0000999-rdb/49",
+        "id": "door/s0000999-rdb/0/0/49",
         "doorResourceId": "door/model-55003",
         "visualMeshIds": [
-          "mesh/door/s0000999-rdb/49/texture-0-45/action-visual",
-          "mesh/door/s0000999-rdb/49/texture-374-2/action-visual"
+          "mesh/door/s0000999-rdb/0/0/49/texture-0-45/action-visual",
+          "mesh/door/s0000999-rdb/0/0/49/texture-374-2/action-visual"
         ],
         "position": {
           "x": 19.2,
@@ -420712,14 +421341,17 @@
           "x": 0,
           "y": 90,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/s0000999-rdb/50",
+        "id": "door/s0000999-rdb/0/0/50",
         "doorResourceId": "door/model-55003",
         "visualMeshIds": [
-          "mesh/door/s0000999-rdb/50/texture-0-45/action-visual",
-          "mesh/door/s0000999-rdb/50/texture-374-2/action-visual"
+          "mesh/door/s0000999-rdb/0/0/50/texture-0-45/action-visual",
+          "mesh/door/s0000999-rdb/0/0/50/texture-374-2/action-visual"
         ],
         "position": {
           "x": 2.6000001,
@@ -420730,14 +421362,17 @@
           "x": 0,
           "y": 0,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       },
       {
-        "id": "door/s0000999-rdb/52",
+        "id": "door/s0000999-rdb/0/0/52",
         "doorResourceId": "door/model-55004",
         "visualMeshIds": [
-          "mesh/door/s0000999-rdb/52/texture-0-77/action-visual",
-          "mesh/door/s0000999-rdb/52/texture-374-0/action-visual"
+          "mesh/door/s0000999-rdb/0/0/52/texture-0-77/action-visual",
+          "mesh/door/s0000999-rdb/0/0/52/texture-374-0/action-visual"
         ],
         "position": {
           "x": 9,
@@ -420748,7 +421383,10 @@
           "x": 0,
           "y": 0,
           "z": 0
-        }
+        },
+        "kind": "normal",
+        "startingLockValue": 0,
+        "action": null
       }
     ]
   },

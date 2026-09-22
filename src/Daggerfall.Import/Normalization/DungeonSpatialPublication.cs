@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Daggerfall.Import.Normalized;
@@ -52,6 +53,9 @@ public sealed class GeneratedSpatialArtifact
 /// </summary>
 public sealed record DungeonMaterialSlot(string MaterialResourceId, uint Slot);
 
+/// <summary>One action-door visual emitted apart from the immutable world mesh.</summary>
+public sealed record DungeonDoorVisual(string DoorId, GeneratedSpatialArtifact Artifact, IReadOnlyList<DungeonMaterialSlot> MaterialSlots);
+
 /// <summary>
 /// Deterministic spatial closure for one normalized location.  The static mesh
 /// is shaped exactly for Engine's content-backed static-mesh admission while
@@ -61,9 +65,10 @@ public sealed record DungeonSpatialPublication(
     GeneratedSpatialArtifact StaticMesh,
     GeneratedSpatialArtifact CollisionNavigation,
     GeneratedSpatialArtifact ResourceCatalog,
-    IReadOnlyList<DungeonMaterialSlot> MaterialSlots)
+    IReadOnlyList<DungeonMaterialSlot> MaterialSlots,
+    IReadOnlyList<DungeonDoorVisual> DoorVisuals)
 {
-    public IReadOnlyList<GeneratedSpatialArtifact> Artifacts => [StaticMesh, CollisionNavigation, ResourceCatalog];
+    public IReadOnlyList<GeneratedSpatialArtifact> Artifacts => [StaticMesh, CollisionNavigation, ResourceCatalog, .. DoorVisuals.Select(visual => visual.Artifact)];
 
     public IReadOnlyList<NormalizedArtifactDescriptor> ArtifactDescriptors => Artifacts
         .Select(artifact => artifact.ToDescriptor())
@@ -107,10 +112,11 @@ public sealed record DungeonSpatialPublication(
         }
 
         NormalizedMesh[] worldMeshes = world.MeshIds.Select(meshId => meshById[meshId]).ToArray();
-        if (worldMeshes.Any(mesh => !StringComparer.Ordinal.Equals(mesh.ArtifactId, staticMeshArtifactId)))
-        {
-            throw new InvalidOperationException("Every published visual mesh must refer to the generated static-mesh artifact.");
-        }
+        Dictionary<string, NormalizedDoorPlacement> doorsByMeshId = [];
+        foreach (NormalizedDoorPlacement door in world.Doors)
+            foreach (string meshId in door.VisualMeshIds)
+                if (!doorsByMeshId.TryAdd(meshId, door)) throw new InvalidOperationException($"Action visual mesh '{meshId}' belongs to more than one door.");
+        NormalizedMesh[] staticMeshes = worldMeshes.Where(mesh => !doorsByMeshId.ContainsKey(mesh.Id)).ToArray();
 
         foreach (NormalizedResourceCatalogEntry resource in resources)
         {
@@ -121,7 +127,9 @@ public sealed record DungeonSpatialPublication(
             }
         }
 
-        MeshAssembly assembly = MeshAssembly.Create(worldMeshes);
+        string[] materialUniverse = worldMeshes.SelectMany(mesh => mesh.MaterialGroups)
+            .Select(group => group.MaterialResourceId).Distinct(StringComparer.Ordinal).OrderBy(material => material, StringComparer.Ordinal).ToArray();
+        MeshAssembly assembly = MeshAssembly.Create(staticMeshes, materialUniverse: materialUniverse);
         DungeonMaterialSlot[] materialSlots = assembly.MaterialSlots
             .Select(binding => new DungeonMaterialSlot(binding.Material, checked((uint)binding.Slot)))
             .ToArray();
@@ -131,14 +139,48 @@ public sealed record DungeonSpatialPublication(
             throw new InvalidOperationException("Generated static-mesh material slots must be unique by resource and slot.");
         }
 
-        byte[] staticMesh = StaticMeshJson.Serialize(visualMeshAssetId, bounds, assembly);
-        byte[] collisionNavigation = CollisionNavigationJson.Serialize(staticMeshArtifactId, bounds, worldMeshes, navigation);
+        // A valid RDB can contain only action-door visual geometry. Its static bundle is intentionally
+        // empty; the world bounds remain the truthful content bounds for that inline asset.
+        NormalizedBounds staticBounds = staticMeshes.Length == 0 ? bounds : MeshGeometry.Bounds(staticMeshes.SelectMany(mesh => mesh.Vertices).ToArray());
+        byte[] staticMesh = StaticMeshJson.Serialize(visualMeshAssetId, staticBounds, assembly);
+        byte[] collisionNavigation = CollisionNavigationJson.Serialize(staticMeshArtifactId, bounds, staticMeshes, navigation);
         byte[] resourceCatalog = ResourceCatalogJson.Serialize(resources);
+        List<DungeonDoorVisual> doorVisuals = [];
+        string directory = staticMeshRelativePath[..staticMeshRelativePath.LastIndexOf('/')];
+        foreach (NormalizedDoorPlacement door in world.Doors.OrderBy(door => door.Id, StringComparer.Ordinal))
+        {
+            NormalizedMesh[] localMeshes = door.VisualMeshIds.Select(meshId => Localize(meshById[meshId], door)).ToArray();
+            MeshAssembly doorAssembly = MeshAssembly.Create(localMeshes, materialUniverse: materialUniverse);
+            string suffix = door.Id["door/".Length..].Replace('/', '-');
+            string artifactId = $"{staticMeshArtifactId}/door/{suffix}";
+            string relativePath = $"{directory}/doors/{suffix}.json";
+            GeneratedSpatialArtifact artifact = new(artifactId, relativePath,
+                StaticMeshJson.Serialize($"mesh/{door.Id}", MeshGeometry.Bounds(localMeshes.SelectMany(mesh => mesh.Vertices).ToArray()), doorAssembly), []);
+            doorVisuals.Add(new DungeonDoorVisual(door.Id, artifact, doorAssembly.MaterialSlots
+                .Select(binding => new DungeonMaterialSlot(binding.Material, checked((uint)binding.Slot))).ToArray()));
+        }
         return new(
             new GeneratedSpatialArtifact(staticMeshArtifactId, staticMeshRelativePath, staticMesh, []),
             new GeneratedSpatialArtifact(collisionNavigationArtifactId, collisionNavigationRelativePath, collisionNavigation, [staticMeshArtifactId]),
             new GeneratedSpatialArtifact(resourceCatalogArtifactId, resourceCatalogRelativePath, resourceCatalog, []),
-            Array.AsReadOnly(materialSlots));
+            Array.AsReadOnly(materialSlots),
+            doorVisuals);
+    }
+
+    private static NormalizedMesh Localize(NormalizedMesh mesh, NormalizedDoorPlacement door)
+    {
+        if (door.RotationDegrees.X != 0F || door.RotationDegrees.Z != 0F)
+            throw new InvalidOperationException($"Action door '{door.Id}' has a non-yaw rotation that the static-mesh door publisher cannot represent.");
+        float radians = -door.RotationDegrees.Y * (MathF.PI / 180F);
+        float sine = MathF.Sin(radians), cosine = MathF.Cos(radians);
+        NormalizedVector3 Convert(NormalizedVector3 value, bool normal)
+        {
+            float x = value.X - (normal ? 0F : door.Position.X);
+            float y = value.Y - (normal ? 0F : door.Position.Y);
+            float z = value.Z - (normal ? 0F : door.Position.Z);
+            return new((x * cosine) - (z * sine), y, (x * sine) + (z * cosine));
+        }
+        return mesh with { Vertices = mesh.Vertices.Select(value => Convert(value, false)).ToArray(), Normals = mesh.Normals.Select(value => Convert(value, true)).ToArray() };
     }
 
     public void ValidateAgainst(NormalizedImportDocument document)
@@ -598,17 +640,20 @@ internal sealed class MeshAssembly
     public IReadOnlyList<MeshAssemblyGroup> Groups { get; }
     public IReadOnlyList<(string Material, int Slot)> MaterialSlots { get; }
 
-    public static MeshAssembly Create(IReadOnlyList<NormalizedMesh> meshes, bool collisionOnly = false)
+    public static MeshAssembly Create(IReadOnlyList<NormalizedMesh> meshes, bool collisionOnly = false, IReadOnlyList<string>? materialUniverse = null)
     {
         ArgumentNullException.ThrowIfNull(meshes);
         NormalizedMesh[] orderedMeshes = meshes.OrderBy(mesh => mesh.Id, StringComparer.Ordinal).ToArray();
         foreach (NormalizedMesh mesh in orderedMeshes) mesh.Validate();
-        string[] materials = orderedMeshes.SelectMany(mesh => mesh.MaterialGroups)
+        string[] materials = (materialUniverse ?? orderedMeshes.SelectMany(mesh => mesh.MaterialGroups)
             .Where(group => !collisionOnly || group.ParticipatesInCollision)
             .Select(group => group.MaterialResourceId)
             .Distinct(StringComparer.Ordinal)
             .OrderBy(material => material, StringComparer.Ordinal)
-            .ToArray();
+            .ToArray()).ToArray();
+        if ((materials.Length == 0 && !collisionOnly) || materials.Distinct(StringComparer.Ordinal).Count() != materials.Length
+            || !materials.SequenceEqual(materials.OrderBy(material => material, StringComparer.Ordinal), StringComparer.Ordinal))
+            throw new ArgumentException("A mesh material universe must be non-empty, unique, and sorted.", nameof(materialUniverse));
         Dictionary<string, int> slots = materials.Select((material, slot) => (material, slot)).ToDictionary(value => value.material, value => value.slot, StringComparer.Ordinal);
         List<NormalizedVector3> vertices = [];
         List<NormalizedVector3> normals = [];

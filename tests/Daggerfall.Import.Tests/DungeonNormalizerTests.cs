@@ -206,6 +206,48 @@ public sealed class DungeonNormalizerTests
         Assert.Contains("\"positions\": []", collisionNavigation, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Normalizes_classic_action_door_lock_selector_and_linked_special_door_kind()
+    {
+        DungeonLogicalSource[] ordinarySources = CreateSources();
+        Replace(ordinarySources, "BLOCKS.BSA", CreateNamedBsa(("S0000007.RDB", CreateRdbFixture(modelDescription: "DOR", triggerFlagStartingLock: 0xD0, actionFlags: 0x10))));
+        NormalizedDoorPlacement ordinary = Assert.Single(DungeonNormalizer.Normalize(Request(ordinarySources)).Document.World.Doors);
+
+        Assert.Equal("normal", ordinary.Kind);
+        Assert.Equal(50, ordinary.StartingLockValue);
+        Assert.Equal((byte)0x10, ordinary.Action!.Flags);
+
+        DungeonLogicalSource[] specialSources = CreateSources();
+        Replace(specialSources, "BLOCKS.BSA", CreateNamedBsa(("S0000007.RDB", CreateRdbFixture(modelDescription: "MOD", actionFlags: 0x12))));
+        NormalizedDoorPlacement special = Assert.Single(DungeonNormalizer.Normalize(Request(specialSources)).Document.World.Doors);
+
+        Assert.Equal("special", special.Kind);
+        Assert.Equal(0, special.StartingLockValue);
+        Assert.Equal((byte)0x12, special.Action!.Flags);
+    }
+
+    [Fact]
+    public void Repeated_rdb_block_placements_keep_each_action_door_and_visual_identity_distinct()
+    {
+        DungeonLogicalSource[] sources = CreateSources();
+        Replace(sources, "MAPS.BSA", CreateNamedBsa(
+            ("MAPNAMES.017", CreateMapNames()),
+            ("MAPTABLE.017", CreateMapTable()),
+            ("MAPPITEM.017", CreateMapPItem()),
+            ("MAPDITEM.017", CreateMapDItem((1, 1), (2, 1)))));
+        Replace(sources, "BLOCKS.BSA", CreateNamedBsa(("S0000007.RDB", CreateRdbFixture(modelDescription: "DOR"))));
+
+        DungeonNormalizationResult result = DungeonNormalizer.Normalize(Request(sources));
+
+        Assert.Equal(
+        [
+            "door/s0000007-rdb/1/1/0",
+            "door/s0000007-rdb/2/1/0",
+        ], result.Document.World.Doors.Select(door => door.Id).OrderBy(id => id, StringComparer.Ordinal));
+        Assert.Equal(2, result.SpatialPublication.DoorVisuals.Select(visual => visual.Artifact.Id).Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(2, result.SpatialPublication.DoorVisuals.Select(visual => visual.Artifact.RelativePath).Distinct(StringComparer.Ordinal).Count());
+    }
+
     private static DungeonNormalizationRequest Request(IEnumerable<DungeonLogicalSource> sources) =>
         DungeonNormalizationRequest.Create(new DungeonLogicalSourceSet(sources), 17, "Fixture Hold");
 
@@ -270,19 +312,24 @@ public sealed class DungeonNormalizerTests
         return pitem;
     }
 
-    private static byte[] CreateMapDItem()
+    private static byte[] CreateMapDItem(params (sbyte X, sbyte Z)[] blocks)
     {
-        byte[] ditem = new byte[149];
+        if (blocks.Length == 0) blocks = [(1, 1)];
+        byte[] ditem = new byte[145 + (blocks.Length * 4)];
         BitConverter.GetBytes(1U).CopyTo(ditem, 0);
         BitConverter.GetBytes(0U).CopyTo(ditem, 4);
         BitConverter.GetBytes((ushort)1).CopyTo(ditem, 8);
         BitConverter.GetBytes((ushort)7).CopyTo(ditem, 10);
         BitConverter.GetBytes(0U).CopyTo(ditem, 12);
         BitConverter.GetBytes(99U).CopyTo(ditem, 49);
-        BitConverter.GetBytes((ushort)1).CopyTo(ditem, 138);
-        ditem[145] = 1;
-        ditem[146] = 1;
-        BitConverter.GetBytes((ushort)((3 << 11) | 0x400 | 7)).CopyTo(ditem, 147);
+        BitConverter.GetBytes((ushort)blocks.Length).CopyTo(ditem, 138);
+        for (int index = 0; index < blocks.Length; index++)
+        {
+            int offset = 145 + (index * 4);
+            ditem[offset] = unchecked((byte)blocks[index].X);
+            ditem[offset + 1] = unchecked((byte)blocks[index].Z);
+            BitConverter.GetBytes((ushort)((3 << 11) | 0x400 | 7)).CopyTo(ditem, offset + 2);
+        }
         return ditem;
     }
 
@@ -290,8 +337,10 @@ public sealed class DungeonNormalizerTests
         ushort flatTextureArchive = RdbSourceClassification.EditorFlatArchive,
         ushort flatTextureRecord = RdbSourceClassification.StartMarkerRecord,
         ushort factionOrMobileId = 0,
-        string modelDescription = "MOD") =>
-        CreateRdbFixtureWithModels(["42"], flatTextureArchive, flatTextureRecord, factionOrMobileId, modelDescription);
+        string modelDescription = "MOD",
+        uint triggerFlagStartingLock = 0,
+        byte actionFlags = 0) =>
+        CreateRdbFixtureWithModels(["42"], flatTextureArchive, flatTextureRecord, factionOrMobileId, modelDescription, triggerFlagStartingLock, actionFlags);
 
     /// <summary>
     /// Builds an RDB block whose single cell places one model per entry of <paramref name="modelIds"/>, in
@@ -304,7 +353,9 @@ public sealed class DungeonNormalizerTests
         ushort flatTextureArchive = RdbSourceClassification.EditorFlatArchive,
         ushort flatTextureRecord = RdbSourceClassification.StartMarkerRecord,
         ushort factionOrMobileId = 0,
-        string modelDescription = "MOD")
+        string modelDescription = "MOD",
+        uint triggerFlagStartingLock = 0,
+        byte actionFlags = 0)
     {
         // The classic RDB layout the decoder reads: a 20-byte header, a fixed 750-entry model-reference
         // table, one cell root, then 25-byte object nodes and their resources.
@@ -322,7 +373,8 @@ public sealed class DungeonNormalizerTests
         int firstModelResource = lightNode + nodeBytes;
         int flatResource = firstModelResource + (modelIds.Count * modelResourceBytes);
         int lightResource = flatResource + flatResourceBytes;
-        byte[] data = new byte[lightResource + lightResourceBytes];
+        int actionResource = lightResource + lightResourceBytes;
+        byte[] data = new byte[actionFlags == 0 ? actionResource : actionResource + 10];
         BitConverter.GetBytes(1U).CopyTo(data, 4);
         BitConverter.GetBytes(1U).CopyTo(data, 8);
         BitConverter.GetBytes((uint)roots).CopyTo(data, 12);
@@ -334,6 +386,8 @@ public sealed class DungeonNormalizerTests
             Encoding.ASCII.GetBytes(modelDescription).CopyTo(data, reference + 5);
             int resource = firstModelResource + (index * modelResourceBytes);
             BitConverter.GetBytes((ushort)index).CopyTo(data, resource + 12);
+            BitConverter.GetBytes(triggerFlagStartingLock).CopyTo(data, resource + 14);
+            if (actionFlags != 0) BitConverter.GetBytes(actionResource).CopyTo(data, resource + 19);
             int next = index + 1 < modelIds.Count ? firstModelNode + ((index + 1) * nodeBytes) : flatNode;
             WriteNode(data, firstModelNode + (index * nodeBytes), next, [index, 0, 0], 1, resource);
         }
@@ -345,6 +399,14 @@ public sealed class DungeonNormalizerTests
         data[flatResource + 5] = (byte)(factionOrMobileId >> 8);
         BitConverter.GetBytes(-1).CopyTo(data, flatResource + 6);
         BitConverter.GetBytes((ushort)512).CopyTo(data, lightResource + 8);
+        if (actionFlags != 0)
+        {
+            data[actionResource] = 1;
+            BitConverter.GetBytes((ushort)30).CopyTo(data, actionResource + 1);
+            BitConverter.GetBytes((ushort)90).CopyTo(data, actionResource + 3);
+            BitConverter.GetBytes(-1).CopyTo(data, actionResource + 5);
+            data[actionResource + 9] = actionFlags;
+        }
         return data;
     }
 
