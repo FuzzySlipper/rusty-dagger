@@ -53,29 +53,111 @@ public sealed class DaggerfallCharacterPresentationTests
             });
     }
 
+    [Fact]
+    public void Sheet_distinguishes_live_from_permanent_values_and_reads_current_affiliation_standing()
+    {
+        using Fixture f = new();
+        DaggerfallCharacterState character = new(f.Definitions, f.Player.Stats, f.PlayerDefinition);
+        long strengthBefore = checked((long)f.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Strength.Value)).BaseValue);
+        DaggerfallStatModifiers.AdjustPermanent(f.Player.Stats, DaggerfallMechanicsIds.Strength, 4);
+        _ = DaggerfallStatModifiers.ApplyMod(f.Player.Stats, DaggerfallMechanicsIds.Strength, -7);
+        DaggerfallStatModifiers.AdjustPermanent(f.Player.Stats, DaggerfallMechanicsIds.ResistanceFire, 25);
+        _ = DaggerfallStatModifiers.ApplyMod(f.Player.Stats, DaggerfallMechanicsIds.ResistanceFire, -10);
+        f.Progression.AdvanceTo(750, 2);
+
+        DaggerfallSocialState social = new(f.Definitions.Factions);
+        DaggerfallFactionDefinition faction = f.Definitions.Factions.Factions[15];
+        _ = social.JoinGuild(faction.Id, currentDay: 3);
+        _ = social.PromoteGuild(faction.Id, currentDay: 4);
+        _ = social.ChangeFactionReputation(faction.Id, 6);
+        DaggerfallSkillUseReactions skills = new(f.Progression, f.Player.Stats, f.Definitions, () => character.Career);
+        DaggerfallLevelProgress expectedProgress = skills.ReadLevelProgress();
+        DaggerfallCharacterPresentation presentation = new(f.Definitions, character, f.PlayerDefinition, f.Equipment, social, skills);
+
+        CharacterSheetPresentation sheet = presentation.Read(f.Player, f.Progression);
+
+        Assert.Equal((strengthBefore - 3, strengthBefore + 4), Value(sheet.Attributes, "strength"));
+        Assert.Equal((15L, 25L), Value(sheet.Resistances, "resistance-fire"));
+        Assert.Equal((2, 750), (sheet.Progression.Level, sheet.Progression.Experience));
+        Assert.Equal((expectedProgress.CurrentSkillSum, expectedProgress.NextLevelSkillSum, expectedProgress.PendingLevelUp),
+            (sheet.Progression.SkillProgress, sheet.Progression.NextLevelSkillProgress, sheet.Progression.PendingLevelUp));
+        CharacterAffiliationPresentation affiliation = Assert.Single(sheet.Affiliations);
+        Assert.Equal(faction.Name, affiliation.Faction);
+        Assert.Equal(1, affiliation.Rank);
+        Assert.Equal(social.FactionReputation(faction.Id), affiliation.Reputation);
+    }
+
+    [Fact]
+    public void Sheet_reuses_identification_and_condition_presentation_for_equipped_magic_items()
+    {
+        using Fixture f = new();
+        foreach (WorldRpg.Kit.Inventory.UniqueInventoryItem equipped in f.Equipment.Read().Assignments.Select(assignment => assignment.Item).Distinct())
+            f.Equipment.Unequip(equipped);
+
+        const string magicKey = "magic-item.0010";
+        DaggerfallMagicItemDefinition magic = f.Definitions.Magic.MagicItems[magicKey];
+        string itemId = DaggerfallMagicItemIds.For("template-113-iron", magicKey);
+        WorldRpg.Kit.Inventory.UniqueInventoryItem item = f.Equipment.Materialize(
+            new DurableIdentityReference(DurableIdentityKind.Item, 700), new InventoryItemId(itemId));
+        f.Equipment.Equip(item, [new SlotId("right-hand")]);
+
+        DaggerfallItemInstances instances = new();
+        DaggerfallEquipmentMoves moves = new(f.Inventory, f.Equipment, f.Definitions, itemInstances: instances);
+        DaggerfallItemConditionService condition = new(f.Definitions, instances, moves);
+        DaggerfallInventoryPresentation inventory = new(moves, f.Definitions, new Dictionary<string, string>());
+        inventory.UseItemValuation(new DaggerfallItemValuation(f.Definitions), instances, DaggerfallItemOwner.Player,
+            entity => f.Actors.Entities.IdentityOf(new EntityId(entity)).Value);
+        inventory.UseItemCondition(condition);
+        instances.RegisterUnique(700, new DaggerfallItemInstanceMetadata(itemId, "iron", 0, 2, 2, Identified: false,
+            Stolen: false, QuestId: null, QuestItemSymbol: null, magicKey, DaggerfallItemOwner.Player));
+        f.Presentation.UseItemPresentation(inventory);
+
+        CharacterEquipmentPresentation unknown = Assert.Single(f.Presentation.Read(f.Player, f.Progression).Equipment);
+        Assert.False(unknown.Identified);
+        Assert.Equal(f.Definitions.RequireItem(new DaggerfallItemId(itemId)).Template!.Name, unknown.Label);
+        Assert.Contains("Unidentified magical item", unknown.Details, StringComparison.Ordinal);
+
+        _ = condition.Identify(item);
+        _ = condition.Damage(item, 1);
+        CharacterEquipmentPresentation identified = Assert.Single(f.Presentation.Read(f.Player, f.Progression).Equipment);
+        Assert.True(identified.Identified);
+        Assert.Equal(magic.Name.Replace("%it", f.Definitions.RequireItem(new DaggerfallItemId(itemId)).Template!.Name, StringComparison.Ordinal), identified.Label);
+        Assert.Equal((1, 2, 50), (identified.Condition!.Current, identified.Condition.Maximum, identified.Condition.Percentage));
+        Assert.Contains("Condition: 1/2 (50%)", identified.Details, StringComparison.Ordinal);
+    }
+
     private static (long Current, long Maximum) Resource(CharacterSheetPresentation sheet, string id)
     {
         CharacterResourcePresentation resource = sheet.Resources.Single(value => value.Id == id);
         return (resource.Current, resource.Maximum);
     }
 
+    private static (long Value, long Permanent) Value(IEnumerable<CharacterStatPresentation> values, string id)
+    {
+        CharacterStatPresentation value = values.Single(value => value.Id == id);
+        return (value.Value, value.Permanent);
+    }
+
     private sealed class Fixture : IDisposable
     {
-        private readonly MechanicsEquipmentCoordinator equipment;
-        private readonly ActorsState actors;
+        internal readonly MechanicsEquipmentCoordinator Equipment;
+        internal readonly MechanicsInventoryCoordinator Inventory;
+        internal readonly ActorsState Actors;
+        internal readonly DaggerfallDefinitions Definitions;
+        internal readonly DaggerfallActorDefinition PlayerDefinition;
         internal readonly PlayerActorState Player;
         internal readonly ProgressionState Progression = new();
         internal readonly DaggerfallCharacterPresentation Presentation;
 
         internal Fixture()
         {
-            DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
-            DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
-            var items = definitions.Items.Values.ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
-            var slots = definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
-            actors = new ActorsState();
-            Player = actors.CreatePlayer(1, new EntityTypeId(player.Id.Value),
-                new DaggerfallMechanicsState().CreateStats(player, DaggerfallPlayerVitals.Initial(player.Stats, definitions.Catalogs.RequireCareer("class00"))), "health");
+            Definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+            PlayerDefinition = Definitions.RequireActor(new DaggerfallActorId("player"));
+            var items = Definitions.Items.Values.Concat(Definitions.TemplateItems.Values).ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
+            var slots = Definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
+            Actors = new ActorsState();
+            Player = Actors.CreatePlayer(1, new EntityTypeId(PlayerDefinition.Id.Value),
+                new DaggerfallMechanicsState().CreateStats(PlayerDefinition, DaggerfallPlayerVitals.Initial(PlayerDefinition.Stats, Definitions.Catalogs.RequireCareer("class00"))), "health");
             EntityId owner = Player.Actor.Entity;
             InventoryStore world = new();
             world.RegisterInventory(new InventoryState(owner));
@@ -84,21 +166,22 @@ public sealed class DaggerfallCharacterPresentationTests
             EquipmentComponent equipmentComponent = new(world, owner);
             Player.Actor.Add(inventory);
             Player.Actor.Add(equipmentComponent);
-            equipment = new MechanicsEquipmentCoordinator(inventory, equipmentComponent, actors.Entities, items, slots);
-            foreach (DaggerfallLoadoutEntry entry in player.Loadout.Where(entry => entry.UniqueEntityId is not null))
+            Inventory = new MechanicsInventoryCoordinator(inventory, Actors.Entities, items);
+            Equipment = new MechanicsEquipmentCoordinator(inventory, equipmentComponent, Actors.Entities, items, slots);
+            foreach (DaggerfallLoadoutEntry entry in PlayerDefinition.Loadout.Where(entry => entry.UniqueEntityId is not null))
             {
-                WorldRpg.Kit.Inventory.UniqueInventoryItem item = equipment.Materialize(
+                WorldRpg.Kit.Inventory.UniqueInventoryItem item = Equipment.Materialize(
                     new DurableIdentityReference(DurableIdentityKind.Item, entry.UniqueEntityId!.Value),
                     new InventoryItemId(entry.ItemId.Value));
                 if (entry.EquipSlot is DaggerfallEquipmentSlotId slot)
-                    equipment.Equip(item, [new SlotId(slot.Value)]);
+                    Equipment.Equip(item, [new SlotId(slot.Value)]);
             }
-            Presentation = new DaggerfallCharacterPresentation(definitions, player, equipment);
+            Presentation = new DaggerfallCharacterPresentation(Definitions, PlayerDefinition, Equipment);
         }
 
         public void Dispose()
         {
-            actors.Dispose();
+            Actors.Dispose();
         }
     }
 

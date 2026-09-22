@@ -17,12 +17,27 @@ export interface CharacterResource {
 export interface CharacterProgression {
   readonly level: number;
   readonly experience: number;
+  readonly skillProgress?: number | null;
+  readonly nextLevelSkillProgress?: number | null;
+  readonly pendingLevelUp?: boolean;
 }
+
+export interface CharacterAffiliation {
+  readonly faction: string;
+  readonly guildGroup: string;
+  readonly rank: number;
+  readonly reputation: number;
+  readonly recognition: number;
+}
+
+export interface CharacterHistory { readonly biography: readonly string[]; }
 
 export interface CharacterEquipment {
   readonly label: string;
   readonly slots: readonly string[];
   readonly details: string;
+  readonly condition?: { readonly current: number; readonly maximum: number; readonly percentage: number; readonly broken: boolean; } | null;
+  readonly identified?: boolean;
 }
 
 export interface CharacterIdentity {
@@ -72,6 +87,9 @@ export interface CharacterProjection {
   readonly resources: readonly CharacterResource[];
   readonly progression: CharacterProgression;
   readonly equipment: readonly CharacterEquipment[];
+  readonly resistances?: readonly CharacterStat[];
+  readonly affiliations?: readonly CharacterAffiliation[];
+  readonly history?: CharacterHistory | null;
   readonly identity?: CharacterIdentity | null;
   readonly grantedSkills?: readonly CharacterGrantedSkill[];
   readonly creation?: CharacterCreation | null;
@@ -112,13 +130,16 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
   const resources = section('Live condition');
   const attributes = section('Attributes');
   const skills = section('Skills');
+  const resistances = section('Resistances');
+  const affiliations = section('Affiliations');
+  const history = section('History');
   const equipment = section('Equipped items');
   const career = section('Career training');
   const levelUp = section('Level up');
   const creation = section('Character choices');
   const columns = document.createElement('div');
   columns.className = 'dagger-character-columns';
-  columns.append(resources.element, attributes.element, skills.element, career.element, equipment.element, levelUp.element, creation.element);
+  columns.append(resources.element, attributes.element, skills.element, resistances.element, affiliations.element, history.element, career.element, equipment.element, levelUp.element, creation.element);
   shell.append(chrome, heading, overview, columns);
   root.append(shell);
   let disposed = false;
@@ -134,6 +155,9 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
         overviewRow('Player', value.name),
         overviewRow('Level', format(value.progression.level)),
         overviewRow('Total XP', format(value.progression.experience)),
+        ...(value.progression.nextLevelSkillProgress == null || value.progression.skillProgress == null ? [] : [
+          overviewRow('Level progress', `${format(value.progression.skillProgress)} / ${format(value.progression.nextLevelSkillProgress)} skill total${value.progression.pendingLevelUp === true ? ' · Level up ready' : ''}`),
+        ]),
         ...(value.identity ? [overviewRow('Race', value.identity.race), overviewRow('Career', value.identity.career),
           overviewRow('Face', `${value.identity.gender} ${format(value.identity.faceIndex + 1)}`)] : []),
       );
@@ -151,6 +175,21 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
         label: stat.label,
         value: stat.value === stat.permanent ? format(stat.value) : `${format(stat.value)} live / ${format(stat.permanent)} permanent`,
         testid: `character-sheet-skill-${stat.id}`,
+      })));
+      renderRows(resistances.rows, (value.resistances ?? []).map(stat => ({
+        label: stat.label,
+        value: stat.value === stat.permanent ? format(stat.value) : `${format(stat.value)} live / ${format(stat.permanent)} permanent`,
+        testid: `character-sheet-resistance-${stat.id}`,
+      })));
+      renderRows(affiliations.rows, (value.affiliations ?? []).map(affiliation => ({
+        label: affiliation.faction,
+        value: `${affiliation.guildGroup || 'Guild'} · Rank ${format(affiliation.rank)} · Reputation ${format(affiliation.reputation)} · Recognition ${format(affiliation.recognition)}`,
+        testid: `character-sheet-affiliation-${affiliation.faction}`,
+      })));
+      renderRows(history.rows, (value.history?.biography ?? []).map((line, index) => ({
+        label: `History ${format(index + 1)}`,
+        value: line,
+        testid: `character-sheet-history-${index}`,
       })));
       equipment.rows.replaceChildren(...value.equipment.map(item => equipmentRow(item)));
       renderRows(career.rows, (value.grantedSkills ?? []).map(skill => ({
@@ -183,6 +222,9 @@ export function isCharacterProjection(value: unknown): value is CharacterProject
     && 'resources' in value && Array.isArray(value.resources) && value.resources.every(isResource)
     && 'progression' in value && isProgression(value.progression)
     && 'equipment' in value && Array.isArray(value.equipment) && value.equipment.every(isEquipment)
+    && (!('resistances' in value) || Array.isArray(value.resistances) && isStats(value.resistances))
+    && (!('affiliations' in value) || Array.isArray(value.affiliations) && value.affiliations.every(isAffiliation))
+    && (!('history' in value) || value.history === null || isHistory(value.history))
     && (!('identity' in value) || value.identity === null || isIdentity(value.identity))
     && (!('grantedSkills' in value) || Array.isArray(value.grantedSkills) && value.grantedSkills.every(isGrantedSkill))
     && (!('creation' in value) || value.creation === null || isCreation(value.creation))
@@ -266,14 +308,35 @@ function isResource(value: unknown): value is CharacterResource {
 function isProgression(value: unknown): value is CharacterProgression {
   return typeof value === 'object' && value !== null
     && 'level' in value && isNumber(value.level)
-    && 'experience' in value && isNumber(value.experience);
+    && 'experience' in value && isNumber(value.experience)
+    && (!('skillProgress' in value) || value.skillProgress === null || isNumber(value.skillProgress))
+    && (!('nextLevelSkillProgress' in value) || value.nextLevelSkillProgress === null || isNumber(value.nextLevelSkillProgress))
+    && (!('pendingLevelUp' in value) || typeof value.pendingLevelUp === 'boolean');
+}
+
+function isAffiliation(value: unknown): value is CharacterAffiliation {
+  return typeof value === 'object' && value !== null
+    && 'faction' in value && typeof value.faction === 'string'
+    && 'guildGroup' in value && typeof value.guildGroup === 'string'
+    && 'rank' in value && isNumber(value.rank)
+    && 'reputation' in value && isNumber(value.reputation)
+    && 'recognition' in value && isNumber(value.recognition);
+}
+
+function isHistory(value: unknown): value is CharacterHistory {
+  return typeof value === 'object' && value !== null && 'biography' in value && Array.isArray(value.biography)
+    && value.biography.every(line => typeof line === 'string');
 }
 
 function isEquipment(value: unknown): value is CharacterEquipment {
   return typeof value === 'object' && value !== null
     && 'label' in value && typeof value.label === 'string'
     && 'slots' in value && Array.isArray(value.slots) && value.slots.every(slot => typeof slot === 'string')
-    && 'details' in value && typeof value.details === 'string';
+    && 'details' in value && typeof value.details === 'string'
+    && (!('condition' in value) || value.condition === null || typeof value.condition === 'object' && value.condition !== null
+      && 'current' in value.condition && isNumber(value.condition.current) && 'maximum' in value.condition && isNumber(value.condition.maximum)
+      && 'percentage' in value.condition && isNumber(value.condition.percentage) && 'broken' in value.condition && typeof value.condition.broken === 'boolean')
+    && (!('identified' in value) || typeof value.identified === 'boolean');
 }
 
 function isIdentity(value: unknown): value is CharacterIdentity {

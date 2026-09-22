@@ -217,6 +217,38 @@ test('pending level up shows permanent and live values and sends guarded semanti
   } finally { f.dispose(); }
 });
 
+test('character sheet refreshes owner-published progression, resistance, affiliation, and retained history', () => {
+  const f = fixture();
+  try {
+    f.publish({ mode: 'playing', character: {
+      name: 'Aubk-i', attributes: [], skills: [], equipment: [{ label: 'Iron Longsword', slots: ['Right Hand'], details: 'Condition: 2/2 (100%); Unidentified magical item', condition: { current: 2, maximum: 2, percentage: 100, broken: false }, identified: false }], resources: [], grantedSkills: [], creationAvailable: false,
+      progression: { level: 2, experience: 750, skillProgress: 15, nextLevelSkillProgress: 17, pendingLevelUp: false },
+      resistances: [{ id: 'resistance-fire', label: 'Resistance Fire', value: 15, permanent: 25 }],
+      affiliations: [{ faction: 'Mephala', guildGroup: 'Daedra', rank: 1, reputation: 6, recognition: 3 }],
+      history: { biography: ['A first retained account.'] },
+    } });
+    assert.match(f.root.querySelector('[aria-label="Player progression"]').textContent, /15 \/ 17 skill total/);
+    assert.match(f.root.querySelector('[data-testid="character-sheet-resistance-resistance-fire"]').textContent, /15 live \/ 25 permanent/);
+    assert.match(f.root.querySelector('[data-testid="character-sheet-affiliation-Mephala"]').textContent, /Rank 1.*Reputation 6.*Recognition 3/);
+    assert.equal(f.root.querySelector('[data-testid="character-sheet-history-0"]').textContent, 'A first retained account.');
+    const equipment = [...f.root.querySelectorAll('.dagger-character-section')].find(section => section.querySelector('h3')?.textContent === 'Equipped items');
+    assert.match(equipment.textContent, /Unidentified magical item/);
+
+    f.publish({ mode: 'playing', character: {
+      name: 'Aubk-i', attributes: [], skills: [], equipment: [{ label: 'Dagger of Fire', slots: ['Right Hand'], details: 'Condition: 1/2 (50%); Enchantment: Fire', condition: { current: 1, maximum: 2, percentage: 50, broken: false }, identified: true }], resources: [], grantedSkills: [], creationAvailable: false,
+      progression: { level: 2, experience: 900, skillProgress: 17, nextLevelSkillProgress: 17, pendingLevelUp: true },
+      resistances: [{ id: 'resistance-fire', label: 'Resistance Fire', value: 25, permanent: 25 }],
+      affiliations: [{ faction: 'Mephala', guildGroup: 'Daedra', rank: 2, reputation: 9, recognition: 4 }],
+      history: { biography: ['A revised retained account.'] },
+    } });
+    assert.match(f.root.querySelector('[aria-label="Player progression"]').textContent, /17 \/ 17 skill total.*Level up ready/);
+    assert.match(f.root.querySelector('[data-testid="character-sheet-resistance-resistance-fire"]').textContent, /^25$/);
+    assert.match(f.root.querySelector('[data-testid="character-sheet-affiliation-Mephala"]').textContent, /Rank 2.*Reputation 9.*Recognition 4/);
+    assert.equal(f.root.querySelector('[data-testid="character-sheet-history-0"]').textContent, 'A revised retained account.');
+    assert.match(equipment.textContent, /Dagger of Fire.*Condition: 1\/2 \(50%\).*Enchantment: Fire/);
+  } finally { f.dispose(); }
+});
+
 test('custom class editor sends typed skills traits and exposes eligibility reasons', () => {
   const f = fixture();
   try {

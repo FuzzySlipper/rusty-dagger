@@ -36,6 +36,9 @@ internal enum DaggerfallSkillUseDomain { Combat, Magic, Physical, Social }
 internal enum DaggerfallSkillUseOutcome { Accepted, Attempted, Succeeded }
 internal enum DaggerfallSkillUseCadence { PerAcceptedOperation, PerGameMinute }
 
+/// <summary>The current classic skill-sum progress toward the next committed player level.</summary>
+internal sealed record DaggerfallLevelProgress(int CurrentSkillSum, int NextLevelSkillSum, bool PendingLevelUp);
+
 /// <summary>Typed classic attribution: fixed amount, admission outcome, and only the cadence required by its source.</summary>
 internal sealed record DaggerfallSkillUsePolicy(
     DaggerfallSkillUseReason Reason,
@@ -139,6 +142,14 @@ internal sealed class DaggerfallSkillUseReactions
     internal bool PendingLevelUp => _progression.Level < CalculatedPlayerLevel;
     internal long LastSkillIncreaseCheckSecond => _lastSkillIncreaseCheckSecond;
     internal static IReadOnlyCollection<DaggerfallSkillUsePolicy> AttributionPolicies => Policies.Values.ToArray();
+
+    /// <summary>Reads level progress from the same skill-sum owner that decides level eligibility.</summary>
+    internal DaggerfallLevelProgress ReadLevelProgress()
+    {
+        DaggerfallFormulaTuning tuning = DaggerfallFormulaPolicy.Classic;
+        int next = checked(_startingLevelUpSkillSum + checked((_progression.Level + 1) * tuning.LevelFormulaDivisor) - tuning.LevelFormulaOffset);
+        return new DaggerfallLevelProgress(CurrentLevelUpSkillSum, next, PendingLevelUp);
+    }
 
     /// <summary>Starts classic level eligibility from the skill set a newly committed career grants.</summary>
     internal void RebaseForCareerSelection()

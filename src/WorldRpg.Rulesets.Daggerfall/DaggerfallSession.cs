@@ -263,7 +263,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             _inventoryUi.UseItemCondition(_itemCondition);
             _lootUi = new DaggerfallLootPresentation(_corpseLoot, _inventoryUi);
             InitializeActivation(engine, tuning.LootInteraction);
-            _characterUi = new DaggerfallCharacterPresentation(definitions, State.Character, playerDefinition, equipmentCoordinator, State.LevelUps);
+            _characterUi = new DaggerfallCharacterPresentation(definitions, State.Character, playerDefinition, equipmentCoordinator, State.LevelUps, State.Social, State.SkillUses);
+            _characterUi.UseItemPresentation(_inventoryUi);
             // The DOM's art comes from admitted content by media identity, so a session reads the
             // published closure once and publishes it to the UI that draws it.
             _hud = new DaggerfallHudProjection(

@@ -193,6 +193,7 @@ public sealed class DaggerfallCharacterStateTests
         restoredStats.GetStat(StatId.Parse(career.Attributes[0])).BaseValue = stats.GetStat(StatId.Parse(career.Attributes[0])).BaseValue;
         DaggerfallCharacterState restored = new(definitions, restoredStats, player, save);
         Assert.Equal(committed.Biography, restored.Background!.Biography);
+        Assert.Equal(committed.Biography, restored.History);
         Assert.Equal(committed.Biography, Assert.IsType<DaggerfallCharacterBackgroundPresentation>(restored.ReadCreation().Background).Biography);
     }
 
