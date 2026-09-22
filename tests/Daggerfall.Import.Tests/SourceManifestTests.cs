@@ -95,6 +95,67 @@ public sealed class SourceManifestTests : IDisposable
     }
 
     [Fact]
+    public void Composed_source_manifest_survives_media_republication_and_atomic_failure()
+    {
+        Write("A.CIF", "alpha"u8);
+        string inventory = Inventory(
+            "CNT-001,family,CNT-001,cif,local/arena2/A.CIF,1,,A,scope,current-structural,note",
+            "CNT-001.file.A.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,uninspected,note");
+        SourceManifest source = SourceManifestBuilder.Build(
+            new SourceManifestRequest("local/arena2", "inventory.csv", root, ["A.CIF"], [], []),
+            Encoding.UTF8.GetBytes(inventory));
+        ImportProvenance provenance = new(
+            ImportProvenance.CurrentSchemaVersion,
+            "daggerfall-import/test",
+            1,
+            [new LogicalSourceRecord(LogicalSourceRecord.CurrentSchemaVersion, "arena2/A.CIF", ContentDigest.Compute("alpha"u8), 5, 1)]);
+        ImportPublicationPlan First(string mediaPath, ReadOnlySpan<byte> bytes) => SourceManifestPublication.Compose(
+            ImportPublicationPlan.Create(provenance, [new ImportPublicationArtifact(mediaPath, bytes)]), source);
+
+        string output = Path.Combine(root, "publication");
+        ImportPublicationWriter.Write(First("media/old.bin", "old"u8), output);
+        ImportPublicationPlan changed = First("media/current.bin", "current"u8);
+        ImportPublicationWriter.Write(changed, output);
+
+        SourceManifest retained = SourceManifestSerializer.Deserialize(File.ReadAllBytes(Path.Combine(output, SourceManifestSerializer.ManifestRelativePath)));
+        Assert.Equal(SourceRecordDisposition.Imported, Record(retained, "CNT-001.file.A.CIF").Disposition);
+        Assert.False(File.Exists(Path.Combine(output, "media/old.bin")));
+        Assert.True(changed.Compare(output).IsNoOp);
+
+        ImportPublicationPlan failing = SourceManifestPublication.Compose(
+            ImportPublicationPlan.Create(provenance,
+            [
+                new ImportPublicationArtifact("conflict", "file"u8),
+                new ImportPublicationArtifact("conflict/child.bin", "child"u8),
+            ]), source);
+        Assert.ThrowsAny<IOException>(() => ImportPublicationWriter.Write(failing, output));
+        Assert.True(File.Exists(Path.Combine(output, "media/current.bin")));
+        Assert.Equal(SourceManifestSerializer.Serialize(retained), File.ReadAllBytes(Path.Combine(output, SourceManifestSerializer.ManifestRelativePath)));
+    }
+
+    [Fact]
+    public void No_inventory_publication_refuses_to_replace_existing_source_provenance()
+    {
+        Write("A.CIF", "alpha"u8);
+        string inventory = Inventory(
+            "CNT-001,family,CNT-001,cif,local/arena2/A.CIF,1,,A,scope,current-structural,note",
+            "CNT-001.file.A.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,uninspected,note");
+        SourceManifest source = SourceManifestBuilder.Build(
+            new SourceManifestRequest("local/arena2", "inventory.csv", root, ["A.CIF"], [], []), Encoding.UTF8.GetBytes(inventory));
+        ImportProvenance provenance = new(ImportProvenance.CurrentSchemaVersion, "daggerfall-import/test", 1,
+            [new LogicalSourceRecord(LogicalSourceRecord.CurrentSchemaVersion, "arena2/A.CIF", ContentDigest.Compute("alpha"u8), 5, 1)]);
+        string output = Path.Combine(root, "publication");
+        ImportPublicationWriter.Write(SourceManifestPublication.Compose(
+            ImportPublicationPlan.Create(provenance, [new ImportPublicationArtifact("media/current.bin", "current"u8)]), source), output);
+
+        ImportPublicationPlan noInventoryPlan = ImportPublicationPlan.Create(provenance, [new ImportPublicationArtifact("media/current.bin", "changed"u8)]);
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => SourceManifestPublication.RefuseProvenanceLoss(noInventoryPlan, output));
+        Assert.Contains("--inventory", error.Message, StringComparison.Ordinal);
+        Assert.True(File.Exists(Path.Combine(output, SourceManifestSerializer.ManifestRelativePath)));
+        Assert.Equal("current"u8.ToArray(), File.ReadAllBytes(Path.Combine(output, "media/current.bin")));
+    }
+
+    [Fact]
     public void A_casing_difference_keeps_the_casing_the_source_tree_actually_uses()
     {
         Write("Mixed.CIF", "alpha"u8);

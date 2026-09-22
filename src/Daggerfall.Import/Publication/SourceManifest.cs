@@ -297,3 +297,54 @@ public static class SourceManifestSerializer
         return manifest;
     }
 }
+
+/// <summary>
+/// Adds a source-manifest record to the exact directory a publication writer owns.
+/// The generated import manifest is rebuilt around it, so an atomic replacement
+/// retains current provenance while still retiring artifacts no longer in the plan.
+/// </summary>
+public static class SourceManifestPublication
+{
+    /// <summary>
+    /// Prevents an ordinary import invocation without its inventory from replacing a published
+    /// source-manifest closure. The writer remains an exact-owner writer: callers must compose a
+    /// current manifest with <see cref="Compose"/> rather than carrying stale output forward.
+    /// </summary>
+    public static void RefuseProvenanceLoss(ImportPublicationPlan plan, string outputDirectory)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory);
+        if (plan.Artifacts.Any(artifact => artifact.RelativePath == SourceManifestSerializer.ManifestRelativePath)) return;
+        string existing = Path.Combine(outputDirectory, SourceManifestSerializer.ManifestRelativePath.Replace('/', Path.DirectorySeparatorChar));
+        if (File.Exists(existing))
+            throw new InvalidOperationException($"Refusing to replace '{outputDirectory}' without its source provenance. Supply --inventory so sources/manifest.json is regenerated from the admitted source tree.");
+    }
+
+    public static ImportPublicationPlan Compose(ImportPublicationPlan plan, SourceManifest manifest)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(manifest);
+        manifest.Validate();
+        if (plan.Manifest.Sources.Count == 0)
+        {
+            throw new InvalidOperationException("A publication with no sources cannot carry a source manifest.");
+        }
+
+        byte[] bytes = SourceManifestSerializer.Serialize(manifest);
+        ImportProvenance provenance = new(
+            ImportProvenance.CurrentSchemaVersion,
+            plan.Manifest.ImporterId,
+            plan.Manifest.ImporterVersion,
+            plan.Manifest.Sources.Select(source => new LogicalSourceRecord(
+                LogicalSourceRecord.CurrentSchemaVersion,
+                source.SourcePath,
+                source.ContentHash,
+                source.ByteLen,
+                NormalizedImportDocument.CurrentSchemaVersion)).ToArray());
+        return ImportPublicationPlan.Create(provenance,
+        [
+            .. plan.Artifacts.Where(artifact => artifact.RelativePath != ImportPublicationManifestSerializer.ManifestRelativePath),
+            new ImportPublicationArtifact(SourceManifestSerializer.ManifestRelativePath, bytes),
+        ]);
+    }
+}

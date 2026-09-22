@@ -159,6 +159,10 @@ internal static partial class Program
 
             ToolOptions options = ToolOptions.Parse(args);
             ImportPublicationPlan plan = AttachSourceManifest(BuildPlan(options), options);
+            if (options.Command == ToolCommand.Write && options.InventoryFile is null)
+            {
+                SourceManifestPublication.RefuseProvenanceLoss(plan, options.OutputDirectory);
+            }
             switch (options.Command)
             {
                 case ToolCommand.Plan:
