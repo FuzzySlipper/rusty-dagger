@@ -54,17 +54,76 @@ public sealed class CombatResolutionTests
         ApplyHitEvent applied = resolution.Apply(participants, damage.Damage, damage.Body, interaction =>
         {
             Track health = interaction.Participants.TargetStats.GetTrack(TrackId.Parse("health"));
-            int before = health.ValueInt;
+            double before = health.Current;
             health.SetCurrent(before - interaction.Damage, clamp: true);
-            interaction.AppliedDamage = before - health.ValueInt;
-            interaction.Killed = health.Current <= health.Minimum;
+            interaction.ActualHealthLost = before - health.Current;
+            interaction.Defeated = before > health.Minimum && health.Current <= health.Minimum;
         });
 
         Assert.True(hit.Hit);
         Assert.Equal(12, damage.Damage);
-        Assert.Equal(8, applied.AppliedDamage);
+        Assert.Equal(8d, applied.ActualHealthLost);
         Assert.Equal(92, target.Stats.GetTrack(TrackId.Parse("health")).ValueInt);
         Assert.Equal(7, applied.Body);
+    }
+
+    [Fact]
+    public void Canonical_health_application_retains_source_cause_actual_loss_and_one_defeat_transition()
+    {
+        using ActorsState actors = Actors();
+        ActorState attacker = actors.Get(2);
+        ActorState target = actors.Get(3);
+        Track health = target.Stats.GetTrack(TrackId.Parse("health"));
+        health.SetCurrent(3.75, clamp: true);
+        CombatParticipants participants = new(attacker.Actor, target.Actor, "falling");
+        CombatResolution resolution = new();
+
+        ApplyHitEvent lethal = resolution.ApplyToHealth(participants, 10, 0, health);
+        ApplyHitEvent repeated = resolution.ApplyToHealth(participants, 10, 0, health);
+
+        Assert.Equal((10, 3.75d, true), (lethal.Result.CalculatedDamage, lethal.Result.ActualHealthLost, lethal.Result.Defeated));
+        Assert.Same(attacker.Actor, lethal.Result.Source);
+        Assert.Same(target.Actor, lethal.Result.Target);
+        Assert.Equal("falling", lethal.Result.Cause);
+        Assert.Equal((0d, false), (repeated.ActualHealthLost, repeated.Defeated));
+        Assert.Equal(0, health.ValueInt);
+    }
+
+    [Fact]
+    public void Canonical_health_application_preserves_fractional_current_values_and_the_minimum_bound()
+    {
+        using ActorsState actors = Actors();
+        Track health = actors.Get(3).Stats.GetTrack(TrackId.Parse("health"));
+        CombatParticipants participants = new(actors.Get(2).Actor, actors.Get(3).Actor, "hazard");
+        CombatResolution resolution = new();
+
+        health.SetCurrent(10.75, clamp: true);
+        ApplyHitEvent ordinary = resolution.ApplyToHealth(participants, 1, 0, health);
+        Assert.Equal(9.75d, health.Current);
+        Assert.Equal(1d, ordinary.ActualHealthLost);
+        Assert.False(ordinary.Defeated);
+
+        health.SetCurrent(0.5d, clamp: true);
+        ApplyHitEvent bounded = resolution.ApplyToHealth(participants, 1, 0, health);
+        Assert.Equal(0d, health.Current);
+        Assert.Equal(0.5d, bounded.ActualHealthLost);
+        Assert.True(bounded.Defeated);
+    }
+
+    [Fact]
+    public void A_source_that_is_also_the_target_contributes_once()
+    {
+        using ActorsState actors = Actors();
+        ActorState target = actors.Get(3);
+        CombatContributions ward = new();
+        ward.Rules.Add(new ApplyingContribution(interaction => interaction.Damage -= 2));
+        target.Actor.Add(ward);
+        Track health = target.Stats.GetTrack(TrackId.Parse("health"));
+
+        ApplyHitEvent applied = new CombatResolution().ApplyToHealth(new(target.Actor, target.Actor, "effect"), 5, 0, health);
+
+        Assert.Equal(3d, applied.ActualHealthLost);
+        Assert.Equal(97d, health.Current);
     }
 
     [Fact]

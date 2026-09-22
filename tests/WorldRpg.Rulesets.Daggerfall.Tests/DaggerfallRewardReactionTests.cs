@@ -59,7 +59,7 @@ public sealed class DaggerfallRewardReactionTests
             RandomMinimums(),
             actors,
             experimentalKillExperience: true);
-        ActorDiedFact death = new(9000, DaggerfallActorIdentity.PlayerEntityId, 5, 2, 3);
+        ActorDiedFact death = new(9000, DaggerfallActorIdentity.PlayerEntityId, DaggerfallDamageCause.PhysicalAttack, 5, 5d, 2, 3);
         FactBuffer<IProductFact> facts = new();
 
         reactions.React(death, facts);
@@ -89,7 +89,7 @@ public sealed class DaggerfallRewardReactionTests
             new Dictionary<long, DaggerfallActorDefinition> { [9000] = thief },
             experimentalKillExperience: true);
 
-        reactions.React(new ActorDiedFact(9000, 777, 5, 2, 3), new FactBuffer<IProductFact>());
+        reactions.React(new ActorDiedFact(9000, 777, DaggerfallDamageCause.PhysicalAttack, 5, 5d, 2, 3), new FactBuffer<IProductFact>());
 
         Assert.Equal(0, progression.Experience);
     }
@@ -109,7 +109,7 @@ public sealed class DaggerfallRewardReactionTests
         (IRandomService random, RecordingRandomProxy recorder) = RecordingRandom(8);
         DaggerfallRewardReactions reactions = CreateReactions(definitions, player, mechanics, progression, random, new Dictionary<long, DaggerfallActorDefinition> { [9000] = defeated });
 
-        reactions.React(new ActorDiedFact(9000, DaggerfallActorIdentity.PlayerEntityId, 5, 2, 3), new FactBuffer<IProductFact>());
+        reactions.React(new ActorDiedFact(9000, DaggerfallActorIdentity.PlayerEntityId, DaggerfallDamageCause.PhysicalAttack, 5, 5d, 2, 3), new FactBuffer<IProductFact>());
 
         Assert.Equal(500, progression.Experience);
         Assert.Equal(2, progression.Level);
@@ -174,7 +174,7 @@ public sealed class DaggerfallRewardReactionTests
         (IRandomService random, RecordingRandomProxy recorder) = RecordingRandom(6, 8);
         DaggerfallRewardReactions reactions = CreateReactions(definitions, player, mechanics, progression, random, new Dictionary<long, DaggerfallActorDefinition> { [9000] = defeated });
 
-        reactions.React(new ActorDiedFact(9000, DaggerfallActorIdentity.PlayerEntityId, 5, 2, 3), new FactBuffer<IProductFact>());
+        reactions.React(new ActorDiedFact(9000, DaggerfallActorIdentity.PlayerEntityId, DaggerfallDamageCause.PhysicalAttack, 5, 5d, 2, 3), new FactBuffer<IProductFact>());
 
         Assert.Equal(1_000, progression.Experience);
         Assert.Equal(3, progression.Level);
@@ -208,7 +208,7 @@ public sealed class DaggerfallRewardReactionTests
             random,
             new Dictionary<long, DaggerfallActorDefinition> { [9000] = thief },
             experimentalKillExperience: true);
-        ActorDiedFact death = new(9000, DaggerfallActorIdentity.PlayerEntityId, 5, 2, 3);
+        ActorDiedFact death = new(9000, DaggerfallActorIdentity.PlayerEntityId, DaggerfallDamageCause.PhysicalAttack, 5, 5d, 2, 3);
         FactBuffer<IProductFact> facts = new();
 
         reactions.React(death, facts);
@@ -249,7 +249,7 @@ public sealed class DaggerfallRewardReactionTests
             experimentalKillExperience: true);
         FactBuffer<IProductFact> facts = new();
 
-        Assert.Throws<OverflowException>(() => reactions.React(new ActorDiedFact(9000, DaggerfallActorIdentity.PlayerEntityId, 5, 2, 3), facts));
+        Assert.Throws<OverflowException>(() => reactions.React(new ActorDiedFact(9000, DaggerfallActorIdentity.PlayerEntityId, DaggerfallDamageCause.PhysicalAttack, 5, 5d, 2, 3), facts));
         Assert.Empty(recorder.Requests);
         Assert.Empty(mechanics.GetStat(StatId.Parse("health-maximum")).Explain().Decisions);
         Assert.Equal(100d, mechanics.GetTrack(TrackId.Parse("health")).Current);

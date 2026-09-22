@@ -4,11 +4,11 @@ using Rusty.Engine.Mechanics;
 namespace WorldRpg.Kit.Combat;
 
 /// <summary>Actual participants, with live stats/effects rather than copied bonuses.</summary>
-public sealed record CombatParticipants(Actor Attacker, Actor Target, string Action)
+public sealed record CombatParticipants(Actor Source, Actor Target, string Cause)
 {
-    public StatsComponent AttackerStats => Attacker.Get<StatsComponent>();
+    public StatsComponent SourceStats => Source.Get<StatsComponent>();
     public StatsComponent TargetStats => Target.Get<StatsComponent>();
-    public EffectsComponent AttackerEffects => Attacker.Get<EffectsComponent>();
+    public EffectsComponent SourceEffects => Source.Get<EffectsComponent>();
     public EffectsComponent TargetEffects => Target.Get<EffectsComponent>();
 }
 public sealed class TryHitEvent(CombatParticipants participants)
@@ -25,16 +25,28 @@ public sealed class DamageEvent(CombatParticipants participants)
     public CombatParticipants Participants { get; } = participants;
     public int Body { get; set; }
     public int Damage { get; set; }
+    /// <summary>Damage after base policy and ordered calculation contributions, before application contributions.</summary>
+    public int CalculatedDamage { get => Damage; set => Damage = value; }
     public bool Allowed { get; set; } = true;
 }
 public sealed class ApplyHitEvent(CombatParticipants participants, int damage, int body)
 {
     public CombatParticipants Participants { get; } = participants;
+    /// <summary>The calculated amount handed to application before application contributions may reduce it.</summary>
+    public int CalculatedDamage { get; } = damage;
     public int Damage { get; set; } = damage;
     public int Body { get; } = body;
-    public int AppliedDamage { get; set; }
-    public bool Killed { get; set; }
+    /// <summary>Health actually removed from the canonical live track; this is never inferred from calculated damage.</summary>
+    public double ActualHealthLost { get; set; }
+    /// <summary>True only when this application crossed a living target to its health minimum.</summary>
+    public bool Defeated { get; set; }
+    public DamageResult Result => new(Participants.Source, Participants.Target, Participants.Cause,
+        CalculatedDamage, ActualHealthLost, Defeated);
 }
+
+/// <summary>Completed synchronous health application. The source, target, cause, calculation, live loss, and transition stay together.</summary>
+public readonly record struct DamageResult(Actor Source, Actor Target, string Cause, int CalculatedDamage,
+    double ActualHealthLost, bool Defeated);
 
 /// <summary>Explicit participant contributions, in registration order after each base calculation and before application.</summary>
 public interface ICombatContribution
@@ -76,11 +88,28 @@ public sealed class CombatResolution
         apply(interaction);
         return interaction;
     }
+    /// <summary>
+    /// Runs application contributions then mutates the supplied canonical health track once. A
+    /// target already at its minimum has no second death transition and loses no additional health.
+    /// </summary>
+    public ApplyHitEvent ApplyToHealth(CombatParticipants participants, int damage, int body, Track health)
+    {
+        ArgumentNullException.ThrowIfNull(health);
+        return Apply(participants, damage, body, interaction =>
+        {
+            double before = health.Current;
+            if (before <= health.Minimum) return;
+            health.SetCurrent(Math.Max(health.Minimum, before - Math.Max(0d, interaction.Damage)), clamp: true);
+            interaction.ActualHealthLost = before - health.Current;
+            interaction.Defeated = before > health.Minimum && health.Current <= health.Minimum;
+        });
+    }
     private IEnumerable<ICombatContribution> Gather(CombatParticipants participants)
     {
-        foreach (ICombatContribution rule in FromActor(participants.Attacker)) yield return rule;
-        foreach (ICombatContribution rule in FromActor(participants.Target)) yield return rule;
-        if (_actions.TryGetValue(participants.Action, out IReadOnlyList<ICombatContribution>? action))
+        foreach (ICombatContribution rule in FromActor(participants.Source)) yield return rule;
+        if (participants.Target.Entity != participants.Source.Entity)
+            foreach (ICombatContribution rule in FromActor(participants.Target)) yield return rule;
+        if (_actions.TryGetValue(participants.Cause, out IReadOnlyList<ICombatContribution>? action))
             foreach (ICombatContribution rule in action) yield return rule;
     }
     private static IEnumerable<ICombatContribution> FromActor(Actor actor)

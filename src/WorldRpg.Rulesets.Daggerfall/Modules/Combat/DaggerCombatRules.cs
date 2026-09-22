@@ -23,11 +23,13 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     private const string HealthTrack = "health";
     private const string StaminaTrack = "stamina";
     private readonly IRandomService _random;
-    internal CombatResolution Rules { get; } = new();
+    internal CombatResolution Rules { get; }
     private readonly ActorsState _actors;
     private readonly MechanicsEquipmentCoordinator _equipment;
     private readonly Func<long, MechanicsInventoryCoordinator?> _actorInventories;
+    private readonly Func<long, MechanicsEquipmentCoordinator> _actorEquipment;
     private readonly DaggerfallItemInstances _itemInstances;
+    private readonly DaggerfallItemConditionService? _itemCondition;
     private readonly DaggerfallDefinitions _catalog;
     private readonly IReadOnlyDictionary<string, int> _weaponMaterialRanks;
     private readonly IReadOnlyDictionary<string, DaggerfallActionDefinition> _actions;
@@ -46,14 +48,19 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     internal DaggerCombatRules(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment,
         Func<long, MechanicsInventoryCoordinator?> actorInventories, DaggerfallItemInstances itemInstances,
         DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity,
-        TargetingService targeting, Action<DaggerfallSkillUse>? skillUses = null, Func<int>? playerBiographyAvoidHit = null)
+        TargetingService targeting, Action<DaggerfallSkillUse>? skillUses = null, Func<int>? playerBiographyAvoidHit = null,
+        Func<long, MechanicsEquipmentCoordinator>? actorEquipment = null, DaggerfallItemConditionService? itemCondition = null,
+        CombatResolution? rules = null)
     {
         _random = random;
+        Rules = rules ?? new CombatResolution();
         Execution = new(actors, this, DeferRangedImpact);
         _actors = actors;
         _equipment = equipment;
         _actorInventories = actorInventories;
+        _actorEquipment = actorEquipment ?? (_ => equipment);
         _itemInstances = itemInstances ?? throw new ArgumentNullException(nameof(itemInstances));
+        _itemCondition = itemCondition;
         _catalog = definitions;
         _weaponMaterialRanks = DaggerfallFormulaPolicy.ClassicWeaponMaterialRanks;
         _actions = definitions.Actions;
@@ -311,18 +318,80 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     private void ApplyDamage(CombatParticipants participants, long attacker, long target, int damage, int body, bool enemy,
         ulong generation, ulong step, FactBuffer<IProductFact> facts)
     {
-        ApplyHitEvent applied = Rules.Apply(participants, damage, body, interaction =>
-        {
-            Track health = participants.TargetStats.GetTrack(TrackId.Parse(HealthTrack));
-            int before = health.ValueInt;
-            health.SetCurrent(Math.Max(health.Minimum, (double)before - Math.Max(0, interaction.Damage)), clamp: true);
-            interaction.AppliedDamage = before - health.ValueInt;
-            interaction.Killed = health.Current <= health.Minimum && before > health.Minimum;
-        });
-        facts.Append(new AttackHitFact(attacker, target, applied.AppliedDamage, body, enemy, generation, step));
-        if (applied.AppliedDamage > 0) facts.Append(new ActorDamagedFact(target, applied.AppliedDamage));
-        if (applied.Killed) facts.Append(new ActorDiedFact(target, attacker, applied.AppliedDamage, generation, step));
+        Track health = participants.TargetStats.GetTrack(TrackId.Parse(HealthTrack));
+        ApplyHitEvent applied = Rules.ApplyToHealth(participants, damage, body, health);
+        facts.Append(new AttackHitFact(attacker, target, applied.CalculatedDamage, applied.ActualHealthLost, body, enemy, generation, step));
+        facts.Append(new DamageAppliedFact(attacker, target, DaggerfallDamageCause.PhysicalAttack,
+            applied.CalculatedDamage, applied.ActualHealthLost, body, generation, step));
+        if (applied.ActualHealthLost > 0)
+            facts.Append(new ActorDamagedFact(target, attacker, DaggerfallDamageCause.PhysicalAttack,
+                applied.CalculatedDamage, applied.ActualHealthLost));
+        if (applied.Defeated)
+            facts.Append(new ActorDiedFact(target, attacker, DaggerfallDamageCause.PhysicalAttack,
+                applied.CalculatedDamage, applied.ActualHealthLost, generation, step));
+        if (applied.Damage > 0) ApplyPhysicalWear(attacker, target, body, applied.Damage, enemy, generation, step);
     }
+
+    /// <summary>
+    /// Physical wear happens only after the one accepted hit result. The donor charges the struck
+    /// weapon and either a covering shield or the armor for the rolled body part; separate keyed
+    /// draws preserve the donor's independent minimum-wear rolls without adding a second hit path.
+    /// </summary>
+    private void ApplyPhysicalWear(long attacker, long target, int body, int damage, bool enemy, ulong generation, ulong step)
+    {
+        if (_itemCondition is null) return;
+        if (EquippedWeapon(attacker) is WorldRpg.Kit.Inventory.UniqueInventoryItem weapon)
+            DamageCondition(weapon, attacker, ConditionUnits(attacker, target, damage, enemy, generation, step, CombatRandomKey.WeaponConditionSalt));
+        if (EquippedDefence(target, body) is WorldRpg.Kit.Inventory.UniqueInventoryItem defence)
+            DamageCondition(defence, target, ConditionUnits(attacker, target, damage, enemy, generation, step, CombatRandomKey.ArmorConditionSalt));
+    }
+
+    private void DamageCondition(WorldRpg.Kit.Inventory.UniqueInventoryItem item, long owner, int units)
+    {
+        if (units <= 0) return;
+        if (owner == PlayerId) _ = _itemCondition!.Damage(item, units);
+        else _ = _itemCondition!.Damage(item, DaggerfallItemOwner.Actor(owner), _actorEquipment(owner), units);
+    }
+
+    private int ConditionUnits(long attacker, long target, int damage, bool enemy, ulong generation, ulong step, int salt)
+    {
+        int units = checked((10 * damage + 50) / 100);
+        return units != 0 || Draw(new ExplicitMeleeRequest(attacker, target, generation, step, 1d), attacker, target, salt, 1, 100, enemy) > 20
+            ? units
+            : 1;
+    }
+
+    private WorldRpg.Kit.Inventory.UniqueInventoryItem? EquippedWeapon(long owner)
+    {
+        EquipmentRead equipment = owner == PlayerId ? _equipment.Read() : _actorEquipment(owner).Read();
+        foreach (string slot in new[] { "right-hand", "left-hand" })
+            if (equipment.TryGet(new WorldRpg.Kit.Inventory.EquipmentSlotId(slot), out WorldRpg.Kit.Inventory.UniqueInventoryItem item)
+                && ReadWeapon(equipment, slot) is not null) return item;
+        return null;
+    }
+
+    private WorldRpg.Kit.Inventory.UniqueInventoryItem? EquippedDefence(long owner, int body)
+    {
+        EquipmentRead equipment = owner == PlayerId ? _equipment.Read() : _actorEquipment(owner).Read();
+        if (equipment.TryGet(new WorldRpg.Kit.Inventory.EquipmentSlotId("left-hand"), out WorldRpg.Kit.Inventory.UniqueInventoryItem shield)
+            && _catalog.RequireItem(new DaggerfallItemId(shield.Definition.Value)) is { Shield: not null } shieldDefinition
+            && ShieldCovers(shieldDefinition.Id.Value, body)) return shield;
+        string slot = body switch
+        {
+            0 => "head", 1 => "right-arm", 2 => "left-arm", 3 => "chest-armor",
+            4 => "gloves", 5 => "legs-armor", 6 => "feet", _ => throw new ArgumentOutOfRangeException(nameof(body)),
+        };
+        return equipment.TryGet(new WorldRpg.Kit.Inventory.EquipmentSlotId(slot), out WorldRpg.Kit.Inventory.UniqueInventoryItem armor)
+            && _catalog.RequireItem(new DaggerfallItemId(armor.Definition.Value)).Armor is not null ? armor : null;
+    }
+
+    private static bool ShieldCovers(string shield, int body) => shield switch
+    {
+        "buckler" => body is 2 or 4,
+        "round-shield" or "kite-shield" => body is 2 or 4 or 5,
+        "tower-shield" => body is 0 or 2 or 4 or 5,
+        _ => false,
+    };
 
     private bool TryResolve(long id, out Combatant combatant)
     {

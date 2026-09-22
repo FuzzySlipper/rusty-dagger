@@ -3,6 +3,7 @@ using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Presentation;
 
@@ -57,11 +58,11 @@ internal sealed class DaggerfallOutcomePresentation(
                 break;
             case AttackHitFact hit when Actor(hit.EnemyAttack ? hit.AttackerId : hit.TargetId, out DaggerfallActorDefinition definition):
                 _lineIsResult = true;
-                presentation.SetOutcome(hit.EnemyAttack ? $"{definition.Id.Value} hit you for {hit.Damage} damage" : $"Hit {definition.Id.Value} for {hit.Damage} damage");
+                presentation.SetOutcome(hit.EnemyAttack ? $"{definition.Id.Value} hit you for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage" : $"Hit {definition.Id.Value} for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage");
                 break;
             case ActorDiedFact died when Actor(died.ActorId, out DaggerfallActorDefinition definition):
                 _lineIsResult = true;
-                presentation.SetOutcome($"Defeated {definition.Id} for {died.AppliedDamage} damage; gained {definition.Rewards.ExperienceReward} XP");
+                presentation.SetOutcome($"Defeated {definition.Id} for {DaggerfallFormulaPolicy.DisplayDamage(died.ActualHealthLost)} damage; gained {definition.Rewards.ExperienceReward} XP");
                 break;
             case LootAwardedFact loot:
                 presentation.AppendOutcome($"looted {loot.Quantity} {loot.ItemId}");

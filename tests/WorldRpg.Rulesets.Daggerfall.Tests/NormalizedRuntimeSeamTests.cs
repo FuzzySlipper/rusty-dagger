@@ -375,14 +375,16 @@ public sealed class NormalizedRuntimeSeamTests
         session.State.Equipment.Swap(equipped, new WorldRpg.Kit.Inventory.UniqueInventoryItem(steelItem.Entity.Value, steelDagger.Item),
             [new WorldRpg.Kit.Inventory.EquipmentSlotId("right-hand")]);
         authored[2000] = authored[2000] with { MinimumMaterial = "steel" };
-        DaggerCombatRules steelCombat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.InventoryFor,
-            session.State.ItemInstances, definitions, authored, targeting);
+        ((Dictionary<long, DaggerfallActorDefinition>)session.DefinitionsByActor)[2000] = authored[2000];
 
-        steelCombat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 9, 30, .125), facts);
-        List<IProductFact> steelCanHit = [];
-        facts.Deliver(steelCanHit.Add);
-        Assert.Contains(steelCanHit, fact => fact is AttackHitFact);
-        Assert.DoesNotContain(new AttackRejectedFact(AttackRejection.InsufficientWeaponMaterial), steelCanHit);
+        int healthBeforeSteelHit = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).ValueInt;
+        int conditionBeforeSteelHit = session.State.ItemInstances.RequireUnique(steelIdentity.Value).CurrentCondition;
+        // This reaches the session's composed combat instance, proving its constructor received a
+        // live condition owner rather than the direct test combat's injected service.
+        session.ResolveExplicitMelee(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 9, 30, .125));
+        Assert.True(session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).ValueInt < healthBeforeSteelHit);
+        Assert.True(session.State.ItemInstances.RequireUnique(steelIdentity.Value).CurrentCondition < conditionBeforeSteelHit);
+        Assert.Contains("Hit", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -977,7 +979,7 @@ public sealed class NormalizedRuntimeSeamTests
 
         // A hit lands, and then the attack button stays held: the cooldown rejection repeats every
         // update, and the player still has to be able to read what happened.
-        outcomes.React(new AttackHitFact(1, 2008, 7, 3, false, 1, 100));
+        outcomes.React(new AttackHitFact(1, 2008, 7, 7d, 3, false, 1, 100));
         Assert.Equal("Hit rat for 7 damage", presentation.LastOutcome);
         for (int repeat = 0; repeat < 40; repeat++)
         {
@@ -1663,8 +1665,8 @@ public sealed class NormalizedRuntimeSeamTests
         presentation.React(new AttackMissedFact(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 1, false, 2, 3));
         presentation.React(new AttackMissedFact(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 2, false, 2, 3));
         using ActorsState actors = ActorsAt(new WorldPoint(2F, 0F, 3F));
-        presentation.React(new AttackHitFact(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 3, false, 2, 3), actors);
-        presentation.React(new AttackHitFact(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 4, false, 2, 3), actors);
+        presentation.React(new AttackHitFact(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 1d, 3, false, 2, 3), actors);
+        presentation.React(new AttackHitFact(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 1d, 4, false, 2, 3), actors);
 
         presentation.CompleteAdmittedUpdate();
         presentation.BeginAdmittedUpdate();
@@ -1829,7 +1831,7 @@ public sealed class NormalizedRuntimeSeamTests
         using ActorsState actors = ActorsAt(new WorldPoint(1F, 1F, 1F));
         presentation.Publish(actors);
         actors.Get(12).ApplyPose(new ActorPose(targetPosition, 0F));
-        AttackHitFact hit = new(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 0, false, 5, 8);
+        AttackHitFact hit = new(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 1d, 0, false, 5, 8);
 
         presentation.React(hit, actors);
         presentation.React(hit, actors);
@@ -1895,7 +1897,7 @@ public sealed class NormalizedRuntimeSeamTests
             using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(classic: classic), random: KeyedRandomFake.Create(ordinal).Service);
             using ActorsState actors = ActorsAt(new WorldPoint(2F, 0F, 3F));
 
-            presentation.React(new AttackHitFact(DaggerfallActorIdentity.PlayerEntityId, 12, 1, ordinal, false, 2, 3), actors);
+            presentation.React(new AttackHitFact(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 1d, ordinal, false, 2, 3), actors);
 
             Assert.All(appearance.AtlasRequests.Last().Frames.Span.ToArray(), frame => Assert.False(frame.HasSize));
             Assert.Equal(expectedSizes[ordinal], appearance.SpriteRequests.Last().Size);
@@ -3341,7 +3343,7 @@ public sealed class NormalizedRuntimeSeamTests
             definitions, RandomMinimum.Create(), new DaggerfallUniqueItemAllocator(1_000), new ProgressionState(), DaggerfallTuning.Defaults.LootInteraction,
             CharacterForLoot(definitions));
         // Corpse policy is independent of player XP credit.
-        ActorDiedFact death = new(2000, 77, 3, 2, 3);
+        ActorDiedFact death = new(2000, 77, DaggerfallDamageCause.PhysicalAttack, 3, 3d, 2, 3);
         loot.Create(death);
         Assert.True(loot.Corpses[2000].IsInteractable);
         Assert.Empty(containers.Read(playerOwner).Stacks);
@@ -3442,7 +3444,7 @@ public sealed class NormalizedRuntimeSeamTests
             new Dictionary<long, DaggerfallActorDefinition> { [2000] = definitions.RequireActor(new DaggerfallActorId("rat")) },
             definitions, RandomMinimum.Create(), new DaggerfallUniqueItemAllocator(1_000), new ProgressionState(), DaggerfallTuning.Defaults.LootInteraction,
             CharacterForLoot(definitions));
-        loot.Create(new ActorDiedFact(2000, 77, 3, 2, 3));
+        loot.Create(new ActorDiedFact(2000, 77, DaggerfallDamageCause.PhysicalAttack, 3, 3d, 2, 3));
         Assert.True(loot.Corpses[2000].IsInteractable);
         Assert.False(loot.Corpses[2000].IsRegistered);
         Assert.Equal([playerOwner], world.InventoryOwners);

@@ -1,3 +1,4 @@
+using Rusty.Engine;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Policies;
@@ -46,25 +47,57 @@ internal sealed class DaggerfallItemConditionService(
     {
         if (units <= 0) throw new ArgumentOutOfRangeException(nameof(units));
         (ulong durableItemId, DaggerfallItemInstanceMetadata metadata) = RequirePlayerItem(item);
+        return Damage(item, durableItemId, metadata, units, broken =>
+        {
+            EquipmentMoveResult result = equipment.RemoveBroken(broken);
+            if (result.Outcome != EquipmentMoveOutcome.Applied)
+                throw new InvalidOperationException($"Broken item '{metadata.ItemId}' could not be removed from equipment: {result.Detail}");
+            return result.Change;
+        });
+    }
+
+    /// <summary>
+    /// Applies the same condition transition to an equipped non-player item. Its owning actor's
+    /// Engine equipment coordinator remains the authoritative containment/removal owner; player
+    /// equipment continues through <see cref="DaggerfallEquipmentMoves"/> for its layout and UI cue.
+    /// </summary>
+    internal DaggerfallItemConditionResult Damage(UniqueInventoryItem item, DaggerfallItemOwner owner,
+        MechanicsEquipmentCoordinator actorEquipment, int units)
+    {
+        if (units <= 0) throw new ArgumentOutOfRangeException(nameof(units));
+        ArgumentNullException.ThrowIfNull(actorEquipment);
+        owner.Validate();
+        if (owner == DaggerfallItemOwner.Player)
+            return Damage(item, units);
+        if (!actorEquipment.Inventory.UniqueItems.Any(candidate => candidate.Entity.Value == item.EntityId))
+            throw new InvalidOperationException($"Unique item '{item.EntityId}' is no longer in this inventory.");
+        ulong durableItemId = actorEquipment.GetDurableItemId(new Rusty.Engine.Entities.EntityId(item.EntityId)).Value;
+        DaggerfallItemInstanceMetadata metadata = instances.RequireUnique(durableItemId);
+        RequireItemMetadata(item, metadata);
+        if (metadata.Owner != owner)
+            throw new InvalidOperationException($"Item '{metadata.ItemId}' belongs to {metadata.Owner.Scope} {metadata.Owner.Id}, not {owner.Scope} {owner.Id}.");
+        return Damage(item, durableItemId, metadata, units, broken => RemoveActorBroken(actorEquipment, broken));
+    }
+
+    private DaggerfallItemConditionResult Damage(UniqueInventoryItem item, ulong durableItemId,
+        DaggerfallItemInstanceMetadata metadata, int units, Func<UniqueInventoryItem, DaggerfallEquipmentChange?> removeBroken)
+    {
         if (metadata.MaximumCondition == 0)
             throw new InvalidOperationException($"Item '{metadata.ItemId}' has no condition units.");
         if (metadata.CurrentCondition == 0)
             return new(DaggerfallItemConditionOutcome.AlreadyBroken, durableItemId, metadata);
 
         int current = Math.Max(0, checked(metadata.CurrentCondition - units));
-        EquipmentMoveResult? removed = null;
+        DaggerfallEquipmentChange? removed = null;
         if (current == 0)
         {
-            EquipmentMoveResult candidate = equipment.RemoveBroken(item);
-            if (candidate.Outcome != EquipmentMoveOutcome.Applied)
-                throw new InvalidOperationException($"Broken item '{metadata.ItemId}' could not be removed from equipment: {candidate.Detail}");
-            removed = candidate;
+            removed = removeBroken(item);
         }
         DaggerfallItemInstanceMetadata changed = metadata with { CurrentCondition = current };
         instances.ReplaceUnique(durableItemId, changed);
         if (current != 0)
             return new(DaggerfallItemConditionOutcome.Damaged, durableItemId, changed);
-        return new(DaggerfallItemConditionOutcome.Broken, durableItemId, changed, removed!.Change);
+        return new(DaggerfallItemConditionOutcome.Broken, durableItemId, changed, removed);
     }
 
     /// <summary>Restores an existing condition-bearing item to its authored maximum without changing durable identity.</summary>
@@ -150,6 +183,18 @@ internal sealed class DaggerfallItemConditionService(
         if (metadata.Owner != DaggerfallItemOwner.Player)
             throw new InvalidOperationException($"Item '{metadata.ItemId}' belongs to {metadata.Owner.Scope} {metadata.Owner.Id}, not the player inventory.");
         return (durableItemId, metadata);
+    }
+
+    private DaggerfallEquipmentChange? RemoveActorBroken(MechanicsEquipmentCoordinator equipment, UniqueInventoryItem item)
+    {
+        EquipmentRead before = equipment.Read();
+        if (!before.Assignments.Any(assignment => assignment.Item.EntityId == item.EntityId)) return null;
+        try { equipment.Unequip(item); }
+        catch (Exception error) when (error is ArgumentException or InvalidOperationException)
+        {
+            throw new InvalidOperationException($"Broken item '{item.Definition.Value}' could not be removed from equipment: {error.Message}", error);
+        }
+        return new DaggerfallEquipmentChange(null, [item], DaggerfallHandEquipTiming.None, DaggerfallEquipmentCue.Unequip);
     }
 
     private DaggerfallMagicItemDefinition RequireMagic(DaggerfallItemInstanceMetadata metadata) =>

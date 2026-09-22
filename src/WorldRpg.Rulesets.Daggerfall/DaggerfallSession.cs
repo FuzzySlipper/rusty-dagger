@@ -191,10 +191,16 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             partiallyConstructed.Add(_camera);
             TargetingService targeting = new(engine.Perception, _spatial, State.Actors, new DaggerTargetingPolicy(authored, tuning.MeleeTargeting));
             _staminaRecovery = new DaggerfallStaminaRecoveryModule(tuning.StaminaRecovery);
+            _equipmentMoves = new DaggerfallEquipmentMoves(inventory, equipmentCoordinator, definitions,
+                () => State.Character.Career.ForbiddenEquipment, State.ItemInstances);
+            _itemCondition = new DaggerfallItemConditionService(definitions, State.ItemInstances, _equipmentMoves);
+            CombatResolution combatRules = new();
             State.Effects = new DaggerfallEffectLifecycle(State.Actors, effects ?? DaggerfallDiseasePolicy.CreateCatalog(
                 _random,
                 () => _time.Calendar.DayNumber,
-                () => State.Character.Career));
+                () => State.Character.Career,
+                combatRules,
+                AppendEffectDamage));
             partiallyConstructed.Add(State.Effects);
             _rewards = new DaggerfallRewardReactions(
                 State.Progression,
@@ -209,7 +215,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             State.LevelUps = new DaggerfallLevelUpState(State.Progression, State.SkillUses, State.Actors.Player.Stats,
                 definitions, () => State.Character.Career, _random, _rewards);
             _combat = new DaggerCombatRules(_random, State.Actors, State.Equipment, State.InventoryFor, State.ItemInstances, definitions, authored, targeting, use => State.SkillUses.Record(use),
-                () => State.Character.Background?.Modifiers.AvoidHit ?? 0);
+                () => State.Character.Background?.Modifiers.AvoidHit ?? 0, State.EquipmentFor, _itemCondition, combatRules);
             State.Kit = new(State.Actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, State.Inventory, State.Equipment);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
                 engine.Perception,
@@ -255,9 +261,6 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 tuning.LootInteraction,
                 State.Character);
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored, () => State.Kit.Targeting.LastEvidence);
-            _equipmentMoves = new DaggerfallEquipmentMoves(inventory, equipmentCoordinator, definitions,
-                () => State.Character.Career.ForbiddenEquipment, State.ItemInstances);
-            _itemCondition = new DaggerfallItemConditionService(definitions, State.ItemInstances, _equipmentMoves);
             _inventoryUi = new DaggerfallInventoryPresentation(_equipmentMoves, definitions, inputs.ClassicPresentation.InventoryIcons,
                 State.Encumbrance, State.Currency);
             _inventoryUi.UseItemValuation(new DaggerfallItemValuation(definitions), State.ItemInstances, DaggerfallItemOwner.Player,
@@ -888,6 +891,23 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             catch (Exception exception) { (failures ??= []).Add(exception); }
         }
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
+    }
+
+    private void AppendEffectDamage(DaggerfallEffectDamage effect)
+    {
+        DamageResult result = effect.Result;
+        long source = checked((long)result.Source.Get<DurableEntityIdentity>().Identity.Value);
+        long target = checked((long)result.Target.Get<DurableEntityIdentity>().Identity.Value);
+        ulong generation = _latestUpdateGeneration ?? 1UL;
+        ulong step = _latestSimulationStep ?? 1UL;
+        _facts.Append(new DamageAppliedFact(source, target, DaggerfallDamageCause.Effect,
+            result.CalculatedDamage, result.ActualHealthLost, 0, generation, step));
+        if (result.ActualHealthLost > 0)
+            _facts.Append(new ActorDamagedFact(target, source, DaggerfallDamageCause.Effect,
+                result.CalculatedDamage, result.ActualHealthLost));
+        if (result.Defeated)
+            _facts.Append(new ActorDiedFact(target, source, DaggerfallDamageCause.Effect,
+                result.CalculatedDamage, result.ActualHealthLost, generation, step));
     }
 
     private void React(IProductFact fact)

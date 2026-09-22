@@ -4,8 +4,14 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 namespace WorldRpg.Rulesets.Daggerfall.Facts;
 
 internal interface IProductFact : IWorldRpgFact;
-internal sealed record ActorDamagedFact(long ActorId, int Amount) : IProductFact;
-internal sealed record ActorDiedFact(long ActorId, long KillerId, int AppliedDamage, ulong OriginatingGeneration, ulong OriginatingSequence) : IProductFact;
+internal enum DaggerfallDamageCause { PhysicalAttack, Hazard, Effect }
+/// <summary>One accepted live health application. Calculated damage and actual health lost intentionally differ at bounds or contributions.</summary>
+internal sealed record DamageAppliedFact(long SourceActorId, long TargetActorId, DaggerfallDamageCause Cause,
+    int CalculatedDamage, double ActualHealthLost, int StruckBody, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
+internal sealed record ActorDamagedFact(long ActorId, long SourceActorId, DaggerfallDamageCause Cause,
+    int CalculatedDamage, double ActualHealthLost) : IProductFact;
+internal sealed record ActorDiedFact(long ActorId, long KillerId, DaggerfallDamageCause Cause,
+    int CalculatedDamage, double ActualHealthLost, ulong OriginatingGeneration, ulong OriginatingSequence) : IProductFact;
 internal enum AttackRejection { MissingPlayerPosition, NoTargetInReach, UnknownExplicitCombatant, TargetDefeated, Cooldown, NoAttackPolicy, InsufficientStamina, StaminaSpendNotAccepted, InsufficientWeaponMaterial, EmptyQuiver }
 internal sealed record AttackRejectedFact(AttackRejection Reason, long? ActorId = null) : IProductFact;
 /// <summary>One player melee swing passed cooldown and stamina admission, independently of its target outcome.</summary>
@@ -17,8 +23,9 @@ internal sealed record PlayerAttackStartedFact(ulong OriginatingGeneration, ulon
 /// </summary>
 internal sealed record EnemyAttackStartedFact(long AttackerId, long TargetId, bool WillHit, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
 internal sealed record AttackMissedFact(long AttackerId, long TargetId, int Roll, int Chance, bool EnemyAttack, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
-/// <summary>Struck body follows the donor table; scalar current armor deliberately ignores it.</summary>
-internal sealed record AttackHitFact(long AttackerId, long TargetId, int Damage, int StruckBody, bool EnemyAttack, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
+/// <summary>Physical contact is distinct from accepted health loss; body follows the donor table.</summary>
+internal sealed record AttackHitFact(long AttackerId, long TargetId, int CalculatedDamage, double ActualHealthLost,
+    int StruckBody, bool EnemyAttack, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
 internal sealed record LootAwardedFact(long ActorId, string ItemId, ulong Quantity, ulong OriginatingSequence) : IProductFact;
 /// <summary>Explicit interaction emptied the defeated actor's durable loot container.</summary>
 internal sealed record CorpseLootedFact(long ActorId) : IProductFact;
