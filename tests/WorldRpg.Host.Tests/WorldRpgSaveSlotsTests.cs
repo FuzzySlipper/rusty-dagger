@@ -25,12 +25,14 @@ public sealed class WorldRpgSaveSlotsTests
         Assert.Equal("daggerfall", entry.Ruleset);
         Assert.Single(slots.List());
 
-        // Overwriting takes the guard: a stale revision is refused and the slot keeps its save.
+        // A refused payload write must not create metadata for a save that never happened.
         PersistenceRevisionGuard guard = PersistenceRevisionGuard.Exact;
-        using WorldRpgSaveStore direct = new(Engine(persistence), "worldrpg-test");
-        PersistenceSaveReceipt conflict = direct.Save("slot-a", Envelope("daggerfall"), guard, entry.Revision + 1);
-        Assert.Equal(PersistenceSaveOutcome.RevisionConflict, conflict.Outcome);
+        byte[] originalPayload = persistence.Get("worldrpg-test", "slot-a");
+        InvalidOperationException conflict = Assert.Throws<InvalidOperationException>(
+            () => slots.SaveSlot("slot-a", "Refused overwrite", Envelope("daggerfall"), guard, entry.Revision + 1));
+        Assert.Contains("RevisionConflict", conflict.Message, StringComparison.Ordinal);
         Assert.Equal("Before the dungeon", slots.List()[0].Label);
+        Assert.Equal(originalPayload, persistence.Get("worldrpg-test", "slot-a"));
 
         WorldRpgSaveSlotEntry second = slots.SaveSlot("slot-a", "After the dungeon", Envelope("daggerfall"));
         Assert.Equal("After the dungeon", slots.List()[0].Label);
@@ -74,6 +76,37 @@ public sealed class WorldRpgSaveSlotsTests
         Assert.False(slots.DeleteSlot("slot-a"));
     }
 
+    [Theory]
+    [MemberData(nameof(InvalidIndexValues))]
+    public void Invalid_present_indexes_report_failure_and_preserve_existing_slot_bytes(string description, string? indexValue)
+    {
+        InMemoryPersistenceService persistence = new();
+        using WorldRpgSaveSlots slots = new(Engine(persistence), "worldrpg-test");
+        slots.SaveSlot("slot-a", "Before the dungeon", Envelope("daggerfall"));
+        byte[] originalPayload = persistence.Get("worldrpg-test", "slot-a");
+        byte[] malformedIndex = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(indexValue);
+        persistence.Put("worldrpg-test/slots", WorldRpgSaveSlots.IndexKey, malformedIndex);
+
+        WorldRpgSaveFormatException listFailure = Assert.Throws<WorldRpgSaveFormatException>(() => slots.List());
+        Assert.True(listFailure.Message.Contains("slot index", StringComparison.Ordinal), description);
+        Assert.Throws<WorldRpgSaveFormatException>(() => slots.LoadSlot("slot-a", "daggerfall"));
+        Assert.Throws<WorldRpgSaveFormatException>(() => slots.DeleteSlot("slot-a"));
+        Assert.Throws<WorldRpgSaveFormatException>(() => slots.SaveSlot("slot-a", "After the dungeon", Envelope("daggerfall")));
+
+        Assert.Equal(originalPayload, persistence.Get("worldrpg-test", "slot-a"));
+        Assert.Equal(malformedIndex, persistence.Get("worldrpg-test/slots", WorldRpgSaveSlots.IndexKey));
+    }
+
+    public static IEnumerable<object?[]> InvalidIndexValues =>
+    [
+        ["present null", null],
+        ["empty value", ""],
+        ["malformed JSON", "not-json"],
+        ["null index list", "null"],
+        ["incomplete entry", "[{}]"],
+        ["duplicate slot key", """[{"Key":"slot-a","Label":"A","SavedAtUtc":"2026-09-22T00:00:00Z","Ruleset":"daggerfall","Revision":1},{"Key":"slot-a","Label":"B","SavedAtUtc":"2026-09-22T01:00:00Z","Ruleset":"daggerfall","Revision":2}]"""],
+    ];
+
     private static GameSaveEnvelope Envelope(string ruleset) =>
         new(new RulesetSavePayload(new RulesetId(ruleset), [1, 2, 3]));
 
@@ -100,13 +133,20 @@ public sealed class WorldRpgSaveSlotsTests
     {
         private readonly Dictionary<(string Scope, string Key), Entry> _values = [];
         private readonly Dictionary<ulong, Entry?> _blobs = [];
-        private ulong _nextBlob;
+        private readonly Dictionary<ulong, string> _scopes = [];
+        private ulong _nextHandle;
 
         internal void Put(string scope, string key, byte[] payload) => _values[(scope, key)] = new(1, payload.ToArray());
-        public PersistenceStore OpenStore(PersistenceOpenRequest request) => new(new PersistenceStoreHandle(1), static () => { });
+        internal byte[] Get(string scope, string key) => _values[(scope, key)].Payload.ToArray();
+        public PersistenceStore OpenStore(PersistenceOpenRequest request)
+        {
+            ulong handle = ++_nextHandle;
+            _scopes.Add(handle, request.Scope);
+            return new(new PersistenceStoreHandle(handle), () => _scopes.Remove(handle));
+        }
         public PersistenceSaveReceipt Save(PersistenceSaveRequest request)
         {
-            string scope = "worldrpg-test";
+            string scope = _scopes[request.Store.Handle.Value];
             (string Scope, string Key) key = (scope, request.Key);
             bool present = _values.TryGetValue(key, out Entry? existing);
             if ((request.RevisionGuard == PersistenceRevisionGuard.Absent && present)
@@ -118,10 +158,11 @@ public sealed class WorldRpgSaveSlotsTests
         }
         public PersistenceBlob Load(PersistenceLoadRequest request)
         {
-            Entry? value = _values.TryGetValue(("worldrpg-test", request.Key), out Entry? found) ? found : null;
-            ulong handle = ++_nextBlob;
+            string scope = _scopes[request.Store.Handle.Value];
+            Entry? value = _values.TryGetValue((scope, request.Key), out Entry? found) ? found : null;
+            ulong handle = ++_nextHandle;
             _blobs.Add(handle, value);
-            return new(new PersistenceBlobHandle(handle), static () => { });
+            return new(new PersistenceBlobHandle(handle), () => _blobs.Remove(handle));
         }
         public PersistenceBlobInfo DescribeBlob(PersistenceBlob blob)
         {
