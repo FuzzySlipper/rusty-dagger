@@ -1,8 +1,9 @@
 /// <reference path="./live-debug-panel.d.ts" />
+import { mountControls, type ControlsProjection, type ControlAction } from './controls.js';
 import { mountLiveDebugPanel, type LiveDebugPanelMount } from '@rusty-engine/live-debug';
 import { adopt, heldRevision, image, type ArtRequestAction, type UiArt } from './art.js';
 import { mountInventory, type InventoryProjection, type InventoryAction } from './inventory.js';
-import { mountCharacter, isCharacterProjection, type CharacterProjection } from './character.js';
+import { mountCharacter, isCharacterProjection, type CharacterProjection, type CharacterAction } from './character.js';
 import { mountLoot, type LootProjection, type LootAction } from './loot.js';
 import { BEGIN_ACTION, TITLE_MODE, screenForMode } from './screens.js';
 
@@ -26,7 +27,7 @@ interface ProductUiContext {
     focusGameplay(): void;
   };
   readonly projection?: { subscribe(listener: (projection: ProjectionEnvelope | null) => void): () => void };
-  readonly intents?: { claim(intent: string, value: { kind: 'product-payload'; contract: string; data: UiAction | InventoryAction | LootAction | ArtRequestAction | SaveSlotAction }): void };
+  readonly intents?: { claim(intent: string, value: { kind: 'product-payload'; contract: string; data: UiAction | ControlAction | CharacterAction | InventoryAction | LootAction | ArtRequestAction | SaveSlotAction }): void };
 }
 
 interface UiAction { readonly action: string; readonly [field: string]: string | number | boolean | undefined; }
@@ -43,6 +44,7 @@ interface DaggerHud {
   readonly uiArt?: UiArt | null;
   readonly panelRequest?: PanelRequest | null;
   readonly saveSlots?: SaveSlotProjection;
+  readonly controls?: ControlsProjection;
   readonly view?: { readonly yawRadians: number; readonly pitchRadians: number; readonly interaction: string };
   readonly slots?: readonly { readonly owner: string; readonly id: string; readonly label: string; readonly detail: string; readonly order: number }[];
   readonly focus?: { readonly interaction: string; readonly container: string; readonly close: string } | null;
@@ -120,7 +122,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
         <button data-action="debug">Engine debug console</button>
         <button data-action="diagnostics">Composition diagnostics</button>
         <button data-action="tools">Sprite animation tool</button>
-        <button disabled>Settings — not yet available</button>
+        <button data-action="settings">Control settings</button>
         <p>The world continues while this menu is open.</p>
       </div>
       <div class="dagger-menu-panel" hidden>
@@ -128,6 +130,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       <strong>Resolved composition</strong>
       <dl></dl>
     </section>
+      <div class="dagger-controls-root" hidden></div>
       <div class="dagger-inventory-root" hidden></div>
       <div class="dagger-character-root" hidden></div>
       <div class="dagger-loot-root" hidden></div>
@@ -168,8 +171,14 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   const inventoryView = mountInventory(inventoryRoot, (action) => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
   }));
+  const controlsRoot = shell.querySelector<HTMLElement>('.dagger-controls-root')!;
+  const controlsView = mountControls(controlsRoot, action => context.intents?.claim('dagger.ui', {
+    kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
+  }));
   const characterRoot = shell.querySelector<HTMLElement>('.dagger-character-root')!;
-  const characterView = mountCharacter(characterRoot);
+  const characterView = mountCharacter(characterRoot, action => context.intents?.claim('dagger.ui', {
+    kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
+  }));
   const lootRoot = shell.querySelector<HTMLElement>('.dagger-loot-root')!;
   const saveSlotsRoot = shell.querySelector<HTMLElement>('.dagger-save-slots')!;
   const saveSlotsDiagnostic = shell.querySelector<HTMLElement>('.dagger-save-slots-diagnostic')!;
@@ -217,8 +226,9 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       if (host.isConnected) host.textContent = `Debug console unavailable: ${error instanceof Error ? error.message : String(error)}`;
     });
   };
-  let activePanel: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'loot' | 'debug' | 'save-slots' | null = null;
+  let activePanel: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'loot' | 'debug' | 'save-slots' | 'settings' | null = null;
   const showHome = (): void => {
+    controlsView.cancel();
     const previous = activePanel;
     if (previous === 'debug') closeDebug();
     if (previous === 'loot') closeLoot();
@@ -231,6 +241,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     home.querySelector<HTMLButtonElement>(`[data-action="${returnAction}"]`)?.focus();
   };
   const closeMenu = (): void => {
+    controlsView.cancel();
     controllerDirection = 0;
     if (activePanel === 'loot') closeLoot();
     closeDebug();
@@ -250,7 +261,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     else if (menu.open) closeMenu();
     else openMenu();
   };
-  const showPanel = (action: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'loot' | 'debug' | 'save-slots'): void => {
+  const showPanel = (action: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'loot' | 'debug' | 'save-slots' | 'settings'): void => {
     if (!menu.open) openMenu();
     if (activePanel === 'loot' && action !== 'loot') closeLoot();
     if (activePanel === 'debug') closeDebug();
@@ -263,6 +274,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     characterRoot.hidden = action !== 'character';
     lootRoot.hidden = action !== 'loot';
     saveSlotsRoot.hidden = action !== 'save-slots';
+    controlsRoot.hidden = action !== 'settings';
     debugRoot.hidden = action !== 'debug';
     if (action === 'debug') openDebug();
     shell.querySelector<HTMLButtonElement>('[data-action="loot-exit"]')!.hidden = action !== 'loot';
@@ -270,7 +282,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     menu.classList.toggle('has-character', action === 'character');
     menu.classList.toggle('has-loot', action === 'loot');
     menu.classList.toggle('has-debug', action === 'debug');
-    menuTitle.textContent = action === 'diagnostics' ? 'Composition diagnostics'
+    menuTitle.textContent = action === 'settings' ? 'Control settings' : action === 'diagnostics' ? 'Composition diagnostics'
       : action === 'inventory' ? 'Inventory & equipment' : action === 'character' ? 'Character'
       : action === 'loot' ? 'Loot' : action === 'debug' ? 'Engine debug console'
       : action === 'save-slots' ? (saveSlotMode === 'save' ? 'Save game' : 'Load game') : 'Sprite animation tool';
@@ -317,7 +329,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     else if (action === 'loot') claim('loot');
     else if (action === 'save-game') showSaveSlots('save');
     else if (action === 'load-game') showSaveSlots('load');
-    else if (action === 'diagnostics' || action === 'tools' || action === 'inventory' || action === 'character' || action === 'debug') showPanel(action);
+    else if (action === 'settings' || action === 'diagnostics' || action === 'tools' || action === 'inventory' || action === 'character' || action === 'debug') showPanel(action);
   };
   const onMenuClick = (event: MouseEvent): void => {
     const action = (event.target as HTMLElement).closest<HTMLButtonElement>('button')?.dataset.action;
@@ -356,6 +368,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   // Capture before Engine input sees navigation keys. Escape's native dialog
   // cancellation is suppressed so one physical press performs exactly one step.
   const onKeyDown = (event: KeyboardEvent): void => {
+    if (activePanel === 'settings' && controlsView.captureKey(event)) return;
     shell.classList.remove('controller-navigation');
     if (menu.open && event.code === 'Tab') {
       const buttons = Array.from(menu.querySelectorAll<HTMLElement>('button:not(:disabled),select:not(:disabled),input:not(:disabled),[tabindex="0"]'))
@@ -377,15 +390,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     }
     if (menu.open || event.ctrlKey || event.altKey || event.metaKey
       || (event.target instanceof Element && event.target.closest('input,textarea,select,[contenteditable="true"]'))) return;
-    const action = ({ KeyI: 'inventory', KeyC: 'character', KeyF: 'loot' } as Record<string, string>)[event.code];
-    if (action) {
-      event.preventDefault();
-      event.stopPropagation();
-      if (!event.repeat) {
-        if (action === 'inventory' || action === 'character' || action === 'debug') showPanel(action);
-        else claim(action);
-      }
-    }
+
   };
   // The Engine owns controller sampling and interface/gameplay arbitration.
   // This adapter assigns only DOM menu meaning and reuses click/menu handlers.
@@ -541,6 +546,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     title.textContent = value.mode === 'paused' ? 'Paused' : value.mode === 'dead' ? 'Defeated'
       : value.mode === 'title' ? 'Title' : value.mode === 'modal' ? 'Interaction' : 'Exploring';
     outcome.textContent = value.lastOutcome;
+    if (value.controls) controlsView.update(value.controls);
     view.textContent = value.view ? viewSummary(value.view) : '';
     status.replaceChildren(...(value.slots ?? []).map(row => { const item = document.createElement('p'); item.textContent = `${row.label}: ${row.detail}`; return item; }));
     const focus = value.focus ?? null;
@@ -558,6 +564,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     unsubscribeController?.();
     unsubscribe();
     closeDebug();
+    controlsView.dispose();
     inventoryView.dispose();
     characterView.dispose();
     lootView.dispose();

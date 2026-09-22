@@ -26,6 +26,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     private readonly ActorsState _actors;
     private readonly MechanicsEquipmentCoordinator _equipment;
     private readonly Func<long, MechanicsInventoryCoordinator?> _actorInventories;
+    private readonly DaggerfallItemInstances _itemInstances;
     private readonly IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> _items;
     private readonly IReadOnlyDictionary<string, int> _weaponMaterialRanks;
     private readonly IReadOnlyDictionary<string, DaggerfallActionDefinition> _actions;
@@ -40,13 +41,17 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     // action with different ammunition would move this name onto the authored action.
     private const string ArrowItemId = "arrow";
 
-    internal DaggerCombatRules(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment, Func<long, MechanicsInventoryCoordinator?> actorInventories, DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity, TargetingService targeting, Action<DaggerfallSkillUse>? skillUses = null)
+    internal DaggerCombatRules(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment,
+        Func<long, MechanicsInventoryCoordinator?> actorInventories, DaggerfallItemInstances itemInstances,
+        DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity,
+        TargetingService targeting, Action<DaggerfallSkillUse>? skillUses = null)
     {
         _random = random;
         Execution = new(actors, this, DeferRangedImpact);
         _actors = actors;
         _equipment = equipment;
         _actorInventories = actorInventories;
+        _itemInstances = itemInstances ?? throw new ArgumentNullException(nameof(itemInstances));
         _items = definitions.Items;
         _weaponMaterialRanks = DaggerfallFormulaPolicy.ClassicWeaponMaterialRanks;
         _actions = definitions.Actions;
@@ -224,7 +229,15 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
             facts.Append(new AttackRejectedFact(AttackRejection.EmptyQuiver, shooterId));
             return false;
         }
-        quiver.Consume(new InventoryConsume(new InventoryItemId(ArrowItemId), 1));
+        InventoryStackId stack = quiver.Read().Stacks
+            .Where(value => value.Definition.Value == ArrowItemId)
+            .OrderBy(value => value.Id.Value, StringComparer.Ordinal)
+            .Select(value => value.Id)
+            .FirstOrDefault()
+            ?? throw new InvalidOperationException("The archer's selected arrow stack disappeared before the shot could consume it.");
+        InventoryMutationReceipt receipt = quiver.Consume(new InventoryConsume(stack, 1));
+        if (receipt.AfterQuantity == 0)
+            _itemInstances.RemoveStack(DaggerfallItemOwner.Actor(shooterId), stack);
         return true;
     }
 

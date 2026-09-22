@@ -38,7 +38,7 @@ internal sealed class DaggerfallEquipmentMoves(
     internal static string LayoutKey(ulong entity) =>
         $"unique:{entity.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
     internal static string LayoutKey(UniqueItem item) => LayoutKey(item.EntityId);
-    internal static string LayoutKey(InventoryItemId stack) => $"stack:{stack.Value}";
+    internal static string LayoutKey(InventoryStackId stack) => $"stack:{stack.Value}";
 
     internal InventoryView ReadInventory() => inventory.Read();
     internal EquipmentRead ReadEquipment() => equipment.Read();
@@ -50,14 +50,14 @@ internal sealed class DaggerfallEquipmentMoves(
     {
         InventoryView current = inventory.Read();
         HashSet<ulong> equipped = equipment.Read().Assignments.Select(assignment => assignment.Item.EntityId).ToHashSet();
-        _layout.Reconcile(current.Stacks.Select(stack => LayoutKey(new InventoryItemId(stack.Definition.Value)))
+        _layout.Reconcile(current.Stacks.Select(stack => LayoutKey(stack.Id))
             .Concat(current.UniqueItems.Where(item => !equipped.Contains(item.Entity.Value)).Select(item => LayoutKey(new UniqueItem(item.Entity.Value, new InventoryItemId(item.Definition.Value))))));
     }
 
-    internal EquipmentMoveResult MoveStackToGrid(InventoryItemId stack, int target)
+    internal EquipmentMoveResult MoveStackToGrid(InventoryStackId stack, int target)
     {
         if (target < 0 || target >= GridCapacity) return new(EquipmentMoveOutcome.InvalidDestination);
-        if (!inventory.Read().Stacks.Any(entry => entry.Definition.Value == stack.Value))
+        if (!inventory.Read().Stacks.Any(entry => entry.Id == stack))
             return new(EquipmentMoveOutcome.UnknownItem);
         _layout.Place(LayoutKey(stack), target);
         return new(EquipmentMoveOutcome.Applied);
@@ -167,8 +167,8 @@ internal sealed class DaggerfallEquipmentMoves(
         }
         if (key.StartsWith("stack:", StringComparison.Ordinal))
         {
-            string definition = key.Substring("stack:".Length);
-            if (!current.Stacks.Any(entry => entry.Definition.Value == definition)) return false;
+            string id = key.Substring("stack:".Length);
+            if (!current.Stacks.Any(entry => entry.Id.Value == id)) return false;
             isStack = true;
             return true;
         }

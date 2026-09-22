@@ -9,7 +9,8 @@ namespace WorldRpg.Kit.Inventory;
 public sealed record InventoryContainerSeed(
     InventoryItemId Item,
     ulong Quantity = 1,
-    DurableIdentityReference? UniqueItem = null)
+    DurableIdentityReference? UniqueItem = null,
+    InventoryStackId? Stack = null)
 {
     public InventoryContainerSeed Validate()
     {
@@ -20,16 +21,29 @@ public sealed record InventoryContainerSeed(
             identity.Validate();
             if (identity.Kind != DurableIdentityKind.Item || Quantity != 1)
                 throw new ArgumentException("Unique inventory seeds require one durable item identity and quantity one.", nameof(UniqueItem));
+            if (Stack is not null)
+                throw new ArgumentException("Unique inventory seeds do not carry a fungible stack identity.", nameof(Stack));
         }
+        else if (Stack is null)
+            throw new ArgumentException("Fungible inventory seeds require an explicit stack identity.", nameof(Stack));
         return this;
     }
 }
 
 /// <summary>A caller-selected amount of one stack, or one unique item, to transfer.</summary>
-public sealed record InventoryContainerSelection(InventoryItemId Item, ulong Quantity, ulong? UniqueEntityId = null);
+public sealed record InventoryContainerSelection(
+    InventoryItemId Item,
+    ulong Quantity,
+    InventoryStackId? Stack = null,
+    InventoryStackId? DestinationStack = null,
+    ulong? UniqueEntityId = null);
 
 /// <summary>One copied fungible transfer performed by a container move.</summary>
-public readonly record struct InventoryContainerStackTransfer(InventoryItemId Item, ulong Quantity);
+public readonly record struct InventoryContainerStackTransfer(
+    InventoryItemId Item,
+    InventoryStackId SourceStack,
+    InventoryStackId DestinationStack,
+    ulong Quantity);
 
 /// <summary>One copied unique-item transfer performed by a container move.</summary>
 public readonly record struct InventoryContainerUniqueTransfer(InventoryItemId Item, ulong EntityId);
@@ -174,7 +188,7 @@ public sealed class MechanicsInventoryContainerCoordinator
                     created.Add(identity);
                     candidate.MaterializeUnique(new ItemState(item, definition), owner);
                 }
-                else candidate.Grant(owner, definition, seed.Quantity);
+                else candidate.Grant(owner, definition, seed.Stack!, seed.Quantity);
             }
             candidate.Publish();
         }
@@ -206,6 +220,10 @@ public sealed class MechanicsInventoryContainerCoordinator
         ArgumentOutOfRangeException.ThrowIfZero(selection.Quantity);
         if (selection.UniqueEntityId is not null && selection.Quantity != 1)
             throw new ArgumentException("A unique transfer moves exactly one item.", nameof(selection));
+        if (selection.UniqueEntityId is not null && (selection.Stack is not null || selection.DestinationStack is not null))
+            throw new ArgumentException("A unique transfer does not carry a fungible stack identity.", nameof(selection));
+        if (selection.UniqueEntityId is null && selection.Stack is null)
+            throw new ArgumentException("A fungible transfer requires its selected source stack identity.", nameof(selection));
         return TransferCore(source, destination, selection, expectedWorldRevision);
     }
 
@@ -240,14 +258,22 @@ public sealed class MechanicsInventoryContainerCoordinator
             else
             {
                 if (definition.Kind != ItemKind.Fungible) throw new ArgumentException("A stack transfer requires a fungible item.", nameof(selection));
-                stacks = [new InventoryStack(definition.Id, selection.Quantity)];
+                stacks = sourceBeforeView.Stacks
+                    .Where(stack => stack.Id == selection.Stack && stack.Definition == definition.Id)
+                    .ToArray();
+                if (stacks.Length != 1 || selection.Quantity > stacks[0].Quantity)
+                    throw new InvalidOperationException("The selected stack is no longer in this container with the requested quantity.");
+                stacks = [new InventoryStack(stacks[0].Id, stacks[0].Definition, selection.Quantity)];
                 uniqueItems = [];
             }
         }
 
         foreach (InventoryStack stack in stacks)
         {
-            candidate.TransferFungible(source, destination, RequireMappedDefinition(stack.Definition), stack.Quantity);
+            if (selection?.DestinationStack is InventoryStackId destinationStack)
+                candidate.TransferFungible(source, destination, stack.Id, destinationStack, stack.Quantity);
+            else
+                candidate.TransferFungible(source, destination, stack.Id, stack.Quantity);
         }
         foreach (Rusty.Engine.Mechanics.UniqueInventoryItem item in uniqueItems)
         {
@@ -265,13 +291,15 @@ public sealed class MechanicsInventoryContainerCoordinator
             Summarize(sourceAfterView),
             Summarize(destinationBeforeView),
             Summarize(destinationAfterView),
-            stacks.Select(stack => new InventoryContainerStackTransfer(MapDefinition(stack.Definition), stack.Quantity)),
+            stacks.Select(stack => new InventoryContainerStackTransfer(MapDefinition(stack.Definition), stack.Id,
+                selection?.DestinationStack ?? stack.Id, stack.Quantity)),
             uniqueItems.Select(item => new InventoryContainerUniqueTransfer(MapDefinition(item.Definition), item.Entity.Value)));
     }
 
     private void ValidateSeeds(IEnumerable<InventoryContainerSeed> seeds)
     {
         var identities = new HashSet<DurableIdentityReference>();
+        var stackIds = new HashSet<InventoryStackId>();
         foreach (InventoryContainerSeed seed in seeds)
         {
             ItemDefinition definition = RequireDefinition(seed.Item);
@@ -289,6 +317,10 @@ public sealed class MechanicsInventoryContainerCoordinator
             else if (definition.Kind != ItemKind.Fungible)
             {
                 throw new InvalidOperationException($"Fungible seed '{seed.Item.Value}' requires a fungible item definition.");
+            }
+            else if (!stackIds.Add(seed.Stack!))
+            {
+                throw new InvalidOperationException($"Fungible stack identity '{seed.Stack}' appears more than once in the seed.");
             }
         }
     }

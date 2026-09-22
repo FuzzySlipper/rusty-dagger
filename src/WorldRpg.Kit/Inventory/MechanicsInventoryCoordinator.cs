@@ -9,21 +9,24 @@ public readonly record struct EquipmentSlotId(string Value);
 /// <summary>A live runtime item reference. Save its directory identity, not this session-local number.</summary>
 public readonly record struct UniqueInventoryItem(ulong EntityId, InventoryItemId Definition);
 
-public sealed record InventoryGrant(InventoryItemId Item, ulong Quantity)
+/// <summary>One product-selected fungible stack grant. Stack identity is explicit and owner-scoped.</summary>
+public sealed record InventoryGrant(InventoryItemId Item, InventoryStackId Stack, ulong Quantity)
 {
     public InventoryGrant Validate()
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(Item.Value);
+        ArgumentNullException.ThrowIfNull(Stack);
         ArgumentOutOfRangeException.ThrowIfZero(Quantity);
         return this;
     }
 }
 
-public sealed record InventoryConsume(InventoryItemId Item, ulong Quantity)
+/// <summary>One product-selected fungible stack consumption.</summary>
+public sealed record InventoryConsume(InventoryStackId Stack, ulong Quantity)
 {
     public InventoryConsume Validate()
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(Item.Value);
+        ArgumentNullException.ThrowIfNull(Stack);
         ArgumentOutOfRangeException.ThrowIfZero(Quantity);
         return this;
     }
@@ -33,7 +36,8 @@ public sealed record InventoryConsume(InventoryItemId Item, ulong Quantity)
 public sealed record InventoryAtomicGrant(
     InventoryItemId Item,
     ulong Quantity = 1,
-    DurableIdentityReference? UniqueItem = null)
+    DurableIdentityReference? UniqueItem = null,
+    InventoryStackId? Stack = null)
 {
     public InventoryAtomicGrant Validate()
     {
@@ -44,7 +48,11 @@ public sealed record InventoryAtomicGrant(
             identity.Validate();
             if (identity.Kind != DurableIdentityKind.Item || Quantity != 1)
                 throw new ArgumentException("Unique atomic grants require one durable item identity and quantity one.", nameof(UniqueItem));
+            if (Stack is not null)
+                throw new ArgumentException("Unique atomic grants do not carry a fungible stack identity.", nameof(Stack));
         }
+        else if (Stack is null)
+            throw new ArgumentException("Fungible atomic grants require an explicit stack identity.", nameof(Stack));
         return this;
     }
 }
@@ -89,7 +97,7 @@ public sealed class MechanicsInventoryCoordinator
     public InventoryMutationReceipt Grant(InventoryGrant grant)
     {
         grant.Validate();
-        return Component.Grant(RequireDefinition(grant.Item), grant.Quantity);
+        return Component.Grant(RequireDefinition(grant.Item), grant.Stack, grant.Quantity);
     }
 
     /// <summary>Publishes all requested grants together, or retains none of their newly materialized item entities.</summary>
@@ -118,7 +126,7 @@ public sealed class MechanicsInventoryCoordinator
                 {
                     if (definition.Kind != ItemKind.Fungible)
                         throw new InvalidOperationException($"Atomic stack grant '{grant.Item.Value}' requires a fungible item definition.");
-                    candidate.Grant(Component.Owner, definition, grant.Quantity);
+                    candidate.Grant(Component.Owner, definition, grant.Stack!, grant.Quantity);
                 }
             }
             candidate.Publish();
@@ -133,7 +141,24 @@ public sealed class MechanicsInventoryCoordinator
     public InventoryMutationReceipt Consume(InventoryConsume consume)
     {
         consume.Validate();
-        return Component.Consume(RequireDefinition(consume.Item), consume.Quantity);
+        return Component.Consume(consume.Stack, consume.Quantity);
+    }
+
+    /// <summary>Splits one explicit fungible stack through the Engine-owned inventory operation.</summary>
+    public InventorySplitReceipt Split(InventoryStackId source, InventoryStackId split, ulong quantity)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(split);
+        ArgumentOutOfRangeException.ThrowIfZero(quantity);
+        return Component.SplitFungible(source, split, quantity);
+    }
+
+    /// <summary>Merges two explicit fungible stacks through the Engine-owned inventory operation.</summary>
+    public InventoryMergeReceipt Merge(InventoryStackId source, InventoryStackId destination)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(destination);
+        return Component.MergeFungible(source, destination);
     }
 
     public DurableIdentityReference GetDurableItemId(EntityId item) => RequireItemIdentity(Entities.IdentityOf(item));

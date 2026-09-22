@@ -14,9 +14,8 @@ internal sealed record DaggerfallCatalogKey(string Id, int Index, DaggerfallCata
 internal sealed record DaggerfallRaceDefinition(string Id, int DonorRaceId, DaggerfallCatalogCitation Source);
 
 /// <summary>
-/// One decoded career: the classic record's identity, the skills and attributes it names
-/// by key, and the elements it resists or is immune to. The skill and element lists omit
-/// the carrier's terminal value, which names no skill.
+/// One decoded career: the classic record's identity, trained skills, and authored initial
+/// attribute bases. Attribute keys and values retain the donor's shared source order.
 /// </summary>
 internal sealed record DaggerfallCareerDefinition(
     string Id,
@@ -25,6 +24,7 @@ internal sealed record DaggerfallCareerDefinition(
     IReadOnlyList<string> MajorSkills,
     IReadOnlyList<string> MinorSkills,
     IReadOnlyList<string> Attributes,
+    IReadOnlyList<int> AttributeValues,
     int HitPointsPerLevel,
     float AdvancementMultiplier,
     IReadOnlyList<string> ResistanceElements,

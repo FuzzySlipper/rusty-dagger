@@ -18,6 +18,8 @@ public sealed class UiValueBuilder
 
     public uint Null() => Add(NullKind);
 
+    public uint Boolean(bool value) => Add(StructuredValueKind.Bool, boolValue: value ? 1u : 0u);
+
     public uint Number(double value) => Add(NumberKind, numberValue: value);
 
     public uint String(string value)

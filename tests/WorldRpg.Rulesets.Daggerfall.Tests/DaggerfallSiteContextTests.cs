@@ -417,7 +417,12 @@ public sealed class DaggerfallSiteContextTests
         new DaggerfallNpcSave([]),
         [],
         new DaggerfallSkillProgressionSave([], 0, []),
-        new DaggerfallSocialSave([], [], [], []));
+        new DaggerfallSocialSave([], [], [], []),
+        new DaggerfallCharacterSave("Nameless", "breton", DaggerfallCharacterGender.Male, 0,
+            DaggerfallCharacterReflexes.Average, "class00"))
+    {
+        Quests = new([]),
+    };
 
     private static DaggerfallStatsSave EmptyStats() => new(StatsComponentCapture.Capture(new StatsComponent()), []);
 

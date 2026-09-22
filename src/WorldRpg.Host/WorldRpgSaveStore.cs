@@ -75,5 +75,6 @@ public sealed class WorldRpgSaveFormatException : InvalidOperationException
 
 [JsonSourceGenerationOptions(WriteIndented = false)]
 [JsonSerializable(typeof(WorldRpgSaveStore.PersistedEnvelope))]
-[JsonSerializable(typeof(List<WorldRpgSaveSlotEntry>))]
+[JsonSerializable(typeof(string))]
+[JsonSerializable(typeof(List<WorldRpgPersistedSaveSlot>))]
 internal partial class WorldRpgSaveJsonContext : JsonSerializerContext;

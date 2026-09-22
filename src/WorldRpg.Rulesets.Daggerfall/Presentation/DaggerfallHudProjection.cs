@@ -36,7 +36,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         CharacterSheetPresentation? character = null,
         DaggerfallPanelRequest? panelRequest = null,
         IReadOnlyList<SaveSlotSummary>? saveSlots = null,
-        string? saveSlotDiagnostic = null)
+        string? saveSlotDiagnostic = null,
+        DaggerfallControlSettings? controlSettings = null,
+        string? controlDiagnostic = null)
     {
         UiValueBuilder builder = new();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
@@ -88,12 +90,18 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                     ("ruleset", builder.String(slot.Ruleset)))).ToArray())),
                 ("diagnostic", saveSlotDiagnostic is null ? builder.Null() : builder.String(saveSlotDiagnostic)))),
         ];
+        if (controlSettings is not null) fields = [.. fields, ("controls", builder.Object(
+            ("diagnostic", builder.String(controlDiagnostic ?? "")),
+            ("bindings", builder.Array(DaggerfallControlSettings.Catalog.Select(action => builder.Object(
+                ("id", builder.String(action.Id)), ("category", builder.String(action.Category)),
+                ("keys", builder.Array(controlSettings.KeysFor(action.Id).Select(builder.String).ToArray())),
+                ("fixed", builder.Boolean(action.Id == "menu")))).ToArray()))))];
         if (inventory is not null) fields = [.. fields, ("inventory", Inventory(builder, inventory))];
         // Contents are an affordance the same way focus is: a dead or paused product refuses the take
         // its gate would otherwise honour, so the panel is published only in the mode that lets the
         // interaction act rather than offering buttons that silently do nothing.
         fields = [.. fields, ("loot", loot is null || mode != ProductMode.Modal ? builder.Null() : Loot(builder, loot))];
-        if (character is not null) fields = [.. fields, ("character", Character(builder, character))];
+        if (character is not null) fields = [.. fields, ("character", Character(builder, character, mode == ProductMode.Title))];
         if (compositionIdentity is not null)
             fields = [.. fields, ("composition", Composition(builder, compositionIdentity))];
         if (uiArt is not null)
@@ -144,7 +152,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("title", builder.String(value.Title)), ("items", builder.Array(value.Items.Select(item => Item(builder, item)).ToArray())),
         ("message", builder.String(value.Message)));
 
-    private static uint Character(UiValueBuilder builder, CharacterSheetPresentation value)
+    private static uint Character(UiValueBuilder builder, CharacterSheetPresentation value, bool creationAvailable)
     {
         uint Stat(CharacterStatPresentation stat) => builder.Object(("id", builder.String(stat.Id)),
             ("label", builder.String(stat.Label)), ("value", builder.Number(stat.Value)));
@@ -157,6 +165,21 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("progression", builder.Object(("level", builder.Number(value.Progression.Level)), ("experience", builder.Number(value.Progression.Experience)))),
             ("equipment", builder.Array(value.Equipment.Select(item => builder.Object(("label", builder.String(item.Label)),
                 ("slots", builder.Array(item.Slots.Select(builder.String).ToArray())), ("details", builder.String(item.Details)))).ToArray())),
+            ("grantedSkills", builder.Array((value.GrantedSkills ?? []).Select(skill => builder.Object(
+                ("id", builder.String(skill.SkillId)), ("tier", builder.String(skill.Tier.ToString().ToLowerInvariant())))).ToArray())),
+            ("creationAvailable", builder.Boolean(creationAvailable)),
+            ("creation", value.Creation is { } creation ? builder.Object(
+                ("editing", builder.Boolean(creation.Editing)),
+                ("current", builder.Object(("name", builder.String(creation.Current.Name)), ("race", builder.String(creation.Current.RaceId)),
+                    ("gender", builder.String(creation.Current.Gender == DaggerfallCharacterGender.Female ? "female" : "male")),
+                    ("faceIndex", builder.Number(creation.Current.FaceIndex)), ("reflexes", builder.Number((int)creation.Current.Reflexes)), ("career", builder.String(creation.Current.CareerId)))),
+                ("races", builder.Array(creation.Races.Select(race => builder.Object(("id", builder.String(race.Id)), ("label", builder.String(race.Label)),
+                    ("available", builder.Boolean(race.Available)), ("restriction", race.Restriction is null ? builder.Null() : builder.String(race.Restriction)))).ToArray())),
+                ("careers", builder.Array(creation.Careers.Select(career => builder.Object(("id", builder.String(career.Id)), ("label", builder.String(career.Label)),
+                    ("available", builder.Boolean(career.Available)), ("restriction", career.Restriction is null ? builder.Null() : builder.String(career.Restriction)))).ToArray())),
+                ("faces", builder.Array(creation.Faces.Select(face => builder.Object(("index", builder.Number(face.Index)), ("mediaId", builder.String(face.MediaId)))).ToArray())),
+                ("reflexes", builder.Array(creation.Reflexes.Select(reflex => builder.Object(("value", builder.Number(reflex.Value)), ("label", builder.String(reflex.Label)))).ToArray())))
+                : builder.Null()),
             // The media the sheet draws from, so a consumer resolves published identities rather than
             // reconstructing a race's file names. An actor that declares no race publishes none.
             ("identity", value.Identity is { } identity
@@ -164,7 +187,13 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                     ("race", builder.String(identity.Race)),
                     ("donorRaceId", builder.Number(identity.DonorRaceId)),
                     ("portrait", builder.String(identity.Portrait)),
+                    ("gender", builder.String(identity.Gender)),
+                    ("faceIndex", builder.Number(identity.FaceIndex)),
+                    ("career", builder.String(identity.Career)),
                     ("media", builder.Array(identity.Media.Select(medium => builder.Object(
+                        ("layer", builder.String(medium.Layer)),
+                        ("mediaId", builder.String(medium.MediaId)))).ToArray())),
+                    ("selectedMedia", builder.Array((identity.SelectedMedia ?? []).Select(medium => builder.Object(
                         ("layer", builder.String(medium.Layer)),
                         ("mediaId", builder.String(medium.MediaId)))).ToArray())))
                 : builder.Null()));

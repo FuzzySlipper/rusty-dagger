@@ -180,6 +180,16 @@ public sealed class ActiveEffectLifecycle : IDisposable
         return state;
     }
 
+    /// <summary>Lets compiled effect policy finish its current magic-round payload through normal Engine expiry.</summary>
+    public void ExpireAfterCurrentRound(EffectInstanceId instance)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        ArgumentNullException.ThrowIfNull(instance);
+        if (!_states.TryGetValue(instance, out ActiveEffectState? state))
+            throw new InvalidOperationException($"Effect '{instance.Value}' is not active.");
+        state.RemainingRounds = 1;
+    }
+
     /// <summary>Runs one ordinary magic round and expires finite effects after their payload.</summary>
     public IReadOnlyList<ActiveEffectLifecycleReceipt> AdvanceMagicRound(Action<ActiveEffectState> apply)
     {

@@ -18,8 +18,9 @@ public sealed class MechanicsInventoryCoordinatorTests
         MechanicsInventoryCoordinator inventory = new(owner.Inventory, owner.Entities,
             new Dictionary<InventoryItemId, ItemDefinition> { [new InventoryItemId("gold")] = gold });
 
-        inventory.Grant(new InventoryGrant(new InventoryItemId("gold"), 3));
-        InventoryMutationReceipt consumed = inventory.Consume(new InventoryConsume(new InventoryItemId("gold"), 2));
+        InventoryStackId goldStack = Stack("gold-stack");
+        inventory.Grant(new InventoryGrant(new InventoryItemId("gold"), goldStack, 3));
+        InventoryMutationReceipt consumed = inventory.Consume(new InventoryConsume(goldStack, 2));
 
         Assert.Same(owner.Inventory, owner.Entities.Store.Get<InventoryComponent>(owner.Entity));
         Assert.Equal(1UL, consumed.AfterQuantity);
@@ -43,9 +44,9 @@ public sealed class MechanicsInventoryCoordinatorTests
 
         Assert.Throws<InvalidOperationException>(() => inventory.GrantAtomic(
         [
-            new InventoryAtomicGrant(new InventoryItemId("gold"), 3),
+            new InventoryAtomicGrant(new InventoryItemId("gold"), 3, Stack: Stack("gold-stack")),
             new InventoryAtomicGrant(new InventoryItemId("sword"), UniqueItem: swordId),
-            new InventoryAtomicGrant(new InventoryItemId("missing")),
+            new InventoryAtomicGrant(new InventoryItemId("missing"), Stack: Stack("missing-stack")),
         ]));
 
         Assert.Empty(owner.Inventory.Stacks);
@@ -54,10 +55,10 @@ public sealed class MechanicsInventoryCoordinatorTests
 
         inventory.GrantAtomic(
         [
-            new InventoryAtomicGrant(new InventoryItemId("gold"), 3),
+            new InventoryAtomicGrant(new InventoryItemId("gold"), 3, Stack: Stack("gold-stack")),
             new InventoryAtomicGrant(new InventoryItemId("sword"), UniqueItem: swordId),
         ]);
-        inventory.GrantAtomic([new InventoryAtomicGrant(new InventoryItemId("gold"), 2)]);
+        inventory.GrantAtomic([new InventoryAtomicGrant(new InventoryItemId("gold"), 2, Stack: Stack("gold-stack"))]);
 
         Assert.Equal(5UL, Assert.Single(owner.Inventory.Stacks).Quantity);
         EntityId runtimeSword = Assert.Single(owner.Inventory.UniqueItems).Entity;
@@ -71,8 +72,8 @@ public sealed class MechanicsInventoryCoordinatorTests
         MechanicsInventoryCoordinator inventory = new(owner.Inventory, owner.Entities,
             new Dictionary<InventoryItemId, ItemDefinition>());
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => inventory.Consume(new InventoryConsume(new InventoryItemId("gold"), 0)));
-        Assert.Throws<InvalidOperationException>(() => inventory.Grant(new InventoryGrant(new InventoryItemId("gold"), 1)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => inventory.Consume(new InventoryConsume(Stack("gold-stack"), 0)));
+        Assert.Throws<InvalidOperationException>(() => inventory.Grant(new InventoryGrant(new InventoryItemId("gold"), Stack("gold-stack"), 1)));
         Assert.Empty(owner.Inventory.Stacks);
     }
 
@@ -157,6 +158,8 @@ public sealed class MechanicsInventoryCoordinatorTests
 
     private static ItemDefinition Fungible(string id, ulong maximumQuantity) =>
         new(ItemDefinitionId.Parse(id), ItemKind.Fungible, maximumQuantity);
+
+    private static InventoryStackId Stack(string id) => InventoryStackId.Parse(id);
 
     private static ItemDefinition UniqueEquipment(string id, int requiredSlots) =>
         new(ItemDefinitionId.Parse(id), ItemKind.Unique, maximumQuantity: 1,

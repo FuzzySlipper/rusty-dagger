@@ -125,6 +125,8 @@ internal sealed class DaggerfallActiveEffect
     /// <summary>Requested stack count available to compiled policy before the Engine state is attached.</summary>
     internal ushort Stacks { get; }
     internal Actor Target { get; }
+    /// <summary>Compiled policy requests ordinary Engine expiry after the current magic-round payload.</summary>
+    internal bool ExpireAfterCurrentRound { get; set; }
 
     internal void Attach(ActiveEffectState lifecycle)
     {
@@ -353,6 +355,8 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
     private void ApplyRound(DaggerfallActiveEffect active)
     {
         active.Definition.MagicRound?.Invoke(active);
+        if (active.ExpireAfterCurrentRound)
+            LifecycleFor(checked((long)active.Lifecycle.Context.Target.Value)).ExpireAfterCurrentRound(active.Lifecycle.Context.Instance);
     }
 
     private void Admit(DaggerfallEffectDefinition definition, ActiveEffectContext context, ushort stacks, uint? remainingRounds,

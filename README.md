@@ -195,12 +195,16 @@ host with `--live-debug` (the repository development service already does).
 Escape closes the console to the menu, then returns to gameplay.
 
 In the game, **Escape** opens the menu; Escape in a submenu returns to the menu
-before returning to play. The menu releases gameplay controls but does not pause
+before returning to play. Control settings offer rebinding, explicit conflict swaps and reset;
+preferences persist across restart and loading a save. Character choices are available
+from the character sheet at the title screen, and commit name, race, gender, face,
+reflexes and predefined career. Once play begins the sheet is read-only.
+The menu releases gameplay controls but does not pause
 the world. Composition diagnostics are available there. **I** opens inventory and equipment: drag items between the 50-slot pack grid and
 compatible equipment slots, or select an item and use the keyboard destination
 controls. Drops use the current inventory revision; rejected drops preserve the
 items and layout. Slot arrangement lasts for the session, matching the earlier
-UI; saves retain items and equipment. **C** opens the read-only character sheet with live resources, attributes, skills,
+UI; saves retain items and equipment. **C** opens the character sheet with live resources, attributes, skills,
 progression and equipped items. **F** searches the aimed nearby corpse and opens
 its loot without taking anything. **Take 1** transfers one stack unit; **Take**
 transfers one unique item. Empty loot stays open until Exit. Transfers recheck

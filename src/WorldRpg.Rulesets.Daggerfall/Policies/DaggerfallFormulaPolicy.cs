@@ -104,6 +104,10 @@ internal static class DaggerfallFormulaPolicy
         return FloorDivide(checked(currentLevelUpSkills - startingLevelUpSkills + selected.LevelFormulaOffset), selected.LevelFormulaDivisor);
     }
 
+    /// <summary>The donor's level check, ordered as its starting and current skill-set sums.</summary>
+    internal static int CalculatePlayerLevel(int startingLevelUpSkillsSum, int currentLevelUpSkillsSum, DaggerfallFormulaTuning? tuning = null) =>
+        ClassicPlayerLevel(currentLevelUpSkillsSum, startingLevelUpSkillsSum, tuning);
+
     /// <summary>The selected live profile's 500-XP threshold count.</summary>
     internal static int ExperimentalXpLevel(int experience, DaggerfallFormulaTuning? tuning = null)
     {
@@ -140,6 +144,22 @@ internal static class DaggerfallFormulaPolicy
         long numerator = checked((long)skillValue * skillMultiplier * careerMultiplierCenti * powerMilli * selected.SkillUsesNumerator);
         return checked((int)(FloorDivide(numerator, selected.SkillUsesDenominator) + 1));
     }
+
+    /// <summary>The donor's career-float overload, retained for authored career multipliers.</summary>
+    internal static int CalculateSkillUsesForAdvancement(int skillValue, int skillAdvancementMultiplier, float careerAdvancementMultiplier, int level)
+    {
+        if (skillValue < 0 || skillAdvancementMultiplier < 0 || !float.IsFinite(careerAdvancementMultiplier)
+            || careerAdvancementMultiplier < 0 || level < 0)
+            throw new ArgumentOutOfRangeException();
+
+        double levelModifier = Math.Pow(1.04d, level);
+        double uses = Math.Floor((skillValue * skillAdvancementMultiplier * careerAdvancementMultiplier * levelModifier * 2d / 5d) + 1d);
+        return checked((int)uses);
+    }
+
+    /// <summary>Compatibility overload for exact-centi callers using the existing tuned profile.</summary>
+    internal static int CalculateSkillUsesForAdvancement(int skillValue, int skillAdvancementMultiplier, int careerAdvancementMultiplierCenti, int level, DaggerfallFormulaTuning? tuning = null) =>
+        SkillUsesForAdvancement(skillValue, skillAdvancementMultiplier, careerAdvancementMultiplierCenti, level, tuning);
 
     internal static int SkillAdvancementMultiplier(string skill)
     {

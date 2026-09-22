@@ -24,7 +24,7 @@ internal sealed class DaggerfallInventoryPresentation(
         EquipmentRead equipped = moves.ReadEquipment();
         var items = current.UniqueItems.Select(item => (Key: UniqueKey(item.Entity.Value), Definition: item.Definition.Value, Quantity: 1UL,
                 Slots: equipped.Assignments.Where(assignment => assignment.Item.EntityId == item.Entity.Value).Select(assignment => assignment.Slot.Value).ToArray()))
-            .Concat(current.Stacks.Select(stack => (Key: StackKey(stack.Definition.Value), Definition: stack.Definition.Value, Quantity: stack.Quantity, Slots: Array.Empty<string>())))
+            .Concat(current.Stacks.Select(stack => (Key: StackKey(stack.Id), Definition: stack.Definition.Value, Quantity: stack.Quantity, Slots: Array.Empty<string>())))
             .OrderBy(item => item.Key, StringComparer.Ordinal).ToArray();
         moves.ReconcileLayout();
         return new InventoryPresentation($"{current.StoreRevision}:{moves.LayoutRevision}", items.Select(item =>
@@ -49,7 +49,9 @@ internal sealed class DaggerfallInventoryPresentation(
         {
             result = TryParseUnique(row, out UniqueInventoryItem unique)
                 ? moves.MoveToGrid(unique, target)
-                : moves.MoveStackToGrid(new InventoryItemId(row.Definition), target);
+                : TryParseStack(row, out Rusty.Engine.Mechanics.InventoryStackId stack)
+                    ? moves.MoveStackToGrid(stack, target)
+                    : new EquipmentMoveResult(EquipmentMoveOutcome.UnknownItem);
         }
         else if (action.TargetEquipment is string slot)
         {
@@ -89,7 +91,14 @@ internal sealed class DaggerfallInventoryPresentation(
     }
 
     internal static string UniqueKey(ulong entity) => DaggerfallEquipmentMoves.LayoutKey(entity);
-    internal static string StackKey(string definition) => DaggerfallEquipmentMoves.LayoutKey(new InventoryItemId(definition));
+    internal static string StackKey(Rusty.Engine.Mechanics.InventoryStackId stack) => DaggerfallEquipmentMoves.LayoutKey(stack);
+    private static bool TryParseStack(InventoryItemPresentation row, out Rusty.Engine.Mechanics.InventoryStackId stack)
+    {
+        stack = null!;
+        if (!row.Key.StartsWith("stack:", StringComparison.Ordinal)) return false;
+        stack = Rusty.Engine.Mechanics.InventoryStackId.Parse(row.Key.Substring("stack:".Length));
+        return true;
+    }
     internal static string Label(string id) => CultureInfo.InvariantCulture.TextInfo.ToTitleCase(id.Replace('-', ' '));
     private static string Details(DaggerfallItemDefinition item) => item.Weapon is { } weapon
         ? $"Damage {weapon.MinimumDamage}–{weapon.MaximumDamage}; {Label(weapon.Material)}; {Label(weapon.Skill)}"

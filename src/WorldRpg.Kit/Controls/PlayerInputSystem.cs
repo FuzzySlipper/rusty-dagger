@@ -90,6 +90,9 @@ public sealed class PlayerInputSystem
         _held.Keys.RemoveWhere(key => key != controls.Forward && key != controls.Backward && key != controls.Left && key != controls.Right);
     }
 
+    /// <summary>Releases locally interpreted held input when physical mappings or focus change.</summary>
+    public void ClearHeldInput() => _held.Clear();
+
     /// <summary>Interprets and applies one admitted input slice before its dependent Engine movement proposal.</summary>
     public void Apply(PlayerControlState player, ProductUpdateState update)
     {
