@@ -135,6 +135,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("delivery", builder.String(message.Delivery.ToString().ToLowerInvariant())),
         ("text", builder.String(message.Text)),
         ("signoff", message.Signoff is null ? builder.Null() : builder.String(message.Signoff)),
+        ("promptId", message.PromptId is null ? builder.Null() : builder.String(message.PromptId)),
+        ("options", builder.Array((message.Options ?? []).Select(option => builder.Object(
+            ("id", builder.Number(option.Id)), ("label", builder.String(option.Label)))).ToArray())),
         ("diagnostics", builder.Array(message.Diagnostics.Select(builder.String).ToArray())));
 
     private static uint Art(UiValueBuilder builder, DaggerfallUiArt art)

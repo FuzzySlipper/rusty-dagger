@@ -11,8 +11,12 @@ internal enum DaggerfallQuestMessageDelivery { Popup, Letter, Rumor, Journal, Pr
 /// <summary>A source-backed message awaiting ordinary DOM presentation.</summary>
 internal sealed record DaggerfallQuestMessageDeliverySave(string InstanceId, int MessageId, DaggerfallQuestMessageDelivery Delivery, int Variant = 0);
 internal sealed record DaggerfallQuestJournalEntrySave(string InstanceId, int Step, int MessageId);
-internal sealed record DaggerfallQuestPromptSave(string InstanceId, int MessageId, string YesTask, string NoTask, string TaskSymbol, int OperationIndex, int Occurrence);
-internal sealed record DaggerfallQuestChoiceSave(string InstanceId, int MessageId, bool Yes, string Target, string TaskSymbol, int OperationIndex, int Occurrence);
+internal sealed record DaggerfallQuestPromptOption(int Id, string Label, string Target);
+internal sealed record DaggerfallQuestPromptSave(string InstanceId, int MessageId, DaggerfallQuestPromptOption[] Options, string TaskSymbol, int OperationIndex, int Occurrence)
+{
+    internal string Id => $"{Uri.EscapeDataString(InstanceId)}/{Uri.EscapeDataString(TaskSymbol)}/{OperationIndex}/{Occurrence}";
+}
+internal sealed record DaggerfallQuestChoiceSave(string InstanceId, int MessageId, int ChoiceId, string Target, string TaskSymbol, int OperationIndex, int Occurrence);
 internal sealed record DaggerfallQuestMessagesSave(
     DaggerfallQuestMessageDeliverySave[] Deliveries,
     DaggerfallQuestJournalEntrySave[] Journal,
@@ -41,7 +45,7 @@ internal sealed record DaggerfallQuestRenderedMessage(
     DaggerfallQuestMessageDelivery Delivery,
     string Text,
     IReadOnlyList<string> Diagnostics,
-    string? Signoff = null);
+    string? Signoff = null, string? PromptId = null, IReadOnlyList<DaggerfallQuestPromptOption>? Options = null);
 internal sealed record DaggerfallQuestPresentation(
     IReadOnlyList<DaggerfallQuestRenderedMessage> Deliveries,
     IReadOnlyList<DaggerfallQuestRenderedMessage> Journal,
@@ -107,42 +111,53 @@ internal sealed class DaggerfallQuestMessages
     }
 
     /// <summary>Opens one source-declared choice. Its owning operation remains incomplete until TryChoose records it.</summary>
-    internal bool Prompt(DaggerfallQuestRuntimeInstance instance, int messageId, string yesTask, string noTask, string taskSymbol, int operationIndex)
+    internal bool Prompt(DaggerfallQuestRuntimeInstance instance, int messageId, DaggerfallQuestPromptOption[] options, string taskSymbol, int operationIndex)
     {
         RequireMessage(instance, messageId);
+        ValidateOptions(options);
         if (_pending is not null)
             return _pending.InstanceId == instance.InstanceId && _pending.MessageId == messageId
                 && _pending.TaskSymbol == taskSymbol && _pending.OperationIndex == operationIndex;
-        _pending = new(instance.InstanceId, messageId,
-            DaggerfallQuestInstanceSave.Canonical(yesTask, "quest prompt yes task"),
-            DaggerfallQuestInstanceSave.Canonical(noTask, "quest prompt no task"),
+        _pending = new(instance.InstanceId, messageId, [.. options],
             DaggerfallQuestInstanceSave.Canonical(taskSymbol, "quest prompt task"),
             operationIndex, NextOccurrence(instance.InstanceId, messageId, taskSymbol, operationIndex));
         Deliver(instance, messageId, DaggerfallQuestMessageDelivery.Prompt);
         return true;
     }
 
-    /// <summary>Validates and applies the task action before consuming the one pending UI choice.</summary>
-    internal bool TryChoose(string instanceId, int messageId, bool yes, Action<DaggerfallQuestPromptSave, DaggerfallQuestChoiceSave> apply,
+    /// <summary>Validates without mutation, records the answer, then activates its compiled branch.</summary>
+    internal bool TryChoose(string instanceId, int messageId, string promptId, int choiceId,
+        Func<DaggerfallQuestPromptSave, DaggerfallQuestChoiceSave, Action> prepare,
         out DaggerfallQuestChoiceSave? choice, out DaggerfallQuestPromptSave? prompt)
     {
-        ArgumentNullException.ThrowIfNull(apply);
-        if (_pending is not { } pending || pending.InstanceId != instanceId || pending.MessageId != messageId)
-        {
-            choice = null;
-            prompt = null;
-            return false;
-        }
-
-        DaggerfallQuestChoiceSave proposed = new(instanceId, messageId, yes, yes ? pending.YesTask : pending.NoTask,
+        ArgumentNullException.ThrowIfNull(prepare);
+        choice = null;
+        prompt = null;
+        if (_pending is not { } pending || pending.InstanceId != instanceId || pending.MessageId != messageId
+            || pending.Id != promptId) return false;
+        DaggerfallQuestPromptOption? option = pending.Options.SingleOrDefault(value => value.Id == choiceId);
+        if (option is null) return false;
+        DaggerfallQuestChoiceSave proposed = new(instanceId, messageId, choiceId, option.Target,
             pending.TaskSymbol, pending.OperationIndex, pending.Occurrence);
-        apply(pending, proposed);
+        Action apply = prepare(pending, proposed);
+        _choices.Add(proposed);
         _pending = null;
         _deliveries.RemoveAll(value => value.Delivery == DaggerfallQuestMessageDelivery.Prompt && value.InstanceId == instanceId && value.MessageId == messageId);
-        _choices.Add(proposed);
+        apply();
         choice = proposed;
         prompt = pending;
         return true;
+    }
+
+    private static void ValidateOptions(DaggerfallQuestPromptOption[] options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        if (options.Length is < 2 or > 4 || options.Select(value => value.Id).Distinct().Count() != options.Length)
+            throw new ArgumentException("Quest prompt requires two to four distinct choices.");
+        foreach (DaggerfallQuestPromptOption option in options)
+            if (option.Id < 0 || string.IsNullOrWhiteSpace(option.Label)
+                || option.Target != DaggerfallQuestInstanceSave.Canonical(option.Target, "quest prompt target"))
+                throw new ArgumentException("Quest prompt choice is malformed.");
     }
 
     /// <summary>Resolves the precise source spelling for a persisted prompt operation.</summary>
@@ -190,7 +205,9 @@ internal sealed class DaggerfallQuestMessages
             DaggerfallQuestRuntimeInstance instance = byId.TryGetValue(delivery.InstanceId, out DaggerfallQuestRuntimeInstance? value)
                 ? value : throw new InvalidOperationException($"Quest message delivery refers to missing quest instance '{delivery.InstanceId}'.");
             (string text, string? signoff, IReadOnlyList<string> diagnostics) = Render(instance, delivery.MessageId, delivery.Delivery, delivery.Variant, context(instance));
-            return new DaggerfallQuestRenderedMessage(delivery.InstanceId, delivery.MessageId, delivery.Delivery, text, diagnostics, signoff);
+            DaggerfallQuestPromptSave? prompt = delivery.Delivery == DaggerfallQuestMessageDelivery.Prompt
+                && _pending?.InstanceId == delivery.InstanceId && _pending.MessageId == delivery.MessageId ? _pending : null;
+            return new DaggerfallQuestRenderedMessage(delivery.InstanceId, delivery.MessageId, delivery.Delivery, text, diagnostics, signoff, prompt?.Id, prompt?.Options);
         }).ToArray();
     }
 
@@ -254,9 +271,8 @@ internal sealed class DaggerfallQuestMessages
             if (_choices.Any(choice => choice.InstanceId == pending.InstanceId && choice.MessageId == pending.MessageId
                 && choice.TaskSymbol == pending.TaskSymbol && choice.OperationIndex == pending.OperationIndex && choice.Occurrence == pending.Occurrence))
                 throw new ArgumentException("Saved quest prompt occurrence has already been answered.");
+            ValidateOptions(pending.Options);
             _pending = pending with {
-                YesTask = DaggerfallQuestInstanceSave.Canonical(pending.YesTask, "saved quest prompt yes task"),
-                NoTask = DaggerfallQuestInstanceSave.Canonical(pending.NoTask, "saved quest prompt no task"),
                 TaskSymbol = DaggerfallQuestInstanceSave.Canonical(pending.TaskSymbol, "saved quest prompt task"),
             };
         }

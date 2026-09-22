@@ -36,7 +36,7 @@ internal sealed class DaggerfallQuestTaskRuntimeState
 
 internal sealed record DaggerfallQuestTaskCondition(DaggerfallQuestTaskConditionOperator Operator, string Symbol);
 internal sealed record DaggerfallQuestTaskOperation(DaggerfallQuestTaskOperationKind Kind, int SourceLine, string Source,
-    string[] Targets, DaggerfallQuestTaskCondition[] Conditions, int? MessageId, int? Step = null, string? MessageAlias = null);
+    string[] Targets, DaggerfallQuestTaskCondition[] Conditions, int? MessageId, int? Step = null, string? MessageAlias = null, DaggerfallQuestPromptOption[]? PromptOptions = null);
 internal sealed record DaggerfallQuestTaskDefinition(string Symbol, DaggerfallQuestTaskKind Kind, string? PersistUntilTarget,
     string? GlobalName, IReadOnlyList<DaggerfallQuestTaskOperation> Operations);
 internal sealed class DaggerfallQuestTaskProgram
@@ -65,6 +65,15 @@ internal static partial class DaggerfallQuestTaskCompiler
     private static readonly Regex Journal = Header("^log\\s+(?<message>\\d+)\\s+step\\s+(?<step>\\d+)$");
     private static readonly Regex RemoveJournal = Header("^remove\\s+log\\s+step\\s+(?<step>\\d+)$");
     private static readonly Regex Rumor = Header("^rumor\\s+mill\\s+(?<message>\\d+)$");
+    private static string ButtonLabel(int id) => id switch
+    {
+        0 => "Accept", 1 => "Reject", 2 => "Cancel", 3 => "Yes", 4 => "No", 5 => "OK", 6 => "Male", 7 => "Female",
+        8 => "Add", 9 => "Delete", 10 => "Edit", 11 => "Counter", 12 => "12 months", 13 => "36 months", 14 => "Copy",
+        15 => "Guilty", 16 => "Not guilty", 17 => "Debate", 18 => "Lie", 19 => "Anchor", 20 => "Teleport",
+        _ => throw new ArgumentException($"Quest prompt button {id} requires its source label."),
+    };
+    private static readonly Regex PromptMulti = Header(@"^promptmulti\s+(?<message>\d+)(?<options>(?:\s+\d+(?::[a-zA-Z0-9]+)?\s+[a-zA-Z0-9_.]+){2,4})$");
+    private static readonly Regex PromptOption = Header(@"(?<id>\d+)(?::(?<label>[a-zA-Z0-9]+))?\s+(?<target>[a-zA-Z0-9_.]+)");
     private static readonly Regex Prompt = Header("^prompt\\s+(?<message>[a-zA-Z0-9.]+)\\s+yes\\s+(?<yes>[a-zA-Z0-9_.]+)\\s+no\\s+(?<no>[a-zA-Z0-9_.]+)$");
     private static readonly Regex Timer = Header("^(?<start>start)\\s+timer\\s+(?<symbol>[a-zA-Z0-9_.-]+)$|^stop\\s+timer\\s+(?<stop>[a-zA-Z0-9_.-]+)$");
     private static readonly Regex Daily = Header("^daily\\s+from\\s+(?<fromHour>\\d+):(?<fromMinute>\\d+)\\s+to\\s+(?<toHour>\\d+):(?<toMinute>\\d+)$");
@@ -206,6 +215,19 @@ internal static partial class DaggerfallQuestTaskCompiler
             return new(DaggerfallQuestTaskOperationKind.RemoveJournal, sourceLine, line, [], [], null, Step(removeJournal.Groups["step"].Value, sourceLine));
         if (Rumor.Match(line) is { Success: true } rumor)
             return new(DaggerfallQuestTaskOperationKind.Rumor, sourceLine, line, [], [], Message(rumor.Groups["message"].Value));
+        if (PromptMulti.Match(line) is { Success: true } multi)
+        {
+            DaggerfallQuestPromptOption[] options = [.. PromptOption.Matches(multi.Groups["options"].Value).Select(match =>
+            {
+                int id = int.Parse(match.Groups["id"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                string label = id <= 20 ? ButtonLabel(id) : match.Groups["label"].Success ? match.Groups["label"].Value : ButtonLabel(id);
+                return new DaggerfallQuestPromptOption(id, label, Canonical(match.Groups["target"].Value));
+            })];
+            if (options.Select(option => option.Id).Distinct().Count() != options.Length)
+                throw new ArgumentException($"Quest prompt at line {sourceLine} repeats a choice id.");
+            return new(DaggerfallQuestTaskOperationKind.Prompt, sourceLine, line, options.Select(option => option.Target).ToArray(), [],
+                Message(multi.Groups["message"].Value), PromptOptions: options);
+        }
         if (Prompt.Match(line) is { Success: true } prompt)
         {
             string token = prompt.Groups["message"].Value;
@@ -397,7 +419,7 @@ internal static class DaggerfallQuestTaskRunner
                             instance.Outcome = $"Quest prompt action at line {operation.SourceLine}: {promptDiagnostic}";
                             return;
                         }
-                        messages.Prompt(instance, promptMessage, operation.Targets[0], operation.Targets[1], task.Symbol, operationIndex);
+                        messages.Prompt(instance, promptMessage, PromptChoices(operation), task.Symbol, operationIndex);
                         return;
                     case DaggerfallQuestTaskOperationKind.End:
                         MarkCompleted(state, operationIndex);
@@ -438,7 +460,7 @@ internal static class DaggerfallQuestTaskRunner
     }
 
     /// <summary>Completes the prompt operation recorded by the UI and starts exactly its selected task.</summary>
-    internal static void Choose(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskProgram program,
+    internal static Action PrepareChoice(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskProgram program,
         DaggerfallVariableStore variables, DaggerfallQuestPromptSave prompt, DaggerfallQuestChoiceSave choice,
         Func<DaggerfallQuestTaskOperation, int>? resolvePromptMessage = null)
     {
@@ -446,9 +468,14 @@ internal static class DaggerfallQuestTaskRunner
         ArgumentNullException.ThrowIfNull(program);
         ArgumentNullException.ThrowIfNull(variables);
         (DaggerfallQuestTaskRuntimeState state, DaggerfallQuestTaskOperation operation) = ValidateChoice(instance, program, choice, prompt, resolvePromptMessage);
-        _ = Require(choice.Target, program.TaskIndexes, instance.InstanceId, operation);
-        MarkCompleted(state, prompt.OperationIndex);
-        Start(choice.Target, instance.Tasks, program.TaskIndexes, program.Tasks, variables, instance.InstanceId, operation);
+        int target = Require(choice.Target, program.TaskIndexes, instance.InstanceId, operation);
+        if (program.Tasks[target].Kind == DaggerfallQuestTaskKind.Global)
+            _ = variables.ReadGlobal(program.Tasks[target].GlobalName!);
+        return () =>
+        {
+            MarkCompleted(state, prompt.OperationIndex);
+            Start(choice.Target, instance.Tasks, program.TaskIndexes, program.Tasks, variables, instance.InstanceId, operation);
+        };
     }
 
     /// <summary>Validates a persisted pending prompt against its compiled operation without consuming it.</summary>
@@ -460,8 +487,7 @@ internal static class DaggerfallQuestTaskRunner
         ArgumentNullException.ThrowIfNull(prompt);
         (_, DaggerfallQuestTaskOperation operation) = PromptOperation(instance, program, prompt.TaskSymbol, prompt.OperationIndex);
         ValidatePromptSource(operation, prompt.MessageId, resolvePromptMessage);
-        if (!string.Equals(operation.Targets[0], prompt.YesTask, StringComparison.Ordinal)
-            || !string.Equals(operation.Targets[1], prompt.NoTask, StringComparison.Ordinal))
+        if (!PromptChoices(operation).SequenceEqual(prompt.Options))
             throw new ArgumentException("Quest prompt does not match its source operation.");
     }
 
@@ -472,7 +498,7 @@ internal static class DaggerfallQuestTaskRunner
         ArgumentNullException.ThrowIfNull(choice);
         (_, DaggerfallQuestTaskOperation operation) = PromptOperation(instance, program, choice.TaskSymbol, choice.OperationIndex);
         ValidatePromptSource(operation, choice.MessageId, resolvePromptMessage);
-        if (choice.Occurrence < 0 || !string.Equals(choice.Target, choice.Yes ? operation.Targets[0] : operation.Targets[1], StringComparison.Ordinal))
+        if (choice.Occurrence < 0 || !PromptChoices(operation).Any(option => option.Id == choice.ChoiceId && option.Target == choice.Target))
             throw new ArgumentException("Quest choice does not match its source operation.");
     }
 
@@ -486,10 +512,13 @@ internal static class DaggerfallQuestTaskRunner
         ValidatePrompt(instance, program, prompt, resolvePromptMessage);
         (DaggerfallQuestTaskRuntimeState state, DaggerfallQuestTaskOperation operation) = PromptOperation(instance, program, prompt.TaskSymbol, prompt.OperationIndex);
         if (state.OperationCompleted[prompt.OperationIndex]) throw new InvalidOperationException("Quest prompt operation was already completed.");
-        if (!string.Equals(choice.Target, choice.Yes ? prompt.YesTask : prompt.NoTask, StringComparison.Ordinal))
+        if (!prompt.Options.Any(option => option.Id == choice.ChoiceId && option.Target == choice.Target))
             throw new ArgumentException("Quest prompt choice target does not match its pending operation.");
         return (state, operation);
     }
+
+    internal static DaggerfallQuestPromptOption[] PromptChoices(DaggerfallQuestTaskOperation operation) => operation.PromptOptions
+        ?? [new(3, "Yes", operation.Targets[0]), new(4, "No", operation.Targets[1])];
 
     private static void ValidatePromptSource(DaggerfallQuestTaskOperation operation, int messageId,
         Func<DaggerfallQuestTaskOperation, int>? resolvePromptMessage)
