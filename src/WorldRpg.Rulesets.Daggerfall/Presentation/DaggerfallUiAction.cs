@@ -5,7 +5,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision = null, string? Item = null, int? TargetGrid = null, string? TargetEquipment = null, string? Container = null, string? Key = null, string? Label = null, bool Confirm = false,
     string? Name = null, string? Race = null, string? Gender = null, int? FaceIndex = null, int? Reflexes = null, string? Career = null, string? Mode = null,
     string? PrimarySkills = null, string? MajorSkills = null, string? MinorSkills = null, string? Advantages = null, string? Disadvantages = null, int? HitPointsPerLevel = null,
-    string? Attribute = null, string? BackgroundAnswers = null, string? AttributeAllocations = null, string? SkillAllocations = null);
+    string? Attribute = null, string? BackgroundAnswers = null, string? AttributeAllocations = null, string? SkillAllocations = null, string? QuestInstance = null, int? QuestMessage = null, bool? QuestChoice = null);
 
 /// <summary>The small Daggerfall player-action wire contract, consumed during admitted updates.</summary>
 internal static class DaggerfallUiAction
@@ -20,25 +20,33 @@ internal static class DaggerfallUiAction
             JsonElement root = document.RootElement;
             if (root.ValueKind != JsonValueKind.Object) return null;
             HashSet<string> fields = new(StringComparer.Ordinal);
-            string? action = null, revision = null, item = null, targetEquipment = null, container = null, key = null, label = null, name = null, race = null, gender = null, career = null, mode = null, primarySkills = null, majorSkills = null, minorSkills = null, advantages = null, disadvantages = null, attribute = null, backgroundAnswers = null, attributeAllocations = null, skillAllocations = null;
-            int? targetGrid = null, faceIndex = null, reflexes = null, hitPointsPerLevel = null;
+            string? action = null, revision = null, item = null, targetEquipment = null, container = null, key = null, label = null, name = null, race = null, gender = null, career = null, mode = null, primarySkills = null, majorSkills = null, minorSkills = null, advantages = null, disadvantages = null, attribute = null, backgroundAnswers = null, attributeAllocations = null, skillAllocations = null, questInstance = null;
+            int? targetGrid = null, faceIndex = null, reflexes = null, hitPointsPerLevel = null, questMessage = null;
             bool confirm = false;
+            bool? questChoice = null;
             foreach (JsonProperty property in root.EnumerateObject())
             {
                 if (!fields.Add(property.Name)) return null;
-                if (property.Name is "targetGrid" or "faceIndex" or "reflexes" or "hitPointsPerLevel")
+                if (property.Name is "targetGrid" or "faceIndex" or "reflexes" or "hitPointsPerLevel" or "questMessage")
                 {
                     if (!property.Value.TryGetInt32(out int grid)) return null;
                     if (property.Name == "targetGrid") targetGrid = grid;
                     else if (property.Name == "faceIndex") faceIndex = grid;
                     else if (property.Name == "reflexes") reflexes = grid;
-                    else hitPointsPerLevel = grid;
+                    else if (property.Name == "hitPointsPerLevel") hitPointsPerLevel = grid;
+                    else questMessage = grid;
                     continue;
                 }
                 if (property.Name == "confirm")
                 {
                     if (property.Value.ValueKind is not JsonValueKind.True and not JsonValueKind.False) return null;
                     confirm = property.Value.GetBoolean();
+                    continue;
+                }
+                if (property.Name == "questChoice")
+                {
+                    if (property.Value.ValueKind is not JsonValueKind.True and not JsonValueKind.False) return null;
+                    questChoice = property.Value.GetBoolean();
                     continue;
                 }
                 if (property.Value.ValueKind != JsonValueKind.String) return null;
@@ -66,6 +74,7 @@ internal static class DaggerfallUiAction
                     case "backgroundAnswers": backgroundAnswers = value; break;
                     case "attributeAllocations": attributeAllocations = value; break;
                     case "skillAllocations": skillAllocations = value; break;
+                    case "questInstance": questInstance = value; break;
                     default: return null;
                 }
             }
@@ -129,6 +138,10 @@ internal static class DaggerfallUiAction
                 return fields.SetEquals(["action", "mode"])
                     && mode is "grab" or "info" or "talk" or "steal" or "bash"
                     ? new(action, Mode: mode) : null;
+            if (action == "quest-choice")
+                return fields.SetEquals(["action", "questInstance", "questMessage", "questChoice"])
+                    && !string.IsNullOrWhiteSpace(questInstance) && questMessage is > 0 && questChoice is not null
+                    ? new(action, QuestInstance: questInstance, QuestMessage: questMessage, QuestChoice: questChoice) : null;
             // "begin" is the entry screen's own action, which the product answers: the session accepts the
             // shape so a slice carrying it is a known action it does not act on, rather than an
             // unrecognized one it reports over the screen that asked.

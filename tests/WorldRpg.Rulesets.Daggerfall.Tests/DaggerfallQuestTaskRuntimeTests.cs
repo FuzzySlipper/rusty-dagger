@@ -1,5 +1,7 @@
+using System.Text.Json;
 using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
@@ -7,6 +9,185 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class DaggerfallQuestTaskRuntimeTests
 {
+    [Fact]
+    public void Direct_message_operations_keep_journal_prompt_choice_and_delivery_state_through_a_save()
+    {
+        DaggerfallQuestSourceDefinition source = new("test", string.Empty, "test.txt", DaggerfallQuestDisposition.Compiled,
+            [new(1010, 1, ["Dear %pcn, _giver_ of ==giver_ in ___town_. Find =monster_ at __dungeon_."])],
+        [
+            Block("variable", 1, "variable _yes_"),
+            Block("variable", 2, "variable _no_"),
+            Block("headless", 3, "log 1010 step 4", "rumor mill 1010", "prompt 1010 yes _yes_ no _no_"),
+        ], []);
+        DaggerfallQuestTaskProgram program = Program(source);
+        DaggerfallQuestRuntimeInstance runtime = Runtime(source);
+        DaggerfallQuestMessages messages = Messages(source);
+        DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal));
+
+        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, messages);
+
+        Assert.Equal(new DaggerfallQuestJournalEntrySave("quest:1", 4, 1010), Assert.Single(messages.Journal));
+        Assert.Equal(DaggerfallQuestMessageDelivery.Rumor, Assert.Single(messages.Deliveries, value => value.Delivery == DaggerfallQuestMessageDelivery.Rumor).Delivery);
+        Assert.NotNull(messages.Pending);
+        DaggerfallQuestMessagesSave saved = messages.Capture();
+        DaggerfallQuestMessages restored = Messages(source);
+        restored.Restore(saved with { Choices = [
+            new("quest:1", 1010, true, "yes", "earlier-prompt", 0, 0),
+            new("quest:1", 1010, false, "no", "rearmed-prompt", 0, 0),
+        ] }, new Dictionary<string, DaggerfallQuestRuntimeInstance>(StringComparer.Ordinal) { [runtime.InstanceId] = runtime });
+        Assert.Equal(2, restored.Choices.Count);
+
+        Assert.True(restored.TryChoose("quest:1", 1010, true,
+            (prompt, choice) => DaggerfallQuestTaskRunner.Choose(runtime, program, variables, prompt, choice),
+            out DaggerfallQuestChoiceSave? choice, out _));
+        Assert.True(runtime.Tasks.Single(task => task.Symbol == "yes").IsSet);
+        Assert.False(restored.TryChoose("quest:1", 1010, true, (_, _) => { }, out _, out _));
+        Assert.Contains(restored.Choices, choice => choice.Target == "yes" && choice.TaskSymbol == "headless.3");
+    }
+
+    [Fact]
+    public void Rearmed_prompt_records_distinct_occurrences_and_restores_both_answers()
+    {
+        DaggerfallQuestSourceDefinition source = new("test", string.Empty, "rearmed.txt", DaggerfallQuestDisposition.Compiled,
+            [new(1010, 1, ["Choose."])],
+            [Block("variable", 1, "variable _yes_"), Block("variable", 2, "variable _no_"),
+                Block("task", 3, "_source_ task:", "prompt 1010 yes _yes_ no _no_", "clear _source_")], []);
+        DaggerfallQuestTaskProgram program = Program(source);
+        DaggerfallQuestRuntimeInstance runtime = Runtime(source);
+        DaggerfallQuestMessages messages = Messages(source);
+        DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal));
+        DaggerfallQuestTaskRuntimeState sourceTask = runtime.Tasks.Single(task => task.Symbol == "source");
+
+        sourceTask.IsSet = true;
+        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, messages);
+        Assert.True(messages.TryChoose("quest:1", 1010, true,
+            (prompt, choice) => DaggerfallQuestTaskRunner.Choose(runtime, program, variables, prompt, choice), out _, out _));
+        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, messages);
+        Assert.False(sourceTask.IsSet);
+        Assert.All(sourceTask.OperationCompleted, Assert.False);
+        sourceTask.IsSet = true;
+        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, messages);
+        Assert.True(messages.TryChoose("quest:1", 1010, false,
+            (prompt, choice) => DaggerfallQuestTaskRunner.Choose(runtime, program, variables, prompt, choice), out _, out _));
+
+        Assert.Equal([0, 1], messages.Choices.Select(choice => choice.Occurrence));
+        DaggerfallQuestMessages restored = Messages(source);
+        restored.Restore(messages.Capture(), new Dictionary<string, DaggerfallQuestRuntimeInstance>(StringComparer.Ordinal) { [runtime.InstanceId] = runtime });
+        Assert.Equal([0, 1], restored.Choices.Select(choice => choice.Occurrence));
+    }
+
+    [Fact]
+    public void Stale_prompt_rejection_keeps_the_pending_choice_visible()
+    {
+        DaggerfallQuestSourceDefinition source = new("test", string.Empty, "stale.txt", DaggerfallQuestDisposition.Compiled,
+            [new(1010, 1, ["Choose."])],
+            [Block("variable", 1, "variable _no_"),
+                Block("headless", 3, "prompt 1010 yes _missing_ no _no_")], []);
+        DaggerfallQuestTaskProgram program = Program(source);
+        DaggerfallQuestRuntimeInstance runtime = Runtime(source);
+        DaggerfallQuestMessages messages = Messages(source);
+        DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal));
+
+        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, messages);
+        DaggerfallQuestTaskRuntimeState sourceTask = runtime.Tasks.Single(task => task.Symbol.StartsWith("headless.", StringComparison.Ordinal));
+        Assert.Throws<ArgumentException>(() => messages.TryChoose("quest:1", 1010, true,
+            (prompt, choice) => DaggerfallQuestTaskRunner.Choose(runtime, program, variables, prompt, choice), out _, out _));
+        Assert.False(sourceTask.OperationCompleted[0]);
+        Assert.NotNull(messages.Pending);
+        Assert.Empty(messages.Choices);
+    }
+
+    [Fact]
+    public void Quest_message_state_is_required_in_the_current_save_shape()
+    {
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize("{\"Instances\":[]}",
+            DaggerfallSaveJsonContext.Default.GetTypeInfo(typeof(DaggerfallQuestInstancesSave))!));
+        Assert.Throws<ArgumentNullException>(() => (new DaggerfallQuestInstancesSave([]) { Messages = null! }).Validate());
+    }
+
+    [Fact]
+    public void Direct_message_compiler_claims_every_retained_task_form()
+    {
+        DaggerfallQuestSourceDefinition source = Source(Block("headless", 1,
+            "log 1010 step 3", "remove log step 3", "rumor mill 1010", "prompt QuestorOffer yes _yes_ no _no_", "end quest saying 1010"));
+
+        DaggerfallQuestTaskOperationKind[] operations = Program(source).Tasks.Single().Operations.Select(operation => operation.Kind).ToArray();
+
+        Assert.Equal([DaggerfallQuestTaskOperationKind.Journal, DaggerfallQuestTaskOperationKind.RemoveJournal,
+            DaggerfallQuestTaskOperationKind.Rumor, DaggerfallQuestTaskOperationKind.Prompt, DaggerfallQuestTaskOperationKind.End], operations);
+        DaggerfallQuestTaskOperation prompt = Program(source).Tasks.Single().Operations[3];
+        Assert.Null(prompt.MessageId);
+        Assert.Equal("QuestorOffer", prompt.MessageAlias);
+        DaggerfallQuestSourceDefinition withMessage = new("test", string.Empty, source.SourceFile, DaggerfallQuestDisposition.Compiled,
+            [new(1010, 1, ["An offered quest."])], source.Blocks, []);
+        DaggerfallQuestMessages messages = Messages(withMessage, new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase) { ["QuestorOffer"] = 1010 });
+        Assert.True(messages.TryResolveMessage(Runtime(withMessage), null, "QuestorOffer", out int resolved, out string? diagnostic));
+        Assert.Equal(1010, resolved);
+        Assert.Null(diagnostic);
+    }
+
+    [Fact]
+    public void Persisted_prompt_alias_must_resolve_to_its_compiled_source_message()
+    {
+        DaggerfallQuestSourceDefinition source = new("test", string.Empty, "alias.txt", DaggerfallQuestDisposition.Compiled,
+            [new(1010, 1, ["Offer."]), new(1011, 2, ["Different valid message."])],
+            [Block("headless", 3, "prompt QuestorOffer yes _yes_ no _no_")], []);
+        DaggerfallQuestTaskProgram program = Program(source);
+        DaggerfallQuestRuntimeInstance runtime = Runtime(source);
+        DaggerfallQuestMessages messages = Messages(source, new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase) { ["QuestorOffer"] = 1010 });
+        DaggerfallQuestTaskOperation operation = program.Tasks.Single().Operations.Single();
+        DaggerfallQuestPromptSave wrongMessage = new("quest:1", 1011, "yes", "no", "headless.3", 0, 0);
+
+        Assert.Equal(1010, messages.ResolvePromptMessage(runtime, operation));
+        Assert.Throws<ArgumentException>(() => DaggerfallQuestTaskRunner.ValidatePrompt(runtime, program, wrongMessage,
+            candidate => messages.ResolvePromptMessage(runtime, candidate)));
+    }
+
+    [Fact]
+    public void Journal_removal_rumor_and_terminal_popup_execute_in_source_order()
+    {
+        DaggerfallQuestSourceDefinition source = new("test", string.Empty, "delivery.txt", DaggerfallQuestDisposition.Compiled,
+            [new(1010, 1, ["Message."])],
+            [Block("headless", 1, "log 1010 step 3", "remove log step 3", "rumor mill 1010", "end quest saying 1010")], []);
+        DaggerfallQuestRuntimeInstance runtime = Runtime(source);
+        DaggerfallQuestMessages messages = Messages(source);
+
+        DaggerfallQuestTaskRunner.Advance(runtime, Program(source), new(new Dictionary<string, int>(StringComparer.Ordinal)), DaggerfallCalendar.Start, messages);
+
+        Assert.Empty(messages.Journal);
+        Assert.Equal(DaggerfallQuestLifecycle.Ended, runtime.Lifecycle);
+        Assert.Equal([DaggerfallQuestMessageDelivery.Rumor, DaggerfallQuestMessageDelivery.Popup], messages.Deliveries.Select(value => value.Delivery));
+    }
+
+    [Fact]
+    public void Quest_message_macros_use_all_retained_resource_arms_before_shared_global_macros()
+    {
+        DaggerfallQuestSourceDefinition source = new("test", string.Empty, "macros.txt", DaggerfallQuestDisposition.Compiled,
+            [new(1010, 1, ["%pcn meets _giver_ of ==giver_ in __dungeon_, ___town_, and ____realm_: =monster_ (=#giver_).", "Sincerely _giver_", "<--->", "unused variant"])], [], []);
+        DaggerfallQuestRuntimeInstance runtime = Runtime(source);
+        DaggerfallQuestMessages messages = Messages(source);
+        DaggerfallQuestMessageContext context = new(new(new(Name: "Nulfaga"), new(), new(), new(), new(), new()),
+            new Dictionary<string, DaggerfallQuestResourceTextContext>(StringComparer.Ordinal)
+            {
+                ["giver"] = new(Name: "Aubk-i", Binding: "the guildmaster", Faction: "The Mages Guild"),
+                ["dungeon"] = new(NameTwo: "Daggerfall Castle"),
+                ["town"] = new(NameThree: "Daggerfall"),
+                ["realm"] = new(NameFour: "Glenumbra"),
+                ["monster"] = new(Details: "a daedra"),
+            });
+
+        messages.Popup(runtime, 1010);
+        messages.Letter(runtime, 1010);
+        DaggerfallQuestRenderedMessage popup = Assert.Single(messages.Render([runtime], context), message => message.Delivery == DaggerfallQuestMessageDelivery.Popup);
+        DaggerfallQuestRenderedMessage letter = Assert.Single(messages.Render([runtime], context), message => message.Delivery == DaggerfallQuestMessageDelivery.Letter);
+
+        Assert.Equal("Nulfaga meets Aubk-i of The Mages Guild in Daggerfall Castle, Daggerfall, and Glenumbra: a daedra (the guildmaster).\nSincerely Aubk-i", popup.Text);
+        Assert.Empty(popup.Diagnostics);
+        Assert.Equal("Nulfaga meets Aubk-i of The Mages Guild in ..., ..., and ...: a daedra (the guildmaster).", letter.Text);
+        Assert.Equal("Sincerely Aubk-i", letter.Signoff);
+        Assert.Empty(letter.Diagnostics);
+    }
+
     [Fact]
     public void Ordered_tasks_evaluate_and_not_then_end_with_the_retained_message()
     {
@@ -128,6 +309,10 @@ public sealed class DaggerfallQuestTaskRuntimeTests
 
     private static DaggerfallQuestSourceDefinition Source(params DaggerfallQuestBlockDefinition[] blocks) =>
         new("test", string.Empty, "test.txt", DaggerfallQuestDisposition.Compiled, [], blocks, []);
+
+    private static DaggerfallQuestMessages Messages(DaggerfallQuestSourceDefinition source, IReadOnlyDictionary<string, int>? staticMessages = null) => new(
+        new DaggerfallTextResolver(new DaggerfallTextSet(new Dictionary<DaggerfallTextKey, DaggerfallTextValue>(), [], [])),
+        new Dictionary<string, DaggerfallQuestSourceDefinition>(StringComparer.Ordinal) { [source.SourceFile] = source }, staticMessages);
 
     private static DaggerfallQuestBlockDefinition Block(string kind, int line, params string[] lines) => new(kind, line, lines, null);
 }

@@ -5,7 +5,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>The source-defined forms whose trigger state belongs to a quest instance.</summary>
 internal enum DaggerfallQuestTaskKind { Headless, Standard, Variable, PersistUntil, Global }
-internal enum DaggerfallQuestTaskOperationKind { When, DailyFrom, Start, Clear, Unset, StartClock, StopClock, End, Unsupported }
+internal enum DaggerfallQuestTaskOperationKind { When, DailyFrom, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, Rumor, Prompt, End, Unsupported }
 internal enum DaggerfallQuestTaskConditionOperator { When, WhenNot, And, AndNot, Or, OrNot }
 
 /// <summary>One durable trigger state. Operation completion aligns with the compiled source operation order.</summary>
@@ -36,7 +36,7 @@ internal sealed class DaggerfallQuestTaskRuntimeState
 
 internal sealed record DaggerfallQuestTaskCondition(DaggerfallQuestTaskConditionOperator Operator, string Symbol);
 internal sealed record DaggerfallQuestTaskOperation(DaggerfallQuestTaskOperationKind Kind, int SourceLine, string Source,
-    string[] Targets, DaggerfallQuestTaskCondition[] Conditions, int? MessageId);
+    string[] Targets, DaggerfallQuestTaskCondition[] Conditions, int? MessageId, int? Step = null, string? MessageAlias = null);
 internal sealed record DaggerfallQuestTaskDefinition(string Symbol, DaggerfallQuestTaskKind Kind, string? PersistUntilTarget,
     string? GlobalName, IReadOnlyList<DaggerfallQuestTaskOperation> Operations);
 internal sealed class DaggerfallQuestTaskProgram
@@ -62,6 +62,10 @@ internal static partial class DaggerfallQuestTaskCompiler
     private static readonly Regex Clear = Header("^clear\\s+(?<symbols>[a-zA-Z0-9_.]+(?:\\s+[a-zA-Z0-9_.]+)*)$");
     private static readonly Regex Unset = Header("^unset\\s+(?<symbols>[a-zA-Z0-9_.]+(?:\\s+[a-zA-Z0-9_.]+)*)$");
     private static readonly Regex End = Header("^end\\s+quest(?:\\s+saying\\s+(?<message>\\d+))?$");
+    private static readonly Regex Journal = Header("^log\\s+(?<message>\\d+)\\s+step\\s+(?<step>\\d+)$");
+    private static readonly Regex RemoveJournal = Header("^remove\\s+log\\s+step\\s+(?<step>\\d+)$");
+    private static readonly Regex Rumor = Header("^rumor\\s+mill\\s+(?<message>\\d+)$");
+    private static readonly Regex Prompt = Header("^prompt\\s+(?<message>[a-zA-Z0-9.]+)\\s+yes\\s+(?<yes>[a-zA-Z0-9_.]+)\\s+no\\s+(?<no>[a-zA-Z0-9_.]+)$");
     private static readonly Regex Timer = Header("^(?<start>start)\\s+timer\\s+(?<symbol>[a-zA-Z0-9_.-]+)$|^stop\\s+timer\\s+(?<stop>[a-zA-Z0-9_.-]+)$");
     private static readonly Regex Daily = Header("^daily\\s+from\\s+(?<fromHour>\\d+):(?<fromMinute>\\d+)\\s+to\\s+(?<toHour>\\d+):(?<toMinute>\\d+)$");
     private static readonly Regex WhenTerm = new("(?<operator>when not|when|and not|and|or not|or)\\s+(?<symbol>[a-zA-Z0-9_.]+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
@@ -80,6 +84,22 @@ internal static partial class DaggerfallQuestTaskCompiler
         foreach (DaggerfallQuestTaskDefinition task in tasks)
             if (!symbols.Add(task.Symbol)) throw new ArgumentException($"Quest source '{source.SourceFile}' declares task '{task.Symbol}' more than once.");
         return new(tasks);
+    }
+
+    /// <summary>Assesses executable task bodies using the same compiler and operation kinds the runner advances.</summary>
+    internal static IReadOnlyList<DaggerfallQuestDiagnosticDefinition> Assess(DaggerfallQuestSourceDefinition source)
+    {
+        try
+        {
+            DaggerfallQuestTaskProgram program = Compile(source);
+            return [.. program.Tasks.SelectMany(task => task.Operations)
+                .Where(operation => operation.Kind == DaggerfallQuestTaskOperationKind.Unsupported)
+                .Select(operation => new DaggerfallQuestDiagnosticDefinition(operation.SourceLine, operation.Source, "No current quest task runner operation supports this action."))];
+        }
+        catch (ArgumentException exception)
+        {
+            return [new DaggerfallQuestDiagnosticDefinition(1, source.SourceFile, exception.Message)];
+        }
     }
 
     internal static DaggerfallQuestTaskState[] InitialState(DaggerfallQuestTaskProgram program)
@@ -180,6 +200,19 @@ internal static partial class DaggerfallQuestTaskCompiler
             return new(DaggerfallQuestTaskOperationKind.DailyFrom, sourceLine, line,
                 [DailyMinute(daily.Groups["fromHour"].Value, daily.Groups["fromMinute"].Value, sourceLine).ToString(System.Globalization.CultureInfo.InvariantCulture),
                  DailyMinute(daily.Groups["toHour"].Value, daily.Groups["toMinute"].Value, sourceLine).ToString(System.Globalization.CultureInfo.InvariantCulture)], [], null);
+        if (Journal.Match(line) is { Success: true } journal)
+            return new(DaggerfallQuestTaskOperationKind.Journal, sourceLine, line, [], [], Message(journal.Groups["message"].Value), Step(journal.Groups["step"].Value, sourceLine));
+        if (RemoveJournal.Match(line) is { Success: true } removeJournal)
+            return new(DaggerfallQuestTaskOperationKind.RemoveJournal, sourceLine, line, [], [], null, Step(removeJournal.Groups["step"].Value, sourceLine));
+        if (Rumor.Match(line) is { Success: true } rumor)
+            return new(DaggerfallQuestTaskOperationKind.Rumor, sourceLine, line, [], [], Message(rumor.Groups["message"].Value));
+        if (Prompt.Match(line) is { Success: true } prompt)
+        {
+            string token = prompt.Groups["message"].Value;
+            int? message = int.TryParse(token, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int parsed) && parsed > 0 ? parsed : null;
+            return new(DaggerfallQuestTaskOperationKind.Prompt, sourceLine, line,
+                [Canonical(prompt.Groups["yes"].Value), Canonical(prompt.Groups["no"].Value)], [], message, null, message is null ? token : null);
+        }
         if (End.Match(line) is { Success: true } end)
         {
             int? message = end.Groups["message"].Success ? int.Parse(end.Groups["message"].Value, System.Globalization.CultureInfo.InvariantCulture) : null;
@@ -232,6 +265,10 @@ internal static partial class DaggerfallQuestTaskCompiler
             throw new ArgumentException($"Quest daily window at source line {sourceLine} has an invalid hour or minute.");
         return (hour * World.DaggerfallCalendar.MinutesPerHour) + minute;
     }
+    private static int Message(string value) => int.TryParse(value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int message) && message > 0
+        ? message : throw new ArgumentException($"Quest message at source line has invalid id '{value}'.");
+    private static int Step(string value, int sourceLine) => int.TryParse(value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int step) && step >= 0
+        ? step : throw new ArgumentException($"Quest journal operation at source line {sourceLine} has invalid step '{value}'.");
     private static string Canonical(string value) => DaggerfallQuestInstanceSave.Canonical(value, "quest task");
     private static string Trim(string value) => value.Trim();
     private static Regex Header(string expression) => new(expression, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
@@ -240,7 +277,7 @@ internal static partial class DaggerfallQuestTaskCompiler
 /// <summary>Runs only the retained source-order task transitions over one mutable active quest instance.</summary>
 internal static class DaggerfallQuestTaskRunner
 {
-    internal static void Advance(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskProgram program, DaggerfallVariableStore variables, World.DaggerfallCalendar calendar)
+    internal static void Advance(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskProgram program, DaggerfallVariableStore variables, World.DaggerfallCalendar calendar, DaggerfallQuestMessages? messages = null)
     {
         ArgumentNullException.ThrowIfNull(instance);
         ArgumentNullException.ThrowIfNull(program);
@@ -317,11 +354,57 @@ internal static class DaggerfallQuestTaskRunner
                         }
                         MarkCompleted(state, operationIndex);
                         break;
+                    case DaggerfallQuestTaskOperationKind.Journal:
+                        if (messages is null)
+                        {
+                            instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
+                            instance.Outcome = $"Quest journal action at line {operation.SourceLine} has no message owner.";
+                            return;
+                        }
+                        messages.Log(instance, operation.MessageId!.Value, operation.Step!.Value);
+                        MarkCompleted(state, operationIndex);
+                        break;
+                    case DaggerfallQuestTaskOperationKind.RemoveJournal:
+                        if (messages is null)
+                        {
+                            instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
+                            instance.Outcome = $"Quest journal action at line {operation.SourceLine} has no message owner.";
+                            return;
+                        }
+                        messages.RemoveLog(instance, operation.Step!.Value);
+                        MarkCompleted(state, operationIndex);
+                        break;
+                    case DaggerfallQuestTaskOperationKind.Rumor:
+                        if (messages is null)
+                        {
+                            instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
+                            instance.Outcome = $"Quest rumor action at line {operation.SourceLine} has no message owner.";
+                            return;
+                        }
+                        messages.Rumor(instance, operation.MessageId!.Value);
+                        MarkCompleted(state, operationIndex);
+                        break;
+                    case DaggerfallQuestTaskOperationKind.Prompt:
+                        if (messages is null)
+                        {
+                            instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
+                            instance.Outcome = $"Quest prompt action at line {operation.SourceLine} has no message owner.";
+                            return;
+                        }
+                        if (!messages.TryResolveMessage(instance, operation.MessageId, operation.MessageAlias, out int promptMessage, out string? promptDiagnostic))
+                        {
+                            instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
+                            instance.Outcome = $"Quest prompt action at line {operation.SourceLine}: {promptDiagnostic}";
+                            return;
+                        }
+                        messages.Prompt(instance, promptMessage, operation.Targets[0], operation.Targets[1], task.Symbol, operationIndex);
+                        return;
                     case DaggerfallQuestTaskOperationKind.End:
                         MarkCompleted(state, operationIndex);
                         instance.Lifecycle = DaggerfallQuestLifecycle.Ended;
                         instance.Outcome = "end quest";
                         instance.TerminalMessageId = operation.MessageId;
+                        if (operation.MessageId is { } messageId) messages?.Popup(instance, messageId);
                         return;
                     case DaggerfallQuestTaskOperationKind.Unsupported:
                         instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
@@ -352,6 +435,84 @@ internal static class DaggerfallQuestTaskRunner
     {
         if (!program.TaskIndexes.TryGetValue(symbol, out int index)) return;
         Set(program.Tasks[index], instance.Tasks[index], true, variables);
+    }
+
+    /// <summary>Completes the prompt operation recorded by the UI and starts exactly its selected task.</summary>
+    internal static void Choose(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskProgram program,
+        DaggerfallVariableStore variables, DaggerfallQuestPromptSave prompt, DaggerfallQuestChoiceSave choice,
+        Func<DaggerfallQuestTaskOperation, int>? resolvePromptMessage = null)
+    {
+        ArgumentNullException.ThrowIfNull(instance);
+        ArgumentNullException.ThrowIfNull(program);
+        ArgumentNullException.ThrowIfNull(variables);
+        (DaggerfallQuestTaskRuntimeState state, DaggerfallQuestTaskOperation operation) = ValidateChoice(instance, program, choice, prompt, resolvePromptMessage);
+        _ = Require(choice.Target, program.TaskIndexes, instance.InstanceId, operation);
+        MarkCompleted(state, prompt.OperationIndex);
+        Start(choice.Target, instance.Tasks, program.TaskIndexes, program.Tasks, variables, instance.InstanceId, operation);
+    }
+
+    /// <summary>Validates a persisted pending prompt against its compiled operation without consuming it.</summary>
+    internal static void ValidatePrompt(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskProgram program, DaggerfallQuestPromptSave prompt,
+        Func<DaggerfallQuestTaskOperation, int>? resolvePromptMessage = null)
+    {
+        ArgumentNullException.ThrowIfNull(instance);
+        ArgumentNullException.ThrowIfNull(program);
+        ArgumentNullException.ThrowIfNull(prompt);
+        (_, DaggerfallQuestTaskOperation operation) = PromptOperation(instance, program, prompt.TaskSymbol, prompt.OperationIndex);
+        ValidatePromptSource(operation, prompt.MessageId, resolvePromptMessage);
+        if (!string.Equals(operation.Targets[0], prompt.YesTask, StringComparison.Ordinal)
+            || !string.Equals(operation.Targets[1], prompt.NoTask, StringComparison.Ordinal))
+            throw new ArgumentException("Quest prompt does not match its source operation.");
+    }
+
+    /// <summary>Validates a persisted answer before it is admitted as a choice receipt.</summary>
+    internal static void ValidateChoice(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskProgram program, DaggerfallQuestChoiceSave choice,
+        Func<DaggerfallQuestTaskOperation, int>? resolvePromptMessage = null)
+    {
+        ArgumentNullException.ThrowIfNull(choice);
+        (_, DaggerfallQuestTaskOperation operation) = PromptOperation(instance, program, choice.TaskSymbol, choice.OperationIndex);
+        ValidatePromptSource(operation, choice.MessageId, resolvePromptMessage);
+        if (choice.Occurrence < 0 || !string.Equals(choice.Target, choice.Yes ? operation.Targets[0] : operation.Targets[1], StringComparison.Ordinal))
+            throw new ArgumentException("Quest choice does not match its source operation.");
+    }
+
+    private static (DaggerfallQuestTaskRuntimeState State, DaggerfallQuestTaskOperation Operation) ValidateChoice(
+        DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskProgram program, DaggerfallQuestChoiceSave choice, DaggerfallQuestPromptSave prompt,
+        Func<DaggerfallQuestTaskOperation, int>? resolvePromptMessage)
+    {
+        if (choice.TaskSymbol != prompt.TaskSymbol || choice.OperationIndex != prompt.OperationIndex
+            || choice.Occurrence != prompt.Occurrence || choice.MessageId != prompt.MessageId)
+            throw new ArgumentException("Quest prompt receipt does not match its pending operation.");
+        ValidatePrompt(instance, program, prompt, resolvePromptMessage);
+        (DaggerfallQuestTaskRuntimeState state, DaggerfallQuestTaskOperation operation) = PromptOperation(instance, program, prompt.TaskSymbol, prompt.OperationIndex);
+        if (state.OperationCompleted[prompt.OperationIndex]) throw new InvalidOperationException("Quest prompt operation was already completed.");
+        if (!string.Equals(choice.Target, choice.Yes ? prompt.YesTask : prompt.NoTask, StringComparison.Ordinal))
+            throw new ArgumentException("Quest prompt choice target does not match its pending operation.");
+        return (state, operation);
+    }
+
+    private static void ValidatePromptSource(DaggerfallQuestTaskOperation operation, int messageId,
+        Func<DaggerfallQuestTaskOperation, int>? resolvePromptMessage)
+    {
+        if (messageId <= 0) throw new ArgumentException("Quest prompt has an invalid message id.");
+        int? direct = operation.MessageId;
+        int? expected = direct ?? (resolvePromptMessage is null ? null : resolvePromptMessage(operation));
+        if (expected is not null && expected != messageId)
+            throw new ArgumentException("Quest prompt message does not match its source operation.");
+    }
+
+    private static (DaggerfallQuestTaskRuntimeState State, DaggerfallQuestTaskOperation Operation) PromptOperation(
+        DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskProgram program, string taskSymbol, int operationIndex)
+    {
+        if (!program.TaskIndexes.TryGetValue(taskSymbol, out int taskIndex))
+            throw new ArgumentException($"Quest prompt refers to missing task '{taskSymbol}'.");
+        DaggerfallQuestTaskRuntimeState state = instance.Tasks[taskIndex];
+        if (operationIndex < 0 || operationIndex >= state.OperationCompleted.Length)
+            throw new ArgumentException($"Quest prompt has invalid operation {operationIndex}.");
+        DaggerfallQuestTaskOperation operation = program.Tasks[taskIndex].Operations[operationIndex];
+        if (operation.Kind != DaggerfallQuestTaskOperationKind.Prompt)
+            throw new ArgumentException("Quest prompt does not refer to a prompt operation.");
+        return (state, operation);
     }
 
     private static void Start(string symbol, DaggerfallQuestTaskRuntimeState[] states, IReadOnlyDictionary<string, int> indexes, IReadOnlyList<DaggerfallQuestTaskDefinition> tasks,

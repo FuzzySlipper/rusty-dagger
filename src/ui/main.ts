@@ -51,6 +51,20 @@ interface DaggerHud {
   readonly focus?: { readonly interaction: string; readonly container: string; readonly close: string } | null;
 }
 
+interface QuestMessageProjection {
+  readonly instance: string;
+  readonly message: number;
+  readonly delivery: 'popup' | 'letter' | 'rumor' | 'journal' | 'prompt';
+  readonly text: string;
+  readonly signoff: string | null;
+  readonly diagnostics: readonly string[];
+}
+interface QuestPresentation {
+  readonly deliveries: readonly QuestMessageProjection[];
+  readonly journal: readonly QuestMessageProjection[];
+  readonly pending: QuestMessageProjection | null;
+}
+
 interface SaveSlotProjection {
   readonly entries: readonly { readonly key: string; readonly label: string; readonly savedAtUtc: string; readonly ruleset: string }[];
   readonly diagnostic: string | null;
@@ -107,6 +121,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     <section class="dagger-vitals" aria-live="polite">
     </section>
     <p class="dagger-outcome" role="status">Awaiting projection…</p>
+    <section class="dagger-quests" aria-live="polite"></section>
     <p class="dagger-view" aria-live="polite"></p><section class="dagger-status"></section><button class="dagger-focus-close" hidden></button>
     <div class="dagger-death" role="alert" hidden><img class="dagger-death-screen" alt="You have died."></div>
     <div class="dagger-entry" role="dialog" aria-label="Title" hidden><img class="dagger-entry-screen" alt="Rusty Dagger"><button class="dagger-entry-begin" type="button">Begin</button></div>
@@ -160,6 +175,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   }));
   const title = shell.querySelector<HTMLElement>('.dagger-title strong')!;
   const outcome = shell.querySelector<HTMLParagraphElement>('.dagger-outcome')!;
+  const quests = shell.querySelector<HTMLElement>('.dagger-quests')!;
   const view = shell.querySelector<HTMLParagraphElement>('.dagger-view')!;
   const status = shell.querySelector<HTMLElement>('.dagger-status')!;
   const focusClose = shell.querySelector<HTMLButtonElement>('.dagger-focus-close')!;
@@ -552,6 +568,9 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     title.textContent = value.mode === 'paused' ? 'Paused' : value.mode === 'dead' ? 'Defeated'
       : value.mode === 'title' ? 'Title' : value.mode === 'modal' ? 'Interaction' : 'Exploring';
     outcome.textContent = value.lastOutcome;
+    renderQuestMessages(quests, value.quests, (action) => context.intents?.claim('dagger.ui', {
+      kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
+    }));
     if (value.controls) controlsView.update(value.controls);
     if (value.activation) activationMode.value = value.activation.mode;
     activationMode.disabled = value.mode !== 'playing';
@@ -595,6 +614,49 @@ export function isHud(value: unknown): value is DaggerHud {
     && 'resources' in value && Array.isArray(value.resources) && value.resources.every(isResourceRow)
     && 'lastOutcome' in value && typeof value.lastOutcome === 'string'
     && 'composition' in value && isCompositionIdentity(value.composition);
+}
+
+function renderQuestMessages(root: HTMLElement, value: QuestPresentation | undefined, claim: (action: UiAction) => void): void {
+  root.replaceChildren();
+  if (!value) return;
+  const add = (message: QuestMessageProjection, heading: string): void => {
+    const article = document.createElement('article');
+    article.className = `dagger-quest-message dagger-quest-${message.delivery}`;
+    const title = document.createElement('strong');
+    title.textContent = heading;
+    const text = document.createElement('p');
+    text.textContent = message.text;
+    article.append(title, text);
+    if (message.signoff) {
+      const signoff = document.createElement('p');
+      signoff.textContent = message.signoff;
+      article.append(signoff);
+    }
+    if (message.diagnostics.length > 0) {
+      const diagnostics = document.createElement('p');
+      diagnostics.className = 'dagger-quest-diagnostic';
+      diagnostics.textContent = message.diagnostics.join(' ');
+      article.append(diagnostics);
+    }
+    root.append(article);
+  };
+  value.deliveries.filter(message => message.delivery !== 'prompt').forEach(message => add(message, message.delivery));
+  value.journal.forEach(message => add(message, 'journal'));
+  if (value.pending) {
+    const message = value.pending;
+    const prompt = document.createElement('article');
+    prompt.className = 'dagger-quest-message dagger-quest-prompt';
+    const text = document.createElement('p');
+    text.textContent = message.text;
+    const yes = document.createElement('button');
+    yes.type = 'button'; yes.textContent = 'Yes';
+    yes.addEventListener('click', () => claim({ action: 'quest-choice', questInstance: message.instance, questMessage: message.message, questChoice: true }));
+    const no = document.createElement('button');
+    no.type = 'button'; no.textContent = 'No';
+    no.addEventListener('click', () => claim({ action: 'quest-choice', questInstance: message.instance, questMessage: message.message, questChoice: false }));
+    prompt.append(text, yes, no);
+    root.append(prompt);
+  }
 }
 
 function isSaveSlots(value: unknown): value is SaveSlotProjection {

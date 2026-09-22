@@ -123,6 +123,17 @@ internal sealed class DaggerfallTextResolver(DaggerfallTextSet text)
         return new(output.ToString(), diagnostics);
     }
 
+    /// <summary>Expands a source-owned text run that has no standalone normalized text record.</summary>
+    internal DaggerfallTextRenderResult ResolveRaw(string source, DaggerfallTextKey diagnosticKey, DaggerfallTextContext context)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(source);
+        ArgumentNullException.ThrowIfNull(context);
+        List<DaggerfallTextDiagnostic> diagnostics = [];
+        StringBuilder output = new();
+        Expand(output, source, diagnosticKey, context, diagnostics);
+        return new(output.ToString(), diagnostics);
+    }
+
     private static void Expand(StringBuilder output, string source, DaggerfallTextKey key, DaggerfallTextContext context, List<DaggerfallTextDiagnostic> diagnostics)
     {
         Dictionary<string, string> cache = new(StringComparer.Ordinal);
