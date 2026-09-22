@@ -9,6 +9,57 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class DaggerfallQuestTaskRuntimeTests
 {
+    [Theory]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    public void Multi_choice_survives_pending_save_records_before_branch_and_rejects_replayed_occurrence(int count)
+    {
+        string[] choices = ["3 _a_", "4 _b_", "19 _c_", "20 _d_"];
+        DaggerfallQuestSourceDefinition source = new("test", string.Empty, "multi.txt", DaggerfallQuestDisposition.Compiled,
+            [new(1010, 1, ["Choose."])],
+            [Block("variable", 1, "variable _a_"), Block("variable", 2, "variable _b_"),
+             Block("variable", 3, "variable _c_"), Block("variable", 4, "variable _d_"),
+             Block("task", 5, "_source_ task:", "promptmulti 1010 " + string.Join(' ', choices.Take(count)), "clear _source_")], []);
+        DaggerfallQuestTaskProgram program = Program(source);
+        DaggerfallQuestRuntimeInstance runtime = Runtime(source);
+        DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal));
+        runtime.Tasks.Single(task => task.Symbol == "source").IsSet = true;
+        DaggerfallQuestMessages messages = Messages(source);
+        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, messages);
+        DaggerfallQuestMessages restored = Messages(source);
+        string json = JsonSerializer.Serialize(messages.Capture(), typeof(DaggerfallQuestMessagesSave), DaggerfallSaveJsonContext.Default);
+        DaggerfallQuestMessagesSave persisted = (DaggerfallQuestMessagesSave)JsonSerializer.Deserialize(json, typeof(DaggerfallQuestMessagesSave), DaggerfallSaveJsonContext.Default)!;
+        restored.Restore(persisted, new Dictionary<string, DaggerfallQuestRuntimeInstance> { [runtime.InstanceId] = runtime });
+        DaggerfallQuestPromptSave pending = restored.Pending!;
+        Assert.Equal(count, pending.Options.Length);
+        DaggerfallQuestRenderedMessage projected = Assert.Single(restored.Render([runtime]));
+        Assert.Equal(pending.Id, projected.PromptId);
+        Assert.Equal(pending.Options, projected.Options);
+        Assert.False(restored.TryChoose(runtime.InstanceId, 1010, pending.Id, 999, (_, _) => throw new Exception("invalid choice invoked"), out _, out _));
+        Assert.True(restored.TryChoose(runtime.InstanceId, 1010, pending.Id, pending.Options[^1].Id, (prompt, choice) =>
+        {
+            Action apply = DaggerfallQuestTaskRunner.PrepareChoice(runtime, program, variables, prompt, choice);
+            return () =>
+            {
+                Assert.Equal(choice, Assert.Single(restored.Capture().Choices));
+                Assert.Null(restored.Pending);
+                apply();
+            };
+        }, out _, out _));
+        Assert.True(runtime.Tasks.Single(task => task.Symbol == pending.Options[^1].Target).IsSet);
+        Assert.False(restored.TryChoose(runtime.InstanceId, 1010, pending.Id, pending.Options[^1].Id, (_, _) => throw new Exception("replay invoked"), out _, out _));
+        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, restored);
+        runtime.Tasks.Single(task => task.Symbol == "source").IsSet = true;
+        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, restored);
+        Assert.NotEqual(pending.Id, restored.Pending!.Id);
+        Assert.False(restored.TryChoose(runtime.InstanceId, 1010, pending.Id, pending.Options[0].Id, (_, _) => throw new Exception("stale occurrence invoked"), out _, out _));
+        Assert.Single(restored.Choices);
+        DaggerfallQuestTaskRunner.ValidatePrompt(runtime, program, restored.Pending);
+        Assert.Throws<ArgumentException>(() => DaggerfallQuestTaskRunner.ValidatePrompt(runtime, program,
+            restored.Pending with { Options = [new(3, "Yes", "a"), new(4, "No", "wrong")] }));
+    }
+
     [Fact]
     public void Direct_message_operations_keep_journal_prompt_choice_and_delivery_state_through_a_save()
     {
@@ -32,16 +83,16 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         DaggerfallQuestMessagesSave saved = messages.Capture();
         DaggerfallQuestMessages restored = Messages(source);
         restored.Restore(saved with { Choices = [
-            new("quest:1", 1010, true, "yes", "earlier-prompt", 0, 0),
-            new("quest:1", 1010, false, "no", "rearmed-prompt", 0, 0),
+            new("quest:1", 1010, 3, "yes", "earlier-prompt", 0, 0),
+            new("quest:1", 1010, 4, "no", "rearmed-prompt", 0, 0),
         ] }, new Dictionary<string, DaggerfallQuestRuntimeInstance>(StringComparer.Ordinal) { [runtime.InstanceId] = runtime });
         Assert.Equal(2, restored.Choices.Count);
 
-        Assert.True(restored.TryChoose("quest:1", 1010, true,
-            (prompt, choice) => DaggerfallQuestTaskRunner.Choose(runtime, program, variables, prompt, choice),
+        Assert.True(restored.TryChoose("quest:1", 1010, restored.Pending?.Id ?? "expired", 3,
+            (prompt, choice) => DaggerfallQuestTaskRunner.PrepareChoice(runtime, program, variables, prompt, choice),
             out DaggerfallQuestChoiceSave? choice, out _));
         Assert.True(runtime.Tasks.Single(task => task.Symbol == "yes").IsSet);
-        Assert.False(restored.TryChoose("quest:1", 1010, true, (_, _) => { }, out _, out _));
+        Assert.False(restored.TryChoose("quest:1", 1010, restored.Pending?.Id ?? "expired", 3, (_, _) => () => { }, out _, out _));
         Assert.Contains(restored.Choices, choice => choice.Target == "yes" && choice.TaskSymbol == "headless.3");
     }
 
@@ -60,15 +111,15 @@ public sealed class DaggerfallQuestTaskRuntimeTests
 
         sourceTask.IsSet = true;
         DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, messages);
-        Assert.True(messages.TryChoose("quest:1", 1010, true,
-            (prompt, choice) => DaggerfallQuestTaskRunner.Choose(runtime, program, variables, prompt, choice), out _, out _));
+        Assert.True(messages.TryChoose("quest:1", 1010, messages.Pending?.Id ?? "expired", 3,
+            (prompt, choice) => DaggerfallQuestTaskRunner.PrepareChoice(runtime, program, variables, prompt, choice), out _, out _));
         DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, messages);
         Assert.False(sourceTask.IsSet);
         Assert.All(sourceTask.OperationCompleted, Assert.False);
         sourceTask.IsSet = true;
         DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, messages);
-        Assert.True(messages.TryChoose("quest:1", 1010, false,
-            (prompt, choice) => DaggerfallQuestTaskRunner.Choose(runtime, program, variables, prompt, choice), out _, out _));
+        Assert.True(messages.TryChoose("quest:1", 1010, messages.Pending?.Id ?? "expired", 4,
+            (prompt, choice) => DaggerfallQuestTaskRunner.PrepareChoice(runtime, program, variables, prompt, choice), out _, out _));
 
         Assert.Equal([0, 1], messages.Choices.Select(choice => choice.Occurrence));
         DaggerfallQuestMessages restored = Messages(source);
@@ -90,8 +141,8 @@ public sealed class DaggerfallQuestTaskRuntimeTests
 
         DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, messages);
         DaggerfallQuestTaskRuntimeState sourceTask = runtime.Tasks.Single(task => task.Symbol.StartsWith("headless.", StringComparison.Ordinal));
-        Assert.Throws<ArgumentException>(() => messages.TryChoose("quest:1", 1010, true,
-            (prompt, choice) => DaggerfallQuestTaskRunner.Choose(runtime, program, variables, prompt, choice), out _, out _));
+        Assert.Throws<ArgumentException>(() => messages.TryChoose("quest:1", 1010, messages.Pending?.Id ?? "expired", 3,
+            (prompt, choice) => DaggerfallQuestTaskRunner.PrepareChoice(runtime, program, variables, prompt, choice), out _, out _));
         Assert.False(sourceTask.OperationCompleted[0]);
         Assert.NotNull(messages.Pending);
         Assert.Empty(messages.Choices);
@@ -136,7 +187,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         DaggerfallQuestRuntimeInstance runtime = Runtime(source);
         DaggerfallQuestMessages messages = Messages(source, new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase) { ["QuestorOffer"] = 1010 });
         DaggerfallQuestTaskOperation operation = program.Tasks.Single().Operations.Single();
-        DaggerfallQuestPromptSave wrongMessage = new("quest:1", 1011, "yes", "no", "headless.3", 0, 0);
+        DaggerfallQuestPromptSave wrongMessage = new("quest:1", 1011, [new(3, "Yes", "yes"), new(4, "No", "no")], "headless.3", 0, 0);
 
         Assert.Equal(1010, messages.ResolvePromptMessage(runtime, operation));
         Assert.Throws<ArgumentException>(() => DaggerfallQuestTaskRunner.ValidatePrompt(runtime, program, wrongMessage,

@@ -135,11 +135,11 @@ test('view is cleared when the product no longer supplies it', () => {
 test('a projected quest prompt renders once and returns the selected semantic choice', () => {
   const f = fixture();
   try {
-    const prompt = { instance: 'quest:1', message: 1010, delivery: 'prompt', text: 'Will you help?', signoff: null, diagnostics: [] };
+    const prompt = { instance: 'quest:1', message: 1010, delivery: 'prompt', text: 'Will you help?', signoff: null, diagnostics: [], promptId: 'prompt:1', options: [{ id: 3, label: 'Yes' }, { id: 4, label: 'No' }] };
     f.publish({ quests: { deliveries: [prompt], journal: [], pending: prompt } });
     assert.equal(f.root.querySelector('.dagger-quest-prompt p').textContent, 'Will you help?');
     f.root.querySelector('.dagger-quest-prompt button').click();
-    assert.deepEqual(f.actions.at(-1), { action: 'quest-choice', questInstance: 'quest:1', questMessage: 1010, questChoice: true });
+    assert.deepEqual(f.actions.at(-1), { action: 'quest-choice', questInstance: 'quest:1', questMessage: 1010, questPrompt: 'prompt:1', questChoice: 3 });
     f.publish({ quests: { deliveries: [], journal: [], pending: null } });
     assert.equal(f.root.querySelector('.dagger-quest-prompt'), null);
   } finally { f.dispose(); }
@@ -379,5 +379,23 @@ test('title creation renders normalized questions and sends the selected backgro
     f.root.querySelector('[aria-label="Skills medical"]').value = '6';
     f.root.querySelector('[data-testid="character-background-reroll"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'character-background-reroll', name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00', backgroundAnswers: '1:a', attributeAllocations: 'strength:6', skillAllocations: 'medical:6' });
+  } finally { f.dispose(); }
+});
+
+
+test('multi-choice prompt uses supplied stable identities and refreshes occurrence', () => {
+  const f = fixture();
+  try {
+    const prompt = { instance: 'quest:2', message: 1072, delivery: 'prompt', text: 'Choose a direction.', signoff: null,
+      diagnostics: [], promptId: 'quest:2/source/0/1', options: [{ id: 24, label: 'South' }, { id: 25, label: 'West' }, { id: 28, label: 'Southwest' }] };
+    f.publish({ quests: { deliveries: [prompt], journal: [], pending: prompt } });
+    const buttons = f.root.querySelectorAll('.dagger-quest-prompt button');
+    assert.equal(buttons.length, 3);
+    buttons[2].click();
+    assert.deepEqual(f.actions.at(-1), { action: 'quest-choice', questInstance: 'quest:2', questMessage: 1072,
+      questPrompt: 'quest:2/source/0/1', questChoice: 28 });
+    f.publish({ quests: { deliveries: [], journal: [], pending: { ...prompt, promptId: 'quest:2/source/0/2' } } });
+    f.root.querySelector('.dagger-quest-prompt button').click();
+    assert.equal(f.actions.at(-1).questPrompt, 'quest:2/source/0/2');
   } finally { f.dispose(); }
 });

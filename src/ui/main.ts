@@ -52,6 +52,8 @@ interface DaggerHud {
 }
 
 interface QuestMessageProjection {
+  readonly promptId: string | null;
+  readonly options: readonly { readonly id: number; readonly label: string }[];
   readonly instance: string;
   readonly message: number;
   readonly delivery: 'popup' | 'letter' | 'rumor' | 'journal' | 'prompt';
@@ -648,13 +650,14 @@ function renderQuestMessages(root: HTMLElement, value: QuestPresentation | undef
     prompt.className = 'dagger-quest-message dagger-quest-prompt';
     const text = document.createElement('p');
     text.textContent = message.text;
-    const yes = document.createElement('button');
-    yes.type = 'button'; yes.textContent = 'Yes';
-    yes.addEventListener('click', () => claim({ action: 'quest-choice', questInstance: message.instance, questMessage: message.message, questChoice: true }));
-    const no = document.createElement('button');
-    no.type = 'button'; no.textContent = 'No';
-    no.addEventListener('click', () => claim({ action: 'quest-choice', questInstance: message.instance, questMessage: message.message, questChoice: false }));
-    prompt.append(text, yes, no);
+    prompt.append(text);
+    for (const option of message.options) {
+      const button = document.createElement('button');
+      button.type = 'button'; button.textContent = option.label;
+      button.addEventListener('click', () => claim({ action: 'quest-choice', questInstance: message.instance,
+        questMessage: message.message, questPrompt: message.promptId ?? undefined, questChoice: option.id }));
+      prompt.append(button);
+    }
     root.append(prompt);
   }
 }

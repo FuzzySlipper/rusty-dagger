@@ -100,10 +100,10 @@ public sealed class DaggerfallUiActionTests
     public void Cinematic_skip_is_a_small_semantic_action(string json, bool accepted) =>
         Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
     [Theory]
-    [InlineData("{\"action\":\"quest-choice\",\"questInstance\":\"quest:1\",\"questMessage\":1010,\"questChoice\":true}", true)]
-    [InlineData("{\"action\":\"quest-choice\",\"questInstance\":\"quest:1\",\"questMessage\":0,\"questChoice\":true}", false)]
+    [InlineData("{\"action\":\"quest-choice\",\"questInstance\":\"quest:1\",\"questMessage\":1010,\"questChoice\":3,\"questPrompt\":\"prompt:1\"}", true)]
+    [InlineData("{\"action\":\"quest-choice\",\"questInstance\":\"quest:1\",\"questMessage\":0,\"questChoice\":3,\"questPrompt\":\"prompt:1\"}", false)]
     [InlineData("{\"action\":\"quest-choice\",\"questInstance\":\"quest:1\",\"questMessage\":1010}", false)]
-    [InlineData("{\"action\":\"quest-choice\",\"questInstance\":\"quest:1\",\"questMessage\":1010,\"questChoice\":true,\"item\":\"x\"}", false)]
+    [InlineData("{\"action\":\"quest-choice\",\"questInstance\":\"quest:1\",\"questMessage\":1010,\"questChoice\":3,\"questPrompt\":\"prompt:1\",\"item\":\"x\"}", false)]
     public void Quest_choice_actions_name_the_pending_prompt_once(string json, bool accepted) =>
         Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
 }

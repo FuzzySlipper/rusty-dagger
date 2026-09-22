@@ -574,8 +574,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 case "character-level-commit": if (playing) ChangeLevelUp(action!); break;
                 case "activation-mode": if (playing) ApplyActivationMode(action!); break;
                 case "quest-choice":
-                    if ((playing || modal) && State.Quests.ChoosePrompt(State.Variables, action!.QuestInstance!, action.QuestMessage!.Value, action.QuestChoice!.Value))
+                    if ((playing || modal) && State.Quests.ChoosePrompt(State.Variables, action!.QuestInstance!, action.QuestMessage!.Value, action.QuestPrompt!, action.QuestChoice!.Value))
                         Presentation.SetOutcome("Quest choice recorded.");
+                    else Presentation.SetOutcome("Quest choice rejected: this prompt is no longer pending or the choice is invalid.");
                     break;
                 case "attack": if (playing && !opensInteraction) firstStep.Request(DaggerfallInput.Attack); break;
                 // A reloaded DOM holds no art and asks for the revision it is missing; the projection

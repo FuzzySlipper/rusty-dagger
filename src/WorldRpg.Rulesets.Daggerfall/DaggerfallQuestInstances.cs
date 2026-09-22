@@ -352,14 +352,14 @@ internal sealed class DaggerfallQuestInstances
     }
 
     /// <summary>Records a DOM prompt answer once, then starts its source-declared target task.</summary>
-    internal bool ChoosePrompt(DaggerfallVariableStore variables, string instanceId, int messageId, bool yes)
+    internal bool ChoosePrompt(DaggerfallVariableStore variables, string instanceId, int messageId, string promptId, int choiceId)
     {
         ArgumentNullException.ThrowIfNull(variables);
-        DaggerfallQuestRuntimeInstance instance = _instances.TryGetValue(instanceId, out DaggerfallQuestRuntimeInstance? runtime)
-            ? runtime : throw new InvalidOperationException($"Quest prompt refers to missing instance '{instanceId}'.");
+        if (!_instances.TryGetValue(instanceId, out DaggerfallQuestRuntimeInstance? instance)
+            || instance.Lifecycle != DaggerfallQuestLifecycle.Active) return false;
         DaggerfallQuestTaskProgram program = Program(instance.SourceFile);
-        return Messages.TryChoose(instanceId, messageId, yes,
-            (prompt, choice) => DaggerfallQuestTaskRunner.Choose(instance, program, variables, prompt, choice,
+        return Messages.TryChoose(instanceId, messageId, promptId, choiceId,
+            (prompt, choice) => DaggerfallQuestTaskRunner.PrepareChoice(instance, program, variables, prompt, choice,
                 operation => Messages.ResolvePromptMessage(instance, operation)), out _, out _);
     }
 
