@@ -230,6 +230,17 @@ internal sealed class DaggerfallQuestMessages
 
     internal DaggerfallQuestMessagesSave Capture() => new([.. _deliveries], [.. Journal], _pending) { Choices = [.. _choices] };
 
+    /// <summary>Releases presentation and prompt history when the owning tombstone expires.</summary>
+    internal void RemoveInstances(IReadOnlySet<string> instanceIds)
+    {
+        ArgumentNullException.ThrowIfNull(instanceIds);
+        _deliveries.RemoveAll(value => instanceIds.Contains(value.InstanceId));
+        foreach ((string InstanceId, int Step) key in _journal.Keys.Where(key => instanceIds.Contains(key.Instance)).ToArray())
+            _journal.Remove(key);
+        _choices.RemoveAll(value => instanceIds.Contains(value.InstanceId));
+        if (_pending is { } pending && instanceIds.Contains(pending.InstanceId)) _pending = null;
+    }
+
     internal void Restore(DaggerfallQuestMessagesSave saved, IReadOnlyDictionary<string, DaggerfallQuestRuntimeInstance> instances)
     {
         ArgumentNullException.ThrowIfNull(saved);

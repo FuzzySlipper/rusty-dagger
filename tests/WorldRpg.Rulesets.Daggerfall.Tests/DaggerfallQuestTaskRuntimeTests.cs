@@ -1,4 +1,7 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Reflection;
+using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -359,6 +362,214 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         Assert.Contains("Quest action at line 7 refers to missing clock 'clock'.", advanced.Outcome, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Pick_one_of_persists_the_selected_task_before_a_save_can_replay_the_operation()
+    {
+        DaggerfallQuestSourceDefinition source = Source(
+            Block("variable", 1, "variable _first_"), Block("variable", 2, "variable _second_"),
+            Block("headless", 3, "pick one of _first_ _second_"));
+        DaggerfallQuestRuntimeInstance runtime = Runtime(source);
+        DaggerfallQuestTaskRunner.Advance(runtime, Program(source), new(new Dictionary<string, int>(StringComparer.Ordinal)),
+            DaggerfallCalendar.Start, lifecycle: new LifecycleFake(pick: "second"));
+
+        DaggerfallQuestInstanceSave captured = runtime.Capture();
+        string json = JsonSerializer.Serialize(captured, typeof(DaggerfallQuestInstanceSave), DaggerfallSaveJsonContext.Default);
+        DaggerfallQuestInstanceSave restored = (DaggerfallQuestInstanceSave)JsonSerializer.Deserialize(json, typeof(DaggerfallQuestInstanceSave), DaggerfallSaveJsonContext.Default)!;
+
+        Assert.Equal("second", restored.Tasks.Single(task => task.Symbol == "headless.3").OperationState[0].PickedTarget);
+        Assert.True(restored.Tasks.Single(task => task.Symbol == "second").IsSet);
+    }
+
+    [Fact]
+    public void Run_quest_keeps_its_child_receipt_until_the_terminal_success_branch_is_started()
+    {
+        DaggerfallQuestSourceDefinition source = Source(
+            Block("variable", 1, "variable _success_"), Block("variable", 2, "variable _failure_"),
+            Block("headless", 3, "run quest child then _success_ or _failure_"));
+        DaggerfallQuestRuntimeInstance runtime = Runtime(source);
+        LifecycleFake lifecycle = new(childBranch: null);
+        DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal));
+
+        DaggerfallQuestTaskRunner.Advance(runtime, Program(source), variables, DaggerfallCalendar.Start, lifecycle: lifecycle);
+        Assert.Equal("child:1", runtime.Tasks.Single(task => task.Symbol == "headless.3").OperationState[0].ChildInstanceId);
+        Assert.False(runtime.Tasks.Single(task => task.Symbol == "headless.3").OperationCompleted[0]);
+
+        lifecycle.ChildBranch = "success";
+        DaggerfallQuestTaskRunner.Advance(runtime, Program(source), variables, DaggerfallCalendar.Start, lifecycle: lifecycle);
+        Assert.True(runtime.Tasks.Single(task => task.Symbol == "success").IsSet);
+    }
+
+    [Fact]
+    public void Run_quest_with_a_missing_source_starts_its_failure_branch_through_the_session_owner()
+    {
+        DaggerfallQuestSourceDefinition source = Source(
+            Block("variable", 1, "variable _success_"), Block("variable", 2, "variable _failure_"),
+            Block("headless", 3, "run quest missing then _success_ or _failure_"));
+        DaggerfallQuestRuntimeInstance runtime = Runtime(source);
+
+        DaggerfallQuestTaskRunner.Advance(runtime, Program(source), new(new Dictionary<string, int>(StringComparer.Ordinal)),
+            DaggerfallCalendar.Start, lifecycle: new DaggerfallQuestInstances(Definitions(), RandomMinimum.Create()));
+
+        DaggerfallQuestTaskRuntimeState task = Assert.Single(runtime.Tasks, task => task.Symbol == "headless.3");
+        Assert.True(task.OperationCompleted[0]);
+        Assert.True(Assert.Single(runtime.Tasks, task => task.Symbol == "failure").IsSet);
+        Assert.Null(task.OperationState[0].ChildInstanceId);
+    }
+
+    [Fact]
+    public void Instance_policy_rejects_duplicate_and_cyclic_children_then_removes_terminal_tombstones_after_a_week()
+    {
+        DaggerfallDefinitions definitions = Definitions();
+        DaggerfallQuestSourceDefinition[] sources = StartableSources(definitions, 3);
+        DaggerfallQuestInstances instances = new(definitions, RandomMinimum.Create());
+        DaggerfallQuestInstanceSave parent = new("parent", sources[0].SourceFile, sources[0].Name, DaggerfallQuestLifecycle.Active, null, [], []);
+        instances.Start(parent);
+
+        Assert.Throws<ArgumentException>(() => instances.Start(parent with { InstanceId = "duplicate" }));
+        Assert.Throws<ArgumentException>(() => instances.ScheduleChild("parent", sources[0].SourceFile, 0, "cycle"));
+        instances.Start(new("child", sources[1].SourceFile, sources[1].Name, DaggerfallQuestLifecycle.Active, null, [], []) { ParentInstanceId = "parent" });
+        instances.ScheduleChild("parent", sources[2].SourceFile, 0, "pending-child");
+        DaggerfallQuestInstancesSave queued = instances.Capture();
+        Assert.Equal("pending-child", Assert.Single(queued.PendingStarts).InstanceId);
+        instances.Complete("parent", "finished");
+        instances.Advance(new(new Dictionary<string, int>(StringComparer.Ordinal)), DaggerfallCalendar.Start);
+        DaggerfallQuestInstanceSave[] tombstoned = [.. instances.All];
+        Assert.Equal(DaggerfallQuestLifecycle.Tombstoned, Assert.Single(tombstoned, instance => instance.InstanceId == "parent").Lifecycle);
+        DaggerfallQuestInstanceSave child = Assert.Single(tombstoned, instance => instance.InstanceId == "child");
+        Assert.Equal(DaggerfallQuestLifecycle.Tombstoned, child.Lifecycle);
+        Assert.False(child.Succeeded);
+        Assert.Contains("Parent quest 'parent' ended.", child.Outcome, StringComparison.Ordinal);
+
+        DaggerfallCalendar afterWeek = DaggerfallCalendar.Start.Advance((7 * 24 * 60 * 60) + 1, out _);
+        instances.Advance(new(new Dictionary<string, int>(StringComparer.Ordinal)), afterWeek);
+        Assert.Empty(instances.All);
+    }
+
+    [Fact]
+    public void Restore_rejects_saved_missing_and_cyclic_parents()
+    {
+        DaggerfallDefinitions definitions = Definitions();
+        DaggerfallQuestSourceDefinition[] sources = StartableSources(definitions, 2);
+        DaggerfallQuestInstances instances = new(definitions, RandomMinimum.Create());
+        instances.Start(new("parent", sources[0].SourceFile, sources[0].Name, DaggerfallQuestLifecycle.Active, null, [], []));
+        instances.Start(new("child", sources[1].SourceFile, sources[1].Name, DaggerfallQuestLifecycle.Active, null, [], []) { ParentInstanceId = "parent" });
+
+        DaggerfallQuestInstancesSave saved = RoundTrip(instances.Capture());
+        DaggerfallQuestInstanceSave parent = Assert.Single(saved.Instances, instance => instance.InstanceId == "parent");
+        DaggerfallQuestInstanceSave child = Assert.Single(saved.Instances, instance => instance.InstanceId == "child");
+
+        Assert.Throws<ArgumentException>(() => new DaggerfallQuestInstances(definitions, RandomMinimum.Create()).Restore(saved with
+        {
+            Instances = [parent with { ParentInstanceId = "child" }, child],
+        }));
+        Assert.Throws<ArgumentException>(() => new DaggerfallQuestInstances(definitions, RandomMinimum.Create()).Restore(saved with
+        {
+            Instances = [parent, child with { ParentInstanceId = "missing" }],
+        }));
+        Assert.Throws<ArgumentException>(() => new DaggerfallQuestInstances(definitions, RandomMinimum.Create()).Restore(saved with
+        {
+            PendingStarts = [new("pending", sources[0].SourceFile, "missing", 0)],
+        }));
+    }
+
+    [Fact]
+    public void Restore_rejects_a_pick_receipt_that_does_not_belong_to_its_compiled_operation()
+    {
+        DaggerfallDefinitions definitions = Definitions();
+        (DaggerfallQuestInstances instances, DaggerfallQuestSourceDefinition source) = StartedSource(definitions,
+            program => program.Tasks.SelectMany(task => task.Operations).Any(operation => operation.Kind == DaggerfallQuestTaskOperationKind.PickOneOf));
+        DaggerfallQuestInstancesSave saved = RoundTrip(instances.Capture());
+        DaggerfallQuestInstanceSave instance = Assert.Single(saved.Instances);
+        DaggerfallQuestTaskProgram program = Program(source);
+        int taskIndex = program.Tasks.Select((task, index) => (task, index))
+            .Single(value => value.task.Operations.Any(operation => operation.Kind == DaggerfallQuestTaskOperationKind.PickOneOf)).index;
+        int operationIndex = program.Tasks[taskIndex].Operations
+            .Select((operation, index) => (operation, index))
+            .Single(value => value.operation.Kind == DaggerfallQuestTaskOperationKind.PickOneOf).index;
+        DaggerfallQuestTaskState[] tasks = [.. instance.Tasks];
+        DaggerfallQuestTaskOperationState[] operationState = [.. tasks[taskIndex].OperationState];
+        operationState[operationIndex] = new("not-a-compiled-target", "unrelated-child");
+        tasks[taskIndex] = tasks[taskIndex] with { OperationState = operationState };
+
+        Assert.Throws<ArgumentException>(() => new DaggerfallQuestInstances(definitions, RandomMinimum.Create()).Restore(saved with
+        {
+            Instances = [instance with { Tasks = tasks }],
+        }));
+    }
+
+    [Fact]
+    public void Start_quest_is_independent_when_its_parent_ends_before_the_queued_start()
+    {
+        DaggerfallDefinitions definitions = DefinitionsWithLifecycleFixtures();
+        DaggerfallQuestInstances instances = new(definitions, RandomMinimum.Create());
+        DaggerfallQuestSourceDefinition parent = definitions.QuestSources.Resolve("startparent.txt");
+        instances.Start(new("parent", parent.SourceFile, parent.Name, DaggerfallQuestLifecycle.Active, null, [], []));
+
+        instances.Advance(new(new Dictionary<string, int>(StringComparer.Ordinal)), DaggerfallCalendar.Start);
+        DaggerfallQuestStartSave queued = Assert.Single(instances.Capture().PendingStarts);
+        Assert.Null(queued.ParentInstanceId);
+        Assert.Equal("parent:start:11", queued.InstanceId);
+
+        instances.Advance(new(new Dictionary<string, int>(StringComparer.Ordinal)), DaggerfallCalendar.Start);
+        Assert.Contains(instances.All, instance => instance.InstanceId == queued.InstanceId);
+    }
+
+    [Fact]
+    public void Restore_keeps_a_completed_run_quest_receipt_after_its_child_tombstone_expires()
+    {
+        DaggerfallDefinitions definitions = DefinitionsWithLifecycleFixtures();
+        DaggerfallQuestInstances instances = new(definitions, RandomMinimum.Create());
+        DaggerfallQuestSourceDefinition parent = definitions.QuestSources.Resolve("runparent.txt");
+        instances.Start(new("parent", parent.SourceFile, parent.Name, DaggerfallQuestLifecycle.Active, null, [], []));
+        DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal));
+
+        instances.Advance(variables, DaggerfallCalendar.Start);
+        instances.Advance(variables, DaggerfallCalendar.Start);
+        const string childId = "parent:run:headless.3:0";
+        instances.Complete(childId, "completed");
+        instances.Advance(variables, DaggerfallCalendar.Start);
+        Assert.True(Assert.Single(instances.All, instance => instance.InstanceId == "parent").Tasks
+            .Single(task => task.Symbol == "success").IsSet);
+
+        DaggerfallCalendar afterWeek = DaggerfallCalendar.Start.Advance((7 * 24 * 60 * 60) + 1, out _);
+        instances.Advance(variables, afterWeek);
+        DaggerfallQuestInstancesSave saved = RoundTrip(instances.Capture());
+        Assert.DoesNotContain(saved.Instances, instance => instance.InstanceId == childId);
+        Assert.Equal(DaggerfallQuestLifecycle.Active, Assert.Single(saved.Instances).Lifecycle);
+
+        DaggerfallQuestInstances restored = new(definitions, RandomMinimum.Create());
+        restored.Restore(saved);
+        Assert.Equal("parent", Assert.Single(restored.All).InstanceId);
+    }
+
+    [Fact]
+    public void Plain_child_end_uses_the_run_quest_failure_branch()
+    {
+        DaggerfallDefinitions definitions = DefinitionsWithLifecycleFixtures();
+        DaggerfallQuestInstances instances = new(definitions, RandomMinimum.Create());
+        DaggerfallQuestSourceDefinition parent = definitions.QuestSources.Resolve("endparent.txt");
+        instances.Start(new("parent", parent.SourceFile, parent.Name, DaggerfallQuestLifecycle.Active, null, [], []));
+        DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal));
+
+        instances.Advance(variables, DaggerfallCalendar.Start);
+        instances.Advance(variables, DaggerfallCalendar.Start);
+        instances.Advance(variables, DaggerfallCalendar.Start);
+
+        DaggerfallQuestInstanceSave saved = Assert.Single(instances.All, instance => instance.InstanceId == "parent");
+        Assert.True(saved.Tasks.Single(task => task.Symbol == "failure").IsSet);
+        Assert.False(saved.Tasks.Single(task => task.Symbol == "success").IsSet);
+    }
+
+    [Theory]
+    [InlineData("S0000999.txt")]
+    [InlineData("s0000977")]
+    [InlineData("_BRISIEN.txt")]
+    [InlineData("S0000001.txt")]
+    public void Protected_main_quest_names_are_a_daggerfall_lifecycle_policy(string source)
+    {
+        Assert.Equal(source is not "S0000001.txt", DaggerfallQuestInstances.IsProtectedMainQuest(source));
+    }
+
     private static DaggerfallQuestInstanceSave Advance(DaggerfallQuestSourceDefinition source)
     {
         DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal));
@@ -377,6 +588,89 @@ public sealed class DaggerfallQuestTaskRuntimeTests
 
     private static DaggerfallQuestTaskProgram Program(DaggerfallQuestSourceDefinition source) => DaggerfallQuestTaskCompiler.Compile(source);
 
+    private static DaggerfallQuestInstancesSave RoundTrip(DaggerfallQuestInstancesSave saved) =>
+        (DaggerfallQuestInstancesSave)JsonSerializer.Deserialize(
+            JsonSerializer.Serialize(saved, typeof(DaggerfallQuestInstancesSave), DaggerfallSaveJsonContext.Default),
+            typeof(DaggerfallQuestInstancesSave), DaggerfallSaveJsonContext.Default)!;
+
+    private static (DaggerfallQuestInstances Instances, DaggerfallQuestSourceDefinition Source) StartedSource(
+        DaggerfallDefinitions definitions, Func<DaggerfallQuestTaskProgram, bool> matches)
+    {
+        foreach (DaggerfallQuestSourceDefinition source in definitions.QuestSources.Quests.Values.Where(source => source.Disposition == DaggerfallQuestDisposition.Compiled))
+        {
+            DaggerfallQuestTaskProgram program = Program(source);
+            if (!matches(program)) continue;
+            DaggerfallQuestInstances instances = new(definitions, RandomMinimum.Create());
+            try
+            {
+                instances.Start(new("quest", source.SourceFile, source.Name, DaggerfallQuestLifecycle.Active, null, [], []));
+                return (instances, source);
+            }
+            catch (ArgumentException)
+            {
+                // The normalized corpus correctly rejects sources with unresolved authored bindings; continue to an admitted source.
+            }
+        }
+        throw new Xunit.Sdk.XunitException("The normalized corpus contained no startable matching quest source.");
+    }
+
+    private static DaggerfallQuestSourceDefinition[] StartableSources(DaggerfallDefinitions definitions, int count)
+    {
+        List<DaggerfallQuestSourceDefinition> sources = [];
+        foreach (DaggerfallQuestSourceDefinition source in definitions.QuestSources.Quests.Values.Where(source => source.Disposition == DaggerfallQuestDisposition.Compiled))
+        {
+            try
+            {
+                new DaggerfallQuestInstances(definitions, RandomMinimum.Create())
+                    .Start(new("probe", source.SourceFile, source.Name, DaggerfallQuestLifecycle.Active, null, [], []));
+                sources.Add(source);
+            }
+            catch (ArgumentException)
+            {
+                // A source with unresolved normalized bindings is not an eligible lifecycle test fixture.
+            }
+            if (sources.Count == count) return [.. sources];
+        }
+        throw new Xunit.Sdk.XunitException($"The normalized corpus contained fewer than {count} startable quest sources.");
+    }
+
+    private static DaggerfallDefinitions Definitions()
+    {
+        return DaggerfallBaseContent.Read(File.ReadAllBytes(BasePayloadPath()));
+    }
+
+    private static DaggerfallDefinitions DefinitionsWithLifecycleFixtures()
+    {
+        JsonObject root = JsonNode.Parse(File.ReadAllText(BasePayloadPath()))!.AsObject();
+        JsonArray quests = root["questSources"]!["quests"]!.AsArray();
+        quests.Add(JsonNode.Parse("""
+            {"name":"startparent","displayName":"Start parent","sourceFile":"startparent.txt","disposition":"compiled","messages":[],"blocks":[{"kind":"headless","firstLine":11,"lines":["start quest independentchild","end quest"],"global":null}],"diagnostics":[]}
+            """));
+        quests.Add(JsonNode.Parse("""
+            {"name":"runparent","displayName":"Run parent","sourceFile":"runparent.txt","disposition":"compiled","messages":[],"blocks":[{"kind":"variable","firstLine":1,"lines":["variable _success_"],"global":null},{"kind":"variable","firstLine":2,"lines":["variable _failure_"],"global":null},{"kind":"headless","firstLine":3,"lines":["run quest runchild then _success_ or _failure_"],"global":null}],"diagnostics":[]}
+            """));
+        quests.Add(JsonNode.Parse("""
+            {"name":"independentchild","displayName":"Independent child","sourceFile":"independentchild.txt","disposition":"compiled","messages":[],"blocks":[{"kind":"variable","firstLine":1,"lines":["variable _idle_"],"global":null}],"diagnostics":[]}
+            """));
+        quests.Add(JsonNode.Parse("""
+            {"name":"runchild","displayName":"Run child","sourceFile":"runchild.txt","disposition":"compiled","messages":[],"blocks":[{"kind":"variable","firstLine":1,"lines":["variable _idle_"],"global":null}],"diagnostics":[]}
+            """));
+        quests.Add(JsonNode.Parse("""
+            {"name":"endparent","displayName":"End parent","sourceFile":"endparent.txt","disposition":"compiled","messages":[],"blocks":[{"kind":"variable","firstLine":1,"lines":["variable _success_"],"global":null},{"kind":"variable","firstLine":2,"lines":["variable _failure_"],"global":null},{"kind":"headless","firstLine":3,"lines":["run quest endchild then _success_ or _failure_"],"global":null}],"diagnostics":[]}
+            """));
+        quests.Add(JsonNode.Parse("""
+            {"name":"endchild","displayName":"End child","sourceFile":"endchild.txt","disposition":"compiled","messages":[],"blocks":[{"kind":"headless","firstLine":1,"lines":["end quest"],"global":null}],"diagnostics":[]}
+            """));
+        return DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(root.ToJsonString()));
+    }
+
+    private static string BasePayloadPath()
+    {
+        DirectoryInfo? root = new(Environment.CurrentDirectory);
+        while (root is not null && !File.Exists(Path.Combine(root.FullName, "content/worldrpg/payloads/daggerfall.base.json"))) root = root.Parent;
+        return Path.Combine(root!.FullName, "content/worldrpg/payloads/daggerfall.base.json");
+    }
+
     private static DaggerfallQuestSourceDefinition Source(params DaggerfallQuestBlockDefinition[] blocks) =>
         new("test", string.Empty, "test.txt", DaggerfallQuestDisposition.Compiled, [], blocks, []);
 
@@ -385,4 +679,31 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         new Dictionary<string, DaggerfallQuestSourceDefinition>(StringComparer.Ordinal) { [source.SourceFile] = source }, staticMessages);
 
     private static DaggerfallQuestBlockDefinition Block(string kind, int line, params string[] lines) => new(kind, line, lines, null);
+
+    private sealed class LifecycleFake(string? pick = null, string? childBranch = null) : IDaggerfallQuestTaskLifecycle
+    {
+        internal string? ChildBranch { get; set; } = childBranch;
+        public string Pick(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation, int operationIndex, DaggerfallQuestTaskRuntimeState state)
+        {
+            string selected = pick ?? operation.Targets[0];
+            state.OperationState[operationIndex] = state.OperationState[operationIndex] with { PickedTarget = selected };
+            return selected;
+        }
+
+        public string? RunChild(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskDefinition task, DaggerfallQuestTaskOperation operation, int operationIndex, DaggerfallQuestTaskRuntimeState state)
+        {
+            state.OperationState[operationIndex] = state.OperationState[operationIndex] with { ChildInstanceId = "child:1" };
+            return ChildBranch;
+        }
+
+        public void Schedule(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) { }
+    }
+
+    private class RandomMinimum : DispatchProxy
+    {
+        internal static IRandomService Create() => DispatchProxy.Create<IRandomService, RandomMinimum>();
+        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IRandomService.DrawKeyed)
+            ? new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Minimum)
+            : throw new NotSupportedException(method?.Name);
+    }
 }
