@@ -28,7 +28,7 @@ using KitUniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Concrete Daggerfall composition of catalog policy, module state, and named Engine capabilities.</summary>
-internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, ISaveRequestingGameSession, IPlayerPreferencesSession
+internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, ISaveRequestingGameSession, IPlayerPreferencesSession
 {
 
     /// <summary>Admitted world seconds a panel request stands before the DOM is assumed not to need it.</summary>
@@ -95,6 +95,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// </summary>
     internal World.DaggerfallHolidayAnnouncement? HolidayAnnouncement { get; private set; }
     internal DaggerfallCinematicPresentation? Cinematics { get; }
+    private readonly DaggerfallOpeningCinematics _openingCinematics;
 
     internal DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
         : this(engine, definitions, inputs, tuning, null, null, null) { }
@@ -107,8 +108,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
         : this(engine, definitions, inputs, tuning, compositionIdentity, null, null) { }
 
-    internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, DaggerfallAudioBundle audioBundle, ProductContent? cinematicContent = null)
-        : this(engine, definitions, inputs, tuning, compositionIdentity, null, null, audioBundle, cinematicContent) { }
+    internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, DaggerfallAudioBundle audioBundle, ProductContent? cinematicContent = null, bool videosEnabled = true)
+        : this(engine, definitions, inputs, tuning, compositionIdentity, null, null, audioBundle, cinematicContent, videosEnabled) { }
 
     internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
         DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, RulesetSavePayload saved, IRandomService random)
@@ -116,20 +117,20 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
         DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, RulesetSavePayload saved,
-        IRandomService random, DaggerfallAudioBundle audioBundle, ProductContent? cinematicContent = null)
-        => Restore(engine, compositionIdentity, definitions, inputs, tuning, saved, random, null, audioBundle, cinematicContent);
+        IRandomService random, DaggerfallAudioBundle audioBundle, ProductContent? cinematicContent = null, bool videosEnabled = true)
+        => Restore(engine, compositionIdentity, definitions, inputs, tuning, saved, random, null, audioBundle, cinematicContent, videosEnabled);
 
     internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
         DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, RulesetSavePayload saved,
-        IRandomService random, DaggerfallEffectCatalog? effects, DaggerfallAudioBundle? audioBundle = null, ProductContent? cinematicContent = null)
+        IRandomService random, DaggerfallEffectCatalog? effects, DaggerfallAudioBundle? audioBundle = null, ProductContent? cinematicContent = null, bool videosEnabled = true)
     {
         DaggerfallSavePayload payload = DaggerfallSavePayload.Read(saved).ResolveRestore(definitions, inputs);
-        return new DaggerfallSession(engine, definitions, inputs, tuning, compositionIdentity, payload, effects, audioBundle, cinematicContent);
+        return new DaggerfallSession(engine, definitions, inputs, tuning, compositionIdentity, payload, effects, audioBundle, cinematicContent, videosEnabled);
     }
 
     private DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs,
         DaggerfallTuning tuning, ResolvedCompositionIdentity? compositionIdentity, DaggerfallSavePayload? saved,
-        DaggerfallEffectCatalog? effects, DaggerfallAudioBundle? audioBundle = null, ProductContent? cinematicContent = null)
+        DaggerfallEffectCatalog? effects, DaggerfallAudioBundle? audioBundle = null, ProductContent? cinematicContent = null, bool videosEnabled = true)
     {
         List<IDisposable> partiallyConstructed = [];
         try
@@ -139,6 +140,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             _definitions = definitions;
             Cinematics = cinematicContent is null ? null : new DaggerfallCinematicPresentation(engine, cinematicContent, definitions.Cinematics);
             if (Cinematics is not null) partiallyConstructed.Add(Cinematics);
+            _openingCinematics = new DaggerfallOpeningCinematics(Cinematics, videosEnabled);
             _spatialService = engine.Spatial;
             _spawnGroundProbeLift = tuning.EnemyBehavior.SpawnGroundProbeLift;
             _spawnGroundProbeDistance = tuning.EnemyBehavior.SpawnGroundProbeDistance;
@@ -523,6 +525,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         // answers before this runs - is dropped and the presentation still publishes so the player
         // can see the mode they are in.
         Cinematics?.Poll();
+        _openingCinematics.Poll();
         bool playing = _mode == ProductMode.Playing && Cinematics?.ActiveSource is null;
         bool modal = _mode == ProductMode.Modal;
         // The slice that opens an interaction admits no attack. A key pressed in the same admitted
@@ -542,6 +545,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 // shape and does nothing with it; the product has already left the mode by the time an
                 // action in ordinary play could arrive.
                 case "begin": break;
+                case "cinematic-skip": _openingCinematics.Skip(); break;
                 case "controls-rebind":
                 case "controls-reset": ChangeControls(action!); break;
                 case "character-begin":

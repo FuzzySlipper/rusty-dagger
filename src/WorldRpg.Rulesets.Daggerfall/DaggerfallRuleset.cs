@@ -7,10 +7,17 @@ namespace WorldRpg.Rulesets.Daggerfall;
 public sealed class DaggerfallRuleset : ISaveableGameRuleset
 {
     private readonly ConditionalWeakTable<ResolvedGameComposition, DaggerfallAdmittedContent> _admittedContent = [];
+    private readonly bool _videosEnabled;
     public static readonly RulesetId Identity = new("daggerfall");
     internal static readonly ContentPackId BasePack = new("daggerfall.base");
     internal static readonly ContentPackId BlocksPack = new("daggerfall.blocks");
     internal static readonly ContentPackId PrivateersHoldPack = new("daggerfall.privateers-hold");
+
+    /// <summary>Creates the ordinary product ruleset with its admitted cinematic playback enabled.</summary>
+    public DaggerfallRuleset() : this(videosEnabled: true) { }
+
+    /// <summary>Test-only explicit no-video composition; absent admitted content is never interpreted as this setting.</summary>
+    internal DaggerfallRuleset(bool videosEnabled) => _videosEnabled = videosEnabled;
 
     public RulesetId Id => Identity;
 
@@ -33,7 +40,8 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             saved,
             context.Engine.Random,
             admitted.Audio,
-            admitted.Content);
+            admitted.Content,
+            _videosEnabled);
         session.Site.AdmitBuildingNames(context.Engine.Random, admitted.Definitions, admitted.Blocks);
         return session;
     }
@@ -52,7 +60,8 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             admitted.Inputs,
             admitted.Tuning,
             admitted.Audio,
-            admitted.Content);
+            admitted.Content,
+            _videosEnabled);
         session.Site.AdmitBuildingNames(context.Engine.Random, admitted.Definitions, admitted.Blocks);
         return session;
     }

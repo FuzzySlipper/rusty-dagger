@@ -206,7 +206,22 @@ public sealed class WorldRpgProduct : IEngineProduct
     /// launcher or a test. Asking while the product is not at its entry screen is refused and recorded
     /// rather than silently ignored.
     /// </remarks>
-    public ProductModeChange Begin() => Apply(ProductMode.Playing, "the entry screen asked for ordinary play", closesEntryScreen: true);
+    public ProductModeChange Begin()
+    {
+        if (_mode != ProductMode.Title)
+            return Apply(ProductMode.Playing, "the entry screen asked for ordinary play", closesEntryScreen: true);
+
+        if (_session is not IEntryScreenStartupSession startup)
+            return Apply(ProductMode.Playing, "the entry screen asked for ordinary play", closesEntryScreen: true);
+
+        return startup.StartEntry() switch
+        {
+            EntryScreenStartupResult.ReadyForPlay => Apply(ProductMode.Playing, "the entry screen completed its startup", closesEntryScreen: true),
+            EntryScreenStartupResult.Waiting => Record(new(_mode, _mode, ProductModeChangeOutcome.AlreadyInMode, "the entry screen started its opening sequence")),
+            EntryScreenStartupResult.Failed => Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, "the entry screen could not start its opening sequence")),
+            _ => throw new InvalidOperationException("The entry screen returned an unknown startup result."),
+        };
+    }
 
     /// <summary>Republishes the current session projection when the Engine attaches a new presentation client.</summary>
     public void Attach()
@@ -351,7 +366,13 @@ public sealed class WorldRpgProduct : IEngineProduct
         // action is. Applying the mode first would put the session into ordinary play in time to act on
         // the very slice that only asked for play, and to report the request it cannot interpret as an
         // unrecognized action. The transition publishes the presentation it changed.
-        if (begin) Apply(ProductMode.Playing, "the entry screen asked for ordinary play", closesEntryScreen: true);
+        if (begin) Begin();
+        if (_mode == ProductMode.Title
+            && _session is IEntryScreenStartupSession startup
+            && startup.TakeEntryReadyForPlay())
+        {
+            Apply(ProductMode.Playing, "the entry screen completed its opening sequence", closesEntryScreen: true);
+        }
         return result;
     }
 

@@ -56,6 +56,32 @@ public sealed class WorldRpgProductModeTests
     }
 
     [Fact]
+    public void Entry_startup_can_hold_the_title_until_its_one_completion_is_consumed()
+    {
+        ModeRecordingRuleset ruleset = new() { StartupResult = EntryScreenStartupResult.Waiting };
+        using WorldRpgProduct product = Product(ruleset);
+        product.Start();
+        Assert.Equal(ProductMode.Title, product.Begin().To);
+        Assert.Equal(1, ruleset.StartupRequests);
+        ruleset.EntryReady = true;
+        product.Update(Update(1));
+        Assert.Equal(ProductMode.Playing, product.Mode);
+        product.Update(Update(2));
+        Assert.Equal(1, ruleset.EntryCompletions);
+    }
+
+    [Fact]
+    public void Entry_screen_begin_action_uses_the_same_startup_hook_as_the_direct_host_call()
+    {
+        ModeRecordingRuleset ruleset = new() { StartupResult = EntryScreenStartupResult.Waiting };
+        using WorldRpgProduct product = Product(ruleset);
+        product.Start();
+        product.Update(Semantic("{\"action\":\"begin\"}"));
+        Assert.Equal(ProductMode.Title, product.Mode);
+        Assert.Equal(1, ruleset.StartupRequests);
+    }
+
+    [Fact]
     public void Quit_retires_the_session_and_puts_the_replacement_at_the_title()
     {
         ModeRecordingRuleset ruleset = new();
@@ -374,6 +400,11 @@ public sealed class WorldRpgProductModeTests
 
         internal int Updates { get; private set; }
 
+        internal EntryScreenStartupResult StartupResult { get; set; } = EntryScreenStartupResult.ReadyForPlay;
+        internal bool EntryReady { get; set; }
+        internal int StartupRequests { get; private set; }
+        internal int EntryCompletions { get; private set; }
+
         internal ModeRecordingSession? Replaced { get; private set; }
 
         internal ProductMode? LastApplied => _current?.LastApplied;
@@ -403,9 +434,18 @@ public sealed class WorldRpgProductModeTests
             ModeAtUpdate = mode;
             ModeBeforeUpdate ??= mode;
         }
+
+        internal EntryScreenStartupResult StartEntry() { StartupRequests++; return StartupResult; }
+        internal bool TakeEntryReady()
+        {
+            if (!EntryReady) return false;
+            EntryReady = false;
+            EntryCompletions++;
+            return true;
+        }
     }
 
-    private sealed class ModeRecordingSession(ModeRecordingRuleset owner) : IGameSession, IModeAwareGameSession, IEntryScreenSession
+    private sealed class ModeRecordingSession(ModeRecordingRuleset owner) : IGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession
     {
         internal ProductMode? LastApplied { get; private set; }
 
@@ -426,6 +466,9 @@ public sealed class WorldRpgProductModeTests
                 if (inputEvent.PayloadData.Span.SequenceEqual("{\"action\":\"begin\"}"u8)) return true;
             return false;
         }
+
+        public EntryScreenStartupResult StartEntry() => owner.StartEntry();
+        public bool TakeEntryReadyForPlay() => owner.TakeEntryReady();
 
         public void PublishInitial()
         {

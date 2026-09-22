@@ -14,6 +14,7 @@ internal sealed class DaggerfallCinematicPresentation(IEngineContext engine, Pro
     private (string Source, VideoPlaybackHandle Handle)? _active;
     private ulong _lastFact;
     private ulong _lostFacts;
+    private DaggerfallCinematicResult? _unreadResult;
     internal string? ActiveSource => _active?.Source;
     internal DaggerfallCinematicResult? LastResult { get; private set; }
 
@@ -29,13 +30,14 @@ internal sealed class DaggerfallCinematicPresentation(IEngineContext engine, Pro
         VideoPlaybackHandle handle = engine.Video.PlayFromContent(new PlayVideoFromContentRequest(reference));
         _active = (source.FileName, handle);
         LastResult = null;
+        _unreadResult = null;
     }
 
     internal void Skip()
     {
         if (_active is not { } active) return;
         engine.Video.Skip(active.Handle);
-        LastResult = new(active.Source, VideoRealizationFactKind.Skipped, null);
+        SetResult(new(active.Source, VideoRealizationFactKind.Skipped, null));
         _active = null;
     }
 
@@ -57,17 +59,31 @@ internal sealed class DaggerfallCinematicPresentation(IEngineContext engine, Pro
             _lastFact = fact.FactId;
             if (fact.Handle != active.Handle) continue;
             if (fact.Kind is not (VideoRealizationFactKind.Completed or VideoRealizationFactKind.Skipped or VideoRealizationFactKind.Failed)) continue;
-            LastResult = new(active.Source, fact.Kind,
-                fact.Kind == VideoRealizationFactKind.Failed ? fact.Failure.ToString() : null);
+            SetResult(new(active.Source, fact.Kind,
+                fact.Kind == VideoRealizationFactKind.Failed ? fact.Failure.ToString() : null));
             Stop();
             break;
         }
         if (_active is not null && readout.EvictedFactCount > _lostFacts)
         {
-            LastResult = new(active.Source, VideoRealizationFactKind.Failed, "Engine video completion observations were lost.");
+            SetResult(new(active.Source, VideoRealizationFactKind.Failed, "Engine video completion observations were lost."));
             Stop();
         }
         _lostFacts = readout.EvictedFactCount;
+    }
+
+    /// <summary>Returns one terminal outcome to the caller which owns this playback request.</summary>
+    internal DaggerfallCinematicResult? TakeResult()
+    {
+        DaggerfallCinematicResult? result = _unreadResult;
+        _unreadResult = null;
+        return result;
+    }
+
+    private void SetResult(DaggerfallCinematicResult result)
+    {
+        LastResult = result;
+        _unreadResult = result;
     }
 
     public void Dispose() => Stop();

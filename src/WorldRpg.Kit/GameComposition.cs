@@ -263,6 +263,32 @@ public interface IEntryScreenSession
 }
 
 /// <summary>
+/// Optional entry seam for a ruleset whose entry action starts work before ordinary play may begin.
+/// The Host owns the eventual mode transition; the ruleset only says whether its entry work is
+/// waiting, ready, or could not start.
+/// </summary>
+public interface IEntryScreenStartupSession
+{
+    EntryScreenStartupResult StartEntry();
+
+    /// <summary>Consumes the one completion which permits the Host to leave its entry screen.</summary>
+    bool TakeEntryReadyForPlay();
+}
+
+/// <summary>The result of requesting a ruleset-owned entry startup operation.</summary>
+public enum EntryScreenStartupResult
+{
+    /// <summary>The Host may enter ordinary play now.</summary>
+    ReadyForPlay,
+
+    /// <summary>The ruleset accepted the request and is waiting on an Engine-admitted operation.</summary>
+    Waiting,
+
+    /// <summary>The ruleset refused or could not start its entry operation.</summary>
+    Failed,
+}
+
+/// <summary>
 /// The mode a product runs a game session under. The product decides the mode; a session decides
 /// what the mode means for its own world, input and presentation.
 /// </summary>
