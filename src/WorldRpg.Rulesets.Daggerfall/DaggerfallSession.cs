@@ -196,6 +196,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 tuning.Progression.EnableExperimentalKillExperience);
             State.SkillUses = new DaggerfallSkillUseReactions(State.Progression, State.Actors.Player.Stats, definitions, () => State.Character.Career);
             State.Character.BindCareerCommitted(State.SkillUses.RebaseForCareerSelection);
+            State.LevelUps = new DaggerfallLevelUpState(State.Progression, State.SkillUses, State.Actors.Player.Stats,
+                definitions, () => State.Character.Career, _random, _rewards);
             _combat = new DaggerCombatRules(_random, State.Actors, State.Equipment, State.InventoryFor, State.ItemInstances, definitions, authored, targeting, use => State.SkillUses.Record(use));
             State.Kit = new(State.Actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, State.Inventory, State.Equipment);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
@@ -244,7 +246,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             _inventoryUi = new DaggerfallInventoryPresentation(_equipmentMoves, definitions, inputs.ClassicPresentation.InventoryIcons);
             _lootUi = new DaggerfallLootPresentation(_corpseLoot, _inventoryUi);
             InitializeActivation(engine, tuning.LootInteraction);
-            _characterUi = new DaggerfallCharacterPresentation(definitions, State.Character, playerDefinition, equipmentCoordinator);
+            _characterUi = new DaggerfallCharacterPresentation(definitions, State.Character, playerDefinition, equipmentCoordinator, State.LevelUps);
             // The DOM's art comes from admitted content by media identity, so a session reads the
             // published closure once and publishes it to the UI that draws it.
             _hud = new DaggerfallHudProjection(
@@ -546,6 +548,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 case "character-update":
                 case "character-commit":
                 case "character-cancel": ChangeCharacter(action!); break;
+                case "character-level-allocate":
+                case "character-level-commit": if (playing) ChangeLevelUp(action!); break;
                 case "activation-mode": if (playing) ApplyActivationMode(action!); break;
                 case "attack": if (playing && !opensInteraction) firstStep.Request(DaggerfallInput.Attack); break;
                 // A reloaded DOM holds no art and asks for the revision it is missing; the projection
@@ -749,6 +753,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         // after rest, travel, prison, or another interval, including an interval with no clock expiry.
         State.Quests.Advance(State.Variables, _time.Calendar);
         State.SkillUses.RaiseSkills(_time.Calendar.ToAbsoluteSeconds());
+        State.LevelUps.BeginIfEligible();
         State.Social.AdvanceElapsedMinutes(minuteBefore, MinuteIndex(_time.Calendar));
         AdvanceEffectsForCalendar(calendarBefore, ordinaryPlay: false);
         AnnounceHoliday();

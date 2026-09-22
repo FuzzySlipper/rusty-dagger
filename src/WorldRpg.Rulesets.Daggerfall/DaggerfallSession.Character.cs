@@ -55,6 +55,32 @@ internal sealed partial class DaggerfallSession
             throw new ArgumentException("Open character choices before changing them.");
     }
 
+    /// <summary>Applies a real character-sheet level-up action while ordinary play is active.</summary>
+    private void ChangeLevelUp(DaggerfallPlayerUiAction action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        try
+        {
+            switch (action.Action)
+            {
+                case "character-level-allocate":
+                    State.LevelUps.Allocate(action.Attribute ?? throw new ArgumentException("Level-up attribute is incomplete.", nameof(action)));
+                    Presentation.SetOutcome("Level-up point allocated.");
+                    break;
+                case "character-level-commit":
+                    State.LevelUps.Commit();
+                    Presentation.SetOutcome("Level-up committed.");
+                    break;
+                default:
+                    throw new ArgumentException($"'{action.Action}' is not a level-up action.", nameof(action));
+            }
+        }
+        catch (ArgumentException error)
+        {
+            Presentation.SetOutcome($"Level-up choice was not accepted: {error.Message}");
+        }
+    }
+
     private static DaggerfallCharacterCreationChoices Choices(DaggerfallPlayerUiAction action)
     {
         if (action.Name is null || action.Race is null || action.Career is null || action.FaceIndex is not int face || action.Reflexes is not int reflexes)

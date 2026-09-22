@@ -67,4 +67,20 @@ public sealed class DaggerfallUiActionTests
     [InlineData("{\"action\":\"delete-slot\",\"key\":\"slot-1\",\"confirm\":\"yes\"}", false)]
     public void Save_slot_actions_are_small_and_exact(string json, bool accepted)
         => Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
+
+    [Theory]
+    [InlineData("{\"action\":\"character-level-allocate\",\"attribute\":\"strength\"}", "strength")]
+    [InlineData("{\"action\":\"character-level-allocate\"}", null)]
+    [InlineData("{\"action\":\"character-level-allocate\",\"attribute\":\"strength\",\"career\":\"class00\"}", null)]
+    public void Level_up_allocate_actions_are_exact_and_typed(string json, string? attribute)
+    {
+        DaggerfallPlayerUiAction? action = DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json));
+        Assert.Equal(attribute, action?.Attribute);
+    }
+
+    [Theory]
+    [InlineData("{\"action\":\"character-level-commit\"}", true)]
+    [InlineData("{\"action\":\"character-level-commit\",\"attribute\":\"strength\"}", false)]
+    public void Level_up_commit_action_has_no_untyped_fields(string json, bool accepted) =>
+        Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
 }

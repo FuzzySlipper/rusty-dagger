@@ -1,9 +1,10 @@
-export interface CharacterAction { readonly action: string; readonly name?: string; readonly race?: string; readonly gender?: string; readonly faceIndex?: number; readonly reflexes?: number; readonly career?: string; readonly primarySkills?: string; readonly majorSkills?: string; readonly minorSkills?: string; readonly hitPointsPerLevel?: number; readonly advantages?: string; readonly disadvantages?: string; }
+export interface CharacterAction { readonly action: string; readonly name?: string; readonly race?: string; readonly gender?: string; readonly faceIndex?: number; readonly reflexes?: number; readonly career?: string; readonly primarySkills?: string; readonly majorSkills?: string; readonly minorSkills?: string; readonly hitPointsPerLevel?: number; readonly advantages?: string; readonly disadvantages?: string; readonly attribute?: string; }
 
 export interface CharacterStat {
   readonly id: string;
   readonly label: string;
   readonly value: number;
+  readonly permanent: number;
 }
 
 export interface CharacterResource {
@@ -53,6 +54,8 @@ export interface CharacterCustomClass {
   readonly hitPointsPerLevel: number; readonly advantages: readonly CharacterCustomTrait[]; readonly disadvantages: readonly CharacterCustomTrait[];
   readonly eligibility: readonly string[]; readonly skills: readonly string[]; readonly supportedAdvantages: readonly string[]; readonly supportedDisadvantages: readonly string[];
 }
+export interface CharacterLevelUpAttribute { readonly id: string; readonly label: string; readonly permanent: number; readonly live: number; readonly pending: number; readonly canAllocate: boolean; }
+export interface CharacterLevelUp { readonly level: number; readonly bonusPool: number; readonly remainingPoints: number; readonly healthGain: number; readonly canCommit: boolean; readonly attributes: readonly CharacterLevelUpAttribute[]; }
 
 /** Read-only Daggerfall sheet values supplied by the C# projection. */
 export interface CharacterProjection {
@@ -66,6 +69,7 @@ export interface CharacterProjection {
   readonly grantedSkills?: readonly CharacterGrantedSkill[];
   readonly creation?: CharacterCreation | null;
   readonly creationAvailable?: boolean;
+  readonly levelUp?: CharacterLevelUp | null;
 }
 
 import { image } from './art.js';
@@ -103,10 +107,11 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
   const skills = section('Skills');
   const equipment = section('Equipped items');
   const career = section('Career training');
+  const levelUp = section('Level up');
   const creation = section('Character choices');
   const columns = document.createElement('div');
   columns.className = 'dagger-character-columns';
-  columns.append(resources.element, attributes.element, skills.element, career.element, equipment.element, creation.element);
+  columns.append(resources.element, attributes.element, skills.element, career.element, equipment.element, levelUp.element, creation.element);
   shell.append(chrome, heading, overview, columns);
   root.append(shell);
   let disposed = false;
@@ -132,12 +137,12 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
       })));
       renderRows(attributes.rows, value.attributes.map(stat => ({
         label: stat.label,
-        value: format(stat.value),
+        value: stat.value === stat.permanent ? format(stat.value) : `${format(stat.value)} live / ${format(stat.permanent)} permanent`,
         testid: `character-sheet-attribute-${stat.id}`,
       })));
       renderRows(skills.rows, value.skills.map(stat => ({
         label: stat.label,
-        value: format(stat.value),
+        value: stat.value === stat.permanent ? format(stat.value) : `${format(stat.value)} live / ${format(stat.permanent)} permanent`,
         testid: `character-sheet-skill-${stat.id}`,
       })));
       equipment.rows.replaceChildren(...value.equipment.map(item => equipmentRow(item)));
@@ -147,6 +152,7 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
         testid: `character-sheet-granted-${skill.id}`,
       })));
       renderCreation(creation.rows, value.creation ?? null, value.creationAvailable === true, send);
+      renderLevelUp(levelUp.rows, value.levelUp ?? null, send);
     },
     // The sheet's chrome is published art that can arrive after the sheet's own state.
     refresh(): void {
@@ -173,7 +179,8 @@ export function isCharacterProjection(value: unknown): value is CharacterProject
     && (!('identity' in value) || value.identity === null || isIdentity(value.identity))
     && (!('grantedSkills' in value) || Array.isArray(value.grantedSkills) && value.grantedSkills.every(isGrantedSkill))
     && (!('creation' in value) || value.creation === null || isCreation(value.creation))
-    && (!('creationAvailable' in value) || typeof value.creationAvailable === 'boolean');
+    && (!('creationAvailable' in value) || typeof value.creationAvailable === 'boolean')
+    && (!('levelUp' in value) || value.levelUp === null || isLevelUp(value.levelUp));
 }
 
 function section(title: string): { readonly element: HTMLElement; readonly rows: HTMLElement } {
@@ -226,7 +233,19 @@ function isStats(value: unknown): value is readonly CharacterStat[] {
   return Array.isArray(value) && value.every(item => typeof item === 'object' && item !== null
     && 'id' in item && typeof item.id === 'string'
     && 'label' in item && typeof item.label === 'string'
-    && 'value' in item && isNumber(item.value));
+    && 'value' in item && isNumber(item.value)
+    && 'permanent' in item && isNumber(item.permanent));
+}
+
+function isLevelUp(value: unknown): value is CharacterLevelUp {
+  return typeof value === 'object' && value !== null
+    && 'level' in value && isNumber(value.level) && 'bonusPool' in value && isNumber(value.bonusPool)
+    && 'remainingPoints' in value && isNumber(value.remainingPoints) && 'healthGain' in value && isNumber(value.healthGain)
+    && 'canCommit' in value && typeof value.canCommit === 'boolean'
+    && 'attributes' in value && Array.isArray(value.attributes) && value.attributes.every(attribute => typeof attribute === 'object' && attribute !== null
+      && 'id' in attribute && typeof attribute.id === 'string' && 'label' in attribute && typeof attribute.label === 'string'
+      && 'permanent' in attribute && isNumber(attribute.permanent) && 'live' in attribute && isNumber(attribute.live)
+      && 'pending' in attribute && isNumber(attribute.pending) && 'canAllocate' in attribute && typeof attribute.canAllocate === 'boolean');
 }
 
 function isResource(value: unknown): value is CharacterResource {
@@ -344,6 +363,29 @@ function renderCreation(root: HTMLElement, value: CharacterCreation | null, avai
   commit.addEventListener('click', () => send?.(action('character-commit')));
   const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Cancel'; cancel.dataset.testid = 'character-cancel'; cancel.addEventListener('click', () => send?.({ action: 'character-cancel' }));
   root.replaceChildren(name, race, gender, face, reflexes, career, customFields, update, commit, cancel);
+}
+
+function renderLevelUp(root: HTMLElement, value: CharacterLevelUp | null, send?: (action: CharacterAction) => void): void {
+  if (value === null) { root.replaceChildren(); return; }
+  const summary = document.createElement('p');
+  summary.dataset.testid = 'character-level-up-summary';
+  summary.textContent = `Level ${format(value.level)}: ${format(value.remainingPoints)} of ${format(value.bonusPool)} points remain; health gain ${format(value.healthGain)}.`;
+  const allocations = document.createElement('dl');
+  allocations.dataset.testid = 'character-level-up-attributes';
+  for (const attribute of value.attributes) {
+    const row = document.createElement('div');
+    const label = document.createElement('dt'); label.textContent = attribute.label;
+    const detail = document.createElement('dd');
+    detail.textContent = `${format(attribute.live)} live / ${format(attribute.permanent)} permanent${attribute.pending === 0 ? '' : ` + ${format(attribute.pending)} pending`}`;
+    const allocate = document.createElement('button'); allocate.type = 'button'; allocate.textContent = `Increase ${attribute.label}`;
+    allocate.disabled = !attribute.canAllocate; allocate.dataset.testid = `character-level-up-${attribute.id}`;
+    allocate.addEventListener('click', () => send?.({ action: 'character-level-allocate', attribute: attribute.id }));
+    row.append(label, detail, allocate); allocations.append(row);
+  }
+  const commit = document.createElement('button'); commit.type = 'button'; commit.textContent = 'Commit level up';
+  commit.disabled = !value.canCommit; commit.dataset.testid = 'character-level-up-commit';
+  commit.addEventListener('click', () => send?.({ action: 'character-level-commit' }));
+  root.replaceChildren(summary, allocations, commit);
 }
 
 function labeled(label: string, input: HTMLElement): HTMLElement { const item = document.createElement('label'); item.textContent = label; item.append(input); return item; }

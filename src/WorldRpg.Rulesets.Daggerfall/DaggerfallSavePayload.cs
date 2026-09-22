@@ -26,7 +26,8 @@ internal sealed record DaggerfallSavePayload(
     DaggerfallActiveEffectSave[] ActiveEffects,
     DaggerfallSkillProgressionSave SkillUses,
     DaggerfallSocialSave Social,
-    DaggerfallCharacterSave? Character = null)
+    DaggerfallCharacterSave? Character = null,
+    DaggerfallLevelUpSave? LevelUp = null)
 {
     /// <summary>Every current quest instance; an empty collection is meaningful current state.</summary>
     [JsonRequired]
@@ -185,6 +186,9 @@ internal sealed record DaggerfallSavePayload(
         ArgumentNullException.ThrowIfNull(Quests);
         Quests.Validate();
         ArgumentNullException.ThrowIfNull(Character);
+        LevelUp?.Validate();
+        if (LevelUp is not null && LevelUp.Level != Level + 1)
+            throw new ArgumentException("Saved Daggerfall level-up must target exactly the next progression level.", nameof(LevelUp));
         if (Experience < 0 || Level < 1)
             throw new ArgumentOutOfRangeException(nameof(Experience), "Saved progression must be non-negative and begin at level one.");
         if (!double.IsFinite(Calendar.RemainderSeconds) || Calendar.RemainderSeconds < 0d || Calendar.RemainderSeconds >= 1d)

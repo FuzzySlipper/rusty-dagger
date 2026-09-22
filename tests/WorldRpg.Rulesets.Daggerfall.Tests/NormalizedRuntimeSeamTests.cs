@@ -40,6 +40,59 @@ public sealed class NormalizedRuntimeSeamTests
     private static readonly ContentSha256 Hash = new(1, 2, 3, 4);
 
     [Fact]
+    public void Ordinary_rest_opens_a_saved_level_allocation_that_commits_one_health_gain_after_reload()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
+        DaggerfallSavePayload saved;
+        using (DaggerfallSession original = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        {
+            foreach (DaggerfallStatId skill in definitions.Vocabulary.Skills)
+                original.State.Actors.Player.Stats.GetStat(StatId.Parse(skill.Value)).BaseValue = 100;
+            _ = original.AdvanceElapsedTime(361);
+            DaggerfallLevelUpSave pending = Assert.IsType<DaggerfallLevelUpSave>(original.State.LevelUps.Pending);
+            Assert.Equal(1, original.State.Progression.Level);
+            saved = DaggerfallSavePayload.Read(original.CaptureSave());
+            AssertLevelUpEqual(pending, Assert.IsType<DaggerfallLevelUpSave>(saved.LevelUp));
+        }
+
+        ContentFake resumedContent = new(releases);
+        PopulateContent(resumedContent, inputs);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
+
+        DaggerfallLevelUpSave restoredPending = Assert.IsType<DaggerfallLevelUpSave>(restored.State.LevelUps.Pending);
+        AssertLevelUpEqual(Assert.IsType<DaggerfallLevelUpSave>(saved.LevelUp), restoredPending);
+        while (restoredPending.Allocations.Sum(allocation => allocation.Points) < restoredPending.BonusPool)
+        {
+            restored.State.LevelUps.Allocate("strength");
+            restoredPending = Assert.IsType<DaggerfallLevelUpSave>(restored.State.LevelUps.Pending);
+        }
+        restored.State.LevelUps.Commit();
+
+        Assert.Equal(2, restored.State.Progression.Level);
+        Assert.Single(restored.State.Actors.Player.Stats.GetStat(StatId.Parse("health-maximum")).Sources,
+            source => DaggerfallLevelUpHealthSource.IsForLevel(source, restored.State.Actors.Player.Actor.Entity, 2));
+        Assert.Null(DaggerfallSavePayload.Read(restored.CaptureSave()).LevelUp);
+
+        static void AssertLevelUpEqual(DaggerfallLevelUpSave expected, DaggerfallLevelUpSave actual)
+        {
+            Assert.Equal(expected.Level, actual.Level);
+            Assert.Equal(expected.BonusPool, actual.BonusPool);
+            Assert.Equal(expected.HealthGain, actual.HealthGain);
+            Assert.Equal(expected.Allocations.Select(allocation => (allocation.Attribute, allocation.Points)), actual.Allocations.Select(allocation => (allocation.Attribute, allocation.Points)));
+        }
+    }
+
+    [Fact]
     public void Quest_instances_keep_same_definition_runs_and_typed_bindings_across_save_restore()
     {
         string root = RepositoryRoot();

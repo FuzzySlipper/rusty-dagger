@@ -168,6 +168,30 @@ test('played characters do not expose character creation controls', () => {
   } finally { f.dispose(); }
 });
 
+test('pending level up shows permanent and live values and sends guarded semantic choices', () => {
+  const f = fixture();
+  try {
+    f.publish({ mode: 'playing', character: {
+      name: 'Aubk-i', attributes: [{ id: 'strength', label: 'Strength', value: 48, permanent: 50 }], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [], creationAvailable: false, creation: null,
+      levelUp: { level: 2, bonusPool: 4, remainingPoints: 4, healthGain: 6, canCommit: false,
+        attributes: [{ id: 'strength', label: 'Strength', permanent: 50, live: 48, pending: 0, canAllocate: true }, { id: 'intelligence', label: 'Intelligence', permanent: 100, live: 100, pending: 0, canAllocate: false }] },
+    } });
+    assert.match(f.root.querySelector('[data-testid="character-sheet-attribute-strength"]').textContent, /48 live \/ 50 permanent/);
+    assert.match(f.root.querySelector('[data-testid="character-level-up-summary"]').textContent, /4 of 4 points remain; health gain 6/);
+    f.root.querySelector('[data-testid="character-level-up-strength"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'character-level-allocate', attribute: 'strength' });
+    assert.equal(f.root.querySelector('[data-testid="character-level-up-intelligence"]').disabled, true);
+    assert.equal(f.root.querySelector('[data-testid="character-level-up-commit"]').disabled, true);
+    f.publish({ mode: 'playing', character: {
+      name: 'Aubk-i', attributes: [{ id: 'strength', label: 'Strength', value: 48, permanent: 50 }], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [], creationAvailable: false, creation: null,
+      levelUp: { level: 2, bonusPool: 4, remainingPoints: 0, healthGain: 6, canCommit: true,
+        attributes: [{ id: 'strength', label: 'Strength', permanent: 50, live: 48, pending: 4, canAllocate: false }] },
+    } });
+    f.root.querySelector('[data-testid="character-level-up-commit"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'character-level-commit' });
+  } finally { f.dispose(); }
+});
+
 test('custom class editor sends typed skills traits and exposes eligibility reasons', () => {
   const f = fixture();
   try {
