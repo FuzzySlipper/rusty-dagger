@@ -111,7 +111,8 @@ internal sealed class DaggerSessionPersistence
             _effects.Capture(),
             State.SkillUses.Capture(),
             State.Social.Capture(),
-            Character: State.Character.Capture())
+            Character: State.Character.Capture(),
+            LevelUp: State.LevelUps.Capture())
         {
             Quests = State.Quests.Capture(),
         });
@@ -143,6 +144,7 @@ internal sealed class DaggerSessionPersistence
 
         State.Progression.AdvanceTo(saved.Experience, saved.Level);
         State.SkillUses.Restore(saved.SkillUses);
+        State.LevelUps.Restore(saved.LevelUp);
         State.Quests.Restore(saved.Quests);
 
         ApplyInventory(saved.Inventory, State.Inventory, State.Equipment, DaggerfallItemOwner.Player);

@@ -59,6 +59,24 @@ internal sealed class DaggerfallRewardReactions(
         ApplyHealthSources(sources);
     }
 
+    /// <summary>
+    /// Applies the already-resolved health result for one accepted classic level.  The level-up
+    /// state owns pending allocation and eligibility; this reward owner retains the durable health
+    /// source and canonical Kit progression mutation.
+    /// </summary>
+    internal void CommitLevelUp(int level, int healthGain)
+    {
+        if (level != progression.Level + 1)
+            throw new ArgumentException("Daggerfall level-up commits must advance exactly one level.", nameof(level));
+        if (healthGain < 1) throw new ArgumentOutOfRangeException(nameof(healthGain));
+        Stat healthMaximum = playerMechanics.GetStat(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value));
+        StatSource expected = DaggerfallLevelUpHealthSource.Create(playerEntity, level, healthGain);
+        if (healthMaximum.Sources.Any(source => source.Identity == expected.Identity))
+            throw new MechanicsException($"Daggerfall level-up health source {expected.Identity} already exists.");
+        healthMaximum.SetSources(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value), [.. healthMaximum.Sources, expected]);
+        progression.AdvanceTo(progression.Experience, level);
+    }
+
     private ProgressionAwardPlan? PlanExperimentalProgression(long defeatedActorId, DaggerfallActorDefinition defeated)
     {
         if (defeated.Rewards.ExperienceReward <= 0 || _experienceAwarded.Contains(defeatedActorId)) return null;

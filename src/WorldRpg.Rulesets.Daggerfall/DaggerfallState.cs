@@ -21,6 +21,8 @@ internal sealed class DaggerfallState(PlayerControlState playerControl, ActorsSt
     internal DaggerfallEffectLifecycle Effects { get; set; } = null!;
     /// <summary>Classic skill-use attribution and counters over the player's Kit progression state.</summary>
     internal DaggerfallSkillUseReactions SkillUses { get; set; } = null!;
+    /// <summary>One durable, staged classic level-up allocation opened by ordinary rest eligibility.</summary>
+    internal DaggerfallLevelUpState LevelUps { get; set; } = null!;
     internal PlayerControlState PlayerControl { get; } = playerControl;
     internal ActorsState Actors { get; } = actors;
     internal ProgressionState Progression => Actors.Player.Progression;

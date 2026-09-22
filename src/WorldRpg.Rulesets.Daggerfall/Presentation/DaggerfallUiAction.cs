@@ -4,7 +4,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision = null, string? Item = null, int? TargetGrid = null, string? TargetEquipment = null, string? Container = null, string? Key = null, string? Label = null, bool Confirm = false,
     string? Name = null, string? Race = null, string? Gender = null, int? FaceIndex = null, int? Reflexes = null, string? Career = null, string? Mode = null,
-    string? PrimarySkills = null, string? MajorSkills = null, string? MinorSkills = null, string? Advantages = null, string? Disadvantages = null, int? HitPointsPerLevel = null);
+    string? PrimarySkills = null, string? MajorSkills = null, string? MinorSkills = null, string? Advantages = null, string? Disadvantages = null, int? HitPointsPerLevel = null,
+    string? Attribute = null);
 
 /// <summary>The small Daggerfall player-action wire contract, consumed during admitted updates.</summary>
 internal static class DaggerfallUiAction
@@ -19,7 +20,7 @@ internal static class DaggerfallUiAction
             JsonElement root = document.RootElement;
             if (root.ValueKind != JsonValueKind.Object) return null;
             HashSet<string> fields = new(StringComparer.Ordinal);
-            string? action = null, revision = null, item = null, targetEquipment = null, container = null, key = null, label = null, name = null, race = null, gender = null, career = null, mode = null, primarySkills = null, majorSkills = null, minorSkills = null, advantages = null, disadvantages = null;
+            string? action = null, revision = null, item = null, targetEquipment = null, container = null, key = null, label = null, name = null, race = null, gender = null, career = null, mode = null, primarySkills = null, majorSkills = null, minorSkills = null, advantages = null, disadvantages = null, attribute = null;
             int? targetGrid = null, faceIndex = null, reflexes = null, hitPointsPerLevel = null;
             bool confirm = false;
             foreach (JsonProperty property in root.EnumerateObject())
@@ -61,6 +62,7 @@ internal static class DaggerfallUiAction
                     case "minorSkills": minorSkills = value; break;
                     case "advantages": advantages = value; break;
                     case "disadvantages": disadvantages = value; break;
+                    case "attribute": attribute = value; break;
                     default: return null;
                 }
             }
@@ -99,6 +101,11 @@ internal static class DaggerfallUiAction
                     && !string.IsNullOrWhiteSpace(key)
                     ? new(action, Key: key, Confirm: confirm) : null;
             if (action is "character-begin" or "character-cancel")
+                return fields.SetEquals(["action"]) ? new(action) : null;
+            if (action == "character-level-allocate")
+                return fields.SetEquals(["action", "attribute"]) && !string.IsNullOrWhiteSpace(attribute)
+                    ? new(action, Attribute: attribute) : null;
+            if (action == "character-level-commit")
                 return fields.SetEquals(["action"]) ? new(action) : null;
             if (action is "character-update" or "character-commit")
                 return (career == DaggerfallCustomCareerPolicy.CareerId

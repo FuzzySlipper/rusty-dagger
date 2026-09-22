@@ -103,7 +103,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         // its gate would otherwise honour, so the panel is published only in the mode that lets the
         // interaction act rather than offering buttons that silently do nothing.
         fields = [.. fields, ("loot", loot is null || mode != ProductMode.Modal ? builder.Null() : Loot(builder, loot))];
-        if (character is not null) fields = [.. fields, ("character", Character(builder, character, mode == ProductMode.Title))];
+        if (character is not null) fields = [.. fields, ("character", Character(builder, character, mode == ProductMode.Title, mode == ProductMode.Playing))];
         if (compositionIdentity is not null)
             fields = [.. fields, ("composition", Composition(builder, compositionIdentity))];
         if (uiArt is not null)
@@ -154,10 +154,10 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("title", builder.String(value.Title)), ("items", builder.Array(value.Items.Select(item => Item(builder, item)).ToArray())),
         ("message", builder.String(value.Message)));
 
-    private static uint Character(UiValueBuilder builder, CharacterSheetPresentation value, bool creationAvailable)
+    private static uint Character(UiValueBuilder builder, CharacterSheetPresentation value, bool creationAvailable, bool levelUpAvailable)
     {
         uint Stat(CharacterStatPresentation stat) => builder.Object(("id", builder.String(stat.Id)),
-            ("label", builder.String(stat.Label)), ("value", builder.Number(stat.Value)));
+            ("label", builder.String(stat.Label)), ("value", builder.Number(stat.Value)), ("permanent", builder.Number(stat.Permanent)));
         uint creation = value.Creation is null ? builder.Null() : Creation(builder, value.Creation);
         uint identity = value.Identity is null ? builder.Null() : Identity(builder, value.Identity);
         return builder.Object(("name", builder.String(value.Name)),
@@ -172,10 +172,20 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("grantedSkills", builder.Array((value.GrantedSkills ?? []).Select(skill => builder.Object(
                 ("id", builder.String(skill.SkillId)), ("tier", builder.String(skill.Tier.ToString().ToLowerInvariant())))).ToArray())),
             ("creationAvailable", builder.Boolean(creationAvailable)), ("creation", creation),
+            ("levelUp", !levelUpAvailable || value.LevelUp is null ? builder.Null() : LevelUp(builder, value.LevelUp)),
             // The media the sheet draws from, so a consumer resolves published identities rather than
             // reconstructing a race's file names. An actor that declares no race publishes none.
             ("identity", identity));
     }
+
+    private static uint LevelUp(UiValueBuilder builder, DaggerfallLevelUpPresentation levelUp) => builder.Object(
+        ("level", builder.Number(levelUp.Level)), ("bonusPool", builder.Number(levelUp.BonusPool)),
+        ("remainingPoints", builder.Number(levelUp.RemainingPoints)), ("healthGain", builder.Number(levelUp.HealthGain)),
+        ("canCommit", builder.Boolean(levelUp.CanCommit)),
+        ("attributes", builder.Array(levelUp.Attributes.Select(attribute => builder.Object(
+            ("id", builder.String(attribute.Id)), ("label", builder.String(attribute.Label)),
+            ("permanent", builder.Number(attribute.Permanent)), ("live", builder.Number(attribute.Live)),
+            ("pending", builder.Number(attribute.Pending)), ("canAllocate", builder.Boolean(attribute.CanAllocate)))).ToArray())));
 
     private static uint Custom(UiValueBuilder builder, DaggerfallCustomCareerPresentation custom) => builder.Object(
         ("name", builder.String(custom.Current.Name)),
