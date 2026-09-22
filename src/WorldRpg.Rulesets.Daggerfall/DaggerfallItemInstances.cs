@@ -215,6 +215,17 @@ internal sealed class DaggerfallItemInstances
             ? metadata
             : throw new InvalidOperationException($"Unique item '{itemId}' has no Daggerfall metadata.");
 
+    /// <summary>Whether a durable item already has product metadata before a grouped grant commits.</summary>
+    internal bool ContainsUnique(ulong itemId) => _unique.ContainsKey(itemId);
+
+    /// <summary>Whether a stack identity already has product meaning for one durable owner.</summary>
+    internal bool ContainsStack(DaggerfallItemOwner owner, InventoryStackId stack)
+    {
+        owner.Validate();
+        ArgumentNullException.ThrowIfNull(stack);
+        return _stacks.ContainsKey((owner, stack.Value));
+    }
+
     internal void ReplaceUnique(ulong itemId, DaggerfallItemInstanceMetadata metadata)
     {
         _ = RequireUnique(itemId);

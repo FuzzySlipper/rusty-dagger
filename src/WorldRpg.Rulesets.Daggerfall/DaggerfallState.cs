@@ -47,6 +47,8 @@ internal sealed class DaggerfallState(PlayerControlState playerControl, ActorsSt
     internal DaggerfallEncumbrancePolicy Encumbrance { get; set; } = null!;
     /// <summary>Inventory-backed coins, letters of credit, and the one persistent bank balance.</summary>
     internal DaggerfallCurrencyService Currency { get; set; } = null!;
+    /// <summary>Typed Daggerfall service admission, quotes, outcomes, and pending concrete work.</summary>
+    internal DaggerfallServiceTransactions Services { get; set; } = null!;
     internal MechanicsInventoryCoordinator? InventoryFor(long durableActorId) =>
         Actors.TryGet(durableActorId, out var actor) ? new(actor.Inventory, Actors.Entities, items) : null;
     internal MechanicsEquipmentCoordinator EquipmentFor(long durableActorId)
