@@ -100,7 +100,12 @@ internal sealed class DaggerSessionPersistence
             new DaggerfallCalendarSave(_time.Calendar.Year, _time.Calendar.Month, _time.Calendar.Day, _time.Calendar.Hour, _time.Calendar.Minute, _time.Calendar.Second, _time.RemainderSeconds),
             _site.Capture(),
             actorInventories,
-            new DaggerfallVariablesSave([.. State.Variables.Capture().Select(entry => new DaggerfallVariableSave((int)entry.Address.Scope, entry.Address.Owner, entry.Address.Key, entry.Value))])));
+            new DaggerfallVariablesSave([.. State.Variables.Capture().Select(entry => new DaggerfallVariableSave((int)entry.Address.Scope, entry.Address.Owner, entry.Address.Key, entry.Value))]),
+            new DaggerfallNpcSave([.. State.Npcs.Capture().Select(npc => new DaggerfallNpcEntry(
+                npc.DurableId, (int)npc.Kind, npc.StableKey, npc.Site.Region, npc.Site.Location, npc.Site.Building,
+                npc.Appearance.Race, npc.Appearance.Gender, npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord,
+                npc.Appearance.NameSeed, npc.Appearance.FactionId, npc.Role, [.. npc.Services],
+                (int)npc.Presence, npc.X, npc.Y, npc.Z))])));
     }
 
     private ActorState LiveDynamicActor(long durableId) =>

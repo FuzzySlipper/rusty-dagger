@@ -121,7 +121,80 @@ public sealed record BlockObjectSummary(
     int TreasureMarkers,
     int FixedMobiles,
     IReadOnlyList<string> ModelIds,
-    IReadOnlyList<BlockTextureReference> Textures);
+    IReadOnlyList<BlockTextureReference> Textures,
+    IReadOnlyList<RdbModelPlacement> ModelPlacements,
+    IReadOnlyList<RdbFlatPlacement> FlatPlacements,
+    IReadOnlyList<RdbLightPlacement> LightPlacements,
+    IReadOnlyList<RdbDoorPlacement> DoorPlacements);
+
+/// <summary>One placed dungeon model: its position, identity and action link.</summary>
+/// <param name="Index">The model's ordinal in the block.</param>
+/// <param name="ModelId">The model id.</param>
+/// <param name="X">The X position.</param>
+/// <param name="Y">The Y position.</param>
+/// <param name="Z">The Z position.</param>
+/// <param name="YRotation">The Y rotation.</param>
+/// <param name="Description">The description tag.</param>
+/// <param name="ActionAxis">The action axis, when the model carries an action.</param>
+/// <param name="ActionDuration">The action duration, when the model carries an action.</param>
+/// <param name="ActionMagnitude">The action magnitude, when the model carries an action.</param>
+/// <param name="ActionNext">The next object offset, when the model carries an action.</param>
+/// <param name="ActionFlags">The action flags, when the model carries an action.</param>
+public sealed record RdbModelPlacement(
+    int Index,
+    string ModelId,
+    int X,
+    int Y,
+    int Z,
+    int YRotation,
+    string Description,
+    byte? ActionAxis,
+    ushort? ActionDuration,
+    ushort? ActionMagnitude,
+    int? ActionNext,
+    byte? ActionFlags);
+
+/// <summary>One placed dungeon flat: its position, texture and trigger link.</summary>
+/// <param name="Index">The flat's ordinal in the block.</param>
+/// <param name="X">The X position.</param>
+/// <param name="Y">The Y position.</param>
+/// <param name="Z">The Z position.</param>
+/// <param name="TextureArchive">The texture archive.</param>
+/// <param name="TextureRecord">The texture record.</param>
+/// <param name="Flags">The flags.</param>
+/// <param name="Magnitude">The magnitude.</param>
+/// <param name="FactionOrMobileId">The faction or mobile id.</param>
+/// <param name="NextObjectOffset">The next object offset.</param>
+/// <param name="Action">The action byte.</param>
+public sealed record RdbFlatPlacement(
+    int Index,
+    int X,
+    int Y,
+    int Z,
+    ushort TextureArchive,
+    ushort TextureRecord,
+    ushort Flags,
+    byte Magnitude,
+    ushort FactionOrMobileId,
+    int NextObjectOffset,
+    byte Action);
+
+/// <summary>One placed dungeon light: its position and radius.</summary>
+/// <param name="Index">The light's ordinal in the block.</param>
+/// <param name="X">The X position.</param>
+/// <param name="Y">The Y position.</param>
+/// <param name="Z">The Z position.</param>
+/// <param name="Radius">The radius.</param>
+public sealed record RdbLightPlacement(int Index, int X, int Y, int Z, ushort Radius);
+
+/// <summary>One dungeon door: the model that carries its tag and where it stands.</summary>
+/// <param name="ModelIndex">The model's ordinal in the block.</param>
+/// <param name="ModelId">The model id.</param>
+/// <param name="X">The X position.</param>
+/// <param name="Y">The Y position.</param>
+/// <param name="Z">The Z position.</param>
+/// <param name="Description">The description tag.</param>
+public sealed record RdbDoorPlacement(int ModelIndex, string ModelId, int X, int Y, int Z, string Description);
 
 /// <summary>One record of the block archive, classified and summarized without decoding a placement.</summary>
 /// <param name="Ordinal">The record's position in the archive's directory, which is its stable identity.</param>
@@ -136,6 +209,7 @@ public sealed record BlockObjectSummary(
 /// <param name="RdbName">Its name taken apart as a dungeon block, when it is one.</param>
 /// <param name="RmbHeader">What its header declares, when it is a city block that could be read.</param>
 /// <param name="Objects">What it places, when it is a dungeon block that could be read.</param>
+/// <param name="RmbPlacements">What it places, when it is a city block that could be read.</param>
 public sealed record BlockRecord(
     int Ordinal,
     string SourceKey,
@@ -148,7 +222,8 @@ public sealed record BlockRecord(
     BlockRmbName? RmbName,
     BlockRdbName? RdbName,
     RmbBlockSummary? RmbHeader,
-    BlockObjectSummary? Objects);
+    BlockObjectSummary? Objects,
+    RmbBlockPlacements? RmbPlacements = null);
 
 /// <summary>Every record a block archive declares, in the order its directory lists them.</summary>
 /// <param name="Source">Logical source identity supplied to the reader.</param>
@@ -323,12 +398,22 @@ public static class BlockRecordInventoryReader
     private static BlockRecord ReadRmb(byte[] bytes, string source, int ordinal, string key, long offset, int byteLength)
     {
         BlockRmbName? name = RmbName(key);
-        if (!RmbBlockSummaryReader.TryRead(bytes, source, (int)offset, byteLength, out RmbBlockSummary? summary, out string reason))
+        if (!RmbBlockSummaryReader.TryRead(bytes, source, (int)offset, byteLength, out RmbBlockSummary? summary, out string reason) || summary is null)
         {
             return new BlockRecord(ordinal, key, BlockRecordKind.Rmb, BlockRecordDisposition.Summarized, offset, byteLength, BlockRecordState.Malformed, reason, name, null, null, null);
         }
 
-        return new BlockRecord(ordinal, key, BlockRecordKind.Rmb, BlockRecordDisposition.Summarized, offset, byteLength, BlockRecordState.Read, string.Empty, name, null, summary, null);
+        RmbBlockPlacements? placements = null;
+        try
+        {
+            placements = RmbPlacementReader.Read(bytes, (int)offset, summary, source);
+        }
+        catch (Arena2FormatException error)
+        {
+            return new BlockRecord(ordinal, key, BlockRecordKind.Rmb, BlockRecordDisposition.Summarized, offset, byteLength, BlockRecordState.Malformed, error.Message, name, null, summary, null);
+        }
+
+        return new BlockRecord(ordinal, key, BlockRecordKind.Rmb, BlockRecordDisposition.Summarized, offset, byteLength, BlockRecordState.Read, string.Empty, name, null, summary, null, placements);
     }
 
     private static BlockRecord ReadRdb(byte[] bytes, string source, int ordinal, string key, long offset, int byteLength)
@@ -372,9 +457,40 @@ public static class BlockRecordInventoryReader
                 if (RdbSourceClassification.IsFixedMobileMarker(flat)) fixedMobiles++;
             }
 
+            List<RdbModelPlacement> modelPlacements = [];
+            List<RdbDoorPlacement> doorPlacements = [];
+            for (int index = 0; index < block.Models.Count; index++)
+            {
+                RdbModelSource model = block.Models[index];
+                modelPlacements.Add(new RdbModelPlacement(
+                    index, model.ModelId, model.X, model.Y, model.Z, model.YRotation, model.Description,
+                    model.Action?.Axis, model.Action?.Duration, model.Action?.Magnitude, model.Action?.NextObjectOffset, model.Action?.Flags));
+                if (RdbSourceClassification.HasActionDoorTag(model))
+                {
+                    doorPlacements.Add(new RdbDoorPlacement(index, model.ModelId, model.X, model.Y, model.Z, model.Description));
+                }
+            }
+
+            List<RdbFlatPlacement> flatPlacements = [];
+            for (int index = 0; index < block.Flats.Count; index++)
+            {
+                RdbFlatSource flat = block.Flats[index];
+                flatPlacements.Add(new RdbFlatPlacement(
+                    index, flat.X, flat.Y, flat.Z, flat.TextureArchive, flat.TextureRecord,
+                    flat.Flags, flat.Magnitude, flat.FactionOrMobileId, flat.NextObjectOffset, flat.Action));
+            }
+
+            List<RdbLightPlacement> lightPlacements = [];
+            for (int index = 0; index < block.Lights.Count; index++)
+            {
+                RdbLightSource light = block.Lights[index];
+                lightPlacements.Add(new RdbLightPlacement(index, light.X, light.Y, light.Z, light.Radius));
+            }
+
             BlockObjectSummary objects = new(
                 block.Models.Count, block.Flats.Count, block.Lights.Count, doors,
-                startMarkers, enterMarkers, treasureMarkers, fixedMobiles, modelIds, references);
+                startMarkers, enterMarkers, treasureMarkers, fixedMobiles, modelIds, references,
+                modelPlacements, flatPlacements, lightPlacements, doorPlacements);
             return new BlockRecord(ordinal, key, BlockRecordKind.Rdb, BlockRecordDisposition.Summarized, offset, byteLength, BlockRecordState.Read, string.Empty, null, name, null, objects);
         }
         catch (Arena2FormatException error)

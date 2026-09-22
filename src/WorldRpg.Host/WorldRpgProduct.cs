@@ -265,6 +265,44 @@ public sealed class WorldRpgProduct : IEngineProduct
         Record(new(from, ProductMode.Playing, from == ProductMode.Playing ? ProductModeChangeOutcome.AlreadyInMode : ProductModeChangeOutcome.Applied, "the product replaced its session"));
     }
 
+    /// <summary>
+    /// Quits to the title: the running session retires and the entry screen owns the product again.
+    /// A quit from the title is refused; quitting never deletes saves.
+    /// </summary>
+    public void QuitToTitle()
+    {
+        if (_shutdown)
+        {
+            Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, "the product is shut down"));
+            return;
+        }
+
+        if (_mode == ProductMode.Title)
+        {
+            Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, "the product is already at the title"));
+            return;
+        }
+
+        IGameSession replacement = _ruleset.CreateSession(new GameSessionContext(_context.Engine, _composition));
+        IGameSession previous = _session;
+        try
+        {
+            replacement.PublishInitial();
+        }
+        catch
+        {
+            replacement.Dispose();
+            throw;
+        }
+
+        _session = replacement;
+        previous.Dispose();
+        ProductMode from = _mode;
+        _mode = ProductMode.Title;
+        if (_session is IModeAwareGameSession aware) aware.ApplyProductMode(ProductMode.Title);
+        Record(new(from, ProductMode.Title, ProductModeChangeOutcome.Applied, "the product quit to the title"));
+    }
+
     public void Shutdown()
     {
         if (_shutdown) return;

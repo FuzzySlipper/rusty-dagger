@@ -354,7 +354,7 @@ public sealed class BlockInventoryTests
         DaggerfallBlocks blocks = Supplied();
 
         Assert.Contains("declares 1294 records and publishes 1295, where the section carries 1295", Assert.Throws<InvalidOperationException>(() => (blocks with { Sources = [blocks.Sources[0] with { DeclaredLength = 1294 }] }).Validate()).Message, StringComparison.Ordinal);
-        Assert.Contains("Block schema must be 1 but is 2", Assert.Throws<InvalidOperationException>(() => (blocks with { SchemaVersion = 2 }).Validate()).Message, StringComparison.Ordinal);
+        Assert.Contains("Block schema must be 2 but is 3", Assert.Throws<InvalidOperationException>(() => (blocks with { SchemaVersion = 3 }).Validate()).Message, StringComparison.Ordinal);
     }
 
     [Fact]

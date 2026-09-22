@@ -113,6 +113,16 @@ internal static class Program
                 return RunItemsCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "quests")
+            {
+                return RunQuestsCommand(args);
+            }
+
+            if (args.Length != 0 && args[0] == "videos")
+            {
+                return RunVideosCommand(args);
+            }
+
             if (args.Length != 0 && args[0] == "geometry")
             {
                 return RunGeometryCommand(args);
@@ -1126,6 +1136,138 @@ internal static class Program
     }
 
     /// <summary>
+    /// Reads donor-shaped quest text into the base pack when asked, so a quest source resolves
+    /// to its messages and QBN blocks rather than to a binary blob. Every line matches a known
+    /// signature or the quest is diagnosed and must not run.
+    /// </summary>
+    private static int RunQuestsCommand(IReadOnlyList<string> args)
+    {
+        const string Usage = "usage: daggerfall-import-tool quests --quest-text SOURCE_DIR --pack PACK.json --inventory CSV [--update]";
+        bool update = args.Contains("--update", StringComparer.Ordinal);
+        Dictionary<string, string> values = new(StringComparer.Ordinal);
+        for (int index = 1; index < args.Count; index++)
+        {
+            string argument = args[index];
+            if (argument == "--update") continue;
+            if (!argument.StartsWith("--", StringComparison.Ordinal) || index + 1 >= args.Count || !values.TryAdd(argument, args[++index]))
+            {
+                throw new ArgumentException(Usage);
+            }
+        }
+
+        string[] accepted = ["--quest-text", "--pack", "--inventory"];
+        if (values.Count != accepted.Length || accepted.Any(key => !values.ContainsKey(key)))
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(values["--inventory"]));
+        string[] messageNames = ["Message", "QuestorOffer", "RefuseQuest", "AcceptQuest", "QuestFail", "QuestComplete", "RumorsDuringQuest", "RumorsPostfailure", "RumorsPostFailure", "RumorsPostsuccess", "RumorsPostSuccess", "QuestorPostsuccess", "QuestorPostSuccess", "QuestorPostfailure", "QuestorPostFailure", "QuestLogEntry", "QuestTimeLapse"];
+        Dictionary<string, int> globalKeys = QuestGlobalKeys();
+        List<QuestSourceDocument> documents = [];
+        List<(string FileName, string QuestName, int Line, string Reason)> failures = [];
+        long totalBytes = 0;
+        foreach (string path in Directory.EnumerateFiles(values["--quest-text"], "*.txt").Order(StringComparer.Ordinal))
+        {
+            string fileName = Path.GetFileName(path);
+            string text = File.ReadAllText(path);
+            totalBytes += new FileInfo(path).Length;
+            try
+            {
+                documents.Add(QuestSourceReader.Read(text, fileName, messageNames, globalKeys));
+            }
+            catch (Arena2FormatException exception)
+            {
+                failures.Add((fileName, Path.GetFileNameWithoutExtension(path), exception.Offset, exception.Message));
+            }
+        }
+
+        DaggerfallQuestPack pack = DaggerfallQuestPackBuilder.Build(documents, failures, "donor/StreamingAssets/Quests", new byte[totalBytes], inventory);
+        Console.WriteLine($"quests: {pack.Quests.Count} sources, {pack.Quests.Count(quest => quest.Disposition == DaggerfallQuestDisposition.Runnable)} runnable");
+        if (!update)
+        {
+            Console.WriteLine("pack: not written (rerun with --update to publish these sources into it)");
+            return 0;
+        }
+
+        JsonNode node = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
+        node["questSources"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(pack, PublishedJson.Section));
+        File.WriteAllText(values["--pack"], node.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        Console.WriteLine($"pack: quest sources updated in {values["--pack"]}");
+        return 0;
+    }
+
+    /// <summary>
+    /// Records cinematic source identities without shipping media: digests tell files apart and
+    /// donor callers bind the opening three VIDs and the sixteen Daedric FLCs, while the rest stay
+    /// unresolved rather than assuming an ending mapping.
+    /// </summary>
+    private static int RunVideosCommand(IReadOnlyList<string> args)
+    {
+        const string Usage = "usage: daggerfall-import-tool videos --arena2 SOURCE_DIR --pack PACK.json --inventory CSV [--update]";
+        bool update = args.Contains("--update", StringComparer.Ordinal);
+        Dictionary<string, string> values = new(StringComparer.Ordinal);
+        for (int index = 1; index < args.Count; index++)
+        {
+            string argument = args[index];
+            if (argument == "--update") continue;
+            if (!argument.StartsWith("--", StringComparison.Ordinal) || index + 1 >= args.Count || !values.TryAdd(argument, args[++index]))
+            {
+                throw new ArgumentException(Usage);
+            }
+        }
+
+        string[] accepted = ["--arena2", "--pack", "--inventory"];
+        if (values.Count != accepted.Length || accepted.Any(key => !values.ContainsKey(key)))
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(values["--inventory"]));
+        List<(string FileName, DaggerfallCinematicKind Kind, long ByteLength, string Digest)> files = [];
+        foreach (string path in Directory.EnumerateFiles(values["--arena2"]).Order(StringComparer.OrdinalIgnoreCase))
+        {
+            string fileName = Path.GetFileName(path);
+            DaggerfallCinematicKind? kind = fileName.EndsWith(".VID", StringComparison.OrdinalIgnoreCase)
+                ? DaggerfallCinematicKind.Vid
+                : fileName.EndsWith(".FLC", StringComparison.OrdinalIgnoreCase) ? DaggerfallCinematicKind.Flc : null;
+            if (kind is null) continue;
+            byte[] bytes = File.ReadAllBytes(path);
+            files.Add((fileName, kind.Value, bytes.LongLength, Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes))));
+        }
+
+        DaggerfallCinematicPack pack = DaggerfallCinematicPackBuilder.Build(files, "local/arena2", inventory);
+        Console.WriteLine($"videos: {pack.Cinematics.Count} cinematics, {pack.Cinematics.Count(record => record.Binding == DaggerfallCinematicBinding.Bound)} bound");
+        if (!update)
+        {
+            Console.WriteLine("pack: not written (rerun with --update to publish these identities into it)");
+            return 0;
+        }
+
+        JsonNode node = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
+        node["cinematics"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(pack, PublishedJson.Section));
+        File.WriteAllText(values["--pack"], node.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        Console.WriteLine($"pack: cinematic identities updated in {values["--pack"]}");
+        return 0;
+    }
+
+    private static Dictionary<string, int> QuestGlobalKeys()
+    {
+        string[] names = ["LiftedCurse", "GothrydGotTotem", "KingOfWormsGotTotem", "GortwogGotTotem", "AkorithiGotTotem", "Unused1", "UnderkingGotTotem", "EadwyreGotTotem", "BrisiennaGotTotem", "MedoraGotHorn", "Unused2", "GothrydEnding", "KingOfWormsEnding", "GortwogEnding", "AkorithiEnding", "Unused3", "UnderkingEnding", "EadwyreEnding", "BrisiennaEnding", "Unused4", "Unused5", "UnknownElysanna", "Unused6", "MorgiahSatisfied", "Unused7", "ElysannaSatisfied", "Unused8", "Unused9", "BarenziahSatisfied", "MyniseraSatisfied", "Unused10", "MetLadyBrisienna", "Unused11", "KingOfWormsSatisfied", "Unused12", "Unused13", "FinishedMantellanCrux", "Unused14", "Unused15", "Unused16", "Unused17", "Unused18", "UnknownHelseth", "LysandusSatisfied", "Unused19", "Unused20", "Unused21", "Unused22", "Unused23", "Unused24", "Unused25", "Unused26", "Unused27", "Unused28", "Unused29", "Unused30", "Unused31", "Unused32", "Unused33", "Unused34", "Unused35", "Unused36", "Unused37", "Unused38"];
+        Dictionary<string, int> keys = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["TookTheCure"] = 5,
+            ["OpenedShapeshifters"] = 10,
+        };
+        for (int index = 0; index < names.Length; index++)
+        {
+            keys[names[index]] = index;
+        }
+
+        return keys;
+    }
+
+    /// <summary>
     /// Reads the donor's exported template tables into the base pack when asked, so a native
     /// template index resolves to the substitute record the donor states rather than to a
     /// placeholder. Every record carries substitute provenance; the ledger targets resolve to it.
@@ -1343,12 +1485,52 @@ internal static class Program
             return 0;
         }
 
+        // Placements ride in their own payload beside the pack: 621k records would triple the
+        // base pack, while the base section keeps the counts existing consumers read. The full
+        // document is validated before either file is written, so the two never disagree.
+        DaggerfallBlocks stripped = StripPlacements(blocks);
         JsonNode pack = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
-        pack["blocks"] = JsonNode.Parse(JsonSerializer.Serialize(blocks, PublishedJson.Section));
+        pack["blocks"] = JsonNode.Parse(JsonSerializer.Serialize(stripped, PublishedJson.Section));
         File.WriteAllText(values["--pack"], pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
         Console.WriteLine($"pack: blocks updated in {values["--pack"]}");
+        string payloadPath = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(values["--pack"]))!, "daggerfall.blocks.json");
+        File.WriteAllText(payloadPath, JsonSerializer.Serialize(blocks, PublishedJson.SectionCompact) + "\n");
+        Console.WriteLine($"pack: block placements updated in {payloadPath}");
         return 0;
     }
+
+    private static DaggerfallBlocks StripPlacements(DaggerfallBlocks blocks)
+    {
+        List<DaggerfallBlockRecord> records = [];
+        foreach (DaggerfallBlockRecord record in blocks.Records)
+        {
+            DaggerfallBlockObjects? objects = record.Objects is null ? null : record.Objects with
+            {
+                ModelPlacements = [],
+                FlatPlacements = [],
+                LightPlacements = [],
+                DoorPlacements = [],
+            };
+            DaggerfallBlockRmbHeader? rmb = record.Rmb;
+            if (rmb is not null)
+            {
+                rmb = rmb with
+                {
+                    Buildings = [.. rmb.Buildings.Select(building => building with
+                    {
+                        ExteriorPlacements = EmptyHalf(),
+                        InteriorPlacements = EmptyHalf(),
+                    })],
+                };
+            }
+
+            records.Add(record with { Objects = objects, Rmb = rmb, RmbPlacements = null });
+        }
+
+        return blocks with { Records = records };
+    }
+
+    private static DaggerfallBlockHalfPlacements EmptyHalf() => new([], [], [], [], []);
 
     /// <summary>
     /// Publishes the classic media into a content root, so the artifacts are admitted content a

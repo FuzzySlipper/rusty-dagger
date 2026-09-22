@@ -167,7 +167,9 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     DaggerfallBooksSet books,
     DaggerfallFactionsSet factions,
     DaggerfallTerrainSet terrain,
-    DaggerfallItemTemplateSet itemTemplateCatalog)
+    DaggerfallItemTemplateSet itemTemplateCatalog,
+    DaggerfallQuestSourceSet questSources,
+    DaggerfallCinematicSet cinematics)
 {
     /// <summary>The normalized reference catalogs a consumer resolves keys through.</summary>
     internal DaggerfallCatalogSet Catalogs { get; } = catalogs;
@@ -233,6 +235,18 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     /// resolves to its substitute record with group, stack and reference facts.
     /// </summary>
     internal DaggerfallItemTemplateSet ItemTemplateCatalog { get; } = itemTemplateCatalog;
+
+    /// <summary>
+    /// The normalized quest sources, loaded from the pack alone: each source file resolves to
+    /// its messages, blocks and whether it may run.
+    /// </summary>
+    internal DaggerfallQuestSourceSet QuestSources { get; } = questSources;
+
+    /// <summary>
+    /// The cinematic identities, loaded from the pack alone: each file resolves to its digest
+    /// and whether a donor caller binds it.
+    /// </summary>
+    internal DaggerfallCinematicSet Cinematics { get; } = cinematics;
 
     internal DaggerfallVocabulary Vocabulary { get; } = vocabulary;
     internal IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> Actors { get; } = new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors.ToDictionary());
