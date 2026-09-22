@@ -40,6 +40,13 @@ public sealed class DaggerfallCinematicsContentTests
         DaggerfallCinematicDefinition[] published = Definitions().Cinematics.Cinematics.Values
             .Where(value => value.Artifact is not null).ToArray();
         Assert.Equal(17, published.Count(value => value.Kind == DaggerfallCinematicKind.Vid));
+        Assert.Equal(16, published.Count(value => value.Kind == DaggerfallCinematicKind.Flc));
+        Assert.All(published.Where(value => value.Kind == DaggerfallCinematicKind.Flc), value =>
+        {
+            Assert.Equal(14, value.Artifact!.FrameCount);
+            Assert.False(value.Artifact.HasAudio);
+            Assert.Equal(DaggerfallCinematicBinding.Bound, value.Binding);
+        });
         foreach (DaggerfallCinematicDefinition source in published)
         {
             DaggerfallCinematicArtifact artifact = source.Artifact!;
