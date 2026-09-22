@@ -67,9 +67,15 @@ public sealed class WorldRpgSaveSlots : IDisposable
 
         ArgumentException.ThrowIfNullOrWhiteSpace(label);
         ArgumentNullException.ThrowIfNull(value);
-        PersistenceSaveReceipt receipt = _saves.Save(key, value, guard, expectedRevision);
-        WorldRpgSaveSlotEntry entry = new(key, label, DateTime.UtcNow, value.Payload.Ruleset.Value, receipt.Revision);
         List<WorldRpgSaveSlotEntry> index = ReadIndex();
+        PersistenceSaveReceipt receipt = _saves.Save(key, value, guard, expectedRevision);
+        if (receipt.Outcome != PersistenceSaveOutcome.Saved)
+        {
+            throw new InvalidOperationException(
+                $"Save slot '{key}' was not written because persistence returned {receipt.Outcome} at revision {receipt.Revision}; its index was left unchanged.");
+        }
+
+        WorldRpgSaveSlotEntry entry = new(key, label, DateTime.UtcNow, value.Payload.Ruleset.Value, receipt.Revision);
         index.RemoveAll(existing => string.Equals(existing.Key, key, StringComparison.Ordinal));
         index.Add(entry);
         WriteIndex(index);
@@ -137,18 +143,64 @@ public sealed class WorldRpgSaveSlots : IDisposable
 
     private List<WorldRpgSaveSlotEntry> ReadIndex()
     {
-        ProductStateLoad<string> loaded = _index.Load(IndexKey);
-        if (!loaded.Present || string.IsNullOrEmpty(loaded.State)) return [];
+        ProductStateLoad<string> loaded;
         try
         {
-            return System.Text.Json.JsonSerializer.Deserialize<List<WorldRpgSaveSlotEntry>>(loaded.State!) ?? [];
+            loaded = _index.Load(IndexKey);
         }
-        catch (System.Text.Json.JsonException)
+        catch (System.Text.Json.JsonException error)
         {
-            return [];
+            throw MalformedIndex("its stored JSON string cannot be decoded", error);
+        }
+        catch (InvalidOperationException error) when (error is not WorldRpgSaveFormatException)
+        {
+            throw MalformedIndex("its stored value is null", error);
+        }
+
+        if (!loaded.Present) return [];
+        if (string.IsNullOrEmpty(loaded.State)) throw MalformedIndex("its stored value is empty");
+
+        try
+        {
+            List<WorldRpgSaveSlotEntry>? index = System.Text.Json.JsonSerializer.Deserialize(
+                loaded.State,
+                WorldRpgSaveJsonContext.Default.ListWorldRpgSaveSlotEntry);
+            if (index is null) throw MalformedIndex("it contains null instead of a slot list");
+            ValidateIndex(index);
+            return index;
+        }
+        catch (System.Text.Json.JsonException error)
+        {
+            throw MalformedIndex("its slot list is not valid JSON", error);
         }
     }
 
+    private static void ValidateIndex(List<WorldRpgSaveSlotEntry> index)
+    {
+        HashSet<string> keys = new(StringComparer.Ordinal);
+        for (int entryIndex = 0; entryIndex < index.Count; entryIndex++)
+        {
+            WorldRpgSaveSlotEntry? entry = index[entryIndex];
+            string location = $"entry {entryIndex + 1}";
+            if (entry is null) throw MalformedIndex($"{location} is null");
+            if (string.IsNullOrWhiteSpace(entry.Key)) throw MalformedIndex($"{location} has no key");
+            if (string.Equals(entry.Key, IndexKey, StringComparison.Ordinal)) throw MalformedIndex($"{location} uses the reserved index key");
+            if (!keys.Add(entry.Key)) throw MalformedIndex($"{location} duplicates key '{entry.Key}'");
+            if (string.IsNullOrWhiteSpace(entry.Label)) throw MalformedIndex($"{location} has no label");
+            if (entry.SavedAtUtc == default) throw MalformedIndex($"{location} has no save timestamp");
+            if (string.IsNullOrWhiteSpace(entry.Ruleset)) throw MalformedIndex($"{location} has no ruleset");
+            if (entry.Revision == 0) throw MalformedIndex($"{location} has no save revision");
+        }
+    }
+
+    private static WorldRpgSaveFormatException MalformedIndex(string detail, Exception? inner = null) =>
+        inner is null
+            ? new WorldRpgSaveFormatException($"The saved slot index is malformed: {detail}.")
+            : new WorldRpgSaveFormatException($"The saved slot index is malformed: {detail}.", inner);
+
     private void WriteIndex(List<WorldRpgSaveSlotEntry> index) =>
-        _index.Save(IndexKey, System.Text.Json.JsonSerializer.Serialize(index), PersistenceRevisionGuard.Any);
+        _index.Save(
+            IndexKey,
+            System.Text.Json.JsonSerializer.Serialize(index, WorldRpgSaveJsonContext.Default.ListWorldRpgSaveSlotEntry),
+            PersistenceRevisionGuard.Any);
 }
