@@ -46,10 +46,13 @@ internal sealed record DaggerfallItemTemplateLedger(
     public const string PresentStatus = "present";
 
     /// <summary>The disposition vocabulary a target may carry.</summary>
-    public static readonly string[] Dispositions = [UnresolvedDisposition, "decoded", "malformed", "unsupported"];
+    public static readonly string[] Dispositions = [UnresolvedDisposition, "decoded", "malformed", "unsupported", SubstituteDisposition];
 
     /// <summary>The disposition every target carries while no native fact is decoded.</summary>
     public const string UnresolvedDisposition = "unresolved";
+
+    /// <summary>The disposition a target carries when the donor's exported table resolves it without native bytes.</summary>
+    public const string SubstituteDisposition = "substitute";
 
     /// <summary>Whether the template source is supplied and decoded.</summary>
     public bool SourceSupplied => !string.Equals(SourceStatus, AbsentStatus, StringComparison.Ordinal);

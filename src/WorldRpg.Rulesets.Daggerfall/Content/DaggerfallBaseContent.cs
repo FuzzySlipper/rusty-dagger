@@ -49,10 +49,11 @@ internal static class DaggerfallBaseContent
             DaggerfallBooksSet books = ReadBooks(root, text, diagnostics);
             DaggerfallFactionsSet factions = ReadFactions(root, diagnostics);
             DaggerfallTerrainSet terrain = ReadTerrain(root, diagnostics);
+            DaggerfallItemTemplateSet itemTemplatesCatalog = ReadItemTemplates(root, diagnostics);
             ValidateReferences(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, hud, diagnostics);
             ValidateCatalog(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, lootCategoryPools, donorErrata, diagnostics);
             diagnostics.ThrowIfAny();
-            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles, names, rumors, biographies, grids, books, factions, terrain);
+            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles, names, rumors, biographies, grids, books, factions, terrain, itemTemplatesCatalog);
         }
         catch (JsonException exception)
         {
@@ -1788,6 +1789,81 @@ internal static class DaggerfallBaseContent
         return new DaggerfallTerrainSet(1000, 500, heightmap, samples);
     }
 
+    /// <summary>
+    /// Reads the published item template catalog from the pack alone. Every template the catalog
+    /// claims substitute-resolved names a group the donor states; every magic placement names a
+    /// group the donor table carries. A template no group claims is a miss the ledger owns, not
+    /// a record this section invents.
+    /// </summary>
+    private static DaggerfallItemTemplateSet ReadItemTemplates(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!root.TryGetProperty("itemTemplates", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
+        {
+            diagnostics.Add("Base payload publishes no itemTemplates section; template lookups resolve to nothing until it is republished.");
+            return new DaggerfallItemTemplateSet(
+                new ReadOnlyDictionary<int, DaggerfallItemTemplateDefinition>(new Dictionary<int, DaggerfallItemTemplateDefinition>()),
+                new ReadOnlyDictionary<int, DaggerfallMagicTemplateDefinition>(new Dictionary<int, DaggerfallMagicTemplateDefinition>()));
+        }
+
+        Dictionary<int, DaggerfallItemTemplateDefinition> templates = [];
+        foreach (JsonElement template in Array(section, "templates", diagnostics))
+        {
+            int index = Integer(template, "index", diagnostics);
+            List<string> groups = [.. Array(template, "groups", diagnostics).Select(group => group.GetString() ?? string.Empty)];
+            string dispositionName = Text(template, "disposition", diagnostics);
+            if (!TryReadName(dispositionName, out DaggerfallItemTemplateDisposition disposition))
+            {
+                diagnostics.Add($"Item template {index} names the disposition '{dispositionName}', which the contract does not declare.");
+                continue;
+            }
+
+            if (groups.Count == 0 && disposition == DaggerfallItemTemplateDisposition.Substitute)
+            {
+                diagnostics.Add($"Item template {index} claims a substitute record with no donor group.");
+            }
+
+            if (!templates.TryAdd(index, new DaggerfallItemTemplateDefinition(
+                index, Text(template, "name", diagnostics), groups, disposition,
+                Number(template, "baseWeight", diagnostics), Integer(template, "hitPoints", diagnostics),
+                Integer(template, "capacityOrTarget", diagnostics), Integer(template, "basePrice", diagnostics),
+                Integer(template, "enchantmentPoints", diagnostics), Integer(template, "rarity", diagnostics),
+                Integer(template, "variants", diagnostics), Boolean(template, "isBluntWeapon", diagnostics),
+                Boolean(template, "isLiquid", diagnostics), Boolean(template, "isOneHanded", diagnostics),
+                Boolean(template, "isIngredient", diagnostics), Boolean(template, "stackable", diagnostics),
+                Integer(template, "worldTextureArchive", diagnostics), Integer(template, "worldTextureRecord", diagnostics),
+                Integer(template, "playerTextureArchive", diagnostics), Integer(template, "playerTextureRecord", diagnostics),
+                OptionalText(template, "weaponMediaId") ?? string.Empty, Integer(template, "drawOrderOrEffect", diagnostics))))
+            {
+                diagnostics.Add($"Item template catalog names template {index} twice, so one of them is unreachable.");
+            }
+        }
+
+        if (templates.Count != 288)
+        {
+            diagnostics.Add($"The published item catalog carries {templates.Count} templates for 288 native targets.");
+        }
+
+        Dictionary<int, DaggerfallMagicTemplateDefinition> magic = [];
+        foreach (JsonElement entry in Array(section, "magic", diagnostics))
+        {
+            int index = Integer(entry, "index", diagnostics);
+            List<DaggerfallTemplateEnchantmentDefinition> enchantments = [.. Array(entry, "enchantments", diagnostics)
+                .Select(enchantment => new DaggerfallTemplateEnchantmentDefinition(Text(enchantment, "type", diagnostics), Integer(enchantment, "param", diagnostics)))];
+            if (!magic.TryAdd(index, new DaggerfallMagicTemplateDefinition(
+                index, Text(entry, "name", diagnostics), Text(entry, "type", diagnostics),
+                Integer(entry, "group", diagnostics), OptionalText(entry, "groupName") ?? string.Empty,
+                Integer(entry, "groupIndex", diagnostics), enchantments,
+                Integer(entry, "uses", diagnostics), Integer(entry, "value", diagnostics), Integer(entry, "material", diagnostics))))
+            {
+                diagnostics.Add($"Item template catalog names magic template {index} twice, so one of them is unreachable.");
+            }
+        }
+
+        return new DaggerfallItemTemplateSet(
+            new ReadOnlyDictionary<int, DaggerfallItemTemplateDefinition>(templates),
+            new ReadOnlyDictionary<int, DaggerfallMagicTemplateDefinition>(magic));
+    }
+
     private static byte[] ReadGridCells(JsonElement section, string rowsKey, int width, int height, string what, DaggerfallContentDiagnostics diagnostics)    {
         List<byte> cells = [];
         HashSet<int> seenRows = [];
@@ -2057,8 +2133,11 @@ internal static class DaggerfallBaseContent
 
             // A target can only be resolved by reading the native source: an absent source
             // and a resolved target cannot both be true.
+            // A target resolves by reading the native source, or by reading the donor's exported
+            // table: an absent native source with any other disposition cannot both be true.
             if (string.Equals(status, DaggerfallItemTemplateLedger.AbsentStatus, StringComparison.Ordinal)
-                && !string.Equals(disposition, DaggerfallItemTemplateLedger.UnresolvedDisposition, StringComparison.Ordinal))
+                && !string.Equals(disposition, DaggerfallItemTemplateLedger.UnresolvedDisposition, StringComparison.Ordinal)
+                && !string.Equals(disposition, DaggerfallItemTemplateLedger.SubstituteDisposition, StringComparison.Ordinal))
             {
                 diagnostics.Add($"Item template target {index} is '{disposition}' while the native item template source is '{status}'.");
             }

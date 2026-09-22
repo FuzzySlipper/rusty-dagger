@@ -116,15 +116,15 @@ public sealed class DaggerfallCatalogContentTests
     {
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
 
-        // FALL.EXE is not supplied, so every one of the classic 288 targets is unresolved
-        // and says what its entry rests on. The ledger is what keeps a migrated item value
-        // from reading as a decoded native template fact.
+        // FALL.EXE is not supplied, so every one of the classic 288 targets resolves to the
+        // donor's exported table and says what its entry rests on. The ledger is what keeps a
+        // migrated item value from reading as a decoded native template fact.
         Assert.Equal(288, definitions.ItemTemplates.Targets.Count);
         Assert.Equal(Enumerable.Range(0, 288), definitions.ItemTemplates.Targets.Select(target => target.Index));
         Assert.All(definitions.ItemTemplates.Targets, target =>
         {
             Assert.False(string.IsNullOrWhiteSpace(target.Provenance));
-            Assert.Equal(DaggerfallItemTemplateLedger.UnresolvedDisposition, target.Disposition);
+            Assert.Equal(DaggerfallItemTemplateLedger.SubstituteDisposition, target.Disposition);
         });
         Assert.Equal("absent", definitions.ItemTemplates.SourceStatus);
         Assert.False(definitions.ItemTemplates.SourceSupplied);
@@ -184,7 +184,7 @@ public sealed class DaggerfallCatalogContentTests
     [Theory]
     [InlineData("\"itemTemplateLedger\"", "\"itemTemplateLedgerAbsent\"")]
     [InlineData("\"provenance\": \"no-donor-group\"", "\"provenance\": \"\"")]
-    [InlineData("\"disposition\": \"unresolved\"", "\"disposition\": \"decoded\"")]
+    [InlineData("\"disposition\": \"substitute\"", "\"disposition\": \"decoded\"")]
     [InlineData("\"targets\": 288", "\"targets\": 287")]
     [InlineData("\"referencedByDonorGroups\": 279", "\"referencedByDonorGroups\": 278")]
     [InlineData("\"nativeTemplatesDecoded\": 0", "\"nativeTemplatesDecoded\": 279")]
@@ -201,7 +201,7 @@ public sealed class DaggerfallCatalogContentTests
 
     [Theory]
     [InlineData("\"status\": \"absent\"", "\"status\": \"Absent\"")]
-    [InlineData("\"disposition\": \"unresolved\"", "\"disposition\": \"banana\"")]
+    [InlineData("\"disposition\": \"substitute\"", "\"disposition\": \"banana\"")]
     [InlineData("\"nativeDecoding\": false", "\"nativeDecoding\": \"false\"")]
     [InlineData("\"donorGroups\": [", "\"donorGroups\": [123, ")]
     public void RejectsALedgerThatLeavesItsVocabulary(string before, string after)
@@ -224,7 +224,7 @@ public sealed class DaggerfallCatalogContentTests
         string payload = File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json"));
         string tampered = payload
             .Replace("\"status\": \"absent\"", "\"status\": \"present\"", StringComparison.Ordinal)
-            .Replace("\"disposition\": \"unresolved\"", "\"disposition\": \"malformed\"", StringComparison.Ordinal);
+            .Replace("\"disposition\": \"substitute\"", "\"disposition\": \"malformed\"", StringComparison.Ordinal);
 
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(tampered));
 
