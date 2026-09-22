@@ -120,6 +120,7 @@ internal sealed class DaggerSessionPersistence
             Doors = _doors.Capture(),
             Currency = State.Currency.Capture(),
             Services = State.Services.Capture(),
+            QuestTraining = State.QuestTraining.Capture(),
             Locomotion = _locomotion.Capture(),
         });
     }

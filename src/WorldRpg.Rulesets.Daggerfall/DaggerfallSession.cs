@@ -213,6 +213,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 authored,
                 tuning.Progression.EnableExperimentalKillExperience);
             State.SkillUses = new DaggerfallSkillUseReactions(State.Progression, State.Actors.Player.Stats, definitions, () => State.Character.Career);
+            State.Quests.BindRuntime(new DaggerfallQuestRuntime(State.Progression, State.Actors.Player.Stats, definitions,
+                State.QuestTraining, tuning.Locomotion, _random, () => _time.Calendar, AdvanceQuestTraining));
             State.Character.BindCareerCommitted(State.SkillUses.RebaseForCareerSelection);
             State.LevelUps = new DaggerfallLevelUpState(State.Progression, State.SkillUses, State.Actors.Player.Stats,
                 definitions, () => State.Character.Career, _random, _rewards);
@@ -802,6 +804,20 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         AdvanceEffectsForCalendar(calendarBefore, ordinaryPlay: false);
         AnnounceHoliday();
         return advance;
+    }
+
+    /// <summary>Applies quest training through the session's calendar without recursively advancing the executing task.</summary>
+    private void AdvanceQuestTraining(long gameSeconds)
+    {
+        DaggerfallCalendar calendarBefore = _time.Calendar;
+        long minuteBefore = MinuteIndex(calendarBefore);
+        _ = _time.AdvanceInterval(gameSeconds, []);
+        State.Quests.AdvanceClocks(State.Variables, calendarBefore, _time.Calendar);
+        State.SkillUses.RaiseSkills(_time.Calendar.ToAbsoluteSeconds());
+        State.LevelUps.BeginIfEligible();
+        State.Social.AdvanceElapsedMinutes(minuteBefore, MinuteIndex(_time.Calendar));
+        AdvanceEffectsForCalendar(calendarBefore, ordinaryPlay: false);
+        AnnounceHoliday();
     }
 
     private void AdvanceEffectsForCalendar(DaggerfallCalendar before, bool ordinaryPlay)

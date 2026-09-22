@@ -2,8 +2,11 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Reflection;
 using Rusty.Engine;
+using Rusty.Engine.Mechanics;
+using WorldRpg.Kit.Progression;
 using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
@@ -164,6 +167,16 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         Assert.Throws<JsonException>(() => JsonSerializer.Deserialize("{\"Instances\":[]}",
             DaggerfallSaveJsonContext.Default.GetTypeInfo(typeof(DaggerfallQuestInstancesSave))!));
         Assert.Throws<ArgumentNullException>(() => (new DaggerfallQuestInstancesSave([]) { Messages = null! }).Validate());
+    }
+
+    [Fact]
+    public void Quest_success_flag_is_required_even_when_an_active_instance_has_not_set_it()
+    {
+        DaggerfallQuestInstanceSave saved = Runtime(Source()).Capture();
+        JsonObject json = JsonNode.Parse(JsonSerializer.Serialize(saved, typeof(DaggerfallQuestInstanceSave), DaggerfallSaveJsonContext.Default))!.AsObject();
+        Assert.True(json.Remove("Succeeded"));
+
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize(json.ToJsonString(), typeof(DaggerfallQuestInstanceSave), DaggerfallSaveJsonContext.Default));
     }
 
     [Fact]
@@ -560,6 +573,114 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         Assert.False(saved.Tasks.Single(task => task.Symbol == "success").IsSet);
     }
 
+    [Fact]
+    public void Live_player_conditions_and_train_pc_use_the_named_quest_runtime_and_saved_training_time()
+    {
+        DaggerfallDefinitions definitions = Definitions();
+        DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
+        DaggerfallCareerDefinition career = definitions.Catalogs.RequireCareer(player.Career!);
+        StatsComponent stats = new DaggerfallMechanicsState().CreateStats(player, DaggerfallPlayerVitals.Initial(player.Stats, career));
+        ProgressionState progression = new();
+        DaggerfallQuestTrainingState training = new();
+        DaggerfallCalendar calendar = DaggerfallCalendar.Start;
+        DaggerfallQuestRuntime runtime = new(progression, stats, definitions, training, DaggerfallLocomotionTuning.Classic, RandomMinimum.Create(), () => calendar,
+            seconds => calendar = calendar.Advance(seconds, out _));
+        string skill = definitions.Vocabulary.Skills.First().Value;
+        string attribute = definitions.Vocabulary.Attributes.First().Value;
+        stats.GetStat(StatId.Parse(skill)).BaseValue = 42;
+        stats.GetStat(StatId.Parse(attribute)).BaseValue = 43;
+        progression.AdvanceTo(0, 3);
+
+        Assert.True(runtime.IsLevelCompleted(3));
+        Assert.True(runtime.IsAttributeAtLeast(attribute, 43));
+        Assert.True(runtime.IsSkillAtLeast(skill, 42));
+
+        DaggerfallQuestSourceDefinition source = Source(Block("headless", 7, "train pc " + skill.Replace("-", string.Empty, StringComparison.Ordinal)));
+        DaggerfallQuestRuntimeInstance instance = Runtime(source);
+        DaggerfallQuestTaskOperation operation = Program(source).Tasks.Single().Operations.Single();
+        double fatigueBefore = stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current;
+        runtime.Train(instance, operation);
+
+        Assert.True(instance.Succeeded);
+        Assert.Equal(DaggerfallCalendar.Start.ToAbsoluteSeconds(), training.LastSkillTrainingSecond);
+        Assert.Equal(DaggerfallCalendar.Start.Advance(3 * 60 * 60, out _), calendar);
+        Assert.Equal(10 * DaggerfallFormulaPolicy.SkillAdvancementMultiplier(skill), progression.SkillUses[skill]);
+        Assert.Equal(training.Capture(), new DaggerfallQuestTrainingState(training.Capture()).Capture());
+        Assert.Equal(fatigueBefore - (11 * 180), stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
+    }
+
+    [Fact]
+    public void Compiler_claims_the_donor_level_attribute_skill_and_train_pc_forms()
+    {
+        DaggerfallQuestSourceDefinition source = Source(Block("headless", 4,
+            "level 2 completed", "when attribute Strength is at least 40", "when skill LongBlade is at least 30", "train pc LongBlade"));
+
+        Assert.Equal([
+            DaggerfallQuestTaskOperationKind.LevelCompleted,
+            DaggerfallQuestTaskOperationKind.WhenAttributeLevel,
+            DaggerfallQuestTaskOperationKind.WhenSkillLevel,
+            DaggerfallQuestTaskOperationKind.TrainPc,
+        ], Program(source).Tasks.Single().Operations.Select(operation => operation.Kind));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Quest_instances_run_train_pc_through_the_bound_session_runtime(bool hasRewardMessage)
+    {
+        DaggerfallDefinitions definitions = DefinitionsWithLifecycleFixtures(hasRewardMessage);
+        DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
+        DaggerfallCareerDefinition career = definitions.Catalogs.RequireCareer(player.Career!);
+        StatsComponent stats = new DaggerfallMechanicsState().CreateStats(player, DaggerfallPlayerVitals.Initial(player.Stats, career));
+        DaggerfallCalendar calendar = DaggerfallCalendar.Start;
+        DaggerfallQuestTrainingState training = new();
+        DaggerfallQuestRuntime runtime = new(new ProgressionState(), stats, definitions, training, DaggerfallLocomotionTuning.Classic, RandomMinimum.Create(), () => calendar,
+            seconds => calendar = calendar.Advance(seconds, out _));
+        DaggerfallQuestInstances instances = new(definitions, RandomMinimum.Create());
+        instances.BindRuntime(runtime);
+        DaggerfallQuestSourceDefinition source = definitions.QuestSources.Resolve("trainquest.txt");
+        instances.Start(new("training", source.SourceFile, source.Name, DaggerfallQuestLifecycle.Active, null, [], []));
+
+        instances.Advance(new(new Dictionary<string, int>(StringComparer.Ordinal)), calendar);
+
+        Assert.Equal(DaggerfallCalendar.Start.Advance(3 * 60 * 60, out _), calendar);
+        Assert.True(Assert.Single(instances.All).Succeeded);
+        Assert.NotNull(training.LastSkillTrainingSecond);
+        if (hasRewardMessage) Assert.Equal(new DaggerfallQuestMessageDeliverySave("training", 1004, DaggerfallQuestMessageDelivery.Popup), Assert.Single(instances.Messages.Deliveries));
+        else Assert.Empty(instances.Messages.Deliveries);
+    }
+
+    [Fact]
+    public void Rearming_a_task_cannot_repeat_train_pc_time_fatigue_or_skill_reward()
+    {
+        DaggerfallDefinitions definitions = DefinitionsWithLifecycleFixtures();
+        DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
+        DaggerfallCareerDefinition career = definitions.Catalogs.RequireCareer(player.Career!);
+        StatsComponent stats = new DaggerfallMechanicsState().CreateStats(player, DaggerfallPlayerVitals.Initial(player.Stats, career));
+        DaggerfallCalendar calendar = DaggerfallCalendar.Start;
+        ProgressionState progression = new();
+        DaggerfallQuestTrainingState training = new();
+        DaggerfallQuestRuntime runtime = new(progression, stats, definitions, training, DaggerfallLocomotionTuning.Classic, RandomMinimum.Create(), () => calendar,
+            seconds => calendar = calendar.Advance(seconds, out _));
+        DaggerfallQuestInstances instances = new(definitions, RandomMinimum.Create());
+        instances.BindRuntime(runtime);
+        DaggerfallQuestSourceDefinition source = definitions.QuestSources.Resolve("rearmtraining.txt");
+        instances.Start(new("rearm-training", source.SourceFile, source.Name, DaggerfallQuestLifecycle.Active, null, [], []));
+        DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal));
+
+        instances.Advance(variables, calendar);
+        long trainedAt = training.LastSkillTrainingSecond!.Value;
+        int skillUses = progression.SkillUses["long-blade"];
+        double fatigue = stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current;
+        instances.Advance(variables, calendar);
+
+        Assert.Equal(DaggerfallCalendar.Start.Advance(3 * 60 * 60, out _), calendar);
+        Assert.Equal(trainedAt, training.LastSkillTrainingSecond);
+        Assert.Equal(skillUses, progression.SkillUses["long-blade"]);
+        Assert.Equal(fatigue, stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
+        Assert.Single(instances.Messages.Deliveries, delivery => delivery is { MessageId: 1004, Delivery: DaggerfallQuestMessageDelivery.Popup });
+    }
+
     [Theory]
     [InlineData("S0000999.txt")]
     [InlineData("s0000977")]
@@ -639,7 +760,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         return DaggerfallBaseContent.Read(File.ReadAllBytes(BasePayloadPath()));
     }
 
-    private static DaggerfallDefinitions DefinitionsWithLifecycleFixtures()
+    private static DaggerfallDefinitions DefinitionsWithLifecycleFixtures(bool hasRewardMessage = true)
     {
         JsonObject root = JsonNode.Parse(File.ReadAllText(BasePayloadPath()))!.AsObject();
         JsonArray quests = root["questSources"]!["quests"]!.AsArray();
@@ -661,6 +782,14 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         quests.Add(JsonNode.Parse("""
             {"name":"endchild","displayName":"End child","sourceFile":"endchild.txt","disposition":"compiled","messages":[],"blocks":[{"kind":"headless","firstLine":1,"lines":["end quest"],"global":null}],"diagnostics":[]}
             """));
+        quests.Add(JsonNode.Parse("""
+            {"name":"trainquest","displayName":"Train quest","sourceFile":"trainquest.txt","disposition":"compiled","messages":[{"id":1004,"firstLine":1,"lines":["Complete."]}],"blocks":[{"kind":"headless","firstLine":1,"lines":["train pc LongBlade"],"global":null}],"diagnostics":[]}
+            """));
+        quests.Add(JsonNode.Parse("""
+            {"name":"rearmtraining","displayName":"Rearm training","sourceFile":"rearmtraining.txt","disposition":"compiled","messages":[{"id":1004,"firstLine":1,"lines":["Complete."]}],"blocks":[{"kind":"variable","firstLine":1,"lines":["variable _stop_"],"global":null},{"kind":"task","firstLine":2,"lines":["until _stop_ performed:","start task _source_"],"global":null},{"kind":"task","firstLine":4,"lines":["_source_ task:","train pc LongBlade","clear _source_"],"global":null}],"diagnostics":[]}
+            """));
+        if (!hasRewardMessage)
+            quests.Single(quest => quest!["sourceFile"]!.GetValue<string>() == "trainquest.txt")!["messages"] = new JsonArray();
         return DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(root.ToJsonString()));
     }
 
@@ -683,6 +812,10 @@ public sealed class DaggerfallQuestTaskRuntimeTests
     private sealed class LifecycleFake(string? pick = null, string? childBranch = null) : IDaggerfallQuestTaskLifecycle
     {
         internal string? ChildBranch { get; set; } = childBranch;
+        public bool IsLevelCompleted(int minimum) => false;
+        public bool IsAttributeAtLeast(string attribute, int minimum) => false;
+        public bool IsSkillAtLeast(string skill, int minimum) => false;
+        public void Train(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) { }
         public string Pick(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation, int operationIndex, DaggerfallQuestTaskRuntimeState state)
         {
             string selected = pick ?? operation.Targets[0];

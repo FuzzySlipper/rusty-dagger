@@ -45,6 +45,9 @@ internal sealed record DaggerfallSavePayload(
     /// <summary>Accepted service work that has not reached its concrete service-specific completion.</summary>
     [JsonRequired]
     public DaggerfallServiceStateSave Services { get; init; } = new([]);
+    /// <summary>The last donor quest-provided free skill training time, when one has occurred.</summary>
+    [JsonRequired]
+    public DaggerfallQuestTrainingSave QuestTraining { get; init; } = new(null);
     /// <summary>The dynamic identity kinds owned by the current Daggerfall ruleset.</summary>
     internal static readonly DurableIdentityKind[] PersistedKinds = [DurableIdentityKind.Actor, DurableIdentityKind.Item];
 
@@ -195,6 +198,8 @@ internal sealed record DaggerfallSavePayload(
         ArgumentNullException.ThrowIfNull(Corpses);
         ArgumentNullException.ThrowIfNull(Services);
         Services.Validate();
+        ArgumentNullException.ThrowIfNull(QuestTraining);
+        QuestTraining.Validate();
         ArgumentNullException.ThrowIfNull(Identities);
         ArgumentNullException.ThrowIfNull(CombatCooldowns);
         ArgumentNullException.ThrowIfNull(Calendar);

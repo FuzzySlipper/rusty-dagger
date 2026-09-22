@@ -95,6 +95,16 @@ internal sealed class DaggerfallQuestMessages
 
     /// <summary>Named entry seams for later item, person, and action callers after their own interaction commits.</summary>
     internal void Popup(DaggerfallQuestRuntimeInstance instance, int messageId) => Deliver(instance, messageId, DaggerfallQuestMessageDelivery.Popup);
+    /// <summary>Donor optional reward text: an absent source message does not cancel the completed reward.</summary>
+    internal bool TryPopup(DaggerfallQuestRuntimeInstance instance, int messageId)
+    {
+        if (!_sources.TryGetValue(instance.SourceFile, out DaggerfallQuestSourceDefinition? source))
+            throw new InvalidOperationException($"Quest instance '{instance.InstanceId}' refers to unavailable source '{instance.SourceFile}'.");
+        if (!source.Messages.Any(message => message.Id == messageId)) return false;
+        Popup(instance, messageId);
+        return true;
+    }
+
     internal void Letter(DaggerfallQuestRuntimeInstance instance, int messageId) => Deliver(instance, messageId, DaggerfallQuestMessageDelivery.Letter);
     internal void Rumor(DaggerfallQuestRuntimeInstance instance, int messageId) => Deliver(instance, messageId, DaggerfallQuestMessageDelivery.Rumor);
 
