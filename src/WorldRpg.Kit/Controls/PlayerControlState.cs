@@ -79,20 +79,31 @@ public sealed record PlayerControlTuning(
 /// <summary>Explicit product overrides layered over the Engine's current default character-controller configuration.</summary>
 public sealed record CharacterControllerTuning(
     float? StandingHeight = null,
+    float? CrouchedHeight = null,
     float? Radius = null,
     float? ForwardSpeed = null,
     float? BackwardSpeed = null,
     float? StrafeSpeed = null,
+    float? JumpSpeed = null,
+    float? JumpBufferSeconds = null,
+    float? JumpCoyoteSeconds = null,
+    float? JumpLandingLockoutSeconds = null,
+    bool? JumpHeldInputRetriggers = null,
     float? RecoveryMaximumDistance = null,
     float? MaximumStepHeight = null)
 {
     public CharacterControllerTuning Validate()
     {
         ValidateFinite(StandingHeight, nameof(StandingHeight));
+        ValidateFinite(CrouchedHeight, nameof(CrouchedHeight));
         ValidateFinite(Radius, nameof(Radius));
         ValidateFinite(ForwardSpeed, nameof(ForwardSpeed));
         ValidateFinite(BackwardSpeed, nameof(BackwardSpeed));
         ValidateFinite(StrafeSpeed, nameof(StrafeSpeed));
+        ValidateFinite(JumpSpeed, nameof(JumpSpeed));
+        ValidateFinite(JumpBufferSeconds, nameof(JumpBufferSeconds));
+        ValidateFinite(JumpCoyoteSeconds, nameof(JumpCoyoteSeconds));
+        ValidateFinite(JumpLandingLockoutSeconds, nameof(JumpLandingLockoutSeconds));
         ValidateFinite(RecoveryMaximumDistance, nameof(RecoveryMaximumDistance));
         ValidateFinite(MaximumStepHeight, nameof(MaximumStepHeight));
         return this;
@@ -106,6 +117,7 @@ public sealed record CharacterControllerTuning(
             Shape = defaults.Shape with
             {
                 StandingHeight = StandingHeight ?? defaults.Shape.StandingHeight,
+                CrouchedHeight = CrouchedHeight ?? defaults.Shape.CrouchedHeight,
                 Radius = Radius ?? defaults.Shape.Radius,
             },
             Ground = defaults.Ground with
@@ -113,6 +125,14 @@ public sealed record CharacterControllerTuning(
                 ForwardSpeed = ForwardSpeed ?? defaults.Ground.ForwardSpeed,
                 BackwardSpeed = BackwardSpeed ?? defaults.Ground.BackwardSpeed,
                 StrafeSpeed = StrafeSpeed ?? defaults.Ground.StrafeSpeed,
+            },
+            Vertical = defaults.Vertical with { JumpSpeed = JumpSpeed ?? defaults.Vertical.JumpSpeed },
+            Jump = defaults.Jump with
+            {
+                BufferSeconds = JumpBufferSeconds ?? defaults.Jump.BufferSeconds,
+                CoyoteSeconds = JumpCoyoteSeconds ?? defaults.Jump.CoyoteSeconds,
+                LandingLockoutSeconds = JumpLandingLockoutSeconds ?? defaults.Jump.LandingLockoutSeconds,
+                HeldInputRetriggers = JumpHeldInputRetriggers ?? defaults.Jump.HeldInputRetriggers,
             },
             Recovery = defaults.Recovery with
             {

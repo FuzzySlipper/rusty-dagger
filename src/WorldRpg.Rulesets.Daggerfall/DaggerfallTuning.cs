@@ -8,6 +8,7 @@ internal sealed record DaggerfallTuning(
     PlayerControlTuning PlayerControl,
     ControllerInputTuning ControllerInput,
     SpatialTuning Spatial,
+    DaggerfallLocomotionTuning Locomotion,
     FirstPersonCameraTuning Camera,
     DaggerfallMeleeTargetingTuning MeleeTargeting,
     DaggerfallEnemyBehaviorTuning EnemyBehavior,
@@ -27,8 +28,15 @@ internal sealed record DaggerfallTuning(
             ForwardSpeed: 3.5f,
             BackwardSpeed: 3.5f,
             StrafeSpeed: 3.5f,
+            CrouchedHeight: 1.1f,
+            JumpSpeed: 7f,
+            JumpBufferSeconds: .12f,
+            JumpCoyoteSeconds: .1f,
+            JumpLandingLockoutSeconds: .1f,
+            JumpHeldInputRetriggers: false,
             RecoveryMaximumDistance: 1f,
             MaximumStepHeight: .75f)),
+        DaggerfallLocomotionTuning.Classic,
         new FirstPersonCameraTuning(.75f, 65d, .1d, 100d),
         new DaggerfallMeleeTargetingTuning(2.25d, .5d),
         new DaggerfallEnemyBehaviorTuning(12d, .5d, 3f, 32),
@@ -43,6 +51,7 @@ internal sealed record DaggerfallTuning(
         PlayerControl = PlayerControl.Validate(),
         ControllerInput = ControllerInput.Validate(),
         Spatial = Spatial.Validate(),
+        Locomotion = Locomotion.Validate(),
         Camera = Camera.Validate(),
         MeleeTargeting = MeleeTargeting.Validate(),
         EnemyBehavior = EnemyBehavior.Validate(),
@@ -65,6 +74,7 @@ internal sealed record DaggerfallTuning(
             throw new InvalidOperationException("Tuning profile enemyBehavior.attackReach is obsolete: how far an attack carries is authored on the action, not on the enemy behaviour tuning. Remove the key and set reach on the actions that need it.");
         JsonElement controls = root.GetProperty("playerControl");
         JsonElement spatial = root.GetProperty("spatial");
+        JsonElement locomotion = root.GetProperty("locomotion");
         JsonElement camera = root.GetProperty("camera");
         JsonElement meleeTargeting = root.GetProperty("meleeTargeting");
         JsonElement enemyBehavior = root.GetProperty("enemyBehavior");
@@ -89,6 +99,19 @@ internal sealed record DaggerfallTuning(
                 checked((uint)spatial.GetProperty("navigationChunkSize").GetInt32()),
                 checked((uint)spatial.GetProperty("navigationMaximumStepCells").GetInt32()),
                 ReadCharacterController(spatial.GetProperty("characterController"))),
+            new DaggerfallLocomotionTuning(
+                locomotion.GetProperty("classicToEngineSpeedRatio").GetSingle(),
+                locomotion.GetProperty("walkBase").GetSingle(),
+                locomotion.GetProperty("crouchBase").GetSingle(),
+                locomotion.GetProperty("runBaseMultiplier").GetSingle(),
+                locomotion.GetProperty("runningSkillDivisor").GetSingle(),
+                locomotion.GetProperty("minimumWalkSpeedAttribute").GetInt32(),
+                locomotion.GetProperty("idleFatiguePerGameMinute").GetInt32(),
+                locomotion.GetProperty("runningFatiguePerGameMinute").GetInt32(),
+                locomotion.GetProperty("jumpFatigueCost").GetInt32(),
+                locomotion.GetProperty("jumpBaseSpeed").GetSingle(),
+                locomotion.GetProperty("jumpSkillMultiplier").GetSingle(),
+                locomotion.GetProperty("crouchedJumpMultiplier").GetSingle()),
             new FirstPersonCameraTuning(
                 camera.GetProperty("eyeHeight").GetSingle(),
                 camera.GetProperty("fieldOfViewYDegrees").GetDouble(),
@@ -122,10 +145,16 @@ internal sealed record DaggerfallTuning(
 
     private static CharacterControllerTuning ReadCharacterController(JsonElement controller) => new(
         StandingHeight: controller.GetProperty("standingHeight").GetSingle(),
+        CrouchedHeight: controller.GetProperty("crouchedHeight").GetSingle(),
         Radius: controller.GetProperty("radius").GetSingle(),
         ForwardSpeed: controller.GetProperty("forwardSpeed").GetSingle(),
         BackwardSpeed: controller.GetProperty("backwardSpeed").GetSingle(),
         StrafeSpeed: controller.GetProperty("strafeSpeed").GetSingle(),
+        JumpSpeed: controller.GetProperty("jumpSpeed").GetSingle(),
+        JumpBufferSeconds: controller.GetProperty("jumpBufferSeconds").GetSingle(),
+        JumpCoyoteSeconds: controller.GetProperty("jumpCoyoteSeconds").GetSingle(),
+        JumpLandingLockoutSeconds: controller.GetProperty("jumpLandingLockoutSeconds").GetSingle(),
+        JumpHeldInputRetriggers: controller.GetProperty("jumpHeldInputRetriggers").GetBoolean(),
         RecoveryMaximumDistance: controller.GetProperty("recoveryMaximumDistance").GetSingle(),
         MaximumStepHeight: controller.GetProperty("maximumStepHeight").GetSingle());
 

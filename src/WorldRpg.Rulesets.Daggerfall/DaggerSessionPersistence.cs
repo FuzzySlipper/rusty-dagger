@@ -35,11 +35,12 @@ internal sealed class DaggerSessionPersistence
     private readonly DaggerfallSiteContext _site;
     private readonly DaggerfallEffectLifecycle _effects;
     private readonly DaggerfallDoorRuntime _doors;
+    private readonly DaggerfallLocomotionPolicy _locomotion;
     internal DaggerSessionPersistence(DaggerfallState state, DaggerfallCorpseLootModule corpses,
         DaggerfallUniqueItemAllocator uniqueItems, FirstPersonCameraSystem camera, DaggerfallWorldTime time, DaggerfallSiteContext site,
-        DaggerfallEffectLifecycle effects, DaggerfallDoorRuntime doors)
+        DaggerfallEffectLifecycle effects, DaggerfallDoorRuntime doors, DaggerfallLocomotionPolicy locomotion)
     {
-        State = state; _corpseLoot = corpses; _uniqueItems = uniqueItems; _camera = camera; _time = time; _site = site; _effects = effects; _doors = doors;
+        State = state; _corpseLoot = corpses; _uniqueItems = uniqueItems; _camera = camera; _time = time; _site = site; _effects = effects; _doors = doors; _locomotion = locomotion;
     }
     internal RulesetSavePayload Capture(ulong? generation, ulong? step, IReadOnlyDictionary<long, DaggerfallActorId> dynamicActors)
     {
@@ -118,6 +119,7 @@ internal sealed class DaggerSessionPersistence
             Quests = State.Quests.Capture(),
             Doors = _doors.Capture(),
             Currency = State.Currency.Capture(),
+            Locomotion = _locomotion.Capture(),
         });
     }
 
@@ -147,6 +149,7 @@ internal sealed class DaggerSessionPersistence
 
         State.Progression.AdvanceTo(saved.Experience, saved.Level);
         State.SkillUses.Restore(saved.SkillUses);
+        _locomotion.Restore(saved.Locomotion);
         State.LevelUps.Restore(saved.LevelUp);
         State.Quests.Restore(saved.Quests);
 
