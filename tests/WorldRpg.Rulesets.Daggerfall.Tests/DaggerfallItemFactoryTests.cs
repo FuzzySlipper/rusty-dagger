@@ -120,6 +120,28 @@ public sealed class DaggerfallItemFactoryTests
     }
 
     [Fact]
+    public void Book_identity_resolves_its_normalized_runtime_value_and_reports_missing_metadata_definition()
+    {
+        DaggerfallDefinitions definitions = LoadDefinitions();
+        DaggerfallItemFactory factory = new(definitions, RandomMinimum());
+        DaggerfallItemValuation valuation = new(definitions);
+        DaggerfallCreatedItem first = factory.Create(new DaggerfallItemCreateRequest("Books", "book-zero", DaggerfallItemOwner.Player,
+            TemplateIndex: 277, BookId: 0));
+        DaggerfallCreatedItem biography = factory.Create(new DaggerfallItemCreateRequest("Books", "book-fifty-nine", DaggerfallItemOwner.Player,
+            TemplateIndex: 277, BookId: 59));
+        DaggerfallItemDefinition definition = definitions.RequireItem(new DaggerfallItemId(first.Item.Value));
+
+        Assert.Equal(580, valuation.CurrentValue(definition, first.Metadata));
+        Assert.Equal(406, valuation.CurrentValue(definition, biography.Metadata));
+        Assert.NotEqual(definition.Value, valuation.CurrentValue(definition, first.Metadata));
+        Assert.Equal(valuation.CurrentValue(definition, biography.Metadata),
+            valuation.CurrentValue(definition, DaggerfallItemInstanceMetadata.Restore(biography.Item.Value, biography.Metadata.Capture())));
+        InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() =>
+            valuation.CurrentValue(definition, first.Metadata with { BookId = 255 }));
+        Assert.Contains("unpublished book 255", missing.Message);
+    }
+
+    [Fact]
     public void Materialize_commits_to_engine_then_registers_metadata_for_stack_and_unique_instances()
     {
         DaggerfallDefinitions definitions = LoadDefinitions();

@@ -21,6 +21,7 @@ public enum DaggerfallBookDisposition
 /// <param name="Author">The book's internal author name.</param>
 /// <param name="IsNaughty">Whether the file carries the adult-content flag.</param>
 /// <param name="FilePrice">The price the file states; the donor re-rolls it at open.</param>
+/// <param name="RuntimePrice">The donor-compatible price calculated from the file prefix.</param>
 /// <param name="PageCount">How many pages the file declares.</param>
 /// <param name="PageKeys">The text key of each page, in order.</param>
 /// <param name="Disposition">Whether the book's pages are published.</param>
@@ -32,6 +33,7 @@ public sealed record DaggerfallBook(
     string Author,
     bool IsNaughty,
     uint FilePrice,
+    uint RuntimePrice,
     int PageCount,
     IReadOnlyList<string> PageKeys,
     DaggerfallBookDisposition Disposition,
@@ -56,10 +58,21 @@ public sealed record DaggerfallBook(
             {
                 throw new InvalidOperationException($"Book {BookId} publishes {PageKeys.Count} page keys for {PageCount} pages.");
             }
+
+            if (RuntimePrice is < 300 or > 800)
+            {
+                throw new ArgumentOutOfRangeException(nameof(RuntimePrice), RuntimePrice,
+                    $"Book {BookId} must publish the donor's 300..800 runtime value.");
+            }
         }
         else if (Reason.Length == 0)
         {
             throw new ArgumentException($"Book {BookId} carries no reason for its disposition.", nameof(Reason));
+        }
+        else if (RuntimePrice != 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(RuntimePrice), RuntimePrice,
+                $"Unreadable book {BookId} cannot publish a runtime value.");
         }
     }
 }
@@ -136,7 +149,7 @@ public static class DaggerfallBooksBuilder
         {
             if (!supplied.TryGetValue(bookId, out (string Label, byte[] Bytes) suppliedBook))
             {
-                published.Add(new DaggerfallBook(bookId, $"BOK{bookId:D5}.TXT", string.Empty, string.Empty, false, 0, 0, [], DaggerfallBookDisposition.NotSupplied, "No file is supplied for this identity."));
+                published.Add(new DaggerfallBook(bookId, $"BOK{bookId:D5}.TXT", string.Empty, string.Empty, false, 0, 0, 0, [], DaggerfallBookDisposition.NotSupplied, "No file is supplied for this identity."));
                 continue;
             }
 
@@ -147,7 +160,7 @@ public static class DaggerfallBooksBuilder
             }
             catch (Arena2FormatException failure)
             {
-                published.Add(new DaggerfallBook(bookId, $"BOK{bookId:D5}.TXT", string.Empty, string.Empty, false, 0, 0, [], DaggerfallBookDisposition.Malformed, failure.Message));
+                published.Add(new DaggerfallBook(bookId, $"BOK{bookId:D5}.TXT", string.Empty, string.Empty, false, 0, 0, 0, [], DaggerfallBookDisposition.Malformed, failure.Message));
                 continue;
             }
 
@@ -179,6 +192,7 @@ public static class DaggerfallBooksBuilder
                 book.Header.Author,
                 book.Header.IsNaughty,
                 book.Header.Price,
+                RuntimePrice(suppliedBook.Bytes),
                 book.Header.PageCount,
                 pageKeys,
                 DaggerfallBookDisposition.Read,
@@ -190,6 +204,20 @@ public static class DaggerfallBooksBuilder
             published);
         catalog.Validate();
         return (catalog, sources, records);
+    }
+
+    /// <summary>
+    /// The donor ignores the filed price when opening a book. It seeds the classic 15-bit LCG
+    /// from the first four little-endian file bytes, advances it once, then reduces the sample to
+    /// the inclusive 300..800 range. This belongs in import: runtime reads the normalized value
+    /// and never opens a source file or owns a compatibility random implementation.
+    /// </summary>
+    private static uint RuntimePrice(ReadOnlySpan<byte> bytes)
+    {
+        uint seed = (uint)(bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) | (bytes[3] << 24));
+        uint state = unchecked((seed * 1_103_515_245u) + 12_345u);
+        uint sample = (state >> 16) & 0x7fffu;
+        return (sample % 501u) + 300u;
     }
 
     private static string RequireFile(IReadOnlyList<SourceInventoryRow> inventory, string label)

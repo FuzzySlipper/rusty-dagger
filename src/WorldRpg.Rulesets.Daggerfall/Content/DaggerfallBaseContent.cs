@@ -1588,6 +1588,7 @@ internal static class DaggerfallBaseContent
             string author = OptionalText(book, "author") ?? string.Empty;
             bool naughty = book.TryGetProperty("isNaughty", out JsonElement naughtyValue) && naughtyValue.ValueKind == JsonValueKind.True;
             uint filePrice = book.TryGetProperty("filePrice", out JsonElement priceValue) && priceValue.TryGetUInt32(out uint parsed) ? parsed : 0;
+            uint runtimePrice = book.TryGetProperty("runtimePrice", out JsonElement runtimePriceValue) && runtimePriceValue.TryGetUInt32(out uint parsedRuntime) ? parsedRuntime : 0;
             int pageCount = Integer(book, "pageCount", diagnostics);
             List<string> pageKeys = [.. Array(book, "pageKeys", diagnostics).Select(key => key.GetString() ?? string.Empty)];
             string dispositionName = Text(book, "disposition", diagnostics);
@@ -1617,7 +1618,16 @@ internal static class DaggerfallBaseContent
                 diagnostics.Add($"Book {bookId} is {dispositionName} with {pageKeys.Count} page keys.");
             }
 
-            if (!books.TryAdd(bookId, new DaggerfallBookDefinition(bookId, fileName, title, author, naughty, filePrice, pageCount, pageKeys, disposition)))
+            if (disposition == DaggerfallBookDisposition.Read && runtimePrice is < 300 or > 800)
+            {
+                diagnostics.Add($"Book {bookId} publishes runtime price {runtimePrice}, outside the donor's 300..800 range.");
+            }
+            else if (disposition != DaggerfallBookDisposition.Read && runtimePrice != 0)
+            {
+                diagnostics.Add($"Unreadable book {bookId} publishes runtime price {runtimePrice}.");
+            }
+
+            if (!books.TryAdd(bookId, new DaggerfallBookDefinition(bookId, fileName, title, author, naughty, filePrice, runtimePrice, pageCount, pageKeys, disposition)))
             {
                 diagnostics.Add($"Book catalog names book {bookId} twice, so one of them is unreachable.");
             }
