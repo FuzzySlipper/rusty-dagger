@@ -106,15 +106,15 @@ public sealed record CharacterMediaPublicationResult(
 }
 
 /// <summary>
-/// Publishes the character and face canvases a presentation reference names, so the references resolve to
-/// admitted bytes instead of staying pending forever.
+/// Publishes the character and face canvases a presentation reference names as normal content artifacts.
 /// </summary>
 /// <remarks>
 /// This is the emission half of the character presentation: it takes the canvas references the inventory
 /// enumerated and the source bytes they came from, decodes each canvas through the reader that owns its
 /// format, and writes it as a PNG in that canvas's palette. It deliberately returns the identities it
 /// published rather than assuming them, because the reference's binding has to be derived from what
-/// exists.
+/// exists. Publishing bytes does not itself bind a consumer: an unclaimed faction face can remain
+/// required-pending while its named artifact is available for the future consumer that will resolve it.
 /// A canvas whose format has no decoder here, or whose file the corpus does not carry, is refused with
 /// the identity and the reason rather than skipped: a missing canvas must be visible.
 /// </remarks>
@@ -170,13 +170,13 @@ public static class CharacterMediaPublication
                     // A palette that exists but belongs to another family is as wrong as a missing one:
                     // the classic reader pairs this file with 'expected', and trusting the reference
                     // would publish every colour wrong while looking successful.
-                    refusals.Add($"'{reference.MediaId}' names palette '{reference.Palette}', but '{file}' is read with '{expected}'.");
+                    refusals.Add($"'{reference.MediaId}' names palette '{reference.Palette}' for '{file}', but that source is read with '{expected}'.");
                     continue;
                 }
 
                 if (!palettes.TryGetValue(named_, out named))
                 {
-                    refusals.Add($"'{reference.MediaId}' names palette '{reference.Palette}', which the supplied corpus does not carry.");
+                    refusals.Add($"'{reference.MediaId}' names palette '{reference.Palette}' for '{file}', which the supplied corpus does not carry.");
                     continue;
                 }
             }
@@ -214,6 +214,12 @@ public static class CharacterMediaPublication
             }
 
             Arena2Canvas enumerated = set.Canvases[canvasIndex];
+            if (set.Kind == Arena2CanvasKind.RciGrid && set.Reason.Length != 0)
+            {
+                reason = $"'{file}' has an incomplete fixed-cell grid: {set.Reason}";
+                return false;
+            }
+
             if (file.EndsWith(".CEL", StringComparison.OrdinalIgnoreCase))
             {
                 // A classic animation's frames are the canvases, and the container carries the palette
@@ -255,11 +261,25 @@ public static class CharacterMediaPublication
                 Arena2CanvasKind.HeaderlessCanvas => [ImgDecoder.DecodeHeaderless(bytes, file)],
                 Arena2CanvasKind.ImgRecordSequence when !file.Contains("WEAPO", StringComparison.OrdinalIgnoreCase) => ImgDecoder.DecodeRecordSequence(bytes, file),
                 Arena2CanvasKind.ImgRecord => [ImgDecoder.Decode(bytes, file)],
-                Arena2CanvasKind.RciGrid => throw new Arena2FormatException(file, 0,
-                    $"an RCI grid's {set.Canvases.Count} cells are enumerated by shape; this repository has no decoder that slices their pixels"),
+                Arena2CanvasKind.RciGrid => [],
                 _ => throw new Arena2FormatException(file, 0,
                     $"the {set.Kind} shape of '{file}' has no pixel decoder here"),
             };
+            if (set.Kind == Arena2CanvasKind.RciGrid)
+            {
+                int cellBytes = checked(enumerated.Width * enumerated.Height);
+                int offset = checked(enumerated.Record * cellBytes);
+                if (offset < 0 || bytes.Length - offset < cellBytes)
+                {
+                    reason = $"'{file}' ends before its {enumerated.Record}th {enumerated.Width}x{enumerated.Height} RCI cell";
+                    return false;
+                }
+
+                canvas = new CharacterCanvas(enumerated.Width, enumerated.Height, bytes.Slice(offset, cellBytes).ToArray(), null);
+                reason = string.Empty;
+                return true;
+            }
+
             if (enumerated.Record < 0 || enumerated.Record >= records.Count)
             {
                 reason = $"'{file}' decodes {records.Count} record(s), so record {enumerated.Record} does not exist";

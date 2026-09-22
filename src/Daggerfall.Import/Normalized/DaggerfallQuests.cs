@@ -108,7 +108,8 @@ public sealed record DaggerfallQuestDiagnostic(int Line, string Text, string Rea
 /// <param name="Quests">The quests in source order.</param>
 public sealed record DaggerfallQuestPack(
     DaggerfallTextSource Source,
-    IReadOnlyList<DaggerfallQuestRecord> Quests)
+    IReadOnlyList<DaggerfallQuestRecord> Quests,
+    DaggerfallQuestResources? Resources = null)
 {
     public void Validate()
     {
@@ -119,6 +120,8 @@ public sealed record DaggerfallQuestPack(
         {
             quest.Validate();
         }
+
+        Resources?.Validate();
     }
 }
 
@@ -209,6 +212,7 @@ public static class DaggerfallQuestPackBuilder
         DaggerfallQuestPack pack = new(
             new DaggerfallTextSource(DaggerfallTextKind.Resource, family.Id, label, "en", bytes.LongLength, 0, resolved.Count),
             [.. resolved.OrderBy(quest => quest.SourceFile, StringComparer.Ordinal)]);
+        pack = pack with { Resources = DaggerfallQuestResourceBuilder.Build(pack) };
         pack.Validate();
         return pack;
     }

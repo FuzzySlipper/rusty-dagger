@@ -358,8 +358,8 @@ public static class CharacterMediaReferences
     /// that reason, so binding only the race one actor happens to declare would leave seven races' live
     /// references labelled unclaimed.
     /// <para>
-    /// What stays unbound is what no consumer resolves: the faction face grid, whose cells nothing here
-    /// slices the pixels of, and the story and compass families, which have no character-sheet role.
+    /// What stays unbound is what no consumer resolves: the faction face grid and the story and compass
+    /// families, which have no character-sheet role.
     /// </para>
     /// </remarks>
     /// <param name="inventory">The supplied files, which are the candidate bindings.</param>

@@ -53,13 +53,6 @@ public static class CharacterMediaPublisher
     /// <summary>The palette source of a canvas painted in a supplied palette file.</summary>
     public const string SuppliedPaletteSource = "supplied-palette-file";
 
-    /// <summary>
-    /// Why an RCI grid's cells carry no artifact here. The cells are enumerated from the file's byte
-    /// arithmetic and their shape is known, but nothing in this repository slices a cell's pixels.
-    /// </summary>
-    private const string RciGridReason =
-        "the RCI reader enumerates the grid's cells by shape from the file's own byte arithmetic, and nothing in this repository slices a cell's pixels, so the cells are addressable and unpublishable";
-
     /// <summary>The documented family id the character-media inventory rows cite.</summary>
     public const string CharacterMediaFamilyId = "CNT-021";
 
@@ -234,8 +227,6 @@ public static class CharacterMediaPublisher
         /// <summary>The container read and refused, or its pixels have no decoder: the gap is past the reader.</summary>
         NoPixelDecoder,
 
-        /// <summary>The grid's cells are enumerated from byte arithmetic and nothing slices their pixels.</summary>
-        NoCellSlicer,
     }
 
     /// <summary>
@@ -265,7 +256,6 @@ public static class CharacterMediaPublisher
             UnpublishableCause cause = file.Decode switch
             {
                 Arena2CanvasKind.Unread => UnpublishableCause.NoReader,
-                Arena2CanvasKind.RciGrid => UnpublishableCause.NoCellSlicer,
                 _ => UnpublishableCause.NoPixelDecoder,
             };
             (string Family, UnpublishableCause Cause) key = (file.Family, cause);
@@ -281,12 +271,6 @@ public static class CharacterMediaPublisher
             string reader = DonorReaders.GetValueOrDefault(family, string.Empty);
             unreadable.Add(cause switch
             {
-                UnpublishableCause.NoCellSlicer => new CharacterMediaUnreadableFamily(
-                    family,
-                    "fixed-cell RCI grid",
-                    files,
-                    RciGridReason,
-                    string.Empty),
                 UnpublishableCause.NoPixelDecoder => new CharacterMediaUnreadableFamily(
                     family,
                     Kind(family, files, inventory),
