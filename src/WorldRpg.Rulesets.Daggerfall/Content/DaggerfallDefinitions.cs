@@ -44,9 +44,19 @@ internal static class DaggerfallMechanicsIds
 {
     internal static readonly DaggerfallStatId Strength = new("strength");
     internal static readonly DaggerfallStatId Intelligence = new("intelligence");
+    internal static readonly DaggerfallStatId Willpower = new("willpower");
     internal static readonly DaggerfallStatId Agility = new("agility");
     internal static readonly DaggerfallStatId Endurance = new("endurance");
+    internal static readonly DaggerfallStatId Personality = new("personality");
+    internal static readonly DaggerfallStatId Speed = new("speed");
     internal static readonly DaggerfallStatId Luck = new("luck");
+    internal static readonly DaggerfallStatId ResistanceFire = new("resistance-fire");
+    internal static readonly DaggerfallStatId ResistanceFrost = new("resistance-frost");
+    internal static readonly DaggerfallStatId ResistanceDiseaseOrPoison = new("resistance-disease-or-poison");
+    internal static readonly DaggerfallStatId ResistanceShock = new("resistance-shock");
+    internal static readonly DaggerfallStatId ResistanceMagic = new("resistance-magic");
+    internal static readonly DaggerfallStatId ImmunityParalysis = new("immunity-paralysis");
+    internal static readonly DaggerfallStatId ImmunityDisease = new("immunity-disease");
     internal static readonly DaggerfallStatId Dodging = new("dodging");
     internal static readonly DaggerfallStatId LongBlade = new("long-blade");
     internal static readonly DaggerfallStatId HandToHand = new("hand-to-hand");
@@ -156,7 +166,8 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     DaggerfallWorldGridsSet grids,
     DaggerfallBooksSet books,
     DaggerfallFactionsSet factions,
-    DaggerfallTerrainSet terrain)
+    DaggerfallTerrainSet terrain,
+    DaggerfallItemTemplateSet itemTemplateCatalog)
 {
     /// <summary>The normalized reference catalogs a consumer resolves keys through.</summary>
     internal DaggerfallCatalogSet Catalogs { get; } = catalogs;
@@ -216,6 +227,12 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     /// its height with the cell samples behind it.
     /// </summary>
     internal DaggerfallTerrainSet Terrain { get; } = terrain;
+
+    /// <summary>
+    /// The normalized item template catalog, loaded from the pack alone: each native index
+    /// resolves to its substitute record with group, stack and reference facts.
+    /// </summary>
+    internal DaggerfallItemTemplateSet ItemTemplateCatalog { get; } = itemTemplateCatalog;
 
     internal DaggerfallVocabulary Vocabulary { get; } = vocabulary;
     internal IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> Actors { get; } = new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors.ToDictionary());

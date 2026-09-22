@@ -40,6 +40,19 @@ internal static class DaggerActorFactory
             ValidateInitialEntityIds(inputs, playerDefinition.Loadout);
             Dictionary<InventoryItemId, ItemDefinition> itemDefinitions = definitions.Items.Values
                 .ToDictionary(item => new InventoryItemId(item.Id.Value), ToManagedItem);
+            // Template records resolve beside catalog items: an instance granted by native index
+            // reads the same coordination path. Weight and equipment stay instance facts the
+            // material and equipment owners compute, so templates carry no capacity or policy.
+            foreach (DaggerfallItemTemplateDefinition template in definitions.ItemTemplateCatalog.Templates.Values)
+            {
+                itemDefinitions[new InventoryItemId($"template-{template.Index}")] = new ItemDefinition(
+                    ItemDefinitionId.Parse($"template-{template.Index}"),
+                    template.Stackable ? ItemKind.Fungible : ItemKind.Unique,
+                    template.Stackable ? 1000000000ul : 1ul,
+                    null,
+                    null,
+                    null);
+            }
             Dictionary<KitEquipmentSlotId, EquipmentSlotDefinition> equipmentSlots = definitions.EquipmentSlots.Values
                 .ToDictionary(slot => new KitEquipmentSlotId(slot.Id.Value), ToManagedSlot);
             PlayerActorState player = actors.CreatePlayer(checked((long)PlayerMechanicsEntityId),
@@ -102,7 +115,13 @@ internal static class DaggerActorFactory
                     }
                 }
             }
-            DaggerfallState state = new(new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians), actors, inventory, equipmentCoordinator, containers, itemDefinitions, equipmentSlots, inventoryStore);
+            DaggerfallVariableStore variables = new();
+            if (saved?.Variables is { } restoredVariables)
+            {
+                variables.Restore(restoredVariables.Entries.Select(entry => (entry.Require(), entry.Value)));
+            }
+
+            DaggerfallState state = new(new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians), actors, inventory, equipmentCoordinator, containers, itemDefinitions, equipmentSlots, inventoryStore, variables);
             authored.Add(DaggerfallActorIdentity.PlayerEntityId, playerDefinition);
             if (saved is not null) MaterializeDynamicActors(random, actors, mechanics, definitions, saved, authored, inventoryStore);
             return new(state, authored, playerDefinition);

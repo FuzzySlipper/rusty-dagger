@@ -313,7 +313,9 @@ public sealed class ItemTemplateLedgerTests
         Assert.All(targets, target =>
         {
             Assert.False(string.IsNullOrWhiteSpace(target!["provenance"]!.GetValue<string>()));
-            Assert.Equal("unresolved", target["disposition"]!.GetValue<string>());
+            // The template task resolves every target to the donor's exported table: native bytes
+            // stay absent, so no target claims a native decoding.
+            Assert.Equal("substitute", target["disposition"]!.GetValue<string>());
         });
 
         // The summary is checked against the entries rather than trusted: a ledger whose

@@ -99,7 +99,8 @@ internal sealed class DaggerSessionPersistence
                 .Select(value => new DaggerfallCombatCooldownSave(value.AttackerId, value.RemainingSteps)).ToArray(),
             new DaggerfallCalendarSave(_time.Calendar.Year, _time.Calendar.Month, _time.Calendar.Day, _time.Calendar.Hour, _time.Calendar.Minute, _time.Calendar.Second, _time.RemainderSeconds),
             _site.Capture(),
-            actorInventories));
+            actorInventories,
+            new DaggerfallVariablesSave([.. State.Variables.Capture().Select(entry => new DaggerfallVariableSave((int)entry.Address.Scope, entry.Address.Owner, entry.Address.Key, entry.Value))])));
     }
 
     private ActorState LiveDynamicActor(long durableId) =>

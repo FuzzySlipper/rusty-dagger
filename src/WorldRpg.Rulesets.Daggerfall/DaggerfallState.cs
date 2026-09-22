@@ -13,7 +13,7 @@ internal sealed class DaggerfallState(PlayerControlState playerControl, ActorsSt
     MechanicsInventoryCoordinator inventory, MechanicsEquipmentCoordinator equipment,
     MechanicsInventoryContainerCoordinator containers, IReadOnlyDictionary<InventoryItemId, ItemDefinition> items,
     IReadOnlyDictionary<WorldRpg.Kit.Inventory.EquipmentSlotId, EquipmentSlotDefinition> slots,
-    InventoryStore inventoryStore)
+    InventoryStore inventoryStore, DaggerfallVariableStore variables)
 {
     internal GameplayServices<IProductFact> Kit { get; set; } = null!;
     internal PlayerControlState PlayerControl { get; } = playerControl;
@@ -24,6 +24,8 @@ internal sealed class DaggerfallState(PlayerControlState playerControl, ActorsSt
     internal MechanicsInventoryContainerCoordinator Containers { get; } = containers;
     /// <summary>The one managed inventory store every actor inventory and equipment registers in.</summary>
     internal InventoryStore InventoryStore { get; } = inventoryStore;
+    /// <summary>The session's scoped quest and world variables, handed explicitly to readers.</summary>
+    internal DaggerfallVariableStore Variables { get; } = variables;
     internal MechanicsInventoryCoordinator? InventoryFor(long durableActorId) =>
         Actors.TryGet(durableActorId, out var actor) ? new(actor.Inventory, Actors.Entities, items) : null;
     internal MechanicsEquipmentCoordinator EquipmentFor(long durableActorId)

@@ -108,6 +108,11 @@ internal static class Program
                 return RunTerrainCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "items")
+            {
+                return RunItemsCommand(args);
+            }
+
             if (args.Length != 0 && args[0] == "geometry")
             {
                 return RunGeometryCommand(args);
@@ -1118,6 +1123,82 @@ internal static class Program
         File.WriteAllText(values["--pack"], pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
         Console.WriteLine($"pack: terrain updated in {values["--pack"]}");
         return 0;
+    }
+
+    /// <summary>
+    /// Reads the donor's exported template tables into the base pack when asked, so a native
+    /// template index resolves to the substitute record the donor states rather than to a
+    /// placeholder. Every record carries substitute provenance; the ledger targets resolve to it.
+    /// </summary>
+    private static int RunItemsCommand(IReadOnlyList<string> args)
+    {
+        const string Usage = "usage: daggerfall-import-tool items --arena2 SOURCE_DIR --pack PACK.json --inventory CSV --item-templates FILE --magic-templates FILE [--update]";
+        bool update = args.Contains("--update", StringComparer.Ordinal);
+        Dictionary<string, string> values = new(StringComparer.Ordinal);
+        for (int index = 1; index < args.Count; index++)
+        {
+            string argument = args[index];
+            if (argument == "--update") continue;
+            if (!argument.StartsWith("--", StringComparison.Ordinal) || index + 1 >= args.Count || !values.TryAdd(argument, args[++index]))
+            {
+                throw new ArgumentException(Usage);
+            }
+        }
+
+        string[] accepted = ["--arena2", "--pack", "--inventory", "--item-templates", "--magic-templates"];
+        if (values.Count != accepted.Length || accepted.Any(key => !values.ContainsKey(key)))
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(values["--inventory"]));
+        // The substitute tables are read by file name, not by directory: the provenance label
+        // names the donor export, so a file that is not that export is refused rather than
+        // published under its name.
+        if (!StringComparer.Ordinal.Equals(Path.GetFileName(values["--item-templates"]), "ItemTemplates.txt")
+            || !StringComparer.Ordinal.Equals(Path.GetFileName(values["--magic-templates"]), "MagicItemTemplates.txt"))
+        {
+            throw new ArgumentException("The item substitute tables must be the donor's ItemTemplates.txt and MagicItemTemplates.txt exports.");
+        }
+
+        string label = "donor/Assets/Resources/ItemTemplates.txt";
+        string magicLabel = "donor/Assets/Resources/MagicItemTemplates.txt";
+        IReadOnlyList<SubstituteItemTemplate> substitutes = ItemTemplateReader.ReadTemplates(File.ReadAllText(values["--item-templates"]), label);
+        IReadOnlyList<SubstituteMagicTemplate> magic = ItemTemplateReader.ReadMagic(File.ReadAllText(values["--magic-templates"]), magicLabel);
+        byte[] bytes = File.ReadAllBytes(values["--item-templates"]);
+        DaggerfallItemTemplates catalog = DaggerfallItemTemplatesBuilder.Build(substitutes, magic, label, bytes, inventory);
+
+        Console.WriteLine($"items: {catalog.Templates.Count} templates, {catalog.Magic.Count} magic templates");
+        if (!update)
+        {
+            Console.WriteLine("pack: not written (rerun with --update to publish these templates into it)");
+            return 0;
+        }
+
+        JsonNode pack = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
+        pack["itemTemplates"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(catalog, PublishedJson.Section));
+        ResolveLedgerTargets(pack, catalog);
+        File.WriteAllText(values["--pack"], pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        Console.WriteLine($"pack: item templates updated in {values["--pack"]}");
+        return 0;
+    }
+
+    private static void ResolveLedgerTargets(JsonNode pack, DaggerfallItemTemplates catalog)
+    {
+        if (pack["itemTemplateLedger"]?["targets"] is not JsonArray targets) return;
+        Dictionary<int, DaggerfallItemTemplate> resolved = catalog.Templates.ToDictionary(template => template.Index);
+        foreach (JsonNode? target in targets)
+        {
+            if (target is null) continue;
+            int index = target["index"]!.GetValue<int>();
+            if (resolved.TryGetValue(index, out DaggerfallItemTemplate? _))
+            {
+                // The disposition moves to the substitute table; the provenance stays, because
+                // it records how the target's groups were attributed, which the substitute
+                // read does not change.
+                target["disposition"] = "substitute";
+            }
+        }
     }
 
     /// <summary>

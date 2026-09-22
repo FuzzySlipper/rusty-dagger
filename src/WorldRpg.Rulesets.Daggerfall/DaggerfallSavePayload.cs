@@ -20,7 +20,8 @@ internal sealed record DaggerfallSavePayload(
     DaggerfallCombatCooldownSave[] CombatCooldowns,
     DaggerfallCalendarSave Calendar,
     DaggerfallSiteSave Site,
-    DaggerfallActorInventorySave[] ActorInventories)
+    DaggerfallActorInventorySave[] ActorInventories,
+    DaggerfallVariablesSave Variables)
 {
     /// <summary>The dynamic identity kinds owned by the current Daggerfall ruleset.</summary>
     internal static readonly DurableIdentityKind[] PersistedKinds = [DurableIdentityKind.Actor, DurableIdentityKind.Item];
@@ -146,6 +147,8 @@ internal sealed record DaggerfallSavePayload(
         ArgumentNullException.ThrowIfNull(Calendar);
         ArgumentNullException.ThrowIfNull(Site);
         ArgumentNullException.ThrowIfNull(ActorInventories);
+        ArgumentNullException.ThrowIfNull(Variables);
+        Variables.Validate();
         if (Experience < 0 || Level < 1)
             throw new ArgumentOutOfRangeException(nameof(Experience), "Saved progression must be non-negative and begin at level one.");
         if (!double.IsFinite(Calendar.RemainderSeconds) || Calendar.RemainderSeconds < 0d || Calendar.RemainderSeconds >= 1d)
@@ -343,6 +346,36 @@ internal sealed record DaggerfallSiteSave(DaggerfallSiteIdSave? Active, Daggerfa
             discovered.Validate("discovered site");
             if (!seen.Add((discovered.Region!.Value, discovered.Index!.Value)))
                 throw new ArgumentException("A save must record each discovered site once.");
+        }
+    }
+}
+
+/// <summary>One persisted variable: its scope, owner, key and value.</summary>
+internal sealed record DaggerfallVariableSave(int Scope, int Owner, int Key, bool Value)
+{
+    internal DaggerfallVariableAddress Require()
+    {
+        DaggerfallVariableScope scope = Scope switch
+        {
+            0 => DaggerfallVariableScope.Global,
+            1 => DaggerfallVariableScope.Region,
+            2 => DaggerfallVariableScope.Faction,
+            _ => throw new InvalidOperationException($"Saved variable names scope {Scope}, which the contract does not declare."),
+        };
+        return new DaggerfallVariableAddress(scope, Owner, Key);
+    }
+}
+
+/// <summary>The session's written variables in a stable order.</summary>
+internal sealed record DaggerfallVariablesSave(DaggerfallVariableSave[] Entries)
+{
+    internal void Validate()
+    {
+        ArgumentNullException.ThrowIfNull(Entries);
+        foreach (DaggerfallVariableSave entry in Entries)
+        {
+            ArgumentNullException.ThrowIfNull(entry);
+            entry.Require();
         }
     }
 }
