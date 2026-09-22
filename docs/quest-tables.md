@@ -1,8 +1,8 @@
-# Quest global and static-message tables
+# Quest tables and classic catalog
 
-`Daggerfall.Import` reads the donor's `Quests-GlobalVars.txt` and
-`Quests-StaticMessages.txt` offline. The ordinary `quests` command publishes
-`questTables` alongside `questSources` in the base payload:
+`Daggerfall.Import` reads the donor's global, static-message, place, sound,
+disease and spell tables offline. The ordinary `quests` command publishes
+`questTables` and the classic `questCatalog` alongside `questSources` in the base payload:
 
 ```sh
 dotnet run --project src/Daggerfall.Import.Tool -- quests \
@@ -27,3 +27,19 @@ The ruleset admits them through `DaggerfallBaseContent`; `QuestSources.Tables`
 provides the named lookup surfaces. `DaggerActorFactory` supplies the admitted
 global aliases to `DaggerfallVariableStore`, whose existing save records still
 store numeric addresses and values. No donor save-file format is imported.
+
+Places retain every raw parameter and spelling. Permanent locations expose the
+packed location key from `p1` and `p2`, plus the low byte of `p2` used for teleport
+transfer. `Mantellan_Crux` resolves through `MantellanCrux` while its original
+source row remains available. Sound names preserve indices, including `empty`
+and storm variants; a symbol is not a claim that an audio asset is playable.
+Disease IDs remain 0–16, and spell IDs remain sparse, with aliases such as
+`HolyWord` and `HolyTouch` sharing 58. These are source identifiers, not new
+effect implementations.
+
+The classic catalog retains 187 active and 23 disabled rows in source order,
+including five rows whose quest source is missing. It records group, membership,
+rank/level/reputation threshold meaning, adult and one-time flags, source lines
+and notes. Disabled Oblivion rows that omit membership preserve that absence.
+The publication does not include DFU-only lists or discover quest packs, and
+does not apply faction eligibility policy at runtime.

@@ -1925,10 +1925,52 @@ internal static class DaggerfallBaseContent
         return new DaggerfallCinematicSet(new ReadOnlyDictionary<string, DaggerfallCinematicDefinition>(cinematics));
     }
 
+    private static DaggerfallQuestCatalog ReadQuestCatalog(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    {
+        JsonElement catalog = Object(Property(root, "questCatalog", diagnostics), "questCatalog", diagnostics);
+        string path = Text(Object(Property(catalog, "source", diagnostics), "source", diagnostics), "sourcePath", diagnostics);
+        List<DaggerfallQuestCatalogRow> rows = [];
+        HashSet<string> names = new(StringComparer.OrdinalIgnoreCase);
+        foreach (JsonElement row in Array(catalog, "rows", diagnostics))
+        {
+            string name = Text(row, "name", diagnostics);
+            if (!names.Add(name)) diagnostics.Add($"Classic quest '{name}' appears twice in the catalog.");
+            rows.Add(new(name, Text(row, "group", diagnostics),
+                row.GetProperty("membership").ValueKind == JsonValueKind.Null ? null : Text(row, "membership", diagnostics),
+                Integer(row, "minimumRequirement", diagnostics), Text(row, "requirementKind", diagnostics),
+                row.GetProperty("adult").GetBoolean(), row.GetProperty("oneTime").GetBoolean(), row.GetProperty("active").GetBoolean(),
+                Text(row, "sourceDisposition", diagnostics), OptionalText(row, "notes"), Integer(row, "sourceLine", diagnostics)));
+        }
+        return new(path, rows.AsReadOnly());
+    }
+
     private static DaggerfallQuestTables ReadQuestTables(JsonElement root, DaggerfallContentDiagnostics diagnostics)
     {
         JsonElement tables = Object(Property(root, "questTables", diagnostics), "questTables", diagnostics);
-        return new(ReadTable("globals", true), ReadTable("staticMessages", false));
+        return new(ReadTable("globals", true), ReadTable("staticMessages", false), ReadPlaces(), ReadTable("sounds", false),
+            ReadTable("diseases", false), ReadTable("spells", false));
+
+        DaggerfallQuestPlaces ReadPlaces()
+        {
+            JsonElement table = Object(Property(tables, "places", diagnostics), "places", diagnostics);
+            string path = Text(Object(Property(table, "source", diagnostics), "source", diagnostics), "sourcePath", diagnostics);
+            List<DaggerfallQuestPlace> rows = [];
+            HashSet<string> names = new(StringComparer.OrdinalIgnoreCase);
+            foreach (JsonElement row in Array(table, "rows", diagnostics))
+            {
+                string name = Text(row, "name", diagnostics);
+                if (!names.Add(name)) { diagnostics.Add($"Quest place '{name}' is duplicated."); continue; }
+                JsonElement location = Property(row, "locationKey", diagnostics);
+                JsonElement transfer = Property(row, "teleportTransfer", diagnostics);
+                rows.Add(new(name, Text(row, "canonicalName", diagnostics), Integer(row, "p1", diagnostics),
+                    Integer(row, "p2", diagnostics), Integer(row, "p3", diagnostics),
+                    location.ValueKind == JsonValueKind.Null ? null : location.GetUInt32(),
+                    transfer.ValueKind == JsonValueKind.Null ? null : transfer.GetByte(), Integer(row, "sourceLine", diagnostics)));
+            }
+            foreach (DaggerfallQuestPlace row in rows)
+                if (!names.Contains(row.CanonicalName)) diagnostics.Add($"Quest place '{row.Name}' has missing canonical identity '{row.CanonicalName}'.");
+            return new(path, rows.AsReadOnly());
+        }
 
         DaggerfallQuestTable ReadTable(string key, bool globals)
         {
@@ -1959,7 +2001,7 @@ internal static class DaggerfallBaseContent
         if (!root.TryGetProperty("questSources", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
         {
             diagnostics.Add("Base payload publishes no questSources section; quest lookups resolve to nothing until it is republished.");
-            return new DaggerfallQuestSourceSet(new ReadOnlyDictionary<string, DaggerfallQuestSourceDefinition>(new Dictionary<string, DaggerfallQuestSourceDefinition>(StringComparer.Ordinal)), ReadQuestTables(root, diagnostics));
+            return new DaggerfallQuestSourceSet(new ReadOnlyDictionary<string, DaggerfallQuestSourceDefinition>(new Dictionary<string, DaggerfallQuestSourceDefinition>(StringComparer.Ordinal)), ReadQuestTables(root, diagnostics), ReadQuestCatalog(root, diagnostics));
         }
 
         Dictionary<string, DaggerfallQuestSourceDefinition> quests = new(StringComparer.Ordinal);
@@ -2003,7 +2045,7 @@ internal static class DaggerfallBaseContent
             }
         }
 
-        return new DaggerfallQuestSourceSet(new ReadOnlyDictionary<string, DaggerfallQuestSourceDefinition>(quests), ReadQuestTables(root, diagnostics));
+        return new DaggerfallQuestSourceSet(new ReadOnlyDictionary<string, DaggerfallQuestSourceDefinition>(quests), ReadQuestTables(root, diagnostics), ReadQuestCatalog(root, diagnostics));
     }
 
     private static byte[] ReadGridCells(JsonElement section, string rowsKey, int width, int height, string what, DaggerfallContentDiagnostics diagnostics)    {

@@ -74,6 +74,7 @@ public static class QuestSourceReader
         string displayName = string.Empty;
         List<QuestHeaderField> header = [];
         List<string> qrcLines = [];
+        List<int> qrcNumbers = [];
         List<string> qbnLines = [];
         List<int> qbnNumbers = [];
         bool inQrc = false;
@@ -109,6 +110,7 @@ public static class QuestSourceReader
             if (inQrc)
             {
                 qrcLines.Add(line);
+                qrcNumbers.Add(index + 1);
             }
             else if (inQbn)
             {
@@ -141,7 +143,7 @@ public static class QuestSourceReader
             throw new Arena2FormatException(fileName, 0, "Quest source states no QBN section.");
         }
 
-        return new QuestSourceDocument(fileName, questName, questNameLine, displayName, header, ReadMessages(qrcLines, fileName, messageIds), ReadBlocks(qbnLines, qbnNumbers, fileName, globalKeys));
+        return new QuestSourceDocument(fileName, questName, questNameLine, displayName, header, ReadMessages(qrcLines, qrcNumbers, fileName, messageIds), ReadBlocks(qbnLines, qbnNumbers, fileName, globalKeys));
     }
 
     private static string FieldValue(string line)
@@ -150,7 +152,7 @@ public static class QuestSourceReader
         return colon < 0 ? string.Empty : line[(colon + 1)..].Trim();
     }
 
-    private static IReadOnlyList<QuestMessageBlock> ReadMessages(List<string> lines, string fileName, IReadOnlyDictionary<string, int> messageIds)
+    private static IReadOnlyList<QuestMessageBlock> ReadMessages(List<string> lines, List<int> numbers, string fileName, IReadOnlyDictionary<string, int> messageIds)
     {
         List<QuestMessageBlock> messages = [];
         for (int index = 0; index < lines.Count; index++)
@@ -165,7 +167,7 @@ public static class QuestSourceReader
             // open block, because content may stand past blank lines.
             if (!IsMessageHeader(line, messageIds))
             {
-                throw new Arena2FormatException(fileName, index + 1, $"Quest QRC line opens no message: '{line.Trim()}'.");
+                throw new Arena2FormatException(fileName, numbers[index], $"Quest QRC line opens no message: '{line.Trim()}'.");
             }
 
             int colon = line.IndexOf(':');
@@ -179,10 +181,10 @@ public static class QuestSourceReader
             }
             else if (!int.TryParse(idText, out id))
             {
-                throw new Arena2FormatException(fileName, index + 1, $"Quest QRC line states no message id: '{line.Trim()}'.");
+                throw new Arena2FormatException(fileName, numbers[index], $"Quest QRC line states no message id: '{line.Trim()}'.");
             }
 
-            int firstLine = index + 1;
+            int firstLine = numbers[index];
             List<string> message = [];
             while (index + 1 < lines.Count)
             {

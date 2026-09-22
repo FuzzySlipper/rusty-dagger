@@ -1164,7 +1164,11 @@ internal static class Program
         IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(values["--inventory"]));
         DaggerfallQuestTables tables = new(
             DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(values["--tables"], "Quests-GlobalVars.txt")), "Tables/Quests-GlobalVars.txt", globals: true),
-            DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(values["--tables"], "Quests-StaticMessages.txt")), "Tables/Quests-StaticMessages.txt"));
+            DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(values["--tables"], "Quests-StaticMessages.txt")), "Tables/Quests-StaticMessages.txt"),
+            DaggerfallQuestPlaceReader.Read(File.ReadAllBytes(Path.Combine(values["--tables"], "Quests-Places.txt")), "Tables/Quests-Places.txt"),
+            DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(values["--tables"], "Quests-Sounds.txt")), "Tables/Quests-Sounds.txt"),
+            DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(values["--tables"], "Quests-Diseases.txt")), "Tables/Quests-Diseases.txt"),
+            DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(values["--tables"], "Quests-Spells.txt")), "Tables/Quests-Spells.txt"));
         IReadOnlyDictionary<string, int> messageIds = tables.StaticMessages.Lookup;
         IReadOnlyDictionary<string, int> globalKeys = tables.Globals.Lookup;
         List<QuestSourceDocument> documents = [];
@@ -1186,6 +1190,10 @@ internal static class Program
         }
 
         DaggerfallQuestPack pack = DaggerfallQuestPackBuilder.Build(documents, failures, "donor/StreamingAssets/Quests", new byte[totalBytes], inventory);
+        DaggerfallQuestCatalog catalog = DaggerfallQuestCatalogReader.Read(
+            File.ReadAllBytes(Path.Combine(values["--tables"], "QuestList-Classic.txt")), "Tables/QuestList-Classic.txt",
+            Directory.EnumerateFiles(values["--quest-text"], "*.txt"));
+        Console.WriteLine($"classic catalog: {catalog.Rows.Count(row => row.Active)} active, {catalog.Rows.Count(row => !row.Active)} disabled, {catalog.Rows.Count(row => row.SourceDisposition == "missing")} missing sources");
         Console.WriteLine($"quests: {pack.Quests.Count} sources, {pack.Quests.Count(quest => quest.Disposition == DaggerfallQuestDisposition.Runnable)} runnable");
         if (!update)
         {
@@ -1194,6 +1202,7 @@ internal static class Program
         }
 
         JsonNode node = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
+        node["questCatalog"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(catalog, PublishedJson.Section));
         node["questTables"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(tables, PublishedJson.Section));
         node["questSources"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(pack, PublishedJson.Section));
         File.WriteAllText(values["--pack"], node.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
