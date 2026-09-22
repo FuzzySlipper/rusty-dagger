@@ -7,6 +7,32 @@ namespace Daggerfall.Import.Tests;
 
 public sealed class CinematicMediaPublisherTests
 {
+    [Theory]
+    [InlineData("AZURA.FLC", 2.996)]
+    [InlineData("VAERNIMA.FLC", 0.994)]
+    public void Real_flc_publication_excludes_ring_frame_and_preserves_source_cadence(string name, double duration)
+    {
+        DirectoryInfo? root = new(AppContext.BaseDirectory);
+        while (root is not null && !File.Exists(Path.Combine(root.FullName, "AGENTS.md"))) root = root.Parent;
+        string source = Path.Combine(root?.FullName ?? throw new InvalidOperationException("Repository root missing."), "local/arena2", name);
+        byte[] bytes = File.ReadAllBytes(source);
+        DaggerfallCinematicRecord record = new(name, DaggerfallCinematicKind.Flc, bytes.Length,
+            Convert.ToHexString(SHA256.HashData(bytes)), DaggerfallCinematicBinding.Bound, "Daedric summons", null, "");
+        string directory = Path.Combine(Path.GetTempPath(), "dagger-flc-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            CinematicMediaArtifact artifact = CinematicMediaPublisher.Publish(source, record, directory, "worldrpg/media/cinematics");
+            Assert.Equal(14, artifact.FrameCount);
+            Assert.Equal(320, artifact.Width);
+            Assert.Equal(200, artifact.Height);
+            Assert.InRange(artifact.DurationSeconds, duration - 0.02, duration + 0.02);
+            Assert.False(artifact.HasAudio);
+            Assert.Single(Directory.GetFiles(directory));
+            Assert.Empty(Directory.GetDirectories(directory));
+        }
+        finally { if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true); }
+    }
+
     [Fact]
     public void Real_vid_publication_preserves_frames_and_regenerates_identically()
     {
