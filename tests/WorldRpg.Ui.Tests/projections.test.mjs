@@ -120,6 +120,54 @@ test('view is cleared when the product no longer supplies it', () => {
   } finally { f.dispose(); }
 });
 
+test('title character choices are projected and committed through semantic actions', () => {
+  const f = fixture();
+  try {
+    f.publish({ mode: 'title', character: {
+      name: 'Nameless', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [],
+      creationAvailable: true,
+      creation: {
+        editing: false, current: { name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' },
+        races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }],
+        careers: [{ id: 'class00', label: 'Mage', available: true, restriction: null }],
+        faces: [{ index: 0, mediaId: 'character.head.male.00.0' }], reflexes: [{ value: 2, label: 'Average' }],
+      },
+    } });
+    f.root.querySelector('[data-testid="character-begin"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'character-begin' });
+    f.publish({ mode: 'title', character: {
+      name: 'Nameless', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [],
+      creationAvailable: true,
+      creation: {
+        editing: true, current: { name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' },
+        races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }], careers: [{ id: 'class00', label: 'Mage', available: true, restriction: null }],
+        faces: [{ index: 0, mediaId: 'character.head.male.00.0' }], reflexes: [{ value: 2, label: 'Average' }],
+      },
+    } });
+    const name = f.root.querySelector('[aria-label="Character name"]'); name.value = 'Aubk-i';
+    f.root.querySelector('[data-testid="character-commit"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'character-commit', name: 'Aubk-i', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' });
+  } finally { f.dispose(); }
+});
+
+test('played characters do not expose character creation controls', () => {
+  const f = fixture();
+  try {
+    f.publish({ mode: 'playing', character: {
+      name: 'Aubk-i', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [],
+      creationAvailable: false,
+      creation: {
+        editing: false, current: { name: 'Aubk-i', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' },
+        races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }],
+        careers: [{ id: 'class00', label: 'Mage', available: true, restriction: null }],
+        faces: [{ index: 0, mediaId: 'character.head.male.00.0' }], reflexes: [{ value: 2, label: 'Average' }],
+      },
+    } });
+    assert.equal(f.root.querySelector('[data-testid="character-begin"]'), null);
+    assert.equal(f.root.querySelector('[data-testid="character-commit"]'), null);
+  } finally { f.dispose(); }
+});
+
 test('the visible mode follows the product across play, modal, pause, and death', () => {
   const f = fixture();
   try {
@@ -160,5 +208,33 @@ test('save slots list, name new saves, and demand explicit overwrite and deletio
     assert.equal(f.root.querySelector('[data-action="delete-slot"]').textContent, 'Confirm delete');
     click('delete-slot');
     assert.deepEqual(f.actions.at(-1), { action: 'delete-slot', key: 'slot-1', confirm: true });
+  } finally { f.dispose(); }
+});
+
+test('control settings capture, explicit swap, cancel and reset use semantic actions', () => {
+  const f = fixture();
+  try {
+    f.publish({ controls: { diagnostic: '', bindings: [
+      { id: 'move.forward', category: 'movement', keys: ['KeyW'], fixed: false },
+      { id: 'menu', category: 'interface', keys: ['Escape'], fixed: true },
+    ] } });
+    f.root.querySelector('[data-action="settings"]').click();
+    const settings = f.root.querySelector('.dagger-controls-root');
+    assert.equal(settings.hidden, false);
+    const rebind = [...settings.querySelectorAll('button')].find(button => button.textContent === 'Rebind');
+    rebind.click();
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyQ', bubbles: true, cancelable: true }));
+    assert.deepEqual(f.actions.at(-1), { action: 'controls-rebind', item: 'move.forward', key: 'KeyQ', confirm: false });
+    settings.querySelector('input').checked = true;
+    rebind.click();
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyS', bubbles: true, cancelable: true }));
+    assert.equal(f.actions.at(-1).confirm, true);
+    const count = f.actions.length;
+    rebind.click();
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
+    assert.equal(f.actions.length, count);
+    assert.equal(settings.hidden, false);
+    [...settings.querySelectorAll('button')].find(button => button.textContent === 'Reset bindings').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'controls-reset' });
   } finally { f.dispose(); }
 });

@@ -23,7 +23,7 @@ internal sealed class DaggerfallLootPresentation(DaggerfallCorpseLootModule loot
         if (_actor is not long actor) return null;
         InventoryView? contents = loot.ReadContents(actor);
         InventoryItemPresentation[] rows = contents is null ? [] : contents.Stacks
-            .Select(stack => items.DescribeItem(DaggerfallInventoryPresentation.StackKey(stack.Definition.Value), stack.Definition.Value, stack.Quantity))
+            .Select(stack => items.DescribeItem(DaggerfallInventoryPresentation.StackKey(stack.Id), stack.Definition.Value, stack.Quantity))
             .Concat(contents.UniqueItems.Select(item => items.DescribeItem(DaggerfallInventoryPresentation.UniqueKey(item.Entity.Value), item.Definition.Value, 1)))
             .OrderBy(item => item.Key, StringComparer.Ordinal).ToArray();
         return new(Token, $"{Token}:{contents?.StoreRevision ?? 0}", DaggerfallInventoryPresentation.Label(loot.ContainerName(actor)) + " — loot",
@@ -68,8 +68,15 @@ internal sealed class DaggerfallLootPresentation(DaggerfallCorpseLootModule loot
         InventoryView contents = loot.ReadContents(_actor!.Value)!;
         ulong? unique = item.Key.StartsWith("unique:", StringComparison.Ordinal)
             ? ulong.Parse(item.Key.AsSpan("unique:".Length), CultureInfo.InvariantCulture) : null;
+        InventoryStackId? stack = item.Key.StartsWith("stack:", StringComparison.Ordinal)
+            ? InventoryStackId.Parse(item.Key.Substring("stack:".Length)) : null;
         // The retained loot UI takes one stack unit or one unique entity per click.
-        InventoryContainerSelection selection = new(new InventoryItemId(item.Definition), 1, unique);
+        InventoryStackId? destination = stack is null
+            ? null
+            : loot.ResolveTakeDestination(_actor!.Value, stack,
+                InventoryStackId.Parse($"daggerfall.loot.take.{_actor}.{_opening}.{stack.Value}"));
+        InventoryContainerSelection selection = new(new InventoryItemId(item.Definition), 1, Stack: stack,
+            DestinationStack: destination, UniqueEntityId: unique);
         return prepared with
         {
             Selection = selection,

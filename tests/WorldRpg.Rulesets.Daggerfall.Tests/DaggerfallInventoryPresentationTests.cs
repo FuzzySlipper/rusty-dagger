@@ -20,11 +20,11 @@ public sealed class DaggerfallInventoryPresentationTests
         using Fixture f = new();
         var before = f.Ui.Read();
         int daggerSlot = Item(before, f.Key(1002)).GridSlot!.Value;
-        int goldSlot = Item(before, "stack:gold-piece").GridSlot!.Value;
+        int goldSlot = Item(before, f.StackKey("gold-piece")).GridSlot!.Value;
         f.Ui.Move(new("inventory-move", before.Revision, f.Key(1002), goldSlot));
         var moved = f.Ui.Read();
         Assert.Equal(goldSlot, Item(moved, f.Key(1002)).GridSlot);
-        Assert.Equal(daggerSlot, Item(moved, "stack:gold-piece").GridSlot);
+        Assert.Equal(daggerSlot, Item(moved, f.StackKey("gold-piece")).GridSlot);
         Assert.Equal(25UL, f.Inventory.Read().Stacks.Single().Quantity);
 
         f.Ui.Move(new("inventory-move", moved.Revision, f.Key(1002), TargetEquipment: "right-hand"));
@@ -56,7 +56,7 @@ public sealed class DaggerfallInventoryPresentationTests
         f.Ui.Move(new("inventory-move", before.Revision, "unique:999999", 10));
         Assert.Contains("no longer in your inventory", f.Ui.Read().Message);
         Assert.Equal(current.Revision, f.Ui.Read().Revision);
-        f.Ui.Move(new("inventory-move", current.Revision, "stack:gold-piece", TargetEquipment: "head"));
+        f.Ui.Move(new("inventory-move", current.Revision, f.StackKey("gold-piece"), TargetEquipment: "head"));
         Assert.Contains("does not fit", f.Ui.Read().Message);
         Assert.Equal(f.Ui.Read().Revision, current.Revision);
         Assert.Equal(f.Key(1001), f.Ui.Read().Slots.Single(slot => slot.Id == "right-hand").ItemKey);
@@ -118,7 +118,7 @@ public sealed class DaggerfallInventoryPresentationTests
         Assert.Equal(EquipmentMoveOutcome.UnknownItem,
             f.Moves.MoveToGrid(new UniqueItem(999999, new InventoryItemId("iron-longsword")), 10).Outcome);
         Assert.Equal(EquipmentMoveOutcome.InvalidDestination,
-            f.Moves.MoveStackToGrid(new InventoryItemId("gold-piece"), DaggerfallEquipmentMoves.GridCapacity).Outcome);
+            f.Moves.MoveStackToGrid(f.Inventory.Read().Stacks.First().Id, DaggerfallEquipmentMoves.GridCapacity).Outcome);
         Assert.Equal(storeBefore, f.Inventory.Read().StoreRevision);
         Assert.Equal(before.Revision, f.Ui.Read().Revision);
     }
@@ -164,13 +164,13 @@ public sealed class DaggerfallInventoryPresentationTests
     {
         using Fixture f = new();
         var before = f.Ui.Read();
-        int goldSlot = Item(before, "stack:gold-piece").GridSlot!.Value;
+        int goldSlot = Item(before, f.StackKey("gold-piece")).GridSlot!.Value;
         // The sword starts equipped; dropping it on the gold stack's cell refuses gracefully.
         // The previous implementation threw FormatException out of Move on this input.
         f.Ui.Move(new("inventory-move", before.Revision, f.Key(1001), goldSlot));
         Assert.Contains("Stacked items cannot be equipped", f.Ui.Read().Message);
         Assert.Equal(f.Key(1001), f.Ui.Read().Slots.Single(slot => slot.Id == "right-hand").ItemKey);
-        Assert.Equal(goldSlot, Item(f.Ui.Read(), "stack:gold-piece").GridSlot);
+        Assert.Equal(goldSlot, Item(f.Ui.Read(), f.StackKey("gold-piece")).GridSlot);
     }
 
     [Fact]
@@ -191,6 +191,8 @@ public sealed class DaggerfallInventoryPresentationTests
     {
         internal readonly EntityDirectory Entities = new();
         internal string Key(ulong id) => DaggerfallInventoryPresentation.UniqueKey(Entities.Resolve(new(DurableIdentityKind.Item, id)).Value);
+        internal string StackKey(string definition) => DaggerfallInventoryPresentation.StackKey(
+            Inventory.Read().Stacks.Single(stack => stack.Definition.Value == definition).Id);
         internal readonly MechanicsInventoryCoordinator Inventory;
         internal readonly MechanicsEquipmentCoordinator Equipment;
         internal readonly DaggerfallEquipmentMoves Moves;
@@ -215,14 +217,14 @@ public sealed class DaggerfallInventoryPresentationTests
             Equipment = new(inventory, equipment, Entities, items, slots);
             Moves = new(Inventory, Equipment, definitions);
             Definitions = definitions;
-            foreach (var entry in definitions.RequireActor(new("player")).Loadout)
+            foreach ((DaggerfallLoadoutEntry entry, int ordinal) in definitions.RequireActor(new("player")).Loadout.Select((entry, ordinal) => (entry, ordinal)))
             {
                 if (entry.UniqueEntityId is ulong entity)
                 {
                     var item = Equipment.Materialize(new(DurableIdentityKind.Item, entity), new(entry.ItemId.Value));
                     if (entry.EquipSlot is { } slot) Equipment.Equip(item, [new(slot.Value)]);
                 }
-                else Inventory.Grant(new(new(entry.ItemId.Value), entry.Quantity));
+                else Inventory.Grant(new(new(entry.ItemId.Value), InventoryStackId.Parse($"fixture.{ordinal}"), entry.Quantity));
             }
             Ui = new(Moves, definitions, new Dictionary<string, string>());
         }

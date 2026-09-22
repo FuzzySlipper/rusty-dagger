@@ -522,7 +522,7 @@ internal static class DaggerfallBaseContent
         foreach (DaggerfallRaceDefinition race in definitions.Catalogs.Races.OrderBy(race => race.Id, StringComparer.Ordinal)) Add("catalog-race", race.Id, race.DonorRaceId, race.Source.SourceRecordId, race.Source.Path);
         foreach (DaggerfallCareerDefinition career in definitions.Catalogs.Careers.OrderBy(career => career.Id, StringComparer.Ordinal))
         {
-            Add("catalog-career", career.Id, career.Name, string.Join(',', career.PrimarySkills), string.Join(',', career.MajorSkills), string.Join(',', career.MinorSkills), string.Join(',', career.Attributes), career.HitPointsPerLevel, FingerprintField(career.AdvancementMultiplier), string.Join(',', career.ResistanceElements), string.Join(',', career.ImmunityElements), string.Join(',', career.FlagBytes.Select(flag => $"{flag.Name}={flag.Value}")), career.Source.SourceRecordId, career.Source.Path);
+            Add("catalog-career", career.Id, career.Name, string.Join(',', career.PrimarySkills), string.Join(',', career.MajorSkills), string.Join(',', career.MinorSkills), string.Join(',', career.Attributes), string.Join(',', career.AttributeValues), career.HitPointsPerLevel, FingerprintField(career.AdvancementMultiplier), string.Join(',', career.ResistanceElements), string.Join(',', career.ImmunityElements), string.Join(',', career.FlagBytes.Select(flag => $"{flag.Name}={flag.Value}")), career.Source.SourceRecordId, career.Source.Path);
         }
 
         foreach (string collision in definitions.Catalogs.CareerNameCollisions) Add("catalog-career-name-collision", collision);
@@ -2069,7 +2069,44 @@ internal static class DaggerfallBaseContent
             }
         }
 
-        return new DaggerfallQuestSourceSet(new ReadOnlyDictionary<string, DaggerfallQuestSourceDefinition>(quests), ReadQuestTables(root, diagnostics), ReadQuestCatalog(root, diagnostics));
+        List<DaggerfallQuestResourceDefinition> resources = [];
+        List<DaggerfallQuestUnresolvedReferenceDefinition> unresolved = [];
+        if (section.TryGetProperty("resources", out JsonElement resourceSection) && resourceSection.ValueKind == JsonValueKind.Object)
+        {
+            foreach (JsonElement declaration in Array(resourceSection, "declarations", diagnostics))
+            {
+                JsonElement symbol = Object(Property(declaration, "symbol", diagnostics), "symbol", diagnostics);
+                DaggerfallQuestFoeOptions? foe = null;
+                DaggerfallQuestItemOptions? item = null;
+                DaggerfallQuestPersonOptions? person = null;
+                string[]? sites = null;
+                if (declaration.TryGetProperty("foe", out JsonElement f) && f.ValueKind == JsonValueKind.Object)
+                    foe = new(Integer(f, "count", diagnostics));
+                if (declaration.TryGetProperty("item", out JsonElement i) && i.ValueKind == JsonValueKind.Object)
+                    item = new(i.GetProperty("artifact").GetBoolean(), OptionalInteger(i, "class", diagnostics),
+                        OptionalInteger(i, "subclass", diagnostics), OptionalInteger(i, "template", diagnostics),
+                        OptionalInteger(i, "key", diagnostics), OptionalInteger(i, "rangeLow", diagnostics),
+                        OptionalInteger(i, "rangeHigh", diagnostics), OptionalText(i, "usedMessage"), OptionalText(i, "anyInfoMessage"));
+                if (declaration.TryGetProperty("person", out JsonElement p) && p.ValueKind == JsonValueKind.Object)
+                    person = new(OptionalText(p, "named"), OptionalText(p, "faction"), OptionalText(p, "factionType"),
+                        OptionalText(p, "group"), OptionalInteger(p, "face", diagnostics), OptionalText(p, "gender"), OptionalText(p, "scope"), p.GetProperty("atHome").GetBoolean());
+                if (declaration.TryGetProperty("place", out JsonElement place) && place.ValueKind == JsonValueKind.Object)
+                    sites = [.. Array(place, "sites", diagnostics).Select(site => Text(site, "canonicalId", diagnostics))];
+                resources.Add(new DaggerfallQuestResourceDefinition(
+                    Text(declaration, "quest", diagnostics), Text(declaration, "sourceFile", diagnostics), Integer(declaration, "sourceLine", diagnostics),
+                    Text(declaration, "kind", diagnostics), Text(symbol, "sourceSpelling", diagnostics), Text(symbol, "canonicalId", diagnostics),
+                    Text(declaration, "sourceText", diagnostics), OptionalText(declaration, "targetSourceSpelling"), OptionalText(declaration, "targetCanonicalId"), OptionalText(declaration, "placeKind"),
+                    [.. Array(declaration, "parameters", diagnostics).Select(parameter => parameter.GetString() ?? string.Empty)], foe, item, person, sites));
+            }
+            foreach (JsonElement reference in Array(resourceSection, "unresolved", diagnostics))
+            {
+                unresolved.Add(new DaggerfallQuestUnresolvedReferenceDefinition(
+                    Text(reference, "quest", diagnostics), Text(reference, "sourceFile", diagnostics), Integer(reference, "sourceLine", diagnostics),
+                    Text(reference, "sourceSpelling", diagnostics), Text(reference, "canonicalId", diagnostics)));
+            }
+        }
+
+        return new DaggerfallQuestSourceSet(new ReadOnlyDictionary<string, DaggerfallQuestSourceDefinition>(quests), ReadQuestTables(root, diagnostics), ReadQuestCatalog(root, diagnostics), resources, unresolved);
     }
 
     private static byte[] ReadGridCells(JsonElement section, string rowsKey, int width, int height, string what, DaggerfallContentDiagnostics diagnostics)    {
@@ -2724,6 +2761,12 @@ internal static class DaggerfallBaseContent
             IReadOnlyList<string> major = ReadIds(career, "majorSkills", diagnostics);
             IReadOnlyList<string> minor = ReadIds(career, "minorSkills", diagnostics);
             IReadOnlyList<string> careerAttributes = ReadIds(career, "attributes", diagnostics);
+            IReadOnlyList<int> attributeValues = Array(career, "attributeValues", diagnostics).Select(value =>
+            {
+                if (value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out int parsed)) return parsed;
+                diagnostics.Add("'attributeValues' must contain integers.");
+                return 0;
+            }).ToArray();
             IReadOnlyList<string> resistant = ReadIds(career, "resistanceElements", diagnostics);
             IReadOnlyList<string> immune = ReadIds(career, "immunityElements", diagnostics);
             int hitPoints = Integer(career, "hitPointsPerLevel", diagnostics);
@@ -2733,7 +2776,7 @@ internal static class DaggerfallBaseContent
             int lowToleranceFlags = FlagByte(career, "lowToleranceFlags", diagnostics);
             int criticalWeaknessFlags = FlagByte(career, "criticalWeaknessFlags", diagnostics);
             DaggerfallCareerDefinition definition = new(
-                id, name, primary, major, minor, careerAttributes, hitPoints, multiplier, resistant, immune,
+                id, name, primary, major, minor, careerAttributes, attributeValues, hitPoints, multiplier, resistant, immune,
                 resistanceFlags, immunityFlags, lowToleranceFlags, criticalWeaknessFlags, ReadCitation(career, sources, diagnostics));
             foreach (string skill in definition.SkillReferences)
             {
@@ -2777,6 +2820,10 @@ internal static class DaggerfallBaseContent
             if (careerAttributes.Count != ClassicAttributeValueCount)
             {
                 diagnostics.Add($"Career '{id}' must carry {ClassicAttributeValueCount} attribute keys.");
+            }
+            if (attributeValues.Count != ClassicAttributeValueCount || attributeValues.Any(value => value < 0))
+            {
+                diagnostics.Add($"Career '{id}' must carry {ClassicAttributeValueCount} non-negative attribute values.");
             }
 
             string[] trained = [.. definition.SkillReferences];

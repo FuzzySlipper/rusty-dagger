@@ -70,13 +70,13 @@ internal sealed class DaggerSessionPersistence
                     DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity));
             })
             .ToArray();
-        DaggerfallInventorySave inventorySave = CaptureInventory(State.Inventory, State.Equipment);
+        DaggerfallInventorySave inventorySave = CaptureInventory(State.Inventory, State.Equipment, DaggerfallItemOwner.Player);
         DaggerfallCorpseSave[] corpses = _corpseLoot.Corpses.Values.OrderBy(corpse => corpse.ActorId).Select(corpse =>
         {
             // Corpses never carry equipment: anything worn stays on the actor's own inventory
             // section, so the corpse save shares the stack/unique contents mapping only.
             (DaggerfallStackSave[] stacks, DaggerfallUniqueSave[] uniques) = corpse.IsRegistered
-                ? CaptureContents(State.Containers.Read(corpse.Owner))
+                ? CaptureContents(State.Containers.Read(corpse.Owner), DaggerfallItemOwner.Corpse(corpse.ActorId))
                 : ([], []);
             return new DaggerfallCorpseSave(
                 corpse.ActorId,
@@ -87,7 +87,7 @@ internal sealed class DaggerSessionPersistence
                 uniques);
         }).ToArray();
         DaggerfallActorInventorySave[] actorInventories = State.ActorInventories.OrderBy(entry => entry.Key)
-            .Select(entry => new DaggerfallActorInventorySave(entry.Key, CaptureInventory(entry.Value, State.EquipmentFor(entry.Key)))).ToArray();
+            .Select(entry => new DaggerfallActorInventorySave(entry.Key, CaptureInventory(entry.Value, State.EquipmentFor(entry.Key), DaggerfallItemOwner.Actor(entry.Key)))).ToArray();
         return DaggerfallSavePayload.Encode(new DaggerfallSavePayload(
             player,
             actors,
@@ -110,7 +110,11 @@ internal sealed class DaggerSessionPersistence
                 (int)npc.Presence, npc.X, npc.Y, npc.Z))]),
             _effects.Capture(),
             State.SkillUses.Capture(),
-            State.Social.Capture()));
+            State.Social.Capture(),
+            Character: State.Character.Capture())
+        {
+            Quests = State.Quests.Capture(),
+        });
     }
 
     private ActorState LiveDynamicActor(long durableId) =>
@@ -139,8 +143,9 @@ internal sealed class DaggerSessionPersistence
 
         State.Progression.AdvanceTo(saved.Experience, saved.Level);
         State.SkillUses.Restore(saved.SkillUses);
+        State.Quests.Restore(saved.Quests);
 
-        ApplyInventory(saved.Inventory, State.Inventory, State.Equipment);
+        ApplyInventory(saved.Inventory, State.Inventory, State.Equipment, DaggerfallItemOwner.Player);
         ApplyActorInventories(saved.ActorInventories);
 
         WorldPoint position = new(saved.Player.X, saved.Player.Y, saved.Player.Z);
@@ -161,11 +166,11 @@ internal sealed class DaggerSessionPersistence
         // it already charged but never lands.
     }
 
-    private DaggerfallInventorySave CaptureInventory(MechanicsInventoryCoordinator inventoryOwner, MechanicsEquipmentCoordinator equipmentOwner)
+    private DaggerfallInventorySave CaptureInventory(MechanicsInventoryCoordinator inventoryOwner, MechanicsEquipmentCoordinator equipmentOwner, DaggerfallItemOwner owner)
     {
         InventoryView inventory = inventoryOwner.Read();
         EquipmentRead equipped = equipmentOwner.Read();
-        (DaggerfallStackSave[] stacks, DaggerfallUniqueSave[] uniques) = CaptureContents(inventory);
+        (DaggerfallStackSave[] stacks, DaggerfallUniqueSave[] uniques) = CaptureContents(inventory, owner);
         return new(
             stacks,
             uniques,
@@ -174,22 +179,30 @@ internal sealed class DaggerSessionPersistence
     }
 
     /// <summary>Shared stack/unique contents mapping for actor inventories and corpse containers.</summary>
-    private (DaggerfallStackSave[] Stacks, DaggerfallUniqueSave[] UniqueItems) CaptureContents(InventoryView contents) => (
-        contents.Stacks.OrderBy(stack => stack.Definition.Value, StringComparer.Ordinal)
-            .Select(stack => new DaggerfallStackSave(stack.Definition.Value, stack.Quantity)).ToArray(),
+    private (DaggerfallStackSave[] Stacks, DaggerfallUniqueSave[] UniqueItems) CaptureContents(InventoryView contents, DaggerfallItemOwner owner) => (
+        contents.Stacks.OrderBy(stack => stack.Id.Value, StringComparer.Ordinal)
+            .Select(stack => new DaggerfallStackSave(stack.Id.Value, stack.Definition.Value, stack.Quantity,
+                State.ItemInstances.RequireStack(owner, stack.Id).Capture())).ToArray(),
         contents.UniqueItems.OrderBy(item => item.Entity.Value)
-            .Select(item => new DaggerfallUniqueSave(item.Definition.Value, State.Actors.Entities.IdentityOf(item.Entity).Value)).ToArray());
+            .Select(item =>
+            {
+                ulong identity = State.Actors.Entities.IdentityOf(item.Entity).Value;
+                return new DaggerfallUniqueSave(item.Definition.Value, identity, State.ItemInstances.RequireUnique(identity).Capture());
+            }).ToArray());
 
-    private static void ApplyInventory(DaggerfallInventorySave saved, MechanicsInventoryCoordinator inventory, MechanicsEquipmentCoordinator equipment)
+    private void ApplyInventory(DaggerfallInventorySave saved, MechanicsInventoryCoordinator inventory, MechanicsEquipmentCoordinator equipment, DaggerfallItemOwner owner)
     {
         foreach (DaggerfallStackSave stack in saved.Stacks)
         {
-            inventory.Grant(new InventoryGrant(new InventoryItemId(stack.ItemId), stack.Quantity));
+            InventoryStackId stackId = InventoryStackId.Parse(stack.StackId);
+            inventory.Grant(new InventoryGrant(new InventoryItemId(stack.ItemId), stackId, stack.Quantity));
+            State.ItemInstances.RegisterStack(owner, stackId, DaggerfallItemInstanceMetadata.Restore(stack.ItemId, stack.Metadata));
         }
         Dictionary<ulong, KitUniqueInventoryItem> unique = [];
         foreach (DaggerfallUniqueSave item in saved.UniqueItems)
         {
             unique.Add(item.EntityId, equipment.Materialize(new DurableIdentityReference(DurableIdentityKind.Item, item.EntityId), new InventoryItemId(item.ItemId)));
+            State.ItemInstances.RegisterUnique(item.EntityId, DaggerfallItemInstanceMetadata.Restore(item.ItemId, item.Metadata));
         }
         foreach (IGrouping<ulong, DaggerfallEquipmentSave> group in saved.Equipment.GroupBy(value => value.ItemEntityId))
         {
@@ -203,7 +216,7 @@ internal sealed class DaggerSessionPersistence
         {
             MechanicsInventoryCoordinator inventory = State.InventoryFor(section.EntityId)
                 ?? throw new ArgumentException($"Saved inventory owner {section.EntityId} is missing.");
-            ApplyInventory(section.Inventory, inventory, State.EquipmentFor(section.EntityId));
+            ApplyInventory(section.Inventory, inventory, State.EquipmentFor(section.EntityId), DaggerfallItemOwner.Actor(section.EntityId));
         }
     }
 }

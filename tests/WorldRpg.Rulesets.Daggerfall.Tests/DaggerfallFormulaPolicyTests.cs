@@ -17,11 +17,13 @@ public sealed class DaggerfallFormulaPolicyTests
         Assert.Equal(4, DaggerfallFormulaPolicy.HandToHandMinimumDamage(30));
         Assert.Equal(7, DaggerfallFormulaPolicy.HandToHandMaximumDamage(30));
         Assert.Equal(2, DaggerfallFormulaPolicy.ClassicPlayerLevel(4, 0));
+        Assert.Equal(2, DaggerfallFormulaPolicy.CalculatePlayerLevel(0, 4));
         Assert.Equal(0, DaggerfallFormulaPolicy.ExperimentalXpLevel(0, DaggerfallFormulaPolicy.Experimental));
         Assert.Equal(0, DaggerfallFormulaPolicy.ExperimentalXpLevel(499, DaggerfallFormulaPolicy.Experimental));
         Assert.Equal(1, DaggerfallFormulaPolicy.ExperimentalXpLevel(500, DaggerfallFormulaPolicy.Experimental));
         Assert.Equal(2, DaggerfallFormulaPolicy.ExperimentalXpLevel(1_000, DaggerfallFormulaPolicy.Experimental));
         Assert.Equal(33, DaggerfallFormulaPolicy.SkillUsesForAdvancement(30, 2, 130, 1));
+        Assert.Equal(26, DaggerfallFormulaPolicy.CalculateSkillUsesForAdvancement(30, 2, 1.0390625f, 1));
         Assert.Equal(12, DaggerfallFormulaPolicy.SkillAdvancementMultiplier("medical"));
         Assert.Equal((4, 8), DaggerfallFormulaPolicy.HitPointsPerLevelRollBounds(8));
         Assert.Equal(3, DaggerfallFormulaPolicy.HitPointsPerLevelUp(4, 40));

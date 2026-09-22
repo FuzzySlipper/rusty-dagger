@@ -28,6 +28,7 @@ internal sealed class DaggerfallCorpseLootModule
     private readonly IPerceptionService _perception;
     private readonly SpatialMovementSystem _spatial;
     private readonly MechanicsInventoryContainerCoordinator _containers;
+    private readonly DaggerfallItemInstances _itemInstances;
     private readonly EntityId _playerOwner;
     private readonly ActorsState _actors;
     private readonly IReadOnlyDictionary<long, DaggerfallActorDefinition> _definitions;
@@ -42,6 +43,7 @@ internal sealed class DaggerfallCorpseLootModule
         IPerceptionService perception,
         SpatialMovementSystem spatial,
         MechanicsInventoryContainerCoordinator containers,
+        DaggerfallItemInstances itemInstances,
         EntityId playerOwner,
         ActorsState actors,
         IReadOnlyDictionary<long, DaggerfallActorDefinition> definitions,
@@ -54,6 +56,7 @@ internal sealed class DaggerfallCorpseLootModule
         _perception = perception ?? throw new ArgumentNullException(nameof(perception));
         _spatial = spatial ?? throw new ArgumentNullException(nameof(spatial));
         _containers = containers ?? throw new ArgumentNullException(nameof(containers));
+        _itemInstances = itemInstances ?? throw new ArgumentNullException(nameof(itemInstances));
         _playerOwner = playerOwner;
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
@@ -94,6 +97,7 @@ internal sealed class DaggerfallCorpseLootModule
                 value.IsInteractable,
                 RestoreSeeds(value));
             actor.Actor.Add(corpse);
+            RegisterRestoredMetadata(value);
         }
     }
 
@@ -117,6 +121,7 @@ internal sealed class DaggerfallCorpseLootModule
         // corpse marker. Even an empty generated corpse is targetable once so
         // the player receives a truthful semantic result.
         state.Actor.Add(_corpseLoot.Create(CorpseIdentity(fact.ActorId), CorpseType, fact.OriginatingSequence, seeds));
+        RegisterGeneratedMetadata(fact.ActorId, seeds);
     }
 
     /// <summary>Reads Engine visibility and prepares, but does not publish, an explicit loot action.</summary>
@@ -216,11 +221,14 @@ internal sealed class DaggerfallCorpseLootModule
         }
         try
         {
+            if (pending.Selection is { Stack: InventoryStackId source, DestinationStack: InventoryStackId destination })
+                _itemInstances.EnsureTransferCompatible(DaggerfallItemOwner.Corpse(pending.ActorId), DaggerfallItemOwner.Player, source, destination);
             // The transfer commits first. All code after it is deterministic local bookkeeping and
             // completed-change facts, which is why a rejection appends nothing.
-            if (pending.Selection is { } selection)
-                _corpseLoot.Transfer(current, _playerOwner, selection, pending.ExpectedWorldRevision!.Value);
-            else _corpseLoot.TransferAll(current, _playerOwner, pending.ExpectedWorldRevision);
+            CorpseLootTransferResult transfer = pending.Selection is { } selection
+                ? _corpseLoot.Transfer(current, _playerOwner, selection, pending.ExpectedWorldRevision!.Value)
+                : _corpseLoot.TransferAll(current, _playerOwner, pending.ExpectedWorldRevision);
+            SyncTransferredMetadata(pending.ActorId, current, transfer.Transfer);
         }
         catch (Exception rejection) when (rejection is MechanicsException or InvalidOperationException)
         {
@@ -240,15 +248,66 @@ internal sealed class DaggerfallCorpseLootModule
 
     internal string ContainerName(long actorId) => _definitions[actorId].Id.Value;
 
+    /// <summary>Selects a stable compatible player stack before the Engine transfer is prepared.</summary>
+    internal InventoryStackId ResolveTakeDestination(long corpseActorId, InventoryStackId source, InventoryStackId freshDestination)
+    {
+        DaggerfallItemInstanceMetadata sourceMetadata = _itemInstances.RequireStack(DaggerfallItemOwner.Corpse(corpseActorId), source);
+        return _containers.Read(_playerOwner).Stacks
+            .OrderBy(stack => stack.Id.Value, StringComparer.Ordinal)
+            .Select(stack => (Stack: stack.Id, Metadata: _itemInstances.RequireStack(DaggerfallItemOwner.Player, stack.Id)))
+            .Where(candidate => sourceMetadata.IsStackCompatibleWith(candidate.Metadata))
+            .Select(candidate => candidate.Stack)
+            .FirstOrDefault() ?? freshDestination;
+    }
+
     private static readonly EntityTypeId CorpseType = new("daggerfall.corpse");
     private static DurableIdentityReference CorpseIdentity(long actorId) => new(DurableIdentityKind.Container, checked((ulong)actorId));
 
     private static IReadOnlyList<InventoryContainerSeed> RestoreSeeds(DaggerfallCorpseSave value) => value.Stacks
-        .Select(stack => new InventoryContainerSeed(new InventoryItemId(stack.ItemId), stack.Quantity))
+        .Select(stack => new InventoryContainerSeed(new InventoryItemId(stack.ItemId), stack.Quantity, Stack: InventoryStackId.Parse(stack.StackId)))
         .Concat(value.UniqueItems.Select(unique => new InventoryContainerSeed(
             new InventoryItemId(unique.ItemId),
             UniqueItem: new DurableIdentityReference(DurableIdentityKind.Item, unique.EntityId))))
         .ToArray();
+
+    private void RegisterRestoredMetadata(DaggerfallCorpseSave corpse)
+    {
+        DaggerfallItemOwner owner = DaggerfallItemOwner.Corpse(corpse.ActorId);
+        foreach (DaggerfallStackSave stack in corpse.Stacks)
+            _itemInstances.RegisterStack(owner, InventoryStackId.Parse(stack.StackId), DaggerfallItemInstanceMetadata.Restore(stack.ItemId, stack.Metadata));
+        foreach (DaggerfallUniqueSave unique in corpse.UniqueItems)
+            _itemInstances.RegisterUnique(unique.EntityId, DaggerfallItemInstanceMetadata.Restore(unique.ItemId, unique.Metadata));
+    }
+
+    private void RegisterGeneratedMetadata(long actorId, IEnumerable<InventoryContainerSeed> seeds)
+    {
+        DaggerfallItemOwner owner = DaggerfallItemOwner.Corpse(actorId);
+        foreach (InventoryContainerSeed seed in seeds)
+        {
+            DaggerfallItemDefinition definition = _catalog.Items[new DaggerfallItemId(seed.Item.Value)];
+            if (seed.Stack is InventoryStackId stack)
+                _itemInstances.RegisterDefaultStack(owner, new InventoryStack(stack, ItemDefinitionId.Parse(seed.Item.Value), seed.Quantity), definition);
+            else if (seed.UniqueItem is DurableIdentityReference unique)
+                _itemInstances.RegisterDefaultUnique(unique.Value, definition, owner);
+        }
+    }
+
+    private void SyncTransferredMetadata(long corpseActorId, CorpseLootComponent corpse, InventoryContainerTransferReceipt? transfer)
+    {
+        if (transfer is null) return;
+        InventoryView remaining = _corpseLoot.Read(corpse)!;
+        DaggerfallItemOwner source = DaggerfallItemOwner.Corpse(corpseActorId);
+        foreach (InventoryContainerStackTransfer stack in transfer.Stacks)
+        {
+            bool exhausted = !remaining.Stacks.Any(value => value.Id == stack.SourceStack);
+            _itemInstances.TransferStack(source, DaggerfallItemOwner.Player, stack.SourceStack, stack.DestinationStack, exhausted);
+        }
+        foreach (InventoryContainerUniqueTransfer unique in transfer.UniqueItems)
+        {
+            DurableIdentityReference identity = _actors.Entities.IdentityOf(new EntityId(unique.EntityId));
+            _itemInstances.MoveUnique(identity.Value, DaggerfallItemOwner.Player);
+        }
+    }
 
     private IReadOnlyList<InventoryContainerSeed> GenerateSeeds(ActorDiedFact fact, DaggerfallActorDefinition actor)
     {
@@ -264,15 +323,15 @@ internal sealed class DaggerfallCorpseLootModule
                 minimum,
                 maximum)).Value));
         List<InventoryContainerSeed> seeds = [];
-        foreach (DaggerfallLootDrop drop in loot.Drops)
+        foreach ((DaggerfallLootDrop drop, int ordinal) in loot.Drops.Select((drop, ordinal) => (drop, ordinal)))
         {
             DaggerfallItemDefinition item = _catalog.Items[new DaggerfallItemId(drop.ItemId)];
             if (item.IsFungible)
             {
-                seeds.Add(new InventoryContainerSeed(new InventoryItemId(drop.ItemId), checked((ulong)drop.Quantity)));
+                seeds.Add(new InventoryContainerSeed(new InventoryItemId(drop.ItemId), checked((ulong)drop.Quantity),
+                    Stack: DaggerfallInventoryStackIds.ForLoot(fact.ActorId, fact.OriginatingSequence, ordinal)));
                 continue;
             }
-            int ordinal = seeds.Count;
             // Pick the drop's durable identity first, then derive the Engine handle
             // from it; the seed carries both facts so the container coordinator can
             // materialize the item without re-deciding what the identity means.

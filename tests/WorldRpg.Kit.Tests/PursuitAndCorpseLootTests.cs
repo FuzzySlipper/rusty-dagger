@@ -37,10 +37,10 @@ public sealed class PursuitAndCorpseLootTests
             new DurableIdentityReference(DurableIdentityKind.Container, 2000),
             new EntityTypeId("corpse"),
             originatingSequence: 7,
-            [new InventoryContainerSeed(new InventoryItemId("gold"), 2)]);
+            [new InventoryContainerSeed(new InventoryItemId("gold"), 2, Stack: InventoryStackId.Parse("corpse-gold"))]);
 
         CorpseLootTransferResult first = loot.Transfer(corpse, recipient,
-            new InventoryContainerSelection(new InventoryItemId("gold"), 1), inventory.Revision);
+            new InventoryContainerSelection(new InventoryItemId("gold"), 1, InventoryStackId.Parse("corpse-gold"), InventoryStackId.Parse("player-gold")), inventory.Revision);
 
         Assert.False(first.IsEmpty);
         Assert.True(corpse.IsInteractable);
@@ -51,7 +51,7 @@ public sealed class PursuitAndCorpseLootTests
 
         Assert.True(last.IsEmpty);
         Assert.False(corpse.IsInteractable);
-        Assert.Equal(2UL, Assert.Single(containers.Read(recipient).Stacks).Quantity);
+        Assert.Equal(2UL, containers.Read(recipient).Stacks.Aggregate(0UL, (total, stack) => total + stack.Quantity));
         Assert.Empty(loot.Read(corpse)!.Stacks);
         Assert.Throws<InvalidOperationException>(() => loot.TransferAll(corpse, recipient));
     }

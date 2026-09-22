@@ -1,6 +1,7 @@
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Progression;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -63,6 +64,9 @@ internal readonly record struct DaggerfallSkillUse(
 internal sealed class DaggerfallSkillUseReactions
 {
     internal const int MaximumSkillUses = 20_000;
+    internal const int MaximumSkillValue = 100;
+    private const int MasteryProtectionStartsAt = 95;
+    private const long SkillIncreaseCheckIntervalSeconds = 360;
 
     private static readonly IReadOnlyDictionary<DaggerfallSkillUseReason, DaggerfallSkillUsePolicy> Policies =
         new Dictionary<DaggerfallSkillUseReason, DaggerfallSkillUsePolicy>
@@ -93,33 +97,55 @@ internal sealed class DaggerfallSkillUseReactions
 
     private readonly ProgressionState _progression;
     private readonly StatsComponent _stats;
-    private readonly DaggerfallCareerDefinition _career;
+    private readonly Func<DaggerfallCareerDefinition> _career;
     private readonly DaggerfallStatId[] _skills;
     private readonly Dictionary<DaggerfallSkillUseIntervalKey, long> _lastGameMinutes = [];
     private int _startingLevelUpSkillSum;
+    private long _lastSkillIncreaseCheckSecond;
 
     internal DaggerfallSkillUseReactions(
         ProgressionState progression,
         StatsComponent stats,
         DaggerfallDefinitions definitions,
         DaggerfallActorDefinition player)
+        : this(progression, stats, definitions, () => definitions.Catalogs.RequireCareer(player.Career
+            ?? throw new InvalidOperationException("The Daggerfall player definition must name a career for classic progression.")))
+    {
+    }
+
+    /// <summary>Uses the character state's presently committed career whenever progression is evaluated.</summary>
+    internal DaggerfallSkillUseReactions(
+        ProgressionState progression,
+        StatsComponent stats,
+        DaggerfallDefinitions definitions,
+        Func<DaggerfallCareerDefinition> career)
     {
         ArgumentNullException.ThrowIfNull(progression);
         ArgumentNullException.ThrowIfNull(stats);
         ArgumentNullException.ThrowIfNull(definitions);
-        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(career);
         _progression = progression;
         _stats = stats;
         _skills = definitions.Vocabulary.Skills.ToArray();
-        _career = definitions.Catalogs.RequireCareer(player.Career
-            ?? throw new InvalidOperationException("The Daggerfall player definition must name a career for classic progression."));
+        _career = career;
         EnsureKnownCareerSkills();
         foreach (DaggerfallStatId skill in _skills) _progression.TallySkillUse(skill.Value, 0, MaximumSkillUses);
-        _startingLevelUpSkillSum = CurrentLevelUpSkillSum();
+        _startingLevelUpSkillSum = CalculateCurrentLevelUpSkillSum();
     }
 
     internal int StartingLevelUpSkillSum => _startingLevelUpSkillSum;
+    internal int CurrentLevelUpSkillSum => CalculateCurrentLevelUpSkillSum();
+    internal int CalculatedPlayerLevel => DaggerfallFormulaPolicy.CalculatePlayerLevel(_startingLevelUpSkillSum, CalculateCurrentLevelUpSkillSum());
+    internal bool PendingLevelUp => _progression.Level < CalculatedPlayerLevel;
+    internal long LastSkillIncreaseCheckSecond => _lastSkillIncreaseCheckSecond;
     internal static IReadOnlyCollection<DaggerfallSkillUsePolicy> AttributionPolicies => Policies.Values.ToArray();
+
+    /// <summary>Starts classic level eligibility from the skill set a newly committed career grants.</summary>
+    internal void RebaseForCareerSelection()
+    {
+        EnsureKnownCareerSkills();
+        _startingLevelUpSkillSum = CalculateCurrentLevelUpSkillSum();
+    }
 
     /// <summary>
     /// Records an operation which its gameplay owner already accepted. Ordinary operations rely on
@@ -160,10 +186,44 @@ internal sealed class DaggerfallSkillUseReactions
         return true;
     }
 
+    /// <summary>
+    /// Applies the donor's rest/travel skill check at an admitted calendar instant. The elapsed
+    /// gate is deliberately a single check, rather than catch-up loops: a long rest coalesces
+    /// exactly as the donor's completion callback does.
+    /// </summary>
+    internal bool RaiseSkills(long gameSecond)
+    {
+        if (gameSecond <= _lastSkillIncreaseCheckSecond
+            || gameSecond - _lastSkillIncreaseCheckSecond <= SkillIncreaseCheckIntervalSeconds) return false;
+
+        _lastSkillIncreaseCheckSecond = gameSecond;
+        foreach (DaggerfallStatId skill in _skills)
+        {
+            int permanent = Permanent(skill);
+            int threshold = DaggerfallFormulaPolicy.CalculateSkillUsesForAdvancement(
+                permanent,
+                DaggerfallFormulaPolicy.SkillAdvancementMultiplier(skill.Value),
+                Career.AdvancementMultiplier,
+                _progression.Level);
+            int scaledUses = ScaleUsesForReflexes(_progression.SkillUses.GetValueOrDefault(skill.Value));
+            if (scaledUses < threshold) continue;
+
+            // The donor consumes the whole tally before deciding whether the skill can still rise.
+            _progression.ResetSkillUse(skill.Value);
+            if (permanent >= MaximumSkillValue || (permanent >= MasteryProtectionStartsAt && AlreadyMasteredPrimarySkill()))
+                continue;
+
+            DaggerfallStatModifiers.AdjustPermanent(_stats, skill, 1);
+        }
+
+        return true;
+    }
+
     internal DaggerfallSkillProgressionSave Capture() => new(
         _skills.Select(skill => new DaggerfallSkillUseCounterSave(skill.Value, _progression.SkillUses.GetValueOrDefault(skill.Value))).ToArray(),
         _startingLevelUpSkillSum,
-        _lastGameMinutes.Select(entry => new DaggerfallSkillUseIntervalSave(entry.Key.Skill, entry.Key.Reason, entry.Value)).ToArray());
+        _lastGameMinutes.Select(entry => new DaggerfallSkillUseIntervalSave(entry.Key.Skill, entry.Key.Reason, entry.Value)).ToArray(),
+        _lastSkillIncreaseCheckSecond);
 
     internal void Restore(DaggerfallSkillProgressionSave saved)
     {
@@ -188,18 +248,32 @@ internal sealed class DaggerfallSkillUseReactions
         _lastGameMinutes.Clear();
         foreach ((DaggerfallSkillUseIntervalKey key, long minute) in restoredIntervals) _lastGameMinutes.Add(key, minute);
         _startingLevelUpSkillSum = saved.StartingLevelUpSkillSum;
+        _lastSkillIncreaseCheckSecond = saved.LastSkillIncreaseCheckSecond;
     }
 
-    private int CurrentLevelUpSkillSum()
+    private int CalculateCurrentLevelUpSkillSum()
     {
-        int primary = _career.PrimarySkills.Sum(skill => Permanent(new DaggerfallStatId(skill)));
-        int majors = _career.MajorSkills.Sum(skill => Permanent(new DaggerfallStatId(skill)))
-            - _career.MajorSkills.Min(skill => Permanent(new DaggerfallStatId(skill)));
-        int minor = _career.MinorSkills.Max(skill => Permanent(new DaggerfallStatId(skill)));
+        DaggerfallCareerDefinition career = Career;
+        int primary = career.PrimarySkills.Sum(skill => Permanent(new DaggerfallStatId(skill)));
+        int majors = career.MajorSkills.Sum(skill => Permanent(new DaggerfallStatId(skill)))
+            - career.MajorSkills.Min(skill => Permanent(new DaggerfallStatId(skill)));
+        int minor = career.MinorSkills.Max(skill => Permanent(new DaggerfallStatId(skill)));
         return checked(primary + majors + minor);
     }
 
     private int Permanent(DaggerfallStatId skill) => checked((int)_stats.GetStat(StatId.Parse(skill.Value)).BaseValue);
+
+    private int ScaleUsesForReflexes(int uses)
+    {
+        int reflexes = Permanent(new DaggerfallStatId("reflexes"));
+        return checked((int)((long)uses * DaggerfallFormulaPolicy.ReflexesSkillUseScaleMilli(reflexes) / 1000));
+    }
+
+    private bool AlreadyMasteredPrimarySkill() => Career.PrimarySkills
+        .Any(skill => Permanent(new DaggerfallStatId(skill)) >= MaximumSkillValue);
+
+    private DaggerfallCareerDefinition Career => _career()
+        ?? throw new InvalidOperationException("Daggerfall skill advancement requires a committed career.");
 
     private static bool SupportsVariableSkill(DaggerfallSkillUse use) => use.Reason switch
     {
@@ -216,9 +290,10 @@ internal sealed class DaggerfallSkillUseReactions
     private void EnsureKnownCareerSkills()
     {
         HashSet<string> known = _skills.Select(skill => skill.Value).ToHashSet(StringComparer.Ordinal);
-        if (_career.PrimarySkills.Count == 0 || _career.MajorSkills.Count == 0 || _career.MinorSkills.Count == 0
-            || _career.SkillReferences.Any(skill => !known.Contains(skill)))
-            throw new InvalidOperationException($"Daggerfall career '{_career.Id}' has no complete skill progression mapping.");
+        DaggerfallCareerDefinition career = Career;
+        if (career.PrimarySkills.Count == 0 || career.MajorSkills.Count == 0 || career.MinorSkills.Count == 0
+            || career.SkillReferences.Any(skill => !known.Contains(skill)))
+            throw new InvalidOperationException($"Daggerfall career '{career.Id}' has no complete skill progression mapping.");
     }
 
     private readonly record struct DaggerfallSkillUseIntervalKey(string Skill, DaggerfallSkillUseReason Reason);
@@ -228,7 +303,8 @@ internal sealed class DaggerfallSkillUseReactions
 internal sealed record DaggerfallSkillProgressionSave(
     DaggerfallSkillUseCounterSave[] Counters,
     int StartingLevelUpSkillSum,
-    DaggerfallSkillUseIntervalSave[] Intervals)
+    DaggerfallSkillUseIntervalSave[] Intervals,
+    long LastSkillIncreaseCheckSecond = 0)
 {
     internal DaggerfallSkillProgressionSave Validate()
     {

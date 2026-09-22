@@ -64,7 +64,7 @@ public sealed class WorldRpgProductSaveLoadTests
     }
 
     [Fact]
-    public void Named_slot_load_and_index_failures_keep_the_live_session_and_publish_diagnostics()
+    public void Named_slot_load_and_catalog_failures_keep_the_live_session_and_publish_diagnostics()
     {
         InMemoryPersistenceService persistence = new();
         LoadTestRuleset ruleset = new();
@@ -74,7 +74,8 @@ public sealed class WorldRpgProductSaveLoadTests
         session.ArmSlotRequest(new(SaveSlotOperation.Save, Label: "Before the dungeon"));
         product.Update(Update(1));
 
-        persistence.Put("slot-1", "not-json"u8.ToArray());
+        persistence.Put(WorldRpgSaveSlots.IndexKey, System.Text.Encoding.UTF8.GetBytes(
+            """[{"Key":"slot-1","Label":"Before the dungeon","SavedAtUtc":"2026-09-22T00:00:00Z","Ruleset":"test","Payload":"","Revision":1}]"""));
         session.ArmSlotRequest(new(SaveSlotOperation.Load, "slot-1"));
         product.Update(Update(2));
         Assert.Same(session, ruleset.RequireCurrent());
@@ -86,8 +87,64 @@ public sealed class WorldRpgProductSaveLoadTests
         product.Update(Update(3));
         Assert.Same(session, ruleset.RequireCurrent());
         Assert.Empty(session.SaveSlots);
-        Assert.Contains("slot index", session.SaveSlotDiagnostic, StringComparison.Ordinal);
+        Assert.Contains("slot catalog", session.SaveSlotDiagnostic, StringComparison.Ordinal);
         Assert.StartsWith("Save slots unavailable:", session.Outcome, StringComparison.Ordinal);
+    }
+
+
+    [Fact]
+    public void Player_preferences_apply_before_publication_and_survive_restart_and_load()
+    {
+        InMemoryPersistenceService persistence = new();
+        LoadTestRuleset ruleset = new();
+        using WorldRpgProduct product = new(Context(persistence), ruleset, new GameBundleId("test.bundle"));
+        LoadTestSession initial = ruleset.RequireCurrent();
+        Assert.Null(initial.PreferencesAtInitialPublication);
+
+        product.Start();
+        product.Begin();
+        initial.ArmPlayerPreferencesSave("look:inverted");
+        product.Update(Update(1));
+        Assert.Equal("look:inverted", initial.ActivePreferences);
+        Assert.Equal("Player preferences saved.", initial.PlayerPreferencesOutcome);
+
+        product.Restart();
+        LoadTestSession restarted = ruleset.RequireCurrent();
+        Assert.Equal("look:inverted", restarted.ActivePreferences);
+        Assert.Equal("look:inverted", restarted.PreferencesAtInitialPublication);
+
+        restarted.ArmSlotRequest(new(SaveSlotOperation.Save, Label: "For preference load"));
+        product.Update(Update(2));
+        restarted.ArmSlotRequest(new(SaveSlotOperation.Load, "slot-1"));
+        product.Update(Update(3));
+        LoadTestSession loaded = Assert.IsType<LoadTestSession>(ruleset.Replacement);
+        Assert.Equal("look:inverted", loaded.ActivePreferences);
+        Assert.Equal("look:inverted", loaded.PreferencesAtInitialPublication);
+
+        product.QuitToTitle();
+        LoadTestSession title = ruleset.RequireCurrent();
+        Assert.Equal("look:inverted", title.ActivePreferences);
+        Assert.Equal("look:inverted", title.PreferencesAtInitialPublication);
+    }
+
+    [Fact]
+    public void Corrupt_or_unwritten_player_preferences_keep_defaults_or_the_active_session_binding()
+    {
+        InMemoryPersistenceService persistence = new();
+        persistence.Put("test", "not-json"u8.ToArray());
+        LoadTestRuleset ruleset = new();
+        using WorldRpgProduct product = new(Context(persistence), ruleset, new GameBundleId("test.bundle"));
+        LoadTestSession session = ruleset.RequireCurrent();
+        Assert.Null(session.ActivePreferences);
+        Assert.Null(session.PreferencesAtInitialPublication);
+        Assert.Contains("defaults are active", session.PlayerPreferencesOutcome, StringComparison.Ordinal);
+
+        product.Start();
+        session.ArmPlayerPreferencesSave("look:normal");
+        persistence.ThrowOnNextSave = true;
+        product.Update(Update(1));
+        Assert.Equal("look:normal", session.ActivePreferences);
+        Assert.Contains("active but were not saved", session.PlayerPreferencesOutcome, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -166,9 +223,10 @@ public sealed class WorldRpgProductSaveLoadTests
         }
     }
 
-    private sealed class LoadTestSession : ISaveableGameSession, ISaveRequestingGameSession, IModeAwareGameSession
+    private sealed class LoadTestSession : ISaveableGameSession, ISaveRequestingGameSession, IModeAwareGameSession, IPlayerPreferencesSession
     {
         private SaveSlotRequest? _saveSlotRequest;
+        private string? _playerPreferencesSave;
 
         internal bool ThrowOnDispose { get; set; }
 
@@ -182,11 +240,37 @@ public sealed class WorldRpgProductSaveLoadTests
 
         internal string? SaveSlotDiagnostic { get; private set; }
 
+        internal string? ActivePreferences { get; private set; }
+
+        internal string? PreferencesAtInitialPublication { get; private set; }
+
+        internal string? PlayerPreferencesOutcome { get; private set; }
+
+        internal void ArmPlayerPreferencesSave(string serialized)
+        {
+            ActivePreferences = serialized;
+            _playerPreferencesSave = serialized;
+        }
+
         internal void ArmSlotRequest(SaveSlotRequest request) => _saveSlotRequest = request;
 
         public void PublishInitial()
         {
+            PreferencesAtInitialPublication = ActivePreferences;
         }
+
+        public string CapturePlayerPreferences() => ActivePreferences ?? string.Empty;
+
+        public void ApplyPlayerPreferences(string? serialized) => ActivePreferences = serialized;
+
+        public string? TakePlayerPreferencesSave()
+        {
+            string? save = _playerPreferencesSave;
+            _playerPreferencesSave = null;
+            return save;
+        }
+
+        public void ReportPlayerPreferencesOutcome(string message) => PlayerPreferencesOutcome = message;
 
         public ProductUpdateResult Update(ProductUpdate update) => ProductUpdateResult.None;
 
@@ -238,11 +322,19 @@ public sealed class WorldRpgProductSaveLoadTests
         private readonly Dictionary<ulong, Entry?> _blobs = [];
         private ulong _nextBlob;
 
+        internal bool ThrowOnNextSave { get; set; }
+
         internal void Put(string key, byte[] payload) => _values[("1", key)] = new(1, payload.ToArray());
 
         public PersistenceStore OpenStore(PersistenceOpenRequest request) => new(new PersistenceStoreHandle(1), static () => { });
         public PersistenceSaveReceipt Save(PersistenceSaveRequest request)
         {
+            if (ThrowOnNextSave)
+            {
+                ThrowOnNextSave = false;
+                throw new InvalidOperationException("Injected persistence save fault.");
+            }
+
             ulong revision = _values.TryGetValue((request.Store.Handle.Value.ToString(), request.Key), out Entry? existing)
                 ? checked(existing!.Revision + 1) : 1;
             _values[(request.Store.Handle.Value.ToString(), request.Key)] = new(revision, request.Payload.ToArray());

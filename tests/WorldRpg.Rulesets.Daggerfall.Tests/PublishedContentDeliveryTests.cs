@@ -103,24 +103,13 @@ public sealed class PublishedContentDeliveryTests
                 family.GetProperty("files").EnumerateArray().Select(file => file.GetString()!).ToArray(),
                 family.GetProperty("donorAnchor").GetString()!)),
         ];
-        Assert.Equal(["FACE"], unreachable.Select(family => family.Family));
-        Assert.Equal(["FACES.CIF"], unreachable[0].Files);
-        // The face grid has no donor reader to name: the donor reads the grid, this repository enumerates
-        // its cells and cannot slice their pixels, which is a different gap from a missing reader.
-        Assert.Empty(unreachable[0].Anchor);
-        Assert.All(unreachable, family =>
-        {
-            Assert.False(string.IsNullOrWhiteSpace(family.Kind));
-            // The remaining refusal describes cells whose pixels are not published,
-            // rather than a canvas published at the wrong shape or with guessed colours.
-            Assert.Contains("pixels", family.Reason, StringComparison.Ordinal);
-        });
+        Assert.Empty(unreachable);
 
         HashSet<string> characterPublished = [.. GeneratedContentFiles(content)
             .Where(path => path.StartsWith("worldrpg/media/character/", StringComparison.Ordinal) && !path.EndsWith("character-media-inventory.json", StringComparison.Ordinal))];
         // Every artifact the index names is an admitted file, and the group carries no other: an
         // artifact written without an index entry, or an entry with no artifact, fails here.
-        Assert.Equal(360, characterListed.Count);
+        Assert.Equal(421, characterListed.Count);
         Assert.Equal(240, characters.Artifacts.Count(artifact => artifact.GetProperty("binding").GetString() == "admitted"));
         Assert.Equal(
             [.. characterPublished.Except(characterListed).Order(StringComparer.Ordinal)],
@@ -229,13 +218,12 @@ public sealed class PublishedContentDeliveryTests
 
         // The canvases are published, so a reference the character sheet resolves is admitted rather than
         // pending forever - and the sheet resolves every race the catalogs publish, so all 200 layers are
-        // bound. Every faction face stays required-pending: their grid's cells have no published artifact
-        // and no consumer. Both counts are pinned so that binding a file has to move this deliberately.
+        // bound. Every faction face stays required-pending: the artifacts are published,
+        // while the future social UI owns their consumer. Both counts are pinned so that binding a file has to move this deliberately.
         Assert.Equal(200, layers.Count(layer => layer.GetProperty("binding").GetString() == "admitted"));
         Assert.DoesNotContain(layers, layer => layer.GetProperty("binding").GetString() == "requiredPending");
         Assert.All(layers, layer => Assert.Equal("the character sheet", layer.GetProperty("consumer").GetString()));
-        // The faction faces are a grid nothing here slices the pixels of, so they are neither published
-        // nor bound and the count is the whole grid.
+        // Faction-face pixels are published; their social consumer remains pending.
         Assert.Equal(61, factionFaces.Count(face => face.GetProperty("binding").GetString() == "requiredPending"));
 
         // The three supplied career portraits are what any career's sheet draws, so they are bound by the
@@ -261,8 +249,7 @@ public sealed class PublishedContentDeliveryTests
         }
 
         // Every reference whose canvas was published states the same palette as the index entry for that
-        // canvas: a consumer resolving either record paints the same colours. The faction faces have no
-        // artifact and so no entry, which is the pending state the section already states.
+        // canvas: a consumer resolving either record paints the same colours.
         foreach (JsonElement[] references in new[] { layers, factionFaces, careers })
         {
             Assert.All(references.Where(reference => painted.ContainsKey(reference.GetProperty("mediaId").GetString()!)), reference =>
@@ -272,15 +259,13 @@ public sealed class PublishedContentDeliveryTests
             });
         }
 
-        Assert.All(factionFaces, face => Assert.False(painted.ContainsKey(face.GetProperty("mediaId").GetString()!)));
+        Assert.All(factionFaces, face => Assert.True(painted.ContainsKey(face.GetProperty("mediaId").GetString()!)));
 
         // A supplied file whose canvases could not be published is recorded as unreadable with the
         // refusal that names it - not as a file that read and went unused, which would say the opposite
         // of what the generated media index states about the same bytes.
         JsonElement[] unfiles = [.. files.Where(file => file.GetProperty("outcome").GetString() == "unreadable")];
-        Assert.Equal(
-            ["FACES.CIF"],
-            unfiles.Select(file => file.GetProperty("path").GetString()).Order(StringComparer.Ordinal));
+        Assert.Empty(unfiles);
         Assert.All(unfiles, file =>
         {
             Assert.True(file.GetProperty("canvasCount").GetInt32() > 0);

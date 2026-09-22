@@ -54,6 +54,24 @@ public sealed class ActiveEffectLifecycleTests
     }
 
     [Fact]
+    public void Compiled_policy_can_expire_after_its_current_round_payload()
+    {
+        ActiveEffectLifecycle effects = new(new EffectsComponent());
+        ActiveEffectContext context = Context("complete", "disease");
+        _ = effects.Admit(Definition("disease", EffectStackingPolicy.IndependentByProvenance, 1), ActiveEffectAdmissionKind.Apply,
+            context, Provenance(context), 1, null);
+
+        ActiveEffectLifecycleReceipt expired = Assert.Single(effects.AdvanceMagicRound(state =>
+        {
+            Assert.Equal(context.Instance, state.Context.Instance);
+            effects.ExpireAfterCurrentRound(state.Context.Instance);
+        }));
+
+        Assert.Equal(ActiveEffectEndReason.Expired, expired.EndReason);
+        Assert.Empty(effects.Active);
+    }
+
+    [Fact]
     public void Refresh_duration_keeps_original_contribution_and_provenance()
     {
         EffectsComponent component = new();

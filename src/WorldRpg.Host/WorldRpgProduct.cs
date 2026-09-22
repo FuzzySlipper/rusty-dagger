@@ -13,6 +13,9 @@ public sealed class WorldRpgProduct : IEngineProduct
     /// <summary>Engine persistence scope for ordinary menu saves.</summary>
     private const string SaveStoreScope = "worldrpg.saves";
 
+    /// <summary>Engine persistence scope for current ruleset-owned player preferences.</summary>
+    private const string PlayerPreferencesScope = "worldrpg.preferences";
+
     /// <summary>The one Host-owned catalog and payload owner used by ordinary menu save actions.</summary>
     private WorldRpgSaveSlots SaveSlots => _saveSlots ??= new WorldRpgSaveSlots(_context.Engine, SaveStoreScope);
 
@@ -21,12 +24,18 @@ public sealed class WorldRpgProduct : IEngineProduct
     private readonly IGameRuleset _ruleset;
     private readonly List<ProductModeChange> _modeHistory = [];
     private WorldRpgSaveSlots? _saveSlots;
+    private ProductStateStore<string>? _playerPreferences;
     private IGameSession _session;
     private readonly ResolvedCompositionIdentity _compositionIdentity;
     private bool _started;
     private bool _shutdown;
     private readonly bool _resumed;
     private ProductMode _mode = ProductMode.Playing;
+
+    private ProductStateStore<string> PlayerPreferences => _playerPreferences ??= new ProductStateStore<string>(
+        _context.Engine,
+        PlayerPreferencesScope,
+        new JsonProductStateCodec<string>(WorldRpgSaveJsonContext.Default.String));
 
     public WorldRpgProduct(ProductCreateContext context)
         : this(context, HostDefaults.DefaultBundle, ruleset: null)
@@ -50,6 +59,7 @@ public sealed class WorldRpgProduct : IEngineProduct
         _session = selected.CreateSession(new GameSessionContext(context.Engine, composition));
         try
         {
+            ApplyPlayerPreferences(_session);
             RefreshSaveSlots();
             _session.PublishInitial();
         }
@@ -71,6 +81,7 @@ public sealed class WorldRpgProduct : IEngineProduct
         _ruleset = ruleset;
         _compositionIdentity = composition.Identity;
         _session = session;
+        ApplyPlayerPreferences(_session);
         // A resumed product is already past the entry screen: the world has been played, so starting it
         // again behind a screen that offers to begin would offer to begin a run that is already running.
         _resumed = true;
@@ -245,6 +256,7 @@ public sealed class WorldRpgProduct : IEngineProduct
         IGameSession previous = _session;
         try
         {
+            ApplyPlayerPreferences(replacement);
             replacement.PublishInitial();
         }
         catch
@@ -286,6 +298,7 @@ public sealed class WorldRpgProduct : IEngineProduct
         IGameSession previous = _session;
         try
         {
+            ApplyPlayerPreferences(replacement);
             replacement.PublishInitial();
         }
         catch
@@ -307,6 +320,7 @@ public sealed class WorldRpgProduct : IEngineProduct
         if (_shutdown) return;
         _session.Dispose();
         _saveSlots?.Dispose();
+        _playerPreferences?.Dispose();
         _shutdown = true;
     }
 
@@ -327,6 +341,7 @@ public sealed class WorldRpgProduct : IEngineProduct
         // a step rather than after it.
         AdoptSessionRequest();
         ProductUpdateResult result = _session.Update(update);
+        PersistRequestedPlayerPreferences();
         AdoptSessionRequest();
         HonorSaveRequests();
 
@@ -349,6 +364,69 @@ public sealed class WorldRpgProduct : IEngineProduct
     {
         if (_session is not IModeAwareGameSession aware || aware.PendingModeRequest is not { } requested) return;
         Apply(requested, "the ruleset asked for this mode", closesModal: aware.PendingModeRequestClosesModal);
+    }
+
+    private void ApplyPlayerPreferences(IGameSession session)
+    {
+        if (session is not IPlayerPreferencesSession preferences) return;
+
+        try
+        {
+            ProductStateLoad<string> loaded = PlayerPreferences.Load(_composition.Ruleset.Value);
+            if (loaded.Present && loaded.State is null)
+                throw new InvalidOperationException("The stored player-preference value is null.");
+            preferences.ApplyPlayerPreferences(loaded.Present ? loaded.State : null);
+        }
+        catch (Exception error)
+        {
+            ApplyDefaultPlayerPreferences(preferences, $"Saved player preferences are invalid; defaults are active: {error.Message}");
+        }
+    }
+
+    private static void ApplyDefaultPlayerPreferences(IPlayerPreferencesSession preferences, string diagnostic)
+    {
+        try
+        {
+            preferences.ApplyPlayerPreferences(null);
+            preferences.ReportPlayerPreferencesOutcome(diagnostic);
+        }
+        catch (Exception fallbackError)
+        {
+            preferences.ReportPlayerPreferencesOutcome($"{diagnostic} Default preferences could not be applied: {fallbackError.Message}");
+        }
+    }
+
+    private void PersistRequestedPlayerPreferences()
+    {
+        if (_session is not IPlayerPreferencesSession preferences) return;
+
+        string? serialized;
+        try
+        {
+            serialized = preferences.TakePlayerPreferencesSave();
+        }
+        catch (Exception error)
+        {
+            preferences.ReportPlayerPreferencesOutcome($"Player preferences are active but were not saved: {error.Message}");
+            return;
+        }
+
+        if (serialized is null) return;
+        try
+        {
+            PersistenceSaveReceipt receipt = PlayerPreferences.Save(_composition.Ruleset.Value, serialized, PersistenceRevisionGuard.Any);
+            if (receipt.Outcome != PersistenceSaveOutcome.Saved)
+            {
+                preferences.ReportPlayerPreferencesOutcome($"Player preferences are active but were not saved: persistence returned {receipt.Outcome}.");
+                return;
+            }
+
+            preferences.ReportPlayerPreferencesOutcome("Player preferences saved.");
+        }
+        catch (Exception error)
+        {
+            preferences.ReportPlayerPreferencesOutcome($"Player preferences are active but were not saved: {error.Message}");
+        }
     }
 
     /// <summary>
@@ -530,6 +608,7 @@ public sealed class WorldRpgProduct : IEngineProduct
 
         try
         {
+            ApplyPlayerPreferences(replacement);
             replacement.PublishInitial();
         }
         catch (Exception error)

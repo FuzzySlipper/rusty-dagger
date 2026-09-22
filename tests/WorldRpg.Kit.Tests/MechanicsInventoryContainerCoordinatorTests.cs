@@ -45,7 +45,7 @@ public sealed class MechanicsInventoryContainerCoordinatorTests
         containers.Seed(source, [new InventoryContainerSeed(new InventoryItemId("sword"), UniqueItem: Item(40))]);
         EntityId item = Assert.Single(containers.Read(source).UniqueItems).Entity;
 
-        containers.Transfer(source, destination, new InventoryContainerSelection(new InventoryItemId("sword"), 1, item.Value), store.Revision);
+        containers.Transfer(source, destination, new InventoryContainerSelection(new InventoryItemId("sword"), 1, UniqueEntityId: item.Value), store.Revision);
 
         Assert.Empty(entities.Store.Get<InventoryComponent>(source).UniqueItems);
         Assert.Equal(item, Assert.Single(entities.Store.Get<InventoryComponent>(destination).UniqueItems).Entity);
@@ -64,7 +64,7 @@ public sealed class MechanicsInventoryContainerCoordinatorTests
         Assert.Throws<MechanicsException>(() => containers.Seed(owner,
         [
             new InventoryContainerSeed(new InventoryItemId("sword"), UniqueItem: Item(40)),
-            new InventoryContainerSeed(new InventoryItemId("gold"), 11),
+            new InventoryContainerSeed(new InventoryItemId("gold"), 11, Stack: Stack("gold")),
         ]));
 
         Assert.Empty(containers.Read(owner).Stacks);
@@ -84,10 +84,10 @@ public sealed class MechanicsInventoryContainerCoordinatorTests
         containers.RegisterOwner(destination);
         containers.Seed(source,
         [
-            new InventoryContainerSeed(new InventoryItemId("amber"), 1),
-            new InventoryContainerSeed(new InventoryItemId("zinc"), 2),
+            new InventoryContainerSeed(new InventoryItemId("amber"), 1, Stack: Stack("amber-source")),
+            new InventoryContainerSeed(new InventoryItemId("zinc"), 2, Stack: Stack("zinc-source")),
         ]);
-        containers.Seed(destination, [new InventoryContainerSeed(new InventoryItemId("zinc"), 9)]);
+        containers.Seed(destination, [new InventoryContainerSeed(new InventoryItemId("zinc"), 9, Stack: Stack("zinc-source"))]);
         InventoryView sourceBefore = containers.Read(source);
         InventoryView destinationBefore = containers.Read(destination);
 
@@ -119,6 +119,8 @@ public sealed class MechanicsInventoryContainerCoordinatorTests
         entities.Create(new DurableIdentityReference(DurableIdentityKind.Container, id), new EntityTypeId("container"));
 
     private static DurableIdentityReference Item(ulong id) => new(DurableIdentityKind.Item, id);
+
+    private static InventoryStackId Stack(string id) => InventoryStackId.Parse(id);
 
     private static ItemDefinition Fungible(string id, ulong maximumQuantity) =>
         new(ItemDefinitionId.Parse(id), ItemKind.Fungible, maximumQuantity);

@@ -25,8 +25,12 @@ internal sealed record DaggerfallSavePayload(
     DaggerfallNpcSave Npcs,
     DaggerfallActiveEffectSave[] ActiveEffects,
     DaggerfallSkillProgressionSave SkillUses,
-    DaggerfallSocialSave Social)
+    DaggerfallSocialSave Social,
+    DaggerfallCharacterSave? Character = null)
 {
+    /// <summary>Every current quest instance; an empty collection is meaningful current state.</summary>
+    [JsonRequired]
+    public DaggerfallQuestInstancesSave Quests { get; init; } = new([]);
     /// <summary>The dynamic identity kinds owned by the current Daggerfall ruleset.</summary>
     internal static readonly DurableIdentityKind[] PersistedKinds = [DurableIdentityKind.Actor, DurableIdentityKind.Item];
 
@@ -104,13 +108,13 @@ internal sealed record DaggerfallSavePayload(
         }
 
         HashSet<ulong> uniqueItems = [];
-        ValidateInventory(Inventory, definitions, uniqueItems, "player", requireEquipment: true);
+        ValidateInventory(Inventory, definitions, uniqueItems, DaggerfallItemOwner.Player, requireEquipment: true);
         foreach (DaggerfallCorpseSave corpse in Corpses)
         {
             if (!savedActorIds.Contains(corpse.ActorId) && !dynamicActorIds.Contains(corpse.ActorId))
                 throw new ArgumentException($"Saved corpse refers to missing actor {corpse.ActorId}.");
             corpse.Validate();
-            ValidateInventory(new DaggerfallInventorySave(corpse.Stacks, corpse.UniqueItems, []), definitions, uniqueItems, $"corpse {corpse.ActorId}", requireEquipment: false);
+            ValidateInventory(new DaggerfallInventorySave(corpse.Stacks, corpse.UniqueItems, []), definitions, uniqueItems, DaggerfallItemOwner.Corpse(corpse.ActorId), requireEquipment: false);
         }
         HashSet<long> actorInventories = [];
         foreach (DaggerfallActorInventorySave inventory in ActorInventories)
@@ -118,12 +122,13 @@ internal sealed record DaggerfallSavePayload(
             inventory.Validate();
             if ((!savedActorIds.Contains(inventory.EntityId) && !dynamicActorIds.Contains(inventory.EntityId)) || !actorInventories.Add(inventory.EntityId))
                 throw new ArgumentException($"Saved actor inventory {inventory.EntityId} has no distinct saved actor.");
-            ValidateInventory(inventory.Inventory, definitions, uniqueItems, $"actor {inventory.EntityId}", requireEquipment: true);
+            ValidateInventory(inventory.Inventory, definitions, uniqueItems, DaggerfallItemOwner.Actor(inventory.EntityId), requireEquipment: true);
         }
         HashSet<long> allActors = [.. savedActorIds, .. dynamicActorIds];
         if (!actorInventories.SetEquals(allActors))
             throw new ArgumentException("Current save must carry one actor inventory section for every saved actor.");
         RequireLiveUniqueItems(uniqueItems);
+        Quests.Validate(definitions);
 
         HashSet<(int Region, int Index)> locations = [.. definitions.Locations.Records.Select(value => (value.Region, value.Index))];
         RequireSite(Site.Active, locations, "active site");
@@ -134,8 +139,16 @@ internal sealed record DaggerfallSavePayload(
         foreach (DaggerfallCombatCooldownSave cooldown in CombatCooldowns)
             if (!combatants.Contains(cooldown.AttackerId))
                 throw new ArgumentException($"Saved attack cooldown refers to missing actor {cooldown.AttackerId}.");
+        HashSet<(string Scope, long OwnerId, string StackId)> questStacks = [];
+        AddQuestStacks(questStacks, DaggerfallItemOwner.Player, Inventory.Stacks);
+        foreach (DaggerfallCorpseSave corpse in Corpses)
+            AddQuestStacks(questStacks, DaggerfallItemOwner.Corpse(corpse.ActorId), corpse.Stacks);
+        foreach (DaggerfallActorInventorySave inventory in ActorInventories)
+            AddQuestStacks(questStacks, DaggerfallItemOwner.Actor(inventory.EntityId), inventory.Inventory.Stacks);
+        Quests.ValidateBindings(combatants, savedLedger, locations, questStacks);
         ValidateActiveEffects(ActiveEffects, combatants, uniqueItems);
         Social.Validate(definitions.Factions);
+        Character?.Validate(definitions);
         ValidateEffectSourceReferences(
         [
             (DaggerfallActorIdentity.PlayerEntityId, Player.Stats),
@@ -169,6 +182,9 @@ internal sealed record DaggerfallSavePayload(
         SkillUses.Validate();
         ArgumentNullException.ThrowIfNull(Social);
         Social.Validate();
+        ArgumentNullException.ThrowIfNull(Quests);
+        Quests.Validate();
+        ArgumentNullException.ThrowIfNull(Character);
         if (Experience < 0 || Level < 1)
             throw new ArgumentOutOfRangeException(nameof(Experience), "Saved progression must be non-negative and begin at level one.");
         if (!double.IsFinite(Calendar.RemainderSeconds) || Calendar.RemainderSeconds < 0d || Calendar.RemainderSeconds >= 1d)
@@ -254,7 +270,7 @@ internal sealed record DaggerfallSavePayload(
         }
     }
 
-    private static void ValidateInventory(DaggerfallInventorySave inventory, DaggerfallDefinitions definitions, HashSet<ulong> allUnique, string owner, bool requireEquipment)
+    private static void ValidateInventory(DaggerfallInventorySave inventory, DaggerfallDefinitions definitions, HashSet<ulong> allUnique, DaggerfallItemOwner owner, bool requireEquipment)
     {
         inventory.Validate();
         foreach (DaggerfallStackSave stack in inventory.Stacks) RequireFungible(definitions, stack, owner);
@@ -262,11 +278,12 @@ internal sealed record DaggerfallSavePayload(
         foreach (DaggerfallUniqueSave saved in inventory.UniqueItems)
         {
             if (!definitions.Items.TryGetValue(new DaggerfallItemId(saved.ItemId), out DaggerfallItemDefinition? definition) || definition.IsFungible || !allUnique.Add(saved.EntityId))
-                throw new ArgumentException($"Saved {owner} unique item '{saved.EntityId}' is missing, incompatible, or duplicated.");
+                throw new ArgumentException($"Saved {owner.Scope} {owner.Id} unique item '{saved.EntityId}' is missing, incompatible, or duplicated.");
+            RequireMetadata(saved.ItemId, saved.Metadata, owner);
             unique.Add(saved.EntityId, definition);
         }
         if (!requireEquipment && inventory.Equipment.Length != 0)
-            throw new ArgumentException($"Saved {owner} cannot equip items.");
+            throw new ArgumentException($"Saved {owner.Scope} {owner.Id} cannot equip items.");
         foreach (IGrouping<ulong, DaggerfallEquipmentSave> group in inventory.Equipment.GroupBy(value => value.ItemEntityId))
         {
             if (!unique.TryGetValue(group.Key, out DaggerfallItemDefinition? item) || item.Equipment is null)
@@ -280,12 +297,28 @@ internal sealed record DaggerfallSavePayload(
         }
     }
 
-    private static void RequireFungible(DaggerfallDefinitions definitions, DaggerfallStackSave stack, string owner)
+    private static void RequireFungible(DaggerfallDefinitions definitions, DaggerfallStackSave stack, DaggerfallItemOwner owner)
     {
         if (!definitions.Items.TryGetValue(new DaggerfallItemId(stack.ItemId), out DaggerfallItemDefinition? definition) || !definition.IsFungible)
-            throw new ArgumentException($"Saved {owner} stack '{stack.ItemId}' is not a selected fungible item.");
+            throw new ArgumentException($"Saved {owner.Scope} {owner.Id} stack '{stack.ItemId}' is not a selected fungible item.");
         if (stack.Quantity > definition.MaximumQuantity)
-            throw new ArgumentException($"Saved {owner} stack '{stack.ItemId}' exceeds its authored maximum quantity.");
+            throw new ArgumentException($"Saved {owner.Scope} {owner.Id} stack '{stack.ItemId}' exceeds its authored maximum quantity.");
+        RequireMetadata(stack.ItemId, stack.Metadata, owner);
+    }
+
+    private static void AddQuestStacks(HashSet<(string Scope, long OwnerId, string StackId)> target, DaggerfallItemOwner owner, IEnumerable<DaggerfallStackSave> stacks)
+    {
+        foreach (DaggerfallStackSave stack in stacks)
+            if (!target.Add((owner.Scope, owner.Id, stack.StackId)))
+                throw new ArgumentException($"Saved stack '{stack.StackId}' appears more than once for {owner.Scope} {owner.Id}.");
+    }
+
+    private static void RequireMetadata(string itemId, DaggerfallItemMetadataSave metadata, DaggerfallItemOwner owner)
+    {
+        ArgumentNullException.ThrowIfNull(metadata);
+        DaggerfallItemInstanceMetadata restored = DaggerfallItemInstanceMetadata.Restore(itemId, metadata);
+        if (restored.Owner != owner)
+            throw new ArgumentException($"Saved item '{itemId}' has metadata ownership {restored.Owner.Scope} {restored.Owner.Id}, not {owner.Scope} {owner.Id}.");
     }
 
     /// <summary>Every effect-backed stat source must have the active instance that owns its eventual cleanup.</summary>
@@ -336,14 +369,16 @@ internal sealed record DaggerfallInventorySave(DaggerfallStackSave[] Stacks, Dag
         ArgumentNullException.ThrowIfNull(Stacks);
         ArgumentNullException.ThrowIfNull(UniqueItems);
         ArgumentNullException.ThrowIfNull(Equipment);
-        HashSet<string> stackItems = [];
+        HashSet<string> stackIds = [];
         foreach (DaggerfallStackSave stack in Stacks)
-            if (stack is null || string.IsNullOrWhiteSpace(stack.ItemId) || stack.Quantity == 0 || !stackItems.Add(stack.ItemId))
-                throw new ArgumentException("Inventory stacks must be unique non-empty positive entries.");
+            if (stack is null || string.IsNullOrWhiteSpace(stack.StackId) || string.IsNullOrWhiteSpace(stack.ItemId) || stack.Quantity == 0 || !stackIds.Add(stack.StackId))
+                throw new ArgumentException("Inventory stacks must have distinct explicit identities, definitions, and positive quantities.");
+            else _ = DaggerfallItemInstanceMetadata.Restore(stack.ItemId, stack.Metadata);
         HashSet<ulong> items = [];
         foreach (DaggerfallUniqueSave unique in UniqueItems)
             if (unique is null || string.IsNullOrWhiteSpace(unique.ItemId) || unique.EntityId == 0 || !items.Add(unique.EntityId))
                 throw new ArgumentException("Unique inventory entries must be valid and distinct.");
+            else _ = DaggerfallItemInstanceMetadata.Restore(unique.ItemId, unique.Metadata);
         HashSet<string> slots = [];
         foreach (DaggerfallEquipmentSave equipment in Equipment)
             if (equipment is null || string.IsNullOrWhiteSpace(equipment.SlotId) || !slots.Add(equipment.SlotId) || !items.Contains(equipment.ItemEntityId))
@@ -351,8 +386,21 @@ internal sealed record DaggerfallInventorySave(DaggerfallStackSave[] Stacks, Dag
     }
 }
 
-internal sealed record DaggerfallStackSave(string ItemId, ulong Quantity);
-internal sealed record DaggerfallUniqueSave(string ItemId, ulong EntityId);
+/// <summary>One Engine-backed stack preserved by its product-selected owner-scoped identity.</summary>
+internal sealed record DaggerfallStackSave(string StackId, string ItemId, ulong Quantity, DaggerfallItemMetadataSave Metadata);
+internal sealed record DaggerfallUniqueSave(string ItemId, ulong EntityId, DaggerfallItemMetadataSave Metadata);
+internal sealed record DaggerfallItemOwnerSave(string Scope, long Id);
+internal sealed record DaggerfallItemMetadataSave(
+    string Material,
+    int Variant,
+    int CurrentCondition,
+    int MaximumCondition,
+    bool Identified,
+    bool Stolen,
+    string? QuestId,
+    string? QuestItemSymbol,
+    string? Enchantment,
+    DaggerfallItemOwnerSave Owner);
 internal sealed record DaggerfallEquipmentSave(string SlotId, ulong ItemEntityId);
 internal sealed record DaggerfallCombatCooldownSave(long AttackerId, ulong RemainingSteps);
 
@@ -621,6 +669,7 @@ internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definiti
 [JsonSourceGenerationOptions(WriteIndented = false)]
 [JsonSerializable(typeof(DaggerfallSavePayload))]
 [JsonSerializable(typeof(DaggerfallStatsSave))]
+[JsonSerializable(typeof(DaggerfallCharacterSave))]
 [JsonSerializable(typeof(DurableIdentityState))]
 [JsonSerializable(typeof(KindAllocatorState))]
 internal partial class DaggerfallSaveJsonContext : JsonSerializerContext;

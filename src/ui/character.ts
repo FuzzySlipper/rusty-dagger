@@ -1,3 +1,5 @@
+export interface CharacterAction { readonly action: string; readonly name?: string; readonly race?: string; readonly gender?: string; readonly faceIndex?: number; readonly reflexes?: number; readonly career?: string; }
+
 export interface CharacterStat {
   readonly id: string;
   readonly label: string;
@@ -22,6 +24,29 @@ export interface CharacterEquipment {
   readonly details: string;
 }
 
+export interface CharacterIdentity {
+  readonly race: string;
+  readonly donorRaceId: number;
+  readonly portrait: string;
+  readonly gender: string;
+  readonly faceIndex: number;
+  readonly career: string;
+  readonly media: readonly CharacterMedia[];
+  readonly selectedMedia: readonly CharacterMedia[];
+}
+
+export interface CharacterMedia { readonly layer: string; readonly mediaId: string; }
+export interface CharacterGrantedSkill { readonly id: string; readonly tier: string; }
+export interface CharacterChoice { readonly id: string; readonly label: string; readonly available: boolean; readonly restriction: string | null; }
+export interface CharacterFace { readonly index: number; readonly mediaId: string; }
+export interface CharacterReflex { readonly value: number; readonly label: string; }
+export interface CharacterCreation {
+  readonly editing: boolean;
+  readonly current: { readonly name: string; readonly race: string; readonly gender: string; readonly faceIndex: number; readonly reflexes: number; readonly career: string; };
+  readonly races: readonly CharacterChoice[]; readonly careers: readonly CharacterChoice[];
+  readonly faces: readonly CharacterFace[]; readonly reflexes: readonly CharacterReflex[];
+}
+
 /** Read-only Daggerfall sheet values supplied by the C# projection. */
 export interface CharacterProjection {
   readonly name: string;
@@ -30,6 +55,10 @@ export interface CharacterProjection {
   readonly resources: readonly CharacterResource[];
   readonly progression: CharacterProgression;
   readonly equipment: readonly CharacterEquipment[];
+  readonly identity?: CharacterIdentity | null;
+  readonly grantedSkills?: readonly CharacterGrantedSkill[];
+  readonly creation?: CharacterCreation | null;
+  readonly creationAvailable?: boolean;
 }
 
 import { image } from './art.js';
@@ -40,7 +69,7 @@ export interface CharacterView {
   dispose(): void;
 }
 
-export function mountCharacter(root: HTMLElement): CharacterView {
+export function mountCharacter(root: HTMLElement, send?: (action: CharacterAction) => void): CharacterView {
   const shell = document.createElement('section');
   shell.className = 'dagger-character';
   shell.dataset.testid = 'character-sheet';
@@ -66,9 +95,11 @@ export function mountCharacter(root: HTMLElement): CharacterView {
   const attributes = section('Attributes');
   const skills = section('Skills');
   const equipment = section('Equipped items');
+  const career = section('Career training');
+  const creation = section('Character choices');
   const columns = document.createElement('div');
   columns.className = 'dagger-character-columns';
-  columns.append(resources.element, attributes.element, skills.element, equipment.element);
+  columns.append(resources.element, attributes.element, skills.element, career.element, equipment.element, creation.element);
   shell.append(chrome, heading, overview, columns);
   root.append(shell);
   let disposed = false;
@@ -84,6 +115,8 @@ export function mountCharacter(root: HTMLElement): CharacterView {
         overviewRow('Player', value.name),
         overviewRow('Level', format(value.progression.level)),
         overviewRow('Total XP', format(value.progression.experience)),
+        ...(value.identity ? [overviewRow('Race', value.identity.race), overviewRow('Career', value.identity.career),
+          overviewRow('Face', `${value.identity.gender} ${format(value.identity.faceIndex + 1)}`)] : []),
       );
       renderRows(resources.rows, value.resources.map(resource => ({
         label: resource.label,
@@ -101,6 +134,12 @@ export function mountCharacter(root: HTMLElement): CharacterView {
         testid: `character-sheet-skill-${stat.id}`,
       })));
       equipment.rows.replaceChildren(...value.equipment.map(item => equipmentRow(item)));
+      renderRows(career.rows, (value.grantedSkills ?? []).map(skill => ({
+        label: skill.id,
+        value: skill.tier,
+        testid: `character-sheet-granted-${skill.id}`,
+      })));
+      renderCreation(creation.rows, value.creation ?? null, value.creationAvailable === true, send);
     },
     // The sheet's chrome is published art that can arrive after the sheet's own state.
     refresh(): void {
@@ -123,7 +162,11 @@ export function isCharacterProjection(value: unknown): value is CharacterProject
     && 'skills' in value && isStats(value.skills)
     && 'resources' in value && Array.isArray(value.resources) && value.resources.every(isResource)
     && 'progression' in value && isProgression(value.progression)
-    && 'equipment' in value && Array.isArray(value.equipment) && value.equipment.every(isEquipment);
+    && 'equipment' in value && Array.isArray(value.equipment) && value.equipment.every(isEquipment)
+    && (!('identity' in value) || value.identity === null || isIdentity(value.identity))
+    && (!('grantedSkills' in value) || Array.isArray(value.grantedSkills) && value.grantedSkills.every(isGrantedSkill))
+    && (!('creation' in value) || value.creation === null || isCreation(value.creation))
+    && (!('creationAvailable' in value) || typeof value.creationAvailable === 'boolean');
 }
 
 function section(title: string): { readonly element: HTMLElement; readonly rows: HTMLElement } {
@@ -198,6 +241,78 @@ function isEquipment(value: unknown): value is CharacterEquipment {
     && 'label' in value && typeof value.label === 'string'
     && 'slots' in value && Array.isArray(value.slots) && value.slots.every(slot => typeof slot === 'string')
     && 'details' in value && typeof value.details === 'string';
+}
+
+function isIdentity(value: unknown): value is CharacterIdentity {
+  return typeof value === 'object' && value !== null
+    && 'race' in value && typeof value.race === 'string'
+    && 'donorRaceId' in value && isNumber(value.donorRaceId)
+    && 'portrait' in value && typeof value.portrait === 'string'
+    && 'gender' in value && typeof value.gender === 'string'
+    && 'faceIndex' in value && isNumber(value.faceIndex)
+    && 'career' in value && typeof value.career === 'string'
+    && 'media' in value && Array.isArray(value.media) && value.media.every(isMedia)
+    && 'selectedMedia' in value && Array.isArray(value.selectedMedia) && value.selectedMedia.every(isMedia);
+}
+
+function isMedia(value: unknown): value is CharacterMedia {
+  return typeof value === 'object' && value !== null
+    && 'layer' in value && typeof value.layer === 'string'
+    && 'mediaId' in value && typeof value.mediaId === 'string';
+}
+
+function isGrantedSkill(value: unknown): value is CharacterGrantedSkill {
+  return typeof value === 'object' && value !== null
+    && 'id' in value && typeof value.id === 'string'
+    && 'tier' in value && typeof value.tier === 'string';
+}
+
+function isCreation(value: unknown): value is CharacterCreation {
+  return typeof value === 'object' && value !== null
+    && 'editing' in value && typeof value.editing === 'boolean'
+    && 'current' in value && isCreationCurrent(value.current)
+    && 'races' in value && isChoices(value.races)
+    && 'careers' in value && isChoices(value.careers)
+    && 'faces' in value && Array.isArray(value.faces) && value.faces.every(face => typeof face === 'object' && face !== null && 'index' in face && isNumber(face.index) && 'mediaId' in face && typeof face.mediaId === 'string')
+    && 'reflexes' in value && Array.isArray(value.reflexes) && value.reflexes.every(reflex => typeof reflex === 'object' && reflex !== null && 'value' in reflex && isNumber(reflex.value) && 'label' in reflex && typeof reflex.label === 'string');
+}
+
+function isCreationCurrent(value: unknown): value is CharacterCreation['current'] {
+  return typeof value === 'object' && value !== null && 'name' in value && typeof value.name === 'string'
+    && 'race' in value && typeof value.race === 'string' && 'gender' in value && typeof value.gender === 'string'
+    && 'faceIndex' in value && isNumber(value.faceIndex) && 'reflexes' in value && isNumber(value.reflexes)
+    && 'career' in value && typeof value.career === 'string';
+}
+
+function isChoices(value: unknown): value is readonly CharacterChoice[] {
+  return Array.isArray(value) && value.every(choice => typeof choice === 'object' && choice !== null
+    && 'id' in choice && typeof choice.id === 'string' && 'label' in choice && typeof choice.label === 'string'
+    && 'available' in choice && typeof choice.available === 'boolean' && 'restriction' in choice
+    && (choice.restriction === null || typeof choice.restriction === 'string'));
+}
+
+function renderCreation(root: HTMLElement, value: CharacterCreation | null, available: boolean, send?: (action: CharacterAction) => void): void {
+  if (value === null) { root.replaceChildren(); return; }
+  if (!available) { root.replaceChildren(); return; }
+  const begin = document.createElement('button'); begin.type = 'button'; begin.textContent = 'Edit character';
+  begin.disabled = value.editing; begin.dataset.testid = 'character-begin'; begin.addEventListener('click', () => send?.({ action: 'character-begin' }));
+  if (!value.editing) { root.replaceChildren(begin); return; }
+  const name = document.createElement('input'); name.value = value.current.name; name.setAttribute('aria-label', 'Character name');
+  const race = select(value.races, value.current.race); race.setAttribute('aria-label', 'Race');
+  const gender = select([{ id: 'male', label: 'Male', available: true, restriction: null }, { id: 'female', label: 'Female', available: true, restriction: null }], value.current.gender); gender.setAttribute('aria-label', 'Gender');
+  const face = select(value.faces.map(item => ({ id: String(item.index), label: `Face ${item.index + 1}`, available: true, restriction: null })), String(value.current.faceIndex)); face.setAttribute('aria-label', 'Face');
+  const reflexes = select(value.reflexes.map(item => ({ id: String(item.value), label: item.label, available: true, restriction: null })), String(value.current.reflexes)); reflexes.setAttribute('aria-label', 'Reflexes');
+  const career = select(value.careers, value.current.career); career.setAttribute('aria-label', 'Career');
+  const commit = document.createElement('button'); commit.type = 'button'; commit.textContent = 'Commit character'; commit.dataset.testid = 'character-commit';
+  commit.addEventListener('click', () => send?.({ action: 'character-commit', name: name.value, race: race.value, gender: gender.value, faceIndex: Number(face.value), reflexes: Number(reflexes.value), career: career.value }));
+  const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Cancel'; cancel.dataset.testid = 'character-cancel'; cancel.addEventListener('click', () => send?.({ action: 'character-cancel' }));
+  root.replaceChildren(name, race, gender, face, reflexes, career, commit, cancel);
+}
+
+function select(values: readonly CharacterChoice[], current: string): HTMLSelectElement {
+  const element = document.createElement('select');
+  for (const value of values) { const option = document.createElement('option'); option.value = value.id; option.textContent = value.restriction ? `${value.label} — ${value.restriction}` : value.label; option.disabled = !value.available; option.selected = value.id === current; element.append(option); }
+  return element;
 }
 
 function isNumber(value: unknown): value is number {

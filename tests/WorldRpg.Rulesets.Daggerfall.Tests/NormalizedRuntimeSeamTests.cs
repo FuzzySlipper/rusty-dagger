@@ -39,11 +39,111 @@ public sealed class NormalizedRuntimeSeamTests
     private static readonly ContentSha256 Hash = new(1, 2, 3, 4);
 
     [Fact]
+    public void Quest_instances_keep_same_definition_runs_and_typed_bindings_across_save_restore()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
+
+        DaggerfallSavePayload saved;
+        using (DaggerfallSession original = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        {
+            DaggerfallSavePayload baseline = DaggerfallSavePayload.Read(original.CaptureSave());
+            ulong rewardItem = baseline.Inventory.UniqueItems.First().EntityId;
+            DaggerfallStackSave questGold = baseline.Inventory.Stacks.First();
+            DaggerfallSiteRecord place = definitions.Locations.Records.First();
+            DaggerfallQuestResourceState[] resources =
+            [
+                new("_questgiver_", DaggerfallQuestResourceBinding.Actors(2000)),
+                new("_mondung_", DaggerfallQuestResourceBinding.Place(new DaggerfallSiteIdSave(place.Region, place.Index))),
+                new("_monster_", DaggerfallQuestResourceBinding.Actors(2000)),
+                new("_reward_", DaggerfallQuestResourceBinding.Stack(new DaggerfallItemOwnerSave("player", DaggerfallActorIdentity.PlayerEntityId), questGold.StackId)),
+            ];
+            DaggerfallQuestResourceState[] uniqueResources = resources
+                .Select(resource => resource.Symbol == "_reward_" ? resource with { Binding = DaggerfallQuestResourceBinding.UniqueItem(rewardItem) } : resource)
+                .ToArray();
+            DaggerfallQuestSymbolState[] symbols = [new("_task_state_", "waiting"), new("arbitrary_macro", "Mundus")];
+            DaggerfallQuestInstanceSave first = new("00B00Y00:1", "00B00Y00.txt", "00B00Y00", DaggerfallQuestLifecycle.Active, null, resources, symbols);
+            DaggerfallQuestInstanceSave second = new("00B00Y00:2", "00B00Y00.txt", "00B00Y00", DaggerfallQuestLifecycle.Active, null, uniqueResources, [new("_task_state_", "other-run")]);
+            DaggerfallQuestInstanceSave active = new("00B00Y00:3", "00B00Y00.txt", "00B00Y00", DaggerfallQuestLifecycle.Active, null, resources, []);
+
+            Assert.Throws<ArgumentException>(() => original.State.Quests.Start(first with { SourceFile = "missing.txt" }));
+            original.State.Quests.Start(first);
+            original.State.Quests.Start(second);
+            original.State.Quests.Start(active);
+            original.State.Quests.Complete("00B00Y00:1", "reward-delivered");
+            original.State.Quests.Fail("00B00Y00:2", "deadline-expired");
+            saved = DaggerfallSavePayload.Read(original.CaptureSave());
+
+            Assert.Equal(3, saved.Quests.Instances.Length);
+            Assert.Equal(DaggerfallQuestLifecycle.Completed, saved.Quests.Instances.Single(instance => instance.InstanceId == "00B00Y00:1").Lifecycle);
+            Assert.Equal(DaggerfallQuestLifecycle.Failed, saved.Quests.Instances.Single(instance => instance.InstanceId == "00B00Y00:2").Lifecycle);
+            Assert.Equal(DaggerfallQuestResourceBindingKind.Item, saved.Quests.Instances.Single(instance => instance.InstanceId == "00B00Y00:1").Resources.Single(resource => resource.Symbol == "_reward_").Binding.Kind);
+            Assert.Equal(questGold.StackId, saved.Quests.Instances.Single(instance => instance.InstanceId == "00B00Y00:1").Resources.Single(resource => resource.Symbol == "_reward_").Binding.Stacks.Single().StackId);
+            Assert.Equal(rewardItem, saved.Quests.Instances.Single(instance => instance.InstanceId == "00B00Y00:2").Resources.Single(resource => resource.Symbol == "_reward_").Binding.UniqueItemIds.Single());
+            Assert.Contains(saved.Quests.Instances.Single(instance => instance.InstanceId == "00B00Y00:1").Symbols, symbol => symbol.Symbol == "arbitrary_macro");
+        }
+
+        ContentFake resumedContent = new(releases);
+        PopulateContent(resumedContent, inputs);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
+
+        JsonObject missingQuestSection = JsonNode.Parse(DaggerfallSavePayload.Encode(saved).Bytes.Span)!.AsObject();
+        Assert.True(missingQuestSection.Remove("Quests"));
+        Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Read(new RulesetSavePayload(
+            DaggerfallRuleset.Identity, Encoding.UTF8.GetBytes(missingQuestSection.ToJsonString()))));
+
+        Assert.Equal(3, resumed.State.Quests.All.Count);
+        Assert.Equal("reward-delivered", resumed.State.Quests.All.Single(instance => instance.InstanceId == "00B00Y00:1").Outcome);
+        Assert.Equal("deadline-expired", resumed.State.Quests.All.Single(instance => instance.InstanceId == "00B00Y00:2").Outcome);
+        Assert.Equal(DaggerfallQuestLifecycle.Active, resumed.State.Quests.All.Single(instance => instance.InstanceId == "00B00Y00:3").Lifecycle);
+
+        DaggerfallQuestInstanceSave firstWithMissingDefinition = saved.Quests.Instances.Single(instance => instance.InstanceId == "00B00Y00:1") with { SourceFile = "missing.txt" };
+        DaggerfallSavePayload missingDefinition = saved with
+        {
+            Quests = new([.. saved.Quests.Instances.Where(instance => instance.InstanceId != "00B00Y00:1"), firstWithMissingDefinition]),
+        };
+        Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(missingDefinition), RandomMinimum.Create()));
+
+        DaggerfallQuestInstanceSave firstWithDanglingActor = saved.Quests.Instances.Single(instance => instance.InstanceId == "00B00Y00:1") with
+        {
+            Resources = saved.Quests.Instances.Single(instance => instance.InstanceId == "00B00Y00:1").Resources
+                .Select(resource => resource.Symbol == "_questgiver_" ? resource with { Binding = DaggerfallQuestResourceBinding.Actors(999_999) } : resource)
+                .ToArray(),
+        };
+        DaggerfallSavePayload dangling = saved with
+        {
+            Quests = new([.. saved.Quests.Instances.Where(instance => instance.InstanceId != "00B00Y00:1"), firstWithDanglingActor]),
+        };
+        Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(dangling), RandomMinimum.Create()));
+
+        DaggerfallQuestInstanceSave firstWithDanglingStack = saved.Quests.Instances.Single(instance => instance.InstanceId == "00B00Y00:1") with
+        {
+            Resources = saved.Quests.Instances.Single(instance => instance.InstanceId == "00B00Y00:1").Resources
+                .Select(resource => resource.Symbol == "_reward_" ? resource with { Binding = DaggerfallQuestResourceBinding.Stack(new DaggerfallItemOwnerSave("player", DaggerfallActorIdentity.PlayerEntityId), "missing-stack") } : resource)
+                .ToArray(),
+        };
+        DaggerfallSavePayload missingStack = saved with
+        {
+            Quests = new([.. saved.Quests.Instances.Where(instance => instance.InstanceId != "00B00Y00:1"), firstWithDanglingStack]),
+        };
+        Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(missingStack), RandomMinimum.Create()));
+    }
+
+    [Fact]
     public void Mapped_attack_press_reaches_combat_once_without_held_or_catchup_replay()
     {
         string root = RepositoryRoot();
-        PrivateersHoldInputs inputs = ReadInputs(root);
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -53,11 +153,12 @@ public sealed class NormalizedRuntimeSeamTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
         double before = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
+        double staminaBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current;
         ProductInputEvent pressed = Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack");
         session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d), [pressed, pressed]);
         double after = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
         Assert.True(after < before);
-        Assert.Equal(85d, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
+        Assert.True(session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current < staminaBefore);
         session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 2, 1, 1, 100, 60, 3, 0, 1d / 60d),
             [Input(InputEventKind.MappedDigital, InputEdge.Held, x: 1, phase: InputPhase.Held, intent: "attack")]);
         Assert.Equal(after, session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current);
@@ -115,7 +216,20 @@ public sealed class NormalizedRuntimeSeamTests
 
         Assert.Equal(2, restored.State.Progression.SkillUses["long-blade"]);
         Assert.Equal(2, restored.State.Progression.SkillUses["critical-strike"]);
-        Assert.Equal(saved.SkillUses.StartingLevelUpSkillSum, restored.State.SkillUses.StartingLevelUpSkillSum);
+        int baselineBeforeRest = restored.State.SkillUses.StartingLevelUpSkillSum;
+        Assert.Equal(baselineBeforeRest, restored.State.SkillUses.CurrentLevelUpSkillSum);
+
+        double longBladeBeforeRest = restored.State.Actors.Player.Stats.GetStat(StatId.Parse("long-blade")).BaseValue;
+        restored.State.Progression.TallySkillUse("long-blade", DaggerfallSkillUseReactions.MaximumSkillUses, DaggerfallSkillUseReactions.MaximumSkillUses);
+        long expectedCheckSecond = new DaggerfallCalendar(saved.Calendar.Year, saved.Calendar.Month, saved.Calendar.Day, saved.Calendar.Hour, saved.Calendar.Minute, saved.Calendar.Second).ToAbsoluteSeconds() + 361;
+        _ = restored.AdvanceElapsedTime(361);
+        Assert.Equal(longBladeBeforeRest + 1d, restored.State.Actors.Player.Stats.GetStat(StatId.Parse("long-blade")).BaseValue);
+        DaggerfallSavePayload restSaved = DaggerfallSavePayload.Read(restored.CaptureSave());
+        Assert.Equal(expectedCheckSecond, restSaved.SkillUses.LastSkillIncreaseCheckSecond);
+
+        _ = restored.AdvanceElapsedTime(0);
+        Assert.Equal(longBladeBeforeRest + 1d, restored.State.Actors.Player.Stats.GetStat(StatId.Parse("long-blade")).BaseValue);
+        Assert.Equal(expectedCheckSecond, DaggerfallSavePayload.Read(restored.CaptureSave()).SkillUses.LastSkillIncreaseCheckSecond);
     }
 
     [Fact]
@@ -138,7 +252,8 @@ public sealed class NormalizedRuntimeSeamTests
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
         authored[2000] = authored[2000] with { MinimumMaterial = "daedric" };
         TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting));
-        DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.InventoryFor, definitions, authored, targeting);
+        DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.InventoryFor,
+            session.State.ItemInstances, definitions, authored, targeting);
 
         double staminaBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current;
         FactBuffer<IProductFact> facts = new();
@@ -1795,6 +1910,7 @@ public sealed class NormalizedRuntimeSeamTests
     public void Host_admits_one_realtime_update_and_releases_the_normalized_session_owners()
     {
         string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
         List<string> releases = [];
         ContentFake content = new(releases);
         PrivateersHoldInputs inputs = ReadInputs(root);
@@ -2314,7 +2430,7 @@ public sealed class NormalizedRuntimeSeamTests
 
         DaggerfallSavePayload missingDefinition = saved with
         {
-            Inventory = saved.Inventory with { Stacks = [new DaggerfallStackSave("missing-item", 1)] },
+            Inventory = saved.Inventory with { Stacks = [new DaggerfallStackSave("missing-stack", "missing-item", 1, saved.Inventory.Stacks[0].Metadata)] },
         };
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -2372,6 +2488,7 @@ public sealed class NormalizedRuntimeSeamTests
     public void Host_save_close_reopen_resumes_a_fresh_daggerfall_session_with_current_state()
     {
         string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
         PrivateersHoldInputs inputs = ReadInputs(root);
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
         InMemoryPersistenceService persistence = new();
@@ -2387,6 +2504,8 @@ public sealed class NormalizedRuntimeSeamTests
         ulong savedStackQuantity;
         ulong savedNpcUniqueId;
         HashSet<ulong> savedUniqueIds;
+        DaggerfallItemInstanceMetadata savedStackMetadata = null!;
+        DaggerfallItemInstanceMetadata savedUniqueMetadata = null!;
         DaggerfallSession sourceSession;
         using (WorldRpgSaveStore store = new(sourceEngine.Context, "daggerfall-host-save"))
         using (WorldRpgProduct sourceProduct = new(new ProductCreateContext(sourceEngine.Context, FullContent(root), input), sourceRuleset, new GameBundleId("daggerfall.privateers-hold")))
@@ -2401,10 +2520,18 @@ public sealed class NormalizedRuntimeSeamTests
             savedPosition = new WorldPoint(12, 3, -7);
             sourceSession.State.PlayerControl.Restore(savedPosition, default);
             var stack = sourceSession.State.Inventory.Read().Stacks.First();
-            sourceSession.State.Inventory.Grant(new InventoryGrant(new InventoryItemId(stack.Definition.Value), 2));
+            sourceSession.State.Inventory.Grant(new InventoryGrant(new InventoryItemId(stack.Definition.Value), stack.Id, 2));
+            savedStackMetadata = new DaggerfallItemInstanceMetadata(stack.Definition.Value, "steel", 4, 3, 8,
+                false, true, "quest-99", "relic", "soul-trap", DaggerfallItemOwner.Player).Validate();
+            sourceSession.State.ItemInstances.ReplaceStack(DaggerfallItemOwner.Player, stack.Id, savedStackMetadata);
             DurableIdentityReference npcUniqueIdentity = sourceSession.UniqueItemAllocator.AllocateReference();
             MechanicsEquipmentCoordinator npcEquipment = sourceSession.State.EquipmentFor(2000);
             var npcUnique = npcEquipment.Materialize(npcUniqueIdentity, new InventoryItemId("iron-dagger"));
+            sourceSession.State.ItemInstances.RegisterDefaultUnique(npcUniqueIdentity.Value,
+                definitions.Items[new DaggerfallItemId("iron-dagger")], DaggerfallItemOwner.Actor(2000));
+            savedUniqueMetadata = new DaggerfallItemInstanceMetadata("iron-dagger", "ebony", 2, 7, 12,
+                false, true, "quest-99", "blade", "fire", DaggerfallItemOwner.Actor(2000)).Validate();
+            sourceSession.State.ItemInstances.ReplaceUnique(npcUniqueIdentity.Value, savedUniqueMetadata);
             npcEquipment.Equip(npcUnique, [new WorldRpg.Kit.Inventory.EquipmentSlotId("right-hand")]);
             savedHealth = health.Current;
             savedMaximum = maximum.Value;
@@ -2442,9 +2569,12 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(savedMaximum, restoredMaximum.Value);
         Assert.Same(restoredMaximum, restoredHealth.Maximum);
         Assert.Equal(savedStackQuantity, restoredSession.State.Inventory.Read().Stacks.Single(value => value.Definition == sourceSession.State.Inventory.Read().Stacks.First().Definition).Quantity);
+        Assert.Equal(savedStackMetadata, restoredSession.State.ItemInstances.RequireStack(DaggerfallItemOwner.Player,
+            restoredSession.State.Inventory.Read().Stacks.Single(value => value.Definition == sourceSession.State.Inventory.Read().Stacks.First().Definition).Id));
         MechanicsInventoryCoordinator restoredNpcInventory = Assert.IsType<MechanicsInventoryCoordinator>(restoredSession.State.InventoryFor(2000));
         var restoredNpcUnique = Assert.Single(restoredNpcInventory.Read().UniqueItems, item => item.Definition.Value == "iron-dagger");
         Assert.Equal(savedNpcUniqueId, restoredSession.State.Actors.Entities.IdentityOf(restoredNpcUnique.Entity).Value);
+        Assert.Equal(savedUniqueMetadata, restoredSession.State.ItemInstances.RequireUnique(savedNpcUniqueId));
         Assert.Contains(restoredSession.State.EquipmentFor(2000).Read().Assignments,
             assignment => assignment.Slot.Value == "right-hand" && assignment.Item.EntityId == restoredNpcUnique.Entity.Value);
 
@@ -2453,6 +2583,88 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Same(restoredMaximum, restoredHealth.Maximum);
         Assert.DoesNotContain(restoredSession.UniqueItemAllocator.AllocateReference().Value, savedUniqueIds);
         Assert.Equal(0, resumedSpatial.StepCalls);
+    }
+
+    [Fact]
+    public void Default_disease_catalog_restores_live_modifiers_without_replaying_damage_and_cures_its_source()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        EngineContextFake Engine() => EngineContextFake.Create(content,
+            SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases), random: RandomMaximum.Create());
+        EngineContextFake engine = Engine();
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        session.State.Progression.AdvanceTo(0, 2);
+        var will = session.State.Actors.Player.Stats.GetStat(StatId.Parse("willpower"));
+        double originalBase = will.BaseValue;
+        Assert.Equal(DaggerfallDiseaseAdmission.Started, session.InflictDisease(new(
+            "test-disease", "accepted-hit", null, session.State.Actors.Player.DurableId, [DaggerfallClassicDisease.BrainFever])));
+        session.AdvanceElapsedTime(DaggerfallCalendar.SecondsPerDay);
+        Assert.Equal(originalBase, will.BaseValue);
+        Assert.Equal(originalBase - 5, will.Value);
+        var save = session.CaptureSave();
+        EngineContextFake restoredEngine = Engine();
+        var identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, identity, definitions, inputs,
+            DaggerfallTuning.Defaults, save, RandomMaximum.Create());
+        var restoredWill = restored.State.Actors.Player.Stats.GetStat(StatId.Parse("willpower"));
+        Assert.Equal(originalBase, restoredWill.BaseValue);
+        Assert.Equal(will.Value, restoredWill.Value);
+        double health = restored.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
+        restored.AdvanceElapsedTime(0);
+        Assert.Equal(will.Value, restoredWill.Value);
+        Assert.Equal(1, restored.CureDisease(DaggerfallClassicDisease.BrainFever));
+        Assert.Equal(originalBase, restoredWill.Value);
+        Assert.Equal(health, restored.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
+    }
+
+    [Fact]
+    public void Ordinary_control_actions_replace_engine_mappings_and_survive_restart_and_load()
+    {
+        static ProductInputEvent Ui(string json) => Input(InputEventKind.DirectDigital) with
+        {
+            ValueKind = InputValueKind.ProductPayload,
+            PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+            PayloadData = Encoding.UTF8.GetBytes(json),
+        };
+        string root = RepositoryRoot();
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
+        CapturingDaggerfallRuleset ruleset = new();
+        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.privateers-hold"));
+        product.Start(); product.Begin();
+        ProductInputMapping Mapping(string intent) => Assert.Single(engine.PhysicalInput.Mappings, value => Encoding.UTF8.GetString(value.Intent.Span) == intent);
+        Assert.Equal(KeyboardControl.KeyW, Mapping("move.forward").Keyboard);
+        product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"controls-rebind","item":"move.forward","key":"KeyQ"}""")]));
+        Assert.Equal(KeyboardControl.KeyQ, Mapping("move.forward").Keyboard);
+        product.Restart();
+        Assert.Equal(KeyboardControl.KeyQ, Mapping("move.forward").Keyboard);
+        product.Update(new ProductUpdate(OuterUpdate(2), [Ui("""{"action":"save-slot","label":"Controls are preferences"}""")]));
+        product.Update(new ProductUpdate(OuterUpdate(3), [Ui("""{"action":"controls-rebind","item":"attack","key":"KeyQ"}""")]));
+        Assert.Equal(PointerButton.Primary, Mapping("attack").PointerButton);
+        Assert.Contains("already answers", engine.PublishedNested("controls", "diagnostic"));
+        product.Update(new ProductUpdate(OuterUpdate(4), [Ui("""{"action":"controls-rebind","item":"attack","key":"KeyQ","confirm":true}""")]));
+        Assert.Equal(KeyboardControl.KeyQ, Mapping("attack").Keyboard);
+        Assert.Equal(PointerButton.Primary, Mapping("move.forward").PointerButton);
+        product.Update(new ProductUpdate(OuterUpdate(5), [Ui("""{"action":"load-slot","key":"slot-1"}""")]));
+        Assert.Equal(KeyboardControl.KeyQ, Mapping("attack").Keyboard);
+        engine.PhysicalInput.Outcome = InputMappingReplacementOutcome.InvalidMappings;
+        product.Update(new ProductUpdate(OuterUpdate(6), [Ui("""{"action":"controls-reset"}""")]));
+        Assert.Equal(KeyboardControl.KeyQ, Mapping("attack").Keyboard);
+        Assert.Contains("InvalidMappings", engine.PublishedNested("controls", "diagnostic"));
+        engine.PhysicalInput.Outcome = InputMappingReplacementOutcome.Staged;
+        product.Update(new ProductUpdate(OuterUpdate(7), [Ui("""{"action":"controls-reset"}""")]));
+        Assert.Equal(KeyboardControl.KeyW, Mapping("move.forward").Keyboard);
+        Assert.Equal(PointerButton.Primary, Mapping("attack").PointerButton);
     }
 
     [Fact]
@@ -2562,7 +2774,7 @@ public sealed class NormalizedRuntimeSeamTests
         {
             Inventory = valid.Inventory with
             {
-                UniqueItems = [.. valid.Inventory.UniqueItems, new DaggerfallUniqueSave("iron-tanto", unissued)],
+                UniqueItems = [.. valid.Inventory.UniqueItems, new DaggerfallUniqueSave("iron-tanto", unissued, valid.Inventory.UniqueItems[0].Metadata)],
             },
         };
         KindAllocatorState[] removedKinds = valid.Identities.Kinds.Select(state => state.Kind == DurableIdentityKind.Item
@@ -2804,7 +3016,8 @@ public sealed class NormalizedRuntimeSeamTests
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
         CorpseContainer corpse = session.Corpses[2000];
         Assert.True(corpse.IsRegistered);
-        session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5)]);
+        session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5, Stack: InventoryStackId.Parse("test.loot.2807"))]);
+        RegisterCorpseStack(session, definitions, 2000, "test.loot.2807");
         perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1d, 1d, PerceptionPairKind.Visible, 1d));
         ulong before = session.State.Inventory.Read().StoreRevision;
         void Ui(string json, ulong step)
@@ -2820,7 +3033,7 @@ public sealed class NormalizedRuntimeSeamTests
         Ui("{\"action\":\"loot\"}", 2);
         LootPresentation opened = Assert.IsType<LootPresentation>(session.OpenLoot);
         Assert.Equal(before, session.State.Inventory.Read().StoreRevision);
-        InventoryItemPresentation gold = opened.Items.Single(item => item.Definition == "gold-piece");
+        InventoryItemPresentation gold = opened.Items.Single(item => item.Key == DaggerfallInventoryPresentation.StackKey(InventoryStackId.Parse("test.loot.2807")));
         string take = System.Text.Json.JsonSerializer.Serialize(new { action = "loot-take", container = opened.Container, revision = opened.Revision, item = gold.Key });
         Ui(take, 3);
         Assert.Equal(ulong.Parse(gold.Quantity) - 1, ulong.Parse(session.OpenLoot!.Items.Single(item => item.Key == gold.Key).Quantity));
@@ -2851,8 +3064,9 @@ public sealed class NormalizedRuntimeSeamTests
         MechanicsInventoryContainerCoordinator containers = new(world, actors.Entities, items);
         containers.RegisterOwner(playerOwner);
         using SpatialMovementSystem movement = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
+        DaggerfallItemInstances itemInstances = new();
         DaggerfallCorpseLootModule loot = new(
-            perception.Service, movement, containers, playerOwner, actors,
+            perception.Service, movement, containers, itemInstances, playerOwner, actors,
             new Dictionary<long, DaggerfallActorDefinition> { [2000] = definitions.RequireActor(new DaggerfallActorId("thief")) },
             definitions, RandomMinimum.Create(), new DaggerfallUniqueItemAllocator(1_000), new ProgressionState(), DaggerfallTuning.Defaults.LootInteraction);
         // Corpse policy is independent of player XP credit.
@@ -2879,13 +3093,16 @@ public sealed class NormalizedRuntimeSeamTests
         PlayerControlState player = new(new WorldPoint(0, 0, 0), 0, 0);
         // An ordinary generated corpse can hold mixed contents. Ensure the selected stack
         // has several units so this exercise distinguishes taking one from taking all.
-        containers.Seed(loot.Corpses[2000].Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5)]);
+        InventoryStackId testStack = InventoryStackId.Parse("test.loot.2882");
+        containers.Seed(loot.Corpses[2000].Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5, Stack: testStack)]);
+        itemInstances.RegisterDefaultStack(DaggerfallItemOwner.Corpse(2000),
+            containers.Read(loot.Corpses[2000].Owner).Stacks.Single(stack => stack.Id == testStack), definitions.Items[new DaggerfallItemId("gold-piece")]);
         ulong beforeOpen = world.Revision;
         Assert.Null(panel.Open(player, ForwardLook()));
         LootPresentation opened = Assert.IsType<LootPresentation>(panel.Read());
         Assert.Equal(beforeOpen, world.Revision);
         Assert.Empty(containers.Read(playerOwner).Stacks);
-        InventoryItemPresentation gold = opened.Items.Single(item => item.Key == "stack:gold-piece");
+        InventoryItemPresentation gold = opened.Items.Single(item => item.Key == DaggerfallInventoryPresentation.StackKey(testStack));
         ulong goldBefore = ulong.Parse(gold.Quantity);
         DaggerfallPlayerUiAction take = new("loot-take", opened.Revision, gold.Key, Container: opened.Container);
         Assert.Null(panel.PrepareTake(take with { Container = "other" }, player, ForwardLook()));
@@ -2898,7 +3115,7 @@ public sealed class NormalizedRuntimeSeamTests
         FactBuffer<IProductFact> facts = new();
         panel.Complete(loot.TryCommitLoot(pending, facts));
         Assert.Equal(1UL, containers.Read(playerOwner).Stacks.Single(stack => stack.Definition.Value == "gold-piece").Quantity);
-        Assert.Equal(goldBefore - 1, containers.Read(loot.Corpses[2000].Owner).Stacks.Single(stack => stack.Definition.Value == "gold-piece").Quantity);
+        Assert.Equal(goldBefore - 1, containers.Read(loot.Corpses[2000].Owner).Stacks.Single(stack => stack.Id == testStack).Quantity);
         Assert.True(loot.Corpses[2000].IsInteractable);
         ulong afterTake = world.Revision;
         Assert.Null(panel.PrepareTake(take, player, ForwardLook()));
@@ -2946,7 +3163,7 @@ public sealed class NormalizedRuntimeSeamTests
         containers.RegisterOwner(playerOwner);
         using SpatialMovementSystem movement = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
         DaggerfallCorpseLootModule loot = new(
-            perception.Service, movement, containers, playerOwner, actors,
+            perception.Service, movement, containers, new DaggerfallItemInstances(), playerOwner, actors,
             new Dictionary<long, DaggerfallActorDefinition> { [2000] = definitions.RequireActor(new DaggerfallActorId("rat")) },
             definitions, RandomMinimum.Create(), new DaggerfallUniqueItemAllocator(1_000), new ProgressionState(), DaggerfallTuning.Defaults.LootInteraction);
         loot.Create(new ActorDiedFact(2000, 77, 3, 2, 3));
@@ -3097,7 +3314,7 @@ public sealed class NormalizedRuntimeSeamTests
         TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors,
             new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting));
         DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment,
-            session.State.InventoryFor, definitions, authored, targeting);
+            session.State.InventoryFor, session.State.ItemInstances, definitions, authored, targeting);
         const long archer = 2004;
         const ulong generation = 77;
         const ulong releaseStep = 400;
@@ -3483,7 +3700,8 @@ public sealed class NormalizedRuntimeSeamTests
         session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
         CorpseContainer corpse = session.Corpses[2000];
-        session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5)]);
+        session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5, Stack: InventoryStackId.Parse("test.loot.3486"))]);
+        RegisterCorpseStack(session, definitions, 2000, "test.loot.3486");
         perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
         return session;
     }
@@ -3517,6 +3735,15 @@ public sealed class NormalizedRuntimeSeamTests
     {
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
         return PrivateersHoldContent.Read(ImportContent(root), File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
+    }
+
+    private static void RegisterCorpseStack(DaggerfallSession session, DaggerfallDefinitions definitions, long actorId, string stackId)
+    {
+        CorpseContainer corpse = session.Corpses[actorId];
+        InventoryStackId id = InventoryStackId.Parse(stackId);
+        InventoryStack stack = session.State.Containers.Read(corpse.Owner).Stacks.Single(value => value.Id == id);
+        session.State.ItemInstances.RegisterDefaultStack(DaggerfallItemOwner.Corpse(actorId), stack,
+            definitions.Items[new DaggerfallItemId(stack.Definition.Value)]);
     }
 
     private static NormalizedActorSprite SpriteFor(PrivateersHoldInputs inputs, string actorId) => inputs.ActorSprites.First(pair => inputs.Project.Actors[pair.Key].ActorId.Value == actorId).Value;
@@ -3577,11 +3804,11 @@ public sealed class NormalizedRuntimeSeamTests
     public void The_projection_carries_the_published_ui_art_the_dom_draws()
     {
         string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
         List<string> releases = [];
         ContentFake content = new(releases);
         PrivateersHoldInputs inputs = ReadInputs(root);
         PopulateContent(content, inputs);
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
 
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
@@ -4026,7 +4253,8 @@ public sealed class NormalizedRuntimeSeamTests
             placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
         TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting));
-        DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.InventoryFor, definitions, authored, targeting);
+        DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.InventoryFor,
+            session.State.ItemInstances, definitions, authored, targeting);
         FactBuffer<IProductFact> facts = new();
 
         // The enemy decides a swing against the living player.
@@ -4072,16 +4300,20 @@ public sealed class NormalizedRuntimeSeamTests
             placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
         TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting));
-        DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.InventoryFor, definitions, authored, targeting);
+        DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.InventoryFor,
+            session.State.ItemInstances, definitions, authored, targeting);
         FactBuffer<IProductFact> facts = new();
         long archer = Assert.Single(inputs.Project.Actors.Values, placement => placement.ActorId == new DaggerfallActorId("archer")).EntityId;
         WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator quiver = Assert.IsType<WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator>(session.State.InventoryFor(archer));
 
         // The pack authors the archer's quiver; the managed inventory carries it.
-        Assert.Equal(12UL, quiver.Read().Stacks.Single(stack => stack.Definition.Value == "arrow").Quantity);
+        InventoryStackId arrowStack = quiver.Read().Stacks.Single(stack => stack.Definition.Value == "arrow").Id;
+        Assert.Equal(12UL, quiver.Read().Stacks.Single(stack => stack.Id == arrowStack).Quantity);
+        quiver.Consume(new WorldRpg.Kit.Inventory.InventoryConsume(arrowStack, 11));
 
         Assert.True(combat.Attacks.TryBeginEnemyAttack(archer, DaggerfallActorIdentity.PlayerEntityId, 77, 400, .125, facts));
-        Assert.Equal(11UL, quiver.Read().Stacks.Single(stack => stack.Definition.Value == "arrow").Quantity);
+        Assert.DoesNotContain(quiver.Read().Stacks, stack => stack.Id == arrowStack);
+        Assert.Throws<InvalidOperationException>(() => session.State.ItemInstances.RequireStack(DaggerfallItemOwner.Actor(archer), arrowStack));
         List<IProductFact> decided = [];
         facts.Deliver(decided.Add);
         Assert.Contains(decided, fact => fact is EnemyAttackStartedFact);
@@ -4106,11 +4338,13 @@ public sealed class NormalizedRuntimeSeamTests
             placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
         TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting));
-        DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.InventoryFor, definitions, authored, targeting);
+        DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.InventoryFor,
+            session.State.ItemInstances, definitions, authored, targeting);
         FactBuffer<IProductFact> facts = new();
         long archer = Assert.Single(inputs.Project.Actors.Values, placement => placement.ActorId == new DaggerfallActorId("archer")).EntityId;
-        Assert.IsType<WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator>(session.State.InventoryFor(archer)).Consume(
-            new WorldRpg.Kit.Inventory.InventoryConsume(new WorldRpg.Kit.Inventory.InventoryItemId("arrow"), 12));
+        WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator archerInventory = Assert.IsType<WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator>(session.State.InventoryFor(archer));
+        archerInventory.Consume(new WorldRpg.Kit.Inventory.InventoryConsume(
+            archerInventory.Read().Stacks.Single(stack => stack.Definition.Value == "arrow").Id, 12));
         double playerHealthBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
 
         Assert.False(combat.Attacks.TryBeginEnemyAttack(archer, DaggerfallActorIdentity.PlayerEntityId, 77, 400, .125, facts));
@@ -4144,8 +4378,9 @@ public sealed class NormalizedRuntimeSeamTests
         using (DaggerfallSession original = new(source.Context, definitions, inputs, DaggerfallTuning.Defaults))
         {
             // One drawn arrow leaves eleven; the save must carry exactly that, not a refill.
-            Assert.IsType<WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator>(original.State.InventoryFor(archer)).Consume(
-                new WorldRpg.Kit.Inventory.InventoryConsume(new WorldRpg.Kit.Inventory.InventoryItemId("arrow"), 1));
+            WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator archerInventory = Assert.IsType<WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator>(original.State.InventoryFor(archer));
+            archerInventory.Consume(new WorldRpg.Kit.Inventory.InventoryConsume(
+                archerInventory.Read().Stacks.Single(stack => stack.Definition.Value == "arrow").Id, 1));
             payload = original.CaptureSave();
         }
 
@@ -4531,7 +4766,8 @@ public sealed class NormalizedRuntimeSeamTests
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
         CorpseContainer corpse = session.Corpses[2000];
         Assert.True(corpse.IsRegistered);
-        session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5)]);
+        session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5, Stack: InventoryStackId.Parse("test.loot.4534"))]);
+        RegisterCorpseStack(session, definitions, 2000, "test.loot.4534");
         // The pair the passing attack test uses, so the melee assertions below can actually fire.
         perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
         void Ui(string json, ulong step)
@@ -4589,7 +4825,7 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Null(session.LastMeleeTargeting);
         Assert.Equal(stepsBeforeModal, spatial.StepCalls);
         LootPresentation opened = Assert.IsType<LootPresentation>(session.OpenLoot);
-        InventoryItemPresentation gold = opened.Items.Single(item => item.Definition == "gold-piece");
+        InventoryItemPresentation gold = opened.Items.Single(item => item.Key == DaggerfallInventoryPresentation.StackKey(InventoryStackId.Parse("test.loot.4534")));
 
         // The projection the thin UI renders carries the mode the product decided and the token a
         // close has to name, so the UI keeps no focus authority of its own.
@@ -4638,7 +4874,7 @@ public sealed class NormalizedRuntimeSeamTests
         session.ApplyProductMode(ProductMode.Dead);
         int stepsBeforeDeath = spatial.StepCalls;
         ulong afterDeath = session.State.Inventory.Read().StoreRevision;
-        InventoryItemPresentation remaining = reopened.Items.Single(item => item.Definition == "gold-piece");
+        InventoryItemPresentation remaining = reopened.Items.Single(item => item.Key == gold.Key);
         session.Update(new ProductUpdate(OuterUpdate(8), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
         Ui(System.Text.Json.JsonSerializer.Serialize(new { action = "loot-take", container = reopened.Container, revision = reopened.Revision, item = remaining.Key }), 9);
         Assert.Equal(stepsBeforeDeath, spatial.StepCalls);
@@ -4688,7 +4924,9 @@ public sealed class NormalizedRuntimeSeamTests
             session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
             session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
             CorpseContainer corpse = session.Corpses[2000];
-            session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5)]);
+            session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5, Stack: InventoryStackId.Parse("test.loot.4691"))]);
+            session.State.ItemInstances.RegisterStack(DaggerfallItemOwner.Corpse(2000), InventoryStackId.Parse("test.loot.4691"),
+                new DaggerfallItemInstanceMetadata("gold-piece", "none", 0, 1, 1, true, false, null, null, null, DaggerfallItemOwner.Corpse(2000)).Validate());
             perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
 
             // Opening loot through the product puts the product into the modal the session asked for.
@@ -4737,7 +4975,8 @@ public sealed class NormalizedRuntimeSeamTests
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
         CorpseContainer corpse = session.Corpses[2000];
         Assert.True(corpse.IsRegistered);
-        session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5)]);
+        session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5, Stack: InventoryStackId.Parse("test.loot.4740"))]);
+        RegisterCorpseStack(session, definitions, 2000, "test.loot.4740");
         perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
 
         static ulong PlayerGold(DaggerfallSession session) => session.State.Inventory.Read().Stacks
@@ -4766,7 +5005,13 @@ public sealed class NormalizedRuntimeSeamTests
 
         // One take moves one unit, delivers its facts, and republishes: the panel stays open,
         // the world takes no step, and the outcome line carries the delivered fact.
-        string take = JsonSerializer.Serialize(new { action = "loot-take", container = opened.Container, revision = opened.Revision, item = "stack:gold-piece" });
+        string take = JsonSerializer.Serialize(new
+        {
+            action = "loot-take",
+            container = opened.Container,
+            revision = opened.Revision,
+            item = DaggerfallInventoryPresentation.StackKey(InventoryStackId.Parse("test.loot.4740")),
+        });
         Ui(take, 3);
         Assert.Equal(playerBefore + 1, PlayerGold(session));
         LootPresentation afterTake = Assert.IsType<LootPresentation>(session.OpenLoot);
@@ -4899,8 +5144,10 @@ public sealed class NormalizedRuntimeSeamTests
             Kill(original, 2000);
             CorpseContainer thief = original.Corpses[2000];
             original.State.Containers.Seed(thief.Owner, [
-                new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5),
+                new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5, Stack: InventoryStackId.Parse("test.loot.4902")),
                 new InventoryContainerSeed(new InventoryItemId("iron-dagger"), 1, new(DurableIdentityKind.Item, 5001))]);
+            RegisterCorpseStack(original, definitions, 2000, "test.loot.4902");
+            original.State.ItemInstances.RegisterDefaultUnique(5001, definitions.Items[new DaggerfallItemId("iron-dagger")], DaggerfallItemOwner.Corpse(2000));
             // The giant-bat carries no loot table, so its corpse stays unregistered and empty.
             // It is tougher than the thief: repeat the explicit swing until the death lands.
             original.State.Actors.Get(2006).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
@@ -4939,7 +5186,8 @@ public sealed class NormalizedRuntimeSeamTests
         DaggerfallCorpseSave savedThief = captured.Corpses.Single(corpse => corpse.ActorId == 2000);
         Assert.True(savedThief.IsRegistered);
         // The thief's loot table generates gold on top of the seeded stack; the save carries both.
-        Assert.True(savedThief.Stacks.Single(stack => stack.ItemId == "gold-piece").Quantity >= 5UL);
+        Assert.True(savedThief.Stacks.Where(stack => stack.ItemId == "gold-piece")
+            .Aggregate(0UL, (total, stack) => total + stack.Quantity) >= 5UL);
         Assert.Equal(5001UL, Assert.Single(savedThief.UniqueItems, item => item.ItemId == "iron-dagger").EntityId);
         DaggerfallCorpseSave savedBat = captured.Corpses.Single(corpse => corpse.ActorId == 2006);
         Assert.False(savedBat.IsRegistered);
@@ -4963,8 +5211,12 @@ public sealed class NormalizedRuntimeSeamTests
         {
             InventoryView restoredThief = resumed.State.Containers.Read(resumed.Corpses[2000].Owner);
             Assert.Equal(
-                savedThief.Stacks.Single(stack => stack.ItemId == "gold-piece").Quantity,
-                restoredThief.Stacks.Single(stack => stack.Definition.Value == "gold-piece").Quantity);
+                savedThief.Stacks.Where(stack => stack.ItemId == "gold-piece")
+                    .OrderBy(stack => stack.StackId, StringComparer.Ordinal)
+                    .Select(stack => (stack.StackId, stack.Quantity)),
+                restoredThief.Stacks.Where(stack => stack.Definition.Value == "gold-piece")
+                    .OrderBy(stack => stack.Id.Value, StringComparer.Ordinal)
+                    .Select(stack => (stack.Id.Value, stack.Quantity)));
             var restoredDagger = Assert.Single(restoredThief.UniqueItems, item => item.Definition.Value == "iron-dagger");
             Assert.Equal(5001UL, resumed.State.Actors.Entities.IdentityOf(restoredDagger.Entity).Value);
             Assert.False(resumed.Corpses[2006].IsRegistered);
@@ -5396,6 +5648,14 @@ public sealed class NormalizedRuntimeSeamTests
             new(request.Checkpoint.SourceGeneration, request.Checkpoint.Motion);
     }
 
+    private class RandomMaximum : DispatchProxy
+    {
+        internal static IRandomService Create() => DispatchProxy.Create<IRandomService, RandomMaximum>();
+        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IRandomService.DrawKeyed)
+            ? new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Maximum)
+            : throw new NotSupportedException(method?.Name);
+    }
+
     private class RandomMinimum : DispatchProxy
     {
         internal IRandomService Service { get; private set; } = null!;
@@ -5507,6 +5767,17 @@ public sealed class NormalizedRuntimeSeamTests
         private sealed record Entry(ulong Revision, byte[] Payload);
     }
 
+    private sealed class InputServiceFake : IInputService
+    {
+        internal ProductInputMapping[] Mappings = [];
+        internal InputMappingReplacementOutcome Outcome = InputMappingReplacementOutcome.Staged;
+        public InputMappingReplacementOutcome ReplacePhysicalMappings(ReadOnlySpan<ProductInputMapping> mappings)
+        {
+            if (Outcome == InputMappingReplacementOutcome.Staged) Mappings = mappings.ToArray();
+            return Outcome;
+        }
+    }
+
     private class EngineContextFake : DispatchProxy
     {
         internal IEngineContext Context { get; private set; } = null!;
@@ -5526,6 +5797,7 @@ public sealed class NormalizedRuntimeSeamTests
 
         /// <summary>Read one named field of one element of a published array.</summary>
         internal string? PublishedArrayItem(string array, int index, string key) => ((UiServiceFake)(object)ui).ArrayItemField(array, index, key);
+        internal readonly InputServiceFake PhysicalInput = new();
         private IContentService content = null!;
         private ISpatialService spatial = null!;
         private IGraphicsService appearance = null!;
@@ -5537,7 +5809,7 @@ public sealed class NormalizedRuntimeSeamTests
         private IPersistenceService persistence = null!;
 
         internal static EngineContextFake Create(IContentService content, ISpatialService spatial, IGraphicsService appearance,
-            IPerceptionService? perception = null, IPersistenceService? persistence = null)
+            IPerceptionService? perception = null, IPersistenceService? persistence = null, IRandomService? random = null)
         {
             IEngineContext context = DispatchProxy.Create<IEngineContext, EngineContextFake>();
             EngineContextFake fake = (EngineContextFake)(object)context;
@@ -5548,7 +5820,7 @@ public sealed class NormalizedRuntimeSeamTests
             fake.perception = perception ?? PerceptionFake.Create().Service;
             fake.camera = ServiceProxy<ICameraViewService, CameraServiceFake>.Create();
             fake.audio = ServiceProxy<IAudioService, AudioServiceFake>.Create();
-            fake.random = ServiceProxy<IRandomService, RandomServiceFake>.Create();
+            fake.random = random ?? ServiceProxy<IRandomService, RandomServiceFake>.Create();
             fake.ui = UiServiceFake.Create(fake);
             fake.persistence = persistence ?? new InMemoryPersistenceService();
             return fake;
@@ -5556,6 +5828,7 @@ public sealed class NormalizedRuntimeSeamTests
 
         protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
         {
+            "get_Input" => PhysicalInput,
             "get_Content" => content,
             "get_Spatial" => spatial,
             "get_Graphics" => appearance,

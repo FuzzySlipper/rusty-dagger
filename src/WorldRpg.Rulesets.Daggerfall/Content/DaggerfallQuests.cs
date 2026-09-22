@@ -47,13 +47,23 @@ internal sealed record DaggerfallQuestDiagnosticDefinition(int Line, string Text
 
 /// <summary>The normalized quest source pack, loaded from the pack alone.</summary>
 /// <param name="Quests">The quests by source file.</param>
-internal sealed record DaggerfallQuestSourceSet(IReadOnlyDictionary<string, DaggerfallQuestSourceDefinition> Quests, DaggerfallQuestTables Tables, DaggerfallQuestCatalog Catalog)
+internal sealed record DaggerfallQuestResourceDefinition(string Quest, string SourceFile, int SourceLine, string Kind, string SourceSpelling, string CanonicalId, string SourceText, string? TargetSourceSpelling, string? TargetCanonicalId, string? PlaceKind, IReadOnlyList<string> Parameters,
+    DaggerfallQuestFoeOptions? Foe = null, DaggerfallQuestItemOptions? Item = null,
+    DaggerfallQuestPersonOptions? Person = null, IReadOnlyList<string>? Sites = null);
+internal sealed record DaggerfallQuestFoeOptions(int Count);
+internal sealed record DaggerfallQuestItemOptions(bool Artifact, int? Class, int? Subclass, int? Template, int? Key, int? RangeLow, int? RangeHigh, string? UsedMessage, string? AnyInfoMessage);
+internal sealed record DaggerfallQuestPersonOptions(string? Named, string? Faction, string? FactionType, string? Group, int? Face, string? Gender, string? Scope, bool AtHome);
+internal sealed record DaggerfallQuestUnresolvedReferenceDefinition(string Quest, string SourceFile, int SourceLine, string SourceSpelling, string CanonicalId);
+
+internal sealed record DaggerfallQuestSourceSet(IReadOnlyDictionary<string, DaggerfallQuestSourceDefinition> Quests, DaggerfallQuestTables Tables, DaggerfallQuestCatalog Catalog, IReadOnlyList<DaggerfallQuestResourceDefinition>? ResourceDeclarations = null, IReadOnlyList<DaggerfallQuestUnresolvedReferenceDefinition>? UnresolvedReferences = null)
 {
     /// <summary>
     /// Resolves a quest source by file: its messages, blocks and compilation disposition. A
     /// diagnosed quest resolves with its diagnostics attached. Quest lifecycle/action execution
     /// belongs to a later owner; this content model only exposes normalized source records.
     /// </summary>
+    internal IReadOnlyList<DaggerfallQuestResourceDefinition> Resources { get; } = ResourceDeclarations ?? [];
+    internal IReadOnlyList<DaggerfallQuestUnresolvedReferenceDefinition> UnresolvedReferences { get; } = UnresolvedReferences ?? [];
     internal DaggerfallQuestSourceDefinition Resolve(string sourceFile) => Quests[sourceFile];
 }
 

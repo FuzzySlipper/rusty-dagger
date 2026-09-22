@@ -28,7 +28,7 @@ using KitUniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Concrete Daggerfall composition of catalog policy, module state, and named Engine capabilities.</summary>
-internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, ISaveRequestingGameSession
+internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, ISaveRequestingGameSession, IPlayerPreferencesSession
 {
 
     /// <summary>Admitted world seconds a panel request stands before the DOM is assumed not to need it.</summary>
@@ -96,7 +96,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     internal World.DaggerfallHolidayAnnouncement? HolidayAnnouncement { get; private set; }
 
     internal DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
-        : this(engine, definitions, inputs, tuning, null, null, DaggerfallEffectCatalog.Empty) { }
+        : this(engine, definitions, inputs, tuning, null, null, null) { }
 
     /// <summary>Explicit compiled effect composition seam for ruleset families and save reconstruction tests.</summary>
     internal DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs,
@@ -104,23 +104,23 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         : this(engine, definitions, inputs, tuning, null, null, effects) { }
 
     internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
-        : this(engine, definitions, inputs, tuning, compositionIdentity, null, DaggerfallEffectCatalog.Empty) { }
+        : this(engine, definitions, inputs, tuning, compositionIdentity, null, null) { }
 
     internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, DaggerfallAudioBundle audioBundle)
-        : this(engine, definitions, inputs, tuning, compositionIdentity, null, DaggerfallEffectCatalog.Empty, audioBundle) { }
+        : this(engine, definitions, inputs, tuning, compositionIdentity, null, null, audioBundle) { }
 
     internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
         DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, RulesetSavePayload saved, IRandomService random)
-        => Restore(engine, compositionIdentity, definitions, inputs, tuning, saved, random, DaggerfallEffectCatalog.Empty);
+        => Restore(engine, compositionIdentity, definitions, inputs, tuning, saved, random, (DaggerfallEffectCatalog?)null);
 
     internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
         DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, RulesetSavePayload saved,
         IRandomService random, DaggerfallAudioBundle audioBundle)
-        => Restore(engine, compositionIdentity, definitions, inputs, tuning, saved, random, DaggerfallEffectCatalog.Empty, audioBundle);
+        => Restore(engine, compositionIdentity, definitions, inputs, tuning, saved, random, null, audioBundle);
 
     internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
         DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, RulesetSavePayload saved,
-        IRandomService random, DaggerfallEffectCatalog effects, DaggerfallAudioBundle? audioBundle = null)
+        IRandomService random, DaggerfallEffectCatalog? effects, DaggerfallAudioBundle? audioBundle = null)
     {
         DaggerfallSavePayload payload = DaggerfallSavePayload.Read(saved).ResolveRestore(definitions, inputs);
         return new DaggerfallSession(engine, definitions, inputs, tuning, compositionIdentity, payload, effects, audioBundle);
@@ -128,7 +128,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     private DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs,
         DaggerfallTuning tuning, ResolvedCompositionIdentity? compositionIdentity, DaggerfallSavePayload? saved,
-        DaggerfallEffectCatalog effects, DaggerfallAudioBundle? audioBundle = null)
+        DaggerfallEffectCatalog? effects, DaggerfallAudioBundle? audioBundle = null)
     {
         List<IDisposable> partiallyConstructed = [];
         try
@@ -165,6 +165,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                     ToSiteId(restoredSite.ReturnAnchor),
                     restoredSite.Discovered.Select(id => id.Require()))
                 : new World.DaggerfallSiteContext(definitions.Locations, inputs.Site, null, []);
+            _controlEngine = engine;
             _input = new PlayerInputSystem(tuning.PlayerControl, DaggerfallInput.Controls, DaggerfallInput.Bindings, tuning.ControllerInput);
             _spatial = new SpatialMovementSystem(engine.Spatial, engine.Content, inputs.SpatialArtifact, tuning.Spatial);
             partiallyConstructed.Add(_spatial);
@@ -177,7 +178,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             partiallyConstructed.Add(_camera);
             TargetingService targeting = new(engine.Perception, _spatial, State.Actors, new DaggerTargetingPolicy(authored, tuning.MeleeTargeting));
             _staminaRecovery = new DaggerfallStaminaRecoveryModule(tuning.StaminaRecovery);
-            State.Effects = new DaggerfallEffectLifecycle(State.Actors, effects);
+            State.Effects = new DaggerfallEffectLifecycle(State.Actors, effects ?? DaggerfallDiseasePolicy.CreateCatalog(_random, () => _time.Calendar.DayNumber));
             partiallyConstructed.Add(State.Effects);
             _rewards = new DaggerfallRewardReactions(
                 State.Progression,
@@ -187,8 +188,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 _random,
                 authored,
                 tuning.Progression.EnableExperimentalKillExperience);
-            State.SkillUses = new DaggerfallSkillUseReactions(State.Progression, State.Actors.Player.Stats, definitions, playerDefinition);
-            _combat = new DaggerCombatRules(_random, State.Actors, State.Equipment, State.InventoryFor, definitions, authored, targeting, use => State.SkillUses.Record(use));
+            State.SkillUses = new DaggerfallSkillUseReactions(State.Progression, State.Actors.Player.Stats, definitions, () => State.Character.Career);
+            State.Character.BindCareerCommitted(State.SkillUses.RebaseForCareerSelection);
+            _combat = new DaggerCombatRules(_random, State.Actors, State.Equipment, State.InventoryFor, State.ItemInstances, definitions, authored, targeting, use => State.SkillUses.Record(use));
             State.Kit = new(State.Actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, State.Inventory, State.Equipment);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
                 engine.Perception,
@@ -220,6 +222,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 engine.Perception,
                 _spatial,
                 containers,
+                State.ItemInstances,
                 playerEntity,
                 State.Actors,
                 authored,
@@ -232,7 +235,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             _equipmentMoves = new DaggerfallEquipmentMoves(inventory, equipmentCoordinator, definitions);
             _inventoryUi = new DaggerfallInventoryPresentation(_equipmentMoves, definitions, inputs.ClassicPresentation.InventoryIcons);
             _lootUi = new DaggerfallLootPresentation(_corpseLoot, _inventoryUi);
-            _characterUi = new DaggerfallCharacterPresentation(definitions, playerDefinition, equipmentCoordinator);
+            _characterUi = new DaggerfallCharacterPresentation(definitions, State.Character, playerDefinition, equipmentCoordinator);
             // The DOM's art comes from admitted content by media identity, so a session reads the
             // published closure once and publishes it to the UI that draws it.
             _hud = new DaggerfallHudProjection(
@@ -271,34 +274,6 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// memory, managed inventory and equipment, definition loadout, and floor grounding.
     /// Returns the allocated durable identity, which the save persists and restore reuses.
     /// </summary>
-    /// <summary>
-    /// Applies persisted control settings: movement keys rebind through the input owner, which
-    /// releases held keys its new bindings no longer claim. Action intents ride the browser
-    /// shell's bindings, so only movement travels this path today.
-    /// </summary>
-    internal void ApplyControlSettings(DaggerfallControlSettings settings)
-    {
-        ArgumentNullException.ThrowIfNull(settings);
-        PlayerControlBindings controls = new(
-            DaggerfallInput.Controls.MovementIntents,
-            ParseKey(settings.KeysFor("move.forward")),
-            ParseKey(settings.KeysFor("move.backward")),
-            ParseKey(settings.KeysFor("move.left")),
-            ParseKey(settings.KeysFor("move.right")),
-            DaggerfallInput.Controls.DirectionalIntents);
-        _input.Rebind(controls, DaggerfallInput.Bindings);
-
-        static KeyboardControl ParseKey(IReadOnlyList<string> keys)
-        {
-            if (keys.Count != 1 || !Enum.TryParse(keys[0], out KeyboardControl key))
-            {
-                throw new ArgumentException($"Movement binds exactly one keyboard key, not '{string.Join(",", keys)}'.", nameof(settings));
-            }
-
-            return key;
-        }
-    }
-
     internal long SpawnActor(string definitionId, ActorPose pose, int? level = null)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -423,14 +398,19 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
         MechanicsInventoryCoordinator actorInventory = State.InventoryFor(actor.DurableId)
             ?? throw new InvalidOperationException($"Spawned actor {actor.DurableId} has no registered inventory.");
+        int ordinal = 0;
         foreach (DaggerfallLoadoutEntry entry in definition.Loadout)
-            actorInventory.Grant(new InventoryGrant(new InventoryItemId(entry.ItemId.Value), entry.Quantity));
+        {
+            InventoryStackId stackId = DaggerfallInventoryStackIds.ForSpawnLoadout(actor.DurableId, ordinal++);
+            actorInventory.Grant(new InventoryGrant(new InventoryItemId(entry.ItemId.Value), stackId, entry.Quantity));
+            State.ItemInstances.RegisterDefaultStack(DaggerfallItemOwner.Actor(actor.DurableId),
+                new InventoryStack(stackId, ItemDefinitionId.Parse(entry.ItemId.Value), entry.Quantity), _definitions.Items[entry.ItemId]);
+        }
     }
 
     /// <summary>
     /// Destroys the unique items one retiring actor owns — carried, equipped, and corpse-seeded —
-    /// and tombstones their identities so the save never reissues them. Fungible stacks vanish
-    /// with the actor; they carry no identity to preserve.
+    /// and tombstones their identities so the save never reissues them. Fungible stacks and their instance metadata retire with the actor.
     /// </summary>
     private void DestroyOwnedItems(long durableId)
     {
@@ -445,8 +425,11 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         if (actor.Actor.TryGet<CorpseLootComponent>(out CorpseLootComponent? corpse) && corpse is not null && corpse.HasRegisteredInventory)
             foreach (var item in State.Containers.Read(corpse.Owner).UniqueItems)
                 owned.Add(State.Actors.Entities.IdentityOf(item.Entity).Value);
+        State.ItemInstances.RemoveOwner(DaggerfallItemOwner.Actor(durableId));
+        State.ItemInstances.RemoveOwner(DaggerfallItemOwner.Corpse(durableId));
         foreach (ulong itemId in owned)
         {
+            State.ItemInstances.RemoveUnique(itemId);
             _ = State.Effects.CancelItemReferences(itemId);
             DurableIdentityReference reference = new(DurableIdentityKind.Item, itemId);
             State.Actors.Entities.Destroy(reference);
@@ -547,6 +530,12 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 // shape and does nothing with it; the product has already left the mode by the time an
                 // action in ordinary play could arrive.
                 case "begin": break;
+                case "controls-rebind":
+                case "controls-reset": ChangeControls(action!); break;
+                case "character-begin":
+                case "character-update":
+                case "character-commit":
+                case "character-cancel": ChangeCharacter(action!); break;
                 case "attack": if (playing && !opensInteraction) firstStep.Request(DaggerfallInput.Attack); break;
                 // A reloaded DOM holds no art and asks for the revision it is missing; the projection
                 // answers on its next snapshot rather than a second delivery channel existing.
@@ -743,6 +732,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         DaggerfallCalendar calendarBefore = _time.Calendar;
         long minuteBefore = MinuteIndex(calendarBefore);
         DaggerfallCalendarAdvance advance = _time.AdvanceInterval(gameSeconds, consequences ?? []);
+        State.SkillUses.RaiseSkills(_time.Calendar.ToAbsoluteSeconds());
         State.Social.AdvanceElapsedMinutes(minuteBefore, MinuteIndex(_time.Calendar));
         AdvanceEffectsForCalendar(calendarBefore, ordinaryPlay: false);
         AnnounceHoliday();
@@ -850,7 +840,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     private void PublishPresentation()
     {
-        _hud.Publish(State.Actors.Player, State.Progression, Presentation, _mode, State.PlayerControl, Slots, _inventoryUi.Read(), _lootUi.Read(), _characterUi.Read(State.Actors.Player, State.Progression), LatestPanelRequest, _saveSlots, _saveSlotDiagnostic);
+        _hud.Publish(State.Actors.Player, State.Progression, Presentation, _mode, State.PlayerControl, Slots, _inventoryUi.Read(), _lootUi.Read(), _characterUi.Read(State.Actors.Player, State.Progression), LatestPanelRequest, _saveSlots, _saveSlotDiagnostic, _controlSettings, _controlDiagnostic);
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors);
@@ -892,7 +882,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         HolidayAnnouncement = announcement;
         if (announcement is not null)
         {
-            Presentation.SetOutcome(string.Concat(_definitions.Text.Require(announcement.TextKey).TextRuns));
+            Presentation.SetOutcome(_definitions.TextPresentation.Resolve(announcement.TextKey, DaggerfallTextContext.Empty).Text);
         }
     }
 
@@ -994,6 +984,9 @@ internal static class DaggerfallInput
         new(Attack, "attack"u8.ToArray()),
         new(ToggleWeapon, "toggle-weapon"u8.ToArray()),
         new(Interact, "interact"u8.ToArray()),
+        new(Inventory, "inventory"u8.ToArray()),
+        new(Character, "character"u8.ToArray()),
+        new(Menu, "menu"u8.ToArray()),
     ];
 
     /// <summary>

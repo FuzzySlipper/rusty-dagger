@@ -1,4 +1,5 @@
 using Rusty.Engine;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -138,6 +139,20 @@ public sealed class DaggerfallControlSettings
         ValidateBindings(parsed, nameof(json));
         return new DaggerfallControlSettings(CopyBindings(parsed));
     }
+
+    /// <summary>Complete Engine-owned physical mapping set for the declared semantic catalog.</summary>
+    public ProductInputMapping[] PhysicalMappings() => Catalog.SelectMany(action =>
+        KeysFor(action.Id).Select((key, index) =>
+        {
+            bool keyboard = Enum.TryParse(key, out KeyboardControl control) && control != KeyboardControl.None;
+            return new ProductInputMapping(
+                Encoding.UTF8.GetBytes($"controls.{action.Id}.{index}"), Encoding.UTF8.GetBytes(action.Id),
+                keyboard ? InputTriggerKind.Key : InputTriggerKind.PointerButton,
+                action.Category == "movement" ? InputEdge.Held : InputEdge.Pressed,
+                default, keyboard ? control : default,
+                keyboard ? default : Enum.Parse<PointerButton>(key), default, default, default,
+                new InputContext("gameplay"u8.ToArray()));
+        })).ToArray();
 
     private static Dictionary<string, List<string>> CreateDefaultBindings() =>
         Catalog.ToDictionary(action => action.Id, action => action.DefaultKeys.ToList(), StringComparer.Ordinal);

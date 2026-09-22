@@ -9,6 +9,7 @@ using WorldRpg.Kit.Progression;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -91,13 +92,116 @@ public sealed class DaggerfallSkillUseReactionTests
     }
 
     [Fact]
+    public void Rest_skill_check_consumes_each_qualified_counter_once_and_exposes_level_eligibility()
+    {
+        (DaggerfallSkillUseReactions uses, ProgressionState progression, StatsComponent stats) = Create(stats =>
+        {
+            foreach (string skill in new[] { "mysticism", "alteration", "thaumaturgy", "illusion", "destruction", "restoration", "medical", "short-blade", "blunt-weapon", "dragonish", "daedric", "dodging" })
+                stats.GetStat(StatId.Parse(skill)).BaseValue = 10;
+            stats.GetStat(StatId.Parse("reflexes")).BaseValue = 2;
+        });
+        int baseline = uses.StartingLevelUpSkillSum;
+        progression.TallySkillUse("mysticism", DaggerfallSkillUseReactions.MaximumSkillUses, DaggerfallSkillUseReactions.MaximumSkillUses);
+        progression.TallySkillUse("destruction", DaggerfallSkillUseReactions.MaximumSkillUses, DaggerfallSkillUseReactions.MaximumSkillUses);
+
+        Assert.False(uses.RaiseSkills(360));
+        Assert.True(uses.RaiseSkills(361));
+        Assert.Equal(11d, stats.GetStat(StatId.Parse("mysticism")).BaseValue);
+        Assert.Equal(11d, stats.GetStat(StatId.Parse("destruction")).BaseValue);
+        Assert.Equal(0, progression.SkillUses["mysticism"]);
+        Assert.Equal(0, progression.SkillUses["destruction"]);
+        Assert.Equal(baseline + 2, uses.CurrentLevelUpSkillSum);
+        Assert.Equal(2, uses.CalculatedPlayerLevel);
+        Assert.True(uses.PendingLevelUp);
+        Assert.Equal(1, progression.Level);
+
+        Assert.False(uses.RaiseSkills(361));
+        Assert.False(uses.RaiseSkills(721));
+        Assert.True(uses.RaiseSkills(722));
+    }
+
+    [Fact]
+    public void Rest_skill_check_consumes_thresholds_before_the_donor_skill_and_primary_master_caps()
+    {
+        (DaggerfallSkillUseReactions uses, ProgressionState progression, StatsComponent stats) = Create(stats =>
+        {
+            stats.GetStat(StatId.Parse("mysticism")).BaseValue = 100;
+            stats.GetStat(StatId.Parse("destruction")).BaseValue = 100;
+            stats.GetStat(StatId.Parse("short-blade")).BaseValue = 95;
+            stats.GetStat(StatId.Parse("reflexes")).BaseValue = 2;
+        });
+        progression.TallySkillUse("destruction", DaggerfallSkillUseReactions.MaximumSkillUses, DaggerfallSkillUseReactions.MaximumSkillUses);
+        progression.TallySkillUse("short-blade", DaggerfallSkillUseReactions.MaximumSkillUses, DaggerfallSkillUseReactions.MaximumSkillUses);
+
+        Assert.True(uses.RaiseSkills(361));
+        Assert.Equal(100d, stats.GetStat(StatId.Parse("destruction")).BaseValue);
+        Assert.Equal(95d, stats.GetStat(StatId.Parse("short-blade")).BaseValue);
+        Assert.Equal(0, progression.SkillUses["destruction"]);
+        Assert.Equal(0, progression.SkillUses["short-blade"]);
+    }
+
+    [Fact]
+    public void Rest_skill_check_interval_round_trips_with_pending_counters()
+    {
+        (DaggerfallSkillUseReactions original, ProgressionState progression, StatsComponent stats) = Create(stats =>
+        {
+            stats.GetStat(StatId.Parse("long-blade")).BaseValue = 10;
+            stats.GetStat(StatId.Parse("reflexes")).BaseValue = 2;
+        });
+        Assert.True(original.RaiseSkills(361));
+        progression.TallySkillUse("long-blade", DaggerfallSkillUseReactions.MaximumSkillUses, DaggerfallSkillUseReactions.MaximumSkillUses);
+        DaggerfallSkillProgressionSave saved = original.Capture();
+
+        (DaggerfallSkillUseReactions restored, ProgressionState restoredProgression, StatsComponent restoredStats) = Create(stats =>
+        {
+            stats.GetStat(StatId.Parse("long-blade")).BaseValue = 10;
+            stats.GetStat(StatId.Parse("reflexes")).BaseValue = 2;
+        });
+        restored.Restore(saved);
+
+        Assert.Equal(361, restored.LastSkillIncreaseCheckSecond);
+        Assert.False(restored.RaiseSkills(721));
+        Assert.Equal(DaggerfallSkillUseReactions.MaximumSkillUses, restoredProgression.SkillUses["long-blade"]);
+        Assert.True(restored.RaiseSkills(722));
+        Assert.Equal(11d, restoredStats.GetStat(StatId.Parse("long-blade")).BaseValue);
+        Assert.Equal(0, restoredProgression.SkillUses["long-blade"]);
+    }
+
+    [Fact]
+    public void Rest_skill_check_requires_the_exact_threshold_after_the_donor_reflexes_scale()
+    {
+        (DaggerfallSkillUseReactions uses, ProgressionState progression, StatsComponent stats) = Create(stats =>
+        {
+            stats.GetStat(StatId.Parse("mysticism")).BaseValue = 10;
+            stats.GetStat(StatId.Parse("reflexes")).BaseValue = 2;
+        });
+        int threshold = DaggerfallFormulaPolicy.CalculateSkillUsesForAdvancement(10, 1, 1.0390625f, 1);
+        progression.TallySkillUse("mysticism", threshold - 1, DaggerfallSkillUseReactions.MaximumSkillUses);
+
+        Assert.True(uses.RaiseSkills(361));
+        Assert.Equal(10d, stats.GetStat(StatId.Parse("mysticism")).BaseValue);
+        progression.TallySkillUse("mysticism", 1, DaggerfallSkillUseReactions.MaximumSkillUses);
+        stats.GetStat(StatId.Parse("reflexes")).BaseValue = 3;
+
+        Assert.True(uses.RaiseSkills(722));
+        Assert.Equal(10d, stats.GetStat(StatId.Parse("mysticism")).BaseValue);
+        Assert.Equal(threshold, progression.SkillUses["mysticism"]);
+        stats.GetStat(StatId.Parse("reflexes")).BaseValue = 2;
+
+        Assert.True(uses.RaiseSkills(1083));
+        Assert.Equal(11d, stats.GetStat(StatId.Parse("mysticism")).BaseValue);
+        Assert.Equal(0, progression.SkillUses["mysticism"]);
+    }
+
+    [Fact]
     public void Resolved_enemy_miss_tallies_dodging_once_before_the_miss_returns()
     {
         DaggerfallDefinitions definitions = LoadDefinitions();
         using ActorsState actors = new();
         List<DaggerfallSkillUse> uses = [];
         DaggerCombatRules combat = new(
-            null!, actors, null!, _ => null, definitions, new Dictionary<long, DaggerfallActorDefinition>(), null!, uses.Add);
+            null!, actors, null!, _ => null, new DaggerfallItemInstances(), definitions,
+            new Dictionary<long, DaggerfallActorDefinition>(), null!, uses.Add);
         FactBuffer<IProductFact> facts = new();
 
         combat.Apply(
@@ -128,12 +232,13 @@ public sealed class DaggerfallSkillUseReactionTests
         Assert.Equal(1, progression.Level);
     }
 
-    private static (DaggerfallSkillUseReactions Uses, ProgressionState Progression, StatsComponent Stats) Create()
+    private static (DaggerfallSkillUseReactions Uses, ProgressionState Progression, StatsComponent Stats) Create(Action<StatsComponent>? configure = null)
     {
         DaggerfallDefinitions definitions = LoadDefinitions();
         DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
         ProgressionState progression = new();
         StatsComponent stats = new DaggerfallMechanicsState().CreateStats(player, player.PlayerInitialVitals);
+        configure?.Invoke(stats);
         return (new DaggerfallSkillUseReactions(progression, stats, definitions, player), progression, stats);
     }
 

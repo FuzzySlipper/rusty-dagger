@@ -13,7 +13,8 @@ internal sealed class DaggerfallState(PlayerControlState playerControl, ActorsSt
     MechanicsInventoryCoordinator inventory, MechanicsEquipmentCoordinator equipment,
     MechanicsInventoryContainerCoordinator containers, IReadOnlyDictionary<InventoryItemId, ItemDefinition> items,
     IReadOnlyDictionary<WorldRpg.Kit.Inventory.EquipmentSlotId, EquipmentSlotDefinition> slots,
-    InventoryStore inventoryStore, DaggerfallVariableStore variables, DaggerfallNpcRegistry npcs, DaggerfallSocialState social)
+    InventoryStore inventoryStore, DaggerfallVariableStore variables, DaggerfallNpcRegistry npcs, DaggerfallSocialState social,
+    DaggerfallItemInstances itemInstances, DaggerfallCharacterState character, DaggerfallQuestInstances quests)
 {
     internal GameplayServices<IProductFact> Kit { get; set; } = null!;
     /// <summary>Compiled Daggerfall effect policy over the attached per-actor Engine effect components.</summary>
@@ -34,6 +35,12 @@ internal sealed class DaggerfallState(PlayerControlState playerControl, ActorsSt
     internal DaggerfallNpcRegistry Npcs { get; } = npcs;
     /// <summary>Persistent Daggerfall reputation, reaction, and guild-membership policy for talk, services, and quests.</summary>
     internal DaggerfallSocialState Social { get; } = social;
+    /// <summary>Daggerfall instance meaning paired with Engine-backed stacks and unique items.</summary>
+    internal DaggerfallItemInstances ItemInstances { get; } = itemInstances;
+    /// <summary>The committed player identity and its cancellable creation draft.</summary>
+    internal DaggerfallCharacterState Character { get; } = character;
+    /// <summary>Current Daggerfall quest instances over admitted definitions and durable product bindings.</summary>
+    internal DaggerfallQuestInstances Quests { get; } = quests;
     internal MechanicsInventoryCoordinator? InventoryFor(long durableActorId) =>
         Actors.TryGet(durableActorId, out var actor) ? new(actor.Inventory, Actors.Entities, items) : null;
     internal MechanicsEquipmentCoordinator EquipmentFor(long durableActorId)

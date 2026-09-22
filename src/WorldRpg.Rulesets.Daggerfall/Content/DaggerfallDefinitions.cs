@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
@@ -50,6 +51,7 @@ internal static class DaggerfallMechanicsIds
     internal static readonly DaggerfallStatId Personality = new("personality");
     internal static readonly DaggerfallStatId Speed = new("speed");
     internal static readonly DaggerfallStatId Luck = new("luck");
+    internal static readonly DaggerfallStatId Reflexes = new("reflexes");
     internal static readonly DaggerfallStatId ResistanceFire = new("resistance-fire");
     internal static readonly DaggerfallStatId ResistanceFrost = new("resistance-frost");
     internal static readonly DaggerfallStatId ResistanceDiseaseOrPoison = new("resistance-disease-or-poison");
@@ -284,5 +286,8 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     /// with text that is legitimately empty.
     /// </summary>
     internal DaggerfallTextSet Text { get; } = text;
+
+    /// <summary>The Daggerfall presentation owner for normalized lookup, layout and global macro expansion.</summary>
+    internal DaggerfallTextResolver TextPresentation { get; } = new(text);
     internal DaggerfallActorDefinition RequireActor(DaggerfallActorId id) => Actors.TryGetValue(id, out DaggerfallActorDefinition? actor) ? actor : throw new InvalidOperationException($"Daggerfall definitions do not contain actor '{id.Value}'.");
 }

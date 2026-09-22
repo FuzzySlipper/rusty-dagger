@@ -19,7 +19,9 @@ internal sealed record CharacterSheetPresentation(
     CharacterResourcePresentation[] Resources,
     CharacterProgressionPresentation Progression,
     CharacterEquipmentPresentation[] Equipment,
-    CharacterIdentityPresentation? Identity = null);
+    CharacterIdentityPresentation? Identity = null,
+    DaggerfallCareerSkillGrant[]? GrantedSkills = null,
+    DaggerfallCharacterCreationPresentation? Creation = null);
 
 /// <summary>One presentation layer a character is drawn from, by the identity a consumer resolves.</summary>
 /// <param name="Layer">The layer's role, as the publication names it.</param>
@@ -34,7 +36,9 @@ internal sealed record CharacterMediaIdentity(string Layer, string MediaId);
 /// <param name="DonorRaceId">The donor's race value for that race, or zero.</param>
 /// <param name="Portrait">The career's portrait identity, or empty when the career has none or none is named.</param>
 /// <param name="Media">Every layer the race publishes, in the order the publication names them.</param>
-internal sealed record CharacterIdentityPresentation(string Race, int DonorRaceId, string Portrait, CharacterMediaIdentity[] Media)
+internal sealed record CharacterIdentityPresentation(
+    string Race, int DonorRaceId, string Portrait, CharacterMediaIdentity[] Media,
+    string Gender = "", int FaceIndex = 0, string Career = "", CharacterMediaIdentity[]? SelectedMedia = null)
 {
     /// <summary>
     /// Resolves an actor's declared race and career through the published presentation set.
@@ -48,12 +52,12 @@ internal sealed record CharacterIdentityPresentation(string Race, int DonorRaceI
     private static string LayerName(DaggerfallCharacterLayerDefinition layer) => layer.Kind switch
     {
         DaggerfallCharacterLayerKind.Background => "background",
-        DaggerfallCharacterLayerKind.BodyUnclothed => $"body.{Gender(layer.Gender)}.unclothed",
-        DaggerfallCharacterLayerKind.BodyClothed => $"body.{Gender(layer.Gender)}.clothed",
-        _ => $"head.{Gender(layer.Gender)}.{layer.HeadIndex}",
+        DaggerfallCharacterLayerKind.BodyUnclothed => $"body.{LayerGender(layer.Gender)}.unclothed",
+        DaggerfallCharacterLayerKind.BodyClothed => $"body.{LayerGender(layer.Gender)}.clothed",
+        _ => $"head.{LayerGender(layer.Gender)}.{layer.HeadIndex}",
     };
 
-    private static string Gender(DaggerfallCharacterGender? gender) => gender == DaggerfallCharacterGender.Female ? "female" : "male";
+    private static string LayerGender(DaggerfallCharacterGender? gender) => gender == DaggerfallCharacterGender.Female ? "female" : "male";
 
     internal static CharacterIdentityPresentation? From(DaggerfallDefinitions definitions, DaggerfallActorDefinition? actor)
     {
@@ -73,33 +77,67 @@ internal sealed record CharacterIdentityPresentation(string Race, int DonorRaceI
             portrait,
             [.. layers.Layers.Select(layer => new CharacterMediaIdentity(LayerName(layer), layer.MediaId))]);
     }
+
+    /// <summary>Resolves the committed player identity including its exact gender and face media.</summary>
+    internal static CharacterIdentityPresentation From(DaggerfallDefinitions definitions, DaggerfallCharacterIdentity identity)
+    {
+        ArgumentNullException.ThrowIfNull(definitions);
+        ArgumentNullException.ThrowIfNull(identity);
+        DaggerfallRaceLayers layers = definitions.CharacterPresentation.RequireRace(identity.RaceId);
+        string portrait = definitions.CharacterPresentation.Careers.TryGetValue(identity.CareerId, out DaggerfallCareerPortraitDefinition? found)
+            ? found.MediaId : string.Empty;
+        DaggerfallCharacterLayerDefinition head = layers.Heads(identity.Gender).Single(layer => layer.HeadIndex == identity.FaceIndex);
+        CharacterMediaIdentity[] all = [.. layers.Layers.Select(layer => new CharacterMediaIdentity(LayerName(layer), layer.MediaId))];
+        CharacterMediaIdentity[] selected =
+        [
+            new CharacterMediaIdentity(LayerName(layers.Background), layers.Background.MediaId),
+            new CharacterMediaIdentity(LayerName(layers.Body(identity.Gender, clothed: true)), layers.Body(identity.Gender, clothed: true).MediaId),
+            new CharacterMediaIdentity(LayerName(head), head.MediaId),
+        ];
+        return new CharacterIdentityPresentation(identity.RaceId, layers.DonorRaceId, portrait, all,
+            identity.Gender == DaggerfallCharacterGender.Female ? "female" : "male", identity.FaceIndex, identity.CareerId, selected);
+    }
 }
 
 /// <summary>
 /// Daggerfall's character-sheet policy. Mechanics supplies live stat and
 /// resource values; definitions retain the ordered vocabulary and item meaning.
 /// </summary>
-internal sealed class DaggerfallCharacterPresentation(
-    DaggerfallDefinitions definitions,
-    DaggerfallActorDefinition playerDefinition,
-    MechanicsEquipmentCoordinator equipment)
+internal sealed class DaggerfallCharacterPresentation
 {
+    private readonly DaggerfallDefinitions _definitions;
+    private readonly DaggerfallActorDefinition _playerDefinition;
+    private readonly MechanicsEquipmentCoordinator _equipment;
+    private readonly DaggerfallCharacterState? _character;
+
+    internal DaggerfallCharacterPresentation(DaggerfallDefinitions definitions, DaggerfallActorDefinition playerDefinition, MechanicsEquipmentCoordinator equipment)
+    {
+        _definitions = definitions; _playerDefinition = playerDefinition; _equipment = equipment;
+    }
+
+    internal DaggerfallCharacterPresentation(DaggerfallDefinitions definitions, DaggerfallCharacterState character, DaggerfallActorDefinition playerDefinition, MechanicsEquipmentCoordinator equipment)
+    {
+        _definitions = definitions; _character = character; _playerDefinition = playerDefinition; _equipment = equipment;
+    }
+
     internal CharacterSheetPresentation Read(PlayerActorState player, ProgressionState progression)
     {
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(progression);
         return new CharacterSheetPresentation(
-            "Player",
-            Stats(player, definitions.Vocabulary.Attributes),
-            Stats(player, definitions.Vocabulary.Skills),
-            definitions.HudResources.Select(resource => Resource(player, resource)).ToArray(),
+            _character?.Identity.Name ?? "Player",
+            Stats(player, _definitions.Vocabulary.Attributes),
+            Stats(player, _definitions.Vocabulary.Skills),
+            _definitions.HudResources.Select(resource => Resource(player, resource)).ToArray(),
             new CharacterProgressionPresentation(progression.Level, progression.Experience),
             Equipment(),
-            CharacterIdentityPresentation.From(definitions, playerDefinition));
+            _character is null ? CharacterIdentityPresentation.From(_definitions, _playerDefinition) : CharacterIdentityPresentation.From(_definitions, _character.Identity),
+            _character is null ? [] : [.. _character.GrantedSkills],
+            _character?.ReadCreation());
     }
 
     private CharacterStatPresentation[] Stats(PlayerActorState player, IReadOnlyList<DaggerfallStatId> ids) => ids
-        .Where(id => playerDefinition.Stats.Values.ContainsKey(id))
+        .Where(id => _playerDefinition.Stats.Values.ContainsKey(id))
         .Select(id => new CharacterStatPresentation(id.Value, Label(id.Value), player.Stats.GetStat(StatId.Parse(id.Value)).ValueInt64))
         .ToArray();
 
@@ -110,11 +148,11 @@ internal sealed class DaggerfallCharacterPresentation(
     }
 
 
-    private CharacterEquipmentPresentation[] Equipment() => equipment.Read().Assignments
+    private CharacterEquipmentPresentation[] Equipment() => _equipment.Read().Assignments
         .GroupBy(assignment => assignment.Item.EntityId)
         .Select(group =>
         {
-            DaggerfallItemDefinition item = definitions.Items[new DaggerfallItemId(group.First().Item.Definition.Value)];
+            DaggerfallItemDefinition item = _definitions.Items[new DaggerfallItemId(group.First().Item.Definition.Value)];
             return new CharacterEquipmentPresentation(
                 Label(item.Id.Value),
                 group.Select(assignment => Label(assignment.Slot.Value)).OrderBy(value => value, StringComparer.Ordinal).ToArray(),
