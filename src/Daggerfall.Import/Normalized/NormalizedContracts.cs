@@ -694,12 +694,18 @@ public sealed record NormalizedTreasurePlacement(string Id, string TreasureResou
     }
 }
 
+/// <summary>Normalized RDB action linkage retained for the compiled action graph.</summary>
+public sealed record NormalizedDoorAction(byte Axis, ushort Duration, ushort Magnitude, int NextObjectOffset, byte Flags);
+
 public sealed record NormalizedDoorPlacement(
     string Id,
     string DoorResourceId,
     IReadOnlyList<string> VisualMeshIds,
     NormalizedVector3 Position,
-    NormalizedVector3 RotationDegrees)
+    NormalizedVector3 RotationDegrees,
+    string Kind = "normal",
+    int StartingLockValue = 0,
+    NormalizedDoorAction? Action = null)
 {
     public NormalizedDoorPlacement Canonicalize() => this with
     {
@@ -723,6 +729,8 @@ public sealed record NormalizedDoorPlacement(
         }
         Position.Validate(nameof(Position));
         RotationDegrees.Validate(nameof(RotationDegrees));
+        if (Kind is not ("normal" or "special")) throw new ArgumentException($"A normalized door kind must be normal or special, got '{Kind ?? "<null>"}'.", nameof(Kind));
+        if (StartingLockValue < 0 || Kind == "special" && StartingLockValue != 0) throw new ArgumentOutOfRangeException(nameof(StartingLockValue));
     }
 }
 

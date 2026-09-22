@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Numerics;
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -83,6 +84,26 @@ public sealed class NormalizedPrivateersHoldContentTests
         Assert.Equal("weapon.dagger.steel", Assert.IsType<NormalizedClassicWeapon>(inputs.ClassicPresentation.Weapons["weapon.dagger.steel"]).ResourceId);
         Assert.Equal("weapon.dagger.steel", inputs.ClassicPresentation.CompatibleItemVisuals["iron-dagger"]);
         Assert.Equal(["blood0", "blood1", "blood2", "magicSparkle"], inputs.ClassicPresentation.Effects.Select(effect => effect.Name));
+    }
+
+    [Fact]
+    public void Projects_selected_privateers_hold_RDB_doors_with_real_source_id_pose_and_action_visual_bounds()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+
+        PrivateersHoldInputs inputs = PrivateersHoldContent.Read(GeneratedContent(root),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
+
+        Assert.Equal(58, inputs.Doors.Count);
+        DaggerfallRdbDoorDefinition first = Assert.Single(inputs.Doors, door => door.Id == new DaggerfallRdbDoorId("B0000003.RDB", 1, 0, 0));
+        Assert.Equal(new Vector3(67.8F, 32F, 0F), first.Position);
+        Assert.Equal(new Vector3(0F, 540F, 0F), first.RotationDegrees);
+        Assert.True(first.BoundsMin.X < first.BoundsMax.X);
+        Assert.True(first.BoundsMin.Y < first.BoundsMax.Y);
+        Assert.True(first.BoundsMin.Z < first.BoundsMax.Z);
+        DaggerfallRdbDoorDefinition locked = Assert.Single(inputs.Doors, door => door.Id == new DaggerfallRdbDoorId("S0000999.RDB", 0, 0, 153));
+        Assert.Equal(2, locked.StartingLockValue);
     }
 
     [Fact]

@@ -40,6 +40,29 @@ public sealed class NormalizedRuntimeSeamTests
     private static readonly ContentSha256 Hash = new(1, 2, 3, 4);
 
     [Fact]
+    public void Selected_RDB_door_visuals_share_their_runtime_pose_and_keep_the_appearance_snapshot_unique()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        AppearanceFake graphics = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, graphics, PerceptionFake.Create().Service);
+
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        session.PublishInitial();
+
+        AppearanceFact[] snapshot = Assert.Single(graphics.Snapshots);
+        Assert.Equal(snapshot.Length, snapshot.Select(fact => fact.ObjectId).Distinct().Count());
+        Assert.Equal(1 + inputs.Doors.Count, graphics.StaticMeshContentRequests.Count);
+        foreach (DaggerfallRdbDoorDefinition door in inputs.Doors)
+            Assert.Contains(snapshot, fact => fact.Transform.Translation == door.Position);
+    }
+
+    [Fact]
     public void Ordinary_rest_opens_a_saved_level_allocation_that_commits_one_health_gain_after_reload()
     {
         string root = RepositoryRoot();
@@ -6322,6 +6345,7 @@ public sealed class NormalizedRuntimeSeamTests
     private sealed class AppearanceFake(List<string> releases) : IGraphicsService
     {
         internal List<RenderResourceRequest> OpenResourceRequests { get; } = [];
+        internal List<StaticMeshContentAppearanceRequest> StaticMeshContentRequests { get; } = [];
         internal List<MeshMaterialBinding> StaticMeshBindings { get; } = [];
         internal List<SpriteAtlasCreateRequest> AtlasRequests { get; } = [];
         internal List<SpriteFromAtlasRequest> SpriteRequests { get; } = [];
@@ -6385,7 +6409,7 @@ public sealed class NormalizedRuntimeSeamTests
         public MeshPartition PartitionMesh(MeshPartitionRequest request) => throw new NotSupportedException();
         public MeshPartitionReadout ReadMeshPartition(MeshPartition partition) => throw new NotSupportedException();
         public MeshResource TakeMeshPartitionPart(MeshPartitionPartRequest request) => throw new NotSupportedException();
-        public Appearance CreateStaticMeshFromContent(StaticMeshContentAppearanceRequest request) => CreateAppearance();
+        public Appearance CreateStaticMeshFromContent(StaticMeshContentAppearanceRequest request) { StaticMeshContentRequests.Add(request); return CreateAppearance(); }
         public Appearance CreateStaticMeshFromContentReference(StaticMeshContentReferenceRequest request) => CreateAppearance();
         public Appearance ReplaceStaticMesh(Appearance appearance, StaticMeshAppearanceRequest request) => CreateAppearance();
         public Appearance ReplaceStaticMeshFromContent(Appearance appearance, StaticMeshContentAppearanceRequest request) => CreateAppearance();

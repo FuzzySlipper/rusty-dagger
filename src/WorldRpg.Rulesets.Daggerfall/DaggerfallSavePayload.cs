@@ -4,6 +4,7 @@ using Rusty.Engine;
 using WorldRpg.Kit;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -32,6 +33,9 @@ internal sealed record DaggerfallSavePayload(
     /// <summary>Every current quest instance; an empty collection is meaningful current state.</summary>
     [JsonRequired]
     public DaggerfallQuestInstancesSave Quests { get; init; } = new([]);
+    /// <summary>Every selected RDB door's current state, including a partially completed motion.</summary>
+    [JsonRequired]
+    public DaggerfallDoorSave[] Doors { get; init; } = [];
     /// <summary>The dynamic identity kinds owned by the current Daggerfall ruleset.</summary>
     internal static readonly DurableIdentityKind[] PersistedKinds = [DurableIdentityKind.Actor, DurableIdentityKind.Item];
 
@@ -68,6 +72,17 @@ internal sealed record DaggerfallSavePayload(
     {
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(inputs);
+        HashSet<DaggerfallRdbDoorId> selectedDoors = [.. inputs.Doors.Select(door => door.Id)];
+        HashSet<DaggerfallRdbDoorId> savedDoors = [];
+        foreach (DaggerfallDoorSave door in Doors)
+        {
+            ArgumentNullException.ThrowIfNull(door);
+            door.Validate();
+            if (!selectedDoors.Contains(door.Id) || !savedDoors.Add(door.Id))
+                throw new ArgumentException($"Saved RDB door '{door.Id}' is not a distinct door in the selected world.");
+        }
+        if (!savedDoors.SetEquals(selectedDoors))
+            throw new ArgumentException("Current save must carry one state for every selected RDB door.");
         _ = definitions.RequireActor(new DaggerfallActorId("player"));
         HashSet<long> savedActorIds = [];
         foreach (DaggerfallActorSave actor in Actors)
@@ -185,6 +200,8 @@ internal sealed record DaggerfallSavePayload(
         Social.Validate();
         ArgumentNullException.ThrowIfNull(Quests);
         Quests.Validate();
+        ArgumentNullException.ThrowIfNull(Doors);
+        foreach (DaggerfallDoorSave door in Doors) { ArgumentNullException.ThrowIfNull(door); door.Validate(); }
         ArgumentNullException.ThrowIfNull(Character);
         LevelUp?.Validate();
         if (LevelUp is not null && LevelUp.Level != Level + 1)

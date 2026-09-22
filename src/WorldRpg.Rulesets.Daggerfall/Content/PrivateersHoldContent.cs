@@ -5,6 +5,7 @@ using System.Text.Json;
 using Rusty.Engine;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
@@ -66,10 +67,12 @@ internal static class PrivateersHoldContent
         Dictionary<string, ContentSha256> artifacts = ReadImportArtifacts(files, Prefix("import-manifest.json"), publicationRoot, diagnostics);
         string spatialPath = Prefix("spatial/privateer-s-hold/collision-navigation.json");
         string meshPath = Prefix("spatial/privateer-s-hold/static-mesh.json");
+        string normalizedPath = Prefix("normalized.json");
         string mediaPath = Prefix("media/dungeon/manifest.json");
         string classicMediaPath = Prefix("media/classic/manifest.json");
         ContentSha256 spatialHash = RequireArtifact(artifacts, spatialPath, diagnostics);
         ContentSha256 meshHash = RequireArtifact(artifacts, meshPath, diagnostics);
+        _ = RequireArtifact(artifacts, normalizedPath, diagnostics);
         ContentSha256 mediaHash = RequireArtifact(artifacts, mediaPath, diagnostics);
         ContentSha256 classicMediaHash = RequireArtifact(artifacts, classicMediaPath, diagnostics);
         ulong gridId = UnsignedInteger(world, "navigationGridId", diagnostics);
@@ -81,6 +84,7 @@ internal static class PrivateersHoldContent
             artifacts,
             definitions,
             diagnostics);
+        IReadOnlyList<DaggerfallRdbDoorDefinition> doors = ReadNormalizedDoors(files.GetExactlyOne(normalizedPath), publicationRoot, artifacts, materials, diagnostics);
         (IReadOnlyList<NormalizedAudioClip> audio, NormalizedClassicPresentation classicPresentation) = ReadClassicPresentation(
             files, files.GetExactlyOne(classicMediaPath), publicationRoot, artifacts, diagnostics);
         classicPresentation = ReadClassicSelection(root, classicPresentation, definitions, diagnostics);
@@ -112,7 +116,190 @@ internal static class PrivateersHoldContent
             new ReadOnlyDictionary<long, NormalizedActorSprite>(actorSprites),
             audio,
             classicPresentation,
-            start.Site);
+            start.Site,
+            doors);
+    }
+
+    /// <summary>
+    /// Selects the actual RDB action doors published with this world closure.  The import has
+    /// already converted source coordinates and model rotations; this reader only validates and
+    /// projects those normalized facts.  Door bounds come from the action visual meshes, whose
+    /// geometry is deliberately excluded from the world's static collision artifact.
+    /// </summary>
+    private static IReadOnlyList<DaggerfallRdbDoorDefinition> ReadNormalizedDoors(ReadOnlyMemory<byte>? bytes, string publicationRoot, IReadOnlyDictionary<string, ContentSha256> artifacts, IReadOnlyList<NormalizedMaterial> materials, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (bytes is null)
+        {
+            diagnostics.Add("Normalized world closure must contain normalized.json for its selected RDB doors.");
+            return [];
+        }
+
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(bytes.Value);
+            JsonElement root = DaggerfallBaseContent.Object(document.RootElement, "normalized world", diagnostics);
+            JsonElement world = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "world", diagnostics), "normalized world.world", diagnostics);
+            Dictionary<string, ContentArtifact> artifactById = [];
+            foreach (JsonElement candidate in DaggerfallBaseContent.Array(root, "artifacts", diagnostics))
+            {
+                JsonElement artifact = DaggerfallBaseContent.Object(candidate, "normalized artifact", diagnostics);
+                string id = DaggerfallBaseContent.Text(artifact, "id", diagnostics);
+                string relativePath = DaggerfallBaseContent.Text(artifact, "relativePath", diagnostics);
+                string path = $"{publicationRoot.TrimEnd('/')}/{relativePath}";
+                if (!artifacts.TryGetValue(path, out ContentSha256 hash)) diagnostics.Add($"Normalized artifact '{id}' is absent from the admitted import manifest.");
+                else if (!artifactById.TryAdd(id, new ContentArtifact(path, hash))) diagnostics.Add($"Normalized world repeats artifact '{id}'.");
+            }
+            Dictionary<string, uint> worldMaterialSlots = materials.Where(material => !string.IsNullOrWhiteSpace(material.MaterialResourceId))
+                .ToDictionary(material => material.MaterialResourceId, material => material.Slot, StringComparer.Ordinal);
+            Dictionary<string, JsonElement> meshes = [];
+            foreach (JsonElement candidate in DaggerfallBaseContent.Array(root, "meshes", diagnostics))
+            {
+                JsonElement mesh = DaggerfallBaseContent.Object(candidate, "normalized world mesh", diagnostics);
+                string id = DaggerfallBaseContent.Text(mesh, "id", diagnostics);
+                if (!meshes.TryAdd(id, mesh)) diagnostics.Add($"Normalized world repeats mesh '{id}'.");
+            }
+
+            List<DaggerfallRdbDoorDefinition> result = [];
+            HashSet<DaggerfallRdbDoorId> identities = [];
+            foreach (JsonElement candidate in DaggerfallBaseContent.Array(world, "doors", diagnostics))
+            {
+                JsonElement door = DaggerfallBaseContent.Object(candidate, "normalized RDB door", diagnostics);
+                string sourceId = DaggerfallBaseContent.Text(door, "id", diagnostics);
+                if (!TryDoorIdentity(sourceId, out DaggerfallRdbDoorId identity))
+                {
+                    diagnostics.Add($"Normalized door '{sourceId}' must name one RDB model as door/<source>-rdb/<block-x>/<block-z>/<model-index>.");
+                    continue;
+                }
+                if (!identities.Add(identity))
+                {
+                    diagnostics.Add($"Normalized world repeats RDB door '{identity}'.");
+                    continue;
+                }
+
+                Vector3 position = ObjectVector3(DaggerfallBaseContent.Property(door, "position", diagnostics), $"normalized door '{sourceId}' position", diagnostics);
+                Vector3 rotation = ObjectVector3(DaggerfallBaseContent.Property(door, "rotationDegrees", diagnostics), $"normalized door '{sourceId}' rotation", diagnostics);
+                DaggerfallDoorKind kind = DaggerfallBaseContent.Text(door, "kind", diagnostics) switch
+                {
+                    "normal" => DaggerfallDoorKind.Normal,
+                    "special" => DaggerfallDoorKind.Special,
+                    _ => InvalidDoorKind(identity, diagnostics),
+                };
+                int startingLock = DaggerfallBaseContent.Integer(door, "startingLockValue", diagnostics);
+                DaggerfallDoorActionSource? action = ReadDoorAction(DaggerfallBaseContent.Property(door, "action", diagnostics), identity, diagnostics);
+                if (rotation.X != 0F || rotation.Z != 0F)
+                {
+                    diagnostics.Add($"Normalized RDB door '{identity}' must have a yaw-only rotation.");
+                    continue;
+                }
+
+                List<Vector3> vertices = [];
+                HashSet<string> materialIds = [];
+                foreach (JsonElement meshIdValue in DaggerfallBaseContent.Array(door, "visualMeshIds", diagnostics))
+                {
+                    if (meshIdValue.ValueKind != JsonValueKind.String)
+                    {
+                        diagnostics.Add($"Normalized RDB door '{identity}' visualMeshIds must contain strings.");
+                        continue;
+                    }
+                    string meshId = meshIdValue.GetString() ?? string.Empty;
+                    if (!meshes.TryGetValue(meshId, out JsonElement mesh))
+                    {
+                        diagnostics.Add($"Normalized RDB door '{identity}' refers to missing visual mesh '{meshId}'.");
+                        continue;
+                    }
+                    foreach (JsonElement vertex in DaggerfallBaseContent.Array(mesh, "vertices", diagnostics))
+                        vertices.Add(ObjectVector3(DaggerfallBaseContent.Object(vertex, $"normalized RDB door '{identity}' vertex", diagnostics), $"normalized RDB door '{identity}' vertex", diagnostics));
+                    foreach (JsonElement groupValue in DaggerfallBaseContent.Array(mesh, "materialGroups", diagnostics))
+                        materialIds.Add(DaggerfallBaseContent.Text(DaggerfallBaseContent.Object(groupValue, $"normalized RDB door '{identity}' material group", diagnostics), "materialResourceId", diagnostics));
+                }
+                if (vertices.Count == 0)
+                {
+                    diagnostics.Add($"Normalized RDB door '{identity}' must have action visual geometry.");
+                    continue;
+                }
+
+                Quaternion closed = DaggerfallDoorPose.ClosedRotation(rotation);
+                Quaternion inverse = Quaternion.Inverse(closed);
+                Vector3 first = Vector3.Transform(vertices[0] - position, inverse);
+                Vector3 minimum = first;
+                Vector3 maximum = first;
+                foreach (Vector3 worldVertex in vertices.Skip(1))
+                {
+                    Vector3 local = Vector3.Transform(worldVertex - position, inverse);
+                    minimum = Vector3.Min(minimum, local);
+                    maximum = Vector3.Max(maximum, local);
+                }
+                try
+                {
+                    string artifactId = $"artifact/dungeon/privateer-s-hold/static-mesh/door/{sourceId["door/".Length..].Replace('/', '-')}";
+                    if (!artifactById.TryGetValue(artifactId, out ContentArtifact? visualArtifact))
+                    {
+                        diagnostics.Add($"Normalized RDB door '{identity}' has no separately published visual artifact.");
+                        continue;
+                    }
+                    DaggerfallDoorMaterialBinding[] bindings = materialIds.OrderBy(material => material, StringComparer.Ordinal)
+                        .Select(material => worldMaterialSlots.TryGetValue(material, out uint worldSlot)
+                            ? new DaggerfallDoorMaterialBinding(worldSlot, worldSlot)
+                            : throw new InvalidOperationException($"Normalized RDB door '{identity}' refers to missing material '{material}'."))
+                        .ToArray();
+                    result.Add(new DaggerfallRdbDoorDefinition(identity, position, rotation, minimum, maximum, kind, startingLock,
+                        Visual: new DaggerfallDoorVisual(visualArtifact.Path, visualArtifact.Sha256, bindings), Action: action).Validate());
+                }
+                catch (ArgumentException exception)
+                {
+                    diagnostics.Add($"Normalized RDB door '{identity}' has invalid pose or bounds: {exception.Message}");
+                }
+            }
+            return result.OrderBy(value => value.Id.SourceKey, StringComparer.Ordinal)
+                .ThenBy(value => value.Id.BlockX)
+                .ThenBy(value => value.Id.BlockZ)
+                .ThenBy(value => value.Id.ModelIndex)
+                .ToArray();
+        }
+        catch (JsonException exception)
+        {
+            diagnostics.Add($"Normalized world closure is not valid JSON: {exception.Message}");
+            return [];
+        }
+    }
+
+    private static bool TryDoorIdentity(string sourceId, out DaggerfallRdbDoorId identity)
+    {
+        identity = default;
+        string[] parts = sourceId.Split('/', StringSplitOptions.None);
+        if (parts.Length != 5 || !StringComparer.Ordinal.Equals(parts[0], "door")
+            || !parts[1].EndsWith("-rdb", StringComparison.Ordinal)
+            || !int.TryParse(parts[2], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int blockX)
+            || !int.TryParse(parts[3], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int blockZ)
+            || !int.TryParse(parts[4], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int modelIndex))
+            return false;
+        string source = parts[1][..^"-rdb".Length];
+        if (source.Length == 0) return false;
+        identity = new DaggerfallRdbDoorId($"{source.ToUpperInvariant()}.RDB", blockX, blockZ, modelIndex);
+        return true;
+    }
+
+    private static DaggerfallDoorKind InvalidDoorKind(DaggerfallRdbDoorId identity, DaggerfallContentDiagnostics diagnostics)
+    {
+        diagnostics.Add($"Normalized RDB door '{identity}' has an unknown kind.");
+        return DaggerfallDoorKind.Normal;
+    }
+
+    private static DaggerfallDoorActionSource? ReadDoorAction(JsonElement value, DaggerfallRdbDoorId identity, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (value.ValueKind == JsonValueKind.Null) return null;
+        JsonElement action = DaggerfallBaseContent.Object(value, $"normalized RDB door '{identity}' action", diagnostics);
+        int axis = DaggerfallBaseContent.Integer(action, "axis", diagnostics);
+        int duration = DaggerfallBaseContent.Integer(action, "duration", diagnostics);
+        int magnitude = DaggerfallBaseContent.Integer(action, "magnitude", diagnostics);
+        int next = DaggerfallBaseContent.Integer(action, "nextObjectOffset", diagnostics);
+        int flags = DaggerfallBaseContent.Integer(action, "flags", diagnostics);
+        if (axis is < byte.MinValue or > byte.MaxValue || duration is < ushort.MinValue or > ushort.MaxValue || magnitude is < ushort.MinValue or > ushort.MaxValue || flags is < byte.MinValue or > byte.MaxValue)
+        {
+            diagnostics.Add($"Normalized RDB door '{identity}' action values are out of source range.");
+            return null;
+        }
+        return new((byte)axis, (ushort)duration, (ushort)magnitude, next, (byte)flags);
     }
 
     private static Dictionary<long, AuthoredActor> ReadNormalizedPlacements(JsonElement root, DaggerfallDefinitions definitions, DaggerfallContentDiagnostics diagnostics)
@@ -232,7 +419,7 @@ internal static class PrivateersHoldContent
                 uint slot = checked((uint)DaggerfallBaseContent.Integer(material, "materialSlot", diagnostics));
                 string textureId = DaggerfallBaseContent.Text(material, "mediaId", diagnostics);
                 if (!resources.TryGetValue(textureId, out MediaResource? texture)) diagnostics.Add($"Generated material slot '{slot}' refers to missing media '{textureId}'.");
-                else materials.Add(new NormalizedMaterial(slot, texture.Path, texture.Hash));
+                else materials.Add(new NormalizedMaterial(slot, texture.Path, texture.Hash, DaggerfallBaseContent.Text(material, "materialResourceId", diagnostics)));
             }
             if (materials.Select(material => material.Slot).Distinct().Count() != materials.Count) diagnostics.Add("Generated dungeon materials repeat a static-mesh material slot.");
 
@@ -796,6 +983,13 @@ internal static class PrivateersHoldContent
         if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() != 3) { diagnostics.Add($"'{name}' must be a three-number vector."); return default; }
         return new(NumberAt(value, 0, name, diagnostics), NumberAt(value, 1, name, diagnostics), NumberAt(value, 2, name, diagnostics));
     }
+    private static Vector3 ObjectVector3(JsonElement value, string name, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (value.ValueKind != JsonValueKind.Object) { diagnostics.Add($"'{name}' must be an object with x, y and z."); return default; }
+        return new(Number(DaggerfallBaseContent.Property(value, "x", diagnostics), name, diagnostics),
+            Number(DaggerfallBaseContent.Property(value, "y", diagnostics), name, diagnostics),
+            Number(DaggerfallBaseContent.Property(value, "z", diagnostics), name, diagnostics));
+    }
     private static Quaternion QuaternionValue(JsonElement value, string name, DaggerfallContentDiagnostics diagnostics)
     {
         if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() != 4) { diagnostics.Add($"'{name}' must be a four-number rotation."); return Quaternion.Identity; }
@@ -823,6 +1017,12 @@ internal static class PrivateersHoldContent
         diagnostics.Add($"'{name}' values must be finite numbers.");
         return 0f;
     }
+    private static float Number(JsonElement value, string name, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetSingle(out float number) && float.IsFinite(number)) return number;
+        diagnostics.Add($"'{name}' values must be finite numbers.");
+        return 0F;
+    }
     private static long Long(JsonElement value, string property, DaggerfallContentDiagnostics diagnostics)
     {
         JsonElement result = DaggerfallBaseContent.Property(value, property, diagnostics);
@@ -845,7 +1045,7 @@ internal sealed class AdmittedFiles
 internal sealed record ScenarioStart(WorldPoint Position, PlayerInitialLook Look, DaggerfallSiteId? Site);
 internal sealed record AuthoredWorldAppearance(Color Tint, Transform Transform, bool Visible, RenderLayer Layer);
 internal sealed record ContentArtifact(string Path, ContentSha256 Sha256);
-internal sealed record NormalizedMaterial(uint Slot, string TexturePath, ContentSha256 TextureSha256);
+internal sealed record NormalizedMaterial(uint Slot, string TexturePath, ContentSha256 TextureSha256, string MaterialResourceId = "");
 internal sealed record NormalizedAtlasFrame(uint Id, int X, int Y, int Width, int Height, Vector2? DisplaySize = null);
 internal sealed record NormalizedSpriteState(string Name, IReadOnlyList<uint> Frames, float FramesPerSecond, bool Loops)
 {
@@ -897,7 +1097,7 @@ internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 T
     internal NormalizedAttackSequence? RangedAttackSequence { get; init; }
     internal NormalizedActorSprite? Corpse { get; init; }
 }
-internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null)
+internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null, IReadOnlyList<DaggerfallRdbDoorDefinition>? doors = null)
 {
     internal ProjectFacts Project { get; } = project;
     internal SpatialContentArtifact SpatialArtifact { get; } = spatialArtifact;
@@ -908,6 +1108,14 @@ internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentA
     internal IReadOnlyDictionary<long, NormalizedActorSprite> ActorSprites { get; } = new ReadOnlyDictionary<long, NormalizedActorSprite>(actorSprites.ToDictionary());
     internal IReadOnlyList<NormalizedAudioClip> Audio { get; } = Array.AsReadOnly((audio ?? []).ToArray());
     internal NormalizedClassicPresentation ClassicPresentation { get; } = classicPresentation ?? NormalizedClassicPresentation.Empty;
+    /// <summary>Normalized RDB action doors for this selected published world, in stable source identity order.</summary>
+    internal IReadOnlyList<DaggerfallRdbDoorDefinition> Doors { get; } = Array.AsReadOnly((doors ?? [])
+        .Select(door => door.Validate())
+        .OrderBy(door => door.Id.SourceKey, StringComparer.Ordinal)
+        .ThenBy(door => door.Id.BlockX)
+        .ThenBy(door => door.Id.BlockZ)
+        .ThenBy(door => door.Id.ModelIndex)
+        .ToArray());
 
     /// <summary>
     /// The site the scenario starts the player at, when it declares one. It is the session's starting
