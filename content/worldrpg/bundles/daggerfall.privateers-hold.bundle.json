@@ -4,6 +4,7 @@
   "ruleset": "daggerfall",
   "contentPacks": [
     { "id": "daggerfall.base" },
+    { "id": "daggerfall.blocks" },
     { "id": "daggerfall.privateers-hold" }
   ],
   "tuning": { "id": "daggerfall.defaults" }

@@ -1,4 +1,5 @@
 using WorldRpg.Rulesets.Daggerfall.Content;
+using Rusty.Engine;
 
 namespace WorldRpg.Rulesets.Daggerfall.World;
 
@@ -26,6 +27,7 @@ internal sealed class DaggerfallSiteContext
     private readonly IReadOnlyDictionary<DaggerfallSiteId, DaggerfallSiteRecord> _records;
     private readonly IReadOnlyList<DaggerfallSiteRecord> _ordered;
     private readonly HashSet<DaggerfallSiteId> _discovered = [];
+    private DaggerfallBuildingNameService? _buildingNames;
 
     internal DaggerfallSiteContext(DaggerfallLocationSet locations)
         : this(locations, null, null, [])
@@ -104,6 +106,26 @@ internal sealed class DaggerfallSiteContext
     /// <summary>Resolves a site's record, or reports that the bundle does not carry it.</summary>
     internal bool TryFind(DaggerfallSiteId id, out DaggerfallSiteRecord record) =>
         _records.TryGetValue(id, out record!);
+
+    /// <summary>Admits the ruleset's block naming policy once the selected content pack is valid.</summary>
+    internal void AdmitBuildingNames(IRandomService random, DaggerfallDefinitions definitions, DaggerfallBlocksSnapshot blocks)
+    {
+        if (_buildingNames is not null)
+        {
+            throw new InvalidOperationException("Classic building names are already admitted for this site context.");
+        }
+
+        _buildingNames = new DaggerfallBuildingNameService(random, definitions, blocks, this);
+    }
+
+    /// <summary>
+    /// Resolves an actual admitted RMB building's classic name at an explicit site. Map, talk and
+    /// quest-place callers use this location authority rather than reconstructing loose seed, type,
+    /// or faction arguments.
+    /// </summary>
+    internal DaggerfallBuildingNameResult ResolveBuildingName(DaggerfallSiteId site, DaggerfallRmbBuildingId building) =>
+        _buildingNames?.Resolve(site, building)
+        ?? DaggerfallBuildingNameResult.Missing("Classic building-name content has not been admitted for this site context.");
 
     /// <summary>Resolves a site's record, naming the identity the bundle does not carry.</summary>
     internal DaggerfallSiteRecord Require(DaggerfallSiteId id) =>

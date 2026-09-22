@@ -42,6 +42,7 @@ internal static class DaggerfallBaseContent
             DaggerfallMagicCatalogSet magic = ReadMagicCatalog(root, diagnostics);
             DaggerfallLocationSet locations = ReadLocations(root, diagnostics);
             DaggerfallTextSet text = ReadText(root, diagnostics);
+            DaggerfallBuildingNameInputs buildingNames = ReadBuildingNameInputs(root, diagnostics);
             DaggerfallNameTablesSet names = ReadNameTables(root, text, diagnostics);
             DaggerfallRumorCatalogSet rumors = ReadRumorCatalog(root, text, diagnostics);
             DaggerfallBiographiesSet biographies = ReadBiographies(root, text, diagnostics);
@@ -55,7 +56,10 @@ internal static class DaggerfallBaseContent
             ValidateReferences(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, hud, diagnostics);
             ValidateCatalog(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, lootCategoryPools, donorErrata, diagnostics);
             diagnostics.ThrowIfAny();
-            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles, names, rumors, biographies, grids, books, factions, terrain, itemTemplatesCatalog, questSources, cinematics);
+            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles, names, rumors, biographies, grids, books, factions, terrain, itemTemplatesCatalog, questSources, cinematics)
+            {
+                BuildingNames = buildingNames,
+            };
         }
         catch (JsonException exception)
         {
@@ -826,6 +830,37 @@ internal static class DaggerfallBaseContent
         }
 
         return new DaggerfallTextSet(values, pendingKinds, macros);
+    }
+
+    /// <summary>
+    /// Reads the exact classic region-to-name-bank mapping. It cannot be inferred from a faction's
+    /// race: the donor's MapsFile table is a separate FALL.EXE-derived input used by name generation.
+    /// </summary>
+    private static DaggerfallBuildingNameInputs ReadBuildingNameInputs(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!root.TryGetProperty("buildingNames", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
+        {
+            diagnostics.Add("Base payload publishes no buildingNames section; classic building names cannot select a region name bank.");
+            return new DaggerfallBuildingNameInputs([]);
+        }
+
+        JsonElement source = Object(Property(section, "source", diagnostics), "buildingNames.source", diagnostics);
+        string path = Text(source, "path", diagnostics);
+        long byteLength = Long(source, "byteLength", diagnostics);
+        int regions = Integer(source, "regions", diagnostics);
+        if (string.IsNullOrWhiteSpace(path) || byteLength <= 0 || regions != 62)
+        {
+            diagnostics.Add("Building-name source must name a non-empty donor path, retain bytes, and publish all 62 classic regions.");
+        }
+
+        List<int> banks = [.. Array(section, "regionNameBanks", diagnostics).Select(entry =>
+        {
+            if (entry.ValueKind == JsonValueKind.Number && entry.TryGetInt32(out int value) && value is 0 or 1) return value;
+            diagnostics.Add("Building-name region bank must be Breton (0) or Redguard (1).");
+            return -1;
+        })];
+        if (banks.Count != 62) diagnostics.Add($"Building-name inputs publish {banks.Count} regions for the 62 classic regions.");
+        return new DaggerfallBuildingNameInputs(banks);
     }
 
     /// <summary>

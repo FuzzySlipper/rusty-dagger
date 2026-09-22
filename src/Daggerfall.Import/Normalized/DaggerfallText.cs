@@ -25,6 +25,9 @@ public enum DaggerfallTextKind
 
     /// <summary>A generated name, addressed by the bank and index its table states.</summary>
     Name,
+
+    /// <summary>A localized managed donor string, addressed by its Internal_Strings.csv key.</summary>
+    Internal,
 }
 
 /// <summary>One addressable text value: which source family it belongs to, and its identity there.</summary>
@@ -207,7 +210,7 @@ public sealed record DaggerfallTextRecord(
     public void Validate()
     {
         Key.Validate();
-        NormalizedImportDocument.RequireLogicalId(Source, nameof(Source));
+        NormalizedImportDocument.RequireLogicalPath(Source, nameof(Source));
         if (Index < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(Index), Index, $"Published text key '{Key}' cannot carry a negative ordinal.");
@@ -339,7 +342,13 @@ public sealed record DaggerfallText(
             throw new InvalidOperationException("A published text section must name the sources it read.");
         }
 
-        NormalizedImportDocument.ValidateUnique(Sources, source => source.Path, "text source");
+        foreach (IGrouping<string, DaggerfallTextSource> group in Sources.GroupBy(source => source.Path, StringComparer.Ordinal))
+        {
+            if (group.Count() > 1)
+            {
+                throw new InvalidOperationException($"Duplicate text source path '{group.Key}'.");
+            }
+        }
         foreach (DaggerfallTextSource source in Sources)
         {
             source.Validate();
@@ -678,7 +687,7 @@ public static class DaggerfallTextBuilder
     /// The distinct macro symbols the records carry, how many values carry each, and how the donor's own
     /// table accounts for the symbol.
     /// </summary>
-    private static IEnumerable<DaggerfallTextMacro> MacroIndex(IReadOnlyList<DaggerfallTextRecord> records)
+    internal static IEnumerable<DaggerfallTextMacro> MacroIndex(IReadOnlyList<DaggerfallTextRecord> records)
     {
         Dictionary<string, int> counts = new(StringComparer.Ordinal);
         foreach (DaggerfallTextRecord record in records)

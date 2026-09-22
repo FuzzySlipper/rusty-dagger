@@ -24,7 +24,7 @@ public sealed class DaggerfallTextSetTests
     {
         DaggerfallTextSet text = Definitions().Text;
 
-        Assert.Equal(3862 + 840, text.Values.Count);
+        Assert.Equal(3862 + 840 + 990, text.Values.Count);
         Assert.Equal(DaggerfallTextResolution.Resolved, text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Resource, "0"), out DaggerfallTextValue? value));
         Assert.Equal("local/arena2/TEXT.RSC", value!.Source);
         Assert.Equal("en", value.Language);
@@ -42,6 +42,11 @@ public sealed class DaggerfallTextSetTests
         Assert.Equal("Paralysis", text.Require(new DaggerfallTextKey(DaggerfallTextKind.Resource, "1202")).TextRuns.First());
         Assert.Equal(shared.Offset, text.Require(new DaggerfallTextKey(DaggerfallTextKind.Resource, "1202")).Offset);
         Assert.Equal(5, text.Require(new DaggerfallTextKey(DaggerfallTextKind.Resource, "11")).Subrecords);
+
+        DaggerfallTextValue stores = text.Require(new DaggerfallTextKey(DaggerfallTextKind.Internal, "StoresA"));
+        Assert.Contains("%ef", stores.Macros);
+        Assert.Contains("%rt", stores.Macros);
+        Assert.Equal("donor/daggerfall-unity/Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv", stores.Source);
     }
 
     [Fact]
@@ -82,15 +87,15 @@ public sealed class DaggerfallTextSetTests
     {
         DaggerfallTextSet text = Definitions().Text;
 
-        Assert.Equal(168, text.Macros.Count);
-        Assert.Equal(141, text.Macros.Count(macro => macro.Disposition == DaggerfallTextMacroDisposition.Handled));
-        Assert.Equal(18, text.Macros.Count(macro => macro.Disposition == DaggerfallTextMacroDisposition.DonorUnresolved));
-        Assert.Equal(9, text.Macros.Count(macro => macro.Disposition == DaggerfallTextMacroDisposition.Unrecognised));
+        Assert.Equal(177, text.Macros.Count);
+        Assert.Equal(142, text.Macros.Count(macro => macro.Disposition == DaggerfallTextMacroDisposition.Handled));
+        Assert.Equal(19, text.Macros.Count(macro => macro.Disposition == DaggerfallTextMacroDisposition.DonorUnresolved));
+        Assert.Equal(16, text.Macros.Count(macro => macro.Disposition == DaggerfallTextMacroDisposition.Unrecognised));
 
         // The index says which values carry a symbol. How often the corpus spells one is a fact about a
         // value's text that only the reader's own macro grammar produces, so the pack does not state it
         // and nothing here reads it: the reader checks the index against the values instead.
-        Assert.Equal(168, text.Macros.Select(macro => macro.Symbol).Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(177, text.Macros.Select(macro => macro.Symbol).Distinct(StringComparer.Ordinal).Count());
 
         // The distinction is the donor's own table, so a symbol it names without a handler is not
         // reported as absent from it, and a symbol it never names is not reported as one it decided on.
@@ -150,7 +155,7 @@ public sealed class DaggerfallTextSetTests
     {
         // The control for every mutation below: the harness rewrites the payload through JSON, so this
         // states that the rewrite alone is not what a mutation test is observing.
-        Assert.Equal(3862 + 840, Definitions(_ => { }).Text.Values.Count);
+        Assert.Equal(3862 + 840 + 990, Definitions(_ => { }).Text.Values.Count);
     }
 
     [Fact]

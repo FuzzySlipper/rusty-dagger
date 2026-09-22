@@ -12,6 +12,7 @@ internal enum DaggerfallTextKind
     Biography,
     Rumor,
     Name,
+    Internal,
 }
 
 /// <summary>One addressable text value, as the published key states it.</summary>
