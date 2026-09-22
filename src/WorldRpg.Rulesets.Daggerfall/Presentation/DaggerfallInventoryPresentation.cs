@@ -74,8 +74,8 @@ internal sealed class DaggerfallInventoryPresentation(
 
     internal InventoryItemPresentation DescribeItem(string key, string itemId, ulong quantity, int? gridSlot = null, string[]? equippedSlots = null)
     {
-        DaggerfallItemDefinition definition = definitions.Items[new DaggerfallItemId(itemId)];
-        return new InventoryItemPresentation(key, itemId, Label(itemId), quantity.ToString(CultureInfo.InvariantCulture),
+        DaggerfallItemDefinition definition = definitions.RequireItem(new DaggerfallItemId(itemId));
+        return new InventoryItemPresentation(key, itemId, definition.Template?.Name ?? Label(itemId), quantity.ToString(CultureInfo.InvariantCulture),
             definition.Weight, definition.Value, Details(definition), icons.GetValueOrDefault(itemId), gridSlot, equippedSlots ?? [],
             definitions.EquipmentSlots.Keys.Select(slot => slot.Value).Where(slot => DaggerfallEquipmentPolicy.IsCompatible(definitions, definition, slot)).ToArray());
     }

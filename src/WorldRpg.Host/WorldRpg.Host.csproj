@@ -55,6 +55,7 @@
     <!-- The complete sound catalog remains in the eager snapshot. Both generated WAV projections
          are independently opened at the first cue, so neither body enters that startup snapshot. -->
     <RustyEngineContentBundle Include="daggerfall.classic-audio" Root="worldrpg/media/audio/clips" />
+    <RustyEngineContentBundle Include="daggerfall.cinematics" Root="worldrpg/media/cinematics" />
     <RustyEngineContentBundle Include="daggerfall.privateers-hold-audio" Root="worldrpg/imports/privateers-hold/media/audio/clips" />
   </ItemGroup>
 

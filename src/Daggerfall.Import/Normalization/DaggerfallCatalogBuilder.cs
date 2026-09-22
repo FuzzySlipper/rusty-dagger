@@ -101,6 +101,7 @@ public static class DaggerfallCatalogBuilder
                 [.. attributes.Select(key => key.Id)],
                 [.. decoded.Attributes.Select(value => checked((int)value))],
                 decoded.HitPointsPerLevel,
+                SpellPointMultiplierMilli(decoded.AbilityFlagsAndSpellPoints),
                 decoded.AdvancementMultiplier,
                 [.. FlaggedElements(decoded.ResistanceFlags)],
                 [.. FlaggedElements(decoded.ImmunityFlags)],
@@ -135,6 +136,19 @@ public static class DaggerfallCatalogBuilder
         catalogs.Validate(inventoryIds);
         return catalogs;
     }
+
+    /// <summary>Interprets the CLASS carrier's three spell-point bits in the exact DFCareer order.</summary>
+    private static int SpellPointMultiplierMilli(ushort abilityFlagsAndSpellPoints) =>
+        ((abilityFlagsAndSpellPoints & 0x1c00) >> 8) switch
+        {
+            0 => 3000,
+            4 => 2000,
+            8 => 1750,
+            12 => 1500,
+            16 => 1000,
+            20 => 500,
+            _ => throw new InvalidOperationException("CLASS spell-point multiplier bits are not a classic value."),
+        };
 
     private static IEnumerable<string> PrimarySkill(this ClassCfgRecord record, IReadOnlyList<DaggerfallIndexedKey> skills) =>
         Skill(record.PrimarySkill1, skills).Concat(Skill(record.PrimarySkill2, skills)).Concat(Skill(record.PrimarySkill3, skills));

@@ -152,7 +152,7 @@ internal sealed class DaggerfallCharacterPresentation
         .GroupBy(assignment => assignment.Item.EntityId)
         .Select(group =>
         {
-            DaggerfallItemDefinition item = _definitions.Items[new DaggerfallItemId(group.First().Item.Definition.Value)];
+            DaggerfallItemDefinition item = _definitions.RequireItem(new DaggerfallItemId(group.First().Item.Definition.Value));
             return new CharacterEquipmentPresentation(
                 Label(item.Id.Value),
                 group.Select(assignment => Label(assignment.Slot.Value)).OrderBy(value => value, StringComparer.Ordinal).ToArray(),

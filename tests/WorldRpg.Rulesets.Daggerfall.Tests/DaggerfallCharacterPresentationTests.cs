@@ -17,7 +17,9 @@ public sealed class DaggerfallCharacterPresentationTests
     public void Sheet_reads_current_modeled_values_resources_progression_and_actual_equipment()
     {
         using Fixture f = new();
-        f.Player.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(42);
+        // The default mage uses its career's 25 + 6 starting health maximum, not the
+        // former provisional endurance-derived maximum.
+        f.Player.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(21);
         f.Progression.AdvanceTo(250, 2);
 
         CharacterSheetPresentation sheet = f.Presentation.Read(f.Player, f.Progression);
@@ -31,9 +33,9 @@ public sealed class DaggerfallCharacterPresentationTests
         Assert.Equal(0, sheet.Skills.Single(value => value.Id == "etiquette").Value);
         Assert.Equal(30, sheet.Skills.Single(value => value.Id == "backstabbing").Value);
         Assert.Equal(60, sheet.Skills.Single(value => value.Id == "long-blade").Value);
-        Assert.Equal((42L, 85L), Resource(sheet, "health"));
-        Assert.Equal((90L, 90L), Resource(sheet, "stamina"));
-        Assert.Equal((50L, 50L), Resource(sheet, "magicka"));
+        Assert.Equal((21L, 31L), Resource(sheet, "health"));
+        Assert.Equal((5_760L, 5_760L), Resource(sheet, "stamina"));
+        Assert.Equal((100L, 100L), Resource(sheet, "magicka"));
         Assert.Equal(2, sheet.Progression.Level);
         Assert.Equal(250, sheet.Progression.Experience);
         Assert.Collection(sheet.Equipment,
@@ -73,7 +75,7 @@ public sealed class DaggerfallCharacterPresentationTests
             var slots = definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
             actors = new ActorsState();
             Player = actors.CreatePlayer(1, new EntityTypeId(player.Id.Value),
-                new DaggerfallMechanicsState().CreateStats(player, player.PlayerInitialVitals), "health");
+                new DaggerfallMechanicsState().CreateStats(player, DaggerfallPlayerVitals.Initial(player.Stats, definitions.Catalogs.RequireCareer("class00"))), "health");
             EntityId owner = Player.Actor.Entity;
             InventoryStore world = new();
             world.RegisterInventory(new InventoryState(owner));

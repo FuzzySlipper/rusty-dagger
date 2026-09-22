@@ -167,20 +167,21 @@ public sealed class DaggerfallFormulaPolicyTests
 
         Assert.Equal(40, result.GoldRoll!.Value * result.PlayerLevel);
         Assert.Equal(["weapons", "armor", "magic"], result.Categories.Select(category => category.Category));
-        Assert.All(result.Categories.Where(category => category.Supported), category =>
+        Assert.All(result.Categories.Where(category => category.Supported && category.Category != "magic"), category =>
         {
             Assert.True(category.Supported);
             Assert.Equal([100, 50, 25], category.Rolls.Select(roll => roll.Chance));
             Assert.All(category.Rolls, roll => Assert.True(roll.Success));
         });
-        Assert.Equal(7, result.Drops.Count);
-        Assert.False(result.Categories.Single(category => category.Category == "magic").Supported);
+        Assert.Equal(8, result.Drops.Count);
+        Assert.True(result.Categories.Single(category => category.Category == "magic").Supported);
+        Assert.Contains(result.Drops, drop => drop.SourceCategory == "magic" && drop.ItemId.StartsWith("magic-item.", StringComparison.Ordinal));
         Assert.Contains("loot.T.armor.0", rolls);
         Assert.Contains("loot.T.weapons.2.pick", rolls);
     }
 
     [Fact]
-    public void LootGenerationKeepsUnsupportedCategorySuccessVisibleAndScalesOnlyClassicIngredientGroups()
+    public void LootGenerationMaterializesClassicIngredientCategoriesAndScalesOnlyTheirDonorGroups()
     {
         DaggerfallDefinitions definitions = LoadDefinitions();
         DaggerfallLootResult result = DaggerfallLootPolicy.Generate(definitions, "C", 2, (_, minimum, _) => minimum);
@@ -189,9 +190,9 @@ public sealed class DaggerfallFormulaPolicyTests
         DaggerfallLootCategoryResult creatureThree = result.Categories.Single(category => category.Category == "creature3");
         Assert.Equal(10, creatureOne.EffectiveChance);
         Assert.Equal(5, creatureThree.EffectiveChance);
-        Assert.False(creatureOne.Supported);
+        Assert.True(creatureOne.Supported);
         Assert.All(creatureOne.Rolls, roll => Assert.True(roll.Success));
-        Assert.DoesNotContain(result.Drops, drop => drop.SourceCategory == "creature1");
+        Assert.Contains(result.Drops, drop => drop.SourceCategory == "creature1" && drop.ItemId.StartsWith("template-", StringComparison.Ordinal));
     }
 
     private static DaggerfallDefinitions LoadDefinitions() => DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));

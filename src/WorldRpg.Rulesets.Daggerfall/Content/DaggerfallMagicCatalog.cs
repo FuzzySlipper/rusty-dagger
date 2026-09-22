@@ -1,5 +1,16 @@
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
+/// <summary>Stable Engine definition identity for one magic template over one selected base item.</summary>
+internal static class DaggerfallMagicItemIds
+{
+    internal static string For(string baseItemId, string magicKey)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(baseItemId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(magicKey);
+        return $"{baseItemId}-magic-{magicKey.Replace('.', '-')}";
+    }
+}
+
 /// <summary>One effect of a published spell, with the source's duration, chance and magnitude triples.</summary>
 internal sealed record DaggerfallSpellEffectDefinition(
     string Key,

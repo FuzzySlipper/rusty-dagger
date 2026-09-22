@@ -52,34 +52,35 @@ public sealed class DaggerfallStatReadsTests
         Track stamina = mechanics.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value));
         int created = healthMaximum.ValueInt;
 
-        // Wounding first proves the two policies: stamina keeps current while its ceiling moves,
-        // health carries the missing amount with its ceiling.
+        // Wounding first proves the two policies: stamina keeps current while its live ceiling
+        // moves, while career/level health is permanent and must not move with endurance.
         health.Current = health.Current - 10;
         stamina.Current = stamina.Current - 10;
         double woundedHealth = health.Current;
         double woundedStamina = stamina.Current;
         DaggerfallStatModifiers.AdjustPermanent(mechanics, DaggerfallMechanicsIds.Endurance, 10);
         Assert.Equal(50, endurance.ValueInt);
-        DaggerfallStatModifiers.RefreshPlayerDerivedMaxima(mechanics);
-        Assert.Equal(25 + ((50 * 3) / 2), healthMaximum.ValueInt);
-        Assert.True(healthMaximum.ValueInt > created);
+        DaggerfallStatModifiers.RefreshPlayerDerivedMaxima(mechanics, Career());
+        Assert.Equal(created, healthMaximum.ValueInt);
         Assert.Equal(woundedStamina, stamina.Current);
-        Assert.Equal(woundedHealth + (healthMaximum.ValueInt - created), health.Current);
+        Assert.Equal(woundedHealth, health.Current);
 
         // Save and restore keep the changed base, the maxima and the wounds.
         DaggerfallStatsSave saved = DaggerfallStatsSaveBoundary.Capture(mechanics, new EntityId(DaggerfallActorIdentity.PlayerEntityId));
         DaggerfallRestoredStats restored = DaggerfallStatsSaveBoundary.Restore(saved, new EntityId(DaggerfallActorIdentity.PlayerEntityId));
         Assert.Equal(50, restored.Component.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).ValueInt);
         Assert.Equal(healthMaximum.ValueInt, restored.Component.GetStat(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value)).ValueInt);
-        Assert.Equal(woundedHealth + (healthMaximum.ValueInt - created), restored.Component.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current);
+        Assert.Equal(woundedHealth, restored.Component.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current);
     }
 
     private static StatsComponent PlayerStats()
     {
         DaggerfallDefinitions definitions = LoadDefinitions();
         DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
-        return new DaggerfallMechanicsState().CreateStats(player, player.PlayerInitialVitals);
+        return new DaggerfallMechanicsState().CreateStats(player, DaggerfallPlayerVitals.Initial(player.Stats, Career()));
     }
+
+    private static DaggerfallCareerDefinition Career() => LoadDefinitions().Catalogs.RequireCareer("class00");
 
     private static DaggerfallDefinitions LoadDefinitions()
     {

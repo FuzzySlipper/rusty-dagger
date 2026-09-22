@@ -45,6 +45,7 @@ interface DaggerHud {
   readonly panelRequest?: PanelRequest | null;
   readonly saveSlots?: SaveSlotProjection;
   readonly controls?: ControlsProjection;
+  readonly activation?: { readonly mode: string; readonly message: string; readonly applied: boolean };
   readonly view?: { readonly yawRadians: number; readonly pitchRadians: number; readonly interaction: string };
   readonly slots?: readonly { readonly owner: string; readonly id: string; readonly label: string; readonly detail: string; readonly order: number }[];
   readonly focus?: { readonly interaction: string; readonly container: string; readonly close: string } | null;
@@ -116,7 +117,8 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
         <button data-action="resume" autofocus>Return to game</button>
         <button data-action="inventory">Inventory &amp; equipment · I</button>
         <button data-action="character">Character · C</button>
-        <button data-action="loot">Search aimed loot · F</button>
+        <button data-action="loot">Activate aimed target · F</button>
+        <label>Activation mode <select class="dagger-activation-mode"><option value="grab">Grab</option><option value="info">Information</option><option value="talk">Talk</option><option value="steal">Steal</option><option value="bash">Bash</option></select></label>
         <button data-action="save-game">Save game</button>
         <button data-action="load-game">Load game</button>
         <button data-action="debug">Engine debug console</button>
@@ -152,6 +154,10 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     </dialog>`;
   root.append(shell);
 
+  const activationMode = shell.querySelector<HTMLSelectElement>('.dagger-activation-mode')!;
+  activationMode.addEventListener('change', () => context.intents?.claim('dagger.ui', {
+    kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'activation-mode', mode: activationMode.value },
+  }));
   const title = shell.querySelector<HTMLElement>('.dagger-title strong')!;
   const outcome = shell.querySelector<HTMLParagraphElement>('.dagger-outcome')!;
   const view = shell.querySelector<HTMLParagraphElement>('.dagger-view')!;
@@ -547,6 +553,8 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       : value.mode === 'title' ? 'Title' : value.mode === 'modal' ? 'Interaction' : 'Exploring';
     outcome.textContent = value.lastOutcome;
     if (value.controls) controlsView.update(value.controls);
+    if (value.activation) activationMode.value = value.activation.mode;
+    activationMode.disabled = value.mode !== 'playing';
     view.textContent = value.view ? viewSummary(value.view) : '';
     status.replaceChildren(...(value.slots ?? []).map(row => { const item = document.createElement('p'); item.textContent = `${row.label}: ${row.detail}`; return item; }));
     const focus = value.focus ?? null;

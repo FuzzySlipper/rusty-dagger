@@ -246,6 +246,17 @@ public sealed class DaggerfallCatalogTests
         }
     }
 
+    [Fact]
+    public void Publishes_the_classic_spell_point_multiplier_from_each_career_bitfield()
+    {
+        DaggerfallCatalogs catalogs = BuildFromRepository();
+
+        // CLASS00 stores 4 (2.00 × INT); CLASS01 stores 12 (1.50 × INT) in the
+        // donor's three-bit field. Both values are published as exact integer millis.
+        Assert.Equal(2000, catalogs.Careers.Single(career => career.Id == "class00").SpellPointMultiplierMilli);
+        Assert.Equal(1500, catalogs.Careers.Single(career => career.Id == "class01").SpellPointMultiplierMilli);
+    }
+
     private static List<string> ExpectedElements(int flags)
     {
         string[] keys = ["fire", "frost", "disease-or-poison", "shock", "magic"];

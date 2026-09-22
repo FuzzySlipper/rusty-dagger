@@ -1,11 +1,13 @@
 using WorldRpg.Kit;
+using Rusty.Engine;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>The durable lifecycle of one instantiated quest source.</summary>
-internal enum DaggerfallQuestLifecycle { Active, Completed, Failed }
+internal enum DaggerfallQuestLifecycle { Active, Completed, Failed, Ended }
 /// <summary>The stable product identity carried by a declared quest resource.</summary>
 internal enum DaggerfallQuestResourceBindingKind { Actor, Item, Place }
 
@@ -66,6 +68,11 @@ internal sealed record DaggerfallQuestSymbolState(string Symbol, string Value);
 internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string SourceFile, string DefinitionName,
     DaggerfallQuestLifecycle Lifecycle, string? Outcome, DaggerfallQuestResourceState[] Resources, DaggerfallQuestSymbolState[] Symbols)
 {
+    /// <summary>Source-order task trigger and operation state reconstructed from the normalized definition.</summary>
+    public DaggerfallQuestTaskState[] Tasks { get; init; } = [];
+    /// <summary>The retained end-quest message id; presentation delivery remains with its owning action.</summary>
+    public int? TerminalMessageId { get; init; }
+    public DaggerfallQuestClockState[] Clocks { get; init; } = [];
     internal void ValidateShape()
     {
         if (string.IsNullOrWhiteSpace(InstanceId) || string.IsNullOrWhiteSpace(SourceFile) || string.IsNullOrWhiteSpace(DefinitionName))
@@ -74,6 +81,10 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
             throw new ArgumentException($"Quest instance '{InstanceId}' has an incompatible lifecycle/outcome.");
         ArgumentNullException.ThrowIfNull(Resources);
         ArgumentNullException.ThrowIfNull(Symbols);
+        ArgumentNullException.ThrowIfNull(Tasks);
+        ArgumentNullException.ThrowIfNull(Clocks);
+        if (TerminalMessageId is < 0 || (TerminalMessageId is not null && Lifecycle != DaggerfallQuestLifecycle.Ended))
+            throw new ArgumentException($"Quest instance '{InstanceId}' has an incompatible terminal message.");
         HashSet<string> resources = [];
         foreach (DaggerfallQuestResourceState resource in Resources)
         {
@@ -93,7 +104,7 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
         }
     }
 
-    internal void Validate(DaggerfallDefinitions definitions)
+    internal void Validate(DaggerfallDefinitions definitions, bool validateClockState = true)
     {
         ArgumentNullException.ThrowIfNull(definitions);
         ValidateShape();
@@ -115,6 +126,13 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
             if (resource.Binding.Kind != BindingKind(declared.Kind))
                 throw new ArgumentException($"Quest instance '{InstanceId}' binds resource '{symbol}' as {resource.Binding.Kind}, but '{SourceFile}' declares it as {declared.Kind}.");
         }
+        if (validateClockState)
+            ValidateClocks(DaggerfallQuestClockCompiler.Compile(definition));
+    }
+
+    private void ValidateClocks(IReadOnlyList<DaggerfallQuestClockDefinition> definitions)
+    {
+        DaggerfallQuestClockCompiler.ValidateSavedState(InstanceId, definitions, Clocks);
     }
 
     internal static string Canonical(string symbol, string owner)
@@ -198,86 +216,196 @@ internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[
     }
 }
 
-/// <summary>Session-owned quest instances. Ordered action execution remains with the later quest-action owner.</summary>
-internal sealed class DaggerfallQuestInstances(DaggerfallDefinitions definitions)
+/// <summary>Mutable runtime representation of one quest; save DTOs are captured only at explicit boundaries.</summary>
+internal sealed class DaggerfallQuestRuntimeInstance
 {
-    private readonly DaggerfallDefinitions _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
-    private readonly Dictionary<string, DaggerfallQuestInstanceSave> _instances = new(StringComparer.Ordinal);
-    internal IReadOnlyCollection<DaggerfallQuestInstanceSave> All => _instances.Values.Select(Clone).ToArray();
+    internal DaggerfallQuestRuntimeInstance(DaggerfallQuestInstanceSave saved, DaggerfallQuestTaskProgram program)
+    {
+        ArgumentNullException.ThrowIfNull(saved);
+        ArgumentNullException.ThrowIfNull(program);
+        DaggerfallQuestTaskCompiler.ValidateState(program, saved.Tasks, saved.SourceFile);
+        InstanceId = saved.InstanceId;
+        SourceFile = saved.SourceFile;
+        DefinitionName = saved.DefinitionName;
+        Lifecycle = saved.Lifecycle;
+        Outcome = saved.Outcome;
+        Resources = CopyResources(saved.Resources);
+        Symbols = [.. saved.Symbols];
+        TerminalMessageId = saved.TerminalMessageId;
+        Tasks = saved.Tasks.Select(task => new DaggerfallQuestTaskRuntimeState(task)).ToArray();
+        Clocks = [.. saved.Clocks];
+    }
+
+    internal string InstanceId { get; }
+    internal string SourceFile { get; }
+    internal string DefinitionName { get; }
+    internal DaggerfallQuestLifecycle Lifecycle { get; set; }
+    internal string? Outcome { get; set; }
+    internal DaggerfallQuestResourceState[] Resources { get; set; }
+    internal DaggerfallQuestSymbolState[] Symbols { get; set; }
+    internal int? TerminalMessageId { get; set; }
+    internal DaggerfallQuestTaskRuntimeState[] Tasks { get; }
+    internal DaggerfallQuestClockState[] Clocks { get; set; }
+
+    internal bool StartClock(string symbol)
+    {
+        int index = Array.FindIndex(Clocks, clock => clock.Symbol == symbol);
+        if (index < 0) return false;
+        DaggerfallQuestClockState clock = Clocks[index];
+        if (DaggerfallQuestClockCompiler.UnsupportedStartCondition(clock) is { } condition)
+            throw new NotSupportedException($"Quest clock '{symbol}' requires {condition}; #8051 owns the missing quest-place/travel policy.");
+        if (!clock.Finished) Clocks[index] = clock with { Enabled = true };
+        return true;
+    }
+
+    internal bool StopClock(string symbol)
+    {
+        int index = Array.FindIndex(Clocks, clock => clock.Symbol == symbol);
+        if (index < 0) return false;
+        DaggerfallQuestClockState clock = Clocks[index];
+        if (!clock.Finished) Clocks[index] = clock with { Enabled = false };
+        return true;
+    }
+
+    internal DaggerfallQuestInstanceSave Capture() => new(InstanceId, SourceFile, DefinitionName, Lifecycle, Outcome,
+        CopyResources(Resources),
+        [.. Symbols])
+    {
+        TerminalMessageId = TerminalMessageId,
+        Tasks = [.. Tasks.Select(task => task.Capture())],
+        Clocks = [.. Clocks],
+    };
+
+    private static DaggerfallQuestResourceState[] CopyResources(IEnumerable<DaggerfallQuestResourceState> resources) =>
+        resources.Select(resource => resource with { Binding = resource.Binding with { ActorIds = [.. resource.Binding.ActorIds], UniqueItemIds = [.. resource.Binding.UniqueItemIds], Stacks = [.. resource.Binding.Stacks], Places = [.. resource.Binding.Places] } }).ToArray();
+}
+
+/// <summary>Session-owned quest instances and immutable admitted task programs.</summary>
+internal sealed class DaggerfallQuestInstances
+{
+    private readonly DaggerfallDefinitions _definitions;
+    private readonly IRandomService _random;
+    private readonly IReadOnlyDictionary<string, DaggerfallQuestTaskProgram> _programs;
+    private readonly Dictionary<string, DaggerfallQuestRuntimeInstance> _instances = new(StringComparer.Ordinal);
+
+    internal DaggerfallQuestInstances(DaggerfallDefinitions definitions, IRandomService random)
+    {
+        _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
+        _random = random ?? throw new ArgumentNullException(nameof(random));
+        _programs = definitions.QuestSources.Quests.Values
+            .Where(source => source.Disposition == DaggerfallQuestDisposition.Compiled)
+            .ToDictionary(source => source.SourceFile, DaggerfallQuestTaskCompiler.Compile, StringComparer.Ordinal);
+    }
+
+    internal IReadOnlyCollection<DaggerfallQuestInstanceSave> All => _instances.Values.Select(instance => instance.Capture()).ToArray();
 
     internal DaggerfallQuestInstanceSave Start(DaggerfallQuestInstanceSave instance)
     {
         ArgumentNullException.ThrowIfNull(instance);
         if (instance.Lifecycle != DaggerfallQuestLifecycle.Active)
             throw new ArgumentException("A newly started quest instance must be active.", nameof(instance));
-        instance.Validate(_definitions);
-        DaggerfallQuestInstanceSave copy = Clone(instance);
-        if (!_instances.TryAdd(copy.InstanceId, copy)) throw new ArgumentException($"Quest instance '{copy.InstanceId}' already exists.");
-        return Clone(copy);
+        instance.Validate(_definitions, validateClockState: false);
+        if (instance.Tasks.Length != 0) throw new ArgumentException("A newly started quest instance cannot supply prior task state.", nameof(instance));
+        DaggerfallQuestTaskProgram program = Program(instance.SourceFile);
+        DaggerfallQuestClockDefinition[] clocks = DaggerfallQuestClockCompiler.Compile(_definitions.QuestSources.Resolve(instance.SourceFile));
+        DaggerfallQuestRuntimeInstance started = new(instance with { Tasks = DaggerfallQuestTaskCompiler.InitialState(program), Clocks = [.. clocks.Select(clock =>
+        {
+            long duration = DaggerfallQuestClockCompiler.UnsupportedTravelCondition(clock) is not null ? 0
+                : clock.MaximumSeconds == clock.MinimumSeconds ? clock.MinimumSeconds
+                : _random.DrawKeyed(new KeyedRngRequest(0, "daggerfall.quest.clock", $"{instance.InstanceId}:{clock.Symbol}", clock.MinimumSeconds, clock.MaximumSeconds)).Value;
+            return new DaggerfallQuestClockState(clock.Symbol, duration, duration, clock.Flag, clock.MinRange, clock.MaxRange, false, false);
+        })] }, program);
+        if (!_instances.TryAdd(started.InstanceId, started)) throw new ArgumentException($"Quest instance '{started.InstanceId}' already exists.");
+        return started.Capture();
     }
 
     internal DaggerfallQuestInstanceSave Complete(string instanceId, string outcome) => Transition(instanceId, DaggerfallQuestLifecycle.Completed, outcome);
     internal DaggerfallQuestInstanceSave Fail(string instanceId, string outcome) => Transition(instanceId, DaggerfallQuestLifecycle.Failed, outcome);
 
+    /// <summary>Advances active quest task blocks once within the already-admitted session simulation step.</summary>
+    internal void Advance(DaggerfallVariableStore variables, DaggerfallCalendar calendar)
+    {
+        ArgumentNullException.ThrowIfNull(variables);
+        foreach (DaggerfallQuestRuntimeInstance instance in _instances.Values)
+            if (instance.Lifecycle == DaggerfallQuestLifecycle.Active)
+                DaggerfallQuestTaskRunner.Advance(instance, Program(instance.SourceFile), variables, calendar);
+    }
+
+    /// <summary>Consumes elapsed calendar time once; clocks never own a timer or update loop.</summary>
+    internal void AdvanceClocks(DaggerfallVariableStore variables, DaggerfallCalendar before, DaggerfallCalendar after)
+    {
+        ArgumentNullException.ThrowIfNull(variables);
+        foreach (DaggerfallQuestRuntimeInstance instance in _instances.Values)
+            DaggerfallQuestClockAdvancer.Advance(instance, Program(instance.SourceFile), variables, before, after);
+    }
+
     internal DaggerfallQuestInstanceSave SetResource(string instanceId, DaggerfallQuestResourceState resource)
     {
         ArgumentNullException.ThrowIfNull(resource);
-        DaggerfallQuestInstanceSave instance = Active(instanceId);
+        DaggerfallQuestRuntimeInstance instance = Active(instanceId);
         string symbol = DaggerfallQuestInstanceSave.Canonical(resource.Symbol, $"quest instance '{instanceId}' resource");
-        return Replace(instance with { Resources = instance.Resources.Where(value => DaggerfallQuestInstanceSave.Canonical(value.Symbol, $"quest instance '{instanceId}' resource") != symbol).Append(resource).ToArray() });
+        instance.Resources = instance.Resources.Where(value => DaggerfallQuestInstanceSave.Canonical(value.Symbol, $"quest instance '{instanceId}' resource") != symbol).Append(resource).ToArray();
+        ValidateRuntime(instance);
+        return instance.Capture();
     }
 
     internal DaggerfallQuestInstanceSave SetSymbol(string instanceId, DaggerfallQuestSymbolState symbol)
     {
         ArgumentNullException.ThrowIfNull(symbol);
-        DaggerfallQuestInstanceSave instance = Active(instanceId);
+        DaggerfallQuestRuntimeInstance instance = Active(instanceId);
         string name = DaggerfallQuestInstanceSave.Canonical(symbol.Symbol, $"quest instance '{instanceId}' symbol");
-        return Replace(instance with { Symbols = instance.Symbols.Where(value => DaggerfallQuestInstanceSave.Canonical(value.Symbol, $"quest instance '{instanceId}' symbol") != name).Append(symbol).ToArray() });
+        instance.Symbols = instance.Symbols.Where(value => DaggerfallQuestInstanceSave.Canonical(value.Symbol, $"quest instance '{instanceId}' symbol") != name).Append(symbol).ToArray();
+        ValidateRuntime(instance);
+        return instance.Capture();
     }
 
     internal bool TryGet(string instanceId, out DaggerfallQuestInstanceSave? instance)
     {
-        if (_instances.TryGetValue(instanceId, out DaggerfallQuestInstanceSave? value)) { instance = Clone(value); return true; }
+        if (_instances.TryGetValue(instanceId, out DaggerfallQuestRuntimeInstance? value)) { instance = value.Capture(); return true; }
         instance = null;
         return false;
     }
 
-    internal DaggerfallQuestInstancesSave Capture() => new([.. _instances.Values.OrderBy(value => value.InstanceId, StringComparer.Ordinal).Select(Clone)]);
+    internal DaggerfallQuestInstancesSave Capture() => new([.. _instances.Values.OrderBy(value => value.InstanceId, StringComparer.Ordinal).Select(instance => instance.Capture())]);
 
     internal void Restore(DaggerfallQuestInstancesSave saved)
     {
         ArgumentNullException.ThrowIfNull(saved);
         saved.Validate(_definitions);
-        Dictionary<string, DaggerfallQuestInstanceSave> restored = new(StringComparer.Ordinal);
-        foreach (DaggerfallQuestInstanceSave instance in saved.Instances) restored.Add(instance.InstanceId, Clone(instance));
+        Dictionary<string, DaggerfallQuestRuntimeInstance> restored = new(StringComparer.Ordinal);
+        foreach (DaggerfallQuestInstanceSave instance in saved.Instances)
+        {
+            DaggerfallQuestTaskProgram program = Program(instance.SourceFile);
+            restored.Add(instance.InstanceId, new DaggerfallQuestRuntimeInstance(instance, program));
+        }
         _instances.Clear();
-        foreach ((string id, DaggerfallQuestInstanceSave instance) in restored) _instances.Add(id, instance);
+        foreach ((string id, DaggerfallQuestRuntimeInstance instance) in restored) _instances.Add(id, instance);
     }
 
     private DaggerfallQuestInstanceSave Transition(string instanceId, DaggerfallQuestLifecycle lifecycle, string outcome)
     {
         if (string.IsNullOrWhiteSpace(outcome)) throw new ArgumentException("A completed or failed quest needs an outcome.", nameof(outcome));
-        return Replace(Active(instanceId) with { Lifecycle = lifecycle, Outcome = outcome });
+        DaggerfallQuestRuntimeInstance instance = Active(instanceId);
+        instance.Lifecycle = lifecycle;
+        instance.Outcome = outcome;
+        ValidateRuntime(instance);
+        return instance.Capture();
     }
 
-    private DaggerfallQuestInstanceSave Active(string instanceId)
+    private DaggerfallQuestRuntimeInstance Active(string instanceId)
     {
-        if (string.IsNullOrWhiteSpace(instanceId) || !_instances.TryGetValue(instanceId, out DaggerfallQuestInstanceSave? instance)) throw new KeyNotFoundException($"Quest instance '{instanceId}' does not exist.");
+        if (string.IsNullOrWhiteSpace(instanceId) || !_instances.TryGetValue(instanceId, out DaggerfallQuestRuntimeInstance? instance)) throw new KeyNotFoundException($"Quest instance '{instanceId}' does not exist.");
         if (instance.Lifecycle != DaggerfallQuestLifecycle.Active) throw new InvalidOperationException($"Quest instance '{instanceId}' is already {instance.Lifecycle}.");
         return instance;
     }
 
-    private DaggerfallQuestInstanceSave Replace(DaggerfallQuestInstanceSave instance)
-    {
-        instance.Validate(_definitions);
-        DaggerfallQuestInstanceSave copy = Clone(instance);
-        _instances[copy.InstanceId] = copy;
-        return Clone(copy);
-    }
+    private DaggerfallQuestTaskProgram Program(string sourceFile) => _programs.TryGetValue(sourceFile, out DaggerfallQuestTaskProgram? program)
+        ? program : throw new ArgumentException($"Quest source '{sourceFile}' has no admitted task program.");
 
-    private static DaggerfallQuestInstanceSave Clone(DaggerfallQuestInstanceSave source) => source with
+    private void ValidateRuntime(DaggerfallQuestRuntimeInstance instance)
     {
-        Resources = source.Resources.Select(resource => resource with { Binding = resource.Binding with { ActorIds = [.. resource.Binding.ActorIds], UniqueItemIds = [.. resource.Binding.UniqueItemIds], Stacks = [.. resource.Binding.Stacks], Places = [.. resource.Binding.Places] } }).ToArray(),
-        Symbols = [.. source.Symbols],
-    };
+        DaggerfallQuestInstanceSave captured = instance.Capture();
+        captured.Validate(_definitions);
+        DaggerfallQuestTaskCompiler.ValidateState(Program(instance.SourceFile), captured.Tasks, instance.SourceFile);
+    }
 }

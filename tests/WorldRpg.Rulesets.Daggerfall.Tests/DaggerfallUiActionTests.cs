@@ -45,6 +45,18 @@ public sealed class DaggerfallUiActionTests
         => Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
 
     [Theory]
+    [InlineData("{\"action\":\"activation-mode\",\"mode\":\"grab\"}", "grab")]
+    [InlineData("{\"action\":\"activation-mode\",\"mode\":\"info\"}", "info")]
+    [InlineData("{\"action\":\"activation-mode\",\"mode\":\"talk\"}", "talk")]
+    [InlineData("{\"action\":\"activation-mode\",\"mode\":\"steal\"}", "steal")]
+    [InlineData("{\"action\":\"activation-mode\",\"mode\":\"bash\"}", "bash")]
+    [InlineData("{\"action\":\"activation-mode\",\"mode\":\"attack\"}", null)]
+    [InlineData("{\"action\":\"activation-mode\"}", null)]
+    [InlineData("{\"action\":\"activation-mode\",\"mode\":\"grab\",\"item\":\"x\"}", null)]
+    public void Activation_mode_actions_are_exact_and_typed(string json, string? expected)
+        => Assert.Equal(expected, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json))?.Mode);
+
+    [Theory]
     [InlineData("{\"action\":\"save-slots\"}", true)]
     [InlineData("{\"action\":\"save-slot\",\"label\":\"Before the dungeon\"}", true)]
     [InlineData("{\"action\":\"save-slot\",\"key\":\"slot-1\",\"label\":\"Before the dungeon\",\"confirm\":true}", true)]

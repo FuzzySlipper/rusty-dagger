@@ -277,7 +277,7 @@ internal sealed record DaggerfallSavePayload(
         Dictionary<ulong, DaggerfallItemDefinition> unique = [];
         foreach (DaggerfallUniqueSave saved in inventory.UniqueItems)
         {
-            if (!definitions.Items.TryGetValue(new DaggerfallItemId(saved.ItemId), out DaggerfallItemDefinition? definition) || definition.IsFungible || !allUnique.Add(saved.EntityId))
+            if (!definitions.TryResolveItem(new DaggerfallItemId(saved.ItemId), out DaggerfallItemDefinition definition) || definition.IsFungible || !allUnique.Add(saved.EntityId))
                 throw new ArgumentException($"Saved {owner.Scope} {owner.Id} unique item '{saved.EntityId}' is missing, incompatible, or duplicated.");
             RequireMetadata(saved.ItemId, saved.Metadata, owner);
             unique.Add(saved.EntityId, definition);
@@ -299,7 +299,7 @@ internal sealed record DaggerfallSavePayload(
 
     private static void RequireFungible(DaggerfallDefinitions definitions, DaggerfallStackSave stack, DaggerfallItemOwner owner)
     {
-        if (!definitions.Items.TryGetValue(new DaggerfallItemId(stack.ItemId), out DaggerfallItemDefinition? definition) || !definition.IsFungible)
+        if (!definitions.TryResolveItem(new DaggerfallItemId(stack.ItemId), out DaggerfallItemDefinition definition) || !definition.IsFungible)
             throw new ArgumentException($"Saved {owner.Scope} {owner.Id} stack '{stack.ItemId}' is not a selected fungible item.");
         if (stack.Quantity > definition.MaximumQuantity)
             throw new ArgumentException($"Saved {owner.Scope} {owner.Id} stack '{stack.ItemId}' exceeds its authored maximum quantity.");
@@ -400,7 +400,11 @@ internal sealed record DaggerfallItemMetadataSave(
     string? QuestId,
     string? QuestItemSymbol,
     string? Enchantment,
-    DaggerfallItemOwnerSave Owner);
+    DaggerfallItemOwnerSave Owner,
+    string? Race = null,
+    string? Gender = null,
+    string? Dye = null,
+    int? BookId = null);
 internal sealed record DaggerfallEquipmentSave(string SlotId, ulong ItemEntityId);
 internal sealed record DaggerfallCombatCooldownSave(long AttackerId, ulong RemainingSteps);
 

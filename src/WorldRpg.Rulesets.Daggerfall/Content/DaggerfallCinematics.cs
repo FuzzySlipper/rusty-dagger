@@ -31,7 +31,13 @@ internal sealed record DaggerfallCinematicDefinition(
     DaggerfallCinematicBinding Binding,
     string Caller,
     int? FactionId,
-    string Quest);
+    string Quest)
+{
+    internal DaggerfallCinematicArtifact? Artifact { get; init; }
+}
+
+internal sealed record DaggerfallCinematicArtifact(string Path, string MimeType, long ByteLength,
+    string Sha256, int Width, int Height, long FrameCount, double DurationSeconds, bool HasAudio);
 
 /// <summary>The cinematic provenance set, loaded from the pack alone.</summary>
 /// <param name="Cinematics">The cinematics by file name.</param>

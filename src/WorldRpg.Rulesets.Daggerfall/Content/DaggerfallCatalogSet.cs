@@ -26,6 +26,7 @@ internal sealed record DaggerfallCareerDefinition(
     IReadOnlyList<string> Attributes,
     IReadOnlyList<int> AttributeValues,
     int HitPointsPerLevel,
+    int SpellPointMultiplierMilli,
     float AdvancementMultiplier,
     IReadOnlyList<string> ResistanceElements,
     IReadOnlyList<string> ImmunityElements,
