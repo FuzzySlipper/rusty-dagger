@@ -197,11 +197,11 @@ public sealed class CharacterMediaPublicationTests
 
         // The census, as counts rather than a claim: every family the inventory enumerates is published
         // from, and the totals are the readers' own.
-        Assert.Equal(264, pass.Artifacts.Count);
-        Assert.Equal(157, pass.Refusals.Count);
+        Assert.Equal(360, pass.Artifacts.Count);
+        Assert.Equal(61, pass.Refusals.Count);
         Assert.Equal(87, inventory.Files.Count);
         Assert.Equal(
-            [4, 9, 9, 10, 32, 40, 160],
+            [4, 9, 9, 10, 32, 96, 40, 160],
             new[]
             {
                 pass.Artifacts.Count(artifact => artifact.Reference.Family == "NITE"),
@@ -209,6 +209,7 @@ public sealed class CharacterMediaPublicationTests
                 pass.Artifacts.Count(artifact => artifact.Reference.Family == "CHAR"),
                 pass.Artifacts.Count(artifact => artifact.Reference.Family == "CUST"),
                 pass.Artifacts.Count(artifact => artifact.Reference.Family == "BODY"),
+                pass.Artifacts.Count(artifact => artifact.Reference.Family == "BSS"),
                 pass.Artifacts.Count(artifact => artifact.Reference.Family == "CEL"),
                 pass.Artifacts.Count(artifact => artifact.Reference.Family == "FACE"),
             });
@@ -222,13 +223,12 @@ public sealed class CharacterMediaPublicationTests
             Assert.Contains(set.Canvases, canvas => canvas.MediaId == artifact.MediaId);
         });
 
-        // The two gaps, each naming its files and its real reason, and neither of them a placeholder
-        // family: the cells exist and cannot be sliced, and the BSS frames were never extracted.
-        Assert.Equal(["BSS", "FACE"], pass.UnreadableFamilies.Select(family => family.Family));
-        Assert.Equal(["CMPA00I0.BSS", "CMPA01I0.BSS", "CMPA02I0.BSS"], pass.UnreadableFamilies[0].Files);
-        Assert.Equal(["FACES.CIF"], pass.UnreadableFamilies[1].Files);
-        Assert.Equal("Assets/Scripts/API/BssFile.cs", pass.UnreadableFamilies[0].DonorAnchor);
-        Assert.Equal(string.Empty, pass.UnreadableFamilies[1].DonorAnchor);
+        // The BSS snapshots now publish through their donor-defined layout.  Only the fixed-cell
+        // face grid remains unreadable because this repository still has no cell pixel slicer.
+        CharacterMediaUnreadableFamily remaining = Assert.Single(pass.UnreadableFamilies);
+        Assert.Equal("FACE", remaining.Family);
+        Assert.Equal(["FACES.CIF"], remaining.Files);
+        Assert.Equal(string.Empty, remaining.DonorAnchor);
         // Every refusal names the canvas and the file it needed, so a missing canvas is legible rather
         // than a total that quietly came up short.
         Assert.All(pass.Refusals, refusal =>
@@ -375,13 +375,8 @@ public sealed class CharacterMediaPublicationTests
         CharacterMediaReferenceSet set = CharacterMediaReferences.Derive(inventory, palettes.Keys.ToHashSet(StringComparer.Ordinal));
         CharacterMediaPassResult pass = CharacterMediaPublisher.PublishAll(set, sources, palettes, inventory);
 
-        Assert.Equal(["BSS", "FACE"], pass.UnreadableFamilies.Select(family => family.Family));
-        CharacterMediaUnreadableFamily bss = pass.UnreadableFamilies[0];
-        Assert.Equal("BSS sprite container", bss.Kind);
-        Assert.Contains("missing pixel decoder", bss.Reason, StringComparison.Ordinal);
-        Assert.DoesNotContain("nothing in this repository reads", bss.Reason, StringComparison.Ordinal);
-        Assert.Equal("Assets/Scripts/API/BssFile.cs", bss.DonorAnchor);
-        CharacterMediaUnreadableFamily grid = pass.UnreadableFamilies[1];
+        CharacterMediaUnreadableFamily grid = Assert.Single(pass.UnreadableFamilies);
+        Assert.Equal("FACE", grid.Family);
         Assert.Equal("fixed-cell RCI grid", grid.Kind);
         Assert.Contains("nothing in this repository slices a cell's pixels", grid.Reason, StringComparison.Ordinal);
         // The grid has no donor reader to name: the donor reads the grid and this repository enumerates its

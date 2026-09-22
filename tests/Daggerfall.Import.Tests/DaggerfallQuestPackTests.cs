@@ -1,6 +1,7 @@
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
+using System.Text.Json;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
@@ -54,6 +55,51 @@ public sealed class DaggerfallQuestPackTests
     }
 
     [Fact]
+    public void Retains_QRC_message_boundaries_and_ordered_QBN_action_source_without_executing_it()
+    {
+        QuestSourceDocument document = QuestSourceReader.Read(
+            "-- donor metadata\nQuest: Q\nDisplayName: Fixture\nQRC:\n-- panel comment\nMessage: 7\nFirst\n-- adjacent dash text\n\nQBN:\n-- ignored QBN comment\nClock timer 1 day 1\n\nstartup action\nsecond action\n\n_done_ task:\nend quest\n",
+            "fixture.txt", MessageIds, GlobalKeys);
+
+        Assert.Equal(["First", "-- adjacent dash text"], Assert.Single(document.Messages).Lines);
+        Assert.Equal([QuestBlockKind.Clock, QuestBlockKind.Headless, QuestBlockKind.Task], document.Blocks.Select(block => block.Kind));
+        Assert.Equal(["startup action", "second action"], document.Blocks[1].Lines);
+        Assert.Equal(["_done_ task:", "end quest"], document.Blocks[2].Lines);
+    }
+
+    [Fact]
+    public void Refuses_an_unattached_QBN_line_with_its_file_and_physical_line()
+    {
+        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => QuestSourceReader.Read(
+            "Quest: Q\nQRC:\nMessage: 7\ntext\nQBN:\nstartup action\n\nunsupported top-level\n",
+            "fixture.txt", MessageIds, GlobalKeys));
+
+        Assert.Equal("fixture.txt", error.SourceName);
+        Assert.Equal(8, error.Offset);
+        Assert.Contains("unsupported top-level", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Deterministically_compiles_a_representative_classic_script()
+    {
+        const string tables = "/home/research/daggerfall-unity/Assets/StreamingAssets/Tables";
+        const string source = "/home/research/daggerfall-unity/Assets/StreamingAssets/Quests/50C00Y00.txt";
+        // The full donor corpus is optional in portable developer and CI checkouts.
+        if (!File.Exists(source) || !Directory.Exists(tables)) return;
+
+        DaggerfallQuestTable globals = DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(tables, "Quests-GlobalVars.txt")), "Tables/Quests-GlobalVars.txt", globals: true);
+        DaggerfallQuestTable messages = DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(tables, "Quests-StaticMessages.txt")), "Tables/Quests-StaticMessages.txt");
+        DaggerfallQuestPack first = Compile(File.ReadAllText(source), "50C00Y00.txt", messages.Lookup, globals.Lookup);
+        DaggerfallQuestPack second = Compile(File.ReadAllText(source), "50C00Y00.txt", messages.Lookup, globals.Lookup);
+
+        Assert.Equal(JsonSerializer.Serialize(first), JsonSerializer.Serialize(second));
+        DaggerfallQuestRecord quest = Assert.Single(first.Quests);
+        Assert.Equal("50C00Y00", quest.Name);
+        Assert.Equal([QuestBlockKind.Item, QuestBlockKind.Person, QuestBlockKind.Person, QuestBlockKind.Person], quest.Blocks.Take(4).Select(block => block.Kind));
+        Assert.Equal(QuestBlockKind.Headless, quest.Blocks.First(block => block.Kind == QuestBlockKind.Headless).Kind);
+    }
+
+    [Fact]
     public void Builds_the_pack_and_diagnoses_duplicates()
     {
         QuestSourceDocument first = QuestSourceReader.Read("quest: Q\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\n", "a.txt", MessageIds, GlobalKeys);
@@ -64,6 +110,18 @@ public sealed class DaggerfallQuestPackTests
         Assert.All(pack.Quests, quest => Assert.Equal(DaggerfallQuestDisposition.Diagnosed, quest.Disposition));
         Assert.All(pack.Quests, quest => Assert.Single(quest.Diagnostics));
         Assert.Contains("2 sources", pack.Quests[0].Diagnostics[0].Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Canonicalizes_quest_records_by_source_file_not_semantic_name()
+    {
+        QuestSourceDocument first = QuestSourceReader.Read("quest: A\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\n", "z.txt", MessageIds, GlobalKeys);
+        QuestSourceDocument second = QuestSourceReader.Read("quest: Z\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\n", "a.txt", MessageIds, GlobalKeys);
+
+        DaggerfallQuestPack pack = DaggerfallQuestPackBuilder.Build([first, second], [], "donor/StreamingAssets/Quests", [1], Inventory());
+
+        Assert.Equal(["a.txt", "z.txt"], pack.Quests.Select(quest => quest.SourceFile));
+        Assert.Equal(["Z", "A"], pack.Quests.Select(quest => quest.Name));
     }
 
     [Fact]
@@ -94,10 +152,10 @@ public sealed class DaggerfallQuestPackTests
         DaggerfallQuestPack pack = DaggerfallQuestPackBuilder.Build(documents, failures, "donor/StreamingAssets/Quests", new byte[total], inventory);
         pack.Validate();
         Assert.Equal(265, pack.Quests.Count);
-        Assert.Equal(263, pack.Quests.Count(quest => quest.Disposition == DaggerfallQuestDisposition.Runnable));
-        // The diagnosed pair shares one semantic id; every runnable quest keeps source lines.
+        Assert.Equal(263, pack.Quests.Count(quest => quest.Disposition == DaggerfallQuestDisposition.Compiled));
+        // The diagnosed pair shares one semantic id; every compiled quest keeps source lines.
         Assert.Equal(2, pack.Quests.Count(quest => quest.Disposition == DaggerfallQuestDisposition.Diagnosed));
-        Assert.All(pack.Quests.Where(quest => quest.Disposition == DaggerfallQuestDisposition.Runnable), quest => Assert.NotEmpty(quest.Blocks));
+        Assert.All(pack.Quests.Where(quest => quest.Disposition == DaggerfallQuestDisposition.Compiled), quest => Assert.NotEmpty(quest.Blocks));
 
         // Resource lines never merge: the donor reads 35 blocks in $CUREVAM.
         DaggerfallQuestRecord curevam = pack.Quests.Single(quest => quest.Name == "$CUREVAM");
@@ -117,6 +175,12 @@ public sealed class DaggerfallQuestPackTests
     [
         new SourceInventoryRow("CNT-017-QBN", "family", "CNT-017", "quest-source", "donor", string.Empty, string.Empty, string.Empty),
     ];
+
+    private static DaggerfallQuestPack Compile(string text, string file, IReadOnlyDictionary<string, int> messages, IReadOnlyDictionary<string, int> globals)
+    {
+        QuestSourceDocument document = QuestSourceReader.Read(text, file, messages, globals);
+        return DaggerfallQuestPackBuilder.Build([document], [], "donor/StreamingAssets/Quests", [1], Inventory());
+    }
 
     private static string RepositoryRoot()
     {

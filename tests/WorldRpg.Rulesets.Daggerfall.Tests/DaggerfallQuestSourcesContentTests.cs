@@ -4,27 +4,34 @@ using Xunit;
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// The normalized quest sources through the pack: runnable quests resolve with messages and
+/// The normalized quest sources through the pack: compiled quests resolve with messages and
 /// blocks, diagnosed quests resolve with their diagnostics and must not run.
 /// </summary>
 public sealed class DaggerfallQuestSourcesContentTests
 {
     [Fact]
-    public void Resolves_runnable_and_diagnosed_quests()
+    public void Resolves_compiled_and_diagnosed_quests()
     {
         DaggerfallDefinitions definitions = Definitions();
 
         Assert.Equal(265, definitions.QuestSources.Quests.Count);
-        Assert.Equal(263, definitions.QuestSources.Quests.Values.Count(quest => quest.Disposition == DaggerfallQuestDisposition.Runnable));
+        Assert.Equal(263, definitions.QuestSources.Quests.Values.Count(quest => quest.Disposition == DaggerfallQuestDisposition.Compiled));
 
-        // A runnable quest resolves with its messages, blocks and source lines.
+        // A compiled quest resolves with its messages, blocks and source lines.
         DaggerfallQuestSourceDefinition quest = definitions.QuestSources.Resolve("00B00Y00.txt");
-        Assert.Equal(DaggerfallQuestDisposition.Runnable, quest.Disposition);
+        Assert.Equal(DaggerfallQuestDisposition.Compiled, quest.Disposition);
         Assert.NotEmpty(quest.Messages);
         Assert.NotEmpty(quest.Blocks);
         Assert.Empty(quest.Diagnostics);
         Assert.All(quest.Messages, message => Assert.True(message.FirstLine > 0));
         Assert.All(quest.Blocks, block => Assert.True(block.FirstLine > 0 && block.Lines.Count > 0));
+
+        // The published compiler result preserves action order as content. It is not an
+        // executable action program: the later quest lifecycle owner interprets these lines.
+        DaggerfallQuestBlockDefinition headless = quest.Blocks.Single(block => block.Kind == "headless");
+        Assert.Equal(["start timer _1stparton_ ", "reveal _mondung_ ", "log 1030 step 0 ", "place foe _monster_ at _mondung_ "], headless.Lines);
+        DaggerfallQuestBlockDefinition task = quest.Blocks.First(block => block.Kind == "task");
+        Assert.Equal(["_pcgetsgold_ task:", "when _qgclicked_ and _mondead_ ", "give pc _reward_ ", "end quest "], task.Lines);
 
         // The diagnosed pair shares one semantic id; both resolve with diagnostics attached.
         DaggerfallQuestSourceDefinition demo2 = definitions.QuestSources.Resolve("__DEMO02.txt");

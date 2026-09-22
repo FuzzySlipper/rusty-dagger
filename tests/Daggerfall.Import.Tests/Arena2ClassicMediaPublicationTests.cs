@@ -98,7 +98,7 @@ public sealed class Arena2ClassicMediaPublicationTests
         Assert.Contains(first.Artifacts, artifact => artifact.RelativePath == "media/ui/inventory-icons/inventory-icon-iron-dagger.png");
         Assert.Contains(first.Artifacts, artifact => artifact.RelativePath == "media/ui/inventory-icons/inventory-icon-arrow.png");
 
-        byte[] wave = Artifact(first, "media/audio/audio-melee-dagger-swing.wav");
+        byte[] wave = Artifact(first, "media/audio/clips/audio-melee-dagger-swing.wav");
         AssertWave(wave);
         Assert.Equal("arena2/DAGGER.SND", first.Sources.Single(source => source.SourcePath == "arena2/DAGGER.SND").SourcePath);
     }

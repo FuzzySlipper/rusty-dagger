@@ -218,6 +218,16 @@ public sealed class FlcDecoderTests
         Assert.False(FlcDecoder.TryRead(mage[..(FlcDecoder.HeaderBytes + 20)], "MAGE.CEL", out _, out string clipped));
         Assert.Contains("declares its first frame at", clipped, StringComparison.Ordinal);
 
+        // The header count owns the frame walk.  Claiming one fewer frame leaves two physical frames,
+        // where this donor convention permits exactly its one loop frame, and is refused at the offset.
+        byte[] countMismatch = [.. mage];
+        countMismatch[6] = 14;
+        countMismatch[7] = 0;
+        Assert.False(FlcDecoder.TryRead(countMismatch, "count-mismatch.CEL", out _, out string mismatch));
+        Assert.Contains("count-mismatch.CEL", mismatch, StringComparison.Ordinal);
+        Assert.Contains("14 frames", mismatch, StringComparison.Ordinal);
+        Assert.Contains("at byte", mismatch, StringComparison.Ordinal);
+
         // A container whose declared first frame offset is not backed by a prefix chunk is refused:
         // the gap would otherwise be a fact nobody accounted for.
         byte[] shifted = [.. mage];

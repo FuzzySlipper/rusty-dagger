@@ -73,8 +73,8 @@ public sealed class ResidualSourceInventory
         // which the drift lists report. They are classified rather than refused so a future
         // residual file of one of these shapes lands in its documented family.
         ["GFX"] = new("Arena2CanvasReader", "GfxFile", "classic GFX frame containers, of which the shipped corpus keeps its two under the UI media family"),
-        ["CEL"] = new("", "FlcFile", "classic animation frames the donor reads with its FLC reader"),
-        ["BSS"] = new("", "BssFile", "compass sprite banks, which is what the donor opens with its BSS reader"),
+        ["CEL"] = new("Arena2CanvasReader", "FlcFile", "classic animation frames the donor reads with its FLC reader"),
+        ["BSS"] = new("Arena2CanvasReader", "BssFile", "compass sprite banks, which is what the donor opens with its BSS reader"),
         ["DEF"] = new("", "MagicItemsFile", "the magic item definition table the donor reads as MAGIC.DEF"),
         ["RSC"] = new("", "TextFile", "packed text records the donor reads as TEXT.RSC"),
     };

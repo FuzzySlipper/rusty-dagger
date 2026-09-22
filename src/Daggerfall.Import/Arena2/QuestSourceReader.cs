@@ -1,6 +1,6 @@
 namespace Daggerfall.Import.Arena2;
 
-/// <summary>Which QBN item a block is: the donor's closed set of line signatures.</summary>
+/// <summary>Which top-level QBN item a block is: the donor parser's closed set of line signatures.</summary>
 public enum QuestBlockKind
 {
     Clock,
@@ -25,7 +25,10 @@ public sealed record QuestHeaderField(string Name, string Value);
 /// <param name="Lines">The message lines.</param>
 public sealed record QuestMessageBlock(int Id, int FirstLine, IReadOnlyList<string> Lines);
 
-/// <summary>One QBN block: its kind, lines and global link.</summary>
+/// <summary>
+/// One QBN block: its top-level kind, ordered source lines and global link. Action-body lines
+/// remain source records here; later ruleset-owned action work gives them executable meaning.
+/// </summary>
 /// <param name="Kind">The block kind.</param>
 /// <param name="FirstLine">The 1-based first line.</param>
 /// <param name="Lines">The block lines.</param>
@@ -54,9 +57,9 @@ public sealed record QuestSourceDocument(
 /// line numbers, because a quest diagnostic names lines rather than bytes. The grammar follows
 /// the donor's first
 /// pass exactly: quest/displayname/qrc/qbn markers, dash comments skipped outside QRC, empty
-/// QRC or QBN refused, and a QBN line no branch claims refused rather than carried. Message
-/// ids follow the donor's bracket rule; QBN blocks follow its branch order with the headless
-/// entry point taken once.
+/// QRC or QBN refused, and an unattached QBN line no branch claims refused rather than carried.
+/// Message ids follow the donor's bracket rule; QBN blocks follow its branch order with the
+/// headless entry point taken once. This reader does not claim task action bodies as executable.
 /// </summary>
 public static class QuestSourceReader
 {
