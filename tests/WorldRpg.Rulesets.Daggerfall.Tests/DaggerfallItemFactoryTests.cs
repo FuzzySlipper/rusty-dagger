@@ -105,6 +105,8 @@ public sealed class DaggerfallItemFactoryTests
             TemplateIndex: 83, PotionRecipeKey: 221871));
         DaggerfallCreatedItem recipe = factory.Create(new DaggerfallItemCreateRequest("MiscItems", "recipe", DaggerfallItemOwner.Player,
             TemplateIndex: 278, PotionRecipeKey: 221871));
+        DaggerfallCreatedItem letter = factory.Create(new DaggerfallItemCreateRequest("MiscItems", "letter", DaggerfallItemOwner.Player,
+            TemplateIndex: 275, CreditValue: 100));
 
         Assert.Equal(("breton", "male", "blue"), (clothing.Metadata.Race, clothing.Metadata.Gender, clothing.Metadata.Dye));
         Assert.Equal(("breton", "female", "chain"), (armor.Metadata.Race, armor.Metadata.Gender, armor.Metadata.Dye));
@@ -113,9 +115,11 @@ public sealed class DaggerfallItemFactoryTests
         Assert.NotNull(book.Metadata.BookId);
         Assert.Equal(221871, potion.Metadata.PotionRecipeKey);
         Assert.Equal(221871, recipe.Metadata.PotionRecipeKey);
+        Assert.Equal(100UL, letter.Metadata.CreditValue);
         Assert.Equal(book.Metadata, DaggerfallItemInstanceMetadata.Restore(book.Item.Value, book.Metadata.Capture()));
         Assert.Equal(potion.Metadata, DaggerfallItemInstanceMetadata.Restore(potion.Item.Value, potion.Metadata.Capture()));
         Assert.Equal(recipe.Metadata, DaggerfallItemInstanceMetadata.Restore(recipe.Item.Value, recipe.Metadata.Capture()));
+        Assert.Equal(letter.Metadata, DaggerfallItemInstanceMetadata.Restore(letter.Item.Value, letter.Metadata.Capture()));
         Assert.True(DaggerfallEquipmentPolicy.IsCompatible(definitions, definitions.RequireItem(new DaggerfallItemId("template-102")), "chest-armor"));
     }
 
@@ -227,6 +231,7 @@ public sealed class DaggerfallItemFactoryTests
         Assert.Throws<ArgumentException>(() => factory.Create(new DaggerfallItemCreateRequest("Weapons", "bad", DaggerfallItemOwner.Player, Material: "leather", TemplateIndex: 113)));
         Assert.Throws<ArgumentException>(() => factory.Create(new DaggerfallItemCreateRequest("UselessItems1", "potion", DaggerfallItemOwner.Player, TemplateIndex: 83)));
         Assert.Throws<ArgumentException>(() => factory.Create(new DaggerfallItemCreateRequest("Weapons", "not-potion", DaggerfallItemOwner.Player, TemplateIndex: 113, PotionRecipeKey: 221871)));
+        Assert.Throws<ArgumentException>(() => factory.Create(new DaggerfallItemCreateRequest("MiscItems", "letter", DaggerfallItemOwner.Player, TemplateIndex: 275)));
     }
 
     private static DaggerfallItemCreateRequest Request(DaggerfallItemTemplateDefinition template) => new(
@@ -236,7 +241,8 @@ public sealed class DaggerfallItemFactoryTests
         TemplateIndex: template.Index,
         Race: template.Groups.Contains("Armor", StringComparer.Ordinal) || template.Groups.Contains("MensClothing", StringComparer.Ordinal) || template.Groups.Contains("WomensClothing", StringComparer.Ordinal) ? "breton" : null,
         Gender: template.Groups.Contains("Armor", StringComparer.Ordinal) ? "male" : null,
-        PotionRecipeKey: template.Index is 83 or 278 ? 221871 : null);
+        PotionRecipeKey: template.Index is 83 or 278 ? 221871 : null,
+        CreditValue: template.Index == 275 ? 100 : null);
 
     private static IRandomService RandomMinimum() => DispatchProxy.Create<IRandomService, RandomMinimumProxy>();
 

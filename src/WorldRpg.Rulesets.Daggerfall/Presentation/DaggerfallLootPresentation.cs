@@ -23,8 +23,10 @@ internal sealed class DaggerfallLootPresentation(DaggerfallCorpseLootModule loot
         if (_actor is not long actor) return null;
         InventoryView? contents = loot.ReadContents(actor);
         InventoryItemPresentation[] rows = contents is null ? [] : contents.Stacks
-            .Select(stack => items.DescribeItem(DaggerfallInventoryPresentation.StackKey(stack.Id), stack.Definition.Value, stack.Quantity))
-            .Concat(contents.UniqueItems.Select(item => items.DescribeItem(DaggerfallInventoryPresentation.UniqueKey(item.Entity.Value), item.Definition.Value, 1)))
+            .Select(stack => items.DescribeItem(DaggerfallInventoryPresentation.StackKey(stack.Id), stack.Definition.Value, stack.Quantity,
+                owner: DaggerfallItemOwner.Corpse(actor)))
+            .Concat(contents.UniqueItems.Select(item => items.DescribeItem(DaggerfallInventoryPresentation.UniqueKey(item.Entity.Value), item.Definition.Value, 1,
+                owner: DaggerfallItemOwner.Corpse(actor))))
             .OrderBy(item => item.Key, StringComparer.Ordinal).ToArray();
         return new(Token, $"{Token}:{contents?.StoreRevision ?? 0}", DaggerfallInventoryPresentation.Label(loot.ContainerName(actor)) + " — loot",
             rows, rows.Length == 0, Message);

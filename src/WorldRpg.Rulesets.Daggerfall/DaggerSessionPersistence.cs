@@ -117,6 +117,7 @@ internal sealed class DaggerSessionPersistence
         {
             Quests = State.Quests.Capture(),
             Doors = _doors.Capture(),
+            Currency = State.Currency.Capture(),
         });
     }
 

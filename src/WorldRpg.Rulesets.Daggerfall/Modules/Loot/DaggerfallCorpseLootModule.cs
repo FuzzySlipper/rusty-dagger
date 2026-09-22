@@ -33,6 +33,7 @@ internal sealed class DaggerfallCorpseLootModule
     private readonly ActorsState _actors;
     private readonly IReadOnlyDictionary<long, DaggerfallActorDefinition> _definitions;
     private readonly DaggerfallDefinitions _catalog;
+    private readonly DaggerfallEncumbrancePolicy? _encumbrance;
     private readonly DaggerfallUniqueItemAllocator _uniqueItems;
     private readonly ProgressionState _progression;
     private readonly DaggerfallLootInteractionTuning _tuning;
@@ -49,6 +50,7 @@ internal sealed class DaggerfallCorpseLootModule
         ActorsState actors,
         IReadOnlyDictionary<long, DaggerfallActorDefinition> definitions,
         DaggerfallDefinitions catalog,
+        DaggerfallEncumbrancePolicy? encumbrance,
         IRandomService random,
         DaggerfallUniqueItemAllocator uniqueItems,
         ProgressionState progression,
@@ -63,6 +65,7 @@ internal sealed class DaggerfallCorpseLootModule
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+        _encumbrance = encumbrance;
         ArgumentNullException.ThrowIfNull(random);
         _uniqueItems = uniqueItems ?? throw new ArgumentNullException(nameof(uniqueItems));
         _progression = progression ?? throw new ArgumentNullException(nameof(progression));
@@ -71,6 +74,17 @@ internal sealed class DaggerfallCorpseLootModule
         _population = new DaggerfallLootPopulation(_catalog, random, _uniqueItems);
         _corpseLoot = new CorpseLootCoordinator(_actors.Entities, _containers);
     }
+
+    // Focused module tests can exercise corpse ownership with no player inventory/stat fixture.
+    // Session composition always supplies the live capacity policy above.
+    internal DaggerfallCorpseLootModule(
+        IPerceptionService perception, SpatialMovementSystem spatial, MechanicsInventoryContainerCoordinator containers,
+        DaggerfallItemInstances itemInstances, EntityId playerOwner, ActorsState actors,
+        IReadOnlyDictionary<long, DaggerfallActorDefinition> definitions, DaggerfallDefinitions catalog,
+        IRandomService random, DaggerfallUniqueItemAllocator uniqueItems, ProgressionState progression,
+        DaggerfallLootInteractionTuning tuning, DaggerfallCharacterState character)
+        : this(perception, spatial, containers, itemInstances, playerOwner, actors, definitions, catalog,
+            null, random, uniqueItems, progression, tuning, character) { }
 
     internal IReadOnlyDictionary<long, CorpseContainer> Corpses => _actors.All
         .Select(actor => actor.Actor.TryGet<CorpseLootComponent>(out CorpseLootComponent? corpse) && corpse is not null
@@ -262,6 +276,12 @@ internal sealed class DaggerfallCorpseLootModule
         }
         try
         {
+            if (_encumbrance is not null && pending.Selection is { } requested
+                && !_encumbrance.CanCarry(_catalog.RequireItem(new DaggerfallItemId(requested.Item.Value)), requested.Quantity))
+            {
+                LastCommit = new CorpseLootCommitEvidence(pending.ActorId, false, "You cannot carry any more.");
+                return CorpseLootCommitResult.Rejected;
+            }
             if (pending.Selection is { Stack: InventoryStackId source, DestinationStack: InventoryStackId destination })
                 _itemInstances.EnsureTransferCompatible(DaggerfallItemOwner.Corpse(pending.ActorId), DaggerfallItemOwner.Player, source, destination);
             // The transfer commits first. All code after it is deterministic local bookkeeping and

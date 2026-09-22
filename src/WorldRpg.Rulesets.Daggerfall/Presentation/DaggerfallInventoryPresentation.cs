@@ -10,7 +10,7 @@ internal sealed record InventoryItemPresentation(string Key, string Definition, 
 internal sealed record EquipmentSlotPresentation(string Id, string Label, string? ItemKey);
 internal sealed record EquipmentChangePresentation(string Cue, int RightHandDelayMilliseconds, int LeftHandDelayMilliseconds);
 internal sealed record InventoryPresentation(string Revision, InventoryItemPresentation[] Items, EquipmentSlotPresentation[] Slots, string Message,
-    EquipmentChangePresentation? EquipmentChange = null);
+    EquipmentChangePresentation? EquipmentChange = null, DaggerfallEncumbrance? Encumbrance = null, DaggerfallCurrencyTotals? Currency = null);
 
 /// <summary>Daggerfall inventory projection and UI-action translation; quantities and equipment remain Engine facts.</summary>
 internal sealed class DaggerfallInventoryPresentation
@@ -18,6 +18,8 @@ internal sealed class DaggerfallInventoryPresentation
     private readonly DaggerfallEquipmentMoves moves;
     private readonly DaggerfallDefinitions definitions;
     private readonly IReadOnlyDictionary<string, string> icons;
+    private readonly DaggerfallEncumbrancePolicy? encumbrance;
+    private readonly DaggerfallCurrencyService? currency;
     private DaggerfallItemValuation? valuation;
     private DaggerfallItemInstances? itemInstances;
     private DaggerfallItemOwner? itemOwner;
@@ -28,11 +30,15 @@ internal sealed class DaggerfallInventoryPresentation
     internal DaggerfallInventoryPresentation(
         DaggerfallEquipmentMoves moves,
         DaggerfallDefinitions definitions,
-        IReadOnlyDictionary<string, string> icons)
+        IReadOnlyDictionary<string, string> icons,
+        DaggerfallEncumbrancePolicy? encumbrance = null,
+        DaggerfallCurrencyService? currency = null)
     {
         this.moves = moves;
         this.definitions = definitions;
         this.icons = icons;
+        this.encumbrance = encumbrance;
+        this.currency = currency;
         moves.Changed += change => LastEquipmentChange = change;
     }
 
@@ -60,7 +66,8 @@ internal sealed class DaggerfallInventoryPresentation
             DescribeItem(item.Key, item.Definition, item.Quantity, item.Slots.Length == 0 ? moves.GridPosition(item.Key) : null, item.Slots)).ToArray(),
             definitions.EquipmentSlots.Values.Select(slot => new EquipmentSlotPresentation(slot.Id.Value, Label(slot.Id.Value),
                 equipped.TryGet(new EquipmentSlotId(slot.Id.Value), out UniqueInventoryItem item) ? UniqueKey(item.EntityId) : null)).ToArray(), Message,
-            LastEquipmentChange is { } change ? new(change.Cue.ToString().ToLowerInvariant(), change.Timing.RightHandMilliseconds, change.Timing.LeftHandMilliseconds) : null);
+            LastEquipmentChange is { } change ? new(change.Cue.ToString().ToLowerInvariant(), change.Timing.RightHandMilliseconds, change.Timing.LeftHandMilliseconds) : null,
+            encumbrance?.Read(), currency?.Read());
     }
 
     /// <summary>
@@ -102,21 +109,22 @@ internal sealed class DaggerfallInventoryPresentation
         };
     }
 
-    internal InventoryItemPresentation DescribeItem(string key, string itemId, ulong quantity, int? gridSlot = null, string[]? equippedSlots = null)
+    internal InventoryItemPresentation DescribeItem(string key, string itemId, ulong quantity, int? gridSlot = null, string[]? equippedSlots = null,
+        DaggerfallItemOwner? owner = null)
     {
         DaggerfallItemDefinition definition = definitions.RequireItem(new DaggerfallItemId(itemId));
         return new InventoryItemPresentation(key, itemId, definition.Template?.Name ?? Label(itemId), quantity.ToString(CultureInfo.InvariantCulture),
-            definition.Weight, CurrentValue(key, definition), Details(definition), icons.GetValueOrDefault(itemId), gridSlot, equippedSlots ?? [],
+            definition.Weight, CurrentValue(key, definition, owner ?? itemOwner), Details(definition), icons.GetValueOrDefault(itemId), gridSlot, equippedSlots ?? [],
             definitions.EquipmentSlots.Keys.Select(slot => slot.Value).Where(slot => DaggerfallEquipmentPolicy.IsCompatible(definitions, definition, slot)).ToArray());
     }
 
-    private int CurrentValue(string key, DaggerfallItemDefinition definition)
+    private int CurrentValue(string key, DaggerfallItemDefinition definition, DaggerfallItemOwner? owner)
     {
         if (valuation is null) return definition.Value;
         DaggerfallItemInstanceMetadata metadata = key.StartsWith("unique:", StringComparison.Ordinal)
             ? itemInstances!.RequireUnique(uniqueIdentity!(ParseUniqueEntity(key)))
             : key.StartsWith("stack:", StringComparison.Ordinal)
-                ? itemInstances!.RequireStack(itemOwner!, Rusty.Engine.Mechanics.InventoryStackId.Parse(key["stack:".Length..]))
+                ? itemInstances!.RequireStack(owner?.Validate() ?? throw new InvalidOperationException("Valued inventory rows require a durable owner."), Rusty.Engine.Mechanics.InventoryStackId.Parse(key["stack:".Length..]))
                 : throw new InvalidOperationException($"Inventory item key '{key}' does not name a unique item or stack.");
         return valuation.CurrentValue(definition, metadata);
     }

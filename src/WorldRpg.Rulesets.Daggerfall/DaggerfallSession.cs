@@ -234,6 +234,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
             _uniqueItems = DaggerfallUniqueItemAllocator.Sharing(_actorIdentities);
             State.Npcs.Identities = _actorIdentities;
+            State.Encumbrance = new DaggerfallEncumbrancePolicy(State.Inventory, State.Actors.Player.Stats);
+            State.Currency = new DaggerfallCurrencyService(definitions, State.Inventory, State.ItemInstances, State.Encumbrance, _uniqueItems, saved?.Currency);
             _corpseLoot = new DaggerfallCorpseLootModule(
                 engine.Perception,
                 _spatial,
@@ -243,6 +245,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 State.Actors,
                 authored,
                 definitions,
+                State.Encumbrance,
                 _random,
                 _uniqueItems,
                 State.Progression,
@@ -251,7 +254,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored, () => State.Kit.Targeting.LastEvidence);
             _equipmentMoves = new DaggerfallEquipmentMoves(inventory, equipmentCoordinator, definitions,
                 () => State.Character.Career.ForbiddenEquipment, State.ItemInstances);
-            _inventoryUi = new DaggerfallInventoryPresentation(_equipmentMoves, definitions, inputs.ClassicPresentation.InventoryIcons);
+            _inventoryUi = new DaggerfallInventoryPresentation(_equipmentMoves, definitions, inputs.ClassicPresentation.InventoryIcons,
+                State.Encumbrance, State.Currency);
             _inventoryUi.UseItemValuation(new DaggerfallItemValuation(definitions), State.ItemInstances, DaggerfallItemOwner.Player,
                 entity => State.Actors.Entities.IdentityOf(new Rusty.Engine.Entities.EntityId(entity)).Value);
             _lootUi = new DaggerfallLootPresentation(_corpseLoot, _inventoryUi);
@@ -575,6 +579,10 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 case "art-request": _hud.RequestArt(); break;
                 case "inventory": break;
                 case "inventory-move": if (playing || modal) _inventoryUi.Move(action!); break;
+                case "currency-deposit-gold": if (playing || modal) ChangeCurrency(action!); break;
+                case "currency-withdraw-gold": if (playing || modal) ChangeCurrency(action!); break;
+                case "currency-deposit-letters": if (playing || modal) ChangeCurrency(action!); break;
+                case "currency-withdraw-letter": if (playing || modal) ChangeCurrency(action!); break;
                 case "character": break;
                 case "loot": if (playing) firstStep.Request(DaggerfallInput.Interact); break;
                 case "loot-close": if (playing || modal) _lootUi.Close(action!.Container); break;
@@ -811,6 +819,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         _latestSimulationStep = simulationStep;
         State.Kit.AttackExecution.ObserveTimeline(generation, simulationStep);
         _input.Apply(State.PlayerControl, update);
+        // The Engine still receives an ordinary character step (grounding and gravity remain its
+        // responsibility), but classic over-capacity removes planar intent before that proposal.
+        if (!State.Encumbrance.Read().CanMove) update.PlanarIntent = Vector2.Zero;
         _doors.Advance(update.DeltaSeconds);
         _spatial.Step(State.PlayerControl, update, _doors.CharacterEnvironment());
         _camera.Update(State.PlayerControl);
