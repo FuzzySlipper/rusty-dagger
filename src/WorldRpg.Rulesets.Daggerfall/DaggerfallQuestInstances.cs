@@ -79,6 +79,7 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
     /// <summary>The quest that invoked this child, if this was started by a run-quest operation.</summary>
     public string? ParentInstanceId { get; init; }
     /// <summary>Whether the retained terminal result satisfies a run-quest success branch.</summary>
+    [JsonRequired]
     public bool? Succeeded { get; init; }
     /// <summary>Absolute game seconds when a terminal instance entered its one-week tombstone retention period.</summary>
     public long? TombstoneAtSeconds { get; init; }
@@ -346,6 +347,7 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
     private readonly IReadOnlyDictionary<string, DaggerfallQuestTaskProgram> _programs;
     private readonly Dictionary<string, DaggerfallQuestRuntimeInstance> _instances = new(StringComparer.Ordinal);
     private readonly Dictionary<string, DaggerfallQuestStartSave> _pendingStarts = new(StringComparer.Ordinal);
+    private DaggerfallQuestRuntime? _runtime;
     private const long TombstoneRetentionSeconds = 7 * 24 * 60 * 60;
 
     internal DaggerfallQuestInstances(DaggerfallDefinitions definitions, IRandomService random, DaggerfallQuestRuntimeAdmission? admission = null, DaggerfallDisabledQuestSelection? disabledSelection = null)
@@ -362,6 +364,9 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
 
     internal IReadOnlyCollection<DaggerfallQuestInstanceSave> All => _instances.Values.Select(instance => instance.Capture()).ToArray();
     internal DaggerfallQuestMessages Messages { get; }
+
+    /// <summary>Binds the one session's live player and elapsed-time owners after composition completes.</summary>
+    internal void BindRuntime(DaggerfallQuestRuntime runtime) => _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
 
     internal DaggerfallQuestPresentation ReadPresentation(Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestMessageContext> context)
     {
@@ -586,6 +591,11 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
         return target;
     }
 
+    bool IDaggerfallQuestTaskLifecycle.IsLevelCompleted(int minimum) => Runtime.IsLevelCompleted(minimum);
+    bool IDaggerfallQuestTaskLifecycle.IsAttributeAtLeast(string attribute, int minimum) => Runtime.IsAttributeAtLeast(attribute, minimum);
+    bool IDaggerfallQuestTaskLifecycle.IsSkillAtLeast(string skill, int minimum) => Runtime.IsSkillAtLeast(skill, minimum);
+    void IDaggerfallQuestTaskLifecycle.Train(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => Runtime.Train(instance, operation);
+
     void IDaggerfallQuestTaskLifecycle.Schedule(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) =>
         ScheduleStart(ResolveSource(operation.Targets.Single()), null, instance.FactionId,
             $"{instance.InstanceId}:start:{operation.SourceLine}");
@@ -763,5 +773,7 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
             }
         }
     }
+
+    private DaggerfallQuestRuntime Runtime => _runtime ?? throw new InvalidOperationException("Daggerfall quest runtime has not been bound to this session.");
 
 }

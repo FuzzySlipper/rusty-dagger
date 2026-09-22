@@ -23,6 +23,8 @@ internal sealed class DaggerfallState(PlayerControlState playerControl, ActorsSt
     internal DaggerfallSkillUseReactions SkillUses { get; set; } = null!;
     /// <summary>One durable, staged classic level-up allocation opened by ordinary rest eligibility.</summary>
     internal DaggerfallLevelUpState LevelUps { get; set; } = null!;
+    /// <summary>Current donor quest-training timestamp, separate from the calendar that advances it.</summary>
+    internal DaggerfallQuestTrainingState QuestTraining { get; set; } = new();
     internal PlayerControlState PlayerControl { get; } = playerControl;
     internal ActorsState Actors { get; } = actors;
     internal ProgressionState Progression => Actors.Player.Progression;
