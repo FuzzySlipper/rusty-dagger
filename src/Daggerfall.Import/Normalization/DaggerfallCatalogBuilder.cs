@@ -99,6 +99,7 @@ public static class DaggerfallCatalogBuilder
                 [.. decoded.MajorSkill(skills)],
                 [.. decoded.MinorSkill(skills)],
                 [.. attributes.Select(key => key.Id)],
+                [.. decoded.Attributes.Select(value => checked((int)value))],
                 decoded.HitPointsPerLevel,
                 decoded.AdvancementMultiplier,
                 [.. FlaggedElements(decoded.ResistanceFlags)],

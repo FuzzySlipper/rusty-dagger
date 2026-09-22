@@ -70,9 +70,9 @@ public sealed record DaggerfallRaceKey(string Id, int DonorRaceId, DaggerfallCat
 }
 
 /// <summary>
-/// One decoded career: the classic record's identity, the skills and attributes it names
-/// by key, and the elements it resists or is immune to. The references are keys so a
-/// dangling one is a validation error rather than a value nobody can resolve.
+/// One decoded career: the classic record's identity, the skills it trains, and its
+/// authored initial attribute bases. Attribute keys retain the source order while the
+/// parallel values are the numbers the CLASS carrier actually supplies.
 /// </summary>
 public sealed record DaggerfallCareerRecord(
     string Id,
@@ -81,6 +81,7 @@ public sealed record DaggerfallCareerRecord(
     IReadOnlyList<string> MajorSkills,
     IReadOnlyList<string> MinorSkills,
     IReadOnlyList<string> Attributes,
+    IReadOnlyList<int> AttributeValues,
     int HitPointsPerLevel,
     float AdvancementMultiplier,
     IReadOnlyList<string> ResistanceElements,
@@ -154,6 +155,11 @@ public sealed record DaggerfallCareerRecord(
         RequireElements(ResistanceElements, ResistanceFlags, "resists");
         RequireElements(ImmunityElements, ImmunityFlags, "is immune to");
         RequireReferences(Attributes, attributeKeys, $"career '{Id}' names attribute");
+        if (AttributeValues.Count != DaggerfallCatalogs.ClassicAttributeCount
+            || AttributeValues.Any(value => value < 0))
+        {
+            throw new InvalidOperationException($"Career '{Id}' must carry {DaggerfallCatalogs.ClassicAttributeCount} non-negative attribute values.");
+        }
         Source.Validate(inventoryRecordIds);
     }
 

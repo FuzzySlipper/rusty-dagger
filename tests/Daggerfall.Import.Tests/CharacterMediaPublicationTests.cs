@@ -7,9 +7,8 @@ using Xunit;
 namespace Daggerfall.Import.Tests;
 
 /// <summary>
-/// The character/face canvases a presentation reference names have to become admitted bytes, not stay
-/// pending forever. These checks publish real corpus canvases and pin the two refusals that keep a missing
-/// canvas visible.
+/// The character/face canvases a presentation reference names have to become normal content artifacts.
+/// These checks publish real corpus canvases and make any missing canvas visible by its refusal.
 /// </summary>
 public sealed class CharacterMediaPublicationTests
 {
@@ -21,19 +20,17 @@ public sealed class CharacterMediaPublicationTests
         [
             new("character.head.breton.male", "FACE00I0.CIF", "FACE", "head", "an unstated consumer", MediaBinding.RequiredPending, 3, "ART_PAL.COL", [], "the canvas the reference names"),
             new("character.head.breton.female", "FACE00I0.CIF", "FACE", "head", "an unstated consumer", MediaBinding.RequiredPending, 0, "ART_PAL.COL", [], "the canvas the reference names"),
-            // The face grid's cells are enumerated but their pixels are not decodable here, so it is
-            // refused with that reason rather than published as a shape with no image.
+            // FACES.CIF is the donor's 64x64 fixed-cell RCI grid: the reference selects one
+            // actual indexed-pixel cell rather than a placeholder canvas.
             new("character.faction-face.00", "FACES.CIF", "FACE", "faction-face", "an unstated consumer", MediaBinding.RequiredPending, 0, "ART_PAL.COL", [], "the canvas the reference names"),
         ];
 
         CharacterMediaPublicationResult published = CharacterMediaPublication.Publish("FACE", references, sources, palettes);
 
-        Assert.Equal(2, published.Artifacts.Count);
-        // Artifacts come out in canvas order, which is the order the reader enumerates records in.
-        Assert.Equal(["character.head.breton.female", "character.head.breton.male"], published.Artifacts.Select(artifact => artifact.MediaId));
-        Assert.True(published.Refusals.Count == 1, $"refused: {string.Join(" | ", published.Refusals)}");
-        Assert.Contains("character.faction-face.00", published.Refusals[0], StringComparison.Ordinal);
-        Assert.Contains("FACES.CIF", published.Refusals[0], StringComparison.Ordinal);
+        Assert.Equal(3, published.Artifacts.Count);
+        // Equal canvas ordinals preserve the reference order; a record's own ordinal orders its frames.
+        Assert.Equal(["character.head.breton.female", "character.faction-face.00", "character.head.breton.male"], published.Artifacts.Select(artifact => artifact.MediaId));
+        Assert.Empty(published.Refusals);
         Assert.Equal(published.PublishedMediaIds.Count, published.PublishedMediaIds.Distinct(StringComparer.Ordinal).Count());
         Assert.All(published.Artifacts, artifact =>
         {
@@ -75,6 +72,78 @@ public sealed class CharacterMediaPublicationTests
         Assert.Equal(2, published.Refusals.Count);
         Assert.Contains(published.Refusals, refusal => refusal.Contains("character.faction-face.00", StringComparison.Ordinal) && refusal.Contains("NOTHERE.CIF", StringComparison.Ordinal));
         Assert.Contains(published.Refusals, refusal => refusal.Contains("character.faction-face.01", StringComparison.Ordinal) && refusal.Contains("999", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void SlicesFixedCellsAtTheirExactOffsetsAndRefusesIncompleteOrUnpaintableGrids()
+    {
+        const int cellBytes = 64 * 64;
+        byte[] grid = new byte[cellBytes * 2];
+        grid[0] = 1;
+        grid[cellBytes - 1] = 2;
+        grid[cellBytes] = 3;
+        grid[(cellBytes * 2) - 1] = 4;
+        byte[] paletteBytes = new byte[768];
+        paletteBytes[3] = 0x11;
+        paletteBytes[4] = 0x22;
+        paletteBytes[5] = 0x33;
+        paletteBytes[6] = 0x44;
+        paletteBytes[7] = 0x55;
+        paletteBytes[8] = 0x66;
+        paletteBytes[9] = 0x77;
+        paletteBytes[10] = 0x88;
+        paletteBytes[11] = 0x99;
+        paletteBytes[12] = 0xaa;
+        paletteBytes[13] = 0xbb;
+        paletteBytes[14] = 0xcc;
+        Arena2Palette palette = PaletteDecoder.Decode(paletteBytes, "ART_PAL.COL");
+        Dictionary<string, ReadOnlyMemory<byte>> sources = new(StringComparer.Ordinal)
+        {
+            ["FACES.CIF"] = grid,
+        };
+        Dictionary<string, Arena2Palette> palettes = new(StringComparer.Ordinal)
+        {
+            ["ART_PAL.COL"] = palette,
+        };
+        CharacterCanvasReference[] references =
+        [
+            new("character.faction-face.00", "FACES.CIF", "FACE", "faction-face", "an unstated consumer", MediaBinding.RequiredPending, 0, "ART_PAL.COL", [], "fixture"),
+            new("character.faction-face.01", "FACES.CIF", "FACE", "faction-face", "an unstated consumer", MediaBinding.RequiredPending, 1, "ART_PAL.COL", [], "fixture"),
+        ];
+
+        CharacterMediaPublicationResult published = CharacterMediaPublication.Publish("FACE", references, sources, palettes);
+
+        Assert.Empty(published.Refusals);
+        CharacterMediaArtifact first = published.Artifacts.Single(artifact => artifact.MediaId == "character.faction-face.00");
+        CharacterMediaArtifact second = published.Artifacts.Single(artifact => artifact.MediaId == "character.faction-face.01");
+        Assert.Equal((64, 64), (first.Width, first.Height));
+        Assert.Equal((64, 64), (second.Width, second.Height));
+        AssertOpaquePixels(first, grid.AsMemory(0, cellBytes), palette);
+        AssertOpaquePixels(second, grid.AsMemory(cellBytes, cellBytes), palette);
+        CharacterMediaPublicationResult republished = CharacterMediaPublication.Publish("FACE", references, sources, palettes);
+        Assert.Equal(first.Bytes, republished.Artifacts.Single(artifact => artifact.MediaId == first.MediaId).Bytes);
+        Assert.Equal(second.Bytes, republished.Artifacts.Single(artifact => artifact.MediaId == second.MediaId).Bytes);
+
+        byte[] truncated = new byte[grid.Length + 1];
+        grid.CopyTo(truncated, 0);
+        truncated[^1] = 0xff;
+        sources["FACES.CIF"] = truncated;
+        CharacterMediaPublicationResult incomplete = CharacterMediaPublication.Publish("FACE", references, sources, palettes);
+        Assert.Empty(incomplete.Artifacts);
+        Assert.All(incomplete.Refusals, refusal =>
+        {
+            Assert.Contains("FACES.CIF", refusal, StringComparison.Ordinal);
+            Assert.Contains("incomplete fixed-cell grid", refusal, StringComparison.Ordinal);
+        });
+
+        sources["FACES.CIF"] = grid;
+        CharacterMediaPublicationResult missingPalette = CharacterMediaPublication.Publish("FACE", references, sources, new Dictionary<string, Arena2Palette>(StringComparer.Ordinal));
+        Assert.Empty(missingPalette.Artifacts);
+        Assert.All(missingPalette.Refusals, refusal =>
+        {
+            Assert.Contains("FACES.CIF", refusal, StringComparison.Ordinal);
+            Assert.Contains("ART_PAL.COL", refusal, StringComparison.Ordinal);
+        });
     }
 
     [Fact]
@@ -197,11 +266,11 @@ public sealed class CharacterMediaPublicationTests
 
         // The census, as counts rather than a claim: every family the inventory enumerates is published
         // from, and the totals are the readers' own.
-        Assert.Equal(360, pass.Artifacts.Count);
-        Assert.Equal(61, pass.Refusals.Count);
+        Assert.Equal(421, pass.Artifacts.Count);
+        Assert.Empty(pass.Refusals);
         Assert.Equal(87, inventory.Files.Count);
         Assert.Equal(
-            [4, 9, 9, 10, 32, 96, 40, 160],
+            [4, 9, 9, 10, 32, 96, 40, 221],
             new[]
             {
                 pass.Artifacts.Count(artifact => artifact.Reference.Family == "NITE"),
@@ -223,19 +292,19 @@ public sealed class CharacterMediaPublicationTests
             Assert.Contains(set.Canvases, canvas => canvas.MediaId == artifact.MediaId);
         });
 
-        // The BSS snapshots now publish through their donor-defined layout.  Only the fixed-cell
-        // face grid remains unreadable because this repository still has no cell pixel slicer.
-        CharacterMediaUnreadableFamily remaining = Assert.Single(pass.UnreadableFamilies);
-        Assert.Equal("FACE", remaining.Family);
-        Assert.Equal(["FACES.CIF"], remaining.Files);
-        Assert.Equal(string.Empty, remaining.DonorAnchor);
-        // Every refusal names the canvas and the file it needed, so a missing canvas is legible rather
-        // than a total that quietly came up short.
-        Assert.All(pass.Refusals, refusal =>
-        {
-            Assert.StartsWith("'character.", refusal, StringComparison.Ordinal);
-            Assert.Contains(pass.UnreadableFamilies.SelectMany(family => family.Files), file => refusal.Contains(file, StringComparison.Ordinal));
-        });
+        Assert.Empty(pass.UnreadableFamilies);
+        Assert.All(
+            set.Canvases.Where(canvas => System.IO.Path.GetFileName(canvas.Path).Equals("FACES.CIF", StringComparison.OrdinalIgnoreCase)),
+            canvas => Assert.Contains(canvas.MediaId, pass.PublishedMediaIds));
+        ReadOnlyMemory<byte> faces = sourceBytes["FACES.CIF"];
+        AssertOpaquePixels(
+            pass.Artifacts.Single(artifact => artifact.MediaId == "character.faction-face.00"),
+            faces[..(64 * 64)],
+            palettes[CharacterMediaReferences.ArtPalette]);
+        AssertOpaquePixels(
+            pass.Artifacts.Single(artifact => artifact.MediaId == "character.faction-face.60"),
+            faces[(60 * 64 * 64)..(61 * 64 * 64)],
+            palettes[CharacterMediaReferences.ArtPalette]);
 
         // The committed index is the pass's own output, regenerated for the same consumer the committed
         // pack names and under the same content group, so an index that drifted from the corpus, from its
@@ -362,12 +431,11 @@ public sealed class CharacterMediaPublicationTests
     }
 
     /// <summary>
-    /// A family entry says what is true of the family it names. The FACE family publishes 160 canvases here,
-    /// so an entry that claimed nothing reads the FACE format would be false in the same run that reads it -
-    /// while a BSS container really does read and really does have no pixel decoder.
+    /// Every readable source has a published artifact; an unreadable-family record would therefore be a false
+    /// claim about the same pass.
     /// </summary>
     [Fact]
-    public void StatesEachUnpublishableFamilyWithACauseThatMatchesTheRun()
+    public void StatesNoUnreadableFamilyWhenEverySourcePublishes()
     {
         (Dictionary<string, ReadOnlyMemory<byte>> sources, Dictionary<string, Arena2Palette> palettes) = Corpus();
         List<(string Path, ReadOnlyMemory<byte> Bytes)> supplied = [.. sources.Select(entry => (entry.Key, entry.Value))];
@@ -375,26 +443,9 @@ public sealed class CharacterMediaPublicationTests
         CharacterMediaReferenceSet set = CharacterMediaReferences.Derive(inventory, palettes.Keys.ToHashSet(StringComparer.Ordinal));
         CharacterMediaPassResult pass = CharacterMediaPublisher.PublishAll(set, sources, palettes, inventory);
 
-        CharacterMediaUnreadableFamily grid = Assert.Single(pass.UnreadableFamilies);
-        Assert.Equal("FACE", grid.Family);
-        Assert.Equal("fixed-cell RCI grid", grid.Kind);
-        Assert.Contains("nothing in this repository slices a cell's pixels", grid.Reason, StringComparison.Ordinal);
-        // The grid has no donor reader to name: the donor reads the grid and this repository enumerates its
-        // cells, so naming a reader here would be naming the wrong gap.
-        Assert.Equal(string.Empty, grid.DonorAnchor);
-
-        // Every file either family names is one the pass actually refused, and the aggregate covers them
-        // exactly: an entry that claimed a file the run published would be the false claim in one direction.
-        string[] refusedFiles = [.. pass.Refusals
-            .SelectMany(refusal => pass.UnreadableFamilies.SelectMany(family => family.Files).Where(file => refusal.Contains(file, StringComparison.Ordinal)))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Order(StringComparer.OrdinalIgnoreCase)];
-        Assert.Equal(
-            pass.UnreadableFamilies.SelectMany(family => family.Files).Order(StringComparer.OrdinalIgnoreCase),
-            refusedFiles);
-        Assert.All(pass.UnreadableFamilies.SelectMany(family => family.Files), file => Assert.DoesNotContain(
-            pass.Artifacts,
-            artifact => System.IO.Path.GetFileName(artifact.Reference.Path).Equals(file, StringComparison.OrdinalIgnoreCase)));
+        Assert.Empty(pass.Refusals);
+        Assert.Empty(pass.UnreadableFamilies);
+        Assert.Empty(pass.UnpublishableFiles);
     }
 
     /// <summary>
@@ -432,7 +483,7 @@ public sealed class CharacterMediaPublicationTests
     public void StatesAFileLevelGapWithoutClaimingTheFamilyIsUnreadable()
     {
         (Dictionary<string, ReadOnlyMemory<byte>> sources, Dictionary<string, Arena2Palette> palettes) = Corpus();
-        // A file the name rule puts in the FACE family whose bytes no reader accepts, alongside the 220
+        // A file the name rule puts in the FACE family whose bytes no reader accepts, alongside the 221
         // canvases the family really publishes.
         sources["FACE99I0.CIF"] = new byte[5000];
         List<(string Path, ReadOnlyMemory<byte> Bytes)> supplied = [.. sources.Select(entry => (entry.Key, entry.Value))];
@@ -440,8 +491,7 @@ public sealed class CharacterMediaPublicationTests
         CharacterMediaReferenceSet set = CharacterMediaReferences.Derive(inventory, palettes.Keys.ToHashSet(StringComparer.Ordinal), sources);
         CharacterMediaPassResult pass = CharacterMediaPublisher.PublishAll(set, sources, palettes, inventory);
 
-        // The family now has two entries, keyed by cause: the grid whose cells nothing slices, and the file
-        // no reader opens. Neither may claim the family is a format nothing reads.
+        // The family has one file-level gap; it must not claim the family is a format nothing reads.
         CharacterMediaUnreadableFamily face = pass.UnreadableFamilies.Single(family => family.Files.Contains("FACE99I0.CIF"));
         Assert.Equal(["FACE99I0.CIF"], face.Files);
         Assert.DoesNotContain("nothing in this repository reads the FACE format", face.Reason, StringComparison.Ordinal);
