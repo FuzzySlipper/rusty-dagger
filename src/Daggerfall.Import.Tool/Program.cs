@@ -2155,7 +2155,12 @@ internal static partial class Program
                 DungeonNormalizationResult result = DungeonNormalizer.Normalize(request);
 
                 Arena2DungeonMediaPublication dungeonMedia = Arena2DungeonMediaPublication.Create(
-                    Arena2DungeonMediaRequest.Create(result.Document, new Arena2DungeonMediaSourceSet(sources.DungeonMediaSources)) with { AuthoredOverlays = dungeonOverlays });
+                    Arena2DungeonMediaRequest.Create(result.Document, new Arena2DungeonMediaSourceSet(sources.DungeonMediaSources)) with
+                    {
+                        AuthoredOverlays = dungeonOverlays,
+                        TextureLeaves = sources.TextureLeaves(),
+                        TextureLeafConsumer = $"selected dungeon media '{options.Location}'",
+                    });
                 Arena2ClassicMediaPublication classicMedia = Arena2ClassicMediaPublication.Create(
                     sources.ClassicMediaInputs,
                     options.ClassicMediaProfile with { AuthoredOverlays = classicOverlays },

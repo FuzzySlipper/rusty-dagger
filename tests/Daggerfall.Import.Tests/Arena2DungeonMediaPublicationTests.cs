@@ -8,6 +8,26 @@ namespace Daggerfall.Import.Tests;
 public sealed class Arena2DungeonMediaPublicationTests
 {
     [Fact]
+    public void Selected_publication_refuses_absent_or_refused_texture_leaves_with_its_consumer()
+    {
+        Arena2DungeonMediaSource palette = new("arena2/PAL.PAL", [1]);
+        Arena2DungeonMediaSourceSet absent = new([palette, new Arena2DungeonMediaSource("arena2/TEXTURE.021", [1])]);
+        InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() =>
+            absent.RequireTextureLeaves(TextureLeafInventory.Enumerate([], "fixture"), "selected dungeon media 'fixture'"));
+        Assert.Contains("selected dungeon media 'fixture'", missing.Message, StringComparison.Ordinal);
+        Assert.Contains("21", missing.Message, StringComparison.Ordinal);
+
+        byte[] refusedBytes = new byte[46];
+        TextureLeafInventory refused = TextureLeafInventory.Enumerate([(215, "TEXTURE.215", (ReadOnlyMemory<byte>)refusedBytes)], "fixture");
+        Arena2DungeonMediaSourceSet malformed = new([palette, new Arena2DungeonMediaSource("arena2/TEXTURE.215", refusedBytes)]);
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() =>
+            malformed.RequireTextureLeaves(refused, "selected dungeon media 'fixture'"));
+        Assert.Contains("selected dungeon media 'fixture'", failure.Message, StringComparison.Ordinal);
+        Assert.Contains("215", failure.Message, StringComparison.Ordinal);
+        Assert.Contains("does not parse", failure.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void PublishesExactMaterialBillboardActorAndCorpseClosureDeterministically()
     {
         Arena2DungeonMediaRequest request = CreateRequest();

@@ -26,6 +26,11 @@
   ],
   "artifacts": [
     {
+      "path": "worldrpg/media/audio/classic-sound-catalog.json",
+      "byteLength": 154009,
+      "sha256": "83eec6dbf5ef1f49009fd525711ecb8ff16bdb0b1f969aea5e2fb0f3c1887890"
+    },
+    {
       "path": "worldrpg/media/audio/clips/audio-melee-dagger-swing.wav",
       "byteLength": 1331,
       "sha256": "52bef8e0b2e58e8ea4d9b00a5071d5c44f9beda27d57b0832c2e2d60046984fd",
@@ -62,9 +67,16 @@
       "mediaId": "audio.melee.hit.5"
     },
     {
-      "path": "worldrpg/media/audio/classic-sound-catalog.json",
-      "byteLength": 154009,
-      "sha256": "83eec6dbf5ef1f49009fd525711ecb8ff16bdb0b1f969aea5e2fb0f3c1887890"
+      "path": "worldrpg/media/combat/weapon-00-atlas.png",
+      "byteLength": 57273,
+      "sha256": "92ec6a4c7b9251421c23cd1b8d36c4010d6b621a196817e59a39ce8e76790a1c",
+      "mediaId": "weapon.00"
+    },
+    {
+      "path": "worldrpg/media/combat/weapon-03-atlas.png",
+      "byteLength": 47476,
+      "sha256": "b0dc64ffb1c19e35c6c8b6514f7b51e42eb9a8e7f5e65cd5c8e2f92809cc8101",
+      "mediaId": "weapon.03"
     },
     {
       "path": "worldrpg/media/combat/weapon-axe-atlas.png",
@@ -121,6 +133,12 @@
       "mediaId": "weapon.warhammer"
     },
     {
+      "path": "worldrpg/media/combat/weapon-werecreature-atlas.png",
+      "byteLength": 68862,
+      "sha256": "e590a06ee813606a0219d29b68dc55e0ae63696f2596ef2740366b5e284daba0",
+      "mediaId": "weapon.werecreature"
+    },
+    {
       "path": "worldrpg/media/effects/effect-blood-0-atlas.png",
       "byteLength": 2824,
       "sha256": "939e98d382d2ed3028cecf14a2dd3abf39a8ac89b8f6d270164c4837f2b48c0c",
@@ -145,10 +163,436 @@
       "mediaId": "effect.sparkle.magic"
     },
     {
+      "path": "worldrpg/media/fonts/font-classic-0000-atlas.png",
+      "byteLength": 2545,
+      "sha256": "49af7b4d851f9c11d6a86678505025664fe798a2ff191dcf9ed0d45c8f85d3f2",
+      "mediaId": "font.classic.0000"
+    },
+    {
+      "path": "worldrpg/media/fonts/font-classic-0001-atlas.png",
+      "byteLength": 3628,
+      "sha256": "e3669c2d60c399b3662c670a1d94a79800b58e3a4e54f9d00abbf3b8db9b6d44",
+      "mediaId": "font.classic.0001"
+    },
+    {
+      "path": "worldrpg/media/fonts/font-classic-0002-atlas.png",
+      "byteLength": 1097,
+      "sha256": "4311fbf7188c4ae4d354e3a54a0d05a808dc638f464c646dac7afef2117a82cf",
+      "mediaId": "font.classic.0002"
+    },
+    {
       "path": "worldrpg/media/fonts/font-classic-0003-atlas.png",
       "byteLength": 2376,
       "sha256": "0b4ecb2ac56683ac4eeee614b109d3327328aa1e1ec3914e369eb9845291e581",
       "mediaId": "font.classic.0003"
+    },
+    {
+      "path": "worldrpg/media/fonts/font-classic-0004-atlas.png",
+      "byteLength": 997,
+      "sha256": "5b2870d0ebec14e497a045e6cd1e9e6e62053a72280038e1021e0bbf0041a69c",
+      "mediaId": "font.classic.0004"
+    },
+    {
+      "path": "worldrpg/media/maps/map-amap00i0.png",
+      "byteLength": 13056,
+      "sha256": "60cd0f2851020b9a820b50e5d263806156246049d8e454528c38ef3a8b4433e3",
+      "mediaId": "map.amap00i0"
+    },
+    {
+      "path": "worldrpg/media/maps/map-amap01i0.png",
+      "byteLength": 480,
+      "sha256": "d31d40a747cbc9c5b38c18323be409cf69b38ca5774d8c24906dc2ca4530f754",
+      "mediaId": "map.amap01i0"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i05.png",
+      "byteLength": 4479,
+      "sha256": "ea119b8c1525615c3314bc5678a4db4f5a5c07b41d72b88c796372f01a051826",
+      "mediaId": "map.fmap0i05"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i09.png",
+      "byteLength": 5336,
+      "sha256": "8c9b3156c62695fedef8431a121fb17d8c309f0e5eb45e902a403aea2dc91660",
+      "mediaId": "map.fmap0i09"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i11.png",
+      "byteLength": 3537,
+      "sha256": "29a9135360e657d6df499ef9532d2658f1c70444f4da30790405b34d463d8ff2",
+      "mediaId": "map.fmap0i11"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i17.png",
+      "byteLength": 4426,
+      "sha256": "3b0449a3f3d99d322af68c48b650792ef00020d118db88640a6ec581c189d5e7",
+      "mediaId": "map.fmap0i17"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i18.png",
+      "byteLength": 3954,
+      "sha256": "dc7663e48cc1a065ad50c19a201f725cdeb641efd99ec5c7737195f05d2fdf44",
+      "mediaId": "map.fmap0i18"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i19.png",
+      "byteLength": 2590,
+      "sha256": "8068ad41532d99ff5c1fdbdc9eb37a2edf71ec2bcf1f207db77471dce0485905",
+      "mediaId": "map.fmap0i19"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i20.png",
+      "byteLength": 4319,
+      "sha256": "ac189c155f398275e34364f8aef517e95db47bb837fcc042ec9f4f2f3337c3c2",
+      "mediaId": "map.fmap0i20"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i21.png",
+      "byteLength": 3800,
+      "sha256": "65f666773e96a4682064ba69ddae932ebe5cc9ca5f32d5543a2c8b929d4aefd8",
+      "mediaId": "map.fmap0i21"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i22.png",
+      "byteLength": 4905,
+      "sha256": "a475762db4d4c2dbee6715142bebeb012826b3d3a84ed1e0cd4e314ea34257cd",
+      "mediaId": "map.fmap0i22"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i23.png",
+      "byteLength": 6121,
+      "sha256": "eca75254b0c6828aa724b7d9df12067646faedc50674aab4d8821331c207632d",
+      "mediaId": "map.fmap0i23"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i26.png",
+      "byteLength": 5985,
+      "sha256": "6eb7a71e986f56ba1944d822ab929859ac73a89446a99b49c307833734405a74",
+      "mediaId": "map.fmap0i26"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i32.png",
+      "byteLength": 3927,
+      "sha256": "b21f43b997087b6919921f81cfcebb068d69555fd826664ab6348d39ef92ab0f",
+      "mediaId": "map.fmap0i32"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i33.png",
+      "byteLength": 5904,
+      "sha256": "33007c6502f76f3b0470fbfe45c01db6b272ecb213df8b1a0ad78fc2924581e8",
+      "mediaId": "map.fmap0i33"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i34.png",
+      "byteLength": 5868,
+      "sha256": "dc6a1ce4f1e2a393301c04fbabea77ba055c9b92f19d93384e9c60957bd5cb07",
+      "mediaId": "map.fmap0i34"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i35.png",
+      "byteLength": 5028,
+      "sha256": "a83b521d1bd7e6d06e922c7e07478f5582a541a5535fd915494a6220f9ccb5fa",
+      "mediaId": "map.fmap0i35"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i36.png",
+      "byteLength": 4921,
+      "sha256": "a62a951f2e68bed00deab1548a4d333fd4e4918564ef69a4d3f20cba56f70a12",
+      "mediaId": "map.fmap0i36"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i37.png",
+      "byteLength": 4718,
+      "sha256": "97bc66345baaf1cba35b114601c3a902f0d2589ff764de055ab1528e196ad05e",
+      "mediaId": "map.fmap0i37"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i38.png",
+      "byteLength": 4628,
+      "sha256": "c58d5916f9018561a2cf714e2e289127e95419f34d62d3d4589583e8ecf01c9b",
+      "mediaId": "map.fmap0i38"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i39.png",
+      "byteLength": 4282,
+      "sha256": "a605de0f2b67464d66791f8011bba028bfcaca64e6304a6f811cf91f9074bc3c",
+      "mediaId": "map.fmap0i39"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i40.png",
+      "byteLength": 4133,
+      "sha256": "bf169be79b993bb72de6bf70294727980168f2bf54d81e24a2c023b5cf1d6e81",
+      "mediaId": "map.fmap0i40"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i41.png",
+      "byteLength": 3739,
+      "sha256": "24d0020b5f3d07e2cd565a5219e6246ab037a96223e289cfecff2358398920ce",
+      "mediaId": "map.fmap0i41"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i42.png",
+      "byteLength": 4256,
+      "sha256": "808b5928b218aa6a21bec76f6f9b63f8e9fd2340d6ffb8122227a8e81140506f",
+      "mediaId": "map.fmap0i42"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i43.png",
+      "byteLength": 2952,
+      "sha256": "45cf7bf73d725209b258603c8b10cb13b23798419ca4c7d7252dbaccdc3740f5",
+      "mediaId": "map.fmap0i43"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i44.png",
+      "byteLength": 3494,
+      "sha256": "fce9cc28f715ec26827ba0e6df03823c924ccc82090d2de379bdd54861bf00bf",
+      "mediaId": "map.fmap0i44"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i45.png",
+      "byteLength": 3549,
+      "sha256": "237630ab9e4601063d24919149bd534a861d201e383868914df1ea9966a2f827",
+      "mediaId": "map.fmap0i45"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i46.png",
+      "byteLength": 4419,
+      "sha256": "4946e1af0301d1c8cbd2caf70f2e30ee23b0249e12e5fa8ab42639d6bc1502e1",
+      "mediaId": "map.fmap0i46"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i47.png",
+      "byteLength": 4112,
+      "sha256": "7531084ca15c91882e9a7d439e48fafcf0c70a6a528e5d6b95fe8ee0b636cee8",
+      "mediaId": "map.fmap0i47"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i48.png",
+      "byteLength": 4471,
+      "sha256": "23b2d7a292bf39a3f765eb82ff90d2e3eccf5a002883e9dcefd750f21370601c",
+      "mediaId": "map.fmap0i48"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i49.png",
+      "byteLength": 4547,
+      "sha256": "83e1e73239f013722ace3919854726da3842eef1bd2f3902ae137937b2c7549f",
+      "mediaId": "map.fmap0i49"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i50.png",
+      "byteLength": 5299,
+      "sha256": "af8c9e7601dafa2b6a7d62c0432f910c2d129efeeb5c91d46677b7da63141bb9",
+      "mediaId": "map.fmap0i50"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i51.png",
+      "byteLength": 5251,
+      "sha256": "058dff9644d2efe3fe8594125a1d8877b26391ce040b4fa70616397c65db1aca",
+      "mediaId": "map.fmap0i51"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i52.png",
+      "byteLength": 5337,
+      "sha256": "ee651ec2a01c634b2bf0e12012cf707b211e576d62e33ecb56d3dbde01640d4c",
+      "mediaId": "map.fmap0i52"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i53.png",
+      "byteLength": 3088,
+      "sha256": "845f44ab8a727d252f8227b316a2d21af2cbb8a2c269f03aec14d3ed69173569",
+      "mediaId": "map.fmap0i53"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i54.png",
+      "byteLength": 2888,
+      "sha256": "f4e8d8af7a20427a85b003f75b8d7846c0796872a52c8c295915d23cabd964e1",
+      "mediaId": "map.fmap0i54"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i55.png",
+      "byteLength": 3948,
+      "sha256": "ae45e0f2a1b82df1b76251712f4abc5ee903d02db5e137dba49756a1938b7a8d",
+      "mediaId": "map.fmap0i55"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i56.png",
+      "byteLength": 3891,
+      "sha256": "f93db0bc759195bce8cbb7933c089b63ca110ad163b5b899c8af71c0ebce0078",
+      "mediaId": "map.fmap0i56"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i57.png",
+      "byteLength": 5348,
+      "sha256": "41b0528190022ee1ceac231f450298833a093c227ec0b7e90f0021b176bc483a",
+      "mediaId": "map.fmap0i57"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i58.png",
+      "byteLength": 4022,
+      "sha256": "ed88158abdb313b5e0c1c82074965b60de8f6887a1b5c0040e64b18e2c5d40b6",
+      "mediaId": "map.fmap0i58"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i59.png",
+      "byteLength": 3715,
+      "sha256": "95559348ec995c126f6df8a8e9843ecad4043edf40d4ba469200b91a1de77563",
+      "mediaId": "map.fmap0i59"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i60.png",
+      "byteLength": 4335,
+      "sha256": "1c9cce7d77d0f27bd5b41a96eac58d060c3d9d53a6a11ae306823cf4155eda19",
+      "mediaId": "map.fmap0i60"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmap0i61.png",
+      "byteLength": 1626,
+      "sha256": "4f92bae1c9296fa925b389bf0c66ebda9faf4e9fa5e3ac033c86d82f4716159b",
+      "mediaId": "map.fmap0i61"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmapai00.png",
+      "byteLength": 4483,
+      "sha256": "239bd4c068b83e8715ca0f77d9087ae324bdecc40f4ecd6803579b74e9438d00",
+      "mediaId": "map.fmapai00"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmapai01.png",
+      "byteLength": 5901,
+      "sha256": "8daf7cf9a5897286b915c9657845e7ec21c6c3e71436f03c7a6598b1d271f4c6",
+      "mediaId": "map.fmapai01"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmapai16.png",
+      "byteLength": 6313,
+      "sha256": "ecc5d07955c8561ea36538c294691009d8ee2e10c4f0ce93e398ddbbd63e0509",
+      "mediaId": "map.fmapai16"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmapbi00.png",
+      "byteLength": 3978,
+      "sha256": "a6891531527ad5729bf170b703b2e45ab5dbf5667dbb6b122125330cf353f937",
+      "mediaId": "map.fmapbi00"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmapbi01.png",
+      "byteLength": 5301,
+      "sha256": "18592b39122683b1a1bc28ed47cb3863672d4824ac805125f4110405bbccfa12",
+      "mediaId": "map.fmapbi01"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmapbi16.png",
+      "byteLength": 6583,
+      "sha256": "e9112c2909e03edf79c03d2c5c088b4ba074a2d4a576a597665e6384f00148d7",
+      "mediaId": "map.fmapbi16"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmapci01.png",
+      "byteLength": 4373,
+      "sha256": "d67a9d7a63638cda57e72a15fb5ce879dfd22951014d5621b1916786c6dbec42",
+      "mediaId": "map.fmapci01"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmapci16.png",
+      "byteLength": 5850,
+      "sha256": "5f7279513929f89f1aa2677395f7245698bb7d366f87ef302331890f8832be8e",
+      "mediaId": "map.fmapci16"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmapdi01.png",
+      "byteLength": 4475,
+      "sha256": "8f1084bce2f5f0b6b29bfd64278a8abb144ffe611ab2f289bb84de9e810d372d",
+      "mediaId": "map.fmapdi01"
+    },
+    {
+      "path": "worldrpg/media/maps/map-fmapdi16.png",
+      "byteLength": 6601,
+      "sha256": "36f45efe357d1e90435a6ecff9f8386876d89b7fc5883ace1d04df892311627a",
+      "mediaId": "map.fmapdi16"
+    },
+    {
+      "path": "worldrpg/media/maps/map-tmap00i0.png",
+      "byteLength": 42568,
+      "sha256": "567f2028ff86cb07ed6f5275e58f159bb0ce0be437d4c84582351a1aa330cf60",
+      "mediaId": "map.tmap00i0"
+    },
+    {
+      "path": "worldrpg/media/maps/map-town00i0.png",
+      "byteLength": 1788,
+      "sha256": "ea3cc45452fb15189937db744ab7c110ec1fb8a76fe5132a392a7f38acb9dad7",
+      "mediaId": "map.town00i0"
+    },
+    {
+      "path": "worldrpg/media/maps/map-trav00i0.png",
+      "byteLength": 10828,
+      "sha256": "22d0aa4efb820cd0dc17444a840c8c5a1403d4badcc3791643d7555849812925",
+      "mediaId": "map.trav00i0"
+    },
+    {
+      "path": "worldrpg/media/maps/map-trav01i0.png",
+      "byteLength": 2490,
+      "sha256": "5f70163c3309de6e4255279b5ccb56f70bed85df71bbd8ecdd022f5e556162c7",
+      "mediaId": "map.trav01i0"
+    },
+    {
+      "path": "worldrpg/media/maps/map-trav01i1.png",
+      "byteLength": 2225,
+      "sha256": "0b0f0e2591fdcc7f28a6c165366a84d4ac4d67d00511e65a20d2ae220df90b66",
+      "mediaId": "map.trav01i1"
+    },
+    {
+      "path": "worldrpg/media/maps/map-trav02i0.png",
+      "byteLength": 5056,
+      "sha256": "fcbb88685f9700f601d1a3f14a971978dec77cbb8df0054a8cbdf6f9caf60948",
+      "mediaId": "map.trav02i0"
+    },
+    {
+      "path": "worldrpg/media/maps/map-trav0i00.png",
+      "byteLength": 42265,
+      "sha256": "f6975b2fe0092d0dfce19dd0e8def57a9dc0a7024c3cd144fe8afe25c353cc1c",
+      "mediaId": "map.trav0i00"
+    },
+    {
+      "path": "worldrpg/media/maps/map-trav0i01.png",
+      "byteLength": 3235,
+      "sha256": "fa3b2e87d0726b1d459aa638ace12d3ed9dd4d55b97797977579b31308c5f15d",
+      "mediaId": "map.trav0i01"
+    },
+    {
+      "path": "worldrpg/media/maps/map-trav0i03.png",
+      "byteLength": 896,
+      "sha256": "1c0346bd78ae36c2be749af041059695768eac4611d5686b579164acd4248055",
+      "mediaId": "map.trav0i03"
+    },
+    {
+      "path": "worldrpg/media/maps/map-trav0i04.png",
+      "byteLength": 9208,
+      "sha256": "5b3502678a5fba4c6477377451b4ff60721fb3b02414c7e18c13f6e66853ae3a",
+      "mediaId": "map.trav0i04"
+    },
+    {
+      "path": "worldrpg/media/maps/map-travai05.png",
+      "byteLength": 500,
+      "sha256": "111b735cab7b2eae329a072ec849cde02c11c5223e11d203082dd0c1731d8f4f",
+      "mediaId": "map.travai05"
+    },
+    {
+      "path": "worldrpg/media/maps/map-travbi05.png",
+      "byteLength": 483,
+      "sha256": "a7c9d8d669ac64e9a2524a6dc25058706afe5b48546c1e7702cdf088180927e0",
+      "mediaId": "map.travbi05"
+    },
+    {
+      "path": "worldrpg/media/maps/map-travci05.png",
+      "byteLength": 463,
+      "sha256": "5557a95676fd6d3250e717ed5544421e2261e6da3bae51e5a26b794bfe75540f",
+      "mediaId": "map.travci05"
+    },
+    {
+      "path": "worldrpg/media/maps/map-travdi05.png",
+      "byteLength": 490,
+      "sha256": "7b08010c62f7d7980fe8adeec780ebdfd086718857e27309b0406ae64efa8642",
+      "mediaId": "map.travdi05"
     },
     {
       "path": "worldrpg/media/ui/authored/inventory-grid-slot-slate-v1.png",
