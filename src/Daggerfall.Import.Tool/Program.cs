@@ -1145,7 +1145,7 @@ internal static partial class Program
     /// </summary>
     private static int RunQuestsCommand(IReadOnlyList<string> args)
     {
-        const string Usage = "usage: daggerfall-import-tool quests --quest-text SOURCE_DIR --tables TABLE_DIR --pack PACK.json --inventory CSV [--update]";
+        const string Usage = "usage: daggerfall-import-tool quests --arena2 SOURCE_DIR --quest-text SOURCE_DIR --tables TABLE_DIR --pack PACK.json --inventory CSV [--update]";
         bool update = args.Contains("--update", StringComparer.Ordinal);
         Dictionary<string, string> values = new(StringComparer.Ordinal);
         for (int index = 1; index < args.Count; index++)
@@ -1158,7 +1158,7 @@ internal static partial class Program
             }
         }
 
-        string[] accepted = ["--quest-text", "--tables", "--pack", "--inventory"];
+        string[] accepted = ["--arena2", "--quest-text", "--tables", "--pack", "--inventory"];
         if (values.Count != accepted.Length || accepted.Any(key => !values.ContainsKey(key)))
         {
             throw new ArgumentException(Usage);
@@ -1200,19 +1200,33 @@ internal static partial class Program
         DaggerfallQuestCatalog catalog = DaggerfallQuestCatalogReader.Read(
             File.ReadAllBytes(Path.Combine(values["--tables"], "QuestList-Classic.txt")), "Tables/QuestList-Classic.txt",
             Directory.EnumerateFiles(values["--quest-text"], "*.txt"));
+        string[] originalPaths = [.. Directory.EnumerateFiles(values["--arena2"])
+            .Where(path => path.EndsWith(QuestSourceInventory.BinaryExtension, StringComparison.OrdinalIgnoreCase)
+                || path.EndsWith(QuestSourceInventory.ResourcesExtension, StringComparison.OrdinalIgnoreCase))
+            .Select(Path.GetFileName)
+            .OfType<string>()];
+        string originalLabel = Path.GetFileName(Path.TrimEndingDirectorySeparator(values["--arena2"]));
+        QuestSourceInventory originalInventory = QuestSourceInventory.Enumerate(originalPaths,
+            string.IsNullOrEmpty(originalLabel) ? values["--arena2"] : originalLabel);
+        DaggerfallQuestOriginalSourceSet originals = DaggerfallQuestOriginalSourceBuilder.Build(values["--arena2"], originalInventory, pack);
         Console.WriteLine($"classic catalog: {catalog.Rows.Count(row => row.Active)} active, {catalog.Rows.Count(row => !row.Active)} disabled, {catalog.Rows.Count(row => row.SourceDisposition == "missing")} missing sources");
         Console.WriteLine($"quests: {pack.Quests.Count} sources, {pack.Quests.Count(quest => quest.Disposition == DaggerfallQuestDisposition.Compiled)} compiled");
+        Console.WriteLine($"original quest sources: {originals.Quests.Count} stems, {originals.Quests.Count(quest => quest.Selection == DaggerfallQuestOriginalSourceSelection.RewrittenText)} rewritten text selections, {originals.Quests.Count(quest => quest.Selection != DaggerfallQuestOriginalSourceSelection.RewrittenText)} not enabled");
         if (!update)
         {
             Console.WriteLine("pack: not written (rerun with --update to publish these sources into it)");
             return 0;
         }
 
-        JsonNode node = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
-        node["questCatalog"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(catalog, PublishedJson.Section));
-        node["questTables"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(tables, PublishedJson.Section));
-        node["questSources"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(pack, PublishedJson.Section));
-        File.WriteAllText(values["--pack"], node.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        string existing = File.ReadAllText(values["--pack"]);
+        string updated = TopLevelJsonSectionRewriter.ReplaceOrAppend(existing, new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["questCatalog"] = System.Text.Json.JsonSerializer.Serialize(catalog, PublishedJson.Section),
+            ["questTables"] = System.Text.Json.JsonSerializer.Serialize(tables, PublishedJson.Section),
+            ["questSources"] = System.Text.Json.JsonSerializer.Serialize(pack, PublishedJson.Section),
+            ["questOriginalSources"] = System.Text.Json.JsonSerializer.Serialize(originals, PublishedJson.Section),
+        });
+        File.WriteAllText(values["--pack"], updated);
         Console.WriteLine($"pack: quest sources updated in {values["--pack"]}");
         return 0;
     }

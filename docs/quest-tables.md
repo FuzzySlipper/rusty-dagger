@@ -2,7 +2,18 @@
 
 `Daggerfall.Import` reads the donor's global, static-message, place, sound,
 disease and spell tables offline. The ordinary `quests` command publishes
-`questTables` and the classic `questCatalog` alongside `questSources` in the base payload:
+`questTables`, the classic `questCatalog`, `questSources`, and the per-stem
+`questOriginalSources` selection/provenance section in the base payload. The latter
+accounts for every supplied classic QBN/QRC stem. It records actual QBN resource and
+opcode message fields, QRC record IDs, offsets, decoded delimiters, and payload digests
+against the rewritten text identities. QBN data remains offline evidence; it is not an
+action decoder or an execution path. A stem without compiled rewritten text is explicitly
+not enabled, including the four QBN-only and one QRC-only originals.
+
+The rewritten text is read with Daggerfall Unity's
+`Assets/Scripts/Game/Questing/Parser.cs`. The fixed QBN identity layout is
+cross-checked against the independent Quester decompiler's
+[`QbnReader.cs`](https://github.com/stellargames/Quester/blob/master/Quester/QbnReader.cs): only its header/section framing and QRC-reference fields are adopted here, then bounded against every supplied local QBN. The classic corpus remains the source of record for each published path, record offset, text, and digest.
 
 The `compiled` source disposition means QRC messages and finite top-level QBN
 blocks parsed without diagnostics. It does not mean a quest can execute: ordered
@@ -11,6 +22,7 @@ families. Diagnosed sources retain their file and physical line information.
 
 ```sh
 dotnet run --project src/Daggerfall.Import.Tool -- quests \
+  --arena2 local/arena2 \
   --quest-text /home/research/daggerfall-unity/Assets/StreamingAssets/Quests \
   --tables /home/research/daggerfall-unity/Assets/StreamingAssets/Tables \
   --pack content/worldrpg/payloads/daggerfall.base.json \
