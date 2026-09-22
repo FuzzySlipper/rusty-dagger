@@ -68,11 +68,8 @@ public sealed class DaggerfallQuestPackTests
         const string quests = "/home/research/daggerfall-unity/Assets/StreamingAssets/Quests";
         if (!Directory.Exists(quests)) return;
 
-        string[] names = File.ReadAllLines("/home/research/daggerfall-unity/Assets/StreamingAssets/Tables/Quests-GlobalVars.txt")
-            .Where(line => !line.StartsWith("--") && line.Length > 0 && !line.StartsWith("schema"))
-            .Select(line => line.Split(',')[1].Trim()).ToArray();
-        Dictionary<string, int> keys = new(StringComparer.OrdinalIgnoreCase) { ["TookTheCure"] = 5, ["OpenedShapeshifters"] = 10 };
-        for (int index = 0; index < names.Length; index++) keys[names[index]] = index;
+        DaggerfallQuestTable globals = DaggerfallQuestTableReader.Read(File.ReadAllBytes("/home/research/daggerfall-unity/Assets/StreamingAssets/Tables/Quests-GlobalVars.txt"), "Tables/Quests-GlobalVars.txt", globals: true);
+        DaggerfallQuestTable messages = DaggerfallQuestTableReader.Read(File.ReadAllBytes("/home/research/daggerfall-unity/Assets/StreamingAssets/Tables/Quests-StaticMessages.txt"), "Tables/Quests-StaticMessages.txt");
         IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv")));
         List<QuestSourceDocument> documents = [];
         List<(string, string, int, string)> failures = [];
@@ -82,7 +79,7 @@ public sealed class DaggerfallQuestPackTests
             total += new FileInfo(path).Length;
             try
             {
-                documents.Add(QuestSourceReader.Read(File.ReadAllText(path), Path.GetFileName(path), MessageNames, keys));
+                documents.Add(QuestSourceReader.Read(File.ReadAllText(path), Path.GetFileName(path), messages.Rows.Select(row => row.Name).ToArray(), globals.Lookup));
             }
             catch (Arena2FormatException exception)
             {

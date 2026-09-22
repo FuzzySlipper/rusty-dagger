@@ -30,35 +30,11 @@ public sealed class DaggerfallVariableStore
     /// <summary>How many globals the donor numbers.</summary>
     public const int GlobalCount = 64;
 
-    /// <summary>The donor's global names by key, from its quest global table.</summary>
-    public static readonly IReadOnlyList<string> GlobalNames =
-    [
-        "LiftedCurse", "GothrydGotTotem", "KingOfWormsGotTotem", "GortwogGotTotem", "AkorithiGotTotem",
-        "Unused1", "UnderkingGotTotem", "EadwyreGotTotem", "BrisiennaGotTotem", "MedoraGotHorn",
-        "Unused2", "GothrydEnding", "KingOfWormsEnding", "GortwogEnding", "AkorithiEnding",
-        "Unused3", "UnderkingEnding", "EadwyreEnding", "BrisiennaEnding", "Unused4",
-        "Unused5", "UnknownElysanna", "Unused6", "MorgiahSatisfied", "Unused7",
-        "ElysannaSatisfied", "Unused8", "Unused9", "BarenziahSatisfied", "MyniseraSatisfied",
-        "Unused10", "MetLadyBrisienna", "Unused11", "KingOfWormsSatisfied", "Unused12",
-        "Unused13", "FinishedMantellanCrux", "Unused14", "Unused15", "Unused16",
-        "Unused17", "Unused18", "UnknownHelseth", "LysandusSatisfied", "Unused19",
-        "Unused20", "Unused21", "Unused22", "Unused23", "Unused24",
-        "Unused25", "Unused26", "Unused27", "Unused28", "Unused29",
-        "Unused30", "Unused31", "Unused32", "Unused33", "Unused34",
-        "Unused35", "Unused36", "Unused37", "Unused38",
-    ];
+    private readonly IReadOnlyDictionary<string, int> _globalKeys;
 
-    private static readonly Dictionary<string, int> GlobalKeys = new(StringComparer.Ordinal)
-    {
-    };
-
-    static DaggerfallVariableStore()
-    {
-        for (int key = 0; key < GlobalNames.Count; key++)
-        {
-            GlobalKeys.Add(GlobalNames[key], key);
-        }
-    }
+    /// <summary>Uses the aliases admitted from the selected content pack.</summary>
+    public DaggerfallVariableStore(IReadOnlyDictionary<string, int> globalKeys) =>
+        _globalKeys = globalKeys ?? throw new ArgumentNullException(nameof(globalKeys));
 
     private readonly Dictionary<DaggerfallVariableAddress, bool> _values = new();
 
@@ -73,7 +49,7 @@ public sealed class DaggerfallVariableStore
     public bool ReadGlobal(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        if (!GlobalKeys.TryGetValue(name, out int key))
+        if (!_globalKeys.TryGetValue(name, out int key))
         {
             throw new ArgumentOutOfRangeException(nameof(name), name, "No quest global carries this name.");
         }
@@ -98,7 +74,7 @@ public sealed class DaggerfallVariableStore
     public bool WriteGlobal(string name, bool value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        if (!GlobalKeys.TryGetValue(name, out int key))
+        if (!_globalKeys.TryGetValue(name, out int key))
         {
             throw new ArgumentOutOfRangeException(nameof(name), name, "No quest global carries this name.");
         }
