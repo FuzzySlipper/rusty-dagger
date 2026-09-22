@@ -87,6 +87,8 @@ internal sealed class DaggerfallCharacterState
     internal DaggerfallCareerDefinition Career => _customCareer?.Career ?? _definitions.Catalogs.RequireCareer(Identity.CareerId);
     internal DaggerfallCustomCareerDefinition? CustomCareer => _customCareer;
     internal DaggerfallCharacterBackgroundSave? Background => _background;
+    /// <summary>The committed BIOG text retained with this character, distinct from an editable draft.</summary>
+    internal IReadOnlyList<string> History => _background?.Biography ?? [];
     internal DaggerfallRaceDefinition Race => _definitions.Catalogs.RequireRace(Identity.RaceId);
 
     internal IReadOnlyList<DaggerfallCareerSkillGrant> GrantedSkills =>

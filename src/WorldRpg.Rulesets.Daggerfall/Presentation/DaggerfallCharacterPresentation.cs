@@ -10,8 +10,10 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// <summary>Read-only player-sheet projection from the current Mechanics, progression, and equipment state.</summary>
 internal sealed record CharacterStatPresentation(string Id, string Label, long Value, long Permanent);
 internal sealed record CharacterResourcePresentation(string Id, string Label, long Current, long Maximum);
-internal sealed record CharacterProgressionPresentation(int Level, int Experience);
-internal sealed record CharacterEquipmentPresentation(string Label, string[] Slots, string Details);
+internal sealed record CharacterProgressionPresentation(int Level, int Experience, int? SkillProgress = null, int? NextLevelSkillProgress = null, bool PendingLevelUp = false);
+internal sealed record CharacterEquipmentPresentation(string Label, string[] Slots, string Details, ItemConditionPresentation? Condition = null, bool Identified = true);
+internal sealed record CharacterAffiliationPresentation(string Faction, string GuildGroup, int Rank, int Reputation, int Recognition);
+internal sealed record CharacterHistoryPresentation(string[] Biography);
 internal sealed record CharacterSheetPresentation(
     string Name,
     CharacterStatPresentation[] Attributes,
@@ -19,6 +21,9 @@ internal sealed record CharacterSheetPresentation(
     CharacterResourcePresentation[] Resources,
     CharacterProgressionPresentation Progression,
     CharacterEquipmentPresentation[] Equipment,
+    CharacterStatPresentation[] Resistances,
+    CharacterAffiliationPresentation[] Affiliations,
+    CharacterHistoryPresentation? History,
     CharacterIdentityPresentation? Identity = null,
     DaggerfallCareerSkillGrant[]? GrantedSkills = null,
     DaggerfallCharacterCreationPresentation? Creation = null,
@@ -111,6 +116,19 @@ internal sealed class DaggerfallCharacterPresentation
     private readonly MechanicsEquipmentCoordinator _equipment;
     private readonly DaggerfallCharacterState? _character;
     private readonly DaggerfallLevelUpState? _levelUps;
+    private readonly DaggerfallSocialState? _social;
+    private readonly DaggerfallSkillUseReactions? _skills;
+    private DaggerfallInventoryPresentation? _items;
+    private static readonly DaggerfallStatId[] ResistanceStats =
+    [
+        DaggerfallMechanicsIds.ResistanceFire,
+        DaggerfallMechanicsIds.ResistanceFrost,
+        DaggerfallMechanicsIds.ResistanceDiseaseOrPoison,
+        DaggerfallMechanicsIds.ResistanceShock,
+        DaggerfallMechanicsIds.ResistanceMagic,
+        DaggerfallMechanicsIds.ImmunityParalysis,
+        DaggerfallMechanicsIds.ImmunityDisease,
+    ];
 
     internal DaggerfallCharacterPresentation(DaggerfallDefinitions definitions, DaggerfallActorDefinition playerDefinition, MechanicsEquipmentCoordinator equipment)
     {
@@ -123,10 +141,38 @@ internal sealed class DaggerfallCharacterPresentation
     }
 
     internal DaggerfallCharacterPresentation(DaggerfallDefinitions definitions, DaggerfallCharacterState character, DaggerfallActorDefinition playerDefinition,
+        MechanicsEquipmentCoordinator equipment, DaggerfallSocialState social)
+        : this(definitions, character, playerDefinition, equipment)
+    {
+        _social = social ?? throw new ArgumentNullException(nameof(social));
+    }
+
+    internal DaggerfallCharacterPresentation(DaggerfallDefinitions definitions, DaggerfallCharacterState character, DaggerfallActorDefinition playerDefinition,
+        MechanicsEquipmentCoordinator equipment, DaggerfallSocialState social, DaggerfallSkillUseReactions skills)
+        : this(definitions, character, playerDefinition, equipment, social)
+    {
+        _skills = skills ?? throw new ArgumentNullException(nameof(skills));
+    }
+
+    internal DaggerfallCharacterPresentation(DaggerfallDefinitions definitions, DaggerfallCharacterState character, DaggerfallActorDefinition playerDefinition,
         MechanicsEquipmentCoordinator equipment, DaggerfallLevelUpState levelUps)
     {
         _definitions = definitions; _character = character; _playerDefinition = playerDefinition; _equipment = equipment;
         _levelUps = levelUps ?? throw new ArgumentNullException(nameof(levelUps));
+    }
+
+    internal DaggerfallCharacterPresentation(DaggerfallDefinitions definitions, DaggerfallCharacterState character, DaggerfallActorDefinition playerDefinition,
+        MechanicsEquipmentCoordinator equipment, DaggerfallLevelUpState levelUps, DaggerfallSocialState social)
+        : this(definitions, character, playerDefinition, equipment, levelUps)
+    {
+        _social = social ?? throw new ArgumentNullException(nameof(social));
+    }
+
+    internal DaggerfallCharacterPresentation(DaggerfallDefinitions definitions, DaggerfallCharacterState character, DaggerfallActorDefinition playerDefinition,
+        MechanicsEquipmentCoordinator equipment, DaggerfallLevelUpState levelUps, DaggerfallSocialState social, DaggerfallSkillUseReactions skills)
+        : this(definitions, character, playerDefinition, equipment, levelUps, social)
+    {
+        _skills = skills ?? throw new ArgumentNullException(nameof(skills));
     }
 
     internal CharacterSheetPresentation Read(PlayerActorState player, ProgressionState progression)
@@ -138,22 +184,43 @@ internal sealed class DaggerfallCharacterPresentation
             Stats(player, _definitions.Vocabulary.Attributes),
             Stats(player, _definitions.Vocabulary.Skills),
             _definitions.HudResources.Select(resource => Resource(player, resource)).ToArray(),
-            new CharacterProgressionPresentation(progression.Level, progression.Experience),
+            Progression(progression),
             Equipment(),
+            Stats(player, ResistanceStats, requireActorDefinition: false),
+            Affiliations(),
+            _character is { History.Count: > 0 } character ? new CharacterHistoryPresentation([.. character.History]) : null,
             _character is null ? CharacterIdentityPresentation.From(_definitions, _playerDefinition) : CharacterIdentityPresentation.From(_definitions, _character.Identity),
             _character is null ? [] : [.. _character.GrantedSkills],
             _character?.ReadCreation(),
             _levelUps?.Read());
     }
 
-    private CharacterStatPresentation[] Stats(PlayerActorState player, IReadOnlyList<DaggerfallStatId> ids) => ids
-        .Where(id => _playerDefinition.Stats.Values.ContainsKey(id))
+    /// <summary>Uses the composed inventory projection for equipment naming, identification, and condition.</summary>
+    internal void UseItemPresentation(DaggerfallInventoryPresentation items)
+    {
+        if (_items is not null) throw new InvalidOperationException("Character equipment presentation is already configured.");
+        _items = items ?? throw new ArgumentNullException(nameof(items));
+    }
+
+    private CharacterStatPresentation[] Stats(PlayerActorState player, IReadOnlyList<DaggerfallStatId> ids, bool requireActorDefinition = true) => ids
+        .Where(id => !requireActorDefinition || _playerDefinition.Stats.Values.ContainsKey(id))
         .Select(id =>
         {
             Stat stat = player.Stats.GetStat(StatId.Parse(id.Value));
             return new CharacterStatPresentation(id.Value, Label(id.Value), stat.ValueInt64, checked((long)stat.BaseValue));
         })
         .ToArray();
+
+    private CharacterProgressionPresentation Progression(ProgressionState progression)
+    {
+        DaggerfallLevelProgress? progress = _skills?.ReadLevelProgress();
+        return new CharacterProgressionPresentation(progression.Level, progression.Experience, progress?.CurrentSkillSum, progress?.NextLevelSkillSum,
+            progress?.PendingLevelUp ?? false);
+    }
+
+    private CharacterAffiliationPresentation[] Affiliations() => _social?.ReadAffiliations()
+        .Select(value => new CharacterAffiliationPresentation(value.Faction, value.GuildGroup, value.Rank, value.Reputation, value.Recognition))
+        .ToArray() ?? [];
 
     private static CharacterResourcePresentation Resource(PlayerActorState player, DaggerfallHudResourceDefinition resource)
     {
@@ -167,10 +234,15 @@ internal sealed class DaggerfallCharacterPresentation
         .Select(group =>
         {
             DaggerfallItemDefinition item = _definitions.RequireItem(new DaggerfallItemId(group.First().Item.Definition.Value));
+            string[] slots = group.Select(assignment => Label(assignment.Slot.Value)).OrderBy(value => value, StringComparer.Ordinal).ToArray();
+            InventoryItemPresentation? described = _items?.DescribeItem(DaggerfallInventoryPresentation.UniqueKey(group.Key), item.Id.Value, 1,
+                equippedSlots: group.Select(assignment => assignment.Slot.Value).ToArray());
             return new CharacterEquipmentPresentation(
-                Label(item.Id.Value),
-                group.Select(assignment => Label(assignment.Slot.Value)).OrderBy(value => value, StringComparer.Ordinal).ToArray(),
-                Details(item));
+                described?.Label ?? Label(item.Id.Value),
+                slots,
+                described?.Details ?? Details(item),
+                described?.Condition,
+                described?.Identified ?? true);
         })
         .OrderBy(item => item.Label, StringComparer.Ordinal)
         .ToArray();

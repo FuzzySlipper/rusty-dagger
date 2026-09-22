@@ -194,9 +194,21 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("resources", builder.Array(value.Resources.Select(resource => builder.Object(
                 ("id", builder.String(resource.Id)), ("label", builder.String(resource.Label)),
                 ("current", builder.Number(resource.Current)), ("maximum", builder.Number(resource.Maximum)))).ToArray())),
-            ("progression", builder.Object(("level", builder.Number(value.Progression.Level)), ("experience", builder.Number(value.Progression.Experience)))),
+            ("progression", builder.Object(("level", builder.Number(value.Progression.Level)), ("experience", builder.Number(value.Progression.Experience)),
+                ("skillProgress", value.Progression.SkillProgress is int progress ? builder.Number(progress) : builder.Null()),
+                ("nextLevelSkillProgress", value.Progression.NextLevelSkillProgress is int next ? builder.Number(next) : builder.Null()),
+                ("pendingLevelUp", builder.Boolean(value.Progression.PendingLevelUp)))),
             ("equipment", builder.Array(value.Equipment.Select(item => builder.Object(("label", builder.String(item.Label)),
-                ("slots", builder.Array(item.Slots.Select(builder.String).ToArray())), ("details", builder.String(item.Details)))).ToArray())),
+                ("slots", builder.Array(item.Slots.Select(builder.String).ToArray())), ("details", builder.String(item.Details)),
+                ("condition", item.Condition is null ? builder.Null() : builder.Object(("current", builder.Number(item.Condition.Current)),
+                    ("maximum", builder.Number(item.Condition.Maximum)), ("percentage", builder.Number(item.Condition.Percentage)), ("broken", builder.Boolean(item.Condition.Broken)))),
+                ("identified", builder.Boolean(item.Identified)))).ToArray())),
+            ("resistances", builder.Array(value.Resistances.Select(Stat).ToArray())),
+            ("affiliations", builder.Array(value.Affiliations.Select(affiliation => builder.Object(
+                ("faction", builder.String(affiliation.Faction)), ("guildGroup", builder.String(affiliation.GuildGroup)),
+                ("rank", builder.Number(affiliation.Rank)), ("reputation", builder.Number(affiliation.Reputation)),
+                ("recognition", builder.Number(affiliation.Recognition)))).ToArray())),
+            ("history", value.History is null ? builder.Null() : builder.Object(("biography", builder.Array(value.History.Biography.Select(builder.String).ToArray())))),
             ("grantedSkills", builder.Array((value.GrantedSkills ?? []).Select(skill => builder.Object(
                 ("id", builder.String(skill.SkillId)), ("tier", builder.String(skill.Tier.ToString().ToLowerInvariant())))).ToArray())),
             ("creationAvailable", builder.Boolean(creationAvailable)), ("creation", creation),

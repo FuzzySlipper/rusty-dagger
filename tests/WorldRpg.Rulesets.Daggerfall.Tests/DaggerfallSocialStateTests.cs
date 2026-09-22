@@ -53,6 +53,8 @@ public sealed class DaggerfallSocialStateTests
         restored.Restore(captured);
         Assert.Equal(social.ReactionForFaction(faction.Id), restored.ReactionForFaction(faction.Id));
         Assert.Equal(social.GuildEligibility(faction.Id), restored.GuildEligibility(faction.Id));
+        DaggerfallSocialAffiliationView affiliation = Assert.Single(restored.ReadAffiliations());
+        Assert.Equal((faction.Name, 2, factionBefore + 9, 3), (affiliation.Faction, affiliation.Rank, affiliation.Reputation, affiliation.Recognition));
         Assert.True(restored.ExpelGuild(faction.Id));
         Assert.False(restored.GuildEligibility(faction.Id).IsMember);
     }
