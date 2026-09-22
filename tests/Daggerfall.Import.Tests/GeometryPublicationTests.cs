@@ -182,37 +182,32 @@ public sealed class GeometryPublicationTests
         // answerable at all rather than answered by an aggregate.
         Assert.All(textures.Decoded, leaf => Assert.Equal(leaf.Records, leaf.RecordFacts.Count));
 
-        // The per-record read flag is derived from an actual decode rather than from the header, so it is
-        // checked against one: a record the owner calls readable has a frame that decodes, and one it
-        // cannot read says why.
-        int checkedRecords = 0;
-        int unreadable = 0;
-        foreach (TextureLeafRecord leaf in textures.Decoded.Take(24))
+        // The per-record read flag is derived from an actual decode rather than from the header, so every
+        // decoded leaf is checked against its own source bytes: a record the owner calls readable has a
+        // frame that decodes, and one it cannot read says why.
+        ReadOnlyMemory<byte> ReadTextureBytes(TextureLeafRecord leaf) =>
+            File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2", leaf.Path));
+        TextureLeafRecord[] decoded = [.. textures.Decoded];
+        int checkedRecords = CrossCheckTextureReadability(decoded, ReadTextureBytes);
+        int expectedCheckedRecords = decoded.Sum(leaf => leaf.RecordFacts.Count);
+        Assert.Equal(expectedCheckedRecords, checkedRecords);
+
+        // A lie after the old 24-leaf sample reaches the same cross-check. The copied record stays tied to
+        // its real decoded leaf and bytes, so this proves the regression without guessing a source offset.
+        Assert.True(decoded.Length > 24, $"the real corpus has {decoded.Length} decoded leaves");
+        TextureLeafRecord beyondSample = decoded
+            .Skip(24)
+            .First(leaf => leaf.RecordFacts.Any(facts => facts.Frames > 0 && facts.UnreadableReason.Length == 0));
+        TextureRecordFacts readable = beyondSample.RecordFacts
+            .First(facts => facts.Frames > 0 && facts.UnreadableReason.Length == 0);
+        TextureLeafRecord corrupted = beyondSample with
         {
-            TextureArchive archive = TextureArchive.Parse(
-                File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2", leaf.Path)),
-                leaf.Path,
-                null);
-            foreach (TextureRecordFacts facts in leaf.RecordFacts.Where(facts => facts.Frames > 0))
-            {
-                bool decodes = true;
-                try
-                {
-                    _ = archive.DecodeFrame(facts.RecordIndex, 0);
-                }
-                catch (Exception failure) when (failure is Arena2FormatException or ArgumentOutOfRangeException)
-                {
-                    decodes = false;
-                }
+            RecordFacts = [.. beyondSample.RecordFacts.Select(facts => facts.RecordIndex == readable.RecordIndex
+                ? facts with { UnreadableReason = "the test deliberately lies" }
+                : facts)],
+        };
+        Assert.Throws<Xunit.Sdk.EqualException>(() => CrossCheckTextureReadability([corrupted], ReadTextureBytes));
 
-                Assert.Equal(decodes, facts.UnreadableReason.Length == 0);
-                checkedRecords++;
-                unreadable += decodes ? 0 : 1;
-            }
-        }
-
-        Assert.True(checkedRecords > 100, $"the sample covers {checkedRecords} records");
-        Assert.True(unreadable >= 0);
         Assert.All(textures.Decoded.SelectMany(leaf => leaf.RecordFacts), facts => Assert.True(facts.Width >= 0 && facts.Height >= 0));
         Assert.False(textures.TryGetRecord(81, 999, out _));
         Assert.False(textures.TryGetRecord(34, 0, out _));
@@ -453,6 +448,41 @@ public sealed class GeometryPublicationTests
 
     private static GeometryPublication Publish(IReadOnlyList<string> referenced, TextureLeafInventory textures) =>
         GeometryPublicationBuilder.Create(new GeometryPublicationRequest(Archive.Value, File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/ARCH3D.BSA")), referenced, textures));
+
+    /// <summary>Checks each supplied leaf's recorded frame readability against bytes from its named source.</summary>
+    private static int CrossCheckTextureReadability(
+        IEnumerable<TextureLeafRecord> leaves,
+        Func<TextureLeafRecord, ReadOnlyMemory<byte>> sourceBytes)
+    {
+        int checkedRecords = 0;
+        foreach (TextureLeafRecord leaf in leaves)
+        {
+            TextureArchive archive = TextureArchive.Parse(sourceBytes(leaf).Span, leaf.Path, null);
+            foreach (TextureRecordFacts facts in leaf.RecordFacts)
+            {
+                checkedRecords++;
+                if (facts.Frames == 0)
+                {
+                    Assert.Empty(facts.UnreadableReason);
+                    continue;
+                }
+
+                bool decodes = true;
+                try
+                {
+                    _ = archive.DecodeFrame(facts.RecordIndex, 0);
+                }
+                catch (Exception failure) when (failure is Arena2FormatException or ArgumentOutOfRangeException)
+                {
+                    decodes = false;
+                }
+
+                Assert.Equal(decodes, facts.UnreadableReason.Length == 0);
+            }
+        }
+
+        return checkedRecords;
+    }
 
     /// <summary>Publishes the references against a mesh archive the test supplies.</summary>
     private static GeometryPublication Publish(IReadOnlyList<string> referenced, TextureLeafInventory textures, byte[] archive) =>
