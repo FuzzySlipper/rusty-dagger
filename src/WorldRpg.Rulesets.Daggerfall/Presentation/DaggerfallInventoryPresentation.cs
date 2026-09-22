@@ -6,7 +6,9 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 internal sealed record InventoryItemPresentation(string Key, string Definition, string Label, string Quantity, int Weight, int Value,
-    string Details, string? Icon, int? GridSlot, string[] EquippedSlots, string[] CompatibleSlots);
+    string Details, string? Icon, int? GridSlot, string[] EquippedSlots, string[] CompatibleSlots,
+    ItemConditionPresentation? Condition = null, bool Identified = true);
+internal sealed record ItemConditionPresentation(int Current, int Maximum, int Percentage, bool Broken);
 internal sealed record EquipmentSlotPresentation(string Id, string Label, string? ItemKey);
 internal sealed record EquipmentChangePresentation(string Cue, int RightHandDelayMilliseconds, int LeftHandDelayMilliseconds);
 internal sealed record InventoryPresentation(string Revision, InventoryItemPresentation[] Items, EquipmentSlotPresentation[] Slots, string Message,
@@ -24,8 +26,10 @@ internal sealed class DaggerfallInventoryPresentation
     private DaggerfallItemInstances? itemInstances;
     private DaggerfallItemOwner? itemOwner;
     private Func<ulong, ulong>? uniqueIdentity;
+    private DaggerfallItemConditionService? itemCondition;
     internal string Message { get; private set; } = "Drag items between the grid and compatible equipment slots.";
     internal DaggerfallEquipmentChange? LastEquipmentChange { get; private set; }
+    internal ulong MetadataRevision => itemInstances?.Revision ?? 0;
 
     internal DaggerfallInventoryPresentation(
         DaggerfallEquipmentMoves moves,
@@ -53,6 +57,15 @@ internal sealed class DaggerfallInventoryPresentation
         uniqueIdentity = resolveUniqueIdentity ?? throw new ArgumentNullException(nameof(resolveUniqueIdentity));
     }
 
+    /// <summary>Connects persisted condition and identification meaning to existing inventory rows.</summary>
+    internal void UseItemCondition(DaggerfallItemConditionService condition)
+    {
+        if (itemCondition is not null) throw new InvalidOperationException("Inventory item condition is already configured.");
+        if (itemInstances is null || itemOwner is null || uniqueIdentity is null)
+            throw new InvalidOperationException("Inventory item condition requires durable item metadata.");
+        itemCondition = condition ?? throw new ArgumentNullException(nameof(condition));
+    }
+
     internal InventoryPresentation Read()
     {
         Rusty.Engine.Mechanics.InventoryView current = moves.ReadInventory();
@@ -62,7 +75,7 @@ internal sealed class DaggerfallInventoryPresentation
             .Concat(current.Stacks.Select(stack => (Key: StackKey(stack.Id), Definition: stack.Definition.Value, Quantity: stack.Quantity, Slots: Array.Empty<string>())))
             .OrderBy(item => item.Key, StringComparer.Ordinal).ToArray();
         moves.ReconcileLayout();
-        return new InventoryPresentation($"{current.StoreRevision}:{moves.LayoutRevision}", items.Select(item =>
+        return new InventoryPresentation($"{current.StoreRevision}:{moves.LayoutRevision}:{MetadataRevision}", items.Select(item =>
             DescribeItem(item.Key, item.Definition, item.Quantity, item.Slots.Length == 0 ? moves.GridPosition(item.Key) : null, item.Slots)).ToArray(),
             definitions.EquipmentSlots.Values.Select(slot => new EquipmentSlotPresentation(slot.Id.Value, Label(slot.Id.Value),
                 equipped.TryGet(new EquipmentSlotId(slot.Id.Value), out UniqueInventoryItem item) ? UniqueKey(item.EntityId) : null)).ToArray(), Message,
@@ -113,21 +126,48 @@ internal sealed class DaggerfallInventoryPresentation
         DaggerfallItemOwner? owner = null)
     {
         DaggerfallItemDefinition definition = definitions.RequireItem(new DaggerfallItemId(itemId));
-        return new InventoryItemPresentation(key, itemId, definition.Template?.Name ?? Label(itemId), quantity.ToString(CultureInfo.InvariantCulture),
-            definition.Weight, CurrentValue(key, definition, owner ?? itemOwner), Details(definition), icons.GetValueOrDefault(itemId), gridSlot, equippedSlots ?? [],
-            definitions.EquipmentSlots.Keys.Select(slot => slot.Value).Where(slot => DaggerfallEquipmentPolicy.IsCompatible(definitions, definition, slot)).ToArray());
+        DaggerfallItemInstanceMetadata? metadata = Metadata(key, owner ?? itemOwner);
+        ItemDisplay display = Display(definition, metadata);
+        return new InventoryItemPresentation(key, itemId, display.Label, quantity.ToString(CultureInfo.InvariantCulture),
+            definition.Weight, CurrentValue(definition, metadata), display.Details, icons.GetValueOrDefault(itemId), gridSlot, equippedSlots ?? [],
+            definitions.EquipmentSlots.Keys.Select(slot => slot.Value).Where(slot => DaggerfallEquipmentPolicy.IsCompatible(definitions, definition, slot)).ToArray(),
+            display.Condition, display.Identified);
     }
 
-    private int CurrentValue(string key, DaggerfallItemDefinition definition, DaggerfallItemOwner? owner)
+    private DaggerfallItemInstanceMetadata? Metadata(string key, DaggerfallItemOwner? owner)
     {
-        if (valuation is null) return definition.Value;
-        DaggerfallItemInstanceMetadata metadata = key.StartsWith("unique:", StringComparison.Ordinal)
+        if (itemInstances is null) return null;
+        DaggerfallItemOwner resolvedOwner = owner?.Validate() ?? throw new InvalidOperationException("Valued inventory rows require a durable owner.");
+        return key.StartsWith("unique:", StringComparison.Ordinal)
             ? itemInstances!.RequireUnique(uniqueIdentity!(ParseUniqueEntity(key)))
             : key.StartsWith("stack:", StringComparison.Ordinal)
-                ? itemInstances!.RequireStack(owner?.Validate() ?? throw new InvalidOperationException("Valued inventory rows require a durable owner."), Rusty.Engine.Mechanics.InventoryStackId.Parse(key["stack:".Length..]))
+                ? itemInstances!.RequireStack(resolvedOwner, Rusty.Engine.Mechanics.InventoryStackId.Parse(key["stack:".Length..]))
                 : throw new InvalidOperationException($"Inventory item key '{key}' does not name a unique item or stack.");
-        return valuation.CurrentValue(definition, metadata);
     }
+
+    private int CurrentValue(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata? metadata) =>
+        valuation is null ? definition.Value : valuation.CurrentValue(definition, metadata ?? throw new InvalidOperationException("Valued inventory rows require durable metadata."));
+
+    private ItemDisplay Display(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata? metadata)
+    {
+        string baseLabel = definition.Template?.Name ?? Label(definition.Id.Value);
+        if (metadata is null || itemCondition is null) return new(baseLabel, Details(definition), null, true);
+        if (!string.Equals(metadata.ItemId, definition.Id.Value, StringComparison.Ordinal))
+            throw new InvalidOperationException($"Live inventory definition '{definition.Id.Value}' does not match durable metadata '{metadata.ItemId}'.");
+        DaggerfallItemCondition condition = itemCondition.Condition(metadata);
+        ItemConditionPresentation presentedCondition = new(condition.Current, condition.Maximum, condition.Percentage, condition.IsBroken);
+        string conditionDetail = condition.Maximum == 0 ? string.Empty : $"Condition: {condition.Current}/{condition.Maximum} ({condition.Percentage}%); ";
+        if (metadata.Enchantment is null) return new(baseLabel, conditionDetail + Details(definition), presentedCondition, true);
+        if (!definitions.Magic.MagicItems.TryGetValue(metadata.Enchantment, out DaggerfallMagicItemDefinition? magic))
+            throw new InvalidOperationException($"Item '{metadata.ItemId}' names unpublished magic metadata '{metadata.Enchantment}'.");
+        if (!metadata.Identified)
+            return new(baseLabel, conditionDetail + "Unidentified magical item", presentedCondition, false);
+        string namedMagic = magic.Name.Replace("%it", baseLabel, StringComparison.Ordinal);
+        string effects = string.Join(", ", magic.Enchantments.Select(enchantment => Label(enchantment.ParamMeaning)));
+        return new(namedMagic, conditionDetail + Details(definition) + $"; Enchantment: {effects}", presentedCondition, true);
+    }
+
+    private sealed record ItemDisplay(string Label, string Details, ItemConditionPresentation? Condition, bool Identified);
 
     private static bool TryParseUnique(InventoryItemPresentation row, out UniqueInventoryItem item)
     {

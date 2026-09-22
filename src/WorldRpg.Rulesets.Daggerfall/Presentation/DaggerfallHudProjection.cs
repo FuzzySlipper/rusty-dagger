@@ -169,6 +169,10 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("label", builder.String(item.Label)), ("quantity", builder.String(item.Quantity)),
         ("weight", builder.Number(item.Weight)), ("value", builder.Number(item.Value)),
         ("details", builder.String(item.Details)), ("icon", item.Icon is null ? builder.Null() : builder.String(item.Icon)),
+        ("condition", item.Condition is { } condition ? builder.Object(("current", builder.Number(condition.Current)),
+            ("maximum", builder.Number(condition.Maximum)), ("percentage", builder.Number(condition.Percentage)),
+            ("broken", builder.Boolean(condition.Broken))) : builder.Null()),
+        ("identified", builder.Boolean(item.Identified)),
         ("gridSlot", item.GridSlot is int slot ? builder.Number(slot) : builder.Null()),
         ("equippedSlots", builder.Array(item.EquippedSlots.Select(builder.String).ToArray())),
         ("compatibleSlots", builder.Array(item.CompatibleSlots.Select(builder.String).ToArray())));

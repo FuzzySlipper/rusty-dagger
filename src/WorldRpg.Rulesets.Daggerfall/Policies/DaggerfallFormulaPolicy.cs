@@ -338,6 +338,17 @@ internal static class DaggerfallFormulaPolicy
         throw new ArgumentException($"Actor kind '{kind}' has no classic body weight.", nameof(kind));
     }
 
+    /// <summary>
+    /// The donor's item-condition display unit. Items without condition use are complete rather than
+    /// dividing by zero; otherwise the classic integer percentage truncates toward zero.
+    /// </summary>
+    internal static int ConditionPercentage(int currentCondition, int maximumCondition)
+    {
+        if (currentCondition < 0 || maximumCondition < 0 || currentCondition > maximumCondition)
+            throw new ArgumentOutOfRangeException(nameof(currentCondition), "Item condition must remain within its maximum.");
+        return maximumCondition == 0 ? 100 : (int)(100L * currentCondition / maximumCondition);
+    }
+
     private static int FloorDivide(int value, int divisor) => value >= 0 ? value / divisor : -checked(((-value) + divisor - 1) / divisor);
     private static long FloorDivide(long value, long divisor) => value >= 0 ? value / divisor : -checked(((-value) + divisor - 1) / divisor);
     private static int TruncateDivide(int value, int divisor) => value / divisor;

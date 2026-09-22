@@ -38,9 +38,18 @@ export interface InventoryItem {
   readonly value: number;
   readonly details: string;
   readonly icon: string | null;
+  readonly condition: ItemCondition | null;
+  readonly identified: boolean;
   readonly gridSlot: number | null;
   readonly equippedSlots: readonly string[];
   readonly compatibleSlots: readonly string[];
+}
+
+export interface ItemCondition {
+  readonly current: number;
+  readonly maximum: number;
+  readonly percentage: number;
+  readonly broken: boolean;
 }
 
 export interface EquipmentSlot {

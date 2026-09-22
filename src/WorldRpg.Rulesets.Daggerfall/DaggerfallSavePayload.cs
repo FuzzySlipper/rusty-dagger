@@ -305,7 +305,7 @@ internal sealed record DaggerfallSavePayload(
         {
             if (!definitions.TryResolveItem(new DaggerfallItemId(saved.ItemId), out DaggerfallItemDefinition definition) || definition.IsFungible || !allUnique.Add(saved.EntityId))
                 throw new ArgumentException($"Saved {owner.Scope} {owner.Id} unique item '{saved.EntityId}' is missing, incompatible, or duplicated.");
-            RequireMetadata(saved.ItemId, saved.Metadata, owner);
+            RequireMetadata(definitions, saved.ItemId, saved.Metadata, owner);
             unique.Add(saved.EntityId, definition);
         }
         if (!requireEquipment && inventory.Equipment.Length != 0)
@@ -329,7 +329,9 @@ internal sealed record DaggerfallSavePayload(
             throw new ArgumentException($"Saved {owner.Scope} {owner.Id} stack '{stack.ItemId}' is not a selected fungible item.");
         if (stack.Quantity > definition.MaximumQuantity)
             throw new ArgumentException($"Saved {owner.Scope} {owner.Id} stack '{stack.ItemId}' exceeds its authored maximum quantity.");
-        RequireMetadata(stack.ItemId, stack.Metadata, owner);
+        DaggerfallItemInstanceMetadata metadata = RequireMetadata(definitions, stack.ItemId, stack.Metadata, owner);
+        if (metadata.Enchantment is not null)
+            throw new ArgumentException($"Saved {owner.Scope} {owner.Id} stack '{stack.ItemId}' cannot carry an enchantment.");
     }
 
     private static void AddQuestStacks(HashSet<(string Scope, long OwnerId, string StackId)> target, DaggerfallItemOwner owner, IEnumerable<DaggerfallStackSave> stacks)
@@ -339,12 +341,22 @@ internal sealed record DaggerfallSavePayload(
                 throw new ArgumentException($"Saved stack '{stack.StackId}' appears more than once for {owner.Scope} {owner.Id}.");
     }
 
-    private static void RequireMetadata(string itemId, DaggerfallItemMetadataSave metadata, DaggerfallItemOwner owner)
+    private static DaggerfallItemInstanceMetadata RequireMetadata(DaggerfallDefinitions definitions, string itemId, DaggerfallItemMetadataSave metadata, DaggerfallItemOwner owner)
     {
         ArgumentNullException.ThrowIfNull(metadata);
         DaggerfallItemInstanceMetadata restored = DaggerfallItemInstanceMetadata.Restore(itemId, metadata);
         if (restored.Owner != owner)
             throw new ArgumentException($"Saved item '{itemId}' has metadata ownership {restored.Owner.Scope} {restored.Owner.Id}, not {owner.Scope} {owner.Id}.");
+        if (restored.Enchantment is not { } enchantment) return restored;
+        if (!definitions.Magic.MagicItems.ContainsKey(enchantment))
+            throw new ArgumentException($"Saved item '{itemId}' names unpublished magic metadata '{enchantment}'.");
+        string suffix = $"-magic-{enchantment.Replace('.', '-')}";
+        bool factoryMagic = itemId.EndsWith(suffix, StringComparison.Ordinal)
+            && definitions.TryResolveItem(new DaggerfallItemId(itemId[..^suffix.Length]), out _);
+        bool plainEnchanted = definitions.TryResolveItem(new DaggerfallItemId(DaggerfallMagicItemIds.For(itemId, enchantment)), out _);
+        if (!factoryMagic && !plainEnchanted)
+            throw new ArgumentException($"Saved enchantment '{enchantment}' is incompatible with item definition '{itemId}'.");
+        return restored;
     }
 
     /// <summary>Every effect-backed stat source must have the active instance that owns its eventual cleanup.</summary>

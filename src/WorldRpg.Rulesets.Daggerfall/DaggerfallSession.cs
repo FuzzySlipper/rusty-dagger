@@ -63,6 +63,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private readonly DaggerfallOutcomePresentation _outcomes;
     private readonly DaggerfallHudProjection _hud;
     private readonly DaggerfallEquipmentMoves _equipmentMoves;
+    private readonly DaggerfallItemConditionService _itemCondition;
     private readonly DaggerfallInventoryPresentation _inventoryUi;
     private readonly DaggerfallLootPresentation _lootUi;
     private readonly DaggerfallCharacterPresentation _characterUi;
@@ -254,10 +255,12 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored, () => State.Kit.Targeting.LastEvidence);
             _equipmentMoves = new DaggerfallEquipmentMoves(inventory, equipmentCoordinator, definitions,
                 () => State.Character.Career.ForbiddenEquipment, State.ItemInstances);
+            _itemCondition = new DaggerfallItemConditionService(definitions, State.ItemInstances, _equipmentMoves);
             _inventoryUi = new DaggerfallInventoryPresentation(_equipmentMoves, definitions, inputs.ClassicPresentation.InventoryIcons,
                 State.Encumbrance, State.Currency);
             _inventoryUi.UseItemValuation(new DaggerfallItemValuation(definitions), State.ItemInstances, DaggerfallItemOwner.Player,
                 entity => State.Actors.Entities.IdentityOf(new Rusty.Engine.Entities.EntityId(entity)).Value);
+            _inventoryUi.UseItemCondition(_itemCondition);
             _lootUi = new DaggerfallLootPresentation(_corpseLoot, _inventoryUi);
             InitializeActivation(engine, tuning.LootInteraction);
             _characterUi = new DaggerfallCharacterPresentation(definitions, State.Character, playerDefinition, equipmentCoordinator, State.LevelUps);
@@ -1041,6 +1044,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     /// <summary>Typed equipment moves over live state: the same operations the UI adapter uses.</summary>
     internal DaggerfallEquipmentMoves EquipmentMoves => _equipmentMoves;
+    /// <summary>Typed mutation and disclosure of persisted item condition and magic meaning.</summary>
+    internal DaggerfallItemConditionService ItemCondition => _itemCondition;
     internal CorpseLootEvidence? LastCorpseLoot => _corpseLoot.LastEvidence;
     internal CorpseLootCommitEvidence? LastCorpseLootCommit => _corpseLoot.LastCommit;
     internal IReadOnlyDictionary<long, CorpseContainer> Corpses => _corpseLoot.Corpses;
