@@ -1,8 +1,12 @@
+using Rusty.Engine;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 namespace WorldRpg.Rulesets.Daggerfall;
 
-/// <summary>One semantic control action: its id, default keys and what it drives.</summary>
+/// <summary>One semantic control action: its id, default controls and what it drives.</summary>
 /// <param name="Id">The action id the session dispatches.</param>
-/// <param name="DefaultKeys">The default keyboard keys.</param>
+/// <param name="DefaultKeys">The default physical controls.</param>
 /// <param name="Category">Movement, combat, interface, magic, rest, maps or transport.</param>
 public sealed record DaggerfallControlAction(string Id, IReadOnlyList<string> DefaultKeys, string Category);
 
@@ -17,7 +21,7 @@ public sealed record DaggerfallControlAction(string Id, IReadOnlyList<string> De
 /// </summary>
 public sealed class DaggerfallControlSettings
 {
-    /// <summary>The key no action may claim.</summary>
+    /// <summary>The key no action other than the fixed menu may claim.</summary>
     public const string ReservedKey = "Escape";
 
     /// <summary>The semantic action catalog with defaults and categories.</summary>
@@ -27,36 +31,36 @@ public sealed class DaggerfallControlSettings
         new("move.backward", ["KeyS"], "movement"),
         new("move.left", ["KeyA"], "movement"),
         new("move.right", ["KeyD"], "movement"),
-        new("attack", ["Mouse0"], "combat"),
+        new("attack", ["Primary"], "combat"),
         new("interact", ["KeyF"], "combat"),
         new("toggle-weapon", ["KeyZ"], "combat"),
         new("inventory", ["KeyI"], "interface"),
         new("character", ["KeyC"], "interface"),
-        new("menu", ["Escape"], "interface"),
+        new("menu", [ReservedKey], "interface"),
         new("spell", ["KeyV"], "magic"),
         new("rest", ["KeyR"], "rest"),
         new("map", ["KeyM"], "maps"),
         new("transport", ["KeyT"], "transport"),
     ];
 
+    private const string MenuAction = "menu";
     private readonly Dictionary<string, List<string>> _bindings;
 
     /// <summary>Creates default settings.</summary>
-    public DaggerfallControlSettings() =>
-        _bindings = Catalog.ToDictionary(action => action.Id, action => action.DefaultKeys.ToList(), StringComparer.Ordinal);
+    public DaggerfallControlSettings() => _bindings = CreateDefaultBindings();
 
     private DaggerfallControlSettings(Dictionary<string, List<string>> bindings) => _bindings = bindings;
 
-    /// <summary>The keys one action answers to.</summary>
+    /// <summary>The controls one action answers to.</summary>
     public IReadOnlyList<string> KeysFor(string action) =>
         _bindings.TryGetValue(action, out List<string>? keys) ? keys : throw new ArgumentOutOfRangeException(nameof(action), action, "No semantic control action carries this id.");
 
-    /// <summary>Every action with its keys.</summary>
+    /// <summary>Every action with its controls.</summary>
     public IReadOnlyDictionary<string, IReadOnlyList<string>> All => _bindings.ToDictionary(entry => entry.Key, entry => (IReadOnlyList<string>)entry.Value, StringComparer.Ordinal);
 
     /// <summary>
-    /// Rebinds one action: refuses reserved keys and collisions, naming the holder. Pass swap
-    /// to move the holder's keys onto the rebound action instead of refusing.
+    /// Rebinds one action: refuses reserved controls and collisions, naming the holder. Pass swap
+    /// to exchange the rebound action's old controls with one conflicting action.
     /// </summary>
     public void Rebind(string action, IReadOnlyList<string> keys, bool swap = false)
     {
@@ -67,63 +71,61 @@ public sealed class DaggerfallControlSettings
             throw new ArgumentOutOfRangeException(nameof(action), action, "No semantic control action carries this id.");
         }
 
-        if (keys.Count == 0)
+        if (string.Equals(action, MenuAction, StringComparison.Ordinal))
         {
-            throw new ArgumentException("A rebinding states no keys.", nameof(keys));
+            throw new ArgumentException("The menu always answers Escape and cannot be rebound.", nameof(action));
         }
 
-        if (_bindings[action].SequenceEqual(keys, StringComparer.Ordinal))
+        List<string> requested = ValidateActionKeys(action, keys, nameof(keys));
+        if (_bindings[action].SequenceEqual(requested, StringComparer.Ordinal))
         {
             return;
         }
 
-        foreach (string key in keys)
+        string[] holders = _bindings
+            .Where(entry => !string.Equals(entry.Key, action, StringComparison.Ordinal)
+                && entry.Value.Any(key => requested.Contains(key, StringComparer.Ordinal)))
+            .Select(entry => entry.Key)
+            .ToArray();
+        if (holders.Length != 0 && !swap)
         {
-            if (string.Equals(key, ReservedKey, StringComparison.Ordinal))
-            {
-                throw new ArgumentException($"Key '{key}' is reserved for the menu and never rebinds.", nameof(keys));
-            }
-
-            string? holder = _bindings.FirstOrDefault(entry => !string.Equals(entry.Key, action, StringComparison.Ordinal) && entry.Value.Contains(key, StringComparer.Ordinal)).Key;
-            if (holder is not null)
-            {
-                if (!swap)
-                {
-                    throw new InvalidOperationException($"Key '{key}' already answers '{holder}'; swap them explicitly or choose another key.");
-                }
-
-                (_bindings[holder], _bindings[action]) = (_bindings[action], keys.ToList());
-                return;
-            }
+            string holder = holders[0];
+            string key = requested.First(candidate => _bindings[holder].Contains(candidate, StringComparer.Ordinal));
+            throw new InvalidOperationException($"Key '{key}' already answers '{holder}'; swap them explicitly or choose another key.");
         }
 
-        _bindings[action] = keys.ToList();
+        if (holders.Length > 1)
+        {
+            throw new InvalidOperationException($"The requested controls collide with multiple actions ({string.Join(", ", holders)}); one rebind can swap with only one action.");
+        }
+
+        Dictionary<string, List<string>> candidate = CopyBindings(_bindings);
+        candidate[action] = requested;
+        if (holders.Length == 1)
+        {
+            candidate[holders[0]] = _bindings[action].ToList();
+        }
+
+        ValidateBindings(candidate, nameof(keys));
+        ReplaceBindings(candidate);
     }
 
     /// <summary>Restores every default.</summary>
-    public void Reset()
-    {
-        _bindings.Clear();
-        foreach (DaggerfallControlAction action in Catalog)
-        {
-            _bindings.Add(action.Id, action.DefaultKeys.ToList());
-        }
-    }
+    public void Reset() => ReplaceBindings(CreateDefaultBindings());
 
     /// <summary>Serializes the bindings for the settings holder.</summary>
-    public string Serialize() =>
-        System.Text.Json.JsonSerializer.Serialize(_bindings.ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal));
+    public string Serialize() => JsonSerializer.Serialize(_bindings, DaggerfallControlSettingsJsonContext.Default.DictionaryStringListString);
 
-    /// <summary>Parses persisted bindings: unknown actions, reserved keys and collisions are refused.</summary>
+    /// <summary>Parses a complete persisted binding set after validating every action and control.</summary>
     public static DaggerfallControlSettings Parse(string json)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(json);
         Dictionary<string, List<string>>? parsed;
         try
         {
-            parsed = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, List<string>>>(json);
+            parsed = JsonSerializer.Deserialize(json, DaggerfallControlSettingsJsonContext.Default.DictionaryStringListString);
         }
-        catch (System.Text.Json.JsonException exception)
+        catch (JsonException exception)
         {
             throw new ArgumentException("Persisted controls parse to no bindings.", nameof(json), exception);
         }
@@ -133,18 +135,112 @@ public sealed class DaggerfallControlSettings
             throw new ArgumentException("Persisted controls parse to no bindings.", nameof(json));
         }
 
-        DaggerfallControlSettings settings = new();
-        settings._bindings.Clear();
+        ValidateBindings(parsed, nameof(json));
+        return new DaggerfallControlSettings(CopyBindings(parsed));
+    }
+
+    private static Dictionary<string, List<string>> CreateDefaultBindings() =>
+        Catalog.ToDictionary(action => action.Id, action => action.DefaultKeys.ToList(), StringComparer.Ordinal);
+
+    private static Dictionary<string, List<string>> CopyBindings(IReadOnlyDictionary<string, List<string>> bindings) =>
+        bindings.ToDictionary(entry => entry.Key, entry => entry.Value.ToList(), StringComparer.Ordinal);
+
+    private void ReplaceBindings(Dictionary<string, List<string>> bindings)
+    {
+        _bindings.Clear();
+        foreach ((string action, List<string> keys) in bindings)
+        {
+            _bindings.Add(action, keys);
+        }
+    }
+
+    private static void ValidateBindings(IReadOnlyDictionary<string, List<string>> bindings, string parameterName)
+    {
+        foreach (string action in bindings.Keys)
+        {
+            if (!Catalog.Any(candidate => string.Equals(candidate.Id, action, StringComparison.Ordinal)))
+            {
+                throw new ArgumentOutOfRangeException(parameterName, action, "No semantic control action carries this id.");
+            }
+        }
+
+        Dictionary<string, string> holders = new(StringComparer.Ordinal);
         foreach (DaggerfallControlAction action in Catalog)
         {
-            settings._bindings.Add(action.Id, action.DefaultKeys.ToList());
-        }
+            if (!bindings.TryGetValue(action.Id, out List<string>? keys))
+            {
+                throw new ArgumentException($"Persisted controls omit required action '{action.Id}'.", parameterName);
+            }
 
-        foreach ((string action, List<string> keys) in parsed)
-        {
-            settings.Rebind(action, keys);
+            foreach (string key in ValidateActionKeys(action.Id, keys, parameterName))
+            {
+                if (!holders.TryAdd(key, action.Id))
+                {
+                    throw new ArgumentException($"Key '{key}' is assigned to both '{holders[key]}' and '{action.Id}'.", parameterName);
+                }
+            }
         }
-
-        return settings;
     }
+
+    private static List<string> ValidateActionKeys(string action, IReadOnlyList<string>? keys, string parameterName)
+    {
+        if (keys is null)
+        {
+            throw new ArgumentException($"Action '{action}' has null controls.", parameterName);
+        }
+
+        if (keys.Count == 0)
+        {
+            throw new ArgumentException($"Action '{action}' states no controls.", parameterName);
+        }
+
+        if (string.Equals(action, MenuAction, StringComparison.Ordinal)
+            && (keys.Count != 1 || !string.Equals(keys[0], ReservedKey, StringComparison.Ordinal)))
+        {
+            throw new ArgumentException("The menu always answers Escape and cannot be rebound.", parameterName);
+        }
+
+        HashSet<string> uniqueKeys = new(StringComparer.Ordinal);
+        List<string> validated = new(keys.Count);
+        for (int index = 0; index < keys.Count; index++)
+        {
+            string? key = keys[index];
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new ArgumentException($"Action '{action}' has a null or empty control at index {index}.", parameterName);
+            }
+
+            if (!IsSupportedControl(key))
+            {
+                throw new ArgumentException($"Control '{key}' is not a supported Engine input control.", parameterName);
+            }
+
+            if (!string.Equals(action, MenuAction, StringComparison.Ordinal) && string.Equals(key, ReservedKey, StringComparison.Ordinal))
+            {
+                throw new ArgumentException($"Key '{key}' is reserved for the menu and never rebinds.", parameterName);
+            }
+
+            if (!uniqueKeys.Add(key))
+            {
+                throw new ArgumentException($"Action '{action}' repeats control '{key}'.", parameterName);
+            }
+
+            validated.Add(key);
+        }
+
+        return validated;
+    }
+
+    private static bool IsSupportedControl(string key) =>
+        Enum.TryParse(key, out KeyboardControl keyboard)
+        && keyboard != KeyboardControl.None
+        && Enum.IsDefined(keyboard)
+        && string.Equals(key, keyboard.ToString(), StringComparison.Ordinal)
+        || Enum.TryParse(key, out PointerButton pointer)
+        && pointer != PointerButton.None
+        && Enum.IsDefined(pointer)
+        && string.Equals(key, pointer.ToString(), StringComparison.Ordinal);
 }
+
+[JsonSerializable(typeof(Dictionary<string, List<string>>))]
+internal partial class DaggerfallControlSettingsJsonContext : JsonSerializerContext;
