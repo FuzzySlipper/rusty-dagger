@@ -36,6 +36,9 @@ internal sealed record DaggerfallSavePayload(
     /// <summary>Every selected RDB door's current state, including a partially completed motion.</summary>
     [JsonRequired]
     public DaggerfallDoorSave[] Doors { get; init; } = [];
+    /// <summary>The current bank balance and generated-gold stack sequence; coins and letters remain inventory entries.</summary>
+    [JsonRequired]
+    public DaggerfallCurrencySave Currency { get; init; } = new(0, 1);
     /// <summary>The dynamic identity kinds owned by the current Daggerfall ruleset.</summary>
     internal static readonly DurableIdentityKind[] PersistedKinds = [DurableIdentityKind.Actor, DurableIdentityKind.Item];
 
@@ -202,6 +205,8 @@ internal sealed record DaggerfallSavePayload(
         Quests.Validate();
         ArgumentNullException.ThrowIfNull(Doors);
         foreach (DaggerfallDoorSave door in Doors) { ArgumentNullException.ThrowIfNull(door); door.Validate(); }
+        ArgumentNullException.ThrowIfNull(Currency);
+        Currency.Validate();
         ArgumentNullException.ThrowIfNull(Character);
         LevelUp?.Validate();
         if (LevelUp is not null && LevelUp.Level != Level + 1)
@@ -426,7 +431,8 @@ internal sealed record DaggerfallItemMetadataSave(
     string? Gender = null,
     string? Dye = null,
     int? BookId = null,
-    int? PotionRecipeKey = null);
+    int? PotionRecipeKey = null,
+    ulong? CreditValue = null);
 internal sealed record DaggerfallEquipmentSave(string SlotId, ulong ItemEntityId);
 internal sealed record DaggerfallCombatCooldownSave(long AttackerId, ulong RemainingSteps);
 

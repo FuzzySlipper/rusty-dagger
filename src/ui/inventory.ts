@@ -6,6 +6,20 @@ export interface InventoryProjection {
   readonly slots: readonly EquipmentSlot[];
   readonly message: string;
   readonly equipmentChange: EquipmentChange | null;
+  readonly encumbrance?: Encumbrance | null;
+  readonly currency?: CurrencyTotals | null;
+}
+
+export interface Encumbrance {
+  readonly currentClassicUnits: number;
+  readonly maximumClassicUnits: number;
+  readonly canMove: boolean;
+}
+
+export interface CurrencyTotals {
+  readonly gold: string;
+  readonly lettersOfCredit: string;
+  readonly accountGold: string;
 }
 
 /** A completed ruleset-owned equipment change. Delay fields remain available to a later readiness owner. */
@@ -296,10 +310,14 @@ export function mountInventory(
 
 function equipmentStatus(value: InventoryProjection): string {
   const change = value.equipmentChange ?? null;
-  if (change === null) return value.message;
-  return `${value.message} ${change.cue === 'equip' ? 'Equipped.'
+  const outcome = change === null ? value.message : `${value.message} ${change.cue === 'equip' ? 'Equipped.'
     : change.cue === 'unequip' ? 'Unequipped.'
       : 'Equipment transferred.'}`;
+  const load = value.encumbrance == null ? ''
+    : ` Load ${value.encumbrance.currentClassicUnits}/${value.encumbrance.maximumClassicUnits}${value.encumbrance.canMove ? '' : ' (over capacity)'}.`;
+  const currency = value.currency == null ? ''
+    : ` Gold ${value.currency.gold}; letters ${value.currency.lettersOfCredit}; account ${value.currency.accountGold}.`;
+  return `${outcome}${load}${currency}`;
 }
 
 function createDetails(): {

@@ -144,6 +144,9 @@ public sealed class MechanicsInventoryCoordinator
         return Component.Consume(consume.Stack, consume.Quantity);
     }
 
+    /// <summary>Destroys one contained unique item through the Engine inventory candidate.</summary>
+    public ItemDestroyReceipt Destroy(UniqueInventoryItem item) => Component.Store.DestroyUnique(RequireUniqueEntity(item));
+
     /// <summary>Splits one explicit fungible stack through the Engine-owned inventory operation.</summary>
     public InventorySplitReceipt Split(InventoryStackId source, InventoryStackId split, ulong quantity)
     {
@@ -173,6 +176,15 @@ public sealed class MechanicsInventoryCoordinator
 
     private ItemDefinition RequireDefinition(InventoryItemId id) => _items.TryGetValue(id, out ItemDefinition? definition)
         ? definition : throw new InvalidOperationException($"Managed inventory does not define item '{id.Value}'.");
+
+    private EntityId RequireUniqueEntity(UniqueInventoryItem item)
+    {
+        EntityId entity = new(item.EntityId);
+        if (!Component.Contains(entity) || !Component.Store.TryGetItem(entity, out ItemState? found)
+            || found is null || found.Definition.Id.Value != item.Definition.Value)
+            throw new InvalidOperationException($"Unique item {item.EntityId} is not contained by this inventory with definition '{item.Definition.Value}'.");
+        return entity;
+    }
 }
 
 /// <summary>Typed coordination over live inventory and equipment components for one owner.</summary>

@@ -137,6 +137,23 @@ public sealed class MechanicsInventoryCoordinatorTests
         Assert.Equal(item.EntityId, Assert.Single(destinationEquipment.Read().Assignments).Item.EntityId);
     }
 
+    [Fact]
+    public void Destroy_removes_one_contained_unique_item_from_the_engine_inventory()
+    {
+        OwnerState owner = CreateOwner();
+        ItemDefinition letter = UniqueEquipment("letter", requiredSlots: 1);
+        MechanicsInventoryCoordinator inventory = new(owner.Inventory, owner.Entities,
+            new Dictionary<InventoryItemId, ItemDefinition> { [new InventoryItemId("letter")] = letter });
+        DurableIdentityReference identity = new(DurableIdentityKind.Item, 44);
+        inventory.GrantAtomic([new InventoryAtomicGrant(new InventoryItemId("letter"), UniqueItem: identity)]);
+        EntityId entity = Assert.Single(owner.Inventory.UniqueItems).Entity;
+
+        ItemDestroyReceipt receipt = inventory.Destroy(new KitUniqueInventoryItem(entity.Value, new InventoryItemId("letter")));
+
+        Assert.Equal(entity, receipt.Item);
+        Assert.Empty(owner.Inventory.UniqueItems);
+    }
+
     private static OwnerState CreateOwner(EntityDirectory? entities = null, InventoryStore? store = null, ulong actorId = 1,
         bool withEquipment = false)
     {

@@ -7,6 +7,16 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallUiActionTests
 {
     [Theory]
+    [InlineData("{\"action\":\"currency-deposit-gold\",\"amount\":25}", true)]
+    [InlineData("{\"action\":\"currency-withdraw-letter\",\"amount\":100}", true)]
+    [InlineData("{\"action\":\"currency-withdraw-gold\",\"amount\":0}", false)]
+    [InlineData("{\"action\":\"currency-deposit-gold\"}", false)]
+    [InlineData("{\"action\":\"currency-deposit-letters\"}", true)]
+    [InlineData("{\"action\":\"currency-deposit-letters\",\"amount\":1}", false)]
+    public void Currency_actions_admit_only_explicit_nonzero_amounts(string json, bool accepted) =>
+        Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
+
+    [Theory]
     [InlineData("{\"action\":\"attack\"}", "attack")]
     [InlineData("{\"action\":\"loot\"}", "loot")]
     [InlineData("{\"action\":\"inventory\"}", "inventory")]

@@ -35,6 +35,7 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
         (string? race, string? gender, string? dye) = SelectAppearance(template, request, material);
         int? bookId = SelectBook(template, request);
         int? potionRecipeKey = SelectPotionRecipe(template, request);
+        ulong? creditValue = SelectCreditValue(template, request);
         // ItemBuilder.SetItem initializes ordinary templates from hitPoints, then its material
         // routine scales weapon and plate condition before the item can enter an inventory.
         int condition = template.Index == 131 ? 0 : DaggerfallItemMaterialPolicy.Apply(template, material).MaximumCondition;
@@ -44,12 +45,12 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
         return new DaggerfallCreatedItem(template.Index, item, template.Stackable,
             quantity, new DaggerfallItemInstanceMetadata(item.Value, material, variant, condition, condition,
                 Identified: enchantment is null, Stolen: request.Stolen, request.QuestId, request.QuestSymbol, enchantment, request.Owner,
-                race, gender, dye, bookId, potionRecipeKey).Validate());
+                race, gender, dye, bookId, potionRecipeKey, creditValue).Validate());
     }
 
     private DaggerfallCreatedItem CreateMagic(DaggerfallItemCreateRequest request)
     {
-        if (request.TemplateIndex is not null || request.Material is not null || request.Variant is not null || request.BookId is not null || request.PotionRecipeKey is not null)
+        if (request.TemplateIndex is not null || request.Material is not null || request.Variant is not null || request.BookId is not null || request.PotionRecipeKey is not null || request.CreditValue is not null)
             throw new ArgumentException("Magic template creation chooses its own base template, material, variant, and book identity.", nameof(request));
         DaggerfallMagicItemDefinition[] regular = _definitions.Magic.MagicItems.Values
             .Where(item => item.Type == 0).OrderBy(item => item.Key, StringComparer.Ordinal).ToArray();
@@ -244,6 +245,18 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
         return recipe;
     }
 
+    private static ulong? SelectCreditValue(DaggerfallItemTemplateDefinition template, DaggerfallItemCreateRequest request)
+    {
+        if (template.Index != 275)
+        {
+            if (request.CreditValue is not null)
+                throw new ArgumentException($"Template {template.Index} is not a letter of credit.", nameof(request));
+            return null;
+        }
+        return request.CreditValue is > 0 ? request.CreditValue
+            : throw new ArgumentException("A letter of credit requires a positive redeemable amount.", nameof(request));
+    }
+
     private ulong SelectQuantity(DaggerfallItemTemplateDefinition template, DaggerfallItemCreateRequest request, string material)
     {
         if (!template.Stackable)
@@ -266,12 +279,12 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
 internal sealed record DaggerfallItemCreateRequest(string Category, string Key, DaggerfallItemOwner Owner, ulong? Quantity = null,
     int? TemplateIndex = null, string? Material = null, int? Variant = null, int Level = 1, bool Stolen = false,
     string? QuestId = null, string? QuestSymbol = null, string? Race = null, string? Gender = null, string? Dye = null,
-    int? BookId = null, string? MagicItemKey = null, int? PotionRecipeKey = null)
+    int? BookId = null, string? MagicItemKey = null, int? PotionRecipeKey = null, ulong? CreditValue = null)
 {
     internal void Validate()
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(Category); ArgumentException.ThrowIfNullOrWhiteSpace(Key);
-        if (Quantity == 0 || Level < 0 || BookId < 0 || PotionRecipeKey <= 0) throw new ArgumentOutOfRangeException(nameof(Quantity));
+        if (Quantity == 0 || Level < 0 || BookId < 0 || PotionRecipeKey <= 0 || CreditValue == 0) throw new ArgumentOutOfRangeException(nameof(Quantity));
         if ((QuestId is null) != (QuestSymbol is null)) throw new ArgumentException("Quest items require both quest and symbol.");
         if (Material is { Length: 0 } || Race is { Length: 0 } || Gender is { Length: 0 } || Dye is { Length: 0 } || MagicItemKey is { Length: 0 })
             throw new ArgumentException("Item creation values cannot be empty strings.");

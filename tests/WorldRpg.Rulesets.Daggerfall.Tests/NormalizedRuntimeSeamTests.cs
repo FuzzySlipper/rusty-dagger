@@ -5392,6 +5392,132 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Over_capacity_player_still_receives_an_engine_step_but_cannot_propose_planar_movement()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+
+        InventoryStackId coins = InventoryStackId.Parse("test.encumbrance.movement");
+        session.State.Inventory.Grant(new(new InventoryItemId("gold-piece"), coins, checked((ulong)(session.State.Encumbrance.Read().MaximumClassicUnits + 1))));
+        session.State.ItemInstances.RegisterDefaultStack(DaggerfallItemOwner.Player, session.State.Inventory.Read().Stacks.Single(stack => stack.Id == coins), definitions.RequireItem(new DaggerfallItemId("gold-piece")));
+        Assert.False(session.State.Encumbrance.Read().CanMove);
+
+        session.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
+
+        Assert.Single(spatial.StepRequests);
+        Assert.Equal(Vector2.Zero, spatial.StepRequests[0].Command.PlanarIntent);
+    }
+
+    [Fact]
+    public void Loot_transfer_at_the_player_capacity_boundary_leaves_both_engine_containers_unchanged()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        spatial.KeepPosition = true;
+        PerceptionFake perception = PerceptionFake.Create();
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
+        AimActivationAt(session, 2000);
+        CorpseContainer corpse = session.Corpses[2000];
+        InventoryStackId corpseCoins = InventoryStackId.Parse("test.encumbrance.corpse");
+        session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 1, Stack: corpseCoins)]);
+        RegisterCorpseStack(session, definitions, 2000, corpseCoins.Value);
+        InventoryStackId playerCoins = InventoryStackId.Parse("test.encumbrance.player");
+        session.State.Inventory.Grant(new(new InventoryItemId("gold-piece"), playerCoins, checked((ulong)session.State.Encumbrance.Read().MaximumClassicUnits)));
+        session.State.ItemInstances.RegisterDefaultStack(DaggerfallItemOwner.Player, session.State.Inventory.Read().Stacks.Single(stack => stack.Id == playerCoins), definitions.RequireItem(new DaggerfallItemId("gold-piece")));
+        Assert.False(session.State.Encumbrance.Read().CanMove);
+        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
+
+        void Ui(string json, ulong step) => session.Update(new ProductUpdate(OuterUpdate(step), [Input(InputEventKind.DirectDigital) with
+        {
+            ValueKind = InputValueKind.ProductPayload,
+            PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+            PayloadData = Encoding.UTF8.GetBytes(json),
+        }]));
+
+        Ui("{\"action\":\"loot\"}", 1);
+        session.ApplyProductMode(ProductMode.Modal);
+        LootPresentation opened = Assert.IsType<LootPresentation>(session.OpenLoot);
+        InventoryItemPresentation coin = Assert.Single(opened.Items, item => item.Key == DaggerfallInventoryPresentation.StackKey(corpseCoins));
+        Ui(JsonSerializer.Serialize(new { action = "loot-take", container = opened.Container, revision = opened.Revision, item = coin.Key }), 2);
+
+        Assert.Equal(checked((ulong)session.State.Encumbrance.Read().MaximumClassicUnits), session.State.Inventory.Read().Stacks.Single(stack => stack.Id == playerCoins).Quantity);
+        Assert.Equal(1UL, session.State.Containers.Read(corpse.Owner).Stacks.Single(stack => stack.Id == corpseCoins).Quantity);
+        Assert.Contains("Cannot take", Assert.IsType<LootPresentation>(session.OpenLoot).Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Currency_actions_mutate_inventory_backed_values_and_restore_their_letter_identity()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        RulesetSavePayload saved;
+        ulong letterIdentity;
+        using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        {
+            InventoryStackId coins = InventoryStackId.Parse("test.currency.session.coins");
+            session.State.Inventory.Grant(new(new InventoryItemId("template-276"), coins, 200));
+            session.State.ItemInstances.RegisterDefaultStack(DaggerfallItemOwner.Player, session.State.Inventory.Read().Stacks.Single(stack => stack.Id == coins), definitions.RequireItem(new DaggerfallItemId("template-276")));
+
+            void Ui(string json, ulong step) => session.Update(new ProductUpdate(OuterUpdate(step), [Input(InputEventKind.DirectDigital) with
+            {
+                ValueKind = InputValueKind.ProductPayload,
+                PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+                PayloadData = Encoding.UTF8.GetBytes(json),
+            }]));
+
+            Ui("{\"action\":\"currency-deposit-gold\",\"amount\":200}", 1);
+            Assert.Equal(new DaggerfallCurrencyTotals(25, 0, 200), session.State.Currency.Read());
+            Assert.Equal("Currency updated.", engine.PublishedField("lastOutcome"));
+            Ui("{\"action\":\"currency-withdraw-letter\",\"amount\":100}", 2);
+            Assert.Equal(new DaggerfallCurrencyTotals(25, 100, 99), session.State.Currency.Read());
+            Rusty.Engine.Mechanics.UniqueInventoryItem letter = Assert.Single(session.State.Inventory.Read().UniqueItems,
+                item => item.Definition.Value == "template-275");
+            letterIdentity = session.State.Inventory.GetDurableItemId(letter.Entity).Value;
+            Assert.Equal(100UL, session.State.ItemInstances.RequireUnique(letterIdentity).CreditValue);
+            saved = session.CaptureSave();
+        }
+
+        JsonObject missingCurrency = JsonNode.Parse(saved.Bytes.Span)!.AsObject();
+        Assert.True(missingCurrency.Remove("Currency"));
+        RulesetSavePayload malformed = new(saved.Ruleset, JsonSerializer.SerializeToUtf8Bytes(missingCurrency));
+        Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Read(malformed));
+
+        ContentFake resumedContent = new(releases);
+        PopulateContent(resumedContent, inputs);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, saved, RandomMinimum.Create());
+
+        Assert.Equal(new DaggerfallCurrencyTotals(25, 100, 99), resumed.State.Currency.Read());
+        Rusty.Engine.Mechanics.UniqueInventoryItem restoredLetter = Assert.Single(resumed.State.Inventory.Read().UniqueItems,
+            item => item.Definition.Value == "template-275");
+        Assert.Equal(letterIdentity, resumed.State.Inventory.GetDurableItemId(restoredLetter.Entity).Value);
+        Assert.Equal(100UL, resumed.State.ItemInstances.RequireUnique(letterIdentity).CreditValue);
+    }
+
+    [Fact]
     public void Admitted_authored_entity_ids_cover_construction_and_allocator_inputs_and_reject_duplicates()
     {
         // One helper now serves actor construction validation and allocator reservations. The

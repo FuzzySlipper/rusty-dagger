@@ -30,6 +30,7 @@ internal sealed record DaggerActorAssembly(DaggerfallState State, Dictionary<lon
 internal static class DaggerActorFactory
 {
     private const ulong PlayerMechanicsEntityId = (ulong)DaggerfallActorIdentity.PlayerEntityId;
+    internal static CapacityMetricId ClassicWeightMetric { get; } = CapacityMetricId.Parse("daggerfall.classic-weight");
     internal static DaggerActorAssembly Create(IRandomService random, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallSavePayload? saved)
     {
         ActorsState actors = new();
@@ -50,7 +51,10 @@ internal static class DaggerActorFactory
             EntityId playerEntity = player.Actor.Entity;
             if (saved is not null) RestoreStats(player.Actor, saved.Player.Stats);
             InventoryStore inventoryStore = new();
-            inventoryStore.RegisterInventory(new InventoryState(playerEntity));
+            // Engine owns one authoritative sum of item capacity costs. Daggerfall's mutable
+            // strength maximum remains policy, so the unbounded Engine limit supplies the live
+            // used value without inventing a second inventory ledger.
+            inventoryStore.RegisterInventory(new InventoryState(playerEntity, [new InventoryCapacityLimit(ClassicWeightMetric, ulong.MaxValue)]));
             inventoryStore.RegisterEquipment(new EquipmentState(playerEntity));
             player.Actor.Add(new InventoryComponent(inventoryStore, playerEntity));
             player.Actor.Add(new EquipmentComponent(inventoryStore, playerEntity));
@@ -217,11 +221,9 @@ internal static class DaggerActorFactory
             : new ItemEquipmentPolicy(
                 item.Equipment.RequiredSlots,
                 item.Equipment.ExclusiveGroup is { } group && group != "hands" ? EquipmentExclusivityId.Parse(group) : null);
-        // Weight is authored item metadata for every catalog entry.  The current
-        // reference session does not register a carrying-capacity policy, so this
-        // is a cost declaration rather than a claim that encumbrance is enforced.
-        IEnumerable<ItemCapacityCost>? capacity = item.Weight > 0
-            ? [new ItemCapacityCost(CapacityMetricId.Parse("weight"), checked((ulong)item.Weight))]
+        ulong classicWeight = DaggerfallEncumbrancePolicy.ClassicWeightCost(item);
+        IEnumerable<ItemCapacityCost>? capacity = classicWeight > 0
+            ? [new ItemCapacityCost(ClassicWeightMetric, classicWeight)]
             : null;
         return new ItemDefinition(
             ItemDefinitionId.Parse(item.Id.Value),

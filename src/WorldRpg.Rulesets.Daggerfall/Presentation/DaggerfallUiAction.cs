@@ -5,7 +5,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision = null, string? Item = null, int? TargetGrid = null, string? TargetEquipment = null, string? Container = null, string? Key = null, string? Label = null, bool Confirm = false,
     string? Name = null, string? Race = null, string? Gender = null, int? FaceIndex = null, int? Reflexes = null, string? Career = null, string? Mode = null,
     string? PrimarySkills = null, string? MajorSkills = null, string? MinorSkills = null, string? Advantages = null, string? Disadvantages = null, int? HitPointsPerLevel = null,
-    string? Attribute = null, string? BackgroundAnswers = null, string? AttributeAllocations = null, string? SkillAllocations = null, string? QuestInstance = null, int? QuestMessage = null, bool? QuestChoice = null);
+    string? Attribute = null, string? BackgroundAnswers = null, string? AttributeAllocations = null, string? SkillAllocations = null, ulong? Amount = null,
+    string? QuestInstance = null, int? QuestMessage = null, bool? QuestChoice = null);
 
 /// <summary>The small Daggerfall player-action wire contract, consumed during admitted updates.</summary>
 internal static class DaggerfallUiAction
@@ -22,6 +23,7 @@ internal static class DaggerfallUiAction
             HashSet<string> fields = new(StringComparer.Ordinal);
             string? action = null, revision = null, item = null, targetEquipment = null, container = null, key = null, label = null, name = null, race = null, gender = null, career = null, mode = null, primarySkills = null, majorSkills = null, minorSkills = null, advantages = null, disadvantages = null, attribute = null, backgroundAnswers = null, attributeAllocations = null, skillAllocations = null, questInstance = null;
             int? targetGrid = null, faceIndex = null, reflexes = null, hitPointsPerLevel = null, questMessage = null;
+            ulong? amount = null;
             bool confirm = false;
             bool? questChoice = null;
             foreach (JsonProperty property in root.EnumerateObject())
@@ -35,6 +37,12 @@ internal static class DaggerfallUiAction
                     else if (property.Name == "reflexes") reflexes = grid;
                     else if (property.Name == "hitPointsPerLevel") hitPointsPerLevel = grid;
                     else questMessage = grid;
+                    continue;
+                }
+                if (property.Name == "amount")
+                {
+                    if (!property.Value.TryGetUInt64(out ulong parsed) || parsed == 0) return null;
+                    amount = parsed;
                     continue;
                 }
                 if (property.Name == "confirm")
@@ -88,6 +96,10 @@ internal static class DaggerfallUiAction
                 return fields.SetEquals(["action", "revision", "item", "container"])
                     && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item) && !string.IsNullOrWhiteSpace(container)
                     ? new(action, revision, item, Container: container) : null;
+            if (action is "currency-deposit-gold" or "currency-withdraw-gold" or "currency-withdraw-letter")
+                return fields.SetEquals(["action", "amount"]) && amount is not null ? new(action, Amount: amount) : null;
+            if (action == "currency-deposit-letters")
+                return fields.SetEquals(["action"]) ? new(action) : null;
             if (action == "art-request")
                 return fields.SetEquals(["action", "revision"]) && !string.IsNullOrWhiteSpace(revision)
                     ? new(action, revision) : null;
