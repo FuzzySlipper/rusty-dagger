@@ -33,8 +33,20 @@ public sealed class DaggerfallQuestTableTests
         Assert.Equal(5, table.Lookup["TookTheCure"]);
         Assert.Equal(10, table.Lookup["OpenedShapeshifters"]);
         Assert.Equal(63, table.Lookup["Slot63"]);
-        QuestSourceDocument quest = QuestSourceReader.Read("quest: Q\nqrc:\nMessage: 1\ntext\nqbn:\nTookTheCure _done_\n", "q.txt", ["Message"], table.Lookup);
+        QuestSourceDocument quest = QuestSourceReader.Read("quest: Q\nqrc:\nMessage: 1\ntext\nqbn:\nTookTheCure _done_\n", "q.txt", new Dictionary<string, int> { ["Message"] = 0 }, table.Lookup);
         Assert.Equal(5, Assert.Single(quest.Blocks).Global);
+    }
+
+    [Theory]
+    [InlineData("[9999]", 1000)]
+    [InlineData("[offer]", 1000)]
+    [InlineData("9999", 9999)]
+    public void Fixed_message_headers_use_table_identity_and_bare_headers_keep_explicit_ids(string header, int expected)
+    {
+        DaggerfallQuestTable messages = DaggerfallQuestTableReader.Read(Encoding.UTF8.GetBytes("schema: id,*name\n1000, QuestorOffer"), "Tables/messages.txt");
+        QuestSourceDocument quest = QuestSourceReader.Read($"quest: Q\nqrc:\nquestoroffer: {header}\ntext\nqbn:\nclock a\n",
+            "q.txt", messages.Lookup, new Dictionary<string, int>());
+        Assert.Equal(expected, Assert.Single(quest.Messages).Id);
     }
 
     [Theory]
