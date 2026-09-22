@@ -78,6 +78,25 @@ public sealed class DaggerfallLocomotionPolicyTests
         Assert.Equal(2, uses.Count(use => use.Reason == DaggerfallSkillUseReason.Running));
     }
 
+    [Fact]
+    public void Accepted_airborne_to_grounded_transition_reports_the_engine_peak_once()
+    {
+        StatsComponent stats = Stats(speed: 50, running: 40, stamina: 200);
+        DaggerfallLocomotionPolicy policy = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
+        CharacterStepReceipt landing = default(CharacterStepReceipt) with
+        {
+            Transform = new Transform(new Vector3(0f, 2f, 0f), Quaternion.Identity, Vector3.One),
+            Motion = default(CharacterMotion) with { Grounded = true },
+        };
+        CharacterMotion airborne = default(CharacterMotion) with { Grounded = false, PeakY = 9.4f };
+
+        DaggerfallLanding? accepted = policy.CompleteStep(default, airborne, landing, 1d, stats, _ => { });
+        DaggerfallLanding? repeatedGround = policy.CompleteStep(default, landing.Motion, landing, 1d, stats, _ => { });
+
+        Assert.Equal(7.4f, accepted!.Value.Distance, precision: 4);
+        Assert.Null(repeatedGround);
+    }
+
     private static StatsComponent Stats(int speed, int running, int stamina)
     {
         StatsComponent stats = new();

@@ -45,6 +45,9 @@ internal enum DaggerfallEffectStacking
     Reject,
 }
 
+/// <summary>Typed movement meaning supplied by compiled effect families; the movement owner never infers it from effect names.</summary>
+internal readonly record struct DaggerfallMovementProtection(bool PreventsFallDamage);
+
 /// <summary>One compiled Daggerfall effect policy. Future effect families provide their own payload and state meaning here.</summary>
 internal sealed record DaggerfallEffectDefinition(
     string Key,
@@ -54,7 +57,8 @@ internal sealed record DaggerfallEffectDefinition(
     ushort MaximumStacks,
     Func<DaggerfallActiveEffect, IEnumerable<IActiveEffectContribution>>? Apply = null,
     Action<DaggerfallActiveEffect>? MagicRound = null,
-    Func<DaggerfallActiveEffect, IEnumerable<IActiveEffectContribution>>? Resume = null)
+    Func<DaggerfallActiveEffect, IEnumerable<IActiveEffectContribution>>? Resume = null,
+    DaggerfallMovementProtection MovementProtection = default)
 {
     internal EffectDefinition ToEngineDefinition(string source) => new(
         EffectDefinitionId.Parse($"daggerfall.{Key}"),
@@ -163,6 +167,11 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
     internal IReadOnlyList<DaggerfallActiveEffect> Active => _effects.Values
         .OrderBy(effect => effect.Lifecycle.Context.Instance.Value, StringComparer.Ordinal)
         .ToArray();
+
+    /// <summary>Reads current compiled effect meaning for one target without retaining an independent movement-effect cache.</summary>
+    internal bool PreventsFallDamage(long targetId) => _effects.Values.Any(effect =>
+        checked((long)effect.Lifecycle.Context.Target.Value) == targetId
+        && effect.Definition.MovementProtection.PreventsFallDamage);
 
     internal DaggerfallEffectAdmissionOutcome Start(DaggerfallEffectRequest request)
     {

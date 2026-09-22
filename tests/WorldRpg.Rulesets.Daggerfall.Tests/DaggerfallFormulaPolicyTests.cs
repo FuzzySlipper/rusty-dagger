@@ -13,6 +13,9 @@ public sealed class DaggerfallFormulaPolicyTests
         Assert.Equal(-1, DaggerfallFormulaPolicy.ToHitModifier(45));
         Assert.Equal(67, DaggerfallFormulaPolicy.MaxEncumbrance(45));
         Assert.Equal(6_400, DaggerfallFormulaPolicy.MaxFatigue(45, 55));
+        Assert.Equal(0, DaggerfallFormulaPolicy.FallDamage(5f));
+        Assert.Equal(12, DaggerfallFormulaPolicy.FallDamage(7.5f));
+        Assert.Equal(256, DaggerfallFormulaPolicy.FatigueDamage(2));
         Assert.Equal(33, DaggerfallFormulaPolicy.SpellPoints(22, 1500));
         Assert.Equal(4, DaggerfallFormulaPolicy.HandToHandMinimumDamage(30));
         Assert.Equal(7, DaggerfallFormulaPolicy.HandToHandMaximumDamage(30));
