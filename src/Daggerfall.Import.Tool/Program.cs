@@ -1137,8 +1137,9 @@ internal static class Program
 
     /// <summary>
     /// Reads donor-shaped quest text into the base pack when asked, so a quest source resolves
-    /// to its messages and QBN blocks rather than to a binary blob. Every line matches a known
-    /// signature or the quest is diagnosed and must not run.
+    /// to its messages and finite top-level QBN blocks rather than to a binary blob. Action
+    /// bodies remain ordered source lines for later action compilation; an unclaimed top-level
+    /// line diagnoses the source.
     /// </summary>
     private static int RunQuestsCommand(IReadOnlyList<string> args)
     {
@@ -1198,7 +1199,7 @@ internal static class Program
             File.ReadAllBytes(Path.Combine(values["--tables"], "QuestList-Classic.txt")), "Tables/QuestList-Classic.txt",
             Directory.EnumerateFiles(values["--quest-text"], "*.txt"));
         Console.WriteLine($"classic catalog: {catalog.Rows.Count(row => row.Active)} active, {catalog.Rows.Count(row => !row.Active)} disabled, {catalog.Rows.Count(row => row.SourceDisposition == "missing")} missing sources");
-        Console.WriteLine($"quests: {pack.Quests.Count} sources, {pack.Quests.Count(quest => quest.Disposition == DaggerfallQuestDisposition.Runnable)} runnable");
+        Console.WriteLine($"quests: {pack.Quests.Count} sources, {pack.Quests.Count(quest => quest.Disposition == DaggerfallQuestDisposition.Compiled)} compiled");
         if (!update)
         {
             Console.WriteLine("pack: not written (rerun with --update to publish these sources into it)");
@@ -1660,7 +1661,7 @@ internal static class Program
             // publish the class portraits from the CEL files, through its own command, so the reason says
             // which group is speaking rather than claiming the bytes have no canvas anywhere.
             (".CEL", "class-question animation", "no publisher in this group: the FLC container and its frames are read, and the character group publishes the class portraits from them, but nothing here emits an artifact from these files and nothing plays them back, so this group carries no canvas for them", "Assets/Scripts/API/FlcFile.cs"),
-            (".BSS", "compass sprite bank", "no publisher in this group: the BSS container header is read and its frame arithmetic verified, but no frame's pixels are extracted or published, so the compass the donor draws from these files has no published canvas here", "Assets/Scripts/API/BssFile.cs"),
+            (".BSS", "compass sprite bank", "no publisher in this group: the BSS container is decoded and its frames are published through the character group, but this classic-media group emits no artifact from these files", "Assets/Scripts/API/BssFile.cs"),
             // No family entry for the CIF files: most of the corpus's CIFs are weapon, armour and painting
             // grammars this repository reads and publishes, and the face grammar it refuses is refused by
             // name when a face is read rather than being a family that carries no artifact at all.

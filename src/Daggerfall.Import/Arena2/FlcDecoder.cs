@@ -207,6 +207,28 @@ public static class FlcDecoder
             position += size;
         }
 
+        // FlcFile reads one further frame header for the loop frame after NumOfFrames.  It is not a
+        // publishable frame, but it makes the declared count checkable: the supplied CEL files carry
+        // exactly one complete trailing frame. A count that leaves two frames, or arbitrary bytes,
+        // would otherwise look like a valid shorter animation.
+        if (position < bytes.Length)
+        {
+            if (position > bytes.Length - FrameHeaderBytes)
+            {
+                reason = $"'{source}' declares {frames} frames but leaves {bytes.Length - position} byte(s) after byte {position}, too short for its loop frame header";
+                return false;
+            }
+
+            CheckedLittleEndianReader loop = new(bytes[position..(position + FrameHeaderBytes)].ToArray(), source);
+            int loopSize = loop.ReadInt32();
+            int loopType = loop.ReadUInt16();
+            if (loopType != FrameChunkType || loopSize < FrameHeaderBytes || position + loopSize != bytes.Length)
+            {
+                reason = $"'{source}' declares {frames} frames but its loop frame at byte {position} does not account for the remaining {bytes.Length - position} bytes";
+                return false;
+            }
+        }
+
         container = new FlcContainer(fileSize, frames, width, height, depth, prefix, framesRead);
         reason = string.Empty;
         return true;

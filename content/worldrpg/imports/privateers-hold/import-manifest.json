@@ -1812,52 +1812,52 @@
       "dependsOnPaths": []
     },
     {
-      "relativePath": "media/audio/audio-melee-dagger-swing.wav",
+      "relativePath": "media/audio/clips/audio-melee-dagger-swing.wav",
       "contentHash": "52bef8e0b2e58e8ea4d9b00a5071d5c44f9beda27d57b0832c2e2d60046984fd",
       "byteLen": 1331,
       "dependsOnPaths": []
     },
     {
-      "relativePath": "media/audio/audio-melee-hit-1.wav",
+      "relativePath": "media/audio/clips/audio-melee-hit-1.wav",
       "contentHash": "f3ea121cbd10d9fca4c930c4a1af4a128a706db415eacac111b39b224d3048c8",
       "byteLen": 2173,
       "dependsOnPaths": []
     },
     {
-      "relativePath": "media/audio/audio-melee-hit-2.wav",
+      "relativePath": "media/audio/clips/audio-melee-hit-2.wav",
       "contentHash": "3ff1249ae08cdce8e60e1f55a6a99cbaedba7d2b81c77ce62974f8496a90aebc",
       "byteLen": 2460,
       "dependsOnPaths": []
     },
     {
-      "relativePath": "media/audio/audio-melee-hit-3.wav",
+      "relativePath": "media/audio/clips/audio-melee-hit-3.wav",
       "contentHash": "23e17b41bbe3e10c8b5f442af4b2fd1f8c2263a04c107376f017b95c4bcd76b1",
       "byteLen": 2921,
       "dependsOnPaths": []
     },
     {
-      "relativePath": "media/audio/audio-melee-hit-4.wav",
+      "relativePath": "media/audio/clips/audio-melee-hit-4.wav",
       "contentHash": "5c61b90bd743f7f14f8be916beee202d7345174e7cf7a6d95cc452fec0ea1710",
       "byteLen": 2670,
       "dependsOnPaths": []
     },
     {
-      "relativePath": "media/audio/audio-melee-hit-5.wav",
+      "relativePath": "media/audio/clips/audio-melee-hit-5.wav",
       "contentHash": "7baa35eb158a9cfe756a6aef3027bd0f00817d4f0c4ba27f1abb77fab6cb73d4",
       "byteLen": 3557,
       "dependsOnPaths": []
     },
     {
       "relativePath": "media/classic/manifest.json",
-      "contentHash": "d7902b2c3d7abcd3a2468cad915356f6afe087b0ffa4675c3c18d62a742d37d2",
-      "byteLen": 1279404,
+      "contentHash": "6e1f8f5f8c88e64ee95af5382c55ec04661419ff06e52d3fdc4465b7f1f532a3",
+      "byteLen": 1279440,
       "dependsOnPaths": [
-        "media/audio/audio-melee-dagger-swing.wav",
-        "media/audio/audio-melee-hit-1.wav",
-        "media/audio/audio-melee-hit-2.wav",
-        "media/audio/audio-melee-hit-3.wav",
-        "media/audio/audio-melee-hit-4.wav",
-        "media/audio/audio-melee-hit-5.wav",
+        "media/audio/clips/audio-melee-dagger-swing.wav",
+        "media/audio/clips/audio-melee-hit-1.wav",
+        "media/audio/clips/audio-melee-hit-2.wav",
+        "media/audio/clips/audio-melee-hit-3.wav",
+        "media/audio/clips/audio-melee-hit-4.wav",
+        "media/audio/clips/audio-melee-hit-5.wav",
         "media/combat/weapon-00-atlas.png",
         "media/combat/weapon-03-atlas.png",
         "media/combat/weapon-axe-atlas.png",
@@ -3946,6 +3946,12 @@
       "relativePath": "resources/privateer-s-hold/catalog.json",
       "contentHash": "c53e1551cafa609fb77d30797c70fc477bf9558711d566034ac2dc2b87853da1",
       "byteLen": 115238,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "sources/manifest.json",
+      "contentHash": "308c079c0fd0fda155d76a51575f7aefe1749aa5870f90caf7d4195668394bcb",
+      "byteLen": 6847660,
       "dependsOnPaths": []
     },
     {

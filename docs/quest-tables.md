@@ -4,6 +4,11 @@
 disease and spell tables offline. The ordinary `quests` command publishes
 `questTables` and the classic `questCatalog` alongside `questSources` in the base payload:
 
+The `compiled` source disposition means QRC messages and finite top-level QBN
+blocks parsed without diagnostics. It does not mean a quest can execute: ordered
+action-source lines still need the separately owned quest runtime and action
+families. Diagnosed sources retain their file and physical line information.
+
 ```sh
 dotnet run --project src/Daggerfall.Import.Tool -- quests \
   --quest-text /home/research/daggerfall-unity/Assets/StreamingAssets/Quests \

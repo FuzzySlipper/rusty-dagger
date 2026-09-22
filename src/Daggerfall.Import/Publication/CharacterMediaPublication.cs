@@ -231,6 +231,23 @@ public static class CharacterMediaPublication
                 return true;
             }
 
+            if (file.EndsWith(".BSS", StringComparison.OrdinalIgnoreCase))
+            {
+                // BSS stores complete uncompressed indexed frames.  Its palette comes from the
+                // reference's ART_PAL.COL pairing, unlike FLC's embedded palette.
+                IReadOnlyList<BssFrameImage> frames = BssDecoder.DecodeFrames(bytes, file);
+                if (enumerated.Record < 0 || enumerated.Record >= frames.Count)
+                {
+                    reason = $"'{file}' decodes {frames.Count} frame(s), so frame {enumerated.Record} does not exist";
+                    return false;
+                }
+
+                BssFrameImage frame = frames[enumerated.Record];
+                canvas = new CharacterCanvas(frame.Width, frame.Height, frame.Pixels, null);
+                reason = string.Empty;
+                return true;
+            }
+
             IReadOnlyList<IndexedImg> records = set.Kind switch
             {
                 // The reader established which shape the file has; asking the other reader for it is how a

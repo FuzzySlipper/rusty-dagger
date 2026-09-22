@@ -14,6 +14,17 @@ are assigned by the relevant import/publication tasks. “All content” is not 
 
 ## Evidence and boundaries
 
+The companion CSV's **file-row disposition** is reconciled against the source
+closure of `content/worldrpg/imports/privateers-hold/import-manifest.json`.
+`imported` means that publication names the source; `unused` means the supplied
+source is outside that closure. Neither means that every record in the source is
+implemented, or that other publications cannot use it. Family rows retain their
+planning dispositions. After refreshing this bundle, run the import tool's
+`source-manifest` command with `--publication` pointing to the bundle and
+`--inventory docs/coverage/content-source-manifest.csv --update-inventory`, then
+run `plan` with that inventory to check drift. The reconciler changes only file
+dispositions; historical scope notes and source counts remain inventory evidence.
+
 The local source corpus was inspected read-only at `/home/dev/rusty-dagger/local/arena2` on
 2026-09-10. It contains 1,590 files at its root and 90 files under `books/`, occupying about
 517 MiB. Counts below are filesystem counts or archive-header counts unless explicitly marked

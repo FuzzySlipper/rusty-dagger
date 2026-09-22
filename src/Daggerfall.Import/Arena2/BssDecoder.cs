@@ -10,19 +10,19 @@ namespace Daggerfall.Import.Arena2;
 /// <param name="FrameCount">How many frames the container carries.</param>
 public sealed record BssContainer(int XOffset, int YOffset, int Width, int Height, int FrameCount);
 
+/// <summary>One complete, uncompressed BSS frame, retaining the ordinal that names it in its source container.</summary>
+public sealed record BssFrameImage(int Index, int XOffset, int YOffset, int Width, int Height, byte[] Pixels);
+
 /// <summary>
 /// Reads the BSS sprite container three Daggerfall story sprites are stored in.
 /// </summary>
 /// <remarks>
-/// The layout is the donor's <c>Assets/Scripts/API/BssFile.cs</c>: five little-endian 16-bit fields -
-/// an authored offset, the frame size, and a frame count - followed by uncompressed palette indices,
-/// one byte per pixel per frame. There is no compression and no palette of its own, so a caller
-/// pairs the indices with the classic art palette.
-/// <para>
-/// The header is checked against the file rather than trusted: a container whose declared frame size
-/// and count do not account for exactly its bytes is refused with the arithmetic named. That check is
-/// what makes this a reader rather than a guess - the three supplied files satisfy it to the byte.
-/// </para>
+/// The layout is the donor's <c>Assets/Scripts/API/BssFile.cs</c>: five little-endian signed 16-bit
+/// fields, in order <c>XPos</c>, <c>YPos</c>, <c>Width</c>, <c>Height</c>, and <c>FrameCount</c>, followed
+/// by <c>FrameCount</c> uncompressed 8-bit palette-index frames. The apparent leading values
+/// 48/40/32, 34/28/32, and 30/25/32 in the supplied files are their width/height/frame-count fields;
+/// their preceding x/y positions are 272/157, 279/163, and 281/165. There is no palette in the
+/// container, so the donor pairs it with <c>ART_PAL.COL</c>.
 /// </remarks>
 public static class BssDecoder
 {
@@ -46,6 +46,14 @@ public static class BssDecoder
             return false;
         }
 
+        // BSS has no magic of its own.  An FLC magic at its declared offset is positive evidence
+        // that the caller named a different container as BSS, so do not reinterpret its header words.
+        if (bytes[4] == 0x12 && bytes[5] == 0xAF)
+        {
+            reason = $"'{source}' carries FLC magic 0xAF12 at offset 4, so it is not a BSS container";
+            return false;
+        }
+
         CheckedLittleEndianReader reader = new(bytes[..HeaderBytes].ToArray(), source);
         int x = reader.ReadInt16();
         int y = reader.ReadInt16();
@@ -54,19 +62,36 @@ public static class BssDecoder
         int frames = reader.ReadInt16();
         if (width <= 0 || height <= 0 || frames <= 0)
         {
-            reason = $"'{source}' declares {frames} frames of {width}x{height}, which is not a container this reader can decode";
+            reason = $"'{source}' declares XPos={x}, YPos={y}, {frames} frame(s) of {width}x{height}, which is not a BSS container this reader can decode";
             return false;
         }
 
         long expected = HeaderBytes + ((long)width * height * frames);
         if (expected != bytes.Length)
         {
-            reason = $"'{source}' declares {frames} frames of {width}x{height}, which need {expected} bytes, but it has {bytes.Length}";
+            reason = $"'{source}' declares XPos={x}, YPos={y}, {frames} frame(s) of {width}x{height}, which need {expected} bytes, but it has {bytes.Length}";
             return false;
         }
 
         container = new BssContainer(x, y, width, height, frames);
         reason = string.Empty;
         return true;
+    }
+
+    /// <summary>Decodes the uncompressed palette-index snapshots every BSS container carries.</summary>
+    public static IReadOnlyList<BssFrameImage> DecodeFrames(ReadOnlySpan<byte> bytes, string source)
+    {
+        if (!TryRead(bytes, source, out BssContainer? container, out string reason))
+            throw new Arena2FormatException(source, 0, reason);
+        int pixelsPerFrame = checked(container!.Width * container.Height);
+        List<BssFrameImage> frames = new(container.FrameCount);
+        for (int index = 0; index < container.FrameCount; index++)
+        {
+            int offset = checked(HeaderBytes + (index * pixelsPerFrame));
+            frames.Add(new BssFrameImage(index, container.XOffset, container.YOffset, container.Width, container.Height,
+                bytes.Slice(offset, pixelsPerFrame).ToArray()));
+        }
+
+        return frames;
     }
 }

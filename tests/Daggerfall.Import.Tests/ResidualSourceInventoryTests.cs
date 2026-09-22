@@ -68,17 +68,15 @@ public sealed class ResidualSourceInventoryTests
     {
         ResidualSourceInventory inventory = ReadInventory();
 
-        // Everything a reader reads is unused rather than pending: the residual publication emits
-        // a family only once a named consumer exists, and none does yet.
-        // The documented inventory already imports two of these paths - the two palettes the
-        // classic media publication and the dungeon normalizer decode - so they are imported here
-        // rather than called unused, which would contradict the artifact that knows the consumer.
+        // Current publication closure includes palettes and menu images from this residual set.
+        // A readable source without an admitted consumer remains unused; a published source must
+        // retain that consumer disposition rather than being reset by the residual classifier.
         Assert.Equal(
-            ["ART_PAL.COL", "PAL.PAL"],
+            ["ART_PAL.COL", "CHGN00I0.IMG", "DIE_00I0.IMG", "MAP.PAL", "PAL.PAL", "PICK02I0.IMG", "PICK03I0.IMG", "PRIS00I0.IMG", "TITL00I0.IMG"],
             inventory.Imported.Select(file => file.Path).Order(StringComparer.Ordinal));
         Assert.All(inventory.Imported, file => Assert.Contains("a consumer claims it", file.Note, StringComparison.Ordinal));
 
-        Assert.Equal(120, inventory.Unused.Count());
+        Assert.Equal(113, inventory.Unused.Count());
         Assert.All(inventory.Unused, file => Assert.Contains("no consumer named here claims it", file.Note, StringComparison.Ordinal));
         Assert.All(inventory.Unused, file => Assert.NotEqual(string.Empty, file.Reader));
 
@@ -153,14 +151,14 @@ public sealed class ResidualSourceInventoryTests
         ResidualSourceInventory inventory = ReadInventory();
         ResidualPublicationClosure closure = ResidualPublicationClosure.From(inventory);
 
-        // Nothing is published without a consumer and nothing is dropped silently: the two paths the
+        // Nothing is published without a consumer and nothing is dropped silently: the nine paths the
         // manifest imports are published, the readable remainder is unpublished for want of a
         // consumer, and the unreadable remainder is unpublished for want of a reader.
         Assert.Equal(183, closure.Decisions.Count);
         Assert.Equal(
-            ["ART_PAL.COL", "PAL.PAL"],
+            ["ART_PAL.COL", "CHGN00I0.IMG", "DIE_00I0.IMG", "MAP.PAL", "PAL.PAL", "PICK02I0.IMG", "PICK03I0.IMG", "PRIS00I0.IMG", "TITL00I0.IMG"],
             closure.Published.Select(decision => decision.Path).Order(StringComparer.Ordinal));
-        Assert.Equal(120, closure.WithoutConsumer.Count());
+        Assert.Equal(113, closure.WithoutConsumer.Count());
         Assert.Equal(61, closure.WithoutReader.Count());
         Assert.All(closure.Published, decision => Assert.Contains("a consumer claims it", decision.Reason, StringComparison.Ordinal));
         Assert.All(closure.WithoutConsumer, decision => Assert.Contains("no consumer names it", decision.Reason, StringComparison.Ordinal));
@@ -195,7 +193,9 @@ public sealed class ResidualSourceInventoryTests
         Assert.Equal("MagicItemsFile", inventory.Family("DEF").Single().DonorReader);
         Assert.Equal("TextFile", inventory.Family("RSC").Single().DonorReader);
         Assert.Equal("FlcFile", inventory.Family("CEL").Single().DonorReader);
+        Assert.Equal("Arena2CanvasReader", inventory.Family("CEL").Single().Reader);
         Assert.Equal("BssFile", inventory.Family("BSS").Single().DonorReader);
+        Assert.Equal("Arena2CanvasReader", inventory.Family("BSS").Single().Reader);
         Assert.Empty(inventory.UndocumentedFamilies);
     }
 

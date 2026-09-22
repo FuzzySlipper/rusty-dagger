@@ -20,43 +20,43 @@
         "CMPA01I0.BSS",
         "CMPA02I0.BSS"
       ],
-      "reason": "no publisher in this group: the BSS container header is read and its frame arithmetic verified, but no frame\u0027s pixels are extracted or published, so the compass the donor draws from these files has no published canvas here",
+      "reason": "no publisher in this group: the BSS container is decoded and its frames are published through the character group, but this classic-media group emits no artifact from these files",
       "donorAnchor": "Assets/Scripts/API/BssFile.cs"
     }
   ],
   "artifacts": [
     {
-      "path": "worldrpg/media/audio/audio-melee-dagger-swing.wav",
+      "path": "worldrpg/media/audio/clips/audio-melee-dagger-swing.wav",
       "byteLength": 1331,
       "sha256": "52bef8e0b2e58e8ea4d9b00a5071d5c44f9beda27d57b0832c2e2d60046984fd",
       "mediaId": "audio.melee.dagger.swing"
     },
     {
-      "path": "worldrpg/media/audio/audio-melee-hit-1.wav",
+      "path": "worldrpg/media/audio/clips/audio-melee-hit-1.wav",
       "byteLength": 2173,
       "sha256": "f3ea121cbd10d9fca4c930c4a1af4a128a706db415eacac111b39b224d3048c8",
       "mediaId": "audio.melee.hit.1"
     },
     {
-      "path": "worldrpg/media/audio/audio-melee-hit-2.wav",
+      "path": "worldrpg/media/audio/clips/audio-melee-hit-2.wav",
       "byteLength": 2460,
       "sha256": "3ff1249ae08cdce8e60e1f55a6a99cbaedba7d2b81c77ce62974f8496a90aebc",
       "mediaId": "audio.melee.hit.2"
     },
     {
-      "path": "worldrpg/media/audio/audio-melee-hit-3.wav",
+      "path": "worldrpg/media/audio/clips/audio-melee-hit-3.wav",
       "byteLength": 2921,
       "sha256": "23e17b41bbe3e10c8b5f442af4b2fd1f8c2263a04c107376f017b95c4bcd76b1",
       "mediaId": "audio.melee.hit.3"
     },
     {
-      "path": "worldrpg/media/audio/audio-melee-hit-4.wav",
+      "path": "worldrpg/media/audio/clips/audio-melee-hit-4.wav",
       "byteLength": 2670,
       "sha256": "5c61b90bd743f7f14f8be916beee202d7345174e7cf7a6d95cc452fec0ea1710",
       "mediaId": "audio.melee.hit.4"
     },
     {
-      "path": "worldrpg/media/audio/audio-melee-hit-5.wav",
+      "path": "worldrpg/media/audio/clips/audio-melee-hit-5.wav",
       "byteLength": 3557,
       "sha256": "7baa35eb158a9cfe756a6aef3027bd0f00817d4f0c4ba27f1abb77fab6cb73d4",
       "mediaId": "audio.melee.hit.5"

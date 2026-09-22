@@ -1868,7 +1868,7 @@ internal static class DaggerfallBaseContent
 
     /// <summary>
     /// Reads the normalized quest sources from the pack alone. A diagnosed quest resolves with
-    /// its diagnostics attached and must not run; a runnable quest with diagnostics is a
+    /// its diagnostics attached and must not run; a compiled quest with diagnostics is a
     /// contradiction the pack must not state.
     /// </summary>
     /// <summary>
@@ -2052,9 +2052,9 @@ internal static class DaggerfallBaseContent
             List<DaggerfallQuestDiagnosticDefinition> diags = [.. Array(quest, "diagnostics", diagnostics)
                 .Select(diag => new DaggerfallQuestDiagnosticDefinition(
                     Integer(diag, "line", diagnostics), Text(diag, "text", diagnostics), Text(diag, "reason", diagnostics)))];
-            if (disposition == DaggerfallQuestDisposition.Runnable && diags.Count != 0)
+            if (disposition == DaggerfallQuestDisposition.Compiled && diags.Count != 0)
             {
-                diagnostics.Add($"Quest '{name}' is runnable with diagnostics attached.");
+                diagnostics.Add($"Quest '{name}' is compiled with diagnostics attached.");
             }
 
             if (disposition == DaggerfallQuestDisposition.Diagnosed && diags.Count == 0)

@@ -103,17 +103,15 @@ public sealed class PublishedContentDeliveryTests
                 family.GetProperty("files").EnumerateArray().Select(file => file.GetString()!).ToArray(),
                 family.GetProperty("donorAnchor").GetString()!)),
         ];
-        Assert.Equal(["BSS", "FACE"], unreachable.Select(family => family.Family));
-        Assert.Equal(["CMPA00I0.BSS", "CMPA01I0.BSS", "CMPA02I0.BSS"], unreachable[0].Files);
-        Assert.Equal(["FACES.CIF"], unreachable[1].Files);
-        Assert.Equal("Assets/Scripts/API/BssFile.cs", unreachable[0].Anchor);
+        Assert.Equal(["FACE"], unreachable.Select(family => family.Family));
+        Assert.Equal(["FACES.CIF"], unreachable[0].Files);
         // The face grid has no donor reader to name: the donor reads the grid, this repository enumerates
         // its cells and cannot slice their pixels, which is a different gap from a missing reader.
-        Assert.Empty(unreachable[1].Anchor);
+        Assert.Empty(unreachable[0].Anchor);
         Assert.All(unreachable, family =>
         {
             Assert.False(string.IsNullOrWhiteSpace(family.Kind));
-            // Both reasons are about the same loss: the file carries canvases whose pixels are not here,
+            // The remaining refusal describes cells whose pixels are not published,
             // rather than a canvas published at the wrong shape or with guessed colours.
             Assert.Contains("pixels", family.Reason, StringComparison.Ordinal);
         });
@@ -122,7 +120,7 @@ public sealed class PublishedContentDeliveryTests
             .Where(path => path.StartsWith("worldrpg/media/character/", StringComparison.Ordinal) && !path.EndsWith("character-media-inventory.json", StringComparison.Ordinal))];
         // Every artifact the index names is an admitted file, and the group carries no other: an
         // artifact written without an index entry, or an entry with no artifact, fails here.
-        Assert.Equal(264, characterListed.Count);
+        Assert.Equal(360, characterListed.Count);
         Assert.Equal(240, characters.Artifacts.Count(artifact => artifact.GetProperty("binding").GetString() == "admitted"));
         Assert.Equal(
             [.. characterPublished.Except(characterListed).Order(StringComparer.Ordinal)],
@@ -281,7 +279,7 @@ public sealed class PublishedContentDeliveryTests
         // of what the generated media index states about the same bytes.
         JsonElement[] unfiles = [.. files.Where(file => file.GetProperty("outcome").GetString() == "unreadable")];
         Assert.Equal(
-            ["CMPA00I0.BSS", "CMPA01I0.BSS", "CMPA02I0.BSS", "FACES.CIF"],
+            ["FACES.CIF"],
             unfiles.Select(file => file.GetProperty("path").GetString()).Order(StringComparer.Ordinal));
         Assert.All(unfiles, file =>
         {

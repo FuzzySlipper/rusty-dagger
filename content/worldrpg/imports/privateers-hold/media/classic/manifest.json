@@ -4,7 +4,7 @@
       {
         "id": "audio.melee.dagger.swing",
         "kind": "audio",
-        "relativePath": "media/audio/audio-melee-dagger-swing.wav",
+        "relativePath": "media/audio/clips/audio-melee-dagger-swing.wav",
         "contentDigest": "52bef8e0b2e58e8ea4d9b00a5071d5c44f9beda27d57b0832c2e2d60046984fd",
         "byteLength": 1331,
         "mimeType": "audio/wav",
@@ -24,7 +24,7 @@
       {
         "id": "audio.melee.hit.1",
         "kind": "audio",
-        "relativePath": "media/audio/audio-melee-hit-1.wav",
+        "relativePath": "media/audio/clips/audio-melee-hit-1.wav",
         "contentDigest": "f3ea121cbd10d9fca4c930c4a1af4a128a706db415eacac111b39b224d3048c8",
         "byteLength": 2173,
         "mimeType": "audio/wav",
@@ -44,7 +44,7 @@
       {
         "id": "audio.melee.hit.2",
         "kind": "audio",
-        "relativePath": "media/audio/audio-melee-hit-2.wav",
+        "relativePath": "media/audio/clips/audio-melee-hit-2.wav",
         "contentDigest": "3ff1249ae08cdce8e60e1f55a6a99cbaedba7d2b81c77ce62974f8496a90aebc",
         "byteLength": 2460,
         "mimeType": "audio/wav",
@@ -64,7 +64,7 @@
       {
         "id": "audio.melee.hit.3",
         "kind": "audio",
-        "relativePath": "media/audio/audio-melee-hit-3.wav",
+        "relativePath": "media/audio/clips/audio-melee-hit-3.wav",
         "contentDigest": "23e17b41bbe3e10c8b5f442af4b2fd1f8c2263a04c107376f017b95c4bcd76b1",
         "byteLength": 2921,
         "mimeType": "audio/wav",
@@ -84,7 +84,7 @@
       {
         "id": "audio.melee.hit.4",
         "kind": "audio",
-        "relativePath": "media/audio/audio-melee-hit-4.wav",
+        "relativePath": "media/audio/clips/audio-melee-hit-4.wav",
         "contentDigest": "5c61b90bd743f7f14f8be916beee202d7345174e7cf7a6d95cc452fec0ea1710",
         "byteLength": 2670,
         "mimeType": "audio/wav",
@@ -104,7 +104,7 @@
       {
         "id": "audio.melee.hit.5",
         "kind": "audio",
-        "relativePath": "media/audio/audio-melee-hit-5.wav",
+        "relativePath": "media/audio/clips/audio-melee-hit-5.wav",
         "contentDigest": "7baa35eb158a9cfe756a6aef3027bd0f00817d4f0c4ba27f1abb77fab6cb73d4",
         "byteLength": 3557,
         "mimeType": "audio/wav",

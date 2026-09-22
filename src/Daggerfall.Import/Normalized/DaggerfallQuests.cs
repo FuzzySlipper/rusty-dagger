@@ -6,8 +6,8 @@ namespace Daggerfall.Import.Normalized;
 /// <summary>How a quest source is accounted for.</summary>
 public enum DaggerfallQuestDisposition
 {
-    /// <summary>Every line matches a known signature; the quest may run.</summary>
-    Runnable,
+    /// <summary>Every section and top-level QBN block matches the source compiler; action bodies remain unexecuted source records.</summary>
+    Compiled,
     /// <summary>Some line matches nothing; the quest is diagnosed and must not run.</summary>
     Diagnosed,
 }
@@ -49,9 +49,9 @@ public sealed record DaggerfallQuestRecord(
             diagnostic.Validate();
         }
 
-        if (Disposition == DaggerfallQuestDisposition.Runnable && Diagnostics.Count != 0)
+        if (Disposition == DaggerfallQuestDisposition.Compiled && Diagnostics.Count != 0)
         {
-            throw new InvalidOperationException($"Quest '{Name}' is runnable with diagnostics attached.");
+            throw new InvalidOperationException($"Quest '{Name}' is compiled with diagnostics attached.");
         }
 
         if (Disposition == DaggerfallQuestDisposition.Diagnosed && Diagnostics.Count == 0)
@@ -67,10 +67,10 @@ public sealed record DaggerfallQuestRecord(
 /// <param name="Lines">The message lines.</param>
 public sealed record DaggerfallQuestMessage(int Id, int FirstLine, IReadOnlyList<string> Lines);
 
-/// <summary>One normalized QBN block: its kind, lines and global link.</summary>
+/// <summary>One normalized QBN block: its top-level kind, ordered source lines and global link.</summary>
 /// <param name="Kind">The block kind.</param>
 /// <param name="FirstLine">The 1-based first line.</param>
-/// <param name="Lines">The block lines, verbatim.</param>
+/// <param name="Lines">The ordered source lines, retained for later action compilation rather than treated as executable here.</param>
 /// <param name="Global">The linked global key, if any.</param>
 public sealed record DaggerfallQuestBlock(QuestBlockKind Kind, int FirstLine, IReadOnlyList<string> Lines, int? Global)
 {
@@ -125,7 +125,7 @@ public sealed record DaggerfallQuestPack(
 /// <summary>
 /// Builds the normalized quest source pack from parsed quest text. Duplicate quest names are
 /// refused: a semantic id must resolve to exactly one source. A quest whose every line matches
-/// a known signature is runnable; any refusal the reader raises becomes a diagnosed quest that
+/// a known signature is compiled; any refusal the reader raises becomes a diagnosed quest that
 /// keeps its source lines rather than a silent drop.
 /// </summary>
 public static class DaggerfallQuestPackBuilder
@@ -157,7 +157,7 @@ public static class DaggerfallQuestPackBuilder
                 document.QuestName,
                 document.DisplayName,
                 document.FileName,
-                DaggerfallQuestDisposition.Runnable,
+                DaggerfallQuestDisposition.Compiled,
                 [.. document.Messages.Select(message => new DaggerfallQuestMessage(message.Id, message.FirstLine, message.Lines))],
                 [.. document.Blocks.Select(block => new DaggerfallQuestBlock(block.Kind, block.FirstLine, block.Lines, block.Global))],
                 []));
@@ -208,7 +208,7 @@ public static class DaggerfallQuestPackBuilder
 
         DaggerfallQuestPack pack = new(
             new DaggerfallTextSource(DaggerfallTextKind.Resource, family.Id, label, "en", bytes.LongLength, 0, resolved.Count),
-            [.. resolved.OrderBy(quest => quest.Name, StringComparer.Ordinal).ThenBy(quest => quest.SourceFile, StringComparer.Ordinal)]);
+            [.. resolved.OrderBy(quest => quest.SourceFile, StringComparer.Ordinal)]);
         pack.Validate();
         return pack;
     }

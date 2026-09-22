@@ -1101,7 +1101,11 @@ public sealed record Arena2ClassicMediaPublication(
             Arena2PcmClip clip = sounds.GetClip(source.SourceRecordOrdinal);
             byte[] wave = sounds.CreateWave(source.SourceRecordOrdinal);
             RequireArtifactQuota(wave, options, source.MediaId);
-            result.Add(new(source.MediaId, NormalizedMediaKind.Audio, $"media/audio/{Slug(source.MediaId)}.wav", wave, 0, 0, null, "audio/wav"));
+            // Keep the availability catalog at media/audio while the WAV bodies live below a
+            // declared bundle root. The producer still owns this content-root-relative name;
+            // consumers resolve the published media identity through the manifest, never by
+            // constructing a source filename.
+            result.Add(new(source.MediaId, NormalizedMediaKind.Audio, $"media/audio/clips/{Slug(source.MediaId)}.wav", wave, 0, 0, null, "audio/wav"));
             ClassicAudioManifest manifest = new(source.Clip, source.MediaId, source.SourceRecordOrdinal, clip.NumericId, SoundArchive.SampleRate);
             manifest.Validate();
             semantic.Add(manifest);
