@@ -6,7 +6,14 @@
     { "id": "daggerfall.base" },
     { "id": "daggerfall.blocks" },
     { "id": "daggerfall.privateers-hold" },
-    { "id": "daggerfall.quests.fighters" }
+    { "id": "daggerfall.quests.fighters" },
+    { "id": "daggerfall.quests.mages" },
+    { "id": "daggerfall.quests.temples" },
+    { "id": "daggerfall.quests.social" },
+    { "id": "daggerfall.quests.witches-commoners" },
+    { "id": "daggerfall.quests.merchants-vampires" },
+    { "id": "daggerfall.quests.disabled" },
+    { "id": "daggerfall.quests.nobility" }
   ],
   "tuning": { "id": "daggerfall.defaults" }
 }

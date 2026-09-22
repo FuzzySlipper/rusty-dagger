@@ -1,0 +1,2469 @@
+{
+  "id": "mages",
+  "catalogSource": {
+    "sourcePath": "Tables/QuestList-Classic.txt",
+    "contentHash": "24299ba54dc246ae278123f4c855928e1d7cd36626b972236d13c44c5005d001",
+    "byteLen": 10399
+  },
+  "categories": [
+    {
+      "id": "mages",
+      "catalogGroup": "MagesGuild",
+      "active": true,
+      "availability": "ordinary",
+      "names": [
+        "N0C00Y10",
+        "N0C00Y11",
+        "N0C00Y12",
+        "N0C00Y13",
+        "N0B00Y04",
+        "N0B00Y06",
+        "N0B00Y08",
+        "N0B00Y09",
+        "N0B00Y16",
+        "N0B00Y17",
+        "N0B10Y01",
+        "N0B10Y03",
+        "N0B11Y18",
+        "N0B20Y02",
+        "N0B20Y05",
+        "N0B21Y14",
+        "N0B30Y15",
+        "N0B40Y07"
+      ]
+    }
+  ],
+  "quests": [
+    {
+      "category": "mages",
+      "availability": "ordinary",
+      "name": "N0C00Y10",
+      "sourceFile": "N0C00Y10.txt",
+      "catalogGroup": "MagesGuild",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 48,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "4a4475536a7b832ca4e585b93b5b2e89a5384facbefd45fd3377c2766ba2d2c5",
+      "actionLines": [
+        {
+          "line": 183,
+          "text": "dialog link for person _thief_ "
+        },
+        {
+          "line": 184,
+          "text": "dialog link for location _house_ person _informant_ "
+        },
+        {
+          "line": 185,
+          "text": "start timer _S.01_ "
+        },
+        {
+          "line": 186,
+          "text": "log 1003 step 0 "
+        },
+        {
+          "line": 187,
+          "text": "give item _book_ to _thiefFoe_ "
+        },
+        {
+          "line": 188,
+          "text": "place npc _informant_ at _informant1_ "
+        },
+        {
+          "line": 192,
+          "text": "end quest "
+        },
+        {
+          "line": 195,
+          "text": "daily from 00:00 to 08:00 "
+        },
+        {
+          "line": 196,
+          "text": "place foe _thiefFoe_ at _house_ "
+        },
+        {
+          "line": 199,
+          "text": "daily from 16:02 to 23:59 "
+        },
+        {
+          "line": 200,
+          "text": "place foe _thiefFoe_ at _inn_ "
+        },
+        {
+          "line": 204,
+          "text": "daily from 08:01 to 16:01 "
+        },
+        {
+          "line": 205,
+          "text": "place foe _thiefFoe_ at _store_ "
+        },
+        {
+          "line": 208,
+          "text": "clicked npc _informant_ say 1025 "
+        },
+        {
+          "line": 209,
+          "text": "add dialog for person _thief_ "
+        },
+        {
+          "line": 212,
+          "text": "toting _book_ and _giver_ clicked "
+        },
+        {
+          "line": 213,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 214,
+          "text": "end quest "
+        },
+        {
+          "line": 218,
+          "text": "injured _thiefFoe_ saying 1040 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "mages",
+      "availability": "ordinary",
+      "name": "N0C00Y11",
+      "sourceFile": "N0C00Y11.txt",
+      "catalogGroup": "MagesGuild",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 49,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "5de3bfad4420459ce8617d80315fff5d60f43a760cd61c361f3ebd47b88cf2bd",
+      "actionLines": [
+        {
+          "line": 181,
+          "text": "start timer _traveltime_ "
+        },
+        {
+          "line": 182,
+          "text": "reveal _dungeon_ "
+        },
+        {
+          "line": 183,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 184,
+          "text": "pick one of _map_ _nomap_ _nomap_ "
+        },
+        {
+          "line": 187,
+          "text": "end quest "
+        },
+        {
+          "line": 190,
+          "text": "toting _ingredient_ and _qgiver_ clicked "
+        },
+        {
+          "line": 191,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 192,
+          "text": "                start timer _end_"
+        },
+        {
+          "line": 195,
+          "text": "end quest "
+        },
+        {
+          "line": 198,
+          "text": "clicked item _ingredient_ "
+        },
+        {
+          "line": 199,
+          "text": "say 1040 "
+        },
+        {
+          "line": 204,
+          "text": "when _map_ and _giveingredient_ "
+        },
+        {
+          "line": 205,
+          "text": "reveal _newdung_ readmap"
+        },
+        {
+          "line": 206,
+          "text": "    say 1080 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "mages",
+      "availability": "ordinary",
+      "name": "N0C00Y12",
+      "sourceFile": "N0C00Y12.txt",
+      "catalogGroup": "MagesGuild",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 50,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "47f2204be98296ab6a87dbc3ae16678e38f764ed8009c2d0eca65078aa47dc7d",
+      "actionLines": [
+        {
+          "line": 115,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 116,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 117,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 118,
+          "text": "place foe _imp_ at _mondung_ "
+        },
+        {
+          "line": 121,
+          "text": "when _qgclicked_ and _mondead_ "
+        },
+        {
+          "line": 122,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 123,
+          "text": "end quest "
+        },
+        {
+          "line": 127,
+          "text": "killed 1 _imp_ "
+        },
+        {
+          "line": 130,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 133,
+          "text": "    when _qgclicked_ and not _mondead_"
+        },
+        {
+          "line": 134,
+          "text": "say 1003"
+        },
+        {
+          "line": 135,
+          "text": "    clear _qgclicked_ _clearclick_"
+        },
+        {
+          "line": 139,
+          "text": "end quest "
+        },
+        {
+          "line": 142,
+          "text": "injured _imp_ saying 1010 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "mages",
+      "availability": "ordinary",
+      "name": "N0C00Y13",
+      "sourceFile": "N0C00Y13.txt",
+      "catalogGroup": "MagesGuild",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 51,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "e73abd482218f26c217d93194c4e8c058c9ebfe3b8ccad6bb79ad88356ba4dba",
+      "actionLines": [
+        {
+          "line": 196,
+          "text": "start timer _traveltime_ "
+        },
+        {
+          "line": 197,
+          "text": "reveal _dungeon_ "
+        },
+        {
+          "line": 198,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 201,
+          "text": "end quest "
+        },
+        {
+          "line": 204,
+          "text": "toting _ingredient_ and _questgiver_ clicked "
+        },
+        {
+          "line": 205,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 206,
+          "text": "end quest "
+        },
+        {
+          "line": 209,
+          "text": "clicked item _ingredient_ "
+        },
+        {
+          "line": 210,
+          "text": "_ingredient_ used do _S.03_ "
+        },
+        {
+          "line": 211,
+          "text": "say 1040 "
+        },
+        {
+          "line": 215,
+          "text": "say 1045"
+        },
+        {
+          "line": 216,
+          "text": "create foe _atronach_ every 1 minutes 1 times with 100% success "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "mages",
+      "availability": "ordinary",
+      "name": "N0B00Y04",
+      "sourceFile": "N0B00Y04.txt",
+      "catalogGroup": "MagesGuild",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 52,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "321387082f2fa6b484261cb92830172cc49420f885402b8a8c7d5f63d44f65b1",
+      "actionLines": [
+        {
+          "line": 174,
+          "text": "start timer _traveltime_ "
+        },
+        {
+          "line": 175,
+          "text": "reveal _dungeon_ "
+        },
+        {
+          "line": 176,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 179,
+          "text": "make _ingredient_ permanent"
+        },
+        {
+          "line": 180,
+          "text": "                say 1045 "
+        },
+        {
+          "line": 181,
+          "text": "end quest "
+        },
+        {
+          "line": 184,
+          "text": "clicked item _ingredient_ "
+        },
+        {
+          "line": 185,
+          "text": "say 1040 "
+        },
+        {
+          "line": 188,
+          "text": "toting _ingredient_ and _qgiver_ clicked "
+        },
+        {
+          "line": 189,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 190,
+          "text": "end quest "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "mages",
+      "availability": "ordinary",
+      "name": "N0B00Y06",
+      "sourceFile": "N0B00Y06.txt",
+      "catalogGroup": "MagesGuild",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 53,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "efc4f2e1c516da19e8305a9703caa5ad88db831149a54b8a281616232a3ffdf9",
+      "actionLines": [
+        {
+          "line": 160,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 161,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 162,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 163,
+          "text": "place foe _mummy_ at _mondung_ "
+        },
+        {
+          "line": 166,
+          "text": "end quest "
+        },
+        {
+          "line": 169,
+          "text": "toting _wrappings_ and _qgiver_ clicked "
+        },
+        {
+          "line": 170,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 171,
+          "text": "take _wrappings_ from pc"
+        },
+        {
+          "line": 172,
+          "text": "end quest "
+        },
+        {
+          "line": 177,
+          "text": "clicked item _wrappings_ "
+        },
+        {
+          "line": 178,
+          "text": "say 1011 "
+        },
+        {
+          "line": 181,
+          "text": "injured _mummy_ "
+        },
+        {
+          "line": 182,
+          "text": "give item _wrappings_ to _mummy_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "mages",
+      "availability": "ordinary",
+      "name": "N0B00Y08",
+      "sourceFile": "N0B00Y08.txt",
+      "catalogGroup": "MagesGuild",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 54,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "3ca1db6ffe5df2854504516be2a3ec34166f89ff86f782ceab6defaa4e2fbe79",
+      "actionLines": [
+        {
+          "line": 134,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 135,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 136,
+          "text": "pc at _castle_ set _S.05_ "
+        },
+        {
+          "line": 137,
+          "text": "restrain foe _F.00_ "
+        },
+        {
+          "line": 138,
+          "text": "create npc at _castle_ "
+        },
+        {
+          "line": 139,
+          "text": "place foe _F.00_ at _castle_ "
+        },
+        {
+          "line": 142,
+          "text": "end quest "
+        },
+        {
+          "line": 145,
+          "text": "when _qgclicked_ and _out_ "
+        },
+        {
+          "line": 146,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 147,
+          "text": "change repute with _witch_ by -5 "
+        },
+        {
+          "line": 148,
+          "text": "end quest "
+        },
+        {
+          "line": 151,
+          "text": "when _qgclicked_ and not _out_ "
+        },
+        {
+          "line": 152,
+          "text": "clear _qgclicked_ _S.02_ "
+        },
+        {
+          "line": 155,
+          "text": "say 1011 "
+        },
+        {
+          "line": 158,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 161,
+          "text": "cast Sleep spell do _out_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "mages",
+      "availability": "ordinary",
+      "name": "N0B00Y09",
+      "sourceFile": "N0B00Y09.txt",
+      "catalogGroup": "MagesGuild",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 55,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "61025f34b884bee5fb77e59068b14e9c074d71794d5e92f7a0e6dff5103dea80",
+      "actionLines": [
+        {
+          "line": 298,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 299,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 300,
+          "text": "pick one of _letter_ _letter_ _S.04_ _S.04_ "
+        },
+        {
+          "line": 301,
+          "text": "repute with _db_ exceeds 10 do _S.00_ "
+        },
+        {
+          "line": 302,
+          "text": "letter34 used do _S.15_ "
+        },
+        {
+          "line": 303,
+          "text": "letter35 used do _S.16_ "
+        },
+        {
+          "line": 306,
+          "text": "start timer _S.02_ "
+        },
+        {
+          "line": 307,
+          "text": "clear _letter_ "
+        },
+        {
+          "line": 310,
+          "text": "dialog link for person _db_ "
+        },
+        {
+          "line": 313,
+          "text": "end quest "
+        },
+        {
+          "line": 316,
+          "text": "give pc letter34 notify 1022 "
+        },
+        {
+          "line": 319,
+          "text": "start timer _S.05_ "
+        },
+        {
+          "line": 323,
+          "text": "give pc letter35 notify 1022 "
+        },
+        {
+          "line": 326,
+          "text": "clicked npc _scholar_ "
+        },
+        {
+          "line": 327,
+          "text": "get item research1 "
+        },
+        {
+          "line": 328,
+          "text": "say 1013 "
+        },
+        {
+          "line": 331,
+          "text": "toting research1 and _db_ clicked "
+        },
+        {
+          "line": 332,
+          "text": "prompt 1014 yes _S.08_ no _nononono_ "
+        },
+        {
+          "line": 335,
+          "text": "pick one of _S.10_ _S.11_ "
+        },
+        {
+          "line": 336,
+          "text": "change repute with _db_ by \u002B10 "
+        },
+        {
+          "line": 339,
+          "text": "get item research1 "
+        },
+        {
+          "line": 342,
+          "text": "get item research2 "
+        },
+        {
+          "line": 343,
+          "text": "get item _dbgold_ "
+        },
+        {
+          "line": 344,
+          "text": "say 1019 "
+        },
+        {
+          "line": 345,
+          "text": "make _dbgold_ permanent "
+        },
+        {
+          "line": 348,
+          "text": "get item _dbgold_ "
+        },
+        {
+          "line": 349,
+          "text": "say 1018 "
+        },
+        {
+          "line": 350,
+          "text": "make _dbgold_ permanent "
+        },
+        {
+          "line": 351,
+          "text": "end quest "
+        },
+        {
+          "line": 354,
+          "text": "toting research1 and _qgiver_ clicked "
+        },
+        {
+          "line": 357,
+          "text": "toting research2 and _qgiver_ clicked "
+        },
+        {
+          "line": 360,
+          "text": "when _S.12_ or _S.13_ "
+        },
+        {
+          "line": 361,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 362,
+          "text": "end quest "
+        },
+        {
+          "line": 365,
+          "text": "add dialog for person _db_ "
+        },
+        {
+          "line": 366,
+          "text": "log 1021 step 1 "
+        },
+        {
+          "line": 369,
+          "text": "add dialog for person _db_ "
+        },
+        {
+          "line": 370,
+          "text": "log 1020 step 1 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "mages",
+      "availability": "ordinary",
+      "name": "N0B00Y16",
+      "sourceFile": "N0B00Y16.txt",
+      "catalogGroup": "MagesGuild",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 56,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "d9660f7b9026cd77c632cb55b96b21c8f28569e160905f1eb4507ee10174b24e",
+      "actionLines": [
+        {
+          "line": 187,
+          "text": "start timer _qtime_ "
+        },
+        {
+          "line": 188,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 189,
+          "text": "place npc _merchant_ at _shop_ "
+        },
+        {
+          "line": 192,
+          "text": "end quest "
+        },
+        {
+          "line": 195,
+          "text": "clicked npc _questgiver_ "
+        },
+        {
+          "line": 198,
+          "text": "toting _crn_ and _merchant_ clicked "
+        },
+        {
+          "line": 201,
+          "text": "clicked npc _merchant_ "
+        },
+        {
+          "line": 202,
+          "text": "cast Open spell do _S.07_ "
+        },
+        {
+          "line": 203,
+          "text": "get item _crn_ "
+        },
+        {
+          "line": 204,
+          "text": "say 1030 "
+        },
+        {
+          "line": 207,
+          "text": "create foe _imp_ every 0 minutes 1 times with 100% success "
+        },
+        {
+          "line": 208,
+          "text": "say 1040 "
+        },
+        {
+          "line": 211,
+          "text": "_I.01_ used do _S.09_ "
+        },
+        {
+          "line": 212,
+          "text": "get item _I.01_ "
+        },
+        {
+          "line": 213,
+          "text": "say 1041 "
+        },
+        {
+          "line": 216,
+          "text": "create foe _rats_ every 0 minutes 1 times with 100% success "
+        },
+        {
+          "line": 217,
+          "text": "create foe _bats_ every 0 minutes 1 times with 100% success "
+        },
+        {
+          "line": 218,
+          "text": "say 1042 "
+        },
+        {
+          "line": 221,
+          "text": "say 1043 "
+        },
+        {
+          "line": 224,
+          "text": "have _crn_ set _S.08_"
+        },
+        {
+          "line": 227,
+          "text": "pick one of _a3_ _a4_ _a5_ _a6_ "
+        },
+        {
+          "line": 230,
+          "text": "create foe _skeleton_ every 0 minutes 1 times with 100% success "
+        },
+        {
+          "line": 231,
+          "text": "make _I.01_ permanent "
+        },
+        {
+          "line": 234,
+          "text": "when _S.08_ and _S.10_ "
+        },
+        {
+          "line": 235,
+          "text": "say 1050 "
+        },
+        {
+          "line": 238,
+          "text": "when _S.11_ and _clickqgiver_ "
+        },
+        {
+          "line": 239,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 240,
+          "text": "unset _clickqgiver_ "
+        },
+        {
+          "line": 241,
+          "text": "end quest "
+        },
+        {
+          "line": 244,
+          "text": "when _clickqgiver_ and not _S.11_"
+        },
+        {
+          "line": 245,
+          "text": "say 1003"
+        },
+        {
+          "line": 246,
+          "text": "clear _clearclick_ _clickqgiver_"
+        },
+        {
+          "line": 249,
+          "text": "when _S.10_ and not _S.08_ "
+        },
+        {
+          "line": 250,
+          "text": "get item _crn_ "
+        },
+        {
+          "line": 251,
+          "text": "say 1051 "
+        },
+        {
+          "line": 252,
+          "text": "clear _S.10_"
+        },
+        {
+          "line": 253,
+          "text": "clear _S.13_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "mages",
+      "availability": "ordinary",
+      "name": "N0B00Y17",
+      "sourceFile": "N0B00Y17.txt",
+      "catalogGroup": "MagesGuild",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 57,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "04d1096906c0b0d4e8899560f2124780f3f7c2c3823c23b3d5b65eff83491d1e",
+      "actionLines": [
+        {
+          "line": 343,
+          "text": "start timer _time1_ "
+        },
+        {
+          "line": 344,
+          "text": "reveal _hintdung_ "
+        },
+        {
+          "line": 345,
+          "text": "reveal _scholardung_ "
+        },
+        {
+          "line": 346,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 347,
+          "text": "pick one of _S.02_ _cousin_ _cousin_ _S.03_ "
+        },
+        {
+          "line": 348,
+          "text": "_map2_ used do _S.15_ "
+        },
+        {
+          "line": 349,
+          "text": "_I.03_ used do _S.16_ "
+        },
+        {
+          "line": 350,
+          "text": "place npc _scholar_ at _scholardung_"
+        },
+        {
+          "line": 355,
+          "text": "end quest "
+        },
+        {
+          "line": 358,
+          "text": "place item _map2_ at _hintdung_ "
+        },
+        {
+          "line": 361,
+          "text": "place item _I.03_ at _hintdung_ "
+        },
+        {
+          "line": 364,
+          "text": "place item _I.03_ at _hintdung_ "
+        },
+        {
+          "line": 367,
+          "text": "toting _item_ and _questgiver_ clicked "
+        },
+        {
+          "line": 368,
+          "text": "give pc _item_ "
+        },
+        {
+          "line": 369,
+          "text": "end quest "
+        },
+        {
+          "line": 372,
+          "text": "clicked npc _scholar_ "
+        },
+        {
+          "line": 375,
+          "text": "toting _I.04_ and _contact_ clicked "
+        },
+        {
+          "line": 376,
+          "text": "get item _ingredient_ "
+        },
+        {
+          "line": 377,
+          "text": "say 1044 "
+        },
+        {
+          "line": 380,
+          "text": "toting _ingredient_ and _scholar_ clicked "
+        },
+        {
+          "line": 381,
+          "text": "get item _scholarreward_ "
+        },
+        {
+          "line": 382,
+          "text": "prompt 1045 yes _S.08_ no _S.09_ "
+        },
+        {
+          "line": 383,
+          "text": "make _scholarreward_ permanent "
+        },
+        {
+          "line": 386,
+          "text": "say 1046 "
+        },
+        {
+          "line": 387,
+          "text": "teleport pc to _hintdung_ "
+        },
+        {
+          "line": 390,
+          "text": "say 1047 "
+        },
+        {
+          "line": 393,
+          "text": "start timer _time2_ "
+        },
+        {
+          "line": 394,
+          "text": "log 1025 step 1 "
+        },
+        {
+          "line": 395,
+          "text": "get item _I.04_ "
+        },
+        {
+          "line": 396,
+          "text": "say 1042 "
+        },
+        {
+          "line": 399,
+          "text": "log 1021 step 1 "
+        },
+        {
+          "line": 400,
+          "text": "say 1043 "
+        },
+        {
+          "line": 403,
+          "text": "when _S.05_ and _S.02_ "
+        },
+        {
+          "line": 404,
+          "text": "reveal _itemdung_ "
+        },
+        {
+          "line": 405,
+          "text": "log 1022 step 1 "
+        },
+        {
+          "line": 406,
+          "text": "say 1040 "
+        },
+        {
+          "line": 409,
+          "text": "when _S.03_ or _cousin_ "
+        },
+        {
+          "line": 412,
+          "text": "when _S.13_ and _S.05_ "
+        },
+        {
+          "line": 413,
+          "text": "prompt 1041 yes _S.10_ no _S.11_ "
+        },
+        {
+          "line": 416,
+          "text": "reveal _itemdung_ readmap"
+        },
+        {
+          "line": 417,
+          "text": "log 1023 step 2 "
+        },
+        {
+          "line": 420,
+          "text": "log 1024 step 2 "
+        },
+        {
+          "line": 423,
+          "text": "clicked item _item_ say 1050 "
+        },
+        {
+          "line": 426,
+          "text": "clicked npc _questgiver_ "
+        },
+        {
+          "line": 429,
+          "text": "when _S.03_ and _S.05_ and _S.16_ and _clickqgiver_ "
+        },
+        {
+          "line": 430,
+          "text": "get item _gold_ "
+        },
+        {
+          "line": 431,
+          "text": "say 1060 "
+        },
+        {
+          "line": 432,
+          "text": "make _gold_ permanent "
+        },
+        {
+          "line": 433,
+          "text": "change repute with _questgiver_ by \u002B5 "
+        },
+        {
+          "line": 434,
+          "text": "unset _clickqgiver_ "
+        },
+        {
+          "line": 435,
+          "text": "end quest "
+        },
+        {
+          "line": 438,
+          "text": "when _clickqgiver_ and not _S.19_ and not _S.07_"
+        },
+        {
+          "line": 439,
+          "text": "say 1003"
+        },
+        {
+          "line": 440,
+          "text": "clear _clearclick_ _clickqgiver_"
+        },
+        {
+          "line": 443,
+          "text": "hide npc _scholar_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "mages",
+      "availability": "ordinary",
+      "name": "N0B10Y01",
+      "sourceFile": "N0B10Y01.txt",
+      "catalogGroup": "MagesGuild",
+      "membership": "M",
+      "minimumRequirement": 1,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 58,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "c67b62bb935065a561de2b421cfb477e84feb073e14eb3f1e1dc5c88fc69e0e8",
+      "actionLines": [
+        {
+          "line": 136,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 137,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 138,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 139,
+          "text": "pick one of _fire_ _flesh_ _ice_ _iron_ "
+        },
+        {
+          "line": 142,
+          "text": "when _qgclicked_ and _mondead_ "
+        },
+        {
+          "line": 143,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 144,
+          "text": "end quest "
+        },
+        {
+          "line": 148,
+          "text": "killed 1 _F.02_ saying 1010 "
+        },
+        {
+          "line": 149,
+          "text": "killed 1 _F.03_ saying 1010 "
+        },
+        {
+          "line": 150,
+          "text": "killed 1 _F.01_ saying 1010 "
+        },
+        {
+          "line": 151,
+          "text": "killed 1 _F.00_ saying 1010 "
+        },
+        {
+          "line": 154,
+          "text": "clicked npc _questgiver_ "
+        },
+        {
+          "line": 157,
+          "text": "end quest "
+        },
+        {
+          "line": 161,
+          "text": "place foe _F.02_ at _mondung_ "
+        },
+        {
+          "line": 164,
+          "text": "place foe _F.00_ at _mondung_ "
+        },
+        {
+          "line": 167,
+          "text": "place foe _F.03_ at _mondung_ "
+        },
+        {
+          "line": 170,
+          "text": "place foe _F.01_ at _mondung_ "
+        },
+        {
+          "line": 173,
+          "text": "when _qgclicked_ and not _mondead_ "
+        },
+        {
+          "line": 174,
+          "text": "say 1003"
+        },
+        {
+          "line": 175,
+          "text": "clear _qgclicked_ _clearclick_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "mages",
+      "availability": "ordinary",
+      "name": "N0B10Y03",
+      "sourceFile": "N0B10Y03.txt",
+      "catalogGroup": "MagesGuild",
+      "membership": "M",
+      "minimumRequirement": 1,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 59,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "e7d92044beced0c5c9059b3a7f206d96b08a13d88d2879f7117b541335c7a4be",
+      "actionLines": [
+        {
+          "line": 130,
+          "text": "start timer _oneday_ "
+        },
+        {
+          "line": 131,
+          "text": "log 1010 step 0"
+        },
+        {
+          "line": 132,
+          "text": "create npc at _magesguild_ "
+        },
+        {
+          "line": 137,
+          "text": "when _oneday_ and not _S.07_ "
+        },
+        {
+          "line": 138,
+          "text": "end quest "
+        },
+        {
+          "line": 141,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 144,
+          "text": "daily from 00:00 to 03:00 "
+        },
+        {
+          "line": 145,
+          "text": "pc at _magesguild_ set _S.03_ "
+        },
+        {
+          "line": 148,
+          "text": "create foe _F.00_ every 3 minutes 1 times with 100% success "
+        },
+        {
+          "line": 149,
+          "text": "create foe _F.00_ every 3 minutes 1 times with 100% success "
+        },
+        {
+          "line": 150,
+          "text": "create foe _F.00_ every 3 minutes 1 times with 100% success "
+        },
+        {
+          "line": 151,
+          "text": "create foe _F.00_ every 3 minutes 1 times with 100% success "
+        },
+        {
+          "line": 155,
+          "text": "injured _F.00_ saying 1012 "
+        },
+        {
+          "line": 158,
+          "text": "killed 2 _F.00_ "
+        },
+        {
+          "line": 161,
+          "text": "clicked item _treasure_ "
+        },
+        {
+          "line": 162,
+          "text": "clear _dropped_"
+        },
+        {
+          "line": 165,
+          "text": "dropped _treasure_ at _magesguild_ "
+        },
+        {
+          "line": 166,
+          "text": "clear _S.06_"
+        },
+        {
+          "line": 169,
+          "text": "when _S.06_ and not _S.02_ "
+        },
+        {
+          "line": 170,
+          "text": "create foe _F.01_ every 60 minutes 5 times with 10% success "
+        },
+        {
+          "line": 171,
+          "text": "start timer _S.10_ "
+        },
+        {
+          "line": 172,
+          "text": "log 1011 step 1 "
+        },
+        {
+          "line": 173,
+          "text": "change repute with _qgiver_ by -30 "
+        },
+        {
+          "line": 176,
+          "text": "injured _F.01_ saying 1013 "
+        },
+        {
+          "line": 179,
+          "text": "when _S.10_ and _S.07_ "
+        },
+        {
+          "line": 180,
+          "text": "make _treasure_ permanent "
+        },
+        {
+          "line": 181,
+          "text": "end quest "
+        },
+        {
+          "line": 186,
+          "text": "when _clickonqgiver_ and _S.05_ and not _S.07_ and not _S.02_ "
+        },
+        {
+          "line": 187,
+          "text": "give pc _potion_ "
+        },
+        {
+          "line": 188,
+          "text": "end quest "
+        },
+        {
+          "line": 191,
+          "text": "               when _clickonqgiver_ and not _S.05_"
+        },
+        {
+          "line": 192,
+          "text": "               clear _clearclick_ _clickonqgiver_"
+        },
+        {
+          "line": 195,
+          "text": "               when _clickonqgiver_ and _S.02_"
+        },
+        {
+          "line": 196,
+          "text": "               clear _clearclick2_ _clickonqgiver_"
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "mages",
+      "availability": "ordinary",
+      "name": "N0B11Y18",
+      "sourceFile": "N0B11Y18.txt",
+      "catalogGroup": "MagesGuild",
+      "membership": "M",
+      "minimumRequirement": 1,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": true,
+      "active": true,
+      "catalogSourceLine": 60,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "39360be5509c48f6ba1a0b233267b3e5867ef71a1a609a7177811b3cd222d49a",
+      "actionLines": [
+        {
+          "line": 200,
+          "text": "start timer _qtime_"
+        },
+        {
+          "line": 201,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 202,
+          "text": "place npc _rebel_ at _rebelhouse_ "
+        },
+        {
+          "line": 205,
+          "text": "end quest "
+        },
+        {
+          "line": 208,
+          "text": "clicked npc _rebel_ "
+        },
+        {
+          "line": 209,
+          "text": "prompt 1030 yes _S.02_ no _S.03_ "
+        },
+        {
+          "line": 210,
+          "text": "hide npc _rebel_"
+        },
+        {
+          "line": 214,
+          "text": "  clicked npc _questgiver_"
+        },
+        {
+          "line": 217,
+          "text": "when _qgclicked_ and not _S.01_ "
+        },
+        {
+          "line": 218,
+          "text": "say 1003"
+        },
+        {
+          "line": 219,
+          "text": "clear _qgclicked_ _clearclick_ "
+        },
+        {
+          "line": 222,
+          "text": "start quest 502 502 "
+        },
+        {
+          "line": 223,
+          "text": "log 1021 step 1 "
+        },
+        {
+          "line": 224,
+          "text": "get item _letter_ "
+        },
+        {
+          "line": 225,
+          "text": "say 1031 "
+        },
+        {
+          "line": 226,
+          "text": "remove foe _mage2_"
+        },
+        {
+          "line": 227,
+          "text": "remove foe _F.04_"
+        },
+        {
+          "line": 228,
+          "text": "remove foe _mage1_"
+        },
+        {
+          "line": 229,
+          "text": "remove foe _mage4_"
+        },
+        {
+          "line": 230,
+          "text": "remove foe _mage3_"
+        },
+        {
+          "line": 234,
+          "text": "start timer _S.04_ "
+        },
+        {
+          "line": 235,
+          "text": "say 1032 "
+        },
+        {
+          "line": 236,
+          "text": "    hide npc _rebel_"
+        },
+        {
+          "line": 237,
+          "text": "place foe _mage1_ at _rebelhouse_ "
+        },
+        {
+          "line": 238,
+          "text": "cast Spell_Reflection spell on _mage1_ "
+        },
+        {
+          "line": 242,
+          "text": "pc at _rebelhouse_ set _S.19_ "
+        },
+        {
+          "line": 243,
+          "text": "remove foe _mage1_"
+        },
+        {
+          "line": 244,
+          "text": "say 1060 "
+        },
+        {
+          "line": 249,
+          "text": "create foe _mage3_ every 1 minutes 1 times with 100% success"
+        },
+        {
+          "line": 250,
+          "text": "say 1061 "
+        },
+        {
+          "line": 251,
+          "text": "start timer _S.06_ "
+        },
+        {
+          "line": 252,
+          "text": "remove foe _mage2_"
+        },
+        {
+          "line": 257,
+          "text": "create foe _mage4_ every 1 minutes 1 times with 100% success"
+        },
+        {
+          "line": 258,
+          "text": "say 1062 "
+        },
+        {
+          "line": 259,
+          "text": "start timer _healer_ "
+        },
+        {
+          "line": 260,
+          "text": "remove foe _mage3_"
+        },
+        {
+          "line": 265,
+          "text": "create foe _F.04_ every 1 minutes 1 times with 100% success"
+        },
+        {
+          "line": 266,
+          "text": "say 1063 "
+        },
+        {
+          "line": 267,
+          "text": "remove foe _mage4_"
+        },
+        {
+          "line": 272,
+          "text": "killed 1 _mage2_ "
+        },
+        {
+          "line": 273,
+          "text": "killed 1 _F.04_ "
+        },
+        {
+          "line": 274,
+          "text": "killed 1 _mage4_ "
+        },
+        {
+          "line": 275,
+          "text": "killed 1 _mage3_ "
+        },
+        {
+          "line": 276,
+          "text": "killed 1 _mage1_ "
+        },
+        {
+          "line": 279,
+          "text": "when _S.08_ or _S.02_ "
+        },
+        {
+          "line": 280,
+          "text": "stop timer _healer_ "
+        },
+        {
+          "line": 281,
+          "text": "stop timer _S.06_ "
+        },
+        {
+          "line": 282,
+          "text": "stop timer _S.05_ "
+        },
+        {
+          "line": 283,
+          "text": "stop timer _S.04_ "
+        },
+        {
+          "line": 286,
+          "text": "injured _mage1_ "
+        },
+        {
+          "line": 287,
+          "text": "cast Heal spell on _mage1_ "
+        },
+        {
+          "line": 290,
+          "text": "injured _mage2_ "
+        },
+        {
+          "line": 291,
+          "text": "prompt 1050 yes _S.02_ no _S.03_ "
+        },
+        {
+          "line": 292,
+          "text": "cast Heal spell on _mage2_ "
+        },
+        {
+          "line": 295,
+          "text": "injured _mage3_ "
+        },
+        {
+          "line": 296,
+          "text": "prompt 1051 yes _S.02_ no _S.03_ "
+        },
+        {
+          "line": 297,
+          "text": "cast Heal spell on _mage3_ "
+        },
+        {
+          "line": 300,
+          "text": "injured _mage4_ "
+        },
+        {
+          "line": 301,
+          "text": "prompt 1052 yes _S.02_ no _S.03_ "
+        },
+        {
+          "line": 306,
+          "text": "injured _F.04_ "
+        },
+        {
+          "line": 307,
+          "text": "prompt 1053 yes _S.02_ no _S.03_ "
+        },
+        {
+          "line": 310,
+          "text": "toting _letter_ and _questgiver_ clicked "
+        },
+        {
+          "line": 311,
+          "text": "say 1041 "
+        },
+        {
+          "line": 314,
+          "text": "when _qgclicked_ and _S.08_ "
+        },
+        {
+          "line": 315,
+          "text": "say 1042 "
+        },
+        {
+          "line": 318,
+          "text": "when _S.15_ or _success_ "
+        },
+        {
+          "line": 319,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 320,
+          "text": "end quest "
+        },
+        {
+          "line": 324,
+          "text": "when _S.04_ and not _S.19_ and not _S.08_ "
+        },
+        {
+          "line": 325,
+          "text": "create foe _mage2_ every 1 minutes 1 times with 100% success "
+        },
+        {
+          "line": 326,
+          "text": "start timer _S.05_ "
+        },
+        {
+          "line": 327,
+          "text": "cast Spell_Reflection spell on _mage2_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "mages",
+      "availability": "ordinary",
+      "name": "N0B20Y02",
+      "sourceFile": "N0B20Y02.txt",
+      "catalogGroup": "MagesGuild",
+      "membership": "M",
+      "minimumRequirement": 2,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 61,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "dce7eb789fcc50ce6de888421f4488b52740894b6b7b840defd5cc6310397984",
+      "actionLines": [
+        {
+          "line": 166,
+          "text": "start timer _oneday_ "
+        },
+        {
+          "line": 167,
+          "text": "start timer _S.12_ "
+        },
+        {
+          "line": 168,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 169,
+          "text": "create npc at _magesguild_ "
+        },
+        {
+          "line": 170,
+          "text": "place npc _sleepingmage_ at _magesguild_ "
+        },
+        {
+          "line": 174,
+          "text": "create foe _F.00_ every 55 minutes 1 times with 100% success "
+        },
+        {
+          "line": 177,
+          "text": "injured _F.00_ saying 1011 "
+        },
+        {
+          "line": 180,
+          "text": "killed 3 _F.00_ "
+        },
+        {
+          "line": 183,
+          "text": "clicked npc _sleepingmage_ say 1012 "
+        },
+        {
+          "line": 184,
+          "text": "hide npc _sleepingmage_ "
+        },
+        {
+          "line": 185,
+          "text": "change repute with _sleepingmage_ by -10 "
+        },
+        {
+          "line": 186,
+          "text": "cast Spell_Shield spell on _mage_ "
+        },
+        {
+          "line": 187,
+          "text": "cast Spell_Absorption spell on _mage_ "
+        },
+        {
+          "line": 188,
+          "text": "place foe _mage_ at _magesguild_ "
+        },
+        {
+          "line": 191,
+          "text": "when not _S.12_ and not _S.04_ "
+        },
+        {
+          "line": 194,
+          "text": "when _S.03_ and _S.12_ and not _S.04_ "
+        },
+        {
+          "line": 195,
+          "text": "give pc _magicitem_ "
+        },
+        {
+          "line": 196,
+          "text": "end quest "
+        },
+        {
+          "line": 199,
+          "text": "killed 1 _mage_ "
+        },
+        {
+          "line": 200,
+          "text": "create foe _F.03_ every 30 minutes 10 times with 10% success "
+        },
+        {
+          "line": 201,
+          "text": "create foe _F.04_ every 2 minutes 5 times with 50% success "
+        },
+        {
+          "line": 202,
+          "text": "create foe _F.02_ every 25 minutes 10 times with 10% success "
+        },
+        {
+          "line": 203,
+          "text": "start timer _S.09_ "
+        },
+        {
+          "line": 204,
+          "text": "change repute with _sleepingmage_ by -50 "
+        },
+        {
+          "line": 207,
+          "text": "injured _mage_ saying 1013 "
+        },
+        {
+          "line": 211,
+          "text": "injured _F.02_ saying 1014 "
+        },
+        {
+          "line": 212,
+          "text": "injured _F.03_ saying 1014 "
+        },
+        {
+          "line": 213,
+          "text": "injured _F.04_ saying 1030 "
+        },
+        {
+          "line": 216,
+          "text": "when _S.07_ and _S.09_ "
+        },
+        {
+          "line": 217,
+          "text": "end quest "
+        },
+        {
+          "line": 220,
+          "text": "hide npc _sleepingmage_ "
+        },
+        {
+          "line": 223,
+          "text": "pc at _magesguild_ set _S.01_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "mages",
+      "availability": "ordinary",
+      "name": "N0B20Y05",
+      "sourceFile": "N0B20Y05.txt",
+      "catalogGroup": "MagesGuild",
+      "membership": "M",
+      "minimumRequirement": 2,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 62,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "93542339d430897f5fdbdbac13d08a2f33a3fdd3fa2bfefe0833bca6db446dc8",
+      "actionLines": [
+        {
+          "line": 132,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 133,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 134,
+          "text": "log 1030 step 0 "
+        },
+        {
+          "line": 135,
+          "text": "place foe _monster_ at _mondung_ "
+        },
+        {
+          "line": 138,
+          "text": "when _qgclicked_ and _mondead_ "
+        },
+        {
+          "line": 139,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 140,
+          "text": "unset _qgclicked_ "
+        },
+        {
+          "line": 141,
+          "text": "end quest "
+        },
+        {
+          "line": 145,
+          "text": "killed 1 _monster_ "
+        },
+        {
+          "line": 146,
+          "text": "say 1040 "
+        },
+        {
+          "line": 149,
+          "text": "clicked npc _questgiver_ "
+        },
+        {
+          "line": 152,
+          "text": "end quest "
+        },
+        {
+          "line": 157,
+          "text": "when _qgclicked_ and not _mondead_ "
+        },
+        {
+          "line": 158,
+          "text": "say 1003"
+        },
+        {
+          "line": 159,
+          "text": "clear _qgclicked_ _clearclick_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "mages",
+      "availability": "ordinary",
+      "name": "N0B21Y14",
+      "sourceFile": "N0B21Y14.txt",
+      "catalogGroup": "MagesGuild",
+      "membership": "M",
+      "minimumRequirement": 2,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": true,
+      "active": true,
+      "catalogSourceLine": 63,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "1e19e3e85801fca2a8192d841d3dfec839496083e779ef531b4269bd64188c8e",
+      "actionLines": [
+        {
+          "line": 277,
+          "text": "dialog link for location _temple_ person _acolyte_ "
+        },
+        {
+          "line": 278,
+          "text": "dialog link for location _mondung_ person _thd_ "
+        },
+        {
+          "line": 279,
+          "text": "dialog link for location _noblehouse_ person _love_ "
+        },
+        {
+          "line": 280,
+          "text": "dialog link for person _noble_ "
+        },
+        {
+          "line": 281,
+          "text": "pick one of _S.02_ _S.01_ "
+        },
+        {
+          "line": 282,
+          "text": "_oracleNote_ used do _readletter_ "
+        },
+        {
+          "line": 283,
+          "text": "_oracleMsg_ used do _readletter_ "
+        },
+        {
+          "line": 284,
+          "text": "create npc at _noblehouse_ "
+        },
+        {
+          "line": 285,
+          "text": "place npc _oracle_ at _oracletemple_ "
+        },
+        {
+          "line": 286,
+          "text": "place npc _acolyte_ at _temple_ "
+        },
+        {
+          "line": 287,
+          "text": "place npc _noble_ at _noblehouse_ "
+        },
+        {
+          "line": 290,
+          "text": "clicked npc _acolyte_ "
+        },
+        {
+          "line": 291,
+          "text": "add dialog for person _oracle_ "
+        },
+        {
+          "line": 292,
+          "text": "add dialog for location _noblehouse_ person _noble_ "
+        },
+        {
+          "line": 293,
+          "text": "log 1016 step 1 "
+        },
+        {
+          "line": 294,
+          "text": "say 1015 "
+        },
+        {
+          "line": 297,
+          "text": "start timer _queston1_ "
+        },
+        {
+          "line": 298,
+          "text": "get item _oracleNote_ "
+        },
+        {
+          "line": 301,
+          "text": "start timer _queston2_ "
+        },
+        {
+          "line": 302,
+          "text": "get item _oracleMsg_ "
+        },
+        {
+          "line": 305,
+          "text": "clicked npc _oracle_ "
+        },
+        {
+          "line": 306,
+          "text": "hide npc _oracle_ "
+        },
+        {
+          "line": 307,
+          "text": "say 1017 "
+        },
+        {
+          "line": 308,
+          "text": "add _oracle_ face "
+        },
+        {
+          "line": 311,
+          "text": "clicked npc _noble_ "
+        },
+        {
+          "line": 314,
+          "text": "when _S.04_ and _S.03_ "
+        },
+        {
+          "line": 315,
+          "text": "say 1018 "
+        },
+        {
+          "line": 316,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 317,
+          "text": "change repute with _thd_ by \u002B10 "
+        },
+        {
+          "line": 318,
+          "text": "end quest "
+        },
+        {
+          "line": 322,
+          "text": "when _S.04_ and _S.07_ "
+        },
+        {
+          "line": 323,
+          "text": "get item _gold_ "
+        },
+        {
+          "line": 324,
+          "text": "say 1019 "
+        },
+        {
+          "line": 325,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 326,
+          "text": "end quest "
+        },
+        {
+          "line": 330,
+          "text": "clicked npc _love_ "
+        },
+        {
+          "line": 331,
+          "text": "hide npc _love_ "
+        },
+        {
+          "line": 332,
+          "text": "say 1022 "
+        },
+        {
+          "line": 333,
+          "text": "add _love_ face "
+        },
+        {
+          "line": 336,
+          "text": "when _S.04_ and not _S.03_ and not _S.07_ "
+        },
+        {
+          "line": 337,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 338,
+          "text": "log 1021 step 2 "
+        },
+        {
+          "line": 339,
+          "text": "say 1020 "
+        },
+        {
+          "line": 340,
+          "text": "place npc _love_ at _mondung_ "
+        },
+        {
+          "line": 341,
+          "text": "clear _S.04_ "
+        },
+        {
+          "line": 344,
+          "text": "when _S.10_ and not _S.05_ and not _S.06_ "
+        },
+        {
+          "line": 345,
+          "text": "say 1023 "
+        },
+        {
+          "line": 348,
+          "text": "when _queston1_ or _queston2_ "
+        },
+        {
+          "line": 351,
+          "text": "add dialog for person _acolyte_ "
+        },
+        {
+          "line": 352,
+          "text": "log 1014 step 0 "
+        },
+        {
+          "line": 355,
+          "text": "end quest "
+        },
+        {
+          "line": 358,
+          "text": "end quest "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "mages",
+      "availability": "ordinary",
+      "name": "N0B30Y15",
+      "sourceFile": "N0B30Y15.txt",
+      "catalogGroup": "MagesGuild",
+      "membership": "M",
+      "minimumRequirement": 3,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 64,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "4de3aa1f9feef21ebede472f27d6fb930384fd40d25ded5dbd30c57e3186aacc",
+      "actionLines": [
+        {
+          "line": 111,
+          "text": "start timer _traveltime_ "
+        },
+        {
+          "line": 112,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 113,
+          "text": "pc at _palace_ set _S.01_ "
+        },
+        {
+          "line": 114,
+          "text": "place foe _imp_ at _palace_ "
+        },
+        {
+          "line": 115,
+          "text": "create npc at _palace_ "
+        },
+        {
+          "line": 118,
+          "text": "end quest "
+        },
+        {
+          "line": 121,
+          "text": "start timer _S.02_ "
+        },
+        {
+          "line": 122,
+          "text": "cast Spell_Shield spell on _imp_ "
+        },
+        {
+          "line": 123,
+          "text": "cast Troll\u0027s_Blood spell on _imp_ "
+        },
+        {
+          "line": 124,
+          "text": "cast Shield spell on _imp_ "
+        },
+        {
+          "line": 125,
+          "text": "cast Shield spell on _imp_ "
+        },
+        {
+          "line": 126,
+          "text": "cast Invisibility spell on _imp_ "
+        },
+        {
+          "line": 129,
+          "text": "start timer _Gothryd_ "
+        },
+        {
+          "line": 130,
+          "text": "cast Shield spell on _imp_ "
+        },
+        {
+          "line": 131,
+          "text": "cast Troll\u0027s_Blood spell on _imp_ "
+        },
+        {
+          "line": 132,
+          "text": "cast Spell_Shield spell on _imp_ "
+        },
+        {
+          "line": 133,
+          "text": "cast Invisibility spell on _imp_ "
+        },
+        {
+          "line": 136,
+          "text": "killed 1 _imp_ "
+        },
+        {
+          "line": 139,
+          "text": "clicked npc _questgiver_ "
+        },
+        {
+          "line": 142,
+          "text": "when _S.04_ and not _S.03_ "
+        },
+        {
+          "line": 143,
+          "text": "clear _S.04_ _clearclick_ "
+        },
+        {
+          "line": 146,
+          "text": "when _S.04_ and _S.03_ "
+        },
+        {
+          "line": 147,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 148,
+          "text": "end quest "
+        },
+        {
+          "line": 151,
+          "text": "start timer _S.08_ "
+        },
+        {
+          "line": 152,
+          "text": "cast Invisibility spell on _imp_ "
+        },
+        {
+          "line": 153,
+          "text": "cast Spell_Shield spell on _imp_ "
+        },
+        {
+          "line": 154,
+          "text": "cast Troll\u0027s_Blood spell on _imp_ "
+        },
+        {
+          "line": 157,
+          "text": "cast Spell_Shield spell on _imp_ "
+        },
+        {
+          "line": 158,
+          "text": "cast Troll\u0027s_Blood spell on _imp_ "
+        },
+        {
+          "line": 159,
+          "text": "cast Shield spell on _imp_ "
+        },
+        {
+          "line": 160,
+          "text": "cast Invisibility spell on _imp_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "mages",
+      "availability": "ordinary",
+      "name": "N0B40Y07",
+      "sourceFile": "N0B40Y07.txt",
+      "catalogGroup": "MagesGuild",
+      "membership": "M",
+      "minimumRequirement": 4,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 65,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "b583d2835341d7bf0ccc3d57a2d2785084c47b40420e57fc74ea871a18d3f33b",
+      "actionLines": [
+        {
+          "line": 167,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 168,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 169,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 170,
+          "text": "get item _spellScroll_ "
+        },
+        {
+          "line": 171,
+          "text": "place foe _daedra_ at _mondung_ "
+        },
+        {
+          "line": 174,
+          "text": "end quest "
+        },
+        {
+          "line": 177,
+          "text": "when _qgclicked_ and _S.10_ and not _S.06_ "
+        },
+        {
+          "line": 178,
+          "text": "give pc _book_ "
+        },
+        {
+          "line": 179,
+          "text": "unset _qgclicked_ "
+        },
+        {
+          "line": 180,
+          "text": "end quest "
+        },
+        {
+          "line": 183,
+          "text": "remove foe _daedra_"
+        },
+        {
+          "line": 188,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 191,
+          "text": "take _spellScroll_ from pc "
+        },
+        {
+          "line": 192,
+          "text": "say 1050"
+        },
+        {
+          "line": 193,
+          "text": "create foe _firedaedra_ every 1 minutes 1 times with 100% success"
+        },
+        {
+          "line": 194,
+          "text": "say 1051 "
+        },
+        {
+          "line": 200,
+          "text": "killed 1 _daedra_ "
+        },
+        {
+          "line": 203,
+          "text": "injured _daedra_ "
+        },
+        {
+          "line": 204,
+          "text": "_spellScroll_ used do _S.08_ "
+        },
+        {
+          "line": 207,
+          "text": "_spellScroll_ used do _S.05_ "
+        },
+        {
+          "line": 210,
+          "text": "cast Banish_Daedra spell do _out_ "
+        },
+        {
+          "line": 211,
+          "text": "restrain foe _daedra_ "
+        },
+        {
+          "line": 214,
+          "text": "when _qgclicked_ and _S.06_ "
+        },
+        {
+          "line": 215,
+          "text": "say 1040 "
+        },
+        {
+          "line": 216,
+          "text": "end quest "
+        },
+        {
+          "line": 219,
+          "text": "when _out_ and not _S.06_ "
+        },
+        {
+          "line": 220,
+          "text": "say 1060 "
+        }
+      ],
+      "sourceDiagnostics": []
+    }
+  ],
+  "fingerprint": "4448e4695cd9503c36e5ae5e5621cd72106d68ee566fc8d81b38aedcf8caa012"
+}

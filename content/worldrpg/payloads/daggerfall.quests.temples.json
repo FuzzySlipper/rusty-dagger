@@ -1,0 +1,2789 @@
+{
+  "id": "temples",
+  "catalogSource": {
+    "sourcePath": "Tables/QuestList-Classic.txt",
+    "contentHash": "24299ba54dc246ae278123f4c855928e1d7cd36626b972236d13c44c5005d001",
+    "byteLen": 10399
+  },
+  "categories": [
+    {
+      "id": "general",
+      "catalogGroup": "HolyOrder",
+      "active": true,
+      "availability": "ordinary",
+      "names": [
+        "C0C00Y10",
+        "C0C00Y11",
+        "C0C00Y12",
+        "C0C00Y13",
+        "C0B00Y00",
+        "C0B00Y01",
+        "C0B00Y02",
+        "C0B00Y03",
+        "C0B00Y04",
+        "C0B00Y14",
+        "C0B10Y05",
+        "C0B10Y06",
+        "C0B10Y07",
+        "C0B10Y15",
+        "C0B20Y08",
+        "C0B3XY09"
+      ]
+    },
+    {
+      "id": "specific",
+      "catalogGroup": "HolyOrder",
+      "active": true,
+      "availability": "ordinary",
+      "names": [
+        "00B00Y00",
+        "D0B00Y00",
+        "E0B00Y00",
+        "F0B00Y00",
+        "G0B00Y00",
+        "H0B00Y00",
+        "I0B00Y00",
+        "J0B00Y00"
+      ]
+    }
+  ],
+  "quests": [
+    {
+      "category": "general",
+      "availability": "ordinary",
+      "name": "C0C00Y10",
+      "sourceFile": "C0C00Y10.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 68,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "f32798e7398e00734092e5921f74d223a4d9c316783127d988ce3e806cdae9e1",
+      "actionLines": [
+        {
+          "line": 168,
+          "text": "start timer _questtime_ "
+        },
+        {
+          "line": 169,
+          "text": "prompt 1011 yes _S.01_ no _S.02_ "
+        },
+        {
+          "line": 170,
+          "text": "pick one of _S.06_ _S.07_ "
+        },
+        {
+          "line": 171,
+          "text": "_talisman_ used do _S.08_ "
+        },
+        {
+          "line": 174,
+          "text": "end quest "
+        },
+        {
+          "line": 177,
+          "text": "log 1003 step 0 "
+        },
+        {
+          "line": 178,
+          "text": "say 1025 "
+        },
+        {
+          "line": 181,
+          "text": "say 1005"
+        },
+        {
+          "line": 182,
+          "text": "end quest"
+        },
+        {
+          "line": 186,
+          "text": "clicked npc _cousin_ "
+        },
+        {
+          "line": 187,
+          "text": "say 1010 "
+        },
+        {
+          "line": 190,
+          "text": "when _S.03_ and _S.06_ "
+        },
+        {
+          "line": 191,
+          "text": "make pc ill with Swamp_Rot "
+        },
+        {
+          "line": 197,
+          "text": "take _talisman_ from pc saying 1019 "
+        },
+        {
+          "line": 198,
+          "text": "cure Swamp_Rot "
+        },
+        {
+          "line": 201,
+          "text": "toting _talisman_ and _cousin_ clicked "
+        },
+        {
+          "line": 202,
+          "text": "log 1018 step 2 "
+        },
+        {
+          "line": 203,
+          "text": "say 1016 "
+        },
+        {
+          "line": 204,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 205,
+          "text": "end quest "
+        },
+        {
+          "line": 210,
+          "text": "clicked npc _healer_ say 1013 "
+        },
+        {
+          "line": 211,
+          "text": "prompt 1014 yes _S.11_ no _no_ "
+        },
+        {
+          "line": 214,
+          "text": "clear _S.10_ "
+        },
+        {
+          "line": 217,
+          "text": "clicked _healer_ and at least 20 gold otherwise do _S.12_ "
+        },
+        {
+          "line": 218,
+          "text": "log 1017 step 1 "
+        },
+        {
+          "line": 219,
+          "text": "get item _talisman_ "
+        },
+        {
+          "line": 222,
+          "text": "say 1015 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "general",
+      "availability": "ordinary",
+      "name": "C0C00Y11",
+      "sourceFile": "C0C00Y11.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 69,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "340a747164e53eb75e68c9f878986c61aafc3b696a21be16cf3061980cc57572",
+      "actionLines": [
+        {
+          "line": 121,
+          "text": "start timer _traveltime_ "
+        },
+        {
+          "line": 122,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 123,
+          "text": "pick one of _map_ _nomap_ _nomap_ "
+        },
+        {
+          "line": 124,
+          "text": "pick one of _S.02_ _S.03_ _S.04_ _S.05_ "
+        },
+        {
+          "line": 125,
+          "text": "pc at _house_ set _S.08_ "
+        },
+        {
+          "line": 126,
+          "text": "create npc at _house_ "
+        },
+        {
+          "line": 129,
+          "text": "end quest "
+        },
+        {
+          "line": 132,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 135,
+          "text": "when _questdone_ and _S.06_ "
+        },
+        {
+          "line": 136,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 137,
+          "text": "end quest "
+        },
+        {
+          "line": 140,
+          "text": "place foe _ghost_ at _house_ "
+        },
+        {
+          "line": 143,
+          "text": "place foe _skeleton_ at _house_ "
+        },
+        {
+          "line": 146,
+          "text": "place foe _wraith_ at _house_ "
+        },
+        {
+          "line": 149,
+          "text": "place foe _zombie_ at _house_ "
+        },
+        {
+          "line": 152,
+          "text": "killed 1 _ghost_ "
+        },
+        {
+          "line": 153,
+          "text": "killed 1 _skeleton_ "
+        },
+        {
+          "line": 154,
+          "text": "killed 1 _wraith_ "
+        },
+        {
+          "line": 155,
+          "text": "killed 1 _zombie_ "
+        },
+        {
+          "line": 158,
+          "text": "injured _wraith_ saying 1011 "
+        },
+        {
+          "line": 159,
+          "text": "injured _zombie_ saying 1011 "
+        },
+        {
+          "line": 160,
+          "text": "injured _ghost_ saying 1011 "
+        },
+        {
+          "line": 161,
+          "text": "injured _skeleton_ saying 1011 "
+        },
+        {
+          "line": 164,
+          "text": "               start task _try_"
+        },
+        {
+          "line": 168,
+          "text": "when _try_ and _questdone_ and not _S.06_ "
+        },
+        {
+          "line": 169,
+          "text": "say 1012 "
+        },
+        {
+          "line": 170,
+          "text": "end quest "
+        },
+        {
+          "line": 173,
+          "text": "when _questdone_ and not _S.06_ "
+        },
+        {
+          "line": 174,
+          "text": "clear _questdone_ _clearclick_ "
+        },
+        {
+          "line": 179,
+          "text": "when _map_ and _questdone_ "
+        },
+        {
+          "line": 180,
+          "text": "    say 1080 "
+        },
+        {
+          "line": 181,
+          "text": "reveal _newdung_ readmap"
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "general",
+      "availability": "ordinary",
+      "name": "C0C00Y12",
+      "sourceFile": "C0C00Y12.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 70,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "dce32d73e8ced167eaeb6d2403521f7cd727ffe599e5ca7279896ee886109bf2",
+      "actionLines": [
+        {
+          "line": 150,
+          "text": "dialog link for person _decoy_ "
+        },
+        {
+          "line": 151,
+          "text": "start timer _traveltime_ "
+        },
+        {
+          "line": 152,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 153,
+          "text": "pc at _thiefplace_ set _S.04_ "
+        },
+        {
+          "line": 154,
+          "text": "place npc _thief_ at _thiefplace_ "
+        },
+        {
+          "line": 157,
+          "text": "make _religitem_ permanent "
+        },
+        {
+          "line": 158,
+          "text": "end quest "
+        },
+        {
+          "line": 161,
+          "text": "toting _religitem_ and _qgiver_ clicked "
+        },
+        {
+          "line": 162,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 163,
+          "text": "end quest "
+        },
+        {
+          "line": 166,
+          "text": "injured _rogue_ saying 1012 "
+        },
+        {
+          "line": 167,
+          "text": "injured _burglar_ saying 1012 "
+        },
+        {
+          "line": 170,
+          "text": "clicked npc _thief_ "
+        },
+        {
+          "line": 171,
+          "text": "get item _religitem_ saying 1011"
+        },
+        {
+          "line": 172,
+          "text": "hide npc _thief_ "
+        },
+        {
+          "line": 173,
+          "text": "say 1020"
+        },
+        {
+          "line": 178,
+          "text": "when _S.04_ and _S.03_ "
+        },
+        {
+          "line": 179,
+          "text": "create foe _rogue_ every 5 minutes 2 times with 80% success "
+        },
+        {
+          "line": 180,
+          "text": "create foe _burglar_ every 5 minutes 2 times with 70% success "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "general",
+      "availability": "ordinary",
+      "name": "C0C00Y13",
+      "sourceFile": "C0C00Y13.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 71,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "e6e5bb9b6530fbed8ba1866d6397601b894de83c374c0072445fc6c2a83b510c",
+      "actionLines": [
+        {
+          "line": 101,
+          "text": "create foe _thief_ every 12 minutes 2 times with 5% success "
+        },
+        {
+          "line": 102,
+          "text": "create foe _spellsword_ every 12 minutes 2 times with 5% success "
+        },
+        {
+          "line": 103,
+          "text": "start timer _traveltime_ "
+        },
+        {
+          "line": 104,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 105,
+          "text": "get item _religitem_ "
+        },
+        {
+          "line": 108,
+          "text": "change repute with _qgiver_ by -5 "
+        },
+        {
+          "line": 109,
+          "text": "end quest "
+        },
+        {
+          "line": 112,
+          "text": "toting _religitem_ and _priest_ clicked "
+        },
+        {
+          "line": 113,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 114,
+          "text": "end quest "
+        },
+        {
+          "line": 117,
+          "text": "injured _spellsword_ saying 1011 "
+        },
+        {
+          "line": 118,
+          "text": "injured _thief_ saying 1011 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "general",
+      "availability": "ordinary",
+      "name": "C0B00Y00",
+      "sourceFile": "C0B00Y00.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 72,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "3acc2511a07314ede09cc610d1a934d25bc025d33b20a39faac30687eae9b8b3",
+      "actionLines": [
+        {
+          "line": 104,
+          "text": "start timer _traveltime_ "
+        },
+        {
+          "line": 105,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 106,
+          "text": "pick one of _S.02_ _S.03_ _S.04_ _S.05_ "
+        },
+        {
+          "line": 107,
+          "text": "pc at _house_ set _S.08_ "
+        },
+        {
+          "line": 108,
+          "text": "create npc at _house_ "
+        },
+        {
+          "line": 111,
+          "text": "end quest "
+        },
+        {
+          "line": 114,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 117,
+          "text": "when _questdone_ and _S.06_ "
+        },
+        {
+          "line": 118,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 119,
+          "text": "end quest "
+        },
+        {
+          "line": 122,
+          "text": "place foe _ghost_ at _house_ "
+        },
+        {
+          "line": 125,
+          "text": "place foe _skeleton_ at _house_ "
+        },
+        {
+          "line": 128,
+          "text": "place foe _wraith_ at _house_ "
+        },
+        {
+          "line": 131,
+          "text": "place foe _zombie_ at _house_ "
+        },
+        {
+          "line": 134,
+          "text": "killed 1 _zombie_ "
+        },
+        {
+          "line": 135,
+          "text": "killed 1 _skeleton_ "
+        },
+        {
+          "line": 136,
+          "text": "killed 1 _wraith_ "
+        },
+        {
+          "line": 137,
+          "text": "killed 1 _ghost_ "
+        },
+        {
+          "line": 140,
+          "text": "injured _zombie_ saying 1011 "
+        },
+        {
+          "line": 141,
+          "text": "injured _wraith_ saying 1011 "
+        },
+        {
+          "line": 142,
+          "text": "injured _skeleton_ saying 1011 "
+        },
+        {
+          "line": 143,
+          "text": "injured _ghost_ saying 1011 "
+        },
+        {
+          "line": 148,
+          "text": "when _questdone_ and not _S.06_ "
+        },
+        {
+          "line": 149,
+          "text": "clear _questdone_ _clearclick_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "general",
+      "availability": "ordinary",
+      "name": "C0B00Y01",
+      "sourceFile": "C0B00Y01.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 73,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "e416f32ebc4a3e0827e5e05624dd4fb9eef688845bca9c838e22c3620077b5be",
+      "actionLines": [
+        {
+          "line": 488,
+          "text": "dialog link for location _prophouse_ person _replace_ item _relartifact_ "
+        },
+        {
+          "line": 489,
+          "text": "dialog link for person _priest_ "
+        },
+        {
+          "line": 490,
+          "text": "dialog link for person _lover_ "
+        },
+        {
+          "line": 491,
+          "text": "dialog link for person _replace_ "
+        },
+        {
+          "line": 492,
+          "text": "dialog link for item _finger_ "
+        },
+        {
+          "line": 493,
+          "text": "start timer _S.04_ "
+        },
+        {
+          "line": 494,
+          "text": "start timer _S.14_ "
+        },
+        {
+          "line": 495,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 496,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 497,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 498,
+          "text": "_letter9_ used do _readletter_ "
+        },
+        {
+          "line": 499,
+          "text": "create npc _lover_ "
+        },
+        {
+          "line": 500,
+          "text": "place npc _contact_ at _tavern_ "
+        },
+        {
+          "line": 501,
+          "text": "place npc _prophet_ at _prophouse_ "
+        },
+        {
+          "line": 502,
+          "text": "place npc _priest_ at _mondung_ "
+        },
+        {
+          "line": 505,
+          "text": "end quest "
+        },
+        {
+          "line": 508,
+          "text": "toting _letter9_ and _qgiver_ clicked "
+        },
+        {
+          "line": 509,
+          "text": "toting _finger_ and _qgiver_ clicked "
+        },
+        {
+          "line": 510,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 511,
+          "text": "end quest "
+        },
+        {
+          "line": 515,
+          "text": "clicked npc _contact_ "
+        },
+        {
+          "line": 516,
+          "text": "add dialog for location _prophouse_ person _lover_ "
+        },
+        {
+          "line": 517,
+          "text": "log 1032 step 1 "
+        },
+        {
+          "line": 518,
+          "text": "get item _letter7_ "
+        },
+        {
+          "line": 519,
+          "text": "say 1013 "
+        },
+        {
+          "line": 520,
+          "text": "clear _S.06_ "
+        },
+        {
+          "line": 523,
+          "text": "start timer _S.06_ "
+        },
+        {
+          "line": 524,
+          "text": "hide npc _contact_ "
+        },
+        {
+          "line": 525,
+          "text": "place npc _replace_ at _tavern_ "
+        },
+        {
+          "line": 529,
+          "text": "give pc _letter8_ notify 1015 "
+        },
+        {
+          "line": 532,
+          "text": "clicked npc _replace_ "
+        },
+        {
+          "line": 533,
+          "text": "add dialog for person _lover_ item _relartifact_ "
+        },
+        {
+          "line": 534,
+          "text": "log 1034 step 3 "
+        },
+        {
+          "line": 535,
+          "text": "get item _relartifact_ "
+        },
+        {
+          "line": 536,
+          "text": "say 1016 "
+        },
+        {
+          "line": 539,
+          "text": "clicked npc _lover_ "
+        },
+        {
+          "line": 540,
+          "text": "repute with _lover_ exceeds 5 do _S.09_ "
+        },
+        {
+          "line": 543,
+          "text": "get item _letter9_ "
+        },
+        {
+          "line": 544,
+          "text": "say 1019 "
+        },
+        {
+          "line": 547,
+          "text": "toting _relartifact_ and _lover_ clicked "
+        },
+        {
+          "line": 550,
+          "text": "when _S.10_ and not _S.09_ "
+        },
+        {
+          "line": 551,
+          "text": "get item _letter9_ "
+        },
+        {
+          "line": 552,
+          "text": "say 1020 "
+        },
+        {
+          "line": 553,
+          "text": "clear _S.08_ "
+        },
+        {
+          "line": 556,
+          "text": "when _S.10_ and _S.09_ "
+        },
+        {
+          "line": 557,
+          "text": "say 1024 "
+        },
+        {
+          "line": 560,
+          "text": "when _S.08_ and not _S.09_ "
+        },
+        {
+          "line": 561,
+          "text": "say 1018 "
+        },
+        {
+          "line": 564,
+          "text": "place item _finger_ at _mondung_ "
+        },
+        {
+          "line": 565,
+          "text": "start timer _S.16_ "
+        },
+        {
+          "line": 566,
+          "text": "hide npc _priest_ "
+        },
+        {
+          "line": 569,
+          "text": "clicked npc _priest_ "
+        },
+        {
+          "line": 570,
+          "text": "add dialog for person _lover_ "
+        },
+        {
+          "line": 571,
+          "text": "log 1033 step 2 "
+        },
+        {
+          "line": 572,
+          "text": "say 1025 "
+        },
+        {
+          "line": 575,
+          "text": "have _letter_ set _S.16a_"
+        },
+        {
+          "line": 576,
+          "text": "give pc _letter_ notify 1015 "
+        },
+        {
+          "line": 579,
+          "text": "log 1036 step 5 "
+        },
+        {
+          "line": 583,
+          "text": "clicked item _finger_ "
+        },
+        {
+          "line": 584,
+          "text": "add dialog for item _finger_ "
+        },
+        {
+          "line": 585,
+          "text": "log 1037 step 6 "
+        },
+        {
+          "line": 586,
+          "text": "say 1026 "
+        },
+        {
+          "line": 589,
+          "text": "clicked npc _prophet_ "
+        },
+        {
+          "line": 590,
+          "text": "say 1029 "
+        },
+        {
+          "line": 593,
+          "text": "toting _finger_ and _prophet_ clicked "
+        },
+        {
+          "line": 594,
+          "text": "say 1028 "
+        },
+        {
+          "line": 597,
+          "text": "toting _letter9_ and _prophet_ clicked "
+        },
+        {
+          "line": 598,
+          "text": "hide npc _prophet_ "
+        },
+        {
+          "line": 599,
+          "text": "say 1030 "
+        },
+        {
+          "line": 600,
+          "text": "place foe _fighter_ at _prophouse_ "
+        },
+        {
+          "line": 603,
+          "text": "toting _relartifact_ and _prophet_ clicked "
+        },
+        {
+          "line": 604,
+          "text": "say 1031 "
+        },
+        {
+          "line": 607,
+          "text": "log 1035 step 4 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "general",
+      "availability": "ordinary",
+      "name": "C0B00Y02",
+      "sourceFile": "C0B00Y02.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 74,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "f7469f06d177b5a3158564c8ce01ae14e5eb15b736aed78e29dd9d192f150aea",
+      "actionLines": [
+        {
+          "line": 315,
+          "text": "dialog link for location _house2_ person _hooker_ "
+        },
+        {
+          "line": 316,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 317,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 318,
+          "text": "pick one of _sham_ _real_"
+        },
+        {
+          "line": 319,
+          "text": "place npc _child_ at _house_ "
+        },
+        {
+          "line": 320,
+          "text": "place npc _guardian_ at _tavern_ "
+        },
+        {
+          "line": 321,
+          "text": "place npc _priest_ at _house3_"
+        },
+        {
+          "line": 322,
+          "text": "have _item_ set _haverelic_  "
+        },
+        {
+          "line": 325,
+          "text": "end quest "
+        },
+        {
+          "line": 328,
+          "text": "clicked npc _guardian_ "
+        },
+        {
+          "line": 333,
+          "text": "when _talkguardian_ and _real_ "
+        },
+        {
+          "line": 334,
+          "text": "log 1013 step 1 "
+        },
+        {
+          "line": 335,
+          "text": "say 1011 "
+        },
+        {
+          "line": 338,
+          "text": "when _talkguardian_ and _sham_ and not _revealsham_"
+        },
+        {
+          "line": 339,
+          "text": "log 1014 step 2 "
+        },
+        {
+          "line": 340,
+          "text": "say 1012 "
+        },
+        {
+          "line": 343,
+          "text": "clicked npc _child_ "
+        },
+        {
+          "line": 346,
+          "text": "when _haverelic_ and _real_ and _clickchild_"
+        },
+        {
+          "line": 347,
+          "text": "take _item_ from pc "
+        },
+        {
+          "line": 348,
+          "text": "hide npc _child_ "
+        },
+        {
+          "line": 349,
+          "text": "say 1015 "
+        },
+        {
+          "line": 350,
+          "text": "place foe _daedra_ at _house_ "
+        },
+        {
+          "line": 351,
+          "text": "clear _talkguardian_"
+        },
+        {
+          "line": 357,
+          "text": "when _haverelic_ and _sham_ and _clickchild_ "
+        },
+        {
+          "line": 358,
+          "text": "take _item_ from pc"
+        },
+        {
+          "line": 359,
+          "text": "hide npc _child_ "
+        },
+        {
+          "line": 360,
+          "text": "say 1016 "
+        },
+        {
+          "line": 361,
+          "text": "place npc _guardian_ at _house2_ "
+        },
+        {
+          "line": 362,
+          "text": "place npc _hooker_ at _tavern_ "
+        },
+        {
+          "line": 363,
+          "text": "clear _talkguardian_"
+        },
+        {
+          "line": 367,
+          "text": "when _clickchild_ and not _haverelic_ "
+        },
+        {
+          "line": 368,
+          "text": "log 1020 step 3 "
+        },
+        {
+          "line": 369,
+          "text": "say 1017 "
+        },
+        {
+          "line": 373,
+          "text": "clicked npc _priest_ "
+        },
+        {
+          "line": 376,
+          "text": "when _clickpriest_ and not _firstclickchild_ and not _rescueitem_ and not _exorcise_ and not _givenitem_"
+        },
+        {
+          "line": 377,
+          "text": "say 1018 "
+        },
+        {
+          "line": 378,
+          "text": "clear _clickpriest_"
+        },
+        {
+          "line": 381,
+          "text": "when _clickpriest_ and _firstclickchild_ and not _exorcise_ and not _rescueitem_"
+        },
+        {
+          "line": 382,
+          "text": "say 1019 "
+        },
+        {
+          "line": 383,
+          "text": "start task _givenitem_"
+        },
+        {
+          "line": 384,
+          "text": "get item _item_ "
+        },
+        {
+          "line": 385,
+          "text": "clear _clickpriest_"
+        },
+        {
+          "line": 386,
+          "text": "clear _clickchild_"
+        },
+        {
+          "line": 393,
+          "text": "when _talkguardian_ and _exorcise_ "
+        },
+        {
+          "line": 394,
+          "text": "say 1021 "
+        },
+        {
+          "line": 397,
+          "text": "add dialog for location _house2_ "
+        },
+        {
+          "line": 398,
+          "text": "log 1026 step 6 "
+        },
+        {
+          "line": 399,
+          "text": "say 1024 "
+        },
+        {
+          "line": 402,
+          "text": "say 1022 "
+        },
+        {
+          "line": 405,
+          "text": "clicked _hooker_ and at least 50 gold otherwise do _toopoor_ "
+        },
+        {
+          "line": 406,
+          "text": "prompt 1023 yes _hookerconfess_ no _refuseconfess_ "
+        },
+        {
+          "line": 409,
+          "text": "get item _gold_ "
+        },
+        {
+          "line": 410,
+          "text": "make _gold_ permanent "
+        },
+        {
+          "line": 413,
+          "text": "when _talkguardian_ and _revealsham_ "
+        },
+        {
+          "line": 414,
+          "text": "get item _item_ "
+        },
+        {
+          "line": 415,
+          "text": "hide npc _guardian_ "
+        },
+        {
+          "line": 416,
+          "text": "say 1025 "
+        },
+        {
+          "line": 428,
+          "text": "when _qgclicked_ and _rescueitem_"
+        },
+        {
+          "line": 429,
+          "text": "when _qgclicked_ and _exorcise_ "
+        },
+        {
+          "line": 430,
+          "text": "when _clickpriest_ and _rescueitem_"
+        },
+        {
+          "line": 431,
+          "text": "when _clickpriest_ and _exorcise_"
+        },
+        {
+          "line": 432,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 433,
+          "text": "end quest"
+        },
+        {
+          "line": 436,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 439,
+          "text": "when _qgclicked_ and not _rescueitem_ and not _exorcise_"
+        },
+        {
+          "line": 440,
+          "text": "clear _qgclicked_ _clearclick_"
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "general",
+      "availability": "ordinary",
+      "name": "C0B00Y03",
+      "sourceFile": "C0B00Y03.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 75,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "cd23dd545d20b7201ac8e8cd4e6ee1d1ca3c699e0ce6ee36dfc3d1a7d2929740",
+      "actionLines": [
+        {
+          "line": 127,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 128,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 129,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 130,
+          "text": "place npc _cleric_ at _mondung_ "
+        },
+        {
+          "line": 133,
+          "text": "end quest "
+        },
+        {
+          "line": 136,
+          "text": "clicked npc _cleric_ "
+        },
+        {
+          "line": 137,
+          "text": "hide npc _cleric_ "
+        },
+        {
+          "line": 138,
+          "text": "say 1011 "
+        },
+        {
+          "line": 139,
+          "text": "add _cleric_ face "
+        },
+        {
+          "line": 142,
+          "text": "when _qgclicked_ and _S.01_ "
+        },
+        {
+          "line": 143,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 144,
+          "text": "end quest "
+        },
+        {
+          "line": 147,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 150,
+          "text": "when _qgclicked_ and not _S.01_ "
+        },
+        {
+          "line": 151,
+          "text": "clear _qgclicked_ _S.04_ "
+        },
+        {
+          "line": 154,
+          "text": "when _S.01_ and _queston_ "
+        },
+        {
+          "line": 155,
+          "text": "say 1012 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "general",
+      "availability": "ordinary",
+      "name": "C0B00Y04",
+      "sourceFile": "C0B00Y04.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 76,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "09306058e0273451b13c06f7f23bb2ba6f9cc17389cf4a6f9ad18f26063778aa",
+      "actionLines": [
+        {
+          "line": 134,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 135,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 136,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 137,
+          "text": "place foe _priest_ at _mondung_ "
+        },
+        {
+          "line": 141,
+          "text": "injured _priest_ "
+        },
+        {
+          "line": 142,
+          "text": "say 1011 "
+        },
+        {
+          "line": 143,
+          "text": "add foe _priest_ face "
+        },
+        {
+          "line": 144,
+          "text": "remove foe _priest_"
+        },
+        {
+          "line": 148,
+          "text": "end quest "
+        },
+        {
+          "line": 151,
+          "text": "when _bonk_ and _queston_ "
+        },
+        {
+          "line": 152,
+          "text": "say 1012 "
+        },
+        {
+          "line": 155,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 158,
+          "text": "when _S.04_ and _bonk_ "
+        },
+        {
+          "line": 159,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 160,
+          "text": "end quest "
+        },
+        {
+          "line": 163,
+          "text": "when _S.04_ and not _bonk_ "
+        },
+        {
+          "line": 164,
+          "text": "clear _S.04_ _nope_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "general",
+      "availability": "ordinary",
+      "name": "C0B00Y14",
+      "sourceFile": "C0B00Y14.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 77,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "e165bcde82f870f148386493f1606b0de8ea46f56ac7150d5436eea634aed1c7",
+      "actionLines": [
+        {
+          "line": 158,
+          "text": "start timer _qtime_ "
+        },
+        {
+          "line": 159,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 160,
+          "text": "get item _I.00_ "
+        },
+        {
+          "line": 161,
+          "text": "pick one of _S.05_ _S.05_ _S.04_ "
+        },
+        {
+          "line": 162,
+          "text": "pick one of _S.00_ _S.01_ _S.02_ "
+        },
+        {
+          "line": 165,
+          "text": "place foe _monster1_ at _mondung_ "
+        },
+        {
+          "line": 168,
+          "text": "place foe _monster2_ at _mondung_ "
+        },
+        {
+          "line": 171,
+          "text": "place foe _monster3_ at _mondung_ "
+        },
+        {
+          "line": 174,
+          "text": "end quest "
+        },
+        {
+          "line": 177,
+          "text": "log 1021 step 0 "
+        },
+        {
+          "line": 178,
+          "text": "say 1050 "
+        },
+        {
+          "line": 181,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 184,
+          "text": "killed 1 _monster1_ "
+        },
+        {
+          "line": 185,
+          "text": "killed 1 _monster2_ "
+        },
+        {
+          "line": 186,
+          "text": "killed 1 _monster3_ "
+        },
+        {
+          "line": 187,
+          "text": "say 1060 "
+        },
+        {
+          "line": 188,
+          "text": "have _I.00_ set _S.09_ "
+        },
+        {
+          "line": 191,
+          "text": "when _mondead_ and _S.09_ and not _S.10_ "
+        },
+        {
+          "line": 192,
+          "text": "take _I.00_ from pc "
+        },
+        {
+          "line": 193,
+          "text": "say 1061 "
+        },
+        {
+          "line": 196,
+          "text": "toting _I.00_ and _priest_ clicked "
+        },
+        {
+          "line": 197,
+          "text": "get item _I.00_ "
+        },
+        {
+          "line": 198,
+          "text": "say 1051 "
+        },
+        {
+          "line": 202,
+          "text": "when _S.09_ and not _S.08_ and _S.04_ "
+        },
+        {
+          "line": 205,
+          "text": "clicked npc _questgiver_ "
+        },
+        {
+          "line": 208,
+          "text": "when _clickqgiver_ and _S.07_ "
+        },
+        {
+          "line": 209,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 210,
+          "text": "end quest "
+        },
+        {
+          "line": 213,
+          "text": "when not _S.07_ and _clickqgiver_ "
+        },
+        {
+          "line": 214,
+          "text": "say 1003"
+        },
+        {
+          "line": 215,
+          "text": "clear _clickqgiver_ _clearclick_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "general",
+      "availability": "ordinary",
+      "name": "C0B10Y05",
+      "sourceFile": "C0B10Y05.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "M",
+      "minimumRequirement": 1,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 78,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "5e88f779ed4c54b1eaf821724a5e7086baf63aabe05f365924c87237ecd627a1",
+      "actionLines": [
+        {
+          "line": 120,
+          "text": "start timer _traveltime_ "
+        },
+        {
+          "line": 121,
+          "text": "reveal _dungeon_ "
+        },
+        {
+          "line": 122,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 123,
+          "text": "get item _evilitem_ "
+        },
+        {
+          "line": 124,
+          "text": "place npc _custodian_ at _dungeon_ "
+        },
+        {
+          "line": 127,
+          "text": "end quest "
+        },
+        {
+          "line": 130,
+          "text": "toting _evilitem_ and _custodian_ clicked "
+        },
+        {
+          "line": 131,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 132,
+          "text": "end quest "
+        },
+        {
+          "line": 135,
+          "text": "create foe _orc2_ every 21 minutes 20 times with 5% success "
+        },
+        {
+          "line": 136,
+          "text": "create foe _orc4_ every 41 minutes 20 times with 5% success "
+        },
+        {
+          "line": 137,
+          "text": "create foe _orc1_ every 21 minutes 20 times with 5% success "
+        },
+        {
+          "line": 138,
+          "text": "create foe _orc3_ every 31 minutes 20 times with 5% success "
+        },
+        {
+          "line": 145,
+          "text": "injured _orc2_ saying 1011 "
+        },
+        {
+          "line": 146,
+          "text": "injured _orc4_ saying 1011 "
+        },
+        {
+          "line": 147,
+          "text": "injured _orc3_ saying 1011 "
+        },
+        {
+          "line": 148,
+          "text": "injured _orc1_ saying 1011 "
+        },
+        {
+          "line": 151,
+          "text": "when _traveltime_ and not _S.01_ "
+        },
+        {
+          "line": 152,
+          "text": "make pc ill with Witches\u0027_Pox"
+        },
+        {
+          "line": 153,
+          "text": "say 1012 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "general",
+      "availability": "ordinary",
+      "name": "C0B10Y06",
+      "sourceFile": "C0B10Y06.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "M",
+      "minimumRequirement": 1,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 79,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "b869dda3ec66e1c9040d7e52af06439fcbdd28c1cc4270bd475bc51ae0906bfc",
+      "actionLines": [
+        {
+          "line": 111,
+          "text": "start timer _traveltime_ "
+        },
+        {
+          "line": 112,
+          "text": "reveal _dungeon_ "
+        },
+        {
+          "line": 113,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 116,
+          "text": "end quest "
+        },
+        {
+          "line": 119,
+          "text": "toting _ingredient_ and _qgiver_ clicked "
+        },
+        {
+          "line": 120,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 121,
+          "text": "end quest "
+        },
+        {
+          "line": 124,
+          "text": "clicked item _ingredient_"
+        },
+        {
+          "line": 125,
+          "text": "say 1011 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "general",
+      "availability": "ordinary",
+      "name": "C0B10Y07",
+      "sourceFile": "C0B10Y07.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "M",
+      "minimumRequirement": 1,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 80,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "257afeced1afd91b2eb9dbf8cb82d3ef375d7d962ee8cbed1946e69313c94842",
+      "actionLines": [
+        {
+          "line": 134,
+          "text": "create foe _thief_ every 12 minutes 2 times with 5% success "
+        },
+        {
+          "line": 135,
+          "text": "create foe _spellsword_ every 12 minutes 2 times with 5% success "
+        },
+        {
+          "line": 136,
+          "text": "start timer _traveltime_ "
+        },
+        {
+          "line": 137,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 138,
+          "text": "get item _religitem_ "
+        },
+        {
+          "line": 141,
+          "text": "end quest "
+        },
+        {
+          "line": 144,
+          "text": "toting _religitem_ and _priest_ clicked "
+        },
+        {
+          "line": 145,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 146,
+          "text": "end quest "
+        },
+        {
+          "line": 149,
+          "text": "injured _thief_ saying 1011 "
+        },
+        {
+          "line": 150,
+          "text": "injured _spellsword_ saying 1011 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "general",
+      "availability": "ordinary",
+      "name": "C0B10Y15",
+      "sourceFile": "C0B10Y15.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "M",
+      "minimumRequirement": 1,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 81,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "90cb8ff8e152229e951bdcb8c01b6574d532d0e7cabe1c05cad227f6ee4390da",
+      "actionLines": [
+        {
+          "line": 152,
+          "text": "start timer _qtime_ "
+        },
+        {
+          "line": 153,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 154,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 155,
+          "text": "place foe _lich_ at _mondung_ "
+        },
+        {
+          "line": 158,
+          "text": "have _item_ set _S.07_ "
+        },
+        {
+          "line": 161,
+          "text": "toting _item_ and _questgiver_ clicked "
+        },
+        {
+          "line": 162,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 165,
+          "text": "clicked npc _questgiver_"
+        },
+        {
+          "line": 168,
+          "text": "when _qgclicked_ and not _S.01_"
+        },
+        {
+          "line": 169,
+          "text": "say 1003"
+        },
+        {
+          "line": 170,
+          "text": "clear _qgclicked_ _clearclick_"
+        },
+        {
+          "line": 173,
+          "text": "killed 1 _lich_ "
+        },
+        {
+          "line": 176,
+          "text": "when _S.01_ and _S.02_ "
+        },
+        {
+          "line": 177,
+          "text": "say 1035 "
+        },
+        {
+          "line": 178,
+          "text": "change repute with _questgiver_ by \u002B7 "
+        },
+        {
+          "line": 181,
+          "text": "clicked item _item_ "
+        },
+        {
+          "line": 182,
+          "text": "start timer _shortdelay_ "
+        },
+        {
+          "line": 183,
+          "text": "say 1030 "
+        },
+        {
+          "line": 187,
+          "text": "when _shortdelay_ and not _S.02_ "
+        },
+        {
+          "line": 188,
+          "text": "say 1040 "
+        },
+        {
+          "line": 191,
+          "text": "say 1015 "
+        },
+        {
+          "line": 194,
+          "text": "    when _S.01_ or _qtime_"
+        },
+        {
+          "line": 195,
+          "text": "    end quest"
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "general",
+      "availability": "ordinary",
+      "name": "C0B20Y08",
+      "sourceFile": "C0B20Y08.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "M",
+      "minimumRequirement": 2,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 82,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "34dccb9fbce92ade3ee1fbe92f381b34e9e33cc33a31fca345457dc481850101",
+      "actionLines": [
+        {
+          "line": 111,
+          "text": "start timer _traveltime_ "
+        },
+        {
+          "line": 112,
+          "text": "reveal _dungeon_ "
+        },
+        {
+          "line": 113,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 116,
+          "text": "end quest "
+        },
+        {
+          "line": 119,
+          "text": "toting _ingredient_ and _qgiver_ clicked "
+        },
+        {
+          "line": 120,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 121,
+          "text": "end quest "
+        },
+        {
+          "line": 124,
+          "text": "clicked item _ingredient_ say 1011 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "general",
+      "availability": "ordinary",
+      "name": "C0B3XY09",
+      "sourceFile": "C0B3XY09.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "M",
+      "minimumRequirement": 3,
+      "requirementKind": "rank",
+      "adult": true,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 83,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "3d011d39aae4f919c936965f3ae17be1fe36ac7cbc30eafbd12d7912f9246c10",
+      "actionLines": [
+        {
+          "line": 136,
+          "text": "start timer _traveltime_ "
+        },
+        {
+          "line": 137,
+          "text": "reveal _dungeon_ "
+        },
+        {
+          "line": 138,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 141,
+          "text": "end quest "
+        },
+        {
+          "line": 144,
+          "text": "clicked item _evilfocus_ "
+        },
+        {
+          "line": 145,
+          "text": "place foe _guardian_ at _dungeon_ "
+        },
+        {
+          "line": 146,
+          "text": "prompt 1011 yes _yes_ no _no_ "
+        },
+        {
+          "line": 147,
+          "text": "take _evilfocus_ from pc"
+        },
+        {
+          "line": 150,
+          "text": "remove foe _guardian_"
+        },
+        {
+          "line": 151,
+          "text": "get item _magicitem_ "
+        },
+        {
+          "line": 152,
+          "text": "make _magicitem_ permanent "
+        },
+        {
+          "line": 153,
+          "text": "change repute with _qgiver_ by -10 "
+        },
+        {
+          "line": 154,
+          "text": "say 1014"
+        },
+        {
+          "line": 155,
+          "text": "end quest "
+        },
+        {
+          "line": 159,
+          "text": "create foe _F.02_ every 5 minutes 1 times with 100% success "
+        },
+        {
+          "line": 160,
+          "text": "create foe _spiders_ every 9 minutes 1 times with 100% success "
+        },
+        {
+          "line": 161,
+          "text": "create foe _lesserdaedra_ every 7 minutes 1 times with 100% success "
+        },
+        {
+          "line": 162,
+          "text": "create foe _F.03_ every 3 minutes 1 times with 100% success "
+        },
+        {
+          "line": 163,
+          "text": "say 1012 "
+        },
+        {
+          "line": 166,
+          "text": "killed 1 _guardian_ "
+        },
+        {
+          "line": 167,
+          "text": "say 1013"
+        },
+        {
+          "line": 171,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 174,
+          "text": "when _questdone_ and _S.04_"
+        },
+        {
+          "line": 175,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 176,
+          "text": "end quest "
+        },
+        {
+          "line": 179,
+          "text": "when _questdone_ and not _S.04_ "
+        },
+        {
+          "line": 180,
+          "text": "clear _questdone_ _clearclick_"
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "specific",
+      "availability": "ordinary",
+      "name": "00B00Y00",
+      "sourceFile": "00B00Y00.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "J",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 86,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "8afeaf2e08376f387010faef58038efa664ec928b0448998a6bccf01a8a5ba1f",
+      "actionLines": [
+        {
+          "line": 105,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 106,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 107,
+          "text": "log 1030 step 0 "
+        },
+        {
+          "line": 108,
+          "text": "place foe _monster_ at _mondung_ "
+        },
+        {
+          "line": 111,
+          "text": "when _qgclicked_ and _mondead_ "
+        },
+        {
+          "line": 112,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 113,
+          "text": "end quest "
+        },
+        {
+          "line": 116,
+          "text": "killed 1 _monster_ saying 1031 "
+        },
+        {
+          "line": 119,
+          "text": "clicked npc _questgiver_ "
+        },
+        {
+          "line": 122,
+          "text": "end quest "
+        },
+        {
+          "line": 125,
+          "text": "when _qgclicked_ and not _mondead_"
+        },
+        {
+          "line": 126,
+          "text": "say 1003 "
+        },
+        {
+          "line": 127,
+          "text": "clear _qgclicked_ _clearclick_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "specific",
+      "availability": "ordinary",
+      "name": "D0B00Y00",
+      "sourceFile": "D0B00Y00.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "T",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 87,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "034d3bf311d3a591b1d18df8100e593783b362d31a6965c2d2a22159bfc2b988",
+      "actionLines": [
+        {
+          "line": 121,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 122,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 123,
+          "text": "log 1030 step 0 "
+        },
+        {
+          "line": 124,
+          "text": "pick one of _S.05_ _S.06_ _S.07_ _S.08_ "
+        },
+        {
+          "line": 127,
+          "text": "when _qgclicked_ and _mondead_ "
+        },
+        {
+          "line": 128,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 129,
+          "text": "end quest "
+        },
+        {
+          "line": 132,
+          "text": "killed 1 _spellsword_ saying 1020 "
+        },
+        {
+          "line": 133,
+          "text": "killed 1 _ranger_ saying 1020 "
+        },
+        {
+          "line": 134,
+          "text": "killed 1 _knight_ saying 1020 "
+        },
+        {
+          "line": 135,
+          "text": "killed 1 _archer_ saying 1020 "
+        },
+        {
+          "line": 138,
+          "text": "clicked npc _questgiver_ "
+        },
+        {
+          "line": 141,
+          "text": "end quest "
+        },
+        {
+          "line": 144,
+          "text": "when _qgclicked_ and not _mondead_ "
+        },
+        {
+          "line": 145,
+          "text": "say 1003"
+        },
+        {
+          "line": 146,
+          "text": "clear _qgclicked_ _clearclick_ "
+        },
+        {
+          "line": 149,
+          "text": "place foe _spellsword_ at _mondung_ "
+        },
+        {
+          "line": 152,
+          "text": "place foe _ranger_ at _mondung_ "
+        },
+        {
+          "line": 155,
+          "text": "place foe _knight_ at _mondung_ "
+        },
+        {
+          "line": 158,
+          "text": "place foe _archer_ at _mondung_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "specific",
+      "availability": "ordinary",
+      "name": "E0B00Y00",
+      "sourceFile": "E0B00Y00.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "A",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 88,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "81ed755916e460e90163ae070566cf3c73987e9e2d9b499e5482278e860ed85a",
+      "actionLines": [
+        {
+          "line": 135,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 136,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 137,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 138,
+          "text": "pick one of _wereboar_ _werewolf_ "
+        },
+        {
+          "line": 141,
+          "text": "when _qgclicked_ and _mondead_ "
+        },
+        {
+          "line": 142,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 143,
+          "text": "end quest "
+        },
+        {
+          "line": 146,
+          "text": "killed 1 _wolf_ saying 1020 "
+        },
+        {
+          "line": 147,
+          "text": "killed 1 boar saying 1020 "
+        },
+        {
+          "line": 150,
+          "text": "clicked npc _questgiver_ "
+        },
+        {
+          "line": 153,
+          "text": "end quest "
+        },
+        {
+          "line": 156,
+          "text": "when _qgclicked_ and not _mondead_"
+        },
+        {
+          "line": 157,
+          "text": "say 1003 "
+        },
+        {
+          "line": 158,
+          "text": "clear _qgclicked_ _clearclick_ "
+        },
+        {
+          "line": 161,
+          "text": "place foe _wolf_ at _mondung_ "
+        },
+        {
+          "line": 164,
+          "text": "place foe boar at _mondung_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "specific",
+      "availability": "ordinary",
+      "name": "F0B00Y00",
+      "sourceFile": "F0B00Y00.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "D",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 89,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "400538909df945fa1167796550fc4af1afa1bf2d800507c5a49c1c9ea2dc083e",
+      "actionLines": [
+        {
+          "line": 153,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 154,
+          "text": "log 1030 step 0 "
+        },
+        {
+          "line": 157,
+          "text": "end quest "
+        },
+        {
+          "line": 161,
+          "text": "clicked npc _contact_ "
+        },
+        {
+          "line": 162,
+          "text": "get item _item_ "
+        },
+        {
+          "line": 163,
+          "text": "say 1010 "
+        },
+        {
+          "line": 166,
+          "text": "toting _item_ and _questgiver_ clicked "
+        },
+        {
+          "line": 167,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 168,
+          "text": "end quest "
+        },
+        {
+          "line": 171,
+          "text": "clicked npc _questgiver_"
+        },
+        {
+          "line": 174,
+          "text": "when _qgclick2_ and not _qgclicked_"
+        },
+        {
+          "line": 175,
+          "text": "say 1003"
+        },
+        {
+          "line": 176,
+          "text": "clear _clearclick_ _qgclick2_"
+        },
+        {
+          "line": 181,
+          "text": "when _npcclicked_ and _1stparton_ "
+        },
+        {
+          "line": 182,
+          "text": "make _item_ permanent "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "specific",
+      "availability": "ordinary",
+      "name": "G0B00Y00",
+      "sourceFile": "G0B00Y00.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "K",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 90,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "69d7275747461737226cd20d677ceacf3b30b3d8332b13ac3cb5a13711e02097",
+      "actionLines": [
+        {
+          "line": 103,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 104,
+          "text": "reveal _mondun_ "
+        },
+        {
+          "line": 105,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 106,
+          "text": "pick one of _S.05_ _S.06_ _S.07_ _S.08_ "
+        },
+        {
+          "line": 109,
+          "text": "end quest "
+        },
+        {
+          "line": 112,
+          "text": "when _mondead_ and _qgclicked_ "
+        },
+        {
+          "line": 113,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 114,
+          "text": "end quest "
+        },
+        {
+          "line": 117,
+          "text": "killed 1 _assassin_ saying 1020 "
+        },
+        {
+          "line": 118,
+          "text": "killed 1 _knight_ saying 1020 "
+        },
+        {
+          "line": 119,
+          "text": "killed 1 _spellsword_ saying 1020 "
+        },
+        {
+          "line": 120,
+          "text": "killed 1 _nightblade_ saying 1020 "
+        },
+        {
+          "line": 123,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 126,
+          "text": "when _qgclicked_ and not _mondead_ "
+        },
+        {
+          "line": 127,
+          "text": "say 1003"
+        },
+        {
+          "line": 128,
+          "text": "clear _qgclicked_ _clearclick_ "
+        },
+        {
+          "line": 131,
+          "text": "place foe _assassin_ at _mondun_ "
+        },
+        {
+          "line": 134,
+          "text": "place foe _knight_ at _mondun_ "
+        },
+        {
+          "line": 137,
+          "text": "place foe _spellsword_ at _mondun_ "
+        },
+        {
+          "line": 140,
+          "text": "place foe _nightblade_ at _mondun_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "specific",
+      "availability": "ordinary",
+      "name": "H0B00Y00",
+      "sourceFile": "H0B00Y00.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "R",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 91,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "8bf8de46921a6638f65dad4573de276c822f792d9b366a7156c22a4c6daa2dd5",
+      "actionLines": [
+        {
+          "line": 113,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 114,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 115,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 116,
+          "text": "pick one of _S.05_ _S.06_ _S.07_ _S.08_ "
+        },
+        {
+          "line": 119,
+          "text": "when _qgclicked_ and _mondead_ "
+        },
+        {
+          "line": 120,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 121,
+          "text": "end quest "
+        },
+        {
+          "line": 124,
+          "text": "killed 1 _mummy_ saying 1020 "
+        },
+        {
+          "line": 125,
+          "text": "killed 1 _ghost_ saying 1020 "
+        },
+        {
+          "line": 126,
+          "text": "killed 1 _wraith_ saying 1020 "
+        },
+        {
+          "line": 127,
+          "text": "killed 1 _zombie_ saying 1020 "
+        },
+        {
+          "line": 130,
+          "text": "clicked npc _questgiver_ "
+        },
+        {
+          "line": 133,
+          "text": "end quest "
+        },
+        {
+          "line": 136,
+          "text": "when _qgclicked_ and not _mondead_ "
+        },
+        {
+          "line": 137,
+          "text": "say 1003"
+        },
+        {
+          "line": 138,
+          "text": "clear _qgclicked_ _clearclick_ "
+        },
+        {
+          "line": 141,
+          "text": "place foe _ghost_ at _mondung_ "
+        },
+        {
+          "line": 144,
+          "text": "place foe _mummy_ at _mondung_ "
+        },
+        {
+          "line": 147,
+          "text": "place foe _zombie_ at _mondung_ "
+        },
+        {
+          "line": 150,
+          "text": "place foe _wraith_ at _mondung_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "specific",
+      "availability": "ordinary",
+      "name": "I0B00Y00",
+      "sourceFile": "I0B00Y00.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "S",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 92,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "d34417fd85a77bb78069dc74d95665f437d451fabada02f444a01ce68863d904",
+      "actionLines": [
+        {
+          "line": 117,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 118,
+          "text": "log 1030 step 0 "
+        },
+        {
+          "line": 121,
+          "text": "end quest "
+        },
+        {
+          "line": 125,
+          "text": "clicked npc _chemist_ say 1010 "
+        },
+        {
+          "line": 126,
+          "text": "get item _item_ "
+        },
+        {
+          "line": 129,
+          "text": "toting _item_ and _questgiver_ clicked "
+        },
+        {
+          "line": 130,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 131,
+          "text": "end quest "
+        },
+        {
+          "line": 134,
+          "text": "clicked npc _questgiver_"
+        },
+        {
+          "line": 137,
+          "text": "when _qgclick2_ and not _qgclicked_"
+        },
+        {
+          "line": 138,
+          "text": "say 1003"
+        },
+        {
+          "line": 139,
+          "text": "clear _clearclick_ _qgclick2_"
+        },
+        {
+          "line": 144,
+          "text": "when _npcclicked_ and _1stparton_ "
+        },
+        {
+          "line": 145,
+          "text": "make _item_ permanent "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "specific",
+      "availability": "ordinary",
+      "name": "J0B00Y00",
+      "sourceFile": "J0B00Y00.txt",
+      "catalogGroup": "HolyOrder",
+      "membership": "Z",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 93,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "b0ed9db781aab8bc0cfd21aa7428f81cda20118e1cae871c7073e347f0be9294",
+      "actionLines": [
+        {
+          "line": 105,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 106,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 107,
+          "text": "log 1030 step 0 "
+        },
+        {
+          "line": 108,
+          "text": "pick one of _S.05_ _S.06_ _S.07_ _S.08_ "
+        },
+        {
+          "line": 111,
+          "text": "when _qgclicked_ and _mondead_ "
+        },
+        {
+          "line": 112,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 113,
+          "text": "end quest "
+        },
+        {
+          "line": 116,
+          "text": "killed 1 _monster4_ "
+        },
+        {
+          "line": 117,
+          "text": "killed 1 _monster2_ "
+        },
+        {
+          "line": 118,
+          "text": "killed 1 _monster1_ "
+        },
+        {
+          "line": 119,
+          "text": "killed 1 _monster3_ "
+        },
+        {
+          "line": 122,
+          "text": "clicked npc _questgiver_ "
+        },
+        {
+          "line": 125,
+          "text": "end quest "
+        },
+        {
+          "line": 128,
+          "text": "when _qgclicked_ and not _mondead_"
+        },
+        {
+          "line": 129,
+          "text": "say 1003 "
+        },
+        {
+          "line": 130,
+          "text": "clear _qgclicked_ _clearclick_ "
+        },
+        {
+          "line": 133,
+          "text": "place foe _monster1_ at _mondung_ "
+        },
+        {
+          "line": 136,
+          "text": "place foe _monster2_ at _mondung_ "
+        },
+        {
+          "line": 139,
+          "text": "place foe _monster3_ at _mondung_ "
+        },
+        {
+          "line": 142,
+          "text": "place foe _monster4_ at _mondung_ "
+        },
+        {
+          "line": 145,
+          "text": "injured _monster4_ saying 1020 "
+        },
+        {
+          "line": 146,
+          "text": "injured _monster3_ saying 1020 "
+        },
+        {
+          "line": 147,
+          "text": "injured _monster2_ saying 1020 "
+        },
+        {
+          "line": 148,
+          "text": "injured _monster1_ saying 1020 "
+        }
+      ],
+      "sourceDiagnostics": []
+    }
+  ],
+  "fingerprint": "f95863509a5b8fad2c6e88e010b6bcf73c3cfa5553ca55c038c844f413d87ea4"
+}

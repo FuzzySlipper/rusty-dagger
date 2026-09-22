@@ -1,0 +1,4229 @@
+{
+  "id": "witches-commoners",
+  "catalogSource": {
+    "sourcePath": "Tables/QuestList-Classic.txt",
+    "contentHash": "24299ba54dc246ae278123f4c855928e1d7cd36626b972236d13c44c5005d001",
+    "byteLen": 10399
+  },
+  "categories": [
+    {
+      "id": "witches",
+      "catalogGroup": "Witches",
+      "active": true,
+      "availability": "ordinary",
+      "names": [
+        "Q0C00Y01",
+        "Q0C00Y03",
+        "Q0C00Y04",
+        "Q0C00Y06",
+        "Q0C00Y07",
+        "Q0C00Y08",
+        "Q0C0XY02",
+        "Q0C10Y00",
+        "Q0C20Y02",
+        "Q0C4XY04"
+      ]
+    },
+    {
+      "id": "commoners",
+      "catalogGroup": "Commoners",
+      "active": true,
+      "availability": "ordinary",
+      "names": [
+        "A0C00Y00",
+        "A0C00Y06",
+        "A0C00Y07",
+        "A0C00Y08",
+        "A0C00Y10",
+        "A0C00Y11",
+        "A0C00Y12",
+        "A0C00Y14",
+        "A0C00Y15",
+        "A0C00Y16",
+        "A0C00Y17",
+        "A0C01Y01",
+        "A0C01Y03",
+        "A0C01Y06",
+        "A0C01Y09",
+        "A0C01Y13",
+        "A0C0XY04",
+        "A0C10Y02",
+        "A0C10Y05",
+        "A0C41Y18"
+      ]
+    }
+  ],
+  "quests": [
+    {
+      "category": "witches",
+      "availability": "ordinary",
+      "name": "Q0C00Y01",
+      "sourceFile": "Q0C00Y01.txt",
+      "catalogGroup": "Witches",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 147,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "b3b3000f149d11595ae5d323b34d93f5bd53e815dd07b84df97c05ea718b8267",
+      "actionLines": [
+        {
+          "line": 139,
+          "text": "dialog link for person _daedra_ "
+        },
+        {
+          "line": 140,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 141,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 144,
+          "text": "end quest "
+        },
+        {
+          "line": 147,
+          "text": "clicked item _document_ "
+        },
+        {
+          "line": 148,
+          "text": "create foe _guardian_ every 1 minutes 1 times with 100% success "
+        },
+        {
+          "line": 149,
+          "text": "say 1011 "
+        },
+        {
+          "line": 152,
+          "text": "injured _guardian_ "
+        },
+        {
+          "line": 153,
+          "text": "say 1013 "
+        },
+        {
+          "line": 156,
+          "text": "toting _document_ and _qgiver_ clicked "
+        },
+        {
+          "line": 157,
+          "text": "give pc _mitem_ "
+        },
+        {
+          "line": 158,
+          "text": "end quest "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "witches",
+      "availability": "ordinary",
+      "name": "Q0C00Y03",
+      "sourceFile": "Q0C00Y03.txt",
+      "catalogGroup": "Witches",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 148,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "a4c79d6bee0e32a7f013013c8890ff7d86c9348a08247c88e6866b84bcae8436",
+      "actionLines": [
+        {
+          "line": 160,
+          "text": "create foe _warrior_ every 15 minutes 40 times with 100% success msg 1012 "
+        },
+        {
+          "line": 161,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 162,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 163,
+          "text": "pc at _home_ set _S.01_ "
+        },
+        {
+          "line": 164,
+          "text": "add _child_ face "
+        },
+        {
+          "line": 167,
+          "text": "end quest "
+        },
+        {
+          "line": 170,
+          "text": "say 1011 "
+        },
+        {
+          "line": 171,
+          "text": "drop _child_ face"
+        },
+        {
+          "line": 172,
+          "text": "start task _S.07_"
+        },
+        {
+          "line": 176,
+          "text": "when _S.03_ and _S.07_ "
+        },
+        {
+          "line": 177,
+          "text": "give pc _gem_ "
+        },
+        {
+          "line": 178,
+          "text": "end quest "
+        },
+        {
+          "line": 181,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 184,
+          "text": "when _S.03_ and not _S.07_ "
+        },
+        {
+          "line": 185,
+          "text": "clear _S.03_ _S.04_ "
+        },
+        {
+          "line": 188,
+          "text": "when _queston_ and not _S.07_ "
+        },
+        {
+          "line": 189,
+          "text": "say 1013 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "witches",
+      "availability": "ordinary",
+      "name": "Q0C00Y04",
+      "sourceFile": "Q0C00Y04.txt",
+      "catalogGroup": "Witches",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 149,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "ec64abb75b9b373736de59f1e9de0737a833f1b1573647733d602d7688f73710",
+      "actionLines": [
+        {
+          "line": 165,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 166,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 167,
+          "text": "get item _potion_ "
+        },
+        {
+          "line": 168,
+          "text": "_potion_ used do _S.03_ "
+        },
+        {
+          "line": 169,
+          "text": "place npc _mage_ at _mguild_ "
+        },
+        {
+          "line": 172,
+          "text": "make _potion_ permanent "
+        },
+        {
+          "line": 173,
+          "text": "end quest "
+        },
+        {
+          "line": 176,
+          "text": "daily from 06:40 to 17:20 "
+        },
+        {
+          "line": 179,
+          "text": "create foe _werewolf_ every 19 minutes 12 times with 50% success msg 1013 "
+        },
+        {
+          "line": 180,
+          "text": "create foe _wereboar_ every 11 minutes 10 times with 40% success msg 1014 "
+        },
+        {
+          "line": 181,
+          "text": "create foe _vampire_ every 15 minutes 7 times with 70% success msg 1012 "
+        },
+        {
+          "line": 184,
+          "text": "toting _potion_ and _mage_ clicked "
+        },
+        {
+          "line": 187,
+          "text": "say 1015 "
+        },
+        {
+          "line": 188,
+          "text": "cure vampirism "
+        },
+        {
+          "line": 189,
+          "text": "cure lycanthropy "
+        },
+        {
+          "line": 192,
+          "text": "when _S.02_ and _S.03_ "
+        },
+        {
+          "line": 193,
+          "text": "say 1017 "
+        },
+        {
+          "line": 194,
+          "text": "end quest "
+        },
+        {
+          "line": 197,
+          "text": "when _S.02_ and not _S.03_ "
+        },
+        {
+          "line": 198,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 199,
+          "text": "end quest "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "witches",
+      "availability": "ordinary",
+      "name": "Q0C00Y06",
+      "sourceFile": "Q0C00Y06.txt",
+      "catalogGroup": "Witches",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 150,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "c23f59f453669b164975c2bbc28b831f20b6dbd7c6b2ad24dff96b75f03bd9df",
+      "actionLines": [
+        {
+          "line": 131,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 132,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 133,
+          "text": "log 1015 step 0 "
+        },
+        {
+          "line": 134,
+          "text": "place foe _vamprival_ at _mondung_ "
+        },
+        {
+          "line": 137,
+          "text": "when _vampclicked_ and _S.01_ "
+        },
+        {
+          "line": 138,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 139,
+          "text": "end quest "
+        },
+        {
+          "line": 142,
+          "text": "killed 1 _vamprival_ "
+        },
+        {
+          "line": 143,
+          "text": "say 1020 "
+        },
+        {
+          "line": 146,
+          "text": "clicked npc _witch_ "
+        },
+        {
+          "line": 149,
+          "text": "when _vampclicked_ and not _S.01_ "
+        },
+        {
+          "line": 150,
+          "text": "say 1003"
+        },
+        {
+          "line": 151,
+          "text": "clear _vampclicked_ _clearclick_"
+        },
+        {
+          "line": 155,
+          "text": "end quest "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "witches",
+      "availability": "ordinary",
+      "name": "Q0C00Y07",
+      "sourceFile": "Q0C00Y07.txt",
+      "catalogGroup": "Witches",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 151,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "12cd4d41418289512e65070f6ccd2a09c8231c8ac3a6a536931a48ba42c5b2a9",
+      "actionLines": [
+        {
+          "line": 124,
+          "text": "dialog link for person _daedra_ "
+        },
+        {
+          "line": 125,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 126,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 127,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 128,
+          "text": "get item _clothes_ "
+        },
+        {
+          "line": 129,
+          "text": "place npc _witch_ at _mondung_ "
+        },
+        {
+          "line": 132,
+          "text": "end quest "
+        },
+        {
+          "line": 135,
+          "text": "toting _clothes_ and _witch_ clicked "
+        },
+        {
+          "line": 136,
+          "text": "create foe _guard_ every 2 minutes 30 times with 50% success msg 1012 "
+        },
+        {
+          "line": 137,
+          "text": "hide npc _witch_ "
+        },
+        {
+          "line": 138,
+          "text": "say 1011 "
+        },
+        {
+          "line": 139,
+          "text": "add _witch_ face "
+        },
+        {
+          "line": 142,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 145,
+          "text": "when _qgclicked_ and not _S.01_ "
+        },
+        {
+          "line": 146,
+          "text": "clear _qgclicked_ _S.03_ "
+        },
+        {
+          "line": 149,
+          "text": "when _qgclicked_ and _S.01_ "
+        },
+        {
+          "line": 150,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 151,
+          "text": "end quest "
+        },
+        {
+          "line": 154,
+          "text": "when _queston_ and _S.01_ "
+        },
+        {
+          "line": 155,
+          "text": "say 1013 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "witches",
+      "availability": "ordinary",
+      "name": "Q0C00Y08",
+      "sourceFile": "Q0C00Y08.txt",
+      "catalogGroup": "Witches",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 152,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "74cd37aadc19f092543d706bd530db505007e646aa5f3890fd5ba41ec269ef1c",
+      "actionLines": [
+        {
+          "line": 133,
+          "text": "hide npc _daedra_"
+        },
+        {
+          "line": 134,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 135,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 141,
+          "text": "when _queston_ and _S.05_ "
+        },
+        {
+          "line": 142,
+          "text": "say 1013 "
+        },
+        {
+          "line": 143,
+          "text": "make _book_ permanent "
+        },
+        {
+          "line": 144,
+          "text": "end quest "
+        },
+        {
+          "line": 147,
+          "text": "when _queston_ and not _S.05_ "
+        },
+        {
+          "line": 148,
+          "text": "end quest "
+        },
+        {
+          "line": 151,
+          "text": "toting _book_ and _qgiver_ clicked "
+        },
+        {
+          "line": 152,
+          "text": "give pc _mitem_ "
+        },
+        {
+          "line": 153,
+          "text": "end quest "
+        },
+        {
+          "line": 156,
+          "text": "clicked npc _contact_ "
+        },
+        {
+          "line": 157,
+          "text": "get item _book_ "
+        },
+        {
+          "line": 158,
+          "text": "say 1011 "
+        },
+        {
+          "line": 159,
+          "text": "have _book_ set _S.05_ "
+        },
+        {
+          "line": 162,
+          "text": "create foe _guard_ every 20 minutes 20 times with 50% success msg 1012 "
+        },
+        {
+          "line": 163,
+          "text": "legal repute -30 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "witches",
+      "availability": "ordinary",
+      "name": "Q0C0XY02",
+      "sourceFile": "Q0C0XY02.txt",
+      "catalogGroup": "Witches",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": true,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 153,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "50440adb7b4858616ce9734edb3d8404d44e3c7935ca17448c08419e8f287ca4",
+      "actionLines": [
+        {
+          "line": 153,
+          "text": "dialog link for person _daedra_ "
+        },
+        {
+          "line": 154,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 155,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 156,
+          "text": "get item _jewelry_ "
+        },
+        {
+          "line": 157,
+          "text": "place npc _man_ at _tavern_ "
+        },
+        {
+          "line": 160,
+          "text": "end quest "
+        },
+        {
+          "line": 163,
+          "text": "toting _jewelry_ and _man_ clicked "
+        },
+        {
+          "line": 164,
+          "text": "pick one of _S.04_ _S.02_ _S.03_ _S.05_ "
+        },
+        {
+          "line": 165,
+          "text": "hide npc _man_ "
+        },
+        {
+          "line": 166,
+          "text": "say 1011 "
+        },
+        {
+          "line": 169,
+          "text": "place foe _giant_ at _tavern_ "
+        },
+        {
+          "line": 172,
+          "text": "place foe _harpy_ at _tavern_ "
+        },
+        {
+          "line": 175,
+          "text": "place foe _daedroth_ at _tavern_ "
+        },
+        {
+          "line": 178,
+          "text": "place foe _zombie_ at _tavern_ "
+        },
+        {
+          "line": 181,
+          "text": "killed 1 _giant_ "
+        },
+        {
+          "line": 182,
+          "text": "killed 1 _harpy_ "
+        },
+        {
+          "line": 183,
+          "text": "killed 1 _zombie_ "
+        },
+        {
+          "line": 184,
+          "text": "killed 1 _daedroth_ "
+        },
+        {
+          "line": 187,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 190,
+          "text": "when _qgclicked_ and _S.06_ "
+        },
+        {
+          "line": 191,
+          "text": "say 1012"
+        },
+        {
+          "line": 192,
+          "text": "change repute with _man_ by -15 "
+        },
+        {
+          "line": 193,
+          "text": "make pc ill with Witches\u0027_Pox "
+        },
+        {
+          "line": 194,
+          "text": "end quest "
+        },
+        {
+          "line": 198,
+          "text": "when _qgclicked_ and _S.01_ and not _S.06_ "
+        },
+        {
+          "line": 199,
+          "text": "give pc _mitem_ "
+        },
+        {
+          "line": 200,
+          "text": "end quest "
+        },
+        {
+          "line": 203,
+          "text": "when _qgclicked_ and not _S.01_ "
+        },
+        {
+          "line": 204,
+          "text": "clear _qgclicked_ _S.10_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "witches",
+      "availability": "ordinary",
+      "name": "Q0C10Y00",
+      "sourceFile": "Q0C10Y00.txt",
+      "catalogGroup": "Witches",
+      "membership": "N",
+      "minimumRequirement": 1,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 154,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "cc4ab12925e8897e238096e5b649b8daf78f1a708c7542e8e637917c6434697e",
+      "actionLines": [
+        {
+          "line": 160,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 161,
+          "text": "reveal _dungeon3_ "
+        },
+        {
+          "line": 162,
+          "text": "reveal _dungeon2_ "
+        },
+        {
+          "line": 163,
+          "text": "reveal _dungeon1_ "
+        },
+        {
+          "line": 164,
+          "text": "log 1015 step 0 "
+        },
+        {
+          "line": 165,
+          "text": "pc at _dungeon1_ set _S.10_ "
+        },
+        {
+          "line": 166,
+          "text": "pc at _dungeon2_ set _S.14_ "
+        },
+        {
+          "line": 169,
+          "text": "toting _item1_ and _qgiver_ clicked"
+        },
+        {
+          "line": 170,
+          "text": "say 1024"
+        },
+        {
+          "line": 173,
+          "text": "toting _item2_ and _qgiver_ clicked "
+        },
+        {
+          "line": 174,
+          "text": "say 1025"
+        },
+        {
+          "line": 177,
+          "text": "toting _item3_ and _qgiver_ clicked "
+        },
+        {
+          "line": 178,
+          "text": "say 1026"
+        },
+        {
+          "line": 181,
+          "text": "end quest "
+        },
+        {
+          "line": 184,
+          "text": "create foe _zombie_ every 15 minutes 5 times with 5% success "
+        },
+        {
+          "line": 185,
+          "text": "place foe _zombie_ at _dungeon1_ "
+        },
+        {
+          "line": 188,
+          "text": "create foe _mummy_ every 10 minutes 5 times with 5% success "
+        },
+        {
+          "line": 189,
+          "text": "place foe _mummy_ at _dungeon1_ "
+        },
+        {
+          "line": 192,
+          "text": "create foe _skeleton_ every 12 minutes 5 times with 5% success "
+        },
+        {
+          "line": 193,
+          "text": "place foe _skeleton_ at _dungeon1_ "
+        },
+        {
+          "line": 196,
+          "text": "create foe _F.00_ every 10 minutes 5 times with 5% success "
+        },
+        {
+          "line": 197,
+          "text": "place foe _F.00_ at _dungeon2_ "
+        },
+        {
+          "line": 200,
+          "text": "create foe _spriggan_ every 15 minutes 5 times with 5% success "
+        },
+        {
+          "line": 201,
+          "text": "place foe _spriggan_ at _dungeon2_ "
+        },
+        {
+          "line": 204,
+          "text": "create foe _wereboar_ every 12 minutes 5 times with 5% success "
+        },
+        {
+          "line": 205,
+          "text": "place foe _wereboar_ at _dungeon2_ "
+        },
+        {
+          "line": 208,
+          "text": "pick one of _a1_ _a2_ _a3_ _a1_ "
+        },
+        {
+          "line": 211,
+          "text": "clicked item _item1_ say 1021 "
+        },
+        {
+          "line": 214,
+          "text": "clicked item _item2_ say 1022"
+        },
+        {
+          "line": 217,
+          "text": "clicked item _item3_ say 1023 "
+        },
+        {
+          "line": 220,
+          "text": "pick one of _a4_ _a5_ _a6_ _a4_ "
+        },
+        {
+          "line": 223,
+          "text": "when _pchasitem1_ and _pchasitem2_ and _pchasitem3_ "
+        },
+        {
+          "line": 224,
+          "text": "give pc _reward1_"
+        },
+        {
+          "line": 225,
+          "text": "give pc _reward2_"
+        },
+        {
+          "line": 226,
+          "text": "give pc _reward3_ "
+        },
+        {
+          "line": 227,
+          "text": "end quest "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "witches",
+      "availability": "ordinary",
+      "name": "Q0C20Y02",
+      "sourceFile": "Q0C20Y02.txt",
+      "catalogGroup": "Witches",
+      "membership": "N",
+      "minimumRequirement": 2,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 155,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "84a3d3702a3c20f7763e526ca62f14b3554d1710a79a97dac3504bfb6451944a",
+      "actionLines": [
+        {
+          "line": 134,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 135,
+          "text": "log 1025 step 0 "
+        },
+        {
+          "line": 136,
+          "text": "create npc _other_ "
+        },
+        {
+          "line": 139,
+          "text": "toting _magicitem_ and _questgiver_ clicked "
+        },
+        {
+          "line": 140,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 141,
+          "text": "end quest "
+        },
+        {
+          "line": 144,
+          "text": "clicked _other_ and at least 1000 gold otherwise do _S.07_ "
+        },
+        {
+          "line": 145,
+          "text": "get item _magicitem_ "
+        },
+        {
+          "line": 146,
+          "text": "say 1010 "
+        },
+        {
+          "line": 151,
+          "text": "make _magicitem_ permanent "
+        },
+        {
+          "line": 152,
+          "text": "end quest "
+        },
+        {
+          "line": 157,
+          "text": "say 1020 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "witches",
+      "availability": "ordinary",
+      "name": "Q0C4XY04",
+      "sourceFile": "Q0C4XY04.txt",
+      "catalogGroup": "Witches",
+      "membership": "N",
+      "minimumRequirement": 4,
+      "requirementKind": "rank",
+      "adult": true,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 156,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "234461dda9358cd775d3024f4208922c4ffb070418bb66b48d99befa66160343",
+      "actionLines": [
+        {
+          "line": 135,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 136,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 137,
+          "text": "log 1015 step 0 "
+        },
+        {
+          "line": 138,
+          "text": "pc at _mondung_ set _exitstarter_ "
+        },
+        {
+          "line": 141,
+          "text": "toting _heart_ and _questgiver_ clicked "
+        },
+        {
+          "line": 142,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 143,
+          "text": "end quest "
+        },
+        {
+          "line": 146,
+          "text": "clicked item _heart_ say 1040 "
+        },
+        {
+          "line": 152,
+          "text": "end quest "
+        },
+        {
+          "line": 155,
+          "text": "injured _firedaedra_ "
+        },
+        {
+          "line": 156,
+          "text": "give item _heart_ to _firedaedra_ "
+        },
+        {
+          "line": 159,
+          "text": "injured _F.03_ "
+        },
+        {
+          "line": 160,
+          "text": "give item _heart_ to _F.03_ "
+        },
+        {
+          "line": 163,
+          "text": "injured _seducer_ "
+        },
+        {
+          "line": 164,
+          "text": "give item _heart_ to _seducer_ "
+        },
+        {
+          "line": 167,
+          "text": "injured _daedroth_ "
+        },
+        {
+          "line": 168,
+          "text": "give item _heart_ to _daedroth_ "
+        },
+        {
+          "line": 171,
+          "text": "when not _S.11_ and _exitstarter_ "
+        },
+        {
+          "line": 172,
+          "text": "create foe _seducer_ every 15 minutes 7 times with 10% success "
+        },
+        {
+          "line": 173,
+          "text": "create foe _F.03_ every 20 minutes 6 times with 30% success "
+        },
+        {
+          "line": 174,
+          "text": "create foe _firedaedra_ every 18 minutes 5 times with 25% success "
+        },
+        {
+          "line": 175,
+          "text": "create foe _daedroth_ every 12 minutes 5 times with 20% success "
+        },
+        {
+          "line": 178,
+          "text": "when _S.06_ or _S.07_ or _S.09_ or _S.08_ "
+        },
+        {
+          "line": 179,
+          "text": "clear _S.10_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "commoners",
+      "availability": "ordinary",
+      "name": "A0C00Y00",
+      "sourceFile": "A0C00Y00.txt",
+      "catalogGroup": "Commoners",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 159,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "4c6f40ec04b99164171e8d2b204ddc5d453d1401bcdc1d8cee12e286c3a0c234",
+      "actionLines": [
+        {
+          "line": 227,
+          "text": "start timer _traveltime_ "
+        },
+        {
+          "line": 228,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 229,
+          "text": "pick one of _letter1_ _letter2_ _letter3_ _letter4_ "
+        },
+        {
+          "line": 230,
+          "text": "pc at _inn_ set _S.00_ saying 1013 "
+        },
+        {
+          "line": 234,
+          "text": "when _S.02_ and _S.03_ and not _traveltime_ and not _S.04_ "
+        },
+        {
+          "line": 235,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 236,
+          "text": "end quest "
+        },
+        {
+          "line": 239,
+          "text": "when _S.02_ and _S.04_"
+        },
+        {
+          "line": 240,
+          "text": "say 1022"
+        },
+        {
+          "line": 241,
+          "text": "end quest"
+        },
+        {
+          "line": 245,
+          "text": "toting _letter6_ and _qgiver_ clicked "
+        },
+        {
+          "line": 246,
+          "text": "toting _letter4a_ and _qgiver_ clicked "
+        },
+        {
+          "line": 247,
+          "text": "toting _letter3a_ and _qgiver_ clicked "
+        },
+        {
+          "line": 248,
+          "text": "toting _letter5_ and _qgiver_ clicked "
+        },
+        {
+          "line": 251,
+          "text": "dropped _falseletter3_ at _inn_ saying 1015 "
+        },
+        {
+          "line": 252,
+          "text": "dropped _falseletter1_ at _inn_ saying 1015 "
+        },
+        {
+          "line": 253,
+          "text": "dropped _falseletter4_ at _inn_ saying 1015 "
+        },
+        {
+          "line": 254,
+          "text": "dropped _falseletter2_ at _inn_ saying 1015 "
+        },
+        {
+          "line": 255,
+          "text": "    clear _S.15_"
+        },
+        {
+          "line": 258,
+          "text": "clicked item _treasure_ "
+        },
+        {
+          "line": 259,
+          "text": "pick one of _S.11_ _S.12_ _S.13_ _S.14_ "
+        },
+        {
+          "line": 262,
+          "text": "end quest "
+        },
+        {
+          "line": 265,
+          "text": "injured _spellsword_ "
+        },
+        {
+          "line": 266,
+          "text": "injured _knight_ "
+        },
+        {
+          "line": 267,
+          "text": "injured _monk_ "
+        },
+        {
+          "line": 268,
+          "text": "injured _ranger_ "
+        },
+        {
+          "line": 269,
+          "text": "say 1014 "
+        },
+        {
+          "line": 272,
+          "text": "place item _letter3a_ at _inn_ "
+        },
+        {
+          "line": 273,
+          "text": "get item _falseletter1_ "
+        },
+        {
+          "line": 276,
+          "text": "place item _letter4a_ at _inn_ "
+        },
+        {
+          "line": 277,
+          "text": "get item _falseletter2_ "
+        },
+        {
+          "line": 280,
+          "text": "place item _letter5_ at _inn_ "
+        },
+        {
+          "line": 281,
+          "text": "get item _falseletter3_ "
+        },
+        {
+          "line": 284,
+          "text": "place item _letter6_ at _inn_ "
+        },
+        {
+          "line": 285,
+          "text": "get item _falseletter4_ "
+        },
+        {
+          "line": 288,
+          "text": "create foe _knight_ every 1 minutes 1 times with 100% success "
+        },
+        {
+          "line": 291,
+          "text": "create foe _monk_ every 1 minutes 1 times with 100% success "
+        },
+        {
+          "line": 294,
+          "text": "create foe _spellsword_ every 1 minutes 1 times with 100% success "
+        },
+        {
+          "line": 297,
+          "text": "create foe _ranger_ every 1 minutes 1 times with 100% success "
+        },
+        {
+          "line": 301,
+          "text": "clicked item _falseletter4_ "
+        },
+        {
+          "line": 302,
+          "text": "clicked item _falseletter1_ "
+        },
+        {
+          "line": 303,
+          "text": "clicked item _falseletter2_ "
+        },
+        {
+          "line": 304,
+          "text": "clicked item _falseletter3_ "
+        },
+        {
+          "line": 305,
+          "text": "clear _S.03_"
+        },
+        {
+          "line": 308,
+          "text": "clicked npc _qgiver_"
+        },
+        {
+          "line": 311,
+          "text": "when _qgclicked_ and not _S.02_"
+        },
+        {
+          "line": 312,
+          "text": "say 1003"
+        },
+        {
+          "line": 313,
+          "text": "clear _clearclick_ _qgclicked_"
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "commoners",
+      "availability": "ordinary",
+      "name": "A0C00Y06",
+      "sourceFile": "A0C00Y06.txt",
+      "catalogGroup": "Commoners",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 161,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "35914c7b3c5f57b465a6bc13b48e602d90d167e038b9dab8501a09bf03f8d95f",
+      "actionLines": [
+        {
+          "line": 106,
+          "text": "dialog link for location _hidingplace_ "
+        },
+        {
+          "line": 107,
+          "text": "start timer _escapetime_ "
+        },
+        {
+          "line": 108,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 109,
+          "text": "place npc _traitor_ at _meetingplace_ "
+        },
+        {
+          "line": 112,
+          "text": "end quest "
+        },
+        {
+          "line": 116,
+          "text": "clicked npc _traitor_ say 1012 "
+        },
+        {
+          "line": 117,
+          "text": "start timer _shortdelay_ "
+        },
+        {
+          "line": 118,
+          "text": "hide npc _traitor_ "
+        },
+        {
+          "line": 119,
+          "text": "place foe _mtraitor_ at _meetingplace_ "
+        },
+        {
+          "line": 122,
+          "text": "killed 1 _mtraitor_ "
+        },
+        {
+          "line": 123,
+          "text": "end quest "
+        },
+        {
+          "line": 127,
+          "text": "pc at _hidingplace_ set _revenge_ "
+        },
+        {
+          "line": 128,
+          "text": "when not _traitordead_ and _shortdelay_ "
+        },
+        {
+          "line": 129,
+          "text": "reveal _dungeon_ "
+        },
+        {
+          "line": 130,
+          "text": "log 1011 step 1 "
+        },
+        {
+          "line": 131,
+          "text": "place foe _mtraitor_ at _hidingplace_ "
+        },
+        {
+          "line": 132,
+          "text": "teleport pc to _dungeon_ "
+        },
+        {
+          "line": 135,
+          "text": "injured _mtraitor_ "
+        },
+        {
+          "line": 139,
+          "text": "when _revenge_ and _hittraitor_ and _teleportpc_ "
+        },
+        {
+          "line": 140,
+          "text": "say 1014 "
+        },
+        {
+          "line": 144,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 147,
+          "text": "when _clickqgiver_ and _teleportpc_ "
+        },
+        {
+          "line": 148,
+          "text": "add dialog for location _hidingplace_ "
+        },
+        {
+          "line": 149,
+          "text": "say 1013 "
+        },
+        {
+          "line": 152,
+          "text": "when _clickqgiver_ and not _teleportpc_ "
+        },
+        {
+          "line": 153,
+          "text": "clear _clickqgiver_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "commoners",
+      "availability": "ordinary",
+      "name": "A0C00Y07",
+      "sourceFile": "A0C00Y07.txt",
+      "catalogGroup": "Commoners",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 162,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "46b7d84c7732ac971b8c7cce45fd4e4db1651ce2eb012db12104551df012a561",
+      "actionLines": [
+        {
+          "line": 122,
+          "text": "start timer _oneday_ "
+        },
+        {
+          "line": 123,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 124,
+          "text": "pc at _house_ set _S.01_ "
+        },
+        {
+          "line": 125,
+          "text": "create npc at _house_ "
+        },
+        {
+          "line": 128,
+          "text": "end quest "
+        },
+        {
+          "line": 132,
+          "text": "clicked npc _qgiver_"
+        },
+        {
+          "line": 135,
+          "text": "say 1012"
+        },
+        {
+          "line": 136,
+          "text": "start task _pickspawn_"
+        },
+        {
+          "line": 140,
+          "text": "pick one of _S.04_ _S.05_ _S.06_ _S.07_ "
+        },
+        {
+          "line": 144,
+          "text": "killed 6 _bats_ "
+        },
+        {
+          "line": 145,
+          "text": "killed 3 _spiders_ "
+        },
+        {
+          "line": 146,
+          "text": "killed 7 _rats_ "
+        },
+        {
+          "line": 147,
+          "text": "killed 3 _scorpions_"
+        },
+        {
+          "line": 148,
+          "text": "say 1011"
+        },
+        {
+          "line": 152,
+          "text": "when _S.01_ and _S.04_ and not _S.03_"
+        },
+        {
+          "line": 153,
+          "text": "create foe _bats_ every 2 minutes indefinitely with 100% success "
+        },
+        {
+          "line": 157,
+          "text": "when _S.01_ and _S.05_ and not _S.03_"
+        },
+        {
+          "line": 158,
+          "text": "create foe _rats_ every 2 minutes indefinitely with 100% success "
+        },
+        {
+          "line": 162,
+          "text": "when _S.01_ and _S.06_ and not _S.03_"
+        },
+        {
+          "line": 163,
+          "text": "create foe _scorpions_ every 3 minutes indefinitely with 100% success "
+        },
+        {
+          "line": 167,
+          "text": "when _S.01_ and _S.07_ and not _S.03_"
+        },
+        {
+          "line": 168,
+          "text": "create foe _spiders_ every 3 minutes indefinitely with 100% success "
+        },
+        {
+          "line": 171,
+          "text": "when not _S.03_ and _questdone_ "
+        },
+        {
+          "line": 172,
+          "text": "clear _questdone_ _clearclick_ "
+        },
+        {
+          "line": 176,
+          "text": "when _questdone_ and _S.03_"
+        },
+        {
+          "line": 177,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 178,
+          "text": "end quest"
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "commoners",
+      "availability": "ordinary",
+      "name": "A0C00Y08",
+      "sourceFile": "A0C00Y08.txt",
+      "catalogGroup": "Commoners",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 163,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "9198d7d2ae7e19f9afaeb09878bc49b41a186a98de09a7a7d79061d82ce659f2",
+      "actionLines": [
+        {
+          "line": 145,
+          "text": "start timer _S.00_ "
+        },
+        {
+          "line": 146,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 147,
+          "text": "pc at _place_ set _S.11_ "
+        },
+        {
+          "line": 148,
+          "text": "place npc _darkb_ at _place_ "
+        },
+        {
+          "line": 151,
+          "text": "end quest "
+        },
+        {
+          "line": 154,
+          "text": "restrain foe _archer_ "
+        },
+        {
+          "line": 155,
+          "text": "place foe _archer_ at _place_ "
+        },
+        {
+          "line": 158,
+          "text": "restrain foe _bard_ "
+        },
+        {
+          "line": 159,
+          "text": "place foe _bard_ at _place_ "
+        },
+        {
+          "line": 162,
+          "text": "restrain foe _rogue_ "
+        },
+        {
+          "line": 163,
+          "text": "place foe _rogue_ at _place_ "
+        },
+        {
+          "line": 166,
+          "text": "restrain foe _spellsword_ "
+        },
+        {
+          "line": 167,
+          "text": "place foe _spellsword_ at _place_ "
+        },
+        {
+          "line": 171,
+          "text": "injured _rogue_ saying 1023 "
+        },
+        {
+          "line": 172,
+          "text": "injured _archer_ saying 1021 "
+        },
+        {
+          "line": 173,
+          "text": "injured _bard_ saying 1022 "
+        },
+        {
+          "line": 174,
+          "text": "injured _spellsword_ saying 1024 "
+        },
+        {
+          "line": 177,
+          "text": "killed 1 _archer_ "
+        },
+        {
+          "line": 178,
+          "text": "killed 1 _bard_ "
+        },
+        {
+          "line": 179,
+          "text": "killed 1 _rogue_ "
+        },
+        {
+          "line": 180,
+          "text": "killed 1 _spellsword_ "
+        },
+        {
+          "line": 181,
+          "text": "change repute with _darkb_ by -20 "
+        },
+        {
+          "line": 182,
+          "text": "legal repute -20"
+        },
+        {
+          "line": 186,
+          "text": "clicked npc _questgiver_ "
+        },
+        {
+          "line": 189,
+          "text": "when _S.08_ and not _S.07_ "
+        },
+        {
+          "line": 190,
+          "text": "say 1015 "
+        },
+        {
+          "line": 191,
+          "text": "clear _S.08_ _clearclick_"
+        },
+        {
+          "line": 195,
+          "text": "when _S.08_ and _S.07_ "
+        },
+        {
+          "line": 196,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 197,
+          "text": "end quest "
+        },
+        {
+          "line": 200,
+          "text": "pick one of _S.01_ _S.02_ _S.03_ _S.04_ "
+        },
+        {
+          "line": 201,
+          "text": "hide npc _darkb_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "commoners",
+      "availability": "ordinary",
+      "name": "A0C00Y10",
+      "sourceFile": "A0C00Y10.txt",
+      "catalogGroup": "Commoners",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 164,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "5606a7c96bbdaa7c955e221bd2c366f2dc5189d76897f275fd639f2ecabc5ea4",
+      "actionLines": [
+        {
+          "line": 192,
+          "text": "start timer _S.01_ "
+        },
+        {
+          "line": 193,
+          "text": "start timer _S.02_ "
+        },
+        {
+          "line": 194,
+          "text": "start timer _S.00_ "
+        },
+        {
+          "line": 195,
+          "text": "prompt 1025 yes _S.03_ no _S.05_ "
+        },
+        {
+          "line": 196,
+          "text": "pc at _inn_ set _S.08_ "
+        },
+        {
+          "line": 199,
+          "text": "place foe _F.00_ at _inn_ "
+        },
+        {
+          "line": 202,
+          "text": "end quest "
+        },
+        {
+          "line": 205,
+          "text": "hide npc _giver_ "
+        },
+        {
+          "line": 208,
+          "text": "prompt 1016 yes _S.04_ no _S.05_ "
+        },
+        {
+          "line": 211,
+          "text": "log 1003 step 0 "
+        },
+        {
+          "line": 212,
+          "text": "say 1018 "
+        },
+        {
+          "line": 216,
+          "text": "    say 1027"
+        },
+        {
+          "line": 217,
+          "text": "end quest "
+        },
+        {
+          "line": 220,
+          "text": "injured _F.00_ saying 1019 "
+        },
+        {
+          "line": 223,
+          "text": "killed 1 _F.00_ "
+        },
+        {
+          "line": 224,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 228,
+          "text": "when not _S.08_ and _S.07_ "
+        },
+        {
+          "line": 229,
+          "text": "end quest "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "commoners",
+      "availability": "ordinary",
+      "name": "A0C00Y11",
+      "sourceFile": "A0C00Y11.txt",
+      "catalogGroup": "Commoners",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 165,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "dfdf37c29a5b2f6c58d829095e4f1d437e8faf932790e2ac02149f4f0006a522",
+      "actionLines": [
+        {
+          "line": 199,
+          "text": "dialog link for person _healer_ item talisman "
+        },
+        {
+          "line": 200,
+          "text": "start timer _questtime_ "
+        },
+        {
+          "line": 201,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 202,
+          "text": "get item _gold1_ "
+        },
+        {
+          "line": 203,
+          "text": "pick one of _S.04_ _S.05_ "
+        },
+        {
+          "line": 204,
+          "text": "make _gold1_ permanent "
+        },
+        {
+          "line": 205,
+          "text": "talisman used do _S.06_ "
+        },
+        {
+          "line": 206,
+          "text": "create npc _healer_ "
+        },
+        {
+          "line": 207,
+          "text": "create npc _cousin_ "
+        },
+        {
+          "line": 210,
+          "text": "end quest "
+        },
+        {
+          "line": 213,
+          "text": "clicked npc _cousin_ say 1030 "
+        },
+        {
+          "line": 214,
+          "text": "log 1011 step 1 "
+        },
+        {
+          "line": 217,
+          "text": "when _S.01_ and _S.04_ "
+        },
+        {
+          "line": 218,
+          "text": "make pc ill with Wizard_Fever "
+        },
+        {
+          "line": 224,
+          "text": "take talisman from pc saying 1019 "
+        },
+        {
+          "line": 225,
+          "text": "cure Wizard_Fever "
+        },
+        {
+          "line": 228,
+          "text": "toting talisman and _cousin_ clicked "
+        },
+        {
+          "line": 229,
+          "text": "give pc _gold2_"
+        },
+        {
+          "line": 230,
+          "text": "end quest "
+        },
+        {
+          "line": 234,
+          "text": "clicked npc _healer_ "
+        },
+        {
+          "line": 237,
+          "text": "clicked _healer_ and at least 20 gold otherwise do _S.10_ "
+        },
+        {
+          "line": 238,
+          "text": "log 1017 step 2 "
+        },
+        {
+          "line": 239,
+          "text": "get item talisman "
+        },
+        {
+          "line": 240,
+          "text": "say 1013 "
+        },
+        {
+          "line": 243,
+          "text": "say 1015 "
+        },
+        {
+          "line": 244,
+          "text": "clear _S.08_ _S.09_ _S.10_"
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "commoners",
+      "availability": "ordinary",
+      "name": "A0C00Y12",
+      "sourceFile": "A0C00Y12.txt",
+      "catalogGroup": "Commoners",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 166,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "cdcddf1eab0145ed2b001e7be3885b8ff36a5d9e8947446a45ee0a08a75fff41",
+      "actionLines": [
+        {
+          "line": 180,
+          "text": "dialog link for location _house_ person _informant_ "
+        },
+        {
+          "line": 181,
+          "text": "dialog link for location _inn_ "
+        },
+        {
+          "line": 182,
+          "text": "dialog link for location _store_ person _thief_ "
+        },
+        {
+          "line": 183,
+          "text": "start timer _S.01_ "
+        },
+        {
+          "line": 184,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 185,
+          "text": "place npc _informant_ at _informant1_ "
+        },
+        {
+          "line": 189,
+          "text": "end quest "
+        },
+        {
+          "line": 192,
+          "text": "daily from 00:00 to 08:00 "
+        },
+        {
+          "line": 193,
+          "text": "pc at _house_ set _S.09_ "
+        },
+        {
+          "line": 196,
+          "text": "daily from 16:02 to 23:59 "
+        },
+        {
+          "line": 197,
+          "text": "pc at _inn_ set _S.10_ "
+        },
+        {
+          "line": 200,
+          "text": "daily from 08:01 to 16:01 "
+        },
+        {
+          "line": 201,
+          "text": "pc at _store_ set _S.11_"
+        },
+        {
+          "line": 205,
+          "text": "clicked npc _informant_ say 1025 "
+        },
+        {
+          "line": 206,
+          "text": "add dialog for person _thief_ "
+        },
+        {
+          "line": 207,
+          "text": "log 1035 step 1 "
+        },
+        {
+          "line": 210,
+          "text": "toting _book_ and _giver_ clicked "
+        },
+        {
+          "line": 211,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 212,
+          "text": "end quest "
+        },
+        {
+          "line": 216,
+          "text": "injured _thiefFoe_ "
+        },
+        {
+          "line": 217,
+          "text": "give item _book_ to _thiefFoe_ "
+        },
+        {
+          "line": 218,
+          "text": "say 1030 "
+        },
+        {
+          "line": 221,
+          "text": "place foe _thiefFoe_ at _house_"
+        },
+        {
+          "line": 224,
+          "text": "place foe _thiefFoe_ at _inn_ "
+        },
+        {
+          "line": 227,
+          "text": "place foe _thiefFoe_ at _store_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "commoners",
+      "availability": "ordinary",
+      "name": "A0C00Y14",
+      "sourceFile": "A0C00Y14.txt",
+      "catalogGroup": "Commoners",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 167,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "f26f61323392aa3d98c0ba6c10a7c7bf45aafa92aa8ad9cbaa49b9b69f8b378e",
+      "actionLines": [
+        {
+          "line": 184,
+          "text": "start timer _oneday_ "
+        },
+        {
+          "line": 185,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 186,
+          "text": "pick one of _S.01_ _S.10_ "
+        },
+        {
+          "line": 187,
+          "text": "pick one of _S.14_ _S.15_ _S.15_ _S.15_ "
+        },
+        {
+          "line": 188,
+          "text": "create npc _pickuplocal_ "
+        },
+        {
+          "line": 191,
+          "text": "end quest "
+        },
+        {
+          "line": 194,
+          "text": "pick one of _S.02_ _snitch0_ _S.04_ _S.05_ "
+        },
+        {
+          "line": 198,
+          "text": "get item _book_ saying 1011 "
+        },
+        {
+          "line": 201,
+          "text": "get item _ingredient_ saying 1012 "
+        },
+        {
+          "line": 204,
+          "text": "get item _jewelry_ saying 1013 "
+        },
+        {
+          "line": 207,
+          "text": "get item _mensclothing_ saying 1014 "
+        },
+        {
+          "line": 210,
+          "text": "get item _painting_ saying 1015 "
+        },
+        {
+          "line": 213,
+          "text": "get item _potion_ saying 1016 "
+        },
+        {
+          "line": 216,
+          "text": "get item _weapon_ saying 1017 "
+        },
+        {
+          "line": 219,
+          "text": "get item _womensclothing_ saying 1018 "
+        },
+        {
+          "line": 222,
+          "text": "pick one of _S.06_ _S.07_ _S.08_ _S.09_ "
+        },
+        {
+          "line": 225,
+          "text": "toting _jewelry_ and _pickuplocal_ clicked "
+        },
+        {
+          "line": 226,
+          "text": "toting _mensclothing_ and _pickuplocal_ clicked "
+        },
+        {
+          "line": 227,
+          "text": "toting _painting_ and _pickuplocal_ clicked "
+        },
+        {
+          "line": 228,
+          "text": "toting _potion_ and _pickuplocal_ clicked "
+        },
+        {
+          "line": 229,
+          "text": "toting _weapon_ and _pickuplocal_ clicked "
+        },
+        {
+          "line": 230,
+          "text": "toting _book_ and _pickuplocal_ clicked "
+        },
+        {
+          "line": 231,
+          "text": "toting _ingredient_ and _pickuplocal_ clicked "
+        },
+        {
+          "line": 232,
+          "text": "toting _womensclothing_ and _pickuplocal_ clicked "
+        },
+        {
+          "line": 233,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 234,
+          "text": "end quest "
+        },
+        {
+          "line": 238,
+          "text": "clicked npc _pickuplocal_ "
+        },
+        {
+          "line": 241,
+          "text": "when _S.12_ and not _S.11_ "
+        },
+        {
+          "line": 242,
+          "text": "say 1019 "
+        },
+        {
+          "line": 243,
+          "text": "clear _S.12_ _S.13_ "
+        },
+        {
+          "line": 246,
+          "text": "create foe _thief_ every 20 minutes 3 times with 25% success "
+        },
+        {
+          "line": 250,
+          "text": "injured _thief_ "
+        },
+        {
+          "line": 251,
+          "text": "prompt 1020 yes _yes_ no _no_ "
+        },
+        {
+          "line": 254,
+          "text": "restrain foe _thief_ "
+        },
+        {
+          "line": 258,
+          "text": "when _yes_ and _S.02_ "
+        },
+        {
+          "line": 259,
+          "text": "take _book_ from pc"
+        },
+        {
+          "line": 260,
+          "text": "give item _book_ to _thief_ "
+        },
+        {
+          "line": 264,
+          "text": "when _yes_ and _snitch0_ "
+        },
+        {
+          "line": 265,
+          "text": "take _ingredient_ from pc"
+        },
+        {
+          "line": 266,
+          "text": "give item _ingredient_ to _thief_ "
+        },
+        {
+          "line": 269,
+          "text": "when _yes_ and _S.04_ "
+        },
+        {
+          "line": 270,
+          "text": "take _jewelry_ from pc"
+        },
+        {
+          "line": 271,
+          "text": "give item _jewelry_ to _thief_ "
+        },
+        {
+          "line": 274,
+          "text": "when _yes_ and _S.05_ "
+        },
+        {
+          "line": 275,
+          "text": "take _mensclothing_ from pc"
+        },
+        {
+          "line": 276,
+          "text": "give item _mensclothing_ to _thief_ "
+        },
+        {
+          "line": 279,
+          "text": "when _yes_ and _S.06_ "
+        },
+        {
+          "line": 280,
+          "text": "take _painting_ from pc"
+        },
+        {
+          "line": 281,
+          "text": "give item _painting_ to _thief_ "
+        },
+        {
+          "line": 284,
+          "text": "when _yes_ and _S.07_"
+        },
+        {
+          "line": 285,
+          "text": "take _potion_ from pc "
+        },
+        {
+          "line": 286,
+          "text": "give item _potion_ to _thief_ "
+        },
+        {
+          "line": 289,
+          "text": "when _yes_ and _S.08_ "
+        },
+        {
+          "line": 290,
+          "text": "take _weapon_ from pc"
+        },
+        {
+          "line": 291,
+          "text": "give item _weapon_ to _thief_ "
+        },
+        {
+          "line": 294,
+          "text": "when _yes_ and _S.09_ "
+        },
+        {
+          "line": 295,
+          "text": "take _womensclothing_ from pc"
+        },
+        {
+          "line": 296,
+          "text": "give item _womensclothing_ to _thief_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "commoners",
+      "availability": "ordinary",
+      "name": "A0C00Y15",
+      "sourceFile": "A0C00Y15.txt",
+      "catalogGroup": "Commoners",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 168,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "3964850450fa1b2bf51348c6f66df6d02bf00cc64197a77b9a609cfcbfb88d6c",
+      "actionLines": [
+        {
+          "line": 189,
+          "text": "start timer _traveltime_ "
+        },
+        {
+          "line": 190,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 191,
+          "text": "pick one of _S.01_ _S.10_ "
+        },
+        {
+          "line": 192,
+          "text": "pick one of _S.14_ _S.15_ _S.15_ _S.15_ "
+        },
+        {
+          "line": 193,
+          "text": "create npc _pickupregion_ "
+        },
+        {
+          "line": 196,
+          "text": "end quest "
+        },
+        {
+          "line": 199,
+          "text": "pick one of _S.02_ _snitch0_ _S.04_ _S.05_ "
+        },
+        {
+          "line": 203,
+          "text": "get item _book_ saying 1011 "
+        },
+        {
+          "line": 206,
+          "text": "get item _ingredient_ saying 1012 "
+        },
+        {
+          "line": 209,
+          "text": "get item _jewelry_ saying 1013 "
+        },
+        {
+          "line": 212,
+          "text": "get item _mensclothing_ saying 1014 "
+        },
+        {
+          "line": 215,
+          "text": "get item _painting_ saying 1015 "
+        },
+        {
+          "line": 218,
+          "text": "get item _potion_ saying 1016 "
+        },
+        {
+          "line": 221,
+          "text": "get item _weapon_ saying 1017 "
+        },
+        {
+          "line": 224,
+          "text": "get item _womensclothing_ saying 1018 "
+        },
+        {
+          "line": 227,
+          "text": "pick one of _S.06_ _S.07_ _S.08_ _S.09_ "
+        },
+        {
+          "line": 230,
+          "text": "toting _jewelry_ and _pickupregion_ clicked "
+        },
+        {
+          "line": 231,
+          "text": "toting _mensclothing_ and _pickupregion_ clicked "
+        },
+        {
+          "line": 232,
+          "text": "toting _painting_ and _pickupregion_ clicked "
+        },
+        {
+          "line": 233,
+          "text": "toting _potion_ and _pickupregion_ clicked "
+        },
+        {
+          "line": 234,
+          "text": "toting _weapon_ and _pickupregion_ clicked "
+        },
+        {
+          "line": 235,
+          "text": "toting _book_ and _pickupregion_ clicked "
+        },
+        {
+          "line": 236,
+          "text": "toting _ingredient_ and _pickupregion_ clicked "
+        },
+        {
+          "line": 237,
+          "text": "toting _womensclothing_ and _pickupregion_ clicked "
+        },
+        {
+          "line": 238,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 239,
+          "text": "end quest "
+        },
+        {
+          "line": 243,
+          "text": "clicked npc _pickupregion_ "
+        },
+        {
+          "line": 246,
+          "text": "when _S.12_ and not _S.11_ "
+        },
+        {
+          "line": 247,
+          "text": "say 1019 "
+        },
+        {
+          "line": 248,
+          "text": "clear _S.12_ _S.13_ "
+        },
+        {
+          "line": 251,
+          "text": "create foe _thief_ every 200 minutes 3 times with 10% success "
+        },
+        {
+          "line": 255,
+          "text": "injured _thief_ "
+        },
+        {
+          "line": 256,
+          "text": "prompt 1020 yes _yes_ no _no_ "
+        },
+        {
+          "line": 259,
+          "text": "restrain foe _thief_ "
+        },
+        {
+          "line": 263,
+          "text": "when _yes_ and _S.02_ "
+        },
+        {
+          "line": 264,
+          "text": "take _book_ from pc"
+        },
+        {
+          "line": 265,
+          "text": "give item _book_ to _thief_ "
+        },
+        {
+          "line": 269,
+          "text": "when _yes_ and _snitch0_ "
+        },
+        {
+          "line": 270,
+          "text": "take _ingredient_ from pc"
+        },
+        {
+          "line": 271,
+          "text": "give item _ingredient_ to _thief_ "
+        },
+        {
+          "line": 274,
+          "text": "when _yes_ and _S.04_ "
+        },
+        {
+          "line": 275,
+          "text": "take _jewelry_ from pc"
+        },
+        {
+          "line": 276,
+          "text": "give item _jewelry_ to _thief_ "
+        },
+        {
+          "line": 279,
+          "text": "when _yes_ and _S.05_ "
+        },
+        {
+          "line": 280,
+          "text": "take _mensclothing_ from pc"
+        },
+        {
+          "line": 281,
+          "text": "give item _mensclothing_ to _thief_ "
+        },
+        {
+          "line": 284,
+          "text": "when _yes_ and _S.06_ "
+        },
+        {
+          "line": 285,
+          "text": "take _painting_ from pc"
+        },
+        {
+          "line": 286,
+          "text": "give item _painting_ to _thief_ "
+        },
+        {
+          "line": 289,
+          "text": "when _yes_ and _S.07_"
+        },
+        {
+          "line": 290,
+          "text": "take _potion_ from pc "
+        },
+        {
+          "line": 291,
+          "text": "give item _potion_ to _thief_ "
+        },
+        {
+          "line": 294,
+          "text": "when _yes_ and _S.08_ "
+        },
+        {
+          "line": 295,
+          "text": "take _weapon_ from pc"
+        },
+        {
+          "line": 296,
+          "text": "give item _weapon_ to _thief_ "
+        },
+        {
+          "line": 299,
+          "text": "when _yes_ and _S.09_ "
+        },
+        {
+          "line": 300,
+          "text": "take _womensclothing_ from pc"
+        },
+        {
+          "line": 301,
+          "text": "give item _womensclothing_ to _thief_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "commoners",
+      "availability": "ordinary",
+      "name": "A0C00Y16",
+      "sourceFile": "A0C00Y16.txt",
+      "catalogGroup": "Commoners",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 169,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "d2b46de18302a51a4ea5043b1f0bab138ad4b8cfb2cf14f560eca73b5600b51a",
+      "actionLines": [
+        {
+          "line": 214,
+          "text": "dialog link for person _friend4_ "
+        },
+        {
+          "line": 215,
+          "text": "dialog link for person _missingperson_ "
+        },
+        {
+          "line": 216,
+          "text": "dialog link for location _hidingplace_ person _friend3_ "
+        },
+        {
+          "line": 217,
+          "text": "start timer _S.16_ "
+        },
+        {
+          "line": 218,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 219,
+          "text": "pick one of _S.00_ _S.02_ _S.03_ _S.01_ "
+        },
+        {
+          "line": 220,
+          "text": "create npc _friend4_ "
+        },
+        {
+          "line": 221,
+          "text": "create npc _friend2_ "
+        },
+        {
+          "line": 222,
+          "text": "create npc _friend3_ "
+        },
+        {
+          "line": 223,
+          "text": "create npc _friend1_ "
+        },
+        {
+          "line": 226,
+          "text": "place npc _missingperson_ at _hidingplace_ "
+        },
+        {
+          "line": 232,
+          "text": "clicked npc _friend1_ "
+        },
+        {
+          "line": 235,
+          "text": "clicked npc _friend2_ "
+        },
+        {
+          "line": 238,
+          "text": "clicked npc _friend3_ "
+        },
+        {
+          "line": 241,
+          "text": "clicked npc _friend4_ "
+        },
+        {
+          "line": 244,
+          "text": "when _S.00_ and _S.04_ "
+        },
+        {
+          "line": 245,
+          "text": "add dialog for location _hidingplace_"
+        },
+        {
+          "line": 246,
+          "text": "say 1021 "
+        },
+        {
+          "line": 249,
+          "text": "when _S.02_ and _S.05_ "
+        },
+        {
+          "line": 250,
+          "text": "say 1022 "
+        },
+        {
+          "line": 253,
+          "text": "when _S.03_ and _S.06_ "
+        },
+        {
+          "line": 254,
+          "text": "say 1023 "
+        },
+        {
+          "line": 257,
+          "text": "when _S.01_ and _S.07_ "
+        },
+        {
+          "line": 258,
+          "text": "create foe _F.00_ every 1 minutes 1 times with 100% success "
+        },
+        {
+          "line": 259,
+          "text": "say 1024 "
+        },
+        {
+          "line": 262,
+          "text": "when not _S.00_ and _S.04_ "
+        },
+        {
+          "line": 263,
+          "text": "add dialog for person _friend3_"
+        },
+        {
+          "line": 264,
+          "text": "say 1031 "
+        },
+        {
+          "line": 267,
+          "text": "when not _S.02_ and _S.05_ "
+        },
+        {
+          "line": 268,
+          "text": "add dialog for person _friend4_"
+        },
+        {
+          "line": 269,
+          "text": "say 1032 "
+        },
+        {
+          "line": 272,
+          "text": "when not _S.03_ and _S.06_ "
+        },
+        {
+          "line": 273,
+          "text": "say 1033 "
+        },
+        {
+          "line": 276,
+          "text": "when not _S.01_ and _S.07_ "
+        },
+        {
+          "line": 277,
+          "text": "say 1034 "
+        },
+        {
+          "line": 280,
+          "text": "end quest "
+        },
+        {
+          "line": 283,
+          "text": "killed 1 _F.00_ "
+        },
+        {
+          "line": 284,
+          "text": "hide npc _friend4_ "
+        },
+        {
+          "line": 287,
+          "text": "clicked npc _questgiver_ "
+        },
+        {
+          "line": 290,
+          "text": "when not _yes_ and _S.18_ "
+        },
+        {
+          "line": 291,
+          "text": "clear _S.18_ _clearclick_"
+        },
+        {
+          "line": 294,
+          "text": "when _S.08_ or _S.09_ or _S.10_ or _S.11_ or _S.22_"
+        },
+        {
+          "line": 297,
+          "text": "when _yes_ and _S.18_ "
+        },
+        {
+          "line": 298,
+          "text": "start timer _delay_"
+        },
+        {
+          "line": 301,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 302,
+          "text": "end quest "
+        },
+        {
+          "line": 305,
+          "text": "clicked npc _missingperson_ "
+        },
+        {
+          "line": 306,
+          "text": "add _missingperson_ face saying 1040 "
+        },
+        {
+          "line": 307,
+          "text": "hide npc _missingperson_ "
+        },
+        {
+          "line": 310,
+          "text": "when _S.22_ and _S.18_ "
+        },
+        {
+          "line": 311,
+          "text": "drop _missingperson_ face "
+        },
+        {
+          "line": 314,
+          "text": "when _S.18_ and _S.08_ and not _S.22_ "
+        },
+        {
+          "line": 315,
+          "text": "say 1051 "
+        },
+        {
+          "line": 318,
+          "text": "when _S.18_ and _S.09_ "
+        },
+        {
+          "line": 319,
+          "text": "say 1052 "
+        },
+        {
+          "line": 322,
+          "text": "when _S.18_ and _S.10_ "
+        },
+        {
+          "line": 323,
+          "text": "say 1053 "
+        },
+        {
+          "line": 326,
+          "text": "when _S.18_ and _S.11_ "
+        },
+        {
+          "line": 327,
+          "text": "say 1054 "
+        },
+        {
+          "line": 330,
+          "text": "when _S.18_ and _S.22_ "
+        },
+        {
+          "line": 331,
+          "text": "say 1050 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "commoners",
+      "availability": "ordinary",
+      "name": "A0C00Y17",
+      "sourceFile": "A0C00Y17.txt",
+      "catalogGroup": "Commoners",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 170,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "ae0ac74eeca2bc4966ab1a27c27a71859cadd4fbe3d56f8eec1fc83a3333ef95",
+      "actionLines": [
+        {
+          "line": 175,
+          "text": "start timer _traveltime_ "
+        },
+        {
+          "line": 176,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 177,
+          "text": "pick one of _S.01_ _S.02_ _S.14_ _S.03_ "
+        },
+        {
+          "line": 178,
+          "text": "hide npc _questgiver_ "
+        },
+        {
+          "line": 179,
+          "text": "add _questgiver_ face "
+        },
+        {
+          "line": 180,
+          "text": "create npc at _destination_ "
+        },
+        {
+          "line": 184,
+          "text": "create foe _guards_ every 5 minutes 5 times with 20% success "
+        },
+        {
+          "line": 187,
+          "text": "create foe _mages_ every 5 minutes 3 times with 25% success "
+        },
+        {
+          "line": 190,
+          "text": "create foe _F.01_ every 5 minutes 3 times with 25% success "
+        },
+        {
+          "line": 194,
+          "text": "injured _mages_ saying 1021 "
+        },
+        {
+          "line": 195,
+          "text": "injured _guards_ saying 1020 "
+        },
+        {
+          "line": 196,
+          "text": "injured _F.03_ saying 1023 "
+        },
+        {
+          "line": 197,
+          "text": "injured _F.01_ saying 1022 "
+        },
+        {
+          "line": 198,
+          "text": "prompt 1019 yes _yes_ no _no_ "
+        },
+        {
+          "line": 202,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 203,
+          "text": "drop _questgiver_ face "
+        },
+        {
+          "line": 204,
+          "text": "place npc _questgiver_ at _destination_ "
+        },
+        {
+          "line": 205,
+          "text": "end quest "
+        },
+        {
+          "line": 208,
+          "text": "end quest "
+        },
+        {
+          "line": 211,
+          "text": "start timer _extratime_ "
+        },
+        {
+          "line": 212,
+          "text": "say 1030 "
+        },
+        {
+          "line": 213,
+          "text": "drop _questgiver_ face "
+        },
+        {
+          "line": 216,
+          "text": "pc at _destination_ set _S.06_ "
+        },
+        {
+          "line": 219,
+          "text": "say 1040 "
+        },
+        {
+          "line": 223,
+          "text": "when _yes_ and _S.01_ "
+        },
+        {
+          "line": 224,
+          "text": "legal repute \u002B10 "
+        },
+        {
+          "line": 225,
+          "text": "restrain foe _guards_ "
+        },
+        {
+          "line": 228,
+          "text": "when _yes_ and _S.02_ "
+        },
+        {
+          "line": 229,
+          "text": "change repute with _mage_ by \u002B10 "
+        },
+        {
+          "line": 230,
+          "text": "restrain foe _mages_ "
+        },
+        {
+          "line": 233,
+          "text": "when _yes_ and _S.03_ "
+        },
+        {
+          "line": 234,
+          "text": "change repute with _thief_ by \u002B10 "
+        },
+        {
+          "line": 235,
+          "text": "restrain foe _F.01_ "
+        },
+        {
+          "line": 238,
+          "text": "create foe _F.03_ every 5 minutes 3 times with 25% success "
+        },
+        {
+          "line": 241,
+          "text": "when _yes_ and _S.14_ "
+        },
+        {
+          "line": 242,
+          "text": "change repute with _darkb_ by \u002B10 "
+        },
+        {
+          "line": 243,
+          "text": "restrain foe _F.03_ "
+        },
+        {
+          "line": 246,
+          "text": "when _no_ and _S.03_ "
+        },
+        {
+          "line": 247,
+          "text": "change repute with _thief_ by -20 "
+        },
+        {
+          "line": 250,
+          "text": "when _no_ and _S.01_ "
+        },
+        {
+          "line": 251,
+          "text": "legal repute -20 "
+        },
+        {
+          "line": 254,
+          "text": "when _no_ and _S.02_ "
+        },
+        {
+          "line": 255,
+          "text": "change repute with _mage_ by -20 "
+        },
+        {
+          "line": 258,
+          "text": "when _no_ and _S.14_ "
+        },
+        {
+          "line": 259,
+          "text": "change repute with _darkb_ by -20 "
+        },
+        {
+          "line": 262,
+          "text": "when _traveltime_ and not _S.06_ "
+        },
+        {
+          "line": 263,
+          "text": "say 1050 "
+        },
+        {
+          "line": 264,
+          "text": "drop _questgiver_ face "
+        },
+        {
+          "line": 265,
+          "text": "end quest "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "commoners",
+      "availability": "ordinary",
+      "name": "A0C01Y01",
+      "sourceFile": "A0C01Y01.txt",
+      "catalogGroup": "Commoners",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": true,
+      "active": true,
+      "catalogSourceLine": 171,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "dde93cdad394987b5b08a87082351008df5bd8513fc6717f2ce6afec207dd752",
+      "actionLines": [
+        {
+          "line": 88,
+          "text": "start timer _timer_ "
+        },
+        {
+          "line": 89,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 90,
+          "text": "pc at _qgiverhome_ set _inside_"
+        },
+        {
+          "line": 94,
+          "text": "end quest "
+        },
+        {
+          "line": 97,
+          "text": "daily from 21:00 to 23:59"
+        },
+        {
+          "line": 98,
+          "text": "place npc _qgiver_ at _qgiverhome_ "
+        },
+        {
+          "line": 102,
+          "text": "killed 2 _villains_ "
+        },
+        {
+          "line": 105,
+          "text": "when _clickqgiver_ and _slain_ "
+        },
+        {
+          "line": 106,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 109,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 112,
+          "text": "say 1013"
+        },
+        {
+          "line": 115,
+          "text": "injured _villains_ saying 1011 "
+        },
+        {
+          "line": 118,
+          "text": "when not _slain_ and _clickqgiver_ "
+        },
+        {
+          "line": 119,
+          "text": "clear _clickqgiver_ _clearclick_ "
+        },
+        {
+          "line": 122,
+          "text": "when _inside_ and _nighttime_"
+        },
+        {
+          "line": 123,
+          "text": "create foe _villains_ every 10 minutes 1 times with 100% success "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "commoners",
+      "availability": "ordinary",
+      "name": "A0C01Y03",
+      "sourceFile": "A0C01Y03.txt",
+      "catalogGroup": "Commoners",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": true,
+      "active": true,
+      "catalogSourceLine": 172,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "c0c49ed4319b63fcfb0a5cf74617fd84193bf471add11b6e7e3132fee89e108b",
+      "actionLines": [
+        {
+          "line": 180,
+          "text": "dialog link for location _school_ person _teacher_ "
+        },
+        {
+          "line": 181,
+          "text": "dialog link for location _dungeon_ person _hermit_ "
+        },
+        {
+          "line": 182,
+          "text": "start timer _S.01_ "
+        },
+        {
+          "line": 183,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 184,
+          "text": "get item _flowers_ "
+        },
+        {
+          "line": 185,
+          "text": "get item _letter_ "
+        },
+        {
+          "line": 186,
+          "text": "create npc _spouse_ "
+        },
+        {
+          "line": 187,
+          "text": "place npc _hermit_ at _dungeon_ "
+        },
+        {
+          "line": 188,
+          "text": "place npc _teacher_ at _school_ "
+        },
+        {
+          "line": 192,
+          "text": "end quest "
+        },
+        {
+          "line": 195,
+          "text": "toting _flowers_ and _spouse_ clicked saying 1011 "
+        },
+        {
+          "line": 196,
+          "text": "add dialog for location _school_ person _teacher_ "
+        },
+        {
+          "line": 197,
+          "text": "log 1015 step 1 "
+        },
+        {
+          "line": 198,
+          "text": "get item _book_ "
+        },
+        {
+          "line": 201,
+          "text": "toting _book_ and _teacher_ clicked saying 1012 "
+        },
+        {
+          "line": 202,
+          "text": "add dialog for person _hermit_ "
+        },
+        {
+          "line": 203,
+          "text": "reveal _dungeon_ "
+        },
+        {
+          "line": 204,
+          "text": "log 1016 step 2 "
+        },
+        {
+          "line": 207,
+          "text": "toting _letter_ and _hermit_ clicked saying 1013 "
+        },
+        {
+          "line": 208,
+          "text": "get item _answer_ "
+        },
+        {
+          "line": 211,
+          "text": "toting _answer_ and _qgiver_ clicked "
+        },
+        {
+          "line": 212,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 213,
+          "text": "end quest "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "commoners",
+      "availability": "ordinary",
+      "name": "A0C01Y06",
+      "sourceFile": "A0C01Y06.txt",
+      "catalogGroup": "Commoners",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": true,
+      "active": true,
+      "catalogSourceLine": 173,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "12ae06ccc5408335eee8fc4f662373e8984ad3871d0d2bc1937a9757c806a0cc",
+      "actionLines": [
+        {
+          "line": 165,
+          "text": "dialog link for location _hidingplace_ "
+        },
+        {
+          "line": 166,
+          "text": "start timer _escapetime_ "
+        },
+        {
+          "line": 167,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 168,
+          "text": "place npc _master_ at _meetingplace_ "
+        },
+        {
+          "line": 171,
+          "text": "end quest "
+        },
+        {
+          "line": 175,
+          "text": "clicked npc _master_ say 1012 "
+        },
+        {
+          "line": 176,
+          "text": "start timer _shortdelay_ "
+        },
+        {
+          "line": 177,
+          "text": "hide npc _master_ "
+        },
+        {
+          "line": 178,
+          "text": "cast Shield spell on _mmaster_ "
+        },
+        {
+          "line": 179,
+          "text": "cast Spell_Reflection spell on _mmaster_ "
+        },
+        {
+          "line": 180,
+          "text": "cast Free_Action spell on _mmaster_ "
+        },
+        {
+          "line": 181,
+          "text": "place foe _mmaster_ at _meetingplace_ "
+        },
+        {
+          "line": 184,
+          "text": "killed 1 _mmaster_ "
+        },
+        {
+          "line": 185,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 186,
+          "text": "start timer _S.13_ "
+        },
+        {
+          "line": 189,
+          "text": "pc at _hidingplace_ set _S.12_ "
+        },
+        {
+          "line": 190,
+          "text": "when not _traitordead_ and _shortdelay_ "
+        },
+        {
+          "line": 191,
+          "text": "reveal _dungeon_ "
+        },
+        {
+          "line": 192,
+          "text": "log 1011 step 1 "
+        },
+        {
+          "line": 193,
+          "text": "say 1035 "
+        },
+        {
+          "line": 194,
+          "text": "place foe _mmaster_ at _hidingplace_ "
+        },
+        {
+          "line": 195,
+          "text": "place npc _master_ at _hidingplace_ "
+        },
+        {
+          "line": 196,
+          "text": "teleport pc to _dungeon_ "
+        },
+        {
+          "line": 199,
+          "text": "injured _mmaster_ "
+        },
+        {
+          "line": 203,
+          "text": "when _S.12_ and _hittraitor_ and _teleportpc_ "
+        },
+        {
+          "line": 204,
+          "text": "say 1014 "
+        },
+        {
+          "line": 208,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 211,
+          "text": "when _clickqgiver_ and _teleportpc_ "
+        },
+        {
+          "line": 212,
+          "text": "log 1030 step 2 "
+        },
+        {
+          "line": 213,
+          "text": "say 1013 "
+        },
+        {
+          "line": 216,
+          "text": "when _clickqgiver_ and not _teleportpc_ "
+        },
+        {
+          "line": 217,
+          "text": "clear _clickqgiver_ _clearclick_ "
+        },
+        {
+          "line": 218,
+          "text": "clear _clickqgiver_ "
+        },
+        {
+          "line": 221,
+          "text": "hide npc _master_ "
+        },
+        {
+          "line": 224,
+          "text": "end quest "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "commoners",
+      "availability": "ordinary",
+      "name": "A0C01Y09",
+      "sourceFile": "A0C01Y09.txt",
+      "catalogGroup": "Commoners",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": true,
+      "active": true,
+      "catalogSourceLine": 174,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "f28b1a057ef981bbbdee94d3a46834f135cfc961d5a71885f1a79edf2d4f237f",
+      "actionLines": [
+        {
+          "line": 164,
+          "text": "start timer _questtime_ "
+        },
+        {
+          "line": 165,
+          "text": "log 1025 step 0 "
+        },
+        {
+          "line": 166,
+          "text": "pick one of _S.01_ _S.02_ _S.01_ _S.02_ "
+        },
+        {
+          "line": 167,
+          "text": "create npc _sister_ "
+        },
+        {
+          "line": 168,
+          "text": "place npc _merchant_ at _store_ "
+        },
+        {
+          "line": 171,
+          "text": "end quest "
+        },
+        {
+          "line": 177,
+          "text": "clicked _merchant_ and at least 20 gold otherwise do _S.05_ "
+        },
+        {
+          "line": 178,
+          "text": "get item _item_ "
+        },
+        {
+          "line": 179,
+          "text": "say 1040 "
+        },
+        {
+          "line": 182,
+          "text": "say 1041 "
+        },
+        {
+          "line": 185,
+          "text": "toting _item_ and _questg_ clicked "
+        },
+        {
+          "line": 186,
+          "text": "prompt 1013 yes _S.13_ no _S.11_ "
+        },
+        {
+          "line": 189,
+          "text": "clicked npc _sister_ "
+        },
+        {
+          "line": 192,
+          "text": "when _S.07_ and _S.01_ "
+        },
+        {
+          "line": 193,
+          "text": "say 1050 "
+        },
+        {
+          "line": 196,
+          "text": "when _S.07_ and _S.02_ "
+        },
+        {
+          "line": 197,
+          "text": "say 1051 "
+        },
+        {
+          "line": 200,
+          "text": "toting _item_ and _sister_ clicked "
+        },
+        {
+          "line": 201,
+          "text": "prompt 1011 yes _S.12_ no _S.11_ "
+        },
+        {
+          "line": 204,
+          "text": "get item _item_ "
+        },
+        {
+          "line": 208,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 211,
+          "text": "when _S.01_ and _S.12_ "
+        },
+        {
+          "line": 212,
+          "text": "say 1060 "
+        },
+        {
+          "line": 215,
+          "text": "when _S.02_ and _S.12_ "
+        },
+        {
+          "line": 216,
+          "text": "say 1061 "
+        },
+        {
+          "line": 219,
+          "text": "end quest "
+        },
+        {
+          "line": 222,
+          "text": "when _S.06_ or _S.10_ "
+        },
+        {
+          "line": 223,
+          "text": "start timer _shortdelay_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "commoners",
+      "availability": "ordinary",
+      "name": "A0C01Y13",
+      "sourceFile": "A0C01Y13.txt",
+      "catalogGroup": "Commoners",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": true,
+      "active": true,
+      "catalogSourceLine": 175,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "2095ed7e70cfe0d76b156574e2749e767c23021e2dd6828eb84dbc41f7b384a2",
+      "actionLines": [
+        {
+          "line": 258,
+          "text": "dialog link for location _givershouse_ person _teller_ "
+        },
+        {
+          "line": 259,
+          "text": "dialog link for location _sistershouse_ person _lover_ item _letter_ "
+        },
+        {
+          "line": 260,
+          "text": "dialog link for location _dungeon_ person _sister_ item _gold_ "
+        },
+        {
+          "line": 261,
+          "text": "start timer _S.00_ "
+        },
+        {
+          "line": 262,
+          "text": "log 1003 step 0 "
+        },
+        {
+          "line": 263,
+          "text": "clicked npc _giver_ say 1020 "
+        },
+        {
+          "line": 264,
+          "text": "place npc _teller_ at _inn_ "
+        },
+        {
+          "line": 265,
+          "text": "place npc _lover_ at _dungeon_ "
+        },
+        {
+          "line": 268,
+          "text": "end quest "
+        },
+        {
+          "line": 271,
+          "text": "clicked npc _teller_ say 1017 "
+        },
+        {
+          "line": 272,
+          "text": "log 1010 step 1 "
+        },
+        {
+          "line": 277,
+          "text": "toting _letter_ and _giver_ clicked saying 1021 "
+        },
+        {
+          "line": 278,
+          "text": "reveal _dungeon_ "
+        },
+        {
+          "line": 279,
+          "text": "log 1018 step 2 "
+        },
+        {
+          "line": 282,
+          "text": "give pc _magicsword_ "
+        },
+        {
+          "line": 283,
+          "text": "drop _lover_ face "
+        },
+        {
+          "line": 284,
+          "text": "end quest "
+        },
+        {
+          "line": 287,
+          "text": "clicked npc _lover_ say 2000 "
+        },
+        {
+          "line": 288,
+          "text": "pc at _sistershouse_ set _S.05_ "
+        },
+        {
+          "line": 289,
+          "text": "log 2001 step 3 "
+        },
+        {
+          "line": 290,
+          "text": "hide npc _lover_ "
+        },
+        {
+          "line": 291,
+          "text": "add _lover_ face "
+        },
+        {
+          "line": 294,
+          "text": "when _S.00_ and _S.06_ and not _S.05_ "
+        },
+        {
+          "line": 295,
+          "text": "say 2005 "
+        },
+        {
+          "line": 296,
+          "text": "drop _lover_ face "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "commoners",
+      "availability": "ordinary",
+      "name": "A0C0XY04",
+      "sourceFile": "A0C0XY04.txt",
+      "catalogGroup": "Commoners",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": true,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 176,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "924bbcea1c5fac91e8edc1044bea406672e59db5025e62d05088c9f012886e4e",
+      "actionLines": [
+        {
+          "line": 194,
+          "text": "start timer _totaltime_ "
+        },
+        {
+          "line": 195,
+          "text": "reveal _dungeon_ "
+        },
+        {
+          "line": 196,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 197,
+          "text": "give item _ingredient_ to _guardian_ "
+        },
+        {
+          "line": 198,
+          "text": "place foe _guardian_ at _dungeon_ "
+        },
+        {
+          "line": 199,
+          "text": "place npc _qgiver_ at _meetingplace_ "
+        },
+        {
+          "line": 202,
+          "text": "toting _ingredient_ and _qgiver_ clicked saying 1013 "
+        },
+        {
+          "line": 203,
+          "text": "give item _ingredient_ to _monster_ "
+        },
+        {
+          "line": 204,
+          "text": "cast Shield spell on _monster_ "
+        },
+        {
+          "line": 205,
+          "text": "cast Spell_Reflection spell on _monster_ "
+        },
+        {
+          "line": 208,
+          "text": "injured _guardian_ "
+        },
+        {
+          "line": 209,
+          "text": "prompt 1012 yes _yes_ no _no_ "
+        },
+        {
+          "line": 213,
+          "text": "log 1011 step 1 "
+        },
+        {
+          "line": 214,
+          "text": "get item _token_ "
+        },
+        {
+          "line": 215,
+          "text": "say 1030 "
+        },
+        {
+          "line": 216,
+          "text": "restrain foe _guardian_ "
+        },
+        {
+          "line": 219,
+          "text": "say 1035 "
+        },
+        {
+          "line": 224,
+          "text": "toting _token_ and _qgiver_ clicked saying 1014 "
+        },
+        {
+          "line": 225,
+          "text": "cast Silence spell on _monster_ "
+        },
+        {
+          "line": 228,
+          "text": "killed 1 _monster_ "
+        },
+        {
+          "line": 229,
+          "text": "start timer _extratime_ "
+        },
+        {
+          "line": 232,
+          "text": "when _givetoken_ and _shamandead_ "
+        },
+        {
+          "line": 233,
+          "text": "change repute with _dummymage_ by \u002B25"
+        },
+        {
+          "line": 234,
+          "text": "change repute with _dummyorc_ by -10 "
+        },
+        {
+          "line": 235,
+          "text": "say 1015"
+        },
+        {
+          "line": 239,
+          "text": "make _ingredient_ permanent "
+        },
+        {
+          "line": 240,
+          "text": "end quest "
+        },
+        {
+          "line": 243,
+          "text": "make _ingredient_ permanent "
+        },
+        {
+          "line": 244,
+          "text": "end quest "
+        },
+        {
+          "line": 247,
+          "text": "when _giveingredient_ or _givetoken_ "
+        },
+        {
+          "line": 248,
+          "text": "create foe _orc_ every 1 minutes 1 times with 100% success "
+        },
+        {
+          "line": 249,
+          "text": "hide npc _qgiver_ "
+        },
+        {
+          "line": 250,
+          "text": "place foe _monster_ at _meetingplace_ "
+        },
+        {
+          "line": 253,
+          "text": "killed 1 _guardian_ "
+        },
+        {
+          "line": 256,
+          "text": "when _yes_ and _S.11_ "
+        },
+        {
+          "line": 257,
+          "text": "create foe _daedras_ every 1 minutes 3 times with 100% success "
+        },
+        {
+          "line": 258,
+          "text": "take _token_ from pc saying 1020 "
+        },
+        {
+          "line": 259,
+          "text": "change repute with _dummydarkb_ by -75 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "commoners",
+      "availability": "ordinary",
+      "name": "A0C10Y02",
+      "sourceFile": "A0C10Y02.txt",
+      "catalogGroup": "Commoners",
+      "membership": "N",
+      "minimumRequirement": 1,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 177,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "5d65ba9b15c8e7319b73830a17c8257f80f45df36d315d02473f5dcee557e097",
+      "actionLines": [
+        {
+          "line": 136,
+          "text": "dialog link for person _child_ "
+        },
+        {
+          "line": 137,
+          "text": "start timer _timeforq_ "
+        },
+        {
+          "line": 138,
+          "text": "log 1012 step 0 "
+        },
+        {
+          "line": 139,
+          "text": "pc at _dbguild_ set _S.01_ saying 1011 "
+        },
+        {
+          "line": 140,
+          "text": "place npc _child_ at _dbguild_ "
+        },
+        {
+          "line": 143,
+          "text": "end quest "
+        },
+        {
+          "line": 146,
+          "text": "create foe _darkb_ every 2 minutes 4 times with 30% success "
+        },
+        {
+          "line": 149,
+          "text": "clicked npc _child_ say 1010 "
+        },
+        {
+          "line": 150,
+          "text": "hide npc _child_ "
+        },
+        {
+          "line": 151,
+          "text": "add _child_ face "
+        },
+        {
+          "line": 154,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 157,
+          "text": "when _qgclicked_ and _S.02_ "
+        },
+        {
+          "line": 158,
+          "text": "give pc _money_ "
+        },
+        {
+          "line": 159,
+          "text": "change repute with _dummydarkb_ by -15 "
+        },
+        {
+          "line": 160,
+          "text": "end quest "
+        },
+        {
+          "line": 163,
+          "text": "when _qgclicked_ and not _S.02_ "
+        },
+        {
+          "line": 164,
+          "text": "say 1003"
+        },
+        {
+          "line": 165,
+          "text": "clear _qgclicked_ _clearclick_ "
+        },
+        {
+          "line": 168,
+          "text": "injured _darkb_ "
+        },
+        {
+          "line": 169,
+          "text": "say 1020 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "commoners",
+      "availability": "ordinary",
+      "name": "A0C10Y05",
+      "sourceFile": "A0C10Y05.txt",
+      "catalogGroup": "Commoners",
+      "membership": "M",
+      "minimumRequirement": 1,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 178,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "36bc625c1cf028d64ed37455a31b73f1d8209348503bd314468cb55859e6924f",
+      "actionLines": [
+        {
+          "line": 171,
+          "text": "start timer _traveltime_ "
+        },
+        {
+          "line": 172,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 173,
+          "text": "pc at _temple_ set _S.03_ saying 1015 "
+        },
+        {
+          "line": 174,
+          "text": "pc at _betrothedhome_ set _S.02_ saying 1014 "
+        },
+        {
+          "line": 175,
+          "text": "hide npc _qgiver_ "
+        },
+        {
+          "line": 176,
+          "text": "add _qgiver_ face "
+        },
+        {
+          "line": 177,
+          "text": "place npc _betrothed_ at _betrothedhome_ "
+        },
+        {
+          "line": 178,
+          "text": "place npc _priest_ at _temple_ "
+        },
+        {
+          "line": 182,
+          "text": "restore _qgiver_ "
+        },
+        {
+          "line": 183,
+          "text": "say 1020 "
+        },
+        {
+          "line": 184,
+          "text": "drop _betrothed_ face "
+        },
+        {
+          "line": 185,
+          "text": "drop _qgiver_ face "
+        },
+        {
+          "line": 186,
+          "text": "end quest "
+        },
+        {
+          "line": 189,
+          "text": "clicked npc _betrothed_ say 1011 "
+        },
+        {
+          "line": 190,
+          "text": "hide npc _betrothed_ "
+        },
+        {
+          "line": 191,
+          "text": "add _betrothed_ face "
+        },
+        {
+          "line": 194,
+          "text": "create foe _F.00_ every 1 minutes 1 times with 15% success "
+        },
+        {
+          "line": 197,
+          "text": "create foe _F.01_ every 2 minutes 1 times with 50% success "
+        },
+        {
+          "line": 200,
+          "text": "injured _F.01_ saying 1012 "
+        },
+        {
+          "line": 201,
+          "text": "injured _F.00_ saying 1013 "
+        },
+        {
+          "line": 204,
+          "text": "clicked npc _priest_"
+        },
+        {
+          "line": 207,
+          "text": "    when _S.01_ and _S.05_"
+        },
+        {
+          "line": 208,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 209,
+          "text": "drop _qgiver_ face "
+        },
+        {
+          "line": 210,
+          "text": "drop _betrothed_ face "
+        },
+        {
+          "line": 211,
+          "text": "change repute with _ruler_ by -20 "
+        },
+        {
+          "line": 212,
+          "text": "place npc _qgiver_ at _temple_ "
+        },
+        {
+          "line": 213,
+          "text": "place npc _betrothed_ at _temple_ "
+        },
+        {
+          "line": 216,
+          "text": "when not _S.01_ and _S.05_ "
+        },
+        {
+          "line": 217,
+          "text": "clear _S.05_ _clearclick_ "
+        },
+        {
+          "line": 220,
+          "text": "when _success_ and not _S.03_"
+        },
+        {
+          "line": 221,
+          "text": "restore _qgiver_ "
+        },
+        {
+          "line": 222,
+          "text": "end quest "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "commoners",
+      "availability": "ordinary",
+      "name": "A0C41Y18",
+      "sourceFile": "A0C41Y18.txt",
+      "catalogGroup": "Commoners",
+      "membership": "M",
+      "minimumRequirement": 4,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": true,
+      "active": true,
+      "catalogSourceLine": 179,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "f4e5e1a95a2a5bc6e827e81f12264a683a0cad2cddcf82ae1fdea71e3b1c204e",
+      "actionLines": [
+        {
+          "line": 198,
+          "text": "dialog link for person _sage_ item _finger_ "
+        },
+        {
+          "line": 199,
+          "text": "start timer _S.10_ "
+        },
+        {
+          "line": 200,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 201,
+          "text": "get item _letter_ "
+        },
+        {
+          "line": 202,
+          "text": "get item _finger_ "
+        },
+        {
+          "line": 203,
+          "text": "get item _gold1_ "
+        },
+        {
+          "line": 204,
+          "text": "start task _S.03_ "
+        },
+        {
+          "line": 205,
+          "text": "give pc nothing"
+        },
+        {
+          "line": 206,
+          "text": "_letter_ used do _readletter_ "
+        },
+        {
+          "line": 207,
+          "text": "place foe _realmummy_ at _dungeon_ "
+        },
+        {
+          "line": 208,
+          "text": "destroy _giver_ "
+        },
+        {
+          "line": 213,
+          "text": "daily from 00:00 to 01:00 "
+        },
+        {
+          "line": 214,
+          "text": "create foe _F.00_ every 35 minutes 1001 times with 100% success "
+        },
+        {
+          "line": 217,
+          "text": "injured _F.00_ saying 1016 "
+        },
+        {
+          "line": 218,
+          "text": "unset _S.02_ "
+        },
+        {
+          "line": 221,
+          "text": "clicked npc _dummy_"
+        },
+        {
+          "line": 222,
+          "text": "say 1013"
+        },
+        {
+          "line": 226,
+          "text": "clicked npc _sage_ "
+        },
+        {
+          "line": 227,
+          "text": "have _finger_ set _S.07_ "
+        },
+        {
+          "line": 230,
+          "text": "killed 1 _realmummy_ "
+        },
+        {
+          "line": 231,
+          "text": "say 1030 "
+        },
+        {
+          "line": 232,
+          "text": "make _gold1_ permanent "
+        },
+        {
+          "line": 233,
+          "text": "end quest "
+        },
+        {
+          "line": 236,
+          "text": "when _S.04_ and _S.07_ "
+        },
+        {
+          "line": 237,
+          "text": "reveal _dungeon_ "
+        },
+        {
+          "line": 238,
+          "text": "log 1012 step 2 "
+        },
+        {
+          "line": 239,
+          "text": "say 1025 "
+        },
+        {
+          "line": 240,
+          "text": "unset _S.06_ _S.08_ _S.04_ _S.07_ "
+        },
+        {
+          "line": 244,
+          "text": "when _S.04_ and not _S.07_ "
+        },
+        {
+          "line": 245,
+          "text": "say 1026 "
+        },
+        {
+          "line": 248,
+          "text": "injured _realmummy_ "
+        },
+        {
+          "line": 249,
+          "text": "say 1020 "
+        },
+        {
+          "line": 252,
+          "text": "make _gold1_ permanent "
+        },
+        {
+          "line": 253,
+          "text": "end quest "
+        },
+        {
+          "line": 256,
+          "text": "add dialog for item _finger_ "
+        },
+        {
+          "line": 257,
+          "text": "log 1011 step 1 "
+        }
+      ],
+      "sourceDiagnostics": []
+    }
+  ],
+  "fingerprint": "79160996a5f5022a1841c113ffbd138db9391a9ae348324cb46c7a587bd6920c"
+}

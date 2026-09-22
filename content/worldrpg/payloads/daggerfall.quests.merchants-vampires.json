@@ -1,0 +1,3465 @@
+{
+  "id": "merchants-vampires",
+  "catalogSource": {
+    "sourcePath": "Tables/QuestList-Classic.txt",
+    "contentHash": "24299ba54dc246ae278123f4c855928e1d7cd36626b972236d13c44c5005d001",
+    "byteLen": 10399
+  },
+  "categories": [
+    {
+      "id": "merchants",
+      "catalogGroup": "Merchants",
+      "active": true,
+      "availability": "ordinary",
+      "names": [
+        "K0C00Y00",
+        "K0C00Y02",
+        "K0C00Y03",
+        "K0C00Y04",
+        "K0C00Y05",
+        "K0C00Y07",
+        "K0C00Y08",
+        "K0C00Y09",
+        "K0C01Y00",
+        "K0C01Y10",
+        "K0C0XY01",
+        "K0C30Y03"
+      ]
+    },
+    {
+      "id": "vampires",
+      "catalogGroup": "Vampires",
+      "active": true,
+      "availability": "ordinary",
+      "names": [
+        "P0A01L00",
+        "P0B00L01",
+        "P0B00L03",
+        "P0B00L04",
+        "P0B00L06",
+        "P0B01L02",
+        "P0B10L07",
+        "P0B10L08",
+        "P0B10L10",
+        "P0B20L09"
+      ]
+    }
+  ],
+  "quests": [
+    {
+      "category": "merchants",
+      "availability": "ordinary",
+      "name": "K0C00Y00",
+      "sourceFile": "K0C00Y00.txt",
+      "catalogGroup": "Merchants",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 182,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "4984eeca5a27096549e4fbba2dcc2cbdaf676ba5cbca69e94ad079b4af9dba24",
+      "actionLines": [
+        {
+          "line": 174,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 175,
+          "text": "get item _letter_ "
+        },
+        {
+          "line": 176,
+          "text": "pc at _storehouse_ set _S.04_ "
+        },
+        {
+          "line": 177,
+          "text": "start timer _2storehouse_"
+        },
+        {
+          "line": 181,
+          "text": "toting _mitem_ and _qgiver_ clicked "
+        },
+        {
+          "line": 182,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 183,
+          "text": "change repute with _qgiver_ by \u002B10 "
+        },
+        {
+          "line": 184,
+          "text": "change repute with _competitor_ by -10 "
+        },
+        {
+          "line": 185,
+          "text": "end quest "
+        },
+        {
+          "line": 189,
+          "text": "dropped _letter_ at _storehouse_ "
+        },
+        {
+          "line": 190,
+          "text": "start timer _S.05_ "
+        },
+        {
+          "line": 191,
+          "text": "stop timer _2storehouse_"
+        },
+        {
+          "line": 195,
+          "text": "make _mitem_ permanent "
+        },
+        {
+          "line": 196,
+          "text": "end quest "
+        },
+        {
+          "line": 199,
+          "text": "create foe _knight_ every 8 minutes 2 times with 10% success "
+        },
+        {
+          "line": 200,
+          "text": "create foe _battlemage_ every 7 minutes 2 times with 10% success "
+        },
+        {
+          "line": 201,
+          "text": "create foe _F.00_ every 10 minutes 1 times with 10% success "
+        },
+        {
+          "line": 202,
+          "text": "create foe _F.03_ every 9 minutes 1 times with 10% success "
+        },
+        {
+          "line": 205,
+          "text": "give pc _letter10_ notify 1013 "
+        },
+        {
+          "line": 210,
+          "text": "toting _mitem_ and _competitor_ clicked "
+        },
+        {
+          "line": 211,
+          "text": "prompt 1014 yes _S.09_ no _gimme_ "
+        },
+        {
+          "line": 214,
+          "text": "get item _mitem_ "
+        },
+        {
+          "line": 215,
+          "text": "say 1016 "
+        },
+        {
+          "line": 218,
+          "text": "get item _gem_ "
+        },
+        {
+          "line": 219,
+          "text": "say 1015 "
+        },
+        {
+          "line": 220,
+          "text": "make _gem_ permanent "
+        },
+        {
+          "line": 221,
+          "text": "change repute with _competitor_ by \u002B5 "
+        },
+        {
+          "line": 222,
+          "text": "change repute with _qgiver_ by -5 "
+        },
+        {
+          "line": 223,
+          "text": "end quest "
+        },
+        {
+          "line": 226,
+          "text": "clicked npc _qgiver_"
+        },
+        {
+          "line": 229,
+          "text": "when _qgclick2_ and not _pcgetsgold_"
+        },
+        {
+          "line": 230,
+          "text": "say 1003"
+        },
+        {
+          "line": 231,
+          "text": "clear _clearclick_ _qgclick2_"
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "merchants",
+      "availability": "ordinary",
+      "name": "K0C00Y02",
+      "sourceFile": "K0C00Y02.txt",
+      "catalogGroup": "Merchants",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 183,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "8fd816fcee0be1e517507083b67b0dfaf6f57e695ea711ebabac13125c03bd85",
+      "actionLines": [
+        {
+          "line": 155,
+          "text": "start timer _2mondung_ "
+        },
+        {
+          "line": 156,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 157,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 158,
+          "text": "pc at _depository_ set _letter2_ "
+        },
+        {
+          "line": 159,
+          "text": "pc at _mansion_ set _S.10_ "
+        },
+        {
+          "line": 160,
+          "text": "pc at _palace_ set _S.08_ "
+        },
+        {
+          "line": 167,
+          "text": "toting _goldBrick1_ and _qgiver_ clicked "
+        },
+        {
+          "line": 168,
+          "text": "get item _reward1_ "
+        },
+        {
+          "line": 169,
+          "text": "say 1015 "
+        },
+        {
+          "line": 170,
+          "text": "make _reward1_ permanent "
+        },
+        {
+          "line": 173,
+          "text": "toting _goldBrick2_ and _qgiver_ clicked "
+        },
+        {
+          "line": 174,
+          "text": "get item _reward2_ "
+        },
+        {
+          "line": 175,
+          "text": "say 1015 "
+        },
+        {
+          "line": 176,
+          "text": "make _reward2_ permanent "
+        },
+        {
+          "line": 179,
+          "text": "toting _goldBrick3_ and _qgiver_ clicked "
+        },
+        {
+          "line": 180,
+          "text": "get item _reward3_ "
+        },
+        {
+          "line": 181,
+          "text": "say 1015 "
+        },
+        {
+          "line": 182,
+          "text": "make _reward3_ permanent "
+        },
+        {
+          "line": 185,
+          "text": "toting _goldBrick4_ and _qgiver_ clicked "
+        },
+        {
+          "line": 186,
+          "text": "get item _I.07_ "
+        },
+        {
+          "line": 187,
+          "text": "say 1015 "
+        },
+        {
+          "line": 188,
+          "text": "make _I.07_ permanent "
+        },
+        {
+          "line": 191,
+          "text": "clicked npc _qgiver_"
+        },
+        {
+          "line": 194,
+          "text": "when _qgclick2_ and not _S.04_ and not _S.05_ and not _S.06_ and not _S.07_"
+        },
+        {
+          "line": 195,
+          "text": "say 1003"
+        },
+        {
+          "line": 196,
+          "text": "clear _clearclick_ _qgclick2_"
+        },
+        {
+          "line": 199,
+          "text": "create foe _F.00_ every 10 minutes 10 times with 20% success "
+        },
+        {
+          "line": 202,
+          "text": "create foe _F.01_ every 10 minutes 10 times with 20% success "
+        },
+        {
+          "line": 205,
+          "text": "create foe _F.02_ every 10 minutes 10 times with 20% success "
+        },
+        {
+          "line": 209,
+          "text": "when _S.04_ or _S.05_ or _S.06_ or _S.07_ "
+        },
+        {
+          "line": 212,
+          "text": "when _S.04_ and _S.05_ and _S.06_ and _S.07_ "
+        },
+        {
+          "line": 215,
+          "text": "when _lesser_ "
+        },
+        {
+          "line": 216,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 217,
+          "text": "end quest "
+        },
+        {
+          "line": 220,
+          "text": "when _2mondung_ and _mggold_ "
+        },
+        {
+          "line": 221,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 222,
+          "text": "make _goldBrick1_ permanent "
+        },
+        {
+          "line": 223,
+          "text": "make _goldBrick2_ permanent "
+        },
+        {
+          "line": 224,
+          "text": "make _goldBrick3_ permanent "
+        },
+        {
+          "line": 225,
+          "text": "make _goldBrick4_ permanent "
+        },
+        {
+          "line": 226,
+          "text": "end quest "
+        },
+        {
+          "line": 229,
+          "text": "when _2mondung_ and not _mggold_ "
+        },
+        {
+          "line": 230,
+          "text": "make _goldBrick1_ permanent "
+        },
+        {
+          "line": 231,
+          "text": "make _goldBrick2_ permanent "
+        },
+        {
+          "line": 232,
+          "text": "make _goldBrick3_ permanent "
+        },
+        {
+          "line": 233,
+          "text": "make _goldBrick4_ permanent "
+        },
+        {
+          "line": 234,
+          "text": "end quest "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "merchants",
+      "availability": "ordinary",
+      "name": "K0C00Y03",
+      "sourceFile": "K0C00Y03.txt",
+      "catalogGroup": "Merchants",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 184,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "e793b3b291926ccfb408f468c677388ffd5ebcb672c6e91ca1b7a2f6a1f9d095",
+      "actionLines": [
+        {
+          "line": 190,
+          "text": "dialog link for person _contact_ "
+        },
+        {
+          "line": 191,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 192,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 193,
+          "text": "get item _item_ "
+        },
+        {
+          "line": 194,
+          "text": "pick one of _whip_ _S.02_ "
+        },
+        {
+          "line": 195,
+          "text": "legal repute -10"
+        },
+        {
+          "line": 196,
+          "text": "place npc _contact_ at _conhouse_ "
+        },
+        {
+          "line": 201,
+          "text": "pc at _conhouse_ set _S.04_ "
+        },
+        {
+          "line": 202,
+          "text": "start timer _2letter_ "
+        },
+        {
+          "line": 207,
+          "text": "hide npc _contact_ "
+        },
+        {
+          "line": 208,
+          "text": "place foe _guard_ at _conhouse_ "
+        },
+        {
+          "line": 211,
+          "text": "injured _guard_ "
+        },
+        {
+          "line": 212,
+          "text": "prompt 1015 yes _deed_ no _no_ "
+        },
+        {
+          "line": 215,
+          "text": "take _item_ from pc"
+        },
+        {
+          "line": 216,
+          "text": "give item _item_ to _guard_ "
+        },
+        {
+          "line": 217,
+          "text": "say 1016 "
+        },
+        {
+          "line": 218,
+          "text": "restrain foe _guard_ "
+        },
+        {
+          "line": 222,
+          "text": "_letter_ used do _S.08_ "
+        },
+        {
+          "line": 223,
+          "text": "give pc _letter_ notify 1012 "
+        },
+        {
+          "line": 226,
+          "text": "log 1013 step 1 "
+        },
+        {
+          "line": 229,
+          "text": "toting _item_ and _contact_ clicked "
+        },
+        {
+          "line": 230,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 231,
+          "text": "legal repute \u002B10"
+        },
+        {
+          "line": 232,
+          "text": "end quest "
+        },
+        {
+          "line": 235,
+          "text": "toting _item_ and _contact2_ clicked "
+        },
+        {
+          "line": 238,
+          "text": "when _S.10_ and _whip_ "
+        },
+        {
+          "line": 239,
+          "text": "say 1014 "
+        },
+        {
+          "line": 240,
+          "text": "legal repute \u002B10"
+        },
+        {
+          "line": 241,
+          "text": "end quest "
+        },
+        {
+          "line": 244,
+          "text": "when _queston_ and _S.14_ "
+        },
+        {
+          "line": 245,
+          "text": "say 1017 "
+        },
+        {
+          "line": 246,
+          "text": "make _item_ permanent "
+        },
+        {
+          "line": 249,
+          "text": "have _item_ set _S.14_ "
+        },
+        {
+          "line": 250,
+          "text": "end quest "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "merchants",
+      "availability": "ordinary",
+      "name": "K0C00Y04",
+      "sourceFile": "K0C00Y04.txt",
+      "catalogGroup": "Merchants",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 185,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "a0a1bacb1f6adb0932fa0b7019698e9c8ae346c5e763247b241e26cf69e758b2",
+      "actionLines": [
+        {
+          "line": 234,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 235,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 236,
+          "text": "get item _dueler_ "
+        },
+        {
+          "line": 237,
+          "text": "place npc _lover_ at _loverhome_"
+        },
+        {
+          "line": 240,
+          "text": "end quest "
+        },
+        {
+          "line": 243,
+          "text": "killed 1 _duelist_ "
+        },
+        {
+          "line": 244,
+          "text": "say 1014 "
+        },
+        {
+          "line": 247,
+          "text": "toting _dueler_ and _competitor_ clicked "
+        },
+        {
+          "line": 248,
+          "text": "pc at _arena_ set _S.04_ "
+        },
+        {
+          "line": 249,
+          "text": "log 1016 step 1 "
+        },
+        {
+          "line": 250,
+          "text": "say 1012 "
+        },
+        {
+          "line": 251,
+          "text": "place foe _duelist_ at _arena_ "
+        },
+        {
+          "line": 254,
+          "text": "toting _dueler_ and _lover_ clicked "
+        },
+        {
+          "line": 255,
+          "text": "get item _lovgold_ "
+        },
+        {
+          "line": 256,
+          "text": "say 1015 "
+        },
+        {
+          "line": 257,
+          "text": "make _lovgold_ permanent "
+        },
+        {
+          "line": 258,
+          "text": "end quest "
+        },
+        {
+          "line": 261,
+          "text": "say 1013 "
+        },
+        {
+          "line": 264,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 267,
+          "text": "when _qgclicked_ and _S.01_ "
+        },
+        {
+          "line": 268,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 269,
+          "text": "end quest "
+        },
+        {
+          "line": 272,
+          "text": "clear _qgclicked_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "merchants",
+      "availability": "ordinary",
+      "name": "K0C00Y05",
+      "sourceFile": "K0C00Y05.txt",
+      "catalogGroup": "Merchants",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 186,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "216949eb36da7ffdf6ee4b0560c014161c74f7124a4df1057440e66449810617",
+      "actionLines": [
+        {
+          "line": 223,
+          "text": "dialog link for location _childlocale_ person _child_ "
+        },
+        {
+          "line": 224,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 225,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 226,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 227,
+          "text": "pick one of _metal_ _S.01_ "
+        },
+        {
+          "line": 231,
+          "text": "end quest "
+        },
+        {
+          "line": 235,
+          "text": "place npc _child_ at _mondung_ "
+        },
+        {
+          "line": 238,
+          "text": "repute with _knight_ exceeds 10 do _S.03_ "
+        },
+        {
+          "line": 239,
+          "text": "place npc _child_ at _childlocale_ "
+        },
+        {
+          "line": 242,
+          "text": "start timer _S.04_ "
+        },
+        {
+          "line": 245,
+          "text": "when _metal_ and not _S.03_"
+        },
+        {
+          "line": 246,
+          "text": "start task _S.01_"
+        },
+        {
+          "line": 250,
+          "text": "_letter11_ used do _S.05_ "
+        },
+        {
+          "line": 251,
+          "text": "give pc _letter11_ notify 1012 "
+        },
+        {
+          "line": 255,
+          "text": "log 1013 step 1 "
+        },
+        {
+          "line": 258,
+          "text": "clicked npc _knight_ "
+        },
+        {
+          "line": 259,
+          "text": "add dialog for location _childlocale_ "
+        },
+        {
+          "line": 260,
+          "text": "log 1019 step 2 "
+        },
+        {
+          "line": 261,
+          "text": "say 1014 "
+        },
+        {
+          "line": 264,
+          "text": "clicked npc _child_ "
+        },
+        {
+          "line": 265,
+          "text": "prompt 1017 yes _S.09_ no _no_ "
+        },
+        {
+          "line": 268,
+          "text": "when _S.09_ and _S.04_ "
+        },
+        {
+          "line": 269,
+          "text": "create foe _warrior_ every 21 minutes 10 times with 20% success "
+        },
+        {
+          "line": 270,
+          "text": "change repute with _knight_ by -15 "
+        },
+        {
+          "line": 274,
+          "text": "hide npc _child_ "
+        },
+        {
+          "line": 275,
+          "text": "say 1015 "
+        },
+        {
+          "line": 276,
+          "text": "add _child_ face "
+        },
+        {
+          "line": 279,
+          "text": "injured _warrior_"
+        },
+        {
+          "line": 280,
+          "text": "say 1018 "
+        },
+        {
+          "line": 283,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 286,
+          "text": "when _qgclicked_ and _S.09_ "
+        },
+        {
+          "line": 287,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 288,
+          "text": "drop _child_ face"
+        },
+        {
+          "line": 289,
+          "text": "end quest "
+        },
+        {
+          "line": 294,
+          "text": "when _S.01_ and _reward_ "
+        },
+        {
+          "line": 295,
+          "text": "change repute with _knight_ by \u002B5 "
+        },
+        {
+          "line": 296,
+          "text": "change repute with _qgiver_ by \u002B15 "
+        },
+        {
+          "line": 299,
+          "text": "when _queston_ and _S.06_ and not _S.08_ "
+        },
+        {
+          "line": 300,
+          "text": "change repute with _knight_ by \u002B20 "
+        },
+        {
+          "line": 303,
+          "text": "when _queston_ and _S.09_ "
+        },
+        {
+          "line": 304,
+          "text": "say 1016 "
+        },
+        {
+          "line": 307,
+          "text": "when _qgclicked_ and not _S.09_ "
+        },
+        {
+          "line": 308,
+          "text": "clear _qgclicked_ _clearclick_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "merchants",
+      "availability": "ordinary",
+      "name": "K0C00Y07",
+      "sourceFile": "K0C00Y07.txt",
+      "catalogGroup": "Merchants",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 188,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "e6ceb99860c3b67bb7d8daebaf0b4f81a61368d3dc2bba78f4b00db6d48c5034",
+      "actionLines": [
+        {
+          "line": 256,
+          "text": "start timer _2ransom_ "
+        },
+        {
+          "line": 257,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 258,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 259,
+          "text": "get item _gem_ "
+        },
+        {
+          "line": 260,
+          "text": "_map_ used do _S.08_ "
+        },
+        {
+          "line": 261,
+          "text": "place npc _victim_ at _mondung_ "
+        },
+        {
+          "line": 264,
+          "text": "have _gem_ set _S.20_ "
+        },
+        {
+          "line": 265,
+          "text": "end quest "
+        },
+        {
+          "line": 269,
+          "text": "toting _gem_ and _kidnapper_ clicked "
+        },
+        {
+          "line": 270,
+          "text": "repute with _kidnapper_ exceeds 10 do _S.05_ "
+        },
+        {
+          "line": 273,
+          "text": "say 1019 "
+        },
+        {
+          "line": 276,
+          "text": "create foe _thug_ every 1 minutes 1 times with 100% success "
+        },
+        {
+          "line": 277,
+          "text": "get item _gem_ "
+        },
+        {
+          "line": 278,
+          "text": "give item _map_ to _thug_ "
+        },
+        {
+          "line": 279,
+          "text": "hide npc _kidnapper_ "
+        },
+        {
+          "line": 280,
+          "text": "say 1013 "
+        },
+        {
+          "line": 283,
+          "text": "prompt 1012 yes _S.07_ no _S.04_ "
+        },
+        {
+          "line": 286,
+          "text": "when _S.02_ and not _S.05_ "
+        },
+        {
+          "line": 287,
+          "text": "prompt 1011 yes _S.03_ no _S.04_ "
+        },
+        {
+          "line": 290,
+          "text": "get item _gem_ "
+        },
+        {
+          "line": 291,
+          "text": "say 1018 "
+        },
+        {
+          "line": 294,
+          "text": "reveal _mondung_"
+        },
+        {
+          "line": 297,
+          "text": "clicked npc _victim_ "
+        },
+        {
+          "line": 298,
+          "text": "hide npc _victim_ "
+        },
+        {
+          "line": 299,
+          "text": "say 1014 "
+        },
+        {
+          "line": 300,
+          "text": "add _victim_ face "
+        },
+        {
+          "line": 303,
+          "text": "when _S.11_ and _S.09_ "
+        },
+        {
+          "line": 304,
+          "text": "say 1099 "
+        },
+        {
+          "line": 305,
+          "text": "change repute with _qgiver_ by \u002B15 "
+        },
+        {
+          "line": 306,
+          "text": "change repute with _kidnapper_ by -10 "
+        },
+        {
+          "line": 309,
+          "text": "toting _gem_ and _qgiver_ clicked "
+        },
+        {
+          "line": 310,
+          "text": "clear _qgclicked_ "
+        },
+        {
+          "line": 313,
+          "text": "when _S.11_ and not _S.09_ and not _S.04_ "
+        },
+        {
+          "line": 314,
+          "text": "get item _gem_ "
+        },
+        {
+          "line": 317,
+          "text": "when _S.11_ and not _S.09_ and _S.04_ "
+        },
+        {
+          "line": 318,
+          "text": "say 1016 "
+        },
+        {
+          "line": 321,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 322,
+          "text": "have _gem_ set _S.15_ "
+        },
+        {
+          "line": 326,
+          "text": "when _qgclicked_ and not _S.15_ and _S.09_ "
+        },
+        {
+          "line": 327,
+          "text": "say 1017 "
+        },
+        {
+          "line": 328,
+          "text": "change repute with _qgiver_ by \u002B8 "
+        },
+        {
+          "line": 331,
+          "text": "when _qgclicked_ and _S.07_ "
+        },
+        {
+          "line": 332,
+          "text": "when _qgclicked_ and _S.03_ "
+        },
+        {
+          "line": 333,
+          "text": "say 1020 "
+        },
+        {
+          "line": 336,
+          "text": "when not _S.15_ or not _S.09_ or not _S.03_ or not _S.07_ "
+        },
+        {
+          "line": 337,
+          "text": "clear _qgclicked_ "
+        },
+        {
+          "line": 340,
+          "text": "when _queston_ and _S.09_ and not _qgclicked_ "
+        },
+        {
+          "line": 341,
+          "text": "say 1021 "
+        },
+        {
+          "line": 344,
+          "text": "make _gem_ permanent "
+        },
+        {
+          "line": 347,
+          "text": "when _queston_ and not _S.09_ and not _S.07_ and not _S.17_ "
+        },
+        {
+          "line": 348,
+          "text": "say 1022 "
+        },
+        {
+          "line": 349,
+          "text": "change repute with _qgiver_ by -5 "
+        },
+        {
+          "line": 352,
+          "text": "when not _S.09_ and _S.11_ "
+        },
+        {
+          "line": 353,
+          "text": "get item _gem_ "
+        },
+        {
+          "line": 354,
+          "text": "clear _S.11_ "
+        },
+        {
+          "line": 357,
+          "text": "when _reward_ or _S.16_ or _S.17_ "
+        },
+        {
+          "line": 358,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 359,
+          "text": "end quest "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "merchants",
+      "availability": "ordinary",
+      "name": "K0C00Y08",
+      "sourceFile": "K0C00Y08.txt",
+      "catalogGroup": "Merchants",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 189,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "f1ef2213b5266456e562ccd6cbe24f578fbc8d6dddb73028a447c41f9335669e",
+      "actionLines": [
+        {
+          "line": 171,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 172,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 173,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 174,
+          "text": "get item _upfront_ "
+        },
+        {
+          "line": 175,
+          "text": "make _upfront_ permanent "
+        },
+        {
+          "line": 178,
+          "text": "have _book_ set _S.03_ "
+        },
+        {
+          "line": 179,
+          "text": "end quest "
+        },
+        {
+          "line": 182,
+          "text": "clicked item _book_ "
+        },
+        {
+          "line": 183,
+          "text": "say 1011 "
+        },
+        {
+          "line": 186,
+          "text": "toting _book_ and _qgiver_ clicked "
+        },
+        {
+          "line": 187,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 188,
+          "text": "end quest "
+        },
+        {
+          "line": 191,
+          "text": "say 1012 "
+        },
+        {
+          "line": 192,
+          "text": "make _book_ permanent "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "merchants",
+      "availability": "ordinary",
+      "name": "K0C00Y09",
+      "sourceFile": "K0C00Y09.txt",
+      "catalogGroup": "Merchants",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 190,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "33470a135e167ad5a85040a2e4217e6e6ce9a2c77561f9d5f04e6fe90964071f",
+      "actionLines": [
+        {
+          "line": 184,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 185,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 186,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 187,
+          "text": "place foe _enemy_ at _mondung_ "
+        },
+        {
+          "line": 190,
+          "text": "end quest "
+        },
+        {
+          "line": 193,
+          "text": "injured _enemy_ "
+        },
+        {
+          "line": 194,
+          "text": "say 1012 "
+        },
+        {
+          "line": 197,
+          "text": "killed 1 _enemy_ "
+        },
+        {
+          "line": 198,
+          "text": "say 1011 "
+        },
+        {
+          "line": 201,
+          "text": "when _S.01_ and not _killmon_ "
+        },
+        {
+          "line": 202,
+          "text": "add foe _enemy_ face "
+        },
+        {
+          "line": 203,
+          "text": "remove foe _enemy_"
+        },
+        {
+          "line": 206,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 210,
+          "text": "when _qgclicked_ and _killmon_ "
+        },
+        {
+          "line": 211,
+          "text": "get item _lessgold_ "
+        },
+        {
+          "line": 212,
+          "text": "say 1014 "
+        },
+        {
+          "line": 213,
+          "text": "make _lessgold_ permanent "
+        },
+        {
+          "line": 214,
+          "text": "end quest "
+        },
+        {
+          "line": 217,
+          "text": "when _S.03_ and _qgclicked_ "
+        },
+        {
+          "line": 218,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 219,
+          "text": "end quest "
+        },
+        {
+          "line": 222,
+          "text": "when _queston_ and _S.03_ "
+        },
+        {
+          "line": 223,
+          "text": "say 1013 "
+        },
+        {
+          "line": 224,
+          "text": "drop foe _enemy_ face "
+        },
+        {
+          "line": 227,
+          "text": "when _qgclicked_ and not _S.01_ "
+        },
+        {
+          "line": 228,
+          "text": "clear _qgclicked_ _clearclick_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "merchants",
+      "availability": "ordinary",
+      "name": "K0C01Y00",
+      "sourceFile": "K0C01Y00.txt",
+      "catalogGroup": "Merchants",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": true,
+      "active": true,
+      "catalogSourceLine": 191,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "fef6eea30142da2cbb2165c1cba681828f3e36c41ac0ce004d957aaca468fefe",
+      "actionLines": [
+        {
+          "line": 206,
+          "text": "dialog link for location _mondung_ person _victim_ "
+        },
+        {
+          "line": 207,
+          "text": "dialog link for person _tg_ "
+        },
+        {
+          "line": 208,
+          "text": "start timer _queston1_ "
+        },
+        {
+          "line": 209,
+          "text": "reveal _mondung2_ "
+        },
+        {
+          "line": 210,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 211,
+          "text": "repute with _tg_ exceeds 10 do _S.03_ "
+        },
+        {
+          "line": 212,
+          "text": "place foe _cousin_ at _mondung2_ "
+        },
+        {
+          "line": 213,
+          "text": "place npc _victim_ at _mondung_ "
+        },
+        {
+          "line": 216,
+          "text": "have _gem_ set _S.15_ "
+        },
+        {
+          "line": 217,
+          "text": "end quest "
+        },
+        {
+          "line": 222,
+          "text": "start timer _S.05_ "
+        },
+        {
+          "line": 226,
+          "text": "_letter15_ used do _S.06_ "
+        },
+        {
+          "line": 227,
+          "text": "get item _letter15_ "
+        },
+        {
+          "line": 228,
+          "text": "say 1015 "
+        },
+        {
+          "line": 231,
+          "text": "reveal _mondung_ readmap"
+        },
+        {
+          "line": 232,
+          "text": "log 1017 step 2 "
+        },
+        {
+          "line": 236,
+          "text": "clicked npc _victim_ "
+        },
+        {
+          "line": 237,
+          "text": "hide npc _victim_ "
+        },
+        {
+          "line": 238,
+          "text": "say 1011 "
+        },
+        {
+          "line": 241,
+          "text": "injured _cousin_ "
+        },
+        {
+          "line": 242,
+          "text": "say 1018 "
+        },
+        {
+          "line": 245,
+          "text": "killed 1 _cousin_ "
+        },
+        {
+          "line": 246,
+          "text": "say 1019 "
+        },
+        {
+          "line": 247,
+          "text": "start task _victory_"
+        },
+        {
+          "line": 251,
+          "text": "clicked item _gem_ "
+        },
+        {
+          "line": 252,
+          "text": "say 1020 "
+        },
+        {
+          "line": 255,
+          "text": "clicked npc _qgiver_"
+        },
+        {
+          "line": 258,
+          "text": "when _qgclicked_ and _victory_ "
+        },
+        {
+          "line": 259,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 260,
+          "text": "end quest "
+        },
+        {
+          "line": 263,
+          "text": "when _qgclicked_ and not _victory_"
+        },
+        {
+          "line": 264,
+          "text": "clear _clearclick_ _qgclicked_"
+        },
+        {
+          "line": 267,
+          "text": "toting _gem_ and _qgiver_ clicked "
+        },
+        {
+          "line": 268,
+          "text": "give pc _gold_"
+        },
+        {
+          "line": 269,
+          "text": "end quest "
+        },
+        {
+          "line": 273,
+          "text": "when _S.10_ or _S.08_"
+        },
+        {
+          "line": 280,
+          "text": "make _gem_ permanent "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "merchants",
+      "availability": "ordinary",
+      "name": "K0C01Y10",
+      "sourceFile": "K0C01Y10.txt",
+      "catalogGroup": "Merchants",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": true,
+      "active": true,
+      "catalogSourceLine": 192,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "f98373c764368857d726bbe548a20a4223ccb54d29f8f53caae344b8c8d7842b",
+      "actionLines": [
+        {
+          "line": 201,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 202,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 203,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 204,
+          "text": "place foe _guardian_ at _mondung_ "
+        },
+        {
+          "line": 207,
+          "text": "end quest "
+        },
+        {
+          "line": 210,
+          "text": "clicked item _bothdorjii_ "
+        },
+        {
+          "line": 211,
+          "text": "_bothdorjii_ used do _S.02_ "
+        },
+        {
+          "line": 212,
+          "text": "say 1012 "
+        },
+        {
+          "line": 216,
+          "text": "say 1015"
+        },
+        {
+          "line": 217,
+          "text": "create foe _F.01_ every 1 minutes 1 times with 100% success "
+        },
+        {
+          "line": 220,
+          "text": "when _queston_ and _S.01_ "
+        },
+        {
+          "line": 221,
+          "text": "say 1013 "
+        },
+        {
+          "line": 224,
+          "text": "toting _bothdorjii_ and _qgiver_ clicked "
+        },
+        {
+          "line": 225,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 226,
+          "text": "end quest "
+        },
+        {
+          "line": 229,
+          "text": "injured _F.01_ "
+        },
+        {
+          "line": 230,
+          "text": "say 1014 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "merchants",
+      "availability": "ordinary",
+      "name": "K0C0XY01",
+      "sourceFile": "K0C0XY01.txt",
+      "catalogGroup": "Merchants",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": true,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 193,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "e62b4475f7a2f51626f2c4b74e1240f573bdff504246bc207f8b193daabdc61a",
+      "actionLines": [
+        {
+          "line": 207,
+          "text": "start timer _2mondung_ "
+        },
+        {
+          "line": 208,
+          "text": "start timer _S.05_ "
+        },
+        {
+          "line": 209,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 210,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 211,
+          "text": "give item _clanfeather1_ to _F.01_ "
+        },
+        {
+          "line": 212,
+          "text": "pc at _mondung_ set _S.08_ "
+        },
+        {
+          "line": 213,
+          "text": "_letter26_ used do _S.15_ "
+        },
+        {
+          "line": 214,
+          "text": "place foe _F.01_ at _mondung_"
+        },
+        {
+          "line": 215,
+          "text": "have _clanfeather1_ set _S.14_"
+        },
+        {
+          "line": 218,
+          "text": "end quest "
+        },
+        {
+          "line": 222,
+          "text": "toting _clanfeather1_ and _qgiver_ clicked "
+        },
+        {
+          "line": 223,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 224,
+          "text": "end quest "
+        },
+        {
+          "line": 227,
+          "text": "clicked npc _contact_ "
+        },
+        {
+          "line": 228,
+          "text": "start timer _S.06_ "
+        },
+        {
+          "line": 229,
+          "text": "get item _jewelry_ "
+        },
+        {
+          "line": 230,
+          "text": "hide npc _contact_ "
+        },
+        {
+          "line": 231,
+          "text": "say 1013 "
+        },
+        {
+          "line": 232,
+          "text": "make _jewelry_ permanent "
+        },
+        {
+          "line": 233,
+          "text": "add _contact_ face "
+        },
+        {
+          "line": 234,
+          "text": "change repute with _contact_ by \u002B10 "
+        },
+        {
+          "line": 237,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 240,
+          "text": "give pc _letter26_ notify 1014 "
+        },
+        {
+          "line": 243,
+          "text": "say 1011 "
+        },
+        {
+          "line": 244,
+          "text": "drop _contact_ face "
+        },
+        {
+          "line": 248,
+          "text": "create foe _F.00_ every 21 minutes 15 times with 25% success "
+        },
+        {
+          "line": 251,
+          "text": "when _S.04_ and not _S.02_ "
+        },
+        {
+          "line": 252,
+          "text": "clear _S.04_ _clearclick_"
+        },
+        {
+          "line": 253,
+          "text": "say 1003"
+        },
+        {
+          "line": 254,
+          "text": "say 1040 "
+        },
+        {
+          "line": 261,
+          "text": "say 1099 "
+        },
+        {
+          "line": 265,
+          "text": "place npc _contact_ at _mondung_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "merchants",
+      "availability": "ordinary",
+      "name": "K0C30Y03",
+      "sourceFile": "K0C30Y03.txt",
+      "catalogGroup": "Merchants",
+      "membership": "M",
+      "minimumRequirement": 3,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 194,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "329b5e978626b2050c46d3ddff3657243a311afbf8594c998ae3d5d73bd930c8",
+      "actionLines": [
+        {
+          "line": 483,
+          "text": "dialog link for location _house3_ person _gaffer_ item _rock_ "
+        },
+        {
+          "line": 484,
+          "text": "dialog link for person _guard_ "
+        },
+        {
+          "line": 485,
+          "text": "dialog link for location _house1_ person _hooker_ "
+        },
+        {
+          "line": 486,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 487,
+          "text": "start timer _2letter_ "
+        },
+        {
+          "line": 488,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 489,
+          "text": "repute with _hooker_ exceeds 10 do _S.02_ "
+        },
+        {
+          "line": 490,
+          "text": "repute with _darkb_ exceeds 15 do _S.25_ "
+        },
+        {
+          "line": 491,
+          "text": "repute with _victin_ exceeds 15 do _S.28_ "
+        },
+        {
+          "line": 492,
+          "text": "pc at _mondung2_ set _S.16_ "
+        },
+        {
+          "line": 493,
+          "text": "_letter30_ used do _S.35_ "
+        },
+        {
+          "line": 494,
+          "text": "_rock_ used do _S.19_ "
+        },
+        {
+          "line": 495,
+          "text": "place npc _hooker_ at _house1_ "
+        },
+        {
+          "line": 496,
+          "text": "place npc _gaffer_ at _tavern_ "
+        },
+        {
+          "line": 497,
+          "text": "place npc _banker_ at _bank_ "
+        },
+        {
+          "line": 500,
+          "text": "toting _deed3_ and _qgiver_ clicked "
+        },
+        {
+          "line": 501,
+          "text": "give pc _reward_"
+        },
+        {
+          "line": 502,
+          "text": "end quest "
+        },
+        {
+          "line": 505,
+          "text": "toting _deed_ and _qgiver_ clicked "
+        },
+        {
+          "line": 506,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 507,
+          "text": "end quest "
+        },
+        {
+          "line": 510,
+          "text": "when _qgclicked_ and _S.18_ "
+        },
+        {
+          "line": 511,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 512,
+          "text": "end quest "
+        },
+        {
+          "line": 515,
+          "text": "end quest "
+        },
+        {
+          "line": 518,
+          "text": "start timer _S.03_ "
+        },
+        {
+          "line": 521,
+          "text": "add dialog for person _hooker_ "
+        },
+        {
+          "line": 522,
+          "text": "add dialog for location _house1_ "
+        },
+        {
+          "line": 523,
+          "text": "get item _letter27_ "
+        },
+        {
+          "line": 524,
+          "text": "say 1037 "
+        },
+        {
+          "line": 527,
+          "text": "clicked _hooker_ and at least 10 gold otherwise do _S.34_ "
+        },
+        {
+          "line": 528,
+          "text": "prompt 1011 yes _thankyou_ no _gimme_ "
+        },
+        {
+          "line": 531,
+          "text": "add dialog for person _gaffer_ "
+        },
+        {
+          "line": 532,
+          "text": "log 1041 step 4 "
+        },
+        {
+          "line": 533,
+          "text": "give item _bribe2_ to _F.01_ "
+        },
+        {
+          "line": 534,
+          "text": "say 1012 "
+        },
+        {
+          "line": 535,
+          "text": "change repute with _hooker_ by \u002B5 "
+        },
+        {
+          "line": 536,
+          "text": "send _F.01_ every 80 minutes 30 times with 15% success "
+        },
+        {
+          "line": 540,
+          "text": "get item _bribe4_ "
+        },
+        {
+          "line": 541,
+          "text": "make _bribe4_ permanent "
+        },
+        {
+          "line": 544,
+          "text": "clicked npc _banker_ "
+        },
+        {
+          "line": 545,
+          "text": "start timer _S.13_ "
+        },
+        {
+          "line": 546,
+          "text": "repute with _banker_ exceeds 10 do _S.08_ "
+        },
+        {
+          "line": 549,
+          "text": "log 1038 step 1 "
+        },
+        {
+          "line": 550,
+          "text": "say 1017 "
+        },
+        {
+          "line": 553,
+          "text": "when _S.07_ and not _S.08_ "
+        },
+        {
+          "line": 554,
+          "text": "say 1016 "
+        },
+        {
+          "line": 557,
+          "text": "clicked npc _guard_ "
+        },
+        {
+          "line": 558,
+          "text": "repute with _guard_ exceeds 10 do _S.11_ "
+        },
+        {
+          "line": 561,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 562,
+          "text": "reveal _mondung2_ "
+        },
+        {
+          "line": 563,
+          "text": "log 1039 step 2 "
+        },
+        {
+          "line": 564,
+          "text": "get item _letter29_ "
+        },
+        {
+          "line": 565,
+          "text": "say 1019 "
+        },
+        {
+          "line": 568,
+          "text": "when not _S.11_ and _S.10_ "
+        },
+        {
+          "line": 569,
+          "text": "add dialog for location _house1_ "
+        },
+        {
+          "line": 570,
+          "text": "add dialog for person _hooker_ "
+        },
+        {
+          "line": 571,
+          "text": "log 1040 step 3 "
+        },
+        {
+          "line": 572,
+          "text": "say 1018 "
+        },
+        {
+          "line": 575,
+          "text": "rumor mill 1020 "
+        },
+        {
+          "line": 576,
+          "text": "hide npc _guard_ "
+        },
+        {
+          "line": 579,
+          "text": "dropped _letter29_ at _mondung2_ "
+        },
+        {
+          "line": 582,
+          "text": "when _S.16_ and not _S.14_ "
+        },
+        {
+          "line": 583,
+          "text": "create foe _F.02_ every 221 minutes 200 times with 10% success "
+        },
+        {
+          "line": 586,
+          "text": "place item _deed3_ at _mondung2_ "
+        },
+        {
+          "line": 587,
+          "text": "create foe _F.04_ every 111 minutes 200 times with 5% success "
+        },
+        {
+          "line": 588,
+          "text": "create foe _F.03_ every 100 minutes 200 times with 5% success "
+        },
+        {
+          "line": 589,
+          "text": "place foe _warrior_ at _mondung2_ "
+        },
+        {
+          "line": 592,
+          "text": "injured _warrior_ "
+        },
+        {
+          "line": 593,
+          "text": "say 1023 "
+        },
+        {
+          "line": 596,
+          "text": "killed 1 _warrior_ "
+        },
+        {
+          "line": 597,
+          "text": "say 1024 "
+        },
+        {
+          "line": 600,
+          "text": "say 1026 "
+        },
+        {
+          "line": 603,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 608,
+          "text": "clicked item _deed_ "
+        },
+        {
+          "line": 609,
+          "text": "say 1029 "
+        },
+        {
+          "line": 612,
+          "text": "clicked item _deed3_ "
+        },
+        {
+          "line": 613,
+          "text": "say 1030 "
+        },
+        {
+          "line": 616,
+          "text": "start timer _S.26_ "
+        },
+        {
+          "line": 619,
+          "text": "reveal _mondung_ readmap"
+        },
+        {
+          "line": 620,
+          "text": "get item _letter32_ "
+        },
+        {
+          "line": 621,
+          "text": "say 1032 "
+        },
+        {
+          "line": 624,
+          "text": "reveal _mondung_ readmap"
+        },
+        {
+          "line": 625,
+          "text": "get item _letter15_ "
+        },
+        {
+          "line": 626,
+          "text": "get item _bothdorjii_ "
+        },
+        {
+          "line": 627,
+          "text": "say 1032 "
+        },
+        {
+          "line": 628,
+          "text": "make _bothdorjii_ permanent "
+        },
+        {
+          "line": 631,
+          "text": "start timer _S.27_ "
+        },
+        {
+          "line": 634,
+          "text": "clicked npc _gaffer_ "
+        },
+        {
+          "line": 635,
+          "text": "repute with _gaffer_ exceeds 10 do _S.30_ "
+        },
+        {
+          "line": 638,
+          "text": "reveal _mondung_ readmap"
+        },
+        {
+          "line": 639,
+          "text": "reveal _mondung2_ readmap"
+        },
+        {
+          "line": 640,
+          "text": "log 1042 step 4 "
+        },
+        {
+          "line": 641,
+          "text": "get item _letter33_ "
+        },
+        {
+          "line": 642,
+          "text": "say 1034 "
+        },
+        {
+          "line": 643,
+          "text": "make _letter33_ permanent "
+        },
+        {
+          "line": 646,
+          "text": "when _S.29_ and not _S.30_ "
+        },
+        {
+          "line": 647,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 648,
+          "text": "say 1035 "
+        },
+        {
+          "line": 651,
+          "text": "when _qgclicked_ and not _S.18_"
+        },
+        {
+          "line": 652,
+          "text": "say 1003 "
+        },
+        {
+          "line": 653,
+          "text": "clear _qgclicked_ _clearclick_ "
+        },
+        {
+          "line": 656,
+          "text": "clicked item _rock_"
+        },
+        {
+          "line": 657,
+          "text": "say 1026 "
+        },
+        {
+          "line": 658,
+          "text": "add dialog for item _rock_ "
+        },
+        {
+          "line": 659,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 662,
+          "text": "say 1055 "
+        },
+        {
+          "line": 665,
+          "text": "reveal _mondung2_ readmap"
+        },
+        {
+          "line": 668,
+          "text": "get item _letter28_ "
+        },
+        {
+          "line": 669,
+          "text": "say 1032 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "vampires",
+      "availability": "ordinary",
+      "name": "P0A01L00",
+      "sourceFile": "P0A01L00.txt",
+      "catalogGroup": "Vampires",
+      "membership": "P",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": true,
+      "active": true,
+      "catalogSourceLine": 197,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "0145432d524a255448a1139009c3b9d886d161fc87bad29211588d2b54a24cdf",
+      "actionLines": [
+        {
+          "line": 143,
+          "text": "_letter_ used do _readletter_ "
+        },
+        {
+          "line": 144,
+          "text": "have _letter_ set _S.06_ "
+        },
+        {
+          "line": 145,
+          "text": "give pc _letter_ notify 1020 "
+        },
+        {
+          "line": 146,
+          "text": "place foe _monster_ at _mondung_ "
+        },
+        {
+          "line": 149,
+          "text": "when _qgclicked_ and _mondead_ "
+        },
+        {
+          "line": 150,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 151,
+          "text": "end quest "
+        },
+        {
+          "line": 154,
+          "text": "killed 1 _monster_ "
+        },
+        {
+          "line": 155,
+          "text": "say 1030 "
+        },
+        {
+          "line": 156,
+          "text": "create npc _questgiver_ "
+        },
+        {
+          "line": 159,
+          "text": "clicked npc _questgiver_ "
+        },
+        {
+          "line": 162,
+          "text": "end quest "
+        },
+        {
+          "line": 165,
+          "text": "when _qgclicked_ and not _mondead_ "
+        },
+        {
+          "line": 166,
+          "text": "say 1003"
+        },
+        {
+          "line": 167,
+          "text": "clear _qgclicked_ _clearclick_ "
+        },
+        {
+          "line": 170,
+          "text": "reveal _mondung_ readmap"
+        },
+        {
+          "line": 171,
+          "text": "log 1015 step 0 "
+        },
+        {
+          "line": 174,
+          "text": "start timer _1stparton_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "vampires",
+      "availability": "ordinary",
+      "name": "P0B00L01",
+      "sourceFile": "P0B00L01.txt",
+      "catalogGroup": "Vampires",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 198,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "606b255ce32e460210b62b66ab4468556060caf1144368c5a1483619ae5dbc07",
+      "actionLines": [
+        {
+          "line": 190,
+          "text": "dialog link for person _vampire_ "
+        },
+        {
+          "line": 191,
+          "text": "dialog link for person _pawn_ "
+        },
+        {
+          "line": 192,
+          "text": "letter36 used do _S.12_ "
+        },
+        {
+          "line": 193,
+          "text": "have letter36 set _S.13_ "
+        },
+        {
+          "line": 194,
+          "text": "give pc letter36 notify 1021 "
+        },
+        {
+          "line": 195,
+          "text": "create npc _vampire_ "
+        },
+        {
+          "line": 202,
+          "text": "toting _letter_ and _pawn_ clicked "
+        },
+        {
+          "line": 203,
+          "text": "say 1010 "
+        },
+        {
+          "line": 204,
+          "text": "change repute with _vampire_ by \u002B5 "
+        },
+        {
+          "line": 207,
+          "text": "toting letter36 and _vampire_ clicked "
+        },
+        {
+          "line": 208,
+          "text": "add dialog for person _pawn_ "
+        },
+        {
+          "line": 209,
+          "text": "log 1025 step 1 "
+        },
+        {
+          "line": 210,
+          "text": "get item _letter_ "
+        },
+        {
+          "line": 211,
+          "text": "say AcceptQuest "
+        },
+        {
+          "line": 212,
+          "text": "create npc _pawn_ "
+        },
+        {
+          "line": 215,
+          "text": "end quest "
+        },
+        {
+          "line": 218,
+          "text": "clicked npc _vampire_"
+        },
+        {
+          "line": 222,
+          "text": "when _vampsecondclick_ and not _npcclicked_ "
+        },
+        {
+          "line": 223,
+          "text": "clear _S.11_ _vampsecondclick_ _clearclick_"
+        },
+        {
+          "line": 228,
+          "text": "when _vampsecondclick_ "
+        },
+        {
+          "line": 229,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 230,
+          "text": "end quest "
+        },
+        {
+          "line": 233,
+          "text": "add dialog for person _vampire_ "
+        },
+        {
+          "line": 234,
+          "text": "log 1026 step 0 "
+        },
+        {
+          "line": 237,
+          "text": "start timer _1stparton_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "vampires",
+      "availability": "ordinary",
+      "name": "P0B00L03",
+      "sourceFile": "P0B00L03.txt",
+      "catalogGroup": "Vampires",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 199,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "574d32096ea5ce5101dcd76a692ec6847ebb792eef2c873eca0d95cecb1a80b6",
+      "actionLines": [
+        {
+          "line": 179,
+          "text": "dialog link for person _vampire_ item _vampproof_ "
+        },
+        {
+          "line": 180,
+          "text": "pc at _mondung_ set _S.10_ "
+        },
+        {
+          "line": 181,
+          "text": "_letter_ used do _readletter_ "
+        },
+        {
+          "line": 182,
+          "text": "have _letter_ set _S.12_ "
+        },
+        {
+          "line": 183,
+          "text": "give pc _letter_ notify 1021 "
+        },
+        {
+          "line": 184,
+          "text": "create npc _vampire_ "
+        },
+        {
+          "line": 187,
+          "text": "toting _vampproof_ and _vampire_ clicked "
+        },
+        {
+          "line": 188,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 189,
+          "text": "end quest "
+        },
+        {
+          "line": 194,
+          "text": "killed 1 _vamprival_ saying 1022 "
+        },
+        {
+          "line": 197,
+          "text": "clicked npc _vampire_ say AcceptQuest "
+        },
+        {
+          "line": 198,
+          "text": "reveal _mondung_"
+        },
+        {
+          "line": 199,
+          "text": "log 1026 step 1 "
+        },
+        {
+          "line": 202,
+          "text": "make _vampproof_ permanent "
+        },
+        {
+          "line": 203,
+          "text": "end quest  "
+        },
+        {
+          "line": 206,
+          "text": "when _S.07_ and not _vampclicked_ "
+        },
+        {
+          "line": 210,
+          "text": "add dialog for person _vampire_ "
+        },
+        {
+          "line": 211,
+          "text": "log 1025 step 0 "
+        },
+        {
+          "line": 215,
+          "text": "give item _vampproof_ to _vamprival_ "
+        },
+        {
+          "line": 216,
+          "text": "place foe _vamprival_ at _mondung_ "
+        },
+        {
+          "line": 219,
+          "text": "start timer _1stparton_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "vampires",
+      "availability": "ordinary",
+      "name": "P0B00L04",
+      "sourceFile": "P0B00L04.txt",
+      "catalogGroup": "Vampires",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 200,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "a63a903bba8119b7412fd69bc060abb6caac222aa1e922541daeb23196a986b0",
+      "actionLines": [
+        {
+          "line": 222,
+          "text": "dialog link for location _mondung_ person _vamp_ "
+        },
+        {
+          "line": 223,
+          "text": "_letter_ used do _readletter_ "
+        },
+        {
+          "line": 224,
+          "text": "have _letter_ set _S.08_ "
+        },
+        {
+          "line": 225,
+          "text": "give pc _letter_ notify 1011 "
+        },
+        {
+          "line": 226,
+          "text": "place foe _vampire_ at _mondung_ "
+        },
+        {
+          "line": 229,
+          "text": "clicked npc _vamp_ "
+        },
+        {
+          "line": 232,
+          "text": "when _vampclicked_ "
+        },
+        {
+          "line": 233,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 234,
+          "text": "log 1014 step 1 "
+        },
+        {
+          "line": 235,
+          "text": "say 1013 "
+        },
+        {
+          "line": 238,
+          "text": "killed 1 _vampire_ "
+        },
+        {
+          "line": 239,
+          "text": "say 1016 "
+        },
+        {
+          "line": 242,
+          "text": "clear _vampclicked_ "
+        },
+        {
+          "line": 245,
+          "text": "end quest "
+        },
+        {
+          "line": 248,
+          "text": "injured _vampire_ "
+        },
+        {
+          "line": 249,
+          "text": "say 1015 "
+        },
+        {
+          "line": 252,
+          "text": "when _vampclicked_ and _S.01_ "
+        },
+        {
+          "line": 253,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 254,
+          "text": "end quest "
+        },
+        {
+          "line": 258,
+          "text": "add dialog for person _vamp_ "
+        },
+        {
+          "line": 259,
+          "text": "log 1012 step 0 "
+        },
+        {
+          "line": 262,
+          "text": "start timer _queston_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "vampires",
+      "availability": "ordinary",
+      "name": "P0B00L06",
+      "sourceFile": "P0B00L06.txt",
+      "catalogGroup": "Vampires",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 201,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "13f6ddebe3ccaa0bf0f5ab18721078b7fda898c32e0ed684f46c086bb4a7997d",
+      "actionLines": [
+        {
+          "line": 279,
+          "text": "dialog link for person _vamp_ "
+        },
+        {
+          "line": 280,
+          "text": "dialog link for location _mondung_ person _mg_ "
+        },
+        {
+          "line": 281,
+          "text": "repute with _mg_ exceeds 15 do _S.04_ "
+        },
+        {
+          "line": 282,
+          "text": "give item research1 to _sorceror_ "
+        },
+        {
+          "line": 283,
+          "text": "letter37 used do _S.14_ "
+        },
+        {
+          "line": 284,
+          "text": "_letter_ used do _readletter_ "
+        },
+        {
+          "line": 285,
+          "text": "have _letter_ set _S.15_ "
+        },
+        {
+          "line": 286,
+          "text": "give pc _letter_ notify 1023 "
+        },
+        {
+          "line": 287,
+          "text": "place foe _sorceror_ at _mondung_ "
+        },
+        {
+          "line": 290,
+          "text": "change repute with _vamp_ by -10 "
+        },
+        {
+          "line": 291,
+          "text": "end quest "
+        },
+        {
+          "line": 294,
+          "text": "clicked npc _vamp_ "
+        },
+        {
+          "line": 295,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 296,
+          "text": "log 1021 step 2 "
+        },
+        {
+          "line": 297,
+          "text": "say 1012 "
+        },
+        {
+          "line": 301,
+          "text": "give pc letter37 notify 1014 "
+        },
+        {
+          "line": 304,
+          "text": "start timer _2ndparton_ "
+        },
+        {
+          "line": 307,
+          "text": "clicked npc _mg_ "
+        },
+        {
+          "line": 308,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 309,
+          "text": "log 1019 step 3 "
+        },
+        {
+          "line": 310,
+          "text": "say 1015 "
+        },
+        {
+          "line": 313,
+          "text": "injured _sorceror_ "
+        },
+        {
+          "line": 317,
+          "text": "when _contact_ and _S.05_ "
+        },
+        {
+          "line": 318,
+          "text": "prompt 1017 yes _S.09_ no _S.10_ "
+        },
+        {
+          "line": 321,
+          "text": "get item research1 "
+        },
+        {
+          "line": 322,
+          "text": "say 1018 "
+        },
+        {
+          "line": 323,
+          "text": "restrain foe _sorceror_ "
+        },
+        {
+          "line": 326,
+          "text": "when _contact_ and not _S.05_ "
+        },
+        {
+          "line": 327,
+          "text": "say 1016 "
+        },
+        {
+          "line": 330,
+          "text": "toting research1 and _mg_ clicked "
+        },
+        {
+          "line": 331,
+          "text": "get item _mggold_ "
+        },
+        {
+          "line": 332,
+          "text": "say 1022 "
+        },
+        {
+          "line": 333,
+          "text": "make _mggold_ permanent "
+        },
+        {
+          "line": 334,
+          "text": "change repute with _vamp_ by -20 "
+        },
+        {
+          "line": 335,
+          "text": "change repute with _mg_ by \u002B10 "
+        },
+        {
+          "line": 336,
+          "text": "end quest "
+        },
+        {
+          "line": 339,
+          "text": "toting research1 and _vamp_ clicked "
+        },
+        {
+          "line": 340,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 341,
+          "text": "end quest "
+        },
+        {
+          "line": 344,
+          "text": "add dialog for person _vamp_ "
+        },
+        {
+          "line": 345,
+          "text": "log 1011 step 0 "
+        },
+        {
+          "line": 348,
+          "text": "add dialog for person _mg_ "
+        },
+        {
+          "line": 351,
+          "text": "start timer _queston_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "vampires",
+      "availability": "ordinary",
+      "name": "P0B01L02",
+      "sourceFile": "P0B01L02.txt",
+      "catalogGroup": "Vampires",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": true,
+      "active": true,
+      "catalogSourceLine": 202,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "c57434553b3419aeadac2619aea26739f077d3fc25fec787df67524f13d9cb95",
+      "actionLines": [
+        {
+          "line": 139,
+          "text": "_letter_ used do _readletter_ "
+        },
+        {
+          "line": 140,
+          "text": "have _letter_ set _S.06_ "
+        },
+        {
+          "line": 141,
+          "text": "give pc _letter_ notify 1030 "
+        },
+        {
+          "line": 145,
+          "text": "toting _vamprelic_ and _vampire_ clicked "
+        },
+        {
+          "line": 146,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 147,
+          "text": "change repute with _vampire_ by \u002B5 "
+        },
+        {
+          "line": 148,
+          "text": "end quest "
+        },
+        {
+          "line": 151,
+          "text": "clicked item _vamprelic_ "
+        },
+        {
+          "line": 152,
+          "text": "create foe _mages_ every 2 minutes 2 times with 25% success "
+        },
+        {
+          "line": 153,
+          "text": "create foe _battlemage_ every 1 minutes 4 times with 25% success "
+        },
+        {
+          "line": 156,
+          "text": "make _vamprelic_ permanent "
+        },
+        {
+          "line": 157,
+          "text": "change repute with _vampire_ by -5 "
+        },
+        {
+          "line": 158,
+          "text": "end quest "
+        },
+        {
+          "line": 162,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 165,
+          "text": "start timer _1stparton_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "vampires",
+      "availability": "ordinary",
+      "name": "P0B10L07",
+      "sourceFile": "P0B10L07.txt",
+      "catalogGroup": "Vampires",
+      "membership": "M",
+      "minimumRequirement": 1,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 203,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "2f5d847abcb706b6b7c1278df6bc6bc477dcc8cd89ca4499f6735788ded92bee",
+      "actionLines": [
+        {
+          "line": 169,
+          "text": "dialog link for person _vamp_ "
+        },
+        {
+          "line": 170,
+          "text": "_letter_ used do _readletter_ "
+        },
+        {
+          "line": 171,
+          "text": "have _letter_ set _S.09_ "
+        },
+        {
+          "line": 172,
+          "text": "give pc _letter_ notify 1017 "
+        },
+        {
+          "line": 173,
+          "text": "place foe _F.00_ at _mondung_ "
+        },
+        {
+          "line": 177,
+          "text": "change repute with _vamp_ by -5 "
+        },
+        {
+          "line": 178,
+          "text": "end quest "
+        },
+        {
+          "line": 181,
+          "text": "clicked npc _vamp_ "
+        },
+        {
+          "line": 182,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 183,
+          "text": "log 1013 step 1 "
+        },
+        {
+          "line": 184,
+          "text": "say 1011 "
+        },
+        {
+          "line": 187,
+          "text": "when _vampclicked_ and not _S.05_ and not _S.04_ "
+        },
+        {
+          "line": 188,
+          "text": "clear _vampclicked_ _S.03_ "
+        },
+        {
+          "line": 191,
+          "text": "injured _F.00_ "
+        },
+        {
+          "line": 192,
+          "text": "say 1014 "
+        },
+        {
+          "line": 193,
+          "text": "restrain foe _F.00_"
+        },
+        {
+          "line": 198,
+          "text": "killed 1 _F.00_ "
+        },
+        {
+          "line": 199,
+          "text": "say 1015 "
+        },
+        {
+          "line": 202,
+          "text": "when _vampclicked_ and _S.04_ and not _S.05_ "
+        },
+        {
+          "line": 203,
+          "text": "give pc _jewelry_ "
+        },
+        {
+          "line": 204,
+          "text": "end quest "
+        },
+        {
+          "line": 207,
+          "text": "when _vampclicked_ and _S.05_ "
+        },
+        {
+          "line": 208,
+          "text": "say 1016 "
+        },
+        {
+          "line": 209,
+          "text": "change repute with _vamp_ by -5 "
+        },
+        {
+          "line": 210,
+          "text": "end quest "
+        },
+        {
+          "line": 213,
+          "text": "add dialog for location _mondung_ person _vamp_ "
+        },
+        {
+          "line": 214,
+          "text": "log 1012 step 0 "
+        },
+        {
+          "line": 215,
+          "text": "create npc _vamp_ "
+        },
+        {
+          "line": 218,
+          "text": "start timer _queston_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "vampires",
+      "availability": "ordinary",
+      "name": "P0B10L08",
+      "sourceFile": "P0B10L08.txt",
+      "catalogGroup": "Vampires",
+      "membership": "M",
+      "minimumRequirement": 1,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 204,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "40bf9bf853f3554492a05de83277ac0c6f29d3f23fd9038e070f3531738c633d",
+      "actionLines": [
+        {
+          "line": 204,
+          "text": "dialog link for person _vamp_ "
+        },
+        {
+          "line": 205,
+          "text": "start timer _queston_ "
+        },
+        {
+          "line": 206,
+          "text": "_letter_ used do _readletter_ "
+        },
+        {
+          "line": 207,
+          "text": "give pc _letter_ notify 1021 "
+        },
+        {
+          "line": 210,
+          "text": "end quest "
+        },
+        {
+          "line": 213,
+          "text": "clicked npc _vamp_ "
+        },
+        {
+          "line": 214,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 215,
+          "text": "log 1012 step 1 "
+        },
+        {
+          "line": 216,
+          "text": "get item _letter2_ "
+        },
+        {
+          "line": 217,
+          "text": "say 1011 "
+        },
+        {
+          "line": 218,
+          "text": "place npc _daedra_ at _mondung_ "
+        },
+        {
+          "line": 221,
+          "text": "say 1016 "
+        },
+        {
+          "line": 222,
+          "text": "change repute with _vamp_ by -5 "
+        },
+        {
+          "line": 223,
+          "text": "change repute with _daedra_ by -10 "
+        },
+        {
+          "line": 224,
+          "text": "destroy _daedra_ "
+        },
+        {
+          "line": 227,
+          "text": "killed 1 _daedroth_ "
+        },
+        {
+          "line": 228,
+          "text": "say 1018 "
+        },
+        {
+          "line": 229,
+          "text": "change repute with _daedra_ by \u002B10 "
+        },
+        {
+          "line": 232,
+          "text": "when _vampclicked_ and not _failure_ and not _success_ "
+        },
+        {
+          "line": 233,
+          "text": "clear _vampclicked_ "
+        },
+        {
+          "line": 236,
+          "text": "clicked npc _daedra_ "
+        },
+        {
+          "line": 237,
+          "text": "prompt 1015 yes _failure_ no _challenge_ "
+        },
+        {
+          "line": 240,
+          "text": "create foe _daedroth_ every 1 minutes 1 times with 100% success "
+        },
+        {
+          "line": 241,
+          "text": "hide npc _daedra_ "
+        },
+        {
+          "line": 242,
+          "text": "say 1017 "
+        },
+        {
+          "line": 245,
+          "text": "when _vampclicked_ and _failure_ "
+        },
+        {
+          "line": 246,
+          "text": "say 1019 "
+        },
+        {
+          "line": 247,
+          "text": "end quest "
+        },
+        {
+          "line": 250,
+          "text": "when _vampclicked_ and _success_ "
+        },
+        {
+          "line": 251,
+          "text": "give pc _gem_ "
+        },
+        {
+          "line": 252,
+          "text": "make _gem_ permanent "
+        },
+        {
+          "line": 253,
+          "text": "end quest "
+        },
+        {
+          "line": 256,
+          "text": "add dialog for person _vamp_ "
+        },
+        {
+          "line": 257,
+          "text": "log 1014 step 0 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "vampires",
+      "availability": "ordinary",
+      "name": "P0B10L10",
+      "sourceFile": "P0B10L10.txt",
+      "catalogGroup": "Vampires",
+      "membership": "M",
+      "minimumRequirement": 1,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 205,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "c6e4b521cbd664cb399a61b87468e3c2a884afc20acf29135ca236e9d0a4cf96",
+      "actionLines": [
+        {
+          "line": 153,
+          "text": "dialog link for person _vamp2_ "
+        },
+        {
+          "line": 154,
+          "text": "dialog link for person _vamp_ "
+        },
+        {
+          "line": 155,
+          "text": "_letter_ used do _readletter_ "
+        },
+        {
+          "line": 156,
+          "text": "have _letter_ set _S.10_ "
+        },
+        {
+          "line": 157,
+          "text": "give pc _letter_ notify 1017 "
+        },
+        {
+          "line": 160,
+          "text": "end quest "
+        },
+        {
+          "line": 163,
+          "text": "clicked npc _vamp_ "
+        },
+        {
+          "line": 164,
+          "text": "log 1014 step 1 "
+        },
+        {
+          "line": 165,
+          "text": "hide npc _vamp_ "
+        },
+        {
+          "line": 166,
+          "text": "say 1012 "
+        },
+        {
+          "line": 167,
+          "text": "add _vamp_ face "
+        },
+        {
+          "line": 168,
+          "text": "create npc _vamp2_ "
+        },
+        {
+          "line": 172,
+          "text": "when _vampclicked_ and not _S.04_ "
+        },
+        {
+          "line": 173,
+          "text": "create foe _mage_ every 15 minutes 5 times with 50% success "
+        },
+        {
+          "line": 176,
+          "text": "injured _mage_ "
+        },
+        {
+          "line": 177,
+          "text": "say 1013 "
+        },
+        {
+          "line": 181,
+          "text": "killed 1 _mage_ "
+        },
+        {
+          "line": 182,
+          "text": "say 1015 "
+        },
+        {
+          "line": 185,
+          "text": "clicked npc _vamp2_ "
+        },
+        {
+          "line": 186,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 187,
+          "text": "change repute with _vamp_ by \u002B5 "
+        },
+        {
+          "line": 188,
+          "text": "end quest "
+        },
+        {
+          "line": 191,
+          "text": "when _queston_ and not _S.07_ "
+        },
+        {
+          "line": 192,
+          "text": "say 1016 "
+        },
+        {
+          "line": 193,
+          "text": "change repute with _vamp_ by -10 "
+        },
+        {
+          "line": 196,
+          "text": "add dialog for person _vamp_ "
+        },
+        {
+          "line": 197,
+          "text": "log 1011 step 0 "
+        },
+        {
+          "line": 198,
+          "text": "create npc _vamp_ "
+        },
+        {
+          "line": 201,
+          "text": "start timer _queston_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "vampires",
+      "availability": "ordinary",
+      "name": "P0B20L09",
+      "sourceFile": "P0B20L09.txt",
+      "catalogGroup": "Vampires",
+      "membership": "M",
+      "minimumRequirement": 2,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "active": true,
+      "catalogSourceLine": 206,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "30707e207e816a785b3b8fe05b9c7a0aee80d300c1da0949c1021ec92fe4d8e6",
+      "actionLines": [
+        {
+          "line": 136,
+          "text": "dialog link for person _vamp_ "
+        },
+        {
+          "line": 137,
+          "text": "pc at _mondung_ set _S.07_ "
+        },
+        {
+          "line": 138,
+          "text": "_letter_ used do _readletter_ "
+        },
+        {
+          "line": 139,
+          "text": "have _letter_ set _S.09_ "
+        },
+        {
+          "line": 140,
+          "text": "give pc _letter_ notify 1017 "
+        },
+        {
+          "line": 141,
+          "text": "place foe _wereboar_ at _mondung_ "
+        },
+        {
+          "line": 144,
+          "text": "change repute with _vamp_ by -5 "
+        },
+        {
+          "line": 145,
+          "text": "end quest "
+        },
+        {
+          "line": 148,
+          "text": "clicked npc _vamp_ "
+        },
+        {
+          "line": 151,
+          "text": "when _vampclicked_ "
+        },
+        {
+          "line": 152,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 153,
+          "text": "log 1013 step 1 "
+        },
+        {
+          "line": 154,
+          "text": "say 1011 "
+        },
+        {
+          "line": 157,
+          "text": "when _vampclicked_ and not _S.04_ "
+        },
+        {
+          "line": 158,
+          "text": "clear _vampclicked_ _nononono_ "
+        },
+        {
+          "line": 161,
+          "text": "toting _I.01_ and _vamp_ clicked "
+        },
+        {
+          "line": 162,
+          "text": "give pc _I.01_ "
+        },
+        {
+          "line": 163,
+          "text": "end quest "
+        },
+        {
+          "line": 166,
+          "text": "killed 1 _wereboar_ "
+        },
+        {
+          "line": 167,
+          "text": "say 1020 "
+        },
+        {
+          "line": 170,
+          "text": "add dialog for person _vamp_ "
+        },
+        {
+          "line": 171,
+          "text": "log 1012 step 0 "
+        },
+        {
+          "line": 172,
+          "text": "create npc _vamp_ "
+        },
+        {
+          "line": 175,
+          "text": "create foe _F.00_ every 12 minutes 30 times with 50% success "
+        },
+        {
+          "line": 178,
+          "text": "injured _wereboar_ "
+        },
+        {
+          "line": 179,
+          "text": "give item _I.01_ to _wereboar_ "
+        },
+        {
+          "line": 180,
+          "text": "say 1021 "
+        },
+        {
+          "line": 183,
+          "text": "start timer _queston_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    }
+  ],
+  "fingerprint": "72a1807c3eb0028f75b401316ec6ea6d409678421c14e3df090cb866b2026f95"
+}

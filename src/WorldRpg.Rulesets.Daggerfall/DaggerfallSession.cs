@@ -110,8 +110,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
         : this(engine, definitions, inputs, tuning, compositionIdentity, null, null) { }
 
-    internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, DaggerfallAudioBundle audioBundle, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null)
-        : this(engine, definitions, inputs, tuning, compositionIdentity, null, null, audioBundle, cinematicContent, videosEnabled, questAdmission) { }
+    internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, DaggerfallAudioBundle audioBundle, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null)
+        : this(engine, definitions, inputs, tuning, compositionIdentity, null, null, audioBundle, cinematicContent, videosEnabled, questAdmission, disabledQuestSelection) { }
 
     internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
         DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, RulesetSavePayload saved, IRandomService random)
@@ -119,20 +119,20 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
         DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, RulesetSavePayload saved,
-        IRandomService random, DaggerfallAudioBundle audioBundle, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null)
-        => Restore(engine, compositionIdentity, definitions, inputs, tuning, saved, random, null, audioBundle, cinematicContent, videosEnabled, questAdmission);
+        IRandomService random, DaggerfallAudioBundle audioBundle, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null)
+        => Restore(engine, compositionIdentity, definitions, inputs, tuning, saved, random, null, audioBundle, cinematicContent, videosEnabled, questAdmission, disabledQuestSelection);
 
     internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
         DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, RulesetSavePayload saved,
-        IRandomService random, DaggerfallEffectCatalog? effects, DaggerfallAudioBundle? audioBundle = null, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null)
+        IRandomService random, DaggerfallEffectCatalog? effects, DaggerfallAudioBundle? audioBundle = null, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null)
     {
         DaggerfallSavePayload payload = DaggerfallSavePayload.Read(saved).ResolveRestore(definitions, inputs);
-        return new DaggerfallSession(engine, definitions, inputs, tuning, compositionIdentity, payload, effects, audioBundle, cinematicContent, videosEnabled, questAdmission);
+        return new DaggerfallSession(engine, definitions, inputs, tuning, compositionIdentity, payload, effects, audioBundle, cinematicContent, videosEnabled, questAdmission, disabledQuestSelection);
     }
 
     private DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs,
         DaggerfallTuning tuning, ResolvedCompositionIdentity? compositionIdentity, DaggerfallSavePayload? saved,
-        DaggerfallEffectCatalog? effects, DaggerfallAudioBundle? audioBundle = null, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null)
+        DaggerfallEffectCatalog? effects, DaggerfallAudioBundle? audioBundle = null, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null)
     {
         List<IDisposable> partiallyConstructed = [];
         try
@@ -146,7 +146,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             _spatialService = engine.Spatial;
             _spawnGroundProbeLift = tuning.EnemyBehavior.SpawnGroundProbeLift;
             _spawnGroundProbeDistance = tuning.EnemyBehavior.SpawnGroundProbeDistance;
-            DaggerActorAssembly assembled = DaggerActorFactory.Create(_random, definitions, inputs, saved, questAdmission);
+            DaggerActorAssembly assembled = DaggerActorFactory.Create(_random, definitions, inputs, saved, questAdmission, disabledQuestSelection);
             State = assembled.State;
             ActorsState actors = State.Actors;
             partiallyConstructed.Add(actors);

@@ -1,0 +1,2605 @@
+{
+  "id": "disabled",
+  "catalogSource": {
+    "sourcePath": "Tables/QuestList-Classic.txt",
+    "contentHash": "24299ba54dc246ae278123f4c855928e1d7cd36626b972236d13c44c5005d001",
+    "byteLen": 10399
+  },
+  "categories": [
+    {
+      "id": "disabled-merchant",
+      "catalogGroup": "Merchants",
+      "active": false,
+      "availability": "notOffered",
+      "names": [
+        "K0C00Y06"
+      ]
+    },
+    {
+      "id": "disabled-nobility",
+      "catalogGroup": "Nobility",
+      "active": false,
+      "availability": "notOffered",
+      "names": [
+        "R0C11Y27"
+      ]
+    },
+    {
+      "id": "daedric-summon",
+      "catalogGroup": "Oblivion",
+      "active": false,
+      "availability": "summonOnly",
+      "names": [
+        "10C00Y00",
+        "20C00Y00",
+        "30C00Y00",
+        "40C00Y00",
+        "50C00Y00",
+        "60C00Y00",
+        "70C00Y00",
+        "80C0XY00",
+        "90C00Y00",
+        "T0C00Y00",
+        "U0C00Y00",
+        "V0C00Y00",
+        "W0C00Y00",
+        "X0C00Y00",
+        "Y0C00Y00",
+        "Z0C00Y00"
+      ]
+    }
+  ],
+  "quests": [
+    {
+      "category": "disabled-merchant",
+      "availability": "notOffered",
+      "name": "K0C00Y06",
+      "sourceFile": "K0C00Y06.txt",
+      "catalogGroup": "Merchants",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": false,
+      "active": false,
+      "catalogSourceLine": 187,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "5b55baad952bade66edad4af23ff067ef21234d5a13312ccc269698e1c5407a5",
+      "actionLines": [
+        {
+          "line": 882,
+          "text": "create foe _guard_ every 1 minutes 1 times with 100% success "
+        },
+        {
+          "line": 883,
+          "text": "dialog link for person necromancer "
+        },
+        {
+          "line": 884,
+          "text": "dialog link for person _tg_ "
+        },
+        {
+          "line": 885,
+          "text": "dialog link for person _thief_ "
+        },
+        {
+          "line": 886,
+          "text": "dialog link for location _withouse_ person _witness_ "
+        },
+        {
+          "line": 887,
+          "text": "dialog link for person underking "
+        },
+        {
+          "line": 888,
+          "text": "dialog link for location _thiefhouse_ person _merchant_ "
+        },
+        {
+          "line": 889,
+          "text": "dialog link for person _priest_ "
+        },
+        {
+          "line": 890,
+          "text": "dialog link for person _noble_ "
+        },
+        {
+          "line": 891,
+          "text": "start timer _questtimelimit_ "
+        },
+        {
+          "line": 892,
+          "text": "start timer _delay_ "
+        },
+        {
+          "line": 893,
+          "text": "start timer _letterarrivaltime_ "
+        },
+        {
+          "line": 894,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 895,
+          "text": "pick one of _merchantguilty_ _nobleguilty_ _priestguilty_ _thiefguilty_ "
+        },
+        {
+          "line": 896,
+          "text": "_almightyletter_ used do _havereadwitnessletter_ "
+        },
+        {
+          "line": 897,
+          "text": "legal repute -15 "
+        },
+        {
+          "line": 898,
+          "text": "place npc _noble_ at _noblehome_ "
+        },
+        {
+          "line": 899,
+          "text": "place npc _merchant_ at _merchanthome_ "
+        },
+        {
+          "line": 900,
+          "text": "place npc _witness_ at _inn_ "
+        },
+        {
+          "line": 901,
+          "text": "place npc _priest_ at _priesthome_ "
+        },
+        {
+          "line": 902,
+          "text": "place npc _thief_ at _thiefhome_ "
+        },
+        {
+          "line": 910,
+          "text": "hide npc _qgiver_ "
+        },
+        {
+          "line": 911,
+          "text": "say 1100 "
+        },
+        {
+          "line": 914,
+          "text": "daily from 00:00 to 02:00 "
+        },
+        {
+          "line": 917,
+          "text": "when _priestguilty_ and _latenight_ and _secondwitnessdiscussion_"
+        },
+        {
+          "line": 918,
+          "text": "place npc _priest_ at _thiefhouse_"
+        },
+        {
+          "line": 919,
+          "text": "restore _priest_"
+        },
+        {
+          "line": 922,
+          "text": "when _priestguilty_ and not _latenight_ and _secondwitnessdiscussion_"
+        },
+        {
+          "line": 923,
+          "text": "place item _priestevidenceletter_ at _thiefhouse_ "
+        },
+        {
+          "line": 924,
+          "text": "hide npc _priest_ "
+        },
+        {
+          "line": 927,
+          "text": "when _merchantguilty_ and _latenight_ and _secondwitnessdiscussion_"
+        },
+        {
+          "line": 928,
+          "text": "place npc _merchant_ at _thiefhouse_ "
+        },
+        {
+          "line": 929,
+          "text": "restore _merchant_"
+        },
+        {
+          "line": 932,
+          "text": "when _merchantguilty_ and not _latenight_ and _secondwitnessdiscussion_"
+        },
+        {
+          "line": 933,
+          "text": "place item _merchantevidenceletter_ at _thiefhouse_ "
+        },
+        {
+          "line": 934,
+          "text": "hide npc _merchant_ "
+        },
+        {
+          "line": 937,
+          "text": "when _nobleguilty_ and _latenight_ and _secondwitnessdiscussion_"
+        },
+        {
+          "line": 938,
+          "text": "place npc _noble_ at _thiefhouse_"
+        },
+        {
+          "line": 939,
+          "text": "restore _noble_"
+        },
+        {
+          "line": 942,
+          "text": "when _nobleguilty_ and not _latenight_ and _secondwitnessdiscussion_"
+        },
+        {
+          "line": 943,
+          "text": "place item _nobleevidenceletter_ at _thiefhouse_ "
+        },
+        {
+          "line": 944,
+          "text": "hide npc _noble_ "
+        },
+        {
+          "line": 947,
+          "text": "when _thiefguilty_ and not _latenight_ and _secondwitnessdiscussion_"
+        },
+        {
+          "line": 948,
+          "text": "place item _thiefevidenceletter_ at _thiefhouse_ "
+        },
+        {
+          "line": 949,
+          "text": "hide npc _thief_ "
+        },
+        {
+          "line": 952,
+          "text": "when _thiefguilty_ and _latenight_ and _secondwitnessdiscussion_"
+        },
+        {
+          "line": 953,
+          "text": "place npc _thief_ at _thiefhouse_ "
+        },
+        {
+          "line": 954,
+          "text": "restore _thief_"
+        },
+        {
+          "line": 957,
+          "text": "repute with _tg_ exceeds 10 do _friendofthievesguild_ "
+        },
+        {
+          "line": 958,
+          "text": "repute with necromancer exceeds 10 do _friendofnecros_ "
+        },
+        {
+          "line": 959,
+          "text": "repute with underking exceeds 10 do _friendofunderking_"
+        },
+        {
+          "line": 962,
+          "text": "_thievesguildletter_ used do _havereadthievesguildletter_ "
+        },
+        {
+          "line": 963,
+          "text": "give pc _thievesguildletter_ notify 1017 "
+        },
+        {
+          "line": 964,
+          "text": "clear _friendofnecros_ _friendofunderking_ "
+        },
+        {
+          "line": 967,
+          "text": "log 1028 step 1 "
+        },
+        {
+          "line": 970,
+          "text": "_necromancerletter_ used do _havereadnecromancerletter_ "
+        },
+        {
+          "line": 971,
+          "text": "give pc _necromancerletter_ notify 1017 "
+        },
+        {
+          "line": 972,
+          "text": "clear _friendofunderking_ "
+        },
+        {
+          "line": 975,
+          "text": "log 1026 step 1 "
+        },
+        {
+          "line": 978,
+          "text": "_underkingletter_ used do _havereadunderkingletter_ "
+        },
+        {
+          "line": 979,
+          "text": "give pc _underkingletter_ notify 1017 "
+        },
+        {
+          "line": 982,
+          "text": "log 1027 step 1 "
+        },
+        {
+          "line": 985,
+          "text": "when not _friendofnecros_ and not _friendofunderking_ and not _friendofthievesguild_ "
+        },
+        {
+          "line": 988,
+          "text": "when _nobodyismyfriend_ and _letterarrivaltime_ "
+        },
+        {
+          "line": 991,
+          "text": "clicked npc _witness_ "
+        },
+        {
+          "line": 994,
+          "text": "when _clickonwitness_ and not _havereadwitnessletter_ "
+        },
+        {
+          "line": 995,
+          "text": "create foe _guard2_ every 1 minutes 1 times with 100% success "
+        },
+        {
+          "line": 996,
+          "text": "get item _almightyletter_ "
+        },
+        {
+          "line": 997,
+          "text": "say 1025 "
+        },
+        {
+          "line": 998,
+          "text": "place npc _witness_ at _withouse_ "
+        },
+        {
+          "line": 999,
+          "text": "clear _clickonwitness_ "
+        },
+        {
+          "line": 1002,
+          "text": "log 1034 step 3 "
+        },
+        {
+          "line": 1005,
+          "text": "when _clickonwitness_ and _havereadwitnessletter_"
+        },
+        {
+          "line": 1006,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 1007,
+          "text": "pick one of _honestmistake_ _annoyingwitness_ "
+        },
+        {
+          "line": 1008,
+          "text": "hide npc _witness_ "
+        },
+        {
+          "line": 1011,
+          "text": "when _priestguilty_ and _makehelpfulletterarrive_ "
+        },
+        {
+          "line": 1012,
+          "text": "_antipriestletter_ used do _antipriestlog_ "
+        },
+        {
+          "line": 1013,
+          "text": "give pc _antipriestletter_ notify 1017 "
+        },
+        {
+          "line": 1016,
+          "text": "log 1029 step 2 "
+        },
+        {
+          "line": 1019,
+          "text": "when _merchantguilty_ and _makehelpfulletterarrive_ "
+        },
+        {
+          "line": 1020,
+          "text": "_antimerchantletter_ used do _antimerchantlog_ "
+        },
+        {
+          "line": 1021,
+          "text": "give pc _antimerchantletter_ notify 1017 "
+        },
+        {
+          "line": 1024,
+          "text": "log 1030 step 2 "
+        },
+        {
+          "line": 1027,
+          "text": "when _nobleguilty_ and _makehelpfulletterarrive_ "
+        },
+        {
+          "line": 1028,
+          "text": "_antinobleletter_ used do _antinoblelog_ "
+        },
+        {
+          "line": 1029,
+          "text": "give pc _antinobleletter_ notify 1017 "
+        },
+        {
+          "line": 1032,
+          "text": "log 1031 step 2 "
+        },
+        {
+          "line": 1035,
+          "text": "when _thiefguilty_ and _makehelpfulletterarrive_ "
+        },
+        {
+          "line": 1036,
+          "text": "_antithiefletter_ used do _antithieflog_ "
+        },
+        {
+          "line": 1037,
+          "text": "give pc _antithiefletter_ notify 1017 "
+        },
+        {
+          "line": 1040,
+          "text": "log 1032 step 2 "
+        },
+        {
+          "line": 1045,
+          "text": "when _honestmistake_ and _thiefguilty_ "
+        },
+        {
+          "line": 1046,
+          "text": "log 1046 step 4 "
+        },
+        {
+          "line": 1047,
+          "text": "say 1038 "
+        },
+        {
+          "line": 1050,
+          "text": "when _honestmistake_ and _nobleguilty_ "
+        },
+        {
+          "line": 1051,
+          "text": "log 1044 step 4 "
+        },
+        {
+          "line": 1052,
+          "text": "say 1036 "
+        },
+        {
+          "line": 1055,
+          "text": "when _honestmistake_ and _merchantguilty_ "
+        },
+        {
+          "line": 1056,
+          "text": "log 1043 step 4 "
+        },
+        {
+          "line": 1057,
+          "text": "say 1035 "
+        },
+        {
+          "line": 1060,
+          "text": "when _honestmistake_ and _priestguilty_ "
+        },
+        {
+          "line": 1061,
+          "text": "log 1045 step 4 "
+        },
+        {
+          "line": 1062,
+          "text": "say 1037 "
+        },
+        {
+          "line": 1065,
+          "text": "when _thiefguilty_ and _annoyingwitness_ "
+        },
+        {
+          "line": 1066,
+          "text": "log 1094 step 4 "
+        },
+        {
+          "line": 1067,
+          "text": "say 1042 "
+        },
+        {
+          "line": 1070,
+          "text": "when _priestguilty_ and _annoyingwitness_ "
+        },
+        {
+          "line": 1071,
+          "text": "log 1093 step 4 "
+        },
+        {
+          "line": 1072,
+          "text": "say 1041 "
+        },
+        {
+          "line": 1075,
+          "text": "when _merchantguilty_ and _annoyingwitness_ "
+        },
+        {
+          "line": 1076,
+          "text": "log 1091 step 4 "
+        },
+        {
+          "line": 1077,
+          "text": "say 1039 "
+        },
+        {
+          "line": 1080,
+          "text": "when _nobleguilty_ and _annoyingwitness_ "
+        },
+        {
+          "line": 1081,
+          "text": "log 1092 step 4 "
+        },
+        {
+          "line": 1082,
+          "text": "say 1040 "
+        },
+        {
+          "line": 1085,
+          "text": "clicked item _gem_ "
+        },
+        {
+          "line": 1086,
+          "text": "say 1047 "
+        },
+        {
+          "line": 1089,
+          "text": "clicked item _priestevidenceletter_ "
+        },
+        {
+          "line": 1090,
+          "text": "clicked item _thiefevidenceletter_ "
+        },
+        {
+          "line": 1091,
+          "text": "clicked item _merchantevidenceletter_ "
+        },
+        {
+          "line": 1092,
+          "text": "clicked item _nobleevidenceletter_ "
+        },
+        {
+          "line": 1093,
+          "text": "say 1052 "
+        },
+        {
+          "line": 1096,
+          "text": "when _deliverlettertomerchant_ or _deliverlettertonoble_ or _deliverlettertopriest_ or _deliverlettertothief_ "
+        },
+        {
+          "line": 1097,
+          "text": "log 1059 step 5 "
+        },
+        {
+          "line": 1098,
+          "text": "restore _qgiver_ "
+        },
+        {
+          "line": 1101,
+          "text": "toting _nobleevidenceletter_ and _thief_ clicked "
+        },
+        {
+          "line": 1102,
+          "text": "say 1053 "
+        },
+        {
+          "line": 1105,
+          "text": "toting _thiefevidenceletter_ and _merchant_ clicked "
+        },
+        {
+          "line": 1106,
+          "text": "say 1054 "
+        },
+        {
+          "line": 1109,
+          "text": "toting _merchantevidenceletter_ and _priest_ clicked "
+        },
+        {
+          "line": 1110,
+          "text": "say 1055 "
+        },
+        {
+          "line": 1113,
+          "text": "toting _priestevidenceletter_ and _noble_ clicked "
+        },
+        {
+          "line": 1114,
+          "text": "say 1056 "
+        },
+        {
+          "line": 1117,
+          "text": "when _clickanyone_ and not _makevictimreturn_ "
+        },
+        {
+          "line": 1118,
+          "text": "create foe _guard3_ every 1 minutes 1 times with 100% success "
+        },
+        {
+          "line": 1119,
+          "text": "say 1057 "
+        },
+        {
+          "line": 1120,
+          "text": "clear _clickmerchant_ _clicknoble_ _clickpriest_ _clickthief_ "
+        },
+        {
+          "line": 1121,
+          "text": "start task _reminderwitness_"
+        },
+        {
+          "line": 1124,
+          "text": "log 1061 step 2"
+        },
+        {
+          "line": 1127,
+          "text": "toting _gem_ and _qgiver_ clicked "
+        },
+        {
+          "line": 1128,
+          "text": "legal repute -200"
+        },
+        {
+          "line": 1129,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 1130,
+          "text": "change repute with _qgiver_ by \u002B10 "
+        },
+        {
+          "line": 1131,
+          "text": "legal repute \u002B105"
+        },
+        {
+          "line": 1132,
+          "text": "end quest "
+        },
+        {
+          "line": 1137,
+          "text": "clicked npc _merchant_ "
+        },
+        {
+          "line": 1140,
+          "text": "clicked npc _noble_ "
+        },
+        {
+          "line": 1143,
+          "text": "clicked npc _priest_ "
+        },
+        {
+          "line": 1146,
+          "text": "clicked npc _thief_ "
+        },
+        {
+          "line": 1149,
+          "text": "when _clickmerchant_ or _clicknoble_ or _clickpriest_ or _clickthief_ "
+        },
+        {
+          "line": 1152,
+          "text": "when _clicknoble_ and _deliverlettertothief_ "
+        },
+        {
+          "line": 1153,
+          "text": "when _clickpriest_ and _deliverlettertonoble_ "
+        },
+        {
+          "line": 1154,
+          "text": "when _clickmerchant_ and _deliverlettertopriest_ "
+        },
+        {
+          "line": 1155,
+          "text": "when _clickthief_ and _deliverlettertomerchant_ "
+        },
+        {
+          "line": 1156,
+          "text": "create foe _guard4_ every 1 minutes 1 times with 100% success "
+        },
+        {
+          "line": 1157,
+          "text": "say 1058 "
+        },
+        {
+          "line": 1160,
+          "text": "have _gem_ set _illkeepthatgem_ "
+        },
+        {
+          "line": 1163,
+          "text": "make _gem_ permanent "
+        },
+        {
+          "line": 1166,
+          "text": "when _questtimelimit_ and not _victory_ "
+        },
+        {
+          "line": 1167,
+          "text": "say 1060 "
+        },
+        {
+          "line": 1168,
+          "text": "restore _qgiver_ "
+        },
+        {
+          "line": 1169,
+          "text": "end quest "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "disabled-nobility",
+      "availability": "notOffered",
+      "name": "R0C11Y27",
+      "sourceFile": "R0C11Y27.txt",
+      "catalogGroup": "Nobility",
+      "membership": "N",
+      "minimumRequirement": 1,
+      "requirementKind": "level",
+      "adult": false,
+      "oneTime": true,
+      "active": false,
+      "catalogSourceLine": 231,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "98ab9d7a6e127ca0f3ee1c9f004818818292e224749a8825b632c8fea09b7966",
+      "actionLines": [
+        {
+          "line": 151,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 152,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 153,
+          "text": "get item _item1_ "
+        },
+        {
+          "line": 156,
+          "text": "toting _item2_ and _npc2_ clicked "
+        },
+        {
+          "line": 157,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 158,
+          "text": "end quest "
+        },
+        {
+          "line": 164,
+          "text": "toting _item1_ and _npc1_ clicked "
+        },
+        {
+          "line": 165,
+          "text": "start timer _2ndparton_ "
+        },
+        {
+          "line": 166,
+          "text": "log 1011 step 1 "
+        },
+        {
+          "line": 167,
+          "text": "get item _item2_ "
+        },
+        {
+          "line": 168,
+          "text": "say 1012 "
+        },
+        {
+          "line": 172,
+          "text": "when _1stparton_ and not _S.03_ "
+        },
+        {
+          "line": 173,
+          "text": "make _item1_ permanent "
+        },
+        {
+          "line": 174,
+          "text": "change repute with _questgiver_ by -20 "
+        },
+        {
+          "line": 175,
+          "text": "end quest "
+        },
+        {
+          "line": 179,
+          "text": "make _item2_ permanent "
+        },
+        {
+          "line": 180,
+          "text": "change repute with _questgiver_ by -2 "
+        },
+        {
+          "line": 181,
+          "text": "end quest "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "daedric-summon",
+      "availability": "summonOnly",
+      "name": "10C00Y00",
+      "sourceFile": "10C00Y00.txt",
+      "catalogGroup": "Oblivion",
+      "membership": null,
+      "minimumRequirement": 0,
+      "requirementKind": "unspecified",
+      "adult": false,
+      "oneTime": false,
+      "active": false,
+      "catalogSourceLine": 241,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "0c6dd21280a42c2be1c2cdb4c354356cf24b5257ad2417f6b0fbe013164ca78a",
+      "actionLines": [
+        {
+          "line": 139,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 140,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 141,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 142,
+          "text": "place foe _monster_ at _mondung_ "
+        },
+        {
+          "line": 145,
+          "text": "end quest "
+        },
+        {
+          "line": 150,
+          "text": "when _npcclicked_ and _mondead_ "
+        },
+        {
+          "line": 151,
+          "text": "give pc _artifact_ "
+        },
+        {
+          "line": 152,
+          "text": "end quest "
+        },
+        {
+          "line": 156,
+          "text": "killed 1 _monster_ "
+        },
+        {
+          "line": 157,
+          "text": "say 1030 "
+        },
+        {
+          "line": 158,
+          "text": "clear _S.08_ "
+        },
+        {
+          "line": 161,
+          "text": "clicked npc _qgfriend_ "
+        },
+        {
+          "line": 164,
+          "text": "when _npcclicked_ and not _mondead_ "
+        },
+        {
+          "line": 165,
+          "text": "say 1003"
+        },
+        {
+          "line": 166,
+          "text": "clear _npcclicked_ _clearclick_ "
+        },
+        {
+          "line": 169,
+          "text": "injured _monster_ "
+        },
+        {
+          "line": 170,
+          "text": "say 1040 "
+        },
+        {
+          "line": 173,
+          "text": "when _S.07_ and not _mondead_ "
+        },
+        {
+          "line": 174,
+          "text": "create foe _daedra2_ every 3 minutes 3 times with 100% success "
+        },
+        {
+          "line": 175,
+          "text": "create foe _daedra1_ every 2 minutes 2 times with 100% success "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "daedric-summon",
+      "availability": "summonOnly",
+      "name": "20C00Y00",
+      "sourceFile": "20C00Y00.txt",
+      "catalogGroup": "Oblivion",
+      "membership": null,
+      "minimumRequirement": 0,
+      "requirementKind": "unspecified",
+      "adult": false,
+      "oneTime": false,
+      "active": false,
+      "catalogSourceLine": 242,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "76354d4b4f45a291e8e3f8447c916924cc03c24ccfad5b2fffefc9f6ab1788b2",
+      "actionLines": [
+        {
+          "line": 150,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 151,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 152,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 153,
+          "text": "_map_ used do _readmap_ "
+        },
+        {
+          "line": 154,
+          "text": "place foe _monster_ at _mondung_ "
+        },
+        {
+          "line": 155,
+          "text": "place npc _contact_ at _tavern_ "
+        },
+        {
+          "line": 158,
+          "text": "when _qgclicked_ and _mondead_ "
+        },
+        {
+          "line": 159,
+          "text": "give pc _artifact_ "
+        },
+        {
+          "line": 160,
+          "text": "end quest "
+        },
+        {
+          "line": 166,
+          "text": "killed 1 _monster_"
+        },
+        {
+          "line": 167,
+          "text": "killed 1 _monster1_ "
+        },
+        {
+          "line": 168,
+          "text": "say 1030 "
+        },
+        {
+          "line": 172,
+          "text": "clicked npc _contact_ "
+        },
+        {
+          "line": 175,
+          "text": "end quest "
+        },
+        {
+          "line": 178,
+          "text": "when _qgclicked_ and not _mondead_ "
+        },
+        {
+          "line": 179,
+          "text": "say 1003"
+        },
+        {
+          "line": 180,
+          "text": "clear _qgclicked_ _clearclick_ "
+        },
+        {
+          "line": 185,
+          "text": "injured _monster_ "
+        },
+        {
+          "line": 186,
+          "text": "start timer _S.08_ "
+        },
+        {
+          "line": 189,
+          "text": "when _S.08_ and not _mondead_"
+        },
+        {
+          "line": 190,
+          "text": "remove foe _monster_"
+        },
+        {
+          "line": 191,
+          "text": "place foe _monster1_ at _hideout_"
+        },
+        {
+          "line": 192,
+          "text": "say 1040"
+        },
+        {
+          "line": 197,
+          "text": "reveal _hideout_ readmap"
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "daedric-summon",
+      "availability": "summonOnly",
+      "name": "30C00Y00",
+      "sourceFile": "30C00Y00.txt",
+      "catalogGroup": "Oblivion",
+      "membership": null,
+      "minimumRequirement": 0,
+      "requirementKind": "unspecified",
+      "adult": false,
+      "oneTime": false,
+      "active": false,
+      "catalogSourceLine": 243,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "df449ffb820938914909f40df91605b6a664f1d73add9b53acddfb390739abc1",
+      "actionLines": [
+        {
+          "line": 135,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 136,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 137,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 138,
+          "text": "place foe _monster_ at _mondung_ "
+        },
+        {
+          "line": 141,
+          "text": "end quest "
+        },
+        {
+          "line": 145,
+          "text": "when _npcclicked_ and _mondead_ "
+        },
+        {
+          "line": 146,
+          "text": "give pc _artifact_ "
+        },
+        {
+          "line": 147,
+          "text": "end quest "
+        },
+        {
+          "line": 151,
+          "text": "killed 1 _monster_ "
+        },
+        {
+          "line": 152,
+          "text": "say 1030 "
+        },
+        {
+          "line": 155,
+          "text": "clicked npc _qgfriend_ "
+        },
+        {
+          "line": 159,
+          "text": "when _npcclicked_ and not _mondead_"
+        },
+        {
+          "line": 160,
+          "text": "say 1003"
+        },
+        {
+          "line": 161,
+          "text": "clear _npcclicked_ _clearclick_"
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "daedric-summon",
+      "availability": "summonOnly",
+      "name": "40C00Y00",
+      "sourceFile": "40C00Y00.txt",
+      "catalogGroup": "Oblivion",
+      "membership": null,
+      "minimumRequirement": 0,
+      "requirementKind": "unspecified",
+      "adult": false,
+      "oneTime": false,
+      "active": false,
+      "catalogSourceLine": 244,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "43f4901407f64f088a6a1dec7e4fbefc988d8e4c30bd72f2009dc627a3ffed40",
+      "actionLines": [
+        {
+          "line": 356,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 357,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 358,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 359,
+          "text": "pick one of _S.08_ _S.09_ _S.33_ "
+        },
+        {
+          "line": 360,
+          "text": "pc at _mondung_ set _S.00_ "
+        },
+        {
+          "line": 361,
+          "text": "_letter_ used do _S.02_ "
+        },
+        {
+          "line": 362,
+          "text": "place foe _monster_ at _mondung_ "
+        },
+        {
+          "line": 366,
+          "text": "when _S.00_ and not _S.05_ and not _S.17_ "
+        },
+        {
+          "line": 367,
+          "text": "log 1018 step 1 "
+        },
+        {
+          "line": 368,
+          "text": "say 1017 "
+        },
+        {
+          "line": 371,
+          "text": "reveal _fakedung_ "
+        },
+        {
+          "line": 372,
+          "text": "log 1019 step 1 "
+        },
+        {
+          "line": 375,
+          "text": "end quest "
+        },
+        {
+          "line": 378,
+          "text": "clicked npc _qgfriend_ "
+        },
+        {
+          "line": 381,
+          "text": "killed 1 _monster_ "
+        },
+        {
+          "line": 382,
+          "text": "killed 1 _monster1_"
+        },
+        {
+          "line": 383,
+          "text": "say 1035 "
+        },
+        {
+          "line": 386,
+          "text": "when _S.04_ and _S.05_ "
+        },
+        {
+          "line": 387,
+          "text": "give pc _artifact_ "
+        },
+        {
+          "line": 388,
+          "text": "start timer _bonk_ "
+        },
+        {
+          "line": 389,
+          "text": "unset _S.04_ "
+        },
+        {
+          "line": 392,
+          "text": "when _S.04_ and not _S.05_"
+        },
+        {
+          "line": 393,
+          "text": "say 1003"
+        },
+        {
+          "line": 394,
+          "text": "clear _S.04_ _clearclick_"
+        },
+        {
+          "line": 397,
+          "text": "injured _monster_ "
+        },
+        {
+          "line": 398,
+          "text": "place item _letter_ at _mondung_ "
+        },
+        {
+          "line": 404,
+          "text": "clicked item _bow_ "
+        },
+        {
+          "line": 405,
+          "text": "clear _S.08_ "
+        },
+        {
+          "line": 408,
+          "text": "clicked item _ring_ "
+        },
+        {
+          "line": 409,
+          "text": "clear _S.09_ "
+        },
+        {
+          "line": 412,
+          "text": "clicked item _staff_ "
+        },
+        {
+          "line": 413,
+          "text": "clear _S.33_ "
+        },
+        {
+          "line": 416,
+          "text": "when _S.17_ and _S.19_ "
+        },
+        {
+          "line": 417,
+          "text": "place item _bow_ at _bowdung_ "
+        },
+        {
+          "line": 418,
+          "text": "reveal _bowdung_ "
+        },
+        {
+          "line": 419,
+          "text": "log 1021 step 2 "
+        },
+        {
+          "line": 420,
+          "text": "say 1040 "
+        },
+        {
+          "line": 423,
+          "text": "when _S.17_ and _S.20_ "
+        },
+        {
+          "line": 424,
+          "text": "place item _ring_ at _ringdung_ "
+        },
+        {
+          "line": 425,
+          "text": "reveal _ringdung_ "
+        },
+        {
+          "line": 426,
+          "text": "log 1022 step 2 "
+        },
+        {
+          "line": 427,
+          "text": "say 1041 "
+        },
+        {
+          "line": 430,
+          "text": "when _S.17_ and _S.21_ "
+        },
+        {
+          "line": 431,
+          "text": "place item _staff_ at _staffdung_ "
+        },
+        {
+          "line": 432,
+          "text": "reveal _staffdung_ "
+        },
+        {
+          "line": 433,
+          "text": "log 1023 step 2 "
+        },
+        {
+          "line": 434,
+          "text": "say 1042 "
+        },
+        {
+          "line": 437,
+          "text": "place item _letter_ at _mondung_ "
+        },
+        {
+          "line": 438,
+          "text": "dialog link for location _fakedung_ "
+        },
+        {
+          "line": 439,
+          "text": "start timer _S.22_ "
+        },
+        {
+          "line": 440,
+          "text": "rumor mill 1015 "
+        },
+        {
+          "line": 441,
+          "text": "change repute with _questgiver_ by -20 "
+        },
+        {
+          "line": 442,
+          "text": "remove foe _monster_"
+        },
+        {
+          "line": 443,
+          "text": "place foe _monster1_ at _fakedung_"
+        },
+        {
+          "line": 449,
+          "text": "when _S.07_ and _S.08_ "
+        },
+        {
+          "line": 450,
+          "text": "prompt 1030 yes _S.17_ no _S.18_ "
+        },
+        {
+          "line": 453,
+          "text": "when _S.07_ and _S.09_ "
+        },
+        {
+          "line": 454,
+          "text": "prompt 1031 yes _S.17_ no _S.18_ "
+        },
+        {
+          "line": 457,
+          "text": "when _S.07_ and _S.33_ "
+        },
+        {
+          "line": 458,
+          "text": "prompt 1032 yes _S.17_ no _S.18_ "
+        },
+        {
+          "line": 461,
+          "text": "create foe _daedra_ every 3 minutes 4 times with 100% success "
+        },
+        {
+          "line": 464,
+          "text": "injured _daedra_ "
+        },
+        {
+          "line": 465,
+          "text": "say 1050 "
+        },
+        {
+          "line": 468,
+          "text": "when _betrayQuestor_ and _S.14_ "
+        },
+        {
+          "line": 469,
+          "text": "place item _bow_ at _fakedung_ "
+        },
+        {
+          "line": 470,
+          "text": "say 1045 "
+        },
+        {
+          "line": 473,
+          "text": "when _betrayQuestor_ and _S.15_ "
+        },
+        {
+          "line": 474,
+          "text": "place item _ring_ at _fakedung_ "
+        },
+        {
+          "line": 475,
+          "text": "say 1046 "
+        },
+        {
+          "line": 478,
+          "text": "when _betrayQuestor_ and _S.16_ "
+        },
+        {
+          "line": 479,
+          "text": "place item _staff_ at _fakedung_ "
+        },
+        {
+          "line": 480,
+          "text": "say 1047 "
+        },
+        {
+          "line": 483,
+          "text": "when _S.11_ and not _S.05_ "
+        },
+        {
+          "line": 484,
+          "text": "start timer _betrayQuestor_ "
+        },
+        {
+          "line": 487,
+          "text": "when _S.12_ and not _S.05_ "
+        },
+        {
+          "line": 488,
+          "text": "start timer _betrayQuestor_ "
+        },
+        {
+          "line": 491,
+          "text": "when _S.13_ and not _S.05_ "
+        },
+        {
+          "line": 492,
+          "text": "start timer _betrayQuestor_ "
+        },
+        {
+          "line": 495,
+          "text": "when _S.11_ and _S.05_ "
+        },
+        {
+          "line": 496,
+          "text": "make _bow_ permanent "
+        },
+        {
+          "line": 499,
+          "text": "when _S.12_ and _S.05_ "
+        },
+        {
+          "line": 500,
+          "text": "make _ring_ permanent "
+        },
+        {
+          "line": 503,
+          "text": "when _S.13_ and _S.05_ "
+        },
+        {
+          "line": 504,
+          "text": "make _staff_ permanent "
+        },
+        {
+          "line": 508,
+          "text": "end quest "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "daedric-summon",
+      "availability": "summonOnly",
+      "name": "50C00Y00",
+      "sourceFile": "50C00Y00.txt",
+      "catalogGroup": "Oblivion",
+      "membership": null,
+      "minimumRequirement": 0,
+      "requirementKind": "unspecified",
+      "adult": false,
+      "oneTime": false,
+      "active": false,
+      "catalogSourceLine": 245,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "e9b9ca62ce5abcd98100885092d15241c9308b91b4c08c5a5ecefac44750022d",
+      "actionLines": [
+        {
+          "line": 149,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 150,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 151,
+          "text": "log 1015 step 0 "
+        },
+        {
+          "line": 152,
+          "text": "place foe _monster_ at _mondung_ "
+        },
+        {
+          "line": 155,
+          "text": "end quest "
+        },
+        {
+          "line": 159,
+          "text": "when _npcclicked_ and _mondead_ "
+        },
+        {
+          "line": 160,
+          "text": "give pc _artifact_ "
+        },
+        {
+          "line": 161,
+          "text": "end quest "
+        },
+        {
+          "line": 165,
+          "text": "killed 1 _monster_ "
+        },
+        {
+          "line": 166,
+          "text": "say 1014 "
+        },
+        {
+          "line": 167,
+          "text": "change repute with _dummyvamp_ by -20 "
+        },
+        {
+          "line": 170,
+          "text": "clicked npc _qgfriend_ "
+        },
+        {
+          "line": 173,
+          "text": "when _npcclicked_ and not _mondead_"
+        },
+        {
+          "line": 174,
+          "text": "say 1003 "
+        },
+        {
+          "line": 175,
+          "text": "clear _npcclicked_ _clearclick_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "daedric-summon",
+      "availability": "summonOnly",
+      "name": "60C00Y00",
+      "sourceFile": "60C00Y00.txt",
+      "catalogGroup": "Oblivion",
+      "membership": null,
+      "minimumRequirement": 0,
+      "requirementKind": "unspecified",
+      "adult": false,
+      "oneTime": false,
+      "active": false,
+      "catalogSourceLine": 246,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "90e94172c3a3bde52fc09448f1e17a491efa178291a2d9eae3396f4350863139",
+      "actionLines": [
+        {
+          "line": 156,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 157,
+          "text": "reveal _contactdung_ "
+        },
+        {
+          "line": 158,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 159,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 160,
+          "text": "place foe _monster_ at _mondung_ "
+        },
+        {
+          "line": 161,
+          "text": "place npc _qgfriend_ at _contactdung_ "
+        },
+        {
+          "line": 164,
+          "text": "end quest "
+        },
+        {
+          "line": 168,
+          "text": "when _npcclicked_ and _mondead_ "
+        },
+        {
+          "line": 169,
+          "text": "give pc _artifact_ "
+        },
+        {
+          "line": 170,
+          "text": "end quest "
+        },
+        {
+          "line": 174,
+          "text": "killed 1 _monster_ "
+        },
+        {
+          "line": 175,
+          "text": "say 1030 "
+        },
+        {
+          "line": 178,
+          "text": "clicked npc _qgfriend_ "
+        },
+        {
+          "line": 182,
+          "text": "when _npcclicked_ and not _mondead_"
+        },
+        {
+          "line": 183,
+          "text": "say 1003"
+        },
+        {
+          "line": 184,
+          "text": "clear _npcclicked_ _clearclick_"
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "daedric-summon",
+      "availability": "summonOnly",
+      "name": "70C00Y00",
+      "sourceFile": "70C00Y00.txt",
+      "catalogGroup": "Oblivion",
+      "membership": null,
+      "minimumRequirement": 0,
+      "requirementKind": "unspecified",
+      "adult": false,
+      "oneTime": false,
+      "active": false,
+      "catalogSourceLine": 247,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "f15e71b64408b3601297e7b62caea54dc62cb6bd394fccbe37f3fd2b35fce3c0",
+      "actionLines": [
+        {
+          "line": 141,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 142,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 143,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 144,
+          "text": "place foe _monster_ at _mondung_ "
+        },
+        {
+          "line": 145,
+          "text": "create npc _contact_ "
+        },
+        {
+          "line": 148,
+          "text": "when _qgclicked_ and _mondead_ "
+        },
+        {
+          "line": 149,
+          "text": "give pc _artifact_ "
+        },
+        {
+          "line": 150,
+          "text": "end quest "
+        },
+        {
+          "line": 154,
+          "text": "killed 1 _monster_ "
+        },
+        {
+          "line": 155,
+          "text": "say 1015 "
+        },
+        {
+          "line": 158,
+          "text": "clicked npc _contact_ "
+        },
+        {
+          "line": 161,
+          "text": "end quest "
+        },
+        {
+          "line": 164,
+          "text": "when _qgclicked_ and not _mondead_ "
+        },
+        {
+          "line": 165,
+          "text": "say 1003"
+        },
+        {
+          "line": 166,
+          "text": "clear _qgclicked_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "daedric-summon",
+      "availability": "summonOnly",
+      "name": "80C0XY00",
+      "sourceFile": "80C0XY00.txt",
+      "catalogGroup": "Oblivion",
+      "membership": null,
+      "minimumRequirement": 0,
+      "requirementKind": "unspecified",
+      "adult": true,
+      "oneTime": false,
+      "active": false,
+      "catalogSourceLine": 249,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "fa5a91873ff59026daacaedc719d83e69e64e2c0f1f8f8d163001a9767cd1952",
+      "actionLines": [
+        {
+          "line": 203,
+          "text": "dialog link for person _ruler_ "
+        },
+        {
+          "line": 204,
+          "text": "dialog link for person _murder_ "
+        },
+        {
+          "line": 205,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 206,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 207,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 208,
+          "text": "give item _note_ to _monster_ "
+        },
+        {
+          "line": 209,
+          "text": "_note_ used do _readnote_ "
+        },
+        {
+          "line": 210,
+          "text": "place foe _monster_ at _mondung_ "
+        },
+        {
+          "line": 213,
+          "text": "end quest "
+        },
+        {
+          "line": 217,
+          "text": "when _npcclicked_ and _mondead_ "
+        },
+        {
+          "line": 218,
+          "text": "give pc _artifact_ "
+        },
+        {
+          "line": 219,
+          "text": "end quest "
+        },
+        {
+          "line": 223,
+          "text": "killed 1 _monster_ "
+        },
+        {
+          "line": 224,
+          "text": "say 1015 "
+        },
+        {
+          "line": 225,
+          "text": "create npc _qgfriend_ "
+        },
+        {
+          "line": 228,
+          "text": "clicked npc _qgfriend_ "
+        },
+        {
+          "line": 232,
+          "text": "when _npcclicked_ and not _mondead_"
+        },
+        {
+          "line": 233,
+          "text": "say 1003"
+        },
+        {
+          "line": 234,
+          "text": "clear _npcclicked_ _clearclick_"
+        },
+        {
+          "line": 237,
+          "text": "add dialog for person _murder_ "
+        },
+        {
+          "line": 240,
+          "text": "toting _note_ and _ruler_ clicked "
+        },
+        {
+          "line": 241,
+          "text": "prompt 1041 yes _S.09_ no _school_ "
+        },
+        {
+          "line": 244,
+          "text": "say 1040 "
+        },
+        {
+          "line": 245,
+          "text": "change repute with _murder_ by \u002B15 "
+        },
+        {
+          "line": 248,
+          "text": "get item _note_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "daedric-summon",
+      "availability": "summonOnly",
+      "name": "90C00Y00",
+      "sourceFile": "90C00Y00.txt",
+      "catalogGroup": "Oblivion",
+      "membership": null,
+      "minimumRequirement": 0,
+      "requirementKind": "unspecified",
+      "adult": false,
+      "oneTime": false,
+      "active": false,
+      "catalogSourceLine": 250,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "4e5fb5bbef16eb279f72d9c7325064f44842d3a22e00c35234f0a2387c662d7d",
+      "actionLines": [
+        {
+          "line": 151,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 152,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 153,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 154,
+          "text": "place foe _monster_ at _mondung_ "
+        },
+        {
+          "line": 157,
+          "text": "end quest "
+        },
+        {
+          "line": 162,
+          "text": "when _npcclicked_ and _mondead_ "
+        },
+        {
+          "line": 163,
+          "text": "give pc _artifact_ "
+        },
+        {
+          "line": 164,
+          "text": "end quest "
+        },
+        {
+          "line": 170,
+          "text": "killed 1 _monster_ "
+        },
+        {
+          "line": 171,
+          "text": "say 1015 "
+        },
+        {
+          "line": 174,
+          "text": "clicked npc _qgfriend_ "
+        },
+        {
+          "line": 177,
+          "text": "when _npcclicked_ and not _mondead_ "
+        },
+        {
+          "line": 178,
+          "text": "say 1003"
+        },
+        {
+          "line": 179,
+          "text": "clear _npcclicked_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "daedric-summon",
+      "availability": "summonOnly",
+      "name": "T0C00Y00",
+      "sourceFile": "T0C00Y00.txt",
+      "catalogGroup": "Oblivion",
+      "membership": null,
+      "minimumRequirement": 0,
+      "requirementKind": "unspecified",
+      "adult": false,
+      "oneTime": false,
+      "active": false,
+      "catalogSourceLine": 251,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "fe83faf05c0536add71c13f32e9f5f2734e8806cc8a94f09994e05459f88ca70",
+      "actionLines": [
+        {
+          "line": 150,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 151,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 152,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 153,
+          "text": "place foe _monster_ at _mondung_ "
+        },
+        {
+          "line": 156,
+          "text": "end quest "
+        },
+        {
+          "line": 160,
+          "text": "when _npcclicked_ and _mondead_ "
+        },
+        {
+          "line": 161,
+          "text": "give pc _artifact_ "
+        },
+        {
+          "line": 162,
+          "text": "end quest "
+        },
+        {
+          "line": 166,
+          "text": "killed 1 _monster_ "
+        },
+        {
+          "line": 167,
+          "text": "say 1030 "
+        },
+        {
+          "line": 170,
+          "text": "clicked npc _qgfriend_ "
+        },
+        {
+          "line": 173,
+          "text": "when _npcclicked_ and not _mondead_ "
+        },
+        {
+          "line": 174,
+          "text": "say 1003"
+        },
+        {
+          "line": 175,
+          "text": "clear _npcclicked_ _clearclick_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "daedric-summon",
+      "availability": "summonOnly",
+      "name": "U0C00Y00",
+      "sourceFile": "U0C00Y00.txt",
+      "catalogGroup": "Oblivion",
+      "membership": null,
+      "minimumRequirement": 0,
+      "requirementKind": "unspecified",
+      "adult": false,
+      "oneTime": false,
+      "active": false,
+      "catalogSourceLine": 252,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "d697dd16433088e35e5d7c9842f9ad92220472fe173f1cf36ab260ef86560cd9",
+      "actionLines": [
+        {
+          "line": 189,
+          "text": "dialog link for person _mfriend_ "
+        },
+        {
+          "line": 190,
+          "text": "start timer _escapetime_ "
+        },
+        {
+          "line": 191,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 192,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 193,
+          "text": "_letter_ used do _readletter_ "
+        },
+        {
+          "line": 194,
+          "text": "place foe _monster_ at _mondung_ "
+        },
+        {
+          "line": 197,
+          "text": "end quest "
+        },
+        {
+          "line": 201,
+          "text": "when _npcclicked_ and _mondead_ "
+        },
+        {
+          "line": 202,
+          "text": "give pc _artifact_ "
+        },
+        {
+          "line": 203,
+          "text": "end quest "
+        },
+        {
+          "line": 207,
+          "text": "killed 1 _monster_ "
+        },
+        {
+          "line": 208,
+          "text": "killed 1 _monster1_"
+        },
+        {
+          "line": 209,
+          "text": "say 1030 "
+        },
+        {
+          "line": 212,
+          "text": "clicked npc _qgfriend_ "
+        },
+        {
+          "line": 215,
+          "text": "when _npcclicked_ and not _mondead_"
+        },
+        {
+          "line": 216,
+          "text": "say 1003 "
+        },
+        {
+          "line": 217,
+          "text": "clear _npcclicked_ _clearclick_ "
+        },
+        {
+          "line": 220,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 223,
+          "text": "when _escapetime_ and not _mondead_ "
+        },
+        {
+          "line": 224,
+          "text": "place item _letter_ at _mondung_ "
+        },
+        {
+          "line": 225,
+          "text": "remove foe _monster_"
+        },
+        {
+          "line": 226,
+          "text": "place foe _monster1_ at _hideout_ "
+        },
+        {
+          "line": 230,
+          "text": "clicked npc _mfriend_ "
+        },
+        {
+          "line": 231,
+          "text": "reveal _hideout_ "
+        },
+        {
+          "line": 232,
+          "text": "log 1042 step 1 "
+        },
+        {
+          "line": 233,
+          "text": "say 1041 "
+        },
+        {
+          "line": 236,
+          "text": "add dialog for person _mfriend_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "daedric-summon",
+      "availability": "summonOnly",
+      "name": "V0C00Y00",
+      "sourceFile": "V0C00Y00.txt",
+      "catalogGroup": "Oblivion",
+      "membership": null,
+      "minimumRequirement": 0,
+      "requirementKind": "unspecified",
+      "adult": false,
+      "oneTime": false,
+      "active": false,
+      "catalogSourceLine": 253,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "fade9709a4859ed2a0a7e21f192ff06dc0d2a2be37bbcbdbdfa8e2a700ba78e0",
+      "actionLines": [
+        {
+          "line": 138,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 139,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 140,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 141,
+          "text": "place foe _monster_ at _mondung_ "
+        },
+        {
+          "line": 144,
+          "text": "when _qgclicked_ and _mondead_ "
+        },
+        {
+          "line": 145,
+          "text": "give pc _artifact_ "
+        },
+        {
+          "line": 146,
+          "text": "end quest "
+        },
+        {
+          "line": 151,
+          "text": "killed 1 _monster_ "
+        },
+        {
+          "line": 152,
+          "text": "say 1030 "
+        },
+        {
+          "line": 155,
+          "text": "clicked npc _contact_ "
+        },
+        {
+          "line": 158,
+          "text": "end quest "
+        },
+        {
+          "line": 162,
+          "text": "when _qgclicked_ and not _mondead_"
+        },
+        {
+          "line": 163,
+          "text": "say 1003 "
+        },
+        {
+          "line": 164,
+          "text": "clear _qgclicked_ _clearclick_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "daedric-summon",
+      "availability": "summonOnly",
+      "name": "W0C00Y00",
+      "sourceFile": "W0C00Y00.txt",
+      "catalogGroup": "Oblivion",
+      "membership": null,
+      "minimumRequirement": 0,
+      "requirementKind": "unspecified",
+      "adult": false,
+      "oneTime": false,
+      "active": false,
+      "catalogSourceLine": 254,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "f93fab6b93320454d0097109d118a4bb8c2e53b006ca205a550daa08b08a5588",
+      "actionLines": [
+        {
+          "line": 159,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 160,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 161,
+          "text": "pc at _palace_ set _S.06_ "
+        },
+        {
+          "line": 162,
+          "text": "place npc _enemy_ at _palace_ "
+        },
+        {
+          "line": 165,
+          "text": "end quest "
+        },
+        {
+          "line": 169,
+          "text": "when _npcclicked_ and _mondead_ "
+        },
+        {
+          "line": 170,
+          "text": "when _S.10_ and _mondead_ "
+        },
+        {
+          "line": 171,
+          "text": "give pc _artifact_ "
+        },
+        {
+          "line": 172,
+          "text": "end quest "
+        },
+        {
+          "line": 176,
+          "text": "killed 1 _monster_ "
+        },
+        {
+          "line": 177,
+          "text": "create foe _guard2_ every 3 minutes 5 times with 50% success "
+        },
+        {
+          "line": 178,
+          "text": "say 1030 "
+        },
+        {
+          "line": 181,
+          "text": "clicked npc _contact_ "
+        },
+        {
+          "line": 184,
+          "text": "when not _mondead_ and _npcclicked_"
+        },
+        {
+          "line": 185,
+          "text": "say 1003 "
+        },
+        {
+          "line": 186,
+          "text": "clear _npcclicked_ _clearclick_ "
+        },
+        {
+          "line": 189,
+          "text": "hide npc _enemy_ "
+        },
+        {
+          "line": 190,
+          "text": "restrain foe _monster_ "
+        },
+        {
+          "line": 191,
+          "text": "place foe _monster_ at _palace_ "
+        },
+        {
+          "line": 194,
+          "text": "injured _monster_ "
+        },
+        {
+          "line": 195,
+          "text": "prompt 1035 yes yes no _no_ "
+        },
+        {
+          "line": 198,
+          "text": "get item _magic_ "
+        },
+        {
+          "line": 199,
+          "text": "place foe _monster_ at _L.01_ "
+        },
+        {
+          "line": 202,
+          "text": "create foe _guard1_ every 2 minutes 5 times with 35% success "
+        },
+        {
+          "line": 205,
+          "text": "toting _magic_ and _contact_ clicked "
+        },
+        {
+          "line": 206,
+          "text": "say 1040 "
+        },
+        {
+          "line": 209,
+          "text": "when _S.10_ and not _mondead_ "
+        },
+        {
+          "line": 210,
+          "text": "say 1045 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "daedric-summon",
+      "availability": "summonOnly",
+      "name": "X0C00Y00",
+      "sourceFile": "X0C00Y00.txt",
+      "catalogGroup": "Oblivion",
+      "membership": null,
+      "minimumRequirement": 0,
+      "requirementKind": "unspecified",
+      "adult": false,
+      "oneTime": false,
+      "active": false,
+      "catalogSourceLine": 255,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "1c08ebf5129a708591a1176f16ed61b19d39a1fe9c7c69b4b789c6b074478dd2",
+      "actionLines": [
+        {
+          "line": 135,
+          "text": "start timer _1stparton_"
+        },
+        {
+          "line": 136,
+          "text": "reveal _mondung_"
+        },
+        {
+          "line": 137,
+          "text": "log 1020 step 0"
+        },
+        {
+          "line": 138,
+          "text": "place foe _monster_ at _mondung_"
+        },
+        {
+          "line": 141,
+          "text": "when _mondead_ and _qgclicked_"
+        },
+        {
+          "line": 142,
+          "text": "give pc _artifact_"
+        },
+        {
+          "line": 143,
+          "text": "end quest "
+        },
+        {
+          "line": 147,
+          "text": "killed 1 _monster_"
+        },
+        {
+          "line": 148,
+          "text": "say 1030"
+        },
+        {
+          "line": 149,
+          "text": "create npc _contact_"
+        },
+        {
+          "line": 152,
+          "text": "clicked npc _contact_"
+        },
+        {
+          "line": 155,
+          "text": "end quest"
+        },
+        {
+          "line": 159,
+          "text": "when not _mondead_ and _qgclicked_"
+        },
+        {
+          "line": 160,
+          "text": "say 1003"
+        },
+        {
+          "line": 161,
+          "text": "clear _qgclicked_ _clearclick_"
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "daedric-summon",
+      "availability": "summonOnly",
+      "name": "Y0C00Y00",
+      "sourceFile": "Y0C00Y00.txt",
+      "catalogGroup": "Oblivion",
+      "membership": null,
+      "minimumRequirement": 0,
+      "requirementKind": "unspecified",
+      "adult": false,
+      "oneTime": false,
+      "active": false,
+      "catalogSourceLine": 256,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "9cc1d427bc2338785701ee070e9c2acc48d4ea86fb1fbc5a53e3ce7daae9713e",
+      "actionLines": [
+        {
+          "line": 136,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 137,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 138,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 139,
+          "text": "place foe _monster_ at _mondung_ "
+        },
+        {
+          "line": 140,
+          "text": "place npc _contact_ at _tavern_ "
+        },
+        {
+          "line": 143,
+          "text": "when _qgclicked_ and _mondead_ "
+        },
+        {
+          "line": 144,
+          "text": "give pc _artifact_ "
+        },
+        {
+          "line": 145,
+          "text": "end quest "
+        },
+        {
+          "line": 150,
+          "text": "killed 1 _monster_ "
+        },
+        {
+          "line": 151,
+          "text": "say 1030 "
+        },
+        {
+          "line": 154,
+          "text": "clicked npc _contact_ "
+        },
+        {
+          "line": 157,
+          "text": "end quest "
+        },
+        {
+          "line": 161,
+          "text": "when _qgclicked_ and not _mondead_ "
+        },
+        {
+          "line": 162,
+          "text": "say 1003"
+        },
+        {
+          "line": 163,
+          "text": "clear _qgclicked_ _clearclick_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "category": "daedric-summon",
+      "availability": "summonOnly",
+      "name": "Z0C00Y00",
+      "sourceFile": "Z0C00Y00.txt",
+      "catalogGroup": "Oblivion",
+      "membership": null,
+      "minimumRequirement": 0,
+      "requirementKind": "unspecified",
+      "adult": false,
+      "oneTime": false,
+      "active": false,
+      "catalogSourceLine": 257,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "ef91a27fdc7d2c4194b1db097a55b526c51ccdba0edaba8759a6d9c7dfc73af9",
+      "actionLines": [
+        {
+          "line": 157,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 158,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 159,
+          "text": "pc at _palace_ set _S.06_ "
+        },
+        {
+          "line": 160,
+          "text": "place npc _enemy_ at _palace_ "
+        },
+        {
+          "line": 163,
+          "text": "end quest "
+        },
+        {
+          "line": 167,
+          "text": "when _npcclicked_ and _mondead_ "
+        },
+        {
+          "line": 168,
+          "text": "give pc _artifact_ "
+        },
+        {
+          "line": 169,
+          "text": "end quest "
+        },
+        {
+          "line": 173,
+          "text": "killed 1 _monster_ "
+        },
+        {
+          "line": 174,
+          "text": "say 1030 "
+        },
+        {
+          "line": 177,
+          "text": "clicked npc _qgfriend_ "
+        },
+        {
+          "line": 180,
+          "text": "when _npcclicked_ and not _mondead_ "
+        },
+        {
+          "line": 181,
+          "text": "say 1003"
+        },
+        {
+          "line": 182,
+          "text": "clear _npcclicked_ _clearclick_ "
+        },
+        {
+          "line": 185,
+          "text": "create foe _guards_ every 2 minutes 10 times with 25% success "
+        },
+        {
+          "line": 186,
+          "text": "hide npc _enemy_ "
+        },
+        {
+          "line": 187,
+          "text": "place foe _monster_ at _palace_ "
+        },
+        {
+          "line": 190,
+          "text": "injured _monster_ "
+        },
+        {
+          "line": 191,
+          "text": "create foe _bodyguard_ every 1 minutes 1 times with 100% success "
+        },
+        {
+          "line": 192,
+          "text": "say 1041 "
+        },
+        {
+          "line": 195,
+          "text": "injured _guards_ saying 1040 "
+        }
+      ],
+      "sourceDiagnostics": []
+    }
+  ],
+  "fingerprint": "7af7b03f1a25e701a38f161a8dd61bc0be96fe8e9379848e67f79a6cebddc900"
+}
