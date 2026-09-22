@@ -1168,7 +1168,11 @@ internal static class Program
             DaggerfallQuestPlaceReader.Read(File.ReadAllBytes(Path.Combine(values["--tables"], "Quests-Places.txt")), "Tables/Quests-Places.txt"),
             DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(values["--tables"], "Quests-Sounds.txt")), "Tables/Quests-Sounds.txt"),
             DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(values["--tables"], "Quests-Diseases.txt")), "Tables/Quests-Diseases.txt"),
-            DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(values["--tables"], "Quests-Spells.txt")), "Tables/Quests-Spells.txt"));
+            DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(values["--tables"], "Quests-Spells.txt")), "Tables/Quests-Spells.txt"),
+            DaggerfallQuestActorItemTableReader.Read(
+                File.ReadAllBytes(Path.Combine(values["--tables"], "Quests-Items.txt")), "Tables/Quests-Items.txt",
+                File.ReadAllBytes(Path.Combine(values["--tables"], "Quests-Factions.txt")), "Tables/Quests-Factions.txt",
+                File.ReadAllBytes(Path.Combine(values["--tables"], "Quests-Foes.txt")), "Tables/Quests-Foes.txt"));
         IReadOnlyDictionary<string, int> messageIds = tables.StaticMessages.Lookup;
         IReadOnlyDictionary<string, int> globalKeys = tables.Globals.Lookup;
         List<QuestSourceDocument> documents = [];

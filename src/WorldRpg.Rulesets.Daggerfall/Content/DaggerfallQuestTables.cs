@@ -16,7 +16,7 @@ internal sealed class DaggerfallQuestTable(string sourcePath, IReadOnlyList<Dagg
 
 internal sealed record DaggerfallQuestTables(DaggerfallQuestTable Globals, DaggerfallQuestTable StaticMessages,
     DaggerfallQuestPlaces Places, DaggerfallQuestTable Sounds,
-    DaggerfallQuestTable Diseases, DaggerfallQuestTable Spells);
+    DaggerfallQuestTable Diseases, DaggerfallQuestTable Spells, DaggerfallQuestActorItemTables ActorItemTables);
 
 internal sealed record DaggerfallQuestPlace(string Name, string CanonicalName, int P1, int P2, int P3,
     uint? LocationKey, byte? TeleportTransfer, int SourceLine);

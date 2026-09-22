@@ -21,6 +21,7 @@ using WorldRpg.Kit.Facts;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.Progression;
 using WorldRpg.Kit.World;
+using WorldRpg.Kit.Effects;
 using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
@@ -1881,6 +1882,128 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(0, resumedSpatial.StepCalls);
     }
 
+    [Fact]
+    public void Session_save_restore_rebinds_source_backed_effect_without_mutating_live_stats_or_replaying_start()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake sourceContent = new(releases);
+        PopulateContent(sourceContent, inputs);
+        SpatialFake sourceSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake sourceEngine = EngineContextFake.Create(sourceContent, sourceSpatial.Service, new AppearanceFake(releases));
+        int sourceRounds = 0;
+        int applyCalls = 0;
+        int resumeCalls = 0;
+        int removals = 0;
+        RulesetSavePayload payload;
+        double baseMaximum;
+        double expectedMaximum;
+        using (DaggerfallSession source = new(sourceEngine.Context, definitions, inputs, DaggerfallTuning.Defaults,
+            EffectCatalog(() => sourceRounds++, () => applyCalls++, () => resumeCalls++, () => removals++)))
+        {
+            PlayerActorState player = source.State.Actors.Player;
+            Stat maximum = player.Stats.GetStat(StatId.Parse("health-maximum"));
+            Track health = player.Stats.GetTrack(TrackId.Parse("health"));
+            baseMaximum = maximum.Value;
+            source.State.Effects.Start(SessionEffectRequest());
+            expectedMaximum = baseMaximum + 10;
+            health.SetCurrent(expectedMaximum);
+            Assert.Equal(expectedMaximum, maximum.Value);
+            Assert.Equal(expectedMaximum, health.Current);
+            payload = source.CaptureSave();
+            Assert.Equal(expectedMaximum, maximum.Value);
+            Assert.Equal(expectedMaximum, health.Current);
+            Assert.Equal(1, applyCalls);
+            Assert.Equal(0, resumeCalls);
+        }
+
+        Assert.Equal(1, sourceRounds);
+        Assert.Equal(1, removals);
+        RulesetSavePayload missingEffect = DaggerfallSavePayload.Encode(DaggerfallSavePayload.Read(payload) with { ActiveEffects = [] });
+        ArgumentException missingOwner = Assert.Throws<ArgumentException>(() =>
+            DaggerfallSavePayload.Read(missingEffect).ResolveRestore(definitions, inputs));
+        Assert.Contains("has no matching active effect cleanup owner", missingOwner.Message);
+        ContentFake restoredContent = new(releases);
+        PopulateContent(restoredContent, inputs);
+        SpatialFake restoredSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake restoredEngine = EngineContextFake.Create(restoredContent, restoredSpatial.Service, new AppearanceFake(releases));
+        int restoredRounds = 0;
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using (DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, identity, definitions, inputs,
+            DaggerfallTuning.Defaults, payload, RandomMinimum.Create(), EffectCatalog(() => restoredRounds++, () => applyCalls++, () => resumeCalls++, () => removals++)))
+        {
+            PlayerActorState player = restored.State.Actors.Player;
+            Stat maximum = player.Stats.GetStat(StatId.Parse("health-maximum"));
+            Track health = player.Stats.GetTrack(TrackId.Parse("health"));
+            Assert.Equal(0, restoredRounds);
+            Assert.Equal(1, applyCalls);
+            Assert.Equal(1, resumeCalls);
+            Assert.Equal(expectedMaximum, maximum.Value);
+            Assert.Equal(expectedMaximum, health.Current);
+            EffectSourceIdentity source = Assert.IsType<EffectSourceIdentity>(Assert.Single(maximum.Sources).Identity);
+            Assert.Equal(player.Actor.Entity, source.Entity);
+            Assert.Equal("session-effect-instance", source.Effect.Value);
+            DaggerfallActiveEffect restoredEffect = Assert.Single(restored.State.Effects.Active);
+            Assert.Equal(("session-source", "session-settings", (uint)3),
+                (restoredEffect.Context.Source.Key, restoredEffect.Context.Settings, restoredEffect.Lifecycle.RemainingRounds));
+            Assert.True(restored.State.Effects.Cancel(EffectInstanceId.Parse("session-effect-instance")));
+            Assert.Equal(baseMaximum, maximum.Value);
+            Assert.Equal(baseMaximum, health.Current);
+        }
+
+        Assert.Equal(2, removals);
+
+        static DaggerfallEffectCatalog EffectCatalog(Action magicRound, Action applied, Action resumed, Action removed) => new(
+        [new DaggerfallEffectDefinition("session-effect", "session-effect", DaggerfallEffectStacking.Stack, 1, 1,
+            effect =>
+            {
+                applied();
+                Stat maximum = effect.Target.Get<StatsComponent>().GetStat(StatId.Parse("health-maximum"));
+                EffectSourceIdentity identity = EffectIdentity(effect);
+                maximum.SetSources(StatId.Parse("health-maximum"), maximum.Sources.Append(new StatSource(
+                    identity,
+                    SourceDefinitionId.Parse("daggerfall.session-effect.health"),
+                    priority: 0,
+                    [new StatContributionDefinition(
+                        StatId.Parse("health-maximum"),
+                        StackingGroupId.Parse("daggerfall.session-effect.health"),
+                        MechanicsStackingPolicy.Sum,
+                        new StatContribution.Add(10))])));
+                return [Remove(maximum, identity, removed)];
+            },
+            _ => magicRound(),
+            effect =>
+            {
+                resumed();
+                Stat maximum = effect.Target.Get<StatsComponent>().GetStat(StatId.Parse("health-maximum"));
+                EffectSourceIdentity identity = EffectIdentity(effect);
+                Assert.Contains(maximum.Sources, source => source.Identity == identity);
+                return [Remove(maximum, identity, removed)];
+            })]);
+
+        static EffectSourceIdentity EffectIdentity(DaggerfallActiveEffect effect) => new(
+            effect.Target.Entity,
+            effect.Context.Instance,
+            1,
+            SourceDefinitionId.Parse("daggerfall.session-effect.health"));
+
+        static IActiveEffectContribution Remove(Stat maximum, EffectSourceIdentity identity, Action removed) =>
+            new DelegateActiveEffectContribution(() =>
+            {
+                Assert.True(maximum.RemoveSource(identity));
+                removed();
+            });
+
+        static DaggerfallEffectRequest SessionEffectRequest()
+        {
+            using JsonDocument state = JsonDocument.Parse("{\"session\":true}");
+            return new DaggerfallEffectRequest("session-effect-instance", "session-effect", "session-source", null,
+                DaggerfallActorIdentity.PlayerEntityId, "session-settings", "magic", null, 1, 4, state.RootElement.Clone());
+        }
+    }
+
     /// <summary>
     /// The donor's holiday announcement through the session: restoring onto a kept holiday at a
     /// settlement announces once on the first playing update, and a dungeon session never announces.
@@ -2343,6 +2466,25 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Retiring_a_dynamic_caster_cancels_its_effect_on_another_actor_before_save()
+    {
+        DaggerfallEffectCatalog catalog = new(
+        [new DaggerfallEffectDefinition("retire-bound", "retire-bound", DaggerfallEffectStacking.Stack, 1, 1)]);
+        using DaggerfallSession session = FreshSession(catalog);
+        long caster = session.SpawnActor("rat", new ActorPose(new WorldPoint(10, 0, 10), 0f));
+        using JsonDocument state = JsonDocument.Parse("{\"bound\":true}");
+        _ = session.State.Effects.Start(new DaggerfallEffectRequest(
+            "retire-caster-effect", "retire-bound", "caster-spell", caster,
+            DaggerfallActorIdentity.PlayerEntityId, "classic", "magic", null, 1, 5, state.RootElement.Clone()));
+        Assert.Single(session.State.Effects.Active);
+
+        session.RetireActor(caster);
+
+        Assert.Empty(session.State.Effects.Active);
+        Assert.Empty(DaggerfallSavePayload.Read(session.CaptureSave()).ActiveEffects);
+    }
+
+    [Fact]
     public void Retiring_an_actor_with_open_loot_closes_the_interaction_without_throwing()
     {
         // B1 (behavior lane): retiring a corpse with its loot open used to leave the loot
@@ -2633,6 +2775,7 @@ public sealed class NormalizedRuntimeSeamTests
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
@@ -2648,9 +2791,17 @@ public sealed class NormalizedRuntimeSeamTests
         double healthBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
         // The archer sees the player at that separation, facing them, with the line clear.
         perception.Receipt = Receipt(new PerceptionPair(checked((ulong)archer), 1, separation, 1d, PerceptionPairKind.Visible, 1d));
-        // The swing is decided on the admitted step and lands when its authored damage frame is reached.
+        // The swing is decided and released on its authored frame, but the arrow is still in flight.
         appearance.AdvanceReceiptForAll = CrossedMarker(1);
         session.Update(new ProductUpdate(OuterUpdate(1), []));
+        Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
+
+        ulong arrivedStep = 1;
+        for (ulong step = 2; step <= 240 && session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current == healthBefore; step++)
+        {
+            session.Update(new ProductUpdate(OuterUpdate(step), []));
+            arrivedStep = step;
+        }
 
         // It shot rather than closed: the state is the ranged attack, the player took damage, and no
         // navigation was asked for, which is what "without closing" means here.
@@ -2660,28 +2811,143 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.True(healthAfterShot < healthBefore, "the archer's shot must damage the player at that separation");
         // The line names the attacker, so the player can tell which of the enemies in front of them is
         // doing it: a hit the player took reads as the actor that landed it.
-        string shotOutcome = engine.PublishedField("lastOutcome");
+        string shotOutcome = engine.PublishedField("lastOutcome") ?? string.Empty;
         Assert.Contains("archer", shotOutcome, StringComparison.Ordinal);
 
         // The facing limit is the Engine's and the behaviour honours it: an attacker turned away does not
         // shoot, which is the same evidence kind the melee behaviour test uses for the other actor.
         perception.Receipt = Receipt(new PerceptionPair(checked((ulong)archer), 1, separation, 0d, PerceptionPairKind.FacingRejected, 0d));
-        session.Update(new ProductUpdate(OuterUpdate(2), []));
+        session.Update(new ProductUpdate(OuterUpdate(arrivedStep + 1), []));
         Assert.NotEqual(EnemyBehaviorState.Attack, session.LastEnemyBehavior[archer].State);
 
         // The same shot cannot land twice, and out past its own reach it stops entirely rather than
         // chasing: a ranged attacker that walks into melee is a melee attacker.
         appearance.AdvanceReceiptForAll = null;
-        session.Update(new ProductUpdate(OuterUpdate(2), []));
+        session.Update(new ProductUpdate(OuterUpdate(arrivedStep + 2), []));
         Assert.Equal(healthAfterShot, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
         perception.Receipt = Receipt(new PerceptionPair(checked((ulong)archer), 1, shotReach + 1d, 1d, PerceptionPairKind.Visible, 1d));
-        session.Update(new ProductUpdate(OuterUpdate(3), []));
+        session.Update(new ProductUpdate(OuterUpdate(arrivedStep + 3), []));
         Assert.NotEqual(EnemyBehaviorState.Attack, session.LastEnemyBehavior[archer].State);
 
         // Every placed actor carries a policy, the archer included: an actor that cannot attack is a
         // missing capability its owner has to see, and there is no exception list left to hide one in.
         Assert.All(inputs.Project.Actors.Values, placement =>
             Assert.NotNull(definitions.RequireActor(placement.ActorId).ActionId));
+    }
+
+    [Fact]
+    public void An_archer_shot_misses_when_the_player_leaves_its_release_aim_during_flight()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        spatial.KeepPosition = true;
+        PerceptionFake perception = PerceptionFake.Create();
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        const long archer = 2004;
+        double separation = definitions.Actions.Values.Where(action => action.Interpretation == "fixed-melee").Max(action => action.Reach!.Value) + 1d;
+        perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 1d, PerceptionPairKind.Visible, 1d));
+        double healthBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
+
+        appearance.AdvanceReceiptForAll = CrossedMarker(1);
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+        WorldPoint releaseAim = session.State.PlayerControl.Position!.Value;
+        session.State.PlayerControl.Restore(new WorldPoint(releaseAim.X + 1f, releaseAim.Y, releaseAim.Z), default);
+        // Do not start a later shot while the first one flies; this test isolates the first release.
+        appearance.AdvanceReceiptForAll = null;
+        for (ulong step = 2; step <= 240; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
+
+        Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
+        Assert.Contains("missed", engine.PublishedField("lastOutcome"), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Ranged_flight_discards_stale_generations_and_retires_missing_attackers()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using SpatialMovementSystem targetingSpatial = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
+        Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
+            placement => placement.EntityId, placement => definitions.RequireActor(placement.ActorId));
+        authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
+        TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors,
+            new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting));
+        DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment,
+            session.State.InventoryFor, definitions, authored, targeting);
+        const long archer = 2004;
+        const ulong generation = 77;
+        const ulong releaseStep = 400;
+        Dictionary<long, WorldPoint> positions = new()
+        {
+            [archer] = new WorldPoint(0, 0, 0),
+            [DaggerfallActorIdentity.PlayerEntityId] = new WorldPoint(10, 0, 0),
+        };
+        FactBuffer<IProductFact> facts = new();
+        double healthBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
+
+        Assert.True(combat.Attacks.TryBeginEnemyAttack(archer, DaggerfallActorIdentity.PlayerEntityId, generation, releaseStep, .125, facts));
+        combat.Execution.ApplyImpacts([new AttackImpactNotice(archer, DaggerfallActorIdentity.PlayerEntityId, generation, releaseStep, Expired: false)], generation, facts);
+        combat.AdvanceRangedFlight(generation, releaseStep, .125, positions, facts);
+        // A fresh admitted generation drops the old transient record rather than comparing its
+        // release step to the new timeline's present step and accidentally landing it.
+        combat.AdvanceRangedFlight(generation + 1, releaseStep + 1, .125, positions, facts);
+        combat.AdvanceRangedFlight(generation, releaseStep + 100, .125, positions, facts);
+        Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
+
+        const ulong nextGeneration = 79;
+        const ulong nextReleaseStep = 1000;
+        Assert.True(combat.Attacks.TryBeginEnemyAttack(archer, DaggerfallActorIdentity.PlayerEntityId, nextGeneration, nextReleaseStep, .125, facts));
+        combat.Execution.ApplyImpacts([new AttackImpactNotice(archer, DaggerfallActorIdentity.PlayerEntityId, nextGeneration, nextReleaseStep, Expired: false)], nextGeneration, facts);
+        combat.AdvanceRangedFlight(nextGeneration, nextReleaseStep, .125, positions, facts);
+        session.State.Actors.Entities.Destroy(ActorsState.Identity(archer));
+        combat.AdvanceRangedFlight(nextGeneration, nextReleaseStep + 100, .125, positions, facts);
+        Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
+    }
+
+    [Fact]
+    public void A_save_after_ranged_release_drops_the_transient_in_flight_shot()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        ResolvedCompositionIdentity composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        List<string> releases = [];
+        RulesetSavePayload saved;
+        double healthAtRelease;
+        using (DaggerfallSession original = CreateArcherSession(root, definitions, inputs, releases, out AppearanceFake appearance, out PerceptionFake perception))
+        {
+            perception.Receipt = Receipt(new PerceptionPair(2004, 1, 4d, 1d, PerceptionPairKind.Visible, 1d));
+            appearance.AdvanceReceiptForAll = CrossedMarker(1);
+            original.Update(new ProductUpdate(OuterUpdate(1), []));
+            healthAtRelease = original.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
+            saved = original.CaptureSave();
+        }
+
+        ContentFake resumedContent = new(releases);
+        PopulateContent(resumedContent, inputs);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        resumedSpatial.KeepPosition = true;
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, composition, definitions, inputs, DaggerfallTuning.Defaults, saved, RandomMinimum.Create());
+        // The original release would arrive within this bound. A resumed session has no in-flight
+        // record, so crossing that deadline cannot replay a shot from the discarded runtime queue.
+        for (ulong step = 2; step <= 240; step++) resumed.Update(new ProductUpdate(OuterUpdate(step), []));
+
+        Assert.Equal(healthAtRelease, resumed.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
     }
 
     [Fact]
@@ -2930,7 +3196,7 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     /// <summary>A session that has not swung, so its weapon is ready.</summary>
-    private static DaggerfallSession FreshSession()
+    private static DaggerfallSession FreshSession(DaggerfallEffectCatalog? effects = null)
     {
         string root = RepositoryRoot();
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
@@ -2941,7 +3207,9 @@ public sealed class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
-        return new DaggerfallSession(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        return effects is null
+            ? new DaggerfallSession(engine.Context, definitions, inputs, DaggerfallTuning.Defaults)
+            : new DaggerfallSession(engine.Context, definitions, inputs, DaggerfallTuning.Defaults, effects);
     }
 
     /// <summary>A session with one lootable corpse within reach, and the appearance it drives.</summary>
@@ -4457,6 +4725,19 @@ public sealed class NormalizedRuntimeSeamTests
         return (new DaggerfallSession(engine.Context, definitions, inputs, DaggerfallTuning.Defaults), appearance, perception);
     }
 
+    private static DaggerfallSession CreateArcherSession(string root, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs,
+        List<string> releases, out AppearanceFake appearance, out PerceptionFake perception)
+    {
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        spatial.KeepPosition = true;
+        perception = PerceptionFake.Create();
+        appearance = new AppearanceFake(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
+        return new DaggerfallSession(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+    }
+
     private static long PlayerHealth(DaggerfallSession session) => session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).ValueInt64;
 
     private static ProductUpdateFacts OuterUpdate(ulong simulationStep) => new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, simulationStep, simulationStep, 60, 1, 0, 1d / 60d);
@@ -4666,6 +4947,7 @@ public sealed class NormalizedRuntimeSeamTests
 
     private class SpatialFake : DispatchProxy
     {
+        internal bool KeepPosition { get; set; }
         internal Func<SpatialRaycastRequest, SpatialHit> FloorHit { get; set; } = _ => default;
         internal List<SpatialRaycastRequest> FloorProbes { get; } = [];
         private SpatialHit ProbeFloor(SpatialRaycastRequest request) { FloorProbes.Add(request); return FloorHit(request); }
@@ -4769,7 +5051,7 @@ public sealed class NormalizedRuntimeSeamTests
             return default(CharacterStepReceipt) with
             {
                 Generation = checked((ulong)StepCalls),
-                Transform = new Transform(request.Position + new Vector3(1f, 0f, 0f), Quaternion.Identity, Vector3.One),
+                Transform = new Transform(KeepPosition ? request.Position : request.Position + new Vector3(1f, 0f, 0f), Quaternion.Identity, Vector3.One),
                 Motion = request.Motion with { Grounded = true, LastCommandSequence = request.Command.Sequence },
                 Ground = default(CharacterGround) with { Present = true },
             };

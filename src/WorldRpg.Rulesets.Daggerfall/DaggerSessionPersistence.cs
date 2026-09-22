@@ -33,10 +33,12 @@ internal sealed class DaggerSessionPersistence
     private readonly FirstPersonCameraSystem _camera;
     private readonly DaggerfallWorldTime _time;
     private readonly DaggerfallSiteContext _site;
+    private readonly DaggerfallEffectLifecycle _effects;
     internal DaggerSessionPersistence(DaggerfallState state, DaggerfallCorpseLootModule corpses,
-        DaggerfallUniqueItemAllocator uniqueItems, FirstPersonCameraSystem camera, DaggerfallWorldTime time, DaggerfallSiteContext site)
+        DaggerfallUniqueItemAllocator uniqueItems, FirstPersonCameraSystem camera, DaggerfallWorldTime time, DaggerfallSiteContext site,
+        DaggerfallEffectLifecycle effects)
     {
-        State = state; _corpseLoot = corpses; _uniqueItems = uniqueItems; _camera = camera; _time = time; _site = site;
+        State = state; _corpseLoot = corpses; _uniqueItems = uniqueItems; _camera = camera; _time = time; _site = site; _effects = effects;
     }
     internal RulesetSavePayload Capture(ulong? generation, ulong? step, IReadOnlyDictionary<long, DaggerfallActorId> dynamicActors)
     {
@@ -105,7 +107,8 @@ internal sealed class DaggerSessionPersistence
                 npc.DurableId, (int)npc.Kind, npc.StableKey, npc.Site.Region, npc.Site.Location, npc.Site.Building,
                 npc.Appearance.Race, npc.Appearance.Gender, npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord,
                 npc.Appearance.NameSeed, npc.Appearance.FactionId, npc.Role, [.. npc.Services],
-                (int)npc.Presence, npc.X, npc.Y, npc.Z))])));
+                (int)npc.Presence, npc.X, npc.Y, npc.Z))]),
+            _effects.Capture()));
     }
 
     private ActorState LiveDynamicActor(long durableId) =>
@@ -144,6 +147,9 @@ internal sealed class DaggerSessionPersistence
         // Native continuation and held input start fresh; durable pose and corpse relationships are restored.
         _corpseLoot.Restore(saved.Corpses);
         State.Kit.AttackExecution.RestoreCooldowns(saved.CombatCooldowns.Select(value => new AttackCooldown(value.AttackerId, value.RemainingSteps)));
+        // Actors, their shared stats/tracks, and item identities exist before active effects rebuild
+        // their reversible contributions. Resume deliberately does not replay an initial magic round.
+        _effects.Restore(saved.ActiveEffects);
         _camera.Update(State.PlayerControl);
         // Enemy behavior, perception leases, held input, pending loot, facts,
         // presentation effects and a swing still waiting for its damage frame are

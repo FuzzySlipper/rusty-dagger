@@ -28,7 +28,7 @@ using KitUniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Concrete Daggerfall composition of catalog policy, module state, and named Engine capabilities.</summary>
-internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, ISaveRequestingGameSession
+internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, ISaveRequestingGameSession
 {
 
     /// <summary>Admitted world seconds a panel request stands before the DOM is assumed not to need it.</summary>
@@ -96,20 +96,31 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
     internal World.DaggerfallHolidayAnnouncement? HolidayAnnouncement { get; private set; }
 
     internal DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
-        : this(engine, definitions, inputs, tuning, null, null) { }
+        : this(engine, definitions, inputs, tuning, null, null, DaggerfallEffectCatalog.Empty) { }
+
+    /// <summary>Explicit compiled effect composition seam for ruleset families and save reconstruction tests.</summary>
+    internal DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs,
+        DaggerfallTuning tuning, DaggerfallEffectCatalog effects)
+        : this(engine, definitions, inputs, tuning, null, null, effects) { }
 
     internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
-        : this(engine, definitions, inputs, tuning, compositionIdentity, null) { }
+        : this(engine, definitions, inputs, tuning, compositionIdentity, null, DaggerfallEffectCatalog.Empty) { }
 
     internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
         DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, RulesetSavePayload saved, IRandomService random)
+        => Restore(engine, compositionIdentity, definitions, inputs, tuning, saved, random, DaggerfallEffectCatalog.Empty);
+
+    internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
+        DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, RulesetSavePayload saved,
+        IRandomService random, DaggerfallEffectCatalog effects)
     {
         DaggerfallSavePayload payload = DaggerfallSavePayload.Read(saved).ResolveRestore(definitions, inputs);
-        return new DaggerfallSession(engine, definitions, inputs, tuning, compositionIdentity, payload);
+        return new DaggerfallSession(engine, definitions, inputs, tuning, compositionIdentity, payload, effects);
     }
 
     private DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs,
-        DaggerfallTuning tuning, ResolvedCompositionIdentity? compositionIdentity, DaggerfallSavePayload? saved)
+        DaggerfallTuning tuning, ResolvedCompositionIdentity? compositionIdentity, DaggerfallSavePayload? saved,
+        DaggerfallEffectCatalog effects)
     {
         List<IDisposable> partiallyConstructed = [];
         try
@@ -160,6 +171,8 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
             _combat = new DaggerCombatRules(_random, State.Actors, State.Equipment, State.InventoryFor, definitions, authored, targeting);
             _staminaRecovery = new DaggerfallStaminaRecoveryModule(tuning.StaminaRecovery);
             State.Kit = new(State.Actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, State.Inventory, State.Equipment);
+            State.Effects = new DaggerfallEffectLifecycle(State.Actors, effects);
+            partiallyConstructed.Add(State.Effects);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
                 engine.Perception,
                 _spatial,
@@ -220,7 +233,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
             partiallyConstructed.Add(_hud);
             _appearance = new PrivateersHoldAppearance(engine.Content, engine.Graphics, inputs, engine.Audio, tuning.PresentationAudio, _random);
             partiallyConstructed.Add(_appearance);
-            _persistence = new(State, _corpseLoot, _uniqueItems, _camera, _time, _site);
+            _persistence = new(State, _corpseLoot, _uniqueItems, _camera, _time, _site, State.Effects);
             if (saved is not null) _persistence.Restore(saved);
         }
         catch (Exception constructionFailure)
@@ -348,6 +361,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
         _definitionsByActor.Remove(durableId);
         _appearance.RetireActor(durableId);
         _lootUi.CloseActor(durableId);
+        _ = State.Effects.CancelActorReferences(durableId);
         DestroyOwnedItems(durableId);
         State.Actors.Entities.Destroy(new DurableIdentityReference(DurableIdentityKind.Container, checked((ulong)durableId)));
         State.Actors.Entities.Destroy(ActorsState.Identity(durableId));
@@ -423,6 +437,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
                 owned.Add(State.Actors.Entities.IdentityOf(item.Entity).Value);
         foreach (ulong itemId in owned)
         {
+            _ = State.Effects.CancelItemReferences(itemId);
             DurableIdentityReference reference = new(DurableIdentityKind.Item, itemId);
             State.Actors.Entities.Destroy(reference);
             // Authored reservations stay reserved: the destroyed entity is gone either way, and
@@ -463,6 +478,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
         {
             _appearance.Advance(update.Facts);
             ApplyAttackImpacts();
+            UpdateRangedFlight(update.Facts);
             PublishPresentation();
         }
         _appearance.CompleteAdmittedUpdate();
@@ -568,7 +584,10 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
 
         // The world's clock runs on the same admitted duration the message line ages by, scaled by the
         // tuning the corpus authors, so there is one clock and it is this one.
+        long minuteBefore = _time.Calendar.DayNumber * 24 * 60 + (_time.Calendar.Hour * 60) + _time.Calendar.Minute;
         _time.Advance(deltaSeconds * facts.AdmittedStepCount);
+        long minuteAfter = _time.Calendar.DayNumber * 24 * 60 + (_time.Calendar.Hour * 60) + _time.Calendar.Minute;
+        _ = State.Effects.AdvanceElapsedRounds(minuteAfter - minuteBefore);
         AnnounceHoliday();
         AgePanelRequest(deltaSeconds * facts.AdmittedStepCount);
 
@@ -741,7 +760,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
     {
         if (_disposed) return;
         _disposed = true;
-        DisposeAll([_hud, _camera, _spatial, _appearance, State.Actors]);
+        DisposeAll([_hud, _camera, _spatial, _appearance, State.Actors, State.Effects]);
     }
 
     private static void DisposeAll(IReadOnlyList<IDisposable> values)
@@ -848,6 +867,9 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
         State.Kit.AttackExecution.ApplyImpacts(impacts, generation, _facts);
         DeliverFacts();
     }
+
+    /// <summary>Optional compiled ranged-flight owner; invoked once for every admitted realtime update.</summary>
+    partial void UpdateRangedFlight(ProductUpdateFacts facts);
 
     internal void ResolveExplicitMelee(ExplicitMeleeRequest request)
     {

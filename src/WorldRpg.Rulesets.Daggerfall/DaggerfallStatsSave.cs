@@ -8,11 +8,25 @@ internal sealed record DaggerfallStatsSave(
     StatsComponentSnapshot Snapshot,
     DaggerfallStatSourceSave[] Sources);
 
+/// <summary>The two Daggerfall-owned source identities that can be rebound to a freshly restored actor.</summary>
+internal enum DaggerfallStatSourceIdentityKind
+{
+    Intrinsic,
+    Effect,
+}
+
+/// <summary>Durable provenance for an authored stat source; the runtime entity is supplied at restore.</summary>
+internal sealed record DaggerfallStatSourceIdentitySave(
+    DaggerfallStatSourceIdentityKind Kind,
+    string InstanceId,
+    string? SourceId = null,
+    ushort? Stack = null);
+
 /// <summary>A source is rebound to the freshly restored actor rather than retaining an old runtime entity.</summary>
 internal sealed record DaggerfallStatSourceSave(
     string StatId,
     string SourceStatId,
-    string InstanceId,
+    DaggerfallStatSourceIdentitySave Identity,
     string DefinitionId,
     short Priority,
     DaggerfallStatContributionSave[] Contributions);
@@ -46,16 +60,11 @@ internal static class DaggerfallStatsSaveBoundary
             Stat stat = component.GetStat(StatId.Parse(captured.Id));
             foreach (StatSource source in stat.Sources)
             {
-                if (source.Identity is not IntrinsicSourceIdentity identity || identity.Entity != actor)
-                {
-                    throw new InvalidOperationException($"Daggerfall stat '{captured.Id}' has a source that is not owned by this actor and cannot be rebound safely.");
-                }
-
                 sources.Add(new DaggerfallStatSourceSave(
                     captured.Id,
                     source.Contributions.FirstOrDefault()?.Stat.Value
                         ?? throw new InvalidOperationException($"Daggerfall stat '{captured.Id}' has a source without contributions."),
-                    identity.Instance.Value,
+                    CaptureIdentity(source.Identity, actor, captured.Id),
                     source.Definition.Value,
                     source.Priority,
                     [.. source.Contributions.Select(CaptureContribution)]));
@@ -94,6 +103,13 @@ internal static class DaggerfallStatsSaveBoundary
         return new DaggerfallRestoredStats(rebuilt, handles);
     }
 
+    private static DaggerfallStatSourceIdentitySave CaptureIdentity(MechanicsSourceIdentity identity, EntityId actor, string statId) => identity switch
+    {
+        IntrinsicSourceIdentity intrinsic when intrinsic.Entity == actor => new(DaggerfallStatSourceIdentityKind.Intrinsic, intrinsic.Instance.Value),
+        EffectSourceIdentity effect when effect.Entity == actor => new(DaggerfallStatSourceIdentityKind.Effect, effect.Effect.Value, effect.Source.Value, effect.Stack),
+        _ => throw new InvalidOperationException($"Daggerfall stat '{statId}' has a source that is not owned by this actor and cannot be rebound safely."),
+    };
+
     private static DaggerfallStatContributionSave CaptureContribution(StatContributionDefinition value) =>
         value.Contribution switch
         {
@@ -106,9 +122,9 @@ internal static class DaggerfallStatsSaveBoundary
 
     private static StatSource RestoreSource(DaggerfallStatSourceSave saved, EntityId actor)
     {
-            if (string.IsNullOrWhiteSpace(saved.StatId)
+        if (string.IsNullOrWhiteSpace(saved.StatId)
             || string.IsNullOrWhiteSpace(saved.SourceStatId)
-            || string.IsNullOrWhiteSpace(saved.InstanceId)
+            || saved.Identity is null
             || string.IsNullOrWhiteSpace(saved.DefinitionId)
             || saved.Contributions is null
             || saved.Contributions.Length == 0)
@@ -117,10 +133,24 @@ internal static class DaggerfallStatsSaveBoundary
         }
 
         return new StatSource(
-            new IntrinsicSourceIdentity(actor, SourceInstanceId.Parse(saved.InstanceId)),
+            RestoreIdentity(saved.Identity, actor),
             SourceDefinitionId.Parse(saved.DefinitionId),
             saved.Priority,
             saved.Contributions.Select(RestoreContribution));
+    }
+
+    private static MechanicsSourceIdentity RestoreIdentity(DaggerfallStatSourceIdentitySave saved, EntityId actor)
+    {
+        if (string.IsNullOrWhiteSpace(saved.InstanceId))
+            throw new ArgumentException("Daggerfall authored stat source identity must include an instance.", nameof(saved));
+        return saved.Kind switch
+        {
+            DaggerfallStatSourceIdentityKind.Intrinsic when saved.SourceId is null && saved.Stack is null =>
+                new IntrinsicSourceIdentity(actor, SourceInstanceId.Parse(saved.InstanceId)),
+            DaggerfallStatSourceIdentityKind.Effect when !string.IsNullOrWhiteSpace(saved.SourceId) && saved.Stack is ushort stack =>
+                new EffectSourceIdentity(actor, EffectInstanceId.Parse(saved.InstanceId), stack, SourceDefinitionId.Parse(saved.SourceId)),
+            _ => throw new ArgumentException("Daggerfall authored stat source identity is invalid.", nameof(saved)),
+        };
     }
 
     private static StatContributionDefinition RestoreContribution(DaggerfallStatContributionSave saved)

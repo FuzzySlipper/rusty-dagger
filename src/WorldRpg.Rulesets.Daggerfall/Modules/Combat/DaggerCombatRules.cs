@@ -9,6 +9,7 @@ using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Facts;
 using WorldRpg.Kit.Inventory;
+using System.Numerics;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
@@ -31,6 +32,8 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     internal AttackCapabilities<IProductFact> Attacks { get; }
     internal TargetingService Targeting { get; }
     internal AttackExecution<IProductFact> Execution { get; }
+    private readonly List<DeferredAttackImpact> _releasedRangedShots = [];
+    private readonly Dictionary<RangedShotIdentity, InFlightRangedShot> _inFlightRangedShots = [];
     // The pack's arrow item is the one ammunition the adopted ranged shots draw. A second ranged
     // action with different ammunition would move this name onto the authored action.
     private const string ArrowItemId = "arrow";
@@ -38,7 +41,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     internal DaggerCombatRules(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment, Func<long, MechanicsInventoryCoordinator?> actorInventories, DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity, TargetingService targeting)
     {
         _random = random;
-        Execution = new(actors, this);
+        Execution = new(actors, this, DeferRangedImpact);
         _actors = actors;
         _equipment = equipment;
         _actorInventories = actorInventories;
@@ -107,6 +110,85 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         ApplyDamage(Participants(request.AttackerId, target, action), request.AttackerId, target, outcome.Damage, outcome.Body,
             request.Delayed, request.Generation, request.SimulationStep, facts);
     }
+
+    /// <summary>
+    /// The authored release frame consumes the pending attack, while a fixed-ranged attack stays
+    /// in this ruleset-owned transient queue until the session's admitted update advances it.
+    /// Daggerfall Unity uses a travelling missile; this approximation has no rendered arrow or
+    /// static-cover SphereCast yet, so only the target's current position can dodge the release aim.
+    /// </summary>
+    private bool DeferRangedImpact(DeferredAttackImpact impact, FactBuffer<IProductFact> facts)
+    {
+        if (!impact.Request.Delayed || !IsRangedAction(impact.Request.AttackerId)) return false;
+        _releasedRangedShots.Add(impact);
+        return true;
+    }
+
+    /// <summary>Launches releases at their actual current admitted step, then resolves arrived shots.</summary>
+    internal void AdvanceRangedFlight(ulong generation, ulong simulationStep, double fixedDeltaSeconds,
+        IReadOnlyDictionary<long, WorldPoint> positions, FactBuffer<IProductFact> facts)
+    {
+        if (!double.IsFinite(fixedDeltaSeconds) || fixedDeltaSeconds <= 0d) throw new ArgumentOutOfRangeException(nameof(fixedDeltaSeconds));
+
+        foreach (DeferredAttackImpact release in _releasedRangedShots)
+        {
+            if (release.Request.Generation != generation || !IsLiveCombatant(release.Request.AttackerId)
+                || release.Request.TargetId is not long targetId || !IsLiveCombatant(targetId)
+                || !positions.TryGetValue(release.Request.AttackerId, out WorldPoint origin)
+                || !positions.TryGetValue(targetId, out WorldPoint aim)) continue;
+
+            ulong arrival = checked(simulationStep + RequiredFlightSteps(origin, aim, fixedDeltaSeconds));
+            RangedShotIdentity identity = new(generation, release.Request.AttackerId, targetId, simulationStep);
+            _inFlightRangedShots[identity] = new(release, origin, aim, arrival);
+        }
+        _releasedRangedShots.Clear();
+
+        foreach ((RangedShotIdentity identity, InFlightRangedShot shot) in _inFlightRangedShots.ToArray())
+        {
+            if (identity.Generation != generation || !IsLiveCombatant(shot.Release.Request.AttackerId)
+                || shot.Release.Request.TargetId is not long targetId || !IsLiveCombatant(targetId))
+            {
+                _inFlightRangedShots.Remove(identity);
+                continue;
+            }
+            if (simulationStep < shot.ArriveAtStep) continue;
+            _inFlightRangedShots.Remove(identity);
+            if (!positions.TryGetValue(targetId, out WorldPoint currentTarget)) continue;
+
+            bool dodged = Vector3.Distance(currentTarget.ToVector(), shot.Aim.ToVector()) > ArrowDodgeRadiusMeters;
+            if (!shot.Release.Attack.Outcome.Hit || dodged)
+            {
+                AttackOutcome outcome = shot.Release.Attack.Outcome;
+                facts.Append(new AttackMissedFact(shot.Release.Request.AttackerId, targetId, outcome.Roll, outcome.Chance,
+                    EnemyAttack: true, shot.Release.Request.Generation, shot.Release.Request.SimulationStep));
+                continue;
+            }
+            Execution.ApplyDeferredImpact(shot.Release, facts);
+        }
+    }
+
+    private bool IsRangedAction(long attackerId) => _definitions.TryGetValue(attackerId, out DaggerfallActorDefinition? actor)
+        && actor.ActionId is string actionId && _actions.TryGetValue(actionId, out DaggerfallActionDefinition? action)
+        && action.Interpretation == "fixed-ranged";
+
+    private bool IsLiveCombatant(long actorId)
+    {
+        if (actorId == PlayerId) return ! _actors.Player.IsDefeated && _definitions.ContainsKey(actorId);
+        return _actors.TryGet(actorId, out ActorState actor) && !actor.IsDefeated && _definitions.ContainsKey(actorId);
+    }
+
+    private static ulong RequiredFlightSteps(WorldPoint origin, WorldPoint target, double fixedDeltaSeconds)
+    {
+        double distance = Vector3.Distance(origin.ToVector(), target.ToVector());
+        return checked((ulong)Math.Max(1d, Math.Ceiling((distance / ArrowSpeedMetersPerSecond) / fixedDeltaSeconds)));
+    }
+
+    // DFU DaggerfallMissile moves at 25m/s. The accepted ruleset approximation uses a 0.45m
+    // target-position dodge radius; its missing static-cover cast and visual arrow are documented above.
+    private const double ArrowSpeedMetersPerSecond = 25d;
+    private const float ArrowDodgeRadiusMeters = .45f;
+    private readonly record struct RangedShotIdentity(ulong Generation, long AttackerId, long TargetId, ulong ReleaseStep);
+    private readonly record struct InFlightRangedShot(DeferredAttackImpact Release, WorldPoint Origin, WorldPoint Aim, ulong ArriveAtStep);
 
     /// <summary>
     /// A ranged shot draws one arrow from the shooter's managed quiver and refuses the shot

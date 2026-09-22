@@ -31,9 +31,10 @@ The directory is the sole durable-to-runtime map. `IdentityOf` provides the
 reverse lookup from attached metadata. Actor enumeration reads the store; there
 is no second actor state dictionary. Destroying a directory entry removes that
 entity and its attached components. Native resource owners still dispose their
-resources explicitly. The current Dagger session owns the inventory store for
-its lifetime; a future live despawn feature must decide disposition of contained
-items rather than assuming entity destruction transfers or deletes them.
+resources explicitly. The Dagger session owns the inventory store for its
+lifetime. Its dynamic-actor retirement path explicitly ends affected effects
+and destroys owned items before removing the actor; directory destruction alone
+does not provide that gameplay policy.
 
 ## Stats and recovery
 
@@ -43,8 +44,8 @@ A track shares its maximum Stat; changing that stat reconciles the live track.
 Player progression is attached, while Dagger retains XP and level-up policy.
 `PassiveTrackRecovery` in Kit implements rate, quiet delay and fractional carry;
 Dagger decides which admitted actions delay stamina recovery and when recovery
-is allowed. `EffectsComponent` is attached for discoverable effect state; this
-refactor does not implement the pending spell/effect gameplay backlog.
+is allowed. The active-effect lifecycle is described below; individual spell and
+effect families remain separate gameplay work.
 
 `DaggerSessionPersistence` captures and restores the current source-generated
 payload. It rebuilds authored sources before applying saved track currents, so
@@ -53,6 +54,36 @@ migration negotiation, compatibility fingerprint, or unknown-field preservation.
 It keeps meaningful state and relationships, including charged combat cooldowns;
 held input, AI/perception work, native continuation, presentation, and an
 in-flight attack are reconstructed or transient after restore.
+
+## Active effects
+
+Kit `ActiveEffectLifecycle` coordinates stable instance context, round counters
+and reversible cleanup over the actor's Engine `EffectsComponent`. Dagger's
+`State.Effects` supplies compiled definitions, like-kind policy, effect-specific
+state and outcomes. Start applies an initial magic round; resume does not.
+The session advances rounds from admitted game-calendar minutes. Explicit elapsed
+catch-up follows Dagger's two-day bound and creates no second clock.
+
+`RefreshDuration` retains the incumbent's source, settings, stacks, state and
+contributions; it changes only remaining rounds. Replacement, cancellation,
+expiry, actor/item retirement and session disposal use the cleanup owner.
+Current saves retain durable references, never runtime entity handles.
+
+Capture is read-only. Stat sources carrying effect provenance are rebuilt with
+fresh actor identities before tracks, through Engine's existing capture/rebuild
+helper. A compiled definition that applies contributions supplies a separate
+resume callback to bind cleanup to restored state without applying a second
+contribution or replaying the initial round. The default catalog is empty until
+concrete effect families are composed; unknown effect definitions fail clearly.
+
+## Ranged delivery
+
+Kit attack execution releases a delayed impact to Dagger's flight policy.
+The session records release origin/aim and advances travel inside admitted
+updates; arrival checks the target's current position for a dodge. Flight is
+transient across saves and discarded when its generation or combatants expire.
+The current delivery still prerolls hit/damage and omits static-cover collision
+and a visible arrow. Den #8410 owns those remaining cover/presentation behaviors.
 
 ## Inventory and equipment
 

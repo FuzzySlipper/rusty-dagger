@@ -33,6 +33,30 @@ public sealed class AttackExecutionTests
     }
 
     [Fact]
+    public void A_ruleset_can_defer_a_released_impact_until_its_own_delivery_arrives()
+    {
+        using ActorsState actors = Actors();
+        RecordingRules rules = new();
+        List<DeferredAttackImpact> deferred = [];
+        AttackExecution<TestFact> execution = new(actors, rules, (impact, _) =>
+        {
+            deferred.Add(impact);
+            return true;
+        });
+        FactBuffer<TestFact> facts = new();
+        AttackRequest request = new(2, 3, 7, 10, 1d, Delayed: true);
+
+        Assert.True(execution.Start(request, facts));
+        execution.ApplyImpacts([new AttackImpactNotice(2, 3, 7, 10, Expired: false)], 7, facts);
+        DeferredAttackImpact released = Assert.Single(deferred);
+        Assert.Equal(request, released.Request);
+        Assert.Empty(rules.Applied);
+
+        execution.ApplyDeferredImpact(released, facts);
+        Assert.Equal([request], rules.Applied);
+    }
+
+    [Fact]
     public void Cooldown_capture_restore_reconstructs_readiness_on_the_next_timeline()
     {
         using ActorsState sourceActors = Actors();

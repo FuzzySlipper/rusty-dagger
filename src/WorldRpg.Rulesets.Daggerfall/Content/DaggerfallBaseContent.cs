@@ -1948,7 +1948,31 @@ internal static class DaggerfallBaseContent
     {
         JsonElement tables = Object(Property(root, "questTables", diagnostics), "questTables", diagnostics);
         return new(ReadTable("globals", true), ReadTable("staticMessages", false), ReadPlaces(), ReadTable("sounds", false),
-            ReadTable("diseases", false), ReadTable("spells", false));
+            ReadTable("diseases", false), ReadTable("spells", false), ReadActorItemTables());
+
+        DaggerfallQuestActorItemTables ReadActorItemTables()
+        {
+            JsonElement actorItems = Object(Property(tables, "actorItemTables", diagnostics), "actorItemTables", diagnostics);
+            JsonElement items = Object(Property(actorItems, "items", diagnostics), "items", diagnostics);
+            JsonElement factions = Object(Property(actorItems, "factions", diagnostics), "factions", diagnostics);
+            JsonElement foes = Object(Property(actorItems, "foes", diagnostics), "foes", diagnostics);
+            return new(
+                new(Path(items), Array(items, "rows", diagnostics).Select(row => new DaggerfallQuestItemTableRow(
+                    Text(row, "name", diagnostics), Integer(row, "p1", diagnostics), Integer(row, "p2", diagnostics),
+                    Property(row, "active", diagnostics).GetBoolean(), Integer(row, "sourceLine", diagnostics))).ToArray(), Comments(items)),
+                new(Path(factions), Array(factions, "rows", diagnostics).Select(row => new DaggerfallQuestFactionTableRow(
+                    Text(row, "name", diagnostics), Integer(row, "p1", diagnostics), Text(row, "p2Text", diagnostics),
+                    Property(row, "p2", diagnostics).ValueKind == JsonValueKind.Null ? null : Integer(row, "p2", diagnostics),
+                    Integer(row, "p3", diagnostics), Property(row, "active", diagnostics).GetBoolean(),
+                    Integer(row, "sourceLine", diagnostics))).ToArray(), Comments(factions)),
+                new(Path(foes), Array(foes, "rows", diagnostics).Select(row => new DaggerfallQuestFoeTableRow(
+                    Integer(row, "id", diagnostics), Text(row, "name", diagnostics), Property(row, "active", diagnostics).GetBoolean(),
+                    Integer(row, "sourceLine", diagnostics))).ToArray(), Comments(foes)));
+
+            string Path(JsonElement table) => Text(Object(Property(table, "source", diagnostics), "source", diagnostics), "sourcePath", diagnostics);
+            DaggerfallQuestTableComment[] Comments(JsonElement table) => Array(table, "comments", diagnostics)
+                .Select(comment => new DaggerfallQuestTableComment(Text(comment, "text", diagnostics), Integer(comment, "sourceLine", diagnostics))).ToArray();
+        }
 
         DaggerfallQuestPlaces ReadPlaces()
         {
@@ -3112,17 +3136,11 @@ internal static class DaggerfallBaseContent
             "chain2-material-alias-is-not-authored",
             "bows-retain-donor-both-hands-policy",
             "loot-matrix-uses-fall-exe-errata",
-            // Landed: a ranged shot draws one arrow from the shooter's Kit-coordinated quiver as the
-            // shot begins and is refused outright with an EmptyQuiver rejection naming the shooter
-            // when the quiver is empty; ranged mobiles publish their rangedAttack1 state fail-closed
-            // and play it for the shot. Remaining: the shot resolves at its authored damage frame
-            // from a prerolled outcome that ignores static cover, with no projectile flight rendered
-            // and no static-cover test. The id names a delivery the behavior contradicts on the
-            // ammunition half and is pending rename to
-            // ranged-shots-preroll-their-outcome-and-ignore-cover in Den task #8284, which owns the
-            // pack donorErrata line, this scope comment, the catalog test list, and the fingerprint
-            // fixture; a donor erratum is an identity rather than a description.
-            "ranged-attacks-are-hitscan-and-consume-no-ammunition",
+            // Ranged shots draw one arrow, preroll their combat outcome, and travel through the
+            // admitted session update. This ruleset approximation has no rendered arrow and no
+            // static-cover SphereCast, so the flight only tests whether the target moved away from
+            // its release aim.
+            "ranged-shots-preroll-their-outcome-and-ignore-cover",
         ];
         if (!errata.Select(erratum => erratum.Id).Order().SequenceEqual(expectedErrata.Order())) diagnostics.Add("Donor errata must name mobile 39, the Chain2 omission, the bow two-hand policy, the loot errata and the ranged delivery exactly.");
     }
