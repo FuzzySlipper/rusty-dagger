@@ -5904,6 +5904,41 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(expected.Actions.Select(binding => (binding.Button, binding.Action)), actual.Actions.Select(binding => (binding.Button, binding.Action)));
     }
 
+    /// <summary>Small reusable real-session fixture for focused ruleset tests that need a save/reload boundary.</summary>
+    internal sealed class ConditionSessionFixture : IDisposable
+    {
+        private readonly DaggerfallDefinitions definitions;
+        private readonly PrivateersHoldInputs inputs;
+        private readonly ResolvedCompositionIdentity identity;
+        private readonly List<string> releases = [];
+        internal DaggerfallSession Session { get; }
+        internal DaggerfallDefinitions Definitions => definitions;
+
+        internal ConditionSessionFixture()
+        {
+            string root = RepositoryRoot();
+            definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+            inputs = ReadInputs(root);
+            identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+            ContentFake content = new(releases);
+            PopulateContent(content, inputs);
+            SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+            EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+            Session = new DaggerfallSession(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        }
+
+        internal DaggerfallSession Restore(RulesetSavePayload saved)
+        {
+            ContentFake content = new(releases);
+            PopulateContent(content, inputs);
+            SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+            EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+            return DaggerfallSession.Restore(engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, saved, RandomMinimum.Create());
+        }
+
+        public void Dispose() => Session.Dispose();
+    }
+
     private sealed class ContentFake : IContentService
     {
         // The pinned pair grew a bundle surface. Nothing in this product opens a bundle yet - content is

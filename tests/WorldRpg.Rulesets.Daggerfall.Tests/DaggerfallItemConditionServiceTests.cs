@@ -1,0 +1,258 @@
+using Rusty.Engine;
+using Rusty.Engine.Entities;
+using Rusty.Engine.Mechanics;
+using Rusty.Engine.Persistence;
+using System.Reflection;
+using WorldRpg.Kit;
+using WorldRpg.Kit.Inventory;
+using WorldRpg.Kit.World;
+using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Policies;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
+using Xunit;
+using SlotId = WorldRpg.Kit.Inventory.EquipmentSlotId;
+using UniqueItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
+
+namespace WorldRpg.Rulesets.Daggerfall.Tests;
+
+public sealed class DaggerfallItemConditionServiceTests
+{
+    [Fact]
+    public void Broken_equipped_item_survives_actual_session_reload_then_repairs_and_reequips_with_its_durable_identity()
+    {
+        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        DaggerfallSession source = fixture.Session;
+        source.State.Character.BeginChoices();
+        source.State.Character.ReplacePending(source.State.Character.ReadCreation().Current with
+        {
+            CareerId = "class16",
+            CustomCareer = null,
+            Background = null,
+        });
+        source.State.Character.CommitChoices();
+        WorldRpg.Kit.Inventory.EquipmentAssignment equipped = source.State.Equipment.Read().Assignments.First();
+        UniqueItem item = equipped.Item;
+        ulong durable = source.State.Inventory.GetDurableItemId(new EntityId(item.EntityId)).Value;
+
+        Assert.Equal(DaggerfallItemConditionOutcome.Broken, source.ItemCondition.Damage(item, int.MaxValue).Outcome);
+        RulesetSavePayload save = source.CaptureSave();
+        using DaggerfallSession restored = fixture.Restore(save);
+        UniqueItem restoredItem = restored.State.Inventory.Read().UniqueItems.Single(candidate =>
+            restored.State.Inventory.GetDurableItemId(candidate.Entity).Value == durable) is { } candidate
+                ? new UniqueItem(candidate.Entity.Value, new InventoryItemId(candidate.Definition.Value)) : throw new InvalidOperationException();
+
+        Assert.Equal(0, restored.State.ItemInstances.RequireUnique(durable).CurrentCondition);
+        Assert.DoesNotContain(restored.State.Equipment.Read().Assignments, assignment => assignment.Item.EntityId == restoredItem.EntityId);
+        Assert.Equal(DaggerfallItemConditionOutcome.Repaired, restored.ItemCondition.Repair(restoredItem).Outcome);
+        EquipmentMoveResult reequipped = restored.EquipmentMoves.MoveToSlot(restoredItem, new SlotId(equipped.Slot.Value));
+        Assert.True(reequipped.Outcome == EquipmentMoveOutcome.Applied, reequipped.Detail);
+        Assert.Contains(restored.State.Equipment.Read().Assignments, assignment => assignment.Item.EntityId == restoredItem.EntityId);
+        Assert.Equal(durable, restored.State.Inventory.GetDurableItemId(new EntityId(restoredItem.EntityId)).Value);
+    }
+
+    [Fact]
+    public void Restore_rejects_unknown_or_incompatible_enchantment_metadata_before_materializing_items()
+    {
+        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        DaggerfallSavePayload saved = DaggerfallSavePayload.Read(fixture.Session.CaptureSave());
+        DaggerfallUniqueSave unknownTarget = saved.Inventory.UniqueItems.First();
+        DaggerfallSavePayload unknown = saved with
+        {
+            Inventory = saved.Inventory with
+            {
+                UniqueItems = saved.Inventory.UniqueItems.Select(item => item.EntityId == unknownTarget.EntityId
+                    ? item with { Metadata = item.Metadata with { Enchantment = "magic-item.not-published", Identified = false } }
+                    : item).ToArray(),
+            },
+        };
+        const string magicKey = "magic-item.0010";
+        DaggerfallUniqueSave incompatibleTarget = saved.Inventory.UniqueItems.First(item =>
+            !fixture.Definitions.TryResolveItem(new DaggerfallItemId(DaggerfallMagicItemIds.For(item.ItemId, magicKey)), out _));
+        DaggerfallSavePayload incompatible = saved with
+        {
+            Inventory = saved.Inventory with
+            {
+                UniqueItems = saved.Inventory.UniqueItems.Select(item => item.EntityId == incompatibleTarget.EntityId
+                    ? item with { Metadata = item.Metadata with { Enchantment = magicKey, Identified = false } }
+                    : item).ToArray(),
+            },
+        };
+
+        Assert.Throws<ArgumentException>(() => fixture.Restore(DaggerfallSavePayload.Encode(unknown)));
+        Assert.Throws<ArgumentException>(() => fixture.Restore(DaggerfallSavePayload.Encode(incompatible)));
+    }
+
+    [Fact]
+    public void Breaking_an_equipped_item_clamps_condition_unequips_once_and_repair_restores_eligibility()
+    {
+        using Fixture f = new();
+        UniqueItem sword = f.Materialize(101, "iron-longsword", condition: 2, maximumCondition: 2);
+        Assert.Equal(EquipmentMoveOutcome.Applied, f.Moves.MoveToSlot(sword, new SlotId("right-hand")).Outcome);
+        List<DaggerfallEquipmentChange> changes = [];
+        f.Moves.Changed += changes.Add;
+
+        DaggerfallItemConditionResult damaged = f.Service.Damage(sword, 1);
+        DaggerfallItemConditionResult broken = f.Service.Damage(sword, 9);
+
+        Assert.Equal((DaggerfallItemConditionOutcome.Damaged, 1, 50), (damaged.Outcome, damaged.Metadata.CurrentCondition,
+            f.Service.Condition(damaged.Metadata).Percentage));
+        Assert.Equal(DaggerfallItemConditionOutcome.Broken, broken.Outcome);
+        DaggerfallEquipmentChange change = Assert.Single(changes);
+        Assert.Equal(broken.EquipmentChange, change);
+        Assert.Equal([sword], change.Removed);
+        Assert.DoesNotContain(f.Equipment.Read().Assignments, assignment => assignment.Item == sword);
+        Assert.Equal(DaggerfallItemConditionOutcome.AlreadyBroken, f.Service.Damage(sword, 1).Outcome);
+        Assert.Single(changes);
+
+        Assert.Equal(DaggerfallItemConditionOutcome.Repaired, f.Service.Repair(sword).Outcome);
+        Assert.Equal((2, 100), (f.Service.Read(101).Current, f.Service.Read(101).Percentage));
+        Assert.Equal(EquipmentMoveOutcome.Applied, f.Moves.MoveToSlot(sword, new SlotId("right-hand")).Outcome);
+    }
+
+    [Fact]
+    public void Identification_persists_through_transfer_and_reload_while_unknown_magic_remains_distinct()
+    {
+        using Fixture f = new();
+        const string magicKey = "magic-item.0010";
+        DaggerfallMagicItemDefinition magic = f.Definitions.Magic.MagicItems[magicKey];
+        string magicId = DaggerfallMagicItemIds.For("template-113-iron", magicKey);
+        _ = f.Definitions.RequireItem(new DaggerfallItemId(magicId));
+        UniqueItem magicItem = f.Materialize(202, magicId, magic.Uses, magic.Uses, identified: false, enchantment: magicKey);
+
+        InventoryItemPresentation unknown = Assert.Single(f.Presentation.Read().Items);
+        DaggerfallItemConditionResult identified = f.Service.Identify(magicItem);
+        InventoryItemPresentation known = Assert.Single(f.Presentation.Read().Items);
+        Assert.Equal(DaggerfallItemConditionOutcome.AlreadyIdentified, f.Service.Identify(magicItem).Outcome);
+        f.Instances.MoveUnique(202, DaggerfallItemOwner.Corpse(17));
+        DaggerfallItemInstanceMetadata moved = f.Instances.RequireUnique(202);
+        DaggerfallItemInstanceMetadata restored = DaggerfallItemInstanceMetadata.Restore(moved.ItemId, moved.Capture());
+
+        Assert.Equal(DaggerfallItemConditionOutcome.Identified, identified.Outcome);
+        Assert.False(unknown.Identified);
+        Assert.Equal(f.Definitions.RequireItem(new DaggerfallItemId(magicId)).Template!.Name, unknown.Label);
+        Assert.DoesNotContain(magic.Enchantments[0].ParamMeaning, unknown.Details, StringComparison.OrdinalIgnoreCase);
+        Assert.True(known.Identified);
+        Assert.Contains(DaggerfallInventoryPresentation.Label(magic.Enchantments[0].ParamMeaning), known.Details, StringComparison.Ordinal);
+        Assert.True(restored.Identified);
+        Assert.Equal(magicKey, restored.Enchantment);
+        Assert.Equal(DaggerfallItemOwner.Corpse(17), restored.Owner);
+    }
+
+    [Fact]
+    public void Remote_or_stale_items_are_refused_without_mutating_player_item_meaning()
+    {
+        using Fixture f = new();
+        UniqueItem sword = f.CreatePlainSword(303);
+        DaggerfallItemInstanceMetadata before = f.Instances.RequireUnique(303);
+        f.Instances.MoveUnique(303, DaggerfallItemOwner.Corpse(17));
+
+        Assert.Throws<InvalidOperationException>(() => f.Service.Damage(sword, 1));
+        Assert.Throws<InvalidOperationException>(() => f.Service.Repair(sword));
+        Assert.Throws<InvalidOperationException>(() => f.Service.Identify(sword));
+        Assert.Throws<InvalidOperationException>(() => f.Service.Enchant(sword, "not-published"));
+        Assert.Equal(before with { Owner = DaggerfallItemOwner.Corpse(17) }, f.Instances.RequireUnique(303));
+        Assert.Throws<InvalidOperationException>(() => f.Service.Repair(new UniqueItem(999_999, new InventoryItemId("iron-longsword"))));
+    }
+
+    [Fact]
+    public void Enchanting_a_plain_factory_item_unequips_then_persists_magic_value_condition_and_projection()
+    {
+        using Fixture f = new();
+        const string magicKey = "magic-item.0010";
+        DaggerfallMagicItemDefinition magic = f.Definitions.Magic.MagicItems[magicKey];
+        UniqueItem sword = f.CreatePlainSword(404);
+        string plainItemId = f.Instances.RequireUnique(404).ItemId;
+        Assert.Equal(EquipmentMoveOutcome.Applied, f.Moves.MoveToSlot(sword, new SlotId("right-hand")).Outcome);
+        List<DaggerfallEquipmentChange> changes = [];
+        f.Moves.Changed += changes.Add;
+
+        DaggerfallItemConditionResult result = f.Service.Enchant(sword, magicKey);
+        InventoryItemPresentation row = Assert.Single(f.Presentation.Read().Items);
+        DaggerfallItemInstanceMetadata restored = DaggerfallItemInstanceMetadata.Restore(result.Metadata.ItemId, result.Metadata.Capture());
+
+        Assert.Equal(DaggerfallItemConditionOutcome.Enchanted, result.Outcome);
+        Assert.Equal((plainItemId, magicKey, true, magic.Uses),
+            (result.Metadata.ItemId, result.Metadata.Enchantment, result.Metadata.Identified, result.Metadata.MaximumCondition));
+        Assert.Equal(result.EquipmentChange, Assert.Single(changes));
+        Assert.DoesNotContain(f.Equipment.Read().Assignments, assignment => assignment.Item == sword);
+        Assert.Equal((magic.Value, magic.Uses, magic.Uses), (row.Value, row.Condition!.Current, row.Condition.Maximum));
+        Assert.Equal(result.Metadata, restored);
+        Assert.Equal(DaggerfallItemConditionOutcome.AlreadyEnchanted, f.Service.Enchant(sword, magicKey).Outcome);
+        Assert.Equal(EquipmentMoveOutcome.Applied, f.Moves.MoveToSlot(sword, new SlotId("right-hand")).Outcome);
+        Assert.Contains(f.Equipment.Read().Assignments, assignment => assignment.Item == sword);
+    }
+
+    [Fact]
+    public void Condition_percentage_has_the_donor_zero_maximum_and_truncating_rules()
+    {
+        Assert.Equal(100, DaggerfallFormulaPolicy.ConditionPercentage(0, 0));
+        Assert.Equal(66, DaggerfallFormulaPolicy.ConditionPercentage(2, 3));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallFormulaPolicy.ConditionPercentage(4, 3));
+    }
+
+    private sealed class Fixture : IDisposable
+    {
+        internal readonly EntityDirectory Entities = new();
+        internal readonly MechanicsInventoryCoordinator Inventory;
+        internal readonly MechanicsEquipmentCoordinator Equipment;
+        internal readonly DaggerfallDefinitions Definitions;
+        internal readonly DaggerfallItemInstances Instances = new();
+        internal readonly DaggerfallEquipmentMoves Moves;
+        internal readonly DaggerfallItemConditionService Service;
+        internal readonly DaggerfallInventoryPresentation Presentation;
+
+        internal Fixture()
+        {
+            DirectoryInfo? directory = new(AppContext.BaseDirectory);
+            while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "content/worldrpg/payloads/daggerfall.base.json"))) directory = directory.Parent;
+            Definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(directory!.FullName, "content/worldrpg/payloads/daggerfall.base.json")));
+            var items = Definitions.Items.Values.Concat(Definitions.TemplateItems.Values).ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
+            var slots = Definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
+            InventoryStore world = new();
+            EntityId owner = Entities.Create(new(DurableIdentityKind.Actor, 1), new("test.player"));
+            world.RegisterInventory(new InventoryState(owner));
+            world.RegisterEquipment(new EquipmentState(owner));
+            InventoryComponent inventory = new(world, owner);
+            EquipmentComponent equipment = new(world, owner);
+            Entities.Store.Add(owner, inventory);
+            Entities.Store.Add(owner, equipment);
+            Inventory = new(inventory, Entities, items);
+            Equipment = new(inventory, equipment, Entities, items, slots);
+            Moves = new(Inventory, Equipment, Definitions, itemInstances: Instances);
+            Service = new(Definitions, Instances, Moves);
+            Presentation = new(Moves, Definitions, new Dictionary<string, string>());
+            Presentation.UseItemValuation(new DaggerfallItemValuation(Definitions), Instances, DaggerfallItemOwner.Player,
+                entity => Entities.IdentityOf(new EntityId(entity)).Value);
+            Presentation.UseItemCondition(Service);
+        }
+
+        internal UniqueItem Materialize(ulong durable, string itemId, int condition, int maximumCondition,
+            bool identified = true, string? enchantment = null)
+        {
+            UniqueItem item = Equipment.Materialize(new DurableIdentityReference(DurableIdentityKind.Item, durable), new InventoryItemId(itemId));
+            Instances.RegisterUnique(durable, new DaggerfallItemInstanceMetadata(itemId, "iron", 0, condition, maximumCondition,
+                identified, Stolen: false, QuestId: null, QuestItemSymbol: null, enchantment, DaggerfallItemOwner.Player));
+            return item;
+        }
+
+        internal UniqueItem CreatePlainSword(ulong durable)
+        {
+            IRandomService random = DispatchProxy.Create<IRandomService, UnusedRandom>();
+            DaggerfallCreatedItem created = new DaggerfallItemFactory(Definitions, random).Create(new(
+                "Weapons", "condition.sword", DaggerfallItemOwner.Player, TemplateIndex: 113, Material: "iron", Variant: 0));
+            new DaggerfallItemFactory(Definitions, random).Materialize(created, Inventory, Instances,
+                unique: new DurableIdentityReference(DurableIdentityKind.Item, durable));
+            Rusty.Engine.Mechanics.UniqueInventoryItem item = Inventory.Read().UniqueItems.Single(item =>
+                item.Entity.Value == Entities.Resolve(new(DurableIdentityKind.Item, durable)).Value);
+            return new UniqueItem(item.Entity.Value, new InventoryItemId(item.Definition.Value));
+        }
+
+        public void Dispose() => Entities.Dispose();
+    }
+
+    private class UnusedRandom : DispatchProxy
+    {
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) =>
+            throw new InvalidOperationException($"Unexpected random draw: {targetMethod?.Name}");
+    }
+}

@@ -154,6 +154,44 @@ internal sealed class DaggerfallEquipmentMoves(
     internal EquipmentMoveResult MoveToSlot(UniqueItem item, SlotId slot) =>
         MoveToSlot(item, slot, DaggerfallEquipmentCue.Equip, publish: true);
 
+    /// <summary>
+    /// Removes an equipped item whose ruleset condition has reached zero. The caller owns the
+    /// condition mutation; this keeps the Engine equipment mutation, relationship state, layout,
+    /// and one visible unequip notification together.
+    /// </summary>
+    internal EquipmentMoveResult RemoveBroken(UniqueItem item)
+        => UnequipForItemMutation(item);
+
+    /// <summary>Unequips an item before its enchantment meaning changes, so a later equip admits its effects once.</summary>
+    internal EquipmentMoveResult UnequipForEnchantment(UniqueItem item)
+        => UnequipForItemMutation(item);
+
+    private EquipmentMoveResult UnequipForItemMutation(UniqueItem item)
+    {
+        if (!IsContained(item)) return new(EquipmentMoveOutcome.UnknownItem);
+        if (!IsEquipped(item.EntityId)) return new(EquipmentMoveOutcome.Applied);
+        EquipmentRead before = equipment.Read();
+        try
+        {
+            equipment.Unequip(item);
+        }
+        catch (Exception error) when (error is MechanicsException or ArgumentException or InvalidOperationException)
+        {
+            return new(EquipmentMoveOutcome.Rejected, error.Message);
+        }
+        DaggerfallEquipmentChange change = new(null, [item], Timing(before, equipment.Read()), DaggerfallEquipmentCue.Unequip);
+        ReconcileLayout();
+        Changed?.Invoke(change);
+        return new(EquipmentMoveOutcome.Applied, Removed: [item], Change: change);
+    }
+
+    /// <summary>Resolves a live Engine item to its durable item identity after containment is checked.</summary>
+    internal ulong RequireDurableIdentity(UniqueItem item)
+    {
+        if (!IsContained(item)) throw new InvalidOperationException($"Unique item '{item.EntityId}' is no longer in this inventory.");
+        return equipment.GetDurableItemId(new Rusty.Engine.Entities.EntityId(item.EntityId)).Value;
+    }
+
     private EquipmentMoveResult MoveToSlot(UniqueItem item, SlotId slot, DaggerfallEquipmentCue cue, bool publish)
     {
         if (!definitions.TryResolveItem(new DaggerfallItemId(item.Definition.Value), out DaggerfallItemDefinition definition))

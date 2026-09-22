@@ -18,6 +18,13 @@ internal sealed class DaggerfallItemValuation(DaggerfallDefinitions definitions)
         if (!StringComparer.Ordinal.Equals(definition.Id.Value, metadata.ItemId))
             throw new InvalidOperationException($"Item metadata '{metadata.ItemId}' does not belong to definition '{definition.Id.Value}'.");
 
+        if (metadata.Enchantment is { } enchantment)
+        {
+            if (!_definitions.Magic.MagicItems.TryGetValue(enchantment, out DaggerfallMagicItemDefinition? magic))
+                throw new InvalidOperationException($"Item '{definition.Id.Value}' names unpublished magic metadata '{enchantment}'.");
+            return magic.Value;
+        }
+
         bool isBook = definition.Template?.Groups.Contains("Books", StringComparer.Ordinal) == true;
         if (!isBook)
         {

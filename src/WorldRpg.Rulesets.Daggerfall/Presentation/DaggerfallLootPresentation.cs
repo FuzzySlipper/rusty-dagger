@@ -28,7 +28,7 @@ internal sealed class DaggerfallLootPresentation(DaggerfallCorpseLootModule loot
             .Concat(contents.UniqueItems.Select(item => items.DescribeItem(DaggerfallInventoryPresentation.UniqueKey(item.Entity.Value), item.Definition.Value, 1,
                 owner: DaggerfallItemOwner.Corpse(actor))))
             .OrderBy(item => item.Key, StringComparer.Ordinal).ToArray();
-        return new(Token, $"{Token}:{contents?.StoreRevision ?? 0}", DaggerfallInventoryPresentation.Label(loot.ContainerName(actor)) + " — loot",
+        return new(Token, $"{Token}:{contents?.StoreRevision ?? 0}:{items.MetadataRevision}", DaggerfallInventoryPresentation.Label(loot.ContainerName(actor)) + " — loot",
             rows, rows.Length == 0, Message);
     }
 

@@ -112,6 +112,9 @@ internal sealed class DaggerfallItemInstances
 {
     private readonly Dictionary<(DaggerfallItemOwner Owner, string Stack), DaggerfallItemInstanceMetadata> _stacks = [];
     private readonly Dictionary<ulong, DaggerfallItemInstanceMetadata> _unique = [];
+    private ulong _revision;
+    /// <summary>Changes when persisted item meaning changes, so projections refresh without inventing an inventory mirror.</summary>
+    internal ulong Revision => _revision;
 
     internal void RegisterStack(DaggerfallItemOwner owner, InventoryStackId stack, DaggerfallItemInstanceMetadata metadata)
     {
@@ -121,6 +124,7 @@ internal sealed class DaggerfallItemInstances
         MetadataFor(owner, metadata).Validate();
         if (!_stacks.TryAdd((owner, stack.Value), MetadataFor(owner, metadata)))
             throw new InvalidOperationException($"Item stack '{stack.Value}' is already placed for {owner.Scope} {owner.Id}.");
+        _revision++;
     }
 
     internal void RegisterDefaultStack(DaggerfallItemOwner owner, InventoryStack stack, DaggerfallItemDefinition definition) =>
@@ -135,6 +139,7 @@ internal sealed class DaggerfallItemInstances
     {
         _ = RequireStack(owner, stack);
         _stacks[(owner, stack.Value)] = MetadataFor(owner, metadata).Validate();
+        _revision++;
     }
 
     /// <summary>Retires meaning when its Engine-backed stack reaches zero quantity.</summary>
@@ -142,6 +147,7 @@ internal sealed class DaggerfallItemInstances
     {
         _ = RequireStack(owner, stack);
         _stacks.Remove((owner, stack.Value));
+        _revision++;
     }
 
     /// <summary>Splits through Engine first, then assigns the copied compatible metadata.</summary>
@@ -163,6 +169,7 @@ internal sealed class DaggerfallItemInstances
             throw new InvalidOperationException("Only Daggerfall-compatible item instances may merge.");
         inventory.Merge(source, destination);
         _stacks.Remove((owner, source.Value));
+        _revision++;
     }
 
     /// <summary>Checks whether an Engine transfer may merge into its selected destination.</summary>
@@ -185,7 +192,10 @@ internal sealed class DaggerfallItemInstances
             RegisterStack(destinationOwner, destination, sourceMetadata);
 
         if (sourceWasExhausted)
+        {
             _stacks.Remove((sourceOwner.Validate(), source.Value));
+            _revision++;
+        }
     }
 
     internal void RegisterUnique(ulong itemId, DaggerfallItemInstanceMetadata metadata)
@@ -194,6 +204,7 @@ internal sealed class DaggerfallItemInstances
         ArgumentNullException.ThrowIfNull(metadata);
         if (!_unique.TryAdd(itemId, metadata.Validate()))
             throw new InvalidOperationException($"Unique item '{itemId}' is already placed.");
+        _revision++;
     }
 
     internal void RegisterDefaultUnique(ulong itemId, DaggerfallItemDefinition definition, DaggerfallItemOwner owner) =>
@@ -208,20 +219,32 @@ internal sealed class DaggerfallItemInstances
     {
         _ = RequireUnique(itemId);
         _unique[itemId] = metadata.Validate();
+        _revision++;
     }
 
-    internal void MoveUnique(ulong itemId, DaggerfallItemOwner owner) =>
+    internal void MoveUnique(ulong itemId, DaggerfallItemOwner owner)
+    {
         _unique[itemId] = MetadataFor(owner, RequireUnique(itemId)).Validate();
+        _revision++;
+    }
 
     /// <summary>Retires all stack meaning whose Engine owner has been removed.</summary>
     internal void RemoveOwner(DaggerfallItemOwner owner)
     {
         owner.Validate();
+        int removed = 0;
         foreach ((DaggerfallItemOwner current, string stack) in _stacks.Keys.Where(key => key.Owner == owner).ToArray())
+        {
             _stacks.Remove((current, stack));
+            removed++;
+        }
+        if (removed != 0) _revision++;
     }
 
-    internal void RemoveUnique(ulong itemId) => _unique.Remove(itemId);
+    internal void RemoveUnique(ulong itemId)
+    {
+        if (_unique.Remove(itemId)) _revision++;
+    }
 
     private static DaggerfallItemInstanceMetadata MetadataFor(DaggerfallItemOwner owner, DaggerfallItemInstanceMetadata metadata) =>
         metadata with { Owner = owner.Validate() };
