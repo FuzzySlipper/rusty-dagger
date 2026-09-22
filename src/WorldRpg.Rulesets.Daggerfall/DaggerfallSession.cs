@@ -565,6 +565,10 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 case "character-level-allocate":
                 case "character-level-commit": if (playing) ChangeLevelUp(action!); break;
                 case "activation-mode": if (playing) ApplyActivationMode(action!); break;
+                case "quest-choice":
+                    if ((playing || modal) && State.Quests.ChoosePrompt(State.Variables, action!.QuestInstance!, action.QuestMessage!.Value, action.QuestChoice!.Value))
+                        Presentation.SetOutcome("Quest choice recorded.");
+                    break;
                 case "attack": if (playing && !opensInteraction) firstStep.Request(DaggerfallInput.Attack); break;
                 // A reloaded DOM holds no art and asks for the revision it is missing; the projection
                 // answers on its next snapshot rather than a second delivery channel existing.
@@ -877,10 +881,56 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     private void PublishPresentation()
     {
-        _hud.Publish(State.Actors.Player, State.Progression, Presentation, _mode, State.PlayerControl, Slots, _inventoryUi.Read(), _lootUi.Read(), _characterUi.Read(State.Actors.Player, State.Progression), LatestPanelRequest, _saveSlots, _saveSlotDiagnostic, _controlSettings, _controlDiagnostic, ActivationView);
+        _hud.Publish(State.Actors.Player, State.Progression, Presentation, _mode, State.PlayerControl, Slots, _inventoryUi.Read(), _lootUi.Read(), _characterUi.Read(State.Actors.Player, State.Progression), LatestPanelRequest, _saveSlots, _saveSlotDiagnostic, _controlSettings, _controlDiagnostic, ActivationView, State.Quests.ReadPresentation(QuestTextContext));
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors);
+    }
+
+    private DaggerfallQuestMessageContext QuestTextContext(DaggerfallQuestRuntimeInstance instance)
+    {
+        World.DaggerfallCalendar calendar = _time.Calendar;
+        DaggerfallCharacterIdentity player = State.Character.Identity;
+        Dictionary<string, DaggerfallQuestResourceTextContext> resources = [];
+        foreach (DaggerfallQuestResourceState resource in instance.Resources)
+        {
+            DaggerfallQuestResourceDefinition? declared = _definitions.QuestSources.Resources
+                .SingleOrDefault(value => value.SourceFile == instance.SourceFile
+                    && value.CanonicalId == DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "quest presentation resource"));
+            if (declared is null) continue;
+            string? place = resource.Binding.Places.Select(value => _site.TryFind(new DaggerfallSiteId(value.Region!.Value, value.Index!.Value), out var site) ? site.Name : null)
+                .FirstOrDefault(value => value is not null);
+            string? actorRole = resource.Binding.ActorIds.Select(id => State.Npcs.All.FirstOrDefault(npc => npc.DurableId == id)?.Role)
+                .FirstOrDefault(value => value is not null);
+            string? item = resource.Binding.UniqueItemIds.Select(id => State.ItemInstances.RequireUnique(id).ItemId)
+                .FirstOrDefault(value => value is not null);
+            string? named = declared.Person?.Named?.Replace('_', ' ');
+            string? faction = declared.Person?.Faction?.Replace('_', ' ');
+            string? group = declared.Person?.Group?.Replace('_', ' ');
+            string? name = place ?? named ?? item ?? actorRole ?? group;
+            resources[DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "quest presentation resource")] = new(
+                Name: name,
+                NameTwo: place,
+                NameThree: place,
+                NameFour: place,
+                Details: item ?? declared.SourceText,
+                Binding: actorRole ?? place,
+                Faction: faction);
+        }
+        return new(new(
+            new DaggerfallTextPlayerContext(Name: player.Name, Race: player.RaceId),
+            new DaggerfallTextCalendarContext(
+                Date: $"{calendar.Month + 1}/{calendar.Day + 1}/{calendar.Year}",
+                Time: $"{calendar.Hour:D2}:{calendar.Minute:D2}",
+                DayNumber: (calendar.Day + 1).ToString(System.Globalization.CultureInfo.InvariantCulture),
+                MonthNumber: (calendar.Month + 1).ToString(System.Globalization.CultureInfo.InvariantCulture),
+                Year: calendar.Year.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                Minute: calendar.Minute.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                Hour: calendar.Hour.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                Season: calendar.Season.ToString()),
+            new DaggerfallTextLocationContext(City: _site.ActiveSite?.Name,
+                Region: _site.Region?.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+            new(), new(), new()), resources);
     }
 
     /// <summary>

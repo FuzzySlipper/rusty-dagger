@@ -132,6 +132,19 @@ test('view is cleared when the product no longer supplies it', () => {
   } finally { f.dispose(); }
 });
 
+test('a projected quest prompt renders once and returns the selected semantic choice', () => {
+  const f = fixture();
+  try {
+    const prompt = { instance: 'quest:1', message: 1010, delivery: 'prompt', text: 'Will you help?', signoff: null, diagnostics: [] };
+    f.publish({ quests: { deliveries: [prompt], journal: [], pending: prompt } });
+    assert.equal(f.root.querySelector('.dagger-quest-prompt p').textContent, 'Will you help?');
+    f.root.querySelector('.dagger-quest-prompt button').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'quest-choice', questInstance: 'quest:1', questMessage: 1010, questChoice: true });
+    f.publish({ quests: { deliveries: [], journal: [], pending: null } });
+    assert.equal(f.root.querySelector('.dagger-quest-prompt'), null);
+  } finally { f.dispose(); }
+});
+
 test('title character choices are projected and committed through semantic actions', () => {
   const f = fixture();
   try {

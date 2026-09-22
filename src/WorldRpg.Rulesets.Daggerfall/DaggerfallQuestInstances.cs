@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using WorldRpg.Kit;
 using Rusty.Engine;
 using WorldRpg.Kit.World;
@@ -155,9 +156,12 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
 
 internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[] Instances)
 {
+    [JsonRequired]
+    public DaggerfallQuestMessagesSave Messages { get; init; } = new([], [], null);
     internal void Validate()
     {
         ArgumentNullException.ThrowIfNull(Instances);
+        ArgumentNullException.ThrowIfNull(Messages);
         HashSet<string> ids = new(StringComparer.Ordinal);
         foreach (DaggerfallQuestInstanceSave instance in Instances)
         {
@@ -292,12 +296,25 @@ internal sealed class DaggerfallQuestInstances
     {
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
         _random = random ?? throw new ArgumentNullException(nameof(random));
+        Messages = new DaggerfallQuestMessages(definitions, random);
         _programs = definitions.QuestSources.Quests.Values
             .Where(source => source.Disposition == DaggerfallQuestDisposition.Compiled)
             .ToDictionary(source => source.SourceFile, DaggerfallQuestTaskCompiler.Compile, StringComparer.Ordinal);
     }
 
     internal IReadOnlyCollection<DaggerfallQuestInstanceSave> All => _instances.Values.Select(instance => instance.Capture()).ToArray();
+    internal DaggerfallQuestMessages Messages { get; }
+
+    internal DaggerfallQuestPresentation ReadPresentation(Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestMessageContext> context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        DaggerfallQuestRenderedMessage[] deliveries = [.. Messages.Render(_instances.Values, context)];
+        DaggerfallQuestPromptSave? pending = Messages.Pending;
+        DaggerfallQuestRenderedMessage? prompt = pending is null ? null
+            : deliveries.SingleOrDefault(delivery => delivery.Delivery == DaggerfallQuestMessageDelivery.Prompt
+                && delivery.InstanceId == pending.InstanceId && delivery.MessageId == pending.MessageId);
+        return new(deliveries, Messages.RenderJournal(_instances.Values, context), prompt);
+    }
 
     internal DaggerfallQuestInstanceSave Start(DaggerfallQuestInstanceSave instance)
     {
@@ -328,7 +345,19 @@ internal sealed class DaggerfallQuestInstances
         ArgumentNullException.ThrowIfNull(variables);
         foreach (DaggerfallQuestRuntimeInstance instance in _instances.Values)
             if (instance.Lifecycle == DaggerfallQuestLifecycle.Active)
-                DaggerfallQuestTaskRunner.Advance(instance, Program(instance.SourceFile), variables, calendar);
+                DaggerfallQuestTaskRunner.Advance(instance, Program(instance.SourceFile), variables, calendar, Messages);
+    }
+
+    /// <summary>Records a DOM prompt answer once, then starts its source-declared target task.</summary>
+    internal bool ChoosePrompt(DaggerfallVariableStore variables, string instanceId, int messageId, bool yes)
+    {
+        ArgumentNullException.ThrowIfNull(variables);
+        DaggerfallQuestRuntimeInstance instance = _instances.TryGetValue(instanceId, out DaggerfallQuestRuntimeInstance? runtime)
+            ? runtime : throw new InvalidOperationException($"Quest prompt refers to missing instance '{instanceId}'.");
+        DaggerfallQuestTaskProgram program = Program(instance.SourceFile);
+        return Messages.TryChoose(instanceId, messageId, yes,
+            (prompt, choice) => DaggerfallQuestTaskRunner.Choose(instance, program, variables, prompt, choice,
+                operation => Messages.ResolvePromptMessage(instance, operation)), out _, out _);
     }
 
     /// <summary>Consumes elapsed calendar time once; clocks never own a timer or update loop.</summary>
@@ -366,7 +395,10 @@ internal sealed class DaggerfallQuestInstances
         return false;
     }
 
-    internal DaggerfallQuestInstancesSave Capture() => new([.. _instances.Values.OrderBy(value => value.InstanceId, StringComparer.Ordinal).Select(instance => instance.Capture())]);
+    internal DaggerfallQuestInstancesSave Capture() => new([.. _instances.Values.OrderBy(value => value.InstanceId, StringComparer.Ordinal).Select(instance => instance.Capture())])
+    {
+        Messages = Messages.Capture(),
+    };
 
     internal void Restore(DaggerfallQuestInstancesSave saved)
     {
@@ -380,6 +412,21 @@ internal sealed class DaggerfallQuestInstances
         }
         _instances.Clear();
         foreach ((string id, DaggerfallQuestRuntimeInstance instance) in restored) _instances.Add(id, instance);
+        foreach (DaggerfallQuestChoiceSave choice in saved.Messages.Choices)
+        {
+            DaggerfallQuestRuntimeInstance instance = _instances.TryGetValue(choice.InstanceId, out DaggerfallQuestRuntimeInstance? runtime)
+                ? runtime : throw new ArgumentException($"Saved quest choice refers to missing instance '{choice.InstanceId}'.");
+            DaggerfallQuestTaskRunner.ValidateChoice(instance, Program(instance.SourceFile), choice,
+                operation => Messages.ResolvePromptMessage(instance, operation));
+        }
+        if (saved.Messages.Pending is { } pending)
+        {
+            DaggerfallQuestRuntimeInstance instance = _instances.TryGetValue(pending.InstanceId, out DaggerfallQuestRuntimeInstance? runtime)
+                ? runtime : throw new ArgumentException($"Saved quest prompt refers to missing instance '{pending.InstanceId}'.");
+            DaggerfallQuestTaskRunner.ValidatePrompt(instance, Program(instance.SourceFile), pending,
+                operation => Messages.ResolvePromptMessage(instance, operation));
+        }
+        Messages.Restore(saved.Messages, _instances);
     }
 
     private DaggerfallQuestInstanceSave Transition(string instanceId, DaggerfallQuestLifecycle lifecycle, string outcome)
