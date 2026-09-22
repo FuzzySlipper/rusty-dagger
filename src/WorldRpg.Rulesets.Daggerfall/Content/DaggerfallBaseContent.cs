@@ -526,7 +526,7 @@ internal static class DaggerfallBaseContent
         foreach (DaggerfallRaceDefinition race in definitions.Catalogs.Races.OrderBy(race => race.Id, StringComparer.Ordinal)) Add("catalog-race", race.Id, race.DonorRaceId, race.Source.SourceRecordId, race.Source.Path);
         foreach (DaggerfallCareerDefinition career in definitions.Catalogs.Careers.OrderBy(career => career.Id, StringComparer.Ordinal))
         {
-            Add("catalog-career", career.Id, career.Name, string.Join(',', career.PrimarySkills), string.Join(',', career.MajorSkills), string.Join(',', career.MinorSkills), string.Join(',', career.Attributes), string.Join(',', career.AttributeValues), career.HitPointsPerLevel, career.SpellPointMultiplierMilli, FingerprintField(career.AdvancementMultiplier), string.Join(',', career.ResistanceElements), string.Join(',', career.ImmunityElements), string.Join(',', career.FlagBytes.Select(flag => $"{flag.Name}={flag.Value}")), career.Source.SourceRecordId, career.Source.Path);
+            Add("catalog-career", career.Id, career.Name, string.Join(',', career.PrimarySkills), string.Join(',', career.MajorSkills), string.Join(',', career.MinorSkills), string.Join(',', career.Attributes), string.Join(',', career.AttributeValues), career.HitPointsPerLevel, career.SpellPointMultiplierMilli, FingerprintField(career.AdvancementMultiplier), string.Join(',', career.ResistanceElements), string.Join(',', career.ImmunityElements), string.Join(',', career.FlagBytes.Select(flag => $"{flag.Name}={flag.Value}")), string.Join(',', career.ForbiddenEquipment), career.Source.SourceRecordId, career.Source.Path);
         }
 
         foreach (string collision in definitions.Catalogs.CareerNameCollisions) Add("catalog-career-name-collision", collision);
@@ -2828,9 +2828,10 @@ internal static class DaggerfallBaseContent
             int immunityFlags = FlagByte(career, "immunityFlags", diagnostics);
             int lowToleranceFlags = FlagByte(career, "lowToleranceFlags", diagnostics);
             int criticalWeaknessFlags = FlagByte(career, "criticalWeaknessFlags", diagnostics);
+            IReadOnlyList<string> forbiddenEquipment = ReadIds(career, "forbiddenEquipment", diagnostics);
             DaggerfallCareerDefinition definition = new(
                 id, name, primary, major, minor, careerAttributes, attributeValues, hitPoints, spellPointMultiplierMilli, multiplier, resistant, immune,
-                resistanceFlags, immunityFlags, lowToleranceFlags, criticalWeaknessFlags, ReadCitation(career, sources, diagnostics));
+                resistanceFlags, immunityFlags, lowToleranceFlags, criticalWeaknessFlags, forbiddenEquipment, ReadCitation(career, sources, diagnostics));
             foreach (string skill in definition.SkillReferences)
             {
                 if (!skillKeys.Contains(skill, StringComparer.Ordinal))
@@ -2867,6 +2868,11 @@ internal static class DaggerfallBaseContent
             // while the source says otherwise.
             RequireElements(id, "resistanceElements", resistant, resistanceFlags, diagnostics);
             RequireElements(id, "immunityElements", immune, immunityFlags, diagnostics);
+            if (forbiddenEquipment.Distinct(StringComparer.Ordinal).Count() != forbiddenEquipment.Count
+                || forbiddenEquipment.Any(restriction => !ValidEquipmentRestriction(restriction)))
+            {
+                diagnostics.Add($"Career '{id}' must carry distinct supported forbidden-equipment restrictions.");
+            }
             if (primary.Count is < 1 or > 3 || major.Count is < 1 or > 3 || minor.Count is < 1 or > 6)
             {
                 diagnostics.Add($"Career '{id}' must name one to three primary, one to three major and one to six minor skills.");
@@ -2938,6 +2944,19 @@ internal static class DaggerfallBaseContent
 
         RequireDistinct(pending, entry => entry.Id, "pending catalog", diagnostics);
         return new DaggerfallCatalogSet(attributes, skills, resistances, races, careers, collisions, enemies, itemTemplates, pending, sources);
+    }
+
+    private static bool ValidEquipmentRestriction(string value)
+    {
+        string[] pair = value.Split(':', 2, StringSplitOptions.TrimEntries);
+        return pair.Length == 2 && (pair[0], pair[1]) switch
+        {
+            ("forbidden-material", "iron" or "steel" or "silver" or "elven" or "dwarven" or "mithril" or "adamantium" or "ebony" or "orcish" or "daedric") => true,
+            ("forbidden-shield", "buckler" or "round-shield" or "kite-shield" or "tower-shield") => true,
+            ("forbidden-armor", "leather" or "chain" or "plate") => true,
+            ("forbidden-weapon", "short-blade" or "long-blade" or "hand-to-hand" or "axe" or "blunt-weapon" or "archery") => true,
+            _ => false,
+        };
     }
 
     /// <summary>The classic effect flag each element key answers to, in key order.</summary>

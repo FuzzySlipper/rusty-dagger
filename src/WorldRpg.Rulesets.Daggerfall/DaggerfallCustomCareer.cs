@@ -92,12 +92,12 @@ internal static class DaggerfallCustomCareerPolicy
         int criticalWeakness = Flags(choices.Disadvantages, "critical-weakness");
         int difficulty = Difficulty(choices);
         int multiplier = MageryMultiplier(choices.Advantages);
+        string[] forbidden = choices.Disadvantages.Where(trait => trait.Id is "forbidden-armor" or "forbidden-material" or "forbidden-shield" or "forbidden-weapon")
+            .Select(trait => $"{trait.Id}:{trait.Target}").Order(StringComparer.Ordinal).ToArray();
         DaggerfallCareerDefinition career = new(CareerId, choices.Name.Trim(), choices.PrimarySkills, choices.MajorSkills, choices.MinorSkills,
             attributeBase.Attributes, attributeBase.AttributeValues, choices.HitPointsPerLevel, multiplier,
             0.3f + (2.7f * (difficulty + 12) / 52f), Elements(resistance), Elements(immunity), resistance, immunity, lowTolerance, criticalWeakness,
-            new DaggerfallCatalogCitation("F006", "custom:character-creation"));
-        string[] forbidden = choices.Disadvantages.Where(trait => trait.Id is "forbidden-armor" or "forbidden-material" or "forbidden-shield" or "forbidden-weapon")
-            .Select(trait => $"{trait.Id}:{trait.Target}").Order(StringComparer.Ordinal).ToArray();
+            forbidden, new DaggerfallCatalogCitation("F006", "custom:character-creation"));
         return new(career, choices.Advantages, choices.Disadvantages, forbidden);
     }
 

@@ -91,6 +91,7 @@ public sealed record DaggerfallCareerRecord(
     int ImmunityFlags,
     int LowToleranceFlags,
     int CriticalWeaknessFlags,
+    IReadOnlyList<string> ForbiddenEquipment,
     DaggerfallCatalogSource Source)
 {
     /// <summary>Every skill the career trains, in record order.</summary>
@@ -162,6 +163,12 @@ public sealed record DaggerfallCareerRecord(
         RequireElements(ResistanceElements, ResistanceFlags, "resists");
         RequireElements(ImmunityElements, ImmunityFlags, "is immune to");
         RequireReferences(Attributes, attributeKeys, $"career '{Id}' names attribute");
+        NormalizedImportDocument.ValidateUnique(ForbiddenEquipment, value => value, $"career '{Id}' forbidden equipment");
+        foreach (string restriction in ForbiddenEquipment)
+        {
+            if (!DaggerfallCareerEquipmentRestrictions.Contains(restriction))
+                throw new ArgumentException($"Career '{Id}' carries unknown forbidden-equipment restriction '{restriction}'.", nameof(ForbiddenEquipment));
+        }
         if (AttributeValues.Count != DaggerfallCatalogs.ClassicAttributeCount
             || AttributeValues.Any(value => value < 0))
         {
@@ -194,6 +201,37 @@ public sealed record DaggerfallCareerRecord(
                 throw new InvalidOperationException($"{owner} '{value}', which the catalog does not carry.");
             }
         }
+    }
+}
+
+/// <summary>Classic CLASS equipment bitfields normalized to the ruleset's named restriction contract.</summary>
+public static class DaggerfallCareerEquipmentRestrictions
+{
+    public static readonly string[] Materials = ["iron", "steel", "silver", "elven", "dwarven", "mithril", "adamantium", "ebony", "orcish", "daedric"];
+    public static readonly string[] Shields = ["buckler", "round-shield", "kite-shield", "tower-shield"];
+    public static readonly string[] Armors = ["leather", "chain", "plate"];
+    public static readonly string[] Weapons = ["short-blade", "long-blade", "hand-to-hand", "axe", "blunt-weapon", "archery"];
+
+    public static bool Contains(string restriction) =>
+        Materials.Any(value => restriction == $"forbidden-material:{value}")
+        || Shields.Any(value => restriction == $"forbidden-shield:{value}")
+        || Armors.Any(value => restriction == $"forbidden-armor:{value}")
+        || Weapons.Any(value => restriction == $"forbidden-weapon:{value}");
+
+    public static IReadOnlyList<string> FromClassicFlags(ushort materials, uint weaponArmorShields)
+    {
+        List<string> restrictions = [];
+        Add(restrictions, "forbidden-material", Materials, materials);
+        Add(restrictions, "forbidden-shield", Shields, (weaponArmorShields >> 9) & 0x0f);
+        Add(restrictions, "forbidden-armor", Armors, (weaponArmorShields >> 6) & 0x07);
+        Add(restrictions, "forbidden-weapon", Weapons, weaponArmorShields & 0x3f);
+        return restrictions;
+    }
+
+    private static void Add(List<string> restrictions, string kind, IReadOnlyList<string> values, uint flags)
+    {
+        for (int index = 0; index < values.Count; index++)
+            if ((flags & (1u << index)) != 0) restrictions.Add($"{kind}:{values[index]}");
     }
 }
 

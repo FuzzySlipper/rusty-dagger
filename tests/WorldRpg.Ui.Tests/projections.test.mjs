@@ -83,6 +83,18 @@ test('status rows preserve owner-published order and disappear when removed', ()
   } finally { f.dispose(); }
 });
 
+test('inventory renders the ruleset-owned completed equip cue without claiming a readiness gate', () => {
+  const f = fixture();
+  try {
+    f.publish({ inventory: {
+      revision: '4:1', message: 'Inventory updated.', items: [], slots: [],
+      equipmentChange: { cue: 'equip', rightHandDelayMilliseconds: 5700, leftHandDelayMilliseconds: 4500 },
+    } });
+    assert.equal(f.root.querySelector('.dagger-inventory-status')?.textContent,
+      'Inventory updated. Equipped.');
+  } finally { f.dispose(); }
+});
+
 test('mode screens follow projection and a mode without a backdrop hides both', () => {
   const f = fixture();
   try {

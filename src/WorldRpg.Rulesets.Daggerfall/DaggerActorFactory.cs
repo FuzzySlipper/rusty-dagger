@@ -216,7 +216,7 @@ internal static class DaggerActorFactory
             ? null
             : new ItemEquipmentPolicy(
                 item.Equipment.RequiredSlots,
-                item.Equipment.ExclusiveGroup is { } group ? EquipmentExclusivityId.Parse(group) : null);
+                item.Equipment.ExclusiveGroup is { } group && group != "hands" ? EquipmentExclusivityId.Parse(group) : null);
         // Weight is authored item metadata for every catalog entry.  The current
         // reference session does not register a carrying-capacity policy, so this
         // is a cost declaration rather than a claim that encumbrance is enforced.
@@ -232,6 +232,7 @@ internal static class DaggerActorFactory
             equipment);
     }
 
+    /// <summary>Content owns the complete vocabulary of every Daggerfall equipment slot.</summary>
     internal static EquipmentSlotDefinition ToManagedSlot(DaggerfallEquipmentSlotDefinition slot) =>
         new(Rusty.Engine.Mechanics.EquipmentSlotId.Parse(slot.Id.Value), slot.AllowedClassifications.Select(ItemClassificationId.Parse));
 

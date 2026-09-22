@@ -244,7 +244,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 State.Character);
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored, () => State.Kit.Targeting.LastEvidence);
             _equipmentMoves = new DaggerfallEquipmentMoves(inventory, equipmentCoordinator, definitions,
-                () => State.Character.CustomCareer?.ForbiddenEquipment ?? []);
+                () => State.Character.Career.ForbiddenEquipment, State.ItemInstances);
             _inventoryUi = new DaggerfallInventoryPresentation(_equipmentMoves, definitions, inputs.ClassicPresentation.InventoryIcons);
             _lootUi = new DaggerfallLootPresentation(_corpseLoot, _inventoryUi);
             InitializeActivation(engine, tuning.LootInteraction);
