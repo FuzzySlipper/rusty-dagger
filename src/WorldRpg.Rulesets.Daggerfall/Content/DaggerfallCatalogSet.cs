@@ -34,6 +34,7 @@ internal sealed record DaggerfallCareerDefinition(
     int ImmunityFlags,
     int LowToleranceFlags,
     int CriticalWeaknessFlags,
+    IReadOnlyList<string> ForbiddenEquipment,
     DaggerfallCatalogCitation Source)
 {
     internal IEnumerable<string> SkillReferences => PrimarySkills.Concat(MajorSkills).Concat(MinorSkills);

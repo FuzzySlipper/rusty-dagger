@@ -8,15 +8,29 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 internal sealed record InventoryItemPresentation(string Key, string Definition, string Label, string Quantity, int Weight, int Value,
     string Details, string? Icon, int? GridSlot, string[] EquippedSlots, string[] CompatibleSlots);
 internal sealed record EquipmentSlotPresentation(string Id, string Label, string? ItemKey);
-internal sealed record InventoryPresentation(string Revision, InventoryItemPresentation[] Items, EquipmentSlotPresentation[] Slots, string Message);
+internal sealed record EquipmentChangePresentation(string Cue, int RightHandDelayMilliseconds, int LeftHandDelayMilliseconds);
+internal sealed record InventoryPresentation(string Revision, InventoryItemPresentation[] Items, EquipmentSlotPresentation[] Slots, string Message,
+    EquipmentChangePresentation? EquipmentChange = null);
 
 /// <summary>Daggerfall inventory projection and UI-action translation; quantities and equipment remain Engine facts.</summary>
-internal sealed class DaggerfallInventoryPresentation(
-    DaggerfallEquipmentMoves moves,
-    DaggerfallDefinitions definitions,
-    IReadOnlyDictionary<string, string> icons)
+internal sealed class DaggerfallInventoryPresentation
 {
+    private readonly DaggerfallEquipmentMoves moves;
+    private readonly DaggerfallDefinitions definitions;
+    private readonly IReadOnlyDictionary<string, string> icons;
     internal string Message { get; private set; } = "Drag items between the grid and compatible equipment slots.";
+    internal DaggerfallEquipmentChange? LastEquipmentChange { get; private set; }
+
+    internal DaggerfallInventoryPresentation(
+        DaggerfallEquipmentMoves moves,
+        DaggerfallDefinitions definitions,
+        IReadOnlyDictionary<string, string> icons)
+    {
+        this.moves = moves;
+        this.definitions = definitions;
+        this.icons = icons;
+        moves.Changed += change => LastEquipmentChange = change;
+    }
 
     internal InventoryPresentation Read()
     {
@@ -30,7 +44,8 @@ internal sealed class DaggerfallInventoryPresentation(
         return new InventoryPresentation($"{current.StoreRevision}:{moves.LayoutRevision}", items.Select(item =>
             DescribeItem(item.Key, item.Definition, item.Quantity, item.Slots.Length == 0 ? moves.GridPosition(item.Key) : null, item.Slots)).ToArray(),
             definitions.EquipmentSlots.Values.Select(slot => new EquipmentSlotPresentation(slot.Id.Value, Label(slot.Id.Value),
-                equipped.TryGet(new EquipmentSlotId(slot.Id.Value), out UniqueInventoryItem item) ? UniqueKey(item.EntityId) : null)).ToArray(), Message);
+                equipped.TryGet(new EquipmentSlotId(slot.Id.Value), out UniqueInventoryItem item) ? UniqueKey(item.EntityId) : null)).ToArray(), Message,
+            LastEquipmentChange is { } change ? new(change.Cue.ToString().ToLowerInvariant(), change.Timing.RightHandMilliseconds, change.Timing.LeftHandMilliseconds) : null);
     }
 
     /// <summary>

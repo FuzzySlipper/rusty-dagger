@@ -26,6 +26,7 @@ public sealed class DaggerfallReferenceCatalogTests
         Assert.False(definitions.Catalogs.TryGetRace("vampire", out _));
         Assert.Equal("Mage", definitions.Catalogs.RequireCareer("class00").Name);
         Assert.Equal(["mysticism", "alteration", "thaumaturgy"], definitions.Catalogs.RequireCareer("class00").PrimarySkills);
+        Assert.Contains("forbidden-weapon:long-blade", definitions.Catalogs.RequireCareer("class00").ForbiddenEquipment);
         Assert.False(definitions.Catalogs.TryGetCareer("class19", out _));
         // The indices are the vocabulary's own order, so a consumer can go from a record
         // byte to the key a catalog publishes without a second table.
@@ -106,6 +107,7 @@ public sealed class DaggerfallReferenceCatalogTests
     [InlineData("career with no primary skill")]
     [InlineData("career naming nine attributes")]
     [InlineData("career naming one skill twice")]
+    [InlineData("career with unknown equipment restriction")]
     [InlineData("citation outside the published sources")]
     public void Rejects_a_pack_whose_catalogs_do_not_hold_together(string mutation)
     {
@@ -142,6 +144,9 @@ public sealed class DaggerfallReferenceCatalogTests
                     break;
                 case "career naming one skill twice":
                     careers[0]!["majorSkills"]!.AsArray()[0] = careers[0]!["primarySkills"]!.AsArray()[0]!.GetValue<string>();
+                    break;
+                case "career with unknown equipment restriction":
+                    careers[0]!["forbiddenEquipment"]!.AsArray()[0] = "forbidden-material:moonstone";
                     break;
                 case "citation outside the published sources":
                     careers[0]!["source"]!["recordId"] = "CNT-999";

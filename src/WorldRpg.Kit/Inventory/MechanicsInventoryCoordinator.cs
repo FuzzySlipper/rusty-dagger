@@ -249,9 +249,11 @@ public sealed class MechanicsEquipmentCoordinator
         ArgumentNullException.ThrowIfNull(replaced);
         if (slots.Count == 0) throw new ArgumentException("At least one equipment slot is required.", nameof(slots));
         using InventoryEdit candidate = Inventory.Store.Prepare();
-        candidate.Unequip(Inventory.Owner, RequireEntity(item));
+        EntityId incoming = RequireEntity(item);
+        if (Component.Assignments.Any(assignment => assignment.Item == incoming))
+            candidate.Unequip(Inventory.Owner, incoming);
         foreach (UniqueInventoryItem outgoing in replaced) candidate.Unequip(Inventory.Owner, RequireEntity(outgoing));
-        EquipmentMutationReceipt receipt = candidate.Equip(Inventory.Owner, RequireEntity(item), slots.Select(RequireSlot));
+        EquipmentMutationReceipt receipt = candidate.Equip(Inventory.Owner, incoming, slots.Select(RequireSlot));
         candidate.Publish();
         return receipt;
     }

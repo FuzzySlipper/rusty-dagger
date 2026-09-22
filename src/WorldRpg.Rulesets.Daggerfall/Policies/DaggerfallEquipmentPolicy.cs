@@ -18,7 +18,6 @@ internal static class DaggerfallEquipmentPolicy
         if (item.IsFungible || item.Equipment is null
             || !definitions.EquipmentSlots.TryGetValue(new DaggerfallEquipmentSlotId(slot), out DaggerfallEquipmentSlotDefinition? target))
             return false;
-        // Empty classifications are unimplemented Daggerfall accessory slots, not universal item sockets.
         if (!target.AllowedClassifications.Intersect(item.Equipment.Classifications).Any()) return false;
         return item.Equipment.RequiredSlots == 1 || item.Equipment.RequiredSlots == 2 && slot == "right-hand";
     }
@@ -51,7 +50,7 @@ internal static class DaggerfallEquipmentPolicy
         return equipped.Assignments
             .Where(assignment => assignment.Item.EntityId != item.EntityId
                 && (slots.Contains(assignment.Slot)
-                    || definition.Equipment?.ExclusiveGroup is string group
+                    || definition.Equipment?.ExclusiveGroup is string group && group != "hands"
                         && definitions.TryResolveItem(new DaggerfallItemId(assignment.Item.Definition.Value), out DaggerfallItemDefinition other)
                         && other.Equipment?.ExclusiveGroup == group))
             .DistinctBy(assignment => assignment.Item.EntityId)

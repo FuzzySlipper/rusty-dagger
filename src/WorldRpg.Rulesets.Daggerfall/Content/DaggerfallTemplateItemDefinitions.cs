@@ -96,9 +96,34 @@ internal static class DaggerfallTemplateItemDefinitions
             ? sourceArmor with { Material = material }
             : null;
         DaggerfallItemKind kind = template.Stackable ? DaggerfallItemKind.Fungible : DaggerfallItemKind.Unique;
+        DaggerfallEquipmentDefinition? equipment = source?.Equipment ?? EquipmentFor(template);
         if (!result.TryAdd(id, new DaggerfallItemDefinition(id, kind, template.Stackable ? StackMaximum : 1,
-                properties.Weight, properties.Value, weapon, armor, source?.Shield, source?.Equipment, template)))
+                properties.Weight, properties.Value, weapon, armor, source?.Shield, equipment, template)))
             throw new InvalidOperationException($"Classic template definition '{id.Value}' is duplicated.");
+    }
+
+    private static DaggerfallEquipmentDefinition? EquipmentFor(DaggerfallItemTemplateDefinition template)
+    {
+        string? classification = template.Groups.Contains("Gems", StringComparer.Ordinal) ? "crystal"
+            : template.Groups.Contains("Jewellery", StringComparer.Ordinal) ? template.Index switch
+            {
+                133 or 138 or 139 => "amulet", 134 => "bracer", 135 => "ring", 136 => "bracelet", 137 => "mark", _ => null,
+            }
+            : ClothingClassification(template);
+        return classification is null ? null : new([classification], 1, null);
+    }
+
+    private static string? ClothingClassification(DaggerfallItemTemplateDefinition template)
+    {
+        if (template.Groups.Contains("MensClothing", StringComparer.Ordinal))
+            return template.Index is >= 147 and <= 150 ? "feet"
+                : template.Index is >= 151 and <= 153 or 156 or 162 or 174 or 175 ? "legs-clothes"
+                : template.Index is 154 or 155 ? "cloak" : "chest-clothes";
+        if (template.Groups.Contains("WomensClothing", StringComparer.Ordinal))
+            return template.Index is >= 186 and <= 189 ? "feet"
+                : template.Index is 190 or 193 or 199 or >= 211 and <= 213 ? "legs-clothes"
+                : template.Index is 191 or 192 ? "cloak" : "chest-clothes";
+        return null;
     }
 
     private static IEnumerable<string> MaterialsFor(DaggerfallItemTemplateDefinition template)

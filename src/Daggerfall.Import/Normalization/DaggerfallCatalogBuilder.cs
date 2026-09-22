@@ -109,6 +109,7 @@ public static class DaggerfallCatalogBuilder
                 decoded.ImmunityFlags,
                 decoded.LowToleranceFlags,
                 decoded.CriticalWeaknessFlags,
+                DaggerfallCareerEquipmentRestrictions.FromClassicFlags(decoded.ForbiddenMaterials, decoded.WeaponArmorShields),
                 new DaggerfallCatalogSource(carrier.Id, carrier.PathOrPattern)));
         }
 

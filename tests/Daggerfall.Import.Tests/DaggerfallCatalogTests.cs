@@ -109,6 +109,11 @@ public sealed class DaggerfallCatalogTests
         Assert.Equal(["etiquette", "dodging"], catalogs.Careers.Single(career => career.Id == "class18").MajorSkills);
         Assert.Equal("Mage", catalogs.Careers.Single(career => career.Id == "class00").Name);
         Assert.Equal(["mysticism", "alteration", "thaumaturgy"], catalogs.Careers.Single(career => career.Id == "class00").PrimarySkills);
+        // CLASS00's weapon/armor/shield bitfield prohibits long blades, axes, and
+        // missile weapons, plus the three larger shield forms and chain/plate armor.
+        Assert.Equal(
+            ["forbidden-shield:round-shield", "forbidden-shield:kite-shield", "forbidden-shield:tower-shield", "forbidden-armor:chain", "forbidden-armor:plate", "forbidden-weapon:long-blade", "forbidden-weapon:axe", "forbidden-weapon:archery"],
+            catalogs.Careers.Single(career => career.Id == "class00").ForbiddenEquipment);
     }
 
     [Fact]

@@ -5,6 +5,14 @@ export interface InventoryProjection {
   readonly items: readonly InventoryItem[];
   readonly slots: readonly EquipmentSlot[];
   readonly message: string;
+  readonly equipmentChange: EquipmentChange | null;
+}
+
+/** A completed ruleset-owned equipment change. Delay fields remain available to a later readiness owner. */
+export interface EquipmentChange {
+  readonly cue: 'equip' | 'unequip' | 'transfer';
+  readonly rightHandDelayMilliseconds: number;
+  readonly leftHandDelayMilliseconds: number;
 }
 
 export interface InventoryItem {
@@ -144,7 +152,7 @@ export function mountInventory(
     current = value;
     lastRevision = value.revision;
     lastMessage = value.message;
-    status.textContent = value.message;
+    status.textContent = equipmentStatus(value);
     const byKey = new Map(value.items.map((item) => [item.key, item]));
     const byGrid = new Map(value.items.flatMap((item) => item.gridSlot === null || item.gridSlot < 0 || item.gridSlot >= GRID_SLOT_COUNT
       ? [] : [[item.gridSlot, item] as const]));
@@ -284,6 +292,14 @@ export function mountInventory(
       shell.remove();
     },
   };
+}
+
+function equipmentStatus(value: InventoryProjection): string {
+  const change = value.equipmentChange ?? null;
+  if (change === null) return value.message;
+  return `${value.message} ${change.cue === 'equip' ? 'Equipped.'
+    : change.cue === 'unequip' ? 'Unequipped.'
+      : 'Equipment transferred.'}`;
 }
 
 function createDetails(): {
