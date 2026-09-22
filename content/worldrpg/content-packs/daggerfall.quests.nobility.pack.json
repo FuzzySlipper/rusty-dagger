@@ -1,0 +1,11 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.quests.nobility",
+  "ruleset": "daggerfall",
+  "dependencies": [
+    {
+      "id": "daggerfall.base"
+    }
+  ],
+  "payload": "worldrpg/payloads/daggerfall.quests.nobility.json"
+}

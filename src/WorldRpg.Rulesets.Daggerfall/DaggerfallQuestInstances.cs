@@ -290,14 +290,16 @@ internal sealed class DaggerfallQuestInstances
     private readonly DaggerfallDefinitions _definitions;
     private readonly IRandomService _random;
     private readonly DaggerfallQuestRuntimeAdmission? _admission;
+    private readonly DaggerfallDisabledQuestSelection? _disabledSelection;
     private readonly IReadOnlyDictionary<string, DaggerfallQuestTaskProgram> _programs;
     private readonly Dictionary<string, DaggerfallQuestRuntimeInstance> _instances = new(StringComparer.Ordinal);
 
-    internal DaggerfallQuestInstances(DaggerfallDefinitions definitions, IRandomService random, DaggerfallQuestRuntimeAdmission? admission = null)
+    internal DaggerfallQuestInstances(DaggerfallDefinitions definitions, IRandomService random, DaggerfallQuestRuntimeAdmission? admission = null, DaggerfallDisabledQuestSelection? disabledSelection = null)
     {
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
         _random = random ?? throw new ArgumentNullException(nameof(random));
         _admission = admission;
+        _disabledSelection = disabledSelection;
         Messages = new DaggerfallQuestMessages(definitions, random);
         _programs = definitions.QuestSources.Quests.Values
             .Where(source => source.Disposition == DaggerfallQuestDisposition.Compiled)
@@ -321,6 +323,22 @@ internal sealed class DaggerfallQuestInstances
     internal DaggerfallQuestInstanceSave Start(DaggerfallQuestInstanceSave instance)
     {
         ArgumentNullException.ThrowIfNull(instance);
+        if (_disabledSelection?.IsSummonOnlySource(instance.SourceFile) == true)
+            throw new ArgumentException($"Quest source '{instance.SourceFile}' requires an explicit Daedric summoning identity.", nameof(instance));
+        return StartCore(instance);
+    }
+
+    internal DaggerfallQuestInstanceSave StartSummoned(string summoningIdentity, DaggerfallQuestInstanceSave instance)
+    {
+        ArgumentNullException.ThrowIfNull(instance);
+        DaggerfallDisabledQuestSelection selection = _disabledSelection ?? throw new ArgumentException($"Daedric summoning identity '{summoningIdentity}' is unavailable in this session.", nameof(summoningIdentity));
+        if (!selection.TryResolveSummon(summoningIdentity, out DaggerfallSummonQuestResolution? resolution) || !string.Equals(resolution!.SourceFile, instance.SourceFile, StringComparison.Ordinal))
+            throw new ArgumentException($"Daedric summoning identity '{summoningIdentity}' does not select quest source '{instance.SourceFile}'.", nameof(summoningIdentity));
+        return StartCore(instance);
+    }
+
+    private DaggerfallQuestInstanceSave StartCore(DaggerfallQuestInstanceSave instance)
+    {
         _admission?.RequireRunnable(instance.SourceFile);
         if (instance.Lifecycle != DaggerfallQuestLifecycle.Active)
             throw new ArgumentException("A newly started quest instance must be active.", nameof(instance));

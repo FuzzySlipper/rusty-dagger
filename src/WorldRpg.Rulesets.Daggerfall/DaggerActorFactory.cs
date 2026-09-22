@@ -32,7 +32,7 @@ internal static class DaggerActorFactory
     private const ulong PlayerMechanicsEntityId = (ulong)DaggerfallActorIdentity.PlayerEntityId;
     internal static CapacityMetricId ClassicWeightMetric { get; } = CapacityMetricId.Parse("daggerfall.classic-weight");
     internal static DaggerActorAssembly Create(IRandomService random, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallSavePayload? saved,
-        DaggerfallQuestRuntimeAdmission? questAdmission = null)
+        DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null)
     {
         ActorsState actors = new();
         try
@@ -150,7 +150,7 @@ internal static class DaggerActorFactory
             }
 
             DaggerfallCharacterState character = new(definitions, player.Stats, playerDefinition, saved?.Character);
-            DaggerfallState state = new(new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians), actors, inventory, equipmentCoordinator, containers, itemDefinitions, equipmentSlots, inventoryStore, variables, npcs, social, itemInstances, character, new DaggerfallQuestInstances(definitions, random, questAdmission));
+            DaggerfallState state = new(new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians), actors, inventory, equipmentCoordinator, containers, itemDefinitions, equipmentSlots, inventoryStore, variables, npcs, social, itemInstances, character, new DaggerfallQuestInstances(definitions, random, questAdmission, disabledQuestSelection));
             authored.Add(DaggerfallActorIdentity.PlayerEntityId, playerDefinition);
             if (saved is not null) MaterializeDynamicActors(random, actors, mechanics, definitions, saved, authored, inventoryStore);
             return new(state, authored, playerDefinition);

@@ -123,6 +123,8 @@ internal static partial class Program
                 return RunFightersQuestCorpusCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "classic-quest-corpora") return RunClassicQuestCorporaCommand(args);
+
             if (args.Length != 0 && args[0] == "cinematic-media") return RunCinematicMediaCommand(args);
 
             if (args.Length != 0 && args[0] == "videos")
@@ -1356,6 +1358,25 @@ internal static partial class Program
         DaggerfallFightersGuildQuestCorpus corpus = FightersGuildQuestCorpusPublication.Create(catalog, sources, originals);
         File.WriteAllBytes(args[4], FightersGuildQuestCorpusPublication.Serialize(corpus));
         Console.WriteLine($"fighters quest corpus: {corpus.Quests.Count} exact records, fingerprint {corpus.Fingerprint.Value}");
+        return 0;
+    }
+
+    private static int RunClassicQuestCorporaCommand(IReadOnlyList<string> args)
+    {
+        const string Usage = "usage: daggerfall-import-tool classic-quest-corpora --base BASE.json --out DIRECTORY";
+        if (args.Count != 5 || args[1] != "--base" || args[3] != "--out") throw new ArgumentException(Usage);
+        using JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(args[2]));
+        JsonElement root = document.RootElement;
+        DaggerfallQuestCatalog catalog = JsonSerializer.Deserialize<DaggerfallQuestCatalog>(root.GetProperty("questCatalog").GetRawText(), PublishedJson.SectionRead) ?? throw new InvalidOperationException("Base payload has no readable questCatalog section.");
+        DaggerfallQuestPack sources = JsonSerializer.Deserialize<DaggerfallQuestPack>(root.GetProperty("questSources").GetRawText(), PublishedJson.SectionRead) ?? throw new InvalidOperationException("Base payload has no readable questSources section.");
+        DaggerfallQuestOriginalSourceSet originals = JsonSerializer.Deserialize<DaggerfallQuestOriginalSourceSet>(root.GetProperty("questOriginalSources").GetRawText(), PublishedJson.SectionRead) ?? throw new InvalidOperationException("Base payload has no readable questOriginalSources section.");
+        Directory.CreateDirectory(args[4]);
+        foreach (DaggerfallClassicQuestCorpusSpecification specification in ClassicQuestCorpusPublication.Specifications)
+        {
+            DaggerfallClassicQuestCorpus corpus = ClassicQuestCorpusPublication.Create(specification.Id, catalog, sources, originals);
+            File.WriteAllBytes(Path.Combine(args[4], $"daggerfall.quests.{specification.Id}.json"), ClassicQuestCorpusPublication.Serialize(corpus));
+            Console.WriteLine($"classic quest corpus {specification.Id}: {corpus.Quests.Count} records, fingerprint {corpus.Fingerprint.Value}");
+        }
         return 0;
     }
 

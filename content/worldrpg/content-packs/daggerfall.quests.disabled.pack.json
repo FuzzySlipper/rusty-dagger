@@ -1,0 +1,11 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.quests.disabled",
+  "ruleset": "daggerfall",
+  "dependencies": [
+    {
+      "id": "daggerfall.base"
+    }
+  ],
+  "payload": "worldrpg/payloads/daggerfall.quests.disabled.json"
+}
