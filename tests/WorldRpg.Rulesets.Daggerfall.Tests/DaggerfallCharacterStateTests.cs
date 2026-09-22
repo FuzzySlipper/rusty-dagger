@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
 
@@ -51,7 +52,9 @@ public sealed class DaggerfallCharacterStateTests
         Assert.Equal(career.AttributeValues[1], stats.GetStat(StatId.Parse("intelligence")).BaseValue);
         Assert.Equal(0, stats.GetStat(StatId.Parse("reflexes")).BaseValue);
         Assert.Equal(career.PrimarySkills, character.GrantedSkills.Where(grant => grant.Tier == DaggerfallCareerSkillTier.Primary).Select(grant => grant.SkillId));
-        Assert.Equal(25 + ((int)career.AttributeValues[4] * 3 / 2), stats.GetStat(StatId.Parse("health-maximum")).BaseValue);
+        Assert.Equal(25 + career.HitPointsPerLevel, stats.GetStat(StatId.Parse("health-maximum")).BaseValue);
+        Assert.Equal(DaggerfallFormulaPolicy.SpellPoints(career.AttributeValues[1], career.SpellPointMultiplierMilli),
+            stats.GetStat(StatId.Parse("magicka-maximum")).BaseValue);
     }
 
     [Fact]
@@ -77,7 +80,7 @@ public sealed class DaggerfallCharacterStateTests
         original.CommitChoices();
 
         DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
-        StatsComponent restoredStats = new DaggerfallMechanicsState().CreateStats(player, player.PlayerInitialVitals);
+        StatsComponent restoredStats = new DaggerfallMechanicsState().CreateStats(player, DaggerfallPlayerVitals.Initial(player.Stats, definitions.Catalogs.RequireCareer("class00")));
         restoredStats.GetStat(StatId.Parse("strength")).BaseValue = 91;
         DaggerfallCharacterState restored = new(definitions, restoredStats, player, original.Capture());
         Assert.Equal(original.Identity, restored.Identity);
@@ -85,11 +88,63 @@ public sealed class DaggerfallCharacterStateTests
         Assert.Equal(91, restoredStats.GetStat(StatId.Parse("strength")).BaseValue);
     }
 
+    [Fact]
+    public void Custom_class_uses_the_predefined_career_shape_and_round_trips_its_derived_vitals()
+    {
+        DaggerfallCharacterState character = Create(out DaggerfallDefinitions definitions, out StatsComponent stats);
+        character.BeginChoices();
+        DaggerfallCustomCareerChoices custom = new("Nightblade",
+            ["mysticism", "alteration", "thaumaturgy"], ["illusion", "destruction", "restoration"],
+            ["medical", "short-blade", "blunt-weapon", "dragonish", "daedric", "dodging"], 12,
+            [new DaggerfallCustomCareerTrait("increased-magery", "1.5"), new DaggerfallCustomCareerTrait("immunity", "disease")],
+            [new DaggerfallCustomCareerTrait("forbidden-material", "steel")]);
+        character.ReplacePending(new DaggerfallCharacterCreationChoices("Aubk-i", "khajiit", DaggerfallCharacterGender.Female, 3,
+            DaggerfallCharacterReflexes.High, DaggerfallCustomCareerPolicy.CareerId, custom));
+        character.CommitChoices();
+
+        Assert.Equal(DaggerfallCustomCareerPolicy.CareerId, character.Career.Id);
+        Assert.Equal(3, character.Career.PrimarySkills.Count);
+        Assert.Equal(3, character.Career.MajorSkills.Count);
+        Assert.Equal(6, character.Career.MinorSkills.Count);
+        Assert.Equal(12, character.Career.HitPointsPerLevel);
+        Assert.Equal(1500, character.Career.SpellPointMultiplierMilli);
+        Assert.Equal(37, stats.GetStat(StatId.Parse("health-maximum")).BaseValue);
+        Assert.Equal(DaggerfallFormulaPolicy.SpellPoints(60, 1500), stats.GetStat(StatId.Parse("magicka-maximum")).BaseValue);
+        Assert.Equal(["forbidden-material:steel"], character.CustomCareer!.ForbiddenEquipment);
+        Assert.True(DaggerfallCustomCareerPolicy.Forbids(definitions.RequireItem(new DaggerfallItemId("iron-helm")), ["forbidden-armor:plate"], out string equipmentReason));
+        Assert.Contains("plate", equipmentReason, StringComparison.Ordinal);
+
+        DaggerfallCharacterSave save = character.Capture();
+        Assert.NotNull(save.CustomCareer);
+        Assert.Equal("Nightblade", save.CustomCareer!.Name);
+        save.Validate(definitions);
+    }
+
+    [Fact]
+    public void Custom_class_reports_duplicate_skills_conflicting_traits_and_out_of_range_difficulty()
+    {
+        DaggerfallCharacterState character = Create(out DaggerfallDefinitions definitions, out _);
+        DaggerfallCustomCareerChoices invalid = new("Broken",
+            ["mysticism", "mysticism", "thaumaturgy"], ["illusion", "destruction", "restoration"],
+            ["medical", "short-blade", "blunt-weapon", "dragonish", "daedric", "dodging"], 30,
+            [new DaggerfallCustomCareerTrait("immunity", "disease"), new DaggerfallCustomCareerTrait("regenerate-health", "general"), new DaggerfallCustomCareerTrait("spell-absorption", "general")],
+            [new DaggerfallCustomCareerTrait("critical-weakness", "disease")]);
+        List<string> errors = DaggerfallCustomCareerPolicy.Validate(definitions, invalid);
+
+        Assert.Contains(errors, error => error.Contains("only once", StringComparison.Ordinal));
+        Assert.Contains(errors, error => error.Contains("cannot both target", StringComparison.Ordinal));
+        Assert.Contains(errors, error => error.Contains("Classic difficulty", StringComparison.Ordinal));
+        character.BeginChoices();
+        character.ReplacePending(new DaggerfallCharacterCreationChoices("Broken", "breton", DaggerfallCharacterGender.Male, 0,
+            DaggerfallCharacterReflexes.Average, DaggerfallCustomCareerPolicy.CareerId, invalid));
+        Assert.Throws<ArgumentException>(() => character.CommitChoices());
+    }
+
     private static DaggerfallCharacterState Create(out DaggerfallDefinitions definitions, out StatsComponent stats)
     {
         definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
         DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
-        stats = new DaggerfallMechanicsState().CreateStats(player, player.PlayerInitialVitals);
+        stats = new DaggerfallMechanicsState().CreateStats(player, DaggerfallPlayerVitals.Initial(player.Stats, definitions.Catalogs.RequireCareer("class00")));
         return new DaggerfallCharacterState(definitions, stats, player);
     }
 

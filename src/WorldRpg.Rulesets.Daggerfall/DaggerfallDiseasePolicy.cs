@@ -9,7 +9,7 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-/// <summary>The six classic diseases this coverage slice owns. Later slices extend this enum and catalog deliberately.</summary>
+/// <summary>The retained classic disease identities, each resolved through the compiled donor matrix below.</summary>
 internal enum DaggerfallClassicDisease
 {
     BloodRot,
@@ -18,6 +18,17 @@ internal enum DaggerfallClassicDisease
     Cholera,
     Chrondiasis,
     Consumption,
+    Dementia,
+    Leprosy,
+    Plague,
+    RedDeath,
+    StomachRot,
+    SwampRot,
+    TyphoidFever,
+    WitchesPox,
+    WizardFever,
+    WoundRot,
+    YellowFever,
 }
 
 /// <summary>The externally visible result of FORM-06 disease admission.</summary>
@@ -93,25 +104,40 @@ internal static class DaggerfallDiseasePolicy
             [DaggerfallClassicDisease.Cholera] = new("disease-cholera", 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 30, null, null),
             [DaggerfallClassicDisease.Chrondiasis] = new("disease-chrondiasis", 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5, 10, null, null),
             [DaggerfallClassicDisease.Consumption] = new("disease-consumption", 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 10, null, null),
+            [DaggerfallClassicDisease.Dementia] = new("disease-dementia", 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 2, 10, null, null),
+            [DaggerfallClassicDisease.Leprosy] = new("disease-leprosy", 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 5, 30, null, null),
+            [DaggerfallClassicDisease.Plague] = new("disease-plague", 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 30, null, null),
+            [DaggerfallClassicDisease.RedDeath] = new("disease-red-death", 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 2, 10, null, null),
+            [DaggerfallClassicDisease.StomachRot] = new("disease-stomach-rot", 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 5, null, null),
+            [DaggerfallClassicDisease.SwampRot] = new("disease-swamp-rot", 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 10, null, null),
+            [DaggerfallClassicDisease.TyphoidFever] = new("disease-typhoid-fever", 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2, 10, null, null),
+            [DaggerfallClassicDisease.WitchesPox] = new("disease-witches-pox", 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2, 10, null, null),
+            [DaggerfallClassicDisease.WizardFever] = new("disease-wizard-fever", 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 4, 3, 18),
+            [DaggerfallClassicDisease.WoundRot] = new("disease-wound-rot", 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2, 4, null, null),
+            [DaggerfallClassicDisease.YellowFever] = new("disease-yellow-fever", 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 5, 10, null, null),
         };
 
     /// <summary>Builds the compiled policy for this session's one admitted calendar and RNG service.</summary>
-    internal static DaggerfallEffectCatalog CreateCatalog(IRandomService random, Func<long> currentDay)
+    internal static DaggerfallEffectCatalog CreateCatalog(
+        IRandomService random,
+        Func<long> currentDay,
+        Func<DaggerfallCareerDefinition> playerCareer)
     {
         ArgumentNullException.ThrowIfNull(random);
         ArgumentNullException.ThrowIfNull(currentDay);
+        ArgumentNullException.ThrowIfNull(playerCareer);
         return new DaggerfallEffectCatalog(Data.Values.Select(data => new DaggerfallEffectDefinition(
             data.Key,
             data.Key,
             DaggerfallEffectStacking.Stack,
             ushort.MaxValue,
             1,
-            Apply: effect => [Removal(effect)],
-            MagicRound: effect => AdvanceDisease(effect, data, random, currentDay),
+            Apply: effect => [Removal(effect, playerCareer)],
+            MagicRound: effect => AdvanceDisease(effect, data, random, currentDay, playerCareer),
             Resume: effect =>
             {
                 VerifyRestoredAttributeContributions(effect, ReadState(effect.State));
-                return [Removal(effect)];
+                return [Removal(effect, playerCareer)];
             })));
     }
 
@@ -260,7 +286,8 @@ internal static class DaggerfallDiseasePolicy
         return instances.Length;
     }
 
-    private static void AdvanceDisease(DaggerfallActiveEffect effect, DiseaseData data, IRandomService random, Func<long> currentDay)
+    private static void AdvanceDisease(DaggerfallActiveEffect effect, DiseaseData data, IRandomService random, Func<long> currentDay,
+        Func<DaggerfallCareerDefinition> playerCareer)
     {
         DiseaseState state = ReadState(effect.State);
         long today = currentDay();
@@ -271,6 +298,7 @@ internal static class DaggerfallDiseasePolicy
 
         for (long day = checked(state.LastDay + 1); day <= today; day++)
             state = ApplyDailyDamage(effect, data, state,
+                playerCareer,
                 Draw(random, $"daily:{effect.Context.Instance.Value}:{day}", data.MinimumDamage, data.MaximumDamage));
 
         int? symptoms = state.DaysOfSymptomsLeft is int remaining
@@ -282,7 +310,8 @@ internal static class DaggerfallDiseasePolicy
         if (symptoms == 0) effect.ExpireAfterCurrentRound = true;
     }
 
-    private static DiseaseState ApplyDailyDamage(DaggerfallActiveEffect effect, DiseaseData data, DiseaseState state, int amount)
+    private static DiseaseState ApplyDailyDamage(DaggerfallActiveEffect effect, DiseaseData data, DiseaseState state,
+        Func<DaggerfallCareerDefinition> playerCareer, int amount)
     {
         StatsComponent stats = effect.Target.Get<StatsComponent>();
         Dictionary<string, int> losses = new(state.AttributeLosses, StringComparer.Ordinal);
@@ -294,7 +323,7 @@ internal static class DaggerfallDiseasePolicy
         AddAttributeLoss(losses, DaggerfallMechanicsIds.Personality, data.Personality, amount);
         AddAttributeLoss(losses, DaggerfallMechanicsIds.Speed, data.Speed, amount);
         AddAttributeLoss(losses, DaggerfallMechanicsIds.Luck, data.Luck, amount);
-        ApplyAttributeContributions(effect, stats, losses);
+        ApplyAttributeContributions(effect, stats, losses, playerCareer);
         ApplyTrack(stats, DaggerfallMechanicsIds.Health, data.Health, amount);
         ApplyTrack(stats, DaggerfallMechanicsIds.Stamina, data.Fatigue, amount);
         ApplyTrack(stats, DaggerfallMechanicsIds.Magicka, data.SpellPoints, amount);
@@ -307,10 +336,11 @@ internal static class DaggerfallDiseasePolicy
         losses[id.Value] = checked(losses.GetValueOrDefault(id.Value) + checked(multiplier * amount));
     }
 
-    private static IActiveEffectContribution Removal(DaggerfallActiveEffect effect) =>
-        new DelegateActiveEffectContribution(() => RemoveAttributeContributions(effect));
+    private static IActiveEffectContribution Removal(DaggerfallActiveEffect effect, Func<DaggerfallCareerDefinition> playerCareer) =>
+        new DelegateActiveEffectContribution(() => RemoveAttributeContributions(effect, playerCareer));
 
-    private static void ApplyAttributeContributions(DaggerfallActiveEffect effect, StatsComponent stats, IReadOnlyDictionary<string, int> losses)
+    private static void ApplyAttributeContributions(DaggerfallActiveEffect effect, StatsComponent stats, IReadOnlyDictionary<string, int> losses,
+        Func<DaggerfallCareerDefinition> playerCareer)
     {
         EffectSourceIdentity identity = AttributeSourceIdentity(effect);
         foreach (DaggerfallStatId attribute in Attributes)
@@ -334,16 +364,16 @@ internal static class DaggerfallDiseasePolicy
             stat.SetSources(StatId.Parse(attribute.Value), sources);
         }
 
-        RefreshPlayerDerivedMaxima(effect, stats);
+        RefreshPlayerDerivedMaxima(effect, stats, playerCareer());
     }
 
-    private static void RemoveAttributeContributions(DaggerfallActiveEffect effect)
+    private static void RemoveAttributeContributions(DaggerfallActiveEffect effect, Func<DaggerfallCareerDefinition> playerCareer)
     {
         StatsComponent stats = effect.Target.Get<StatsComponent>();
         EffectSourceIdentity identity = AttributeSourceIdentity(effect);
         foreach (DaggerfallStatId attribute in Attributes)
             _ = stats.GetStat(StatId.Parse(attribute.Value)).RemoveSource(identity);
-        RefreshPlayerDerivedMaxima(effect, stats);
+        RefreshPlayerDerivedMaxima(effect, stats, playerCareer());
     }
 
     private static void VerifyRestoredAttributeContributions(DaggerfallActiveEffect effect, DiseaseState state)
@@ -378,10 +408,10 @@ internal static class DaggerfallDiseasePolicy
     private static SourceDefinitionId AttributeSourceDefinition(DaggerfallActiveEffect effect, DaggerfallStatId attribute) =>
         SourceDefinitionId.Parse($"daggerfall.{effect.Definition.Key}.{attribute.Value}");
 
-    private static void RefreshPlayerDerivedMaxima(DaggerfallActiveEffect effect, StatsComponent stats)
+    private static void RefreshPlayerDerivedMaxima(DaggerfallActiveEffect effect, StatsComponent stats, DaggerfallCareerDefinition career)
     {
         if (effect.Context.Target.Value == checked((ulong)DaggerfallActorIdentity.PlayerEntityId))
-            DaggerfallStatModifiers.RefreshPlayerDerivedMaxima(stats);
+            DaggerfallStatModifiers.RefreshPlayerDerivedMaxima(stats, career);
     }
 
     private static void ApplyTrack(StatsComponent stats, DaggerfallTrackId id, int multiplier, int amount)

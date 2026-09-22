@@ -81,10 +81,7 @@ internal sealed class DaggerfallStatBases(IReadOnlyDictionary<DaggerfallStatId, 
 }
 
 /// <summary>Product policy for turning authored Daggerfall bases into track maxima and initial values.</summary>
-internal sealed record DaggerfallVitalValues(int HealthMaximum, int StaminaMaximum, int MagickaMaximum)
-{
-    internal static DaggerfallVitalValues Player(DaggerfallStatBases stats) => new(25 + ((stats.Endurance * 3) / 2), stats.Strength + stats.Endurance, stats.Intelligence);
-}
+internal sealed record DaggerfallVitalValues(int HealthMaximum, int StaminaMaximum, int MagickaMaximum);
 
 internal sealed record DaggerfallVitalRange(int Minimum, int Maximum);
 internal sealed record DaggerfallCombatProfile(DaggerfallTrackId Health, DaggerfallTrackId? AttackCost);
@@ -109,7 +106,6 @@ internal sealed record DaggerfallLocationSet(
 
 internal sealed record DaggerfallActorDefinition(DaggerfallActorId Id, string Kind, DaggerfallStatBases Stats, DaggerfallVitalRange Health, DaggerfallCombatProfile Combat, DaggerfallRewardPolicy Rewards, int Armor, int? MobileId, int? HitPointsPerLevel, IReadOnlyList<DaggerfallAttackRange> Attacks, string? Team, string? MinimumMaterial, string? LootTableKey, int? Level, int? Weight, string? ActionId, IReadOnlyList<DaggerfallLoadoutEntry> Loadout, DaggerfallActorPresentationDefinition Presentation, bool GroundOnSpawn = false, string? Race = null, string? Career = null)
 {
-    internal DaggerfallVitalValues PlayerInitialVitals => DaggerfallVitalValues.Player(Stats);
 }
 
 /// <summary>
@@ -138,7 +134,7 @@ internal sealed record DaggerfallShieldDefinition(int Armor);
 internal enum DaggerfallItemKind { Fungible, Unique }
 internal sealed record DaggerfallEquipmentDefinition(IReadOnlyList<string> Classifications, ushort RequiredSlots, string? ExclusiveGroup);
 internal sealed record DaggerfallEquipmentSlotDefinition(DaggerfallEquipmentSlotId Id, IReadOnlyList<string> AllowedClassifications);
-internal sealed record DaggerfallItemDefinition(DaggerfallItemId Id, DaggerfallItemKind Kind, ulong MaximumQuantity, int Weight, int Value, DaggerfallWeaponDefinition? Weapon = null, DaggerfallArmorDefinition? Armor = null, DaggerfallShieldDefinition? Shield = null, DaggerfallEquipmentDefinition? Equipment = null)
+internal sealed record DaggerfallItemDefinition(DaggerfallItemId Id, DaggerfallItemKind Kind, ulong MaximumQuantity, int Weight, int Value, DaggerfallWeaponDefinition? Weapon = null, DaggerfallArmorDefinition? Armor = null, DaggerfallShieldDefinition? Shield = null, DaggerfallEquipmentDefinition? Equipment = null, DaggerfallItemTemplateDefinition? Template = null)
 {
     internal bool IsFungible => Kind == DaggerfallItemKind.Fungible;
 }
@@ -253,6 +249,33 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     internal DaggerfallVocabulary Vocabulary { get; } = vocabulary;
     internal IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> Actors { get; } = new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors.ToDictionary());
     internal IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> Items { get; } = new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items.ToDictionary());
+    /// <summary>
+    /// Engine and save definitions for every normalized native template. They are separate from
+    /// authored catalog items so the latter retain their explicit content identity and count.
+    /// </summary>
+    internal IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> TemplateItems { get; } =
+        DaggerfallTemplateItemDefinitions.Create(itemTemplateCatalog, items, magic);
+
+    internal bool TryResolveItem(DaggerfallItemId id, out DaggerfallItemDefinition definition)
+    {
+        if (Items.TryGetValue(id, out DaggerfallItemDefinition? authored) && authored is not null)
+        {
+            definition = authored;
+            return true;
+        }
+        if (TemplateItems.TryGetValue(id, out DaggerfallItemDefinition? template) && template is not null)
+        {
+            definition = template;
+            return true;
+        }
+        definition = null!;
+        return false;
+    }
+
+    internal DaggerfallItemDefinition RequireItem(DaggerfallItemId id) =>
+        TryResolveItem(id, out DaggerfallItemDefinition definition)
+            ? definition
+            : throw new KeyNotFoundException($"Daggerfall item '{id.Value}' is not defined by the selected content.");
     internal IReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition> EquipmentSlots { get; } = new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots.ToDictionary());
     internal IReadOnlyDictionary<string, int> ArmorValuesByMaterial { get; } = new ReadOnlyDictionary<string, int>(armorValuesByMaterial.ToDictionary());
     internal IReadOnlyDictionary<string, DaggerfallActionDefinition> Actions { get; } = new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions.ToDictionary());

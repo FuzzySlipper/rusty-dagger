@@ -1,4 +1,5 @@
 using Rusty.Engine.Mechanics;
+using WorldRpg.Rulesets.Daggerfall;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
@@ -49,20 +50,13 @@ internal static class DaggerfallStatModifiers
     }
 
     /// <summary>
-    /// Recomputes the three vital maxima from live strength, endurance and intelligence after an
-    /// attribute change, the way creation computes them from authored bases. Tracks keep their
-    /// current values; only the ceilings move. This follows the player vitals shape: enemy
-    /// maxima come from their own level formulas, so a caller that changes enemy attributes
-    /// recomputes through that owner's formulas instead.
+    /// Recomputes player maxima through the one career-aware owner after an attribute change.
+    /// Enemy maxima remain with their distinct authored level formulas.
     /// </summary>
-    internal static void RefreshPlayerDerivedMaxima(StatsComponent stats)
+    internal static void RefreshPlayerDerivedMaxima(StatsComponent stats, DaggerfallCareerDefinition career)
     {
         ArgumentNullException.ThrowIfNull(stats);
-        int strength = stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Strength.Value)).ValueInt;
-        int intelligence = stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Intelligence.Value)).ValueInt;
-        int endurance = stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).ValueInt;
-        stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value)).BaseValue = 25 + ((endurance * 3) / 2);
-        stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.StaminaMaximum.Value)).BaseValue = strength + endurance;
-        stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.MagickaMaximum.Value)).BaseValue = intelligence;
+        ArgumentNullException.ThrowIfNull(career);
+        DaggerfallPlayerVitals.Refresh(stats, career);
     }
 }

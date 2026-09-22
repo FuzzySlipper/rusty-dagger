@@ -52,7 +52,7 @@ internal static class DaggerfallEquipmentPolicy
             .Where(assignment => assignment.Item.EntityId != item.EntityId
                 && (slots.Contains(assignment.Slot)
                     || definition.Equipment?.ExclusiveGroup is string group
-                        && definitions.Items.TryGetValue(new DaggerfallItemId(assignment.Item.Definition.Value), out DaggerfallItemDefinition? other)
+                        && definitions.TryResolveItem(new DaggerfallItemId(assignment.Item.Definition.Value), out DaggerfallItemDefinition other)
                         && other.Equipment?.ExclusiveGroup == group))
             .DistinctBy(assignment => assignment.Item.EntityId)
             .Select(assignment => assignment.Item)

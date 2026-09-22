@@ -37,6 +37,8 @@ public sealed record DaggerfallCinematicRecord(
     int? FactionId,
     string Quest)
 {
+    public CinematicMediaArtifact? Artifact { get; init; }
+
     public void Validate()
     {
         NormalizedImportDocument.RequireLogicalPath(FileName, nameof(FileName));

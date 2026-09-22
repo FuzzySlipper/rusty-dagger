@@ -168,6 +168,28 @@ test('played characters do not expose character creation controls', () => {
   } finally { f.dispose(); }
 });
 
+test('custom class editor sends typed skills traits and exposes eligibility reasons', () => {
+  const f = fixture();
+  try {
+    f.publish({ mode: 'title', character: {
+      name: 'Nameless', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [], creationAvailable: true,
+      creation: {
+        editing: true, current: { name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'custom' },
+        races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }], careers: [{ id: 'custom', label: 'Custom class', available: true, restriction: null }],
+        faces: [{ index: 0, mediaId: 'character.head.male.00.0' }], reflexes: [{ value: 2, label: 'Average' }],
+        custom: { name: 'Nightblade', primarySkills: ['mysticism', 'alteration', 'thaumaturgy'], majorSkills: ['illusion', 'destruction', 'restoration'], minorSkills: ['medical', 'short-blade', 'blunt-weapon', 'dragonish', 'daedric', 'dodging'], hitPointsPerLevel: 12,
+          advantages: [{ id: 'increased-magery', target: '1.5' }], disadvantages: [{ id: 'forbidden-material', target: 'steel' }], eligibility: ['Choose each trained skill once.'],
+          skills: ['mysticism', 'alteration', 'thaumaturgy', 'illusion', 'destruction', 'restoration', 'medical', 'short-blade', 'blunt-weapon', 'dragonish', 'daedric', 'dodging'], supportedAdvantages: ['increased-magery'], supportedDisadvantages: ['forbidden-material'] },
+      },
+    } });
+    assert.equal(f.root.querySelector('[data-testid="character-custom-class"]').hidden, false);
+    assert.match(f.root.querySelector('[data-testid="character-custom-eligibility"]').textContent, /Choose each trained skill once/);
+    f.root.querySelector('[data-testid="character-custom-update"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'character-update', name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'custom',
+      primarySkills: 'mysticism,alteration,thaumaturgy', majorSkills: 'illusion,destruction,restoration', minorSkills: 'medical,short-blade,blunt-weapon,dragonish,daedric,dodging', hitPointsPerLevel: 12, advantages: 'increased-magery:1.5', disadvantages: 'forbidden-material:steel' });
+  } finally { f.dispose(); }
+});
+
 test('the visible mode follows the product across play, modal, pause, and death', () => {
   const f = fixture();
   try {
@@ -236,5 +258,21 @@ test('control settings capture, explicit swap, cancel and reset use semantic act
     assert.equal(settings.hidden, false);
     [...settings.querySelectorAll('button')].find(button => button.textContent === 'Reset bindings').click();
     assert.deepEqual(f.actions.at(-1), { action: 'controls-reset' });
+  } finally { f.dispose(); }
+});
+
+test('activation selection follows product mode and emits only semantic mode changes', () => {
+  const f = fixture();
+  try {
+    f.publish({ activation: { mode: 'info', message: 'Information', applied: false } });
+    const select = f.root.querySelector('.dagger-activation-mode');
+    assert.equal(select.value, 'info');
+    select.value = 'bash';
+    select.dispatchEvent(new window.Event('change', { bubbles: true }));
+    assert.deepEqual(f.actions.at(-1), { action: 'activation-mode', mode: 'bash' });
+    f.publish({ activation: { mode: 'grab', message: '', applied: false } });
+    assert.equal(select.value, 'grab');
+    f.publish({ mode: 'title' });
+    assert.equal(select.disabled, true);
   } finally { f.dispose(); }
 });

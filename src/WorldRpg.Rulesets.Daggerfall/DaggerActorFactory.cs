@@ -37,26 +37,16 @@ internal static class DaggerActorFactory
         {
             DaggerfallMechanicsState mechanics = new();
             DaggerfallActorDefinition playerDefinition = definitions.RequireActor(new DaggerfallActorId("player"));
+            DaggerfallCareerDefinition initialCareer = definitions.Catalogs.RequireCareer(playerDefinition.Career
+                ?? throw new InvalidOperationException("The Daggerfall player definition must name its initial career."));
             ValidateInitialEntityIds(inputs, playerDefinition.Loadout);
             Dictionary<InventoryItemId, ItemDefinition> itemDefinitions = definitions.Items.Values
+                .Concat(definitions.TemplateItems.Values)
                 .ToDictionary(item => new InventoryItemId(item.Id.Value), ToManagedItem);
-            // Template records resolve beside catalog items: an instance granted by native index
-            // reads the same coordination path. Weight and equipment stay instance facts the
-            // material and equipment owners compute, so templates carry no capacity or policy.
-            foreach (DaggerfallItemTemplateDefinition template in definitions.ItemTemplateCatalog.Templates.Values)
-            {
-                itemDefinitions[new InventoryItemId($"template-{template.Index}")] = new ItemDefinition(
-                    ItemDefinitionId.Parse($"template-{template.Index}"),
-                    template.Stackable ? ItemKind.Fungible : ItemKind.Unique,
-                    template.Stackable ? 1000000000ul : 1ul,
-                    null,
-                    null,
-                    null);
-            }
             Dictionary<KitEquipmentSlotId, EquipmentSlotDefinition> equipmentSlots = definitions.EquipmentSlots.Values
                 .ToDictionary(slot => new KitEquipmentSlotId(slot.Id.Value), ToManagedSlot);
             PlayerActorState player = actors.CreatePlayer(checked((long)PlayerMechanicsEntityId),
-                new EntityTypeId(playerDefinition.Id.Value), mechanics.CreateStats(playerDefinition, playerDefinition.PlayerInitialVitals), playerDefinition.Combat.Health.Value);
+                new EntityTypeId(playerDefinition.Id.Value), mechanics.CreateStats(playerDefinition, DaggerfallPlayerVitals.Initial(playerDefinition.Stats, initialCareer)), playerDefinition.Combat.Health.Value);
             EntityId playerEntity = player.Actor.Entity;
             if (saved is not null) RestoreStats(player.Actor, saved.Player.Stats);
             InventoryStore inventoryStore = new();
@@ -67,18 +57,23 @@ internal static class DaggerActorFactory
             MechanicsInventoryCoordinator inventory = new(player.Inventory, actors.Entities, itemDefinitions);
             MechanicsInventoryContainerCoordinator containers = new(inventoryStore, actors.Entities, itemDefinitions);
             MechanicsEquipmentCoordinator equipmentCoordinator = new(player.Inventory, player.Equipment, actors.Entities, itemDefinitions, equipmentSlots);
+            DaggerfallItemInstances itemInstances = new();
             foreach ((DaggerfallLoadoutEntry entry, int ordinal) in playerDefinition.Loadout
                 .Where(entry => saved is null && definitions.Items[entry.ItemId].IsFungible)
                 .Select((entry, ordinal) => (entry, ordinal)))
             {
+                InventoryStackId stackId = DaggerfallInventoryStackIds.ForInitialLoadout(checked((long)PlayerMechanicsEntityId), ordinal);
                 inventory.Grant(new InventoryGrant(new InventoryItemId(entry.ItemId.Value),
-                    DaggerfallInventoryStackIds.ForInitialLoadout(checked((long)PlayerMechanicsEntityId), ordinal), entry.Quantity));
+                    stackId, entry.Quantity));
+                itemInstances.RegisterDefaultStack(DaggerfallItemOwner.Player,
+                    new InventoryStack(stackId, ItemDefinitionId.Parse(entry.ItemId.Value), entry.Quantity), definitions.RequireItem(entry.ItemId));
             }
             foreach (DaggerfallLoadoutEntry entry in playerDefinition.Loadout.Where(entry => saved is null && !definitions.Items[entry.ItemId].IsFungible))
             {
                 KitUniqueInventoryItem item = equipmentCoordinator.Materialize(
                     new DurableIdentityReference(DurableIdentityKind.Item, entry.UniqueEntityId!.Value),
                     new InventoryItemId(entry.ItemId.Value));
+                itemInstances.RegisterDefaultUnique(entry.UniqueEntityId.Value, definitions.RequireItem(entry.ItemId), DaggerfallItemOwner.Player);
                 if (entry.EquipSlot is DaggerfallEquipmentSlotId slot)
                 {
                     equipmentCoordinator.Equip(
@@ -113,8 +108,11 @@ internal static class DaggerActorFactory
                             .Where(entry => definitions.Items[entry.ItemId].IsFungible)
                             .Select((entry, ordinal) => (entry, ordinal)))
                         {
+                            InventoryStackId stackId = DaggerfallInventoryStackIds.ForInitialLoadout(source.EntityId, ordinal);
                             actorInventory.Grant(new InventoryGrant(new InventoryItemId(entry.ItemId.Value),
-                                DaggerfallInventoryStackIds.ForInitialLoadout(source.EntityId, ordinal), entry.Quantity));
+                                stackId, entry.Quantity));
+                            itemInstances.RegisterDefaultStack(DaggerfallItemOwner.Actor(source.EntityId),
+                                new InventoryStack(stackId, ItemDefinitionId.Parse(entry.ItemId.Value), entry.Quantity), definitions.RequireItem(entry.ItemId));
                         }
                     }
                 }
@@ -146,15 +144,8 @@ internal static class DaggerActorFactory
                 social.Restore(restoredSocial);
             }
 
-            DaggerfallItemInstances itemInstances = new();
             DaggerfallCharacterState character = new(definitions, player.Stats, playerDefinition, saved?.Character);
-            DaggerfallState state = new(new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians), actors, inventory, equipmentCoordinator, containers, itemDefinitions, equipmentSlots, inventoryStore, variables, npcs, social, itemInstances, character, new DaggerfallQuestInstances(definitions));
-            if (saved is null)
-            {
-                RegisterInitialItemMetadata(itemInstances, DaggerfallItemOwner.Player, player.Inventory.View(), actors.Entities, definitions);
-                foreach (ActorState actor in actors.All)
-                    RegisterInitialItemMetadata(itemInstances, DaggerfallItemOwner.Actor(actor.DurableId), actor.Inventory.View(), actors.Entities, definitions);
-            }
+            DaggerfallState state = new(new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians), actors, inventory, equipmentCoordinator, containers, itemDefinitions, equipmentSlots, inventoryStore, variables, npcs, social, itemInstances, character, new DaggerfallQuestInstances(definitions, random));
             authored.Add(DaggerfallActorIdentity.PlayerEntityId, playerDefinition);
             if (saved is not null) MaterializeDynamicActors(random, actors, mechanics, definitions, saved, authored, inventoryStore);
             return new(state, authored, playerDefinition);
@@ -212,28 +203,6 @@ internal static class DaggerActorFactory
         actor.Actor.Add(new EquipmentComponent(inventoryStore, actor.Actor.Entity));
     }
 
-    private static void RegisterInitialItemMetadata(
-        DaggerfallItemInstances instances,
-        DaggerfallItemOwner owner,
-        InventoryView inventory,
-        EntityDirectory entities,
-        DaggerfallDefinitions definitions)
-    {
-        foreach (InventoryStack stack in inventory.Stacks)
-        {
-            DaggerfallItemDefinition definition = definitions.Items[new DaggerfallItemId(stack.Definition.Value)];
-            instances.RegisterDefaultStack(owner, stack, definition);
-        }
-        foreach (Rusty.Engine.Mechanics.UniqueInventoryItem unique in inventory.UniqueItems)
-        {
-            DurableIdentityReference identity = entities.IdentityOf(unique.Entity);
-            if (identity.Kind != DurableIdentityKind.Item)
-                throw new InvalidOperationException($"Unique inventory item {unique.Entity.Value} has no durable item identity.");
-            DaggerfallItemDefinition definition = definitions.Items[new DaggerfallItemId(unique.Definition.Value)];
-            instances.RegisterDefaultUnique(identity.Value, definition, owner);
-        }
-    }
-
     private static void RestoreStats(Actor actor, DaggerfallStatsSave saved)
     {
         DaggerfallRestoredStats restored = DaggerfallStatsSaveBoundary.Restore(saved, actor.Entity);
@@ -272,7 +241,8 @@ internal static class DaggerActorFactory
     /// </summary>
     internal static DaggerfallVitalValues InitialVitals(IRandomService random, DaggerfallActorDefinition definition, long entityId)
     {
-        if (definition.Id.Value == "player") return definition.PlayerInitialVitals;
+        if (definition.Id.Value == "player")
+            throw new ArgumentException("Player vitals require the selected career and are assembled by the player factory path.", nameof(definition));
         int health = checked((int)random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, CombatRandomKey.EnemyScope, CombatRandomKey.InitialHealth(entityId, definition.Id.Value), definition.Health.Minimum, definition.Health.Maximum)).Value);
         return new DaggerfallVitalValues(health, 0, 0);
     }

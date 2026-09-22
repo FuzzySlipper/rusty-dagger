@@ -9,6 +9,7 @@ using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Facts;
 using WorldRpg.Kit.Inventory;
+using WorldRpg.Kit.World;
 using System.Numerics;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall;
@@ -27,7 +28,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     private readonly MechanicsEquipmentCoordinator _equipment;
     private readonly Func<long, MechanicsInventoryCoordinator?> _actorInventories;
     private readonly DaggerfallItemInstances _itemInstances;
-    private readonly IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> _items;
+    private readonly DaggerfallDefinitions _catalog;
     private readonly IReadOnlyDictionary<string, int> _weaponMaterialRanks;
     private readonly IReadOnlyDictionary<string, DaggerfallActionDefinition> _actions;
     private readonly IReadOnlyDictionary<long, DaggerfallActorDefinition> _definitions;
@@ -52,7 +53,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         _equipment = equipment;
         _actorInventories = actorInventories;
         _itemInstances = itemInstances ?? throw new ArgumentNullException(nameof(itemInstances));
-        _items = definitions.Items;
+        _catalog = definitions;
         _weaponMaterialRanks = DaggerfallFormulaPolicy.ClassicWeaponMaterialRanks;
         _actions = definitions.Actions;
         _definitions = definitionsByEntity;
@@ -257,9 +258,10 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
             return false;
         }
         EquipmentRead equipment = _equipment.Read();
-        DaggerfallWeaponDefinition? weapon = ReadWeapon(equipment, "right-hand") ?? ReadWeapon(equipment, "left-hand");
-        attack = weapon is not null
-            ? new DaggerfallAttackDefinition(weapon.Skill, weapon.MinimumDamage, weapon.MaximumDamage, playerCooldown, weapon.Material, playerAction.DamageBonus)
+        DaggerfallEquippedWeapon? equippedWeapon = ReadWeapon(equipment, "right-hand") ?? ReadWeapon(equipment, "left-hand");
+        attack = equippedWeapon is { } selectedWeapon
+            ? new DaggerfallAttackDefinition(selectedWeapon.Weapon.Skill, selectedWeapon.Weapon.MinimumDamage, selectedWeapon.Weapon.MaximumDamage,
+                playerCooldown, selectedWeapon.Material, playerAction.DamageBonus)
             : new DaggerfallAttackDefinition(
                 "hand-to-hand",
                 DaggerfallFormulaPolicy.HandToHandMinimumDamage(ReadStat(player, DaggerfallMechanicsIds.HandToHand)),
@@ -345,14 +347,17 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         && action.Reach is > 0d
         ? action.Reach
         : null;
-    private DaggerfallWeaponDefinition? ReadWeapon(EquipmentRead equipment, string slot)
+    private DaggerfallEquippedWeapon? ReadWeapon(EquipmentRead equipment, string slot)
     {
         if (!equipment.TryGet(new WorldRpg.Kit.Inventory.EquipmentSlotId(slot), out WorldRpg.Kit.Inventory.UniqueInventoryItem item)
-            || !_items.TryGetValue(new DaggerfallItemId(item.Definition.Value), out DaggerfallItemDefinition? definition)) return null;
-        return definition.Weapon;
+            || _catalog.RequireItem(new DaggerfallItemId(item.Definition.Value)).Weapon is not DaggerfallWeaponDefinition weapon) return null;
+        DurableIdentityReference identity = _actors.Entities.IdentityOf(new EntityId(item.EntityId));
+        if (identity.Kind != DurableIdentityKind.Item)
+            throw new InvalidOperationException($"Equipped weapon '{item.EntityId}' has no durable item identity.");
+        return new(weapon, _itemInstances.RequireUnique(identity.Value).Material);
     }
-    private string PlayerWeaponSkill() => ReadWeapon(_equipment.Read(), "right-hand")?.Skill
-        ?? ReadWeapon(_equipment.Read(), "left-hand")?.Skill
+    private string PlayerWeaponSkill() => ReadWeapon(_equipment.Read(), "right-hand")?.Weapon.Skill
+        ?? ReadWeapon(_equipment.Read(), "left-hand")?.Weapon.Skill
         ?? DaggerfallMechanicsIds.HandToHand.Value;
     private int HitChance(Combatant attacker, Combatant target, string skill) => DaggerfallFormulaPolicy.CalculateHitChance(ReadStat(attacker, new DaggerfallStatId(skill)), target.Definition.Armor, ReadStat(attacker, DaggerfallMechanicsIds.Luck), ReadStat(target, DaggerfallMechanicsIds.Luck), ReadStat(attacker, DaggerfallMechanicsIds.Agility), ReadStat(target, DaggerfallMechanicsIds.Agility), ReadStat(target, DaggerfallMechanicsIds.Dodging));
     internal static int CalculateHitChance(int skill, int struckArmor, int attackerLuck, int targetLuck, int attackerAgility, int targetAgility, int targetDodge) => DaggerfallFormulaPolicy.CalculateHitChance(skill, struckArmor, attackerLuck, targetLuck, attackerAgility, targetAgility, targetDodge);
@@ -361,4 +366,5 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         actor.Stats.GetStat(StatId.Parse(stat.Value)).ValueInt;
     private int Draw(ExplicitMeleeRequest request, long attacker, long target, int salt, int minimum, int maximum, bool enemy) => checked((int)_random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, enemy ? CombatRandomKey.EnemyScope : CombatRandomKey.PlayerScope, CombatRandomKey.For(request.Generation, request.SimulationStep, attacker, target, salt), minimum, maximum)).Value);
     private readonly record struct Combatant(long Id, StatsComponent Stats, DaggerfallActorDefinition Definition);
+    private readonly record struct DaggerfallEquippedWeapon(DaggerfallWeaponDefinition Weapon, string Material);
 }

@@ -28,16 +28,18 @@ public sealed class DaggerfallRewardReactionTests
     {
         DaggerfallDefinitions definitions = LoadDefinitions();
         DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
+        DaggerfallCareerDefinition career = definitions.Catalogs.RequireCareer("class00");
         StatsComponent mechanics = new DaggerfallMechanicsState().CreateStats(
             player,
-            player.PlayerInitialVitals);
+            DaggerfallPlayerVitals.Initial(player.Stats, career));
 
         Stat healthMaximum = mechanics.GetStat(StatId.Parse("health-maximum"));
         Track health = mechanics.GetTrack(TrackId.Parse("health"));
         Assert.Same(healthMaximum, health.Maximum);
-        Assert.Equal(player.PlayerInitialVitals.HealthMaximum, healthMaximum.Value);
-        Assert.Equal(player.PlayerInitialVitals.HealthMaximum, health.Current);
-        Assert.Equal(player.PlayerInitialVitals.StaminaMaximum, mechanics.GetTrack(TrackId.Parse("stamina")).Current);
+        DaggerfallVitalValues vitals = DaggerfallPlayerVitals.Initial(player.Stats, career);
+        Assert.Equal(vitals.HealthMaximum, healthMaximum.Value);
+        Assert.Equal(vitals.HealthMaximum, health.Current);
+        Assert.Equal(vitals.StaminaMaximum, mechanics.GetTrack(TrackId.Parse("stamina")).Current);
     }
 
     [Fact]
@@ -53,7 +55,7 @@ public sealed class DaggerfallRewardReactionTests
             progression,
             CreatePlayerMechanics(player),
             owner,
-            player,
+            () => definitions.Catalogs.RequireCareer("class01"),
             RandomMinimums(),
             actors,
             experimentalKillExperience: true);
@@ -82,7 +84,7 @@ public sealed class DaggerfallRewardReactionTests
             progression,
             CreatePlayerMechanics(player),
             owner,
-            player,
+            () => definitions.Catalogs.RequireCareer("class01"),
             RandomMinimums(),
             new Dictionary<long, DaggerfallActorDefinition> { [9000] = thief },
             experimentalKillExperience: true);
@@ -118,8 +120,43 @@ public sealed class DaggerfallRewardReactionTests
         KeyedRngRequest roll = Assert.Single(recorder.Requests);
         Assert.Equal(CombatRandomKey.PlayerScope, roll.Scope);
         Assert.Equal("player.level-up.2.hp-roll", roll.Key);
-        Assert.Equal(4, roll.Minimum);
-        Assert.Equal(8, roll.Maximum);
+        Assert.Equal(6, roll.Minimum);
+        Assert.Equal(12, roll.Maximum);
+    }
+
+    [Fact]
+    public void Restoring_a_level_with_its_saved_health_source_keeps_the_original_roll()
+    {
+        DaggerfallDefinitions definitions = LoadDefinitions();
+        DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
+        DaggerfallCareerDefinition career = definitions.Catalogs.RequireCareer("class01");
+        EntityId owner = new(DaggerfallActorIdentity.PlayerEntityId);
+        StatsComponent mechanics = new DaggerfallMechanicsState().CreateStats(player, DaggerfallPlayerVitals.Initial(player.Stats, career));
+        Stat healthMaximum = mechanics.GetStat(StatId.Parse("health-maximum"));
+        healthMaximum.SetSources(StatId.Parse("health-maximum"), [DaggerfallLevelUpHealthSource.Create(owner, 2, 7)]);
+        mechanics.GetTrack(TrackId.Parse("health")).TrySpend(5);
+        StatModifierHandle temporaryEndurance = DaggerfallStatModifiers.ApplyMod(mechanics, DaggerfallMechanicsIds.Endurance, -15);
+        ProgressionState progression = new();
+        progression.AdvanceTo(500, 2);
+        (IRandomService random, RecordingRandomProxy recorder) = RecordingRandom();
+        DaggerfallRewardReactions reactions = CreateReactions(
+            definitions,
+            player,
+            mechanics,
+            progression,
+            random,
+            new Dictionary<long, DaggerfallActorDefinition>());
+
+        reactions.RestoreProgression(500, 2);
+
+        Assert.Empty(recorder.Requests);
+        Assert.Equal(44, healthMaximum.ValueInt);
+        Assert.Equal(39, mechanics.GetTrack(TrackId.Parse("health")).ValueInt);
+        Assert.Single(healthMaximum.Sources);
+        Assert.True(DaggerfallStatModifiers.RemoveMod(mechanics, DaggerfallMechanicsIds.Endurance, temporaryEndurance));
+        DaggerfallStatModifiers.RefreshPlayerDerivedMaxima(mechanics, career);
+        Assert.Equal(44, healthMaximum.ValueInt);
+        Assert.Equal(39, mechanics.GetTrack(TrackId.Parse("health")).ValueInt);
     }
 
     [Fact]
@@ -134,15 +171,15 @@ public sealed class DaggerfallRewardReactionTests
         };
         StatsComponent mechanics = CreatePlayerMechanics(player, healthCurrent: 50);
         ProgressionState progression = new();
-        (IRandomService random, RecordingRandomProxy recorder) = RecordingRandom(4, 8);
+        (IRandomService random, RecordingRandomProxy recorder) = RecordingRandom(6, 8);
         DaggerfallRewardReactions reactions = CreateReactions(definitions, player, mechanics, progression, random, new Dictionary<long, DaggerfallActorDefinition> { [9000] = defeated });
 
         reactions.React(new ActorDiedFact(9000, DaggerfallActorIdentity.PlayerEntityId, 5, 2, 3), new FactBuffer<IProductFact>());
 
         Assert.Equal(1_000, progression.Experience);
         Assert.Equal(3, progression.Level);
-        Assert.Equal(110d, mechanics.GetStat(StatId.Parse("health-maximum")).Value);
-        Assert.Equal(60d, mechanics.GetTrack(TrackId.Parse("health")).Current);
+        Assert.Equal(112d, mechanics.GetStat(StatId.Parse("health-maximum")).Value);
+        Assert.Equal(62d, mechanics.GetTrack(TrackId.Parse("health")).Current);
         Assert.Equal(
             ["daggerfall.player.level-up.2.health", "daggerfall.player.level-up.3.health"],
             mechanics.GetStat(StatId.Parse("health-maximum")).Explain().Decisions
@@ -162,12 +199,12 @@ public sealed class DaggerfallRewardReactionTests
         };
         StatsComponent mechanics = CreatePlayerMechanics(player);
         ProgressionState progression = new();
-        (IRandomService random, RecordingRandomProxy recorder) = RecordingRandom(4);
+        (IRandomService random, RecordingRandomProxy recorder) = RecordingRandom(6);
         DaggerfallRewardReactions reactions = new(
             progression,
             mechanics,
             new EntityId(DaggerfallActorIdentity.PlayerEntityId),
-            player,
+            () => definitions.Catalogs.RequireCareer("class01"),
             random,
             new Dictionary<long, DaggerfallActorDefinition> { [9000] = thief },
             experimentalKillExperience: true);
@@ -206,7 +243,7 @@ public sealed class DaggerfallRewardReactionTests
             progression,
             mechanics,
             owner,
-            player,
+            () => definitions.Catalogs.RequireCareer("class01"),
             random,
             new Dictionary<long, DaggerfallActorDefinition> { [9000] = thief },
             experimentalKillExperience: true);
@@ -249,7 +286,7 @@ public sealed class DaggerfallRewardReactionTests
             progression,
             mechanics,
             new EntityId(DaggerfallActorIdentity.PlayerEntityId),
-            player,
+            () => definitions.Catalogs.RequireCareer("class01"),
             random,
             actors,
             experimentalKillExperience: true);

@@ -70,7 +70,9 @@ public sealed class PublishedContentDeliveryTests
         // group and the character index accounts for the character canvases. An artifact no index names
         // fails here, which is what makes a hand-written artifact or a dropped entry visible.
         HashSet<string> published = [.. GeneratedContentFiles(content)
-            .Where(path => !path.EndsWith("classic-media-inventory.json", StringComparison.Ordinal) && !path.Contains("/character/", StringComparison.Ordinal))];
+            .Where(path => !path.EndsWith("classic-media-inventory.json", StringComparison.Ordinal)
+                && !path.Contains("/character/", StringComparison.Ordinal)
+                && !path.Contains("/cinematics/", StringComparison.Ordinal))];
         Assert.Equal(published.Order(StringComparer.Ordinal), listed.Order(StringComparer.Ordinal));
         // The published group carries the seventy-four media artifacts and the sound catalog that
         // describes the whole archive, and the inventory indexes both because both are content.

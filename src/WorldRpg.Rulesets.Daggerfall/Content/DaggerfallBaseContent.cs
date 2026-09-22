@@ -522,7 +522,7 @@ internal static class DaggerfallBaseContent
         foreach (DaggerfallRaceDefinition race in definitions.Catalogs.Races.OrderBy(race => race.Id, StringComparer.Ordinal)) Add("catalog-race", race.Id, race.DonorRaceId, race.Source.SourceRecordId, race.Source.Path);
         foreach (DaggerfallCareerDefinition career in definitions.Catalogs.Careers.OrderBy(career => career.Id, StringComparer.Ordinal))
         {
-            Add("catalog-career", career.Id, career.Name, string.Join(',', career.PrimarySkills), string.Join(',', career.MajorSkills), string.Join(',', career.MinorSkills), string.Join(',', career.Attributes), string.Join(',', career.AttributeValues), career.HitPointsPerLevel, FingerprintField(career.AdvancementMultiplier), string.Join(',', career.ResistanceElements), string.Join(',', career.ImmunityElements), string.Join(',', career.FlagBytes.Select(flag => $"{flag.Name}={flag.Value}")), career.Source.SourceRecordId, career.Source.Path);
+            Add("catalog-career", career.Id, career.Name, string.Join(',', career.PrimarySkills), string.Join(',', career.MajorSkills), string.Join(',', career.MinorSkills), string.Join(',', career.Attributes), string.Join(',', career.AttributeValues), career.HitPointsPerLevel, career.SpellPointMultiplierMilli, FingerprintField(career.AdvancementMultiplier), string.Join(',', career.ResistanceElements), string.Join(',', career.ImmunityElements), string.Join(',', career.FlagBytes.Select(flag => $"{flag.Name}={flag.Value}")), career.Source.SourceRecordId, career.Source.Path);
         }
 
         foreach (string collision in definitions.Catalogs.CareerNameCollisions) Add("catalog-career-name-collision", collision);
@@ -1916,13 +1916,30 @@ internal static class DaggerfallBaseContent
 
             if (!cinematics.TryAdd(file, new DaggerfallCinematicDefinition(
                 file, kind, Long(cinematic, "byteLength", diagnostics), Text(cinematic, "digest", diagnostics),
-                binding, caller, faction, quest)))
+                binding, caller, faction, quest) { Artifact = ReadCinematicArtifact(cinematic, file, diagnostics) }))
             {
                 diagnostics.Add($"Cinematic '{file}' is published twice, so one of them is unreachable.");
             }
         }
 
         return new DaggerfallCinematicSet(new ReadOnlyDictionary<string, DaggerfallCinematicDefinition>(cinematics));
+    }
+
+    private static DaggerfallCinematicArtifact? ReadCinematicArtifact(JsonElement cinematic, string source,
+        DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!cinematic.TryGetProperty("artifact", out JsonElement value) || value.ValueKind == JsonValueKind.Null) return null;
+        value = Object(value, $"cinematic '{source}' artifact", diagnostics);
+        DaggerfallCinematicArtifact artifact = new(Text(value, "path", diagnostics), Text(value, "mimeType", diagnostics),
+            Long(value, "byteLength", diagnostics), Text(value, "sha256", diagnostics), Integer(value, "width", diagnostics),
+            Integer(value, "height", diagnostics), Long(value, "frameCount", diagnostics),
+            OptionalNumber(value, "durationSeconds", diagnostics) ?? 0, Boolean(value, "hasAudio", diagnostics));
+        string expected = "worldrpg/media/cinematics/" + System.IO.Path.GetFileNameWithoutExtension(source).ToLowerInvariant() + ".webm";
+        if (artifact.Path != expected || artifact.MimeType != "video/webm" || artifact.ByteLength <= 0 ||
+            artifact.Sha256.Length != 64 || artifact.Sha256.Any(character => !Uri.IsHexDigit(character)) ||
+            artifact.Width <= 0 || artifact.Height <= 0 || artifact.FrameCount <= 0 || artifact.DurationSeconds <= 0)
+            diagnostics.Add($"Cinematic '{source}' has an invalid packaged WebM artifact; expected '{expected}' with positive dimensions, frames, duration, bytes and SHA-256.");
+        return artifact;
     }
 
     private static DaggerfallQuestCatalog ReadQuestCatalog(JsonElement root, DaggerfallContentDiagnostics diagnostics)
@@ -2770,13 +2787,14 @@ internal static class DaggerfallBaseContent
             IReadOnlyList<string> resistant = ReadIds(career, "resistanceElements", diagnostics);
             IReadOnlyList<string> immune = ReadIds(career, "immunityElements", diagnostics);
             int hitPoints = Integer(career, "hitPointsPerLevel", diagnostics);
+            int spellPointMultiplierMilli = Integer(career, "spellPointMultiplierMilli", diagnostics);
             float multiplier = Number(career, "advancementMultiplier", diagnostics);
             int resistanceFlags = FlagByte(career, "resistanceFlags", diagnostics);
             int immunityFlags = FlagByte(career, "immunityFlags", diagnostics);
             int lowToleranceFlags = FlagByte(career, "lowToleranceFlags", diagnostics);
             int criticalWeaknessFlags = FlagByte(career, "criticalWeaknessFlags", diagnostics);
             DaggerfallCareerDefinition definition = new(
-                id, name, primary, major, minor, careerAttributes, attributeValues, hitPoints, multiplier, resistant, immune,
+                id, name, primary, major, minor, careerAttributes, attributeValues, hitPoints, spellPointMultiplierMilli, multiplier, resistant, immune,
                 resistanceFlags, immunityFlags, lowToleranceFlags, criticalWeaknessFlags, ReadCitation(career, sources, diagnostics));
             foreach (string skill in definition.SkillReferences)
             {
@@ -2802,9 +2820,11 @@ internal static class DaggerfallBaseContent
                 }
             }
 
-            if (string.IsNullOrWhiteSpace(name) || hitPoints <= 0 || !(multiplier > 0f))
+            if (string.IsNullOrWhiteSpace(name) || hitPoints <= 0
+                || spellPointMultiplierMilli is not (500 or 1000 or 1500 or 1750 or 2000 or 3000)
+                || !(multiplier > 0f))
             {
-                diagnostics.Add($"Career '{id}' must carry a name, positive hit points per level and a positive advancement multiplier.");
+                diagnostics.Add($"Career '{id}' must carry a name, positive hit points per level, one classic spell-point multiplier and a positive advancement multiplier.");
             }
 
             // The published element lists must be what the carrier's flag bytes say. A

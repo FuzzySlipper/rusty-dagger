@@ -12,7 +12,14 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Daggerfall-owned reward policy for defeated registered actors.</summary>
-internal sealed class DaggerfallRewardReactions(ProgressionState progression, StatsComponent playerMechanics, Rusty.Engine.Entities.EntityId playerEntity, DaggerfallActorDefinition playerDefinition, IRandomService random, IReadOnlyDictionary<long, DaggerfallActorDefinition> actors, bool experimentalKillExperience = false)
+internal sealed class DaggerfallRewardReactions(
+    ProgressionState progression,
+    StatsComponent playerMechanics,
+    Rusty.Engine.Entities.EntityId playerEntity,
+    Func<DaggerfallCareerDefinition> playerCareer,
+    IRandomService random,
+    IReadOnlyDictionary<long, DaggerfallActorDefinition> actors,
+    bool experimentalKillExperience = false)
 {
     private readonly HashSet<long> _awarded = [];
     private readonly HashSet<long> _experienceAwarded = [];
@@ -40,14 +47,14 @@ internal sealed class DaggerfallRewardReactions(ProgressionState progression, St
         progression.AdvanceTo(experience, level);
         if (level == 1) return;
 
-        int endurance = playerMechanics.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).ValueInt;
         Stat healthMaximum = playerMechanics.GetStat(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value));
         List<StatSource> sources = [.. healthMaximum.Sources];
         for (int restoredLevel = 2; restoredLevel <= level; restoredLevel++)
         {
-            int gain = DaggerfallLevelUpHealthSource.RollGain(random, playerDefinition, endurance, restoredLevel);
-            StatSource source = DaggerfallLevelUpHealthSource.Create(playerEntity, restoredLevel, gain);
-            if (sources.All(existing => existing.Identity != source.Identity)) sources.Add(source);
+            StatSource? existing = sources.SingleOrDefault(source => DaggerfallLevelUpHealthSource.IsForLevel(source, playerEntity, restoredLevel));
+            if (existing is not null) continue;
+            int gain = DaggerfallLevelUpHealthSource.RollGain(random, playerCareer(), PermanentEndurance(), restoredLevel);
+            sources.Add(DaggerfallLevelUpHealthSource.Create(playerEntity, restoredLevel, gain));
         }
         ApplyHealthSources(sources);
     }
@@ -69,11 +76,10 @@ internal sealed class DaggerfallRewardReactions(ProgressionState progression, St
         if (nextLevel == progression.Level)
             return new ProgressionAwardPlan(nextExperience, nextLevel, null);
 
-        int endurance = playerMechanics.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).ValueInt;
         List<StatSource> expectedSources = [];
         for (int level = checked(progression.Level + 1); ; level++)
         {
-            int gain = DaggerfallLevelUpHealthSource.RollGain(random, playerDefinition, endurance, level);
+            int gain = DaggerfallLevelUpHealthSource.RollGain(random, playerCareer(), PermanentEndurance(), level);
             expectedSources.Add(DaggerfallLevelUpHealthSource.Create(playerEntity, level, gain));
             if (level == nextLevel) break;
         }
@@ -133,6 +139,9 @@ internal sealed class DaggerfallRewardReactions(ProgressionState progression, St
         healthMaximum.SetSources(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value), sources);
     }
 
+    private int PermanentEndurance() => checked((int)playerMechanics
+        .GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).BaseValue);
+
     private sealed record ProgressionAwardPlan(
         int NextExperience,
         int NextLevel,
@@ -161,13 +170,12 @@ internal static class DaggerfallLevelUpHealthSource
     }
 
     /// <summary>One keyed, ruleset-owned level-up gain shared by restore validation and source reconstruction.</summary>
-    internal static int RollGain(IRandomService random, DaggerfallActorDefinition playerDefinition, int endurance, int level)
+    internal static int RollGain(IRandomService random, DaggerfallCareerDefinition career, int permanentEndurance, int level)
     {
         ArgumentNullException.ThrowIfNull(random);
-        ArgumentNullException.ThrowIfNull(playerDefinition);
+        ArgumentNullException.ThrowIfNull(career);
         if (level < 2) throw new ArgumentOutOfRangeException(nameof(level));
-        int hitPointsPerLevel = playerDefinition.HitPointsPerLevel
-            ?? throw new InvalidOperationException("The Daggerfall player definition must provide hitPointsPerLevel.");
+        int hitPointsPerLevel = career.HitPointsPerLevel;
         (int minimum, int maximum) = DaggerfallFormulaPolicy.HitPointsPerLevelRollBounds(hitPointsPerLevel, DaggerfallFormulaPolicy.Experimental);
         int roll = checked((int)random.DrawKeyed(new KeyedRngRequest(
             CombatRandomKey.Seed,
@@ -177,8 +185,11 @@ internal static class DaggerfallLevelUpHealthSource
             maximum)).Value);
         if (roll < minimum || roll > maximum)
             throw new MechanicsException($"Daggerfall level-up roll for level {level} was outside [{minimum}, {maximum}].");
-        return DaggerfallFormulaPolicy.HitPointsPerLevelUp(roll, endurance, DaggerfallFormulaPolicy.Experimental);
+        return DaggerfallFormulaPolicy.HitPointsPerLevelUp(roll, permanentEndurance, DaggerfallFormulaPolicy.Experimental);
     }
+
+    internal static bool IsForLevel(StatSource source, Rusty.Engine.Entities.EntityId player, int level) =>
+        source.Identity == new IntrinsicSourceIdentity(player, SourceInstanceId.Parse($"daggerfall.player.level-up.{level}.health"));
 
     internal static bool Matches(StatSource actual, StatSource expected) =>
         actual.Identity == expected.Identity

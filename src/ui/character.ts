@@ -1,4 +1,4 @@
-export interface CharacterAction { readonly action: string; readonly name?: string; readonly race?: string; readonly gender?: string; readonly faceIndex?: number; readonly reflexes?: number; readonly career?: string; }
+export interface CharacterAction { readonly action: string; readonly name?: string; readonly race?: string; readonly gender?: string; readonly faceIndex?: number; readonly reflexes?: number; readonly career?: string; readonly primarySkills?: string; readonly majorSkills?: string; readonly minorSkills?: string; readonly hitPointsPerLevel?: number; readonly advantages?: string; readonly disadvantages?: string; }
 
 export interface CharacterStat {
   readonly id: string;
@@ -45,6 +45,13 @@ export interface CharacterCreation {
   readonly current: { readonly name: string; readonly race: string; readonly gender: string; readonly faceIndex: number; readonly reflexes: number; readonly career: string; };
   readonly races: readonly CharacterChoice[]; readonly careers: readonly CharacterChoice[];
   readonly faces: readonly CharacterFace[]; readonly reflexes: readonly CharacterReflex[];
+  readonly custom?: CharacterCustomClass | null;
+}
+export interface CharacterCustomTrait { readonly id: string; readonly target: string | null; }
+export interface CharacterCustomClass {
+  readonly name: string; readonly primarySkills: readonly string[]; readonly majorSkills: readonly string[]; readonly minorSkills: readonly string[];
+  readonly hitPointsPerLevel: number; readonly advantages: readonly CharacterCustomTrait[]; readonly disadvantages: readonly CharacterCustomTrait[];
+  readonly eligibility: readonly string[]; readonly skills: readonly string[]; readonly supportedAdvantages: readonly string[]; readonly supportedDisadvantages: readonly string[];
 }
 
 /** Read-only Daggerfall sheet values supplied by the C# projection. */
@@ -274,7 +281,17 @@ function isCreation(value: unknown): value is CharacterCreation {
     && 'races' in value && isChoices(value.races)
     && 'careers' in value && isChoices(value.careers)
     && 'faces' in value && Array.isArray(value.faces) && value.faces.every(face => typeof face === 'object' && face !== null && 'index' in face && isNumber(face.index) && 'mediaId' in face && typeof face.mediaId === 'string')
-    && 'reflexes' in value && Array.isArray(value.reflexes) && value.reflexes.every(reflex => typeof reflex === 'object' && reflex !== null && 'value' in reflex && isNumber(reflex.value) && 'label' in reflex && typeof reflex.label === 'string');
+    && 'reflexes' in value && Array.isArray(value.reflexes) && value.reflexes.every(reflex => typeof reflex === 'object' && reflex !== null && 'value' in reflex && isNumber(reflex.value) && 'label' in reflex && typeof reflex.label === 'string')
+    && (!('custom' in value) || value.custom === null || isCustomClass(value.custom));
+}
+
+function isCustomClass(value: unknown): value is CharacterCustomClass {
+  const strings = (items: unknown): items is readonly string[] => Array.isArray(items) && items.every(item => typeof item === 'string');
+  const traits = (items: unknown): items is readonly CharacterCustomTrait[] => Array.isArray(items) && items.every(item => typeof item === 'object' && item !== null && 'id' in item && typeof item.id === 'string' && 'target' in item && (item.target === null || typeof item.target === 'string'));
+  return typeof value === 'object' && value !== null && 'name' in value && typeof value.name === 'string'
+    && 'primarySkills' in value && strings(value.primarySkills) && 'majorSkills' in value && strings(value.majorSkills) && 'minorSkills' in value && strings(value.minorSkills)
+    && 'hitPointsPerLevel' in value && isNumber(value.hitPointsPerLevel) && 'advantages' in value && traits(value.advantages) && 'disadvantages' in value && traits(value.disadvantages)
+    && 'eligibility' in value && strings(value.eligibility) && 'skills' in value && strings(value.skills) && 'supportedAdvantages' in value && strings(value.supportedAdvantages) && 'supportedDisadvantages' in value && strings(value.supportedDisadvantages);
 }
 
 function isCreationCurrent(value: unknown): value is CharacterCreation['current'] {
@@ -303,10 +320,42 @@ function renderCreation(root: HTMLElement, value: CharacterCreation | null, avai
   const face = select(value.faces.map(item => ({ id: String(item.index), label: `Face ${item.index + 1}`, available: true, restriction: null })), String(value.current.faceIndex)); face.setAttribute('aria-label', 'Face');
   const reflexes = select(value.reflexes.map(item => ({ id: String(item.value), label: item.label, available: true, restriction: null })), String(value.current.reflexes)); reflexes.setAttribute('aria-label', 'Reflexes');
   const career = select(value.careers, value.current.career); career.setAttribute('aria-label', 'Career');
+  const custom = value.custom ?? null;
+  const customFields = document.createElement('fieldset'); customFields.dataset.testid = 'character-custom-class';
+  const customLegend = document.createElement('legend'); customLegend.textContent = 'Custom class'; customFields.append(customLegend);
+  const skillValues = [...(custom?.skills ?? [])];
+  const primary = customSkills('Primary skills', custom?.primarySkills ?? skillValues.slice(0, 3), skillValues, 3);
+  const major = customSkills('Major skills', custom?.majorSkills ?? skillValues.slice(3, 6), skillValues, 3);
+  const minor = customSkills('Minor skills', custom?.minorSkills ?? skillValues.slice(6, 12), skillValues, 6);
+  const hp = document.createElement('input'); hp.type = 'number'; hp.min = '4'; hp.max = '30'; hp.value = String(custom?.hitPointsPerLevel ?? 8); hp.setAttribute('aria-label', 'Hit points per level');
+  const advantages = traitInput('Advantages', custom?.advantages ?? [], custom?.supportedAdvantages ?? []);
+  const disadvantages = traitInput('Disadvantages', custom?.disadvantages ?? [], custom?.supportedDisadvantages ?? []);
+  const eligibility = document.createElement('ul'); eligibility.dataset.testid = 'character-custom-eligibility'; eligibility.setAttribute('aria-live', 'polite');
+  eligibility.replaceChildren(...(custom?.eligibility ?? ['Choose Custom class to edit its skills and traits.']).map(reason => { const item = document.createElement('li'); item.textContent = reason; return item; }));
+  customFields.append(primary.element, major.element, minor.element, labeled('HP per level', hp), advantages.element, disadvantages.element, eligibility);
+  const updateVisibility = (): void => { customFields.hidden = career.value !== 'custom'; };
+  career.addEventListener('change', updateVisibility); updateVisibility();
   const commit = document.createElement('button'); commit.type = 'button'; commit.textContent = 'Commit character'; commit.dataset.testid = 'character-commit';
-  commit.addEventListener('click', () => send?.({ action: 'character-commit', name: name.value, race: race.value, gender: gender.value, faceIndex: Number(face.value), reflexes: Number(reflexes.value), career: career.value }));
+  const action = (kind: 'character-update' | 'character-commit'): CharacterAction => career.value === 'custom'
+    ? { action: kind, name: name.value, race: race.value, gender: gender.value, faceIndex: Number(face.value), reflexes: Number(reflexes.value), career: career.value,
+      primarySkills: primary.values().join(','), majorSkills: major.values().join(','), minorSkills: minor.values().join(','), hitPointsPerLevel: Number(hp.value), advantages: advantages.value(), disadvantages: disadvantages.value() }
+    : { action: kind, name: name.value, race: race.value, gender: gender.value, faceIndex: Number(face.value), reflexes: Number(reflexes.value), career: career.value };
+  const update = document.createElement('button'); update.type = 'button'; update.textContent = 'Check custom class'; update.dataset.testid = 'character-custom-update'; update.addEventListener('click', () => send?.(action('character-update')));
+  commit.addEventListener('click', () => send?.(action('character-commit')));
   const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Cancel'; cancel.dataset.testid = 'character-cancel'; cancel.addEventListener('click', () => send?.({ action: 'character-cancel' }));
-  root.replaceChildren(name, race, gender, face, reflexes, career, commit, cancel);
+  root.replaceChildren(name, race, gender, face, reflexes, career, customFields, update, commit, cancel);
+}
+
+function labeled(label: string, input: HTMLElement): HTMLElement { const item = document.createElement('label'); item.textContent = label; item.append(input); return item; }
+function customSkills(label: string, selected: readonly string[], skills: readonly string[], count: number): { readonly element: HTMLElement; readonly values: () => string[] } {
+  const element = document.createElement('fieldset'); const legend = document.createElement('legend'); legend.textContent = label; element.append(legend);
+  const selects = Array.from({ length: count }, (_, index) => { const input = select(skills.map(id => ({ id, label: id, available: true, restriction: null })), selected[index] ?? skills[index] ?? ''); input.setAttribute('aria-label', `${label} ${index + 1}`); element.append(input); return input; });
+  return { element, values: () => selects.map(item => item.value) };
+}
+function traitInput(label: string, traits: readonly CharacterCustomTrait[], supported: readonly string[]): { readonly element: HTMLElement; readonly value: () => string } {
+  const element = document.createElement('label'); element.textContent = `${label} (one id[:target] per line)`;
+  const input = document.createElement('textarea'); input.setAttribute('aria-label', label); input.value = traits.map(trait => trait.target ? `${trait.id}:${trait.target}` : trait.id).join('\n'); input.placeholder = supported.join(', '); element.append(input);
+  return { element, value: () => input.value.split(/\r?\n/).map(item => item.trim()).filter(Boolean).join(',') };
 }
 
 function select(values: readonly CharacterChoice[], current: string): HTMLSelectElement {

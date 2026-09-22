@@ -31,7 +31,8 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             admitted.Tuning,
             saved,
             context.Engine.Random,
-            admitted.Audio);
+            admitted.Audio,
+            admitted.Content);
     }
 
     /// <summary>A fresh session: no saved state exists, so nothing is resolved or reported.</summary>
@@ -47,7 +48,8 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             admitted.Definitions,
             admitted.Inputs,
             admitted.Tuning,
-            admitted.Audio);
+            admitted.Audio,
+            admitted.Content);
     }
 
     private DaggerfallAdmittedContent Admit(ResolvedGameComposition composition) =>
@@ -59,12 +61,13 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             ContentPack pack = selected.RequireContentPack(PrivateersHoldPack);
             PrivateersHoldInputs inputs = PrivateersHoldContent.Read(selected.Content, pack.Payload, definitions);
             DaggerfallTuning tuning = DaggerfallTuning.Read(selected.Tuning.Payload.Span);
-            return new DaggerfallAdmittedContent(definitions, inputs, tuning, new DaggerfallAudioBundle(selected.Content, inputs.Audio));
+            return new DaggerfallAdmittedContent(definitions, inputs, tuning, new DaggerfallAudioBundle(selected.Content, inputs.Audio), selected.Content);
         });
 
     private sealed record DaggerfallAdmittedContent(
         DaggerfallDefinitions Definitions,
         PrivateersHoldInputs Inputs,
         DaggerfallTuning Tuning,
-        DaggerfallAudioBundle Audio);
+        DaggerfallAudioBundle Audio,
+        Rusty.Engine.ProductContent Content);
 }

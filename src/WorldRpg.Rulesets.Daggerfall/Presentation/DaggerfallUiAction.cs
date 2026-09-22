@@ -3,7 +3,8 @@ using System.Text.Json;
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision = null, string? Item = null, int? TargetGrid = null, string? TargetEquipment = null, string? Container = null, string? Key = null, string? Label = null, bool Confirm = false,
-    string? Name = null, string? Race = null, string? Gender = null, int? FaceIndex = null, int? Reflexes = null, string? Career = null);
+    string? Name = null, string? Race = null, string? Gender = null, int? FaceIndex = null, int? Reflexes = null, string? Career = null, string? Mode = null,
+    string? PrimarySkills = null, string? MajorSkills = null, string? MinorSkills = null, string? Advantages = null, string? Disadvantages = null, int? HitPointsPerLevel = null);
 
 /// <summary>The small Daggerfall player-action wire contract, consumed during admitted updates.</summary>
 internal static class DaggerfallUiAction
@@ -18,18 +19,19 @@ internal static class DaggerfallUiAction
             JsonElement root = document.RootElement;
             if (root.ValueKind != JsonValueKind.Object) return null;
             HashSet<string> fields = new(StringComparer.Ordinal);
-            string? action = null, revision = null, item = null, targetEquipment = null, container = null, key = null, label = null, name = null, race = null, gender = null, career = null;
-            int? targetGrid = null, faceIndex = null, reflexes = null;
+            string? action = null, revision = null, item = null, targetEquipment = null, container = null, key = null, label = null, name = null, race = null, gender = null, career = null, mode = null, primarySkills = null, majorSkills = null, minorSkills = null, advantages = null, disadvantages = null;
+            int? targetGrid = null, faceIndex = null, reflexes = null, hitPointsPerLevel = null;
             bool confirm = false;
             foreach (JsonProperty property in root.EnumerateObject())
             {
                 if (!fields.Add(property.Name)) return null;
-                if (property.Name is "targetGrid" or "faceIndex" or "reflexes")
+                if (property.Name is "targetGrid" or "faceIndex" or "reflexes" or "hitPointsPerLevel")
                 {
                     if (!property.Value.TryGetInt32(out int grid)) return null;
                     if (property.Name == "targetGrid") targetGrid = grid;
                     else if (property.Name == "faceIndex") faceIndex = grid;
-                    else reflexes = grid;
+                    else if (property.Name == "reflexes") reflexes = grid;
+                    else hitPointsPerLevel = grid;
                     continue;
                 }
                 if (property.Name == "confirm")
@@ -53,6 +55,12 @@ internal static class DaggerfallUiAction
                     case "race": race = value; break;
                     case "gender": gender = value; break;
                     case "career": career = value; break;
+                    case "mode": mode = value; break;
+                    case "primarySkills": primarySkills = value; break;
+                    case "majorSkills": majorSkills = value; break;
+                    case "minorSkills": minorSkills = value; break;
+                    case "advantages": advantages = value; break;
+                    case "disadvantages": disadvantages = value; break;
                     default: return null;
                 }
             }
@@ -93,11 +101,18 @@ internal static class DaggerfallUiAction
             if (action is "character-begin" or "character-cancel")
                 return fields.SetEquals(["action"]) ? new(action) : null;
             if (action is "character-update" or "character-commit")
-                return fields.SetEquals(["action", "name", "race", "gender", "faceIndex", "reflexes", "career"])
+                return (career == DaggerfallCustomCareerPolicy.CareerId
+                        ? fields.SetEquals(["action", "name", "race", "gender", "faceIndex", "reflexes", "career", "primarySkills", "majorSkills", "minorSkills", "hitPointsPerLevel", "advantages", "disadvantages"])
+                        : fields.SetEquals(["action", "name", "race", "gender", "faceIndex", "reflexes", "career"]))
                     && !string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(race)
                     && !string.IsNullOrWhiteSpace(gender) && !string.IsNullOrWhiteSpace(career)
                     && faceIndex is not null && reflexes is not null
-                    ? new(action, Name: name, Race: race, Gender: gender, FaceIndex: faceIndex, Reflexes: reflexes, Career: career) : null;
+                    ? new(action, Name: name, Race: race, Gender: gender, FaceIndex: faceIndex, Reflexes: reflexes, Career: career,
+                        PrimarySkills: primarySkills, MajorSkills: majorSkills, MinorSkills: minorSkills, Advantages: advantages, Disadvantages: disadvantages, HitPointsPerLevel: hitPointsPerLevel) : null;
+            if (action == "activation-mode")
+                return fields.SetEquals(["action", "mode"])
+                    && mode is "grab" or "info" or "talk" or "steal" or "bash"
+                    ? new(action, Mode: mode) : null;
             // "begin" is the entry screen's own action, which the product answers: the session accepts the
             // shape so a slice carrying it is a known action it does not act on, rather than an
             // unrecognized one it reports over the screen that asked.

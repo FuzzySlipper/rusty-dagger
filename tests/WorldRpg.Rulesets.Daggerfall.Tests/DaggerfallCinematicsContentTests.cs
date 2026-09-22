@@ -1,4 +1,6 @@
 using WorldRpg.Rulesets.Daggerfall.Content;
+using System.Security.Cryptography;
+using System.Text.Json.Nodes;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -29,6 +31,37 @@ public sealed class DaggerfallCinematicsContentTests
         Assert.Equal(16, azura.FactionId);
         Assert.Equal("T0C00Y00", azura.Quest);
         Assert.All(definitions.Cinematics.Cinematics.Values, cinematic => Assert.True(cinematic.ByteLength > 0 && cinematic.Digest.Length == 64));
+    }
+
+    [Fact]
+    public void Every_published_video_is_indexed_by_its_source_and_matches_its_artifact()
+    {
+        string content = Path.Combine(RepositoryRoot(), "content");
+        DaggerfallCinematicDefinition[] published = Definitions().Cinematics.Cinematics.Values
+            .Where(value => value.Artifact is not null).ToArray();
+        Assert.Equal(17, published.Count(value => value.Kind == DaggerfallCinematicKind.Vid));
+        foreach (DaggerfallCinematicDefinition source in published)
+        {
+            DaggerfallCinematicArtifact artifact = source.Artifact!;
+            byte[] bytes = File.ReadAllBytes(Path.Combine(content, artifact.Path));
+            Assert.Equal(artifact.ByteLength, bytes.LongLength);
+            Assert.Equal(artifact.Sha256, Convert.ToHexString(SHA256.HashData(bytes)), ignoreCase: true);
+            Assert.Equal("video/webm", artifact.MimeType);
+            Assert.True(artifact.FrameCount > 0 && artifact.DurationSeconds > 0);
+        }
+        string[] actual = Directory.GetFiles(Path.Combine(content, "worldrpg/media/cinematics"), "*", SearchOption.AllDirectories)
+            .Select(path => Path.GetRelativePath(content, path).Replace(Path.DirectorySeparatorChar, '/')).Order().ToArray();
+        Assert.Equal(published.Select(value => value.Artifact!.Path).Order(), actual);
+    }
+
+    [Fact]
+    public void A_published_artifact_cannot_silently_change_source_identity_or_format()
+    {
+        string path = Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json");
+        JsonObject root = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        JsonObject source = root["cinematics"]!["cinematics"]!.AsArray().First(value => value!["artifact"] is not null)!.AsObject();
+        source["artifact"]!["path"] = "worldrpg/media/cinematics/another.webm";
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(root.ToJsonString())));
     }
 
     private static DaggerfallDefinitions Definitions()

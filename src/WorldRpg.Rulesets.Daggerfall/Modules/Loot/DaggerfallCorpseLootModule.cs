@@ -37,6 +37,8 @@ internal sealed class DaggerfallCorpseLootModule
     private readonly DaggerfallUniqueItemAllocator _uniqueItems;
     private readonly ProgressionState _progression;
     private readonly DaggerfallLootInteractionTuning _tuning;
+    private readonly DaggerfallCharacterState _character;
+    private readonly DaggerfallItemFactory _itemFactory;
     private readonly CorpseLootCoordinator _corpseLoot;
 
     internal DaggerfallCorpseLootModule(
@@ -51,7 +53,8 @@ internal sealed class DaggerfallCorpseLootModule
         IRandomService random,
         DaggerfallUniqueItemAllocator uniqueItems,
         ProgressionState progression,
-        DaggerfallLootInteractionTuning tuning)
+        DaggerfallLootInteractionTuning tuning,
+        DaggerfallCharacterState character)
     {
         _perception = perception ?? throw new ArgumentNullException(nameof(perception));
         _spatial = spatial ?? throw new ArgumentNullException(nameof(spatial));
@@ -65,6 +68,8 @@ internal sealed class DaggerfallCorpseLootModule
         _uniqueItems = uniqueItems ?? throw new ArgumentNullException(nameof(uniqueItems));
         _progression = progression ?? throw new ArgumentNullException(nameof(progression));
         _tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
+        _character = character ?? throw new ArgumentNullException(nameof(character));
+        _itemFactory = new DaggerfallItemFactory(_catalog, _random);
         _corpseLoot = new CorpseLootCoordinator(_actors.Entities, _containers);
     }
 
@@ -116,12 +121,13 @@ internal sealed class DaggerfallCorpseLootModule
         if (state.Actor.TryGet<CorpseLootComponent>(out _)) return;
 
         // A corpse is a distinct container, even when the actor already has a quiver.
-        IReadOnlyList<InventoryContainerSeed> seeds = GenerateSeeds(fact, actor);
+        IReadOnlyList<GeneratedLootSeed> generated = GenerateSeeds(fact, actor);
+        IReadOnlyList<InventoryContainerSeed> seeds = generated.Select(value => value.Seed).ToArray();
         // Donor RemoveLootContainer disables interaction but preserves the
         // corpse marker. Even an empty generated corpse is targetable once so
         // the player receives a truthful semantic result.
         state.Actor.Add(_corpseLoot.Create(CorpseIdentity(fact.ActorId), CorpseType, fact.OriginatingSequence, seeds));
-        RegisterGeneratedMetadata(fact.ActorId, seeds);
+        RegisterGeneratedMetadata(fact.ActorId, generated);
     }
 
     /// <summary>Reads Engine visibility and prepares, but does not publish, an explicit loot action.</summary>
@@ -180,6 +186,34 @@ internal sealed class DaggerfallCorpseLootModule
             return new PendingCorpseLoot(actorId, corpse, [], IsEmpty: true);
 
         // All fallible fact shaping happens before the later Engine publish.
+        InventoryView contents = _corpseLoot.Read(corpse)!;
+        LootAwardedFact[] facts = contents.Stacks
+            .OrderBy(stack => stack.Definition.Value, StringComparer.Ordinal)
+            .Select(stack => new LootAwardedFact(actorId, stack.Definition.Value, stack.Quantity, corpse.OriginatingSequence))
+            .Concat(contents.UniqueItems
+                .OrderBy(item => item.Entity.Value)
+                .Select(item => new LootAwardedFact(actorId, item.Definition.Value, 1, corpse.OriginatingSequence)))
+            .ToArray();
+        return facts.Length == 0
+            ? new PendingCorpseLoot(actorId, corpse, [], IsEmpty: true)
+            : new PendingCorpseLoot(actorId, corpse, facts, IsEmpty: false);
+    }
+
+    /// <summary>
+    /// Shapes loot for a corpse that the contextual activation owner already selected through an
+    /// Engine visibility query. This preserves that target instead of issuing a second broad query
+    /// which could choose an overlapping corpse, while still refusing an unloaded or no-longer
+    /// interactable component.
+    /// </summary>
+    internal PendingCorpseLoot? PrepareResolvedLoot(long actorId)
+    {
+        if (!_actors.TryGet(actorId, out ActorState selectedActor)
+            || !selectedActor.Actor.TryGet<CorpseLootComponent>(out CorpseLootComponent? corpse)
+            || corpse is not { IsInteractable: true }) return null;
+
+        if (!corpse.HasRegisteredInventory)
+            return new PendingCorpseLoot(actorId, corpse, [], IsEmpty: true);
+
         InventoryView contents = _corpseLoot.Read(corpse)!;
         LootAwardedFact[] facts = contents.Stacks
             .OrderBy(stack => stack.Definition.Value, StringComparer.Ordinal)
@@ -279,16 +313,23 @@ internal sealed class DaggerfallCorpseLootModule
             _itemInstances.RegisterUnique(unique.EntityId, DaggerfallItemInstanceMetadata.Restore(unique.ItemId, unique.Metadata));
     }
 
-    private void RegisterGeneratedMetadata(long actorId, IEnumerable<InventoryContainerSeed> seeds)
+    private void RegisterGeneratedMetadata(long actorId, IEnumerable<GeneratedLootSeed> seeds)
     {
         DaggerfallItemOwner owner = DaggerfallItemOwner.Corpse(actorId);
-        foreach (InventoryContainerSeed seed in seeds)
+        foreach (GeneratedLootSeed generated in seeds)
         {
-            DaggerfallItemDefinition definition = _catalog.Items[new DaggerfallItemId(seed.Item.Value)];
+            InventoryContainerSeed seed = generated.Seed;
+            DaggerfallItemDefinition definition = _catalog.RequireItem(new DaggerfallItemId(seed.Item.Value));
             if (seed.Stack is InventoryStackId stack)
-                _itemInstances.RegisterDefaultStack(owner, new InventoryStack(stack, ItemDefinitionId.Parse(seed.Item.Value), seed.Quantity), definition);
+            {
+                if (generated.Metadata is { } metadata) _itemInstances.RegisterStack(owner, stack, metadata);
+                else _itemInstances.RegisterDefaultStack(owner, new InventoryStack(stack, ItemDefinitionId.Parse(seed.Item.Value), seed.Quantity), definition);
+            }
             else if (seed.UniqueItem is DurableIdentityReference unique)
-                _itemInstances.RegisterDefaultUnique(unique.Value, definition, owner);
+            {
+                if (generated.Metadata is { } metadata) _itemInstances.RegisterUnique(unique.Value, metadata);
+                else _itemInstances.RegisterDefaultUnique(unique.Value, definition, owner);
+            }
         }
     }
 
@@ -309,7 +350,7 @@ internal sealed class DaggerfallCorpseLootModule
         }
     }
 
-    private IReadOnlyList<InventoryContainerSeed> GenerateSeeds(ActorDiedFact fact, DaggerfallActorDefinition actor)
+    private IReadOnlyList<GeneratedLootSeed> GenerateSeeds(ActorDiedFact fact, DaggerfallActorDefinition actor)
     {
         if (actor.LootTableKey is not string tableKey) return [];
         DaggerfallLootResult loot = DaggerfallLootPolicy.Generate(
@@ -321,24 +362,64 @@ internal sealed class DaggerfallCorpseLootModule
                 LootRandomKey.Scope,
                 LootRandomKey.For(fact.OriginatingGeneration, fact.OriginatingSequence, fact.ActorId, id),
                 minimum,
-                maximum)).Value));
-        List<InventoryContainerSeed> seeds = [];
+                maximum)).Value),
+            _character.Identity.Gender == DaggerfallCharacterGender.Male ? "MensClothing" : "WomensClothing");
+        List<GeneratedLootSeed> seeds = [];
         foreach ((DaggerfallLootDrop drop, int ordinal) in loot.Drops.Select((drop, ordinal) => (drop, ordinal)))
         {
-            DaggerfallItemDefinition item = _catalog.Items[new DaggerfallItemId(drop.ItemId)];
+            if (_catalog.Magic.MagicItems.ContainsKey(drop.ItemId))
+            {
+                DaggerfallCreatedItem createdMagic = _itemFactory.Create(new DaggerfallItemCreateRequest(
+                    "Magic",
+                    $"loot.{fact.ActorId}.{fact.OriginatingSequence}.{ordinal}.magic",
+                    DaggerfallItemOwner.Corpse(fact.ActorId),
+                    Level: _progression.Level,
+                    Race: _character.Identity.RaceId,
+                    Gender: _character.Identity.Gender == DaggerfallCharacterGender.Male ? "male" : "female",
+                    MagicItemKey: drop.ItemId));
+                DurableIdentityReference magicIdentity = _uniqueItems.AllocateReference();
+                seeds.Add(new GeneratedLootSeed(new InventoryContainerSeed(createdMagic.Item, UniqueItem: magicIdentity), createdMagic.Metadata));
+                continue;
+            }
+            DaggerfallItemDefinition item = _catalog.RequireItem(new DaggerfallItemId(drop.ItemId));
+            if (item.Template is DaggerfallItemTemplateDefinition template)
+            {
+                bool appearance = template.Groups.Contains("Armor", StringComparer.Ordinal)
+                    || template.Groups.Contains("MensClothing", StringComparer.Ordinal)
+                    || template.Groups.Contains("WomensClothing", StringComparer.Ordinal);
+                DaggerfallCreatedItem created = _itemFactory.Create(new DaggerfallItemCreateRequest(
+                    template.Groups[0],
+                    $"loot.{fact.ActorId}.{fact.OriginatingSequence}.{ordinal}.{template.Index}",
+                    DaggerfallItemOwner.Corpse(fact.ActorId),
+                    TemplateIndex: template.Index,
+                    Level: _progression.Level,
+                    Race: appearance ? _character.Identity.RaceId : null,
+                    Gender: appearance ? _character.Identity.Gender == DaggerfallCharacterGender.Male ? "male" : "female" : null));
+                if (created.Stackable)
+                {
+                    InventoryStackId stack = DaggerfallInventoryStackIds.ForLoot(fact.ActorId, fact.OriginatingSequence, ordinal);
+                    seeds.Add(new GeneratedLootSeed(new InventoryContainerSeed(created.Item, created.Quantity, Stack: stack), created.Metadata));
+                }
+                else
+                {
+                    DurableIdentityReference createdIdentity = _uniqueItems.AllocateReference();
+                    seeds.Add(new GeneratedLootSeed(new InventoryContainerSeed(created.Item, UniqueItem: createdIdentity), created.Metadata));
+                }
+                continue;
+            }
             if (item.IsFungible)
             {
-                seeds.Add(new InventoryContainerSeed(new InventoryItemId(drop.ItemId), checked((ulong)drop.Quantity),
-                    Stack: DaggerfallInventoryStackIds.ForLoot(fact.ActorId, fact.OriginatingSequence, ordinal)));
+                seeds.Add(new GeneratedLootSeed(new InventoryContainerSeed(new InventoryItemId(drop.ItemId), checked((ulong)drop.Quantity),
+                    Stack: DaggerfallInventoryStackIds.ForLoot(fact.ActorId, fact.OriginatingSequence, ordinal)), null));
                 continue;
             }
             // Pick the drop's durable identity first, then derive the Engine handle
             // from it; the seed carries both facts so the container coordinator can
             // materialize the item without re-deciding what the identity means.
             DurableIdentityReference identity = _uniqueItems.AllocateReference();
-            seeds.Add(new InventoryContainerSeed(
+            seeds.Add(new GeneratedLootSeed(new InventoryContainerSeed(
                 new InventoryItemId(drop.ItemId),
-                UniqueItem: identity));
+                UniqueItem: identity), null));
         }
         return seeds;
     }
@@ -356,3 +437,4 @@ internal sealed record CorpseLootCommitEvidence(long ActorId, bool Committed, st
 
 /// <summary>Copied Engine visibility receipt and the deterministic corpse choice for one explicit interaction.</summary>
 internal sealed record CorpseLootEvidence(PerceptionQueryRequest Request, PerceptionReadoutLeaseReceipt Receipt, long? SelectedActorId);
+internal sealed record GeneratedLootSeed(InventoryContainerSeed Seed, DaggerfallItemInstanceMetadata? Metadata);

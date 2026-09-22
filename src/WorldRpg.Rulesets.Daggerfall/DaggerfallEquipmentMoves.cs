@@ -30,7 +30,8 @@ internal sealed record EquipmentMoveResult(EquipmentMoveOutcome Outcome, string?
 internal sealed class DaggerfallEquipmentMoves(
     MechanicsInventoryCoordinator inventory,
     MechanicsEquipmentCoordinator equipment,
-    DaggerfallDefinitions definitions)
+    DaggerfallDefinitions definitions,
+    Func<IReadOnlyList<string>>? forbiddenEquipment = null)
 {
     internal const int GridCapacity = 50;
     private readonly InventoryGridLayout _layout = new(GridCapacity);
@@ -113,9 +114,12 @@ internal sealed class DaggerfallEquipmentMoves(
 
     internal EquipmentMoveResult MoveToSlot(UniqueItem item, SlotId slot)
     {
-        if (!definitions.Items.TryGetValue(new DaggerfallItemId(item.Definition.Value), out DaggerfallItemDefinition? definition))
+        if (!definitions.TryResolveItem(new DaggerfallItemId(item.Definition.Value), out DaggerfallItemDefinition definition))
             return new(EquipmentMoveOutcome.UnknownItem);
         if (!IsContained(item)) return new(EquipmentMoveOutcome.UnknownItem);
+        if (forbiddenEquipment?.Invoke() is { } restrictions
+            && DaggerfallCustomCareerPolicy.Forbids(definition, restrictions, out string restriction))
+            return new(EquipmentMoveOutcome.Rejected, restriction);
         if (!DaggerfallEquipmentPolicy.IsCompatible(definitions, definition, slot.Value))
             return new(EquipmentMoveOutcome.Incompatible, "The item does not fit this equipment slot.");
         IReadOnlyList<SlotId> slots = DaggerfallEquipmentPolicy.TargetSlots(definition, slot);
@@ -144,6 +148,22 @@ internal sealed class DaggerfallEquipmentMoves(
             && _layout.Position(LayoutKey(conflicts[0])) is not null)
             _layout.Move(LayoutKey(conflicts[0]), targetGrid);
         return new(EquipmentMoveOutcome.Applied);
+    }
+
+    /// <summary>Removes equipment made ineligible by a newly committed custom career.</summary>
+    internal int UnequipForbidden()
+    {
+        IReadOnlyList<string> restrictions = forbiddenEquipment?.Invoke() ?? [];
+        int removed = 0;
+        foreach (UniqueItem item in equipment.Read().Assignments.Select(assignment => assignment.Item).DistinctBy(item => item.EntityId).ToArray())
+        {
+            if (!definitions.TryResolveItem(new DaggerfallItemId(item.Definition.Value), out DaggerfallItemDefinition definition)
+                || !DaggerfallCustomCareerPolicy.Forbids(definition, restrictions, out _)) continue;
+            equipment.Unequip(item);
+            removed++;
+        }
+        if (removed != 0) ReconcileLayout();
+        return removed;
     }
 
     private bool IsContained(UniqueItem item) =>

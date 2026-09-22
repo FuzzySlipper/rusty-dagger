@@ -9,7 +9,7 @@ using Daggerfall.Import.Normalized;
 
 namespace Daggerfall.Import.Tool;
 
-internal static class Program
+internal static partial class Program
 {
     private const long MaximumIndividualSourceBytes = 128L * 1024L * 1024L;
     private const long MaximumTotalSourceBytes = 512L * 1024L * 1024L;
@@ -118,6 +118,8 @@ internal static class Program
                 return RunQuestsCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "cinematic-media") return RunCinematicMediaCommand(args);
+
             if (args.Length != 0 && args[0] == "videos")
             {
                 return RunVideosCommand(args);
@@ -155,7 +157,7 @@ internal static class Program
                     throw new InvalidOperationException("The import command is not known.");
             }
         }
-        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException or FormatException or System.Text.Json.JsonException)
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException or InvalidDataException or UnauthorizedAccessException or FormatException or System.Text.Json.JsonException)
         {
             Console.Error.WriteLine($"daggerfall-import-tool: {exception.Message}");
             return 1;

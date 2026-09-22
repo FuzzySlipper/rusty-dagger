@@ -83,6 +83,7 @@ public sealed record DaggerfallCareerRecord(
     IReadOnlyList<string> Attributes,
     IReadOnlyList<int> AttributeValues,
     int HitPointsPerLevel,
+    int SpellPointMultiplierMilli,
     float AdvancementMultiplier,
     IReadOnlyList<string> ResistanceElements,
     IReadOnlyList<string> ImmunityElements,
@@ -122,6 +123,12 @@ public sealed record DaggerfallCareerRecord(
         if (HitPointsPerLevel <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(HitPointsPerLevel), HitPointsPerLevel, $"Career '{Id}' must carry positive hit points per level.");
+        }
+
+        if (SpellPointMultiplierMilli is not (500 or 1000 or 1500 or 1750 or 2000 or 3000))
+        {
+            throw new ArgumentOutOfRangeException(nameof(SpellPointMultiplierMilli), SpellPointMultiplierMilli,
+                $"Career '{Id}' must carry one classic spell-point multiplier.");
         }
 
         if (!(AdvancementMultiplier > 0f))

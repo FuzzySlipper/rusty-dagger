@@ -41,6 +41,17 @@ internal sealed class DaggerfallLootPresentation(DaggerfallCorpseLootModule loot
         return prepared.IsEmpty ? prepared : null;
     }
 
+    /// <summary>Opens the corpse chosen by contextual activation without reselecting an overlap.</summary>
+    internal PendingCorpseLoot? OpenResolved(long actorId)
+    {
+        PendingCorpseLoot? prepared = loot.PrepareResolvedLoot(actorId);
+        _actor = prepared?.ActorId;
+        if (prepared is null) { Message = "That loot is no longer available."; return null; }
+        _opening++;
+        Message = prepared.IsEmpty ? "Empty. This container remains open until Exit." : "Choose an item to take. Stack buttons take one unit.";
+        return prepared.IsEmpty ? prepared : null;
+    }
+
     internal void Close(string? container)
     {
         if (container == Token) _actor = null;

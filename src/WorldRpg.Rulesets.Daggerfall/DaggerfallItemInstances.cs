@@ -35,7 +35,11 @@ internal sealed record DaggerfallItemInstanceMetadata(
     string? QuestId,
     string? QuestItemSymbol,
     string? Enchantment,
-    DaggerfallItemOwner Owner)
+    DaggerfallItemOwner Owner,
+    string? Race = null,
+    string? Gender = null,
+    string? Dye = null,
+    int? BookId = null)
 {
     internal DaggerfallItemInstanceMetadata Validate()
     {
@@ -45,6 +49,10 @@ internal sealed record DaggerfallItemInstanceMetadata(
             throw new ArgumentOutOfRangeException(nameof(CurrentCondition), "Item variant and condition must be within their authored range.");
         if ((QuestId is null) != (QuestItemSymbol is null))
             throw new ArgumentException("Quest item identity requires both quest and symbol.");
+        if (Race is { Length: 0 } || Gender is { Length: 0 } || Dye is { Length: 0 })
+            throw new ArgumentException("Item appearance metadata cannot contain empty values.");
+        if (BookId < 0)
+            throw new ArgumentOutOfRangeException(nameof(BookId), "Book identity cannot be negative.");
         Owner.Validate();
         return this;
     }
@@ -61,7 +69,11 @@ internal sealed record DaggerfallItemInstanceMetadata(
             && Stolen == other.Stolen
             && string.Equals(QuestId, other.QuestId, StringComparison.Ordinal)
             && string.Equals(QuestItemSymbol, other.QuestItemSymbol, StringComparison.Ordinal)
-            && string.Equals(Enchantment, other.Enchantment, StringComparison.Ordinal);
+            && string.Equals(Enchantment, other.Enchantment, StringComparison.Ordinal)
+            && string.Equals(Race, other.Race, StringComparison.Ordinal)
+            && string.Equals(Gender, other.Gender, StringComparison.Ordinal)
+            && string.Equals(Dye, other.Dye, StringComparison.Ordinal)
+            && BookId == other.BookId;
     }
 
     internal static DaggerfallItemInstanceMetadata Default(DaggerfallItemDefinition definition, DaggerfallItemOwner owner) =>
@@ -69,12 +81,12 @@ internal sealed record DaggerfallItemInstanceMetadata(
             Identified: true, Stolen: false, QuestId: null, QuestItemSymbol: null, Enchantment: null, owner).Validate();
 
     internal DaggerfallItemMetadataSave Capture() => new(Material, Variant, CurrentCondition, MaximumCondition,
-        Identified, Stolen, QuestId, QuestItemSymbol, Enchantment, new DaggerfallItemOwnerSave(Owner.Scope, Owner.Id));
+        Identified, Stolen, QuestId, QuestItemSymbol, Enchantment, new DaggerfallItemOwnerSave(Owner.Scope, Owner.Id), Race, Gender, Dye, BookId);
 
     internal static DaggerfallItemInstanceMetadata Restore(string itemId, DaggerfallItemMetadataSave saved) =>
         new DaggerfallItemInstanceMetadata(itemId, saved.Material, saved.Variant, saved.CurrentCondition, saved.MaximumCondition,
             saved.Identified, saved.Stolen, saved.QuestId, saved.QuestItemSymbol, saved.Enchantment,
-            new DaggerfallItemOwner(saved.Owner.Scope, saved.Owner.Id)).Validate();
+            new DaggerfallItemOwner(saved.Owner.Scope, saved.Owner.Id), saved.Race, saved.Gender, saved.Dye, saved.BookId).Validate();
 }
 
 /// <summary>

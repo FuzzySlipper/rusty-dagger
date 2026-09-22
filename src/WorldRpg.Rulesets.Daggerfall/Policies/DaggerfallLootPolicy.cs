@@ -11,19 +11,19 @@ internal static class DaggerfallLootPolicy
 {
     private static readonly IReadOnlyList<CategorySpec> Categories =
     [
-        new("weapons", LevelScaled: false, PoolKind.Weapons),
-        new("armor", LevelScaled: false, PoolKind.ArmorAndShields),
-        new("creature1", LevelScaled: true, PoolKind.Unsupported),
-        new("creature2", LevelScaled: true, PoolKind.Unsupported),
-        new("creature3", LevelScaled: false, PoolKind.Unsupported),
-        new("plant1", LevelScaled: true, PoolKind.Unsupported),
-        new("plant2", LevelScaled: true, PoolKind.Unsupported),
-        new("misc1", LevelScaled: false, PoolKind.Unsupported),
-        new("misc2", LevelScaled: false, PoolKind.Unsupported),
-        new("magic", LevelScaled: false, PoolKind.Unsupported),
-        new("clothing", LevelScaled: false, PoolKind.Unsupported),
-        new("books", LevelScaled: false, PoolKind.Unsupported),
-        new("religious", LevelScaled: false, PoolKind.Unsupported),
+        new("weapons", LevelScaled: false, "Weapons"),
+        new("armor", LevelScaled: false, "Armor"),
+        new("creature1", LevelScaled: true, "CreatureIngredients1"),
+        new("creature2", LevelScaled: true, "CreatureIngredients2"),
+        new("creature3", LevelScaled: false, "CreatureIngredients3"),
+        new("plant1", LevelScaled: true, "PlantIngredients1"),
+        new("plant2", LevelScaled: true, "PlantIngredients2"),
+        new("misc1", LevelScaled: false, "MiscellaneousIngredients1"),
+        new("misc2", LevelScaled: false, "MiscellaneousIngredients2"),
+        new("magic", LevelScaled: false, Mode: PoolMode.Magic),
+        new("clothing", LevelScaled: false, Mode: PoolMode.PlayerClothing),
+        new("books", LevelScaled: false, "Books"),
+        new("religious", LevelScaled: false, "ReligiousItems"),
     ];
 
     private const int CategorySlots = 3;
@@ -32,7 +32,8 @@ internal static class DaggerfallLootPolicy
         DaggerfallDefinitions definitions,
         string tableKey,
         int playerLevel,
-        Func<string, int, int, int> draw)
+        Func<string, int, int, int> draw,
+        string? clothingGroup = null)
     {
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentException.ThrowIfNullOrWhiteSpace(tableKey);
@@ -56,8 +57,12 @@ internal static class DaggerfallLootPolicy
             int chance = table.Categories.TryGetValue(spec.Name, out int value) ? value : 0;
             if (chance == 0) continue;
             int effectiveChance = spec.LevelScaled ? checked(chance * playerLevel) : chance;
-            IReadOnlyList<DaggerfallItemDefinition> pool = Pool(definitions, spec.Pool);
-            bool supported = pool.Count > 0;
+            IReadOnlyList<DaggerfallItemDefinition> pool = Pool(definitions, spec.Pool, clothingGroup);
+            IReadOnlyList<string> magic = spec.Mode == PoolMode.Magic
+                ? definitions.Magic.MagicItems.Values.Where(item => item.Type == 0).OrderBy(item => item.Key, StringComparer.Ordinal).Select(item => item.Key).ToArray()
+                : [];
+            int poolCount = spec.Mode == PoolMode.Magic ? magic.Count : pool.Count;
+            bool supported = poolCount > 0;
             List<DaggerfallLootRoll> rolls = [];
             int slotChance = effectiveChance;
             for (int slot = 0; slot < CategorySlots; slot++)
@@ -68,8 +73,8 @@ internal static class DaggerfallLootPolicy
                 int? pick = null;
                 if (success && supported)
                 {
-                    pick = Draw(draw, PickRollId(tableKey, spec.Name, slot), 0, pool.Count - 1);
-                    item = pool[pick.Value].Id.Value;
+                    pick = Draw(draw, PickRollId(tableKey, spec.Name, slot), 0, poolCount - 1);
+                    item = spec.Mode == PoolMode.Magic ? magic[pick.Value] : pool[pick.Value].Id.Value;
                     drops.Add(new(item, 1, spec.Name));
                 }
                 rolls.Add(new(slot, slotChance, roll, success, pick, item));
@@ -93,16 +98,32 @@ internal static class DaggerfallLootPolicy
         return value;
     }
 
-    private static IReadOnlyList<DaggerfallItemDefinition> Pool(DaggerfallDefinitions definitions, PoolKind kind) =>
-        kind switch
-        {
-            PoolKind.Weapons => definitions.Items.Values.Where(item => item.Weapon is not null).OrderBy(item => item.Id.Value).ToArray(),
-            PoolKind.ArmorAndShields => definitions.Items.Values.Where(item => item.Armor is not null || item.Shield is not null).OrderBy(item => item.Id.Value).ToArray(),
-            _ => [],
-        };
+    private static IReadOnlyList<DaggerfallItemDefinition> Pool(DaggerfallDefinitions definitions, PoolKind kind, string? clothingGroup)
+    {
+        if (kind.Mode == PoolMode.TemplateGroup) return TemplateGroup(definitions, kind.Group!);
+        if (kind.Mode == PoolMode.PlayerClothing && clothingGroup is "MensClothing" or "WomensClothing")
+            return TemplateGroup(definitions, clothingGroup);
+        return [];
+    }
 
-    private readonly record struct CategorySpec(string Name, bool LevelScaled, PoolKind Pool);
-    private enum PoolKind { Unsupported, Weapons, ArmorAndShields }
+    private static IReadOnlyList<DaggerfallItemDefinition> TemplateGroup(DaggerfallDefinitions definitions, string group) =>
+        definitions.TemplateItems.Values
+            // The catalog includes material and magic Engine definitions for save resolution;
+            // loot selects a donor template once, then the factory chooses its material/meaning.
+            .Where(item => item.Template is { } template
+                && item.Id.Value == $"template-{template.Index}"
+                && template.Groups.Contains(group, StringComparer.Ordinal))
+            .OrderBy(item => item.Template!.Index)
+            .ToArray();
+
+    private readonly record struct CategorySpec(string Name, bool LevelScaled, string? TemplateGroup = null, PoolMode Mode = PoolMode.TemplateGroup)
+    {
+        internal PoolKind Pool => Mode == PoolMode.PlayerClothing ? new(PoolMode.PlayerClothing, null) : TemplateGroup is null ? new(PoolMode.Unsupported, null) : new(PoolMode.TemplateGroup, TemplateGroup);
+    }
+
+    private readonly record struct PoolKind(PoolMode Mode, string? Group);
+
+    private enum PoolMode { Unsupported, TemplateGroup, PlayerClothing, Magic }
 }
 
 internal sealed record DaggerfallLootResult(

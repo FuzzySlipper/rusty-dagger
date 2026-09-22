@@ -36,7 +36,8 @@ internal sealed partial class DaggerfallSession
                     RequireCharacterDraft();
                     State.Character.ReplacePending(Choices(action));
                     State.Character.CommitChoices();
-                    Presentation.SetOutcome("Character identity committed.");
+                    int unequipped = _equipmentMoves.UnequipForbidden();
+                    Presentation.SetOutcome(unequipped == 0 ? "Character identity committed." : $"Character identity committed; removed {unequipped} forbidden equipped item(s).");
                     break;
                 default:
                     throw new ArgumentException($"'{action.Action}' is not a character action.", nameof(action));
@@ -64,7 +65,29 @@ internal sealed partial class DaggerfallSession
             "female" => DaggerfallCharacterGender.Female,
             _ => throw new ArgumentException("Character gender must be male or female.", nameof(action)),
         };
+        DaggerfallCustomCareerChoices? custom = action.Career == DaggerfallCustomCareerPolicy.CareerId
+            ? new DaggerfallCustomCareerChoices(action.Name,
+                List(action.PrimarySkills, "primary skills"), List(action.MajorSkills, "major skills"), List(action.MinorSkills, "minor skills"),
+                action.HitPointsPerLevel ?? throw new ArgumentException("Custom class hit points per level are incomplete.", nameof(action)),
+                Traits(action.Advantages, "advantages"), Traits(action.Disadvantages, "disadvantages"))
+            : null;
         return new DaggerfallCharacterCreationChoices(action.Name, action.Race, gender, face,
-            (DaggerfallCharacterReflexes)reflexes, action.Career);
+            (DaggerfallCharacterReflexes)reflexes, action.Career, custom);
+    }
+
+    private static string[] List(string? value, string field)
+    {
+        if (value is null) throw new ArgumentException($"Custom class {field} are incomplete.");
+        return value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+    }
+
+    private static DaggerfallCustomCareerTrait[] Traits(string? value, string field)
+    {
+        if (value is null) throw new ArgumentException($"Custom class {field} are incomplete.");
+        return value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Select(entry =>
+        {
+            string[] pair = entry.Split(':', 2, StringSplitOptions.TrimEntries);
+            return new DaggerfallCustomCareerTrait(pair[0], pair.Length == 2 ? pair[1] : null);
+        }).ToArray();
     }
 }

@@ -220,9 +220,9 @@ public sealed class DaggerfallSkillUseReactionTests
         ProgressionState progression = new();
         DaggerfallRewardReactions rewards = new(
             progression,
-            new DaggerfallMechanicsState().CreateStats(player, player.PlayerInitialVitals),
+            new DaggerfallMechanicsState().CreateStats(player, DaggerfallPlayerVitals.Initial(player.Stats, definitions.Catalogs.RequireCareer("class00"))),
             new EntityId(DaggerfallActorIdentity.PlayerEntityId),
-            player,
+            () => definitions.Catalogs.RequireCareer("class00"),
             RandomMinimums(),
             new Dictionary<long, DaggerfallActorDefinition> { [9000] = definitions.RequireActor(new DaggerfallActorId("thief")) });
 
@@ -237,7 +237,7 @@ public sealed class DaggerfallSkillUseReactionTests
         DaggerfallDefinitions definitions = LoadDefinitions();
         DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
         ProgressionState progression = new();
-        StatsComponent stats = new DaggerfallMechanicsState().CreateStats(player, player.PlayerInitialVitals);
+        StatsComponent stats = new DaggerfallMechanicsState().CreateStats(player, DaggerfallPlayerVitals.Initial(player.Stats, definitions.Catalogs.RequireCareer("class00")));
         configure?.Invoke(stats);
         return (new DaggerfallSkillUseReactions(progression, stats, definitions, player), progression, stats);
     }
