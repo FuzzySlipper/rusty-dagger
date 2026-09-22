@@ -8,7 +8,8 @@ internal sealed partial class DaggerfallSession
     /// admitted calendar, canonical player state, RNG, and compiled active-effect lifecycle.
     /// </summary>
     internal DaggerfallDiseaseAdmission InflictDisease(DaggerfallDiseaseExposure exposure) =>
-        DaggerfallDiseasePolicy.InflictDisease(State.Effects, State.Actors, _random, () => _time.Calendar.DayNumber, exposure, State.Character.Career);
+        DaggerfallDiseasePolicy.InflictDisease(State.Effects, State.Actors, _random, () => _time.Calendar.DayNumber,
+            exposure with { BiographyModifier = checked(exposure.BiographyModifier + (State.Character.Background?.Modifiers.DiseaseResistance ?? 0)) }, State.Character.Career);
 
     internal int CureDisease(DaggerfallClassicDisease disease) =>
         DaggerfallDiseasePolicy.CureDisease(State.Effects, State.Actors.Player.DurableId, disease);

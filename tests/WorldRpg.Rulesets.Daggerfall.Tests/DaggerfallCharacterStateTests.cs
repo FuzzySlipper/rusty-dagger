@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Policies;
@@ -18,6 +20,14 @@ public sealed class DaggerfallCharacterStateTests
         Assert.NotNull(action);
         Assert.Equal(("Aubk-i", "khajiit", "female", 3, 1, "class08"), (action!.Name, action.Race, action.Gender, action.FaceIndex, action.Reflexes, action.Career));
         Assert.Null(DaggerfallUiAction.Parse("""{"action":"character-commit","name":"Aubk-i","race":"khajiit","gender":"female","faceIndex":3,"career":"class08"}"""u8));
+    }
+
+    [Fact]
+    public void Background_action_requires_all_normalized_answer_and_allocation_fields()
+    {
+        const string complete = """{"action":"character-update","name":"Aubk-i","race":"khajiit","gender":"female","faceIndex":3,"reflexes":1,"career":"class08","backgroundAnswers":"1:a,2:b","attributeAllocations":"strength:6","skillAllocations":"medical:6"}""";
+        Assert.NotNull(DaggerfallUiAction.Parse(System.Text.Encoding.UTF8.GetBytes(complete)));
+        Assert.Null(DaggerfallUiAction.Parse(System.Text.Encoding.UTF8.GetBytes(complete.Replace(",\"skillAllocations\":\"medical:6\"", string.Empty, StringComparison.Ordinal))));
     }
 
     [Fact]
@@ -111,6 +121,7 @@ public sealed class DaggerfallCharacterStateTests
         Assert.Equal(37, stats.GetStat(StatId.Parse("health-maximum")).BaseValue);
         Assert.Equal(DaggerfallFormulaPolicy.SpellPoints(60, 1500), stats.GetStat(StatId.Parse("magicka-maximum")).BaseValue);
         Assert.Equal(["forbidden-material:steel"], character.CustomCareer!.ForbiddenEquipment);
+        Assert.Equal(character.CustomCareer.ForbiddenEquipment, character.Career.ForbiddenEquipment);
         Assert.True(DaggerfallCustomCareerPolicy.Forbids(definitions.RequireItem(new DaggerfallItemId("iron-helm")), ["forbidden-armor:plate"], out string equipmentReason));
         Assert.Contains("plate", equipmentReason, StringComparison.Ordinal);
 
@@ -140,6 +151,127 @@ public sealed class DaggerfallCharacterStateTests
         Assert.Throws<ArgumentException>(() => character.CommitChoices());
     }
 
+    [Fact]
+    public void Background_rolls_are_allocated_once_and_the_normalized_biography_round_trips()
+    {
+        DaggerfallCharacterState character = Create(out DaggerfallDefinitions definitions, out StatsComponent stats);
+        IRandomService random = MinimumRandom();
+        character.BeginChoices(random);
+        DaggerfallCharacterCreationChoices draft = Assert.IsType<DaggerfallCharacterCreationChoices>(character.Pending);
+        DaggerfallCharacterBackgroundSave rolled = Assert.IsType<DaggerfallCharacterBackgroundSave>(draft.Background);
+        DaggerfallCareerDefinition career = definitions.Catalogs.RequireCareer("class00");
+        DaggerfallBiographyDefinition biography = definitions.Biographies.Biographies.Single(value => value.ClassIndex == rolled.BiographyClassIndex);
+        DaggerfallBiographyAnswerSave[] answers = biography.Questions.Select(question =>
+        {
+            DaggerfallBiographyAnswerDefinition selected = question.Answers.FirstOrDefault(answer => answer.Effects.Any(effect => effect.Kind == DaggerfallBiographyEffectKind.Item)) ?? question.Answers[0];
+            return new DaggerfallBiographyAnswerSave(question.Number, selected.Letter);
+        }).ToArray();
+        DaggerfallCharacterBackgroundSave allocated = DaggerfallCharacterBackgroundPolicy.Update(definitions, career, character.Pending!.ToIdentity(), rolled, answers,
+            [new DaggerfallCreationAllocationSave(career.Attributes[0], rolled.AttributeBonusPool)],
+            [new DaggerfallCreationAllocationSave(career.PrimarySkills[0], 6), new DaggerfallCreationAllocationSave(career.MajorSkills[0], 6), new DaggerfallCreationAllocationSave(career.MinorSkills[0], 6)]);
+        character.ReplacePending(draft with { Background = allocated });
+        DaggerfallCharacterBackgroundSave committed = Assert.IsType<DaggerfallCharacterBackgroundSave>(character.CommitChoices());
+
+        Assert.Equal(12, committed.Answers.Length);
+        Assert.NotEmpty(committed.Biography);
+        Assert.NotEmpty(committed.StartingGrants);
+        Assert.Contains(DaggerfallCharacterBackgroundPolicy.Present(definitions, career, character.Identity, committed).UnsupportedEffects, effect => effect.StartsWith("A poison-resistance", StringComparison.Ordinal));
+        Assert.Equal(career.AttributeValues[0] + allocated.AttributeBonusPool, stats.GetStat(StatId.Parse(career.Attributes[0])).BaseValue);
+        Assert.Equal(committed.Biography, Assert.IsType<DaggerfallCharacterBackgroundPresentation>(character.ReadCreation().Background).Biography);
+        character.BeginChoices();
+        Assert.Throws<ArgumentException>(() => character.CommitChoices());
+
+        DaggerfallCharacterSave save = character.Capture();
+        save.Validate(definitions);
+        DaggerfallCharacterBackgroundSave corruptSkill = committed with
+        {
+            RolledSkills = committed.RolledSkills.Select((skill, index) => index == 0 ? skill with { Points = 99 } : skill).ToArray(),
+        };
+        Assert.Throws<ArgumentException>(() => (save with { Background = corruptSkill }).Validate(definitions));
+        DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
+        StatsComponent restoredStats = new DaggerfallMechanicsState().CreateStats(player, DaggerfallPlayerVitals.Initial(player.Stats, career));
+        restoredStats.GetStat(StatId.Parse(career.Attributes[0])).BaseValue = stats.GetStat(StatId.Parse(career.Attributes[0])).BaseValue;
+        DaggerfallCharacterState restored = new(definitions, restoredStats, player, save);
+        Assert.Equal(committed.Biography, restored.Background!.Biography);
+        Assert.Equal(committed.Biography, Assert.IsType<DaggerfallCharacterBackgroundPresentation>(restored.ReadCreation().Background).Biography);
+    }
+
+    [Fact]
+    public void Background_reroll_uses_a_new_keyed_sequence_while_the_current_draft_stays_fixed()
+    {
+        DaggerfallCharacterState character = Create(out _, out _);
+        IRandomService random = SequenceRandom(out SequenceRandomProxy recorder);
+
+        character.BeginChoices(random);
+        DaggerfallCharacterBackgroundSave first = Assert.IsType<DaggerfallCharacterBackgroundSave>(character.Pending!.Background);
+        int callsAfterFirstRoll = recorder.Requests.Count;
+        DaggerfallCharacterBackgroundPresentation presented = Assert.IsType<DaggerfallCharacterBackgroundPresentation>(character.ReadCreation().Background);
+        Assert.Equal(first.RolledAttributes[0].Points, presented.Attributes.Single(attribute => attribute.Id == first.RolledAttributes[0].Id).Rolled);
+        Assert.Equal(callsAfterFirstRoll, recorder.Requests.Count);
+
+        character.RerollBackground(random);
+        DaggerfallCharacterBackgroundSave second = Assert.IsType<DaggerfallCharacterBackgroundSave>(character.Pending!.Background);
+
+        Assert.Equal(1, first.RollSequence);
+        Assert.Equal(2, second.RollSequence);
+        Assert.NotEqual(first.RolledAttributes[0].Points, second.RolledAttributes[0].Points);
+        Assert.Contains(recorder.Requests, request => request.Key.StartsWith("1.", StringComparison.Ordinal));
+        Assert.Contains(recorder.Requests, request => request.Key.StartsWith("2.", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Biography_expands_the_selected_answer_fragments_into_the_backstory()
+    {
+        DaggerfallCharacterState character = Create(out DaggerfallDefinitions definitions, out _);
+        character.BeginChoices(MinimumRandom());
+        DaggerfallCharacterCreationChoices draft = Assert.IsType<DaggerfallCharacterCreationChoices>(character.Pending);
+        DaggerfallCharacterBackgroundSave initial = Assert.IsType<DaggerfallCharacterBackgroundSave>(draft.Background);
+        DaggerfallCareerDefinition career = definitions.Catalogs.RequireCareer("class00");
+        DaggerfallBiographyDefinition biography = definitions.Biographies.Biographies.Single(value => value.ClassIndex == initial.BiographyClassIndex);
+        DaggerfallBiographyQuestionDefinition question = biography.Questions.Single(value => value.Number == 1);
+        DaggerfallBiographyAnswerDefinition original = question.Answers.Single(value => value.Letter == initial.Answers.Single(answer => answer.Question == question.Number).Letter);
+        DaggerfallBiographyAnswerDefinition replacement = question.Answers.First(value => value.Letter != original.Letter);
+        string originalFragment = Fragment(definitions, original, "#");
+        string replacementFragment = Fragment(definitions, replacement, "#");
+        DaggerfallBiographyAnswerSave[] answers = initial.Answers.Select(answer => answer.Question == question.Number
+            ? new DaggerfallBiographyAnswerSave(question.Number, replacement.Letter) : answer).ToArray();
+
+        DaggerfallCharacterBackgroundSave changed = DaggerfallCharacterBackgroundPolicy.Update(definitions, career, draft.ToIdentity(), initial, answers, [], []);
+
+        Assert.Contains(originalFragment, initial.Biography.Single());
+        Assert.Contains(replacementFragment, changed.Biography.Single());
+        Assert.DoesNotContain(originalFragment, changed.Biography.Single());
+        Assert.DoesNotContain(changed.Biography, line => line.Contains("%q", StringComparison.Ordinal));
+
+        static string Fragment(DaggerfallDefinitions definitions, DaggerfallBiographyAnswerDefinition answer, string position) => definitions.Text.Require(
+            answer.Effects.Single(effect => effect.Kind == DaggerfallBiographyEffectKind.TextMacro && effect.First == position).MacroTarget!.Value).TextRuns.First();
+    }
+
+    [Fact]
+    public void Biography_modifier_slots_remain_distinct_and_feed_their_live_consumers()
+    {
+        DaggerfallCharacterState character = Create(out DaggerfallDefinitions definitions, out _);
+        DaggerfallCareerDefinition career = definitions.Catalogs.RequireCareer("class00");
+        character.BeginChoices(MinimumRandom());
+        DaggerfallCharacterBackgroundSave rolled = Assert.IsType<DaggerfallCharacterBackgroundSave>(character.Pending!.Background);
+        DaggerfallBiographyDefinition biography = definitions.Biographies.Biographies.Single(value => value.ClassIndex == rolled.BiographyClassIndex);
+        DaggerfallBiographyAnswerSave[] answers = biography.Questions.Select(question => new DaggerfallBiographyAnswerSave(question.Number,
+            question.Number == 12 ? question.Answers.Single(answer => answer.Effects.Any(effect => effect.First == "TH")).Letter : question.Answers[0].Letter)).ToArray();
+        DaggerfallCharacterBackgroundSave selected = DaggerfallCharacterBackgroundPolicy.Update(definitions, career, character.Pending!.ToIdentity(), rolled, answers,
+            [new DaggerfallCreationAllocationSave(career.Attributes[0], rolled.AttributeBonusPool)],
+            [new DaggerfallCreationAllocationSave(career.PrimarySkills[0], 6), new DaggerfallCreationAllocationSave(career.MajorSkills[0], 6), new DaggerfallCreationAllocationSave(career.MinorSkills[0], 6)]);
+
+        Assert.Equal(-5, selected.Modifiers.AvoidHit);
+        Assert.Equal(0, selected.Modifiers.DiseaseResistance);
+        Assert.Equal(15, DaggerfallFormulaPolicy.CalculateHitChance(60, 0, 45, 50, 45, 50, 0, selected.Modifiers.AvoidHit));
+        DaggerfallSocialState social = new(definitions.Factions);
+        DaggerfallFactionDefinition faction = definitions.Factions.Factions.Values.First(value => value.SocialGroup >= 0);
+        int baseline = social.ReactionForFaction(faction.Id).Value;
+        social.SetBiographyReactionModifier(-5);
+        Assert.Equal(baseline - 5, social.ReactionForFaction(faction.Id).Value);
+        Assert.DoesNotContain(DaggerfallCharacterBackgroundPolicy.Present(definitions, career, character.Pending!.ToIdentity(), selected).UnsupportedEffects, effect => effect.Contains("not active", StringComparison.Ordinal));
+    }
+
     private static DaggerfallCharacterState Create(out DaggerfallDefinitions definitions, out StatsComponent stats)
     {
         definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
@@ -156,5 +288,35 @@ public sealed class DaggerfallCharacterStateTests
             for (DirectoryInfo? current = new(start); current is not null; current = current.Parent)
                 if (File.Exists(Path.Combine(current.FullName, "AGENTS.md"))) return current.FullName;
         throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
+    }
+
+    private static IRandomService MinimumRandom() => DispatchProxy.Create<IRandomService, MinimumRandomProxy>();
+
+    private static IRandomService SequenceRandom(out SequenceRandomProxy proxy)
+    {
+        IRandomService service = DispatchProxy.Create<IRandomService, SequenceRandomProxy>();
+        proxy = (SequenceRandomProxy)(object)service;
+        return service;
+    }
+
+    private class SequenceRandomProxy : DispatchProxy
+    {
+        internal List<KeyedRngRequest> Requests { get; } = [];
+
+        protected override object? Invoke(MethodInfo? method, object?[]? arguments)
+        {
+            if (method?.Name != nameof(IRandomService.DrawKeyed)) throw new NotSupportedException(method?.Name);
+            KeyedRngRequest request = (KeyedRngRequest)arguments![0]!;
+            Requests.Add(request);
+            int separator = request.Key.IndexOf('.', StringComparison.Ordinal);
+            int sequence = int.Parse(request.Key.AsSpan(0, separator), System.Globalization.CultureInfo.InvariantCulture);
+            return new KeyedRngReceipt(Math.Min(request.Maximum, checked(request.Minimum + sequence - 1)));
+        }
+    }
+
+    private class MinimumRandomProxy : DispatchProxy
+    {
+        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IRandomService.DrawKeyed)
+            ? new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Minimum) : throw new NotSupportedException(method?.Name);
     }
 }

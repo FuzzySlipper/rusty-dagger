@@ -5,7 +5,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision = null, string? Item = null, int? TargetGrid = null, string? TargetEquipment = null, string? Container = null, string? Key = null, string? Label = null, bool Confirm = false,
     string? Name = null, string? Race = null, string? Gender = null, int? FaceIndex = null, int? Reflexes = null, string? Career = null, string? Mode = null,
     string? PrimarySkills = null, string? MajorSkills = null, string? MinorSkills = null, string? Advantages = null, string? Disadvantages = null, int? HitPointsPerLevel = null,
-    string? Attribute = null);
+    string? Attribute = null, string? BackgroundAnswers = null, string? AttributeAllocations = null, string? SkillAllocations = null);
 
 /// <summary>The small Daggerfall player-action wire contract, consumed during admitted updates.</summary>
 internal static class DaggerfallUiAction
@@ -20,7 +20,7 @@ internal static class DaggerfallUiAction
             JsonElement root = document.RootElement;
             if (root.ValueKind != JsonValueKind.Object) return null;
             HashSet<string> fields = new(StringComparer.Ordinal);
-            string? action = null, revision = null, item = null, targetEquipment = null, container = null, key = null, label = null, name = null, race = null, gender = null, career = null, mode = null, primarySkills = null, majorSkills = null, minorSkills = null, advantages = null, disadvantages = null, attribute = null;
+            string? action = null, revision = null, item = null, targetEquipment = null, container = null, key = null, label = null, name = null, race = null, gender = null, career = null, mode = null, primarySkills = null, majorSkills = null, minorSkills = null, advantages = null, disadvantages = null, attribute = null, backgroundAnswers = null, attributeAllocations = null, skillAllocations = null;
             int? targetGrid = null, faceIndex = null, reflexes = null, hitPointsPerLevel = null;
             bool confirm = false;
             foreach (JsonProperty property in root.EnumerateObject())
@@ -63,6 +63,9 @@ internal static class DaggerfallUiAction
                     case "advantages": advantages = value; break;
                     case "disadvantages": disadvantages = value; break;
                     case "attribute": attribute = value; break;
+                    case "backgroundAnswers": backgroundAnswers = value; break;
+                    case "attributeAllocations": attributeAllocations = value; break;
+                    case "skillAllocations": skillAllocations = value; break;
                     default: return null;
                 }
             }
@@ -107,15 +110,21 @@ internal static class DaggerfallUiAction
                     ? new(action, Attribute: attribute) : null;
             if (action == "character-level-commit")
                 return fields.SetEquals(["action"]) ? new(action) : null;
-            if (action is "character-update" or "character-commit")
-                return (career == DaggerfallCustomCareerPolicy.CareerId
-                        ? fields.SetEquals(["action", "name", "race", "gender", "faceIndex", "reflexes", "career", "primarySkills", "majorSkills", "minorSkills", "hitPointsPerLevel", "advantages", "disadvantages"])
-                        : fields.SetEquals(["action", "name", "race", "gender", "faceIndex", "reflexes", "career"]))
+            if (action is "character-update" or "character-commit" or "character-background-reroll")
+            {
+                HashSet<string> required = career == DaggerfallCustomCareerPolicy.CareerId
+                    ? ["action", "name", "race", "gender", "faceIndex", "reflexes", "career", "primarySkills", "majorSkills", "minorSkills", "hitPointsPerLevel", "advantages", "disadvantages"]
+                    : ["action", "name", "race", "gender", "faceIndex", "reflexes", "career"];
+                bool background = fields.Contains("backgroundAnswers") || fields.Contains("attributeAllocations") || fields.Contains("skillAllocations");
+                if (background) required.UnionWith(["backgroundAnswers", "attributeAllocations", "skillAllocations"]);
+                return fields.SetEquals(required)
                     && !string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(race)
                     && !string.IsNullOrWhiteSpace(gender) && !string.IsNullOrWhiteSpace(career)
                     && faceIndex is not null && reflexes is not null
                     ? new(action, Name: name, Race: race, Gender: gender, FaceIndex: faceIndex, Reflexes: reflexes, Career: career,
-                        PrimarySkills: primarySkills, MajorSkills: majorSkills, MinorSkills: minorSkills, Advantages: advantages, Disadvantages: disadvantages, HitPointsPerLevel: hitPointsPerLevel) : null;
+                        PrimarySkills: primarySkills, MajorSkills: majorSkills, MinorSkills: minorSkills, Advantages: advantages, Disadvantages: disadvantages, HitPointsPerLevel: hitPointsPerLevel,
+                        BackgroundAnswers: backgroundAnswers, AttributeAllocations: attributeAllocations, SkillAllocations: skillAllocations) : null;
+            }
             if (action == "activation-mode")
                 return fields.SetEquals(["action", "mode"])
                     && mode is "grab" or "info" or "talk" or "steal" or "bash"

@@ -30,7 +30,8 @@ internal sealed record DaggerfallCharacterCreationChoices(
     int FaceIndex,
     DaggerfallCharacterReflexes Reflexes,
     string CareerId,
-    DaggerfallCustomCareerChoices? CustomCareer = null)
+    DaggerfallCustomCareerChoices? CustomCareer = null,
+    DaggerfallCharacterBackgroundSave? Background = null)
 {
     internal static DaggerfallCharacterCreationChoices From(DaggerfallCharacterIdentity identity) =>
         new(identity.Name, identity.RaceId, identity.Gender, identity.FaceIndex, identity.Reflexes, identity.CareerId);
@@ -48,6 +49,8 @@ internal sealed class DaggerfallCharacterState
     private readonly StatsComponent _stats;
     private Action? _careerCommitted;
     private DaggerfallCustomCareerDefinition? _customCareer;
+    private DaggerfallCharacterBackgroundSave? _background;
+    private int _backgroundRollSequence;
 
     internal DaggerfallCharacterState(DaggerfallDefinitions definitions, StatsComponent stats, DaggerfallActorDefinition player, DaggerfallCharacterSave? restored = null)
     {
@@ -68,7 +71,11 @@ internal sealed class DaggerfallCharacterState
         _customCareer = restored?.CustomCareer is { } custom
             ? DaggerfallCustomCareerPolicy.Compile(definitions, custom, definitions.Catalogs.RequireCareer("class00"))
             : null;
+        _background = restored?.Background;
+        _backgroundRollSequence = _background?.RollSequence ?? 0;
         Validate(Identity);
+        if (_background is not null)
+            _background = DaggerfallCharacterBackgroundPolicy.RequireComplete(_definitions, Career, Identity, _background);
         // A restored Mechanics boundary already carries the player's progressed permanent bases.
         // Creation and later committed choices set the authored career bases; loading must not
         // overwrite progression merely because it revalidates the same identity.
@@ -79,6 +86,7 @@ internal sealed class DaggerfallCharacterState
     internal DaggerfallCharacterCreationChoices? Pending { get; private set; }
     internal DaggerfallCareerDefinition Career => _customCareer?.Career ?? _definitions.Catalogs.RequireCareer(Identity.CareerId);
     internal DaggerfallCustomCareerDefinition? CustomCareer => _customCareer;
+    internal DaggerfallCharacterBackgroundSave? Background => _background;
     internal DaggerfallRaceDefinition Race => _definitions.Catalogs.RequireRace(Identity.RaceId);
 
     internal IReadOnlyList<DaggerfallCareerSkillGrant> GrantedSkills =>
@@ -91,7 +99,7 @@ internal sealed class DaggerfallCharacterState
     /// <summary>The normalized selectable records and current draft, projected without a UI-owned choice list.</summary>
     internal DaggerfallCharacterCreationPresentation ReadCreation()
     {
-        DaggerfallCharacterCreationChoices source = Pending ?? DaggerfallCharacterCreationChoices.From(Identity);
+        DaggerfallCharacterCreationChoices source = Pending ?? DaggerfallCharacterCreationChoices.From(Identity) with { Background = _background };
         DaggerfallCharacterCreationChoices current = source with
         {
             CustomCareer = source.CustomCareer ?? (_customCareer is { } storedCustom
@@ -124,10 +132,29 @@ internal sealed class DaggerfallCharacterState
         DaggerfallCustomCareerPresentation? custom = (Pending is not null || current.CareerId == DaggerfallCustomCareerPolicy.CareerId) && current.CustomCareer is { } draft
             ? new(draft, [.. DaggerfallCustomCareerPolicy.Validate(_definitions, draft)], [.. _definitions.Catalogs.Skills.Select(skill => skill.Id)], [.. DaggerfallCustomCareerPolicy.SupportedAdvantages], [.. DaggerfallCustomCareerPolicy.SupportedDisadvantages])
             : null;
-        return new DaggerfallCharacterCreationPresentation(Pending is not null, current, races, careers, faces, reflexes, custom);
+        DaggerfallCharacterBackgroundPresentation? background = current.Background is { } backgroundDraft && (Pending is not null || _background is not null)
+            ? DaggerfallCharacterBackgroundPolicy.Present(_definitions, CurrentCareer(current), current.ToIdentity(), backgroundDraft) : null;
+        return new DaggerfallCharacterCreationPresentation(Pending is not null, current, races, careers, faces, reflexes, custom, background);
     }
 
-    internal void BeginChoices() => Pending = DaggerfallCharacterCreationChoices.From(Identity);
+    internal void BeginChoices() => Pending = DaggerfallCharacterCreationChoices.From(Identity) with { Background = _background };
+
+    /// <summary>Opening the title-screen flow captures its Engine-random rolls exactly once.</summary>
+    internal void BeginChoices(Rusty.Engine.IRandomService random)
+    {
+        BeginChoices();
+        if (_background is null)
+            Pending = Pending! with { Background = DaggerfallCharacterBackgroundPolicy.Roll(_definitions, Career, Identity, random, NextBackgroundRollSequence()) };
+    }
+
+    internal void RerollBackground(Rusty.Engine.IRandomService random)
+    {
+        DaggerfallCharacterCreationChoices current = Pending ?? throw new ArgumentException("Open character choices before rerolling the background.");
+        if (_background is not null) throw new ArgumentException("A committed background cannot be rerolled.");
+        DaggerfallCharacterIdentity identity = current.ToIdentity(); Validate(identity);
+        DaggerfallCareerDefinition career = CurrentCareer(current);
+        Pending = current with { Background = DaggerfallCharacterBackgroundPolicy.Roll(_definitions, career, identity, random, NextBackgroundRollSequence()) };
+    }
 
     internal void ReplacePending(DaggerfallCharacterCreationChoices choices)
     {
@@ -137,7 +164,7 @@ internal sealed class DaggerfallCharacterState
 
     internal void CancelChoices() => Pending = null;
 
-    internal void CommitChoices()
+    internal DaggerfallCharacterBackgroundSave? CommitChoices()
     {
         DaggerfallCharacterCreationChoices choices = Pending
             ?? throw new InvalidOperationException("There is no character-creation draft to commit.");
@@ -146,11 +173,18 @@ internal sealed class DaggerfallCharacterState
         DaggerfallCustomCareerDefinition? custom = committed.CareerId == DaggerfallCustomCareerPolicy.CareerId
             ? DaggerfallCustomCareerPolicy.Compile(_definitions, choices.CustomCareer ?? throw new ArgumentException("Custom class fields are incomplete."), Career)
             : null;
+        DaggerfallCareerDefinition committedCareer = custom?.Career ?? _definitions.Catalogs.RequireCareer(committed.CareerId);
+        DaggerfallCharacterBackgroundSave? background = choices.Background is null ? null : DaggerfallCharacterBackgroundPolicy.RequireComplete(_definitions, committedCareer, committed, choices.Background);
+        if (_background is not null && background is not null)
+            throw new ArgumentException("Character creation has already been committed.");
         Identity = committed;
         _customCareer = custom;
+        bool firstBackgroundCommit = _background is null && background is not null;
+        _background ??= background;
         Pending = null;
         ApplyCareerBases();
         _careerCommitted?.Invoke();
+        return firstBackgroundCommit ? background : null;
     }
 
     /// <summary>Lets the session rebase career-dependent progression after an admitted selection.</summary>
@@ -161,7 +195,7 @@ internal sealed class DaggerfallCharacterState
     }
 
     internal DaggerfallCharacterSave Capture() => new(
-        Identity.Name, Identity.RaceId, Identity.Gender, Identity.FaceIndex, Identity.Reflexes, Identity.CareerId, _customCareer is null ? null : ToChoices(_customCareer));
+        Identity.Name, Identity.RaceId, Identity.Gender, Identity.FaceIndex, Identity.Reflexes, Identity.CareerId, _customCareer is null ? null : ToChoices(_customCareer), _background);
 
     private void Validate(DaggerfallCharacterIdentity identity)
     {
@@ -184,8 +218,15 @@ internal sealed class DaggerfallCharacterState
         for (int index = 0; index < career.Attributes.Count; index++)
             _stats.GetStat(StatId.Parse(career.Attributes[index])).BaseValue = career.AttributeValues[index];
         _stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Reflexes.Value)).BaseValue = (int)Identity.Reflexes;
+        if (_background is not null) DaggerfallCharacterBackgroundPolicy.ApplyStats(_definitions, career, _background, _stats);
         DaggerfallStatModifiers.RefreshPlayerDerivedMaxima(_stats, career);
     }
+
+    private DaggerfallCareerDefinition CurrentCareer(DaggerfallCharacterCreationChoices choices) => choices.CareerId == DaggerfallCustomCareerPolicy.CareerId
+        ? DaggerfallCustomCareerPolicy.Compile(_definitions, choices.CustomCareer ?? throw new ArgumentException("Custom class fields are incomplete."), Career).Career
+        : _definitions.Catalogs.RequireCareer(choices.CareerId);
+
+    private int NextBackgroundRollSequence() => _backgroundRollSequence = checked(_backgroundRollSequence + 1);
 
     private static DaggerfallCustomCareerChoices ToChoices(DaggerfallCustomCareerDefinition custom) => new(
         custom.Career.Name, [.. custom.Career.PrimarySkills], [.. custom.Career.MajorSkills], [.. custom.Career.MinorSkills], custom.Career.HitPointsPerLevel,
@@ -200,7 +241,7 @@ internal sealed record DaggerfallCharacterFaceChoice(int Index, string MediaId);
 internal sealed record DaggerfallCharacterReflexChoice(int Value, string Label);
 internal sealed record DaggerfallCharacterCreationPresentation(bool Editing, DaggerfallCharacterCreationChoices Current,
     DaggerfallCharacterChoice[] Races, DaggerfallCharacterChoice[] Careers, DaggerfallCharacterFaceChoice[] Faces, DaggerfallCharacterReflexChoice[] Reflexes,
-    DaggerfallCustomCareerPresentation? Custom = null);
+    DaggerfallCustomCareerPresentation? Custom = null, DaggerfallCharacterBackgroundPresentation? Background = null);
 
 /// <summary>Current-schema durable identity. Definition keys are resolved before a session is built.</summary>
 internal sealed record DaggerfallCharacterSave(
@@ -210,7 +251,8 @@ internal sealed record DaggerfallCharacterSave(
     int FaceIndex,
     DaggerfallCharacterReflexes Reflexes,
     string CareerId,
-    DaggerfallCustomCareerChoices? CustomCareer = null)
+    DaggerfallCustomCareerChoices? CustomCareer = null,
+    DaggerfallCharacterBackgroundSave? Background = null)
 {
     internal void Validate(DaggerfallDefinitions definitions)
     {
@@ -223,6 +265,13 @@ internal sealed record DaggerfallCharacterSave(
         if (identity.CareerId == DaggerfallCustomCareerPolicy.CareerId)
             _ = DaggerfallCustomCareerPolicy.Compile(definitions, CustomCareer ?? throw new ArgumentException("Saved custom class has no class data."), definitions.Catalogs.RequireCareer("class00"));
         else _ = definitions.Catalogs.RequireCareer(identity.CareerId);
+        if (Background is not null)
+        {
+            DaggerfallCareerDefinition career = identity.CareerId == DaggerfallCustomCareerPolicy.CareerId
+                ? DaggerfallCustomCareerPolicy.Compile(definitions, CustomCareer!, definitions.Catalogs.RequireCareer("class00")).Career
+                : definitions.Catalogs.RequireCareer(identity.CareerId);
+            _ = DaggerfallCharacterBackgroundPolicy.RequireComplete(definitions, career, identity, Background);
+        }
         if (!definitions.CharacterPresentation.RequireRace(identity.RaceId).Heads(identity.Gender).Any(head => head.HeadIndex == identity.FaceIndex))
             throw new ArgumentException($"Saved character identity names unavailable face {identity.FaceIndex} for race '{identity.RaceId}'.");
     }

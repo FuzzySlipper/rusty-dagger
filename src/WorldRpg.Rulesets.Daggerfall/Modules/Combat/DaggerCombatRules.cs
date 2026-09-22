@@ -33,6 +33,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     private readonly IReadOnlyDictionary<string, DaggerfallActionDefinition> _actions;
     private readonly IReadOnlyDictionary<long, DaggerfallActorDefinition> _definitions;
     private readonly Action<DaggerfallSkillUse>? _skillUses;
+    private readonly Func<int> _playerBiographyAvoidHit;
     internal AttackCapabilities<IProductFact> Attacks { get; }
     internal TargetingService Targeting { get; }
     internal AttackExecution<IProductFact> Execution { get; }
@@ -45,7 +46,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     internal DaggerCombatRules(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment,
         Func<long, MechanicsInventoryCoordinator?> actorInventories, DaggerfallItemInstances itemInstances,
         DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity,
-        TargetingService targeting, Action<DaggerfallSkillUse>? skillUses = null)
+        TargetingService targeting, Action<DaggerfallSkillUse>? skillUses = null, Func<int>? playerBiographyAvoidHit = null)
     {
         _random = random;
         Execution = new(actors, this, DeferRangedImpact);
@@ -58,6 +59,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         _actions = definitions.Actions;
         _definitions = definitionsByEntity;
         _skillUses = skillUses;
+        _playerBiographyAvoidHit = playerBiographyAvoidHit ?? (() => 0);
         Targeting = targeting;
         Attacks = new(PlayerId, Targeting, Execution, ReachOf, facts => facts.Append(new AttackRejectedFact(AttackRejection.MissingPlayerPosition)));
     }
@@ -359,8 +361,8 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     private string PlayerWeaponSkill() => ReadWeapon(_equipment.Read(), "right-hand")?.Weapon.Skill
         ?? ReadWeapon(_equipment.Read(), "left-hand")?.Weapon.Skill
         ?? DaggerfallMechanicsIds.HandToHand.Value;
-    private int HitChance(Combatant attacker, Combatant target, string skill) => DaggerfallFormulaPolicy.CalculateHitChance(ReadStat(attacker, new DaggerfallStatId(skill)), target.Definition.Armor, ReadStat(attacker, DaggerfallMechanicsIds.Luck), ReadStat(target, DaggerfallMechanicsIds.Luck), ReadStat(attacker, DaggerfallMechanicsIds.Agility), ReadStat(target, DaggerfallMechanicsIds.Agility), ReadStat(target, DaggerfallMechanicsIds.Dodging));
-    internal static int CalculateHitChance(int skill, int struckArmor, int attackerLuck, int targetLuck, int attackerAgility, int targetAgility, int targetDodge) => DaggerfallFormulaPolicy.CalculateHitChance(skill, struckArmor, attackerLuck, targetLuck, attackerAgility, targetAgility, targetDodge);
+    private int HitChance(Combatant attacker, Combatant target, string skill) => DaggerfallFormulaPolicy.CalculateHitChance(ReadStat(attacker, new DaggerfallStatId(skill)), target.Definition.Armor, ReadStat(attacker, DaggerfallMechanicsIds.Luck), ReadStat(target, DaggerfallMechanicsIds.Luck), ReadStat(attacker, DaggerfallMechanicsIds.Agility), ReadStat(target, DaggerfallMechanicsIds.Agility), ReadStat(target, DaggerfallMechanicsIds.Dodging), target.Id == DaggerfallActorIdentity.PlayerEntityId ? _playerBiographyAvoidHit() : 0);
+    internal static int CalculateHitChance(int skill, int struckArmor, int attackerLuck, int targetLuck, int attackerAgility, int targetAgility, int targetDodge, int targetBiographyAvoidHit = 0) => DaggerfallFormulaPolicy.CalculateHitChance(skill, struckArmor, attackerLuck, targetLuck, attackerAgility, targetAgility, targetDodge, targetBiographyAvoidHit);
     private int StrengthModifier(Combatant attacker) => DaggerfallFormulaPolicy.DamageModifier(ReadStat(attacker, DaggerfallMechanicsIds.Strength));
     private static int ReadStat(Combatant actor, DaggerfallStatId stat) =>
         actor.Stats.GetStat(StatId.Parse(stat.Value)).ValueInt;

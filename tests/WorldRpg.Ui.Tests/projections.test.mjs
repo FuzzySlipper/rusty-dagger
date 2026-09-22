@@ -312,3 +312,27 @@ test('activation selection follows product mode and emits only semantic mode cha
     assert.equal(select.disabled, true);
   } finally { f.dispose(); }
 });
+
+test('title creation renders normalized questions and sends the selected background allocation', () => {
+  const f = fixture();
+  try {
+    f.publish({ mode: 'title', character: {
+      name: 'Nameless', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [], creationAvailable: true,
+      creation: { editing: true, current: { name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' },
+        races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }], careers: [{ id: 'class00', label: 'Mage', available: true, restriction: null }], faces: [{ index: 0, mediaId: 'character.head.male.00.0' }], reflexes: [{ value: 2, label: 'Average' }],
+        background: { biographyClassIndex: 0, biography: ['A readable biography.'], attributeBonusPool: 6, remainingAttributePoints: 6, primarySkillPoints: 6, majorSkillPoints: 6, minorSkillPoints: 6,
+          questions: [{ number: 1, text: 'Where did you study?', selectedLetter: 'a', answers: [{ letter: 'a', text: 'At home.' }, { letter: 'b', text: 'At court.' }] }],
+          attributes: [{ id: 'strength', label: 'Strength', rolled: 50, allocated: 0, value: 50, canAllocate: true }],
+          skills: [{ id: 'medical', tier: 'primary', rolled: 28, allocated: 0, biographyBonus: 0, value: 28, canAllocate: true }],
+          startingGrants: [{ itemId: 'template-113-iron', templateIndex: 113, quantity: 1, sourceEffect: 'IT 3 0 0' }], unsupportedEffects: ['The source retains this fatigue background effect without a gameplay consequence.'] },
+      },
+    } });
+    assert.match(f.root.querySelector('[data-testid="character-biography"]').textContent, /readable biography/);
+    assert.match(f.root.querySelector('[data-testid="character-starting-grants"]').textContent, /template-113-iron/);
+    assert.match(f.root.querySelector('[data-testid="character-background-unsupported-effects"]').textContent, /fatigue background effect/);
+    f.root.querySelector('[aria-label="Attributes strength"]').value = '6';
+    f.root.querySelector('[aria-label="Skills medical"]').value = '6';
+    f.root.querySelector('[data-testid="character-background-reroll"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'character-background-reroll', name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00', backgroundAnswers: '1:a', attributeAllocations: 'strength:6', skillAllocations: 'medical:6' });
+  } finally { f.dispose(); }
+});

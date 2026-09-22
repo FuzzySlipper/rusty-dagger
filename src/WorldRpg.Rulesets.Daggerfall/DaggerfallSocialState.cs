@@ -54,6 +54,7 @@ internal sealed class DaggerfallSocialState
     private readonly Dictionary<int, int> _regionalReputations = [];
     private readonly Dictionary<int, int> _personalReputations = [];
     private readonly Dictionary<int, DaggerfallGuildMembership> _memberships = [];
+    private int _biographyReactionModifier;
 
     internal DaggerfallSocialState(DaggerfallFactionsSet catalog)
     {
@@ -77,10 +78,7 @@ internal sealed class DaggerfallSocialState
     }
 
     /// <summary>
-    /// Computes the persistent donor talk baseline from faction and social-group standing. Biography
-    /// disposition and temporary effect reaction modifiers are deliberately absent: they belong to
-    /// the future talk/effect composition that supplies those live inputs, not a duplicate social
-    /// record here.
+    /// Computes the persistent donor talk baseline from faction, social-group standing, and BIOG.
     /// </summary>
     internal DaggerfallFactionReaction ReactionForFaction(int factionId)
     {
@@ -88,8 +86,11 @@ internal sealed class DaggerfallSocialState
         int personal = faction.SocialGroup is >= 0 and < SocialGroupCount
             ? PersonalReputation(faction.SocialGroup)
             : 0;
-        return new(faction.Id, FactionReputation(faction.Id), personal);
+        return new(faction.Id, FactionReputation(faction.Id), checked(personal + _biographyReactionModifier));
     }
+
+    /// <summary>Sets the selected BIOG reaction assignment reconstructed from the character save.</summary>
+    internal void SetBiographyReactionModifier(int value) => _biographyReactionModifier = value;
 
     /// <summary>Computes the same reaction for an NPC whether or not it is currently active in the world.</summary>
     internal DaggerfallFactionReaction ReactionForNpc(DaggerfallNpc npc)

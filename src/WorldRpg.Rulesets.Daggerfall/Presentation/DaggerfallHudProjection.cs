@@ -211,7 +211,22 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("races", Choices(builder, creation.Races)), ("careers", Choices(builder, creation.Careers)),
         ("faces", builder.Array(creation.Faces.Select(face => builder.Object(("index", builder.Number(face.Index)), ("mediaId", builder.String(face.MediaId)))).ToArray())),
         ("reflexes", builder.Array(creation.Reflexes.Select(reflex => builder.Object(("value", builder.Number(reflex.Value)), ("label", builder.String(reflex.Label)))).ToArray())),
-        ("custom", creation.Custom is null ? builder.Null() : Custom(builder, creation.Custom)));
+        ("custom", creation.Custom is null ? builder.Null() : Custom(builder, creation.Custom)),
+        ("background", creation.Background is null ? builder.Null() : Background(builder, creation.Background)));
+
+    private static uint Background(UiValueBuilder builder, DaggerfallCharacterBackgroundPresentation background) => builder.Object(
+        ("biographyClassIndex", builder.Number(background.BiographyClassIndex)),
+        ("biography", builder.Array(background.Biography.Select(builder.String).ToArray())),
+        ("attributeBonusPool", builder.Number(background.AttributeBonusPool)), ("remainingAttributePoints", builder.Number(background.RemainingAttributePoints)),
+        ("primarySkillPoints", builder.Number(background.PrimarySkillPoints)), ("majorSkillPoints", builder.Number(background.MajorSkillPoints)), ("minorSkillPoints", builder.Number(background.MinorSkillPoints)),
+        ("questions", builder.Array(background.Questions.Select(question => builder.Object(("number", builder.Number(question.Number)), ("text", builder.String(question.Text)),
+            ("selectedLetter", question.SelectedLetter is null ? builder.Null() : builder.String(question.SelectedLetter)), ("answers", builder.Array(question.Answers.Select(answer => builder.Object(("letter", builder.String(answer.Letter)), ("text", builder.String(answer.Text)))).ToArray())))).ToArray())),
+        ("attributes", builder.Array(background.Attributes.Select(attribute => builder.Object(("id", builder.String(attribute.Id)), ("label", builder.String(attribute.Label)),
+            ("rolled", builder.Number(attribute.Rolled)), ("allocated", builder.Number(attribute.Allocated)), ("value", builder.Number(attribute.Value)), ("canAllocate", builder.Boolean(attribute.CanAllocate)))).ToArray())),
+        ("skills", builder.Array(background.Skills.Select(skill => builder.Object(("id", builder.String(skill.Id)), ("tier", builder.String(skill.Tier)),
+            ("rolled", builder.Number(skill.Rolled)), ("allocated", builder.Number(skill.Allocated)), ("biographyBonus", builder.Number(skill.BiographyBonus)), ("value", builder.Number(skill.Value)), ("canAllocate", builder.Boolean(skill.CanAllocate)))).ToArray())),
+        ("startingGrants", builder.Array(background.StartingGrants.Select(grant => builder.Object(("itemId", builder.String(grant.ItemId)), ("templateIndex", builder.Number(grant.TemplateIndex)), ("quantity", builder.Number((long)grant.Quantity)), ("sourceEffect", builder.String(grant.SourceEffect)))).ToArray())),
+        ("unsupportedEffects", builder.Array(background.UnsupportedEffects.Select(builder.String).ToArray())));
 
     private static uint Choices(UiValueBuilder builder, IEnumerable<DaggerfallCharacterChoice> choices) => builder.Array(choices.Select(choice => builder.Object(
         ("id", builder.String(choice.Id)), ("label", builder.String(choice.Label)), ("available", builder.Boolean(choice.Available)),
