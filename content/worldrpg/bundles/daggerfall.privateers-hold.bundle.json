@@ -5,7 +5,8 @@
   "contentPacks": [
     { "id": "daggerfall.base" },
     { "id": "daggerfall.blocks" },
-    { "id": "daggerfall.privateers-hold" }
+    { "id": "daggerfall.privateers-hold" },
+    { "id": "daggerfall.quests.fighters" }
   ],
   "tuning": { "id": "daggerfall.defaults" }
 }

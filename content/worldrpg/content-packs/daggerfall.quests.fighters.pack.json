@@ -1,0 +1,10 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.quests.fighters",
+  "ruleset": "daggerfall",
+  "dependencies": [
+    { "id": "daggerfall.base" }
+  ],
+  "description": "Retained Fighters Guild quest corpus receipt.",
+  "payload": "worldrpg/payloads/daggerfall.quests.fighters.json"
+}

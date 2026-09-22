@@ -118,6 +118,11 @@ internal static partial class Program
                 return RunQuestsCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "fighters-quest-corpus")
+            {
+                return RunFightersQuestCorpusCommand(args);
+            }
+
             if (args.Length != 0 && args[0] == "cinematic-media") return RunCinematicMediaCommand(args);
 
             if (args.Length != 0 && args[0] == "videos")
@@ -1332,6 +1337,25 @@ internal static partial class Program
         });
         File.WriteAllText(values["--pack"], updated);
         Console.WriteLine($"pack: quest sources updated in {values["--pack"]}");
+        return 0;
+    }
+
+    /// <summary>Publishes the selected Fighters Guild receipt from already normalized quest sections.</summary>
+    private static int RunFightersQuestCorpusCommand(IReadOnlyList<string> args)
+    {
+        const string Usage = "usage: daggerfall-import-tool fighters-quest-corpus --base BASE.json --out PAYLOAD.json";
+        if (args.Count != 5 || args[1] != "--base" || args[3] != "--out") throw new ArgumentException(Usage);
+        using JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(args[2]));
+        JsonElement root = document.RootElement;
+        DaggerfallQuestCatalog catalog = JsonSerializer.Deserialize<DaggerfallQuestCatalog>(root.GetProperty("questCatalog").GetRawText(), PublishedJson.SectionRead)
+            ?? throw new InvalidOperationException("Base payload has no readable questCatalog section.");
+        DaggerfallQuestPack sources = JsonSerializer.Deserialize<DaggerfallQuestPack>(root.GetProperty("questSources").GetRawText(), PublishedJson.SectionRead)
+            ?? throw new InvalidOperationException("Base payload has no readable questSources section.");
+        DaggerfallQuestOriginalSourceSet originals = JsonSerializer.Deserialize<DaggerfallQuestOriginalSourceSet>(root.GetProperty("questOriginalSources").GetRawText(), PublishedJson.SectionRead)
+            ?? throw new InvalidOperationException("Base payload has no readable questOriginalSources section.");
+        DaggerfallFightersGuildQuestCorpus corpus = FightersGuildQuestCorpusPublication.Create(catalog, sources, originals);
+        File.WriteAllBytes(args[4], FightersGuildQuestCorpusPublication.Serialize(corpus));
+        Console.WriteLine($"fighters quest corpus: {corpus.Quests.Count} exact records, fingerprint {corpus.Fingerprint.Value}");
         return 0;
     }
 
