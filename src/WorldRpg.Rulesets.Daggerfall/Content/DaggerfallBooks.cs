@@ -15,6 +15,7 @@ internal enum DaggerfallBookDisposition
 /// <param name="Author">The book's internal author name.</param>
 /// <param name="IsNaughty">Whether the file carries the adult-content flag.</param>
 /// <param name="FilePrice">The price the file states; the donor re-rolls it at open.</param>
+/// <param name="RuntimePrice">The donor-compatible price calculated during import.</param>
 /// <param name="PageCount">How many pages the file declares.</param>
 /// <param name="PageKeys">The text key of each page, in order.</param>
 /// <param name="Disposition">Whether the book's pages are published.</param>
@@ -25,6 +26,7 @@ internal sealed record DaggerfallBookDefinition(
     string Author,
     bool IsNaughty,
     uint FilePrice,
+    uint RuntimePrice,
     int PageCount,
     IReadOnlyList<string> PageKeys,
     DaggerfallBookDisposition Disposition);

@@ -9,7 +9,7 @@ namespace Daggerfall.Import.Tests;
 /// <summary>
 /// The supplied books: header facts, page tokens, message mapping, and the identities no file is
 /// supplied for. The donor addresses files by the message's low byte and re-rolls the filed price
-/// at open; the catalog publishes the filed facts and the pages read through text records.
+/// at open; the catalog publishes both the filed fact and the deterministic runtime value.
 /// </summary>
 public sealed class DaggerfallBooksTests
 {
@@ -26,10 +26,13 @@ public sealed class DaggerfallBooksTests
         Assert.Equal("BOK00000.TXT", first.FileName);
         Assert.Equal("The First Scroll of Baan Dar", first.Title);
         Assert.NotEmpty(first.Author);
+        Assert.Equal(1000u, first.FilePrice);
+        Assert.Equal(580u, first.RuntimePrice);
         DaggerfallBook book = books.Books.Single(entry => entry.BookId == 59);
         Assert.Equal(DaggerfallBookDisposition.Read, book.Disposition);
         Assert.Equal("BOK00059.TXT", book.FileName);
         Assert.Equal("Biography of Queen Barenziah, Vol. I", book.Title);
+        Assert.Equal(406u, book.RuntimePrice);
         Assert.Equal(book.PageCount, book.PageKeys.Count);
         Assert.All(book.PageKeys, key => Assert.StartsWith("Book:00059-p", key, StringComparison.Ordinal));
 

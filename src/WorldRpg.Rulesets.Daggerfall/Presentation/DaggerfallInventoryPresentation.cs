@@ -18,6 +18,10 @@ internal sealed class DaggerfallInventoryPresentation
     private readonly DaggerfallEquipmentMoves moves;
     private readonly DaggerfallDefinitions definitions;
     private readonly IReadOnlyDictionary<string, string> icons;
+    private DaggerfallItemValuation? valuation;
+    private DaggerfallItemInstances? itemInstances;
+    private DaggerfallItemOwner? itemOwner;
+    private Func<ulong, ulong>? uniqueIdentity;
     internal string Message { get; private set; } = "Drag items between the grid and compatible equipment slots.";
     internal DaggerfallEquipmentChange? LastEquipmentChange { get; private set; }
 
@@ -30,6 +34,17 @@ internal sealed class DaggerfallInventoryPresentation
         this.definitions = definitions;
         this.icons = icons;
         moves.Changed += change => LastEquipmentChange = change;
+    }
+
+    /// <summary>Connects durable item meaning after ordinary inventory composition has completed.</summary>
+    internal void UseItemValuation(DaggerfallItemValuation value, DaggerfallItemInstances instances,
+        DaggerfallItemOwner owner, Func<ulong, ulong> resolveUniqueIdentity)
+    {
+        if (valuation is not null) throw new InvalidOperationException("Inventory valuation is already configured.");
+        valuation = value ?? throw new ArgumentNullException(nameof(value));
+        itemInstances = instances ?? throw new ArgumentNullException(nameof(instances));
+        itemOwner = owner?.Validate() ?? throw new ArgumentNullException(nameof(owner));
+        uniqueIdentity = resolveUniqueIdentity ?? throw new ArgumentNullException(nameof(resolveUniqueIdentity));
     }
 
     internal InventoryPresentation Read()
@@ -91,8 +106,19 @@ internal sealed class DaggerfallInventoryPresentation
     {
         DaggerfallItemDefinition definition = definitions.RequireItem(new DaggerfallItemId(itemId));
         return new InventoryItemPresentation(key, itemId, definition.Template?.Name ?? Label(itemId), quantity.ToString(CultureInfo.InvariantCulture),
-            definition.Weight, definition.Value, Details(definition), icons.GetValueOrDefault(itemId), gridSlot, equippedSlots ?? [],
+            definition.Weight, CurrentValue(key, definition), Details(definition), icons.GetValueOrDefault(itemId), gridSlot, equippedSlots ?? [],
             definitions.EquipmentSlots.Keys.Select(slot => slot.Value).Where(slot => DaggerfallEquipmentPolicy.IsCompatible(definitions, definition, slot)).ToArray());
+    }
+
+    private int CurrentValue(string key, DaggerfallItemDefinition definition)
+    {
+        if (valuation is null) return definition.Value;
+        DaggerfallItemInstanceMetadata metadata = key.StartsWith("unique:", StringComparison.Ordinal)
+            ? itemInstances!.RequireUnique(uniqueIdentity!(ParseUniqueEntity(key)))
+            : key.StartsWith("stack:", StringComparison.Ordinal)
+                ? itemInstances!.RequireStack(itemOwner!, Rusty.Engine.Mechanics.InventoryStackId.Parse(key["stack:".Length..]))
+                : throw new InvalidOperationException($"Inventory item key '{key}' does not name a unique item or stack.");
+        return valuation.CurrentValue(definition, metadata);
     }
 
     private static bool TryParseUnique(InventoryItemPresentation row, out UniqueInventoryItem item)
@@ -107,6 +133,9 @@ internal sealed class DaggerfallInventoryPresentation
 
     internal static string UniqueKey(ulong entity) => DaggerfallEquipmentMoves.LayoutKey(entity);
     internal static string StackKey(Rusty.Engine.Mechanics.InventoryStackId stack) => DaggerfallEquipmentMoves.LayoutKey(stack);
+    private static ulong ParseUniqueEntity(string key) => ulong.TryParse(key.AsSpan("unique:".Length), NumberStyles.Integer, CultureInfo.InvariantCulture, out ulong entity)
+        ? entity
+        : throw new InvalidOperationException($"Inventory item key '{key}' does not name a unique item.");
     private static bool TryParseStack(InventoryItemPresentation row, out Rusty.Engine.Mechanics.InventoryStackId stack)
     {
         stack = null!;

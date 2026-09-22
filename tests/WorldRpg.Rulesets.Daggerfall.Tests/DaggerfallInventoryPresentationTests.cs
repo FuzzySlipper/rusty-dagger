@@ -68,6 +68,22 @@ public sealed class DaggerfallInventoryPresentationTests
     }
 
     [Fact]
+    public void Inventory_projects_the_selected_book_runtime_value()
+    {
+        using Fixture f = new(resolveItemValues: true);
+        InventoryStackId stack = InventoryStackId.Parse("book-value");
+        DaggerfallItemDefinition definition = f.Definitions.RequireItem(new DaggerfallItemId("template-277"));
+        f.Inventory.Grant(new(new InventoryItemId(definition.Id.Value), stack, 1));
+        f.ItemInstances!.RegisterStack(DaggerfallItemOwner.Player, stack,
+            DaggerfallItemInstanceMetadata.Default(definition, DaggerfallItemOwner.Player) with { BookId = 59 });
+
+        InventoryItemPresentation book = Item(f.Ui.Read(), DaggerfallInventoryPresentation.StackKey(stack));
+
+        Assert.Equal(406, book.Value);
+        Assert.NotEqual(definition.Value, book.Value);
+    }
+
+    [Fact]
     public void Two_handed_assignment_uses_both_hands_and_reassignment_is_atomic()
     {
         using Fixture f = new();
@@ -354,7 +370,8 @@ public sealed class DaggerfallInventoryPresentationTests
         internal readonly DaggerfallInventoryPresentation Ui;
         internal readonly DaggerfallDefinitions Definitions;
         internal readonly DaggerfallItemInstances? ItemInstances;
-        internal Fixture(bool enforceItemCondition = false, Func<IReadOnlyList<string>>? forbiddenEquipment = null, string? predefinedCareer = null)
+        internal Fixture(bool enforceItemCondition = false, Func<IReadOnlyList<string>>? forbiddenEquipment = null, string? predefinedCareer = null,
+            bool resolveItemValues = false)
         {
             DirectoryInfo? directory = new(AppContext.BaseDirectory);
             while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "content/worldrpg/payloads/daggerfall.base.json"))) directory = directory.Parent;
@@ -371,7 +388,7 @@ public sealed class DaggerfallInventoryPresentationTests
             Entities.Store.Add(owner, equipment);
             Inventory = new(inventory, Entities, items);
             Equipment = new(inventory, equipment, Entities, items, slots);
-            ItemInstances = enforceItemCondition ? new DaggerfallItemInstances() : null;
+            ItemInstances = enforceItemCondition || resolveItemValues ? new DaggerfallItemInstances() : null;
             Func<IReadOnlyList<string>>? restrictions = forbiddenEquipment ?? (predefinedCareer is null
                 ? null
                 : () => definitions.Catalogs.RequireCareer(predefinedCareer).ForbiddenEquipment);
@@ -385,9 +402,20 @@ public sealed class DaggerfallInventoryPresentationTests
                     if (ItemInstances is not null) ItemInstances.RegisterDefaultUnique(entity, definitions.RequireItem(entry.ItemId), DaggerfallItemOwner.Player);
                     if (entry.EquipSlot is { } slot) Equipment.Equip(item, [new(slot.Value)]);
                 }
-                else Inventory.Grant(new(new(entry.ItemId.Value), InventoryStackId.Parse($"fixture.{ordinal}"), entry.Quantity));
+                else
+                {
+                    InventoryStackId stack = InventoryStackId.Parse($"fixture.{ordinal}");
+                    Inventory.Grant(new(new(entry.ItemId.Value), stack, entry.Quantity));
+                    if (ItemInstances is not null) ItemInstances.RegisterDefaultStack(DaggerfallItemOwner.Player,
+                        new InventoryStack(stack, ItemDefinitionId.Parse(entry.ItemId.Value), entry.Quantity), definitions.RequireItem(entry.ItemId));
+                }
             }
             Ui = new(Moves, definitions, new Dictionary<string, string>());
+            if (resolveItemValues)
+            {
+                Ui.UseItemValuation(new DaggerfallItemValuation(definitions), ItemInstances!, DaggerfallItemOwner.Player,
+                    entity => Entities.IdentityOf(new EntityId(entity)).Value);
+            }
         }
         public void Dispose() => Entities.Dispose();
     }

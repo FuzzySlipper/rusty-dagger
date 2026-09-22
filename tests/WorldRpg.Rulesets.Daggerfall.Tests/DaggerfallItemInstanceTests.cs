@@ -61,16 +61,16 @@ public sealed class DaggerfallItemInstanceTests
         InventoryComponent destinationInventory = new(store, destinationOwner);
         InventoryStackId source = Stack("source");
         InventoryStackId destination = Stack("destination");
-        sourceInventory.Grant(Fungible("arrow"), source, 3);
+        sourceInventory.Grant(Fungible("template-277"), source, 3);
 
         DaggerfallItemInstances instances = new();
-        DaggerfallItemInstanceMetadata metadata = Metadata("arrow", DaggerfallItemOwner.Corpse(10), material: "ebony", variant: 3,
-            condition: 7, maximumCondition: 11, identified: false, stolen: true, quest: "mq-9", symbol: "relic", enchantment: "soul-trap");
+        DaggerfallItemInstanceMetadata metadata = Metadata("template-277", DaggerfallItemOwner.Corpse(10), material: "none", variant: 3,
+            condition: 7, maximumCondition: 11, identified: false, stolen: true, quest: "mq-9", symbol: "relic", enchantment: "soul-trap") with { BookId = 59 };
         instances.RegisterStack(DaggerfallItemOwner.Corpse(10), source, metadata);
 
-        destinationInventory.Grant(Fungible("arrow"), destination, 1);
+        destinationInventory.Grant(Fungible("template-277"), destination, 1);
         instances.RegisterStack(DaggerfallItemOwner.Player, destination,
-            Metadata("arrow", DaggerfallItemOwner.Player, material: "iron", variant: 3,
+            Metadata("template-277", DaggerfallItemOwner.Player, material: "iron", variant: 3,
                 condition: 7, maximumCondition: 11, identified: false, stolen: true, quest: "mq-9", symbol: "relic", enchantment: "soul-trap"));
         Assert.Throws<InvalidOperationException>(() => instances.EnsureTransferCompatible(
             DaggerfallItemOwner.Corpse(10), DaggerfallItemOwner.Player, source, destination));
@@ -85,7 +85,7 @@ public sealed class DaggerfallItemInstanceTests
         DaggerfallItemInstanceMetadata moved = instances.RequireStack(DaggerfallItemOwner.Player, destination);
         Assert.Equal(metadata with { Owner = DaggerfallItemOwner.Player }, moved);
 
-        DaggerfallStackSave saved = new(destination.Value, "arrow", 3, moved.Capture());
+        DaggerfallStackSave saved = new(destination.Value, "template-277", 3, moved.Capture());
         new DaggerfallInventorySave([saved], [], []).Validate();
         DaggerfallItemInstances restored = new();
         restored.RegisterStack(DaggerfallItemOwner.Player, InventoryStackId.Parse(saved.StackId),
