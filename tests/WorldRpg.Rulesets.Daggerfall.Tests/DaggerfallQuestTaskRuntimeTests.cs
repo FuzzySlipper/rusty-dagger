@@ -279,6 +279,18 @@ public sealed class DaggerfallQuestTaskRuntimeTests
     }
 
     [Fact]
+    public void Assessment_returns_the_actual_unsupported_operation_line_and_source()
+    {
+        DaggerfallQuestSourceDefinition source = Source(Block("headless", 4, "when _a_ BAD and _b_"));
+
+        DaggerfallQuestDiagnosticDefinition diagnostic = Assert.Single(DaggerfallQuestTaskCompiler.Assess(source));
+
+        Assert.Equal(4, diagnostic.Line);
+        Assert.Equal("when _a_ BAD and _b_", diagnostic.Text);
+        Assert.Contains("runner operation supports", diagnostic.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Unsupported_action_ends_in_a_diagnosed_failure()
     {
         DaggerfallQuestSourceDefinition source = Source(Block("headless", 7, "start timer _clock_"));

@@ -2627,7 +2627,7 @@ public sealed class NormalizedRuntimeSeamTests
             var stack = sourceSession.State.Inventory.Read().Stacks.First();
             sourceSession.State.Inventory.Grant(new InventoryGrant(new InventoryItemId(stack.Definition.Value), stack.Id, 2));
             savedStackMetadata = new DaggerfallItemInstanceMetadata(stack.Definition.Value, "steel", 4, 3, 8,
-                false, true, "quest-99", "relic", "soul-trap", DaggerfallItemOwner.Player).Validate();
+                false, true, "quest-99", "relic", null, DaggerfallItemOwner.Player).Validate();
             sourceSession.State.ItemInstances.ReplaceStack(DaggerfallItemOwner.Player, stack.Id, savedStackMetadata);
             DurableIdentityReference npcUniqueIdentity = sourceSession.UniqueItemAllocator.AllocateReference();
             MechanicsEquipmentCoordinator npcEquipment = sourceSession.State.EquipmentFor(2000);
@@ -2635,7 +2635,7 @@ public sealed class NormalizedRuntimeSeamTests
             sourceSession.State.ItemInstances.RegisterDefaultUnique(npcUniqueIdentity.Value,
                 definitions.Items[new DaggerfallItemId("iron-dagger")], DaggerfallItemOwner.Actor(2000));
             savedUniqueMetadata = new DaggerfallItemInstanceMetadata("iron-dagger", "ebony", 2, 7, 12,
-                false, true, "quest-99", "blade", "fire", DaggerfallItemOwner.Actor(2000)).Validate();
+                false, true, "quest-99", "blade", null, DaggerfallItemOwner.Actor(2000)).Validate();
             sourceSession.State.ItemInstances.ReplaceUnique(npcUniqueIdentity.Value, savedUniqueMetadata);
             npcEquipment.Equip(npcUnique, [new WorldRpg.Kit.Inventory.EquipmentSlotId("right-hand")]);
             savedHealth = health.Current;

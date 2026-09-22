@@ -289,13 +289,15 @@ internal sealed class DaggerfallQuestInstances
 {
     private readonly DaggerfallDefinitions _definitions;
     private readonly IRandomService _random;
+    private readonly DaggerfallQuestRuntimeAdmission? _admission;
     private readonly IReadOnlyDictionary<string, DaggerfallQuestTaskProgram> _programs;
     private readonly Dictionary<string, DaggerfallQuestRuntimeInstance> _instances = new(StringComparer.Ordinal);
 
-    internal DaggerfallQuestInstances(DaggerfallDefinitions definitions, IRandomService random)
+    internal DaggerfallQuestInstances(DaggerfallDefinitions definitions, IRandomService random, DaggerfallQuestRuntimeAdmission? admission = null)
     {
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
         _random = random ?? throw new ArgumentNullException(nameof(random));
+        _admission = admission;
         Messages = new DaggerfallQuestMessages(definitions, random);
         _programs = definitions.QuestSources.Quests.Values
             .Where(source => source.Disposition == DaggerfallQuestDisposition.Compiled)
@@ -319,6 +321,7 @@ internal sealed class DaggerfallQuestInstances
     internal DaggerfallQuestInstanceSave Start(DaggerfallQuestInstanceSave instance)
     {
         ArgumentNullException.ThrowIfNull(instance);
+        _admission?.RequireRunnable(instance.SourceFile);
         if (instance.Lifecycle != DaggerfallQuestLifecycle.Active)
             throw new ArgumentException("A newly started quest instance must be active.", nameof(instance));
         instance.Validate(_definitions, validateClockState: false);
@@ -403,6 +406,8 @@ internal sealed class DaggerfallQuestInstances
     internal void Restore(DaggerfallQuestInstancesSave saved)
     {
         ArgumentNullException.ThrowIfNull(saved);
+        foreach (DaggerfallQuestInstanceSave instance in saved.Instances)
+            _admission?.RequireRunnable(instance.SourceFile);
         saved.Validate(_definitions);
         Dictionary<string, DaggerfallQuestRuntimeInstance> restored = new(StringComparer.Ordinal);
         foreach (DaggerfallQuestInstanceSave instance in saved.Instances)
@@ -446,8 +451,12 @@ internal sealed class DaggerfallQuestInstances
         return instance;
     }
 
-    private DaggerfallQuestTaskProgram Program(string sourceFile) => _programs.TryGetValue(sourceFile, out DaggerfallQuestTaskProgram? program)
-        ? program : throw new ArgumentException($"Quest source '{sourceFile}' has no admitted task program.");
+    private DaggerfallQuestTaskProgram Program(string sourceFile)
+    {
+        _admission?.RequireRunnable(sourceFile);
+        return _programs.TryGetValue(sourceFile, out DaggerfallQuestTaskProgram? program)
+            ? program : throw new ArgumentException($"Quest source '{sourceFile}' has no admitted task program.");
+    }
 
     private void ValidateRuntime(DaggerfallQuestRuntimeInstance instance)
     {

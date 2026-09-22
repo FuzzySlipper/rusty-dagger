@@ -1,0 +1,2682 @@
+{
+  "catalogSource": {
+    "sourcePath": "Tables/QuestList-Classic.txt",
+    "contentHash": "24299ba54dc246ae278123f4c855928e1d7cd36626b972236d13c44c5005d001",
+    "byteLen": 10399
+  },
+  "quests": [
+    {
+      "name": "M0C00Y11",
+      "sourceFile": "M0C00Y11.txt",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "catalogSourceLine": 24,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "b5b4da54a5f5b9be36aee73b84881a549fb2f66d61e64da873743fdbfdac4a07",
+      "actionLines": [
+        {
+          "line": 96,
+          "text": "start timer _2dung_ "
+        },
+        {
+          "line": 97,
+          "text": "reveal _house_ "
+        },
+        {
+          "line": 98,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 99,
+          "text": "place foe _monster_ at _house_ "
+        },
+        {
+          "line": 100,
+          "text": "create npc at _house_ "
+        },
+        {
+          "line": 103,
+          "text": "end quest "
+        },
+        {
+          "line": 106,
+          "text": "killed 1 _monster_ saying 1011 "
+        },
+        {
+          "line": 109,
+          "text": "when _qgclicked_ and _S.01_ "
+        },
+        {
+          "line": 110,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 111,
+          "text": "end quest "
+        },
+        {
+          "line": 114,
+          "text": "               clicked npc _qgiver_"
+        },
+        {
+          "line": 117,
+          "text": "when _qgclicked_ and not _S.01_ "
+        },
+        {
+          "line": 118,
+          "text": "clear _qgclicked_ _clearclick_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "name": "M0C00Y12",
+      "sourceFile": "M0C00Y12.txt",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "catalogSourceLine": 25,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "c93c9ad4ca8d72cc030edb27dbf70ff7dbc2cd16ca80337ed7c3fb6a0163a8b2",
+      "actionLines": [
+        {
+          "line": 97,
+          "text": "start timer _2dung_ "
+        },
+        {
+          "line": 98,
+          "text": "reveal _house_ "
+        },
+        {
+          "line": 99,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 100,
+          "text": "create npc at _house_ "
+        },
+        {
+          "line": 101,
+          "text": "place foe _monster_ at _house_ "
+        },
+        {
+          "line": 104,
+          "text": "end quest "
+        },
+        {
+          "line": 107,
+          "text": "killed 1 _monster_ saying 1011 "
+        },
+        {
+          "line": 110,
+          "text": "when _qgclicked_ and _S.01_ "
+        },
+        {
+          "line": 111,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 112,
+          "text": "end quest "
+        },
+        {
+          "line": 115,
+          "text": "    clicked npc _qgiver_"
+        },
+        {
+          "line": 118,
+          "text": "when _qgclicked_ and not _S.01_ "
+        },
+        {
+          "line": 119,
+          "text": "clear _qgclicked_ _clearclick_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "name": "M0C00Y13",
+      "sourceFile": "M0C00Y13.txt",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "catalogSourceLine": 26,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "804a11bb29f8cd3368797e71919d75542e7c683890fa0c1343bd0d7311ef6b47",
+      "actionLines": [
+        {
+          "line": 97,
+          "text": "start timer _2dung_ "
+        },
+        {
+          "line": 98,
+          "text": "reveal _house_ "
+        },
+        {
+          "line": 99,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 100,
+          "text": "place foe _monster_ at _house_ "
+        },
+        {
+          "line": 101,
+          "text": "create npc at _house_ "
+        },
+        {
+          "line": 104,
+          "text": "end quest "
+        },
+        {
+          "line": 107,
+          "text": "killed 1 _monster_ saying 1011 "
+        },
+        {
+          "line": 110,
+          "text": "when _qgclicked_ and _S.01_ "
+        },
+        {
+          "line": 111,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 112,
+          "text": "end quest "
+        },
+        {
+          "line": 115,
+          "text": "               clicked npc _qgiver_"
+        },
+        {
+          "line": 118,
+          "text": "when _qgclicked_ and not _S.01_ "
+        },
+        {
+          "line": 119,
+          "text": "clear _qgclicked_ _clearclick_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "name": "M0C00Y14",
+      "sourceFile": "M0C00Y14.txt",
+      "membership": "N",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "catalogSourceLine": 27,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "1ec4db5ec89d68a0da1bcb2b99008e840be6abef3089d62b9b8b5217e6d06a38",
+      "actionLines": [
+        {
+          "line": 103,
+          "text": "start timer _2dung_ "
+        },
+        {
+          "line": 104,
+          "text": "reveal _house_ "
+        },
+        {
+          "line": 105,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 106,
+          "text": "pc at _house_ set _S.04_ "
+        },
+        {
+          "line": 107,
+          "text": "create npc at _house_ "
+        },
+        {
+          "line": 110,
+          "text": "end quest "
+        },
+        {
+          "line": 113,
+          "text": "killed 4 _monster_ "
+        },
+        {
+          "line": 114,
+          "text": "say 1020"
+        },
+        {
+          "line": 117,
+          "text": "when _qgclicked_ and _S.01_ "
+        },
+        {
+          "line": 118,
+          "text": "give pc nothing "
+        },
+        {
+          "line": 119,
+          "text": "end quest "
+        },
+        {
+          "line": 122,
+          "text": "    clicked npc _qgiver_"
+        },
+        {
+          "line": 125,
+          "text": "when _qgclicked_ and not _S.01_ "
+        },
+        {
+          "line": 126,
+          "text": "clear _qgclicked_ _clearclick_ "
+        },
+        {
+          "line": 129,
+          "text": "say 1011"
+        },
+        {
+          "line": 130,
+          "text": "create foe _monster_ every 2 minutes 7 times with 100% success "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "name": "M0B00Y00",
+      "sourceFile": "M0B00Y00.txt",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "catalogSourceLine": 28,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "5de1fd5c320bce411e4274ffc9c89b4d7277d50cb107cfb983e5190d959115ad",
+      "actionLines": [
+        {
+          "line": 116,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 117,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 118,
+          "text": "log 1030 step 0 "
+        },
+        {
+          "line": 119,
+          "text": "pick one of _map_ _nomap_ _nomap_ _nomap_ "
+        },
+        {
+          "line": 120,
+          "text": "pick one of _S.06_ _S.07_ _S.08_ "
+        },
+        {
+          "line": 123,
+          "text": "when _qgclicked_ and _mondead_ "
+        },
+        {
+          "line": 124,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 125,
+          "text": "end quest "
+        },
+        {
+          "line": 128,
+          "text": "killed 1 _werewolf_ saying 1020 "
+        },
+        {
+          "line": 129,
+          "text": "killed 1 _wereboar_ saying 1020 "
+        },
+        {
+          "line": 130,
+          "text": "killed 1 _bear_ saying 1021 "
+        },
+        {
+          "line": 133,
+          "text": "clicked npc _questgiver_ "
+        },
+        {
+          "line": 136,
+          "text": "end quest "
+        },
+        {
+          "line": 140,
+          "text": "when _qgclicked_ and not _mondead_ "
+        },
+        {
+          "line": 141,
+          "text": "say 1003"
+        },
+        {
+          "line": 142,
+          "text": "clear _qgclicked_ _clearclick_ "
+        },
+        {
+          "line": 145,
+          "text": "place foe _bear_ at _mondung_ "
+        },
+        {
+          "line": 148,
+          "text": "place foe _wereboar_ at _mondung_ "
+        },
+        {
+          "line": 151,
+          "text": "place foe _werewolf_ at _mondung_ "
+        },
+        {
+          "line": 156,
+          "text": "when _map_ and _pcgetsgold_ "
+        },
+        {
+          "line": 157,
+          "text": "reveal _newdung_ readmap"
+        },
+        {
+          "line": 158,
+          "text": "    say 1080 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "name": "M0B00Y06",
+      "sourceFile": "M0B00Y06.txt",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "catalogSourceLine": 29,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "4a021c3c09b610680b0dfd4cafcb688586390f098fb607c0aaef01162d3ac5e5",
+      "actionLines": [
+        {
+          "line": 125,
+          "text": "start timer _2dung_ "
+        },
+        {
+          "line": 126,
+          "text": "reveal _house_ "
+        },
+        {
+          "line": 127,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 128,
+          "text": "pick one of _map_ _nomap_ _nomap_ _nomap_ "
+        },
+        {
+          "line": 129,
+          "text": "pick one of _monster1_ _monster2_ _monster3_ _monster4_ "
+        },
+        {
+          "line": 130,
+          "text": "create npc at _house_ "
+        },
+        {
+          "line": 133,
+          "text": "end quest "
+        },
+        {
+          "line": 136,
+          "text": "killed 1 _spider_ saying 1013 "
+        },
+        {
+          "line": 137,
+          "text": "killed 1 _tiger_ saying 1014 "
+        },
+        {
+          "line": 138,
+          "text": "killed 1 _harpy_ saying 1012 "
+        },
+        {
+          "line": 139,
+          "text": "killed 1 _bear_ saying 1011 "
+        },
+        {
+          "line": 142,
+          "text": "when _qgclicked_ and _mondead_ "
+        },
+        {
+          "line": 143,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 144,
+          "text": "end quest "
+        },
+        {
+          "line": 147,
+          "text": "when _qgclicked_ and not _mondead_ "
+        },
+        {
+          "line": 148,
+          "text": "clear _qgclicked_ _clearclick_ "
+        },
+        {
+          "line": 151,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 156,
+          "text": "when _map_ and _S.02_ "
+        },
+        {
+          "line": 157,
+          "text": "reveal _newdung_ readmap"
+        },
+        {
+          "line": 158,
+          "text": "    say 1080 "
+        },
+        {
+          "line": 161,
+          "text": "say 1021 "
+        },
+        {
+          "line": 162,
+          "text": "place foe _bear_ at _house_ "
+        },
+        {
+          "line": 165,
+          "text": "say 1022 "
+        },
+        {
+          "line": 166,
+          "text": "place foe _harpy_ at _house_ "
+        },
+        {
+          "line": 169,
+          "text": "say 1023 "
+        },
+        {
+          "line": 170,
+          "text": "place foe _spider_ at _house_ "
+        },
+        {
+          "line": 173,
+          "text": "say 1024 "
+        },
+        {
+          "line": 174,
+          "text": "place foe _tiger_ at _house_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "name": "M0B00Y07",
+      "sourceFile": "M0B00Y07.txt",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "catalogSourceLine": 30,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "4dd48996e0473c54878552057c5e707c1fd7840d8a14745db76b2b85aa722cb1",
+      "actionLines": [
+        {
+          "line": 107,
+          "text": "start timer _2dung_ "
+        },
+        {
+          "line": 108,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 109,
+          "text": "pick one of _map_ _nomap_ _nomap_ "
+        },
+        {
+          "line": 110,
+          "text": "pick one of _monster1_ _monster2_ "
+        },
+        {
+          "line": 111,
+          "text": "create npc at _house_ "
+        },
+        {
+          "line": 114,
+          "text": "end quest "
+        },
+        {
+          "line": 117,
+          "text": "killed 1 _monster_ saying 1011 "
+        },
+        {
+          "line": 118,
+          "text": "killed 1 _bear_ saying 1012 "
+        },
+        {
+          "line": 121,
+          "text": "when _qgclicked_ and _mondead_ "
+        },
+        {
+          "line": 122,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 123,
+          "text": "end quest "
+        },
+        {
+          "line": 126,
+          "text": "when _qgclicked_ and not _mondead_ "
+        },
+        {
+          "line": 127,
+          "text": "clear _qgclicked_ _clearclick_ "
+        },
+        {
+          "line": 130,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 135,
+          "text": "when _map_ and _S.02_ "
+        },
+        {
+          "line": 136,
+          "text": "reveal _newdung_ readmap"
+        },
+        {
+          "line": 137,
+          "text": "    say 1080 "
+        },
+        {
+          "line": 140,
+          "text": "place foe _bear_ at _house_ "
+        },
+        {
+          "line": 143,
+          "text": "place foe _monster_ at _house_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "name": "M0B00Y15",
+      "sourceFile": "M0B00Y15.txt",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "catalogSourceLine": 31,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "629d4a82d56489dd5aac4ade697a8fc803a8b6d9af3a86fad5da875bf6c1602e",
+      "actionLines": [
+        {
+          "line": 112,
+          "text": "start timer _2dung_ "
+        },
+        {
+          "line": 113,
+          "text": "reveal _house_ "
+        },
+        {
+          "line": 114,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 115,
+          "text": "pick one of _monster1_ _monster2_ "
+        },
+        {
+          "line": 116,
+          "text": "create npc at _house_ "
+        },
+        {
+          "line": 119,
+          "text": "end quest "
+        },
+        {
+          "line": 122,
+          "text": "killed 4 _rats_ "
+        },
+        {
+          "line": 123,
+          "text": "killed 4 _monster_ "
+        },
+        {
+          "line": 124,
+          "text": "say 1020 "
+        },
+        {
+          "line": 127,
+          "text": "when _qgclicked_ and _mondead_ "
+        },
+        {
+          "line": 128,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 129,
+          "text": "end quest "
+        },
+        {
+          "line": 132,
+          "text": "when _qgclicked_ and not _mondead_ "
+        },
+        {
+          "line": 133,
+          "text": "clear _qgclicked_ _clearclick_ "
+        },
+        {
+          "line": 136,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 139,
+          "text": "say 1011"
+        },
+        {
+          "line": 140,
+          "text": "create foe _rats_ every 2 minutes 7 times with 100% success "
+        },
+        {
+          "line": 143,
+          "text": "pc at _house_ set _S.04_ "
+        },
+        {
+          "line": 146,
+          "text": "pc at _house_ set _S.07_ "
+        },
+        {
+          "line": 149,
+          "text": "say 1012"
+        },
+        {
+          "line": 150,
+          "text": "create foe _monster_ every 2 minutes 7 times with 100% success "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "name": "M0B00Y16",
+      "sourceFile": "M0B00Y16.txt",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "catalogSourceLine": 32,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "16b3f022a76f5bc3fec6b4c08fae2708d5c422cec66cc9e123fbcbf679d0f933",
+      "actionLines": [
+        {
+          "line": 162,
+          "text": "start timer _qtime_ "
+        },
+        {
+          "line": 163,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 164,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 165,
+          "text": "pick one of _victim_ _S.09_ _S.09_ "
+        },
+        {
+          "line": 166,
+          "text": "pick one of _map_ _nomap_ _nomap_ "
+        },
+        {
+          "line": 167,
+          "text": "pick one of _magicItem_ _noMagicItem_ _noMagicItem_ _noMagicItem_"
+        },
+        {
+          "line": 168,
+          "text": "place foe _giant_ at _mondung_ "
+        },
+        {
+          "line": 173,
+          "text": "injured _giant_ "
+        },
+        {
+          "line": 174,
+          "text": "start task _giantWaveWhileInDungeon_"
+        },
+        {
+          "line": 175,
+          "text": "say 1030 "
+        },
+        {
+          "line": 178,
+          "text": "killed 1 _giant_ "
+        },
+        {
+          "line": 179,
+          "text": "say 1031"
+        },
+        {
+          "line": 182,
+          "text": "clicked npc _questgiver_ "
+        },
+        {
+          "line": 185,
+          "text": "when _clickqgiver_ and not _S.03_"
+        },
+        {
+          "line": 186,
+          "text": "say 1003"
+        },
+        {
+          "line": 187,
+          "text": "clear _clickqgiver_ _clearclick_"
+        },
+        {
+          "line": 190,
+          "text": "when _clickqgiver_ and _S.03_ "
+        },
+        {
+          "line": 191,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 195,
+          "text": "when _success_ and _map_ "
+        },
+        {
+          "line": 196,
+          "text": "reveal _newdung_ readmap"
+        },
+        {
+          "line": 197,
+          "text": "say 1080 "
+        },
+        {
+          "line": 200,
+          "text": "place npc _villager_ at _mondung_ "
+        },
+        {
+          "line": 204,
+          "text": "give item _magic_ to _giant_ "
+        },
+        {
+          "line": 205,
+          "text": "make _magic_ permanent "
+        },
+        {
+          "line": 208,
+          "text": "hide npc _villager_ "
+        },
+        {
+          "line": 211,
+          "text": "clicked npc _villager_ "
+        },
+        {
+          "line": 212,
+          "text": "prompt 1040 yes _yes_ no _no_ "
+        },
+        {
+          "line": 215,
+          "text": "pc at _store_ set _S.13_ "
+        },
+        {
+          "line": 216,
+          "text": "log 1021 step 1 "
+        },
+        {
+          "line": 217,
+          "text": "hide npc _villager_ "
+        },
+        {
+          "line": 218,
+          "text": "say 1041 "
+        },
+        {
+          "line": 219,
+          "text": "add _villager_ face "
+        },
+        {
+          "line": 222,
+          "text": "say 1043 "
+        },
+        {
+          "line": 223,
+          "text": "change repute with _villager_ by -10 "
+        },
+        {
+          "line": 227,
+          "text": "say 1044 "
+        },
+        {
+          "line": 228,
+          "text": "drop _villager_ face "
+        },
+        {
+          "line": 229,
+          "text": "change repute with _villager_ by \u002B15 "
+        },
+        {
+          "line": 230,
+          "text": "place npc _villager_ at _store_ "
+        },
+        {
+          "line": 231,
+          "text": "start task _escortComplete_"
+        },
+        {
+          "line": 234,
+          "text": "when _yes_ and not _escortComplete_ and _qtime_ "
+        },
+        {
+          "line": 235,
+          "text": "say 1042 "
+        },
+        {
+          "line": 238,
+          "text": "when _success_ and _no_ "
+        },
+        {
+          "line": 241,
+          "text": "when _success_ and _S.09_"
+        },
+        {
+          "line": 244,
+          "text": "when _success_ and _escortComplete_ "
+        },
+        {
+          "line": 247,
+          "text": "when _qtime_ or _S.15_ or _S.16_ or _S.17_ or _S.19_"
+        },
+        {
+          "line": 248,
+          "text": "end quest "
+        },
+        {
+          "line": 251,
+          "text": "when _success_ and _victim_ and not _S.10_"
+        },
+        {
+          "line": 254,
+          "text": "pc at _mondung_ set _spawnGiants_"
+        },
+        {
+          "line": 257,
+          "text": "create foe _giantFriends_ every 3 minutes 6 times with 50% success "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "name": "M0B00Y17",
+      "sourceFile": "M0B00Y17.txt",
+      "membership": "M",
+      "minimumRequirement": 0,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "catalogSourceLine": 33,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "c0328dff1550c30159b509358a29ec4919386224eb603ba287c16159d9c52059",
+      "actionLines": [
+        {
+          "line": 222,
+          "text": "dialog link for location _lovehouse_ person _love_ "
+        },
+        {
+          "line": 223,
+          "text": "start timer _qtime_ "
+        },
+        {
+          "line": 224,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 225,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 226,
+          "text": "get item _I.00_ "
+        },
+        {
+          "line": 227,
+          "text": "pick one of _S.10_ _S.10_ _S.11_ _S.11_ "
+        },
+        {
+          "line": 228,
+          "text": "place foe _tiger_ at _mondung_ "
+        },
+        {
+          "line": 229,
+          "text": "create npc _dummy_ "
+        },
+        {
+          "line": 230,
+          "text": "have _I.01_ set _deadbody_"
+        },
+        {
+          "line": 233,
+          "text": "take _I.01_ from pc"
+        },
+        {
+          "line": 237,
+          "text": "end quest "
+        },
+        {
+          "line": 240,
+          "text": "say 1040 "
+        },
+        {
+          "line": 243,
+          "text": "injured _tiger_ "
+        },
+        {
+          "line": 244,
+          "text": "_I.00_ used do _S.04_ "
+        },
+        {
+          "line": 247,
+          "text": "_I.00_ used do _S.01_ "
+        },
+        {
+          "line": 250,
+          "text": "killed 1 _tiger_ "
+        },
+        {
+          "line": 251,
+          "text": "say 1030 "
+        },
+        {
+          "line": 252,
+          "text": "log 1022 step 1"
+        },
+        {
+          "line": 257,
+          "text": "when _S.04_ and not _S.03_ "
+        },
+        {
+          "line": 258,
+          "text": "log 1021 step 1 "
+        },
+        {
+          "line": 259,
+          "text": "say 1041 "
+        },
+        {
+          "line": 260,
+          "text": "remove foe _tiger_"
+        },
+        {
+          "line": 266,
+          "text": "clicked npc _dummy_ "
+        },
+        {
+          "line": 269,
+          "text": "when _S.06_ and _S.05_ "
+        },
+        {
+          "line": 270,
+          "text": "give pc _gold_  "
+        },
+        {
+          "line": 271,
+          "text": "take _I.00_ from pc"
+        },
+        {
+          "line": 272,
+          "text": "end quest "
+        },
+        {
+          "line": 276,
+          "text": "when _S.06_ and _S.03_ "
+        },
+        {
+          "line": 277,
+          "text": "say 1050 "
+        },
+        {
+          "line": 278,
+          "text": "unset _S.06_ "
+        },
+        {
+          "line": 283,
+          "text": "_letter_ used do _readletter_ "
+        },
+        {
+          "line": 284,
+          "text": "place item _letter_ at _mondung_ "
+        },
+        {
+          "line": 285,
+          "text": "place npc _love_ at _lovehouse_ "
+        },
+        {
+          "line": 289,
+          "text": "toting _letter_ and _love_ clicked "
+        },
+        {
+          "line": 290,
+          "text": "get item _magic_ "
+        },
+        {
+          "line": 291,
+          "text": "say 1061 "
+        },
+        {
+          "line": 292,
+          "text": "make _magic_ permanent "
+        },
+        {
+          "line": 295,
+          "text": "add dialog for location _lovehouse_ person _love_ "
+        },
+        {
+          "line": 298,
+          "text": "clicked npc _questgiver_"
+        },
+        {
+          "line": 299,
+          "text": "say 1003"
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "name": "M0B1XY01",
+      "sourceFile": "M0B1XY01.txt",
+      "membership": "M",
+      "minimumRequirement": 1,
+      "requirementKind": "rank",
+      "adult": true,
+      "oneTime": false,
+      "catalogSourceLine": 34,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "801732dd046f25af188f282a39fdf0eb76c6122e865d8728d10a81490f3c2e20",
+      "actionLines": [
+        {
+          "line": 119,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 120,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 121,
+          "text": "log 1030 step 0 "
+        },
+        {
+          "line": 122,
+          "text": "pick one of _map_ _nomap_ _nomap_ "
+        },
+        {
+          "line": 123,
+          "text": "pc at _mondung_ set _S.04_ "
+        },
+        {
+          "line": 126,
+          "text": "when _qgclicked_ and _mondead_ "
+        },
+        {
+          "line": 127,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 128,
+          "text": "end quest "
+        },
+        {
+          "line": 131,
+          "text": "killed 5 _monster_ saying 1020 "
+        },
+        {
+          "line": 134,
+          "text": "clicked npc _questgiver_ "
+        },
+        {
+          "line": 137,
+          "text": "end quest "
+        },
+        {
+          "line": 140,
+          "text": "create foe _monster_ every 15 minutes 20 times with 50% success "
+        },
+        {
+          "line": 143,
+          "text": "when _qgclicked_ and not _mondead_"
+        },
+        {
+          "line": 144,
+          "text": "say 1003 "
+        },
+        {
+          "line": 145,
+          "text": "clear _qgclicked_ _clearclick_ "
+        },
+        {
+          "line": 150,
+          "text": "when _map_ and _pcgetsgold_ "
+        },
+        {
+          "line": 151,
+          "text": "reveal _newdung_ readmap"
+        },
+        {
+          "line": 152,
+          "text": "    say 1080 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "name": "M0B11Y18",
+      "sourceFile": "M0B11Y18.txt",
+      "membership": "M",
+      "minimumRequirement": 1,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": true,
+      "catalogSourceLine": 35,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "cabeab81b8f492801807658c04faa71179e92e2f9320bb7905556ae63c6cb000",
+      "actionLines": [
+        {
+          "line": 363,
+          "text": "dialog link for person _enemy_ "
+        },
+        {
+          "line": 364,
+          "text": "start timer _S.03_ "
+        },
+        {
+          "line": 365,
+          "text": "start timer _S.02_ "
+        },
+        {
+          "line": 366,
+          "text": "start timer _patsy_ "
+        },
+        {
+          "line": 367,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 368,
+          "text": "place npc _enemy_ at _tavern_ "
+        },
+        {
+          "line": 369,
+          "text": "place npc _traitor_ at _palace_ "
+        },
+        {
+          "line": 370,
+          "text": "have _I.04_ set _deadbody_"
+        },
+        {
+          "line": 373,
+          "text": "have _amulet_ set _S.11_ "
+        },
+        {
+          "line": 377,
+          "text": "place npc _traitor_ at _stronghold_ "
+        },
+        {
+          "line": 380,
+          "text": "hide npc _questgiver_ "
+        },
+        {
+          "line": 381,
+          "text": "give pc _I.02_ notify 1032 "
+        },
+        {
+          "line": 384,
+          "text": "daily from 22:00 to 23:59 "
+        },
+        {
+          "line": 385,
+          "text": "start timer _S.05_ "
+        },
+        {
+          "line": 386,
+          "text": "hide npc _enemy_ "
+        },
+        {
+          "line": 387,
+          "text": "place npc _target_ at _targethouse_ "
+        },
+        {
+          "line": 390,
+          "text": "place item _I.04_ at _targethouse_ "
+        },
+        {
+          "line": 391,
+          "text": "hide npc _target_ "
+        },
+        {
+          "line": 394,
+          "text": "take _I.04_ from pc"
+        },
+        {
+          "line": 398,
+          "text": "clicked npc _target_ "
+        },
+        {
+          "line": 399,
+          "text": "pc at _targethouse_ set _S.08_ "
+        },
+        {
+          "line": 400,
+          "text": "stop timer _S.05_ "
+        },
+        {
+          "line": 401,
+          "text": "log 1021 step 1 "
+        },
+        {
+          "line": 402,
+          "text": "hide npc _target_ "
+        },
+        {
+          "line": 403,
+          "text": "say 1041 "
+        },
+        {
+          "line": 404,
+          "text": "add _target_ face "
+        },
+        {
+          "line": 407,
+          "text": "toting _I.02_ and _enemy_ clicked "
+        },
+        {
+          "line": 408,
+          "text": "get item _amulet_ "
+        },
+        {
+          "line": 409,
+          "text": "say 1040 "
+        },
+        {
+          "line": 413,
+          "text": "when _S.06_ and not _S.08_ "
+        },
+        {
+          "line": 414,
+          "text": "_I.03_ used do _S.27_ "
+        },
+        {
+          "line": 415,
+          "text": "say 1042"
+        },
+        {
+          "line": 416,
+          "text": "create foe _F.00_ every 1 minutes 1 times with 100% success "
+        },
+        {
+          "line": 417,
+          "text": "create foe _mages_ every 2 minutes 1 times with 100% success "
+        },
+        {
+          "line": 418,
+          "text": "start timer _S.00_ "
+        },
+        {
+          "line": 419,
+          "text": "log 1022 step 2 "
+        },
+        {
+          "line": 420,
+          "text": "get item _I.03_ "
+        },
+        {
+          "line": 421,
+          "text": "drop _target_ face "
+        },
+        {
+          "line": 424,
+          "text": "pc at _L.00_ set _S.12_ "
+        },
+        {
+          "line": 425,
+          "text": "when _S.11_ and _S.00_ "
+        },
+        {
+          "line": 426,
+          "text": "reveal _L.00_ "
+        },
+        {
+          "line": 427,
+          "text": "say 1043 "
+        },
+        {
+          "line": 428,
+          "text": "teleport pc to _L.00_ "
+        },
+        {
+          "line": 432,
+          "text": "clear _conhouse_ "
+        },
+        {
+          "line": 435,
+          "text": "when _S.00_ and not _S.12_ "
+        },
+        {
+          "line": 436,
+          "text": "create foe _F.03_ every 30 minutes 5 times with 10% success "
+        },
+        {
+          "line": 439,
+          "text": "injured _F.03_ "
+        },
+        {
+          "line": 440,
+          "text": "say 1070 "
+        },
+        {
+          "line": 443,
+          "text": "toting _I.03_ and _traitor_ clicked "
+        },
+        {
+          "line": 444,
+          "text": "prompt 1060 yes _S.17_ no _S.19_ "
+        },
+        {
+          "line": 447,
+          "text": "toting _I.03_ and _ruler_ clicked "
+        },
+        {
+          "line": 448,
+          "text": "prompt 1050 yes _S.18_ no _S.20_ "
+        },
+        {
+          "line": 449,
+          "text": "stop timer _patsy_"
+        },
+        {
+          "line": 452,
+          "text": "start quest 500 500 "
+        },
+        {
+          "line": 453,
+          "text": "get item _traitorreward_ "
+        },
+        {
+          "line": 454,
+          "text": "say 1061 "
+        },
+        {
+          "line": 455,
+          "text": "make _traitorreward_ permanent "
+        },
+        {
+          "line": 456,
+          "text": "change repute with _traitor_ by \u002B15 "
+        },
+        {
+          "line": 457,
+          "text": "remove foe _F.03_"
+        },
+        {
+          "line": 461,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 462,
+          "text": "change repute with _ruler_ by \u002B15 "
+        },
+        {
+          "line": 465,
+          "text": "stop timer _S.02_ "
+        },
+        {
+          "line": 466,
+          "text": "get item _I.03_ "
+        },
+        {
+          "line": 467,
+          "text": "start task _S.02_ "
+        },
+        {
+          "line": 468,
+          "text": "say 1062 "
+        },
+        {
+          "line": 471,
+          "text": "get item _I.03_ "
+        },
+        {
+          "line": 474,
+          "text": "when _S.18_ and not _S.02_ "
+        },
+        {
+          "line": 475,
+          "text": "say 1054 "
+        },
+        {
+          "line": 478,
+          "text": "when _S.18_ and _S.02_ "
+        },
+        {
+          "line": 479,
+          "text": "prompt 1051 yes _S.23_ no _S.24_ "
+        },
+        {
+          "line": 482,
+          "text": "pc at _stronghold_ set _S.26_ "
+        },
+        {
+          "line": 483,
+          "text": "start timer _gettraitor_ "
+        },
+        {
+          "line": 484,
+          "text": "reveal _stronghold_ "
+        },
+        {
+          "line": 485,
+          "text": "log 1023 step 3 "
+        },
+        {
+          "line": 486,
+          "text": "say 1052 "
+        },
+        {
+          "line": 489,
+          "text": "say 1053 "
+        },
+        {
+          "line": 493,
+          "text": "hide npc _traitor_ "
+        },
+        {
+          "line": 494,
+          "text": "place foe _mtraitor_ at _stronghold_ "
+        },
+        {
+          "line": 497,
+          "text": "reveal _stronghold_ "
+        },
+        {
+          "line": 500,
+          "text": "injured _mtraitor_ "
+        },
+        {
+          "line": 501,
+          "text": "start timer _S.35_ "
+        },
+        {
+          "line": 502,
+          "text": "stop timer _gettraitor_ "
+        },
+        {
+          "line": 503,
+          "text": "say 1071 "
+        },
+        {
+          "line": 506,
+          "text": "killed 1 _mtraitor_ "
+        },
+        {
+          "line": 507,
+          "text": "say 1072 "
+        },
+        {
+          "line": 510,
+          "text": "clicked npc _ruler_ "
+        },
+        {
+          "line": 513,
+          "text": "when _S.29_ and _S.30_ "
+        },
+        {
+          "line": 514,
+          "text": "get item _queenreward_ "
+        },
+        {
+          "line": 515,
+          "text": "say 1055 "
+        },
+        {
+          "line": 516,
+          "text": "make _queenreward_ permanent "
+        },
+        {
+          "line": 519,
+          "text": "when _patsy_ and not _S.23_ "
+        },
+        {
+          "line": 522,
+          "text": "when _S.21_ or _success_ "
+        },
+        {
+          "line": 523,
+          "text": "destroy _traitor_ "
+        },
+        {
+          "line": 526,
+          "text": "when _S.21_ or _S.24_ "
+        },
+        {
+          "line": 530,
+          "text": "when _S.35_ and not _S.29_ "
+        },
+        {
+          "line": 531,
+          "text": "say 1073 "
+        },
+        {
+          "line": 532,
+          "text": "remove foe _mtraitor_"
+        },
+        {
+          "line": 536,
+          "text": "when _S.36_ and _S.30_ "
+        },
+        {
+          "line": 537,
+          "text": "get item _queenreward_ "
+        },
+        {
+          "line": 538,
+          "text": "say 1056 "
+        },
+        {
+          "line": 539,
+          "text": "make _queenreward_ permanent "
+        },
+        {
+          "line": 540,
+          "text": "unset _S.30_ "
+        },
+        {
+          "line": 543,
+          "text": "when _S.34_ or _S.37_ "
+        },
+        {
+          "line": 544,
+          "text": "start quest 501 501 "
+        },
+        {
+          "line": 547,
+          "text": "when _S.17_ or _gettraitor_ or _success_ "
+        },
+        {
+          "line": 550,
+          "text": "when _S.32_ or _S.38_ "
+        },
+        {
+          "line": 553,
+          "text": "when _S.39_ or _S.40_ "
+        },
+        {
+          "line": 554,
+          "text": "restore _questgiver_ "
+        },
+        {
+          "line": 555,
+          "text": "make _amulet_ permanent "
+        },
+        {
+          "line": 556,
+          "text": "end quest "
+        },
+        {
+          "line": 559,
+          "text": "clicked npc _questgiver_"
+        },
+        {
+          "line": 560,
+          "text": "say 1003"
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "name": "M0B20Y02",
+      "sourceFile": "M0B20Y02.txt",
+      "membership": "M",
+      "minimumRequirement": 2,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "catalogSourceLine": 36,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "63b9dcb439d57ed83accf7ca3e739663f7efdcd8f9abc6a2071f8c4607481bc2",
+      "actionLines": [
+        {
+          "line": 124,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 125,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 126,
+          "text": "log 1030 step 0 "
+        },
+        {
+          "line": 127,
+          "text": "pick one of _map_ _nomap_ _nomap_ _nomap_ "
+        },
+        {
+          "line": 128,
+          "text": "pc at _mondung_ set _S.01_ "
+        },
+        {
+          "line": 131,
+          "text": "when _qgclicked_ and _mondead_ "
+        },
+        {
+          "line": 132,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 133,
+          "text": "end quest "
+        },
+        {
+          "line": 136,
+          "text": "create foe _monster_ every 15 minutes 15 times with 50% success "
+        },
+        {
+          "line": 139,
+          "text": "killed 6 _monster_ "
+        },
+        {
+          "line": 140,
+          "text": "say 1010 "
+        },
+        {
+          "line": 143,
+          "text": "clicked npc _questgiver_ "
+        },
+        {
+          "line": 146,
+          "text": "end quest "
+        },
+        {
+          "line": 149,
+          "text": "injured _monster_ saying 1020 "
+        },
+        {
+          "line": 152,
+          "text": "when _qgclicked_ and not _mondead_ "
+        },
+        {
+          "line": 153,
+          "text": "clear _qgclicked_ _clearclick_ "
+        },
+        {
+          "line": 158,
+          "text": "when _map_ and _pcgetsgold_ "
+        },
+        {
+          "line": 159,
+          "text": "reveal _newdung_ readmap"
+        },
+        {
+          "line": 160,
+          "text": "    say 1080 "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "name": "M0B21Y19",
+      "sourceFile": "M0B21Y19.txt",
+      "membership": "M",
+      "minimumRequirement": 2,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": true,
+      "catalogSourceLine": 37,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "a81a8ad8404fb3fa48827ed4b73b1b82bfe525fa4a89a66f83e194098d400b4c",
+      "actionLines": [
+        {
+          "line": 200,
+          "text": "dialog link for location _daughterhouse_ person _daughter_ "
+        },
+        {
+          "line": 201,
+          "text": "dialog link for person _darkb_ "
+        },
+        {
+          "line": 202,
+          "text": "start timer _qtime_ "
+        },
+        {
+          "line": 203,
+          "text": "log 1020 step 0 "
+        },
+        {
+          "line": 204,
+          "text": "place npc _victim_ at _victimhouse_"
+        },
+        {
+          "line": 205,
+          "text": "hide npc _victim_"
+        },
+        {
+          "line": 206,
+          "text": "pc at _victimhouse_ set _S.05_ "
+        },
+        {
+          "line": 207,
+          "text": "_note_ used do _readnote_"
+        },
+        {
+          "line": 208,
+          "text": "have _I.02_ set _deadbody_"
+        },
+        {
+          "line": 212,
+          "text": "add dialog for person _darkb_ "
+        },
+        {
+          "line": 215,
+          "text": "injured _enemy_ "
+        },
+        {
+          "line": 216,
+          "text": "say 1035 "
+        },
+        {
+          "line": 219,
+          "text": "_letter_ used do _readletter_ "
+        },
+        {
+          "line": 220,
+          "text": "start timer _S.04_ "
+        },
+        {
+          "line": 221,
+          "text": "give pc _letter_ notify 1070 "
+        },
+        {
+          "line": 222,
+          "text": "place npc _daughter_ at _daughterhouse_ "
+        },
+        {
+          "line": 225,
+          "text": "end quest "
+        },
+        {
+          "line": 228,
+          "text": "start task _insidespawn_"
+        },
+        {
+          "line": 232,
+          "text": "create foe _enemy_ every 0 minutes 4 times with 100% success "
+        },
+        {
+          "line": 233,
+          "text": "place item _I.02_ at _victimhouse_ "
+        },
+        {
+          "line": 234,
+          "text": "place item _note_ at _victimhouse_ "
+        },
+        {
+          "line": 235,
+          "text": "log 1021 step 1 "
+        },
+        {
+          "line": 236,
+          "text": "rumor mill 1040 "
+        },
+        {
+          "line": 237,
+          "text": "hide npc _victim_ "
+        },
+        {
+          "line": 242,
+          "text": "take _I.02_ from pc"
+        },
+        {
+          "line": 246,
+          "text": "clicked npc _darkb_ "
+        },
+        {
+          "line": 247,
+          "text": "create foe _enemy_ every 3 minutes 5 times with 100% success "
+        },
+        {
+          "line": 248,
+          "text": "create foe _F.01_ every 0 minutes 1 times with 100% success "
+        },
+        {
+          "line": 249,
+          "text": "hide npc _darkb_ "
+        },
+        {
+          "line": 250,
+          "text": "say 1050 "
+        },
+        {
+          "line": 251,
+          "text": "start timer _S.03_ "
+        },
+        {
+          "line": 252,
+          "text": "log 1024 step 1"
+        },
+        {
+          "line": 258,
+          "text": "killed 1 _F.01_ "
+        },
+        {
+          "line": 259,
+          "text": "rumor mill 1041 "
+        },
+        {
+          "line": 260,
+          "text": "change repute with _daughter_ by \u002B10 "
+        },
+        {
+          "line": 261,
+          "text": "change repute with _darkb_ by -15 "
+        },
+        {
+          "line": 264,
+          "text": "clicked npc _daughter_ "
+        },
+        {
+          "line": 265,
+          "text": "pc at _daughterhouse_ set _S.12_ "
+        },
+        {
+          "line": 266,
+          "text": "create foe _F.02_ every 0 minutes 1 times with 100% success "
+        },
+        {
+          "line": 267,
+          "text": "say 1051 "
+        },
+        {
+          "line": 268,
+          "text": "add _daughter_ face "
+        },
+        {
+          "line": 269,
+          "text": "hide npc _daughter_"
+        },
+        {
+          "line": 274,
+          "text": "log 1022 step 1"
+        },
+        {
+          "line": 277,
+          "text": "when _qtime_ and not _S.07_ "
+        },
+        {
+          "line": 278,
+          "text": "end quest "
+        },
+        {
+          "line": 281,
+          "text": "injured _F.02_ "
+        },
+        {
+          "line": 282,
+          "text": "say 1036 "
+        },
+        {
+          "line": 286,
+          "text": "pc at _safehouse_ set _S.14_ "
+        },
+        {
+          "line": 287,
+          "text": "when _S.08_ and not _S.12_ "
+        },
+        {
+          "line": 288,
+          "text": "log 1023 step 1"
+        },
+        {
+          "line": 289,
+          "text": "say 1052"
+        },
+        {
+          "line": 294,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 295,
+          "text": "end quest "
+        },
+        {
+          "line": 298,
+          "text": "when _S.04_ and not _S.14_ "
+        },
+        {
+          "line": 299,
+          "text": "say 1071 "
+        },
+        {
+          "line": 302,
+          "text": "clicked npc _questgiver_"
+        },
+        {
+          "line": 305,
+          "text": "when _qgclicked_ and not _insidespawn_"
+        },
+        {
+          "line": 306,
+          "text": "clear _qgclicked_ _clearclick_"
+        },
+        {
+          "line": 309,
+          "text": "when _qgclicked_ and _insidespawn_"
+        },
+        {
+          "line": 310,
+          "text": "say 1003"
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "name": "M0B30Y03",
+      "sourceFile": "M0B30Y03.txt",
+      "membership": "M",
+      "minimumRequirement": 3,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "catalogSourceLine": 38,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "7ac32e48f2be1f2a5d3fa2d118ba6d9fbeb70900c2bf95bf9e770c77f327ace3",
+      "actionLines": [
+        {
+          "line": 119,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 120,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 121,
+          "text": "log 1030 step 0 "
+        },
+        {
+          "line": 122,
+          "text": "pick one of _map_ _nomap_ _nomap_ _map_ "
+        },
+        {
+          "line": 123,
+          "text": "place foe _monster_ at _mondung_ "
+        },
+        {
+          "line": 126,
+          "text": "when _qgclicked_ and _mondead_ "
+        },
+        {
+          "line": 127,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 130,
+          "text": "killed 1 _monster_ saying 1020 "
+        },
+        {
+          "line": 133,
+          "text": "clicked npc _questgiver_ "
+        },
+        {
+          "line": 136,
+          "text": "end quest "
+        },
+        {
+          "line": 139,
+          "text": "when _qgclicked_ and not _mondead_ "
+        },
+        {
+          "line": 140,
+          "text": "say 1003"
+        },
+        {
+          "line": 141,
+          "text": "clear _qgclicked_ _clearclick_ "
+        },
+        {
+          "line": 146,
+          "text": "when _map_ and _pcgetsgold_ "
+        },
+        {
+          "line": 147,
+          "text": "reveal _newdung_ readmap"
+        },
+        {
+          "line": 148,
+          "text": "    say 1080 "
+        },
+        {
+          "line": 151,
+          "text": "when _nomap_ and _pcgetsgold_ "
+        },
+        {
+          "line": 154,
+          "text": "when _S.07_ or _S.08_ "
+        },
+        {
+          "line": 155,
+          "text": "end quest "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "name": "M0B30Y04",
+      "sourceFile": "M0B30Y04.txt",
+      "membership": "M",
+      "minimumRequirement": 3,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "catalogSourceLine": 39,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "6289abc8ddfa3bc7b9a0c42b4e9513e28fad558b72048e7c5a97f88d0b7d76cf",
+      "actionLines": [
+        {
+          "line": 127,
+          "text": "start timer _1stparton_ "
+        },
+        {
+          "line": 128,
+          "text": "reveal _mondung_ "
+        },
+        {
+          "line": 129,
+          "text": "log 1030 step 0 "
+        },
+        {
+          "line": 130,
+          "text": "pick one of _map_ _nomap_ _nomap_ _map_ "
+        },
+        {
+          "line": 131,
+          "text": "place foe _monster_ at _mondung_ "
+        },
+        {
+          "line": 134,
+          "text": "when _qgclicked_ and _mondead_ "
+        },
+        {
+          "line": 135,
+          "text": "give pc _reward_ "
+        },
+        {
+          "line": 138,
+          "text": "injured _monster_ "
+        },
+        {
+          "line": 139,
+          "text": "say 1020 "
+        },
+        {
+          "line": 142,
+          "text": "killed 1 _monster_ "
+        },
+        {
+          "line": 145,
+          "text": "clicked npc _questgiver_ "
+        },
+        {
+          "line": 148,
+          "text": "end quest "
+        },
+        {
+          "line": 151,
+          "text": "when _qgclicked_ and not _mondead_"
+        },
+        {
+          "line": 152,
+          "text": "say 1003 "
+        },
+        {
+          "line": 153,
+          "text": "clear _qgclicked_ _clearclick_ "
+        },
+        {
+          "line": 158,
+          "text": "when _map_ and _pcgetsgold_ "
+        },
+        {
+          "line": 159,
+          "text": "reveal _newdung_ readmap"
+        },
+        {
+          "line": 160,
+          "text": "    say 1080 "
+        },
+        {
+          "line": 161,
+          "text": "end quest"
+        },
+        {
+          "line": 164,
+          "text": "when _nomap_ and _pcgetsgold_ "
+        },
+        {
+          "line": 165,
+          "text": "end quest"
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "name": "M0B30Y08",
+      "sourceFile": "M0B30Y08.txt",
+      "membership": "M",
+      "minimumRequirement": 3,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "catalogSourceLine": 40,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "fd107aed6415ca2cd63b8295033bf111f3351ca5ec0ff784df5b00dcbcda0c19",
+      "actionLines": [
+        {
+          "line": 110,
+          "text": "start timer _2dung_ "
+        },
+        {
+          "line": 111,
+          "text": "reveal _house_ "
+        },
+        {
+          "line": 112,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 113,
+          "text": "pick one of _map_ _map_ _nomap_ _nomap_ "
+        },
+        {
+          "line": 114,
+          "text": "pc at _house_ set _S.04_ "
+        },
+        {
+          "line": 115,
+          "text": "create npc at _house_ "
+        },
+        {
+          "line": 118,
+          "text": "end quest "
+        },
+        {
+          "line": 121,
+          "text": "killed 1 _monster_ saying 1011 "
+        },
+        {
+          "line": 124,
+          "text": "when _qgclicked_ and _mondead_ and _nomap_"
+        },
+        {
+          "line": 125,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 126,
+          "text": "end quest "
+        },
+        {
+          "line": 129,
+          "text": "when _qgclicked_ and _mondead_ and _map_"
+        },
+        {
+          "line": 130,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 131,
+          "text": "reveal _newdung_ readmap"
+        },
+        {
+          "line": 132,
+          "text": "    say 1080"
+        },
+        {
+          "line": 133,
+          "text": "end quest "
+        },
+        {
+          "line": 136,
+          "text": "when _qgclicked_ and not _mondead_ "
+        },
+        {
+          "line": 137,
+          "text": "clear _qgclicked_ _clearclick_ "
+        },
+        {
+          "line": 140,
+          "text": "clicked npc _qgiver_"
+        },
+        {
+          "line": 144,
+          "text": "daily from 05:00 to 19:00 "
+        },
+        {
+          "line": 147,
+          "text": "when _S.04_ and not _S.05_ "
+        },
+        {
+          "line": 148,
+          "text": "place foe _monster_ at _house_ "
+        },
+        {
+          "line": 153,
+          "text": "when _map_ and _S.02_ "
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "name": "M0B40Y05",
+      "sourceFile": "M0B40Y05.txt",
+      "membership": "M",
+      "minimumRequirement": 4,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "catalogSourceLine": 42,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "99fddfd5c82bd0b3e43b69f6e6a5b3736d6dd5b63947f4997262d5e500a7dd9e",
+      "actionLines": [
+        {
+          "line": 169,
+          "text": "start timer _2dung_ "
+        },
+        {
+          "line": 170,
+          "text": "reveal _dungeon_ "
+        },
+        {
+          "line": 171,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 172,
+          "text": "pick one of _map_ _nomap_"
+        },
+        {
+          "line": 173,
+          "text": "place foe _monster_ at _dungeon_ "
+        },
+        {
+          "line": 176,
+          "text": "end quest "
+        },
+        {
+          "line": 179,
+          "text": "killed 1 _monster_ saying 1011 "
+        },
+        {
+          "line": 180,
+          "text": "hide npc _woodsman_"
+        },
+        {
+          "line": 181,
+          "text": "remove log step 1"
+        },
+        {
+          "line": 184,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 187,
+          "text": "    when _qgclicked_ and _S.01_"
+        },
+        {
+          "line": 188,
+          "text": "say 1003"
+        },
+        {
+          "line": 189,
+          "text": "    start task _victory_"
+        },
+        {
+          "line": 193,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 194,
+          "text": "    start timer _end_"
+        },
+        {
+          "line": 199,
+          "text": "when _qgclicked_ and not _S.01_ and not _S.07_ "
+        },
+        {
+          "line": 200,
+          "text": "clear _qgclicked_ _clearclick_ "
+        },
+        {
+          "line": 203,
+          "text": "injured _monster_"
+        },
+        {
+          "line": 206,
+          "text": "    when _S.04_ and not _S.01_"
+        },
+        {
+          "line": 207,
+          "text": "prompt 1020 yes _yes_ no _no_ "
+        },
+        {
+          "line": 210,
+          "text": "add dialog for person _woodsman_ "
+        },
+        {
+          "line": 211,
+          "text": "log 1030 step 1 "
+        },
+        {
+          "line": 212,
+          "text": "say 1021 "
+        },
+        {
+          "line": 213,
+          "text": "restrain foe _monster_"
+        },
+        {
+          "line": 216,
+          "text": "say 1022 "
+        },
+        {
+          "line": 219,
+          "text": "clicked npc _woodsman_"
+        },
+        {
+          "line": 222,
+          "text": "when _S.07_ and _injtalk_ and not _S.01_"
+        },
+        {
+          "line": 223,
+          "text": "    say 1023 "
+        },
+        {
+          "line": 224,
+          "text": "change repute with _woodsman_ by \u002B10 "
+        },
+        {
+          "line": 227,
+          "text": "when _qgclicked_ and _notkill_ "
+        },
+        {
+          "line": 228,
+          "text": "say 1025 "
+        },
+        {
+          "line": 229,
+          "text": "start task _victory_"
+        },
+        {
+          "line": 234,
+          "text": "when _map_ and _victory_ "
+        },
+        {
+          "line": 235,
+          "text": "reveal _newdung_ readmap"
+        },
+        {
+          "line": 236,
+          "text": "    say 1080 "
+        },
+        {
+          "line": 239,
+          "text": "    end quest"
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "name": "M0B50Y09",
+      "sourceFile": "M0B50Y09.txt",
+      "membership": "M",
+      "minimumRequirement": 5,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "catalogSourceLine": 43,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "d3499b215c43235f66f6256872086eb1c77bddcc0f74e85335ba2a4b2076813a",
+      "actionLines": [
+        {
+          "line": 107,
+          "text": "start timer _2dung_ "
+        },
+        {
+          "line": 108,
+          "text": "reveal _dungeon_ "
+        },
+        {
+          "line": 109,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 110,
+          "text": "pick one of _map_ _nomap_ "
+        },
+        {
+          "line": 111,
+          "text": "place foe _monster_ at _dungeon_ "
+        },
+        {
+          "line": 114,
+          "text": "end quest "
+        },
+        {
+          "line": 117,
+          "text": "killed 1 _monster_ saying 1011 "
+        },
+        {
+          "line": 120,
+          "text": "                when _S.01_ and _qgclicked_"
+        },
+        {
+          "line": 121,
+          "text": "give pc _gold_ "
+        },
+        {
+          "line": 122,
+          "text": "                start timer _end_"
+        },
+        {
+          "line": 125,
+          "text": "end quest "
+        },
+        {
+          "line": 128,
+          "text": "               clicked npc _qgiver_"
+        },
+        {
+          "line": 131,
+          "text": "when _qgclicked_ and not _S.01_ "
+        },
+        {
+          "line": 132,
+          "text": "clear _qgclicked_ _clearclick_ "
+        },
+        {
+          "line": 137,
+          "text": "when _map_ and _victory_ "
+        },
+        {
+          "line": 138,
+          "text": "reveal _newdung_ readmap"
+        },
+        {
+          "line": 139,
+          "text": "    say 1080"
+        }
+      ],
+      "sourceDiagnostics": []
+    },
+    {
+      "name": "M0B60Y10",
+      "sourceFile": "M0B60Y10.txt",
+      "membership": "M",
+      "minimumRequirement": 6,
+      "requirementKind": "rank",
+      "adult": false,
+      "oneTime": false,
+      "catalogSourceLine": 44,
+      "catalogSourceDisposition": "present",
+      "sourceDisposition": "compiled",
+      "originalSelection": "rewrittentext",
+      "sourceFingerprint": "aaa7dd8bf02ce00baabbeee2949ae54c16f57ffe41afc5ef2b0fabd8ec3362d8",
+      "actionLines": [
+        {
+          "line": 119,
+          "text": "start timer _2dung_ "
+        },
+        {
+          "line": 120,
+          "text": "reveal _dungeon_ "
+        },
+        {
+          "line": 121,
+          "text": "log 1010 step 0 "
+        },
+        {
+          "line": 122,
+          "text": "pick one of _map_ _nomap_ _nomap_ _nomap_ "
+        },
+        {
+          "line": 123,
+          "text": "pick one of _S.04_ _S.05_ _S.06_ _S.07_ "
+        },
+        {
+          "line": 126,
+          "text": "end quest "
+        },
+        {
+          "line": 129,
+          "text": "killed 1 _ice_ saying 1011 "
+        },
+        {
+          "line": 130,
+          "text": "killed 1 _fire_ saying 1011 "
+        },
+        {
+          "line": 131,
+          "text": "killed 1 _flesh_ saying 1011 "
+        },
+        {
+          "line": 132,
+          "text": "killed 1 _iron_ saying 1011 "
+        },
+        {
+          "line": 135,
+          "text": "clicked npc _qgiver_ "
+        },
+        {
+          "line": 138,
+          "text": "when _S.02_ and not _S.01_ "
+        },
+        {
+          "line": 139,
+          "text": "clear _S.02_ _clearclick_ "
+        },
+        {
+          "line": 142,
+          "text": "place foe _iron_ at _dungeon_ "
+        },
+        {
+          "line": 145,
+          "text": "place foe _ice_ at _dungeon_ "
+        },
+        {
+          "line": 148,
+          "text": "place foe _flesh_ at _dungeon_ "
+        },
+        {
+          "line": 151,
+          "text": "place foe _fire_ at _dungeon_ "
+        },
+        {
+          "line": 156,
+          "text": "when _map_ and _S.02_ "
+        },
+        {
+          "line": 157,
+          "text": "reveal _newdung_ readmap"
+        },
+        {
+          "line": 158,
+          "text": "    say 1080 "
+        },
+        {
+          "line": 161,
+          "text": "when _nomap_ and _S.02_ "
+        },
+        {
+          "line": 164,
+          "text": "when _S.10_ or _S.11_ "
+        },
+        {
+          "line": 165,
+          "text": "give pc _gold_"
+        },
+        {
+          "line": 166,
+          "text": "end quest "
+        }
+      ],
+      "sourceDiagnostics": []
+    }
+  ],
+  "fingerprint": "9a6f0ea22bdd8fd1926ef256489ee715cb6516ffc9eb7dff02ef846df80101a6"
+}
