@@ -115,7 +115,7 @@ internal static class DaggerActorFactory
                     }
                 }
             }
-            DaggerfallVariableStore variables = new();
+            DaggerfallVariableStore variables = new(definitions.QuestSources.Tables.Globals.Lookup);
             DaggerfallNpcRegistry npcs = new();
             if (saved?.Variables is { } restoredVariables)
             {

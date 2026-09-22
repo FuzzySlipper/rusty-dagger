@@ -1142,7 +1142,7 @@ internal static class Program
     /// </summary>
     private static int RunQuestsCommand(IReadOnlyList<string> args)
     {
-        const string Usage = "usage: daggerfall-import-tool quests --quest-text SOURCE_DIR --pack PACK.json --inventory CSV [--update]";
+        const string Usage = "usage: daggerfall-import-tool quests --quest-text SOURCE_DIR --tables TABLE_DIR --pack PACK.json --inventory CSV [--update]";
         bool update = args.Contains("--update", StringComparer.Ordinal);
         Dictionary<string, string> values = new(StringComparer.Ordinal);
         for (int index = 1; index < args.Count; index++)
@@ -1155,15 +1155,18 @@ internal static class Program
             }
         }
 
-        string[] accepted = ["--quest-text", "--pack", "--inventory"];
+        string[] accepted = ["--quest-text", "--tables", "--pack", "--inventory"];
         if (values.Count != accepted.Length || accepted.Any(key => !values.ContainsKey(key)))
         {
             throw new ArgumentException(Usage);
         }
 
         IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(values["--inventory"]));
-        string[] messageNames = ["Message", "QuestorOffer", "RefuseQuest", "AcceptQuest", "QuestFail", "QuestComplete", "RumorsDuringQuest", "RumorsPostfailure", "RumorsPostFailure", "RumorsPostsuccess", "RumorsPostSuccess", "QuestorPostsuccess", "QuestorPostSuccess", "QuestorPostfailure", "QuestorPostFailure", "QuestLogEntry", "QuestTimeLapse"];
-        Dictionary<string, int> globalKeys = QuestGlobalKeys();
+        DaggerfallQuestTables tables = new(
+            DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(values["--tables"], "Quests-GlobalVars.txt")), "Tables/Quests-GlobalVars.txt", globals: true),
+            DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(values["--tables"], "Quests-StaticMessages.txt")), "Tables/Quests-StaticMessages.txt"));
+        string[] messageNames = [.. tables.StaticMessages.Rows.Select(row => row.Name)];
+        IReadOnlyDictionary<string, int> globalKeys = tables.Globals.Lookup;
         List<QuestSourceDocument> documents = [];
         List<(string FileName, string QuestName, int Line, string Reason)> failures = [];
         long totalBytes = 0;
@@ -1191,6 +1194,7 @@ internal static class Program
         }
 
         JsonNode node = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
+        node["questTables"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(tables, PublishedJson.Section));
         node["questSources"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(pack, PublishedJson.Section));
         File.WriteAllText(values["--pack"], node.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
         Console.WriteLine($"pack: quest sources updated in {values["--pack"]}");
@@ -1249,22 +1253,6 @@ internal static class Program
         File.WriteAllText(values["--pack"], node.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
         Console.WriteLine($"pack: cinematic identities updated in {values["--pack"]}");
         return 0;
-    }
-
-    private static Dictionary<string, int> QuestGlobalKeys()
-    {
-        string[] names = ["LiftedCurse", "GothrydGotTotem", "KingOfWormsGotTotem", "GortwogGotTotem", "AkorithiGotTotem", "Unused1", "UnderkingGotTotem", "EadwyreGotTotem", "BrisiennaGotTotem", "MedoraGotHorn", "Unused2", "GothrydEnding", "KingOfWormsEnding", "GortwogEnding", "AkorithiEnding", "Unused3", "UnderkingEnding", "EadwyreEnding", "BrisiennaEnding", "Unused4", "Unused5", "UnknownElysanna", "Unused6", "MorgiahSatisfied", "Unused7", "ElysannaSatisfied", "Unused8", "Unused9", "BarenziahSatisfied", "MyniseraSatisfied", "Unused10", "MetLadyBrisienna", "Unused11", "KingOfWormsSatisfied", "Unused12", "Unused13", "FinishedMantellanCrux", "Unused14", "Unused15", "Unused16", "Unused17", "Unused18", "UnknownHelseth", "LysandusSatisfied", "Unused19", "Unused20", "Unused21", "Unused22", "Unused23", "Unused24", "Unused25", "Unused26", "Unused27", "Unused28", "Unused29", "Unused30", "Unused31", "Unused32", "Unused33", "Unused34", "Unused35", "Unused36", "Unused37", "Unused38"];
-        Dictionary<string, int> keys = new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["TookTheCure"] = 5,
-            ["OpenedShapeshifters"] = 10,
-        };
-        for (int index = 0; index < names.Length; index++)
-        {
-            keys[names[index]] = index;
-        }
-
-        return keys;
     }
 
     /// <summary>

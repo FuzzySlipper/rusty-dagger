@@ -35,6 +35,25 @@ public sealed class DaggerfallQuestSourcesContentTests
         Assert.All(new[] { demo2, demo3 }, demo => Assert.Contains(demo.Diagnostics, diagnostic => diagnostic.Line > 0 && diagnostic.Reason.Contains("2 sources", StringComparison.Ordinal)));
     }
 
+    [Fact]
+    public void Published_tables_preserve_all_slots_aliases_and_provenance()
+    {
+        DaggerfallQuestTables tables = Definitions().QuestSources.Tables;
+        Assert.Equal(66, tables.Globals.Rows.Count);
+        Assert.Equal(Enumerable.Range(0, 64), tables.Globals.Rows.Select(row => row.Id).Distinct().Order());
+        Assert.Equal(5, tables.Globals.Lookup["Unused1"]);
+        Assert.Equal(5, tables.Globals.Lookup["TookTheCure"]);
+        Assert.Equal(10, tables.Globals.Lookup["Unused2"]);
+        Assert.Equal(10, tables.Globals.Lookup["OpenedShapeshifters"]);
+        Assert.Equal(17, tables.StaticMessages.Rows.Count);
+        Assert.Equal(new[] { 0 }.Concat(Enumerable.Range(1000, 11)).Append(1045), tables.StaticMessages.Rows.Select(row => row.Id).Distinct().Order());
+        Assert.Equal(new[] { "RumorsPostfailure", "RumorsPostFailure" }, tables.StaticMessages.Rows.Where(row => row.Id == 1006).Select(row => row.Name));
+        Assert.Equal(1006, tables.StaticMessages.Lookup["rumorspostfailure"]);
+        Assert.Equal("Tables/Quests-GlobalVars.txt", tables.Globals.SourcePath);
+        Assert.Equal("Tables/Quests-StaticMessages.txt", tables.StaticMessages.SourcePath);
+        Assert.All(tables.Globals.Rows.Concat(tables.StaticMessages.Rows), row => Assert.True(row.SourceLine > 0));
+    }
+
     private static DaggerfallDefinitions Definitions()
     {
         string root = RepositoryRoot();

@@ -1925,12 +1925,41 @@ internal static class DaggerfallBaseContent
         return new DaggerfallCinematicSet(new ReadOnlyDictionary<string, DaggerfallCinematicDefinition>(cinematics));
     }
 
+    private static DaggerfallQuestTables ReadQuestTables(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    {
+        JsonElement tables = Object(Property(root, "questTables", diagnostics), "questTables", diagnostics);
+        return new(ReadTable("globals", true), ReadTable("staticMessages", false));
+
+        DaggerfallQuestTable ReadTable(string key, bool globals)
+        {
+            JsonElement table = Object(Property(tables, key, diagnostics), key, diagnostics);
+            string path = Text(Object(Property(table, "source", diagnostics), "source", diagnostics), "sourcePath", diagnostics);
+            List<DaggerfallQuestTableRow> rows = [];
+            Dictionary<string, int> aliases = new(StringComparer.OrdinalIgnoreCase);
+            foreach (JsonElement row in Array(table, "rows", diagnostics))
+            {
+                int id = Integer(row, "id", diagnostics);
+                string name = Text(row, "name", diagnostics);
+                int line = Integer(row, "sourceLine", diagnostics);
+                if (id < 0 || (globals && id >= DaggerfallVariableStore.GlobalCount) || line <= 0)
+                    diagnostics.Add($"Quest table '{key}' has an invalid ID or source line for '{name}'.");
+                if (aliases.TryGetValue(name, out int previous) && previous != id)
+                    diagnostics.Add($"Quest table '{key}' alias '{name}' resolves to both {previous} and {id}.");
+                aliases[name] = id;
+                rows.Add(new(id, name, line));
+            }
+            if (rows.Count == 0 || (globals && rows.Select(row => row.Id).Distinct().Count() != DaggerfallVariableStore.GlobalCount))
+                diagnostics.Add($"Quest table '{key}' is empty or omits global slots.");
+            return new(path, rows.AsReadOnly());
+        }
+    }
+
     private static DaggerfallQuestSourceSet ReadQuestSources(JsonElement root, DaggerfallContentDiagnostics diagnostics)
     {
         if (!root.TryGetProperty("questSources", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
         {
             diagnostics.Add("Base payload publishes no questSources section; quest lookups resolve to nothing until it is republished.");
-            return new DaggerfallQuestSourceSet(new ReadOnlyDictionary<string, DaggerfallQuestSourceDefinition>(new Dictionary<string, DaggerfallQuestSourceDefinition>(StringComparer.Ordinal)));
+            return new DaggerfallQuestSourceSet(new ReadOnlyDictionary<string, DaggerfallQuestSourceDefinition>(new Dictionary<string, DaggerfallQuestSourceDefinition>(StringComparer.Ordinal)), ReadQuestTables(root, diagnostics));
         }
 
         Dictionary<string, DaggerfallQuestSourceDefinition> quests = new(StringComparer.Ordinal);
@@ -1974,7 +2003,7 @@ internal static class DaggerfallBaseContent
             }
         }
 
-        return new DaggerfallQuestSourceSet(new ReadOnlyDictionary<string, DaggerfallQuestSourceDefinition>(quests));
+        return new DaggerfallQuestSourceSet(new ReadOnlyDictionary<string, DaggerfallQuestSourceDefinition>(quests), ReadQuestTables(root, diagnostics));
     }
 
     private static byte[] ReadGridCells(JsonElement section, string rowsKey, int width, int height, string what, DaggerfallContentDiagnostics diagnostics)    {
