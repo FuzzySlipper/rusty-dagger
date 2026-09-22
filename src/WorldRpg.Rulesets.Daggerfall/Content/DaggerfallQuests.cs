@@ -45,7 +45,7 @@ internal sealed record DaggerfallQuestDiagnosticDefinition(int Line, string Text
 
 /// <summary>The normalized quest source pack, loaded from the pack alone.</summary>
 /// <param name="Quests">The quests by source file.</param>
-internal sealed record DaggerfallQuestSourceSet(IReadOnlyDictionary<string, DaggerfallQuestSourceDefinition> Quests, DaggerfallQuestTables Tables)
+internal sealed record DaggerfallQuestSourceSet(IReadOnlyDictionary<string, DaggerfallQuestSourceDefinition> Quests, DaggerfallQuestTables Tables, DaggerfallQuestCatalog Catalog)
 {
     /// <summary>
     /// Resolves a quest source by file: its messages, blocks and whether it may run. A
@@ -54,3 +54,9 @@ internal sealed record DaggerfallQuestSourceSet(IReadOnlyDictionary<string, Dagg
     /// </summary>
     internal DaggerfallQuestSourceDefinition Resolve(string sourceFile) => Quests[sourceFile];
 }
+
+internal sealed record DaggerfallQuestCatalogRow(string Name, string Group, string? Membership,
+    int MinimumRequirement, string RequirementKind, bool Adult, bool OneTime, bool Active,
+    string SourceDisposition, string Notes, int SourceLine);
+
+internal sealed record DaggerfallQuestCatalog(string SourcePath, IReadOnlyList<DaggerfallQuestCatalogRow> Rows);

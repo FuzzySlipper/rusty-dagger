@@ -17,9 +17,11 @@ public sealed record DaggerfallQuestTable(ImportPublicationSource Source, IReadO
         .ToDictionary(group => group.Key, group => group.First().Id, StringComparer.OrdinalIgnoreCase);
 }
 
-public sealed record DaggerfallQuestTables(DaggerfallQuestTable Globals, DaggerfallQuestTable StaticMessages);
+public sealed record DaggerfallQuestTables(DaggerfallQuestTable Globals, DaggerfallQuestTable StaticMessages,
+    DaggerfallQuestPlaces Places, DaggerfallQuestTable Sounds,
+    DaggerfallQuestTable Diseases, DaggerfallQuestTable Spells);
 
-/// <summary>Offline reader for the two id/name quest tables, not donor save serialization.</summary>
+/// <summary>Offline reader for id/name quest tables, not donor save serialization.</summary>
 public static class DaggerfallQuestTableReader
 {
     public static DaggerfallQuestTable Read(byte[] bytes, string sourcePath, bool globals = false)

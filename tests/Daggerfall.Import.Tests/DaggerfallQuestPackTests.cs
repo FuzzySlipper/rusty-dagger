@@ -104,6 +104,7 @@ public sealed class DaggerfallQuestPackTests
         Assert.Equal(35, curevam.Blocks.Count);
         // A terminating blank ends the message without appending: no trailing break line.
         DaggerfallQuestMessage error = curevam.Messages.Single(message => message.Id == 1000);
+        Assert.Equal(12, error.FirstLine);
         Assert.Equal(["Error -- 1000 called"], error.Lines);
         // Dash lines abutting content are content, not comments.
         DaggerfallQuestRecord s15 = pack.Quests.Single(quest => quest.Name == "S0000015");
