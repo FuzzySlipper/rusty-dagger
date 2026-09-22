@@ -57,13 +57,33 @@
     "navigationMaximumStepCells": 2,
     "characterController": {
       "standingHeight": 1.8,
+      "crouchedHeight": 1.1,
       "radius": 0.25,
       "forwardSpeed": 3.5,
       "backwardSpeed": 3.5,
       "strafeSpeed": 3.5,
+      "jumpSpeed": 7.0,
+      "jumpBufferSeconds": 0.12,
+      "jumpCoyoteSeconds": 0.1,
+      "jumpLandingLockoutSeconds": 0.1,
+      "jumpHeldInputRetriggers": false,
       "recoveryMaximumDistance": 1.0,
       "maximumStepHeight": 0.75
     }
+  },
+  "locomotion": {
+    "classicToEngineSpeedRatio": 39.5,
+    "walkBase": 150.0,
+    "crouchBase": 50.0,
+    "runBaseMultiplier": 1.35,
+    "runningSkillDivisor": 200.0,
+    "minimumWalkSpeedAttribute": 30,
+    "idleFatiguePerGameMinute": 11,
+    "runningFatiguePerGameMinute": 88,
+    "jumpFatigueCost": 11,
+    "jumpBaseSpeed": 4.5,
+    "jumpSkillMultiplier": 0.5,
+    "crouchedJumpMultiplier": 0.8
   },
   "camera": {
     "eyeHeight": 0.75,

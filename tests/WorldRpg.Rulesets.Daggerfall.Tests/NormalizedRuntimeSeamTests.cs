@@ -595,11 +595,60 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(3.5f, controller.BackwardSpeed);
         Assert.Equal(3.5f, controller.StrafeSpeed);
         Assert.Equal(1.8f, controller.StandingHeight);
+        Assert.Equal(1.1f, controller.CrouchedHeight);
         Assert.Equal(.25f, controller.Radius);
+        Assert.Equal(7f, controller.JumpSpeed);
+        Assert.Equal(.12f, controller.JumpBufferSeconds);
+        Assert.Equal(.1f, controller.JumpCoyoteSeconds);
+        Assert.Equal(.1f, controller.JumpLandingLockoutSeconds);
+        Assert.False(controller.JumpHeldInputRetriggers);
         Assert.Equal(1f, controller.RecoveryMaximumDistance);
         Assert.Equal(.75f, controller.MaximumStepHeight);
+        Assert.Equal(39.5f, tuning.Locomotion.ClassicToEngineSpeedRatio);
+        Assert.Equal(11, tuning.Locomotion.IdleFatiguePerGameMinute);
+        Assert.Equal(88, tuning.Locomotion.RunningFatiguePerGameMinute);
         Assert.Equal(2.25d, tuning.MeleeTargeting.MaximumDistance);
         Assert.Equal(.5d, tuning.MeleeTargeting.MinimumFacingCosine);
+    }
+
+    [Fact]
+    public void Running_calendar_fatigue_pending_before_a_minute_boundary_survives_save_and_restores_once()
+    {
+        using DaggerfallSession session = FreshSession();
+        Track stamina = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value));
+        double maximum = stamina.MaximumValue;
+        session.Update(new ProductUpdate(
+            new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 4d),
+            [Input(InputEventKind.Key, InputEdge.Pressed, KeyboardControl.KeyW), PhysicalKey(KeyboardControl.KeyW), PhysicalKey(KeyboardControl.ShiftLeft)]));
+
+        Assert.Equal(maximum, stamina.Current);
+        RulesetSavePayload payload = session.CaptureSave();
+
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession restored = DaggerfallSession.Restore(engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, payload, RandomMinimum.Create());
+
+        restored.Update(new ProductUpdate(
+            new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 2, 2, 60, 1, 0, 1d),
+            [Input(InputEventKind.Key, InputEdge.Pressed, KeyboardControl.KeyW), PhysicalKey(KeyboardControl.KeyW), PhysicalKey(KeyboardControl.ShiftLeft)]));
+
+        Assert.Equal(maximum - 88d, restored.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
+
+        static ProductInputEvent PhysicalKey(KeyboardControl key) => Input(InputEventKind.Key, InputEdge.Pressed, key) with
+        {
+            Device = InputDevice.Keyboard,
+            Channel = InputChannel.Button,
+            ValueKind = InputValueKind.Digital,
+            Phase = InputPhase.Pressed,
+            Provenance = InputProvenance.Physical,
+        };
     }
 
     /// <summary>
@@ -6167,6 +6216,7 @@ public sealed class NormalizedRuntimeSeamTests
             {
                 Generation = checked((ulong)StepCalls),
                 Transform = new Transform(KeepPosition ? request.Position : request.Position + new Vector3(1f, 0f, 0f), Quaternion.Identity, Vector3.One),
+                Displacement = !KeepPosition && request.Command.PlanarIntent != Vector2.Zero ? Vector3.UnitX : Vector3.Zero,
                 Motion = request.Motion with { Grounded = true, LastCommandSequence = request.Command.Sequence },
                 Ground = default(CharacterGround) with { Present = true },
             };

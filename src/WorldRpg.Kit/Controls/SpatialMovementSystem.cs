@@ -9,6 +9,28 @@ public readonly record struct CharacterStepEnvironment(CharacterSupport Support,
     public static CharacterStepEnvironment Empty { get; } = new(default, ReadOnlyMemory<CharacterObstacle>.Empty);
 }
 
+/// <summary>Ruleset-selected controls and speeds for one Engine-owned character proposal.</summary>
+public readonly record struct CharacterStepControls(
+    bool JumpPressed = false,
+    bool JumpHeld = false,
+    bool CrouchRequested = false,
+    float? ForwardSpeed = null,
+    float? BackwardSpeed = null,
+    float? StrafeSpeed = null,
+    float? JumpSpeed = null)
+{
+    internal CharacterControllerConfig ApplyTo(CharacterControllerConfig defaults) => defaults with
+    {
+        Ground = defaults.Ground with
+        {
+            ForwardSpeed = ForwardSpeed ?? defaults.Ground.ForwardSpeed,
+            BackwardSpeed = BackwardSpeed ?? defaults.Ground.BackwardSpeed,
+            StrafeSpeed = StrafeSpeed ?? defaults.Ground.StrafeSpeed,
+        },
+        Vertical = defaults.Vertical with { JumpSpeed = JumpSpeed ?? defaults.Vertical.JumpSpeed },
+    };
+}
+
 /// <summary>Owns one Engine spatial session and persistent character continuation.</summary>
 public sealed class SpatialMovementSystem : IDisposable
 {
@@ -67,21 +89,22 @@ public sealed class SpatialMovementSystem : IDisposable
     }
 
     /// <summary>Submits the current control state to the Engine and applies its receipt in the admitted update order.</summary>
-    public void Step(PlayerControlState player, ProductUpdateState update, CharacterStepEnvironment? environment = null)
+    public CharacterStepReceipt? Step(PlayerControlState player, ProductUpdateState update, CharacterStepEnvironment? environment = null, CharacterStepControls? controls = null)
     {
-        if (_disposed) return;
+        if (_disposed) return null;
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(update);
-        if (player.Position is not WorldPoint position) return;
+        if (player.Position is not WorldPoint position) return null;
 
         CharacterStepEnvironment stepEnvironment = environment ?? CharacterStepEnvironment.Empty;
         ulong sequence = checked(player.Motion.LastCommandSequence + 1);
+        CharacterStepControls selected = controls ?? default;
         CharacterControllerCommand command = new(
             update.PlanarIntent,
             player.YawRadians,
-            JumpPressed: false,
-            JumpHeld: false,
-            CrouchRequested: false,
+            selected.JumpPressed,
+            selected.JumpHeld,
+            selected.CrouchRequested,
             ExternalVelocity: Vector3.Zero,
             ExternalImpulse: Vector3.Zero,
             update.DeltaSeconds,
@@ -92,12 +115,13 @@ public sealed class SpatialMovementSystem : IDisposable
             player.Motion,
             stepEnvironment.Support,
             stepEnvironment.Obstacles,
-            _controller,
+            selected.ApplyTo(_controller),
             command);
         CharacterStepReceipt receipt = _spatial.ProposeCharacterStep(request);
         _latestGeneration = receipt.Generation;
         _restoredCheckpoint = null;
         player.Apply(receipt);
+        return receipt;
     }
 
     /// <summary>Captures the Engine-owned continuation only at a completed proposal boundary.</summary>

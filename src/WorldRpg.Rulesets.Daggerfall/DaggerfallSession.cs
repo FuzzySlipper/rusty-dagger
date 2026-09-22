@@ -40,6 +40,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private readonly FirstPersonCameraSystem _camera;
     private readonly DaggerCombatRules _combat;
     private readonly DaggerfallStaminaRecoveryModule _staminaRecovery;
+    private readonly DaggerfallLocomotionPolicy _locomotion;
     private readonly DaggerfallEnemyBehaviorModule _enemyBehavior;
     private readonly DaggerfallCorpseLootModule _corpseLoot;
     private readonly DaggerfallUniqueItemAllocator _uniqueItems;
@@ -174,6 +175,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 : new World.DaggerfallSiteContext(definitions.Locations, inputs.Site, null, []);
             _controlEngine = engine;
             _input = new PlayerInputSystem(tuning.PlayerControl, DaggerfallInput.Controls, DaggerfallInput.Bindings, tuning.ControllerInput);
+            _locomotion = new DaggerfallLocomotionPolicy(tuning.Locomotion, _controlSettings);
             _spatial = new SpatialMovementSystem(engine.Spatial, engine.Content, inputs.SpatialArtifact, tuning.Spatial);
             partiallyConstructed.Add(_spatial);
             // The selected site's normalized RDB doors restore their Engine pose/collider projection
@@ -275,7 +277,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             partiallyConstructed.Add(_hud);
             _appearance = new PrivateersHoldAppearance(engine.Content, engine.Graphics, inputs, engine.Audio, tuning.PresentationAudio, _random, audioBundle, _doors);
             partiallyConstructed.Add(_appearance);
-            _persistence = new(State, _corpseLoot, _uniqueItems, _camera, _time, _site, State.Effects, _doors);
+            _persistence = new(State, _corpseLoot, _uniqueItems, _camera, _time, _site, State.Effects, _doors, _locomotion);
             if (saved is not null) _persistence.Restore(saved);
         }
         catch (Exception constructionFailure)
@@ -656,6 +658,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             SimulateStep(new ProductUpdateState(deltaSeconds), facts.Generation, checked(facts.SimulationStep + step));
             DeliverFacts();
         }
+        _locomotion.AdvanceCalendarMinutes(minuteBefore, MinuteIndex(_time.Calendar), State.Actors.Player.Stats);
     }
 
     /// <summary>
@@ -746,6 +749,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         if (mode == _mode) return;
         _mode = mode;
         _input.Neutralize();
+        _locomotion.Neutralize();
         Presentation.SetOutcome(ModalMessage());
         PublishPresentation();
     }
@@ -827,8 +831,12 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         // The Engine still receives an ordinary character step (grounding and gravity remain its
         // responsibility), but classic over-capacity removes planar intent before that proposal.
         if (!State.Encumbrance.Read().CanMove) update.PlanarIntent = Vector2.Zero;
+        bool canMove = State.Encumbrance.Read().CanMove;
+        DaggerfallLocomotionStep locomotion = _locomotion.BeginStep([.. update.Inputs], update.DeltaSeconds, State.Actors.Player.Stats, canMove);
+        CharacterMotion motionBefore = State.PlayerControl.Motion;
         _doors.Advance(update.DeltaSeconds);
-        _spatial.Step(State.PlayerControl, update, _doors.CharacterEnvironment());
+        CharacterStepReceipt? movement = _spatial.Step(State.PlayerControl, update, _doors.CharacterEnvironment(), locomotion.Controls);
+        _locomotion.CompleteStep(locomotion, motionBefore, movement, update.DeltaSeconds * _time.GameSecondsPerRealSecond, State.Actors.Player.Stats, use => State.SkillUses.Record(use));
         _camera.Update(State.PlayerControl);
         _enemyBehavior.Update(State.PlayerControl, generation, simulationStep, update.DeltaSeconds, _facts);
         LookReceipt currentLook = _input.ResolveCurrentLook(State.PlayerControl);

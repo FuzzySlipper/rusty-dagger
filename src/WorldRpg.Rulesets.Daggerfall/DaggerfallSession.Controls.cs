@@ -43,6 +43,7 @@ internal sealed partial class DaggerfallSession
             Left = Key("move.left"), Right = Key("move.right"),
         }, DaggerfallInput.Bindings);
         _input.ClearHeldInput();
+        _locomotion.Rebind(settings);
 
         KeyboardControl Key(string action) => settings.KeysFor(action)
             .Select(key => Enum.TryParse(key, out KeyboardControl value) ? value : KeyboardControl.None)

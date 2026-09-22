@@ -60,6 +60,8 @@ internal static class DaggerfallMechanicsIds
     internal static readonly DaggerfallStatId ImmunityParalysis = new("immunity-paralysis");
     internal static readonly DaggerfallStatId ImmunityDisease = new("immunity-disease");
     internal static readonly DaggerfallStatId Dodging = new("dodging");
+    internal static readonly DaggerfallStatId Running = new("running");
+    internal static readonly DaggerfallStatId Jumping = new("jumping");
     internal static readonly DaggerfallStatId LongBlade = new("long-blade");
     internal static readonly DaggerfallStatId HandToHand = new("hand-to-hand");
     internal static readonly DaggerfallStatId HealthMaximum = new("health-maximum");
