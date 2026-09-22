@@ -3,6 +3,7 @@ using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.Combat;
 using WorldRpg.Kit.Effects;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Policies;
@@ -74,8 +75,10 @@ internal sealed record DaggerfallDiseaseExposure(
 /// Classic disease data and FORM-06 admission over the existing Daggerfall active-effect lifecycle.
 /// The donor matrix is FALL.EXE 1.07.213 as recorded by DFU's DiseaseEffect; the policy keeps its
 /// calendar cursor and accumulated attribute losses in effect state. Attribute losses are canonical
-/// Engine stat sources owned by that effect; vital loss is direct canonical track damage.
+/// Engine stat sources owned by that effect; health loss uses the same accepted application path as attacks.
 /// </summary>
+internal sealed record DaggerfallEffectDamage(DamageResult Result);
+
 internal static class DaggerfallDiseasePolicy
 {
     private const string DiseaseElement = "disease";
@@ -121,11 +124,14 @@ internal static class DaggerfallDiseasePolicy
     internal static DaggerfallEffectCatalog CreateCatalog(
         IRandomService random,
         Func<long> currentDay,
-        Func<DaggerfallCareerDefinition> playerCareer)
+        Func<DaggerfallCareerDefinition> playerCareer,
+        CombatResolution? combat = null,
+        Action<DaggerfallEffectDamage>? damageApplied = null)
     {
         ArgumentNullException.ThrowIfNull(random);
         ArgumentNullException.ThrowIfNull(currentDay);
         ArgumentNullException.ThrowIfNull(playerCareer);
+        CombatResolution selectedCombat = combat ?? new CombatResolution();
         return new DaggerfallEffectCatalog(Data.Values.Select(data => new DaggerfallEffectDefinition(
             data.Key,
             data.Key,
@@ -133,7 +139,7 @@ internal static class DaggerfallDiseasePolicy
             ushort.MaxValue,
             1,
             Apply: effect => [Removal(effect, playerCareer)],
-            MagicRound: effect => AdvanceDisease(effect, data, random, currentDay, playerCareer),
+            MagicRound: effect => AdvanceDisease(effect, data, random, currentDay, playerCareer, selectedCombat, damageApplied),
             Resume: effect =>
             {
                 VerifyRestoredAttributeContributions(effect, ReadState(effect.State));
@@ -287,7 +293,7 @@ internal static class DaggerfallDiseasePolicy
     }
 
     private static void AdvanceDisease(DaggerfallActiveEffect effect, DiseaseData data, IRandomService random, Func<long> currentDay,
-        Func<DaggerfallCareerDefinition> playerCareer)
+        Func<DaggerfallCareerDefinition> playerCareer, CombatResolution combat, Action<DaggerfallEffectDamage>? damageApplied)
     {
         DiseaseState state = ReadState(effect.State);
         long today = currentDay();
@@ -298,7 +304,7 @@ internal static class DaggerfallDiseasePolicy
 
         for (long day = checked(state.LastDay + 1); day <= today; day++)
             state = ApplyDailyDamage(effect, data, state,
-                playerCareer,
+                playerCareer, combat, damageApplied,
                 Draw(random, $"daily:{effect.Context.Instance.Value}:{day}", data.MinimumDamage, data.MaximumDamage));
 
         int? symptoms = state.DaysOfSymptomsLeft is int remaining
@@ -311,7 +317,7 @@ internal static class DaggerfallDiseasePolicy
     }
 
     private static DiseaseState ApplyDailyDamage(DaggerfallActiveEffect effect, DiseaseData data, DiseaseState state,
-        Func<DaggerfallCareerDefinition> playerCareer, int amount)
+        Func<DaggerfallCareerDefinition> playerCareer, CombatResolution combat, Action<DaggerfallEffectDamage>? damageApplied, int amount)
     {
         StatsComponent stats = effect.Target.Get<StatsComponent>();
         Dictionary<string, int> losses = new(state.AttributeLosses, StringComparer.Ordinal);
@@ -324,7 +330,7 @@ internal static class DaggerfallDiseasePolicy
         AddAttributeLoss(losses, DaggerfallMechanicsIds.Speed, data.Speed, amount);
         AddAttributeLoss(losses, DaggerfallMechanicsIds.Luck, data.Luck, amount);
         ApplyAttributeContributions(effect, stats, losses, playerCareer);
-        ApplyTrack(stats, DaggerfallMechanicsIds.Health, data.Health, amount);
+        ApplyHealth(combat, effect, stats, data, amount, damageApplied);
         ApplyTrack(stats, DaggerfallMechanicsIds.Stamina, data.Fatigue, amount);
         ApplyTrack(stats, DaggerfallMechanicsIds.Magicka, data.SpellPoints, amount);
         return state with { AttributeLosses = losses };
@@ -412,6 +418,16 @@ internal static class DaggerfallDiseasePolicy
     {
         if (effect.Context.Target.Value == checked((ulong)DaggerfallActorIdentity.PlayerEntityId))
             DaggerfallStatModifiers.RefreshPlayerDerivedMaxima(stats, career);
+    }
+
+    private static void ApplyHealth(CombatResolution combat, DaggerfallActiveEffect effect, StatsComponent stats, DiseaseData data, int amount,
+        Action<DaggerfallEffectDamage>? damageApplied)
+    {
+        int damage = checked(data.Health * amount);
+        if (damage == 0) return;
+        Track health = stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
+        ApplyHitEvent applied = combat.ApplyToHealth(new CombatParticipants(effect.Source, effect.Target, $"effect:{data.Key}"), damage, 0, health);
+        damageApplied?.Invoke(new DaggerfallEffectDamage(applied.Result));
     }
 
     private static void ApplyTrack(StatsComponent stats, DaggerfallTrackId id, int multiplier, int amount)

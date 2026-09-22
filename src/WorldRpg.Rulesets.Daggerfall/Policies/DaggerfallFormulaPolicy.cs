@@ -351,6 +351,13 @@ internal static class DaggerfallFormulaPolicy
 
     private static int FloorDivide(int value, int divisor) => value >= 0 ? value / divisor : -checked(((-value) + divisor - 1) / divisor);
     private static long FloorDivide(long value, long divisor) => value >= 0 ? value / divisor : -checked(((-value) + divisor - 1) / divisor);
+    /// <summary>Classic combat text reports whole health points even though Engine tracks preserve fractional current state.</summary>
+    internal static int DisplayDamage(double healthLost)
+    {
+        if (!double.IsFinite(healthLost)) throw new ArgumentOutOfRangeException(nameof(healthLost));
+        return checked((int)Math.Truncate(Math.Max(0d, healthLost)));
+    }
+
     private static int TruncateDivide(int value, int divisor) => value / divisor;
 
     private static readonly int[] StruckBodyTable = [0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 6];

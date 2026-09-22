@@ -1,5 +1,6 @@
 using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Rulesets.Daggerfall.Facts;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Kit.Facts;
 using Xunit;
 
@@ -12,11 +13,18 @@ public sealed class ProductFactsTests
     {
         FactBuffer<IProductFact> buffer = new();
         List<string> delivered = [];
-        buffer.Append(new ActorDiedFact(2000, 1, 16, 1, 7));
+        buffer.Append(new ActorDiedFact(2000, 1, DaggerfallDamageCause.PhysicalAttack, 16, 16d, 1, 7));
         buffer.Deliver(fact => { delivered.Add(fact.GetType().Name); buffer.Append(new LootAwardedFact(2000, "gold-piece", 2, 7)); });
         Assert.Equal(["ActorDiedFact"], delivered);
         buffer.Deliver(fact => delivered.Add(fact.GetType().Name));
         Assert.Equal(["ActorDiedFact", "LootAwardedFact"], delivered);
+    }
+
+    [Fact]
+    public void Damage_display_rounds_the_exact_health_delta_for_classic_text()
+    {
+        Assert.Equal(1, DaggerfallFormulaPolicy.DisplayDamage(1.75d));
+        Assert.Equal(0, DaggerfallFormulaPolicy.DisplayDamage(0.5d));
     }
 
     [Fact]

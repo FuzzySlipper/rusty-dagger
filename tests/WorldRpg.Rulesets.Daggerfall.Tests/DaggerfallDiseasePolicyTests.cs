@@ -3,6 +3,7 @@ using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.Combat;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using Xunit;
@@ -48,6 +49,53 @@ public sealed class DaggerfallDiseasePolicyTests
         DaggerfallActiveEffect active = Assert.Single(effects.Active);
         Assert.True(active.State.GetProperty("incubationOver").GetBoolean());
         Assert.Equal(17, active.State.GetProperty("daysOfSymptomsLeft").GetInt32());
+    }
+
+    [Fact]
+    public void Disease_health_damage_uses_the_canonical_combat_application_contributions()
+    {
+        using ActorsState actors = Actors(level: 2);
+        long day = 100;
+        IRandomService random = Random(100, 0, 18, 10);
+        CombatResolution combat = new();
+        CombatContributions ward = new();
+        ward.Rules.Add(new ApplyingContribution(interaction => interaction.Damage -= 4));
+        actors.Player.Actor.Add(ward);
+        DaggerfallEffectLifecycle effects = new(actors, DaggerfallDiseasePolicy.CreateCatalog(random, () => day, () => Career(), combat));
+
+        Assert.Equal(DaggerfallDiseaseAdmission.Started, DaggerfallDiseasePolicy.InflictDisease(
+            effects, actors, random, () => day, Exposure("combat-disease", DaggerfallClassicDisease.BloodRot)));
+        day++;
+        effects.AdvanceOrdinaryRound();
+
+        // Blood Rot rolled ten health damage; the target's normal applying contribution reduced
+        // the accepted canonical loss to six rather than disease policy directly mutating health.
+        Assert.Equal(94, Track(actors, DaggerfallMechanicsIds.Health));
+    }
+
+    [Fact]
+    public void Disease_health_damage_reports_one_canonical_effect_result_including_defeat()
+    {
+        using ActorsState actors = Actors(level: 2);
+        actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).SetCurrent(5, clamp: true);
+        long day = 100;
+        IRandomService random = Random(100, 0, 18, 10);
+        List<DaggerfallEffectDamage> applied = [];
+        DaggerfallEffectLifecycle effects = new(actors, DaggerfallDiseasePolicy.CreateCatalog(
+            random, () => day, () => Career(), new CombatResolution(), applied.Add));
+
+        Assert.Equal(DaggerfallDiseaseAdmission.Started, DaggerfallDiseasePolicy.InflictDisease(
+            effects, actors, random, () => day, Exposure("effect-result", DaggerfallClassicDisease.BloodRot)));
+        day++;
+        effects.AdvanceOrdinaryRound();
+
+        DaggerfallEffectDamage result = Assert.Single(applied);
+        Assert.Equal("effect:disease-blood-rot", result.Result.Cause);
+        Assert.Equal(10, result.Result.CalculatedDamage);
+        Assert.Equal(5d, result.Result.ActualHealthLost);
+        Assert.True(result.Result.Defeated);
+        Assert.Same(actors.Player.Actor, result.Result.Source);
+        Assert.Same(actors.Player.Actor, result.Result.Target);
     }
 
     [Fact]
@@ -520,6 +568,11 @@ public sealed class DaggerfallDiseasePolicyTests
         ScriptedRandom proxy = (ScriptedRandom)(object)service;
         proxy.Values.AddRange(values);
         return service;
+    }
+
+    private sealed class ApplyingContribution(Action<ApplyHitEvent> apply) : ICombatContribution
+    {
+        public void Applying(ApplyHitEvent interaction) => apply(interaction);
     }
 
     private class ScriptedRandom : DispatchProxy

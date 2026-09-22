@@ -108,12 +108,13 @@ internal sealed record DaggerfallEffectRequest(
 /// <summary>One live Daggerfall effect's policy state and its Kit lifecycle entry.</summary>
 internal sealed class DaggerfallActiveEffect
 {
-    internal DaggerfallActiveEffect(DaggerfallEffectDefinition definition, ActiveEffectContext context, ushort stacks, JsonElement state, Actor target)
+    internal DaggerfallActiveEffect(DaggerfallEffectDefinition definition, ActiveEffectContext context, ushort stacks, JsonElement state, Func<Actor> source, Actor target)
     {
         Definition = definition;
         Context = context;
         Stacks = stacks;
         State = state.Clone();
+        _source = source ?? throw new ArgumentNullException(nameof(source));
         Target = target ?? throw new ArgumentNullException(nameof(target));
     }
 
@@ -124,6 +125,9 @@ internal sealed class DaggerfallActiveEffect
     internal JsonElement State { get; set; }
     /// <summary>Requested stack count available to compiled policy before the Engine state is attached.</summary>
     internal ushort Stacks { get; }
+    private readonly Func<Actor> _source;
+    /// <summary>The live caster resolved at application time, or the target if that caster was retired.</summary>
+    internal Actor Source => _source();
     internal Actor Target { get; }
     /// <summary>Compiled policy requests ordinary Engine expiry after the current magic-round payload.</summary>
     internal bool ExpireAfterCurrentRound { get; set; }
@@ -367,7 +371,9 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
         List<IActiveEffectContribution> contributions = [];
         try
         {
-            active = new DaggerfallActiveEffect(definition, context, stacks, state, ActorFor(checked((long)context.Target.Value)));
+            Actor target = ActorFor(checked((long)context.Target.Value));
+            active = new DaggerfallActiveEffect(definition, context, stacks, state,
+                () => SourceFor(context, target), target);
             contributions.AddRange(Apply(active, resumed));
             ActiveEffectLifecycleReceipt receipt = lifecycle.Admit(definition.ToEngineDefinition(context.Source.Key), admission, context,
                 Provenance(checked((long)context.Target.Value), context), stacks, remainingRounds, contributions);
@@ -396,6 +402,14 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
     private Actor ActorFor(long targetId) => targetId == _actors.Player.DurableId
         ? _actors.Player.Actor
         : _actors.Get(targetId).Actor;
+
+    private Actor SourceFor(ActiveEffectContext context, Actor target)
+    {
+        if (context.Caster is not { } caster) return target;
+        long casterId = checked((long)caster.Value);
+        if (casterId == _actors.Player.DurableId) return _actors.Player.Actor;
+        return _actors.TryGet(casterId, out ActorState actor) ? actor.Actor : target;
+    }
 
     private static List<IActiveEffectContribution> Apply(DaggerfallActiveEffect effect, bool resumed = false)
     {

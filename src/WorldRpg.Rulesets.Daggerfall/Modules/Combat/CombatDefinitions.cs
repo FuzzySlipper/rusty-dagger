@@ -25,6 +25,8 @@ internal static class CombatRandomKey
     internal const int HitSalt = 1;
     internal const int DamageSalt = 2;
     internal const int BodySalt = 3;
+    internal const int WeaponConditionSalt = 4;
+    internal const int ArmorConditionSalt = 5;
     internal const string MediaAttackAlternateScope = "daggerfall.media.attack-alternate.v1";
     internal const int MediaAttackAlternateSalt = 41;
     internal const string MediaHitCueScope = "daggerfall.media.hit-cue.v1";
