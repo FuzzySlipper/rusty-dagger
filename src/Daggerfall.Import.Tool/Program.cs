@@ -1165,7 +1165,7 @@ internal static class Program
         DaggerfallQuestTables tables = new(
             DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(values["--tables"], "Quests-GlobalVars.txt")), "Tables/Quests-GlobalVars.txt", globals: true),
             DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(values["--tables"], "Quests-StaticMessages.txt")), "Tables/Quests-StaticMessages.txt"));
-        string[] messageNames = [.. tables.StaticMessages.Rows.Select(row => row.Name)];
+        IReadOnlyDictionary<string, int> messageIds = tables.StaticMessages.Lookup;
         IReadOnlyDictionary<string, int> globalKeys = tables.Globals.Lookup;
         List<QuestSourceDocument> documents = [];
         List<(string FileName, string QuestName, int Line, string Reason)> failures = [];
@@ -1177,7 +1177,7 @@ internal static class Program
             totalBytes += new FileInfo(path).Length;
             try
             {
-                documents.Add(QuestSourceReader.Read(text, fileName, messageNames, globalKeys));
+                documents.Add(QuestSourceReader.Read(text, fileName, messageIds, globalKeys));
             }
             catch (Arena2FormatException exception)
             {

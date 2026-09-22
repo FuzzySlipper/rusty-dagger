@@ -62,11 +62,11 @@ public static class QuestSourceReader
 {
     /// <summary>Reads one quest text source.</summary>
     /// <param name="globalKeys">The quest global names to keys a global-link line starts with.</param>
-    public static QuestSourceDocument Read(string text, string fileName, IReadOnlyList<string> messageNames, IReadOnlyDictionary<string, int> globalKeys)
+    public static QuestSourceDocument Read(string text, string fileName, IReadOnlyDictionary<string, int> messageIds, IReadOnlyDictionary<string, int> globalKeys)
     {
         ArgumentNullException.ThrowIfNull(text);
         ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
-        ArgumentNullException.ThrowIfNull(messageNames);
+        ArgumentNullException.ThrowIfNull(messageIds);
         ArgumentNullException.ThrowIfNull(globalKeys);
         string[] lines = text.Split('\n');
         string questName = string.Empty;
@@ -141,7 +141,7 @@ public static class QuestSourceReader
             throw new Arena2FormatException(fileName, 0, "Quest source states no QBN section.");
         }
 
-        return new QuestSourceDocument(fileName, questName, questNameLine, displayName, header, ReadMessages(qrcLines, fileName, messageNames), ReadBlocks(qbnLines, qbnNumbers, fileName, globalKeys));
+        return new QuestSourceDocument(fileName, questName, questNameLine, displayName, header, ReadMessages(qrcLines, fileName, messageIds), ReadBlocks(qbnLines, qbnNumbers, fileName, globalKeys));
     }
 
     private static string FieldValue(string line)
@@ -150,7 +150,7 @@ public static class QuestSourceReader
         return colon < 0 ? string.Empty : line[(colon + 1)..].Trim();
     }
 
-    private static IReadOnlyList<QuestMessageBlock> ReadMessages(List<string> lines, string fileName, IReadOnlyList<string> messageNames)
+    private static IReadOnlyList<QuestMessageBlock> ReadMessages(List<string> lines, string fileName, IReadOnlyDictionary<string, int> messageIds)
     {
         List<QuestMessageBlock> messages = [];
         for (int index = 0; index < lines.Count; index++)
@@ -163,20 +163,21 @@ public static class QuestSourceReader
 
             // A message header names a known static field; anything else is content of the
             // open block, because content may stand past blank lines.
-            if (!IsMessageHeader(line, messageNames))
+            if (!IsMessageHeader(line, messageIds))
             {
                 throw new Arena2FormatException(fileName, index + 1, $"Quest QRC line opens no message: '{line.Trim()}'.");
             }
 
             int colon = line.IndexOf(':');
             string idText = line[(colon + 1)..].Trim();
-            // Fixed message types carry their table id in brackets; the rest state it bare.
+            int id;
+            // Bracketed fixed messages resolve by their table name; bracket contents are
+            // descriptive source text, not authoritative numeric identity (donor Parser).
             if (idText.StartsWith("[", StringComparison.Ordinal) && idText.EndsWith("]", StringComparison.Ordinal))
             {
-                idText = idText[1..^1].Trim();
+                id = messageIds[line[..colon].Trim()];
             }
-
-            if (!int.TryParse(idText, out int id))
+            else if (!int.TryParse(idText, out id))
             {
                 throw new Arena2FormatException(fileName, index + 1, $"Quest QRC line states no message id: '{line.Trim()}'.");
             }
@@ -202,7 +203,7 @@ public static class QuestSourceReader
                     continue;
                 }
 
-                if (IsMessageHeader(next, messageNames))
+                if (IsMessageHeader(next, messageIds))
                 {
                     break;
                 }
@@ -229,7 +230,7 @@ public static class QuestSourceReader
         return next.Contains(':') || next.StartsWith("-", StringComparison.Ordinal) || next.Length == 0;
     }
 
-    private static bool IsMessageHeader(string line, IReadOnlyList<string> messageNames)
+    private static bool IsMessageHeader(string line, IReadOnlyDictionary<string, int> messageIds)
     {
         int colon = line.IndexOf(':');
         if (colon <= 0)
@@ -238,7 +239,7 @@ public static class QuestSourceReader
         }
 
         string field = line[..colon].Trim();
-        return messageNames.Any(name => string.Equals(name, field, StringComparison.OrdinalIgnoreCase));
+        return messageIds.ContainsKey(field);
     }
 
     private static IReadOnlyList<QuestBlock> ReadBlocks(List<string> lines, List<int> numbers, string fileName, IReadOnlyDictionary<string, int> globalKeys)

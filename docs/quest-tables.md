@@ -21,6 +21,8 @@ including the case aliases at 1006–1009. Lookup is case-insensitive and return
 the canonical numeric identity; publication does not deduplicate source rows.
 
 The quest source importer consumes these tables instead of a copied name list.
+Bracketed fixed message headers resolve their ID from the table by name; bare
+message headers retain their explicit numeric ID.
 The ruleset admits them through `DaggerfallBaseContent`; `QuestSources.Tables`
 provides the named lookup surfaces. `DaggerActorFactory` supplies the admitted
 global aliases to `DaggerfallVariableStore`, whose existing save records still

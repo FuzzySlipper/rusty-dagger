@@ -11,7 +11,11 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 public sealed class DaggerfallQuestPackTests
 {
-    private static readonly string[] MessageNames = ["Message", "QuestorOffer", "RefuseQuest", "AcceptQuest", "QuestFail", "QuestComplete", "RumorsDuringQuest", "RumorsPostfailure", "RumorsPostFailure", "RumorsPostsuccess", "RumorsPostSuccess", "QuestorPostsuccess", "QuestorPostSuccess", "QuestorPostfailure", "QuestorPostFailure", "QuestLogEntry", "QuestTimeLapse"];
+    private static readonly IReadOnlyDictionary<string, int> MessageIds = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Message"] = 0,
+        ["QuestorOffer"] = 1000,
+    };
 
     private static readonly IReadOnlyDictionary<string, int> GlobalKeys = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
     {
@@ -23,12 +27,12 @@ public sealed class DaggerfallQuestPackTests
     [Fact]
     public void Refuses_malformed_sources_and_unknown_signatures()
     {
-        Assert.Throws<Arena2FormatException>(() => QuestSourceReader.Read("displayname: X\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\n", "q.txt", MessageNames, GlobalKeys));
-        Assert.Throws<Arena2FormatException>(() => QuestSourceReader.Read("quest: Q\nqbn:\nclock a\n", "q.txt", MessageNames, GlobalKeys));
-        Assert.Throws<Arena2FormatException>(() => QuestSourceReader.Read("quest: Q\nqrc:\nMessage: 1\ntext\n", "q.txt", MessageNames, GlobalKeys));
+        Assert.Throws<Arena2FormatException>(() => QuestSourceReader.Read("displayname: X\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\n", "q.txt", MessageIds, GlobalKeys));
+        Assert.Throws<Arena2FormatException>(() => QuestSourceReader.Read("quest: Q\nqbn:\nclock a\n", "q.txt", MessageIds, GlobalKeys));
+        Assert.Throws<Arena2FormatException>(() => QuestSourceReader.Read("quest: Q\nqrc:\nMessage: 1\ntext\n", "q.txt", MessageIds, GlobalKeys));
         // The first stray line is the headless entry and the second joins no block: the donor's
         // block reader swallows following lines into the open block, so the refusal lands late.
-        Arena2FormatException unknown = Assert.Throws<Arena2FormatException>(() => QuestSourceReader.Read("quest: Q\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\nfrobnicate wildly\n\nzorbnication opens\n\nzorbnication continues\n", "q.txt", MessageNames, GlobalKeys));
+        Arena2FormatException unknown = Assert.Throws<Arena2FormatException>(() => QuestSourceReader.Read("quest: Q\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\nfrobnicate wildly\n\nzorbnication opens\n\nzorbnication continues\n", "q.txt", MessageIds, GlobalKeys));
         Assert.Contains("zorbnication opens", unknown.Message, StringComparison.Ordinal);
     }
 
@@ -37,7 +41,7 @@ public sealed class DaggerfallQuestPackTests
     {
         QuestSourceDocument document = QuestSourceReader.Read(
             "quest: Q\nqrc:\nQuestorOffer:  [1000]\nOffer text\n\nMessage:  1011\nFirst\n\nSecond\nqbn:\nclock myclock 1 day 1\n\nLiftedCurse _S.01_\n\n_pcgetsgold_ task:\nperform action\n",
-            "q.txt", MessageNames, GlobalKeys);
+            "q.txt", MessageIds, GlobalKeys);
         Assert.Equal("Q", document.QuestName);
         Assert.Equal(2, document.Messages.Count);
         Assert.Equal(1000, document.Messages[0].Id);
@@ -52,8 +56,8 @@ public sealed class DaggerfallQuestPackTests
     [Fact]
     public void Builds_the_pack_and_diagnoses_duplicates()
     {
-        QuestSourceDocument first = QuestSourceReader.Read("quest: Q\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\n", "a.txt", MessageNames, GlobalKeys);
-        QuestSourceDocument second = QuestSourceReader.Read("quest: Q\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\n", "b.txt", MessageNames, GlobalKeys);
+        QuestSourceDocument first = QuestSourceReader.Read("quest: Q\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\n", "a.txt", MessageIds, GlobalKeys);
+        QuestSourceDocument second = QuestSourceReader.Read("quest: Q\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\n", "b.txt", MessageIds, GlobalKeys);
         DaggerfallQuestPack pack = DaggerfallQuestPackBuilder.Build([first, second], [], "donor/StreamingAssets/Quests", [1], Inventory());
         pack.Validate();
         Assert.Equal(2, pack.Quests.Count);
@@ -79,7 +83,7 @@ public sealed class DaggerfallQuestPackTests
             total += new FileInfo(path).Length;
             try
             {
-                documents.Add(QuestSourceReader.Read(File.ReadAllText(path), Path.GetFileName(path), messages.Rows.Select(row => row.Name).ToArray(), globals.Lookup));
+                documents.Add(QuestSourceReader.Read(File.ReadAllText(path), Path.GetFileName(path), messages.Lookup, globals.Lookup));
             }
             catch (Arena2FormatException exception)
             {
