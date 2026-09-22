@@ -5467,6 +5467,32 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Engine_reported_landing_applies_one_lethal_fall_and_disables_later_player_movement()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        Track health = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
+        health.SetCurrent(3.75d, clamp: true);
+        session.State.PlayerControl.Restore(new WorldPoint(0f, 2f, 0f),
+            default(CharacterMotion) with { Grounded = false, PeakY = 9f });
+
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+        session.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
+
+        Assert.Equal(0d, health.Current);
+        Assert.Equal(2, spatial.StepCalls);
+        Assert.Equal(Vector2.Zero, spatial.StepRequests[1].Command.PlanarIntent);
+    }
+
+
+    [Fact]
     public void Loot_transfer_at_the_player_capacity_boundary_leaves_both_engine_containers_unchanged()
     {
         string root = RepositoryRoot();

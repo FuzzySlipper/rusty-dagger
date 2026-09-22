@@ -39,6 +39,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private readonly SpatialMovementSystem _spatial;
     private readonly FirstPersonCameraSystem _camera;
     private readonly DaggerCombatRules _combat;
+    private readonly DaggerfallVitalityConsequences _vitality;
     private readonly DaggerfallStaminaRecoveryModule _staminaRecovery;
     private readonly DaggerfallLocomotionPolicy _locomotion;
     private readonly DaggerfallEnemyBehaviorModule _enemyBehavior;
@@ -195,6 +196,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 () => State.Character.Career.ForbiddenEquipment, State.ItemInstances);
             _itemCondition = new DaggerfallItemConditionService(definitions, State.ItemInstances, _equipmentMoves);
             CombatResolution combatRules = new();
+            _vitality = new DaggerfallVitalityConsequences(combatRules);
             State.Effects = new DaggerfallEffectLifecycle(State.Actors, effects ?? DaggerfallDiseasePolicy.CreateCatalog(
                 _random,
                 () => _time.Calendar.DayNumber,
@@ -836,15 +838,19 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         State.Kit.AttackExecution.ObserveTimeline(generation, simulationStep);
         _input.Apply(State.PlayerControl, update);
         // The Engine still receives an ordinary character step (grounding and gravity remain its
-        // responsibility), but classic over-capacity removes planar intent before that proposal.
-        if (!State.Encumbrance.Read().CanMove) update.PlanarIntent = Vector2.Zero;
-        bool canMove = State.Encumbrance.Read().CanMove;
+        // responsibility), but classic over-capacity and defeat remove planar intent before that proposal.
+        bool alive = State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current > 0d;
+        if (!State.Encumbrance.Read().CanMove || !alive) update.PlanarIntent = Vector2.Zero;
+        bool canMove = State.Encumbrance.Read().CanMove && alive;
         DaggerfallLocomotionStep locomotion = _locomotion.BeginStep([.. update.Inputs], update.DeltaSeconds, State.Actors.Player.Stats, canMove);
         CharacterMotion motionBefore = State.PlayerControl.Motion;
         _doors.Advance(update.DeltaSeconds);
         CharacterStepReceipt? movement = _spatial.Step(State.PlayerControl, update, _doors.CharacterEnvironment(), locomotion.Controls);
-        _locomotion.CompleteStep(locomotion, motionBefore, movement, update.DeltaSeconds * _time.GameSecondsPerRealSecond, State.Actors.Player.Stats, use => State.SkillUses.Record(use));
+        DaggerfallLanding? landing = _locomotion.CompleteStep(locomotion, motionBefore, movement, update.DeltaSeconds * _time.GameSecondsPerRealSecond, State.Actors.Player.Stats, use => State.SkillUses.Record(use));
+        if (_vitality.ResolveLanding(State.Actors.Player.Actor, landing, State.Effects.PreventsFallDamage(DaggerfallActorIdentity.PlayerEntityId)) is { } fall)
+            AppendDamage(fall, DaggerfallDamageCause.Fall, 0);
         _camera.Update(State.PlayerControl);
+        if (!alive || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d) return;
         _enemyBehavior.Update(State.PlayerControl, generation, simulationStep, update.DeltaSeconds, _facts);
         LookReceipt currentLook = _input.ResolveCurrentLook(State.PlayerControl);
         _staminaRecovery.Update(State.Actors.Player.Stats, update.DeltaSeconds);
@@ -897,20 +903,22 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 
-    private void AppendEffectDamage(DaggerfallEffectDamage effect)
+    private void AppendEffectDamage(DaggerfallEffectDamage effect) =>
+        AppendDamage(effect.Result, DaggerfallDamageCause.Effect, 0);
+
+    private void AppendDamage(DamageResult result, DaggerfallDamageCause cause, int struckBody)
     {
-        DamageResult result = effect.Result;
         long source = checked((long)result.Source.Get<DurableEntityIdentity>().Identity.Value);
         long target = checked((long)result.Target.Get<DurableEntityIdentity>().Identity.Value);
         ulong generation = _latestUpdateGeneration ?? 1UL;
         ulong step = _latestSimulationStep ?? 1UL;
-        _facts.Append(new DamageAppliedFact(source, target, DaggerfallDamageCause.Effect,
-            result.CalculatedDamage, result.ActualHealthLost, 0, generation, step));
+        _facts.Append(new DamageAppliedFact(source, target, cause,
+            result.CalculatedDamage, result.ActualHealthLost, struckBody, generation, step));
         if (result.ActualHealthLost > 0)
-            _facts.Append(new ActorDamagedFact(target, source, DaggerfallDamageCause.Effect,
+            _facts.Append(new ActorDamagedFact(target, source, cause,
                 result.CalculatedDamage, result.ActualHealthLost));
         if (result.Defeated)
-            _facts.Append(new ActorDiedFact(target, source, DaggerfallDamageCause.Effect,
+            _facts.Append(new ActorDiedFact(target, source, cause,
                 result.CalculatedDamage, result.ActualHealthLost, generation, step));
     }
 

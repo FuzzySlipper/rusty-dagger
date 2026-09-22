@@ -55,12 +55,12 @@ internal sealed class DaggerfallLocomotionPolicy
     }
 
     /// <summary>Charges and records only accepted Engine motion, never an input request that Engine kept grounded or blocked.</summary>
-    internal void CompleteStep(DaggerfallLocomotionStep step, CharacterMotion before, CharacterStepReceipt? receipt, double gameSeconds, StatsComponent stats, Action<DaggerfallSkillUse> recordSkillUse)
+    internal DaggerfallLanding? CompleteStep(DaggerfallLocomotionStep step, CharacterMotion before, CharacterStepReceipt? receipt, double gameSeconds, StatsComponent stats, Action<DaggerfallSkillUse> recordSkillUse)
     {
         ArgumentNullException.ThrowIfNull(stats);
         ArgumentNullException.ThrowIfNull(recordSkillUse);
         if (!double.IsFinite(gameSeconds) || gameSeconds <= 0d) throw new ArgumentOutOfRangeException(nameof(gameSeconds));
-        if (receipt is not { } accepted) return;
+        if (receipt is not { } accepted) return null;
 
         bool moved = accepted.Displacement.X != 0f || accepted.Displacement.Z != 0f;
         if (step.Running && moved)
@@ -80,6 +80,9 @@ internal sealed class DaggerfallLocomotionPolicy
             }
         }
         if (accepted.Motion.Grounded) _jumpInFlight = false;
+        return !before.Grounded && accepted.Motion.Grounded && before.PeakY > accepted.Transform.Translation.Y
+            ? new DaggerfallLanding(before.PeakY - accepted.Transform.Translation.Y)
+            : null;
     }
 
     /// <summary>Consumes each calendar minute exactly once; the session calendar remains the only time authority.</summary>
@@ -141,6 +144,17 @@ internal sealed class DaggerfallLocomotionPolicy
 }
 
 internal readonly record struct DaggerfallLocomotionStep(CharacterStepControls Controls, bool Running, bool JumpRequested);
+
+/// <summary>
+/// One actual airborne-to-supported transition reported by the Engine character controller.
+/// The peak belongs to the Engine continuation, so an unloaded session cannot manufacture a fall.
+/// </summary>
+internal readonly record struct DaggerfallLanding(float Distance)
+{
+    internal DaggerfallLanding Validate() => float.IsFinite(Distance) && Distance >= 0f
+        ? this
+        : throw new ArgumentOutOfRangeException(nameof(Distance));
+}
 
 /// <summary>Classic authored movement constants retained as one validated ruleset tuning handle.</summary>
 internal sealed record DaggerfallLocomotionTuning(

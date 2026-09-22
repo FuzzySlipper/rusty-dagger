@@ -54,6 +54,24 @@ internal static class DaggerfallFormulaPolicy
         return checked((strength + endurance) * selected.FatigueUnitsPerAttributePoint);
     }
 
+    /// <summary>Donor PlayerHealth fall policy: five health points for every metre after the five-metre grace distance.</summary>
+    internal static int FallDamage(float distance)
+    {
+        if (!float.IsFinite(distance) || distance < 0f) throw new ArgumentOutOfRangeException(nameof(distance));
+        const float GraceDistanceMetres = 5f;
+        const float HealthPerMetre = 5f;
+        return distance > GraceDistanceMetres
+            ? checked((int)((distance - GraceDistanceMetres) * HealthPerMetre))
+            : 0;
+    }
+
+    /// <summary>Donor FormulaHelper fatigue consequence: two fatigue points per accepted health point, in Daggerfall units.</summary>
+    internal static int FatigueDamage(int healthDamage, DaggerfallFormulaTuning? tuning = null)
+    {
+        if (healthDamage < 0) throw new ArgumentOutOfRangeException(nameof(healthDamage));
+        return checked(healthDamage * 2 * tuning.GetValueOrDefault(Classic).FatigueUnitsPerAttributePoint);
+    }
+
     internal static int SpellPoints(int intelligence, int multiplierMilli, DaggerfallFormulaTuning? tuning = null)
     {
         DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);

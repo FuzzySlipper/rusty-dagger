@@ -329,7 +329,27 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         if (applied.Defeated)
             facts.Append(new ActorDiedFact(target, attacker, DaggerfallDamageCause.PhysicalAttack,
                 applied.CalculatedDamage, applied.ActualHealthLost, generation, step));
+        if (applied.ActualHealthLost > 0d)
+            ApplyFatigueConsequence(attacker, target, applied.Damage, generation, step, facts);
         if (applied.Damage > 0) ApplyPhysicalWear(attacker, target, body, applied.Damage, enemy, generation, step);
+    }
+
+    /// <summary>
+    /// FormulaHelper applies this after a nymph hit; DFU extends the same donor helper to lamias.
+    /// The separate track mutation and fact prevent a stamina consequence from being misreported as health loss.
+    /// </summary>
+    private void ApplyFatigueConsequence(long attacker, long target, int acceptedHealthDamage, ulong generation, ulong step, FactBuffer<IProductFact> facts)
+    {
+        if (acceptedHealthDamage <= 0 || !_definitions.TryGetValue(attacker, out DaggerfallActorDefinition? source)
+            || source.Id.Value is not ("nymph" or "lamia")) return;
+        if (!TryResolve(target, out Combatant victim)) return;
+
+        Track stamina = victim.Stats.GetTrack(TrackId.Parse(StaminaTrack));
+        double before = stamina.Current;
+        int calculated = DaggerfallFormulaPolicy.FatigueDamage(acceptedHealthDamage);
+        stamina.SetCurrent(Math.Max(stamina.Minimum, before - calculated), clamp: true);
+        double actual = before - stamina.Current;
+        facts.Append(new FatigueAppliedFact(attacker, target, calculated, actual, generation, step));
     }
 
     /// <summary>

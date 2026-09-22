@@ -4,7 +4,7 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 namespace WorldRpg.Rulesets.Daggerfall.Facts;
 
 internal interface IProductFact : IWorldRpgFact;
-internal enum DaggerfallDamageCause { PhysicalAttack, Hazard, Effect }
+internal enum DaggerfallDamageCause { PhysicalAttack, Fall, Hazard, Effect }
 /// <summary>One accepted live health application. Calculated damage and actual health lost intentionally differ at bounds or contributions.</summary>
 internal sealed record DamageAppliedFact(long SourceActorId, long TargetActorId, DaggerfallDamageCause Cause,
     int CalculatedDamage, double ActualHealthLost, int StruckBody, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
@@ -12,6 +12,9 @@ internal sealed record ActorDamagedFact(long ActorId, long SourceActorId, Dagger
     int CalculatedDamage, double ActualHealthLost) : IProductFact;
 internal sealed record ActorDiedFact(long ActorId, long KillerId, DaggerfallDamageCause Cause,
     int CalculatedDamage, double ActualHealthLost, ulong OriginatingGeneration, ulong OriginatingSequence) : IProductFact;
+/// <summary>A monster's accepted fatigue consequence remains distinct from health damage and its bounded live loss is observable.</summary>
+internal sealed record FatigueAppliedFact(long SourceActorId, long TargetActorId,
+    int CalculatedFatigueLoss, double ActualFatigueLost, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
 internal enum AttackRejection { MissingPlayerPosition, NoTargetInReach, UnknownExplicitCombatant, TargetDefeated, Cooldown, NoAttackPolicy, InsufficientStamina, StaminaSpendNotAccepted, InsufficientWeaponMaterial, EmptyQuiver }
 internal sealed record AttackRejectedFact(AttackRejection Reason, long? ActorId = null) : IProductFact;
 /// <summary>One player melee swing passed cooldown and stamina admission, independently of its target outcome.</summary>
