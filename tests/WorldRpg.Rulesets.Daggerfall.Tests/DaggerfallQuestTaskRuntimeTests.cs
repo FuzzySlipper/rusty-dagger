@@ -9,6 +9,13 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class DaggerfallQuestTaskRuntimeTests
 {
+    [Fact]
+    public void Saved_prompt_history_is_required_to_prevent_occurrence_reuse()
+    {
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize(
+            "{\"Deliveries\":[],\"Journal\":[],\"Pending\":null}", typeof(DaggerfallQuestMessagesSave), DaggerfallSaveJsonContext.Default));
+    }
+
     [Theory]
     [InlineData(2)]
     [InlineData(3)]
