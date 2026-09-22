@@ -245,6 +245,10 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             State.Npcs.Identities = _actorIdentities;
             State.Encumbrance = new DaggerfallEncumbrancePolicy(State.Inventory, State.Actors.Player.Stats);
             State.Currency = new DaggerfallCurrencyService(definitions, State.Inventory, State.ItemInstances, State.Encumbrance, _uniqueItems, saved?.Currency);
+            State.Services = new DaggerfallServiceTransactions(State.Npcs, State.Social, State.Inventory, State.ItemInstances,
+                State.Currency, _uniqueItems, () => _time.Calendar, () => _site.ActiveSite is { } active
+                    ? new DaggerfallNpcSite(active.Id.Region, active.Name, string.Empty)
+                    : null, saved?.Services);
             _corpseLoot = new DaggerfallCorpseLootModule(
                 engine.Perception,
                 _spatial,

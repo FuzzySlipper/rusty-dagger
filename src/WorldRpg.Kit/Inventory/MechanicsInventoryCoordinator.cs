@@ -144,6 +144,54 @@ public sealed class MechanicsInventoryCoordinator
         return Component.Consume(consume.Stack, consume.Quantity);
     }
 
+    /// <summary>
+    /// Applies selected existing-stack consumption and newly admitted item grants through one
+    /// Engine inventory candidate.  Product policy chooses the payment stacks and grant
+    /// identities before calling this method; the Engine remains responsible for capacity,
+    /// containment, and all-or-nothing publication.
+    /// </summary>
+    public void CommitAtomic(IEnumerable<InventoryConsume> consumes, IEnumerable<InventoryAtomicGrant> grants)
+    {
+        ArgumentNullException.ThrowIfNull(consumes);
+        ArgumentNullException.ThrowIfNull(grants);
+        InventoryConsume[] payments = consumes.Select(consume => consume.Validate()).ToArray();
+        InventoryAtomicGrant[] awards = grants.Select(grant => grant.Validate()).ToArray();
+        if (payments.Length == 0 && awards.Length == 0)
+            throw new ArgumentException("An atomic inventory commit requires a payment or grant.");
+
+        List<DurableIdentityReference> created = [];
+        try
+        {
+            using InventoryEdit candidate = Component.Store.Prepare();
+            foreach (InventoryConsume payment in payments)
+                candidate.Consume(Component.Owner, payment.Stack, payment.Quantity);
+            foreach (InventoryAtomicGrant award in awards)
+            {
+                ItemDefinition definition = RequireDefinition(award.Item);
+                if (award.UniqueItem is DurableIdentityReference identity)
+                {
+                    if (definition.Kind != ItemKind.Unique)
+                        throw new InvalidOperationException($"Atomic unique grant '{award.Item.Value}' requires a unique item definition.");
+                    EntityId item = Entities.CreateItemEntity(identity, new EntityTypeId(definition.Id.Value));
+                    created.Add(identity);
+                    candidate.MaterializeUnique(new ItemState(item, definition), Component.Owner);
+                }
+                else
+                {
+                    if (definition.Kind != ItemKind.Fungible)
+                        throw new InvalidOperationException($"Atomic stack grant '{award.Item.Value}' requires a fungible item definition.");
+                    candidate.Grant(Component.Owner, definition, award.Stack!, award.Quantity);
+                }
+            }
+            candidate.Publish();
+        }
+        catch
+        {
+            foreach (DurableIdentityReference identity in created) Entities.Destroy(identity);
+            throw;
+        }
+    }
+
     /// <summary>Destroys one contained unique item through the Engine inventory candidate.</summary>
     public ItemDestroyReceipt Destroy(UniqueInventoryItem item) => Component.Store.DestroyUnique(RequireUniqueEntity(item));
 

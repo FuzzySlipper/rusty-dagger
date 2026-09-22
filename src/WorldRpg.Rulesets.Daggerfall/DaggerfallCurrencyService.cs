@@ -64,6 +64,37 @@ internal sealed class DaggerfallCurrencyService
 
     internal DaggerfallCurrencySave Capture() => new(_accountGold, _nextGoldStack);
 
+    /// <summary>
+    /// Pays carried gold and admits any immediate service grants through one Engine inventory
+    /// candidate.  The service owner has already decided pricing and meaning; this owner selects
+    /// only the actual coin stacks and retires their metadata after a successful publication.
+    /// </summary>
+    internal bool TrySpendGold(ulong amount, IEnumerable<InventoryAtomicGrant> grants)
+    {
+        ArgumentNullException.ThrowIfNull(grants);
+        InventoryAtomicGrant[] awards = grants.Select(grant => grant.Validate()).ToArray();
+        List<InventoryConsume> spends = [];
+        ulong remaining = amount;
+        foreach (InventoryStack stack in _inventory.Read().Stacks.Where(IsGold).OrderBy(stack => stack.Id.Value, StringComparer.Ordinal))
+        {
+            ulong spent = Math.Min(remaining, stack.Quantity);
+            if (spent != 0) spends.Add(new InventoryConsume(stack.Id, spent));
+            remaining -= spent;
+            if (remaining == 0) break;
+        }
+        if (remaining != 0) return false;
+        if (spends.Count == 0 && awards.Length == 0) return true;
+
+        _inventory.CommitAtomic(spends, awards);
+        foreach (InventoryConsume spent in spends)
+        {
+            InventoryStack? current = _inventory.Read().Stacks.SingleOrDefault(stack => stack.Id == spent.Stack);
+            if (current is not { Quantity: > 0 } && _instances.ContainsStack(DaggerfallItemOwner.Player, spent.Stack))
+                _instances.RemoveStack(DaggerfallItemOwner.Player, spent.Stack);
+        }
+        return true;
+    }
+
     internal bool DepositGold(ulong amount)
     {
         if (amount == 0 || Read().Gold < amount || ulong.MaxValue - _accountGold < amount) return false;

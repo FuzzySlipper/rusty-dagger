@@ -42,6 +42,9 @@ internal sealed record DaggerfallSavePayload(
     /// <summary>Movement work accumulated before its next calendar-minute fatigue charge.</summary>
     [JsonRequired]
     public DaggerfallLocomotionSave Locomotion { get; init; } = new(0d);
+    /// <summary>Accepted service work that has not reached its concrete service-specific completion.</summary>
+    [JsonRequired]
+    public DaggerfallServiceStateSave Services { get; init; } = new([]);
     /// <summary>The dynamic identity kinds owned by the current Daggerfall ruleset.</summary>
     internal static readonly DurableIdentityKind[] PersistedKinds = [DurableIdentityKind.Actor, DurableIdentityKind.Item];
 
@@ -190,6 +193,8 @@ internal sealed record DaggerfallSavePayload(
         ArgumentNullException.ThrowIfNull(DynamicActors);
         ArgumentNullException.ThrowIfNull(Inventory);
         ArgumentNullException.ThrowIfNull(Corpses);
+        ArgumentNullException.ThrowIfNull(Services);
+        Services.Validate();
         ArgumentNullException.ThrowIfNull(Identities);
         ArgumentNullException.ThrowIfNull(CombatCooldowns);
         ArgumentNullException.ThrowIfNull(Calendar);
