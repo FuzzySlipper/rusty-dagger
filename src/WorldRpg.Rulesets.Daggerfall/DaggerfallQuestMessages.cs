@@ -22,6 +22,7 @@ internal sealed record DaggerfallQuestMessagesSave(
     DaggerfallQuestJournalEntrySave[] Journal,
     DaggerfallQuestPromptSave? Pending)
 {
+    [System.Text.Json.Serialization.JsonRequired]
     public DaggerfallQuestChoiceSave[] Choices { get; init; } = [];
 }
 
