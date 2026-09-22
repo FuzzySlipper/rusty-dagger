@@ -60,6 +60,16 @@ internal static class DaggerfallFormulaPolicy
         return FloorDivide(checked(intelligence * multiplierMilli), selected.MilliScale);
     }
 
+    /// <summary>The classic character-sheet ceiling used by character creation.</summary>
+    internal static int MaxStatValue() => 100;
+
+    /// <summary>Validates the Engine-random creation attribute pool (six through fourteen).</summary>
+    internal static int CreationBonusPool(int roll)
+    {
+        if (roll is < 6 or > 14) throw new ArgumentOutOfRangeException(nameof(roll));
+        return roll;
+    }
+
     internal static int HandToHandMinimumDamage(int skill, DaggerfallFormulaTuning? tuning = null)
     {
         DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
@@ -167,13 +177,14 @@ internal static class DaggerfallFormulaPolicy
         return SkillAdvancementMultipliers.TryGetValue(skill, out int value) ? value : throw new ArgumentException($"Unknown Daggerfall skill '{skill}'.", nameof(skill));
     }
 
-    internal static int CalculateHitChance(int skill, int struckArmor, int attackerLuck, int targetLuck, int attackerAgility, int targetAgility, int targetDodging, DaggerfallFormulaTuning? tuning = null)
+    internal static int CalculateHitChance(int skill, int struckArmor, int attackerLuck, int targetLuck, int attackerAgility, int targetAgility, int targetDodging, int targetBiographyAvoidHit = 0, DaggerfallFormulaTuning? tuning = null)
     {
         DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
         int chance = checked(skill + struckArmor + selected.HitChanceBase
             + TruncateDivide(attackerLuck - targetLuck, selected.HitChanceAttributeDivisor)
             + TruncateDivide(attackerAgility - targetAgility, selected.HitChanceAttributeDivisor)
-            - FloorDivide(targetDodging, selected.HitChanceDodgingDivisor));
+            - FloorDivide(targetDodging, selected.HitChanceDodgingDivisor)
+            - targetBiographyAvoidHit);
         return Math.Clamp(chance, selected.MinimumHitChance, selected.MaximumHitChance);
     }
 

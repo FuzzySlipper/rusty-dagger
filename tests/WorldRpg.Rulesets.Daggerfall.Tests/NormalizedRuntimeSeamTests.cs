@@ -3893,6 +3893,103 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.True(appearance.AdvanceRequests.Count > playbackAdvancesBefore);
     }
 
+    [Fact]
+    public void Title_background_commit_materializes_biography_grants_once_and_restores_them()
+    {
+        static ProductInputEvent Ui(string json) => Input(InputEventKind.DirectDigital) with
+        {
+            ValueKind = InputValueKind.ProductPayload,
+            PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+            PayloadData = Encoding.UTF8.GetBytes(json),
+        };
+
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake sourceContent = new(releases);
+        PopulateContent(sourceContent, inputs);
+        SpatialFake sourceSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake source = EngineContextFake.Create(sourceContent, sourceSpatial.Service, new AppearanceFake(releases), random: RandomMinimum.Create());
+        RulesetSavePayload saved;
+        DaggerfallCharacterBackgroundSave committed;
+        ulong goldAfterCommit;
+        using (DaggerfallSession session = new(source.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        {
+            session.ApplyProductMode(ProductMode.Title);
+            ulong goldBefore = Gold(session);
+            session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"character-begin\"}")]));
+            session.Update(new ProductUpdate(OuterUpdate(2), [Ui("{\"action\":\"character-background-reroll\",\"name\":\"Nameless\",\"race\":\"breton\",\"gender\":\"male\",\"faceIndex\":0,\"reflexes\":2,\"career\":\"class00\"}")]));
+            session.Update(new ProductUpdate(OuterUpdate(3), [Ui("{\"action\":\"character-cancel\"}")]));
+            Assert.Equal(goldBefore, Gold(session));
+            session.Update(new ProductUpdate(OuterUpdate(4), [Ui("{\"action\":\"character-begin\"}")]));
+            DaggerfallCharacterBackgroundSave rolled = Assert.IsType<DaggerfallCharacterBackgroundSave>(session.State.Character.Pending!.Background);
+            DaggerfallBiographyDefinition biography = definitions.Biographies.Biographies.Single(value => value.ClassIndex == rolled.BiographyClassIndex);
+            DaggerfallBiographyAnswerSave[] answers = biography.Questions.Select(question => new DaggerfallBiographyAnswerSave(question.Number, question.Answers[0].Letter)).ToArray();
+            Select(DaggerfallBiographyEffectKind.Gold);
+            Select(DaggerfallBiographyEffectKind.Item);
+            Select(DaggerfallBiographyEffectKind.FactionReputation);
+            Select(DaggerfallBiographyEffectKind.SocialReputation);
+            Select(DaggerfallBiographyEffectKind.Skill);
+            SelectModifier("RD");
+            DaggerfallCareerDefinition career = definitions.Catalogs.RequireCareer("class00");
+            DaggerfallCharacterBackgroundSave complete = DaggerfallCharacterBackgroundPolicy.Update(definitions, career, session.State.Character.Pending!.ToIdentity(), rolled, answers,
+                [new DaggerfallCreationAllocationSave(career.Attributes[0], rolled.AttributeBonusPool)],
+                [new DaggerfallCreationAllocationSave(career.PrimarySkills[0], 6), new DaggerfallCreationAllocationSave(career.MajorSkills[0], 6), new DaggerfallCreationAllocationSave(career.MinorSkills[0], 6)]);
+            int faction = DaggerfallCharacterBackgroundPolicy.FactionReputations(definitions, career, complete).First().Faction;
+            int factionBefore = session.State.Social.FactionReputation(faction);
+            int social = DaggerfallCharacterBackgroundPolicy.SocialReputations(definitions, career, complete).First().Group;
+            int socialBefore = session.State.Social.PersonalReputation(social);
+            session.State.Character.ReplacePending(session.State.Character.Pending! with { Background = complete });
+            session.Update(new ProductUpdate(OuterUpdate(5), [Ui("{\"action\":\"character-commit\",\"name\":\"Nameless\",\"race\":\"breton\",\"gender\":\"male\",\"faceIndex\":0,\"reflexes\":2,\"career\":\"class00\"}")]));
+
+            committed = Assert.IsType<DaggerfallCharacterBackgroundSave>(session.State.Character.Background);
+            Assert.NotEmpty(committed.StartingGrants);
+            ulong grantedGold = committed.StartingGrants.Where(grant => grant.ItemId == "template-276").Aggregate(0UL, (total, grant) => checked(total + grant.Quantity));
+            goldAfterCommit = Gold(session);
+            Assert.Equal(goldBefore + grantedGold, goldAfterCommit);
+            Assert.True(session.State.Inventory.Read().Stacks.Any(item => committed.StartingGrants.Any(grant => grant.ItemId == item.Definition.Value))
+                || session.State.Inventory.Read().UniqueItems.Any(item => committed.StartingGrants.Any(grant => grant.ItemId == item.Definition.Value)));
+            Assert.True(session.State.Social.FactionReputation(faction) > factionBefore);
+            Assert.True(session.State.Social.PersonalReputation(social) > socialBefore);
+            Assert.Equal(-5, committed.Modifiers.DiseaseResistance);
+            Assert.Equal(committed.RolledSkills.Single(skill => skill.Id == career.PrimarySkills[0]).Points + 6,
+                session.State.Actors.Player.Stats.GetStat(StatId.Parse(career.PrimarySkills[0])).BaseValue);
+
+            session.Update(new ProductUpdate(OuterUpdate(6), [Ui("{\"action\":\"character-begin\"}")]));
+            session.Update(new ProductUpdate(OuterUpdate(7), [Ui("{\"action\":\"character-commit\",\"name\":\"Nameless\",\"race\":\"breton\",\"gender\":\"male\",\"faceIndex\":0,\"reflexes\":2,\"career\":\"class00\"}")]));
+            Assert.Equal(goldAfterCommit, Gold(session));
+            saved = session.CaptureSave();
+
+            void Select(DaggerfallBiographyEffectKind kind)
+            {
+                (DaggerfallBiographyQuestionDefinition question, DaggerfallBiographyAnswerDefinition answer) = biography.Questions
+                    .SelectMany(question => question.Answers.Select(answer => (question, answer)))
+                    .First(value => value.answer.Effects.Any(effect => effect.Kind == kind));
+                answers[Array.FindIndex(answers, answer => answer.Question == question.Number)] = new(question.Number, answer.Letter);
+            }
+            void SelectModifier(string code)
+            {
+                (DaggerfallBiographyQuestionDefinition question, DaggerfallBiographyAnswerDefinition answer) = biography.Questions
+                    .SelectMany(question => question.Answers.Select(answer => (question, answer)))
+                    .First(value => value.answer.Effects.Any(effect => effect.Kind == DaggerfallBiographyEffectKind.BiographyModifier && effect.First == code));
+                answers[Array.FindIndex(answers, answer => answer.Question == question.Number)] = new(question.Number, answer.Letter);
+            }
+        }
+
+        ContentFake resumedContent = new(releases);
+        PopulateContent(resumedContent, inputs);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), random: RandomMinimum.Create());
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, saved, RandomMinimum.Create());
+        Assert.Equal(committed.Biography, resumed.State.Character.Background!.Biography);
+        Assert.Equal(committed.Modifiers, resumed.State.Character.Background!.Modifiers);
+        Assert.Equal(goldAfterCommit, Gold(resumed));
+
+        static ulong Gold(DaggerfallSession session) => session.State.Inventory.Read().Stacks.Where(stack => stack.Definition.Value == "template-276").Aggregate(0UL, (total, stack) => checked(total + stack.Quantity));
+    }
+
     /// <summary>A session that has not swung, so its weapon is ready.</summary>
     private static DaggerfallSession FreshSession(DaggerfallEffectCatalog? effects = null)
     {

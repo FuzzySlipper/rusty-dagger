@@ -205,7 +205,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             State.Character.BindCareerCommitted(State.SkillUses.RebaseForCareerSelection);
             State.LevelUps = new DaggerfallLevelUpState(State.Progression, State.SkillUses, State.Actors.Player.Stats,
                 definitions, () => State.Character.Career, _random, _rewards);
-            _combat = new DaggerCombatRules(_random, State.Actors, State.Equipment, State.InventoryFor, State.ItemInstances, definitions, authored, targeting, use => State.SkillUses.Record(use));
+            _combat = new DaggerCombatRules(_random, State.Actors, State.Equipment, State.InventoryFor, State.ItemInstances, definitions, authored, targeting, use => State.SkillUses.Record(use),
+                () => State.Character.Background?.Modifiers.AvoidHit ?? 0);
             State.Kit = new(State.Actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, State.Inventory, State.Equipment);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
                 engine.Perception,

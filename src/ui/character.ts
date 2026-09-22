@@ -1,4 +1,4 @@
-export interface CharacterAction { readonly action: string; readonly name?: string; readonly race?: string; readonly gender?: string; readonly faceIndex?: number; readonly reflexes?: number; readonly career?: string; readonly primarySkills?: string; readonly majorSkills?: string; readonly minorSkills?: string; readonly hitPointsPerLevel?: number; readonly advantages?: string; readonly disadvantages?: string; readonly attribute?: string; }
+export interface CharacterAction { readonly action: string; readonly name?: string; readonly race?: string; readonly gender?: string; readonly faceIndex?: number; readonly reflexes?: number; readonly career?: string; readonly primarySkills?: string; readonly majorSkills?: string; readonly minorSkills?: string; readonly hitPointsPerLevel?: number; readonly advantages?: string; readonly disadvantages?: string; readonly attribute?: string; readonly backgroundAnswers?: string; readonly attributeAllocations?: string; readonly skillAllocations?: string; }
 
 export interface CharacterStat {
   readonly id: string;
@@ -47,7 +47,14 @@ export interface CharacterCreation {
   readonly races: readonly CharacterChoice[]; readonly careers: readonly CharacterChoice[];
   readonly faces: readonly CharacterFace[]; readonly reflexes: readonly CharacterReflex[];
   readonly custom?: CharacterCustomClass | null;
+  readonly background?: CharacterBackground | null;
 }
+export interface CharacterBackgroundAnswer { readonly letter: string; readonly text: string; }
+export interface CharacterBackgroundQuestion { readonly number: number; readonly text: string; readonly selectedLetter: string | null; readonly answers: readonly CharacterBackgroundAnswer[]; }
+export interface CharacterBackgroundAttribute { readonly id: string; readonly label: string; readonly rolled: number; readonly allocated: number; readonly value: number; readonly canAllocate: boolean; }
+export interface CharacterBackgroundSkill { readonly id: string; readonly tier: string; readonly rolled: number; readonly allocated: number; readonly biographyBonus: number; readonly value: number; readonly canAllocate: boolean; }
+export interface CharacterStartingGrant { readonly itemId: string; readonly templateIndex: number; readonly quantity: number; readonly sourceEffect: string; }
+export interface CharacterBackground { readonly biographyClassIndex: number; readonly biography: readonly string[]; readonly questions: readonly CharacterBackgroundQuestion[]; readonly attributes: readonly CharacterBackgroundAttribute[]; readonly attributeBonusPool: number; readonly remainingAttributePoints: number; readonly skills: readonly CharacterBackgroundSkill[]; readonly primarySkillPoints: number; readonly majorSkillPoints: number; readonly minorSkillPoints: number; readonly startingGrants: readonly CharacterStartingGrant[]; readonly unsupportedEffects: readonly string[]; }
 export interface CharacterCustomTrait { readonly id: string; readonly target: string | null; }
 export interface CharacterCustomClass {
   readonly name: string; readonly primarySkills: readonly string[]; readonly majorSkills: readonly string[]; readonly minorSkills: readonly string[];
@@ -301,7 +308,21 @@ function isCreation(value: unknown): value is CharacterCreation {
     && 'careers' in value && isChoices(value.careers)
     && 'faces' in value && Array.isArray(value.faces) && value.faces.every(face => typeof face === 'object' && face !== null && 'index' in face && isNumber(face.index) && 'mediaId' in face && typeof face.mediaId === 'string')
     && 'reflexes' in value && Array.isArray(value.reflexes) && value.reflexes.every(reflex => typeof reflex === 'object' && reflex !== null && 'value' in reflex && isNumber(reflex.value) && 'label' in reflex && typeof reflex.label === 'string')
-    && (!('custom' in value) || value.custom === null || isCustomClass(value.custom));
+    && (!('custom' in value) || value.custom === null || isCustomClass(value.custom))
+    && (!('background' in value) || value.background === null || isBackground(value.background));
+
+function isBackground(value: unknown): value is CharacterBackground {
+  const allocation = (entry: unknown): boolean => typeof entry === 'object' && entry !== null && 'id' in entry && typeof entry.id === 'string' && 'allocated' in entry && isNumber(entry.allocated) && 'value' in entry && isNumber(entry.value);
+  return typeof value === 'object' && value !== null
+    && 'biographyClassIndex' in value && isNumber(value.biographyClassIndex) && 'biography' in value && Array.isArray(value.biography) && value.biography.every(line => typeof line === 'string')
+    && 'attributeBonusPool' in value && isNumber(value.attributeBonusPool) && 'remainingAttributePoints' in value && isNumber(value.remainingAttributePoints)
+    && 'primarySkillPoints' in value && isNumber(value.primarySkillPoints) && 'majorSkillPoints' in value && isNumber(value.majorSkillPoints) && 'minorSkillPoints' in value && isNumber(value.minorSkillPoints)
+    && 'questions' in value && Array.isArray(value.questions) && value.questions.every(question => typeof question === 'object' && question !== null && 'number' in question && isNumber(question.number) && 'text' in question && typeof question.text === 'string' && 'selectedLetter' in question && (question.selectedLetter === null || typeof question.selectedLetter === 'string') && 'answers' in question && Array.isArray(question.answers))
+    && 'attributes' in value && Array.isArray(value.attributes) && value.attributes.every(allocation)
+    && 'skills' in value && Array.isArray(value.skills) && value.skills.every(allocation)
+    && 'startingGrants' in value && Array.isArray(value.startingGrants)
+    && 'unsupportedEffects' in value && Array.isArray(value.unsupportedEffects) && value.unsupportedEffects.every(effect => typeof effect === 'string');
+}
 }
 
 function isCustomClass(value: unknown): value is CharacterCustomClass {
@@ -354,15 +375,42 @@ function renderCreation(root: HTMLElement, value: CharacterCreation | null, avai
   customFields.append(primary.element, major.element, minor.element, labeled('HP per level', hp), advantages.element, disadvantages.element, eligibility);
   const updateVisibility = (): void => { customFields.hidden = career.value !== 'custom'; };
   career.addEventListener('change', updateVisibility); updateVisibility();
+  const background = backgroundEditor(value.background ?? null);
   const commit = document.createElement('button'); commit.type = 'button'; commit.textContent = 'Commit character'; commit.dataset.testid = 'character-commit';
-  const action = (kind: 'character-update' | 'character-commit'): CharacterAction => career.value === 'custom'
+  const action = (kind: 'character-update' | 'character-commit' | 'character-background-reroll'): CharacterAction => career.value === 'custom'
     ? { action: kind, name: name.value, race: race.value, gender: gender.value, faceIndex: Number(face.value), reflexes: Number(reflexes.value), career: career.value,
-      primarySkills: primary.values().join(','), majorSkills: major.values().join(','), minorSkills: minor.values().join(','), hitPointsPerLevel: Number(hp.value), advantages: advantages.value(), disadvantages: disadvantages.value() }
-    : { action: kind, name: name.value, race: race.value, gender: gender.value, faceIndex: Number(face.value), reflexes: Number(reflexes.value), career: career.value };
+      primarySkills: primary.values().join(','), majorSkills: major.values().join(','), minorSkills: minor.values().join(','), hitPointsPerLevel: Number(hp.value), advantages: advantages.value(), disadvantages: disadvantages.value(), ...background.values() }
+    : { action: kind, name: name.value, race: race.value, gender: gender.value, faceIndex: Number(face.value), reflexes: Number(reflexes.value), career: career.value, ...background.values() };
   const update = document.createElement('button'); update.type = 'button'; update.textContent = 'Check custom class'; update.dataset.testid = 'character-custom-update'; update.addEventListener('click', () => send?.(action('character-update')));
   commit.addEventListener('click', () => send?.(action('character-commit')));
   const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Cancel'; cancel.dataset.testid = 'character-cancel'; cancel.addEventListener('click', () => send?.({ action: 'character-cancel' }));
-  root.replaceChildren(name, race, gender, face, reflexes, career, customFields, update, commit, cancel);
+  const reroll = document.createElement('button'); reroll.type = 'button'; reroll.textContent = 'Reroll background'; reroll.dataset.testid = 'character-background-reroll'; reroll.disabled = value.background === null;
+  reroll.addEventListener('click', () => send?.(action('character-background-reroll')));
+  root.replaceChildren(name, race, gender, face, reflexes, career, customFields, background.element, reroll, update, commit, cancel);
+}
+
+function backgroundEditor(value: CharacterBackground | null): { readonly element: HTMLElement; readonly values: () => Pick<CharacterAction, 'backgroundAnswers' | 'attributeAllocations' | 'skillAllocations'> } {
+  const element = document.createElement('fieldset'); element.dataset.testid = 'character-background';
+  const legend = document.createElement('legend'); legend.textContent = 'Background and starting abilities'; element.append(legend);
+  if (value === null) { element.hidden = true; return { element, values: () => ({}) }; }
+  const biography = document.createElement('p'); biography.dataset.testid = 'character-biography'; biography.textContent = value.biography.join(' '); element.append(biography);
+  const answers = value.questions.map(question => {
+    const label = document.createElement('label'); label.textContent = `${question.number}. ${question.text}`;
+    const input = select(question.answers.map(answer => ({ id: answer.letter, label: `${answer.letter.toUpperCase()}. ${answer.text}`, available: true, restriction: null })), question.selectedLetter ?? question.answers[0]?.letter ?? '');
+    input.setAttribute('aria-label', `Background question ${question.number}`); label.append(input); element.append(label); return { question: question.number, input };
+  });
+  const attributes = allocationEditor('Attributes', value.attributes.map(attribute => ({ id: attribute.id, label: `${attribute.label}: ${attribute.value}`, allocated: attribute.allocated, canAllocate: attribute.canAllocate })));
+  const skills = allocationEditor('Skills', value.skills.map(skill => ({ id: skill.id, label: `${skill.id} (${skill.tier}): ${skill.value}`, allocated: skill.allocated, canAllocate: skill.canAllocate })));
+  const pools = document.createElement('p'); pools.textContent = `${value.remainingAttributePoints} of ${value.attributeBonusPool} attribute points remain; ${value.primarySkillPoints}/${value.majorSkillPoints}/${value.minorSkillPoints} primary/major/minor skill points remain.`; element.append(pools, attributes.element, skills.element);
+  if (value.startingGrants.length !== 0) { const grants = document.createElement('p'); grants.dataset.testid = 'character-starting-grants'; grants.textContent = `Starting grants: ${value.startingGrants.map(grant => grant.itemId).join(', ')}.`; element.append(grants); }
+  if (value.unsupportedEffects.length !== 0) { const unsupported = document.createElement('p'); unsupported.dataset.testid = 'character-background-unsupported-effects'; unsupported.textContent = `Recorded effects: ${value.unsupportedEffects.join(' ')}`; element.append(unsupported); }
+  return { element, values: () => ({ backgroundAnswers: answers.map(answer => `${answer.question}:${answer.input.value}`).join(','), attributeAllocations: attributes.values(), skillAllocations: skills.values() }) };
+}
+
+function allocationEditor(title: string, values: readonly { readonly id: string; readonly label: string; readonly allocated: number; readonly canAllocate: boolean }[]): { readonly element: HTMLElement; readonly values: () => string } {
+  const element = document.createElement('fieldset'); const legend = document.createElement('legend'); legend.textContent = title; element.append(legend);
+  const inputs = values.map(value => { const label = document.createElement('label'); label.textContent = value.label; const input = document.createElement('input'); input.type = 'number'; input.min = '0'; input.value = String(value.allocated); input.disabled = !value.canAllocate && value.allocated === 0; input.setAttribute('aria-label', `${title} ${value.id}`); label.append(input); element.append(label); return { id: value.id, input }; });
+  return { element, values: () => inputs.map(value => `${value.id}:${Math.max(0, Number(value.input.value) || 0)}`).filter(value => !value.endsWith(':0')).join(',') };
 }
 
 function renderLevelUp(root: HTMLElement, value: CharacterLevelUp | null, send?: (action: CharacterAction) => void): void {

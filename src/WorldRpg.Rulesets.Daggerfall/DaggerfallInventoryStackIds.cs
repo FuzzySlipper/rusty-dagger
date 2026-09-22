@@ -18,4 +18,7 @@ internal static class DaggerfallInventoryStackIds
 
     internal static InventoryStackId ForLoot(long actorId, ulong sequence, int ordinal) =>
         InventoryStackId.Parse($"daggerfall.loot.{actorId}.{sequence}.{ordinal}");
+
+    internal static InventoryStackId ForBiography(int ordinal) =>
+        InventoryStackId.Parse($"daggerfall.character.background.{ordinal}");
 }
