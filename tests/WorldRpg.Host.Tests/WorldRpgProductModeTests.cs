@@ -61,12 +61,24 @@ public sealed class WorldRpgProductModeTests
         ModeRecordingRuleset ruleset = new() { StartupResult = EntryScreenStartupResult.Waiting };
         using WorldRpgProduct product = Product(ruleset);
         product.Start();
-        Assert.Equal(ProductMode.Title, product.Begin().To);
+
+        ProductModeChange started = product.Begin();
+        Assert.Equal(ProductMode.Title, product.Mode);
+        Assert.Equal(ProductModeChangeOutcome.AlreadyInMode, started.Outcome);
         Assert.Equal(1, ruleset.StartupRequests);
+
+        // A repeat Begin does not replace or duplicate the ruleset-owned operation.
+        product.Begin();
+        Assert.Equal(2, ruleset.StartupRequests);
+        Assert.Equal(ProductMode.Title, product.Mode);
+
         ruleset.EntryReady = true;
         product.Update(Update(1));
         Assert.Equal(ProductMode.Playing, product.Mode);
+        Assert.Equal(ProductMode.Playing, ruleset.LastApplied);
+
         product.Update(Update(2));
+        Assert.Equal(ProductMode.Playing, product.Mode);
         Assert.Equal(1, ruleset.EntryCompletions);
     }
 
@@ -76,7 +88,9 @@ public sealed class WorldRpgProductModeTests
         ModeRecordingRuleset ruleset = new() { StartupResult = EntryScreenStartupResult.Waiting };
         using WorldRpgProduct product = Product(ruleset);
         product.Start();
+
         product.Update(Semantic("{\"action\":\"begin\"}"));
+
         Assert.Equal(ProductMode.Title, product.Mode);
         Assert.Equal(1, ruleset.StartupRequests);
     }
@@ -401,8 +415,11 @@ public sealed class WorldRpgProductModeTests
         internal int Updates { get; private set; }
 
         internal EntryScreenStartupResult StartupResult { get; set; } = EntryScreenStartupResult.ReadyForPlay;
+
         internal bool EntryReady { get; set; }
+
         internal int StartupRequests { get; private set; }
+
         internal int EntryCompletions { get; private set; }
 
         internal ModeRecordingSession? Replaced { get; private set; }
@@ -435,7 +452,12 @@ public sealed class WorldRpgProductModeTests
             ModeBeforeUpdate ??= mode;
         }
 
-        internal EntryScreenStartupResult StartEntry() { StartupRequests++; return StartupResult; }
+        internal EntryScreenStartupResult StartEntry()
+        {
+            StartupRequests++;
+            return StartupResult;
+        }
+
         internal bool TakeEntryReady()
         {
             if (!EntryReady) return false;
@@ -468,6 +490,7 @@ public sealed class WorldRpgProductModeTests
         }
 
         public EntryScreenStartupResult StartEntry() => owner.StartEntry();
+
         public bool TakeEntryReadyForPlay() => owner.TakeEntryReady();
 
         public void PublishInitial()

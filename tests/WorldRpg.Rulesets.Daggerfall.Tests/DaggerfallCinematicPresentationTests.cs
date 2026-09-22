@@ -65,15 +65,20 @@ public sealed class DaggerfallCinematicPresentationTests
     {
         Harness state = new();
         DaggerfallOpeningCinematics opening = new(state.Presentation, videosEnabled: true);
+
         Assert.Equal(EntryScreenStartupResult.Waiting, opening.Start());
         Assert.Equal(["anim0000.webm"], state.Paths);
+
         state.Facts.Add(new(true, VideoRealizationFactKind.Completed, 1, new(1), VideoFailureCode.None));
         state.Presentation.Poll();
         opening.Poll();
         Assert.Equal(["anim0000.webm", "anim0011.webm"], state.Paths);
+
+        // Skip is a terminal completion of the second cinematic, not a second opening route.
         opening.Skip();
         opening.Poll();
         Assert.Equal(["anim0000.webm", "anim0011.webm", "dag2.webm"], state.Paths);
+
         state.Facts.Add(new(true, VideoRealizationFactKind.Completed, 2, new(3), VideoFailureCode.None));
         state.Presentation.Poll();
         opening.Poll();
@@ -81,6 +86,8 @@ public sealed class DaggerfallCinematicPresentationTests
         Assert.False(opening.TakeReady());
         Assert.False(opening.IsActive);
         Assert.Equal(EntryScreenStartupResult.ReadyForPlay, opening.Start());
+
+        // A replayed terminal fact cannot reactivate the sequence or start gameplay twice.
         opening.Poll();
         Assert.False(opening.TakeReady());
         Assert.Equal(3, state.Paths.Count);
@@ -92,6 +99,7 @@ public sealed class DaggerfallCinematicPresentationTests
         DaggerfallOpeningCinematics missing = new(null, videosEnabled: true);
         Assert.Equal(EntryScreenStartupResult.Failed, missing.Start());
         Assert.Contains("unavailable", missing.Failure!.Failure, StringComparison.OrdinalIgnoreCase);
+
         DaggerfallOpeningCinematics disabled = new(null, videosEnabled: false);
         Assert.Equal(EntryScreenStartupResult.ReadyForPlay, disabled.Start());
         Assert.True(disabled.TakeReady());
