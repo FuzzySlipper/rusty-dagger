@@ -5,11 +5,17 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>The source-defined forms whose trigger state belongs to a quest instance.</summary>
 internal enum DaggerfallQuestTaskKind { Headless, Standard, Variable, PersistUntil, Global }
-internal enum DaggerfallQuestTaskOperationKind { When, DailyFrom, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, Rumor, Prompt, End, Unsupported }
+internal enum DaggerfallQuestTaskOperationKind { When, DailyFrom, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, End, Unsupported }
 internal enum DaggerfallQuestTaskConditionOperator { When, WhenNot, And, AndNot, Or, OrNot }
 
 /// <summary>One durable trigger state. Operation completion aligns with the compiled source operation order.</summary>
-internal sealed record DaggerfallQuestTaskState(string Symbol, DaggerfallQuestTaskKind Kind, bool IsSet, bool WasSet, bool IsDropped, bool[] OperationCompleted);
+internal sealed record DaggerfallQuestTaskOperationState(string? PickedTarget, string? ChildInstanceId);
+internal sealed record DaggerfallQuestTaskState(string Symbol, DaggerfallQuestTaskKind Kind, bool IsSet, bool WasSet, bool IsDropped, bool[] OperationCompleted)
+{
+    /// <summary>Receipts for operations whose result must remain stable across a current-schema save.</summary>
+    [System.Text.Json.Serialization.JsonRequired]
+    public DaggerfallQuestTaskOperationState[] OperationState { get; init; } = [];
+}
 
 /// <summary>Mutable runtime state for one compiled task; save records are created only at capture boundaries.</summary>
 internal sealed class DaggerfallQuestTaskRuntimeState
@@ -23,6 +29,7 @@ internal sealed class DaggerfallQuestTaskRuntimeState
         WasSet = saved.WasSet;
         IsDropped = saved.IsDropped;
         OperationCompleted = [.. saved.OperationCompleted];
+        OperationState = [.. saved.OperationState];
     }
 
     internal string Symbol { get; }
@@ -31,7 +38,8 @@ internal sealed class DaggerfallQuestTaskRuntimeState
     internal bool WasSet { get; set; }
     internal bool IsDropped { get; set; }
     internal bool[] OperationCompleted { get; set; }
-    internal DaggerfallQuestTaskState Capture() => new(Symbol, Kind, IsSet, WasSet, IsDropped, [.. OperationCompleted]);
+    internal DaggerfallQuestTaskOperationState[] OperationState { get; set; }
+    internal DaggerfallQuestTaskState Capture() => new(Symbol, Kind, IsSet, WasSet, IsDropped, [.. OperationCompleted]) { OperationState = [.. OperationState] };
 }
 
 internal sealed record DaggerfallQuestTaskCondition(DaggerfallQuestTaskConditionOperator Operator, string Symbol);
@@ -62,6 +70,9 @@ internal static partial class DaggerfallQuestTaskCompiler
     private static readonly Regex Clear = Header("^clear\\s+(?<symbols>[a-zA-Z0-9_.]+(?:\\s+[a-zA-Z0-9_.]+)*)$");
     private static readonly Regex Unset = Header("^unset\\s+(?<symbols>[a-zA-Z0-9_.]+(?:\\s+[a-zA-Z0-9_.]+)*)$");
     private static readonly Regex End = Header("^end\\s+quest(?:\\s+saying\\s+(?<message>\\d+))?$");
+    private static readonly Regex PickOneOf = Header("^pick\\s+one\\s+of\\s+(?<targets>[a-zA-Z0-9_.]+(?:\\s+[a-zA-Z0-9_.]+)+)$");
+    private static readonly Regex RunQuest = Header("^run\\s+quest\\s+(?<quest>[a-zA-Z0-9_.]+)\\s+then\\s+(?<success>[a-zA-Z0-9_.]+)\\s+or\\s+(?<failure>[a-zA-Z0-9_.]+)$");
+    private static readonly Regex StartQuest = Header("^start\\s+quest\\s+(?:(?<first>\\d+)\\s+(?<second>\\d+)|(?<quest>[a-zA-Z0-9_.]+))$");
     private static readonly Regex Journal = Header("^log\\s+(?<message>\\d+)\\s+step\\s+(?<step>\\d+)$");
     private static readonly Regex RemoveJournal = Header("^remove\\s+log\\s+step\\s+(?<step>\\d+)$");
     private static readonly Regex Rumor = Header("^rumor\\s+mill\\s+(?<message>\\d+)$");
@@ -116,7 +127,7 @@ internal static partial class DaggerfallQuestTaskCompiler
         ArgumentNullException.ThrowIfNull(program);
         return [.. program.Tasks.Select(task => new DaggerfallQuestTaskState(task.Symbol, task.Kind,
             task.Kind is DaggerfallQuestTaskKind.Headless or DaggerfallQuestTaskKind.PersistUntil, false, false,
-            new bool[task.Operations.Count]))];
+            new bool[task.Operations.Count]) { OperationState = [.. Enumerable.Repeat(new DaggerfallQuestTaskOperationState(null, null), task.Operations.Count)] })];
     }
 
     internal static void ValidateState(DaggerfallQuestTaskProgram program, IReadOnlyList<DaggerfallQuestTaskState> states, string sourceFile)
@@ -129,7 +140,8 @@ internal static partial class DaggerfallQuestTaskCompiler
         {
             DaggerfallQuestTaskState state = states[index] ?? throw new ArgumentException($"Quest source '{sourceFile}' has null task state.");
             DaggerfallQuestTaskDefinition task = program.Tasks[index];
-            if (!string.Equals(state.Symbol, task.Symbol, StringComparison.Ordinal) || state.Kind != task.Kind || state.OperationCompleted is null || state.OperationCompleted.Length != task.Operations.Count)
+            if (!string.Equals(state.Symbol, task.Symbol, StringComparison.Ordinal) || state.Kind != task.Kind || state.OperationCompleted is null || state.OperationCompleted.Length != task.Operations.Count
+                || state.OperationState is null || state.OperationState.Length != task.Operations.Count || state.OperationState.Any(value => value is null))
                 throw new ArgumentException($"Quest source '{sourceFile}' task state '{state.Symbol}' does not match the compiled task at position {index}.");
         }
     }
@@ -215,6 +227,18 @@ internal static partial class DaggerfallQuestTaskCompiler
             return new(DaggerfallQuestTaskOperationKind.RemoveJournal, sourceLine, line, [], [], null, Step(removeJournal.Groups["step"].Value, sourceLine));
         if (Rumor.Match(line) is { Success: true } rumor)
             return new(DaggerfallQuestTaskOperationKind.Rumor, sourceLine, line, [], [], Message(rumor.Groups["message"].Value));
+        if (PickOneOf.Match(line) is { Success: true } pick)
+            return new(DaggerfallQuestTaskOperationKind.PickOneOf, sourceLine, line, Symbols(pick.Groups["targets"].Value), [], null);
+        if (RunQuest.Match(line) is { Success: true } run)
+            return new(DaggerfallQuestTaskOperationKind.RunQuest, sourceLine, line,
+                [run.Groups["quest"].Value, Canonical(run.Groups["success"].Value), Canonical(run.Groups["failure"].Value)], [], null);
+        if (StartQuest.Match(line) is { Success: true } startQuest)
+        {
+            string target = startQuest.Groups["quest"].Success
+                ? startQuest.Groups["quest"].Value
+                : $"S{int.Parse(startQuest.Groups["first"].Value, System.Globalization.CultureInfo.InvariantCulture):0000000}";
+            return new(DaggerfallQuestTaskOperationKind.StartQuest, sourceLine, line, [target], [], null);
+        }
         if (PromptMulti.Match(line) is { Success: true } multi)
         {
             DaggerfallQuestPromptOption[] options = [.. PromptOption.Matches(multi.Groups["options"].Value).Select(match =>
@@ -297,9 +321,16 @@ internal static partial class DaggerfallQuestTaskCompiler
 }
 
 /// <summary>Runs only the retained source-order task transitions over one mutable active quest instance.</summary>
+internal interface IDaggerfallQuestTaskLifecycle
+{
+    string Pick(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation, int operationIndex, DaggerfallQuestTaskRuntimeState state);
+    string? RunChild(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskDefinition task, DaggerfallQuestTaskOperation operation, int operationIndex, DaggerfallQuestTaskRuntimeState state);
+    void Schedule(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation);
+}
+
 internal static class DaggerfallQuestTaskRunner
 {
-    internal static void Advance(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskProgram program, DaggerfallVariableStore variables, World.DaggerfallCalendar calendar, DaggerfallQuestMessages? messages = null)
+    internal static void Advance(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskProgram program, DaggerfallVariableStore variables, World.DaggerfallCalendar calendar, DaggerfallQuestMessages? messages = null, IDaggerfallQuestTaskLifecycle? lifecycle = null)
     {
         ArgumentNullException.ThrowIfNull(instance);
         ArgumentNullException.ThrowIfNull(program);
@@ -366,12 +397,14 @@ internal static class DaggerfallQuestTaskRunner
                         {
                             instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
                             instance.Outcome = exception.Message;
+                            instance.Succeeded = false;
                             return;
                         }
                         if (!changed)
                         {
                             instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
                             instance.Outcome = $"Quest action at line {operation.SourceLine} refers to missing clock '{operation.Targets.Single()}'.";
+                            instance.Succeeded = false;
                             return;
                         }
                         MarkCompleted(state, operationIndex);
@@ -381,6 +414,7 @@ internal static class DaggerfallQuestTaskRunner
                         {
                             instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
                             instance.Outcome = $"Quest journal action at line {operation.SourceLine} has no message owner.";
+                            instance.Succeeded = false;
                             return;
                         }
                         messages.Log(instance, operation.MessageId!.Value, operation.Step!.Value);
@@ -391,6 +425,7 @@ internal static class DaggerfallQuestTaskRunner
                         {
                             instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
                             instance.Outcome = $"Quest journal action at line {operation.SourceLine} has no message owner.";
+                            instance.Succeeded = false;
                             return;
                         }
                         messages.RemoveLog(instance, operation.Step!.Value);
@@ -401,6 +436,7 @@ internal static class DaggerfallQuestTaskRunner
                         {
                             instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
                             instance.Outcome = $"Quest rumor action at line {operation.SourceLine} has no message owner.";
+                            instance.Succeeded = false;
                             return;
                         }
                         messages.Rumor(instance, operation.MessageId!.Value);
@@ -411,26 +447,67 @@ internal static class DaggerfallQuestTaskRunner
                         {
                             instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
                             instance.Outcome = $"Quest prompt action at line {operation.SourceLine} has no message owner.";
+                            instance.Succeeded = false;
                             return;
                         }
                         if (!messages.TryResolveMessage(instance, operation.MessageId, operation.MessageAlias, out int promptMessage, out string? promptDiagnostic))
                         {
                             instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
                             instance.Outcome = $"Quest prompt action at line {operation.SourceLine}: {promptDiagnostic}";
+                            instance.Succeeded = false;
                             return;
                         }
                         messages.Prompt(instance, promptMessage, PromptChoices(operation), task.Symbol, operationIndex);
                         return;
+                    case DaggerfallQuestTaskOperationKind.PickOneOf:
+                        if (lifecycle is null)
+                        {
+                            instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
+                            instance.Outcome = $"Quest pick-one-of action at line {operation.SourceLine} has no session lifecycle owner.";
+                            instance.Succeeded = false;
+                            return;
+                        }
+                        string picked = lifecycle.Pick(instance, operation, operationIndex, state);
+                        Start(picked, states, indexes, program.Tasks, variables, instance.InstanceId, operation);
+                        MarkCompleted(state, operationIndex);
+                        break;
+                    case DaggerfallQuestTaskOperationKind.StartQuest:
+                        if (lifecycle is null)
+                        {
+                            instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
+                            instance.Outcome = $"Quest start action at line {operation.SourceLine} has no session lifecycle owner.";
+                            instance.Succeeded = false;
+                            return;
+                        }
+                        lifecycle.Schedule(instance, operation);
+                        MarkCompleted(state, operationIndex);
+                        break;
+                    case DaggerfallQuestTaskOperationKind.RunQuest:
+                        if (lifecycle is null)
+                        {
+                            instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
+                            instance.Outcome = $"Quest child action at line {operation.SourceLine} has no session lifecycle owner.";
+                            instance.Succeeded = false;
+                            return;
+                        }
+                        if (lifecycle.RunChild(instance, task, operation, operationIndex, state) is { } branch)
+                        {
+                            Start(branch, states, indexes, program.Tasks, variables, instance.InstanceId, operation);
+                            MarkCompleted(state, operationIndex);
+                        }
+                        break;
                     case DaggerfallQuestTaskOperationKind.End:
                         MarkCompleted(state, operationIndex);
                         instance.Lifecycle = DaggerfallQuestLifecycle.Ended;
                         instance.Outcome = "end quest";
+                        instance.Succeeded ??= false;
                         instance.TerminalMessageId = operation.MessageId;
                         if (operation.MessageId is { } messageId) messages?.Popup(instance, messageId);
                         return;
                     case DaggerfallQuestTaskOperationKind.Unsupported:
                         instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
                         instance.Outcome = $"Unsupported quest action at line {operation.SourceLine}: {operation.Source}";
+                        instance.Succeeded = false;
                         return;
                     default:
                         throw new InvalidOperationException($"Quest task operation '{operation.Kind}' cannot run.");
@@ -443,6 +520,7 @@ internal static class DaggerfallQuestTaskRunner
                 {
                     instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
                     instance.Outcome = $"Quest task '{task.Symbol}' names missing persisted-until target '{task.PersistUntilTarget}'.";
+                    instance.Succeeded = false;
                     return;
                 }
                 if (target) Clear(task, state, variables);
@@ -657,6 +735,10 @@ internal static class DaggerfallQuestTaskRunner
         WriteGlobal(task, false, variables);
     }
 
-    private static void Rearm(DaggerfallQuestTaskRuntimeState state) => state.OperationCompleted = new bool[state.OperationCompleted.Length];
+    private static void Rearm(DaggerfallQuestTaskRuntimeState state)
+    {
+        state.OperationCompleted = new bool[state.OperationCompleted.Length];
+        state.OperationState = [.. Enumerable.Repeat(new DaggerfallQuestTaskOperationState(null, null), state.OperationState.Length)];
+    }
     private static void MarkCompleted(DaggerfallQuestTaskRuntimeState state, int index) => state.OperationCompleted[index] = true;
 }
