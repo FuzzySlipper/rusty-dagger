@@ -101,13 +101,21 @@ public sealed class DaggerfallItemFactoryTests
             TemplateIndex: 131));
         DaggerfallCreatedItem book = factory.Create(new DaggerfallItemCreateRequest("Books", "book", DaggerfallItemOwner.Player,
             TemplateIndex: 277));
+        DaggerfallCreatedItem potion = factory.Create(new DaggerfallItemCreateRequest("UselessItems1", "potion", DaggerfallItemOwner.Player,
+            TemplateIndex: 83, PotionRecipeKey: 221871));
+        DaggerfallCreatedItem recipe = factory.Create(new DaggerfallItemCreateRequest("MiscItems", "recipe", DaggerfallItemOwner.Player,
+            TemplateIndex: 278, PotionRecipeKey: 221871));
 
         Assert.Equal(("breton", "male", "blue"), (clothing.Metadata.Race, clothing.Metadata.Gender, clothing.Metadata.Dye));
         Assert.Equal(("breton", "female", "chain"), (armor.Metadata.Race, armor.Metadata.Gender, armor.Metadata.Dye));
         Assert.Equal(("none", 0, 1UL), (arrows.Metadata.Material, arrows.Metadata.CurrentCondition, arrows.Quantity));
         Assert.Equal(1UL, arrows.Quantity); // Random minimum produces the donor's inclusive lower arrow count.
         Assert.NotNull(book.Metadata.BookId);
+        Assert.Equal(221871, potion.Metadata.PotionRecipeKey);
+        Assert.Equal(221871, recipe.Metadata.PotionRecipeKey);
         Assert.Equal(book.Metadata, DaggerfallItemInstanceMetadata.Restore(book.Item.Value, book.Metadata.Capture()));
+        Assert.Equal(potion.Metadata, DaggerfallItemInstanceMetadata.Restore(potion.Item.Value, potion.Metadata.Capture()));
+        Assert.Equal(recipe.Metadata, DaggerfallItemInstanceMetadata.Restore(recipe.Item.Value, recipe.Metadata.Capture()));
         Assert.True(DaggerfallEquipmentPolicy.IsCompatible(definitions, definitions.RequireItem(new DaggerfallItemId("template-102")), "chest-armor"));
     }
 
@@ -143,6 +151,48 @@ public sealed class DaggerfallItemFactoryTests
         Assert.Equal(magic.Metadata, DaggerfallItemInstanceMetadata.Restore(magic.Item.Value, instances.RequireUnique(magicUnique.Value).Capture()));
     }
 
+    [Theory]
+    [InlineData("male", 4)]
+    [InlineData("female", 2)]
+    public void Magic_clothing_uses_player_gender_even_when_other_clothing_group_is_drawn(string gender, int group)
+    {
+        DaggerfallDefinitions definitions = LoadDefinitions();
+        IRandomService random = DispatchProxy.Create<IRandomService, MagicSelectionProxy>();
+        ((MagicSelectionProxy)(object)random).Group = group;
+        string magic = definitions.Magic.MagicItems.Values.First(item => item.Type == 0 && item.Group == 0).Key;
+        DaggerfallCreatedItem item = new DaggerfallItemFactory(definitions, random).Create(new(
+            "Magic", "clothing-case", DaggerfallItemOwner.Player, Race: "breton", Gender: gender, MagicItemKey: magic));
+        Assert.Equal(gender, item.Metadata.Gender);
+        Assert.Equal(magic, item.Metadata.Enchantment);
+    }
+
+    [Fact]
+    public void Magic_weapon_maximum_template_draw_excludes_arrows()
+    {
+        DaggerfallDefinitions definitions = LoadDefinitions();
+        IRandomService random = DispatchProxy.Create<IRandomService, MagicSelectionProxy>();
+        ((MagicSelectionProxy)(object)random).Group = 1;
+        string magic = definitions.Magic.MagicItems.Values.First(item => item.Type == 0 && item.Group == 0).Key;
+        DaggerfallCreatedItem item = new DaggerfallItemFactory(definitions, random).Create(new(
+            "Magic", "weapon-case", DaggerfallItemOwner.Player, Race: "breton", Gender: "male", MagicItemKey: magic));
+        Assert.NotEqual(131, item.TemplateIndex);
+        Assert.False(item.Stackable);
+        Assert.Equal(magic, item.Metadata.Enchantment);
+    }
+
+    private class MagicSelectionProxy : DispatchProxy
+    {
+        internal int Group;
+        protected override object? Invoke(MethodInfo? method, object?[]? arguments)
+        {
+            if (method?.Name != nameof(IRandomService.DrawKeyed)) throw new NotSupportedException(method?.Name);
+            KeyedRngRequest request = (KeyedRngRequest)arguments![0]!;
+            return new KeyedRngReceipt(request.Key.EndsWith(".magic-group", StringComparison.Ordinal) ? Group
+                : request.Key.EndsWith(".template", StringComparison.Ordinal) || request.Key.EndsWith(".magic-weapon", StringComparison.Ordinal)
+                    ? request.Maximum : request.Minimum);
+        }
+    }
+
     [Fact]
     public void Malformed_category_template_appearance_and_quantity_are_rejected_before_materialization()
     {
@@ -153,6 +203,8 @@ public sealed class DaggerfallItemFactoryTests
         Assert.Throws<ArgumentException>(() => factory.Create(new DaggerfallItemCreateRequest("Armor", "bad", DaggerfallItemOwner.Player, TemplateIndex: 102, Race: "not-a-race", Gender: "male")));
         Assert.Throws<ArgumentException>(() => factory.Create(new DaggerfallItemCreateRequest("Weapons", "bad", DaggerfallItemOwner.Player, Quantity: 2, TemplateIndex: 113)));
         Assert.Throws<ArgumentException>(() => factory.Create(new DaggerfallItemCreateRequest("Weapons", "bad", DaggerfallItemOwner.Player, Material: "leather", TemplateIndex: 113)));
+        Assert.Throws<ArgumentException>(() => factory.Create(new DaggerfallItemCreateRequest("UselessItems1", "potion", DaggerfallItemOwner.Player, TemplateIndex: 83)));
+        Assert.Throws<ArgumentException>(() => factory.Create(new DaggerfallItemCreateRequest("Weapons", "not-potion", DaggerfallItemOwner.Player, TemplateIndex: 113, PotionRecipeKey: 221871)));
     }
 
     private static DaggerfallItemCreateRequest Request(DaggerfallItemTemplateDefinition template) => new(
@@ -161,7 +213,8 @@ public sealed class DaggerfallItemFactoryTests
         DaggerfallItemOwner.Player,
         TemplateIndex: template.Index,
         Race: template.Groups.Contains("Armor", StringComparer.Ordinal) || template.Groups.Contains("MensClothing", StringComparer.Ordinal) || template.Groups.Contains("WomensClothing", StringComparer.Ordinal) ? "breton" : null,
-        Gender: template.Groups.Contains("Armor", StringComparer.Ordinal) ? "male" : null);
+        Gender: template.Groups.Contains("Armor", StringComparer.Ordinal) ? "male" : null,
+        PotionRecipeKey: template.Index is 83 or 278 ? 221871 : null);
 
     private static IRandomService RandomMinimum() => DispatchProxy.Create<IRandomService, RandomMinimumProxy>();
 

@@ -408,7 +408,8 @@ internal sealed record DaggerfallItemMetadataSave(
     string? Race = null,
     string? Gender = null,
     string? Dye = null,
-    int? BookId = null);
+    int? BookId = null,
+    int? PotionRecipeKey = null);
 internal sealed record DaggerfallEquipmentSave(string SlotId, ulong ItemEntityId);
 internal sealed record DaggerfallCombatCooldownSave(long AttackerId, ulong RemainingSteps);
 

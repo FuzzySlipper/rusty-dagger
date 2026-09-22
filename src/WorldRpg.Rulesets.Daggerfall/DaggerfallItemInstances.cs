@@ -10,10 +10,12 @@ internal sealed record DaggerfallItemOwner(string Scope, long Id)
     internal static DaggerfallItemOwner Player { get; } = new("player", DaggerfallActorIdentity.PlayerEntityId);
     internal static DaggerfallItemOwner Actor(long id) => new("actor", id);
     internal static DaggerfallItemOwner Corpse(long actorId) => new("corpse", actorId);
+    internal static DaggerfallItemOwner WorldTreasure(long id) => new("world-treasure", id);
+    internal static DaggerfallItemOwner Encounter(long id) => new("encounter", id);
 
     internal DaggerfallItemOwner Validate()
     {
-        if (Scope is not ("player" or "actor" or "corpse") || Id <= 0)
+        if (Scope is not ("player" or "actor" or "corpse" or "world-treasure" or "encounter") || Id <= 0)
             throw new ArgumentException("Item ownership must name a known positive durable owner.");
         return this;
     }
@@ -39,7 +41,8 @@ internal sealed record DaggerfallItemInstanceMetadata(
     string? Race = null,
     string? Gender = null,
     string? Dye = null,
-    int? BookId = null)
+    int? BookId = null,
+    int? PotionRecipeKey = null)
 {
     internal DaggerfallItemInstanceMetadata Validate()
     {
@@ -53,6 +56,8 @@ internal sealed record DaggerfallItemInstanceMetadata(
             throw new ArgumentException("Item appearance metadata cannot contain empty values.");
         if (BookId < 0)
             throw new ArgumentOutOfRangeException(nameof(BookId), "Book identity cannot be negative.");
+        if (PotionRecipeKey <= 0)
+            throw new ArgumentOutOfRangeException(nameof(PotionRecipeKey), "Potion recipe identity must be positive.");
         Owner.Validate();
         return this;
     }
@@ -73,7 +78,8 @@ internal sealed record DaggerfallItemInstanceMetadata(
             && string.Equals(Race, other.Race, StringComparison.Ordinal)
             && string.Equals(Gender, other.Gender, StringComparison.Ordinal)
             && string.Equals(Dye, other.Dye, StringComparison.Ordinal)
-            && BookId == other.BookId;
+            && BookId == other.BookId
+            && PotionRecipeKey == other.PotionRecipeKey;
     }
 
     internal static DaggerfallItemInstanceMetadata Default(DaggerfallItemDefinition definition, DaggerfallItemOwner owner) =>
@@ -81,12 +87,12 @@ internal sealed record DaggerfallItemInstanceMetadata(
             Identified: true, Stolen: false, QuestId: null, QuestItemSymbol: null, Enchantment: null, owner).Validate();
 
     internal DaggerfallItemMetadataSave Capture() => new(Material, Variant, CurrentCondition, MaximumCondition,
-        Identified, Stolen, QuestId, QuestItemSymbol, Enchantment, new DaggerfallItemOwnerSave(Owner.Scope, Owner.Id), Race, Gender, Dye, BookId);
+        Identified, Stolen, QuestId, QuestItemSymbol, Enchantment, new DaggerfallItemOwnerSave(Owner.Scope, Owner.Id), Race, Gender, Dye, BookId, PotionRecipeKey);
 
     internal static DaggerfallItemInstanceMetadata Restore(string itemId, DaggerfallItemMetadataSave saved) =>
         new DaggerfallItemInstanceMetadata(itemId, saved.Material, saved.Variant, saved.CurrentCondition, saved.MaximumCondition,
             saved.Identified, saved.Stolen, saved.QuestId, saved.QuestItemSymbol, saved.Enchantment,
-            new DaggerfallItemOwner(saved.Owner.Scope, saved.Owner.Id), saved.Race, saved.Gender, saved.Dye, saved.BookId).Validate();
+            new DaggerfallItemOwner(saved.Owner.Scope, saved.Owner.Id), saved.Race, saved.Gender, saved.Dye, saved.BookId, saved.PotionRecipeKey).Validate();
 }
 
 /// <summary>
