@@ -26,8 +26,6 @@ internal static class DaggerfallLootPolicy
         new("religious", LevelScaled: false, "ReligiousItems"),
     ];
 
-    private const int CategorySlots = 3;
-
     internal static DaggerfallLootResult Generate(
         DaggerfallDefinitions definitions,
         string tableKey,
@@ -65,7 +63,7 @@ internal static class DaggerfallLootPolicy
             bool supported = poolCount > 0;
             List<DaggerfallLootRoll> rolls = [];
             int slotChance = effectiveChance;
-            for (int slot = 0; slot < CategorySlots; slot++)
+            for (int slot = 0; ; slot++)
             {
                 int roll = Draw(draw, SuccessRollId(tableKey, spec.Name, slot), 0, 99);
                 bool success = roll < slotChance;
@@ -87,9 +85,71 @@ internal static class DaggerfallLootPolicy
         return new(tableKey, playerLevel, goldRoll, categoryResults, drops);
     }
 
+    /// <summary>
+    /// Selects and generates the classic table for one of the nineteen donor
+    /// dungeon types. The returned extras preserve the donor's map/potion/
+    /// recipe rolls beside the ordinary letter-table receipt.
+    /// </summary>
+    internal static DaggerfallDungeonLootResult GenerateDungeon(
+        DaggerfallDefinitions definitions,
+        int dungeonType,
+        int playerLevel,
+        Func<string, int, int, int> draw,
+        string? clothingGroup = null)
+    {
+        ArgumentNullException.ThrowIfNull(definitions);
+        ArgumentNullException.ThrowIfNull(draw);
+        string tableKey = DungeonTableKey(dungeonType);
+        DaggerfallLootResult ordinary = Generate(definitions, tableKey, playerLevel, draw, clothingGroup);
+        List<DaggerfallLootDrop> drops = ordinary.Drops.ToList();
+        List<DaggerfallLootExtraRoll> extras = [];
+        if (tableKey[0] is >= 'J' and <= 'O')
+        {
+            int mapChance = DungeonMapChances[tableKey[0] - 'J'];
+            AddExtra("map", "template-287", mapChance, null);
+            AddExtra("potion", "template-83", 4, PotionRecipeKeys);
+            AddExtra("potion-recipe", "template-278", 2, PotionRecipeKeys);
+        }
+        return new(dungeonType, tableKey, ordinary with { Drops = drops }, extras);
+
+        void AddExtra(string kind, string itemId, int chance, IReadOnlyList<int>? recipes)
+        {
+            int roll = Draw(draw, $"loot.dungeon.{dungeonType}.{kind}", 0, 99);
+            bool success = roll < chance;
+            int? recipe = success && recipes is not null
+                ? recipes[Draw(draw, $"loot.dungeon.{dungeonType}.{kind}.recipe", 0, recipes.Count - 1)]
+                : null;
+            extras.Add(new(kind, chance, roll, success, recipe));
+            if (success) drops.Add(new DaggerfallLootDrop(itemId, 1, kind, recipe));
+        }
+    }
+
+    /// <summary>The donor's <c>DFRegion.DungeonTypes</c> ordinal to loot-letter table.</summary>
+    internal static string DungeonTableKey(int dungeonType) => dungeonType >= 0 && dungeonType < DungeonTableKeys.Length
+        ? DungeonTableKeys[dungeonType]
+        : throw new ArgumentOutOfRangeException(nameof(dungeonType), "Daggerfall publishes nineteen dungeon loot table types (0 through 18).");
+
+    internal static bool IsClassicPotionRecipeKey(int key) => PotionRecipeKeys.Contains(key);
+
     internal static string GoldRollId(string tableKey) => $"loot.{tableKey}.gold";
     internal static string SuccessRollId(string tableKey, string category, int slot) => $"loot.{tableKey}.{category}.{slot}";
     internal static string PickRollId(string tableKey, string category, int slot) => $"{SuccessRollId(tableKey, category, slot)}.pick";
+
+    private static readonly string[] DungeonTableKeys =
+    [
+        "K", "N", "N", "N", "K", "M", "M", "Q", "K", "U", "D", "N", "L", "F", "S", "N", "M", "L", "N",
+    ];
+
+    private static readonly int[] DungeonMapChances = [2, 1, 1, 2, 2, 15];
+
+    // The classic-list order is retained from PotionRecipe.classicRecipeKeys.
+    // It is an item-instance identity used by both a potion (template 83) and
+    // a recipe sheet (template 278), not an Engine inventory definition.
+    private static readonly int[] PotionRecipeKeys =
+    [
+        221871, 239524, 4975678, 5017404, 5188896, 111516185, 4826108, 216843, 224588, 220192,
+        240081, 4937012, 228890, 221117, 4870452, 5361377, 112080144, 4842851, 4815872, 2031019196,
+    ];
 
     private static int Draw(Func<string, int, int, int> draw, string id, int minimum, int maximum)
     {
@@ -118,12 +178,18 @@ internal static class DaggerfallLootPolicy
 
     private readonly record struct CategorySpec(string Name, bool LevelScaled, string? TemplateGroup = null, PoolMode Mode = PoolMode.TemplateGroup)
     {
-        internal PoolKind Pool => Mode == PoolMode.PlayerClothing ? new(PoolMode.PlayerClothing, null) : TemplateGroup is null ? new(PoolMode.Unsupported, null) : new(PoolMode.TemplateGroup, TemplateGroup);
+        internal PoolKind Pool => Mode switch
+        {
+            PoolMode.PlayerClothing => new(PoolMode.PlayerClothing, null),
+            PoolMode.TemplateGroup => new(PoolMode.TemplateGroup, TemplateGroup ?? throw new InvalidOperationException($"Loot category '{Name}' is missing its template group.")),
+            PoolMode.Magic => new(PoolMode.Magic, null),
+            _ => throw new InvalidOperationException($"Loot category '{Name}' has an unknown pool mode."),
+        };
     }
 
     private readonly record struct PoolKind(PoolMode Mode, string? Group);
 
-    private enum PoolMode { Unsupported, TemplateGroup, PlayerClothing, Magic }
+    private enum PoolMode { TemplateGroup, PlayerClothing, Magic }
 }
 
 internal sealed record DaggerfallLootResult(
@@ -148,4 +214,12 @@ internal sealed record DaggerfallLootRoll(
     int? Pick,
     string? Item);
 
-internal sealed record DaggerfallLootDrop(string ItemId, int Quantity, string SourceCategory);
+internal sealed record DaggerfallLootDrop(string ItemId, int Quantity, string SourceCategory, int? PotionRecipeKey = null);
+
+internal sealed record DaggerfallDungeonLootResult(
+    int DungeonType,
+    string TableKey,
+    DaggerfallLootResult Loot,
+    IReadOnlyList<DaggerfallLootExtraRoll> Extras);
+
+internal sealed record DaggerfallLootExtraRoll(string Kind, int Chance, int Roll, bool Success, int? PotionRecipeKey);

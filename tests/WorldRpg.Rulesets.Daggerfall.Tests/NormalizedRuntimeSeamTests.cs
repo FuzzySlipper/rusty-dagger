@@ -5355,10 +5355,19 @@ public sealed class NormalizedRuntimeSeamTests
             Kill(original, 2000);
             AimActivationAt(original, 2000);
             CorpseContainer thief = original.Corpses[2000];
+            DaggerfallItemFactory itemFactory = new(definitions, RandomMinimum.Create());
+            DaggerfallCreatedItem potion = itemFactory.Create(new DaggerfallItemCreateRequest(
+                "UselessItems1", "test.loot.4903.potion", DaggerfallItemOwner.Corpse(2000), TemplateIndex: 83, PotionRecipeKey: 221871));
+            DaggerfallCreatedItem recipe = itemFactory.Create(new DaggerfallItemCreateRequest(
+                "MiscItems", "test.loot.4904.recipe", DaggerfallItemOwner.Corpse(2000), TemplateIndex: 278, PotionRecipeKey: 221871));
             original.State.Containers.Seed(thief.Owner, [
                 new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5, Stack: InventoryStackId.Parse("test.loot.4902")),
+                new InventoryContainerSeed(potion.Item, potion.Quantity, Stack: InventoryStackId.Parse("test.loot.4903")),
+                new InventoryContainerSeed(recipe.Item, UniqueItem: new(DurableIdentityKind.Item, 5002)),
                 new InventoryContainerSeed(new InventoryItemId("iron-dagger"), 1, new(DurableIdentityKind.Item, 5001))]);
             RegisterCorpseStack(original, definitions, 2000, "test.loot.4902");
+            original.State.ItemInstances.RegisterStack(DaggerfallItemOwner.Corpse(2000), InventoryStackId.Parse("test.loot.4903"), potion.Metadata);
+            original.State.ItemInstances.RegisterUnique(5002, recipe.Metadata);
             original.State.ItemInstances.RegisterDefaultUnique(5001, definitions.Items[new DaggerfallItemId("iron-dagger")], DaggerfallItemOwner.Corpse(2000));
             // The giant-bat carries no loot table, so its corpse stays unregistered and empty.
             // It is tougher than the thief: repeat the explicit swing until the death lands.
@@ -5403,6 +5412,8 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.True(savedThief.Stacks.Where(stack => stack.ItemId == "gold-piece")
             .Aggregate(0UL, (total, stack) => total + stack.Quantity) >= 5UL);
         Assert.Equal(5001UL, Assert.Single(savedThief.UniqueItems, item => item.ItemId == "iron-dagger").EntityId);
+        Assert.Equal(221871, savedThief.Stacks.Single(stack => stack.StackId == "test.loot.4903").Metadata.PotionRecipeKey);
+        Assert.Equal(221871, savedThief.UniqueItems.Single(item => item.EntityId == 5002).Metadata.PotionRecipeKey);
         // The live corpse path now uses retained template definitions, and its material and
         // appearance facts must survive the normal save boundary rather than becoming defaults.
         DaggerfallUniqueSave savedTemplateWeapon = savedThief.UniqueItems.First(item => definitions.RequireItem(new DaggerfallItemId(item.ItemId)).Weapon is not null);
@@ -5439,10 +5450,14 @@ public sealed class NormalizedRuntimeSeamTests
             var restoredTemplateWeapon = restoredThief.UniqueItems.First(item => definitions.RequireItem(new DaggerfallItemId(item.Definition.Value)).Weapon is not null);
             ulong restoredTemplateIdentity = resumed.State.Actors.Entities.IdentityOf(restoredTemplateWeapon.Entity).Value;
             Assert.Equal(savedTemplateWeapon.Metadata.Material, resumed.State.ItemInstances.RequireUnique(restoredTemplateIdentity).Material);
+            Assert.Equal(221871, resumed.State.ItemInstances.RequireStack(DaggerfallItemOwner.Corpse(2000), InventoryStackId.Parse("test.loot.4903")).PotionRecipeKey);
+            Assert.Equal(221871, resumed.State.ItemInstances.RequireUnique(5002).PotionRecipeKey);
             Assert.False(resumed.Corpses[2006].IsRegistered);
 
             // The next generated unique must not reuse a restored live identity.
-            Assert.NotEqual(5001UL, resumed.UniqueItemAllocator.AllocateReference().Value);
+            ulong nextUnique = resumed.UniqueItemAllocator.AllocateReference().Value;
+            Assert.NotEqual(5001UL, nextUnique);
+            Assert.NotEqual(5002UL, nextUnique);
         }
 
         ContentFake lootedContent = new(releases);

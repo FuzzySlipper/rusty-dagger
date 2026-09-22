@@ -170,10 +170,11 @@ public sealed class DaggerfallFormulaPolicyTests
         Assert.All(result.Categories.Where(category => category.Supported && category.Category != "magic"), category =>
         {
             Assert.True(category.Supported);
-            Assert.Equal([100, 50, 25], category.Rolls.Select(roll => roll.Chance));
-            Assert.All(category.Rolls, roll => Assert.True(roll.Success));
+            Assert.Equal([100, 50, 25, 12, 6, 3, 1, 0], category.Rolls.Select(roll => roll.Chance));
+            Assert.All(category.Rolls.Take(7), roll => Assert.True(roll.Success));
+            Assert.False(category.Rolls[^1].Success);
         });
-        Assert.Equal(8, result.Drops.Count);
+        Assert.Equal(16, result.Drops.Count);
         Assert.True(result.Categories.Single(category => category.Category == "magic").Supported);
         Assert.Contains(result.Drops, drop => drop.SourceCategory == "magic" && drop.ItemId.StartsWith("magic-item.", StringComparison.Ordinal));
         Assert.Contains("loot.T.armor.0", rolls);
@@ -191,8 +192,54 @@ public sealed class DaggerfallFormulaPolicyTests
         Assert.Equal(10, creatureOne.EffectiveChance);
         Assert.Equal(5, creatureThree.EffectiveChance);
         Assert.True(creatureOne.Supported);
-        Assert.All(creatureOne.Rolls, roll => Assert.True(roll.Success));
+        Assert.Equal([10, 5, 2, 1, 0], creatureOne.Rolls.Select(roll => roll.Chance));
+        Assert.False(creatureOne.Rolls[^1].Success);
         Assert.Contains(result.Drops, drop => drop.SourceCategory == "creature1" && drop.ItemId.StartsWith("template-", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Every_retained_category_pool_is_selectable_and_the_empty_table_has_no_rolls()
+    {
+        DaggerfallDefinitions definitions = LoadDefinitions();
+        DaggerfallLootCategoryResult[] categories = definitions.LootTables.Values
+            .Where(table => table.Key != "-")
+            .SelectMany(table => DaggerfallLootPolicy.Generate(definitions, table.Key, 1, (_, minimum, _) => minimum, "MensClothing").Categories)
+            .ToArray();
+
+        Assert.Equal(
+            ["armor", "books", "clothing", "creature1", "creature2", "creature3", "magic", "misc1", "misc2", "plant1", "plant2", "religious", "weapons"],
+            categories.Select(category => category.Category).Distinct(StringComparer.Ordinal).OrderBy(category => category, StringComparer.Ordinal));
+        Assert.All(categories, category => Assert.True(category.Supported));
+
+        DaggerfallLootResult empty = DaggerfallLootPolicy.Generate(definitions, "-", 1,
+            (_, _, _) => throw new InvalidOperationException("The empty table must not draw random values."));
+        Assert.Empty(empty.Categories);
+        Assert.Empty(empty.Drops);
+        Assert.Null(empty.GoldRoll);
+    }
+
+    [Fact]
+    public void Dungeon_loot_maps_all_nineteen_donor_types_and_retains_map_potion_and_recipe_rolls()
+    {
+        DaggerfallDefinitions definitions = LoadDefinitions();
+        Assert.Equal(
+            ["K", "N", "N", "N", "K", "M", "M", "Q", "K", "U", "D", "N", "L", "F", "S", "N", "M", "L", "N"],
+            Enumerable.Range(0, 19).Select(DaggerfallLootPolicy.DungeonTableKey));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallLootPolicy.DungeonTableKey(19));
+
+        DaggerfallDungeonLootResult dungeon = DaggerfallLootPolicy.GenerateDungeon(definitions, 12, 1, (_, minimum, _) => minimum);
+
+        Assert.Equal("L", dungeon.TableKey);
+        Assert.Equal(["map", "potion", "potion-recipe"], dungeon.Extras.Select(extra => extra.Kind));
+        Assert.All(dungeon.Extras, extra => Assert.True(extra.Success));
+        Assert.Equal(["template-287", "template-83", "template-278"], dungeon.Loot.Drops.TakeLast(3).Select(drop => drop.ItemId));
+        Assert.Equal(221871, dungeon.Loot.Drops.Last(drop => drop.SourceCategory == "potion").PotionRecipeKey);
+        Assert.Equal(221871, dungeon.Loot.Drops.Last(drop => drop.SourceCategory == "potion-recipe").PotionRecipeKey);
+        DaggerfallDungeonLootResult missedMap = DaggerfallLootPolicy.GenerateDungeon(definitions, 12, 1,
+            (id, minimum, maximum) => id.EndsWith(".map", StringComparison.Ordinal) ? maximum : minimum);
+        Assert.False(missedMap.Extras.Single(extra => extra.Kind == "map").Success);
+        Assert.DoesNotContain(missedMap.Loot.Drops, drop => drop.SourceCategory == "map");
+        Assert.Empty(DaggerfallLootPolicy.GenerateDungeon(definitions, 7, 1, (_, minimum, _) => minimum).Extras);
     }
 
     private static DaggerfallDefinitions LoadDefinitions() => DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));

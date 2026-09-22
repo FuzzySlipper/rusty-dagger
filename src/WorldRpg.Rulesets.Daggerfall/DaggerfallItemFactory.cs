@@ -34,6 +34,7 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
         string material = SelectMaterial(template, request);
         (string? race, string? gender, string? dye) = SelectAppearance(template, request, material);
         int? bookId = SelectBook(template, request);
+        int? potionRecipeKey = SelectPotionRecipe(template, request);
         // ItemBuilder.SetItem initializes ordinary templates from hitPoints, then its material
         // routine scales weapon and plate condition before the item can enter an inventory.
         int condition = template.Index == 131 ? 0 : DaggerfallItemMaterialPolicy.Apply(template, material).MaximumCondition;
@@ -43,12 +44,12 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
         return new DaggerfallCreatedItem(template.Index, item, template.Stackable,
             quantity, new DaggerfallItemInstanceMetadata(item.Value, material, variant, condition, condition,
                 Identified: enchantment is null, Stolen: request.Stolen, request.QuestId, request.QuestSymbol, enchantment, request.Owner,
-                race, gender, dye, bookId).Validate());
+                race, gender, dye, bookId, potionRecipeKey).Validate());
     }
 
     private DaggerfallCreatedItem CreateMagic(DaggerfallItemCreateRequest request)
     {
-        if (request.TemplateIndex is not null || request.Material is not null || request.Variant is not null || request.BookId is not null)
+        if (request.TemplateIndex is not null || request.Material is not null || request.Variant is not null || request.BookId is not null || request.PotionRecipeKey is not null)
             throw new ArgumentException("Magic template creation chooses its own base template, material, variant, and book identity.", nameof(request));
         DaggerfallMagicItemDefinition[] regular = _definitions.Magic.MagicItems.Values
             .Where(item => item.Type == 0).OrderBy(item => item.Key, StringComparer.Ordinal).ToArray();
@@ -98,7 +99,25 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
                 2 => ["Weapons"],
                 _ => throw new InvalidOperationException($"Regular magic template '{magic.Key}' has unknown base-group selector {magic.Group}."),
             };
-            return (choices[Draw(request.Key + ".magic-group", 0, choices.Length - 1)], null, null);
+            string selected = choices[Draw(request.Key + ".magic-group", 0, choices.Length - 1)];
+            // Both source clothing groups dispatch to CreateRandomClothing(player gender).
+            if (selected is "MensClothing" or "WomensClothing")
+                selected = request.Gender switch
+                {
+                    "male" => "MensClothing", "female" => "WomensClothing",
+                    _ => throw new ArgumentException("Magic clothing requires an explicit player gender.", nameof(request)),
+                };
+            // ItemBuilder retries arrows before enchanting; select uniformly from the same
+            // eligible weapon set so every keyed draw produces an enchantable base.
+            int? selectedTemplate = null;
+            if (selected == "Weapons")
+            {
+                int[] weapons = _definitions.ItemTemplateCatalog.Templates.Values
+                    .Where(item => item.Groups.Contains("Weapons", StringComparer.Ordinal) && item.Index != 131)
+                    .OrderBy(item => item.Index).Select(item => item.Index).ToArray();
+                selectedTemplate = weapons[Draw(request.Key + ".magic-weapon", 0, weapons.Length - 1)];
+            }
+            return (selected, selectedTemplate, null);
         }
         string category = magic.Group switch
         {
@@ -212,6 +231,19 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
         return readable[Draw(request.Key + ".book", 0, readable.Length - 1)].BookId;
     }
 
+    private static int? SelectPotionRecipe(DaggerfallItemTemplateDefinition template, DaggerfallItemCreateRequest request)
+    {
+        if (template.Index is not (83 or 278))
+        {
+            if (request.PotionRecipeKey is not null)
+                throw new ArgumentException($"Template {template.Index} is not a potion or potion recipe.", nameof(request));
+            return null;
+        }
+        if (request.PotionRecipeKey is not int recipe || !DaggerfallLootPolicy.IsClassicPotionRecipeKey(recipe))
+            throw new ArgumentException($"Template {template.Index} requires one retained classic potion recipe identity.", nameof(request));
+        return recipe;
+    }
+
     private ulong SelectQuantity(DaggerfallItemTemplateDefinition template, DaggerfallItemCreateRequest request, string material)
     {
         if (!template.Stackable)
@@ -234,12 +266,12 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
 internal sealed record DaggerfallItemCreateRequest(string Category, string Key, DaggerfallItemOwner Owner, ulong? Quantity = null,
     int? TemplateIndex = null, string? Material = null, int? Variant = null, int Level = 1, bool Stolen = false,
     string? QuestId = null, string? QuestSymbol = null, string? Race = null, string? Gender = null, string? Dye = null,
-    int? BookId = null, string? MagicItemKey = null)
+    int? BookId = null, string? MagicItemKey = null, int? PotionRecipeKey = null)
 {
     internal void Validate()
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(Category); ArgumentException.ThrowIfNullOrWhiteSpace(Key);
-        if (Quantity == 0 || Level < 0 || BookId < 0) throw new ArgumentOutOfRangeException(nameof(Quantity));
+        if (Quantity == 0 || Level < 0 || BookId < 0 || PotionRecipeKey <= 0) throw new ArgumentOutOfRangeException(nameof(Quantity));
         if ((QuestId is null) != (QuestSymbol is null)) throw new ArgumentException("Quest items require both quest and symbol.");
         if (Material is { Length: 0 } || Race is { Length: 0 } || Gender is { Length: 0 } || Dye is { Length: 0 } || MagicItemKey is { Length: 0 })
             throw new ArgumentException("Item creation values cannot be empty strings.");
