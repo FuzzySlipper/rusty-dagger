@@ -108,7 +108,9 @@ internal sealed class DaggerSessionPersistence
                 npc.Appearance.Race, npc.Appearance.Gender, npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord,
                 npc.Appearance.NameSeed, npc.Appearance.FactionId, npc.Role, [.. npc.Services],
                 (int)npc.Presence, npc.X, npc.Y, npc.Z))]),
-            _effects.Capture()));
+            _effects.Capture(),
+            State.SkillUses.Capture(),
+            State.Social.Capture()));
     }
 
     private ActorState LiveDynamicActor(long durableId) =>
@@ -136,6 +138,7 @@ internal sealed class DaggerSessionPersistence
         }
 
         State.Progression.AdvanceTo(saved.Experience, saved.Level);
+        State.SkillUses.Restore(saved.SkillUses);
 
         ApplyInventory(saved.Inventory, State.Inventory, State.Equipment);
         ApplyActorInventories(saved.ActorInventories);

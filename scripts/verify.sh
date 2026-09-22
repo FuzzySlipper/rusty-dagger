@@ -53,6 +53,7 @@ jq -e --arg package_version "$pair_version" --arg source_revision "$pair_source_
   exit 1
 }
 npm ci
+node --test tests/WorldRpg.Ui.Tests/*.test.mjs
 dotnet restore src/WorldRpg.Host/WorldRpg.Host.csproj
 dotnet restore tests/WorldRpg.Architecture.Tests/WorldRpg.Architecture.Tests.csproj
 dotnet build src/WorldRpg.Host/WorldRpg.Host.csproj --configuration Release --no-restore

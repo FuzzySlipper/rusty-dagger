@@ -55,7 +55,8 @@ public sealed class DaggerfallRewardReactionTests
             owner,
             player,
             RandomMinimums(),
-            actors);
+            actors,
+            experimentalKillExperience: true);
         ActorDiedFact death = new(9000, DaggerfallActorIdentity.PlayerEntityId, 5, 2, 3);
         FactBuffer<IProductFact> facts = new();
 
@@ -83,7 +84,8 @@ public sealed class DaggerfallRewardReactionTests
             owner,
             player,
             RandomMinimums(),
-            new Dictionary<long, DaggerfallActorDefinition> { [9000] = thief });
+            new Dictionary<long, DaggerfallActorDefinition> { [9000] = thief },
+            experimentalKillExperience: true);
 
         reactions.React(new ActorDiedFact(9000, 777, 5, 2, 3), new FactBuffer<IProductFact>());
 
@@ -167,7 +169,8 @@ public sealed class DaggerfallRewardReactionTests
             new EntityId(DaggerfallActorIdentity.PlayerEntityId),
             player,
             random,
-            new Dictionary<long, DaggerfallActorDefinition> { [9000] = thief });
+            new Dictionary<long, DaggerfallActorDefinition> { [9000] = thief },
+            experimentalKillExperience: true);
         ActorDiedFact death = new(9000, DaggerfallActorIdentity.PlayerEntityId, 5, 2, 3);
         FactBuffer<IProductFact> facts = new();
 
@@ -205,7 +208,8 @@ public sealed class DaggerfallRewardReactionTests
             owner,
             player,
             random,
-            new Dictionary<long, DaggerfallActorDefinition> { [9000] = thief });
+            new Dictionary<long, DaggerfallActorDefinition> { [9000] = thief },
+            experimentalKillExperience: true);
         FactBuffer<IProductFact> facts = new();
 
         Assert.Throws<OverflowException>(() => reactions.React(new ActorDiedFact(9000, DaggerfallActorIdentity.PlayerEntityId, 5, 2, 3), facts));
@@ -247,7 +251,8 @@ public sealed class DaggerfallRewardReactionTests
             new EntityId(DaggerfallActorIdentity.PlayerEntityId),
             player,
             random,
-            actors);
+            actors,
+            experimentalKillExperience: true);
     }
 
     private static StatsComponent CreatePlayerMechanics(DaggerfallActorDefinition player, int healthCurrent = 100)

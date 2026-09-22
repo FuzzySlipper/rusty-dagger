@@ -14,19 +14,96 @@ namespace WorldRpg.Host.Tests;
 public sealed class WorldRpgProductSaveLoadTests
 {
     [Fact]
+    public void Named_slot_actions_save_select_overwrite_load_and_delete_real_payloads()
+    {
+        InMemoryPersistenceService persistence = new();
+        LoadTestRuleset ruleset = new();
+        using WorldRpgProduct product = new(Context(persistence), ruleset, new GameBundleId("test.bundle"));
+        product.Start();
+        LoadTestSession session = ruleset.RequireCurrent();
+
+        session.SaveValue = 11;
+        session.ArmSlotRequest(new(SaveSlotOperation.Save, Label: "Before the dungeon"));
+        product.Update(Update(1));
+        Assert.Equal("Saved 'Before the dungeon' (revision 1).", session.Outcome);
+        SaveSlotSummary first = Assert.Single(session.SaveSlots);
+        Assert.Equal("slot-1", first.Key);
+
+        session.SaveValue = 22;
+        session.ArmSlotRequest(new(SaveSlotOperation.Save, Label: "After the dungeon"));
+        product.Update(Update(2));
+        Assert.Equal(2, session.SaveSlots.Count);
+        SaveSlotSummary second = Assert.Single(session.SaveSlots, value => value.Key == "slot-2");
+
+        session.SaveValue = 33;
+        session.ArmSlotRequest(new(SaveSlotOperation.Save, first.Key, "Revisited dungeon"));
+        product.Update(Update(3));
+        Assert.Equal($"Confirm overwriting '{first.Key}'.", session.Outcome);
+        Assert.Equal("Before the dungeon", Assert.Single(session.SaveSlots, value => value.Key == first.Key).Label);
+
+        session.ArmSlotRequest(new(SaveSlotOperation.Save, first.Key, "Revisited dungeon", Confirm: true));
+        product.Update(Update(4));
+        Assert.Equal("Revisited dungeon", Assert.Single(session.SaveSlots, value => value.Key == first.Key).Label);
+
+        session.ArmSlotRequest(new(SaveSlotOperation.Load, second.Key));
+        product.Update(Update(5));
+        LoadTestSession restored = Assert.IsType<LoadTestSession>(ruleset.Replacement);
+        Assert.Equal((byte)22, restored.SaveValue);
+        Assert.Equal("Game loaded.", restored.Outcome);
+
+        restored.ArmSlotRequest(new(SaveSlotOperation.Delete, second.Key));
+        product.Update(Update(6));
+        Assert.Equal($"Confirm deleting '{second.Key}'.", restored.Outcome);
+        restored.ArmSlotRequest(new(SaveSlotOperation.Delete, second.Key, Confirm: true));
+        product.Update(Update(7));
+        Assert.Single(restored.SaveSlots);
+        using WorldRpgSaveSlots reopened = new(Context(persistence).Engine, "worldrpg.saves");
+        (GameSaveEnvelope? deleted, WorldRpgSlotLoadDiagnostic? diagnostic) = reopened.LoadSlot(second.Key, "test");
+        Assert.Null(deleted);
+        Assert.Equal("missing", diagnostic!.Kind);
+    }
+
+    [Fact]
+    public void Named_slot_load_and_index_failures_keep_the_live_session_and_publish_diagnostics()
+    {
+        InMemoryPersistenceService persistence = new();
+        LoadTestRuleset ruleset = new();
+        using WorldRpgProduct product = new(Context(persistence), ruleset, new GameBundleId("test.bundle"));
+        product.Start();
+        LoadTestSession session = ruleset.RequireCurrent();
+        session.ArmSlotRequest(new(SaveSlotOperation.Save, Label: "Before the dungeon"));
+        product.Update(Update(1));
+
+        persistence.Put("slot-1", "not-json"u8.ToArray());
+        session.ArmSlotRequest(new(SaveSlotOperation.Load, "slot-1"));
+        product.Update(Update(2));
+        Assert.Same(session, ruleset.RequireCurrent());
+        Assert.Null(ruleset.Replacement);
+        Assert.StartsWith("Load failed:", session.Outcome, StringComparison.Ordinal);
+
+        persistence.Put(WorldRpgSaveSlots.IndexKey, System.Text.Json.JsonSerializer.SerializeToUtf8Bytes("not-json"));
+        session.ArmSlotRequest(new(SaveSlotOperation.List));
+        product.Update(Update(3));
+        Assert.Same(session, ruleset.RequireCurrent());
+        Assert.Empty(session.SaveSlots);
+        Assert.Contains("slot index", session.SaveSlotDiagnostic, StringComparison.Ordinal);
+        Assert.StartsWith("Save slots unavailable:", session.Outcome, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void A_load_whose_previous_session_fails_disposal_keeps_the_current_session_and_reports()
     {
         InMemoryPersistenceService persistence = new();
         LoadTestRuleset ruleset = new();
         using WorldRpgProduct product = new(Context(persistence), ruleset, new GameBundleId("test.bundle"));
-        using WorldRpgSaveStore store = new(Context(persistence).Engine, "worldrpg.saves");
-        Assert.Equal(PersistenceSaveOutcome.Saved, product.Save(store, "slot").Outcome);
         product.Start();
 
         LoadTestSession previous = ruleset.RequireCurrent();
+        previous.ArmSlotRequest(new(SaveSlotOperation.Save, Label: "Before the failure"));
+        product.Update(Update(1));
         previous.ThrowOnDispose = true;
-        previous.ArmLoadRequest();
-        ProductUpdateResult result = product.Update(Update(1));
+        previous.ArmSlotRequest(new(SaveSlotOperation.Load, "slot-1"));
+        ProductUpdateResult result = product.Update(Update(2));
 
         Assert.Equal(ProductUpdateResult.None, result);
         Assert.Same(previous, ruleset.Current);
@@ -76,7 +153,7 @@ public sealed class WorldRpgProductSaveLoadTests
         public IGameSession CreateSession(GameSessionContext context) => Track(new LoadTestSession());
 
         public IGameSession CreateSession(GameSessionContext context, RulesetSavePayload saved) =>
-            Track(new LoadTestSession(), replacement: true);
+            Track(new LoadTestSession { SaveValue = saved.Bytes.Span[0] }, replacement: true);
 
         internal LoadTestSession RequireCurrent() =>
             Current ?? throw new InvalidOperationException("The ruleset did not create a session.");
@@ -91,7 +168,7 @@ public sealed class WorldRpgProductSaveLoadTests
 
     private sealed class LoadTestSession : ISaveableGameSession, ISaveRequestingGameSession, IModeAwareGameSession
     {
-        private bool _loadRequested;
+        private SaveSlotRequest? _saveSlotRequest;
 
         internal bool ThrowOnDispose { get; set; }
 
@@ -99,7 +176,13 @@ public sealed class WorldRpgProductSaveLoadTests
 
         internal string? Outcome { get; private set; }
 
-        internal void ArmLoadRequest() => _loadRequested = true;
+        internal byte SaveValue { get; set; } = 1;
+
+        internal IReadOnlyList<SaveSlotSummary> SaveSlots { get; private set; } = [];
+
+        internal string? SaveSlotDiagnostic { get; private set; }
+
+        internal void ArmSlotRequest(SaveSlotRequest request) => _saveSlotRequest = request;
 
         public void PublishInitial()
         {
@@ -107,18 +190,22 @@ public sealed class WorldRpgProductSaveLoadTests
 
         public ProductUpdateResult Update(ProductUpdate update) => ProductUpdateResult.None;
 
-        public RulesetSavePayload CaptureSave() => new(new RulesetId("test"), [1, 2, 3]);
+        public RulesetSavePayload CaptureSave() => new(new RulesetId("test"), [SaveValue]);
 
-        public bool TakeSaveRequest() => false;
-
-        public bool TakeLoadRequest()
+        public SaveSlotRequest? TakeSaveSlotRequest()
         {
-            if (!_loadRequested) return false;
-            _loadRequested = false;
-            return true;
+            SaveSlotRequest? request = _saveSlotRequest;
+            _saveSlotRequest = null;
+            return request;
         }
 
         public void ReportSaveOutcome(string message) => Outcome = message;
+
+        public void ReportSaveSlots(IReadOnlyList<SaveSlotSummary> slots, string? diagnostic)
+        {
+            SaveSlots = slots.ToArray();
+            SaveSlotDiagnostic = diagnostic;
+        }
 
         public ProductMode? PendingModeRequest => null;
 
@@ -151,6 +238,8 @@ public sealed class WorldRpgProductSaveLoadTests
         private readonly Dictionary<ulong, Entry?> _blobs = [];
         private ulong _nextBlob;
 
+        internal void Put(string key, byte[] payload) => _values[("1", key)] = new(1, payload.ToArray());
+
         public PersistenceStore OpenStore(PersistenceOpenRequest request) => new(new PersistenceStoreHandle(1), static () => { });
         public PersistenceSaveReceipt Save(PersistenceSaveRequest request)
         {
@@ -158,6 +247,17 @@ public sealed class WorldRpgProductSaveLoadTests
                 ? checked(existing!.Revision + 1) : 1;
             _values[(request.Store.Handle.Value.ToString(), request.Key)] = new(revision, request.Payload.ToArray());
             return new PersistenceSaveReceipt(revision);
+        }
+        public PersistenceDeleteReceipt Delete(PersistenceDeleteRequest request)
+        {
+            (string Scope, string Key) key = (request.Store.Handle.Value.ToString(), request.Key);
+            bool present = _values.TryGetValue(key, out Entry? existing);
+            if ((request.RevisionGuard == PersistenceRevisionGuard.Absent && present)
+                || (request.RevisionGuard == PersistenceRevisionGuard.Exact && (!present || existing!.Revision != request.ExpectedRevision)))
+                return new(PersistenceDeleteOutcome.RevisionConflict, existing?.Revision ?? 0);
+            if (!present) return new(PersistenceDeleteOutcome.Missing, 0);
+            _values.Remove(key);
+            return new(PersistenceDeleteOutcome.Deleted, existing!.Revision);
         }
         public PersistenceBlob Load(PersistenceLoadRequest request)
         {

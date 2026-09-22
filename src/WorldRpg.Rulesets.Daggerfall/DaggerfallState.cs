@@ -13,11 +13,13 @@ internal sealed class DaggerfallState(PlayerControlState playerControl, ActorsSt
     MechanicsInventoryCoordinator inventory, MechanicsEquipmentCoordinator equipment,
     MechanicsInventoryContainerCoordinator containers, IReadOnlyDictionary<InventoryItemId, ItemDefinition> items,
     IReadOnlyDictionary<WorldRpg.Kit.Inventory.EquipmentSlotId, EquipmentSlotDefinition> slots,
-    InventoryStore inventoryStore, DaggerfallVariableStore variables, DaggerfallNpcRegistry npcs)
+    InventoryStore inventoryStore, DaggerfallVariableStore variables, DaggerfallNpcRegistry npcs, DaggerfallSocialState social)
 {
     internal GameplayServices<IProductFact> Kit { get; set; } = null!;
     /// <summary>Compiled Daggerfall effect policy over the attached per-actor Engine effect components.</summary>
     internal DaggerfallEffectLifecycle Effects { get; set; } = null!;
+    /// <summary>Classic skill-use attribution and counters over the player's Kit progression state.</summary>
+    internal DaggerfallSkillUseReactions SkillUses { get; set; } = null!;
     internal PlayerControlState PlayerControl { get; } = playerControl;
     internal ActorsState Actors { get; } = actors;
     internal ProgressionState Progression => Actors.Player.Progression;
@@ -30,6 +32,8 @@ internal sealed class DaggerfallState(PlayerControlState playerControl, ActorsSt
     internal DaggerfallVariableStore Variables { get; } = variables;
     /// <summary>The session's NPC identities, handed explicitly to talk, damage and quest readers.</summary>
     internal DaggerfallNpcRegistry Npcs { get; } = npcs;
+    /// <summary>Persistent Daggerfall reputation, reaction, and guild-membership policy for talk, services, and quests.</summary>
+    internal DaggerfallSocialState Social { get; } = social;
     internal MechanicsInventoryCoordinator? InventoryFor(long durableActorId) =>
         Actors.TryGet(durableActorId, out var actor) ? new(actor.Inventory, Actors.Entities, items) : null;
     internal MechanicsEquipmentCoordinator EquipmentFor(long durableActorId)

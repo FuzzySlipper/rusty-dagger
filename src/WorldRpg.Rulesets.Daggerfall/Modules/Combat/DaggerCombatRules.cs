@@ -11,6 +11,7 @@ using WorldRpg.Kit.Facts;
 using WorldRpg.Kit.Inventory;
 using System.Numerics;
 using WorldRpg.Rulesets.Daggerfall.Policies;
+using WorldRpg.Rulesets.Daggerfall;
 
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
@@ -29,6 +30,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     private readonly IReadOnlyDictionary<string, int> _weaponMaterialRanks;
     private readonly IReadOnlyDictionary<string, DaggerfallActionDefinition> _actions;
     private readonly IReadOnlyDictionary<long, DaggerfallActorDefinition> _definitions;
+    private readonly Action<DaggerfallSkillUse>? _skillUses;
     internal AttackCapabilities<IProductFact> Attacks { get; }
     internal TargetingService Targeting { get; }
     internal AttackExecution<IProductFact> Execution { get; }
@@ -38,7 +40,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     // action with different ammunition would move this name onto the authored action.
     private const string ArrowItemId = "arrow";
 
-    internal DaggerCombatRules(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment, Func<long, MechanicsInventoryCoordinator?> actorInventories, DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity, TargetingService targeting)
+    internal DaggerCombatRules(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment, Func<long, MechanicsInventoryCoordinator?> actorInventories, DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity, TargetingService targeting, Action<DaggerfallSkillUse>? skillUses = null)
     {
         _random = random;
         Execution = new(actors, this, DeferRangedImpact);
@@ -49,6 +51,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         _weaponMaterialRanks = DaggerfallFormulaPolicy.ClassicWeaponMaterialRanks;
         _actions = definitions.Actions;
         _definitions = definitionsByEntity;
+        _skillUses = skillUses;
         Targeting = targeting;
         Attacks = new(PlayerId, Targeting, Execution, ReachOf, facts => facts.Append(new AttackRejectedFact(AttackRejection.MissingPlayerPosition)));
     }
@@ -102,6 +105,11 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         if (request.TargetId is not long target)
         { facts.Append(new AttackRejectedFact(AttackRejection.NoTargetInReach)); return; }
         AttackOutcome outcome = attack.Outcome;
+        // This is the one admitted resolution boundary an enemy attempt reaches. The donor tallies
+        // Dodging before damage, so a resolved miss contributes too; a rejected or unknown attack
+        // never reaches this method and therefore cannot manufacture a use.
+        if (request.AttackerId != PlayerId && target == PlayerId)
+            _skillUses?.Invoke(new DaggerfallSkillUse(DaggerfallMechanicsIds.Dodging.Value, DaggerfallSkillUseReason.DodgingEnemyAttack, DaggerfallSkillUseOutcome.Attempted));
         if (!outcome.Hit)
         { facts.Append(new AttackMissedFact(request.AttackerId, target, outcome.Roll, outcome.Chance, request.Delayed, request.Generation, request.SimulationStep)); return; }
         if (!outcome.Allowed)
@@ -109,6 +117,11 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         string action = request.Action ?? _definitions[request.AttackerId].ActionId ?? "attack";
         ApplyDamage(Participants(request.AttackerId, target, action), request.AttackerId, target, outcome.Damage, outcome.Body,
             request.Delayed, request.Generation, request.SimulationStep, facts);
+        if (request.AttackerId == PlayerId)
+        {
+            _skillUses?.Invoke(new DaggerfallSkillUse(PlayerWeaponSkill(), DaggerfallSkillUseReason.WeaponHit, DaggerfallSkillUseOutcome.Succeeded));
+            _skillUses?.Invoke(new DaggerfallSkillUse("critical-strike", DaggerfallSkillUseReason.CriticalStrikeHit, DaggerfallSkillUseOutcome.Succeeded));
+        }
     }
 
     /// <summary>
@@ -325,6 +338,9 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
             || !_items.TryGetValue(new DaggerfallItemId(item.Definition.Value), out DaggerfallItemDefinition? definition)) return null;
         return definition.Weapon;
     }
+    private string PlayerWeaponSkill() => ReadWeapon(_equipment.Read(), "right-hand")?.Skill
+        ?? ReadWeapon(_equipment.Read(), "left-hand")?.Skill
+        ?? DaggerfallMechanicsIds.HandToHand.Value;
     private int HitChance(Combatant attacker, Combatant target, string skill) => DaggerfallFormulaPolicy.CalculateHitChance(ReadStat(attacker, new DaggerfallStatId(skill)), target.Definition.Armor, ReadStat(attacker, DaggerfallMechanicsIds.Luck), ReadStat(target, DaggerfallMechanicsIds.Luck), ReadStat(attacker, DaggerfallMechanicsIds.Agility), ReadStat(target, DaggerfallMechanicsIds.Agility), ReadStat(target, DaggerfallMechanicsIds.Dodging));
     internal static int CalculateHitChance(int skill, int struckArmor, int attackerLuck, int targetLuck, int attackerAgility, int targetAgility, int targetDodge) => DaggerfallFormulaPolicy.CalculateHitChance(skill, struckArmor, attackerLuck, targetLuck, attackerAgility, targetAgility, targetDodge);
     private int StrengthModifier(Combatant attacker) => DaggerfallFormulaPolicy.DamageModifier(ReadStat(attacker, DaggerfallMechanicsIds.Strength));

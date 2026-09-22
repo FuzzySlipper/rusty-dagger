@@ -46,6 +46,10 @@
     <RustyEngineProductInputMapping Include="move.left.key-a" Intent="move.left" Trigger="key:key-a:held" />
     <RustyEngineProductInputMapping Include="move.backward.key-s" Intent="move.backward" Trigger="key:key-s:held" />
     <RustyEngineProductInputMapping Include="move.right.key-d" Intent="move.right" Trigger="key:key-d:held" />
+    <!-- The complete sound catalog remains in the eager snapshot. Both generated WAV projections
+         are independently opened at the first cue, so neither body enters that startup snapshot. -->
+    <RustyEngineContentBundle Include="daggerfall.classic-audio" Root="worldrpg/media/audio/clips" />
+    <RustyEngineContentBundle Include="daggerfall.privateers-hold-audio" Root="worldrpg/imports/privateers-hold/media/audio/clips" />
   </ItemGroup>
 
   <!-- TypeScript builds only the product-owned DOM companion. The runtime

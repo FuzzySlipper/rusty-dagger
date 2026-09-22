@@ -10,23 +10,17 @@ public sealed class WorldRpgProduct : IEngineProduct
     /// <summary>How many recent mode decisions are kept for diagnosis.</summary>
     public const int ModeHistoryLimit = 16;
 
-    /// <summary>The ordinary menu save slot: one honest save the player-facing menu writes and reads.</summary>
-    private const string SaveSlotKey = "slot";
-
     /// <summary>Engine persistence scope for ordinary menu saves.</summary>
     private const string SaveStoreScope = "worldrpg.saves";
 
-    /// <summary>
-    /// The ordinary menu save store, opened on first save/load request rather than construction
-    /// so products whose sessions never ask never touch persistence.
-    /// </summary>
-    private WorldRpgSaveStore SaveStore => _saveStore ??= new WorldRpgSaveStore(_context.Engine, SaveStoreScope);
+    /// <summary>The one Host-owned catalog and payload owner used by ordinary menu save actions.</summary>
+    private WorldRpgSaveSlots SaveSlots => _saveSlots ??= new WorldRpgSaveSlots(_context.Engine, SaveStoreScope);
 
     private readonly ProductCreateContext _context;
     private readonly ResolvedGameComposition _composition;
     private readonly IGameRuleset _ruleset;
     private readonly List<ProductModeChange> _modeHistory = [];
-    private WorldRpgSaveStore? _saveStore;
+    private WorldRpgSaveSlots? _saveSlots;
     private IGameSession _session;
     private readonly ResolvedCompositionIdentity _compositionIdentity;
     private bool _started;
@@ -54,7 +48,11 @@ public sealed class WorldRpgProduct : IEngineProduct
         _ruleset = selected;
         _compositionIdentity = composition.Identity;
         _session = selected.CreateSession(new GameSessionContext(context.Engine, composition));
-        try { _session.PublishInitial(); }
+        try
+        {
+            RefreshSaveSlots();
+            _session.PublishInitial();
+        }
         catch
         {
             _session.Dispose();
@@ -203,6 +201,7 @@ public sealed class WorldRpgProduct : IEngineProduct
     public void Attach()
     {
         if (_shutdown) return;
+        RefreshSaveSlots();
         _session.PublishInitial();
     }
 
@@ -307,7 +306,7 @@ public sealed class WorldRpgProduct : IEngineProduct
     {
         if (_shutdown) return;
         _session.Dispose();
-        _saveStore?.Dispose();
+        _saveSlots?.Dispose();
         _shutdown = true;
     }
 
@@ -353,49 +352,160 @@ public sealed class WorldRpgProduct : IEngineProduct
     }
 
     /// <summary>
-    /// Honors ordinary save/load menu requests the session asked for. Saving captures through the
-    /// existing API and reports the outcome; loading replaces the session from the stored payload
-    /// the way a restart replaces it, keeping the current session on any failure.
+    /// Honors ordinary named save-slot requests. The catalog owns every menu save/load payload;
+    /// explicit public store methods remain available for startup and focused callers, never as a
+    /// second player-facing menu path.
     /// </summary>
     private void HonorSaveRequests()
     {
         if (_session is not ISaveRequestingGameSession requesting) return;
-        if (requesting.TakeSaveRequest())
-        {
-            try
-            {
-                PersistenceSaveReceipt receipt = Save(SaveStore, SaveSlotKey);
-                requesting.ReportSaveOutcome($"Game saved (revision {receipt.Revision}).");
-            }
-            catch (Exception error)
-            {
-                requesting.ReportSaveOutcome($"Save failed: {error.Message}");
-            }
-        }
-
-        if (requesting.TakeLoadRequest()) LoadSavedGame(requesting);
+        if (requesting.TakeSaveSlotRequest() is { } slotRequest) HonorSaveSlotRequest(requesting, slotRequest);
     }
 
-    private void LoadSavedGame(ISaveRequestingGameSession requesting)
+    private void HonorSaveSlotRequest(ISaveRequestingGameSession requesting, SaveSlotRequest request)
     {
-        ProductStateLoad<GameSaveEnvelope> loaded;
         try
         {
-            loaded = SaveStore.Load(SaveSlotKey);
+            switch (request.Operation)
+            {
+                case SaveSlotOperation.List:
+                    RefreshSaveSlots(requesting);
+                    return;
+                case SaveSlotOperation.Save:
+                    SaveNamedSlot(requesting, request);
+                    return;
+                case SaveSlotOperation.Load:
+                    if (string.IsNullOrWhiteSpace(request.Key))
+                    {
+                        requesting.ReportSaveOutcome("Choose a save slot to load.");
+                        return;
+                    }
+                    LoadNamedSlot(requesting, request.Key);
+                    return;
+                case SaveSlotOperation.Delete:
+                    DeleteNamedSlot(requesting, request);
+                    return;
+                default:
+                    requesting.ReportSaveOutcome("Save slot request was not recognized.");
+                    return;
+            }
+        }
+        catch (WorldRpgSaveFormatException error)
+        {
+            requesting.ReportSaveOutcome($"Save slots unavailable: {error.Message}");
+            requesting.ReportSaveSlots([], error.Message);
         }
         catch (Exception error)
         {
-            requesting.ReportSaveOutcome($"Load failed: {error.Message}");
-            return;
+            requesting.ReportSaveOutcome($"Save slot operation failed: {error.Message}");
         }
+    }
 
-        if (!loaded.Present || loaded.State is null)
+    private void SaveNamedSlot(ISaveRequestingGameSession requesting, SaveSlotRequest request)
+    {
+        if (_shutdown) throw new ObjectDisposedException(nameof(WorldRpgProduct));
+        if (_session is not ISaveableGameSession saveable)
         {
-            requesting.ReportSaveOutcome("No saved game.");
+            requesting.ReportSaveOutcome("Save failed: the selected compiled ruleset does not support save capture.");
             return;
         }
 
-        if (loaded.State.Payload.Ruleset != _composition.Ruleset)
+        if (string.IsNullOrWhiteSpace(request.Label))
+        {
+            requesting.ReportSaveOutcome("Name the save slot before saving.");
+            return;
+        }
+
+        IReadOnlyList<WorldRpgSaveSlotEntry> entries = SaveSlots.List();
+        string key;
+        if (string.IsNullOrWhiteSpace(request.Key))
+        {
+            key = NextSaveSlotKey(entries);
+        }
+        else
+        {
+            if (!entries.Any(entry => string.Equals(entry.Key, request.Key, StringComparison.Ordinal)))
+            {
+                requesting.ReportSaveOutcome("The selected save slot no longer exists. Refresh the list and try again.");
+                RefreshSaveSlots(requesting);
+                return;
+            }
+            if (!request.Confirm)
+            {
+                requesting.ReportSaveOutcome($"Confirm overwriting '{request.Key}'.");
+                return;
+            }
+            key = request.Key;
+        }
+
+        WorldRpgSaveSlotEntry entry = SaveSlots.SaveSlot(key, request.Label.Trim(), new GameSaveEnvelope(saveable.CaptureSave()));
+        requesting.ReportSaveOutcome($"Saved '{entry.Label}' (revision {entry.Revision}).");
+        RefreshSaveSlots(requesting);
+    }
+
+    private void LoadNamedSlot(ISaveRequestingGameSession requesting, string key)
+    {
+        (GameSaveEnvelope? envelope, WorldRpgSlotLoadDiagnostic? diagnostic) = SaveSlots.LoadSlot(key, _composition.Ruleset.Value);
+        if (diagnostic is not null)
+        {
+            requesting.ReportSaveOutcome($"Load failed: {diagnostic.Message}");
+            RefreshSaveSlots(requesting);
+            return;
+        }
+
+        LoadSavedGame(requesting, envelope!);
+    }
+
+    private void DeleteNamedSlot(ISaveRequestingGameSession requesting, SaveSlotRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Key))
+        {
+            requesting.ReportSaveOutcome("Choose a save slot to delete.");
+            return;
+        }
+        if (!request.Confirm)
+        {
+            requesting.ReportSaveOutcome($"Confirm deleting '{request.Key}'.");
+            return;
+        }
+
+        if (!SaveSlots.DeleteSlot(request.Key))
+        {
+            requesting.ReportSaveOutcome("The selected save slot no longer exists.");
+            RefreshSaveSlots(requesting);
+            return;
+        }
+
+        requesting.ReportSaveOutcome($"Deleted save slot '{request.Key}'.");
+        RefreshSaveSlots(requesting);
+    }
+
+    private void RefreshSaveSlots(ISaveRequestingGameSession? requesting = null)
+    {
+        if (_session is not ISaveRequestingGameSession session) return;
+        try
+        {
+            session.ReportSaveSlots(
+                SaveSlots.List().Select(entry => new SaveSlotSummary(entry.Key, entry.Label, entry.SavedAtUtc, entry.Ruleset)).ToArray(),
+                null);
+        }
+        catch (WorldRpgSaveFormatException error)
+        {
+            session.ReportSaveSlots([], error.Message);
+            if (requesting is not null) requesting.ReportSaveOutcome($"Save slots unavailable: {error.Message}");
+        }
+    }
+
+    private static string NextSaveSlotKey(IReadOnlyList<WorldRpgSaveSlotEntry> entries)
+    {
+        ulong ordinal = 1;
+        while (entries.Any(entry => string.Equals(entry.Key, $"slot-{ordinal}", StringComparison.Ordinal))) ordinal++;
+        return $"slot-{ordinal}";
+    }
+
+    private void LoadSavedGame(ISaveRequestingGameSession requesting, GameSaveEnvelope envelope)
+    {
+        if (envelope.Payload.Ruleset != _composition.Ruleset)
         {
             requesting.ReportSaveOutcome("Load failed: the saved game is for a different ruleset.");
             return;
@@ -410,7 +520,7 @@ public sealed class WorldRpgProduct : IEngineProduct
         IGameSession replacement;
         try
         {
-            replacement = saveable.CreateSession(new GameSessionContext(_context.Engine, _composition), loaded.State.Payload);
+            replacement = saveable.CreateSession(new GameSessionContext(_context.Engine, _composition), envelope.Payload);
         }
         catch (Exception error)
         {
@@ -461,6 +571,7 @@ public sealed class WorldRpgProduct : IEngineProduct
         }
 
         if (replacement is ISaveRequestingGameSession resumed) resumed.ReportSaveOutcome("Game loaded.");
+        RefreshSaveSlots();
     }
 
     /// <summary>

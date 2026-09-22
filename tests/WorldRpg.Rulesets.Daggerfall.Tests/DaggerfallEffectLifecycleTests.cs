@@ -62,6 +62,41 @@ public sealed class DaggerfallEffectLifecycleTests
     }
 
     [Fact]
+    public void Cure_reports_an_ordered_outcome_and_removes_its_contribution_and_round_work()
+    {
+        using ActorsState actors = Actors();
+        ActorState target = actors.Get(2);
+        int rounds = 0;
+        DaggerfallEffectLifecycle effects = new(actors, new DaggerfallEffectCatalog(
+        [Definition("cure", "cure", DaggerfallEffectStacking.Stack, 1,
+            effect =>
+            {
+                Stat stat = effect.Target.Get<StatsComponent>().GetStat(StatId.Parse("health-maximum"));
+                StatModifierHandle handle = stat.AddModifier(10);
+                return [new DelegateActiveEffectContribution(() => stat.RemoveModifier(handle))];
+            },
+            _ => rounds++)]));
+        List<DaggerfallEffectOutcome> outcomes = [];
+        effects.Completed += outcomes.Add;
+
+        _ = effects.Start(Request("cure-instance", "cure", "temple", 3));
+        Assert.Equal(110d, target.Stats.GetStat(StatId.Parse("health-maximum")).Value);
+        Assert.Equal(1, rounds);
+
+        Assert.True(effects.Cure(EffectInstanceId.Parse("cure-instance")));
+        effects.AdvanceOrdinaryRound();
+
+        Assert.Empty(effects.Active);
+        Assert.Empty(target.Effects.Effects);
+        Assert.Equal(100d, target.Stats.GetStat(StatId.Parse("health-maximum")).Value);
+        Assert.Equal(1, rounds);
+        Assert.Equal(
+            [DaggerfallEffectOutcomeKind.Started, DaggerfallEffectOutcomeKind.Cured],
+            outcomes.Select(outcome => outcome.Kind));
+        Assert.False(effects.Cure(EffectInstanceId.Parse("cure-instance")));
+    }
+
+    [Fact]
     public void Refresh_duration_retains_incumbent_payload_stacks_and_reversible_contribution()
     {
         using ActorsState actors = Actors();
@@ -164,12 +199,21 @@ public sealed class DaggerfallEffectLifecycleTests
     public void Expires_after_initial_and_elapsed_rounds_with_donor_catchup_bound()
     {
         using ActorsState actors = Actors();
+        ActorState target = actors.Get(2);
         int rounds = 0;
         DaggerfallEffectLifecycle effects = new(actors, new DaggerfallEffectCatalog(
-        [Definition("timer", "timer", DaggerfallEffectStacking.Stack, 1, magicRound: _ => rounds++)]));
+        [Definition("timer", "timer", DaggerfallEffectStacking.Stack, 1,
+            effect =>
+            {
+                Stat stat = effect.Target.Get<StatsComponent>().GetStat(StatId.Parse("health-maximum"));
+                StatModifierHandle handle = stat.AddModifier(5);
+                return [new DelegateActiveEffectContribution(() => stat.RemoveModifier(handle))];
+            },
+            _ => rounds++)]));
 
         _ = effects.Start(Request("timer", "timer", "spell", DaggerfallEffectLifecycle.MaximumElapsedCatchupRounds + 2));
         Assert.Equal(1, rounds); // Start performs the first magic round.
+        Assert.Equal(105d, target.Stats.GetStat(StatId.Parse("health-maximum")).Value);
         Assert.Equal(DaggerfallEffectLifecycle.MaximumElapsedCatchupRounds,
             effects.AdvanceElapsedRounds(10_000));
         Assert.Equal(1 + (int)DaggerfallEffectLifecycle.MaximumElapsedCatchupRounds, rounds);
@@ -177,6 +221,8 @@ public sealed class DaggerfallEffectLifecycleTests
 
         effects.AdvanceOrdinaryRound();
         Assert.Empty(effects.Active);
+        Assert.Empty(target.Effects.Effects);
+        Assert.Equal(100d, target.Stats.GetStat(StatId.Parse("health-maximum")).Value);
         Assert.Equal(2 + (int)DaggerfallEffectLifecycle.MaximumElapsedCatchupRounds, rounds);
     }
 

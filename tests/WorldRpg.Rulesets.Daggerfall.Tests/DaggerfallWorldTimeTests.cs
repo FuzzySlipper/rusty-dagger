@@ -88,6 +88,27 @@ public sealed class DaggerfallWorldTimeTests
         Assert.Throws<ArgumentOutOfRangeException>(() => time.AdvanceInterval(-1, []));
     }
 
+    [Theory]
+    [InlineData(0L)]
+    [InlineData(1L)]
+    [InlineData(60L)]
+    public void Integral_intervals_preserve_nearly_whole_saved_fractions(long seconds)
+    {
+        const double fraction = 0.9999999999999d;
+        DaggerfallWorldTime time = new(DaggerfallCalendar.Start, fraction, 12d);
+        DaggerfallCalendarAdvance advanced = time.AdvanceInterval(seconds, []);
+        Assert.Equal(seconds, advanced.AppliedSeconds);
+        Assert.Equal(seconds, time.Calendar.ToAbsoluteSeconds());
+        Assert.Equal(fraction, time.RemainderSeconds);
+
+        DaggerfallWorldTime interrupted = new(DaggerfallCalendar.Start, fraction, 12d);
+        DaggerfallCalendarAdvance due = interrupted.AdvanceInterval(seconds, [(7, 0)]);
+        Assert.Equal(0, due.AppliedSeconds);
+        Assert.Equal(seconds, due.RemainingSeconds);
+        Assert.Equal(DaggerfallCalendar.Start, interrupted.Calendar);
+        Assert.Equal(fraction, interrupted.RemainderSeconds);
+    }
+
     [Fact]
     public void Emits_only_remainders_a_save_accepts()
     {

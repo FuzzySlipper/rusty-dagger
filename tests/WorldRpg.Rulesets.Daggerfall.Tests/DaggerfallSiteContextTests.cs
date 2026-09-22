@@ -415,7 +415,9 @@ public sealed class DaggerfallSiteContextTests
         [],
         new DaggerfallVariablesSave([]),
         new DaggerfallNpcSave([]),
-        []);
+        [],
+        new DaggerfallSkillProgressionSave([], 0, []),
+        new DaggerfallSocialSave([], [], [], []));
 
     private static DaggerfallStatsSave EmptyStats() => new(StatsComponentCapture.Capture(new StatsComponent()), []);
 

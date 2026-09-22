@@ -26,8 +26,10 @@ interface ProductUiContext {
     focusGameplay(): void;
   };
   readonly projection?: { subscribe(listener: (projection: ProjectionEnvelope | null) => void): () => void };
-  readonly intents?: { claim(intent: string, value: { kind: 'product-payload'; contract: string; data: { action: string } | InventoryAction | LootAction | ArtRequestAction }): void };
+  readonly intents?: { claim(intent: string, value: { kind: 'product-payload'; contract: string; data: UiAction | InventoryAction | LootAction | ArtRequestAction | SaveSlotAction }): void };
 }
+
+interface UiAction { readonly action: string; readonly [field: string]: string | number | boolean | undefined; }
 
 interface DaggerHud {
   readonly resources: readonly { readonly id: string; readonly label: string; readonly current: number; readonly maximum: number }[];
@@ -40,7 +42,22 @@ interface DaggerHud {
   readonly uiArtRevision?: string;
   readonly uiArt?: UiArt | null;
   readonly panelRequest?: PanelRequest | null;
+  readonly saveSlots?: SaveSlotProjection;
+  readonly view?: { readonly yawRadians: number; readonly pitchRadians: number; readonly interaction: string };
+  readonly slots?: readonly { readonly owner: string; readonly id: string; readonly label: string; readonly detail: string; readonly order: number }[];
+  readonly focus?: { readonly interaction: string; readonly container: string; readonly close: string } | null;
 }
+
+interface SaveSlotProjection {
+  readonly entries: readonly { readonly key: string; readonly label: string; readonly savedAtUtc: string; readonly ruleset: string }[];
+  readonly diagnostic: string | null;
+}
+
+type SaveSlotAction =
+  | { readonly action: 'save-slots' }
+  | { readonly action: 'save-slot'; readonly key?: string; readonly label: string; readonly confirm?: boolean }
+  | { readonly action: 'load-slot'; readonly key: string }
+  | { readonly action: 'delete-slot'; readonly key: string; readonly confirm?: boolean };
 
 /** A panel the player asked for on a device the DOM has no channel of its own for. */
 interface PanelRequest {
@@ -87,6 +104,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     <section class="dagger-vitals" aria-live="polite">
     </section>
     <p class="dagger-outcome" role="status">Awaiting projection…</p>
+    <p class="dagger-view" aria-live="polite"></p><section class="dagger-status"></section><button class="dagger-focus-close" hidden></button>
     <div class="dagger-death" role="alert" hidden><img class="dagger-death-screen" alt="You have died."></div>
     <div class="dagger-entry" role="dialog" aria-label="Title" hidden><img class="dagger-entry-screen" alt="Rusty Dagger"><button class="dagger-entry-begin" type="button">Begin</button></div>
     <button class="dagger-menu-toggle" type="button" data-action="menu" aria-haspopup="dialog">Menu · Esc</button>
@@ -113,6 +131,16 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       <div class="dagger-inventory-root" hidden></div>
       <div class="dagger-character-root" hidden></div>
       <div class="dagger-loot-root" hidden></div>
+      <section class="dagger-save-slots" hidden aria-label="Save slots">
+        <p class="dagger-save-slots-diagnostic" role="status"></p>
+        <label>Save name <input class="dagger-save-slots-label" maxlength="120" autocomplete="off"></label>
+        <label>Selected slot <select class="dagger-save-slots-select"><option value="">New slot</option></select></label>
+        <div class="dagger-save-slots-actions">
+          <button data-action="save-slot">Save</button>
+          <button data-action="load-slot">Load selected</button>
+          <button data-action="delete-slot">Delete selected</button>
+        </div>
+      </section>
       <div class="dagger-debug-root" data-rusty-ui-interactive hidden></div>
       <button data-action="loot-exit" hidden>Exit loot</button>
       <section class="dagger-tools" hidden><p>Sprite Workbench is a separate authoring application. Start it from the repository terminal:</p><pre>bash src/scripts/run-sprite-workbench.sh</pre><p>Edits save to authoring/sprites/privateers-hold.json.</p><a class="dagger-workbench-link" target="_blank" rel="noopener">Open Sprite Workbench ↗</a></section>
@@ -123,6 +151,10 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
 
   const title = shell.querySelector<HTMLElement>('.dagger-title strong')!;
   const outcome = shell.querySelector<HTMLParagraphElement>('.dagger-outcome')!;
+  const view = shell.querySelector<HTMLParagraphElement>('.dagger-view')!;
+  const status = shell.querySelector<HTMLElement>('.dagger-status')!;
+  const focusClose = shell.querySelector<HTMLButtonElement>('.dagger-focus-close')!;
+  focusClose.addEventListener('click', () => { if (focusClose.dataset.container && focusClose.dataset.close) context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: focusClose.dataset.close, container: focusClose.dataset.container } }); });
   const vitals = shell.querySelector<HTMLElement>('.dagger-vitals')!;
   const composition = shell.querySelector<HTMLDListElement>('.dagger-composition dl')!;
   const claim = (action: string): void => context.intents?.claim('dagger.ui', {
@@ -139,6 +171,17 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   const characterRoot = shell.querySelector<HTMLElement>('.dagger-character-root')!;
   const characterView = mountCharacter(characterRoot);
   const lootRoot = shell.querySelector<HTMLElement>('.dagger-loot-root')!;
+  const saveSlotsRoot = shell.querySelector<HTMLElement>('.dagger-save-slots')!;
+  const saveSlotsDiagnostic = shell.querySelector<HTMLElement>('.dagger-save-slots-diagnostic')!;
+  const saveSlotsLabel = shell.querySelector<HTMLInputElement>('.dagger-save-slots-label')!;
+  const saveSlotsSelect = shell.querySelector<HTMLSelectElement>('.dagger-save-slots-select')!;
+  const saveSlotSave = shell.querySelector<HTMLButtonElement>('[data-action="save-slot"]')!;
+  const saveSlotLoad = shell.querySelector<HTMLButtonElement>('[data-action="load-slot"]')!;
+  const saveSlotDelete = shell.querySelector<HTMLButtonElement>('[data-action="delete-slot"]')!;
+  let saveSlots: SaveSlotProjection = { entries: [], diagnostic: null };
+  let saveSlotMode: 'save' | 'load' = 'save';
+  let saveConfirm = false;
+  let deleteConfirm = false;
   const lootView = mountLoot(lootRoot, action => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
   }));
@@ -174,7 +217,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       if (host.isConnected) host.textContent = `Debug console unavailable: ${error instanceof Error ? error.message : String(error)}`;
     });
   };
-  let activePanel: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'loot' | 'debug' | null = null;
+  let activePanel: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'loot' | 'debug' | 'save-slots' | null = null;
   const showHome = (): void => {
     const previous = activePanel;
     if (previous === 'debug') closeDebug();
@@ -184,7 +227,8 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     home.hidden = false;
     panel.hidden = true;
     menuTitle.textContent = 'Game menu';
-    home.querySelector<HTMLButtonElement>(`[data-action="${previous ?? 'resume'}"]`)!.focus();
+    const returnAction = previous === 'save-slots' ? (saveSlotMode === 'save' ? 'save-game' : 'load-game') : previous ?? 'resume';
+    home.querySelector<HTMLButtonElement>(`[data-action="${returnAction}"]`)?.focus();
   };
   const closeMenu = (): void => {
     controllerDirection = 0;
@@ -206,7 +250,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     else if (menu.open) closeMenu();
     else openMenu();
   };
-  const showPanel = (action: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'loot' | 'debug'): void => {
+  const showPanel = (action: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'loot' | 'debug' | 'save-slots'): void => {
     if (!menu.open) openMenu();
     if (activePanel === 'loot' && action !== 'loot') closeLoot();
     if (activePanel === 'debug') closeDebug();
@@ -218,6 +262,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     inventoryRoot.hidden = action !== 'inventory';
     characterRoot.hidden = action !== 'character';
     lootRoot.hidden = action !== 'loot';
+    saveSlotsRoot.hidden = action !== 'save-slots';
     debugRoot.hidden = action !== 'debug';
     if (action === 'debug') openDebug();
     shell.querySelector<HTMLButtonElement>('[data-action="loot-exit"]')!.hidden = action !== 'loot';
@@ -227,11 +272,41 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     menu.classList.toggle('has-debug', action === 'debug');
     menuTitle.textContent = action === 'diagnostics' ? 'Composition diagnostics'
       : action === 'inventory' ? 'Inventory & equipment' : action === 'character' ? 'Character'
-      : action === 'loot' ? 'Loot' : action === 'debug' ? 'Engine debug console' : 'Sprite animation tool';
+      : action === 'loot' ? 'Loot' : action === 'debug' ? 'Engine debug console'
+      : action === 'save-slots' ? (saveSlotMode === 'save' ? 'Save game' : 'Load game') : 'Sprite animation tool';
     if (action === 'character') {
       menuTitle.focus({ preventScroll: true });
       menu.scrollTop = 0;
     } else panel.querySelector<HTMLButtonElement>(':scope > [data-action="back"]')!.focus();
+  };
+  const redrawSaveSlots = (): void => {
+    const selected = saveSlotsSelect.value;
+    saveSlotsSelect.replaceChildren(new Option('New slot', ''));
+    for (const entry of saveSlots.entries) {
+      const savedAt = Number.isNaN(Date.parse(entry.savedAtUtc)) ? '' : ` · ${new Date(entry.savedAtUtc).toLocaleString()}`;
+      saveSlotsSelect.add(new Option(`${entry.label}${savedAt}`, entry.key));
+    }
+    saveSlotsSelect.value = saveSlots.entries.some(entry => entry.key === selected) ? selected : '';
+    const selectedEntry = saveSlots.entries.find(entry => entry.key === saveSlotsSelect.value);
+    if (selectedEntry && !saveSlotsLabel.value) saveSlotsLabel.value = selectedEntry.label;
+    saveSlotsDiagnostic.textContent = saveSlots.diagnostic ?? (saveSlots.entries.length === 0 ? 'No saved games yet.' : 'Choose a saved game or name a new one.');
+    saveSlotSave.hidden = saveSlotMode !== 'save';
+    saveSlotLoad.hidden = saveSlotMode !== 'load';
+    saveSlotDelete.hidden = saveSlotMode !== 'load';
+    saveSlotsLabel.closest('label')!.hidden = saveSlotMode !== 'save';
+    saveSlotSave.textContent = saveConfirm ? 'Confirm overwrite' : 'Save';
+    saveSlotDelete.textContent = deleteConfirm ? 'Confirm delete' : 'Delete selected';
+    const hasSelection = saveSlotsSelect.value.length > 0;
+    saveSlotLoad.disabled = !hasSelection;
+    saveSlotDelete.disabled = !hasSelection;
+  };
+  const showSaveSlots = (mode: 'save' | 'load'): void => {
+    saveSlotMode = mode;
+    saveConfirm = false;
+    deleteConfirm = false;
+    redrawSaveSlots();
+    showPanel('save-slots');
+    claim('save-slots');
   };
   // One place decides what a menu action means, whether the DOM heard it from a click, a key, or the
   // product answering a button on a pad the DOM cannot see.
@@ -240,11 +315,44 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     else if (action === 'back') showHome();
     else if (action === 'menu') dismiss();
     else if (action === 'loot') claim('loot');
-    else if (action === 'save-game' || action === 'load-game') claim(action);
+    else if (action === 'save-game') showSaveSlots('save');
+    else if (action === 'load-game') showSaveSlots('load');
     else if (action === 'diagnostics' || action === 'tools' || action === 'inventory' || action === 'character' || action === 'debug') showPanel(action);
   };
-  const onMenuClick = (event: MouseEvent): void =>
-    runMenuAction((event.target as HTMLElement).closest<HTMLButtonElement>('button')?.dataset.action);
+  const onMenuClick = (event: MouseEvent): void => {
+    const action = (event.target as HTMLElement).closest<HTMLButtonElement>('button')?.dataset.action;
+    if (action === 'save-slot') {
+      const key = saveSlotsSelect.value || undefined;
+      const label = saveSlotsLabel.value.trim();
+      if (!label) {
+        saveSlotsDiagnostic.textContent = 'Name the save slot before saving.';
+        saveSlotsLabel.focus();
+        return;
+      }
+      if (key && !saveConfirm) { saveConfirm = true; redrawSaveSlots(); return; }
+      context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'save-slot', key, label, confirm: saveConfirm } });
+      saveConfirm = false;
+      return;
+    }
+    if (action === 'load-slot' && saveSlotsSelect.value) {
+      context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'load-slot', key: saveSlotsSelect.value } });
+      return;
+    }
+    if (action === 'delete-slot' && saveSlotsSelect.value) {
+      if (!deleteConfirm) { deleteConfirm = true; redrawSaveSlots(); return; }
+      context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'delete-slot', key: saveSlotsSelect.value, confirm: true } });
+      deleteConfirm = false;
+      return;
+    }
+    runMenuAction(action);
+  };
+  saveSlotsSelect.addEventListener('change', () => {
+    saveConfirm = false;
+    deleteConfirm = false;
+    const selected = saveSlots.entries.find(entry => entry.key === saveSlotsSelect.value);
+    if (selected) saveSlotsLabel.value = selected.label;
+    redrawSaveSlots();
+  });
   // Capture before Engine input sees navigation keys. Escape's native dialog
   // cancellation is suppressed so one physical press performs exactly one step.
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -430,8 +538,20 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     titleMode = value.mode === TITLE_MODE;
     redrawEntry();
 
-    title.textContent = 'Exploring';
+    title.textContent = value.mode === 'paused' ? 'Paused' : value.mode === 'dead' ? 'Defeated'
+      : value.mode === 'title' ? 'Title' : value.mode === 'modal' ? 'Interaction' : 'Exploring';
     outcome.textContent = value.lastOutcome;
+    view.textContent = value.view ? viewSummary(value.view) : '';
+    status.replaceChildren(...(value.slots ?? []).map(row => { const item = document.createElement('p'); item.textContent = `${row.label}: ${row.detail}`; return item; }));
+    const focus = value.focus ?? null;
+    focusClose.hidden = focus === null;
+    focusClose.dataset.container = focus?.container ?? '';
+    focusClose.dataset.close = focus?.close ?? '';
+    focusClose.textContent = focus === null ? '' : `Close ${focus.interaction}`;
+    if (isSaveSlots(value.saveSlots)) {
+      saveSlots = value.saveSlots;
+      redrawSaveSlots();
+    }
     composition.replaceChildren(...diagnosticRows(value.composition));
   }) ?? (() => {});
   return { dispose: () => {
@@ -445,6 +565,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     menu.removeEventListener('cancel', onCancel);
     menu.removeEventListener('click', onMenuClick);
     menuToggle.removeEventListener('click', onMenuToggle);
+    saveSlotsSelect.replaceChildren();
     if (menu.open) menu.close();
     stylesheet.remove();
     inventoryStylesheet.remove();
@@ -459,6 +580,24 @@ export function isHud(value: unknown): value is DaggerHud {
     && 'resources' in value && Array.isArray(value.resources) && value.resources.every(isResourceRow)
     && 'lastOutcome' in value && typeof value.lastOutcome === 'string'
     && 'composition' in value && isCompositionIdentity(value.composition);
+}
+
+function isSaveSlots(value: unknown): value is SaveSlotProjection {
+  if (typeof value !== 'object' || value === null || !('entries' in value) || !Array.isArray(value.entries)) return false;
+  const diagnostic = 'diagnostic' in value ? value.diagnostic : null;
+  return (diagnostic === null || typeof diagnostic === 'string') && value.entries.every(entry =>
+    typeof entry === 'object' && entry !== null
+    && 'key' in entry && typeof entry.key === 'string'
+    && 'label' in entry && typeof entry.label === 'string'
+    && 'savedAtUtc' in entry && typeof entry.savedAtUtc === 'string'
+    && 'ruleset' in entry && typeof entry.ruleset === 'string');
+}
+
+function viewSummary(view: NonNullable<DaggerHud['view']>): string {
+  const direction = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west']
+    [Math.round((((view.yawRadians % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 4)) % 8]!;
+  const pitch = view.pitchRadians > 0.35 ? 'looking up' : view.pitchRadians < -0.35 ? 'looking down' : 'level';
+  return `Facing ${direction} · ${pitch}`;
 }
 
 function isResourceRow(value: unknown): value is DaggerHud['resources'][number] {

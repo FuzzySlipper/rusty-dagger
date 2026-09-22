@@ -18,6 +18,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private readonly IGraphicsService appearance;
     private readonly IContentService content;
     private readonly IAudioService? audio;
+    private readonly DaggerfallAudioBundle? audioBundle;
     private readonly IRandomService? random;
     private readonly DaggerfallPresentationAudioTuning audioTuning;
     private readonly Dictionary<string, AudioClip> audioClips = new(StringComparer.Ordinal);
@@ -51,7 +52,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private readonly AuthoredWorldAppearance worldAppearance;
     private bool disposed;
 
-    internal PrivateersHoldAppearance(IContentService content, IGraphicsService appearance, PrivateersHoldInputs inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null)
+    internal PrivateersHoldAppearance(IContentService content, IGraphicsService appearance, PrivateersHoldInputs inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(appearance);
@@ -59,6 +60,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         this.appearance = appearance;
         this.content = content;
         this.audio = audio;
+        this.audioBundle = audioBundle;
         this.random = random;
         this.audioTuning = (audioTuning ?? DaggerfallTuning.Defaults.PresentationAudio).Validate();
         hitCues = inputs.Audio.Count == 0 ? [] : PrivateersHoldContent.OrderedHitCues(inputs.Audio);
@@ -84,8 +86,10 @@ internal sealed class PrivateersHoldAppearance : IDisposable
             foreach (NormalizedAudioClip clip in inputs.Audio)
             {
                 // An opened clip is an owned Engine resource now, so it is retained for the lifetime of
-                // this appearance and released with it rather than discarded after the emit.
-                if (audio is not null) audioClips.Add(clip.Id, audio.OpenClip(new AudioClipRequest(clip.Path)));
+                // this appearance and released with it rather than discarded after the emit. Callers
+                // that explicitly supply eager audio retain that composition; the composed product
+                // supplies its bundle owner and opens a clip only when the matching cue is emitted.
+                if (audio is not null && audioBundle is null) audioClips.Add(clip.Id, audio.OpenClip(new AudioClipRequest(clip.Path)));
             }
         }
         catch { Dispose(); throw; }
@@ -661,7 +665,13 @@ internal sealed class PrivateersHoldAppearance : IDisposable
 
     private void Emit(string clipId, PresentationEventIdentity identity, ulong marker)
     {
-        if (audio is null || !audioClips.TryGetValue(clipId, out AudioClip? clip)) return;
+        if (audio is null) return;
+        if (!audioClips.TryGetValue(clipId, out AudioClip? clip))
+        {
+            if (audioBundle is null) return;
+            clip = audioBundle.OpenClip(audio, clipId);
+            audioClips.Add(clipId, clip);
+        }
         string signalId = $"daggerfall.media.{identity.Generation}.{identity.SimulationStep}.{identity.Attacker}.{identity.Target}.{identity.Outcome}.{marker}.{clipId}";
         audio.Emit(new AudioEmitRequest(signalId, new AudioSourceDescriptor(clip, AudioBus.Sfx, audioTuning.Volume, audioTuning.Pitch, false, audioTuning.SpatialBlend, audioTuning.Attenuation, 0F, AudioEmitterKind.Global2d, Vector3.Zero, 0, Vector3.Zero)));
     }

@@ -106,21 +106,29 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
         : this(engine, definitions, inputs, tuning, compositionIdentity, null, DaggerfallEffectCatalog.Empty) { }
 
+    internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, DaggerfallAudioBundle audioBundle)
+        : this(engine, definitions, inputs, tuning, compositionIdentity, null, DaggerfallEffectCatalog.Empty, audioBundle) { }
+
     internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
         DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, RulesetSavePayload saved, IRandomService random)
         => Restore(engine, compositionIdentity, definitions, inputs, tuning, saved, random, DaggerfallEffectCatalog.Empty);
 
     internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
         DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, RulesetSavePayload saved,
-        IRandomService random, DaggerfallEffectCatalog effects)
+        IRandomService random, DaggerfallAudioBundle audioBundle)
+        => Restore(engine, compositionIdentity, definitions, inputs, tuning, saved, random, DaggerfallEffectCatalog.Empty, audioBundle);
+
+    internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
+        DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, RulesetSavePayload saved,
+        IRandomService random, DaggerfallEffectCatalog effects, DaggerfallAudioBundle? audioBundle = null)
     {
         DaggerfallSavePayload payload = DaggerfallSavePayload.Read(saved).ResolveRestore(definitions, inputs);
-        return new DaggerfallSession(engine, definitions, inputs, tuning, compositionIdentity, payload, effects);
+        return new DaggerfallSession(engine, definitions, inputs, tuning, compositionIdentity, payload, effects, audioBundle);
     }
 
     private DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs,
         DaggerfallTuning tuning, ResolvedCompositionIdentity? compositionIdentity, DaggerfallSavePayload? saved,
-        DaggerfallEffectCatalog effects)
+        DaggerfallEffectCatalog effects, DaggerfallAudioBundle? audioBundle = null)
     {
         List<IDisposable> partiallyConstructed = [];
         try
@@ -168,11 +176,20 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             _camera = new FirstPersonCameraSystem(engine.CameraView, State.PlayerControl, tuning.Camera);
             partiallyConstructed.Add(_camera);
             TargetingService targeting = new(engine.Perception, _spatial, State.Actors, new DaggerTargetingPolicy(authored, tuning.MeleeTargeting));
-            _combat = new DaggerCombatRules(_random, State.Actors, State.Equipment, State.InventoryFor, definitions, authored, targeting);
             _staminaRecovery = new DaggerfallStaminaRecoveryModule(tuning.StaminaRecovery);
-            State.Kit = new(State.Actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, State.Inventory, State.Equipment);
             State.Effects = new DaggerfallEffectLifecycle(State.Actors, effects);
             partiallyConstructed.Add(State.Effects);
+            _rewards = new DaggerfallRewardReactions(
+                State.Progression,
+                State.Actors.Player.Stats,
+                State.Actors.Player.Actor.Entity,
+                playerDefinition,
+                _random,
+                authored,
+                tuning.Progression.EnableExperimentalKillExperience);
+            State.SkillUses = new DaggerfallSkillUseReactions(State.Progression, State.Actors.Player.Stats, definitions, playerDefinition);
+            _combat = new DaggerCombatRules(_random, State.Actors, State.Equipment, State.InventoryFor, definitions, authored, targeting, use => State.SkillUses.Record(use));
+            State.Kit = new(State.Actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, State.Inventory, State.Equipment);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
                 engine.Perception,
                 _spatial,
@@ -180,13 +197,6 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 State.Actors,
                 State.Kit.Attacks,
                 tuning.EnemyBehavior);
-            _rewards = new DaggerfallRewardReactions(
-                State.Progression,
-                State.Actors.Player.Stats,
-                State.Actors.Player.Actor.Entity,
-                playerDefinition,
-                _random,
-                authored);
             _authoredEntityIds = DaggerActorFactory.AdmittedAuthoredEntityIds(inputs, playerDefinition.Loadout);
             if (saved is null)
             {
@@ -231,7 +241,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 compositionIdentity,
                 DaggerfallUiArt.Read(engine.Content, inputs.ClassicPresentation.InventoryIcons.Values));
             partiallyConstructed.Add(_hud);
-            _appearance = new PrivateersHoldAppearance(engine.Content, engine.Graphics, inputs, engine.Audio, tuning.PresentationAudio, _random);
+            _appearance = new PrivateersHoldAppearance(engine.Content, engine.Graphics, inputs, engine.Audio, tuning.PresentationAudio, _random, audioBundle);
             partiallyConstructed.Add(_appearance);
             _persistence = new(State, _corpseLoot, _uniqueItems, _camera, _time, _site, State.Effects);
             if (saved is not null) _persistence.Restore(saved);
@@ -546,10 +556,14 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 case "character": break;
                 case "loot": if (playing) firstStep.Request(DaggerfallInput.Interact); break;
                 case "loot-close": if (playing || modal) _lootUi.Close(action!.Container); break;
-                // Ordinary save/load menu requests: the product owns the store and any session
-                // replacement, so the session only asks and presents the reported outcome.
-                case "save-game": if (playing || modal) _saveRequested = true; break;
-                case "load-game": if (playing || modal) _loadRequested = true; break;
+                // Bare quick-save creates a named slot; quick-load selects slot-1. Both use
+                // the same catalog owner as the selectable DOM controls.
+                case "save-game": if (playing || modal) _saveSlotRequest = new(SaveSlotOperation.Save, Label: "Saved game"); break;
+                case "load-game": if (playing || modal) _saveSlotRequest = new(SaveSlotOperation.Load, "slot-1"); break;
+                case "save-slots": if (playing || modal) _saveSlotRequest = new(SaveSlotOperation.List); break;
+                case "save-slot": if (playing || modal) _saveSlotRequest = new(SaveSlotOperation.Save, action!.Key, action.Label, action.Confirm); break;
+                case "load-slot": if (playing || modal) _saveSlotRequest = new(SaveSlotOperation.Load, action!.Key); break;
+                case "delete-slot": if (playing || modal) _saveSlotRequest = new(SaveSlotOperation.Delete, action!.Key, Confirm: action.Confirm); break;
                 case "loot-take":
                     if (playing || modal)
                     {
@@ -582,12 +596,15 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         // while a mode holds the world still.
         Presentation.Advance(deltaSeconds * facts.AdmittedStepCount);
 
-        // The world's clock runs on the same admitted duration the message line ages by, scaled by the
-        // tuning the corpus authors, so there is one clock and it is this one.
-        long minuteBefore = _time.Calendar.DayNumber * 24 * 60 + (_time.Calendar.Hour * 60) + _time.Calendar.Minute;
+        // Ordering within this one admitted update is clock, magic rounds, then calendar consumers
+        // and simulation.  A normal game minute is one magic round; a larger admitted interval uses
+        // the same lifecycle catch-up path as rest, travel, and prison, so no second effect timer can
+        // drift from the saved calendar.
+        DaggerfallCalendar calendarBefore = _time.Calendar;
+        long minuteBefore = MinuteIndex(calendarBefore);
         _time.Advance(deltaSeconds * facts.AdmittedStepCount);
-        long minuteAfter = _time.Calendar.DayNumber * 24 * 60 + (_time.Calendar.Hour * 60) + _time.Calendar.Minute;
-        _ = State.Effects.AdvanceElapsedRounds(minuteAfter - minuteBefore);
+        State.Social.AdvanceElapsedMinutes(minuteBefore, MinuteIndex(_time.Calendar));
+        AdvanceEffectsForCalendar(calendarBefore, ordinaryPlay: true);
         AnnounceHoliday();
         AgePanelRequest(deltaSeconds * facts.AdmittedStepCount);
 
@@ -656,27 +673,32 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// </summary>
     public bool PendingModeRequestClosesModal => PendingModeRequest == ProductMode.Playing;
 
-    private bool _saveRequested;
-    private bool _loadRequested;
+    private SaveSlotRequest? _saveSlotRequest;
+    private IReadOnlyList<SaveSlotSummary> _saveSlots = [];
+    private string? _saveSlotDiagnostic;
 
-    /// <summary>
-    /// Takes a pending ordinary save request. The menu action is only meaningful where the world
-    /// has state worth keeping, so requests from other modes are dropped with the action itself.
-    /// </summary>
-    public bool TakeSaveRequest() => TakeRequest(ref _saveRequested);
-
-    /// <summary>Takes a pending ordinary load request, with the same mode rule as saving.</summary>
-    public bool TakeLoadRequest() => TakeRequest(ref _loadRequested);
-
-    private static bool TakeRequest(ref bool requested)
+    /// <summary>Takes a structured named-slot action for the Host to perform.</summary>
+    public SaveSlotRequest? TakeSaveSlotRequest()
     {
-        if (!requested) return false;
-        requested = false;
-        return true;
+        SaveSlotRequest? request = _saveSlotRequest;
+        _saveSlotRequest = null;
+        return request;
     }
 
     /// <summary>Presents the product's save/load outcome after it honored a request.</summary>
-    public void ReportSaveOutcome(string message) => Presentation.SetOutcome(message);
+    public void ReportSaveOutcome(string message)
+    {
+        Presentation.SetOutcome(message);
+        PublishPresentation();
+    }
+
+    /// <summary>Stores Host-owned save metadata for the next ordinary HUD projection.</summary>
+    public void ReportSaveSlots(IReadOnlyList<SaveSlotSummary> slots, string? diagnostic)
+    {
+        _saveSlots = slots?.ToArray() ?? throw new ArgumentNullException(nameof(slots));
+        _saveSlotDiagnostic = diagnostic;
+        PublishPresentation();
+    }
 
     /// <summary>
     /// Applies the mode the product decided. A mode change is a focus change, so held movement is
@@ -709,6 +731,45 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         DeliverFacts();
         PublishPresentation();
     }
+
+    /// <summary>
+    /// Advances a rest, travel, prison, or other ruleset-owned elapsed interval through the session's
+    /// single calendar.  A caller resumes <see cref="DaggerfallCalendarAdvance.RemainingSeconds"/>
+    /// after handling a consequence; only the portion the calendar accepted advances effects.
+    /// </summary>
+    internal DaggerfallCalendarAdvance AdvanceElapsedTime(long gameSeconds,
+        IReadOnlyList<(int Identity, long SecondsFromNow)>? consequences = null)
+    {
+        DaggerfallCalendar calendarBefore = _time.Calendar;
+        long minuteBefore = MinuteIndex(calendarBefore);
+        DaggerfallCalendarAdvance advance = _time.AdvanceInterval(gameSeconds, consequences ?? []);
+        State.Social.AdvanceElapsedMinutes(minuteBefore, MinuteIndex(_time.Calendar));
+        AdvanceEffectsForCalendar(calendarBefore, ordinaryPlay: false);
+        AnnounceHoliday();
+        return advance;
+    }
+
+    private void AdvanceEffectsForCalendar(DaggerfallCalendar before, bool ordinaryPlay)
+    {
+        long minutes = MinuteIndex(_time.Calendar) - MinuteIndex(before);
+        if (minutes <= 0) return;
+
+        // The normal path is expressed as its normal one-round operation.  Multiple minutes (whether
+        // an unusually long admitted update or an elapsed interval) retain the donor's bounded
+        // catch-up policy inside the lifecycle.
+        if (ordinaryPlay && minutes == 1)
+        {
+            State.Effects.AdvanceOrdinaryRound();
+            return;
+        }
+
+        _ = State.Effects.AdvanceElapsedRounds(minutes);
+    }
+
+    private static long MinuteIndex(DaggerfallCalendar calendar) =>
+        (calendar.DayNumber * DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour)
+        + (calendar.Hour * DaggerfallCalendar.MinutesPerHour)
+        + calendar.Minute;
 
     /// <summary>
     /// One simulation step: input, world time, and reactions. Publication is the caller's:
@@ -789,7 +850,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     private void PublishPresentation()
     {
-        _hud.Publish(State.Actors.Player, State.Progression, Presentation, _mode, State.PlayerControl, Slots, _inventoryUi.Read(), _lootUi.Read(), _characterUi.Read(State.Actors.Player, State.Progression), LatestPanelRequest);
+        _hud.Publish(State.Actors.Player, State.Progression, Presentation, _mode, State.PlayerControl, Slots, _inventoryUi.Read(), _lootUi.Read(), _characterUi.Read(State.Actors.Player, State.Progression), LatestPanelRequest, _saveSlots, _saveSlotDiagnostic);
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors);
