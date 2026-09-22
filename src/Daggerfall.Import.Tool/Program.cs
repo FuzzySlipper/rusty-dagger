@@ -1744,6 +1744,10 @@ internal static partial class Program
         Dictionary<string, bool> ownPalettes = publication.UiImages
             .GroupBy(image => image.MediaId, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Single().OwnEmbeddedPalette, StringComparer.Ordinal);
+        Dictionary<string, LogicalSourceRecord> uiSources = publication.UiImages
+            .ToDictionary(
+                image => image.MediaId,
+                image => publication.Sources.Single(source => string.Equals(source.SourcePath, $"arena2/{image.SourceFile}", StringComparison.Ordinal)));
         JsonObject InventoryEntry(ImportPublicationArtifact artifact)
         {
             JsonObject entry = new()
@@ -1763,6 +1767,18 @@ internal static partial class Program
                         ["source"] = "embedded-in-source-file",
                         ["channelScale"] = 4,
                         ["donorAnchor"] = "ImgFile.ReadPalette",
+                    };
+                }
+                if (uiSources.TryGetValue(mediaId, out LogicalSourceRecord? source))
+                {
+                    // A semantic slot consumes this original IMG, while sha256 above identifies
+                    // the regenerated PNG. Keep both facts: generated-byte stability cannot prove
+                    // that a slot still came from the required donor input.
+                    entry["source"] = new JsonObject
+                    {
+                        ["path"] = source.SourcePath,
+                        ["byteLength"] = source.ByteLength,
+                        ["sha256"] = source.ContentDigest.Value,
                     };
                 }
             }
