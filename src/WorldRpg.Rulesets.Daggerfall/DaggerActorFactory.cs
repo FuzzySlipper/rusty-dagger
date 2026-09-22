@@ -116,12 +116,27 @@ internal static class DaggerActorFactory
                 }
             }
             DaggerfallVariableStore variables = new();
+            DaggerfallNpcRegistry npcs = new();
             if (saved?.Variables is { } restoredVariables)
             {
                 variables.Restore(restoredVariables.Entries.Select(entry => (entry.Require(), entry.Value)));
             }
 
-            DaggerfallState state = new(new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians), actors, inventory, equipmentCoordinator, containers, itemDefinitions, equipmentSlots, inventoryStore, variables);
+            if (saved?.Npcs is { } restoredNpcs)
+            {
+                npcs.Restore(restoredNpcs.Entries.Select(entry => new DaggerfallNpc(
+                    entry.DurableId,
+                    (DaggerfallNpcKind)entry.Kind,
+                    entry.StableKey,
+                    new DaggerfallNpcSite(entry.Region, entry.Location, entry.Building),
+                    new DaggerfallNpcAppearance(entry.Race, entry.Gender, entry.BillboardArchive, entry.BillboardRecord, entry.NameSeed, entry.FactionId),
+                    entry.Role,
+                    entry.Services,
+                    (DaggerfallNpcPresence)entry.Presence,
+                    entry.X, entry.Y, entry.Z)));
+            }
+
+            DaggerfallState state = new(new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians), actors, inventory, equipmentCoordinator, containers, itemDefinitions, equipmentSlots, inventoryStore, variables, npcs);
             authored.Add(DaggerfallActorIdentity.PlayerEntityId, playerDefinition);
             if (saved is not null) MaterializeDynamicActors(random, actors, mechanics, definitions, saved, authored, inventoryStore);
             return new(state, authored, playerDefinition);

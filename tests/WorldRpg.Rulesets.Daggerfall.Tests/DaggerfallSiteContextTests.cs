@@ -413,7 +413,8 @@ public sealed class DaggerfallSiteContextTests
         new DaggerfallCalendarSave(1, 1, 1, 0, 0, 0, 0d),
         site ?? throw new ArgumentNullException(nameof(site)),
         [],
-        new DaggerfallVariablesSave([]));
+        new DaggerfallVariablesSave([]),
+        new DaggerfallNpcSave([]));
 
     private static DaggerfallStatsSave EmptyStats() => new(StatsComponentCapture.Capture(new StatsComponent()), []);
 

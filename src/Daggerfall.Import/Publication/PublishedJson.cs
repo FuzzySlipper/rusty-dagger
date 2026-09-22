@@ -16,6 +16,19 @@ namespace Daggerfall.Import.Publication;
 /// </remarks>
 public static class PublishedJson
 {
+    /// <summary>
+    /// The bulk spatial dialect: the writing dialect without indentation, for payload files whose
+    /// record counts make whitespace the dominant byte. Nothing else changes: names, numbers and
+    /// enums serialize identically, so a compact file parses to the same document.
+    /// </summary>
+    public static readonly JsonSerializerOptions SectionCompact = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false,
+        NumberHandling = JsonNumberHandling.Strict,
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
+    };
+
     /// <summary>The options every published section is written with.</summary>
     public static readonly JsonSerializerOptions Section = new()
     {

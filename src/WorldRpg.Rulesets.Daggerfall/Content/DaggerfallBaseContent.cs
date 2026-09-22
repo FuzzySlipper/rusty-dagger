@@ -50,10 +50,12 @@ internal static class DaggerfallBaseContent
             DaggerfallFactionsSet factions = ReadFactions(root, diagnostics);
             DaggerfallTerrainSet terrain = ReadTerrain(root, diagnostics);
             DaggerfallItemTemplateSet itemTemplatesCatalog = ReadItemTemplates(root, diagnostics);
+            DaggerfallQuestSourceSet questSources = ReadQuestSources(root, diagnostics);
+            DaggerfallCinematicSet cinematics = ReadCinematics(root, diagnostics);
             ValidateReferences(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, hud, diagnostics);
             ValidateCatalog(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, lootCategoryPools, donorErrata, diagnostics);
             diagnostics.ThrowIfAny();
-            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles, names, rumors, biographies, grids, books, factions, terrain, itemTemplatesCatalog);
+            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles, names, rumors, biographies, grids, books, factions, terrain, itemTemplatesCatalog, questSources, cinematics);
         }
         catch (JsonException exception)
         {
@@ -1862,6 +1864,117 @@ internal static class DaggerfallBaseContent
         return new DaggerfallItemTemplateSet(
             new ReadOnlyDictionary<int, DaggerfallItemTemplateDefinition>(templates),
             new ReadOnlyDictionary<int, DaggerfallMagicTemplateDefinition>(magic));
+    }
+
+    /// <summary>
+    /// Reads the normalized quest sources from the pack alone. A diagnosed quest resolves with
+    /// its diagnostics attached and must not run; a runnable quest with diagnostics is a
+    /// contradiction the pack must not state.
+    /// </summary>
+    /// <summary>
+    /// Reads the cinematic identities from the pack alone. A bound cinematic without its caller or
+    /// an unresolved one claiming a hook is a contradiction the pack must not state.
+    /// </summary>
+    private static DaggerfallCinematicSet ReadCinematics(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!root.TryGetProperty("cinematics", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
+        {
+            diagnostics.Add("Base payload publishes no cinematics section; cinematic lookups resolve to nothing until it is republished.");
+            return new DaggerfallCinematicSet(new ReadOnlyDictionary<string, DaggerfallCinematicDefinition>(new Dictionary<string, DaggerfallCinematicDefinition>(StringComparer.OrdinalIgnoreCase)));
+        }
+
+        Dictionary<string, DaggerfallCinematicDefinition> cinematics = new(StringComparer.OrdinalIgnoreCase);
+        foreach (JsonElement cinematic in Array(section, "cinematics", diagnostics))
+        {
+            string file = Text(cinematic, "fileName", diagnostics);
+            string kindName = Text(cinematic, "kind", diagnostics);
+            string bindingName = Text(cinematic, "binding", diagnostics);
+            if (!TryReadName(kindName, out DaggerfallCinematicKind kind))
+            {
+                diagnostics.Add($"Cinematic '{file}' names the kind '{kindName}', which the contract does not declare.");
+                continue;
+            }
+
+            if (!TryReadName(bindingName, out DaggerfallCinematicBinding binding))
+            {
+                diagnostics.Add($"Cinematic '{file}' names the binding '{bindingName}', which the contract does not declare.");
+                continue;
+            }
+
+            string caller = OptionalText(cinematic, "caller");
+            int? faction = OptionalInteger(cinematic, "factionId", diagnostics);
+            string quest = OptionalText(cinematic, "quest");
+            if (binding == DaggerfallCinematicBinding.Bound && caller.Length == 0)
+            {
+                diagnostics.Add($"Cinematic '{file}' is bound and names no caller.");
+            }
+
+            if (binding == DaggerfallCinematicBinding.Unresolved && (caller.Length != 0 || faction.HasValue || quest.Length != 0))
+            {
+                diagnostics.Add($"Cinematic '{file}' is unresolved and still claims a hook.");
+            }
+
+            if (!cinematics.TryAdd(file, new DaggerfallCinematicDefinition(
+                file, kind, Long(cinematic, "byteLength", diagnostics), Text(cinematic, "digest", diagnostics),
+                binding, caller, faction, quest)))
+            {
+                diagnostics.Add($"Cinematic '{file}' is published twice, so one of them is unreachable.");
+            }
+        }
+
+        return new DaggerfallCinematicSet(new ReadOnlyDictionary<string, DaggerfallCinematicDefinition>(cinematics));
+    }
+
+    private static DaggerfallQuestSourceSet ReadQuestSources(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!root.TryGetProperty("questSources", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
+        {
+            diagnostics.Add("Base payload publishes no questSources section; quest lookups resolve to nothing until it is republished.");
+            return new DaggerfallQuestSourceSet(new ReadOnlyDictionary<string, DaggerfallQuestSourceDefinition>(new Dictionary<string, DaggerfallQuestSourceDefinition>(StringComparer.Ordinal)));
+        }
+
+        Dictionary<string, DaggerfallQuestSourceDefinition> quests = new(StringComparer.Ordinal);
+        foreach (JsonElement quest in Array(section, "quests", diagnostics))
+        {
+            string name = Text(quest, "name", diagnostics);
+            string sourceFile = Text(quest, "sourceFile", diagnostics);
+            string dispositionName = Text(quest, "disposition", diagnostics);
+            if (!TryReadName(dispositionName, out DaggerfallQuestDisposition disposition))
+            {
+                diagnostics.Add($"Quest '{name}' names the disposition '{dispositionName}', which the contract does not declare.");
+                continue;
+            }
+
+            List<DaggerfallQuestMessageDefinition> messages = [.. Array(quest, "messages", diagnostics)
+                .Select(message => new DaggerfallQuestMessageDefinition(
+                    Integer(message, "id", diagnostics), Integer(message, "firstLine", diagnostics),
+                    [.. Array(message, "lines", diagnostics).Select(line => line.GetString() ?? string.Empty)]))];
+            List<DaggerfallQuestBlockDefinition> blocks = [.. Array(quest, "blocks", diagnostics)
+                .Select(block => new DaggerfallQuestBlockDefinition(
+                    Text(block, "kind", diagnostics), Integer(block, "firstLine", diagnostics),
+                    [.. Array(block, "lines", diagnostics).Select(line => line.GetString() ?? string.Empty)],
+                    OptionalInteger(block, "global", diagnostics)))];
+            List<DaggerfallQuestDiagnosticDefinition> diags = [.. Array(quest, "diagnostics", diagnostics)
+                .Select(diag => new DaggerfallQuestDiagnosticDefinition(
+                    Integer(diag, "line", diagnostics), Text(diag, "text", diagnostics), Text(diag, "reason", diagnostics)))];
+            if (disposition == DaggerfallQuestDisposition.Runnable && diags.Count != 0)
+            {
+                diagnostics.Add($"Quest '{name}' is runnable with diagnostics attached.");
+            }
+
+            if (disposition == DaggerfallQuestDisposition.Diagnosed && diags.Count == 0)
+            {
+                diagnostics.Add($"Quest '{name}' is diagnosed with no diagnostic attached.");
+            }
+
+            if (!quests.TryAdd(sourceFile, new DaggerfallQuestSourceDefinition(
+                name, OptionalText(quest, "displayName"), sourceFile, disposition, messages, blocks, diags)))
+            {
+                diagnostics.Add($"Quest source file '{sourceFile}' is published twice, so one of them is unreachable.");
+            }
+        }
+
+        return new DaggerfallQuestSourceSet(new ReadOnlyDictionary<string, DaggerfallQuestSourceDefinition>(quests));
     }
 
     private static byte[] ReadGridCells(JsonElement section, string rowsKey, int width, int height, string what, DaggerfallContentDiagnostics diagnostics)    {

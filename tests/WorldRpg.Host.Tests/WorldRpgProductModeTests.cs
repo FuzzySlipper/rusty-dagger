@@ -56,6 +56,25 @@ public sealed class WorldRpgProductModeTests
     }
 
     [Fact]
+    public void Quit_retires_the_session_and_puts_the_replacement_at_the_title()
+    {
+        ModeRecordingRuleset ruleset = new();
+        using WorldRpgProduct product = Product(ruleset);
+        StartInPlay(product);
+
+        product.QuitToTitle();
+        Assert.Equal(ProductMode.Title, product.Mode);
+        // The replacement session is told it is at the title, so it holds input and time while
+        // the entry screen is up rather than simulating behind it.
+        Assert.Equal(ProductMode.Title, ruleset.LastApplied);
+        Assert.Equal(2, ruleset.Created);
+        // Quitting from the title is refused; quitting never deletes saves.
+        product.QuitToTitle();
+        Assert.Equal(ProductModeChangeOutcome.Refused, product.ModeHistory[^1].Outcome);
+        Assert.Equal(2, ruleset.Created);
+    }
+
+    [Fact]
     public void Death_outranks_every_other_mode_and_only_a_replacement_leaves_it()
     {
         ModeRecordingRuleset ruleset = new();

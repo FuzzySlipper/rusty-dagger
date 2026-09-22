@@ -66,15 +66,28 @@ public sealed class PlayerInputSystem
 {
     private readonly HeldPlayerInput _held = new();
     private readonly PlayerControlTuning _tuning;
-    private readonly PlayerControlBindings _controls;
+    private PlayerControlBindings _controls;
     private readonly ControllerInputTuning? _controller;
-    private readonly InputActionBinding[] _bindings;
+    private InputActionBinding[] _bindings;
     public PlayerInputSystem(PlayerControlTuning tuning, PlayerControlBindings controls, IEnumerable<InputActionBinding>? bindings = null, ControllerInputTuning? controller = null)
     {
         _tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
         _controls = controls ?? throw new ArgumentNullException(nameof(controls));
         _controller = controller?.Validate();
         _bindings = bindings?.ToArray() ?? [];
+    }
+
+    /// <summary>
+    /// Replaces movement keys and action bindings from persisted settings: held keys that no
+    /// binding claims anymore are released, so a rebinding never leaves a stuck direction.
+    /// </summary>
+    public void Rebind(PlayerControlBindings controls, IEnumerable<InputActionBinding> bindings)
+    {
+        ArgumentNullException.ThrowIfNull(controls);
+        ArgumentNullException.ThrowIfNull(bindings);
+        _controls = controls;
+        _bindings = bindings.ToArray();
+        _held.Keys.RemoveWhere(key => key != controls.Forward && key != controls.Backward && key != controls.Left && key != controls.Right);
     }
 
     /// <summary>Interprets and applies one admitted input slice before its dependent Engine movement proposal.</summary>

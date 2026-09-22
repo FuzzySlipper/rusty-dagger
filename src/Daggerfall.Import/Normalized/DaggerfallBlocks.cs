@@ -115,7 +115,61 @@ public sealed record DaggerfallBlockObjects(
     int TreasureMarkers,
     int FixedMobiles,
     IReadOnlyList<string> ModelIds,
-    IReadOnlyList<DaggerfallBlockTexture> Textures);
+    IReadOnlyList<DaggerfallBlockTexture> Textures,
+    IReadOnlyList<DaggerfallBlockModelPlacement> ModelPlacements,
+    IReadOnlyList<DaggerfallBlockFlatPlacement> FlatPlacements,
+    IReadOnlyList<DaggerfallBlockLightPlacement> LightPlacements,
+    IReadOnlyList<DaggerfallBlockDoorPlacement> DoorPlacements);
+
+/// <summary>One placed dungeon model: its position, identity and action link.</summary>
+/// <param name="Index">The model's ordinal in the block.</param>
+/// <param name="ModelId">The model id.</param>
+/// <param name="X">The X position.</param>
+/// <param name="Y">The Y position.</param>
+/// <param name="Z">The Z position.</param>
+/// <param name="YRotation">The Y rotation.</param>
+/// <param name="Description">The description tag.</param>
+/// <param name="ActionAxis">The action axis, when the model carries an action.</param>
+/// <param name="ActionDuration">The action duration, when the model carries an action.</param>
+/// <param name="ActionMagnitude">The action magnitude, when the model carries an action.</param>
+/// <param name="ActionNext">The next object offset, when the model carries an action.</param>
+/// <param name="ActionFlags">The action flags, when the model carries an action.</param>
+public sealed record DaggerfallBlockModelPlacement(
+    int Index, string ModelId, int X, int Y, int Z, int YRotation, string Description,
+    byte? ActionAxis, ushort? ActionDuration, ushort? ActionMagnitude, int? ActionNext, byte? ActionFlags);
+
+/// <summary>One placed dungeon flat: its position, texture and trigger link.</summary>
+/// <param name="Index">The flat's ordinal in the block.</param>
+/// <param name="X">The X position.</param>
+/// <param name="Y">The Y position.</param>
+/// <param name="Z">The Z position.</param>
+/// <param name="TextureArchive">The texture archive.</param>
+/// <param name="TextureRecord">The texture record.</param>
+/// <param name="Flags">The flags.</param>
+/// <param name="Magnitude">The magnitude.</param>
+/// <param name="FactionOrMobileId">The faction or mobile id.</param>
+/// <param name="NextObjectOffset">The next object offset.</param>
+/// <param name="Action">The action byte.</param>
+public sealed record DaggerfallBlockFlatPlacement(
+    int Index, int X, int Y, int Z, ushort TextureArchive, ushort TextureRecord,
+    ushort Flags, byte Magnitude, ushort FactionOrMobileId, int NextObjectOffset, byte Action);
+
+/// <summary>One placed dungeon light: its position and radius.</summary>
+/// <param name="Index">The light's ordinal in the block.</param>
+/// <param name="X">The X position.</param>
+/// <param name="Y">The Y position.</param>
+/// <param name="Z">The Z position.</param>
+/// <param name="Radius">The radius.</param>
+public sealed record DaggerfallBlockLightPlacement(int Index, int X, int Y, int Z, ushort Radius);
+
+/// <summary>One dungeon door: the model that carries its tag and where it stands.</summary>
+/// <param name="ModelIndex">The model's ordinal in the block.</param>
+/// <param name="ModelId">The model id.</param>
+/// <param name="X">The X position.</param>
+/// <param name="Y">The Y position.</param>
+/// <param name="Z">The Z position.</param>
+/// <param name="Description">The description tag.</param>
+public sealed record DaggerfallBlockDoorPlacement(int ModelIndex, string ModelId, int X, int Y, int Z, string Description);
 
 /// <summary>What one half of a building sub-record declares it places.</summary>
 /// <param name="Objects">How many 3D object records it declares.</param>
@@ -144,7 +198,66 @@ public sealed record DaggerfallBlockBuilding(
     int Quality,
     int NameSeed,
     DaggerfallBlockObjectCounts Exterior,
-    DaggerfallBlockObjectCounts Interior);
+    DaggerfallBlockObjectCounts Interior,
+    DaggerfallBlockHalfPlacements ExteriorPlacements,
+    DaggerfallBlockHalfPlacements InteriorPlacements);
+
+/// <summary>One half's placements: every record its counts declare, in the donor's order.</summary>
+/// <param name="Models">The 3D object placements.</param>
+/// <param name="Flats">The flat placements.</param>
+/// <param name="Sections">The section-3 placements.</param>
+/// <param name="People">The people placements.</param>
+/// <param name="Doors">The door placements.</param>
+public sealed record DaggerfallBlockHalfPlacements(
+    IReadOnlyList<DaggerfallBlockRmbModel> Models,
+    IReadOnlyList<DaggerfallBlockRmbFlat> Flats,
+    IReadOnlyList<DaggerfallBlockRmbSection> Sections,
+    IReadOnlyList<DaggerfallBlockRmbPerson> People,
+    IReadOnlyList<DaggerfallBlockRmbDoor> Doors);
+
+/// <summary>One placed exterior model: its model, position and rotation.</summary>
+/// <param name="ModelId">The model id.</param>
+/// <param name="ObjectType">The object type byte.</param>
+/// <param name="X">The X position.</param>
+/// <param name="Y">The Y position.</param>
+/// <param name="Z">The Z position.</param>
+/// <param name="YRotation">The Y rotation.</param>
+public sealed record DaggerfallBlockRmbModel(string ModelId, byte ObjectType, int X, int Y, int Z, short YRotation);
+
+/// <summary>One placed exterior flat: its position, texture and faction.</summary>
+/// <param name="X">The X position.</param>
+/// <param name="Y">The Y position.</param>
+/// <param name="Z">The Z position.</param>
+/// <param name="TextureArchive">The texture archive.</param>
+/// <param name="TextureRecord">The texture record.</param>
+/// <param name="FactionId">The NPC faction.</param>
+/// <param name="Flags">The flags.</param>
+public sealed record DaggerfallBlockRmbFlat(int X, int Y, int Z, int TextureArchive, int TextureRecord, short FactionId, byte Flags);
+
+/// <summary>One section-3 waypoint: its position.</summary>
+/// <param name="X">The X position.</param>
+/// <param name="Y">The Y position.</param>
+/// <param name="Z">The Z position.</param>
+public sealed record DaggerfallBlockRmbSection(int X, int Y, int Z);
+
+/// <summary>One placed person: its position, texture and faction.</summary>
+/// <param name="X">The X position.</param>
+/// <param name="Y">The Y position.</param>
+/// <param name="Z">The Z position.</param>
+/// <param name="TextureArchive">The texture archive.</param>
+/// <param name="TextureRecord">The texture record.</param>
+/// <param name="FactionId">The NPC faction.</param>
+/// <param name="Flags">The NPC flags.</param>
+public sealed record DaggerfallBlockRmbPerson(int X, int Y, int Z, int TextureArchive, int TextureRecord, short FactionId, byte Flags);
+
+/// <summary>One placed door: its position, rotation and model.</summary>
+/// <param name="X">The X position.</param>
+/// <param name="Y">The Y position.</param>
+/// <param name="Z">The Z position.</param>
+/// <param name="YRotation">The Y rotation at starting position.</param>
+/// <param name="OpenRotation">The angle to rotate into open position.</param>
+/// <param name="DoorModelIndex">The model index offset from the base door id.</param>
+public sealed record DaggerfallBlockRmbDoor(int X, int Y, int Z, short YRotation, short OpenRotation, byte DoorModelIndex);
 
 /// <summary>What a city block's own header declares, without a single placement decoded.</summary>
 /// <param name="Name">The name the block states for itself.</param>
@@ -177,6 +290,7 @@ public sealed record DaggerfallBlockRmbHeader(
 /// <param name="RdbName">Its name taken apart as a dungeon block, when it is one.</param>
 /// <param name="Rmb">What its header declares, when it is a city block that could be read.</param>
 /// <param name="Objects">What it places, when it is a dungeon block that could be read.</param>
+/// <param name="RmbPlacements">What it places, when it is a city block that could be read.</param>
 public sealed record DaggerfallBlockRecord(
     int Ordinal,
     string SourceKey,
@@ -190,7 +304,24 @@ public sealed record DaggerfallBlockRecord(
     DaggerfallBlockRmbName? RmbName,
     DaggerfallBlockRdbName? RdbName,
     DaggerfallBlockRmbHeader? Rmb,
-    DaggerfallBlockObjects? Objects);
+    DaggerfallBlockObjects? Objects,
+    DaggerfallBlockRmbPlacements? RmbPlacements = null);
+
+/// <summary>One block's placements: every building plus the block's own objects.</summary>
+/// <param name="Buildings">One entry per building sub-record, in header order.</param>
+/// <param name="MiscModels">The block's own 3D object placements.</param>
+/// <param name="MiscFlats">The block's own flat placements.</param>
+public sealed record DaggerfallBlockRmbPlacements(
+    IReadOnlyList<DaggerfallBlockBuildingPlacements> Buildings,
+    IReadOnlyList<DaggerfallBlockRmbModel> MiscModels,
+    IReadOnlyList<DaggerfallBlockRmbFlat> MiscFlats);
+
+/// <summary>One building's placements: both halves.</summary>
+/// <param name="Exterior">The outside half's placements.</param>
+/// <param name="Interior">The inside half's placements.</param>
+public sealed record DaggerfallBlockBuildingPlacements(
+    DaggerfallBlockHalfPlacements Exterior,
+    DaggerfallBlockHalfPlacements Interior);
 
 /// <summary>One archive the published blocks were read from.</summary>
 /// <param name="RecordId">The inventory's identity for the family.</param>
@@ -213,7 +344,7 @@ public sealed record DaggerfallBlocks(
     IReadOnlyList<DaggerfallBlockRecord> Records)
 {
     /// <summary>Shape version this publication writes.</summary>
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 
     /// <summary>The bytes of a city block header, up to and including the block's own name.</summary>
     public const int RmbHeaderBytes = RmbBlockSummaryReader.HeaderBytes;
@@ -294,6 +425,16 @@ public sealed record DaggerfallBlocks(
 /// <summary>One record of the block inventory checked against what its own name and bytes claim.</summary>
 internal static class DaggerfallBlockValidation
 {
+    private static void CheckHalf(string key, DaggerfallBlockObjectCounts counts, DaggerfallBlockHalfPlacements placed)
+    {
+        if (counts.Objects != placed.Models.Count || counts.Flats != placed.Flats.Count
+            || counts.Sections != placed.Sections.Count || counts.People != placed.People.Count
+            || counts.Doors != placed.Doors.Count)
+        {
+            throw new InvalidOperationException($"Published block '{key}' declares half counts its placements do not repeat.");
+        }
+    }
+
     /// <summary>Checks one record's own claims.</summary>
     internal static void Validate(this DaggerfallBlockRecord record)
     {
@@ -356,13 +497,18 @@ internal static class DaggerfallBlockValidation
                     throw new InvalidOperationException($"Published block '{record.SourceKey}' is a readable dungeon block with no object summary.");
                 case DaggerfallBlockKind.Rdb when record.Rmb is not null:
                     throw new InvalidOperationException($"Published block '{record.SourceKey}' is a readable dungeon block carrying a city header summary.");
+                case DaggerfallBlockKind.Rmb when record.RmbPlacements is null:
+                    throw new InvalidOperationException($"Published block '{record.SourceKey}' is a readable city block with no placements.");
+                case DaggerfallBlockKind.Rdb when record.RmbPlacements is not null:
+                    throw new InvalidOperationException($"Published block '{record.SourceKey}' is a readable dungeon block carrying city placements.");
                 case DaggerfallBlockKind.Rdi or DaggerfallBlockKind.Unknown when record.Rmb is not null || record.Objects is not null:
                     throw new InvalidOperationException($"Published block '{record.SourceKey}' is a {record.Kind} record the donor reads as unknown bytes, and it still summarizes what the record places.");
                 default:
                     break;
             }
+
         }
-        else if (record.Rmb is not null || record.Objects is not null)
+        else if (record.Rmb is not null || record.Objects is not null || record.RmbPlacements is not null)
         {
             throw new InvalidOperationException($"Published block '{record.SourceKey}' is malformed and still summarizes bytes it could not read.");
         }
@@ -532,6 +678,44 @@ internal static class DaggerfallBlockValidation
                 throw new InvalidOperationException($"Published block '{record.SourceKey}' states building {index} places {Body(building.Exterior) + Body(building.Interior)} bytes of records in {building.ByteLength} bytes with {building.PaddingBytes} of padding.");
             }
         }
+
+        // Placements repeat what the counts declare, so a count without its records (or records
+        // without their count) is a publication defect rather than a source fact. These run after
+        // the byte accounting above so a lie about sizes is still refused where it is stated.
+        if (record.State == DaggerfallBlockState.Read)
+        {
+            if (record.Objects is not null)
+            {
+                if (record.Objects.ModelPlacements.Count != record.Objects.Models
+                    || record.Objects.FlatPlacements.Count != record.Objects.Flats
+                    || record.Objects.LightPlacements.Count != record.Objects.Lights)
+                {
+                    throw new InvalidOperationException($"Published block '{record.SourceKey}' declares counts its placements do not repeat.");
+                }
+            }
+
+            if (record.Rmb is not null && record.RmbPlacements is not null)
+            {
+                if (record.Rmb.Buildings.Count != record.RmbPlacements.Buildings.Count)
+                {
+                    throw new InvalidOperationException($"Published block '{record.SourceKey}' declares buildings its placements do not repeat.");
+                }
+
+                for (int index = 0; index < record.Rmb.Buildings.Count; index++)
+                {
+                    DaggerfallBlockBuilding building = record.Rmb.Buildings[index];
+                    DaggerfallBlockBuildingPlacements placed = record.RmbPlacements.Buildings[index];
+                    CheckHalf(record.SourceKey, building.Exterior, placed.Exterior);
+                    CheckHalf(record.SourceKey, building.Interior, placed.Interior);
+                }
+
+                if (record.Rmb.Misc3dObjects != record.RmbPlacements.MiscModels.Count
+                    || record.Rmb.MiscFlatObjects != record.RmbPlacements.MiscFlats.Count)
+                {
+                    throw new InvalidOperationException($"Published block '{record.SourceKey}' declares block objects its placements do not repeat.");
+                }
+            }
+        }
     }
 
     /// <summary>The bytes the records one half's counts declare occupy.</summary>
@@ -624,8 +808,9 @@ public static class DaggerfallBlocksBuilder
                 record.Reason,
                 Publish(record.RmbName),
                 Publish(record.RdbName),
-                Publish(record.RmbHeader),
-                Publish(record.Objects)));
+                Publish(record.RmbHeader, record.RmbPlacements),
+                Publish(record.Objects),
+                Publish(record.RmbPlacements)));
         }
 
         DaggerfallBlocks published = new(
@@ -646,17 +831,32 @@ public static class DaggerfallBlocksBuilder
     private static DaggerfallBlockRdbName? Publish(BlockRdbName? name) =>
         name is null ? null : new DaggerfallBlockRdbName(name.Letter.ToString(), name.NumberText, name.Number, (DaggerfallBlockRdbType)name.Type);
 
-    private static DaggerfallBlockRmbHeader? Publish(RmbBlockSummary? summary) =>
+    private static DaggerfallBlockRmbHeader? Publish(RmbBlockSummary? summary, RmbBlockPlacements? placements) =>
         summary is null ? null : new DaggerfallBlockRmbHeader(
             summary.Name,
             summary.OtherNames,
             summary.DeclaredBlocks,
             summary.Misc3dObjects,
             summary.MiscFlatObjects,
-            [.. summary.Buildings.Select(building => new DaggerfallBlockBuilding(
+            [.. summary.Buildings.Select((building, index) => new DaggerfallBlockBuilding(
                 building.Index, building.ByteLength, building.PaddingBytes, building.BuildingType, building.FactionId, building.Quality, building.NameSeed,
-                Publish(building.Exterior), Publish(building.Interior)))],
+                Publish(building.Exterior), Publish(building.Interior),
+                PublishHalf(placements?.Buildings.ElementAtOrDefault(index)?.Exterior), PublishHalf(placements?.Buildings.ElementAtOrDefault(index)?.Interior)))],
             summary.TrailingBytes);
+
+    private static DaggerfallBlockHalfPlacements PublishHalf(RmbHalfPlacements? half) =>
+        new(
+            [.. (half?.Models ?? []).Select(model => new DaggerfallBlockRmbModel(model.ModelId, model.ObjectType, model.X, model.Y, model.Z, model.YRotation))],
+            [.. (half?.Flats ?? []).Select(flat => new DaggerfallBlockRmbFlat(flat.X, flat.Y, flat.Z, flat.TextureArchive, flat.TextureRecord, flat.FactionId, flat.Flags))],
+            [.. (half?.Sections ?? []).Select(section => new DaggerfallBlockRmbSection(section.X, section.Y, section.Z))],
+            [.. (half?.People ?? []).Select(person => new DaggerfallBlockRmbPerson(person.X, person.Y, person.Z, person.TextureArchive, person.TextureRecord, person.FactionId, person.Flags))],
+            [.. (half?.Doors ?? []).Select(door => new DaggerfallBlockRmbDoor(door.X, door.Y, door.Z, door.YRotation, door.OpenRotation, door.DoorModelIndex))]);
+
+    private static DaggerfallBlockRmbPlacements? Publish(RmbBlockPlacements? placements) =>
+        placements is null ? null : new DaggerfallBlockRmbPlacements(
+            [.. placements.Buildings.Select(building => new DaggerfallBlockBuildingPlacements(PublishHalf(building.Exterior), PublishHalf(building.Interior)))],
+            [.. placements.MiscModels.Select(model => new DaggerfallBlockRmbModel(model.ModelId, model.ObjectType, model.X, model.Y, model.Z, model.YRotation))],
+            [.. placements.MiscFlats.Select(flat => new DaggerfallBlockRmbFlat(flat.X, flat.Y, flat.Z, flat.TextureArchive, flat.TextureRecord, flat.FactionId, flat.Flags))]);
 
     private static DaggerfallBlockObjectCounts Publish(RmbObjectCounts counts) =>
         new(counts.Objects, counts.Flats, counts.Sections, counts.People, counts.Doors);
@@ -666,5 +866,13 @@ public static class DaggerfallBlocksBuilder
             objects.Models, objects.Flats, objects.Lights, objects.Doors,
             objects.StartMarkers, objects.EnterMarkers, objects.TreasureMarkers, objects.FixedMobiles,
             objects.ModelIds,
-            [.. objects.Textures.Select(texture => new DaggerfallBlockTexture(texture.Archive, texture.Record))]);
+            [.. objects.Textures.Select(texture => new DaggerfallBlockTexture(texture.Archive, texture.Record))],
+            [.. objects.ModelPlacements.Select(model => new DaggerfallBlockModelPlacement(
+                model.Index, model.ModelId, model.X, model.Y, model.Z, model.YRotation, model.Description,
+                model.ActionAxis, model.ActionDuration, model.ActionMagnitude, model.ActionNext, model.ActionFlags))],
+            [.. objects.FlatPlacements.Select(flat => new DaggerfallBlockFlatPlacement(
+                flat.Index, flat.X, flat.Y, flat.Z, flat.TextureArchive, flat.TextureRecord,
+                flat.Flags, flat.Magnitude, flat.FactionOrMobileId, flat.NextObjectOffset, flat.Action))],
+            [.. objects.LightPlacements.Select(light => new DaggerfallBlockLightPlacement(light.Index, light.X, light.Y, light.Z, light.Radius))],
+            [.. objects.DoorPlacements.Select(door => new DaggerfallBlockDoorPlacement(door.ModelIndex, door.ModelId, door.X, door.Y, door.Z, door.Description))]);
 }

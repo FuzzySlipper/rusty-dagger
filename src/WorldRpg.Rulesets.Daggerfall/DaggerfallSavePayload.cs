@@ -21,7 +21,8 @@ internal sealed record DaggerfallSavePayload(
     DaggerfallCalendarSave Calendar,
     DaggerfallSiteSave Site,
     DaggerfallActorInventorySave[] ActorInventories,
-    DaggerfallVariablesSave Variables)
+    DaggerfallVariablesSave Variables,
+    DaggerfallNpcSave Npcs)
 {
     /// <summary>The dynamic identity kinds owned by the current Daggerfall ruleset.</summary>
     internal static readonly DurableIdentityKind[] PersistedKinds = [DurableIdentityKind.Actor, DurableIdentityKind.Item];
@@ -149,6 +150,8 @@ internal sealed record DaggerfallSavePayload(
         ArgumentNullException.ThrowIfNull(ActorInventories);
         ArgumentNullException.ThrowIfNull(Variables);
         Variables.Validate();
+        ArgumentNullException.ThrowIfNull(Npcs);
+        Npcs.Validate();
         if (Experience < 0 || Level < 1)
             throw new ArgumentOutOfRangeException(nameof(Experience), "Saved progression must be non-negative and begin at level one.");
         if (!double.IsFinite(Calendar.RemainderSeconds) || Calendar.RemainderSeconds < 0d || Calendar.RemainderSeconds >= 1d)
@@ -363,6 +366,46 @@ internal sealed record DaggerfallVariableSave(int Scope, int Owner, int Key, boo
             _ => throw new InvalidOperationException($"Saved variable names scope {Scope}, which the contract does not declare."),
         };
         return new DaggerfallVariableAddress(scope, Owner, Key);
+    }
+}
+
+/// <summary>One persisted NPC: its identity, kind, site, appearance, role and presence.</summary>
+internal sealed record DaggerfallNpcEntry(
+    long DurableId,
+    int Kind,
+    string StableKey,
+    int Region,
+    string Location,
+    string Building,
+    string Race,
+    string Gender,
+    int BillboardArchive,
+    int BillboardRecord,
+    ushort NameSeed,
+    int FactionId,
+    string Role,
+    string[] Services,
+    int Presence,
+    int? X,
+    int? Y,
+    int? Z);
+
+/// <summary>The session's NPCs in durable order.</summary>
+internal sealed record DaggerfallNpcSave(DaggerfallNpcEntry[] Entries)
+{
+    internal void Validate()
+    {
+        ArgumentNullException.ThrowIfNull(Entries);
+        foreach (DaggerfallNpcEntry entry in Entries)
+        {
+            ArgumentNullException.ThrowIfNull(entry);
+            if (!Enum.IsDefined((DaggerfallNpcKind)entry.Kind) || !Enum.IsDefined((DaggerfallNpcPresence)entry.Presence))
+            {
+                throw new ArgumentOutOfRangeException(nameof(entry), entry.Kind, "A saved NPC names a kind or presence the contract does not declare.");
+            }
+
+            ArgumentNullException.ThrowIfNull(entry.Services);
+        }
     }
 }
 

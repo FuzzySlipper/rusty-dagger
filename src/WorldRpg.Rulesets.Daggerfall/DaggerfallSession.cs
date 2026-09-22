@@ -34,7 +34,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
     /// <summary>Admitted world seconds a panel request stands before the DOM is assumed not to need it.</summary>
     private const double PanelRequestLifetimeSeconds = 1d;
     private readonly IRandomService _random;
-    private readonly PlayerInputSystem _input;
+    private PlayerInputSystem _input;
     private ProductMode _mode = ProductMode.Playing;
     private readonly SpatialMovementSystem _spatial;
     private readonly FirstPersonCameraSystem _camera;
@@ -192,6 +192,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
             }
 
             _uniqueItems = DaggerfallUniqueItemAllocator.Sharing(_actorIdentities);
+            State.Npcs.Identities = _actorIdentities;
             _corpseLoot = new DaggerfallCorpseLootModule(
                 engine.Perception,
                 _spatial,
@@ -247,6 +248,34 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IModeAwareGameSe
     /// memory, managed inventory and equipment, definition loadout, and floor grounding.
     /// Returns the allocated durable identity, which the save persists and restore reuses.
     /// </summary>
+    /// <summary>
+    /// Applies persisted control settings: movement keys rebind through the input owner, which
+    /// releases held keys its new bindings no longer claim. Action intents ride the browser
+    /// shell's bindings, so only movement travels this path today.
+    /// </summary>
+    internal void ApplyControlSettings(DaggerfallControlSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        PlayerControlBindings controls = new(
+            DaggerfallInput.Controls.MovementIntents,
+            ParseKey(settings.KeysFor("move.forward")),
+            ParseKey(settings.KeysFor("move.backward")),
+            ParseKey(settings.KeysFor("move.left")),
+            ParseKey(settings.KeysFor("move.right")),
+            DaggerfallInput.Controls.DirectionalIntents);
+        _input.Rebind(controls, DaggerfallInput.Bindings);
+
+        static KeyboardControl ParseKey(IReadOnlyList<string> keys)
+        {
+            if (keys.Count != 1 || !Enum.TryParse(keys[0], out KeyboardControl key))
+            {
+                throw new ArgumentException($"Movement binds exactly one keyboard key, not '{string.Join(",", keys)}'.", nameof(settings));
+            }
+
+            return key;
+        }
+    }
+
     internal long SpawnActor(string definitionId, ActorPose pose, int? level = null)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
