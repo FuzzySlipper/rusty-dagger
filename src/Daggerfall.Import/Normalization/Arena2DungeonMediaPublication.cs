@@ -88,6 +88,21 @@ public sealed class Arena2DungeonMediaSourceSet
 
     internal IReadOnlySet<ushort> TextureArchives => textures.Keys.ToHashSet();
 
+    /// <summary>
+    /// Refuses a selected media closure whose source leaves are absent or refused by the corpus
+    /// inventory. The caller supplies its consumer name so a failed publication names both the
+    /// selected world media and the exact leaf rather than producing a substitute texture.
+    /// </summary>
+    public void RequireTextureLeaves(TextureLeafInventory inventory, string consumer)
+    {
+        ArgumentNullException.ThrowIfNull(inventory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(consumer);
+        foreach (ushort archive in textures.Keys.Order())
+        {
+            inventory.Require(archive, $"{consumer} (TEXTURE.{archive:000})");
+        }
+    }
+
     internal int SourceCount => textures.Count + 1;
 
     internal long SourceByteLength => checked(palette.Bytes.Length + textures.Values.Sum(source => (long)source.Bytes.Length));
@@ -156,6 +171,14 @@ public sealed record Arena2DungeonMediaRequest(
     /// </summary>
     public DungeonMediaDisplayProfile DisplayProfile { get; init; } = DungeonMediaDisplayProfile.DaggerfallDefault;
 
+    /// <summary>
+    /// The complete texture-leaf inventory is optional for isolated decoder tests. A real selected
+    /// publication supplies it and names the consumer so a refused source leaf fails before any
+    /// generated artifact can claim to close over it.
+    /// </summary>
+    public TextureLeafInventory? TextureLeaves { get; init; }
+    public string? TextureLeafConsumer { get; init; }
+
     public static Arena2DungeonMediaRequest Create(NormalizedImportDocument dungeon, Arena2DungeonMediaSourceSet sources) =>
         new(dungeon, sources, Arena2DungeonMediaQuotas.Default);
 
@@ -169,6 +192,10 @@ public sealed record Arena2DungeonMediaRequest(
         ArgumentNullException.ThrowIfNull(AuthoredOverlays);
         ArgumentNullException.ThrowIfNull(DisplayProfile);
         DisplayProfile.Validate();
+        if ((TextureLeaves is null) != string.IsNullOrWhiteSpace(TextureLeafConsumer))
+        {
+            throw new ArgumentException("Texture leaf inventory and consumer must be supplied together.");
+        }
     }
 }
 
@@ -495,6 +522,10 @@ public sealed record Arena2DungeonMediaPublication(
         Arena2Palette palette = request.Sources.DecodePalette();
         Selection selection = Select(request.Dungeon);
         EnforceExactTextureClosure(request.Sources, selection.RequiredArchives);
+        if (request.TextureLeaves is not null)
+        {
+            request.Sources.RequireTextureLeaves(request.TextureLeaves, request.TextureLeafConsumer!);
+        }
         EnforceSpriteOnlyOverlays(request.AuthoredOverlays, selection.Materials);
 
         Dictionary<ushort, TextureArchive> archives = selection.RequiredArchives

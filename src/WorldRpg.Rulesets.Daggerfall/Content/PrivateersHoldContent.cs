@@ -662,7 +662,7 @@ internal static class PrivateersHoldContent
                 float? framesPerSecond = OptionalSingle(resource, "framesPerSecond", diagnostics);
                 bool? loop = OptionalBoolean(resource, "loop", diagnostics);
                 IReadOnlyList<int> sequence = OptionalSequence(resource, frames, diagnostics);
-                if (!resources.TryAdd(id, new ClassicMediaResource(id, kind, path, hash, atlasWidth, atlasHeight, Array.AsReadOnly(frames.ToArray()), pivot, displaySize, framesPerSecond, loop, sequence))) diagnostics.Add($"Generated classic media repeats resource '{id}'.");
+                if (!resources.TryAdd(id, new ClassicMediaResource(id, kind, relativePath, path, hash, byteLength, atlasWidth, atlasHeight, Array.AsReadOnly(frames.ToArray()), pivot, displaySize, framesPerSecond, loop, sequence))) diagnostics.Add($"Generated classic media repeats resource '{id}'.");
             }
             List<NormalizedAudioClip> audio = [];
             foreach (JsonElement value in DaggerfallBaseContent.Array(root, "audio", diagnostics))
@@ -692,7 +692,16 @@ internal static class PrivateersHoldContent
                 }
                 else diagnostics.Add($"Inventory icon '{itemId}' refers to missing inventory media.");
             }
-            return (Array.AsReadOnly(audio.ToArray()), new NormalizedClassicPresentation(weapons, effects) { InventoryIcons = new ReadOnlyDictionary<string, string>(icons) });
+            IReadOnlyDictionary<string, NormalizedClassicMediaResource> publishedResources = new ReadOnlyDictionary<string, NormalizedClassicMediaResource>(
+                resources.Values.ToDictionary(
+                    resource => resource.Id,
+                    resource => new NormalizedClassicMediaResource(resource.Id, resource.Kind, resource.RelativePath, resource.Hash, resource.ByteLength),
+                    StringComparer.Ordinal));
+            return (Array.AsReadOnly(audio.ToArray()), new NormalizedClassicPresentation(weapons, effects)
+            {
+                InventoryIcons = new ReadOnlyDictionary<string, string>(icons),
+                Resources = publishedResources,
+            });
         }
         catch (JsonException exception)
         {
@@ -1073,6 +1082,12 @@ internal sealed record NormalizedClassicPresentation(IReadOnlyDictionary<string,
 {
     internal static NormalizedClassicPresentation Empty { get; } = new(new Dictionary<string, NormalizedClassicWeapon>(), Array.Empty<NormalizedClassicEffect>());
     internal IReadOnlyDictionary<string, string> InventoryIcons { get; init; } = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>());
+    /// <summary>
+    /// Every normalized classic descriptor admitted by the selected site's generated sidecar. The
+    /// ruleset joins this eager metadata to the public media inventory once during composition;
+    /// callers can then request the declared bodies lazily by their public paths.
+    /// </summary>
+    internal IReadOnlyDictionary<string, NormalizedClassicMediaResource> Resources { get; init; } = new ReadOnlyDictionary<string, NormalizedClassicMediaResource>(new Dictionary<string, NormalizedClassicMediaResource>());
     internal IReadOnlyDictionary<string, string> CompatibleItemVisuals { get; init; } = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>());
     internal string? UnarmedVisual { get; init; }
     internal ClassicViewmodelStyle? Viewmodel { get; init; }
@@ -1083,6 +1098,7 @@ internal sealed record NormalizedClassicPresentation(IReadOnlyDictionary<string,
     }
 }
 internal sealed record ClassicViewmodelStyle(int RenderOrder);
+internal sealed record NormalizedClassicMediaResource(string Id, string Kind, string RelativePath, ContentSha256 Sha256, long ByteLength);
 internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, uint InitialFrameId, Vector2 Pivot, Vector2 Size)
 {
     internal IReadOnlyDictionary<string, NormalizedSpriteState> States { get; init; } = new ReadOnlyDictionary<string, NormalizedSpriteState>(new Dictionary<string, NormalizedSpriteState>());
@@ -1130,4 +1146,4 @@ internal sealed class ProjectFacts(WorldPoint? playerPosition, IReadOnlyDictiona
     internal IReadOnlyDictionary<long, AuthoredActor> Actors { get; } = new ReadOnlyDictionary<long, AuthoredActor>(actors.ToDictionary());
 }
 internal sealed record AuthoredActor(long EntityId, DaggerfallActorId ActorId, WorldPoint Position);
-internal sealed record ClassicMediaResource(string Id, string Kind, string Path, ContentSha256 Hash, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, Vector2 Pivot, Vector2 DisplaySize, float? FramesPerSecond, bool? Loop, IReadOnlyList<int> Sequence);
+internal sealed record ClassicMediaResource(string Id, string Kind, string RelativePath, string Path, ContentSha256 Hash, long ByteLength, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, Vector2 Pivot, Vector2 DisplaySize, float? FramesPerSecond, bool? Loop, IReadOnlyList<int> Sequence);

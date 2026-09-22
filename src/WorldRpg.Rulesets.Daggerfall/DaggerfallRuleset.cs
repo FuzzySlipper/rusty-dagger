@@ -75,8 +75,9 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(selected.RequireContentPack(BlocksPack).Payload);
             ContentPack pack = selected.RequireContentPack(PrivateersHoldPack);
             PrivateersHoldInputs inputs = PrivateersHoldContent.Read(selected.Content, pack.Payload, definitions);
+            DaggerfallPublishedClassicMedia classicMedia = DaggerfallPublishedClassicMedia.Read(selected.Content, inputs.ClassicPresentation);
             DaggerfallTuning tuning = DaggerfallTuning.Read(selected.Tuning.Payload.Span);
-            return new DaggerfallAdmittedContent(definitions, blocks, inputs, tuning, new DaggerfallAudioBundle(selected.Content, inputs.Audio), selected.Content);
+            return new DaggerfallAdmittedContent(definitions, blocks, inputs, tuning, classicMedia, new DaggerfallAudioBundle(selected.Content, inputs.Audio), selected.Content);
         });
 
     private sealed record DaggerfallAdmittedContent(
@@ -84,6 +85,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
         DaggerfallBlocksSnapshot Blocks,
         PrivateersHoldInputs Inputs,
         DaggerfallTuning Tuning,
+        DaggerfallPublishedClassicMedia ClassicMedia,
         DaggerfallAudioBundle Audio,
         Rusty.Engine.ProductContent Content);
 }

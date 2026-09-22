@@ -74,10 +74,10 @@ public sealed class PublishedContentDeliveryTests
                 && !path.Contains("/character/", StringComparison.Ordinal)
                 && !path.Contains("/cinematics/", StringComparison.Ordinal))];
         Assert.Equal(published.Order(StringComparer.Ordinal), listed.Order(StringComparer.Ordinal));
-        // The published group carries the seventy-four media artifacts and the sound catalog that
-        // describes the whole archive, and the inventory indexes both because both are content.
+        // The published group carries every classic descriptor and the sound catalog that describes
+        // the archive. The inventory indexes both because both are admitted content.
         Assert.Contains("worldrpg/media/audio/classic-sound-catalog.json", listed);
-        Assert.Equal(80, listed.Count);
+        Assert.Equal(154, listed.Count);
 
         // The character canvases are admitted content in the same tree: they have their own generated
         // index beside them, and both indexes state the bytes they describe rather than trusting them.
@@ -357,9 +357,9 @@ public sealed class PublishedContentDeliveryTests
             Assert.Equal(byteLength, content.ReadBytes(path).Length);
         }
 
-        // The twelve classic UI images the group publishes, the authored skins, and every item icon
-        // the pack names for its catalog: the death screen is the artifact this delivery path exists
-        // for, and the service screens are the ones a UI task binds by slot.
+        // The classic UI images, authored skins, every item icon, maps, fonts and weapon atlases have
+        // stable public identities. The death screen is the artifact this delivery path started from,
+        // while the map and font identities remain available to their named presentation consumers.
         Assert.Equal(("worldrpg/media/ui/screen-death.png", 63124L), identified["screen.death"]);
         Assert.Equal("worldrpg/media/ui/window-character-sheet-chrome.png", identified["window.character-sheet.chrome"].Path);
         Assert.Equal("worldrpg/media/ui/window-book-reader.png", identified["window.book.reader"].Path);
@@ -375,7 +375,10 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal("worldrpg/media/ui/window-merchant-buttons-identify.png", identified["window.merchant.buttons.identify"].Path);
         Assert.Equal("worldrpg/media/ui/inventory-icons/inventory-icon-iron-dagger.png", identified["inventory.icon.iron-dagger"].Path);
         Assert.Equal("worldrpg/media/ui/authored/inventory-skin-panel-slate-v1.png", identified["inventory.skin.panel-slate.v1"].Path);
-        Assert.Equal(79, identified.Count);
+        Assert.Equal("worldrpg/media/maps/map-fmap0i17.png", identified["map.fmap0i17"].Path);
+        Assert.Equal("worldrpg/media/fonts/font-classic-0000-atlas.png", identified["font.classic.0000"].Path);
+        Assert.Equal("worldrpg/media/combat/weapon-werecreature-atlas.png", identified["weapon.werecreature"].Path);
+        Assert.Equal(153, identified.Count);
 
         // The identities the group states are the identities the pack publishes for the same images,
         // so a consumer that asks by media name cannot be answered with a different artifact.
@@ -401,7 +404,29 @@ public sealed class PublishedContentDeliveryTests
         Assert.Empty(identified.Keys.Except(packPaths.Keys));
         Assert.All(
             identified.Keys.Where(packPaths.ContainsKey),
-            id => Assert.Equal(Path.GetFileName(packPaths[id]), Path.GetFileName(identified[id].Path)));
+            id => Assert.Equal($"worldrpg/{packPaths[id]}", identified[id].Path));
+    }
+
+    [Fact]
+    public void The_ruleset_admits_every_selected_classic_descriptor_from_public_content()
+    {
+        // The normalized sidecar is selected content, while the public inventory is the only
+        // runtime catalog of bodies. Join them through the ruleset reader, so session composition
+        // refuses a moved, missing, or substituted public artifact before a presentation consumer
+        // asks for it.
+        ProductContent content = AdmittedContent();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
+            content.ReadBytes("worldrpg/payloads/daggerfall.base.json"));
+        PrivateersHoldInputs inputs = PrivateersHoldContent.Read(
+            content,
+            content.ReadBytes("worldrpg/payloads/daggerfall.privateers-hold.json"),
+            definitions);
+        DaggerfallPublishedClassicMedia media = DaggerfallPublishedClassicMedia.Read(content, inputs.ClassicPresentation);
+
+        Assert.Equal(153, media.Paths.Count);
+        Assert.Equal("worldrpg/media/maps/map-fmap0i17.png", media.Paths["map.fmap0i17"]);
+        Assert.Equal("worldrpg/media/fonts/font-classic-0000-atlas.png", media.Paths["font.classic.0000"]);
+        Assert.Equal("worldrpg/media/combat/weapon-werecreature-atlas.png", media.Paths["weapon.werecreature"]);
     }
 
     [Fact]
