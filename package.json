@@ -2,6 +2,7 @@
   "name": "rusty-dagger-product-ui",
   "private": true,
   "devDependencies": {
+    "jsdom": "^30.1.1",
     "typescript": "5.9.3"
   }
 }

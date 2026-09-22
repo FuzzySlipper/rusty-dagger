@@ -442,8 +442,13 @@ internal static class PrivateersHoldContent
                 int sourceHeight = DaggerfallBaseContent.Integer(resource, "sourceHeight", diagnostics);
                 int atlasWidth = DaggerfallBaseContent.Integer(resource, "atlasWidth", diagnostics);
                 int atlasHeight = DaggerfallBaseContent.Integer(resource, "atlasHeight", diagnostics);
+                // WAV descriptors retain their import-manifest identity and digest in eager content,
+                // but their bodies are opened from the declared Engine bundle on the first cue.
+                // Everything else remains part of the eagerly admitted closure.
+                bool hasExpectedBody = kind == "audio"
+                    || files.GetExactlyOne(path) is ReadOnlyMemory<byte> artifactBytes && artifactBytes.Length == byteLength;
                 if (!ValidLogicalId(id) || !ValidLogicalPath(relativePath) || !KnownClassicMediaKind(kind) || byteLength <= 0 || string.IsNullOrWhiteSpace(mimeType) || sourceWidth < 0 || sourceHeight < 0
-                    || atlasWidth < 0 || atlasHeight < 0 || files.GetExactlyOne(path) is not ReadOnlyMemory<byte> artifactBytes || artifactBytes.Length != byteLength)
+                    || atlasWidth < 0 || atlasHeight < 0 || !hasExpectedBody)
                     diagnostics.Add($"Classic media descriptor '{id}' does not match the canonical importer contract.");
                 List<NormalizedAtlasFrame> frames = [];
                 foreach (JsonElement frameValue in DaggerfallBaseContent.Array(resource, "frames", diagnostics))

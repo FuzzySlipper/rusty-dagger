@@ -43,4 +43,16 @@ public sealed class DaggerfallUiActionTests
     [InlineData("{\"action\":\"art-request\",\"revision\":3}", false)]
     public void Art_requests_name_the_revision_the_dom_is_missing(string json, bool accepted)
         => Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
+
+    [Theory]
+    [InlineData("{\"action\":\"save-slots\"}", true)]
+    [InlineData("{\"action\":\"save-slot\",\"label\":\"Before the dungeon\"}", true)]
+    [InlineData("{\"action\":\"save-slot\",\"key\":\"slot-1\",\"label\":\"Before the dungeon\",\"confirm\":true}", true)]
+    [InlineData("{\"action\":\"save-slot\",\"label\":\"  \"}", false)]
+    [InlineData("{\"action\":\"load-slot\",\"key\":\"slot-1\"}", true)]
+    [InlineData("{\"action\":\"load-slot\"}", false)]
+    [InlineData("{\"action\":\"delete-slot\",\"key\":\"slot-1\",\"confirm\":true}", true)]
+    [InlineData("{\"action\":\"delete-slot\",\"key\":\"slot-1\",\"confirm\":\"yes\"}", false)]
+    public void Save_slot_actions_are_small_and_exact(string json, bool accepted)
+        => Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
 }

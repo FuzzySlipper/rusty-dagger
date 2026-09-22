@@ -34,7 +34,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         InventoryPresentation? inventory = null,
         LootPresentation? loot = null,
         CharacterSheetPresentation? character = null,
-        DaggerfallPanelRequest? panelRequest = null)
+        DaggerfallPanelRequest? panelRequest = null,
+        IReadOnlyList<SaveSlotSummary>? saveSlots = null,
+        string? saveSlotDiagnostic = null)
     {
         UiValueBuilder builder = new();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
@@ -78,6 +80,13 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 : builder.Object(
                     ("panel", builder.String(panelRequest.Panel)),
                     ("revision", builder.String(panelRequest.Revision.ToString(CultureInfo.InvariantCulture))))),
+            ("saveSlots", builder.Object(
+                ("entries", builder.Array((saveSlots ?? []).Select(slot => builder.Object(
+                    ("key", builder.String(slot.Key)),
+                    ("label", builder.String(slot.Label)),
+                    ("savedAtUtc", builder.String(slot.SavedAtUtc.ToString("O", CultureInfo.InvariantCulture))),
+                    ("ruleset", builder.String(slot.Ruleset)))).ToArray())),
+                ("diagnostic", saveSlotDiagnostic is null ? builder.Null() : builder.String(saveSlotDiagnostic)))),
         ];
         if (inventory is not null) fields = [.. fields, ("inventory", Inventory(builder, inventory))];
         // Contents are an affordance the same way focus is: a dead or paused product refuses the take

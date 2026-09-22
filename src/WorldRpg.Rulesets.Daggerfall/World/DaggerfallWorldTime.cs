@@ -34,8 +34,8 @@ internal sealed class DaggerfallWorldTime(
     /// admitted real duration and is scaled; rest, travel and prison arrive as game seconds their owner
     /// already decided - the donor's rest raises <c>minutesPerTick * 60</c>, its travel the journey's
     /// minutes, its training three hours - so the two paths meet here in the unit the calendar counts.
-    /// The fraction of a game second this clock holds is applied first, so an interval does not lose or
-    /// repeat the part of a second that was already bought.
+    /// Integral elapsed intervals preserve the unapplied fraction from ordinary play. Only a later
+    /// fractional update can complete that second; rounding it here would advance unrequested time.
     /// <para>
     /// What the caller gets back is where the advance stopped, which consequence stopped it and how
     /// much of the interval is still theirs. Applying the consequence and resuming is the caller's
@@ -54,13 +54,12 @@ internal sealed class DaggerfallWorldTime(
             throw new ArgumentOutOfRangeException(nameof(gameSeconds), gameSeconds, "An interval is not negative; nothing in the corpus shortens the world's clock.");
         }
 
-        // The clock's own unapplied fraction is spent first, so the interval is applied to a calendar
-        // that already accounts for everything the world was given.
-        long whole = (long)Math.Floor(_remainder + 1e-9);
-        _remainder -= whole;
-        DaggerfallCalendarAdvance advance = Calendar.AdvanceToFirstConsequence(gameSeconds + whole, consequences);
+        // The remainder is already a fraction in [0, 1). An integral interval cannot make it
+        // whole. In particular, applying the ordinary-update tolerance here could turn a zero
+        // interval into a calendar tick and leave a negative, unsaveable remainder.
+        DaggerfallCalendarAdvance advance = Calendar.AdvanceToFirstConsequence(gameSeconds, consequences);
         Calendar = advance.Calendar;
-        return advance with { AppliedSeconds = advance.AppliedSeconds - whole, RemainingSeconds = advance.RemainingSeconds };
+        return advance;
     }
 
     /// <summary>Advances the clock by an admitted real duration at the given scale.</summary>

@@ -29,6 +29,7 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
+using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -60,6 +61,61 @@ public sealed class NormalizedRuntimeSeamTests
         session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 2, 1, 1, 100, 60, 3, 0, 1d / 60d),
             [Input(InputEventKind.MappedDigital, InputEdge.Held, x: 1, phase: InputPhase.Held, intent: "attack")]);
         Assert.Equal(after, session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current);
+    }
+
+    [Fact]
+    public void Admitted_player_hits_record_skill_uses_once_per_operation_and_preserve_them_through_save()
+    {
+        string root = RepositoryRoot();
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1d, 1d, PerceptionPairKind.Visible, 1d));
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        ProductInputEvent pressed = Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack");
+        ProductUpdateFacts first = new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d);
+
+        session.Update(new ProductUpdate(first, [pressed]));
+        Assert.Equal(1, session.State.Progression.SkillUses["long-blade"]);
+        Assert.Equal(1, session.State.Progression.SkillUses["critical-strike"]);
+
+        // The Engine admitted this exact generation/step already. Replaying its UI input reaches
+        // the normal session path, but AttackExecution refuses it before Daggerfall can tally again.
+        session.Update(new ProductUpdate(first, [pressed]));
+        Assert.Equal(1, session.State.Progression.SkillUses["long-blade"]);
+        Assert.Equal(1, session.State.Progression.SkillUses["critical-strike"]);
+
+        // Clear the presentation strike latch, then submit a distinct later operation in the same
+        // generation after its combat cooldown. It is an independent admitted hit, so it counts.
+        appearance.AdvanceReceiptForAll = CompletedMarker(1);
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 2, 2, 60, 1, 0, 1d / 60d), []));
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 3, 3, 60, 1, 0, 1d / 60d), []));
+        appearance.AdvanceReceiptForAll = null;
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 100, 100, 60, 1, 0, 1d / 60d), [pressed]));
+        Assert.Equal(2, session.State.Progression.SkillUses["long-blade"]);
+        Assert.Equal(2, session.State.Progression.SkillUses["critical-strike"]);
+
+        DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
+        Assert.Equal(2, saved.SkillUses.Counters.Single(counter => counter.Skill == "long-blade").Uses);
+        Assert.Equal(2, saved.SkillUses.Counters.Single(counter => counter.Skill == "critical-strike").Uses);
+        Assert.True(saved.SkillUses.StartingLevelUpSkillSum > 0);
+
+        ContentFake resumedContent = new(releases);
+        PopulateContent(resumedContent, inputs);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
+
+        Assert.Equal(2, restored.State.Progression.SkillUses["long-blade"]);
+        Assert.Equal(2, restored.State.Progression.SkillUses["critical-strike"]);
+        Assert.Equal(saved.SkillUses.StartingLevelUpSkillSum, restored.State.SkillUses.StartingLevelUpSkillSum);
     }
 
     [Fact]
@@ -1883,6 +1939,144 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Session_save_restore_retains_social_reaction_and_guild_eligibility_without_a_loaded_npc()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallFactionDefinition faction = definitions.Factions.Factions[15];
+        List<string> releases = [];
+        ContentFake sourceContent = new(releases);
+        PopulateContent(sourceContent, inputs);
+        SpatialFake sourceSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake source = EngineContextFake.Create(sourceContent, sourceSpatial.Service, new AppearanceFake(releases));
+        RulesetSavePayload payload;
+        DaggerfallFactionReaction expected;
+        DaggerfallGuildEligibility expectedEligibility;
+        DaggerfallNpc unloaded = new(9000, DaggerfallNpcKind.Static, "unloaded-social-test",
+            new DaggerfallNpcSite(0, "Daggerfall", "social-test"),
+            new DaggerfallNpcAppearance("Breton", "Male", 0, 0, 0, faction.Id), "talker", ["talk", "quest"],
+            DaggerfallNpcPresence.Hidden, null, null, null);
+        using (DaggerfallSession original = new(source.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        {
+            _ = original.State.Social.ChangeFactionReputation(faction.Id, 10, DaggerfallFactionReputationChange.Propagate);
+            _ = original.State.Social.ChangePersonalReputation(faction.SocialGroup, 7);
+            _ = original.State.Social.ChangeRegionalReputation(0, -4);
+            _ = original.State.Social.JoinGuild(faction.Id, currentDay: 8);
+            _ = original.State.Social.PromoteGuild(faction.Id, currentDay: 12);
+            _ = original.State.Social.PromoteGuild(faction.Id, currentDay: 13);
+            _ = original.State.Social.ChangeGuildRecognition(faction.Id, 3);
+            expected = original.State.Social.ReactionForNpc(unloaded);
+            expectedEligibility = original.State.Social.GuildEligibility(faction.Id);
+            payload = original.CaptureSave();
+        }
+
+        DaggerfallSocialSave saved = DaggerfallSavePayload.Read(payload).Social;
+        Assert.Contains(saved.Factions, entry => entry.FactionId == faction.Id);
+        Assert.Contains(saved.Regions, entry => entry.Region == 0 && entry.Value == -4);
+        Assert.Contains(saved.Personal, entry => entry.SocialGroup == faction.SocialGroup && entry.Value == 7);
+        Assert.Contains(saved.Memberships, entry => entry.FactionId == faction.Id && entry.Rank == 2 && entry.NotedByGuild == 3);
+
+        ContentFake restoredContent = new(releases);
+        PopulateContent(restoredContent, inputs);
+        SpatialFake restoredSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake restoredEngine = EngineContextFake.Create(restoredContent, restoredSpatial.Service, new AppearanceFake(releases));
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession restored = DaggerfallSession.Restore(
+            restoredEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, payload, RandomMinimum.Create());
+
+        Assert.Equal(expected, restored.State.Social.ReactionForNpc(unloaded));
+        Assert.Equal(expectedEligibility, restored.State.Social.GuildEligibility(faction.Id));
+        Assert.Equal(-4, restored.State.Social.RegionalReputation(0));
+    }
+
+    [Fact]
+    public void Elapsed_calendar_time_normalizes_social_faction_and_regional_reputation_once_per_112_days()
+    {
+        using DaggerfallSession session = FreshSession();
+        const int factionId = 15;
+        int factionBefore = session.State.Social.FactionReputation(factionId);
+        _ = session.State.Social.ChangeFactionReputation(factionId, 10);
+        _ = session.State.Social.ChangeRegionalReputation(0, -4);
+
+        DaggerfallCalendarAdvance elapsed = session.AdvanceElapsedTime(DaggerfallSocialState.NormalizeIntervalMinutes * 60L);
+
+        Assert.Equal(DaggerfallSocialState.NormalizeIntervalMinutes * 60L, elapsed.AppliedSeconds);
+        Assert.Equal(factionBefore + 9, session.State.Social.FactionReputation(factionId));
+        Assert.Equal(-3, session.State.Social.RegionalReputation(0));
+    }
+
+    [Fact]
+    public void Normal_magic_minutes_and_elapsed_time_match_and_preserve_active_effect_local_state_through_save()
+    {
+        using DaggerfallSession normal = FreshSession(TimedEffectCatalog());
+        using DaggerfallSession elapsed = FreshSession(TimedEffectCatalog());
+        _ = normal.State.Effects.Start(TimedEffectRequest());
+        _ = elapsed.State.Effects.Start(TimedEffectRequest());
+
+        // Two five-second admitted updates buy two game minutes at the default 12:1 tuning.  Each
+        // minute is a normal magic round, and each effect gets its initial round when admitted.
+        normal.Update(new ProductUpdate(MinuteUpdate(1), []));
+        normal.Update(new ProductUpdate(MinuteUpdate(2), []));
+        // A consequence interrupts elapsed time at one minute.  Resuming exactly its remaining
+        // interval must add the second minute once, rather than replaying the first one.
+        DaggerfallCalendarAdvance elapsedAdvance = elapsed.AdvanceElapsedTime(120, [(99, 60)]);
+
+        Assert.Equal(60, elapsedAdvance.AppliedSeconds);
+        Assert.Equal(60, elapsedAdvance.RemainingSeconds);
+        Assert.Equal(99, elapsedAdvance.Consequence);
+        _ = elapsed.AdvanceElapsedTime(elapsedAdvance.RemainingSeconds);
+        DaggerfallActiveEffect normalEffect = Assert.Single(normal.State.Effects.Active);
+        DaggerfallActiveEffect elapsedEffect = Assert.Single(elapsed.State.Effects.Active);
+        Assert.Equal(normalEffect.Lifecycle.RemainingRounds, elapsedEffect.Lifecycle.RemainingRounds);
+        Assert.Equal(normalEffect.State.GetProperty("ticks").GetInt32(), elapsedEffect.State.GetProperty("ticks").GetInt32());
+        Assert.Equal((uint)3, elapsedEffect.Lifecycle.RemainingRounds);
+        Assert.Equal(3, normalEffect.State.GetProperty("ticks").GetInt32());
+
+        RulesetSavePayload payload = elapsed.CaptureSave();
+        DaggerfallSavePayload captured = DaggerfallSavePayload.Read(payload);
+        DaggerfallActiveEffectSave saved = Assert.Single(captured.ActiveEffects);
+        Assert.Equal((uint)3, saved.RemainingRounds);
+        Assert.Equal(3, saved.State.GetProperty("ticks").GetInt32());
+
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession restored = DaggerfallSession.Restore(
+            engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, payload, RandomMinimum.Create(), TimedEffectCatalog());
+
+        DaggerfallActiveEffect resumed = Assert.Single(restored.State.Effects.Active);
+        Assert.Equal((uint)3, resumed.Lifecycle.RemainingRounds);
+        Assert.Equal(3, resumed.State.GetProperty("ticks").GetInt32());
+        _ = restored.AdvanceElapsedTime(60);
+        Assert.Equal((uint)2, resumed.Lifecycle.RemainingRounds);
+        Assert.Equal(4, resumed.State.GetProperty("ticks").GetInt32());
+
+        static ProductUpdateFacts MinuteUpdate(ulong step) =>
+            new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, step, step, 60, 1, 0, 5d);
+
+        static DaggerfallEffectCatalog TimedEffectCatalog() => new(
+        [new DaggerfallEffectDefinition("timed", "timed", DaggerfallEffectStacking.Stack, 1, 1,
+            MagicRound: effect => effect.State = TimedState(effect.State.GetProperty("ticks").GetInt32() + 1))]);
+
+        static DaggerfallEffectRequest TimedEffectRequest() => new(
+            "timed-instance", "timed", "rest-travel-prison", null, DaggerfallActorIdentity.PlayerEntityId,
+            "timer", "magic", null, 1, 6, TimedState(0));
+
+        static JsonElement TimedState(int ticks)
+        {
+            using JsonDocument state = JsonDocument.Parse($"{{\"ticks\":{ticks},\"localTimer\":\"minute\"}}");
+            return state.RootElement.Clone();
+        }
+    }
+
+    [Fact]
     public void Session_save_restore_rebinds_source_backed_effect_without_mutating_live_stats_or_replaying_start()
     {
         string root = RepositoryRoot();
@@ -2262,7 +2456,7 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
-    public void Ordinary_save_and_load_menu_actions_roundtrip_changed_state_through_the_product()
+    public void Ordinary_save_slot_actions_roundtrip_selected_state_through_the_product()
     {
         // 8342 acceptance through ordinary controls: real input changes state, the menu save
         // action persists it through the product's own store, more input changes state again,
@@ -2293,10 +2487,10 @@ public sealed class NormalizedRuntimeSeamTests
         DaggerfallSession session = ruleset.RequireSession();
         TrackId staminaId = TrackId.Parse("stamina");
 
-        // Loading with no save in the slot is an honest outcome, not a failure.
-        product.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"load-game\"}")]));
+        // Loading an empty named slot is an honest outcome, not a session replacement.
+        product.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"load-slot\",\"key\":\"slot-1\"}")]));
         product.Update(new ProductUpdate(OuterUpdate(2), []));
-        Assert.Contains("No saved game.", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
+        Assert.Contains("No save is indexed under 'slot-1'.", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
 
         // Ordinary held-key input steps the world: the spatial answer moves the player, so
         // position is the cooldown-free proof that gameplay input changed world state.
@@ -2309,34 +2503,50 @@ public sealed class NormalizedRuntimeSeamTests
         WorldPoint positionStepped = PlayerPos(session);
         Assert.True(positionStepped.X > positionBefore.X);
 
-        // The menu save action persists through the product's own store. The saved position is
-        // read after the capturing update, so nothing simulated later can skew the comparison.
-        product.Update(new ProductUpdate(OuterUpdate(4), [Ui("{\"action\":\"save-game\"}")]));
-        WorldPoint savedPosition = PlayerPos(session);
+        // A named save uses the Host catalog and captures the first selected state.
+        product.Update(new ProductUpdate(OuterUpdate(4), [Ui("{\"action\":\"save-slot\",\"label\":\"Before the dungeon\"}")]));
+        WorldPoint firstPosition = PlayerPos(session);
         product.Update(new ProductUpdate(OuterUpdate(5), []));
-        Assert.Contains("Game saved (revision 1).", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
+        Assert.Contains("Saved 'Before the dungeon' (revision 1).", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
 
-        // More ordinary input moves state past the save point.
+        // More ordinary input produces a distinct second slot state.
         product.Update(new ProductUpdate(
             new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 6, 6, 60, 3, 0, 1d / 60d),
             [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
-        Assert.True(PlayerPos(session).X > savedPosition.X);
+        WorldPoint movedSecondPosition = PlayerPos(session);
+        Assert.True(movedSecondPosition.X > firstPosition.X);
+        product.Update(new ProductUpdate(OuterUpdate(7), [Ui("{\"action\":\"save-slot\",\"label\":\"After the dungeon\"}")]));
+        WorldPoint secondPosition = PlayerPos(session);
 
-        // The menu load action restores the saved point through a product session replacement.
-        // The replacement carries the captured position exactly; the next update surfaces the
-        // outcome while the new session keeps stepping, so position is pinned before that step.
-        product.Update(new ProductUpdate(OuterUpdate(7), [Ui("{\"action\":\"load-game\"}")]));
+        // Overwriting an explicit selection requires a confirmation action and cannot alter the
+        // second slot. The confirmed overwrite records the later world state in slot 1.
+        product.Update(new ProductUpdate(
+            new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 8, 8, 60, 3, 0, 1d / 60d),
+            [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
+        WorldPoint overwrittenPosition = PlayerPos(session);
+        product.Update(new ProductUpdate(OuterUpdate(9), [Ui("{\"action\":\"save-slot\",\"key\":\"slot-1\",\"label\":\"Revisited dungeon\"}")]));
+        Assert.Contains("Confirm overwriting 'slot-1'.", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
+        product.Update(new ProductUpdate(OuterUpdate(10), [Ui("{\"action\":\"save-slot\",\"key\":\"slot-1\",\"label\":\"Revisited dungeon\",\"confirm\":true}")]));
+        Assert.Contains("Saved 'Revisited dungeon'", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
+
+        // Loading the selected second slot replaces the session with its own earlier state rather
+        // than the overwritten first slot.
+        product.Update(new ProductUpdate(OuterUpdate(11), [Ui("{\"action\":\"load-slot\",\"key\":\"slot-2\"}")]));
         DaggerfallSession restored = ruleset.RequireSession();
         Assert.NotSame(session, restored);
-        Assert.Equal(savedPosition, PlayerPos(restored));
-        product.Update(new ProductUpdate(OuterUpdate(8), []));
+        Assert.Equal(secondPosition, PlayerPos(restored));
+        Assert.NotEqual(overwrittenPosition, PlayerPos(restored));
+        product.Update(new ProductUpdate(OuterUpdate(12), []));
         Assert.Contains("Game loaded.", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
 
-        // The restored session keeps simulating through the same ordinary controls.
-        product.Update(new ProductUpdate(
-            new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 9, 9, 60, 3, 0, 1d / 60d),
-            [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
-        Assert.True(PlayerPos(restored).X > savedPosition.X);
+        // Deletion also demands confirmation and removes the first payload from reopened storage.
+        product.Update(new ProductUpdate(OuterUpdate(13), [Ui("{\"action\":\"delete-slot\",\"key\":\"slot-1\"}")]));
+        Assert.Contains("Confirm deleting 'slot-1'.", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
+        product.Update(new ProductUpdate(OuterUpdate(14), [Ui("{\"action\":\"delete-slot\",\"key\":\"slot-1\",\"confirm\":true}")]));
+        using WorldRpgSaveSlots reopened = new(engine.Context, "worldrpg.saves");
+        (GameSaveEnvelope? deleted, WorldRpgSlotLoadDiagnostic? deletedDiagnostic) = reopened.LoadSlot("slot-1", "daggerfall");
+        Assert.Null(deleted);
+        Assert.Equal("missing", deletedDiagnostic!.Kind);
     }
 
     [Fact]
@@ -3195,6 +3405,50 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.True(mechanics.GetTrack(stamina).Current <= maximum);
     }
 
+    [Fact]
+    public void Paused_mode_holds_enemy_facts_stamina_and_sprite_playback_until_play_resumes()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        Track stamina = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina"));
+        stamina.SetCurrent(1, clamp: true);
+
+        session.ApplyProductMode(ProductMode.Paused);
+        int factReactionsBefore = appearance.ControlRequests.Count;
+        int playbackAdvancesBefore = appearance.AdvanceRequests.Count;
+        AppearanceFact[] snapshotBefore = appearance.Snapshots[^1];
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+
+        // A held update republishes the existing scene for the mode UI, but does not simulate an
+        // enemy, deliver its EnemyAttackStartedFact into appearance, recover stamina, or advance
+        // any sprite playback.
+        Assert.Empty(session.LastEnemyBehavior);
+        Assert.Equal(1d, stamina.Current);
+        Assert.Equal(factReactionsBefore, appearance.ControlRequests.Count);
+        Assert.Equal(playbackAdvancesBefore, appearance.AdvanceRequests.Count);
+        Assert.Equal(snapshotBefore, appearance.Snapshots[^1]);
+
+        // Ordinary play is the sensitivity control: the same perception now runs behavior, its
+        // delivered attack-start fact drives appearance, recovery advances, and the outer path
+        // advances playback.
+        session.ApplyProductMode(ProductMode.Playing);
+        for (ulong step = 2; step <= 121; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
+        Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[2000].State);
+        Assert.True(stamina.Current > 1d);
+        Assert.True(appearance.ControlRequests.Count > factReactionsBefore);
+        Assert.True(appearance.AdvanceRequests.Count > playbackAdvancesBefore);
+    }
+
     /// <summary>A session that has not swung, so its weapon is ready.</summary>
     private static DaggerfallSession FreshSession(DaggerfallEffectCatalog? effects = null)
     {
@@ -3269,7 +3523,34 @@ public sealed class NormalizedRuntimeSeamTests
 
     private static ProductContent ImportContent(string root) => ContentAt(root, "worldrpg/imports/privateers-hold");
 
-    private static ProductContent FullContent(string root) => ContentAt(root, "worldrpg");
+    private static ProductContent FullContent(string root)
+    {
+        const string publicAudioRoot = "worldrpg/media/audio/clips";
+        const string importedAudioRoot = "worldrpg/imports/privateers-hold/media/audio/clips";
+        const string publicAudioBundle = "daggerfall.classic-audio";
+        const string importedAudioBundle = "daggerfall.privateers-hold-audio";
+        string contentRoot = Path.Combine(root, "content");
+        BundleContentFake bundles = new();
+        List<ProductContentFile> eager = [];
+
+        foreach (string file in Directory.GetFiles(Path.Combine(contentRoot, "worldrpg"), "*", SearchOption.AllDirectories))
+        {
+            string relative = Path.GetRelativePath(contentRoot, file).Replace(Path.DirectorySeparatorChar, '/');
+            string? bundle = relative.StartsWith(publicAudioRoot + "/", StringComparison.Ordinal) ? publicAudioBundle
+                : relative.StartsWith(importedAudioRoot + "/", StringComparison.Ordinal) ? importedAudioBundle
+                : null;
+            if (bundle is null)
+            {
+                eager.Add(new ProductContentFile(Encoding.UTF8.GetBytes(relative), File.ReadAllBytes(file)));
+                continue;
+            }
+
+            string rootPath = bundle == publicAudioBundle ? publicAudioRoot : importedAudioRoot;
+            bundles.Add(bundle, relative[(rootPath.Length + 1)..], File.ReadAllBytes(file));
+        }
+
+        return new ProductContent(eager.ToArray(), bundles);
+    }
 
     private static ProductContent ContentAt(string root, string relativeDirectory)
     {
@@ -4945,6 +5226,53 @@ public sealed class NormalizedRuntimeSeamTests
         internal int ResolveCalls { get; private set; }
     }
 
+    /// <summary>Build-declared bundles for full-product tests; bodies stay outside the eager snapshot.</summary>
+    private sealed class BundleContentFake : IContentService
+    {
+        private readonly Dictionary<string, Dictionary<string, byte[]>> files = new(StringComparer.Ordinal);
+        private readonly Dictionary<ulong, string> openedBundles = [];
+        private ulong nextHandle = 1;
+
+        internal void Add(string bundle, string path, byte[] bytes)
+        {
+            if (!files.TryGetValue(bundle, out Dictionary<string, byte[]>? values)) files.Add(bundle, values = new(StringComparer.Ordinal));
+            values.Add(path, bytes);
+        }
+
+        public ReadOnlyMemory<ContentBundleInfo> ListBundles() => files
+            .OrderBy(entry => entry.Key, StringComparer.Ordinal)
+            .Select(entry => new ContentBundleInfo(entry.Key, checked((ulong)entry.Value.Count), checked((ulong)entry.Value.Values.Sum(bytes => bytes.Length))))
+            .ToArray();
+
+        public ContentBundle OpenBundle(ContentBundleOpenRequest request)
+        {
+            if (!files.ContainsKey(request.Id)) throw new FileNotFoundException("Test bundle is not declared.", request.Id);
+            ulong handle = nextHandle++;
+            openedBundles.Add(handle, request.Id);
+            return new(new ContentBundleHandle(handle), () => openedBundles.Remove(handle));
+        }
+
+        public ReadOnlyMemory<ContentReferenceInfo> ReadBundleFiles(ContentBundle bundle)
+        {
+            if (!openedBundles.TryGetValue(bundle.Handle.Value, out string? id)) throw new InvalidOperationException("Test bundle handle is not open.");
+            return files[id].OrderBy(entry => entry.Key, StringComparer.Ordinal)
+                .Select(entry => new ContentReferenceInfo(entry.Key, Digest(entry.Value), checked((ulong)entry.Value.Length)))
+                .ToArray();
+        }
+
+        public ContentReference OpenBundleReference(ContentBundleReferenceRequest request)
+        {
+            if (!openedBundles.TryGetValue(request.Bundle.Handle.Value, out string? id)
+                || !files[id].ContainsKey(request.Path)) throw new FileNotFoundException("Test bundle file is not declared.", request.Path);
+            return new(new ContentReferenceHandle(nextHandle++), static () => { });
+        }
+
+        public ContentReference OpenReference(ContentOpenRequest request) => throw new NotSupportedException();
+        public ContentReference ResolveReference(ContentResolveRequest request) => throw new NotSupportedException();
+        public ReadOnlyMemory<ContentReferenceInfo> ReadReferenceInfo(ContentReference reference) => throw new NotSupportedException();
+        public ReadOnlyMemory<byte> ReadBytes(ContentReadBytesRequest request) => throw new NotSupportedException();
+    }
+
     private class SpatialFake : DispatchProxy
     {
         internal bool KeepPosition { get; set; }
@@ -5144,6 +5472,22 @@ public sealed class NormalizedRuntimeSeamTests
             _values[key] = new(revision, request.Payload.ToArray());
             return new PersistenceSaveReceipt(revision);
         }
+        public PersistenceDeleteReceipt Delete(PersistenceDeleteRequest request)
+        {
+            (string Scope, string Key) key = (request.Store.Handle.Value.ToString(), request.Key);
+            _values.TryGetValue(key, out Entry? existing);
+            bool matches = request.RevisionGuard switch
+            {
+                PersistenceRevisionGuard.Any => true,
+                PersistenceRevisionGuard.Exact => existing is not null && existing.Revision == request.ExpectedRevision,
+                PersistenceRevisionGuard.Absent => existing is null,
+                _ => throw new ArgumentOutOfRangeException(nameof(request)),
+            };
+            if (!matches) return new(PersistenceDeleteOutcome.RevisionConflict, existing?.Revision ?? 0);
+            if (existing is null) return new(PersistenceDeleteOutcome.Missing, 0);
+            _values.Remove(key);
+            return new(PersistenceDeleteOutcome.Deleted, existing.Revision);
+        }
         public PersistenceBlob Load(PersistenceLoadRequest request)
         {
             Entry? value = _values.TryGetValue((request.Store.Handle.Value.ToString(), request.Key), out Entry? found) ? found : null;
@@ -5247,6 +5591,7 @@ public sealed class NormalizedRuntimeSeamTests
             protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
             {
                 nameof(IAudioService.OpenClip) => new AudioClip(new AudioClipHandle(1), static () => { }),
+                nameof(IAudioService.OpenClipFromContent) => new AudioClip(new AudioClipHandle(1), static () => { }),
                 nameof(IAudioService.Emit) => new AudioSignalHandle(1),
                 _ => throw new NotSupportedException(method?.Name),
             };

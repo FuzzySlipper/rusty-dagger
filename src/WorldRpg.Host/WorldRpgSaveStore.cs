@@ -45,6 +45,9 @@ public sealed class WorldRpgSaveStore : IDisposable
     public PersistenceSaveReceipt Save(string key, GameSaveEnvelope value, PersistenceRevisionGuard guard = PersistenceRevisionGuard.Any, ulong expectedRevision = 0) =>
         _state.Save(key, PersistedEnvelope.From(value ?? throw new ArgumentNullException(nameof(value))), guard, expectedRevision);
 
+    /// <summary>Removes one persisted save payload through the Engine-owned durable store.</summary>
+    public void Delete(string key) => _state.Delete(key);
+
     public void Dispose() => _state.Dispose();
 
     internal sealed record PersistedEnvelope(string Ruleset, byte[] Payload)

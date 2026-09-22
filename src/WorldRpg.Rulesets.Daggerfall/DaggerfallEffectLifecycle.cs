@@ -25,6 +25,7 @@ internal enum DaggerfallEffectOutcomeKind
     Replaced,
     Rejected,
     Cancelled,
+    Cured,
     Expired,
 }
 
@@ -236,12 +237,23 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
     }
 
     internal bool Cancel(EffectInstanceId instance)
+        => End(instance, DaggerfallEffectOutcomeKind.Cancelled);
+
+    /// <summary>
+    /// Ends an active effect because Daggerfall policy cured it.  The policy that selects a cure
+    /// remains with the disease, poison, service, or quest caller; this lifecycle only guarantees
+    /// that its contributions and scheduled magic-round work leave together.
+    /// </summary>
+    internal bool Cure(EffectInstanceId instance)
+        => End(instance, DaggerfallEffectOutcomeKind.Cured);
+
+    private bool End(EffectInstanceId instance, DaggerfallEffectOutcomeKind outcome)
     {
         ArgumentNullException.ThrowIfNull(instance);
         if (!_effects.TryGetValue(instance, out DaggerfallActiveEffect? active)) return false;
         LifecycleFor(checked((long)active.Lifecycle.Context.Target.Value)).Cancel(instance);
         _effects.Remove(instance);
-        Publish(DaggerfallEffectOutcomeKind.Cancelled, instance.Value, active.Definition.Key,
+        Publish(outcome, instance.Value, active.Definition.Key,
             checked((long)active.Lifecycle.Context.Target.Value));
         return true;
     }
@@ -319,7 +331,10 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
 
     private void AdvanceRounds(uint rounds)
     {
-        foreach (ActiveEffectLifecycle lifecycle in _lifecycles.Values.ToArray())
+        // A catch-up can complete effects on several targets.  Actor identity, then each
+        // lifecycle's own stable instance order, makes the externally observable completions
+        // deterministic for save, cure, and presentation callers.
+        foreach (ActiveEffectLifecycle lifecycle in _lifecycles.OrderBy(pair => pair.Key).Select(pair => pair.Value).ToArray())
         {
             IReadOnlyList<ActiveEffectLifecycleReceipt> ended = lifecycle.AdvanceMagicRounds(rounds, state =>
             {

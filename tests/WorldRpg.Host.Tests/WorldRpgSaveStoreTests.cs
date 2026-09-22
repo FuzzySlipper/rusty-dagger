@@ -220,6 +220,17 @@ public sealed class WorldRpgSaveStoreTests
             _values[key] = new(revision, request.Payload.ToArray());
             return new PersistenceSaveReceipt(revision);
         }
+        public PersistenceDeleteReceipt Delete(PersistenceDeleteRequest request)
+        {
+            (string Scope, string Key) key = ("worldrpg-test", request.Key);
+            bool present = _values.TryGetValue(key, out Entry? existing);
+            if ((request.RevisionGuard == PersistenceRevisionGuard.Absent && present)
+                || (request.RevisionGuard == PersistenceRevisionGuard.Exact && (!present || existing!.Revision != request.ExpectedRevision)))
+                return new(PersistenceDeleteOutcome.RevisionConflict, existing?.Revision ?? 0);
+            if (!present) return new(PersistenceDeleteOutcome.Missing, 0);
+            _values.Remove(key);
+            return new(PersistenceDeleteOutcome.Deleted, existing!.Revision);
+        }
         public PersistenceBlob Load(PersistenceLoadRequest request)
         {
             Entry? value = _values.TryGetValue(("worldrpg-test", request.Key), out Entry? found) ? found : null;

@@ -82,6 +82,31 @@ task explains a concrete reason to replace them.
 | World geometry, F055/F057/F058 | `src/Daggerfall.Import/Arena2/RdbDecoder.cs`; `MapsDecoder.cs`; `Normalization/DungeonNormalizer.cs` | Existing dungeon geometry does not establish outdoor RMB or terrain coverage. Keep these import/runtime responsibilities separate. |
 | Thin UI, F044/F095–F107 | `src/WorldRpg.Rulesets.Daggerfall/Presentation/`; `src/ui/` | Extend projections and semantic actions per owning behavior. Do not add a new UI state authority or recreate DFU's widget framework. |
 
+### Skill-use attribution receiving tasks
+
+The #7976 counter entry accepts only the typed reason, outcome, amount and cadence
+declared by its Daggerfall policy. Its current combat callers tally weapon skill and
+Critical Strike on a resolved player hit, and Dodging on every resolved enemy attack
+against the player, including a miss. Ordinary calls rely on the existing admitted
+operation owner; Swimming and Stealth carry their last admitted game minute so the
+counter rejects a repeated minute after a save or repeated update.
+
+The remaining source-backed attribution stays with the operation that will make it
+real. #8046 records the facing-away Backstabbing check; #8089 records each released
+spell effect and excludes cancelled casts; #8001 records Running on each admitted
+running update and Jumping on an admitted ground-to-jump transition; #8014 records
+Climbing checks and admitted rappelling updates; #8082 records Swimming once per
+admitted game-minute swimming interval; #8050 records Medical after accepted recovery
+rest; #8049 records Lockpicking after its duplicate-at-skill rejection; #8054 records
+player Pickpocket attempts; #8055 records shoplifting attempts and completed
+Mercantile trades; #8017 records Stealth once per admitted game-minute check and one
+language use on successful pacification or a failed non-Etiquette/non-Streetwise
+attempt; #8020 records the first Etiquette or Streetwise tone resolution in an NPC
+talk session; and #8165 records the selected Etiquette or Streetwise court response.
+#7987 consumes the saved counters for advancement and does not emit an operation use.
+These are classic one-use events; no DFU three-use pacification boost or one-in-four
+running throttle is adopted without an explicit later decision.
+
 The original feature-map notes remain available in the CSV; do not erase their
 provenance to make the current picture look cleaner. Reconcile further stale
 claims locally while drafting the affected tasks.

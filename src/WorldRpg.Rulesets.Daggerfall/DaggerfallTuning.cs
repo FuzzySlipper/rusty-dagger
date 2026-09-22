@@ -14,7 +14,8 @@ internal sealed record DaggerfallTuning(
     DaggerfallLootInteractionTuning LootInteraction,
     DaggerfallTimeTuning Time,
     DaggerfallStaminaRecoveryTuning StaminaRecovery,
-    DaggerfallPresentationAudioTuning PresentationAudio)
+    DaggerfallPresentationAudioTuning PresentationAudio,
+    DaggerfallProgressionTuning Progression)
 {
     internal static DaggerfallTuning Defaults { get; } = new(
         // Screen-space mouse Y increases downward; Engine camera pitch increases upward.
@@ -34,7 +35,8 @@ internal sealed record DaggerfallTuning(
         new DaggerfallLootInteractionTuning(2.25d, .5d),
         new DaggerfallTimeTuning(12d),
         new DaggerfallStaminaRecoveryTuning(5d, 2d),
-        new DaggerfallPresentationAudioTuning(1F, 1F, 0F, 1F));
+        new DaggerfallPresentationAudioTuning(1F, 1F, 0F, 1F),
+        new DaggerfallProgressionTuning(EnableExperimentalKillExperience: false));
 
     internal DaggerfallTuning Validate() => this with
     {
@@ -48,6 +50,7 @@ internal sealed record DaggerfallTuning(
         Time = Time.Validate(),
         StaminaRecovery = StaminaRecovery.Validate(),
         PresentationAudio = PresentationAudio.Validate(),
+        Progression = Progression.Validate(),
     };
 
     internal static DaggerfallTuning Read(ReadOnlySpan<byte> payload)
@@ -69,6 +72,7 @@ internal sealed record DaggerfallTuning(
         JsonElement staminaRecovery = root.GetProperty("staminaRecovery");
         JsonElement time = root.GetProperty("time");
         JsonElement presentationAudio = root.GetProperty("presentationAudio");
+        JsonElement progression = root.GetProperty("progression");
         return new DaggerfallTuning(
             new PlayerControlTuning(
                 controls.GetProperty("lookSensitivity").GetSingle(),
@@ -111,7 +115,8 @@ internal sealed record DaggerfallTuning(
                 presentationAudio.GetProperty("volume").GetSingle(),
                 presentationAudio.GetProperty("pitch").GetSingle(),
                 presentationAudio.GetProperty("spatialBlend").GetSingle(),
-                presentationAudio.GetProperty("attenuation").GetSingle()))
+                presentationAudio.GetProperty("attenuation").GetSingle()),
+            new DaggerfallProgressionTuning(progression.GetProperty("enableExperimentalKillExperience").GetBoolean()))
             .Validate();
     }
 
@@ -187,6 +192,12 @@ internal sealed record DaggerfallTuning(
         15 => ControllerButton.Button15,
         _ => throw new JsonException($"Controller button {index} is not one the Engine publishes; buttons are numbered 0 through 15."),
     };
+}
+
+/// <summary>Explicit opt-in for the retained non-classic kill-XP experiment.</summary>
+internal sealed record DaggerfallProgressionTuning(bool EnableExperimentalKillExperience)
+{
+    internal DaggerfallProgressionTuning Validate() => this;
 }
 
 /// <summary>

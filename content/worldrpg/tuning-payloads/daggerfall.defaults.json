@@ -99,5 +99,8 @@
     "pitch": 1.0,
     "spatialBlend": 0.0,
     "attenuation": 1.0
+  },
+  "progression": {
+    "enableExperimentalKillExperience": false
   }
 }

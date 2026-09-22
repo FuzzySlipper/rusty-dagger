@@ -73,6 +73,8 @@ public sealed class WorldRpgSaveSlotsTests
         slots.SaveSlot("slot-a", "A", Envelope("daggerfall"));
         Assert.True(slots.DeleteSlot("slot-a"));
         Assert.Empty(slots.List());
+        using WorldRpgSaveStore reopened = new(Engine(persistence), "worldrpg-test");
+        Assert.False(reopened.Load("slot-a").Present);
         Assert.False(slots.DeleteSlot("slot-a"));
     }
 
@@ -155,6 +157,18 @@ public sealed class WorldRpgSaveSlotsTests
             ulong revision = present ? checked(existing!.Revision + 1) : 1;
             _values[key] = new(revision, request.Payload.ToArray());
             return new PersistenceSaveReceipt(revision);
+        }
+        public PersistenceDeleteReceipt Delete(PersistenceDeleteRequest request)
+        {
+            string scope = _scopes[request.Store.Handle.Value];
+            (string Scope, string Key) key = (scope, request.Key);
+            bool present = _values.TryGetValue(key, out Entry? existing);
+            if ((request.RevisionGuard == PersistenceRevisionGuard.Absent && present)
+                || (request.RevisionGuard == PersistenceRevisionGuard.Exact && (!present || existing!.Revision != request.ExpectedRevision)))
+                return new(PersistenceDeleteOutcome.RevisionConflict, existing?.Revision ?? 0);
+            if (!present) return new(PersistenceDeleteOutcome.Missing, 0);
+            _values.Remove(key);
+            return new(PersistenceDeleteOutcome.Deleted, existing!.Revision);
         }
         public PersistenceBlob Load(PersistenceLoadRequest request)
         {

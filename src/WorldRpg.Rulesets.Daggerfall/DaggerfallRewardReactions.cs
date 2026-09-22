@@ -12,22 +12,20 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Daggerfall-owned reward policy for defeated registered actors.</summary>
-internal sealed class DaggerfallRewardReactions(ProgressionState progression, StatsComponent playerMechanics, Rusty.Engine.Entities.EntityId playerEntity, DaggerfallActorDefinition playerDefinition, IRandomService random, IReadOnlyDictionary<long, DaggerfallActorDefinition> actors)
+internal sealed class DaggerfallRewardReactions(ProgressionState progression, StatsComponent playerMechanics, Rusty.Engine.Entities.EntityId playerEntity, DaggerfallActorDefinition playerDefinition, IRandomService random, IReadOnlyDictionary<long, DaggerfallActorDefinition> actors, bool experimentalKillExperience = false)
 {
     private readonly HashSet<long> _awarded = [];
     private readonly HashSet<long> _experienceAwarded = [];
 
     internal void React(ActorDiedFact fact, FactBuffer<IProductFact> facts)
     {
-        if (fact.KillerId != DaggerfallActorIdentity.PlayerEntityId) return;
+        if (!experimentalKillExperience || fact.KillerId != DaggerfallActorIdentity.PlayerEntityId) return;
         if (_awarded.Contains(fact.ActorId) || !actors.TryGetValue(fact.ActorId, out DaggerfallActorDefinition? actor)) return;
 
-        ProgressionAwardPlan? progressionPlan = PlanProgression(fact.ActorId, actor);
+        ProgressionAwardPlan? progressionPlan = PlanExperimentalProgression(fact.ActorId, actor);
         if (progressionPlan is not null)
         {
-            if (progressionPlan.HealthSources is not null)
-                ApplyHealthSources(progressionPlan.HealthSources);
-            progression.AdvanceTo(progressionPlan.NextExperience, progressionPlan.NextLevel);
+            ApplyProgression(progressionPlan);
             facts.Append(new ExperienceAwardedFact(fact.ActorId, actor.Rewards.ExperienceReward));
             _experienceAwarded.Add(fact.ActorId);
         }
@@ -54,13 +52,20 @@ internal sealed class DaggerfallRewardReactions(ProgressionState progression, St
         ApplyHealthSources(sources);
     }
 
-    private ProgressionAwardPlan? PlanProgression(long defeatedActorId, DaggerfallActorDefinition defeated)
+    private ProgressionAwardPlan? PlanExperimentalProgression(long defeatedActorId, DaggerfallActorDefinition defeated)
     {
         if (defeated.Rewards.ExperienceReward <= 0 || _experienceAwarded.Contains(defeatedActorId)) return null;
 
         int nextExperience = checked(progression.Experience + defeated.Rewards.ExperienceReward);
         int curveLevel = checked(1 + DaggerfallFormulaPolicy.ExperimentalXpLevel(nextExperience, DaggerfallFormulaPolicy.Experimental));
         int nextLevel = Math.Max(progression.Level, curveLevel);
+        return PlanLevel(nextExperience, nextLevel);
+    }
+
+    private ProgressionAwardPlan PlanLevel(int nextExperience, int nextLevel)
+    {
+        if (nextExperience < progression.Experience || nextLevel < progression.Level)
+            throw new ArgumentException("Daggerfall progression cannot move backwards.");
         if (nextLevel == progression.Level)
             return new ProgressionAwardPlan(nextExperience, nextLevel, null);
 
@@ -114,6 +119,12 @@ internal sealed class DaggerfallRewardReactions(ProgressionState progression, St
             }
         }
         return new ProgressionAwardPlan(nextExperience, nextLevel, changed ? prospectiveSources.ToArray() : null);
+    }
+
+    private void ApplyProgression(ProgressionAwardPlan plan)
+    {
+        if (plan.HealthSources is not null) ApplyHealthSources(plan.HealthSources);
+        progression.AdvanceTo(plan.NextExperience, plan.NextLevel);
     }
 
     private void ApplyHealthSources(IReadOnlyList<StatSource> sources)

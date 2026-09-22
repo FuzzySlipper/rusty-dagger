@@ -21,8 +21,7 @@ public sealed record WorldRpgSlotLoadDiagnostic(string Kind, string Message);
 /// Save slots with metadata, overwrite and new/quit transitions over the existing save store.
 /// The slot index lives beside the saves under a reserved key, so listing never opens a payload.
 /// Loading admits before any session is touched, so a rejected load keeps the current session.
-/// Deleting drops the slot from the index; the store offers no key removal, so the underlying
-/// bytes remain until overwritten: the index, not the bytes, is what the slot list reads.
+/// Deleting removes both the indexed entry and its Engine-owned durable payload.
 /// </summary>
 public sealed class WorldRpgSaveSlots : IDisposable
 {
@@ -120,17 +119,21 @@ public sealed class WorldRpgSaveSlots : IDisposable
     }
 
     /// <summary>
-    /// Deletes a slot from the index; the store offers no key removal, so indexed listing is what
-    /// deletion means here and stale bytes stay unreachable until overwritten.
+    /// Deletes a slot's payload and then removes its index entry. A payload deletion failure leaves
+    /// the index unchanged, so a slot never claims it was removed while its bytes can still load.
     /// </summary>
     public bool DeleteSlot(string key)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         List<WorldRpgSaveSlotEntry> index = ReadIndex();
-        int removed = index.RemoveAll(entry => string.Equals(entry.Key, key, StringComparison.Ordinal));
-        if (removed > 0) WriteIndex(index);
-        return removed > 0;
+        WorldRpgSaveSlotEntry? entry = index.SingleOrDefault(entry => string.Equals(entry.Key, key, StringComparison.Ordinal));
+        if (entry is null) return false;
+
+        _saves.Delete(key);
+        index.Remove(entry);
+        WriteIndex(index);
+        return true;
     }
 
     public void Dispose()
