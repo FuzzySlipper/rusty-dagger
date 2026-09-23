@@ -882,8 +882,8 @@ internal static partial class Program
     /// matched to: a career's identity is its record position, so its name is what names its art.
     /// </summary>
     /// <summary>
-    /// Reads every region's locations and dungeons from MAPS.BSA and writes them into the base pack
-    /// when asked, so a site or world consumer resolves a place by the region the source names.
+    /// Reads every region's locations and dungeons from MAPS.BSA, joins each MAPPITEM to its RMB/FLD
+    /// facts from BLOCKS.BSA, and writes the complete location contract into the base pack when asked.
     /// </summary>
     private static int RunLocationsCommand(IReadOnlyList<string> args)
     {
@@ -896,9 +896,10 @@ internal static partial class Program
         string arena2 = args[2];
         string packFile = args[4];
         BsaArchive archive = BsaArchive.Parse(File.ReadAllBytes(Path.Combine(arena2, "MAPS.BSA")), "arena2/MAPS.BSA");
-        DaggerfallLocations locations = DaggerfallLocationBuilder.Build(archive);
+        BsaArchive blocks = BsaArchive.Parse(File.ReadAllBytes(Path.Combine(arena2, "BLOCKS.BSA")), "arena2/BLOCKS.BSA");
+        DaggerfallLocations locations = DaggerfallLocationBuilder.Build(archive, blocks);
 
-        Console.WriteLine($"locations: {locations.Locations.Count} locations over {locations.Locations.Select(location => location.Region).Distinct().Count()} regions, {locations.Dungeons.Count} dungeons, {locations.RegionsWithoutTables.Count} regions without usable tables");
+        Console.WriteLine($"locations: {locations.Locations.Count} locations over {locations.Locations.Select(location => location.Region).Distinct().Count()} regions, {locations.Dungeons.Count} dungeons, {locations.Locations.Count(location => location.Exterior is not null)} exterior metadata records, {locations.RegionsWithoutTables.Count} regions without usable tables");
         foreach (IGrouping<string, DaggerfallRegionGap> gap in locations.RegionsWithoutTables.GroupBy(gap => string.Join('+', gap.EmptyTables.Select(name => name[..name.IndexOf('.', StringComparison.Ordinal)]))))
         {
             Console.WriteLine($"  {gap.Count()} regions have no {gap.Key}");

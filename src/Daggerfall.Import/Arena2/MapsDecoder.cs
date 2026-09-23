@@ -478,6 +478,24 @@ public static class MapsDecoder
         ArgumentException.ThrowIfNullOrWhiteSpace(locationName);
         IReadOnlyList<string> names = DecodeLocationNames(archive, region);
         int locationIndex = FindExactLocation(names, locationName, archive.Source);
+        return DecodeExteriorLayout(archive, region, locationIndex);
+    }
+
+    /// <summary>
+    /// Reads the exact RMB-grid source layout of the location at a region/index identity. The index
+    /// overload is the lossless path for normalized publication because MAPNAMES legitimately repeats
+    /// names within one region.
+    /// </summary>
+    public static MapsExteriorLayout DecodeExteriorLayout(BsaArchive archive, int region, int locationIndex)
+    {
+        ArgumentNullException.ThrowIfNull(archive);
+        IReadOnlyList<string> names = DecodeLocationNames(archive, region);
+        if ((uint)locationIndex >= (uint)names.Count)
+        {
+            throw new Arena2FormatException(archive.Source, 0, $"MAPS location index {locationIndex} is outside region {region}'s {names.Count} names");
+        }
+
+        string locationName = names[locationIndex];
         (int mapId, int longitude, int latitude, _, _, _) = DecodeMapTable(GetNamedPayload(archive, "MAPTABLE", region), archive.Source, locationIndex);
         return DecodeExteriorRecord(GetNamedPayload(archive, "MAPPITEM", region), archive.Source, names.Count, region, locationIndex, locationName, mapId, longitude, latitude);
     }
@@ -612,7 +630,11 @@ public static class MapsDecoder
     {
         if (blockIndex >= BlockRecordInventoryReader.RmbBlockPrefixes.Count)
             throw reader.Error($"MAPPITEM block has unsupported RMB prefix index {blockIndex}");
-        int letter2Index = (2 * blockCharacter) >> 6;
+        // DFU evaluates this through a byte before shifting: the source field is an
+        // 8-bit bitfield, so values in its high half wrap before selecting the
+        // second-letter quadrant. Keeping the byte cast matters for the full MAPS
+        // corpus (several exterior records carry 0x80+ here).
+        int letter2Index = unchecked((byte)(2 * blockCharacter)) >> 6;
         if ((uint)letter2Index >= BlockRecordInventoryReader.RmbLetters2.Count)
             throw reader.Error($"MAPPITEM block has unsupported RMB second-letter index {letter2Index}");
 
