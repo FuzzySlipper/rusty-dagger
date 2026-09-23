@@ -29,8 +29,12 @@ an evolving mainline product path, not a spike or a compatibility exercise.
 
 Before substantial work, resolve the current Den task and project guidance, then
 read the downstream brief for C# organization or Engine-boundary work. The user
-request and owning task override older wording. If Den is unreachable, stop and
-report the failed read rather than reconstructing direction from source or Git.
+request and owning task override older wording. Den owns live task status and
+dependencies. If it is unreachable, report the failed read; do not invent task
+records or infer dependency completion from source or Git. Continue work whose
+scope and authority are already established, pausing only decisions or actions
+that depend on unavailable Den information. This is the owner-approved project
+exception to a blanket Den-unavailable stop rule.
 
 ## Current product graph
 
@@ -153,8 +157,10 @@ statuses, or handwritten native declarations. Generated `obj/` sources are
 ignored output: never edit or commit them.
 
 If a required behavior is absent from the safe API: name the behavior and Engine
-owner, confirm no safe wrapper already exposes it, file one narrow
-purpose-neutral `rusty-engine` request, and stop at that boundary. Do not
+owner and confirm no safe wrapper already exposes it. If the owning Engine
+change is already authorized, implement it upstream and continue the dependent
+work. Otherwise file or link one narrow purpose-neutral `rusty-engine` request
+when authorized and report the blocked behavior at that boundary. Do not
 reimplement Engine machinery in C#, TypeScript, or downstream Rust, and do not
 substitute a fake proof path or parallel host.
 
@@ -169,7 +175,9 @@ allowed inside admitted updates; they do not establish an independent clock.
 
 The original game and `/home/research/daggerfall-unity` are behavior and content
 references, not a code-style or architecture template. Consult exact donor
-behavior before implementation. Adapt UI concepts and semantic actions to thin
+behavior when implementing Daggerfall compatibility or donor-derived behavior;
+independently specified WorldRpg features and Rusty integration fixes do not
+require donor research. Adapt UI concepts and semantic actions to thin
 DOM presentation; do not port Unity widgets, scene wiring, MonoBehaviours,
 god singletons, Resources loading, Unity serialization, or Unity import bridges.
 Offline import into Rusty-friendly packs replaces DFU content-reader bootstrap
@@ -188,7 +196,8 @@ another product runtime or an authority source. Do not recreate the former
 ## Coverage execution and drift
 
 Plan dependencies and explicit behavior/interoperability contracts using
-`docs/daggerfall-coverage-plan.md`. No vertical slices, proof threads, or default
+`docs/daggerfall-coverage-plan.md`. Incremental implementation is fine, but a
+proof-only slice or demonstration is not a completed task. Do not add default
 interactive deliverable gates. A demo passing does not establish implementation
 completeness. Do not leave no-op branches, hardcoded examples, parallel paths,
 or partial adapters to satisfy a demonstration. Include the task's real callers,
@@ -203,6 +212,10 @@ preferences. The root reconciles findings. This is not a mandatory multi-review
 ceremony for every edit; the plan describes how to assign bounded review lanes.
 The always-on reuse lanes, reviewer packets, and revision-round rules live in
 `docs/agent-review/` (policy: `[doc: rusty-dagger/agent-review-workflow]`).
+That workflow distinguishes DSH and Codex tools. DSH's reviewer routing remains
+valid for DSH agents. Codex agents use their available collaboration lifecycle;
+when using Prime, its persistent upstream checker, reuse checker, and Senior
+cover these responsibilities without a second reviewer roster.
 Use focused compilation and semantic checks appropriate to the change. Broader
 interactive evaluation can inform later reconciliation without becoming each
 task's definition of done. Stop an upstream-blocked task honestly and continue
