@@ -21,7 +21,29 @@ public sealed record DaggerfallLocationMap(
     int Latitude,
     byte DungeonType,
     int LocationType,
-    bool Discovered);
+    bool Discovered)
+{
+    /// <summary>
+    /// The optional normalized MAPPITEM/BLOCKS/FLD contract. It is absent when the caller only has
+    /// MAPS.BSA, preserving the long-standing MAPS-only builder for source-focused consumers.
+    /// </summary>
+    public DaggerfallLocationExterior? Exterior { get; init; }
+
+    internal void ValidateExterior()
+    {
+        if (Exterior is null)
+        {
+            return;
+        }
+
+        Exterior.Validate($"{Region}:{Index} '{Name}'");
+        (int mapPixelX, int mapPixelY) = MapsDecoder.ToMapPixel(Longitude, Latitude);
+        if (Exterior.MapPixelX != mapPixelX || Exterior.MapPixelY != mapPixelY)
+        {
+            throw new InvalidOperationException($"Location '{Name}' at region {Region}, index {Index} publishes exterior map pixel ({Exterior.MapPixelX},{Exterior.MapPixelY}) but MAPTABLE resolves to ({mapPixelX},{mapPixelY}).");
+        }
+    }
+}
 
 /// <summary>
 /// A region group the donor discards because a table has no bytes, with the tables that are empty.
@@ -99,6 +121,7 @@ public sealed record DaggerfallLocations(
             if (location.Region < 0) throw new InvalidOperationException($"Location '{location.Name}' carries region {location.Region}.");
             if (string.IsNullOrWhiteSpace(location.Name)) throw new InvalidOperationException($"Region {location.Region} location {location.Index} carries no name.");
             if (location.MapId < 0) throw new InvalidOperationException($"Location '{location.Name}' carries map {location.MapId}.");
+            location.ValidateExterior();
         }
 
         HashSet<(int Region, int Index)> locations = [];
@@ -188,13 +211,27 @@ public sealed record DaggerfallLocations(
 public static class DaggerfallLocationBuilder
 {
     public static DaggerfallLocations Build(BsaArchive archive)
+        => Build(archive, blocks: null);
+
+    /// <summary>
+    /// Builds MAPS locations and, when BLOCKS.BSA is supplied, publishes the complete exterior
+    /// placement/flattening contract beside each location. The two archives stay separate because
+    /// MAPS owns location identity while BLOCKS owns the RMB/FLD bytes referenced by MAPPITEM.
+    /// </summary>
+    public static DaggerfallLocations Build(BsaArchive archive, BsaArchive? blocks)
     {
         ArgumentNullException.ThrowIfNull(archive);
+        if (blocks is not null && StringComparer.Ordinal.Equals(archive.Source, blocks.Source))
+        {
+            throw new ArgumentException("MAPS and BLOCKS archives must retain distinct source identities.", nameof(blocks));
+        }
+
         List<DaggerfallLocationMap> locations = [];
         List<DaggerfallDungeonRecord> dungeons = [];
         List<DaggerfallDungeonGap> dungeonGaps = [];
         List<DaggerfallRegionGap> withoutTables = [];
         List<DaggerfallRegionProvenance> regions = [];
+        DaggerfallLocationExteriorBuilder? exteriorBuilder = blocks is null ? null : new DaggerfallLocationExteriorBuilder(blocks);
         foreach (MapsRegionGroup group in MapsDecoder.DecodeRegionGroups(archive))
         {
             // Every region's tables are recorded whatever they hold, including the ones with no bytes:
@@ -222,7 +259,7 @@ public static class DaggerfallLocationBuilder
 
             foreach (MapsLocationRecord location in MapsDecoder.DecodeRegionLocations(archive, group.Region))
             {
-                locations.Add(new DaggerfallLocationMap(
+                DaggerfallLocationMap publishedLocation = new(
                     location.Region,
                     location.Index,
                     location.Name,
@@ -231,7 +268,16 @@ public static class DaggerfallLocationBuilder
                     location.Latitude,
                     location.DungeonType,
                     location.LocationType,
-                    location.Discovered));
+                    location.Discovered);
+                if (blocks is not null)
+                {
+                    publishedLocation = publishedLocation with
+                    {
+                        Exterior = exteriorBuilder!.Build(archive, publishedLocation),
+                    };
+                }
+
+                locations.Add(publishedLocation);
             }
 
             foreach (MapsDungeonLocation dungeon in MapsDecoder.DecodeRegionDungeons(archive, group.Region))
@@ -263,7 +309,7 @@ public static class DaggerfallLocationBuilder
             [.. withoutTables.OrderBy(gap => gap.Region)],
             [.. dungeonGaps.OrderBy(gap => gap.Region).ThenBy(gap => gap.Index)],
             [.. regions.OrderBy(region => region.Region)],
-            [archive.Source]);
+            blocks is null ? [archive.Source] : [archive.Source, blocks.Source]);
         published.Validate();
         return published;
     }
