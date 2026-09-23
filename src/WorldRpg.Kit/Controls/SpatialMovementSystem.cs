@@ -35,7 +35,8 @@ public readonly record struct CharacterStepControls(
 public sealed class SpatialMovementSystem : IDisposable
 {
     private readonly ISpatialService _spatial;
-    private readonly ContentReference _content;
+    private readonly IContentService _contentService;
+    private ContentReference _content;
     private readonly SpatialTuning _tuning;
     private CharacterControllerConfig _controller;
     private readonly SpatialSession _session;
@@ -60,6 +61,7 @@ public sealed class SpatialMovementSystem : IDisposable
         ArgumentNullException.ThrowIfNull(inputs);
         tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
         _spatial = spatial;
+        _contentService = content;
         _tuning = tuning;
         CharacterControllerConfig defaults = spatial.DefaultCharacterControllerConfig();
         _controller = (tuning.CharacterController ?? new CharacterControllerTuning()).ApplyTo(defaults);
@@ -122,6 +124,52 @@ public sealed class SpatialMovementSystem : IDisposable
         _restoredCheckpoint = null;
         player.Apply(receipt);
         return receipt;
+    }
+
+    /// <summary>
+    /// Replaces this session's admitted spatial artifact. The current content reference remains owned
+    /// until the Engine accepts the replacement, so a rejected destination leaves the source session live.
+    /// </summary>
+    public SpatialContentArtifactReplaceReceipt ReplaceContent(SpatialContentArtifact inputs)
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
+        ArgumentNullException.ThrowIfNull(inputs);
+
+        ContentReference? candidate = null;
+        try
+        {
+            candidate = _contentService.ResolveReference(new ContentResolveRequest(inputs.Path, inputs.Sha256));
+            SpatialContentArtifactReplaceReceipt receipt = _spatial.ReplaceContentArtifact(new SpatialContentArtifactReplaceRequest(
+                _session,
+                candidate,
+                inputs.NavigationGridId,
+                _tuning.NavigationChunkSize,
+                _tuning.NavigationMaximumStepCells));
+            ContentReference previous = _content;
+            _content = candidate;
+            candidate = null;
+            previous.Dispose();
+            return receipt;
+        }
+        finally
+        {
+            candidate?.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Starts the next Engine character proposal at a newly selected world position without carrying
+    /// motion or support references from the former position. The Engine still owns grounding on
+    /// that next proposal; this product state only supplies its safe, detached starting point.
+    /// </summary>
+    public void Relocate(PlayerControlState player, WorldPoint position)
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
+        ArgumentNullException.ThrowIfNull(player);
+        position.Validate();
+        player.Restore(position, default);
+        _latestGeneration = null;
+        _restoredCheckpoint = null;
     }
 
     /// <summary>Captures the Engine-owned continuation only at a completed proposal boundary.</summary>

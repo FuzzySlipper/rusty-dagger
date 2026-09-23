@@ -78,7 +78,7 @@ internal static class DaggerfallFormulaPolicy
         return FloorDivide(checked(intelligence * multiplierMilli), selected.MilliScale);
     }
 
-    /// <summary>The classic character-sheet ceiling used by character creation.</summary>
+    /// <summary>The classic character-sheet ceiling used by creation and level allocation.</summary>
     internal static int MaxStatValue() => 100;
 
     /// <summary>Validates the Engine-random creation attribute pool (six through fourteen).</summary>
@@ -86,6 +86,25 @@ internal static class DaggerfallFormulaPolicy
     {
         if (roll is < 6 or > 14) throw new ArgumentOutOfRangeException(nameof(roll));
         return roll;
+    }
+
+    /// <summary>
+    /// Donor <c>FormulaHelper.RollMaxHealth</c>: level one is the base 25 plus career health,
+    /// then every subsequent level consumes one caller-owned Engine random health roll.
+    /// </summary>
+    internal static int RollMaxHealth(int level, int hitPointsPerLevel, int endurance, Func<int, int, int> rollInclusive, DaggerfallFormulaTuning? tuning = null)
+    {
+        if (level < 1) throw new ArgumentOutOfRangeException(nameof(level));
+        ArgumentNullException.ThrowIfNull(rollInclusive);
+        int health = checked(25 + hitPointsPerLevel);
+        for (int current = 1; current < level; current++)
+        {
+            (int minimum, int maximum) = HitPointsPerLevelRollBounds(hitPointsPerLevel, tuning);
+            int roll = rollInclusive(minimum, maximum);
+            if (roll < minimum || roll > maximum) throw new ArgumentOutOfRangeException(nameof(rollInclusive));
+            health = checked(health + HitPointsPerLevelUp(roll, endurance, tuning));
+        }
+        return health;
     }
 
     internal static int HandToHandMinimumDamage(int skill, DaggerfallFormulaTuning? tuning = null)
@@ -123,7 +142,10 @@ internal static class DaggerfallFormulaPolicy
         return Math.Max(selected.MinimumRecoveryRate, FloorDivide(maximumMagicka, selected.RecoveryDivisor));
     }
 
+    /// <summary>Donor <c>FormulaHelper.CalculateBackstabChance</c>: an accepted facing-away opportunity contributes the live skill to hit chance.</summary>
     internal static int BackstabChance(int skill, bool targetFacingAway) => targetFacingAway ? Math.Max(0, skill) : 0;
+
+    internal static int CalculateBackstabChance(int skill, bool targetFacingAway) => BackstabChance(skill, targetFacingAway);
 
     /// <summary>Classic skill-sum progression, kept separate from the live XP experiment.</summary>
     internal static int ClassicPlayerLevel(int currentLevelUpSkills, int startingLevelUpSkills, DaggerfallFormulaTuning? tuning = null)
@@ -195,16 +217,89 @@ internal static class DaggerfallFormulaPolicy
         return SkillAdvancementMultipliers.TryGetValue(skill, out int value) ? value : throw new ArgumentException($"Unknown Daggerfall skill '{skill}'.", nameof(skill));
     }
 
-    internal static int CalculateHitChance(int skill, int struckArmor, int attackerLuck, int targetLuck, int attackerAgility, int targetAgility, int targetDodging, int targetBiographyAvoidHit = 0, DaggerfallFormulaTuning? tuning = null)
+    /// <summary>
+    /// Donor <c>CalculateWeaponToHit</c>: the weapon's material modifier is a
+    /// separate table from the minimum-metal rank used by material eligibility.
+    /// </summary>
+    internal static int CalculateWeaponToHit(string? weaponMaterial) => CalculateWeaponToHit(weaponMaterial, ClassicWeaponToHitMaterialModifiers);
+
+    internal static int CalculateWeaponToHit(string? weaponMaterial, IReadOnlyDictionary<string, int> weaponMaterialModifiers)
+    {
+        ArgumentNullException.ThrowIfNull(weaponMaterialModifiers);
+        if (weaponMaterial is null) return 0;
+        // DFU's GetWeaponMaterialModifier returns zero for an unknown material;
+        // retain that donor fallback while authored content validation catches
+        // an invalid material at its source boundary.
+        return weaponMaterialModifiers.TryGetValue(weaponMaterial, out int modifier)
+            ? checked(modifier * 10)
+            : 0;
+    }
+
+    /// <summary>Donor <c>CalculateArmorToHit</c>: the selected body part's already-composed live armor value.</summary>
+    internal static int CalculateArmorToHit(int struckArmor) => struckArmor;
+
+    /// <summary>Donor <c>CalculateAdrenalineRushToHit</c>, including the strict one-eighth health boundary.</summary>
+    internal static int CalculateAdrenalineRushToHit(bool attackerHasRush, bool attackerImprovedRush, double attackerHealth, double attackerMaximum,
+        bool targetHasRush, bool targetImprovedRush, double targetHealth, double targetMaximum)
+    {
+        // FormulaHelper compares integer health values against integer division
+        // (MaxHealth / 8). Engine tracks are double-backed, so truncate the
+        // authored/current values at this classic integer boundary.
+        static bool Active(bool hasRush, double health, double maximum) => hasRush
+            && Math.Truncate(health) < Math.Truncate(Math.Truncate(maximum) / 8d);
+        if (!double.IsFinite(attackerHealth) || !double.IsFinite(attackerMaximum) || attackerMaximum < 0d
+            || !double.IsFinite(targetHealth) || !double.IsFinite(targetMaximum) || targetMaximum < 0d)
+            throw new ArgumentOutOfRangeException(nameof(attackerHealth));
+        int result = Active(attackerHasRush, attackerHealth, attackerMaximum) ? attackerImprovedRush ? 8 : 5 : 0;
+        return checked(result - (Active(targetHasRush, targetHealth, targetMaximum) ? targetImprovedRush ? 8 : 5 : 0));
+    }
+
+    /// <summary>Donor <c>CalculateStatsToHit</c>, preserving C# integer truncation toward zero for negative differentials.</summary>
+    internal static int CalculateStatsToHit(int attackerLuck, int targetLuck, int attackerAgility, int targetAgility, DaggerfallFormulaTuning? tuning = null)
     {
         DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
-        int chance = checked(skill + struckArmor + selected.HitChanceBase
-            + TruncateDivide(attackerLuck - targetLuck, selected.HitChanceAttributeDivisor)
-            + TruncateDivide(attackerAgility - targetAgility, selected.HitChanceAttributeDivisor)
-            - FloorDivide(targetDodging, selected.HitChanceDodgingDivisor)
-            - targetBiographyAvoidHit);
-        return Math.Clamp(chance, selected.MinimumHitChance, selected.MaximumHitChance);
+        return checked(TruncateDivide(attackerLuck - targetLuck, selected.HitChanceAttributeDivisor)
+            + TruncateDivide(attackerAgility - targetAgility, selected.HitChanceAttributeDivisor));
     }
+
+    /// <summary>Donor <c>CalculateSkillsToHit</c>: target dodging always applies; a separately keyed critical-strike success supplies its bonus.</summary>
+    internal static int CalculateSkillsToHit(int targetDodging, int attackerCriticalStrike, bool criticalStrikeSucceeded, DaggerfallFormulaTuning? tuning = null)
+    {
+        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
+        return checked(-FloorDivide(targetDodging, selected.HitChanceDodgingDivisor)
+            + (criticalStrikeSucceeded ? FloorDivide(attackerCriticalStrike, selected.HitChanceAttributeDivisor) : 0));
+    }
+
+    /// <summary>Donor <c>CalculateAdjustmentsToHit</c>: biography avoidance, the monster bonus, then the classic -50 baseline.</summary>
+    internal static int CalculateAdjustmentsToHit(bool targetIsMonster, int targetBiographyAvoidHit, DaggerfallFormulaTuning? tuning = null)
+    {
+        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
+        return checked((targetIsMonster ? 40 : 0) - targetBiographyAvoidHit + selected.HitChanceBase);
+    }
+
+    /// <summary>One complete donor hit pipeline before its caller compares the independently drawn 1..100 roll.</summary>
+    internal static int CalculateSuccessfulHitChance(int chanceToHitModifier, int struckArmor, int adrenalineRush, int stats, int skills, int adjustments,
+        DaggerfallFormulaTuning? tuning = null)
+    {
+        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
+        return Math.Clamp(checked(chanceToHitModifier + CalculateArmorToHit(struckArmor) + adrenalineRush + stats + skills + adjustments),
+            selected.MinimumHitChance, selected.MaximumHitChance);
+    }
+
+    /// <summary>Boolean donor-shaped overload retained for callers that already own their actual Engine random roll.</summary>
+    internal static bool CalculateSuccessfulHit(int chanceToHitModifier, int struckArmor, int adrenalineRush, int stats, int skills, int adjustments, int roll,
+        DaggerfallFormulaTuning? tuning = null)
+    {
+        if (roll is < 1 or > 100) throw new ArgumentOutOfRangeException(nameof(roll));
+        return roll <= CalculateSuccessfulHitChance(chanceToHitModifier, struckArmor, adrenalineRush, stats, skills, adjustments, tuning);
+    }
+
+    /// <summary>Compatibility read for existing callers that do not own weapon, adrenaline, or critical-strike inputs.</summary>
+    internal static int CalculateHitChance(int skill, int struckArmor, int attackerLuck, int targetLuck, int attackerAgility, int targetAgility, int targetDodging, int targetBiographyAvoidHit = 0, DaggerfallFormulaTuning? tuning = null) =>
+        CalculateSuccessfulHitChance(skill, struckArmor, 0,
+            CalculateStatsToHit(attackerLuck, targetLuck, attackerAgility, targetAgility, tuning),
+            CalculateSkillsToHit(targetDodging, 0, false, tuning),
+            CalculateAdjustmentsToHit(false, targetBiographyAvoidHit, tuning), tuning);
 
     /// <summary>Classic material gate: a weapon must meet the target's minimum material.</summary>
     internal static bool CanHitMaterial(string? weaponMaterial, string? targetMinimumMaterial, IReadOnlyDictionary<string, int> weaponMaterialRanks)
@@ -226,6 +321,20 @@ internal static class DaggerfallFormulaPolicy
         ["iron"] = 0, ["steel"] = 1, ["silver"] = 2, ["elven"] = 3, ["dwarven"] = 4,
         ["mithril"] = 5, ["adamantium"] = 6, ["ebony"] = 7, ["orcish"] = 8, ["daedric"] = 9,
     };
+
+    /// <summary>
+    /// Donor <c>DaggerfallUnityItem.GetWeaponMaterialModifier</c> values used by
+    /// <c>CalculateWeaponToHit</c>. Steel and silver share the zero modifier;
+    /// mithril and adamantium share the three modifier.
+    /// </summary>
+    internal static IReadOnlyDictionary<string, int> ClassicWeaponToHitMaterialModifiers { get; } = new Dictionary<string, int>(StringComparer.Ordinal)
+    {
+        ["iron"] = -1, ["steel"] = 0, ["silver"] = 0, ["elven"] = 1, ["dwarven"] = 2,
+        ["mithril"] = 3, ["adamantium"] = 3, ["ebony"] = 4, ["orcish"] = 5, ["daedric"] = 6,
+    };
+
+    /// <summary>Maps a donor 0..19 body roll to the selected struck body part.</summary>
+    internal static int CalculateStruckBodyPart(int roll) => StruckBodyPart(roll);
 
     internal static int StruckBodyPart(int roll)
     {

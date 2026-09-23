@@ -13,6 +13,9 @@ internal static partial class Program
 {
     private const long MaximumIndividualSourceBytes = 128L * 1024L * 1024L;
     private const long MaximumTotalSourceBytes = 512L * 1024L * 1024L;
+    private static readonly string[] RuntimeEncounterActorResources = Enumerable.Range(0, 39).Concat(Enumerable.Range(40, 3)).Concat(Enumerable.Range(128, 19))
+        .Select(id => $"actor/mobile-{id}").ToArray();
+    private static readonly string[] RuntimeGroundBillboardResources = ["sprite/texture-216-0"];
 
     private static int Main(string[] args)
     {
@@ -123,7 +126,10 @@ internal static partial class Program
                 return RunFightersQuestCorpusCommand(args);
             }
 
-            if (args.Length != 0 && args[0] == "classic-quest-corpora") return RunClassicQuestCorporaCommand(args);
+            if (args.Length != 0 && args[0] == "classic-quest-corpora")
+            {
+                return RunClassicQuestCorporaCommand(args);
+            }
 
             if (args.Length != 0 && args[0] == "cinematic-media") return RunCinematicMediaCommand(args);
 
@@ -135,6 +141,10 @@ internal static partial class Program
             if (args.Length != 0 && args[0] == "geometry")
             {
                 return RunGeometryCommand(args);
+            }
+            if (args.Length != 0 && args[0] == "rmb-spatial")
+            {
+                return RunRmbSpatialCommand(args);
             }
 
             if (args.Length != 0 && args[0] == "blocks")
@@ -158,8 +168,8 @@ internal static partial class Program
             }
 
             ToolOptions options = ToolOptions.Parse(args);
-            ImportPublicationPlan plan = AttachSourceManifest(BuildPlan(options), options);
-            if (options.Command == ToolCommand.Write && options.InventoryFile is null)
+            ImportPublicationPlan plan = AttachSourceManifest(BuildPlan(options), options.Arena2Directory, options.InventoryFile);
+            if (options.InventoryFile is null)
             {
                 SourceManifestPublication.RefuseProvenanceLoss(plan, options.OutputDirectory);
             }
@@ -183,6 +193,77 @@ internal static partial class Program
             Console.Error.WriteLine($"daggerfall-import-tool: {exception.Message}");
             return 1;
         }
+    }
+
+    /// <summary>Publishes one selected RMB exterior or building interior static-mesh/collision/navigation closure.</summary>
+    private static int RunRmbSpatialCommand(IReadOnlyList<string> args)
+    {
+        const string usage = "usage: daggerfall-import-tool rmb-spatial --arena2 SOURCE_DIR --out OUTPUT_DIR --inventory CSV --region REGION --location NAME --profile exterior|interior --ui-authored-assets FILE --ui-original DIR [--block-x X --block-y Y --building INDEX]";
+        Dictionary<string, string> values = [];
+        for (int index = 1; index < args.Count; index += 2)
+            if (index + 1 >= args.Count || !args[index].StartsWith("--", StringComparison.Ordinal) || !values.TryAdd(args[index], args[index + 1])) throw new ArgumentException(usage);
+        string[] required = ["--arena2", "--out", "--inventory", "--region", "--location", "--profile", "--ui-authored-assets", "--ui-original"];
+        if (required.Any(key => !values.ContainsKey(key))) throw new ArgumentException(usage);
+        bool interior = values["--profile"] == "interior";
+        if (values["--profile"] is not ("exterior" or "interior") || values.Keys.Except(interior
+            ? new[] { "--arena2", "--out", "--inventory", "--region", "--location", "--profile", "--ui-authored-assets", "--ui-original", "--block-x", "--block-y", "--building" }
+            : required).Any()) throw new ArgumentException(usage);
+        if (!int.TryParse(values["--region"], NumberStyles.None, CultureInfo.InvariantCulture, out int region)) throw new ArgumentException(usage);
+        RmbBuildingSelection? building = null;
+        if (interior)
+        {
+            if (!values.TryGetValue("--block-x", out string? x) || !values.TryGetValue("--block-y", out string? y) || !values.TryGetValue("--building", out string? slot)
+                || !byte.TryParse(x, NumberStyles.None, CultureInfo.InvariantCulture, out byte blockX) || !byte.TryParse(y, NumberStyles.None, CultureInfo.InvariantCulture, out byte blockY)
+                || !int.TryParse(slot, NumberStyles.None, CultureInfo.InvariantCulture, out int index)) throw new ArgumentException(usage);
+            building = new(blockX, blockY, index);
+        }
+        Arena2ClassicMediaProfile classicMediaProfile = LoadClassicMediaProfile(values["--ui-authored-assets"], values["--ui-original"]);
+        AdmittedArena2Sources sources = new(values["--arena2"]);
+        LoadRequiredDungeonSources(sources);
+        LoadClassicMediaSources(sources);
+        RmbExteriorNormalizationResult result;
+        HashSet<string> resolvedOnDemand = new(StringComparer.Ordinal);
+        ImportPublicationPlan plan;
+        while (true)
+        {
+            try
+            {
+                result = RmbExteriorNormalizer.Normalize(new(new DungeonLogicalSourceSet(sources.DungeonSources), region, values["--location"],
+                    interior ? RmbWorldProfileKind.Interior : RmbWorldProfileKind.Exterior) { Building = building });
+                Arena2DungeonMediaPublication dungeonMedia = Arena2DungeonMediaPublication.Create(
+                    Arena2DungeonMediaRequest.Create(result.Document, new Arena2DungeonMediaSourceSet(sources.DungeonMediaSources)) with
+                    {
+                        RuntimeActorResources = RuntimeEncounterActorResources,
+                        RuntimeBillboardResources = RuntimeGroundBillboardResources,
+                        TextureLeaves = sources.TextureLeaves(),
+                        TextureLeafConsumer = $"selected RMB media '{result.Layout.LocationName}'",
+                    });
+                Arena2ClassicMediaPublication classicMedia = Arena2ClassicMediaPublication.Create(
+                    sources.ClassicMediaInputs,
+                    classicMediaProfile,
+                    new Arena2ClassicMediaPublicationOptions(MaximumSourceBytes: MaximumIndividualSourceBytes));
+                DungeonLogicalSource archSource = sources.DungeonSources.Single(source => source.Label.EndsWith("ARCH3D.BSA", StringComparison.Ordinal));
+                GeometryPublication geometry = GeometryPublicationBuilder.Create(new GeometryPublicationRequest(
+                    Arch3dInventoryReader.Read(archSource.Bytes.ToArray(), archSource.Label),
+                    archSource.Bytes,
+                    result.ReferencedMeshIds,
+                    sources.TextureLeaves()));
+                plan = AttachSourceManifest(Arena2MediaBundlePublication.Create(result, dungeonMedia, classicMedia, geometry).Plan,
+                    values["--arena2"], Path.GetFullPath(values["--inventory"]));
+                break;
+            }
+            catch (MissingArena2SourceException missing) { LoadOnDemand(sources, resolvedOnDemand, missing.SourceName); }
+            catch (MissingDungeonMediaTexturesException mismatch)
+                when (mismatch.UnneededTextureNames.Count == 0 && mismatch.MissingTextureNames.Count != 0)
+            {
+                foreach (string textureName in mismatch.MissingTextureNames)
+                    LoadOnDemand(sources, resolvedOnDemand, textureName);
+            }
+        }
+        string output = Path.GetFullPath(values["--out"]);
+        ImportPublicationWriter.Write(plan, output);
+        Console.WriteLine($"rmb spatial: {result.Layout.LocationName} {values["--profile"]}, {result.Document.Meshes.Count} meshes, {result.Document.Navigation!.Cells.Count} navigation cells, {plan.Artifacts.Count} closure artifacts");
+        return 0;
     }
 
     /// <summary>
@@ -2029,16 +2110,16 @@ internal static partial class Program
     /// dispositions a later normalizer cites travel with the published tree instead of
     /// existing only in an operator's working directory.
     /// </summary>
-    private static ImportPublicationPlan AttachSourceManifest(ImportPublicationPlan plan, ToolOptions options)
+    private static ImportPublicationPlan AttachSourceManifest(ImportPublicationPlan plan, string arena2Directory, string? inventoryFile)
     {
-        if (options.InventoryFile is null)
+        if (inventoryFile is null)
         {
             return plan;
         }
 
-        byte[] inventoryBytes = File.ReadAllBytes(options.InventoryFile);
+        byte[] inventoryBytes = File.ReadAllBytes(inventoryFile);
         SourceManifest complete = SourceManifestBuilder.Scan(
-            new SourceManifestRequest("local/arena2", Path.GetFileName(options.InventoryFile), options.Arena2Directory,
+            new SourceManifestRequest("local/arena2", Path.GetFileName(inventoryFile), arena2Directory,
                 ImportedNames(plan.Manifest.Sources.Select(source => source.SourcePath)), [], ExcludedNames(SourceManifestBuilder.ReadInventory(inventoryBytes))),
             inventoryBytes);
         // A publication that carries a source manifest is its first consumer: every
@@ -2056,7 +2137,7 @@ internal static partial class Program
             }
         }
 
-        SourceInventoryReconciliation reconciliation = SourceInventoryReconciler.Reconcile(options.InventoryFile!, complete.Records, update: false);
+        SourceInventoryReconciliation reconciliation = SourceInventoryReconciler.Reconcile(inventoryFile, complete.Records, update: false);
         foreach (string line in reconciliation.Drift)
         {
             Console.Error.WriteLine($"inventory drift: {line}");
@@ -2067,19 +2148,7 @@ internal static partial class Program
             Console.Error.WriteLine($"inventory unresolved: {line}");
         }
 
-        byte[] bytes = SourceManifestSerializer.Serialize(complete);
-        ImportProvenance provenance = plan.Manifest.Sources.Count == 0
-            ? throw new InvalidOperationException("A publication with no sources cannot carry a source manifest.")
-            : new ImportProvenance(ImportProvenance.CurrentSchemaVersion, plan.Manifest.ImporterId, plan.Manifest.ImporterVersion,
-                plan.Manifest.Sources.Select(source => new LogicalSourceRecord(
-                    LogicalSourceRecord.CurrentSchemaVersion, source.SourcePath, source.ContentHash, source.ByteLen, Daggerfall.Import.Normalized.NormalizedImportDocument.CurrentSchemaVersion)).ToArray());
-        // The plan's own manifest artifact is regenerated by Create, so it must not be
-        // carried over as an input artifact.
-        return ImportPublicationPlan.Create(provenance,
-        [
-            .. plan.Artifacts.Where(artifact => artifact.RelativePath != ImportPublicationManifestSerializer.ManifestRelativePath),
-            new ImportPublicationArtifact(SourceManifestSerializer.ManifestRelativePath, bytes),
-        ]);
+        return SourceManifestPublication.Compose(plan, complete);
     }
 
     private static int RunSpriteCommand(IReadOnlyList<string> args)
@@ -2206,6 +2275,8 @@ internal static partial class Program
                 Arena2DungeonMediaPublication dungeonMedia = Arena2DungeonMediaPublication.Create(
                     Arena2DungeonMediaRequest.Create(result.Document, new Arena2DungeonMediaSourceSet(sources.DungeonMediaSources)) with
                     {
+                        RuntimeActorResources = RuntimeEncounterActorResources,
+                        RuntimeBillboardResources = RuntimeGroundBillboardResources,
                         AuthoredOverlays = dungeonOverlays,
                         TextureLeaves = sources.TextureLeaves(),
                         TextureLeafConsumer = $"selected dungeon media '{options.Location}'",

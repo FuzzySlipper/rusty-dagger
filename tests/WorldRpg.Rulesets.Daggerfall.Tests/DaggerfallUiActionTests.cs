@@ -7,16 +7,6 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallUiActionTests
 {
     [Theory]
-    [InlineData("{\"action\":\"currency-deposit-gold\",\"amount\":25}", true)]
-    [InlineData("{\"action\":\"currency-withdraw-letter\",\"amount\":100}", true)]
-    [InlineData("{\"action\":\"currency-withdraw-gold\",\"amount\":0}", false)]
-    [InlineData("{\"action\":\"currency-deposit-gold\"}", false)]
-    [InlineData("{\"action\":\"currency-deposit-letters\"}", true)]
-    [InlineData("{\"action\":\"currency-deposit-letters\",\"amount\":1}", false)]
-    public void Currency_actions_admit_only_explicit_nonzero_amounts(string json, bool accepted) =>
-        Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
-
-    [Theory]
     [InlineData("{\"action\":\"attack\"}", "attack")]
     [InlineData("{\"action\":\"loot\"}", "loot")]
     [InlineData("{\"action\":\"inventory\"}", "inventory")]
@@ -35,10 +25,27 @@ public sealed class DaggerfallUiActionTests
     [InlineData("{\"action\":\"inventory-move\",\"revision\":\"1:2\",\"item\":\"unique:1002\",\"targetGrid\":3,\"targetEquipment\":\"head\"}", false)]
     [InlineData("{\"action\":\"inventory-move\",\"item\":\"unique:1002\",\"targetGrid\":3}", false)]
     [InlineData("{\"action\":\"inventory-move\",\"revision\":\"1:2\",\"item\":\"unique:1002\",\"targetGrid\":\"3\"}", false)]
+    [InlineData("{\"action\":\"inventory-use\",\"revision\":\"1:2\",\"item\":\"unique:1002\"}", true)]
+    [InlineData("{\"action\":\"inventory-use\",\"revision\":\"1:2\",\"item\":\"unique:1002\",\"amount\":1}", false)]
     public void Inventory_drop_requires_a_revision_identity_and_exactly_one_typed_target(string json, bool accepted)
+        => Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
+
+    [Theory]
+    [InlineData("{\"action\":\"notebook-page\",\"revision\":\"3\",\"page\":1}", true)]
+    [InlineData("{\"action\":\"notebook-page\",\"revision\":\"3\",\"page\":-1}", false)]
+    [InlineData("{\"action\":\"notebook-add\",\"revision\":\"3\",\"text\":\"A durable note.\"}", true)]
+    [InlineData("{\"action\":\"notebook-add\",\"revision\":\"3\",\"text\":\" \"}", false)]
+    [InlineData("{\"action\":\"notebook-edit\",\"revision\":\"3\",\"note\":\"note:1\",\"text\":\"Edited.\"}", true)]
+    [InlineData("{\"action\":\"notebook-remove\",\"revision\":\"3\",\"note\":\"note:1\"}", true)]
+    [InlineData("{\"action\":\"notebook-move\",\"revision\":\"3\",\"note\":\"note:1\",\"destination\":1}", true)]
+    [InlineData("{\"action\":\"notebook-move\",\"revision\":\"3\",\"note\":\"note:1\",\"destination\":-1}", false)]
+    [InlineData("{\"action\":\"notebook-remove\",\"revision\":\"3\",\"note\":\"note:1\",\"item\":\"stack:book\"}", false)]
+    public void Notebook_actions_are_exact_guarded_semantic_claims(string json, bool accepted)
         => Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
     [Theory]
     [InlineData("{\"action\":\"loot-take\",\"container\":\"2000:1\",\"revision\":\"2000:1:8\",\"item\":\"stack:gold-piece\"}", true)]
+    [InlineData("{\"action\":\"loot-take\",\"container\":\"2000:1\",\"revision\":\"2000:1:8\",\"item\":\"stack:gold-piece\",\"amount\":5}", true)]
+    [InlineData("{\"action\":\"loot-take\",\"container\":\"2000:1\",\"revision\":\"2000:1:8\",\"item\":\"stack:gold-piece\",\"amount\":0}", false)]
     [InlineData("{\"action\":\"loot-take\",\"revision\":\"8\",\"item\":\"stack:gold-piece\"}", false)]
     [InlineData("{\"action\":\"loot-take\",\"container\":\"2000:1\",\"revision\":\"8\",\"item\":\"stack:gold-piece\",\"quantity\":5}", false)]
     [InlineData("{\"action\":\"loot-close\",\"container\":\"2000:1\"}", true)]
@@ -95,10 +102,21 @@ public sealed class DaggerfallUiActionTests
         Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
 
     [Theory]
+    [InlineData("{\"action\":\"currency-deposit-gold\",\"amount\":25}", true)]
+    [InlineData("{\"action\":\"currency-withdraw-letter\",\"amount\":100}", true)]
+    [InlineData("{\"action\":\"currency-withdraw-gold\",\"amount\":0}", false)]
+    [InlineData("{\"action\":\"currency-deposit-gold\"}", false)]
+    [InlineData("{\"action\":\"currency-deposit-letters\"}", true)]
+    [InlineData("{\"action\":\"currency-deposit-letters\",\"amount\":1}", false)]
+    public void Currency_actions_admit_only_explicit_nonzero_amounts(string json, bool accepted) =>
+        Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
+
+    [Theory]
     [InlineData("{\"action\":\"cinematic-skip\"}", true)]
     [InlineData("{\"action\":\"cinematic-skip\",\"item\":\"unexpected\"}", false)]
     public void Cinematic_skip_is_a_small_semantic_action(string json, bool accepted) =>
         Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
+
     [Theory]
     [InlineData("{\"action\":\"quest-choice\",\"questInstance\":\"quest:1\",\"questMessage\":1010,\"questChoice\":3,\"questPrompt\":\"prompt:1\"}", true)]
     [InlineData("{\"action\":\"quest-choice\",\"questInstance\":\"quest:1\",\"questMessage\":0,\"questChoice\":3,\"questPrompt\":\"prompt:1\"}", false)]

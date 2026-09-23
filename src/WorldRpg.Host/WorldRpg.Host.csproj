@@ -13,6 +13,7 @@
     <RustyEngineProductEntryType>WorldRpg.Host.WorldRpgProduct</RustyEngineProductEntryType>
     <RustyEngineProductId>rusty-dagger-worldrpg</RustyEngineProductId>
     <RustyEngineProductTitle>Rusty Dagger / WorldRpg</RustyEngineProductTitle>
+    <RustyEngineProductDefaultWorldLights>disabled</RustyEngineProductDefaultWorldLights>
     <RustyEngineProductUiRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui/generated'))</RustyEngineProductUiRoot>
     <RustyEngineProductContentRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineProductContentRoot>
     <RustyEngineProductUiEntry>main.js</RustyEngineProductUiEntry>
@@ -57,6 +58,9 @@
     <RustyEngineContentBundle Include="daggerfall.classic-audio" Root="worldrpg/media/audio/clips" />
     <RustyEngineContentBundle Include="daggerfall.cinematics" Root="worldrpg/media/cinematics" />
     <RustyEngineContentBundle Include="daggerfall.privateers-hold-audio" Root="worldrpg/imports/privateers-hold/media/audio/clips" />
+    <RustyEngineContentBundle Include="daggerfall.castle-necromoghan-audio" Root="worldrpg/imports/castle-necromoghan/media/audio/clips" />
+    <RustyEngineContentBundle Include="daggerfall.charing-exterior-audio" Root="worldrpg/imports/charing/exterior/media/audio/clips" />
+    <RustyEngineContentBundle Include="daggerfall.charing-interior-1-1-0-audio" Root="worldrpg/imports/charing/interior-1-1-0/media/audio/clips" />
   </ItemGroup>
 
   <!-- TypeScript builds only the product-owned DOM companion. The runtime

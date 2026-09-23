@@ -421,12 +421,19 @@ public sealed class PublishedContentDeliveryTests
             content,
             content.ReadBytes("worldrpg/payloads/daggerfall.privateers-hold.json"),
             definitions);
+        PrivateersHoldInputs castle = PrivateersHoldContent.Read(
+            content,
+            content.ReadBytes("worldrpg/payloads/daggerfall.castle-necromoghan.json"),
+            definitions);
+
         DaggerfallPublishedClassicMedia media = DaggerfallPublishedClassicMedia.Read(content, inputs.ClassicPresentation);
+        DaggerfallPublishedClassicMedia castleMedia = DaggerfallPublishedClassicMedia.Read(content, castle.ClassicPresentation);
 
         Assert.Equal(153, media.Paths.Count);
         Assert.Equal("worldrpg/media/maps/map-fmap0i17.png", media.Paths["map.fmap0i17"]);
         Assert.Equal("worldrpg/media/fonts/font-classic-0000-atlas.png", media.Paths["font.classic.0000"]);
         Assert.Equal("worldrpg/media/combat/weapon-werecreature-atlas.png", media.Paths["weapon.werecreature"]);
+        Assert.Equal(media.Paths.OrderBy(pair => pair.Key), castleMedia.Paths.OrderBy(pair => pair.Key));
     }
 
     [Fact]

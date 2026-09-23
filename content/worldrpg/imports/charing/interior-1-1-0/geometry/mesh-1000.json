@@ -1,0 +1,149 @@
+{
+  "asset": "1000",
+  "payload": {
+    "layout": {
+      "vertexCount": 8,
+      "indexCount": 18,
+      "indexWidth": "u32",
+      "attributes": [
+        {
+          "name": "position",
+          "components": 3,
+          "kind": "f32"
+        },
+        {
+          "name": "normal",
+          "components": 3,
+          "kind": "f32"
+        },
+        {
+          "name": "uv",
+          "components": 2,
+          "kind": "f32"
+        }
+      ]
+    },
+    "groups": [
+      {
+        "materialSlot": 0,
+        "start": 0,
+        "count": 18
+      }
+    ],
+    "bounds": {
+      "min": [
+        -1.6,
+        -0,
+        -1.6
+      ],
+      "max": [
+        1.6,
+        -0,
+        1.6
+      ]
+    },
+    "source": {
+      "kind": "inline",
+      "positions": [
+        0,
+        -0,
+        1.6,
+        1.6,
+        -0,
+        1.6,
+        1.6,
+        -0,
+        -0,
+        1.6,
+        -0,
+        -1.6,
+        0,
+        -0,
+        -1.6,
+        -1.6,
+        -0,
+        -1.6,
+        -1.6,
+        -0,
+        -0,
+        -1.6,
+        -0,
+        1.6
+      ],
+      "normals": [
+        -0,
+        1,
+        0,
+        -0,
+        1,
+        0,
+        -0,
+        1,
+        0,
+        -0,
+        1,
+        0,
+        -0,
+        1,
+        0,
+        -0,
+        1,
+        0,
+        -0,
+        1,
+        0,
+        -0,
+        1,
+        0
+      ],
+      "uvs": [
+        1024,
+        2048,
+        2048,
+        2048,
+        2048,
+        1024,
+        2048,
+        0,
+        1024,
+        0,
+        0,
+        0,
+        0,
+        1024,
+        0,
+        2048
+      ],
+      "indices": [
+        0,
+        1,
+        2,
+        0,
+        2,
+        3,
+        0,
+        3,
+        4,
+        0,
+        4,
+        5,
+        0,
+        5,
+        6,
+        0,
+        6,
+        7
+      ]
+    },
+    "provenance": "staticAsset"
+  },
+  "materialSlots": [
+    {
+      "slot": 0,
+      "material": "material/texture-116-3"
+    }
+  ],
+  "collision": {
+    "kind": "visualOnly"
+  }
+}

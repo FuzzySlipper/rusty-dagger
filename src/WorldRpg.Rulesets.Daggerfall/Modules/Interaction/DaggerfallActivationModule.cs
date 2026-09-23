@@ -16,7 +16,7 @@ internal enum DaggerfallActivationMode { Grab, Info, Talk, Steal, Bash }
 /// policy joins this switch when its real owner lands; an unavailable owner reports that fact and
 /// never pretends an action succeeded.
 /// </remarks>
-internal enum DaggerfallActivationTargetKind { Door, Container, Npc, Item, Corpse }
+internal enum DaggerfallActivationTargetKind { Door, Portal, Container, Npc, Item, Corpse }
 
 /// <summary>One live Daggerfall target contributed by its owning domain.</summary>
 internal readonly record struct DaggerfallActivationTarget(
@@ -25,9 +25,12 @@ internal readonly record struct DaggerfallActivationTarget(
     EntityId Entity,
     ulong QueryIdentity,
     WorldPoint Position,
-    int Precedence)
+    int Precedence,
+    string? Label = null,
+    double? ReachDistance = null)
 {
-    internal InteractionTargetCandidate ToKitCandidate() => new(Entity, Identity, QueryIdentity, Position, Precedence, Kind.ToString());
+    internal InteractionTargetCandidate ToKitCandidate() => new(Entity, Identity, QueryIdentity, Position, Precedence,
+        Label ?? Kind.ToString(), ReachDistance);
 }
 
 /// <summary>Stable mode and target selected from one Engine perception query.</summary>
@@ -42,6 +45,12 @@ internal interface IDaggerfallDoorActivationOwner
 {
     IEnumerable<DaggerfallActivationTarget> DoorTargets();
     DaggerfallActivationOutcome ActivateDoor(DaggerfallActivationSelection selection);
+}
+
+internal interface IDaggerfallPortalActivationOwner
+{
+    IEnumerable<DaggerfallActivationTarget> PortalTargets();
+    DaggerfallActivationOutcome ActivatePortal(DaggerfallActivationSelection selection);
 }
 
 internal interface IDaggerfallContainerActivationOwner
@@ -72,12 +81,14 @@ internal interface IDaggerfallCorpseActivationOwner
 internal sealed class DaggerfallActivationContributions(
     IDaggerfallCorpseActivationOwner corpse,
     IDaggerfallDoorActivationOwner? door = null,
+    IDaggerfallPortalActivationOwner? portal = null,
     IDaggerfallContainerActivationOwner? container = null,
     IDaggerfallNpcActivationOwner? npc = null,
     IDaggerfallItemActivationOwner? item = null)
 {
     private readonly IDaggerfallCorpseActivationOwner _corpse = corpse ?? throw new ArgumentNullException(nameof(corpse));
     private readonly IDaggerfallDoorActivationOwner? _door = door;
+    private readonly IDaggerfallPortalActivationOwner? _portal = portal;
     private readonly IDaggerfallContainerActivationOwner? _container = container;
     private readonly IDaggerfallNpcActivationOwner? _npc = npc;
     private readonly IDaggerfallItemActivationOwner? _item = item;
@@ -86,6 +97,7 @@ internal sealed class DaggerfallActivationContributions(
     {
         foreach (DaggerfallActivationTarget target in _corpse.CorpseTargets()) yield return RequireKind(target, DaggerfallActivationTargetKind.Corpse);
         if (_door is not null) foreach (DaggerfallActivationTarget target in _door.DoorTargets()) yield return RequireKind(target, DaggerfallActivationTargetKind.Door);
+        if (_portal is not null) foreach (DaggerfallActivationTarget target in _portal.PortalTargets()) yield return RequireKind(target, DaggerfallActivationTargetKind.Portal);
         if (_container is not null) foreach (DaggerfallActivationTarget target in _container.ContainerTargets()) yield return RequireKind(target, DaggerfallActivationTargetKind.Container);
         if (_npc is not null) foreach (DaggerfallActivationTarget target in _npc.NpcTargets()) yield return RequireKind(target, DaggerfallActivationTargetKind.Npc);
         if (_item is not null) foreach (DaggerfallActivationTarget target in _item.ItemTargets()) yield return RequireKind(target, DaggerfallActivationTargetKind.Item);
@@ -95,6 +107,7 @@ internal sealed class DaggerfallActivationContributions(
     {
         DaggerfallActivationTargetKind.Corpse => _corpse.ActivateCorpse(selection),
         DaggerfallActivationTargetKind.Door when _door is not null => _door.ActivateDoor(selection),
+        DaggerfallActivationTargetKind.Portal when _portal is not null => _portal.ActivatePortal(selection),
         DaggerfallActivationTargetKind.Container when _container is not null => _container.ActivateContainer(selection),
         DaggerfallActivationTargetKind.Npc when _npc is not null => _npc.ActivateNpc(selection),
         DaggerfallActivationTargetKind.Item when _item is not null => _item.ActivateItem(selection),

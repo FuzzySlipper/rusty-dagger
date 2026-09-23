@@ -74,6 +74,24 @@
 
 .dagger-menu.has-character { width: min(70rem, calc(100vw - 32px)); }
 
+.dagger-menu.has-journal { width: min(70rem, calc(100vw - 32px)); }
+.dagger-notebook { display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, .8fr); gap: 20px; }
+.dagger-book-reader, .dagger-user-notes { display: grid; align-content: start; gap: 10px; }
+.dagger-book-reader h2, .dagger-user-notes h2, .dagger-book-reader h3 { margin: 0; }
+.dagger-book-author { color: #b9ae8c; font-style: italic; margin: 0; }
+.dagger-book-page { white-space: pre-wrap; min-height: 10rem; margin: 0; line-height: 1.55; }
+.dagger-book-controls, .dagger-note-list li { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.dagger-book-controls span { margin-inline: auto; color: #b9ae8c; }
+.dagger-note-add { display: grid; gap: 8px; }
+.dagger-note-add textarea, .dagger-note-list textarea { min-height: 4rem; width: 100%; resize: vertical; }
+.dagger-note-list { display: grid; gap: 12px; padding-left: 1.5rem; margin: 0; }
+.dagger-note-list li { align-items: start; }
+.dagger-note-list textarea { flex-basis: 100%; }
+
+@media (max-width: 44rem) {
+  .dagger-notebook { grid-template-columns: 1fr; }
+}
+
 .dagger-menu.has-debug { width: min(64rem, calc(100vw - 32px)); }
 .dagger-debug-root { color: #e2cf96; min-height: 18rem; }
 .dagger-workbench-link { color: #e2cf96; }

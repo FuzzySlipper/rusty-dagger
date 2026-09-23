@@ -261,6 +261,10 @@ public sealed class NormalizedRuntimeSeamTests
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        // This test exercises combat skill-use cadence; retain the authored weapon through both
+        // accepted operations so its physical-wear removal cannot change the selected skill.
+        DaggerfallItemInstanceMetadata sword = session.State.ItemInstances.RequireUnique(1001);
+        session.State.ItemInstances.ReplaceUnique(1001, sword with { CurrentCondition = 100, MaximumCondition = 100 });
         ProductInputEvent pressed = Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack");
         ProductUpdateFacts first = new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d);
 
@@ -375,16 +379,27 @@ public sealed class NormalizedRuntimeSeamTests
         session.State.Equipment.Swap(equipped, new WorldRpg.Kit.Inventory.UniqueInventoryItem(steelItem.Entity.Value, steelDagger.Item),
             [new WorldRpg.Kit.Inventory.EquipmentSlotId("right-hand")]);
         authored[2000] = authored[2000] with { MinimumMaterial = "steel" };
-        ((Dictionary<long, DaggerfallActorDefinition>)session.DefinitionsByActor)[2000] = authored[2000];
+        DaggerCombatRules steelCombat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.InventoryFor,
+            session.State.ItemInstances, definitions, authored, targeting,
+            actorEquipment: session.State.EquipmentFor, itemCondition: session.ItemCondition);
 
         int healthBeforeSteelHit = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).ValueInt;
         int conditionBeforeSteelHit = session.State.ItemInstances.RequireUnique(steelIdentity.Value).CurrentCondition;
-        // This reaches the session's composed combat instance, proving its constructor received a
-        // live condition owner rather than the direct test combat's injected service.
-        session.ResolveExplicitMelee(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 9, 30, .125));
-        Assert.True(session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).ValueInt < healthBeforeSteelHit);
+        steelCombat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 9, 30, .125), facts);
+        List<IProductFact> steelCanHit = [];
+        facts.Deliver(steelCanHit.Add);
+        AttackHitFact hit = Assert.Single(steelCanHit.OfType<AttackHitFact>());
+        DamageAppliedFact applied = Assert.Single(steelCanHit.OfType<DamageAppliedFact>());
+        ActorDamagedFact damaged = Assert.Single(steelCanHit.OfType<ActorDamagedFact>());
+        Assert.Equal((DaggerfallActorIdentity.PlayerEntityId, 2000, DaggerfallDamageCause.PhysicalAttack),
+            (applied.SourceActorId, applied.TargetActorId, applied.Cause));
+        Assert.Equal((hit.CalculatedDamage, hit.ActualHealthLost), (applied.CalculatedDamage, applied.ActualHealthLost));
+        Assert.Equal((applied.CalculatedDamage, applied.ActualHealthLost), (damaged.CalculatedDamage, damaged.ActualHealthLost));
+        Assert.Equal(healthBeforeSteelHit - applied.ActualHealthLost,
+            session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).ValueInt);
+        Assert.True(applied.ActualHealthLost > 0);
         Assert.True(session.State.ItemInstances.RequireUnique(steelIdentity.Value).CurrentCondition < conditionBeforeSteelHit);
-        Assert.Contains("Hit", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
+        Assert.DoesNotContain(new AttackRejectedFact(AttackRejection.InsufficientWeaponMaterial), steelCanHit);
     }
 
     [Fact]
@@ -826,6 +841,55 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Over_capacity_player_still_receives_an_engine_step_but_cannot_propose_planar_movement()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+
+        InventoryStackId coins = InventoryStackId.Parse("test.encumbrance.movement");
+        session.State.Inventory.Grant(new(new InventoryItemId("gold-piece"), coins, checked((ulong)(session.State.Encumbrance.Read().MaximumClassicUnits + 1))));
+        session.State.ItemInstances.RegisterDefaultStack(DaggerfallItemOwner.Player, session.State.Inventory.Read().Stacks.Single(stack => stack.Id == coins), definitions.RequireItem(new DaggerfallItemId("gold-piece")));
+        Assert.False(session.State.Encumbrance.Read().CanMove);
+
+        session.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
+
+        Assert.Single(spatial.StepRequests);
+        Assert.Equal(Vector2.Zero, spatial.StepRequests[0].Command.PlanarIntent);
+    }
+
+    [Fact]
+    public void Engine_reported_landing_applies_one_lethal_fall_and_disables_later_player_movement()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        Track health = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
+        health.SetCurrent(3.75d, clamp: true);
+        session.State.PlayerControl.Restore(new WorldPoint(0f, 2f, 0f),
+            default(CharacterMotion) with { Grounded = false, PeakY = 9f });
+
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+        session.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
+
+        Assert.Equal(0d, health.Current);
+        Assert.Equal(2, spatial.StepCalls);
+        Assert.Equal(Vector2.Zero, spatial.StepRequests[1].Command.PlanarIntent);
+    }
+
+    [Fact]
     public void A_pad_button_asks_the_dom_for_the_menu_action_that_opens_that_panel()
     {
         string root = RepositoryRoot();
@@ -1230,6 +1294,43 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Ground_container_appearance_tracks_drop_empty_transition_and_restore_projection()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AppearanceFake appearance = new(releases);
+        NormalizedGroundContainerSprite sprite = new("sprite/treasure.png", Hash, 39, 26,
+            [new NormalizedAtlasFrame(0, 0, 0, 39, 26)], 0, new Vector2(.5F, .5F), new Vector2(.975F, .65F));
+        DaggerfallWorldProfileKey profile = new DaggerfallWorldProfileKey(new DaggerfallSiteId(1, 2), DaggerfallWorldProfileKind.Dungeon, "hold").Validate();
+        DaggerfallGroundContainer pile = new(profile, 100, new EntityId(2), new WorldPoint(4F, 1F, 8F));
+        using ActorsState actors = EmptyActors();
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(groundContainerSprite: sprite));
+
+        presentation.Publish(actors, new Dictionary<long, DaggerfallGroundContainer> { [pile.Id] = pile });
+        AppearanceFact fact = Assert.Single(appearance.Snapshots.Last(), value => value.ObjectId == (ulong)pile.Id);
+        Assert.Equal(pile.Position.ToVector(), fact.Transform.Translation);
+        Assert.Equal(RenderLayer.Scene, fact.Layer);
+        SpriteFromAtlasRequest request = appearance.SpriteRequests.Last();
+        Assert.Equal(sprite.InitialFrameId, request.FrameId);
+        Assert.Equal(sprite.Pivot, request.Pivot);
+        Assert.Equal(sprite.Size, request.Size);
+        Assert.Equal(BillboardMode.Cylindrical, request.Billboard);
+        Assert.Equal(SpriteSizeMode.World, request.SizeMode);
+
+        // A profile switch or a fully looted pile is represented by the owner's filtered empty
+        // dictionary. The previous ordinary appearance is retired through the existing admitted
+        // update lifecycle, and the same durable pile can be projected again after restore.
+        presentation.Publish(actors, new Dictionary<long, DaggerfallGroundContainer>());
+        Assert.DoesNotContain(appearance.Snapshots.Last(), value => value.ObjectId == (ulong)pile.Id);
+        presentation.BeginAdmittedUpdate();
+        Assert.Equal(1, appearance.DisposedAppearances);
+        int requestsBeforeRestore = appearance.SpriteRequests.Count;
+        presentation.Publish(actors, new Dictionary<long, DaggerfallGroundContainer> { [pile.Id] = pile });
+        Assert.Equal(requestsBeforeRestore + 1, appearance.SpriteRequests.Count);
+        Assert.Contains(appearance.Snapshots.Last(), value => value.ObjectId == (ulong)pile.Id);
+    }
+
+    [Fact]
     public void Appearance_uses_normalized_material_slots_and_atlases_then_releases_dependents_in_order()
     {
         List<string> releases = [];
@@ -1395,6 +1496,68 @@ public sealed class NormalizedRuntimeSeamTests
 
         Assert.Equal(playbackCount, appearance.PlaybackRequests.Count);
         Assert.Equal(3u, appearance.SetFrameRequests.Last().FrameId);
+    }
+
+    [Fact]
+    public void Direction_change_skips_a_source_frame_absent_from_a_shorter_direction()
+    {
+        List<string> releases = [];
+        AppearanceFake appearance = new(releases);
+        using PrivateersHoldAppearance presentation = new(MediaContent(releases), appearance, MediaInputs(primaryFrames: [1], directional: true, shortAttackDirection: true));
+        using ActorsState actors = ActorsWithNpc(11, HealthyMechanics(), new WorldPoint(0f, 0f, 0f));
+
+        presentation.React(new EnemyAttackStartedFact(11, 12, true, 1, 1));
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+            ReadOnlyMemory<SpritePlaybackMarkerCrossing>.Empty,
+            new SpritePlaybackReadout(2, 0, SpritePlaybackState.Playing, 0d, 3, 1, false),
+            true));
+        presentation.Advance(OuterUpdate(1));
+        int frameUpdates = appearance.SetFrameRequests.Count;
+        presentation.UpdateDirections(actors, new WorldPoint(1f, 0f, 0f));
+
+        Assert.Equal(frameUpdates, appearance.SetFrameRequests.Count);
+    }
+
+    [Fact]
+    public void Site_projection_owns_normalized_lights_and_clears_the_inside_background()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, appearance);
+
+        using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        {
+            Assert.Equal(inputs.Lights.Count + 1, appearance.LightRequests.Count);
+            LightRequest ambient = Assert.Single(appearance.LightRequests, request => request.Descriptor.Kind == LightKind.Ambient);
+            Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.Dungeon, ambient.Descriptor.Intensity);
+            Assert.Equal(new Color(0F, 0F, 0F, 1F), engine.BackgroundColors.Single());
+            LightRequest first = appearance.LightRequests.First(request => request.Descriptor.Position == new Vector3(54.4F, 34.4F, -17.2F));
+            Assert.Equal(LightKind.Point, first.Descriptor.Kind);
+            Assert.Equal(Vector3.One, first.Descriptor.Color);
+            Assert.Equal(7.5F, first.Descriptor.Range);
+            Assert.Equal(1F, first.Descriptor.Intensity);
+            Assert.Equal(LightShadowIntent.Disabled, first.Descriptor.ShadowIntent);
+        }
+
+        Assert.Equal(inputs.Lights.Count + 1, appearance.DisposedLights);
+
+        PrivateersHoldInputs exterior = new(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
+            new SpatialContentArtifact("spatial/exterior.json", Hash, 1), new ContentArtifact("mesh/exterior.json", Hash),
+            new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene), new PlayerInitialLook(0, 0), [], new Dictionary<long, NormalizedActorSprite>(),
+            site: new DaggerfallSiteId(17, 4), profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: "worldrpg/test/exterior");
+        using DaggerfallSiteLighting exteriorLighting = new(appearance, engine.Context.CameraView, exterior,
+            DaggerfallTuning.Defaults.SiteLighting, DaggerfallCalendar.Start);
+        Assert.Equal(2, engine.ClearedSkyBackgrounds);
+        Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.ExteriorNight,
+            appearance.LightRequests.Last().Descriptor.Intensity);
+        exteriorLighting.UpdateAmbient(DaggerfallCalendar.Start with { Hour = 12 });
+        Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.ExteriorNoon,
+            appearance.LightUpdates.Single().Replacement.Descriptor.Intensity);
     }
 
     [Fact]
@@ -2074,14 +2237,19 @@ public sealed class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
+        // This lifecycle seam is about one admitted realtime step and owner release ordering. Keep
+        // the opening-media policy explicit so a cinematic waiting for terminal Engine facts cannot
+        // make the first world-step assertion depend on playback timing.
+        CapturingDaggerfallRuleset ruleset = new(videosEnabled: false);
 
-        using (WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input)))
+        using (WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.privateers-hold")))
         {
             product.Start();
             // The product a launcher starts shows its entry screen, and a client that has read it asks to
             // begin; the admitted update under test is the first one that reaches the world.
             Assert.Equal(ProductMode.Title, product.Mode);
             product.Begin();
+            Assert.Equal(ProductMode.Playing, product.Mode);
             ProductUpdateFacts facts = new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d);
             Assert.Equal(ProductUpdateResult.None, product.Update(new ProductUpdate(facts, ReadOnlySpan<ProductInputEvent>.Empty)));
             Assert.Equal(1, spatial.StepCalls);
@@ -2122,6 +2290,85 @@ public sealed class NormalizedRuntimeSeamTests
         double healthBefore = session.State.Actors.Get(2000).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current;
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
         Assert.True(session.State.Actors.Get(2000).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current < healthBefore);
+    }
+
+    [Fact]
+    public void Backstab_opportunity_requires_an_accepted_operation_and_survives_replay_and_save_load()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
+            placement => placement.EntityId,
+            placement => definitions.RequireActor(placement.ActorId));
+        authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
+        DaggerCombatRules combat = new(RandomMaximum.Create(), session.State.Actors, session.State.Equipment, session.State.InventoryFor,
+            session.State.ItemInstances, definitions, authored, null!, use => session.State.SkillUses.Record(use),
+            actorEquipment: session.State.EquipmentFor, itemCondition: session.ItemCondition,
+            playerPosition: () => session.State.PlayerControl.Position);
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("backstabbing")).BaseValue = 37;
+
+        WorldPoint player = session.State.PlayerControl.Position!.Value;
+        ActorState target = session.State.Actors.Get(2000);
+        // With zero heading an actor faces -Z; putting the player at +Z leaves the actor's back
+        // toward the accepted player attack, matching the donor's IsBackFacing opportunity.
+        target.ApplyPose(new ActorPose(new WorldPoint(player.X, player.Y, player.Z - 1f), 0f));
+        FactBuffer<IProductFact> facts = new();
+        combat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 9999, 30, 1, .125), facts);
+        List<IProductFact> rejectedFacts = [];
+        facts.Deliver(rejectedFacts.Add);
+        Assert.Contains(rejectedFacts, fact => fact is AttackRejectedFact { Reason: AttackRejection.UnknownExplicitCombatant });
+        Assert.Equal(0, session.State.Progression.SkillUses["backstabbing"]);
+
+        combat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 31, 1, .125), facts);
+        List<IProductFact> awayFacts = [];
+        facts.Deliver(awayFacts.Add);
+        AttackMissedFact away = Assert.Single(awayFacts.OfType<AttackMissedFact>());
+        Assert.Equal(1, session.State.Progression.SkillUses["backstabbing"]);
+
+        combat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 31, 1, .125), facts);
+        List<IProductFact> replayFacts = [];
+        facts.Deliver(replayFacts.Add);
+        Assert.Contains(replayFacts, fact => fact is AttackRejectedFact { Reason: AttackRejection.Cooldown });
+        Assert.Equal(1, session.State.Progression.SkillUses["backstabbing"]);
+
+        // DFU's 100-degree sector rounds to facing index 2, which is a side-facing opportunity
+        // and therefore contributes neither chance nor a use tally.
+        target.ApplyPose(new ActorPose(target.Position, MathF.PI * 80f / 180f));
+        combat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 32, 1, .125), facts);
+        List<IProductFact> sideFacts = [];
+        facts.Deliver(sideFacts.Add);
+        AttackMissedFact side = Assert.Single(sideFacts.OfType<AttackMissedFact>());
+        Assert.Equal(away.Chance - 37, side.Chance);
+        Assert.Equal(1, session.State.Progression.SkillUses["backstabbing"]);
+
+        // The donor's 135-degree sector rounds to facing index 3, the first back-facing sector.
+        target.ApplyPose(new ActorPose(target.Position, MathF.PI / 4f));
+        combat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 33, 1, .125), facts);
+        List<IProductFact> diagonalFacts = [];
+        facts.Deliver(diagonalFacts.Add);
+        AttackMissedFact diagonal = Assert.Single(diagonalFacts.OfType<AttackMissedFact>());
+        Assert.Equal(away.Chance, diagonal.Chance);
+        Assert.Equal(2, session.State.Progression.SkillUses["backstabbing"]);
+
+        DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
+        List<string> restoredReleases = [];
+        ContentFake restoredContent = new(restoredReleases);
+        PopulateContent(restoredContent, inputs);
+        SpatialFake restoredSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, restoredReleases);
+        EngineContextFake restoredEngine = EngineContextFake.Create(restoredContent, restoredSpatial.Service,
+            new AppearanceFake(restoredReleases), PerceptionFake.Create().Service);
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, identity, definitions, inputs,
+            DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMaximum.Create());
+        Assert.Equal(2, restored.State.Progression.SkillUses["backstabbing"]);
     }
 
     [Fact]
@@ -2606,6 +2853,77 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Current_save_rejects_book_identity_that_is_not_a_readable_catalog_book()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSavePayload valid = CapturedSave(root);
+        DaggerfallItemDefinition nonBook = definitions.TemplateItems.Values
+            .First(definition => definition.IsFungible && definition.Template?.Groups.Contains("Books", StringComparer.Ordinal) != true);
+        DaggerfallBookDefinition unreadable = definitions.Books.Books.Values
+            .First(book => book.Disposition != DaggerfallBookDisposition.Read);
+
+        foreach ((DaggerfallItemDefinition item, int bookId, string expected) in new[]
+        {
+            (nonBook, 59, "not a book"),
+            (definitions.RequireItem(new DaggerfallItemId("template-277")), 999999, "unpublished"),
+            (definitions.RequireItem(new DaggerfallItemId("template-277")), unreadable.BookId, "unreadable"),
+        })
+        {
+            DaggerfallItemMetadataSave metadata = (DaggerfallItemInstanceMetadata.Default(item, DaggerfallItemOwner.Player) with { BookId = bookId }).Capture();
+            DaggerfallSavePayload forged = valid with
+            {
+                Inventory = valid.Inventory with
+                {
+                    Stacks = [new DaggerfallStackSave($"forged-book-{bookId}", item.Id.Value, 1, metadata)],
+                },
+            };
+
+            ArgumentException exception = Assert.Throws<ArgumentException>(() => forged.ResolveRestore(definitions, inputs));
+            Assert.Contains(expected, exception.Message, StringComparison.Ordinal);
+        }
+
+        DaggerfallItemDefinition bookItem = definitions.RequireItem(new DaggerfallItemId("template-277"));
+        DaggerfallItemMetadataSave missingBookId = DaggerfallItemInstanceMetadata.Default(bookItem, DaggerfallItemOwner.Player).Capture();
+        DaggerfallSavePayload missingBookIdentity = valid with
+        {
+            Inventory = valid.Inventory with
+            {
+                Stacks = [new DaggerfallStackSave("forged-book-missing-id", bookItem.Id.Value, 1, missingBookId)],
+            },
+        };
+        ArgumentException missingBookException = Assert.Throws<ArgumentException>(() => missingBookIdentity.ResolveRestore(definitions, inputs));
+        Assert.Contains("no selected book identity", missingBookException.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Current_save_rejects_ground_container_for_an_unadmitted_world_profile()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSavePayload valid = CapturedSave(root);
+        DaggerfallWorldProfileKey unknown = inputs.ProfileKey with { LogicalId = "unadmitted-profile" };
+        DaggerfallSavePayload forged = valid with
+        {
+            GroundContainers =
+            [
+                new DaggerfallGroundContainerSave(
+                    DaggerfallWorldProfileKeySave.Capture(unknown),
+                    999,
+                    0F,
+                    0F,
+                    0F,
+                    new DaggerfallInventorySave([], [], [])),
+            ],
+        };
+
+        ArgumentException exception = Assert.Throws<ArgumentException>(() => forged.ResolveRestore(definitions, inputs));
+        Assert.Contains("unadmitted world profile", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Current_save_keeps_relative_cooldown_but_starts_a_fresh_spatial_continuation()
     {
         string root = RepositoryRoot();
@@ -2830,16 +3148,21 @@ public sealed class NormalizedRuntimeSeamTests
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake engineContent = new(releases);
+        // This ordinary Engine fixture deliberately excludes the cinematic bundle. Unlike the explicit
+        // no-video fixture used by unrelated gameplay tests, production ruleset startup must surface it.
         PopulateContent(engineContent, inputs);
         EngineContextFake engine = EngineContextFake.Create(engineContent,
             SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
         CapturingDaggerfallRuleset ruleset = new(videosEnabled: true);
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.privateers-hold"));
+
         product.Start();
         ProductModeChange result = product.Begin();
+
         Assert.Equal(ProductMode.Title, product.Mode);
         Assert.Equal(ProductModeChangeOutcome.Refused, result.Outcome);
+        Assert.Contains("could not start its opening sequence", result.Reason, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -3063,6 +3386,41 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Human_encounter_actor_materializes_donor_level_equipment_and_persists_without_reroll()
+    {
+        using ConditionSessionFixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        long actorId = session.SpawnActor("encounter-warrior", new ActorPose(new WorldPoint(10, 0, 10), 0f), level: 4);
+        DaggerfallActorDefinition definition = session.DefinitionsByActor[actorId];
+        Assert.Equal((144, "class16", "enemy-class-equipped-melee", "T"), (definition.MobileId, definition.Career, definition.ActionId, definition.LootTableKey));
+        Assert.Equal(50, session.State.Actors.Get(actorId).Stats.GetStat(StatId.Parse("long-blade")).ValueInt);
+        Assert.NotEmpty(session.State.InventoryFor(actorId)!.Read().UniqueItems);
+        Assert.NotEmpty(session.State.EquipmentFor(actorId).Read().Assignments);
+
+        // The generated class actor enters the same defeat/corpse owner as an authored mobile;
+        // its normalized T loot table is populated through the canonical corpse coordinator.
+        session.State.Actors.Get(actorId).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, actorId, 1, 1, .125));
+        Assert.True(session.State.Actors.Get(actorId).IsDefeated);
+        Assert.True(session.Corpses.TryGetValue(actorId, out CorpseContainer? corpse));
+        Assert.NotNull(corpse);
+        Assert.True(corpse.IsRegistered);
+
+        RulesetSavePayload saved = session.CaptureSave();
+        DaggerfallActorInventorySave before = Assert.Single(DaggerfallSavePayload.Read(saved).ActorInventories, value => value.EntityId == actorId);
+        using DaggerfallSession restored = fixture.Restore(saved);
+        DaggerfallActorInventorySave after = Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).ActorInventories, value => value.EntityId == actorId);
+        Assert.Equal(before.Inventory.UniqueItems.Select(item => (item.ItemId, item.EntityId, item.Metadata.Material)), after.Inventory.UniqueItems.Select(item => (item.ItemId, item.EntityId, item.Metadata.Material)));
+        Assert.Equal(before.Inventory.Equipment.Select(item => (item.SlotId, item.ItemEntityId)), after.Inventory.Equipment.Select(item => (item.SlotId, item.ItemEntityId)));
+        Assert.Equal(50, restored.State.Actors.Get(actorId).Stats.GetStat(StatId.Parse("long-blade")).ValueInt);
+        Assert.Equal("enemy-class-equipped-melee", restored.DefinitionsByActor[actorId].ActionId);
+        Assert.Equal(0, restored.DefinitionsByActor[actorId].Rewards.ExperienceReward);
+        Assert.True(restored.Corpses.TryGetValue(actorId, out CorpseContainer? restoredCorpse));
+        Assert.NotNull(restoredCorpse);
+        Assert.True(restoredCorpse.IsRegistered);
+    }
+
+    [Fact]
     public void Retiring_a_dynamic_caster_cancels_its_effect_on_another_actor_before_save()
     {
         DaggerfallEffectCatalog catalog = new(
@@ -3217,6 +3575,56 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.IsType<LootPresentation>(session.OpenLoot);
         Assert.True(session.ActivationView.Applied);
         Assert.Equal("grab", session.ActivationView.Mode);
+    }
+
+    [Fact]
+    public void Session_book_use_opens_a_retained_reader_and_persists_its_notes_through_restore()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        DaggerfallSavePayload saved;
+        DaggerfallItemDefinition definition = definitions.RequireItem(new DaggerfallItemId("template-277"));
+        InventoryStackId stack = InventoryStackId.Parse("session.retained-book");
+        using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        {
+    session.State.Inventory.Grant(new(new InventoryItemId(definition.Id.Value), stack, 1));
+    session.State.ItemInstances.RegisterStack(DaggerfallItemOwner.Player,
+        stack,
+        DaggerfallItemInstanceMetadata.Default(definition, DaggerfallItemOwner.Player) with { BookId = 59 });
+            session.Update(new ProductUpdate(OuterUpdate(1), []));
+
+            void Submit(object action, ulong step) => session.Update(new ProductUpdate(OuterUpdate(step), [Ui(JsonSerializer.Serialize(action))]));
+
+            Submit(new { action = "inventory-use", revision = engine.PublishedNested("inventory", "revision"), item = $"stack:{stack.Value}" }, 2);
+            Assert.Equal("journal", engine.PublishedNested("panelRequest", "panel"));
+            Assert.Equal(1UL, session.State.Inventory.Read().Stacks.Single(item => item.Id == stack).Quantity);
+            Submit(new { action = "notebook-add", revision = engine.PublishedNested("notebook", "revision"), text = "Remember this passage." }, 3);
+            saved = DaggerfallSavePayload.Read(session.CaptureSave());
+        }
+
+        Assert.Single(saved.Notebook.Books, book => book.BookId == 59);
+        Assert.Equal(["Remember this passage."], saved.Notebook.Notes.Select(note => note.Text));
+        ContentFake resumedContent = new(releases);
+        PopulateContent(resumedContent, inputs);
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, spatial.Service, new AppearanceFake(releases));
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults,
+            DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
+        restored.PublishInitial();
+
+        Dictionary<string, object?> projection = Assert.IsType<Dictionary<string, object?>>(resumedEngine.Published());
+        Dictionary<string, object?> notebook = Assert.IsType<Dictionary<string, object?>>(projection["notebook"]);
+        Dictionary<string, object?> book = Assert.IsType<Dictionary<string, object?>>(notebook["book"]);
+        Assert.Equal(59d, Assert.IsType<double>(book["id"]));
+        Assert.Equal(saved.Notebook.Books.Single(value => value.BookId == 59).Pages[0], Assert.IsType<string>(book["text"]));
+        object?[] notes = Assert.IsType<object?[]>(notebook["notes"]);
+        Assert.Equal("Remember this passage.", Assert.IsType<Dictionary<string, object?>>(Assert.Single(notes))["text"]);
     }
 
     private static DaggerfallSavePayload CapturedSave(string root)
@@ -4058,6 +4466,498 @@ public sealed class NormalizedRuntimeSeamTests
             : new DaggerfallSession(engine.Context, definitions, inputs, DaggerfallTuning.Defaults, effects);
     }
 
+    [Fact]
+    public void Site_transition_replaces_the_admitted_world_and_restores_the_source_pose_on_return()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs source = ReadInputs(root);
+        PrivateersHoldInputs destination = PrivateersHoldContent.Read(FullContent(root),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, source);
+        PopulateContent(content, destination);
+        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults);
+        session.AdmitSiteProfiles(new DaggerfallSiteProfiles([source, destination]));
+        WorldPoint sourcePosition = new(17f, 3f, -11f);
+        session.State.PlayerControl.MoveTo(sourcePosition.ToVector());
+        session.State.PlayerControl.YawRadians = .7f;
+        session.State.PlayerControl.PitchRadians = -.2f;
+        const long sourceActorId = 2000;
+        ActorState sourceActor = session.State.Actors.Get(sourceActorId);
+        WorldPoint actorPosition = new(21f, 4f, -13f);
+        sourceActor.ApplyPose(new ActorPose(actorPosition, .4f));
+        sourceActor.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, sourceActorId, 1, 1, .125));
+        Assert.True(session.Corpses.ContainsKey(sourceActorId));
+        CorpseContainer sourceCorpse = session.Corpses[sourceActorId];
+        int sourceCorpseStacks = session.State.Containers.Read(sourceCorpse.Owner).Stacks.Count;
+        DaggerfallRdbDoorId sourceDoor = source.Doors.First().Id;
+        Assert.Equal(DaggerfallDoorOperationResult.Started, session.Doors.Open(sourceDoor, DaggerfallDoorOperationSource.DungeonAction));
+        DaggerfallDoorMotion sourceDoorMotion = session.Doors.Read(sourceDoor).Motion;
+        long sourceArcher = Assert.Single(source.Project.Actors.Values, placement => placement.ActorId == new DaggerfallActorId("archer")).EntityId;
+        MechanicsInventoryCoordinator archerInventory = Assert.IsType<MechanicsInventoryCoordinator>(session.State.InventoryFor(sourceArcher));
+        InventoryStackId arrows = archerInventory.Read().Stacks.Single(stack => stack.Definition.Value == "arrow").Id;
+        archerInventory.Consume(new InventoryConsume(arrows, 1));
+
+        Assert.True(session.TryTransitionTo(destination.ProfileKey));
+        Assert.Equal(destination.Site, session.Site.Active);
+        Assert.Equal(2, spatial.ReplaceCalls);
+        // The behavior module was composed before this transition.  A destination actor must
+        // carry its own pursuit component so the next real admitted update can inspect it.
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+        Assert.True(session.TryTransitionTo(source.ProfileKey));
+        Assert.Equal(source.Site, session.Site.Active);
+        Assert.Equal(sourcePosition, session.State.PlayerControl.Position);
+        Assert.Equal(.7f, session.State.PlayerControl.YawRadians);
+        Assert.Equal(-.2f, session.State.PlayerControl.PitchRadians);
+        Assert.Equal(3, spatial.ReplaceCalls);
+        Assert.Equal(sourceDoorMotion, session.Doors.Read(sourceDoor).Motion);
+        Assert.True(session.Corpses.ContainsKey(sourceActorId));
+        Assert.Equal(sourceCorpseStacks, session.State.Containers.Read(session.Corpses[sourceActorId].Owner).Stacks.Count);
+        Assert.Equal(actorPosition, session.State.Actors.Get(sourceActorId).Position);
+        Assert.Equal(11UL, Assert.IsType<MechanicsInventoryCoordinator>(session.State.InventoryFor(sourceArcher))
+            .Read().Stacks.Single(stack => stack.Definition.Value == "arrow").Quantity);
+    }
+
+    [Fact]
+    public void Site_light_resources_retire_on_transition_and_rebuild_on_save_restore()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs source = ReadInputs(root);
+        ProductContent admitted = FullContent(root);
+        PrivateersHoldInputs destination = ReadProfile(root, admitted, definitions, "daggerfall.castle-necromoghan.json");
+        DaggerfallSiteProfiles profiles = new([source, destination]);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, source);
+        PopulateContent(content, destination);
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(source.SpatialArtifact.Sha256, releases).Service, appearance);
+        RulesetSavePayload save;
+
+        using (DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults))
+        {
+            session.AdmitSiteProfiles(profiles);
+            Assert.Equal(source.Lights.Count + 1, appearance.LightRequests.Count);
+            Assert.True(session.TryTransitionTo(destination.ProfileKey));
+            Assert.Equal(source.Lights.Count + destination.Lights.Count + 2, appearance.LightRequests.Count);
+            Assert.Equal(source.Lights.Count + 1, appearance.DisposedLights);
+            Assert.Equal(2, engine.BackgroundColors.Count);
+            save = session.CaptureSave();
+        }
+        Assert.Equal(source.Lights.Count + destination.Lights.Count + 2, appearance.DisposedLights);
+
+        List<string> restoredReleases = [];
+        ContentFake restoredContent = new(restoredReleases);
+        PopulateContent(restoredContent, source);
+        PopulateContent(restoredContent, destination);
+        AppearanceFake restoredAppearance = new(restoredReleases);
+        EngineContextFake restoredEngine = EngineContextFake.Create(restoredContent, SpatialFake.Create(destination.SpatialArtifact.Sha256, restoredReleases).Service, restoredAppearance);
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using (DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, identity, definitions, source,
+            DaggerfallTuning.Defaults, save, RandomMinimum.Create(), effects: null, profiles: profiles))
+        {
+            Assert.Equal(destination.Lights.Count + 1, restoredAppearance.LightRequests.Count);
+            Assert.True(restored.TryTransitionTo(source.ProfileKey));
+            Assert.Equal(destination.Lights.Count + source.Lights.Count + 2, restoredAppearance.LightRequests.Count);
+            Assert.Equal(destination.Lights.Count + 1, restoredAppearance.DisposedLights);
+        }
+        Assert.Equal(destination.Lights.Count + source.Lights.Count + 2, restoredAppearance.DisposedLights);
+    }
+
+    [Fact]
+    public void Charing_portals_enter_and_return_between_profiles_that_share_a_geographic_site()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        ProductContent admitted = FullContent(root);
+        PrivateersHoldInputs exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
+        PrivateersHoldInputs interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
+        Assert.Equal(exterior.Site, interior.Site);
+        Assert.NotEqual(exterior.ProfileKey, interior.ProfileKey);
+        DaggerfallSiteProfiles profiles = new([exterior, interior]);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, exterior);
+        PopulateContent(content, interior);
+        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        RulesetSavePayload save;
+        DaggerfallSitePortal exteriorPortal = Assert.Single(exterior.Portals);
+        DaggerfallSitePortal interiorPortal = Assert.Single(interior.Portals);
+        long spawnedActor;
+        using (DaggerfallSession session = new(engine.Context, definitions, exterior, DaggerfallTuning.Defaults))
+        {
+            session.AdmitSiteProfiles(profiles);
+            spawnedActor = session.SpawnActor("rat", new ActorPose(new WorldPoint(9f, 0f, 9f), 0f));
+            AimActivationAt(session, exteriorPortal.Position);
+            perception.Responder = request => PortalReceipt(request, exteriorPortal);
+            session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"loot\"}")]));
+
+            Assert.Equal(interior.Site, session.Site.Active);
+            Assert.False(session.State.Actors.TryGet(spawnedActor, out _));
+            Assert.Equal(2, spatial.ReplaceCalls);
+            Assert.Equal("You pass through the entrance.", session.ActivationView.Message);
+            Assert.Equal(interior.ProfileKey, DaggerfallSavePayload.Read(session.CaptureSave()).Site.ActiveProfile!.Require());
+            save = session.CaptureSave();
+        }
+
+        DaggerfallSavePayload captured = DaggerfallSavePayload.Read(save);
+        Assert.Equal(interior.ProfileKey, captured.Site.ActiveProfile!.Require());
+        Assert.Equal(exterior.ProfileKey, captured.Site.ReturnProfile!.Require());
+        Assert.Equal(exterior.ProfileKey, Assert.Single(captured.SiteDeltas).Profile.Require());
+        Assert.Equal(spawnedActor, Assert.Single(captured.SiteDeltas[0].DynamicActors).EntityId);
+
+        List<string> resumedReleases = [];
+        ContentFake resumedContent = new(resumedReleases);
+        PopulateContent(resumedContent, exterior);
+        PopulateContent(resumedContent, interior);
+        SpatialFake resumedSpatial = SpatialFake.Create(interior.SpatialArtifact.Sha256, resumedReleases);
+        PerceptionFake resumedPerception = PerceptionFake.Create();
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(resumedReleases), resumedPerception.Service);
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, exterior,
+            DaggerfallTuning.Defaults, save, RandomMinimum.Create(), effects: null, profiles: profiles);
+
+        Assert.Equal(interior.Site, restored.Site.Active);
+        AimActivationAt(restored, interiorPortal.Position);
+        resumedPerception.Responder = request => PortalReceipt(request, interiorPortal);
+        restored.Update(new ProductUpdate(OuterUpdate(2), [Ui("{\"action\":\"loot\"}")]));
+
+        Assert.Equal(exterior.Site, restored.Site.Active);
+        Assert.True(restored.State.Actors.TryGet(spawnedActor, out ActorState? returnedActor));
+        Assert.Equal(new WorldPoint(9f, 0f, 9f), returnedActor.Position);
+        Assert.Equal(new DaggerfallActorId("rat"), restored.DynamicActors[spawnedActor]);
+        Assert.Equal(2, resumedSpatial.ReplaceCalls);
+        Assert.Equal("You pass through the entrance.", restored.ActivationView.Message);
+    }
+
+    [Fact]
+    public void Dynamic_actor_target_effect_suspends_with_an_inactive_site_and_resumes_after_save_return()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs source = ReadInputs(root);
+        ProductContent admitted = FullContent(root);
+        PrivateersHoldInputs destination = PrivateersHoldContent.Read(admitted,
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+        DaggerfallSiteProfiles profiles = new([source, destination]);
+        DaggerfallEffectCatalog catalog = EffectCatalog();
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, source);
+        PopulateContent(content, destination);
+        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        long dynamicActor;
+        RulesetSavePayload save;
+
+        using (DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults, catalog))
+        {
+            session.AdmitSiteProfiles(profiles);
+            dynamicActor = session.SpawnActor("rat", new ActorPose(new WorldPoint(9f, 0f, 9f), 0f));
+            using JsonDocument state = JsonDocument.Parse("{\"site\":true}");
+            _ = session.State.Effects.Start(new DaggerfallEffectRequest("inactive-target-effect", "inactive-site-effect", "site-spell",
+                DaggerfallActorIdentity.PlayerEntityId, dynamicActor, "classic", "magic", null, 1, 5, state.RootElement.Clone()));
+            _ = session.State.Effects.Start(new DaggerfallEffectRequest("inactive-caster-effect", "inactive-site-effect", "site-spell",
+                dynamicActor, DaggerfallActorIdentity.PlayerEntityId, "classic", "magic", null, 1, 5, state.RootElement.Clone()));
+            Assert.Equal(2, session.State.Effects.Active.Count);
+            Assert.True(session.TryTransitionTo(destination.ProfileKey));
+            DaggerfallActiveEffect retained = Assert.Single(session.State.Effects.Active);
+            Assert.Equal("inactive-caster-effect", retained.Context.Instance.Value);
+            Assert.Equal(dynamicActor, checked((long)retained.Context.Caster!.Value.Value));
+            Assert.False(session.State.Actors.TryGet(dynamicActor, out _));
+            save = session.CaptureSave();
+        }
+
+        DaggerfallSavePayload captured = DaggerfallSavePayload.Read(save);
+        DaggerfallSiteDeltaSave sourceDelta = Assert.Single(captured.SiteDeltas);
+        Assert.Equal(dynamicActor, Assert.Single(sourceDelta.Effects).TargetId);
+        DaggerfallActiveEffectSave retainedSave = Assert.Single(captured.ActiveEffects);
+        Assert.Equal("inactive-caster-effect", retainedSave.Instance);
+        Assert.Equal<long?>(dynamicActor, retainedSave.CasterId);
+        Assert.Equal(DaggerfallActorIdentity.PlayerEntityId, retainedSave.TargetId);
+
+        List<string> resumedReleases = [];
+        ContentFake resumedContent = new(resumedReleases);
+        PopulateContent(resumedContent, source);
+        PopulateContent(resumedContent, destination);
+        SpatialFake resumedSpatial = SpatialFake.Create(destination.SpatialArtifact.Sha256, resumedReleases);
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(resumedReleases));
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, source,
+            DaggerfallTuning.Defaults, save, RandomMinimum.Create(), effects: catalog, profiles: profiles);
+
+        DaggerfallActiveEffect restoredRetained = Assert.Single(restored.State.Effects.Active);
+        Assert.Equal(dynamicActor, checked((long)restoredRetained.Context.Caster!.Value.Value));
+        Assert.True(restored.TryTransitionTo(source.ProfileKey));
+        Assert.Equal(2, restored.State.Effects.Active.Count);
+        DaggerfallActiveEffect effect = Assert.Single(restored.State.Effects.Active, value => value.Context.Instance.Value == "inactive-target-effect");
+        Assert.Equal(dynamicActor, checked((long)effect.Context.Target.Value));
+        Assert.Equal(DaggerfallActorIdentity.PlayerEntityId, checked((long)effect.Context.Caster!.Value.Value));
+        ActorState actor = restored.State.Actors.Get(dynamicActor);
+        Assert.Contains(actor.Stats.GetStat(StatId.Parse("health-maximum")).Sources,
+            source => source.Identity is EffectSourceIdentity effectSource && effectSource.Effect.Value == "inactive-target-effect");
+
+        static DaggerfallEffectCatalog EffectCatalog() => new(
+        [new DaggerfallEffectDefinition("inactive-site-effect", "inactive-site-effect", DaggerfallEffectStacking.Stack, 1, 1,
+            effect =>
+            {
+                Stat maximum = effect.Target.Get<StatsComponent>().GetStat(StatId.Parse("health-maximum"));
+                EffectSourceIdentity identity = new(effect.Target.Entity, effect.Context.Instance, 1,
+                    SourceDefinitionId.Parse("daggerfall.inactive-site-effect.health"));
+                maximum.SetSources(StatId.Parse("health-maximum"), maximum.Sources.Append(new StatSource(identity,
+                    SourceDefinitionId.Parse("daggerfall.inactive-site-effect.health"), 0,
+                    [new StatContributionDefinition(StatId.Parse("health-maximum"), StackingGroupId.Parse("daggerfall.inactive-site-effect.health"),
+                        MechanicsStackingPolicy.Sum, new StatContribution.Add(5))])));
+                return [new DelegateActiveEffectContribution(() => maximum.RemoveSource(identity))];
+            },
+            Resume: effect =>
+            {
+                Stat maximum = effect.Target.Get<StatsComponent>().GetStat(StatId.Parse("health-maximum"));
+                EffectSourceIdentity identity = new(effect.Target.Entity, effect.Context.Instance, 1,
+                    SourceDefinitionId.Parse("daggerfall.inactive-site-effect.health"));
+                return [new DelegateActiveEffectContribution(() => maximum.RemoveSource(identity))];
+            })]);
+    }
+
+
+    [Fact]
+    public void Rejected_site_admission_keeps_the_source_world_and_actors_live()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs source = ReadInputs(root);
+        PrivateersHoldInputs destination = PrivateersHoldContent.Read(FullContent(root),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, source);
+        PopulateContent(content, destination);
+        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults);
+        session.AdmitSiteProfiles(new DaggerfallSiteProfiles([source, destination]));
+        long sourceActor = source.Project.Actors.Keys.First();
+        spatial.RejectContentReplacement = true;
+
+        Assert.Throws<InvalidOperationException>(() => session.TryTransitionTo(destination.ProfileKey));
+        Assert.Equal(source.Site, session.Site.Active);
+        Assert.True(session.State.Actors.TryGet(sourceActor, out _));
+        Assert.Equal(2, spatial.ReplaceCalls);
+    }
+
+    [Fact]
+    public void A_post_relocation_camera_rejection_restores_source_context_pose_and_save_state()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs source = ReadInputs(root);
+        ProductContent admitted = FullContent(root);
+        PrivateersHoldInputs destination = PrivateersHoldContent.Read(admitted,
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, source);
+        PopulateContent(content, destination);
+        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults);
+        session.AdmitSiteProfiles(new DaggerfallSiteProfiles([source, destination]));
+        long sourceActor = source.Project.Actors.Keys.First();
+        WorldPoint sourcePosition = new(8f, 2f, -4f);
+        session.State.PlayerControl.MoveTo(sourcePosition.ToVector());
+        session.State.PlayerControl.YawRadians = .3f;
+        session.State.PlayerControl.PitchRadians = -.1f;
+        engine.FailNextCameraUpdate();
+
+        Assert.Throws<InvalidOperationException>(() => session.TryRelocate(new DaggerfallRelocationDestination(destination.ProfileKey, "start")));
+
+        Assert.Equal(source.Site, session.Site.Active);
+        Assert.Equal(sourcePosition, session.State.PlayerControl.Position);
+        Assert.Equal(.3f, session.State.PlayerControl.YawRadians);
+        Assert.Equal(-.1f, session.State.PlayerControl.PitchRadians);
+        Assert.True(session.State.Actors.TryGet(sourceActor, out _));
+        Assert.Equal(3, spatial.ReplaceCalls);
+        DaggerfallSiteSave savedSite = DaggerfallSavePayload.Read(session.CaptureSave()).Site;
+        Assert.Equal(source.ProfileKey, savedSite.ActiveProfile!.Require());
+        Assert.Null(savedSite.ReturnProfile);
+        Assert.Empty(DaggerfallSavePayload.Read(session.CaptureSave()).SiteDeltas);
+    }
+
+    [Fact]
+    public void Actor_only_relocation_recovers_source_after_committed_transition_release_failure()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs source = ReadInputs(root);
+        ProductContent admitted = FullContent(root);
+        PrivateersHoldInputs destination = PrivateersHoldContent.Read(admitted,
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+        DaggerfallSiteProfiles profiles = new([source, destination]);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, source);
+        PopulateContent(content, destination);
+        AppearanceFake appearance = new(releases);
+        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance);
+
+        using DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults);
+        session.AdmitSiteProfiles(profiles);
+        Assert.True(session.TryTransitionTo(destination.ProfileKey));
+        long actorId = session.SpawnActor("rat", new ActorPose(new WorldPoint(3f, 0f, 3f), 0f));
+        session.PublishInitial();
+        WorldPoint playerPosition = session.State.PlayerControl.Position!.Value;
+        appearance.FailNextProjectionDispose = true;
+
+        _ = Assert.Throws<AggregateException>(() => session.TryRelocate(new DaggerfallRelocationDestination(source.ProfileKey, "start", actorId)));
+
+        Assert.Equal(destination.Site, session.Site.Active);
+        Assert.Equal(source.ProfileKey, DaggerfallSavePayload.Read(session.CaptureSave()).Site.ReturnProfile!.Require());
+        Assert.Equal(playerPosition, session.State.PlayerControl.Position);
+        Assert.False(session.State.Actors.TryGet(actorId, out _));
+
+        Assert.True(session.TryRelocate(new DaggerfallRelocationDestination(source.ProfileKey, "start")));
+        Assert.Equal(source.Site, session.Site.Active);
+        Assert.Equal(source.Project.PlayerPosition, session.State.Actors.Get(actorId).Position);
+    }
+
+    [Fact]
+    public void Named_relocation_resets_control_state_preserves_player_and_round_trips_through_save()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs source = ReadInputs(root);
+        ProductContent admitted = FullContent(root);
+        PrivateersHoldInputs destination = PrivateersHoldContent.Read(admitted,
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+        DaggerfallSiteProfiles profiles = new([source, destination]);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, source);
+        PopulateContent(content, destination);
+        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        RulesetSavePayload save;
+        long relocatedActor;
+
+        using (DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults))
+        {
+            session.AdmitSiteProfiles(profiles);
+            long authoredActor = source.Project.Actors.Keys.First();
+            Assert.True(session.TryRelocate(new DaggerfallRelocationDestination(source.ProfileKey, "start", authoredActor)));
+            Assert.Equal(source.Project.PlayerPosition, session.State.Actors.Get(authoredActor).Position);
+            relocatedActor = session.SpawnActor("rat", new ActorPose(new WorldPoint(3f, 0f, 3f), 0f));
+            Assert.True(session.TryRelocate(new DaggerfallRelocationDestination(source.ProfileKey, "start", relocatedActor)));
+            Assert.Equal(source.Project.PlayerPosition, session.State.Actors.Get(relocatedActor).Position);
+            EntityId player = session.State.Actors.Player.Actor.Entity;
+            session.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
+
+            Assert.True(session.TryRelocate(new DaggerfallRelocationDestination(source.ProfileKey, "start")));
+            Assert.Equal(source.Project.PlayerPosition, session.State.PlayerControl.Position);
+            Assert.Equal(source.InitialLook.YawRadians, session.State.PlayerControl.YawRadians);
+            Assert.Equal(source.InitialLook.PitchRadians, session.State.PlayerControl.PitchRadians);
+            Assert.Equal(default, session.State.PlayerControl.Motion);
+            Assert.Equal(default, session.State.PlayerControl.Ground);
+            session.Update(new ProductUpdate(OuterUpdate(2), []));
+            Assert.Equal(Vector2.Zero, spatial.StepRequests.Last().Command.PlanarIntent);
+            WorldPoint sourceReturnPosition = session.State.PlayerControl.Position!.Value;
+
+            Assert.True(session.TryRelocate(new DaggerfallRelocationDestination(destination.ProfileKey, "start", relocatedActor)));
+            Assert.Equal(source.Site, session.Site.Active);
+            Assert.Equal(sourceReturnPosition, session.State.PlayerControl.Position);
+            Assert.False(session.State.Actors.TryGet(relocatedActor, out _));
+            Assert.True(session.TryRelocate(new DaggerfallRelocationDestination(destination.ProfileKey, "start")));
+            Assert.Equal(destination.Site, session.Site.Active);
+            Assert.Equal(destination.Project.PlayerPosition, session.State.Actors.Get(relocatedActor).Position);
+            Assert.Equal(destination.Project.PlayerPosition, session.State.PlayerControl.Position);
+            Assert.Equal(destination.InitialLook.YawRadians, session.State.PlayerControl.YawRadians);
+            Assert.Equal(destination.InitialLook.PitchRadians, session.State.PlayerControl.PitchRadians);
+            Assert.Equal(player, session.State.Actors.Player.Actor.Entity);
+            Assert.Equal(4, spatial.ReplaceCalls);
+
+            WorldPoint? positionBeforeInvalid = session.State.PlayerControl.Position;
+            Assert.Throws<InvalidOperationException>(() => session.TryRelocate(new DaggerfallRelocationDestination(destination.ProfileKey, "missing")));
+            Assert.Equal(positionBeforeInvalid, session.State.PlayerControl.Position);
+            Assert.Equal(player, session.State.Actors.Player.Actor.Entity);
+            Assert.Equal(4, spatial.ReplaceCalls);
+            DaggerfallSiteReturnPoseSave savedReturnPose = DaggerfallSavePayload.Read(session.CaptureSave()).Site.ReturnPose!;
+            Assert.Equal(sourceReturnPosition, new WorldPoint(savedReturnPose.X, savedReturnPose.Y, savedReturnPose.Z));
+            save = session.CaptureSave();
+        }
+
+        List<string> resumedReleases = [];
+        ContentFake resumedContent = new(resumedReleases);
+        PopulateContent(resumedContent, source);
+        PopulateContent(resumedContent, destination);
+        SpatialFake resumedSpatial = SpatialFake.Create(destination.SpatialArtifact.Sha256, resumedReleases);
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(resumedReleases));
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, source,
+            DaggerfallTuning.Defaults, save, RandomMinimum.Create(), effects: null, profiles: profiles);
+
+        Assert.Equal(destination.Site, restored.Site.Active);
+        Assert.Equal(destination.Project.PlayerPosition, restored.State.Actors.Get(relocatedActor).Position);
+        Assert.Equal(destination.Project.PlayerPosition, restored.State.PlayerControl.Position);
+        Assert.True(restored.TryTransitionTo(source.ProfileKey));
+        Assert.Equal(source.Site, restored.Site.Active);
+        DaggerfallSiteReturnPoseSave restoredReturnPose = DaggerfallSavePayload.Read(save).Site.ReturnPose!;
+        Assert.Equal(new WorldPoint(restoredReturnPose.X, restoredReturnPose.Y, restoredReturnPose.Z), restored.State.PlayerControl.Position);
+        Assert.Equal(2, resumedSpatial.ReplaceCalls);
+    }
+
+    [Fact]
+    public void Save_restore_of_an_active_destination_retains_the_unloaded_return_site()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs source = ReadInputs(root);
+        ProductContent admitted = FullContent(root);
+        PrivateersHoldInputs destination = PrivateersHoldContent.Read(admitted,
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+        DaggerfallSiteProfiles profiles = new([source, destination]);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, source);
+        PopulateContent(content, destination);
+        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        RulesetSavePayload save;
+        using (DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults))
+        {
+            session.AdmitSiteProfiles(profiles);
+            session.State.PlayerControl.MoveTo(new Vector3(8f, 2f, -4f));
+            session.State.PlayerControl.YawRadians = .3f;
+            session.State.PlayerControl.PitchRadians = -.1f;
+            Assert.True(session.TryTransitionTo(destination.ProfileKey));
+            save = session.CaptureSave();
+        }
+
+        List<string> resumedReleases = [];
+        ContentFake resumedContent = new(resumedReleases);
+        PopulateContent(resumedContent, source);
+        PopulateContent(resumedContent, destination);
+        SpatialFake resumedSpatial = SpatialFake.Create(destination.SpatialArtifact.Sha256, resumedReleases);
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(resumedReleases));
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, source,
+            DaggerfallTuning.Defaults, save, RandomMinimum.Create(), effects: null, profiles: profiles);
+
+        Assert.Equal(destination.Site, restored.Site.Active);
+        Assert.True(restored.TryTransitionTo(source.ProfileKey));
+        Assert.Equal(source.Site, restored.Site.Active);
+        Assert.Equal(new WorldPoint(8f, 2f, -4f), restored.State.PlayerControl.Position);
+        Assert.Equal(.3f, restored.State.PlayerControl.YawRadians);
+        Assert.Equal(-.1f, restored.State.PlayerControl.PitchRadians);
+    }
+
     /// <summary>A session with one lootable corpse within reach, and the appearance it drives.</summary>
     private static DaggerfallSession LootableSession(out AppearanceFake appearance)
     {
@@ -4101,6 +5001,22 @@ public sealed class NormalizedRuntimeSeamTests
         session.State.PlayerControl.PitchRadians = 0f;
     }
 
+    private static void AimActivationAt(DaggerfallSession session, WorldPoint target)
+    {
+        session.State.PlayerControl.MoveTo(target.ToVector() + Vector3.UnitZ);
+        session.State.PlayerControl.YawRadians = 0f;
+        session.State.PlayerControl.PitchRadians = 0f;
+    }
+
+    private static PerceptionReadoutLeaseReceipt PortalReceipt(PerceptionQueryRequest request, DaggerfallSitePortal portal) =>
+        Receipt([.. request.Targets.Span.ToArray().Select(target => new PerceptionPair(
+            1,
+            target.Entity,
+            1d,
+            1d,
+            target.Center == portal.Position.ToVector() ? PerceptionPairKind.Visible : PerceptionPairKind.Occluded,
+            1d))]);
+
     private static StatsComponent DefeatedMechanics()
     {
         Stat maximum = new(100, quantum: 1, rounding: MidpointRounding.ToZero, integerRounding: MidpointRounding.ToZero);
@@ -4115,6 +5031,13 @@ public sealed class NormalizedRuntimeSeamTests
         return stats;
     }
 
+    private static ProductInputEvent Ui(string payload) => Input(InputEventKind.DirectDigital) with
+    {
+        ValueKind = InputValueKind.ProductPayload,
+        PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+        PayloadData = Encoding.UTF8.GetBytes(payload),
+    };
+
     private static PerceptionReadoutLeaseReceipt Receipt(params PerceptionPair[] pairs) => new(pairs, ReadOnlyMemory<PerceptionAggregate>.Empty, checked((uint)pairs.Length), false, 0, 1, 1, checked((uint)pairs.Length), checked((ulong)pairs.Length), 0, 0, 0, 0);
 
     private static PrivateersHoldInputs ReadInputs(string root)
@@ -4122,6 +5045,9 @@ public sealed class NormalizedRuntimeSeamTests
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
         return PrivateersHoldContent.Read(ImportContent(root), File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
     }
+
+    private static PrivateersHoldInputs ReadProfile(string root, ProductContent content, DaggerfallDefinitions definitions, string payload) =>
+        PrivateersHoldContent.Read(content, File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads", payload)), definitions);
 
     private static void RegisterCorpseStack(DaggerfallSession session, DaggerfallDefinitions definitions, long actorId, string stackId)
     {
@@ -4138,10 +5064,14 @@ public sealed class NormalizedRuntimeSeamTests
 
     private static ProductContent FullContent(string root)
     {
-        const string publicAudioRoot = "worldrpg/media/audio/clips";
-        const string importedAudioRoot = "worldrpg/imports/privateers-hold/media/audio/clips";
-        const string publicAudioBundle = "daggerfall.classic-audio";
-        const string importedAudioBundle = "daggerfall.privateers-hold-audio";
+        (string Root, string Bundle)[] audioBundles =
+        [
+            ("worldrpg/media/audio/clips", "daggerfall.classic-audio"),
+            ("worldrpg/imports/privateers-hold/media/audio/clips", "daggerfall.privateers-hold-audio"),
+            ("worldrpg/imports/castle-necromoghan/media/audio/clips", "daggerfall.castle-necromoghan-audio"),
+            ("worldrpg/imports/charing/exterior/media/audio/clips", "daggerfall.charing-exterior-audio"),
+            ("worldrpg/imports/charing/interior-1-1-0/media/audio/clips", "daggerfall.charing-interior-1-1-0-audio"),
+        ];
         string contentRoot = Path.Combine(root, "content");
         BundleContentFake bundles = new();
         List<ProductContentFile> eager = [];
@@ -4149,17 +5079,14 @@ public sealed class NormalizedRuntimeSeamTests
         foreach (string file in Directory.GetFiles(Path.Combine(contentRoot, "worldrpg"), "*", SearchOption.AllDirectories))
         {
             string relative = Path.GetRelativePath(contentRoot, file).Replace(Path.DirectorySeparatorChar, '/');
-            string? bundle = relative.StartsWith(publicAudioRoot + "/", StringComparison.Ordinal) ? publicAudioBundle
-                : relative.StartsWith(importedAudioRoot + "/", StringComparison.Ordinal) ? importedAudioBundle
-                : null;
-            if (bundle is null)
+            (string Root, string Bundle) audio = audioBundles.FirstOrDefault(value => relative.StartsWith(value.Root + "/", StringComparison.Ordinal));
+            if (string.IsNullOrEmpty(audio.Root))
             {
                 eager.Add(new ProductContentFile(Encoding.UTF8.GetBytes(relative), File.ReadAllBytes(file)));
                 continue;
             }
 
-            string rootPath = bundle == publicAudioBundle ? publicAudioRoot : importedAudioRoot;
-            bundles.Add(bundle, relative[(rootPath.Length + 1)..], File.ReadAllBytes(file));
+            bundles.Add(audio.Bundle, relative[(audio.Root.Length + 1)..], File.ReadAllBytes(file));
         }
 
         return new ProductContent(eager.ToArray(), bundles);
@@ -4506,10 +5433,11 @@ public sealed class NormalizedRuntimeSeamTests
         content.Add("effect/blood1.png", Hash);
         content.Add("effect/blood2.png", Hash);
         content.Add("effect/sparkle.png", Hash);
+        content.Add("sprite/treasure.png", Hash);
         return content;
     }
 
-    private static PrivateersHoldInputs MediaInputs(int primaryChance = 50, IReadOnlyList<int>? primaryFrames = null, bool includeAlternate = true, bool directional = false, IReadOnlyList<NormalizedAudioClip>? audio = null, string? preferredRestState = null, NormalizedClassicPresentation? classic = null, IReadOnlyList<NormalizedAtlasFrame>? actorFrames = null, IReadOnlyList<int>? rangedFrames = null)
+    private static PrivateersHoldInputs MediaInputs(int primaryChance = 50, IReadOnlyList<int>? primaryFrames = null, bool includeAlternate = true, bool directional = false, IReadOnlyList<NormalizedAudioClip>? audio = null, string? preferredRestState = null, NormalizedClassicPresentation? classic = null, IReadOnlyList<NormalizedAtlasFrame>? actorFrames = null, IReadOnlyList<int>? rangedFrames = null, bool shortAttackDirection = false, NormalizedGroundContainerSprite? groundContainerSprite = null)
     {
         NormalizedSpriteState idle = new("idle", [0], 10F, true)
         {
@@ -4522,7 +5450,7 @@ public sealed class NormalizedRuntimeSeamTests
         NormalizedSpriteState attack = new("primaryAttack", [2, 3], 10F, false)
         {
             Orientations = directional
-                ? Enumerable.Range(0, 8).ToDictionary(sector => sector, sector => (IReadOnlyList<uint>)(sector == 6 ? [3, 2] : [2, 3]))
+                ? Enumerable.Range(0, 8).ToDictionary(sector => sector, sector => (IReadOnlyList<uint>)(sector == 6 && shortAttackDirection ? [3] : sector == 6 ? [3, 2] : [2, 3]))
                 : new Dictionary<int, IReadOnlyList<uint>>(),
         };
         Dictionary<string, NormalizedSpriteState> states = new()
@@ -4553,6 +5481,7 @@ public sealed class NormalizedRuntimeSeamTests
             new PlayerInitialLook(0, 0),
             [],
             new Dictionary<long, NormalizedActorSprite> { [11] = sprite },
+            null,
             audio ??
             [
                 new NormalizedAudioClip("swing", "audio/swing.wav", Hash),
@@ -4562,7 +5491,8 @@ public sealed class NormalizedRuntimeSeamTests
                 new NormalizedAudioClip("hit4", "audio/hit4.wav", Hash),
                 new NormalizedAudioClip("hit5", "audio/hit5.wav", Hash),
             ],
-            classic);
+            classic,
+            groundContainerSprite: groundContainerSprite);
     }
 
     private static NormalizedClassicPresentation ClassicEffects(IReadOnlyList<Vector2>? bloodDisplaySizes = null)
@@ -5443,56 +6373,6 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
-    public void Over_capacity_player_still_receives_an_engine_step_but_cannot_propose_planar_movement()
-    {
-        string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
-        PrivateersHoldInputs inputs = ReadInputs(root);
-        List<string> releases = [];
-        ContentFake content = new(releases);
-        PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
-        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
-
-        InventoryStackId coins = InventoryStackId.Parse("test.encumbrance.movement");
-        session.State.Inventory.Grant(new(new InventoryItemId("gold-piece"), coins, checked((ulong)(session.State.Encumbrance.Read().MaximumClassicUnits + 1))));
-        session.State.ItemInstances.RegisterDefaultStack(DaggerfallItemOwner.Player, session.State.Inventory.Read().Stacks.Single(stack => stack.Id == coins), definitions.RequireItem(new DaggerfallItemId("gold-piece")));
-        Assert.False(session.State.Encumbrance.Read().CanMove);
-
-        session.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
-
-        Assert.Single(spatial.StepRequests);
-        Assert.Equal(Vector2.Zero, spatial.StepRequests[0].Command.PlanarIntent);
-    }
-
-    [Fact]
-    public void Engine_reported_landing_applies_one_lethal_fall_and_disables_later_player_movement()
-    {
-        string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
-        PrivateersHoldInputs inputs = ReadInputs(root);
-        List<string> releases = [];
-        ContentFake content = new(releases);
-        PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
-        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
-        Track health = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
-        health.SetCurrent(3.75d, clamp: true);
-        session.State.PlayerControl.Restore(new WorldPoint(0f, 2f, 0f),
-            default(CharacterMotion) with { Grounded = false, PeakY = 9f });
-
-        session.Update(new ProductUpdate(OuterUpdate(1), []));
-        session.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
-
-        Assert.Equal(0d, health.Current);
-        Assert.Equal(2, spatial.StepCalls);
-        Assert.Equal(Vector2.Zero, spatial.StepRequests[1].Command.PlanarIntent);
-    }
-
-
-    [Fact]
     public void Loot_transfer_at_the_player_capacity_boundary_leaves_both_engine_containers_unchanged()
     {
         string root = RepositoryRoot();
@@ -6154,6 +7034,7 @@ public sealed class NormalizedRuntimeSeamTests
         internal int CommandValidationCalls { get; private set; }
         internal bool RejectConfigValidation { get; set; }
         internal bool RejectProposedStep { get; set; }
+        internal bool RejectContentReplacement { get; set; }
         internal SpatialContentArtifactReplaceRequest? LastRequest { get; private set; }
         internal List<CharacterStepRequest> StepRequests { get; } = [];
         // Representative fixture only: Engine owns the actual default and validity contract.
@@ -6205,6 +7086,7 @@ public sealed class NormalizedRuntimeSeamTests
         private SpatialContentArtifactReplaceReceipt Replace(SpatialContentArtifactReplaceRequest request)
         {
             ReplaceCalls++;
+            if (RejectContentReplacement) throw new InvalidOperationException("Rejected spatial content replacement.");
             LastRequest = request;
             return new(request.Content.Handle.Value, hash, 1, 2, 3, 4, 5, 6, 7, 8);
         }
@@ -6290,6 +7172,7 @@ public sealed class NormalizedRuntimeSeamTests
         internal IPerceptionService Service { get; private set; } = null!;
         internal List<PerceptionQueryRequest> Requests { get; } = [];
         internal PerceptionReadoutLeaseReceipt Receipt { get; set; }
+        internal Func<PerceptionQueryRequest, PerceptionReadoutLeaseReceipt>? Responder { get; set; }
 
         internal static PerceptionFake Create()
         {
@@ -6304,7 +7187,7 @@ public sealed class NormalizedRuntimeSeamTests
             if (method?.Name != nameof(IPerceptionService.QueryVisibility)) throw new NotSupportedException(method?.Name);
             PerceptionQueryRequest request = (PerceptionQueryRequest)arguments![0]!;
             Requests.Add(request);
-            return Receipt;
+            return Responder?.Invoke(request) ?? Receipt;
         }
     }
 
@@ -6312,6 +7195,8 @@ public sealed class NormalizedRuntimeSeamTests
     private sealed class CapturingDaggerfallRuleset : ISaveableGameRuleset
     {
         // Ordinary integration tests exercise gameplay and persistence, not the Engine video runtime.
+        // They name disabled videos explicitly so a missing fake Video service cannot masquerade as a
+        // successful production-media path.
         private readonly DaggerfallRuleset _inner;
         internal CapturingDaggerfallRuleset(bool videosEnabled = false) => _inner = new(videosEnabled);
         internal DaggerfallSession? Session { get; private set; }
@@ -6397,6 +7282,8 @@ public sealed class NormalizedRuntimeSeamTests
     {
         internal IEngineContext Context { get; private set; } = null!;
         internal int UiOpenCalls { get; private set; }
+        internal int ClearedSkyBackgrounds => ((CameraServiceFake)(object)camera).ClearedSkyBackgrounds;
+        internal IReadOnlyList<Color> BackgroundColors => ((CameraServiceFake)(object)camera).BackgroundColors;
 
         /// <summary>Read one named field of the last published projection, or null when none was.</summary>
         internal string? PublishedField(string key) => ((UiServiceFake)(object)ui).Field(key);
@@ -6443,6 +7330,8 @@ public sealed class NormalizedRuntimeSeamTests
             return fake;
         }
 
+        internal void FailNextCameraUpdate() => ((CameraServiceFake)(object)camera).FailNextUpdate = true;
+
         protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
         {
             "get_Input" => PhysicalInput,
@@ -6461,13 +7350,39 @@ public sealed class NormalizedRuntimeSeamTests
 
         private class CameraServiceFake : DispatchProxy
         {
-            protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
+            internal bool FailNextUpdate { get; set; }
+            internal int ClearedSkyBackgrounds { get; private set; }
+            internal List<Color> BackgroundColors { get; } = [];
+
+            protected override object? Invoke(MethodInfo? method, object?[]? arguments)
             {
-                nameof(ICameraViewService.CreateCamera) => new Camera(new CameraHandle(1), () => { }),
-                nameof(ICameraViewService.UpdateCamera) or nameof(ICameraViewService.SetActiveCamera) or nameof(ICameraViewService.ClearActiveCamera) or nameof(ICameraViewService.SetSkyBackground) or nameof(ICameraViewService.ClearSkyBackground) => null,
-                nameof(ICameraViewService.ReplaceCamera) => new Camera(new CameraHandle(1), () => { }),
-                _ => throw new NotSupportedException(method?.Name),
-            };
+                if (method?.Name == nameof(ICameraViewService.UpdateCamera) && FailNextUpdate)
+                {
+                    FailNextUpdate = false;
+                    throw new InvalidOperationException("Rejected camera pose update.");
+                }
+                return method?.Name switch
+                {
+                    nameof(ICameraViewService.CreateCamera) => new Camera(new CameraHandle(1), () => { }),
+                    nameof(ICameraViewService.ClearSkyBackground) => ClearSkyBackground(),
+                    nameof(ICameraViewService.SetBackgroundColor) => SetBackgroundColor(arguments),
+                    nameof(ICameraViewService.UpdateCamera) or nameof(ICameraViewService.SetActiveCamera) or nameof(ICameraViewService.ClearActiveCamera) or nameof(ICameraViewService.SetSkyBackground) => null,
+                    nameof(ICameraViewService.ReplaceCamera) => new Camera(new CameraHandle(1), () => { }),
+                    _ => throw new NotSupportedException(method?.Name),
+                };
+            }
+
+            private object? ClearSkyBackground()
+            {
+                ClearedSkyBackgrounds++;
+                return null;
+            }
+
+            private object? SetBackgroundColor(object?[]? arguments)
+            {
+                BackgroundColors.Add(((SetBackgroundColorRequest)arguments![0]!).Color);
+                return null;
+            }
         }
 
         private class RandomServiceFake : DispatchProxy
@@ -6488,9 +7403,11 @@ public sealed class NormalizedRuntimeSeamTests
             };
         }
 
+        /// <summary>Safe terminal-free video stub for non-media session fixtures.</summary>
         private class VideoServiceFake : DispatchProxy
         {
             private ulong _nextHandle;
+
             protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
             {
                 nameof(IVideoService.PlayFromContent) => new VideoPlaybackHandle(++_nextHandle),
@@ -6688,6 +7605,8 @@ public sealed class NormalizedRuntimeSeamTests
         internal List<SpritePlaybackCreateRequest> PlaybackRequests { get; } = [];
         internal List<SpritePlaybackControlRequest> ControlRequests { get; } = [];
         internal List<SpritePlaybackAdvanceRequest> AdvanceRequests { get; } = [];
+        internal List<LightRequest> LightRequests { get; } = [];
+        internal List<LightUpdateRequest> LightUpdates { get; } = [];
         internal List<AppearanceFact[]> Snapshots { get; } = [];
         internal List<SpriteFrameUpdateRequest> SetFrameRequests { get; } = [];
         internal List<SpritePlayback> CreatedPlaybacks { get; } = [];
@@ -6697,12 +7616,15 @@ public sealed class NormalizedRuntimeSeamTests
         internal int CreatedAppearances { get; private set; }
         internal int DisposedAppearances { get; private set; }
         internal int DisposedPlaybacks { get; private set; }
+        internal int DisposedLights { get; private set; }
         internal List<SpritePlaybackHandle> DisposedPlaybackHandles { get; } = [];
         internal int FailSpritePlaybackCreateAt { get; set; }
         internal int FailSpritePlaybackControlAt { get; set; }
         internal int FailPublishAt { get; set; }
         internal bool RejectLateResourceOpen { get; set; }
         internal bool RejectDisposeOfRetainedAppearance { get; set; }
+        internal bool FailNextProjectionDispose { get; set; }
+        private bool failDuringProjectionDispose;
         internal int PublishCalls { get; private set; }
         internal ulong LastCrossingSequence { get; private set; }
         internal IReadOnlyCollection<Appearance> RetainedAppearances => retainedAppearances;
@@ -6803,13 +7725,18 @@ public sealed class NormalizedRuntimeSeamTests
         public void PublishSnapshot(ReadOnlySpan<AppearanceFact> values)
         {
             PublishCalls++;
+            if (values.IsEmpty && FailNextProjectionDispose)
+            {
+                FailNextProjectionDispose = false;
+                failDuringProjectionDispose = true;
+            }
             Snapshots.Add(values.ToArray());
             retainedAppearances.Clear();
             foreach (AppearanceFact value in values) retainedAppearances.Add(value.Appearance);
             if (FailPublishAt == PublishCalls) throw new InvalidOperationException("Injected presentation publish failure.");
         }
-        public Light CreateLight(LightRequest request) => new(new LightHandle(1), () => { });
-        public void UpdateLight(LightUpdateRequest request) { }
+        public Light CreateLight(LightRequest request) => NewLight(request);
+        public void UpdateLight(LightUpdateRequest request) => LightUpdates.Add(request);
         public Light ReplaceLight(LightUpdateRequest request) => NewLight(request.Replacement);
         public LightReadout ReadLight(Light light) => default;
         public PresentationReadout ReadPresentation() => default;
@@ -6820,6 +7747,11 @@ public sealed class NormalizedRuntimeSeamTests
             Appearance value = null!;
             value = new(new AppearanceHandle(nextHandle++), () =>
             {
+                if (failDuringProjectionDispose)
+                {
+                    failDuringProjectionDispose = false;
+                    throw new InvalidOperationException("Injected appearance dispose failure.");
+                }
                 if (RejectDisposeOfRetainedAppearance && retainedAppearances.Contains(value)) throw new InvalidOperationException("CSHARP_APPEARANCE_IN_USE");
                 DisposedAppearances++;
                 releases.Add("appearance");
@@ -6838,6 +7770,10 @@ public sealed class NormalizedRuntimeSeamTests
             pendingPlaybackCommits.Clear();
             pendingPlaybackRollbacks.Clear();
         }
-        private static Light NewLight(LightRequest request) => new(new LightHandle(1), () => { });
+        private Light NewLight(LightRequest request)
+        {
+            LightRequests.Add(request);
+            return new(new LightHandle(nextHandle++), () => { DisposedLights++; releases.Add("light"); });
+        }
     }
 }

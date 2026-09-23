@@ -40,7 +40,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         DaggerfallControlSettings? controlSettings = null,
         string? controlDiagnostic = null,
         DaggerfallActivationView? activation = null,
-        DaggerfallQuestPresentation? quests = null)
+        DaggerfallQuestPresentation? quests = null,
+        DaggerfallNotebookPresentation? notebook = null)
     {
         UiValueBuilder builder = new();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
@@ -100,6 +101,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("fixed", builder.Boolean(action.Id == "menu")))).ToArray()))))];
         if (activation is not null) fields = [.. fields, ("activation", builder.Object(("mode", builder.String(activation.Mode)), ("message", builder.String(activation.Message)), ("applied", builder.Boolean(activation.Applied))))];
         if (quests is not null) fields = [.. fields, ("quests", Quests(builder, quests))];
+        if (notebook is not null) fields = [.. fields, ("notebook", Notebook(builder, notebook))];
         if (inventory is not null) fields = [.. fields, ("inventory", Inventory(builder, inventory))];
         // Contents are an affordance the same way focus is: a dead or paused product refuses the take
         // its gate would otherwise honour, so the panel is published only in the mode that lets the
@@ -128,6 +130,15 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("deliveries", builder.Array(quests.Deliveries.Select(message => QuestMessage(builder, message)).ToArray())),
         ("journal", builder.Array(quests.Journal.Select(message => QuestMessage(builder, message)).ToArray())),
         ("pending", quests.Pending is null ? builder.Null() : QuestMessage(builder, quests.Pending)));
+
+    private static uint Notebook(UiValueBuilder builder, DaggerfallNotebookPresentation notebook) => builder.Object(
+        ("revision", builder.String(notebook.Revision)),
+        ("book", notebook.Book is null ? builder.Null() : builder.Object(
+            ("id", builder.Number(notebook.Book.BookId)), ("title", builder.String(notebook.Book.Title)),
+            ("author", builder.String(notebook.Book.Author)), ("page", builder.Number(notebook.Book.Page)),
+            ("pageCount", builder.Number(notebook.Book.PageCount)), ("text", builder.String(notebook.Book.Text)))),
+        ("notes", builder.Array(notebook.Notes.Select(note => builder.Object(
+            ("id", builder.String(note.Id)), ("text", builder.String(note.Text)))).ToArray())));
 
     private static uint QuestMessage(UiValueBuilder builder, DaggerfallQuestRenderedMessage message) => builder.Object(
         ("instance", builder.String(message.InstanceId)),

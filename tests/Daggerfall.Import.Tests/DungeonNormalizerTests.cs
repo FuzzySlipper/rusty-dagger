@@ -189,6 +189,24 @@ public sealed class DungeonNormalizerTests
     }
 
     [Fact]
+    public void Projects_donor_interior_light_flats_with_their_record_specific_offset_colour_and_range()
+    {
+        DungeonLogicalSource[] sources = CreateSourcesForFlat(210, 0, 0);
+        sources = [.. sources, new DungeonLogicalSource("TEXTURE.210", CreateTexture())];
+
+        DungeonNormalizationResult result = DungeonNormalizer.Normalize(Request(sources));
+
+        NormalizedLightPlacement light = Assert.Single(result.Document.World.Lights, value => value.Id.StartsWith("light-flat/", StringComparison.Ordinal));
+        Assert.Equal("light-flat/s0000007-rdb/1/1/0", light.Id);
+        Assert.Equal(20F, light.Range);
+        Assert.Equal(1.1F, light.Intensity);
+        Assert.Equal(new NormalizedVector3(.95F, .91F, .63F), light.Color);
+        Assert.Equal(.4F, light.Position.Y, 3);
+        Assert.Contains(result.RecordProvenance, record => record.Id == light.Id && record.Kind == "rdb-interior-light-flat");
+        Assert.Single(result.Document.World.Billboards);
+    }
+
+    [Fact]
     public void RetainsActionDoorGeometryForVisualPublicationButExcludesItFromCollision()
     {
         DungeonLogicalSource[] sources = CreateSources();

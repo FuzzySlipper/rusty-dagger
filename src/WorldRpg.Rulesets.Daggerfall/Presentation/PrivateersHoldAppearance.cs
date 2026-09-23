@@ -9,6 +9,7 @@ using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.Presentation;
+using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -31,6 +32,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     // their normalized texture handles must be admitted with the initial closure.
     private readonly Dictionary<string, RenderResourceInfo> classicTextures = new(StringComparer.Ordinal);
     private readonly Dictionary<long, ActorVisual> actors = [];
+    private readonly Dictionary<long, GroundVisual> groundVisuals = [];
     private readonly List<EffectVisual> effects = [];
     private ViewmodelVisual? viewmodel;
     private bool weaponDrawn = true;
@@ -43,6 +45,8 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private readonly HashSet<PresentationEventIdentity> appliedImpacts = [];
     private readonly List<AttackImpactNotice> attackImpacts = [];
     private readonly List<SpriteAtlas> atlases = [];
+    private SpriteAtlas? groundContainerAtlas;
+    private readonly NormalizedGroundContainerSprite? groundContainerSprite;
     private readonly List<Material> materials = [];
     private readonly Dictionary<uint, Material> materialsBySlot = [];
     private readonly Dictionary<DaggerfallRdbDoorId, Appearance> doorVisuals = [];
@@ -107,6 +111,16 @@ internal sealed class PrivateersHoldAppearance : IDisposable
                 ActorVisual visual = CreateActorVisual(content, entityId, sprite);
                 actors.Add(entityId, visual);
             }
+            groundContainerSprite = inputs.GroundContainerSprite;
+            if (groundContainerSprite is { } groundSprite)
+            {
+                RenderResourceInfo texture = appearance.OpenResource(new RenderResourceRequest(groundSprite.TexturePath));
+                ownedResources.Add(texture.Handle);
+                SpriteAtlasFrame[] frames = SpriteAtlasAdapter.ToAtlasFrames(groundSprite.AtlasWidth, groundSprite.AtlasHeight,
+                    groundSprite.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height)).ToArray());
+                groundContainerAtlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
+                atlases.Add(groundContainerAtlas);
+            }
             AdmitClassicTextures();
             foreach (NormalizedAudioClip clip in inputs.Audio)
             {
@@ -124,6 +138,18 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     /// Drops one actor's visual when its registration ends. Actors without published sprite media
     /// never had an entry, so retiring one is a no-op rather than an error.
     /// </summary>
+    /// <summary>Admits media for one dynamic actor after its canonical mechanics actor has been created.</summary>
+    internal void AddActor(long durableId, NormalizedActorSprite sprite)
+    {
+        if (disposed) throw new ObjectDisposedException(nameof(PrivateersHoldAppearance));
+        ArgumentNullException.ThrowIfNull(sprite);
+        if (durableId <= 0) throw new ArgumentOutOfRangeException(nameof(durableId));
+        if (actors.ContainsKey(durableId)) throw new InvalidOperationException($"Actor {durableId} already has an appearance.");
+        ActorVisual visual = CreateActorVisual(content, durableId, sprite);
+        try { actors.Add(durableId, visual); }
+        catch { List<Exception>? failures = null; visual.Dispose(ref failures); if (failures is { Count: > 0 }) throw new AggregateException(failures); throw; }
+    }
+
     internal void RetireActor(long durableId)
     {
         if (actors.Remove(durableId, out ActorVisual? visual) && visual is not null)
@@ -136,8 +162,13 @@ internal sealed class PrivateersHoldAppearance : IDisposable
 
     /// <summary>Publishes world and viewport weapon appearances; Engine owns projection and fitting.</summary>
     internal void Publish(ActorsState actors)
+        => Publish(actors, new Dictionary<long, DaggerfallGroundContainer>());
+
+    /// <summary>Publishes the active ground-container projection through the same Engine snapshot as actors.</summary>
+    internal void Publish(ActorsState actors, IReadOnlyDictionary<long, DaggerfallGroundContainer> groundContainers)
     {
         if (disposed) return;
+        ReconcileGroundVisuals(groundContainers);
         List<AppearanceFact> facts = [];
         if (world is { } staticWorld) facts.Add(new AppearanceFact(1, false, 0, worldAppearance.Transform, staticWorld, worldAppearance.Visible, worldAppearance.Layer));
         if (doors is not null) foreach (DaggerfallDoorView door in doors.All)
@@ -148,14 +179,19 @@ internal sealed class PrivateersHoldAppearance : IDisposable
             Appearance? chosen = actor.IsDefeated ? visual.Corpse : visual.Live;
             if (chosen is not null) facts.Add(new AppearanceFact(checked((ulong)actor.DurableId), false, 0, new Transform(actor.Position.ToVector(), Quaternion.Identity, Vector3.One), chosen, true, RenderLayer.Scene));
         }
+        foreach (DaggerfallGroundContainer container in groundContainers.Values.OrderBy(container => container.Id))
+        {
+            if (groundVisuals.TryGetValue(container.Id, out GroundVisual? visual))
+                facts.Add(new AppearanceFact(checked((ulong)container.Id), false, 0,
+                    new Transform(container.Position.ToVector(), Quaternion.Identity, Vector3.One), visual.Appearance, true, RenderLayer.Scene));
+        }
         foreach (EffectVisual effect in effects)
             facts.Add(new AppearanceFact(effect.EntityId, false, 0, new Transform(effect.Position.ToVector(), Quaternion.Identity, Vector3.One), effect.Appearance, true, RenderLayer.Scene));
         if (viewmodel is { } weapon)
         {
             facts.Add(new AppearanceFact(weapon.EntityId, false, 0, weapon.Transform, weapon.Appearance, true, RenderLayer.Viewmodel));
         }
-        AppearanceFact[] snapshot = [.. facts];
-        appearance.PublishSnapshot(snapshot);
+        appearance.PublishSnapshot([.. facts]);
     }
 
     /// <summary>
@@ -352,6 +388,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         try { appearance.PublishSnapshot(ReadOnlySpan<AppearanceFact>.Empty); }
         catch (Exception exception) { failures = [exception]; }
         foreach (ActorVisual visual in actors.Values.Reverse()) visual.Dispose(ref failures);
+        foreach (GroundVisual visual in groundVisuals.Values.Reverse()) visual.Dispose(ref failures);
         foreach (EffectVisual effect in effects.AsEnumerable().Reverse()) effect.Dispose(ref failures);
         effects.Clear();
         if (viewmodel is { } weapon) { viewmodel = null; weapon.Dispose(ref failures); }
@@ -359,12 +396,14 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         foreach (IDisposable value in priorRetired.AsEnumerable().Reverse()) Dispose(value, ref failures);
         nextRetired.Clear(); priorRetired.Clear();
         actors.Clear();
+        groundVisuals.Clear();
         if (world is { } staticWorld) { world = null; Dispose(staticWorld, ref failures); }
         foreach (Appearance visual in doorVisuals.Values.Reverse()) Dispose(visual, ref failures);
         doorVisuals.Clear();
         doorVisualEntityIds.Clear();
         foreach (SpriteAtlas atlas in atlases.AsEnumerable().Reverse()) Dispose(atlas, ref failures);
         atlases.Clear();
+        groundContainerAtlas = null;
         foreach (Material material in materials.AsEnumerable().Reverse()) Dispose(material, ref failures);
         materials.Clear();
         foreach (RenderResource resource in ownedResources.AsEnumerable().Reverse()) Dispose(resource, ref failures);
@@ -394,6 +433,28 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     {
         try { value.Dispose(); }
         catch (Exception exception) { (failures ??= []).Add(exception); }
+    }
+
+    private void ReconcileGroundVisuals(IReadOnlyDictionary<long, DaggerfallGroundContainer> containers)
+    {
+        foreach (long id in groundVisuals.Keys.Where(id => !containers.ContainsKey(id)).ToArray())
+        {
+            GroundVisual visual = groundVisuals[id];
+            groundVisuals.Remove(id);
+            Retire(visual);
+        }
+        if (containers.Count == 0) return;
+        if (groundContainerSprite is null || groundContainerAtlas is null)
+            throw new InvalidOperationException("Ground containers require the normalized treasure billboard visual.");
+        foreach (DaggerfallGroundContainer container in containers.Values.OrderBy(container => container.Id))
+        {
+            if (groundVisuals.ContainsKey(container.Id)) continue;
+            Appearance visual = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(groundContainerAtlas,
+                groundContainerSprite.InitialFrameId, groundContainerSprite.Pivot, groundContainerSprite.Size,
+                BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default,
+                new Color(1F, 1F, 1F, 1F)));
+            groundVisuals.Add(container.Id, new GroundVisual(container.Id, visual));
+        }
     }
 
     private ActorVisual CreateActorVisual(IContentService content, long entityId, NormalizedActorSprite sprite)
@@ -733,6 +794,14 @@ internal sealed class PrivateersHoldAppearance : IDisposable
             Live = null;
             if (Corpse is { } corpse) PrivateersHoldAppearance.Dispose(corpse, ref failures);
         }
+    }
+
+    internal sealed class GroundVisual(long entityId, Appearance appearance) : IDisposable
+    {
+        internal long EntityId { get; } = entityId;
+        internal Appearance Appearance { get; } = appearance;
+        public void Dispose() => Appearance.Dispose();
+        internal void Dispose(ref List<Exception>? failures) => PrivateersHoldAppearance.Dispose(Appearance, ref failures);
     }
 
     internal sealed class EffectVisual(ulong entityId, WorldPoint position, SpriteAtlas atlas, Appearance appearance, SpritePlayback playback) : IDisposable

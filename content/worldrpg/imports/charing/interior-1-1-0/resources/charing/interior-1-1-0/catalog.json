@@ -1,0 +1,563 @@
+{
+  "schemaVersion": 1,
+  "resources": [
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-0-113",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/0-113"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-0-114",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/0-114"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-0-44",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/0-44"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-0-73",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/0-73"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-0-75",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/0-75"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-0-76",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/0-76"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-0-77",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/0-77"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-0-78",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/0-78"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-116-3",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/116-3"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-116-4",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/116-4"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-144-0",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/144-0"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-144-1",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/144-1"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-144-3",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/144-3"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-144-4",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/144-4"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-67-0",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/67-0"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-67-14",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/67-14"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-67-8",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/67-8"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-74-1",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/74-1"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-87-0",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/87-0"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-87-1",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/87-1"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-87-2",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/87-2"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-87-3",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/87-3"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-87-4",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/87-4"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-90-0",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/90-0"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-90-1",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/90-1"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-90-5",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/90-5"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-90-6",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/90-6"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-90-7",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/90-7"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-92-0",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/92-0"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-92-1",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/92-1"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-92-2",
+      "kind": "material",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [
+        "texture/92-2"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/0-113",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/0-114",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/0-44",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/0-73",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/0-75",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/0-76",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/0-77",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/0-78",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/116-3",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/116-4",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/144-0",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/144-1",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/144-3",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/144-4",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/67-0",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/67-14",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/67-8",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/74-1",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/87-0",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/87-1",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/87-2",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/87-3",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/87-4",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/90-0",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/90-1",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/90-5",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/90-6",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/90-7",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/92-0",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/92-1",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/92-2",
+      "kind": "texture",
+      "artifactId": "artifact/rmb/charing/interior-1-1-0/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    }
+  ]
+}

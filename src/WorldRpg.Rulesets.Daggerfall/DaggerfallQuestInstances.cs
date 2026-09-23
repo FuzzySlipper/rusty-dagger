@@ -416,8 +416,6 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
                 : _random.DrawKeyed(new KeyedRngRequest(0, "daggerfall.quest.clock", $"{instance.InstanceId}:{clock.Symbol}", clock.MinimumSeconds, clock.MaximumSeconds)).Value;
             return new DaggerfallQuestClockState(clock.Symbol, duration, duration, clock.Flag, clock.MinRange, clock.MaxRange, false, false);
         })] }, program);
-        if (_instances.Values.Any(value => value.Lifecycle == DaggerfallQuestLifecycle.Active && string.Equals(value.SourceFile, started.SourceFile, StringComparison.Ordinal)))
-            throw new ArgumentException($"Daggerfall policy rejects a duplicate active quest source '{started.SourceFile}'.");
         if (!_instances.TryAdd(started.InstanceId, started)) throw new ArgumentException($"Quest instance '{started.InstanceId}' already exists.");
         return started.Capture();
     }
@@ -628,9 +626,6 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
     {
         if (factionId < 0) throw new ArgumentOutOfRangeException(nameof(factionId));
         if (_instances.ContainsKey(instanceId) || _pendingStarts.ContainsKey(instanceId)) return;
-        if (_instances.Values.Any(value => value.Lifecycle == DaggerfallQuestLifecycle.Active && value.SourceFile == sourceFile)
-            || _pendingStarts.Values.Any(value => value.SourceFile == sourceFile))
-            throw new ArgumentException($"Daggerfall policy rejects a duplicate active quest source '{sourceFile}'.");
         _pendingStarts.Add(instanceId, new(instanceId, sourceFile, parentInstanceId, factionId));
     }
 

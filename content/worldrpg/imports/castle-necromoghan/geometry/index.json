@@ -1,0 +1,6548 @@
+{
+  "schemaVersion": 1,
+  "inventorySource": "arena2/ARCH3D.BSA",
+  "summary": {
+    "records": 10251,
+    "published": 173,
+    "unresolvable": 0,
+    "missing": 0,
+    "duplicate": 14,
+    "unused": 10064
+  },
+  "meshes": [
+    {
+      "schemaVersion": 1,
+      "meshId": "41006",
+      "sourceRecordId": 41006,
+      "sourceOrdinal": 8283,
+      "artifactId": "geometry/mesh-41006",
+      "relativePath": "geometry/mesh-41006.json",
+      "vertices": 40,
+      "triangles": 20,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 2,
+          "materialResourceId": "material/texture-67-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 45,
+          "materialResourceId": "material/texture-0-45",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 72,
+          "record": 2,
+          "materialResourceId": "material/texture-72-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "5632cb24753c7ef7abc61659070036b22dc589b7c5882c793db0c87c3507fd49"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41019",
+      "sourceRecordId": 41019,
+      "sourceOrdinal": 8294,
+      "artifactId": "geometry/mesh-41019",
+      "relativePath": "geometry/mesh-41019.json",
+      "vertices": 40,
+      "triangles": 20,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 0,
+          "materialResourceId": "material/texture-67-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 44,
+          "materialResourceId": "material/texture-0-44",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 71,
+          "record": 2,
+          "materialResourceId": "material/texture-71-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "22144f0fe7e6e6baedb408847b2c02dac361c98c674063b3581a5f6e38277a98"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41027",
+      "sourceRecordId": 41027,
+      "sourceOrdinal": 8322,
+      "artifactId": "geometry/mesh-41027",
+      "relativePath": "geometry/mesh-41027.json",
+      "vertices": 20,
+      "triangles": 10,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 6,
+          "materialResourceId": "material/texture-67-6",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 72,
+          "record": 0,
+          "materialResourceId": "material/texture-72-0",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "75d69687ac4846790e90c85d7c06efb5ea7271c6b8a7cdb655a84f71ffad0cdf"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41031",
+      "sourceRecordId": 41031,
+      "sourceOrdinal": 8305,
+      "artifactId": "geometry/mesh-41031",
+      "relativePath": "geometry/mesh-41031.json",
+      "vertices": 16,
+      "triangles": 8,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 6,
+          "materialResourceId": "material/texture-67-6",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 71,
+          "record": 1,
+          "materialResourceId": "material/texture-71-1",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "b13adf559ef972631d70f56d7042fc9e9db04ff9b8be0eb378a35cc792ec25c2"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41044",
+      "sourceRecordId": 41044,
+      "sourceOrdinal": 8253,
+      "artifactId": "geometry/mesh-41044",
+      "relativePath": "geometry/mesh-41044.json",
+      "vertices": 40,
+      "triangles": 20,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 0,
+          "materialResourceId": "material/texture-67-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 45,
+          "materialResourceId": "material/texture-0-45",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 71,
+          "record": 0,
+          "materialResourceId": "material/texture-71-0",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "86695fce6f0542a839d43901c4bc7861a59070b5ac10c76eb6746cbe2c2d92a5"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41108",
+      "sourceRecordId": 41108,
+      "sourceOrdinal": 8111,
+      "artifactId": "geometry/mesh-41108",
+      "relativePath": "geometry/mesh-41108.json",
+      "vertices": 68,
+      "triangles": 34,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 44,
+          "materialResourceId": "material/texture-0-44",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 0,
+          "materialResourceId": "material/texture-67-0",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "c02266501924a33abc9193d853d3238f87a0f5c6c6f154268ae1e2a8d46c40df"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41112",
+      "sourceRecordId": 41112,
+      "sourceOrdinal": 8261,
+      "artifactId": "geometry/mesh-41112",
+      "relativePath": "geometry/mesh-41112.json",
+      "vertices": 68,
+      "triangles": 34,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 44,
+          "materialResourceId": "material/texture-0-44",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 0,
+          "materialResourceId": "material/texture-67-0",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "0703719b62778e0b624a809c58f978dd33a40a032fbfb0404a54332eed28f510"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41113",
+      "sourceRecordId": 41113,
+      "sourceOrdinal": 8270,
+      "artifactId": "geometry/mesh-41113",
+      "relativePath": "geometry/mesh-41113.json",
+      "vertices": 68,
+      "triangles": 34,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 77,
+          "materialResourceId": "material/texture-0-77",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 75,
+          "materialResourceId": "material/texture-0-75",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "b8f3fce35ce2741b3c2384ca0796745700547723d725b0ebffec7ac8e8667388"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41123",
+      "sourceRecordId": 41123,
+      "sourceOrdinal": 8250,
+      "artifactId": "geometry/mesh-41123",
+      "relativePath": "geometry/mesh-41123.json",
+      "vertices": 74,
+      "triangles": 36,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 78,
+          "materialResourceId": "material/texture-0-78",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 0,
+          "materialResourceId": "material/texture-67-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 77,
+          "materialResourceId": "material/texture-0-77",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 75,
+          "materialResourceId": "material/texture-0-75",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 76,
+          "materialResourceId": "material/texture-0-76",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "50aee67215adca028783c3690e59674890f392d9aab47bcf4cca90d575c64c56"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41125",
+      "sourceRecordId": 41125,
+      "sourceOrdinal": 8252,
+      "artifactId": "geometry/mesh-41125",
+      "relativePath": "geometry/mesh-41125.json",
+      "vertices": 90,
+      "triangles": 44,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 78,
+          "materialResourceId": "material/texture-0-78",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 79,
+          "materialResourceId": "material/texture-0-79",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 8,
+          "materialResourceId": "material/texture-67-8",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 77,
+          "materialResourceId": "material/texture-0-77",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "84cc88f6cc7e22443109e10336f8171ec34d9fb2a928073707e56b95c91515c0"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41126",
+      "sourceRecordId": 41126,
+      "sourceOrdinal": 8170,
+      "artifactId": "geometry/mesh-41126",
+      "relativePath": "geometry/mesh-41126.json",
+      "vertices": 56,
+      "triangles": 26,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 77,
+          "materialResourceId": "material/texture-0-77",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 0,
+          "materialResourceId": "material/texture-67-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 78,
+          "materialResourceId": "material/texture-0-78",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 76,
+          "materialResourceId": "material/texture-0-76",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 75,
+          "materialResourceId": "material/texture-0-75",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "2fbfc7b6817543fa987ef2269e7dfc8c0157a5d044f59ad11d00102ba0f0e8eb"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41128",
+      "sourceRecordId": 41128,
+      "sourceOrdinal": 8082,
+      "artifactId": "geometry/mesh-41128",
+      "relativePath": "geometry/mesh-41128.json",
+      "vertices": 32,
+      "triangles": 16,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 77,
+          "materialResourceId": "material/texture-0-77",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 0,
+          "materialResourceId": "material/texture-67-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 78,
+          "materialResourceId": "material/texture-0-78",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "fe8b663d06dc483b76942ec192585218ac94f5a7418089e164fa8b44ff772996"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41129",
+      "sourceRecordId": 41129,
+      "sourceOrdinal": 5849,
+      "artifactId": "geometry/mesh-41129",
+      "relativePath": "geometry/mesh-41129.json",
+      "vertices": 132,
+      "triangles": 68,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 75,
+          "materialResourceId": "material/texture-0-75",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 0,
+          "materialResourceId": "material/texture-67-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 78,
+          "materialResourceId": "material/texture-0-78",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "aef8b6937abd911b5abdb1752b685fed34f1ad28547d1f8fdbee2504bf6689cd"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41130",
+      "sourceRecordId": 41130,
+      "sourceOrdinal": 689,
+      "artifactId": "geometry/mesh-41130",
+      "relativePath": "geometry/mesh-41130.json",
+      "vertices": 112,
+      "triangles": 60,
+      "materials": [
+        {
+          "archive": 1,
+          "record": 57,
+          "materialResourceId": "material/texture-1-57",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 1,
+          "materialResourceId": "material/texture-67-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 1,
+          "record": 60,
+          "materialResourceId": "material/texture-1-60",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "82739b310ce9290bfe372577905559e8a6cc03460ce1868bc223301734e8d609"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41206",
+      "sourceRecordId": 41206,
+      "sourceOrdinal": 8325,
+      "artifactId": "geometry/mesh-41206",
+      "relativePath": "geometry/mesh-41206.json",
+      "vertices": 45,
+      "triangles": 21,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 11,
+          "materialResourceId": "material/texture-67-11",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 43,
+          "materialResourceId": "material/texture-0-43",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "5b1f191e2da23a049dfe7fe2eee0a330256c4dba8615c23bde19fbe90ccb275b"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41208",
+      "sourceRecordId": 41208,
+      "sourceOrdinal": 8327,
+      "artifactId": "geometry/mesh-41208",
+      "relativePath": "geometry/mesh-41208.json",
+      "vertices": 45,
+      "triangles": 21,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 11,
+          "materialResourceId": "material/texture-67-11",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 43,
+          "materialResourceId": "material/texture-0-43",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "4759fe829ac2203b14747023d25006cc4cd903c0e5f0abcd012951c317a36c5b"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41300",
+      "sourceRecordId": 41300,
+      "sourceOrdinal": 6220,
+      "artifactId": "geometry/mesh-41300",
+      "relativePath": "geometry/mesh-41300.json",
+      "vertices": 141,
+      "triangles": 61,
+      "materials": [
+        {
+          "archive": 93,
+          "record": 2,
+          "materialResourceId": "material/texture-93-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 93,
+          "record": 1,
+          "materialResourceId": "material/texture-93-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 93,
+          "record": 5,
+          "materialResourceId": "material/texture-93-5",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 93,
+          "record": 4,
+          "materialResourceId": "material/texture-93-4",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 93,
+          "record": 0,
+          "materialResourceId": "material/texture-93-0",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "0916a02c32c05b2847b3fdd3edd0bb71195f0903963596e701f0e462ee17aa01"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41303",
+      "sourceRecordId": 41303,
+      "sourceOrdinal": 8317,
+      "artifactId": "geometry/mesh-41303",
+      "relativePath": "geometry/mesh-41303.json",
+      "vertices": 101,
+      "triangles": 49,
+      "materials": [
+        {
+          "archive": 93,
+          "record": 6,
+          "materialResourceId": "material/texture-93-6",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 93,
+          "record": 7,
+          "materialResourceId": "material/texture-93-7",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 93,
+          "record": 8,
+          "materialResourceId": "material/texture-93-8",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 75,
+          "materialResourceId": "material/texture-0-75",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "270ccc8ee33dba71c776dbb3ff83d94fa6327d8c90951b1061051e044e609960"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41304",
+      "sourceRecordId": 41304,
+      "sourceOrdinal": 7975,
+      "artifactId": "geometry/mesh-41304",
+      "relativePath": "geometry/mesh-41304.json",
+      "vertices": 52,
+      "triangles": 26,
+      "materials": [
+        {
+          "archive": 46,
+          "record": 2,
+          "materialResourceId": "material/texture-46-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 46,
+          "record": 1,
+          "materialResourceId": "material/texture-46-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 41,
+          "record": 0,
+          "materialResourceId": "material/texture-41-0",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "743102085857412c626c0aa3d184cf752716860d365eeadce2d7f5086a23574f"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41305",
+      "sourceRecordId": 41305,
+      "sourceOrdinal": 8171,
+      "artifactId": "geometry/mesh-41305",
+      "relativePath": "geometry/mesh-41305.json",
+      "vertices": 52,
+      "triangles": 26,
+      "materials": [
+        {
+          "archive": 41,
+          "record": 1,
+          "materialResourceId": "material/texture-41-1",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "e495425acc8a7aa1dddd4f991f2d502de021aec5948ade36dbc7a848542c14f6"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41307",
+      "sourceRecordId": 41307,
+      "sourceOrdinal": 7977,
+      "artifactId": "geometry/mesh-41307",
+      "relativePath": "geometry/mesh-41307.json",
+      "vertices": 36,
+      "triangles": 18,
+      "materials": [
+        {
+          "archive": 46,
+          "record": 1,
+          "materialResourceId": "material/texture-46-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 46,
+          "record": 2,
+          "materialResourceId": "material/texture-46-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "d607c7309f05da84c2ecdf724f9ae0616ac78f2f9cdadc0a8e0b5efb41cf989e"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41308",
+      "sourceRecordId": 41308,
+      "sourceOrdinal": 5724,
+      "artifactId": "geometry/mesh-41308",
+      "relativePath": "geometry/mesh-41308.json",
+      "vertices": 36,
+      "triangles": 18,
+      "materials": [
+        {
+          "archive": 46,
+          "record": 1,
+          "materialResourceId": "material/texture-46-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 46,
+          "record": 2,
+          "materialResourceId": "material/texture-46-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "fbb99e47927570b56a85a73a0269b82832c6bd793a1552cac75ba16dc96dfd9c"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41312",
+      "sourceRecordId": 41312,
+      "sourceOrdinal": 8421,
+      "artifactId": "geometry/mesh-41312",
+      "relativePath": "geometry/mesh-41312.json",
+      "vertices": 188,
+      "triangles": 94,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 89,
+          "materialResourceId": "material/texture-0-89",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 2,
+          "materialResourceId": "material/texture-67-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 90,
+          "record": 3,
+          "materialResourceId": "material/texture-90-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "1bcd6882b92a78df318fb4a42a03d87e72c7e6a0c2eb9a90ce7e707f18da682e"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41313",
+      "sourceRecordId": 41313,
+      "sourceOrdinal": 23,
+      "artifactId": "geometry/mesh-41313",
+      "relativePath": "geometry/mesh-41313.json",
+      "vertices": 188,
+      "triangles": 94,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 89,
+          "materialResourceId": "material/texture-0-89",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 6,
+          "materialResourceId": "material/texture-67-6",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 8,
+          "materialResourceId": "material/texture-67-8",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 2,
+          "materialResourceId": "material/texture-67-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 90,
+          "record": 3,
+          "materialResourceId": "material/texture-90-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "6c5c15d8b964cf7a7e7e8d99e369ad91d0eb499126feb6cb897f80fc891d9ae3"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41315",
+      "sourceRecordId": 41315,
+      "sourceOrdinal": 7684,
+      "artifactId": "geometry/mesh-41315",
+      "relativePath": "geometry/mesh-41315.json",
+      "vertices": 20,
+      "triangles": 10,
+      "materials": [
+        {
+          "archive": 92,
+          "record": 4,
+          "materialResourceId": "material/texture-92-4",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 92,
+          "record": 5,
+          "materialResourceId": "material/texture-92-5",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "7e9ed578e2a8bd2018bdada2a5fa1371162eed49a7787371495c5dab705a4713"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41317",
+      "sourceRecordId": 41317,
+      "sourceOrdinal": 7964,
+      "artifactId": "geometry/mesh-41317",
+      "relativePath": "geometry/mesh-41317.json",
+      "vertices": 38,
+      "triangles": 18,
+      "materials": [
+        {
+          "archive": 92,
+          "record": 5,
+          "materialResourceId": "material/texture-92-5",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 92,
+          "record": 12,
+          "materialResourceId": "material/texture-92-12",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 92,
+          "record": 4,
+          "materialResourceId": "material/texture-92-4",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "561a96988321dfec1a9745d46cbd9c8cd6d7cd8f026e35759e18860ad63df781"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41318",
+      "sourceRecordId": 41318,
+      "sourceOrdinal": 7968,
+      "artifactId": "geometry/mesh-41318",
+      "relativePath": "geometry/mesh-41318.json",
+      "vertices": 72,
+      "triangles": 34,
+      "materials": [
+        {
+          "archive": 92,
+          "record": 5,
+          "materialResourceId": "material/texture-92-5",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 92,
+          "record": 3,
+          "materialResourceId": "material/texture-92-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 92,
+          "record": 4,
+          "materialResourceId": "material/texture-92-4",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "5c23781666dac1346e628f310d0a550951747cf412ebf4e5b9fda5a0e0126cba"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41319",
+      "sourceRecordId": 41319,
+      "sourceOrdinal": 7969,
+      "artifactId": "geometry/mesh-41319",
+      "relativePath": "geometry/mesh-41319.json",
+      "vertices": 20,
+      "triangles": 10,
+      "materials": [
+        {
+          "archive": 92,
+          "record": 8,
+          "materialResourceId": "material/texture-92-8",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 92,
+          "record": 11,
+          "materialResourceId": "material/texture-92-11",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "9f8c8d6b51e9249d03aee66d352967c6978754424b7c138ba37d6d2a4326dadb"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41322",
+      "sourceRecordId": 41322,
+      "sourceOrdinal": 7972,
+      "artifactId": "geometry/mesh-41322",
+      "relativePath": "geometry/mesh-41322.json",
+      "vertices": 44,
+      "triangles": 22,
+      "materials": [
+        {
+          "archive": 92,
+          "record": 5,
+          "materialResourceId": "material/texture-92-5",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 92,
+          "record": 7,
+          "materialResourceId": "material/texture-92-7",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 92,
+          "record": 3,
+          "materialResourceId": "material/texture-92-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "fef430626df7b2152134d66c8517d5525716f1a55cd1f40f9cc3ff4ba96eed91"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41323",
+      "sourceRecordId": 41323,
+      "sourceOrdinal": 7973,
+      "artifactId": "geometry/mesh-41323",
+      "relativePath": "geometry/mesh-41323.json",
+      "vertices": 84,
+      "triangles": 38,
+      "materials": [
+        {
+          "archive": 92,
+          "record": 5,
+          "materialResourceId": "material/texture-92-5",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 92,
+          "record": 3,
+          "materialResourceId": "material/texture-92-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 92,
+          "record": 4,
+          "materialResourceId": "material/texture-92-4",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "a39a94a6fbc03fa5193dc5c7301e10303487737627f1210a43bea19d8a165aa1"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41326",
+      "sourceRecordId": 41326,
+      "sourceOrdinal": 7976,
+      "artifactId": "geometry/mesh-41326",
+      "relativePath": "geometry/mesh-41326.json",
+      "vertices": 84,
+      "triangles": 38,
+      "materials": [
+        {
+          "archive": 92,
+          "record": 5,
+          "materialResourceId": "material/texture-92-5",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 92,
+          "record": 6,
+          "materialResourceId": "material/texture-92-6",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 92,
+          "record": 4,
+          "materialResourceId": "material/texture-92-4",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "aeb0695f292668a8c7ee89c52c6d1bffe0dcc05c5793f57bf1b67f66b245cbb9"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41327",
+      "sourceRecordId": 41327,
+      "sourceOrdinal": 5961,
+      "artifactId": "geometry/mesh-41327",
+      "relativePath": "geometry/mesh-41327.json",
+      "vertices": 60,
+      "triangles": 30,
+      "materials": [
+        {
+          "archive": 92,
+          "record": 11,
+          "materialResourceId": "material/texture-92-11",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 92,
+          "record": 10,
+          "materialResourceId": "material/texture-92-10",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 92,
+          "record": 8,
+          "materialResourceId": "material/texture-92-8",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "a4c5e22cdc93c4821809954b27b7a0a546ffb725ad5a4604ecf3cd3b89db04a9"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41734",
+      "sourceRecordId": 41734,
+      "sourceOrdinal": 8330,
+      "artifactId": "geometry/mesh-41734",
+      "relativePath": "geometry/mesh-41734.json",
+      "vertices": 112,
+      "triangles": 44,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 75,
+          "materialResourceId": "material/texture-0-75",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 76,
+          "materialResourceId": "material/texture-0-76",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 45,
+          "materialResourceId": "material/texture-0-45",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 78,
+          "materialResourceId": "material/texture-0-78",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 77,
+          "materialResourceId": "material/texture-0-77",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 74,
+          "materialResourceId": "material/texture-0-74",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "449ead01c516bf0ce1e5159832941ba837c20a39325523cabd56cbbd1fc92bf3"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "41735",
+      "sourceRecordId": 41735,
+      "sourceOrdinal": 8164,
+      "artifactId": "geometry/mesh-41735",
+      "relativePath": "geometry/mesh-41735.json",
+      "vertices": 146,
+      "triangles": 52,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 75,
+          "materialResourceId": "material/texture-0-75",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 74,
+          "materialResourceId": "material/texture-0-74",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 76,
+          "materialResourceId": "material/texture-0-76",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 77,
+          "materialResourceId": "material/texture-0-77",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 79,
+          "materialResourceId": "material/texture-0-79",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 78,
+          "materialResourceId": "material/texture-0-78",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "6efe5147f4efd1e0544fd6f2310a0b10b8ef528cbf7a73904184bc42717ea55b"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "42510",
+      "sourceRecordId": 42510,
+      "sourceOrdinal": 3512,
+      "artifactId": "geometry/mesh-42510",
+      "relativePath": "geometry/mesh-42510.json",
+      "vertices": 16,
+      "triangles": 8,
+      "materials": [
+        {
+          "archive": 450,
+          "record": 7,
+          "materialResourceId": "material/texture-450-7",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 1,
+          "record": 24,
+          "materialResourceId": "material/texture-1-24",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "e3ef956f217617f4df9421142c59dacacba430412342cf0ab071ee26e80ff8a7"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "42533",
+      "sourceRecordId": 42533,
+      "sourceOrdinal": 9709,
+      "artifactId": "geometry/mesh-42533",
+      "relativePath": "geometry/mesh-42533.json",
+      "vertices": 16,
+      "triangles": 8,
+      "materials": [
+        {
+          "archive": 450,
+          "record": 11,
+          "materialResourceId": "material/texture-450-11",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 1,
+          "record": 24,
+          "materialResourceId": "material/texture-1-24",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "0bb38a8fe0f894e36fc3b0d2637477e53c286de6c5561bd4ab63c96d03238611"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "42570",
+      "sourceRecordId": 42570,
+      "sourceOrdinal": 9695,
+      "artifactId": "geometry/mesh-42570",
+      "relativePath": "geometry/mesh-42570.json",
+      "vertices": 16,
+      "triangles": 8,
+      "materials": [
+        {
+          "archive": 449,
+          "record": 1,
+          "materialResourceId": "material/texture-449-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 1,
+          "record": 24,
+          "materialResourceId": "material/texture-1-24",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "86093e616613a896a810799ac95854ba45edf333e03926fefd6bc0369e0fc861"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "54000",
+      "sourceRecordId": 54000,
+      "sourceOrdinal": 8046,
+      "artifactId": "geometry/mesh-54000",
+      "relativePath": "geometry/mesh-54000.json",
+      "vertices": 24,
+      "triangles": 12,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 124,
+          "materialResourceId": "material/texture-0-124",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "b191ce5b14034c49d91ca8c60ee21cbf351d1b11b6c2d4f28088bdee0b87892f"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "54001",
+      "sourceRecordId": 54001,
+      "sourceOrdinal": 6369,
+      "artifactId": "geometry/mesh-54001",
+      "relativePath": "geometry/mesh-54001.json",
+      "vertices": 24,
+      "triangles": 12,
+      "materials": [
+        {
+          "archive": 94,
+          "record": 1,
+          "materialResourceId": "material/texture-94-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 44,
+          "materialResourceId": "material/texture-0-44",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "2956cd70cb36253ff403acb3a3661d52be9f1e84e348feac11a290524e0e9b43"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "55000",
+      "sourceRecordId": 55000,
+      "sourceOrdinal": 902,
+      "artifactId": "geometry/mesh-55000",
+      "relativePath": "geometry/mesh-55000.json",
+      "vertices": 20,
+      "triangles": 10,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 77,
+          "materialResourceId": "material/texture-0-77",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 74,
+          "record": 0,
+          "materialResourceId": "material/texture-74-0",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "1d9b8ae8d615d81ead8a35863d37f180754aed435e6e47cd331aa12936da660c"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "55001",
+      "sourceRecordId": 55001,
+      "sourceOrdinal": 162,
+      "artifactId": "geometry/mesh-55001",
+      "relativePath": "geometry/mesh-55001.json",
+      "vertices": 20,
+      "triangles": 10,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 45,
+          "materialResourceId": "material/texture-0-45",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 74,
+          "record": 2,
+          "materialResourceId": "material/texture-74-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "8a2d851f27b846bfb8a556d5eb151ae8300908e2f541d4370809ae982ce278ed"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "55002",
+      "sourceRecordId": 55002,
+      "sourceOrdinal": 6427,
+      "artifactId": "geometry/mesh-55002",
+      "relativePath": "geometry/mesh-55002.json",
+      "vertices": 20,
+      "triangles": 10,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 77,
+          "materialResourceId": "material/texture-0-77",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 74,
+          "record": 0,
+          "materialResourceId": "material/texture-74-0",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "4b1336e6ade05a66562a9919afd911f65a0d02ad59751bcfb75d1b45fe603c5b"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "55003",
+      "sourceRecordId": 55003,
+      "sourceOrdinal": 4192,
+      "artifactId": "geometry/mesh-55003",
+      "relativePath": "geometry/mesh-55003.json",
+      "vertices": 20,
+      "triangles": 10,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 45,
+          "materialResourceId": "material/texture-0-45",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 74,
+          "record": 2,
+          "materialResourceId": "material/texture-74-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "24814abd256a81c993b23eef4fa910d7dcf080f24f64539fde0c8536686d6929"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "55004",
+      "sourceRecordId": 55004,
+      "sourceOrdinal": 3394,
+      "artifactId": "geometry/mesh-55004",
+      "relativePath": "geometry/mesh-55004.json",
+      "vertices": 20,
+      "triangles": 10,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 77,
+          "materialResourceId": "material/texture-0-77",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 74,
+          "record": 0,
+          "materialResourceId": "material/texture-74-0",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "e64fe503cf3f1c970c75e5d3c083102148f52390d062d1596baa66da973942bf"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "55005",
+      "sourceRecordId": 55005,
+      "sourceOrdinal": 6483,
+      "artifactId": "geometry/mesh-55005",
+      "relativePath": "geometry/mesh-55005.json",
+      "vertices": 20,
+      "triangles": 10,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 45,
+          "materialResourceId": "material/texture-0-45",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 74,
+          "record": 2,
+          "materialResourceId": "material/texture-74-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "81f99ad7574156d8620ff91b3b792cc56afe6c595b2853a2ca5fc462c304da41"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "55006",
+      "sourceRecordId": 55006,
+      "sourceOrdinal": 4193,
+      "artifactId": "geometry/mesh-55006",
+      "relativePath": "geometry/mesh-55006.json",
+      "vertices": 20,
+      "triangles": 10,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 76,
+          "materialResourceId": "material/texture-0-76",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "10d5bd0409d882d54ba47a227f68debd38a0af610c99db82bb4c2535a425582a"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "55007",
+      "sourceRecordId": 55007,
+      "sourceOrdinal": 4147,
+      "artifactId": "geometry/mesh-55007",
+      "relativePath": "geometry/mesh-55007.json",
+      "vertices": 44,
+      "triangles": 18,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 89,
+          "materialResourceId": "material/texture-0-89",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "c4f971a4711b7f9276eda6b41f2b4a7a611bb0e47baeaf1746542748812d891a"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "55012",
+      "sourceRecordId": 55012,
+      "sourceOrdinal": 5644,
+      "artifactId": "geometry/mesh-55012",
+      "relativePath": "geometry/mesh-55012.json",
+      "vertices": 20,
+      "triangles": 10,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 124,
+          "materialResourceId": "material/texture-0-124",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "4d98544b731ddcd1cf62325c7f15a61c6ef6f7f8f4ed936bf6b26b08b3091543"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "55030",
+      "sourceRecordId": 55030,
+      "sourceOrdinal": 8354,
+      "artifactId": "geometry/mesh-55030",
+      "relativePath": "geometry/mesh-55030.json",
+      "vertices": 20,
+      "triangles": 10,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 76,
+          "materialResourceId": "material/texture-0-76",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "ea1d7054262d8c964b798f3c0f224b666f46661ad6ebbedbc60555dde4b15616"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "58002",
+      "sourceRecordId": 58002,
+      "sourceOrdinal": 86,
+      "artifactId": "geometry/mesh-58002",
+      "relativePath": "geometry/mesh-58002.json",
+      "vertices": 4,
+      "triangles": 2,
+      "materials": [
+        {
+          "archive": 22,
+          "record": 2,
+          "materialResourceId": "material/texture-22-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "07ea8339dd9b41da2a42520643935aa4d7797dc3a1b5422dc0b1835d51a7dcfc"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "58004",
+      "sourceRecordId": 58004,
+      "sourceOrdinal": 6343,
+      "artifactId": "geometry/mesh-58004",
+      "relativePath": "geometry/mesh-58004.json",
+      "vertices": 16,
+      "triangles": 8,
+      "materials": [
+        {
+          "archive": 22,
+          "record": 0,
+          "materialResourceId": "material/texture-22-0",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "3022a3f2493988c05d5caaa0b143d75b57f949662ae1f9733ffe2dfa95ac7256"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "58007",
+      "sourceRecordId": 58007,
+      "sourceOrdinal": 7019,
+      "artifactId": "geometry/mesh-58007",
+      "relativePath": "geometry/mesh-58007.json",
+      "vertices": 256,
+      "triangles": 124,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "21cfb5c987c07daccbc7c2c9f5412f7d295fd4c244f18c145fd4dee6519be127"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "58010",
+      "sourceRecordId": 58010,
+      "sourceOrdinal": 6338,
+      "artifactId": "geometry/mesh-58010",
+      "relativePath": "geometry/mesh-58010.json",
+      "vertices": 210,
+      "triangles": 100,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "d9600d75f6a53a4be118a6ea1d785274b64104e039b5916999a6d378478965d5"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "58011",
+      "sourceRecordId": 58011,
+      "sourceOrdinal": 6211,
+      "artifactId": "geometry/mesh-58011",
+      "relativePath": "geometry/mesh-58011.json",
+      "vertices": 146,
+      "triangles": 70,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 4,
+          "materialResourceId": "material/texture-120-4",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "52c00845a8ef6ce6600d038f00ae3a0d01e7677c87df37bc6be3d5d30d0214d0"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "58012",
+      "sourceRecordId": 58012,
+      "sourceOrdinal": 5775,
+      "artifactId": "geometry/mesh-58012",
+      "relativePath": "geometry/mesh-58012.json",
+      "vertices": 16,
+      "triangles": 8,
+      "materials": [
+        {
+          "archive": 22,
+          "record": 0,
+          "materialResourceId": "material/texture-22-0",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "cafb4c3ecd7ae1ba2a89137474b649bca7ec4e80eeb9c12812a9f45a3771d95a"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "59006",
+      "sourceRecordId": 59006,
+      "sourceOrdinal": 7332,
+      "artifactId": "geometry/mesh-59006",
+      "relativePath": "geometry/mesh-59006.json",
+      "vertices": 20,
+      "triangles": 10,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 1,
+          "materialResourceId": "material/texture-122-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "27d97681ce4b305482a8373023f53319e36223263ae64f79b53ba071c21d8a34"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "59008",
+      "sourceRecordId": 59008,
+      "sourceOrdinal": 770,
+      "artifactId": "geometry/mesh-59008",
+      "relativePath": "geometry/mesh-59008.json",
+      "vertices": 18,
+      "triangles": 8,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "bc376880dfcbdd42ee59c267eb5ede2908dc1cb9127d031d49db0327ad41c5de"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "59009",
+      "sourceRecordId": 59009,
+      "sourceOrdinal": 6354,
+      "artifactId": "geometry/mesh-59009",
+      "relativePath": "geometry/mesh-59009.json",
+      "vertices": 18,
+      "triangles": 8,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "2921486b2a483e9bb1a911b8d2aa6e65e2ba58ed656deaae89b9c3fa1a57a51c"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "60500",
+      "sourceRecordId": 60500,
+      "sourceOrdinal": 8001,
+      "artifactId": "geometry/mesh-60500",
+      "relativePath": "geometry/mesh-60500.json",
+      "vertices": 24,
+      "triangles": 12,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "8384aa78ac465b54e752741d7a4187becdbf533acfe75d167b39d922fc34389d"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "61002",
+      "sourceRecordId": 61002,
+      "sourceOrdinal": 6393,
+      "artifactId": "geometry/mesh-61002",
+      "relativePath": "geometry/mesh-61002.json",
+      "vertices": 48,
+      "triangles": 24,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "7fa61d1faefd57fa8af0ef56ddddb313cd832ade37ca5ac42f4f992811d8947f"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "61003",
+      "sourceRecordId": 61003,
+      "sourceOrdinal": 6317,
+      "artifactId": "geometry/mesh-61003",
+      "relativePath": "geometry/mesh-61003.json",
+      "vertices": 24,
+      "triangles": 12,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "b02b9a99b6a57eb07f29b873207cc2cb3ad298bcef687d76b8903f0bfce70ce0"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "61004",
+      "sourceRecordId": 61004,
+      "sourceOrdinal": 7851,
+      "artifactId": "geometry/mesh-61004",
+      "relativePath": "geometry/mesh-61004.json",
+      "vertices": 78,
+      "triangles": 36,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "a0a4555335a97cdc9278c674a2c4ad5543f944d3f4bcf1d235c7bf79c7d74519"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "61005",
+      "sourceRecordId": 61005,
+      "sourceOrdinal": 6477,
+      "artifactId": "geometry/mesh-61005",
+      "relativePath": "geometry/mesh-61005.json",
+      "vertices": 24,
+      "triangles": 12,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "0d96ff97de5803c08124799acb3476ebcc3ca640b763bb07f2afc1b89ec6ab61"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "61006",
+      "sourceRecordId": 61006,
+      "sourceOrdinal": 885,
+      "artifactId": "geometry/mesh-61006",
+      "relativePath": "geometry/mesh-61006.json",
+      "vertices": 24,
+      "triangles": 12,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "9af4a7ec3f3bd21a94449d3d7bae02b64229ce432d9807367f7c9963136c67c2"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "61011",
+      "sourceRecordId": 61011,
+      "sourceOrdinal": 6478,
+      "artifactId": "geometry/mesh-61011",
+      "relativePath": "geometry/mesh-61011.json",
+      "vertices": 54,
+      "triangles": 26,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 0,
+          "materialResourceId": "material/texture-121-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 321,
+          "record": 2,
+          "materialResourceId": "material/texture-321-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 1,
+          "materialResourceId": "material/texture-121-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "1480c82c9e2e29b667bfcd2c090cb0a2a99cc886afbf5ef9854849fd8f9916ba"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "61013",
+      "sourceRecordId": 61013,
+      "sourceOrdinal": 7354,
+      "artifactId": "geometry/mesh-61013",
+      "relativePath": "geometry/mesh-61013.json",
+      "vertices": 32,
+      "triangles": 16,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "b47ab0edd74b0c5178c21d6eb8d7633db32c4cfed1946d3458e072b58f59b29d"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "61014",
+      "sourceRecordId": 61014,
+      "sourceOrdinal": 6599,
+      "artifactId": "geometry/mesh-61014",
+      "relativePath": "geometry/mesh-61014.json",
+      "vertices": 46,
+      "triangles": 22,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "b6f509d9bfe8244a7a6242e66036e647661d193756a9e7971a5d45acb1e0bf1f"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "61015",
+      "sourceRecordId": 61015,
+      "sourceOrdinal": 6284,
+      "artifactId": "geometry/mesh-61015",
+      "relativePath": "geometry/mesh-61015.json",
+      "vertices": 24,
+      "triangles": 12,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "c88fda15ac66c311f4461cc0107528cfe3fc4a2aff96596b3af9505d7a676688"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "61017",
+      "sourceRecordId": 61017,
+      "sourceOrdinal": 6283,
+      "artifactId": "geometry/mesh-61017",
+      "relativePath": "geometry/mesh-61017.json",
+      "vertices": 156,
+      "triangles": 78,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "770d18d1800f3253a17191dd3d4d8a2427b63b08ba91169127c36ab509364e70"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "61018",
+      "sourceRecordId": 61018,
+      "sourceOrdinal": 150,
+      "artifactId": "geometry/mesh-61018",
+      "relativePath": "geometry/mesh-61018.json",
+      "vertices": 156,
+      "triangles": 78,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "9ee2068770a280c89cd490f19313cd135aa759d173e4bdc5101b2fa3dfa1fb62"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "61019",
+      "sourceRecordId": 61019,
+      "sourceOrdinal": 10191,
+      "artifactId": "geometry/mesh-61019",
+      "relativePath": "geometry/mesh-61019.json",
+      "vertices": 62,
+      "triangles": 30,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 0,
+          "materialResourceId": "material/texture-121-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 321,
+          "record": 2,
+          "materialResourceId": "material/texture-321-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 3,
+          "materialResourceId": "material/texture-121-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "fb74af730e1ba682b9642e24937778ba19fec07026a4aa4de86cf34af7df97c6"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "61020",
+      "sourceRecordId": 61020,
+      "sourceOrdinal": 7855,
+      "artifactId": "geometry/mesh-61020",
+      "relativePath": "geometry/mesh-61020.json",
+      "vertices": 64,
+      "triangles": 30,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 0,
+          "materialResourceId": "material/texture-121-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 321,
+          "record": 2,
+          "materialResourceId": "material/texture-321-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 3,
+          "materialResourceId": "material/texture-121-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "c802e8f35ebef0fbdab4a4ffbfc3a07ae4634cb9ea6be1ebda59a8d1ec39fe05"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "61021",
+      "sourceRecordId": 61021,
+      "sourceOrdinal": 3182,
+      "artifactId": "geometry/mesh-61021",
+      "relativePath": "geometry/mesh-61021.json",
+      "vertices": 92,
+      "triangles": 44,
+      "materials": [
+        {
+          "archive": 121,
+          "record": 0,
+          "materialResourceId": "material/texture-121-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 321,
+          "record": 2,
+          "materialResourceId": "material/texture-321-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 3,
+          "materialResourceId": "material/texture-121-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "a244d9548384d12afa5e20c85d8a1782fde71cd3f8d74b4c1f00fa7511da2424"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "61024",
+      "sourceRecordId": 61024,
+      "sourceOrdinal": 5960,
+      "artifactId": "geometry/mesh-61024",
+      "relativePath": "geometry/mesh-61024.json",
+      "vertices": 78,
+      "triangles": 38,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 321,
+          "record": 2,
+          "materialResourceId": "material/texture-321-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 0,
+          "materialResourceId": "material/texture-121-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 3,
+          "materialResourceId": "material/texture-121-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "f6c5a95193b746d42dd8aa9049670874fcb8646eaece34e2d26e38c6c2bd40df"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "61026",
+      "sourceRecordId": 61026,
+      "sourceOrdinal": 6377,
+      "artifactId": "geometry/mesh-61026",
+      "relativePath": "geometry/mesh-61026.json",
+      "vertices": 32,
+      "triangles": 16,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 0,
+          "materialResourceId": "material/texture-67-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 90,
+          "record": 2,
+          "materialResourceId": "material/texture-90-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "fba00077b5c1b3448d0f2d0d3213c5767ddb9dcd0c1f53501939fda4c34e2f68"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "61027",
+      "sourceRecordId": 61027,
+      "sourceOrdinal": 7853,
+      "artifactId": "geometry/mesh-61027",
+      "relativePath": "geometry/mesh-61027.json",
+      "vertices": 24,
+      "triangles": 12,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 15,
+          "materialResourceId": "material/texture-67-15",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "f4ca369e5c0b203f325b737e04d8ba05fa3fe13fd2c9e876c81b247b31f75f11"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "61028",
+      "sourceRecordId": 61028,
+      "sourceOrdinal": 6598,
+      "artifactId": "geometry/mesh-61028",
+      "relativePath": "geometry/mesh-61028.json",
+      "vertices": 24,
+      "triangles": 12,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 15,
+          "materialResourceId": "material/texture-67-15",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "31336d929eb2023317d1db8e00cefeae2575f4388254dbcf99d7afa5720cb01b"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "61030",
+      "sourceRecordId": 61030,
+      "sourceOrdinal": 5635,
+      "artifactId": "geometry/mesh-61030",
+      "relativePath": "geometry/mesh-61030.json",
+      "vertices": 48,
+      "triangles": 24,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "ff6cfe9a70ca9489278352b9ab82389c248b782afd0709d8e7bb9af203395ce1"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "62008",
+      "sourceRecordId": 62008,
+      "sourceOrdinal": 6426,
+      "artifactId": "geometry/mesh-62008",
+      "relativePath": "geometry/mesh-62008.json",
+      "vertices": 48,
+      "triangles": 24,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "7ed553ba7662ef51162fa714801e179db1663eb16b2eccdef3202d9b61506ee9"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "62009",
+      "sourceRecordId": 62009,
+      "sourceOrdinal": 7330,
+      "artifactId": "geometry/mesh-62009",
+      "relativePath": "geometry/mesh-62009.json",
+      "vertices": 48,
+      "triangles": 24,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "753a3ba9f49c9e8375dadafe6af840648b96b870f9bea0d16b676264287feb82"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "62319",
+      "sourceRecordId": 62319,
+      "sourceOrdinal": 8247,
+      "artifactId": "geometry/mesh-62319",
+      "relativePath": "geometry/mesh-62319.json",
+      "vertices": 24,
+      "triangles": 12,
+      "materials": [
+        {
+          "archive": 146,
+          "record": 1,
+          "materialResourceId": "material/texture-146-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 78,
+          "materialResourceId": "material/texture-0-78",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "6441276d19eb9b1b24163ceaed0801ede49efb388f2d799cb182fe848a9bcdf5"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "62321",
+      "sourceRecordId": 62321,
+      "sourceOrdinal": 8235,
+      "artifactId": "geometry/mesh-62321",
+      "relativePath": "geometry/mesh-62321.json",
+      "vertices": 24,
+      "triangles": 12,
+      "materials": [
+        {
+          "archive": 146,
+          "record": 1,
+          "materialResourceId": "material/texture-146-1",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "3eb7d6fff41c9e59d4afdf585e7b49973c23cb5d6e19c63dbd4ccf2585f284a5"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "63001",
+      "sourceRecordId": 63001,
+      "sourceOrdinal": 888,
+      "artifactId": "geometry/mesh-63001",
+      "relativePath": "geometry/mesh-63001.json",
+      "vertices": 24,
+      "triangles": 12,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "89d7810db027a0a880fa653763733b48325fa16d5f528ab3b9e1e4d173d0a66d"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "63006",
+      "sourceRecordId": 63006,
+      "sourceOrdinal": 6390,
+      "artifactId": "geometry/mesh-63006",
+      "relativePath": "geometry/mesh-63006.json",
+      "vertices": 100,
+      "triangles": 52,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 321,
+          "record": 1,
+          "materialResourceId": "material/texture-321-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 321,
+          "record": 2,
+          "materialResourceId": "material/texture-321-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 321,
+          "record": 0,
+          "materialResourceId": "material/texture-321-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "5d6d59c998a85c319992760eb3c6942c1e64831e9a5ec323e5a422089ec96568"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "63007",
+      "sourceRecordId": 63007,
+      "sourceOrdinal": 3383,
+      "artifactId": "geometry/mesh-63007",
+      "relativePath": "geometry/mesh-63007.json",
+      "vertices": 66,
+      "triangles": 34,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 321,
+          "record": 1,
+          "materialResourceId": "material/texture-321-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 321,
+          "record": 2,
+          "materialResourceId": "material/texture-321-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 321,
+          "record": 0,
+          "materialResourceId": "material/texture-321-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "2fbb428e4cb9c3b97dfe42afc2add205c46b9c01c0f5f547288ce4cfa7123f90"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "64301",
+      "sourceRecordId": 64301,
+      "sourceOrdinal": 148,
+      "artifactId": "geometry/mesh-64301",
+      "relativePath": "geometry/mesh-64301.json",
+      "vertices": 68,
+      "triangles": 34,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 0,
+          "materialResourceId": "material/texture-67-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 8,
+          "materialResourceId": "material/texture-67-8",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "c392c18808f40e810f6aaf7f7895bcc8131ce690a7daf87e5f0a3b5d5e1688e1"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "64302",
+      "sourceRecordId": 64302,
+      "sourceOrdinal": 7107,
+      "artifactId": "geometry/mesh-64302",
+      "relativePath": "geometry/mesh-64302.json",
+      "vertices": 88,
+      "triangles": 44,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 0,
+          "materialResourceId": "material/texture-67-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 8,
+          "materialResourceId": "material/texture-67-8",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "da45ab4c7000da9afba8906c8bcf17d6f8467b8ac740f60dd849f73f2d0d1c43"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "64305",
+      "sourceRecordId": 64305,
+      "sourceOrdinal": 6331,
+      "artifactId": "geometry/mesh-64305",
+      "relativePath": "geometry/mesh-64305.json",
+      "vertices": 96,
+      "triangles": 48,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 0,
+          "materialResourceId": "material/texture-67-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 8,
+          "materialResourceId": "material/texture-67-8",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "d899c7a1471cc94fe7c62e4c725d87a0c0d4d5e3f785b504ef2aa886d368eeba"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67000",
+      "sourceRecordId": 67000,
+      "sourceOrdinal": 7882,
+      "artifactId": "geometry/mesh-67000",
+      "relativePath": "geometry/mesh-67000.json",
+      "vertices": 16,
+      "triangles": 8,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "a5784182677b4d2c728a623636705e33a5c7b61f05b273d859c8dcbb4481af21"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67001",
+      "sourceRecordId": 67001,
+      "sourceOrdinal": 5659,
+      "artifactId": "geometry/mesh-67001",
+      "relativePath": "geometry/mesh-67001.json",
+      "vertices": 16,
+      "triangles": 8,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "69219d581d9b87e5062a43dd51f312b2b011b9b64777c8406477a072615ebe13"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67004",
+      "sourceRecordId": 67004,
+      "sourceOrdinal": 5681,
+      "artifactId": "geometry/mesh-67004",
+      "relativePath": "geometry/mesh-67004.json",
+      "vertices": 64,
+      "triangles": 32,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "34c746507b49a5fa0a019980678afd2bc9db41cc5f134412d77432edf96730b4"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67005",
+      "sourceRecordId": 67005,
+      "sourceOrdinal": 152,
+      "artifactId": "geometry/mesh-67005",
+      "relativePath": "geometry/mesh-67005.json",
+      "vertices": 44,
+      "triangles": 22,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "d54a5071659b995cb7283a96a9029f16eb8df525c3e8f452f67fe6f003ac9e79"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67008",
+      "sourceRecordId": 67008,
+      "sourceOrdinal": 6433,
+      "artifactId": "geometry/mesh-67008",
+      "relativePath": "geometry/mesh-67008.json",
+      "vertices": 32,
+      "triangles": 16,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "d6a8a2649366a1f918e8c4832177e51ead53dccc0a8af653a18b2a2c4d30230b"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67009",
+      "sourceRecordId": 67009,
+      "sourceOrdinal": 5963,
+      "artifactId": "geometry/mesh-67009",
+      "relativePath": "geometry/mesh-67009.json",
+      "vertices": 32,
+      "triangles": 16,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "4f267a388d7c6cab414bd0d116385d1dd73f038124a1e980f55a11e385914c34"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67010",
+      "sourceRecordId": 67010,
+      "sourceOrdinal": 5803,
+      "artifactId": "geometry/mesh-67010",
+      "relativePath": "geometry/mesh-67010.json",
+      "vertices": 16,
+      "triangles": 8,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "8f80b07f38e7c56fd55d72ea624b8fe5659f6a3fe4b73ac6f065faca991ecdf0"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67011",
+      "sourceRecordId": 67011,
+      "sourceOrdinal": 5720,
+      "artifactId": "geometry/mesh-67011",
+      "relativePath": "geometry/mesh-67011.json",
+      "vertices": 44,
+      "triangles": 22,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 3,
+          "materialResourceId": "material/texture-121-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 2,
+          "materialResourceId": "material/texture-121-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 321,
+          "record": 2,
+          "materialResourceId": "material/texture-321-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "cb19c04725293aa3d70f822553ff1c36964521139ea2852dcf2c051fc3a768cc"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67012",
+      "sourceRecordId": 67012,
+      "sourceOrdinal": 6201,
+      "artifactId": "geometry/mesh-67012",
+      "relativePath": "geometry/mesh-67012.json",
+      "vertices": 72,
+      "triangles": 36,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 3,
+          "materialResourceId": "material/texture-121-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 2,
+          "materialResourceId": "material/texture-121-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 321,
+          "record": 2,
+          "materialResourceId": "material/texture-321-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "52a93659dff85b049dc8b7a0bfcc23bb61663c97fc943a92ccd52b45c4de9276"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67014",
+      "sourceRecordId": 67014,
+      "sourceOrdinal": 699,
+      "artifactId": "geometry/mesh-67014",
+      "relativePath": "geometry/mesh-67014.json",
+      "vertices": 20,
+      "triangles": 10,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "16686d168c823b4370ffe69b514f9eda56e602cca90b148e7913bb7a178c5828"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67015",
+      "sourceRecordId": 67015,
+      "sourceOrdinal": 6299,
+      "artifactId": "geometry/mesh-67015",
+      "relativePath": "geometry/mesh-67015.json",
+      "vertices": 16,
+      "triangles": 8,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "824a54c2e6252059494da1344ae68702dc6e029dd450f86f7fd725859ef41866"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67017",
+      "sourceRecordId": 67017,
+      "sourceOrdinal": 6272,
+      "artifactId": "geometry/mesh-67017",
+      "relativePath": "geometry/mesh-67017.json",
+      "vertices": 48,
+      "triangles": 24,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 3,
+          "materialResourceId": "material/texture-121-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 2,
+          "materialResourceId": "material/texture-121-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 321,
+          "record": 2,
+          "materialResourceId": "material/texture-321-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "6597b179e449597de732508c537175bab360c5b29a68ea938a87cc25e7e9c25b"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67018",
+      "sourceRecordId": 67018,
+      "sourceOrdinal": 6244,
+      "artifactId": "geometry/mesh-67018",
+      "relativePath": "geometry/mesh-67018.json",
+      "vertices": 50,
+      "triangles": 24,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 3,
+          "materialResourceId": "material/texture-121-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 2,
+          "materialResourceId": "material/texture-121-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 321,
+          "record": 2,
+          "materialResourceId": "material/texture-321-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "b64940ba1efc231396a48fcc1824ab87390083ae1779d774a69b901ec908606a"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67019",
+      "sourceRecordId": 67019,
+      "sourceOrdinal": 7025,
+      "artifactId": "geometry/mesh-67019",
+      "relativePath": "geometry/mesh-67019.json",
+      "vertices": 48,
+      "triangles": 24,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 321,
+          "record": 2,
+          "materialResourceId": "material/texture-321-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 2,
+          "materialResourceId": "material/texture-121-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 3,
+          "materialResourceId": "material/texture-121-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "1f47eec604dc758dd184b87124ba2dacc8cf4ba3e46b66df261cb40694c36a4d"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67020",
+      "sourceRecordId": 67020,
+      "sourceOrdinal": 94,
+      "artifactId": "geometry/mesh-67020",
+      "relativePath": "geometry/mesh-67020.json",
+      "vertices": 78,
+      "triangles": 38,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 321,
+          "record": 2,
+          "materialResourceId": "material/texture-321-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 2,
+          "materialResourceId": "material/texture-121-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 3,
+          "materialResourceId": "material/texture-121-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "ba8d0f072a4f5b3a8c80ace0f20d995598f0e28387a94db058cd61ce88c81242"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67022",
+      "sourceRecordId": 67022,
+      "sourceOrdinal": 6378,
+      "artifactId": "geometry/mesh-67022",
+      "relativePath": "geometry/mesh-67022.json",
+      "vertices": 60,
+      "triangles": 30,
+      "materials": [
+        {
+          "archive": 321,
+          "record": 2,
+          "materialResourceId": "material/texture-321-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 2,
+          "materialResourceId": "material/texture-121-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 3,
+          "materialResourceId": "material/texture-121-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "7e1c2753c3ad5f52c32720bcf651190350cb9950a44ae6c56208399f32ef0191"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67023",
+      "sourceRecordId": 67023,
+      "sourceOrdinal": 3396,
+      "artifactId": "geometry/mesh-67023",
+      "relativePath": "geometry/mesh-67023.json",
+      "vertices": 60,
+      "triangles": 30,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 321,
+          "record": 2,
+          "materialResourceId": "material/texture-321-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 2,
+          "materialResourceId": "material/texture-121-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 3,
+          "materialResourceId": "material/texture-121-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "612fa4c61db7dd8bb54bab930da44bbcb31172ac8605777c4770a520a92731d2"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67024",
+      "sourceRecordId": 67024,
+      "sourceOrdinal": 6357,
+      "artifactId": "geometry/mesh-67024",
+      "relativePath": "geometry/mesh-67024.json",
+      "vertices": 16,
+      "triangles": 8,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "1b60d0fb84feae4e2da50f2e40eea2e3df42be29c873378245bdee7fee46125f"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67025",
+      "sourceRecordId": 67025,
+      "sourceOrdinal": 7923,
+      "artifactId": "geometry/mesh-67025",
+      "relativePath": "geometry/mesh-67025.json",
+      "vertices": 158,
+      "triangles": 78,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "3867cedfbb51bcab6dbdbd94b34b377d49c505ccf4d868f37f7ae21df56dd927"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67027",
+      "sourceRecordId": 67027,
+      "sourceOrdinal": 7005,
+      "artifactId": "geometry/mesh-67027",
+      "relativePath": "geometry/mesh-67027.json",
+      "vertices": 32,
+      "triangles": 16,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "6406c09a2e2e1ab2834865349da8f5b7ac8752bcda36cd59cb0db23924978027"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67029",
+      "sourceRecordId": 67029,
+      "sourceOrdinal": 158,
+      "artifactId": "geometry/mesh-67029",
+      "relativePath": "geometry/mesh-67029.json",
+      "vertices": 32,
+      "triangles": 16,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "3fc68491b461e2c2ac75b6545340e98c58387e62296184617a0a78967df637f2"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67032",
+      "sourceRecordId": 67032,
+      "sourceOrdinal": 702,
+      "artifactId": "geometry/mesh-67032",
+      "relativePath": "geometry/mesh-67032.json",
+      "vertices": 74,
+      "triangles": 36,
+      "materials": [
+        {
+          "archive": 321,
+          "record": 2,
+          "materialResourceId": "material/texture-321-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 2,
+          "materialResourceId": "material/texture-121-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 3,
+          "materialResourceId": "material/texture-121-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "93e311471059777fa3a0fed3f0547e7a1070ed78956ce6cf448c89efa17e755e"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67033",
+      "sourceRecordId": 67033,
+      "sourceOrdinal": 4213,
+      "artifactId": "geometry/mesh-67033",
+      "relativePath": "geometry/mesh-67033.json",
+      "vertices": 52,
+      "triangles": 26,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 321,
+          "record": 2,
+          "materialResourceId": "material/texture-321-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 2,
+          "materialResourceId": "material/texture-121-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 3,
+          "materialResourceId": "material/texture-121-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "5ee09fa1772f27ad095f7f9fbba7ef15212b5a5a9c52ca5f399b0a3489efc879"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67100",
+      "sourceRecordId": 67100,
+      "sourceOrdinal": 701,
+      "artifactId": "geometry/mesh-67100",
+      "relativePath": "geometry/mesh-67100.json",
+      "vertices": 16,
+      "triangles": 8,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "cff0271023fe10105dbd1cea0e401323f2b2975e4f12ff9003f8b6c94dd267aa"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67101",
+      "sourceRecordId": 67101,
+      "sourceOrdinal": 5757,
+      "artifactId": "geometry/mesh-67101",
+      "relativePath": "geometry/mesh-67101.json",
+      "vertices": 16,
+      "triangles": 8,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "7600d7abcd06581b16ae3a0148521f7c2c5d53841f02625fb0794adf9ec88691"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67105",
+      "sourceRecordId": 67105,
+      "sourceOrdinal": 6588,
+      "artifactId": "geometry/mesh-67105",
+      "relativePath": "geometry/mesh-67105.json",
+      "vertices": 44,
+      "triangles": 22,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "922e2d2b16b97a570d4e5b341a135601ad3644aca785c9f6a7b0dc2869e5c601"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67107",
+      "sourceRecordId": 67107,
+      "sourceOrdinal": 982,
+      "artifactId": "geometry/mesh-67107",
+      "relativePath": "geometry/mesh-67107.json",
+      "vertices": 32,
+      "triangles": 16,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "cf5c08e5ecc56531a8b163edd383388ee9d55d3d354cbdf63a3cbf1fab7aa385"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67108",
+      "sourceRecordId": 67108,
+      "sourceOrdinal": 5755,
+      "artifactId": "geometry/mesh-67108",
+      "relativePath": "geometry/mesh-67108.json",
+      "vertices": 32,
+      "triangles": 16,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "d8bba299d02a66b13a5086e16b102c5176a6445a4c9260dd8ee0de3cafd070fc"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67109",
+      "sourceRecordId": 67109,
+      "sourceOrdinal": 980,
+      "artifactId": "geometry/mesh-67109",
+      "relativePath": "geometry/mesh-67109.json",
+      "vertices": 32,
+      "triangles": 16,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "af8ff2b7c0119c3e73ff8851d9e36bc93d340a5d4f2a2e7496abb3017ef6ae05"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67111",
+      "sourceRecordId": 67111,
+      "sourceOrdinal": 5756,
+      "artifactId": "geometry/mesh-67111",
+      "relativePath": "geometry/mesh-67111.json",
+      "vertices": 44,
+      "triangles": 22,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 4,
+          "materialResourceId": "material/texture-123-4",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "cab39a955a2d68fdcf9577c538a9ed678f55276c86a43126c33a74571f463530"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67112",
+      "sourceRecordId": 67112,
+      "sourceOrdinal": 6582,
+      "artifactId": "geometry/mesh-67112",
+      "relativePath": "geometry/mesh-67112.json",
+      "vertices": 72,
+      "triangles": 36,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 4,
+          "materialResourceId": "material/texture-123-4",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "0b3d987d16b500f92a6188de4f369db171d5fa43a9ebafc8e20ab3605aafb279"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67114",
+      "sourceRecordId": 67114,
+      "sourceOrdinal": 5754,
+      "artifactId": "geometry/mesh-67114",
+      "relativePath": "geometry/mesh-67114.json",
+      "vertices": 20,
+      "triangles": 10,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "9b89bb956a3ceda4d6f2fcfaf0d84f4eb8a44bc4c3df02c3cbaa5e97515284d6"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67115",
+      "sourceRecordId": 67115,
+      "sourceOrdinal": 6587,
+      "artifactId": "geometry/mesh-67115",
+      "relativePath": "geometry/mesh-67115.json",
+      "vertices": 16,
+      "triangles": 8,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "9eb4db76dc72562eb9d797689fdfa988a6fb8a5008cb2f5aba24f03986d4cc3f"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67118",
+      "sourceRecordId": 67118,
+      "sourceOrdinal": 978,
+      "artifactId": "geometry/mesh-67118",
+      "relativePath": "geometry/mesh-67118.json",
+      "vertices": 50,
+      "triangles": 24,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 4,
+          "materialResourceId": "material/texture-123-4",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "16fd788f1d143faee3bb872ecf3130ec9d4071110cd2ed9c517aeb6c3d827d49"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67119",
+      "sourceRecordId": 67119,
+      "sourceOrdinal": 6586,
+      "artifactId": "geometry/mesh-67119",
+      "relativePath": "geometry/mesh-67119.json",
+      "vertices": 48,
+      "triangles": 24,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 4,
+          "materialResourceId": "material/texture-123-4",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "bf85ae2ae9d42012787a78fe2b8d8dfd988ef34699c2a243437185d23f4229a3"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67120",
+      "sourceRecordId": 67120,
+      "sourceOrdinal": 986,
+      "artifactId": "geometry/mesh-67120",
+      "relativePath": "geometry/mesh-67120.json",
+      "vertices": 78,
+      "triangles": 38,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 4,
+          "materialResourceId": "material/texture-123-4",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "262ee7f7205418d0bed8dec7d88b0de076bc5bafd3b1bcc1af6c672b64fd09c1"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67121",
+      "sourceRecordId": 67121,
+      "sourceOrdinal": 985,
+      "artifactId": "geometry/mesh-67121",
+      "relativePath": "geometry/mesh-67121.json",
+      "vertices": 78,
+      "triangles": 38,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 4,
+          "materialResourceId": "material/texture-123-4",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "fe676b2bc8cf142e137238ff649ac869ad013882d3ff8446532b9e8776e63cb5"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67122",
+      "sourceRecordId": 67122,
+      "sourceOrdinal": 5823,
+      "artifactId": "geometry/mesh-67122",
+      "relativePath": "geometry/mesh-67122.json",
+      "vertices": 60,
+      "triangles": 30,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 4,
+          "materialResourceId": "material/texture-123-4",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "3b15e422f77921cfbf8c46eb3fc08040406ccd430a4d2bacff9d8f18c827741e"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67123",
+      "sourceRecordId": 67123,
+      "sourceOrdinal": 5828,
+      "artifactId": "geometry/mesh-67123",
+      "relativePath": "geometry/mesh-67123.json",
+      "vertices": 60,
+      "triangles": 30,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 4,
+          "materialResourceId": "material/texture-123-4",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "58c02063805892e055843f03388cd8195dda818a81be684d7f09a75858c62eaa"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67124",
+      "sourceRecordId": 67124,
+      "sourceOrdinal": 6589,
+      "artifactId": "geometry/mesh-67124",
+      "relativePath": "geometry/mesh-67124.json",
+      "vertices": 16,
+      "triangles": 8,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "cfae9450f60bb3ab541a5289f4de3b9f772dbcc73e03ae0cc1eef5cd70814b50"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67133",
+      "sourceRecordId": 67133,
+      "sourceOrdinal": 6583,
+      "artifactId": "geometry/mesh-67133",
+      "relativePath": "geometry/mesh-67133.json",
+      "vertices": 52,
+      "triangles": 26,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 4,
+          "materialResourceId": "material/texture-123-4",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "4861970794fe5e4679ca1771bfaf3a92c499b64c9afd9c2a849e2b11428fced8"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67301",
+      "sourceRecordId": 67301,
+      "sourceOrdinal": 6271,
+      "artifactId": "geometry/mesh-67301",
+      "relativePath": "geometry/mesh-67301.json",
+      "vertices": 42,
+      "triangles": 20,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 22,
+          "record": 0,
+          "materialResourceId": "material/texture-22-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "1a0f95e819823ee79cf4182aa5cd302623a6ce3663902e198e88089fcdffdb71"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67302",
+      "sourceRecordId": 67302,
+      "sourceOrdinal": 6469,
+      "artifactId": "geometry/mesh-67302",
+      "relativePath": "geometry/mesh-67302.json",
+      "vertices": 44,
+      "triangles": 22,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 22,
+          "record": 0,
+          "materialResourceId": "material/texture-22-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "9330fd8214cb1c217e90c8a4db6c046022dfcf1e71ab9f0e8e04c05911797933"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67325",
+      "sourceRecordId": 67325,
+      "sourceOrdinal": 6236,
+      "artifactId": "geometry/mesh-67325",
+      "relativePath": "geometry/mesh-67325.json",
+      "vertices": 28,
+      "triangles": 14,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "5fdd54e7bd19b02f37100eea87ce1dab31b397060e4ceafb41f7bbb0b9c10c1d"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67327",
+      "sourceRecordId": 67327,
+      "sourceOrdinal": 7331,
+      "artifactId": "geometry/mesh-67327",
+      "relativePath": "geometry/mesh-67327.json",
+      "vertices": 26,
+      "triangles": 12,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "c7a414468c7d9fc42fa5aa952e58da92a2b3965e1f810b4e35b6876aa7257301"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67329",
+      "sourceRecordId": 67329,
+      "sourceOrdinal": 5777,
+      "artifactId": "geometry/mesh-67329",
+      "relativePath": "geometry/mesh-67329.json",
+      "vertices": 44,
+      "triangles": 22,
+      "materials": [
+        {
+          "archive": 22,
+          "record": 0,
+          "materialResourceId": "material/texture-22-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "e345ff581f0aec5ca836d33e917dc22b818e97dd7a11996ae079f5322d373f08"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67400",
+      "sourceRecordId": 67400,
+      "sourceOrdinal": 155,
+      "artifactId": "geometry/mesh-67400",
+      "relativePath": "geometry/mesh-67400.json",
+      "vertices": 54,
+      "triangles": 26,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 22,
+          "record": 0,
+          "materialResourceId": "material/texture-22-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "c22ba99e0ea17605ab44f7d54fd3850fe032da38a36aca5f62b1008b54983b6c"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67401",
+      "sourceRecordId": 67401,
+      "sourceOrdinal": 950,
+      "artifactId": "geometry/mesh-67401",
+      "relativePath": "geometry/mesh-67401.json",
+      "vertices": 42,
+      "triangles": 20,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 22,
+          "record": 0,
+          "materialResourceId": "material/texture-22-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "a24910e99c81c8e6fc1a151086cfb5f1cad531fa9d97e1ca8df706af42885a47"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67402",
+      "sourceRecordId": 67402,
+      "sourceOrdinal": 948,
+      "artifactId": "geometry/mesh-67402",
+      "relativePath": "geometry/mesh-67402.json",
+      "vertices": 44,
+      "triangles": 22,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 22,
+          "record": 0,
+          "materialResourceId": "material/texture-22-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "3fc447745c2cde6198f55c282905f6d7b245115dd32bc2bd41544c80475fa98f"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67425",
+      "sourceRecordId": 67425,
+      "sourceOrdinal": 5964,
+      "artifactId": "geometry/mesh-67425",
+      "relativePath": "geometry/mesh-67425.json",
+      "vertices": 28,
+      "triangles": 14,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "7b321c5daa13ee0378f3a7be94b76a0347940fa2692092fa4574206539c09db4"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67426",
+      "sourceRecordId": 67426,
+      "sourceOrdinal": 5919,
+      "artifactId": "geometry/mesh-67426",
+      "relativePath": "geometry/mesh-67426.json",
+      "vertices": 48,
+      "triangles": 24,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 3,
+          "materialResourceId": "material/texture-121-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 121,
+          "record": 2,
+          "materialResourceId": "material/texture-121-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 321,
+          "record": 2,
+          "materialResourceId": "material/texture-321-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "ae262ba1ec7d9a8d0951d6f09475683e3a3413b26712aed98bc6e58c9ffbc64c"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "67428",
+      "sourceRecordId": 67428,
+      "sourceOrdinal": 5921,
+      "artifactId": "geometry/mesh-67428",
+      "relativePath": "geometry/mesh-67428.json",
+      "vertices": 38,
+      "triangles": 18,
+      "materials": [
+        {
+          "archive": 123,
+          "record": 0,
+          "materialResourceId": "material/texture-123-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 2,
+          "materialResourceId": "material/texture-123-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 123,
+          "record": 3,
+          "materialResourceId": "material/texture-123-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "15ce47670cb7f95f9d5695a788cf7911ac51a31fbe82d665caf66145ec3748b5"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "68000",
+      "sourceRecordId": 68000,
+      "sourceOrdinal": 936,
+      "artifactId": "geometry/mesh-68000",
+      "relativePath": "geometry/mesh-68000.json",
+      "vertices": 50,
+      "triangles": 26,
+      "materials": [
+        {
+          "archive": 120,
+          "record": 3,
+          "materialResourceId": "material/texture-120-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 0,
+          "materialResourceId": "material/texture-120-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 120,
+          "record": 2,
+          "materialResourceId": "material/texture-120-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "d63cfb474302ebb9b97e422651243246545e94ee87f48b856c92fdd9a915528d"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "70000",
+      "sourceRecordId": 70000,
+      "sourceOrdinal": 5652,
+      "artifactId": "geometry/mesh-70000",
+      "relativePath": "geometry/mesh-70000.json",
+      "vertices": 48,
+      "triangles": 24,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 77,
+          "materialResourceId": "material/texture-0-77",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 168,
+          "record": 0,
+          "materialResourceId": "material/texture-168-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 168,
+          "record": 2,
+          "materialResourceId": "material/texture-168-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 168,
+          "record": 3,
+          "materialResourceId": "material/texture-168-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "a6385f7d7195e902902be80cabe6efee41574eb1a183f9a1910ccdfa4a4daa57"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "70007",
+      "sourceRecordId": 70007,
+      "sourceOrdinal": 6642,
+      "artifactId": "geometry/mesh-70007",
+      "relativePath": "geometry/mesh-70007.json",
+      "vertices": 48,
+      "triangles": 24,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 77,
+          "materialResourceId": "material/texture-0-77",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 168,
+          "record": 0,
+          "materialResourceId": "material/texture-168-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 168,
+          "record": 2,
+          "materialResourceId": "material/texture-168-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 168,
+          "record": 3,
+          "materialResourceId": "material/texture-168-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "d672ef8df05097f6af071bb7ed7a788002c5279e4d65be3eb4d13fc389195e70"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "70008",
+      "sourceRecordId": 70008,
+      "sourceOrdinal": 5791,
+      "artifactId": "geometry/mesh-70008",
+      "relativePath": "geometry/mesh-70008.json",
+      "vertices": 48,
+      "triangles": 24,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 168,
+          "record": 0,
+          "materialResourceId": "material/texture-168-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 168,
+          "record": 2,
+          "materialResourceId": "material/texture-168-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 168,
+          "record": 3,
+          "materialResourceId": "material/texture-168-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "685f72fcd2c1c4dd1c7d639707d4b76bd082aa16b4a6eded0854a4f62b65c268"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "70010",
+      "sourceRecordId": 70010,
+      "sourceOrdinal": 5805,
+      "artifactId": "geometry/mesh-70010",
+      "relativePath": "geometry/mesh-70010.json",
+      "vertices": 48,
+      "triangles": 24,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 77,
+          "materialResourceId": "material/texture-0-77",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 168,
+          "record": 0,
+          "materialResourceId": "material/texture-168-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 168,
+          "record": 2,
+          "materialResourceId": "material/texture-168-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 168,
+          "record": 3,
+          "materialResourceId": "material/texture-168-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "596eb74f714780947380e169a19d60e597ada27c0fe30d60dda31f9f32a748a7"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "70037",
+      "sourceRecordId": 70037,
+      "sourceOrdinal": 6626,
+      "artifactId": "geometry/mesh-70037",
+      "relativePath": "geometry/mesh-70037.json",
+      "vertices": 48,
+      "triangles": 24,
+      "materials": [
+        {
+          "archive": 0,
+          "record": 77,
+          "materialResourceId": "material/texture-0-77",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 168,
+          "record": 0,
+          "materialResourceId": "material/texture-168-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 168,
+          "record": 2,
+          "materialResourceId": "material/texture-168-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 168,
+          "record": 3,
+          "materialResourceId": "material/texture-168-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "396bc03925a0f9398e61b0f6cf9dbc4126294ebc1b680f767b37e74ca5b17bdc"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "70113",
+      "sourceRecordId": 70113,
+      "sourceOrdinal": 822,
+      "artifactId": "geometry/mesh-70113",
+      "relativePath": "geometry/mesh-70113.json",
+      "vertices": 48,
+      "triangles": 24,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "30deaa946bbae8caee4e994563269963c0225da3b763ed843686496a7c04e0c6"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "70300",
+      "sourceRecordId": 70300,
+      "sourceOrdinal": 7802,
+      "artifactId": "geometry/mesh-70300",
+      "relativePath": "geometry/mesh-70300.json",
+      "vertices": 4,
+      "triangles": 2,
+      "materials": [
+        {
+          "archive": 95,
+          "record": 0,
+          "materialResourceId": "material/texture-95-0",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "bbc3a5e50ed38d5ad79f21841bb6cde0a075b90022757f894e646e090dee0c90"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "70500",
+      "sourceRecordId": 70500,
+      "sourceOrdinal": 5946,
+      "artifactId": "geometry/mesh-70500",
+      "relativePath": "geometry/mesh-70500.json",
+      "vertices": 91,
+      "triangles": 45,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 1,
+          "materialResourceId": "material/texture-122-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "aa3ae60369f38ca488823d75d6b5c3bea7b06986a5ffec18915b418e86ddc206"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "70501",
+      "sourceRecordId": 70501,
+      "sourceOrdinal": 6653,
+      "artifactId": "geometry/mesh-70501",
+      "relativePath": "geometry/mesh-70501.json",
+      "vertices": 68,
+      "triangles": 34,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "daa0628df248681c80100f09169b9069dae7226f2022f8d976483a46bb7f4515"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "70503",
+      "sourceRecordId": 70503,
+      "sourceOrdinal": 6652,
+      "artifactId": "geometry/mesh-70503",
+      "relativePath": "geometry/mesh-70503.json",
+      "vertices": 130,
+      "triangles": 64,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 1,
+          "materialResourceId": "material/texture-122-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "31451576bb6e4d4b9a6a788a0bcace74af9e4a63e86a2be4dc60d2e33969004b"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "70505",
+      "sourceRecordId": 70505,
+      "sourceOrdinal": 5628,
+      "artifactId": "geometry/mesh-70505",
+      "relativePath": "geometry/mesh-70505.json",
+      "vertices": 182,
+      "triangles": 90,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 1,
+          "materialResourceId": "material/texture-122-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "ac72cab85a3b8eb3252e3f9c285a22b9ef41585b3c9df8508c5a76d67148c9ec"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "70506",
+      "sourceRecordId": 70506,
+      "sourceOrdinal": 6651,
+      "artifactId": "geometry/mesh-70506",
+      "relativePath": "geometry/mesh-70506.json",
+      "vertices": 64,
+      "triangles": 32,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 1,
+          "materialResourceId": "material/texture-122-1",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "15eac0d18f229ab3a1b0751bed89c50890ded300a884afb454defa7410548d40"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "70700",
+      "sourceRecordId": 70700,
+      "sourceOrdinal": 6665,
+      "artifactId": "geometry/mesh-70700",
+      "relativePath": "geometry/mesh-70700.json",
+      "vertices": 91,
+      "triangles": 45,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 1,
+          "materialResourceId": "material/texture-124-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 0,
+          "materialResourceId": "material/texture-124-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 2,
+          "materialResourceId": "material/texture-124-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 3,
+          "materialResourceId": "material/texture-124-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "4ae3102987ca8bbc224b1c4c3b25baeee1bdc518f4addece2b236e7ac2de8dbd"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "70703",
+      "sourceRecordId": 70703,
+      "sourceOrdinal": 7734,
+      "artifactId": "geometry/mesh-70703",
+      "relativePath": "geometry/mesh-70703.json",
+      "vertices": 130,
+      "triangles": 64,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 2,
+          "materialResourceId": "material/texture-124-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 0,
+          "materialResourceId": "material/texture-124-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 1,
+          "materialResourceId": "material/texture-124-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 3,
+          "materialResourceId": "material/texture-124-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "1b3f746bd9abbfa29eb5f3c0b5c61592a6ee52f8508a6b65804cd6c0146a582b"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "70706",
+      "sourceRecordId": 70706,
+      "sourceOrdinal": 7733,
+      "artifactId": "geometry/mesh-70706",
+      "relativePath": "geometry/mesh-70706.json",
+      "vertices": 64,
+      "triangles": 32,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 0,
+          "materialResourceId": "material/texture-124-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 2,
+          "materialResourceId": "material/texture-124-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 3,
+          "materialResourceId": "material/texture-124-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 1,
+          "materialResourceId": "material/texture-124-1",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "51fb24ed3bf850af50beee8481c85c5b678cf65847e368f012cb993b6d3cbcc0"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "70800",
+      "sourceRecordId": 70800,
+      "sourceOrdinal": 1029,
+      "artifactId": "geometry/mesh-70800",
+      "relativePath": "geometry/mesh-70800.json",
+      "vertices": 134,
+      "triangles": 66,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 1,
+          "materialResourceId": "material/texture-122-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "fee34338c66b997dfad919403d8bffc9947da0124f795806e04f5c492f336531"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "70801",
+      "sourceRecordId": 70801,
+      "sourceOrdinal": 6656,
+      "artifactId": "geometry/mesh-70801",
+      "relativePath": "geometry/mesh-70801.json",
+      "vertices": 136,
+      "triangles": 66,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 1,
+          "materialResourceId": "material/texture-122-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "3bf7734cf337d28417d49750eca3a68eb1ba14148d2415a5ad3a718a580ea7c1"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "70806",
+      "sourceRecordId": 70806,
+      "sourceOrdinal": 6661,
+      "artifactId": "geometry/mesh-70806",
+      "relativePath": "geometry/mesh-70806.json",
+      "vertices": 158,
+      "triangles": 78,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 1,
+          "materialResourceId": "material/texture-122-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "7f85a856b587ccca7bae4e3b9808fbef3a61eeabcdb4f4e2cbbd06c10846487d"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "71000",
+      "sourceRecordId": 71000,
+      "sourceOrdinal": 6683,
+      "artifactId": "geometry/mesh-71000",
+      "relativePath": "geometry/mesh-71000.json",
+      "vertices": 134,
+      "triangles": 66,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 0,
+          "materialResourceId": "material/texture-124-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 3,
+          "materialResourceId": "material/texture-124-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 1,
+          "materialResourceId": "material/texture-124-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 2,
+          "materialResourceId": "material/texture-124-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "a91c365f8ce78fc95e2f23e5b8a4d6aaa76ba10a27ddd9fa856c3863f0c3807c"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "71010",
+      "sourceRecordId": 71010,
+      "sourceOrdinal": 7746,
+      "artifactId": "geometry/mesh-71010",
+      "relativePath": "geometry/mesh-71010.json",
+      "vertices": 136,
+      "triangles": 66,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 1,
+          "materialResourceId": "material/texture-124-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 3,
+          "materialResourceId": "material/texture-124-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 2,
+          "materialResourceId": "material/texture-124-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "c5bf6cf28a72ec613a13f5def61581b3a7abaa121420a8be54d8b4da20ed738e"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "71011",
+      "sourceRecordId": 71011,
+      "sourceOrdinal": 6384,
+      "artifactId": "geometry/mesh-71011",
+      "relativePath": "geometry/mesh-71011.json",
+      "vertices": 158,
+      "triangles": 78,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 0,
+          "materialResourceId": "material/texture-124-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 3,
+          "materialResourceId": "material/texture-124-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 1,
+          "materialResourceId": "material/texture-124-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 124,
+          "record": 2,
+          "materialResourceId": "material/texture-124-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "85de602cc752bd4445dcdbe31385862f899345b1785555df0add27386c0d88a6"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "71106",
+      "sourceRecordId": 71106,
+      "sourceOrdinal": 7754,
+      "artifactId": "geometry/mesh-71106",
+      "relativePath": "geometry/mesh-71106.json",
+      "vertices": 72,
+      "triangles": 36,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 1,
+          "materialResourceId": "material/texture-122-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "d1311d4e30284ac06b2100bed40d31a610243f5b83c9d234d1f744e0126bd838"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "71407",
+      "sourceRecordId": 71407,
+      "sourceOrdinal": 6364,
+      "artifactId": "geometry/mesh-71407",
+      "relativePath": "geometry/mesh-71407.json",
+      "vertices": 130,
+      "triangles": 64,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 1,
+          "materialResourceId": "material/texture-122-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "149c422ad4ae93738273d7c7916dda6a0e169288e50265c1f385e7df391687a0"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "72000",
+      "sourceRecordId": 72000,
+      "sourceOrdinal": 7729,
+      "artifactId": "geometry/mesh-72000",
+      "relativePath": "geometry/mesh-72000.json",
+      "vertices": 72,
+      "triangles": 36,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 1,
+          "materialResourceId": "material/texture-122-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "2b863dfbfe149dd5ef58d23c03ae179e2ee7012679bc6dab5273895a2fec5ed4"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "72002",
+      "sourceRecordId": 72002,
+      "sourceOrdinal": 5798,
+      "artifactId": "geometry/mesh-72002",
+      "relativePath": "geometry/mesh-72002.json",
+      "vertices": 72,
+      "triangles": 36,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 1,
+          "materialResourceId": "material/texture-122-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "c7487e8bb36d6c5ecfb71795b6290c9bf0414620b270cfb60e2a1a79034d068f"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "72004",
+      "sourceRecordId": 72004,
+      "sourceOrdinal": 6251,
+      "artifactId": "geometry/mesh-72004",
+      "relativePath": "geometry/mesh-72004.json",
+      "vertices": 72,
+      "triangles": 36,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 1,
+          "materialResourceId": "material/texture-122-1",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "7ef616380ddb3bff9fd11b47b9a910df181dedcda2f1d83fd21a061421c76e73"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "72013",
+      "sourceRecordId": 72013,
+      "sourceOrdinal": 6622,
+      "artifactId": "geometry/mesh-72013",
+      "relativePath": "geometry/mesh-72013.json",
+      "vertices": 92,
+      "triangles": 46,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "4d13aeb2b0023d4b196a6fdb53258743c697fed13f6ae0bde51d40bfed47d7eb"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "72014",
+      "sourceRecordId": 72014,
+      "sourceOrdinal": 6439,
+      "artifactId": "geometry/mesh-72014",
+      "relativePath": "geometry/mesh-72014.json",
+      "vertices": 78,
+      "triangles": 38,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "351d66ebe1116f28ad77a000084330ba1218ba3481081674a2f902a60bdf568d"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "72015",
+      "sourceRecordId": 72015,
+      "sourceOrdinal": 3370,
+      "artifactId": "geometry/mesh-72015",
+      "relativePath": "geometry/mesh-72015.json",
+      "vertices": 94,
+      "triangles": 46,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "66efbed42ccdbae323db8fa4b7d9beda751aea311eee96d2d313c077a4c925f6"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "72016",
+      "sourceRecordId": 72016,
+      "sourceOrdinal": 803,
+      "artifactId": "geometry/mesh-72016",
+      "relativePath": "geometry/mesh-72016.json",
+      "vertices": 112,
+      "triangles": 54,
+      "materials": [
+        {
+          "archive": 67,
+          "record": 14,
+          "materialResourceId": "material/texture-67-14",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 3,
+          "materialResourceId": "material/texture-122-3",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 0,
+          "materialResourceId": "material/texture-122-0",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "a556c888d1e1ba5ab0afc0c96e9ab94222fd74c79d59e28c5649f90aedecfa57"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "72019",
+      "sourceRecordId": 72019,
+      "sourceOrdinal": 6222,
+      "artifactId": "geometry/mesh-72019",
+      "relativePath": "geometry/mesh-72019.json",
+      "vertices": 24,
+      "triangles": 12,
+      "materials": [
+        {
+          "archive": 122,
+          "record": 2,
+          "materialResourceId": "material/texture-122-2",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 122,
+          "record": 4,
+          "materialResourceId": "material/texture-122-4",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "b576638f57f94bb29cbfa2ac4d8a1f1a3e3848310bb70ab9132887a421f60614"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "72100",
+      "sourceRecordId": 72100,
+      "sourceOrdinal": 7012,
+      "artifactId": "geometry/mesh-72100",
+      "relativePath": "geometry/mesh-72100.json",
+      "vertices": 8,
+      "triangles": 4,
+      "materials": [
+        {
+          "archive": 94,
+          "record": 0,
+          "materialResourceId": "material/texture-94-0",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "3619038c0c0af8ac4c904414af557673efb6fc9b2603bf97234cd27caf103410"
+    }
+  ],
+  "unresolvedMeshes": []
+}

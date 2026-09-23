@@ -10,6 +10,7 @@ using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
+using WorldRpg.Rulesets.Daggerfall.Modules.Encounters;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
@@ -29,22 +30,28 @@ internal sealed class DaggerSessionPersistence
 {
     private readonly DaggerfallState State;
     private readonly DaggerfallCorpseLootModule _corpseLoot;
+    private readonly DaggerfallGroundContainers _groundContainers;
+    private readonly DaggerfallBookNotebook _notebook;
     private readonly DaggerfallUniqueItemAllocator _uniqueItems;
     private readonly FirstPersonCameraSystem _camera;
     private readonly DaggerfallWorldTime _time;
     private readonly DaggerfallSiteContext _site;
     private readonly DaggerfallEffectLifecycle _effects;
-    private readonly DaggerfallDoorRuntime _doors;
+    private readonly Func<DaggerfallDoorRuntime> _doors;
     private readonly DaggerfallLocomotionPolicy _locomotion;
-    internal DaggerSessionPersistence(DaggerfallState state, DaggerfallCorpseLootModule corpses,
+    internal DaggerSessionPersistence(DaggerfallState state, DaggerfallCorpseLootModule corpses, DaggerfallGroundContainers groundContainers, DaggerfallBookNotebook notebook,
         DaggerfallUniqueItemAllocator uniqueItems, FirstPersonCameraSystem camera, DaggerfallWorldTime time, DaggerfallSiteContext site,
-        DaggerfallEffectLifecycle effects, DaggerfallDoorRuntime doors, DaggerfallLocomotionPolicy locomotion)
+        DaggerfallEffectLifecycle effects, Func<DaggerfallDoorRuntime> doors, DaggerfallLocomotionPolicy locomotion)
     {
-        State = state; _corpseLoot = corpses; _uniqueItems = uniqueItems; _camera = camera; _time = time; _site = site; _effects = effects; _doors = doors; _locomotion = locomotion;
+        ArgumentNullException.ThrowIfNull(doors);
+        ArgumentNullException.ThrowIfNull(locomotion);
+        State = state; _corpseLoot = corpses; _groundContainers = groundContainers ?? throw new ArgumentNullException(nameof(groundContainers)); _notebook = notebook ?? throw new ArgumentNullException(nameof(notebook)); _uniqueItems = uniqueItems; _camera = camera; _time = time; _site = site; _effects = effects; _doors = doors; _locomotion = locomotion;
     }
-    internal RulesetSavePayload Capture(ulong? generation, ulong? step, IReadOnlyDictionary<long, DaggerfallActorId> dynamicActors)
+    internal RulesetSavePayload Capture(ulong? generation, ulong? step, IReadOnlyDictionary<long, DaggerfallActorId> dynamicActors, DaggerfallEncounterRuntime encounters, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> siteDeltas, DaggerfallWorldProfileKey activeProfile, DaggerfallWorldProfileKey? returnProfile)
     {
         ArgumentNullException.ThrowIfNull(dynamicActors);
+        ArgumentNullException.ThrowIfNull(encounters);
+        ArgumentNullException.ThrowIfNull(siteDeltas);
         PlayerControlState control = State.PlayerControl;
         WorldPoint playerPosition = control.Position
             ?? throw new InvalidOperationException("Daggerfall cannot save without a player position.");
@@ -102,7 +109,7 @@ internal sealed class DaggerSessionPersistence
             State.Kit.AttackExecution.CaptureCooldowns(generation, step)
                 .Select(value => new DaggerfallCombatCooldownSave(value.AttackerId, value.RemainingSteps)).ToArray(),
             new DaggerfallCalendarSave(_time.Calendar.Year, _time.Calendar.Month, _time.Calendar.Day, _time.Calendar.Hour, _time.Calendar.Minute, _time.Calendar.Second, _time.RemainderSeconds),
-            _site.Capture(),
+            _site.Capture() with { ActiveProfile = DaggerfallWorldProfileKeySave.Capture(activeProfile), ReturnProfile = returnProfile is { } returned ? DaggerfallWorldProfileKeySave.Capture(returned) : null },
             actorInventories,
             new DaggerfallVariablesSave([.. State.Variables.Capture().Select(entry => new DaggerfallVariableSave((int)entry.Address.Scope, entry.Address.Owner, entry.Address.Key, entry.Value))]),
             new DaggerfallNpcSave([.. State.Npcs.Capture().Select(npc => new DaggerfallNpcEntry(
@@ -117,12 +124,88 @@ internal sealed class DaggerSessionPersistence
             LevelUp: State.LevelUps.Capture())
         {
             Quests = State.Quests.Capture(),
-            Doors = _doors.Capture(),
+            Doors = _doors().Capture(),
+            SiteDeltas = [.. siteDeltas.OrderBy(entry => entry.Key.Site.Region).ThenBy(entry => entry.Key.Site.Index).ThenBy(entry => entry.Key.LogicalId, StringComparer.Ordinal).Select(entry => new DaggerfallSiteDeltaSave(
+                DaggerfallWorldProfileKeySave.Capture(entry.Key), entry.Value.Actors, entry.Value.DynamicActors, entry.Value.ActorInventories, entry.Value.Corpses, entry.Value.Doors, entry.Value.Effects))],
             Currency = State.Currency.Capture(),
             Services = State.Services.Capture(),
             QuestTraining = State.QuestTraining.Capture(),
             Locomotion = _locomotion.Capture(),
+            Encounters = encounters.Capture(),
+            Notebook = _notebook.Capture(),
+            GroundContainers = _groundContainers.Persisted.OrderBy(container => container.Id).Select(container =>
+            {
+                (DaggerfallStackSave[] stacks, DaggerfallUniqueSave[] uniques) = CaptureContents(State.Containers.Read(container.Owner), DaggerfallItemOwner.Ground(container.Id));
+                return new DaggerfallGroundContainerSave(DaggerfallWorldProfileKeySave.Capture(container.Profile), container.Id, container.Position.X, container.Position.Y, container.Position.Z,
+                    new DaggerfallInventorySave(stacks, uniques, []));
+            }).ToArray(),
         });
+    }
+
+    /// <summary>Captures one unloading site's actor-owned state without retaining runtime entities.</summary>
+    internal DaggerfallSiteRuntimeDelta CaptureSiteDelta(PrivateersHoldInputs inputs, DaggerfallDoorRuntime doors,
+        IReadOnlyDictionary<long, DaggerfallActorId> dynamicActors)
+    {
+        ArgumentNullException.ThrowIfNull(inputs);
+        ArgumentNullException.ThrowIfNull(doors);
+        ArgumentNullException.ThrowIfNull(dynamicActors);
+        long[] authoredIds = [.. inputs.Project.Actors.Keys.OrderBy(id => id)];
+        DaggerfallActorSave[] actors = authoredIds.Select(id =>
+        {
+            ActorState actor = State.Actors.TryGet(id, out ActorState? current)
+                ? current
+                : throw new InvalidOperationException($"Site actor {id} disappeared before its site state could be captured.");
+            return new DaggerfallActorSave(actor.DurableId, actor.Position.X, actor.Position.Y, actor.Position.Z,
+                actor.HeadingYawRadians, DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity));
+        }).ToArray();
+        DaggerfallDynamicActorSave[] spawned = dynamicActors.OrderBy(entry => entry.Key).Select(entry =>
+        {
+            ActorState actor = LiveDynamicActor(entry.Key);
+            return new DaggerfallDynamicActorSave(entry.Key, entry.Value.Value, actor.Position.X, actor.Position.Y, actor.Position.Z,
+                actor.HeadingYawRadians, DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity));
+        }).ToArray();
+        long[] ids = [.. authoredIds, .. spawned.Select(actor => actor.EntityId)];
+        DaggerfallActorInventorySave[] inventories = ids.Select(id => new DaggerfallActorInventorySave(
+            id,
+            CaptureInventory(State.InventoryFor(id) ?? throw new InvalidOperationException($"Site actor {id} has no inventory."),
+                State.EquipmentFor(id), DaggerfallItemOwner.Actor(id)))).ToArray();
+        DaggerfallActiveEffectSave[] effects = State.Effects.Active
+            .Where(effect => ids.Contains(checked((long)effect.Lifecycle.Context.Target.Value)))
+            .Select(effect => new DaggerfallActiveEffectSave(
+                effect.Lifecycle.Context.Instance.Value,
+                effect.Definition.Key,
+                effect.Lifecycle.Context.Source.Key,
+                effect.Lifecycle.Context.Caster?.Value is ulong caster ? checked((long)caster) : null,
+                checked((long)effect.Lifecycle.Context.Target.Value),
+                effect.Lifecycle.Context.Settings,
+                effect.Lifecycle.Context.Element,
+                effect.Lifecycle.Context.Item?.Value,
+                effect.Lifecycle.RemainingRounds,
+                effect.Lifecycle.Stacks,
+                effect.State.Clone()))
+            .ToArray();
+        return new DaggerfallSiteRuntimeDelta(actors, spawned, inventories, CaptureCorpses(ids), doors.Capture(), effects);
+    }
+
+    /// <summary>Reapplies detached values after the destination has created fresh authored actors.</summary>
+    internal void RestoreSiteDelta(DaggerfallSiteRuntimeDelta delta)
+    {
+        ArgumentNullException.ThrowIfNull(delta);
+        ApplyActorInventories(delta.ActorInventories);
+        _corpseLoot.Restore(delta.Corpses);
+        _effects.Restore(delta.Effects);
+    }
+
+    private DaggerfallCorpseSave[] CaptureCorpses(IEnumerable<long> actorIds)
+    {
+        HashSet<long> selected = [.. actorIds];
+        return _corpseLoot.Corpses.Values.Where(corpse => selected.Contains(corpse.ActorId)).OrderBy(corpse => corpse.ActorId).Select(corpse =>
+        {
+            (DaggerfallStackSave[] stacks, DaggerfallUniqueSave[] uniques) = corpse.IsRegistered
+                ? CaptureContents(State.Containers.Read(corpse.Owner), DaggerfallItemOwner.Corpse(corpse.ActorId))
+                : ([], []);
+            return new DaggerfallCorpseSave(corpse.ActorId, corpse.OriginatingSequence, corpse.IsRegistered, corpse.IsInteractable, stacks, uniques);
+        }).ToArray();
     }
 
     private ActorState LiveDynamicActor(long durableId) =>
@@ -157,6 +240,8 @@ internal sealed class DaggerSessionPersistence
 
         ApplyInventory(saved.Inventory, State.Inventory, State.Equipment, DaggerfallItemOwner.Player);
         ApplyActorInventories(saved.ActorInventories);
+        _groundContainers.Restore(saved.GroundContainers);
+        _notebook.Restore(saved.Notebook);
 
         WorldPoint position = new(saved.Player.X, saved.Player.Y, saved.Player.Z);
         State.PlayerControl.YawRadians = saved.Player.YawRadians;

@@ -95,6 +95,49 @@ test('inventory renders the ruleset-owned completed equip cue without claiming a
   } finally { f.dispose(); }
 });
 
+test('book reader and notebook render product state and send revision-guarded semantic actions', () => {
+  const f = fixture();
+  try {
+    const notebook = { revision: '9', book: { id: 59, title: 'A retained book', author: 'An author', page: 0, pageCount: 2, text: 'First page.' },
+      notes: [{ id: 'note:1', text: 'Existing note.' }, { id: 'note:2', text: 'Another note.' }] };
+    f.publish({ notebook });
+    f.root.querySelector('[data-action="journal"]').click();
+    assert.equal(f.root.querySelector('[data-testid="book-reader-title"]').textContent, 'A retained book');
+    assert.equal(f.root.querySelector('[data-testid="book-reader-page"]').textContent, 'First page.');
+    f.root.querySelector('[data-testid="book-reader-next"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'notebook-page', revision: '9', page: 1 });
+    const add = f.root.querySelector('[aria-label="New notebook note"]');
+    add.value = 'New note.';
+    add.closest('form').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    assert.deepEqual(f.actions.at(-1), { action: 'notebook-add', revision: '9', text: 'New note.' });
+    const first = f.root.querySelector('[data-testid="notebook-note-note:1"]');
+    first.querySelector('textarea').value = 'Edited note.';
+    first.querySelector('button').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'notebook-edit', revision: '9', note: 'note:1', text: 'Edited note.' });
+    first.querySelectorAll('button')[3].click();
+    assert.deepEqual(f.actions.at(-1), { action: 'notebook-move', revision: '9', note: 'note:1', destination: 1 });
+  } finally { f.dispose(); }
+});
+
+test('repeated notebook projections retain note drafts and the focused textarea', () => {
+  const f = fixture();
+  try {
+    const notebook = { revision: '12', book: null, notes: [{ id: 'note:1', text: 'Published note.' }] };
+    f.publish({ notebook });
+    f.root.querySelector('[data-action="journal"]').click();
+    const row = f.root.querySelector('[data-testid="notebook-note-note:1"]');
+    const edit = row.querySelector('textarea');
+    edit.focus();
+    edit.value = 'Unsubmitted draft.';
+
+    f.publish({ notebook });
+
+    assert.equal(f.root.querySelector('[data-testid="notebook-note-note:1"] textarea'), edit);
+    assert.equal(edit.value, 'Unsubmitted draft.');
+    assert.equal(document.activeElement, edit);
+  } finally { f.dispose(); }
+});
+
 test('mode screens follow projection and a mode without a backdrop hides both', () => {
   const f = fixture();
   try {
@@ -190,6 +233,30 @@ test('played characters do not expose character creation controls', () => {
     } });
     assert.equal(f.root.querySelector('[data-testid="character-begin"]'), null);
     assert.equal(f.root.querySelector('[data-testid="character-commit"]'), null);
+  } finally { f.dispose(); }
+});
+
+test('title creation renders normalized questions and sends the selected background allocation', () => {
+  const f = fixture();
+  try {
+    f.publish({ mode: 'title', character: {
+      name: 'Nameless', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [], creationAvailable: true,
+      creation: { editing: true, current: { name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' },
+        races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }], careers: [{ id: 'class00', label: 'Mage', available: true, restriction: null }], faces: [{ index: 0, mediaId: 'character.head.male.00.0' }], reflexes: [{ value: 2, label: 'Average' }],
+        background: { biographyClassIndex: 0, biography: ['A readable biography.'], attributeBonusPool: 6, remainingAttributePoints: 6, primarySkillPoints: 6, majorSkillPoints: 6, minorSkillPoints: 6,
+          questions: [{ number: 1, text: 'Where did you study?', selectedLetter: 'a', answers: [{ letter: 'a', text: 'At home.' }, { letter: 'b', text: 'At court.' }] }],
+          attributes: [{ id: 'strength', label: 'Strength', rolled: 50, allocated: 0, value: 50, canAllocate: true }],
+          skills: [{ id: 'medical', tier: 'primary', rolled: 28, allocated: 0, biographyBonus: 0, value: 28, canAllocate: true }],
+          startingGrants: [{ itemId: 'template-113-iron', templateIndex: 113, quantity: 1, sourceEffect: 'IT 3 0 0' }], unsupportedEffects: ['The source retains this fatigue background effect without a gameplay consequence.'] },
+      },
+    } });
+    assert.match(f.root.querySelector('[data-testid="character-biography"]').textContent, /readable biography/);
+    assert.match(f.root.querySelector('[data-testid="character-starting-grants"]').textContent, /template-113-iron/);
+    assert.match(f.root.querySelector('[data-testid="character-background-unsupported-effects"]').textContent, /fatigue background effect/);
+    f.root.querySelector('[aria-label="Attributes strength"]').value = '6';
+    f.root.querySelector('[aria-label="Skills medical"]').value = '6';
+    f.root.querySelector('[data-testid="character-background-reroll"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'character-background-reroll', name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00', backgroundAnswers: '1:a', attributeAllocations: 'strength:6', skillAllocations: 'medical:6' });
   } finally { f.dispose(); }
 });
 
@@ -355,30 +422,6 @@ test('activation selection follows product mode and emits only semantic mode cha
     assert.equal(select.value, 'grab');
     f.publish({ mode: 'title' });
     assert.equal(select.disabled, true);
-  } finally { f.dispose(); }
-});
-
-test('title creation renders normalized questions and sends the selected background allocation', () => {
-  const f = fixture();
-  try {
-    f.publish({ mode: 'title', character: {
-      name: 'Nameless', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [], creationAvailable: true,
-      creation: { editing: true, current: { name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' },
-        races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }], careers: [{ id: 'class00', label: 'Mage', available: true, restriction: null }], faces: [{ index: 0, mediaId: 'character.head.male.00.0' }], reflexes: [{ value: 2, label: 'Average' }],
-        background: { biographyClassIndex: 0, biography: ['A readable biography.'], attributeBonusPool: 6, remainingAttributePoints: 6, primarySkillPoints: 6, majorSkillPoints: 6, minorSkillPoints: 6,
-          questions: [{ number: 1, text: 'Where did you study?', selectedLetter: 'a', answers: [{ letter: 'a', text: 'At home.' }, { letter: 'b', text: 'At court.' }] }],
-          attributes: [{ id: 'strength', label: 'Strength', rolled: 50, allocated: 0, value: 50, canAllocate: true }],
-          skills: [{ id: 'medical', tier: 'primary', rolled: 28, allocated: 0, biographyBonus: 0, value: 28, canAllocate: true }],
-          startingGrants: [{ itemId: 'template-113-iron', templateIndex: 113, quantity: 1, sourceEffect: 'IT 3 0 0' }], unsupportedEffects: ['The source retains this fatigue background effect without a gameplay consequence.'] },
-      },
-    } });
-    assert.match(f.root.querySelector('[data-testid="character-biography"]').textContent, /readable biography/);
-    assert.match(f.root.querySelector('[data-testid="character-starting-grants"]').textContent, /template-113-iron/);
-    assert.match(f.root.querySelector('[data-testid="character-background-unsupported-effects"]').textContent, /fatigue background effect/);
-    f.root.querySelector('[aria-label="Attributes strength"]').value = '6';
-    f.root.querySelector('[aria-label="Skills medical"]').value = '6';
-    f.root.querySelector('[data-testid="character-background-reroll"]').click();
-    assert.deepEqual(f.actions.at(-1), { action: 'character-background-reroll', name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00', backgroundAnswers: '1:a', attributeAllocations: 'strength:6', skillAllocations: 'medical:6' });
   } finally { f.dispose(); }
 });
 

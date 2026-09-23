@@ -126,7 +126,10 @@ public sealed record CharacterControllerTuning(
                 BackwardSpeed = BackwardSpeed ?? defaults.Ground.BackwardSpeed,
                 StrafeSpeed = StrafeSpeed ?? defaults.Ground.StrafeSpeed,
             },
-            Vertical = defaults.Vertical with { JumpSpeed = JumpSpeed ?? defaults.Vertical.JumpSpeed },
+            Vertical = defaults.Vertical with
+            {
+                JumpSpeed = JumpSpeed ?? defaults.Vertical.JumpSpeed,
+            },
             Jump = defaults.Jump with
             {
                 BufferSeconds = JumpBufferSeconds ?? defaults.Jump.BufferSeconds,

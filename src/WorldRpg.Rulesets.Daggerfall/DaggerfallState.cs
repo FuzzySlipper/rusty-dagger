@@ -33,6 +33,7 @@ internal sealed class DaggerfallState(PlayerControlState playerControl, ActorsSt
     internal MechanicsInventoryContainerCoordinator Containers { get; } = containers;
     /// <summary>The one managed inventory store every actor inventory and equipment registers in.</summary>
     internal InventoryStore InventoryStore { get; } = inventoryStore;
+    internal IReadOnlyDictionary<InventoryItemId, ItemDefinition> ItemDefinitions => items;
     /// <summary>The session's scoped quest and world variables, handed explicitly to readers.</summary>
     internal DaggerfallVariableStore Variables { get; } = variables;
     /// <summary>The session's NPC identities, handed explicitly to talk, damage and quest readers.</summary>

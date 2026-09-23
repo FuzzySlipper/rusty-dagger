@@ -205,6 +205,29 @@ public sealed class MapsRegionGroupTests
     }
 
     [Fact]
+    public void Reads_the_exact_rmb_grid_of_a_selected_exterior_location()
+    {
+        BsaArchive archive = BsaArchive.Parse(Archive(
+            ("MAPNAMES.017", MapNames(1)),
+            ("MAPTABLE.017", MapTable(1, dungeonType: 0)),
+            ("MAPPITEM.017", ExteriorLayoutPItem()),
+            ("MAPDITEM.017", [0, 0, 0, 0])), "fixture");
+
+        MapsExteriorLayout layout = MapsDecoder.DecodeExteriorLayout(archive, 17, "Location 0");
+
+        Assert.Equal(17, layout.Region);
+        Assert.Equal(0, layout.LocationIndex);
+        Assert.Equal("Location 0", layout.LocationName);
+        Assert.Equal((byte)2, layout.Width);
+        Assert.Equal((byte)1, layout.Height);
+        Assert.Equal('Q', layout.Letter1);
+        Assert.Equal(7u, layout.LocationId);
+        Assert.Equal(
+            [new MapsExteriorBlock("TVRNAA07.RMB", 0, 0), new MapsExteriorBlock("TEMPQAB4.RMB", 1, 0)],
+            layout.Blocks);
+    }
+
+    [Fact]
     public void Publishes_every_region_s_locations_and_dungeons_with_the_gaps_named()
     {
         BsaArchive archive = BsaArchive.Parse(File.ReadAllBytes(Corpus("MAPS.BSA")), "arena2/MAPS.BSA");
@@ -311,6 +334,34 @@ public sealed class MapsRegionGroupTests
             System.Text.Encoding.ASCII.GetBytes($"Location {index}").CopyTo(bytes, sizeof(uint) + (index * 32));
         }
 
+        return bytes;
+    }
+
+    private static byte[] ExteriorLayoutPItem()
+    {
+        // MAPPITEM's four-byte offset table points directly at one record.  Its source block arrays
+        // always span 64 slots even when the declared grid is smaller.
+        const int recordHeader = 4 + 112 + 2 + 5;
+        const int exteriorFixed = 32 + 4 + 4 + 1 + 1 + 4 + 1 + 2;
+        byte[] bytes = new byte[sizeof(uint) + recordHeader + exteriorFixed + (64 * 3)];
+        int record = sizeof(uint);
+        BitConverter.GetBytes(0U).CopyTo(bytes, 0);
+        BitConverter.GetBytes(7).CopyTo(bytes, record + 4 + 33);
+        int exterior = record + recordHeader;
+        BitConverter.GetBytes(42).CopyTo(bytes, exterior + 32);
+        BitConverter.GetBytes(7U).CopyTo(bytes, exterior + 36);
+        bytes[exterior + 40] = 2;
+        bytes[exterior + 41] = 1;
+        bytes[exterior + 46] = (byte)'Q';
+        int blockIndices = exterior + exteriorFixed;
+        int blockNumbers = blockIndices + 64;
+        int blockCharacters = blockNumbers + 64;
+        bytes[blockIndices] = 0;
+        bytes[blockNumbers] = 7;
+        bytes[blockCharacters] = 0;
+        bytes[blockIndices + 1] = 13;
+        bytes[blockNumbers + 1] = 4;
+        bytes[blockCharacters + 1] = 0x11;
         return bytes;
     }
 

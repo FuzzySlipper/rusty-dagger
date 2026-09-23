@@ -32,10 +32,13 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     private readonly DaggerfallItemConditionService? _itemCondition;
     private readonly DaggerfallDefinitions _catalog;
     private readonly IReadOnlyDictionary<string, int> _weaponMaterialRanks;
+    private readonly IReadOnlyDictionary<string, int> _weaponMaterialToHitModifiers;
     private readonly IReadOnlyDictionary<string, DaggerfallActionDefinition> _actions;
     private readonly IReadOnlyDictionary<long, DaggerfallActorDefinition> _definitions;
     private readonly Action<DaggerfallSkillUse>? _skillUses;
     private readonly Func<int> _playerBiographyAvoidHit;
+    private readonly Func<long, DaggerfallAdrenalineRush> _adrenalineRush;
+    private readonly Func<WorldPoint?> _playerPosition;
     internal AttackCapabilities<IProductFact> Attacks { get; }
     internal TargetingService Targeting { get; }
     internal AttackExecution<IProductFact> Execution { get; }
@@ -50,7 +53,8 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity,
         TargetingService targeting, Action<DaggerfallSkillUse>? skillUses = null, Func<int>? playerBiographyAvoidHit = null,
         Func<long, MechanicsEquipmentCoordinator>? actorEquipment = null, DaggerfallItemConditionService? itemCondition = null,
-        CombatResolution? rules = null)
+        CombatResolution? rules = null, Func<long, DaggerfallAdrenalineRush>? adrenalineRush = null,
+        Func<WorldPoint?>? playerPosition = null)
     {
         _random = random;
         Rules = rules ?? new CombatResolution();
@@ -63,10 +67,13 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         _itemCondition = itemCondition;
         _catalog = definitions;
         _weaponMaterialRanks = DaggerfallFormulaPolicy.ClassicWeaponMaterialRanks;
+        _weaponMaterialToHitModifiers = DaggerfallFormulaPolicy.ClassicWeaponToHitMaterialModifiers;
         _actions = definitions.Actions;
         _definitions = definitionsByEntity;
         _skillUses = skillUses;
         _playerBiographyAvoidHit = playerBiographyAvoidHit ?? (() => 0);
+        _adrenalineRush = adrenalineRush ?? (_ => default);
+        _playerPosition = playerPosition ?? (() => null);
         Targeting = targeting;
         Attacks = new(PlayerId, Targeting, Execution, ReachOf, facts => facts.Append(new AttackRejectedFact(AttackRejection.MissingPlayerPosition)));
     }
@@ -98,7 +105,9 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
             if (attacker.Definition.ActionId is not string actionId || !_actions.TryGetValue(actionId, out var action)
                 || action.CooldownSeconds is not double cooldown || action.Reach is not > 0d)
             { facts.Append(new AttackRejectedFact(AttackRejection.NoAttackPolicy, request.AttackerId)); return false; }
-            attack = ResolveFixedAttack(attacker.Definition, action, cooldown);
+            attack = action.Interpretation == "enemy-equipped-melee"
+                ? ResolveEquippedEnemyAttack(request.AttackerId, cooldown)
+                : ResolveFixedAttack(attacker.Definition, action, cooldown);
             if (action.Interpretation == "fixed-ranged" && !TrySpendArrow(request.AttackerId, facts)) return false;
         }
         if (request.TargetId is not long targetId)
@@ -106,9 +115,13 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         if (!TryResolve(targetId, out Combatant target)) { Refused(AttackRefusal.UnknownActor, facts); return false; }
         ExplicitMeleeRequest explicitRequest = new(request.AttackerId, targetId, request.Generation, request.SimulationStep, request.FixedDeltaSeconds);
         CombatParticipants participants = Participants(attacker.Id, targetId, request.Action ?? attacker.Definition.ActionId ?? "attack");
-        TryHitEvent hit = ResolveHit(participants, explicitRequest, attacker, target, attack, request.Delayed);
-        DamageEvent? damage = hit.Hit ? ResolveDamage(participants, explicitRequest, attacker, target, attack, request.Delayed) : null;
-        prepared = new(attack.CooldownSeconds, new(hit.Hit, damage?.Allowed ?? true, damage?.Body ?? 0, damage?.Damage ?? 0, hit.Roll, hit.Chance));
+        bool backstabOpportunity = BackstabOpportunity(attacker, target, request.Delayed);
+        if (backstabOpportunity)
+            _skillUses?.Invoke(new DaggerfallSkillUse("backstabbing", DaggerfallSkillUseReason.BackstabbingOpportunity, DaggerfallSkillUseOutcome.Accepted));
+        int body = DaggerfallFormulaPolicy.CalculateStruckBodyPart(Draw(explicitRequest, attacker.Id, target.Id, CombatRandomKey.BodySalt, 0, 19, request.Delayed));
+        TryHitEvent hit = ResolveHit(participants, explicitRequest, attacker, target, attack, body, request.Delayed, backstabOpportunity);
+        DamageEvent? damage = hit.Hit ? ResolveDamage(participants, explicitRequest, attacker, target, attack, body, request.Delayed) : null;
+        prepared = new(attack.CooldownSeconds, new(hit.Hit, damage?.Allowed ?? true, body, damage?.Damage ?? 0, hit.Roll, hit.Chance));
         return true;
     }
     public void Started(AttackRequest request, PreparedAttack attack, FactBuffer<IProductFact> facts)
@@ -130,11 +143,14 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         if (!outcome.Allowed)
         { facts.Append(new AttackRejectedFact(AttackRejection.InsufficientWeaponMaterial)); return; }
         string action = request.Action ?? _definitions[request.AttackerId].ActionId ?? "attack";
+        // Capture the weapon skill at the admitted operation boundary. Applying the hit may break
+        // the weapon through physical wear and unequip it before the skill-use reaction runs.
+        string? playerWeaponSkill = request.AttackerId == PlayerId ? PlayerWeaponSkill() : null;
         ApplyDamage(Participants(request.AttackerId, target, action), request.AttackerId, target, outcome.Damage, outcome.Body,
             request.Delayed, request.Generation, request.SimulationStep, facts);
         if (request.AttackerId == PlayerId)
         {
-            _skillUses?.Invoke(new DaggerfallSkillUse(PlayerWeaponSkill(), DaggerfallSkillUseReason.WeaponHit, DaggerfallSkillUseOutcome.Succeeded));
+            _skillUses?.Invoke(new DaggerfallSkillUse(playerWeaponSkill!, DaggerfallSkillUseReason.WeaponHit, DaggerfallSkillUseOutcome.Succeeded));
             _skillUses?.Invoke(new DaggerfallSkillUse("critical-strike", DaggerfallSkillUseReason.CriticalStrikeHit, DaggerfallSkillUseOutcome.Succeeded));
         }
     }
@@ -300,16 +316,16 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         new Actor(_actors.Store, _actors.Entities.Resolve(ActorsState.Identity(target))), action);
 
     private TryHitEvent ResolveHit(CombatParticipants participants, ExplicitMeleeRequest request, Combatant attacker, Combatant target,
-        DaggerfallAttackDefinition attack, bool enemy) => Rules.TryHit(participants, hit =>
+        DaggerfallAttackDefinition attack, int body, bool enemy, bool backstabOpportunity) => Rules.TryHit(participants, hit =>
     {
-        hit.Chance = HitChance(attacker, target, attack.Skill);
+        hit.Chance = HitChance(request, attacker, target, attack, body, enemy, backstabOpportunity);
         hit.Roll = Draw(request, attacker.Id, target.Id, CombatRandomKey.HitSalt, 1, 100, enemy);
     });
 
     private DamageEvent ResolveDamage(CombatParticipants participants, ExplicitMeleeRequest request, Combatant attacker, Combatant target,
-        DaggerfallAttackDefinition attack, bool enemy) => Rules.Damage(participants, damage =>
+        DaggerfallAttackDefinition attack, int body, bool enemy) => Rules.Damage(participants, damage =>
     {
-        damage.Body = DaggerfallFormulaPolicy.StruckBodyPart(Draw(request, attacker.Id, target.Id, CombatRandomKey.BodySalt, 0, 19, enemy));
+        damage.Body = body;
         int raw = Draw(request, attacker.Id, target.Id, CombatRandomKey.DamageSalt, attack.MinimumDamage, attack.MaximumDamage, enemy);
         damage.Allowed = enemy || attack.Material is null || DaggerfallFormulaPolicy.CanHitMaterial(attack.Material, target.Definition.MinimumMaterial, _weaponMaterialRanks);
         damage.Damage = Math.Max(1, checked(raw + StrengthModifier(attacker) + attack.DamageBonus));
@@ -395,7 +411,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         EquipmentRead equipment = owner == PlayerId ? _equipment.Read() : _actorEquipment(owner).Read();
         if (equipment.TryGet(new WorldRpg.Kit.Inventory.EquipmentSlotId("left-hand"), out WorldRpg.Kit.Inventory.UniqueInventoryItem shield)
             && _catalog.RequireItem(new DaggerfallItemId(shield.Definition.Value)) is { Shield: not null } shieldDefinition
-            && ShieldCovers(shieldDefinition.Id.Value, body)) return shield;
+            && ShieldCovers(shieldDefinition, body)) return shield;
         string slot = body switch
         {
             0 => "head", 1 => "right-arm", 2 => "left-arm", 3 => "chest-armor",
@@ -405,11 +421,14 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
             && _catalog.RequireItem(new DaggerfallItemId(armor.Definition.Value)).Armor is not null ? armor : null;
     }
 
-    private static bool ShieldCovers(string shield, int body) => shield switch
+    private static bool ShieldCovers(DaggerfallItemDefinition shield, int body) => shield.Id.Value switch
     {
         "buckler" => body is 2 or 4,
         "round-shield" or "kite-shield" => body is 2 or 4 or 5,
         "tower-shield" => body is 0 or 2 or 4 or 5,
+        _ when shield.Template?.Index is 109 => body is 2 or 4,
+        _ when shield.Template?.Index is 110 or 111 => body is 2 or 4 or 5,
+        _ when shield.Template?.Index is 112 => body is 0 or 2 or 4 or 5,
         _ => false,
     };
 
@@ -419,6 +438,15 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         if (_actors.TryGet(id, out ActorState actor) && _definitions.TryGetValue(id, out DaggerfallActorDefinition? definition)) { combatant = new(id, actor.Stats, definition); return true; }
         combatant = default;
         return false;
+    }
+
+    private DaggerfallAttackDefinition ResolveEquippedEnemyAttack(long actorId, double cooldown)
+    {
+        DaggerfallEquippedWeapon? weapon = ReadWeapon(_actorEquipment(actorId).Read(), "right-hand")
+            ?? ReadWeapon(_actorEquipment(actorId).Read(), "left-hand");
+        return weapon is { } selected
+            ? new DaggerfallAttackDefinition(selected.Weapon.Skill, selected.Weapon.MinimumDamage, selected.Weapon.MaximumDamage, cooldown, selected.Material, Reach: 2d)
+            : new DaggerfallAttackDefinition(DaggerfallMechanicsIds.HandToHand.Value, 1, 2, cooldown, Reach: 2d);
     }
 
     private static DaggerfallAttackDefinition ResolveFixedAttack(DaggerfallActorDefinition actor, DaggerfallActionDefinition action, double cooldown) => action.AttackRangeIndex is int index
@@ -450,7 +478,73 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     private string PlayerWeaponSkill() => ReadWeapon(_equipment.Read(), "right-hand")?.Weapon.Skill
         ?? ReadWeapon(_equipment.Read(), "left-hand")?.Weapon.Skill
         ?? DaggerfallMechanicsIds.HandToHand.Value;
-    private int HitChance(Combatant attacker, Combatant target, string skill) => DaggerfallFormulaPolicy.CalculateHitChance(ReadStat(attacker, new DaggerfallStatId(skill)), target.Definition.Armor, ReadStat(attacker, DaggerfallMechanicsIds.Luck), ReadStat(target, DaggerfallMechanicsIds.Luck), ReadStat(attacker, DaggerfallMechanicsIds.Agility), ReadStat(target, DaggerfallMechanicsIds.Agility), ReadStat(target, DaggerfallMechanicsIds.Dodging), target.Id == DaggerfallActorIdentity.PlayerEntityId ? _playerBiographyAvoidHit() : 0);
+    private int HitChance(ExplicitMeleeRequest request, Combatant attacker, Combatant target, DaggerfallAttackDefinition attack, int body, bool enemy, bool backstabOpportunity)
+    {
+        int critical = ReadStat(attacker, new DaggerfallStatId("critical-strike"));
+        bool criticalSucceeded = Draw(request, attacker.Id, target.Id, CombatRandomKey.CriticalStrikeSalt, 1, 100, enemy) <= critical;
+        DaggerfallAdrenalineRush attackerRush = _adrenalineRush(attacker.Id), targetRush = _adrenalineRush(target.Id);
+        return DaggerfallFormulaPolicy.CalculateSuccessfulHitChance(
+            checked(ReadStat(attacker, new DaggerfallStatId(attack.Skill))
+                + DaggerfallFormulaPolicy.CalculateWeaponToHit(attack.Material, _weaponMaterialToHitModifiers)
+                + DaggerfallFormulaPolicy.CalculateBackstabChance(ReadStat(attacker, new DaggerfallStatId("backstabbing")), backstabOpportunity)),
+            ArmorToHit(target, body),
+            DaggerfallFormulaPolicy.CalculateAdrenalineRushToHit(attackerRush.Enabled, attackerRush.Improved, Health(attacker).Current, Health(attacker).Maximum.Value, targetRush.Enabled, targetRush.Improved, Health(target).Current, Health(target).Maximum.Value),
+            DaggerfallFormulaPolicy.CalculateStatsToHit(ReadStat(attacker, DaggerfallMechanicsIds.Luck), ReadStat(target, DaggerfallMechanicsIds.Luck), ReadStat(attacker, DaggerfallMechanicsIds.Agility), ReadStat(target, DaggerfallMechanicsIds.Agility)),
+            DaggerfallFormulaPolicy.CalculateSkillsToHit(ReadStat(target, DaggerfallMechanicsIds.Dodging), critical, criticalSucceeded),
+            DaggerfallFormulaPolicy.CalculateAdjustmentsToHit(target.Definition.Kind == DaggerfallActorKinds.Monster, target.Id == PlayerId ? _playerBiographyAvoidHit() : 0));
+    }
+
+    private bool BackstabOpportunity(Combatant attacker, Combatant target, bool delayed)
+    {
+        if (delayed || attacker.Id != PlayerId || target.Id == PlayerId || !_actors.TryGet(target.Id, out ActorState targetActor)
+            || _playerPosition() is not WorldPoint playerPosition)
+            return false;
+
+        float dx = playerPosition.X - targetActor.Position.X;
+        float dz = playerPosition.Z - targetActor.Position.Z;
+        float distanceSquared = (dx * dx) + (dz * dz);
+        if (!float.IsFinite(distanceSquared) || distanceSquared <= float.Epsilon)
+            return false;
+
+        // DFU rounds the target-to-player angle into eight 45-degree facings using
+        // nearest-even ties, then treats facing indices 3, 4 and 5 as back-facing.
+        // ActorPose's zero heading faces -Z and positive yaw turns toward +X.
+        Vector3 targetForward = new(MathF.Sin(targetActor.HeadingYawRadians), 0f, -MathF.Cos(targetActor.HeadingYawRadians));
+        float inverseDistance = 1f / MathF.Sqrt(distanceSquared);
+        float dot = Math.Clamp(((targetForward.X * dx) + (targetForward.Z * dz)) * inverseDistance, -1f, 1f);
+        float facingSector = MathF.Acos(dot) / (MathF.PI / 4f);
+        int roundedSector = (int)MathF.Round(facingSector, MidpointRounding.ToEven);
+        return roundedSector is >= 3 and <= 5;
+    }
+
+    private int ArmorToHit(Combatant target, int body)
+    {
+        int equipmentBonus = 0;
+        string bodySlot = body switch
+        {
+            0 => "head", 1 => "right-arm", 2 => "left-arm", 3 => "chest-armor",
+            4 => "gloves", 5 => "legs-armor", 6 => "feet", _ => throw new ArgumentOutOfRangeException(nameof(body)),
+        };
+        EquipmentRead equipment = target.Id == PlayerId ? _equipment.Read() : _actorEquipment(target.Id).Read();
+        foreach (WorldRpg.Kit.Inventory.EquipmentAssignment assignment in equipment.Assignments)
+        {
+            DaggerfallItemDefinition item = _catalog.RequireItem(new DaggerfallItemId(assignment.Item.Definition.Value));
+            if (item.Armor is { } worn && assignment.Slot.Value == bodySlot)
+                equipmentBonus = checked(equipmentBonus + (_catalog.ArmorValuesByMaterial[worn.Material] * 5));
+            else if (item.Shield is { } shield && assignment.Slot.Value == "left-hand" && ShieldCovers(item, body))
+                equipmentBonus = checked(equipmentBonus + (shield.Armor * 5));
+        }
+
+        int equipmentArmor = checked(100 - equipmentBonus);
+        return target.Definition.Kind switch
+        {
+            DaggerfallActorKinds.Monster => Math.Min(target.Definition.Armor, equipmentArmor),
+            DaggerfallActorKinds.EnemyClass => Math.Min(60, equipmentArmor),
+            _ => equipmentArmor,
+        };
+    }
+
+    private static Track Health(Combatant actor) => actor.Stats.GetTrack(TrackId.Parse(HealthTrack));
     internal static int CalculateHitChance(int skill, int struckArmor, int attackerLuck, int targetLuck, int attackerAgility, int targetAgility, int targetDodge, int targetBiographyAvoidHit = 0) => DaggerfallFormulaPolicy.CalculateHitChance(skill, struckArmor, attackerLuck, targetLuck, attackerAgility, targetAgility, targetDodge, targetBiographyAvoidHit);
     private int StrengthModifier(Combatant attacker) => DaggerfallFormulaPolicy.DamageModifier(ReadStat(attacker, DaggerfallMechanicsIds.Strength));
     private static int ReadStat(Combatant actor, DaggerfallStatId stat) =>

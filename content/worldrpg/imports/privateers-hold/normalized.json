@@ -861,9 +861,37 @@
       },
       {
         "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.257",
+        "contentDigest": "8457a0dfd6548779ace607efff650cb69e90b40c7adf2349a5de58e510df9258",
+        "byteLength": 292775,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
         "sourcePath": "arena2/TEXTURE.258",
         "contentDigest": "c6a2b93cc5f3315653dc6eff77ce017a8a5e1bd00aa8ade1c63f1301cfa38533",
         "byteLength": 82779,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.259",
+        "contentDigest": "ea43837fa24ca2cd978a24324ff4f09f7a2e8eaf0e45f4c38bd89ccf2797a74f",
+        "byteLength": 350931,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.260",
+        "contentDigest": "6704421df0f856b1582ce10d6c54a9a405621a066bffe917c6476c70f597fc44",
+        "byteLength": 117695,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.261",
+        "contentDigest": "972926b02f8d8a87a36bbbeb718f7fdec98e8723257c6670cb863396eb8556d1",
+        "byteLength": 405766,
         "sourceSchemaVersion": 1
       },
       {
@@ -875,9 +903,247 @@
       },
       {
         "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.263",
+        "contentDigest": "f977ba88b8e131c2de0e95ae0ffa8cc24f8058f449a232034edf30e069f2ab11",
+        "byteLength": 383682,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.264",
+        "contentDigest": "47ac1f566198ff3f97a9095946e874b2937036e10cec7d2a4a0fe4fd429b3d18",
+        "byteLength": 95612,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.265",
+        "contentDigest": "e73ad5aa225b6b517254279b6ef6065681187195ae303156dffeacf87fd5155f",
+        "byteLength": 131107,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.266",
+        "contentDigest": "bf1366f1985b3debc25cef31914d36075a24611a75e4b85f83eb546456e9804c",
+        "byteLength": 290423,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.267",
+        "contentDigest": "8b2ff3640bf7acc20e24352075a47f30c525da58772cb8d1a06baeff02f5cdaa",
+        "byteLength": 379810,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.268",
+        "contentDigest": "eb104ccebc683936034f7dbeef21e75a11973b3ab0d67140f0e48d72f85a68f7",
+        "byteLength": 132370,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.269",
+        "contentDigest": "31100801985195a44f19cf532eda760268f05bb92517f70940a7093a8a27e74a",
+        "byteLength": 92284,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
         "sourcePath": "arena2/TEXTURE.270",
         "contentDigest": "0ff25c02bcafea04b905547b2428303a98e325bd3350a62f4aa901d3f6237c76",
         "byteLength": 292402,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.271",
+        "contentDigest": "ed6f46e4b93a39ba12de50703aea539975e12f19e537bd1dc51236dc9b4fdb3f",
+        "byteLength": 408158,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.272",
+        "contentDigest": "be499871b73b1aabcc41a64aee0b0dbcca2bcc40b91f20dda449ef5611d5ce8a",
+        "byteLength": 262256,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.273",
+        "contentDigest": "5a62832b1aafa426dfa78baaceb877dd0971f52928e92409d2209ac05c46514e",
+        "byteLength": 153509,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.274",
+        "contentDigest": "024d7751addcf4a81f7f91aabc0d46db7590f4abfe73427b3bbf78c42dc2da50",
+        "byteLength": 210356,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.275",
+        "contentDigest": "2bab5967a95a99d11161d1021767377ab28d870f0b142e1b61d49fa96472cb1f",
+        "byteLength": 260764,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.276",
+        "contentDigest": "912783da167643bf8b31be4d621d45bef6c66272d4f87a195340fc6e4bf93228",
+        "byteLength": 375518,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.277",
+        "contentDigest": "0826551bb14df5349381ef242ef63765a4f61b0c190fdbdd3114f0b01d9f01fe",
+        "byteLength": 460511,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.278",
+        "contentDigest": "47ac259544af6e243cb1c88d4ce66d6e9aafd6a7d9859430f55c51ab6d4e41c9",
+        "byteLength": 102616,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.279",
+        "contentDigest": "26b2bb8c987b34780ae9867a7c2f8f69de96e1aea73733e7353564b123b57376",
+        "byteLength": 403352,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.280",
+        "contentDigest": "4926d2ccdce2412155354a89dcd7d13391ef90ef1cfc074b5b71c36348931856",
+        "byteLength": 427791,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.281",
+        "contentDigest": "7a07e136f26ef71be3964718337bfc77f87e255a8e64481005277cdbeae05099",
+        "byteLength": 448860,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.282",
+        "contentDigest": "9d856264c65b8a5299a270e2b750f3eb637019e63d125037e8b8b4292303d68a",
+        "byteLength": 385216,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.283",
+        "contentDigest": "b1ff26e76caaf8b983268e23ae7da34f1057fa4ad5840c80e96fcc85bcc1a9b1",
+        "byteLength": 250944,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.284",
+        "contentDigest": "6aab43b7f175688df06553c5f84da7a05a57c5486b959d65b7fa4bc607ac5042",
+        "byteLength": 232972,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.285",
+        "contentDigest": "8e5012f4a4e0eb132db25443db8e68d0e3f180a4c2e39f1551808aadba0332d9",
+        "byteLength": 261039,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.286",
+        "contentDigest": "a02c7b476c5d88c9fda7a8292061abaf43be57003f7f708230a29f5fe9377ba8",
+        "byteLength": 198688,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.287",
+        "contentDigest": "9b1b0b1ca0bbc8e5b13c9046498cf3040a926c0efd3e69a80da5d4e48de713eb",
+        "byteLength": 318232,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.288",
+        "contentDigest": "06fe5658b2910e75e44179f3ad50dc9e00ae231d26e9c985f274943f2af27c4c",
+        "byteLength": 358215,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.289",
+        "contentDigest": "e6b2ad953de4bd4b36fc4242cc86ff636fa3541f67a3c40e9df2fdc78cccfb1f",
+        "byteLength": 88501,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.290",
+        "contentDigest": "b0ecdf90a79c58fdc3eea18c4f3a850cf3e6e06516365bf1b6e185970edc847b",
+        "byteLength": 231367,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.291",
+        "contentDigest": "b405fa5893e04dc6f8e064ff0d5b4505f82a5bcc612df6c082c25d1aacdff62e",
+        "byteLength": 234797,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.292",
+        "contentDigest": "4d0aca7a1938fcd758b1e77e25bdd257469a5eaff31bbdf5842c2424efdf2fea",
+        "byteLength": 224933,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.293",
+        "contentDigest": "98cbe905cff4f2f900da446d36ade8349b6654070e0d811a7981230feaaa9f41",
+        "byteLength": 275956,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.295",
+        "contentDigest": "e6b2ad953de4bd4b36fc4242cc86ff636fa3541f67a3c40e9df2fdc78cccfb1f",
+        "byteLength": 88501,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.296",
+        "contentDigest": "75c2f3b048cf7e05dd0d37acf61e7f0aa561e27508c63728395391649899a721",
+        "byteLength": 421951,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.297",
+        "contentDigest": "ba4c8a1ed21bb5e73d17c335a459631a811bdf9037019e6663469bbece39b5f1",
+        "byteLength": 253928,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.305",
+        "contentDigest": "185fca6f49c1f9dd10288e34e0115912e02ef2be48f418bb0c7d5a7565f06cb1",
+        "byteLength": 18602,
         "sourceSchemaVersion": 1
       },
       {
@@ -924,9 +1190,30 @@
       },
       {
         "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.399",
+        "contentDigest": "6452156c4da7d095ee3abf94d82ff8213eec8ed7f34220b615d1a9c65d6f6a94",
+        "byteLength": 290653,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.400",
+        "contentDigest": "cdc057a7bdcf50b02b8bcfa75b26c0c3ebe95b4ba69ab9abbd3ea3c467ff86e6",
+        "byteLength": 40810,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
         "sourcePath": "arena2/TEXTURE.401",
         "contentDigest": "ed01c0564fe92a4707f14dd47e46ae12bc008c19efc85bf6e4ac597f19cde89e",
         "byteLength": 40506,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.405",
+        "contentDigest": "bcc3b09e845ff6c5cdeceb578eb1d3d6dbd35e3041ea17c5bdf2df442397c48a",
+        "byteLength": 23002,
         "sourceSchemaVersion": 1
       },
       {
@@ -952,6 +1239,27 @@
       },
       {
         "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.476",
+        "contentDigest": "2fd1e27994cb6073826694dfdc9922d6b27bca1dd6fc0a535dec45ecd108f203",
+        "byteLength": 423348,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.478",
+        "contentDigest": "f8b0b4103e18d110ec72f4b762266bc32ce43a438df3626f6f2940d3335a3119",
+        "byteLength": 381401,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.480",
+        "contentDigest": "f22572fd376a33f418ed1865846a9e7666adaa9c35cda6e926e764cc25838173",
+        "byteLength": 344037,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
         "sourcePath": "arena2/TEXTURE.482",
         "contentDigest": "01651358a870c7f97c58bcb88354c2db7c58efeacfd21487439822f00416ba08",
         "byteLength": 355018,
@@ -962,6 +1270,27 @@
         "sourcePath": "arena2/TEXTURE.484",
         "contentDigest": "32c3c0e4f78792041c78d6555753cba819a593336bbc91771c6b90dccbd166c7",
         "byteLength": 327366,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.486",
+        "contentDigest": "0d94b2fcde6f3d9003a27559d755cdced21a50cb8df5353c723de4d331839f58",
+        "byteLength": 437984,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.488",
+        "contentDigest": "f9df038100494f4ac8f90af99d6fdf05b385a7cfe639778cccd016b76ac6eb36",
+        "byteLength": 365829,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/TEXTURE.490",
+        "contentDigest": "680caed0e59d03b05567fa20ff5df8015f2a0c3f5ea009cfb5e8c71fb3737696",
+        "byteLength": 438653,
         "sourceSchemaVersion": 1
       },
       {
@@ -417466,6 +417795,1521 @@
     },
     "lights": [
       {
+        "id": "light-flat/b0000003-rdb/1/0/10",
+        "position": {
+          "x": 55.4,
+          "y": 15.400001,
+          "z": -36.2
+        },
+        "range": 5,
+        "intensity": 0.5,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000003-rdb/1/0/11",
+        "position": {
+          "x": 64,
+          "y": 34.65,
+          "z": -48
+        },
+        "range": 12,
+        "intensity": 1.1,
+        "color": {
+          "x": 0.93,
+          "y": 0.84,
+          "z": 0.49
+        }
+      },
+      {
+        "id": "light-flat/b0000003-rdb/1/0/12",
+        "position": {
+          "x": 75.8,
+          "y": 25.05,
+          "z": -28.800001
+        },
+        "range": 12,
+        "intensity": 1.1,
+        "color": {
+          "x": 0.93,
+          "y": 0.84,
+          "z": 0.49
+        }
+      },
+      {
+        "id": "light-flat/b0000003-rdb/1/0/13",
+        "position": {
+          "x": 73.4,
+          "y": 18.65,
+          "z": -48
+        },
+        "range": 12,
+        "intensity": 1.1,
+        "color": {
+          "x": 0.93,
+          "y": 0.84,
+          "z": 0.49
+        }
+      },
+      {
+        "id": "light-flat/b0000003-rdb/1/0/14",
+        "position": {
+          "x": 80,
+          "y": 31.45,
+          "z": -43.4
+        },
+        "range": 12,
+        "intensity": 1.1,
+        "color": {
+          "x": 0.93,
+          "y": 0.84,
+          "z": 0.49
+        }
+      },
+      {
+        "id": "light-flat/b0000003-rdb/1/0/15",
+        "position": {
+          "x": 87,
+          "y": 15.45,
+          "z": -48
+        },
+        "range": 12,
+        "intensity": 1.1,
+        "color": {
+          "x": 0.93,
+          "y": 0.84,
+          "z": 0.49
+        }
+      },
+      {
+        "id": "light-flat/b0000003-rdb/1/0/2",
+        "position": {
+          "x": 54.4,
+          "y": 34.6,
+          "z": -17
+        },
+        "range": 5,
+        "intensity": 0.5,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000003-rdb/1/0/4",
+        "position": {
+          "x": 99.2,
+          "y": 34,
+          "z": -8
+        },
+        "range": 5,
+        "intensity": 0.5,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000003-rdb/1/0/5",
+        "position": {
+          "x": 85.600006,
+          "y": 41,
+          "z": -3.2
+        },
+        "range": 5,
+        "intensity": 0.5,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000003-rdb/1/0/8",
+        "position": {
+          "x": 55.8,
+          "y": 21.800001,
+          "z": -34.8
+        },
+        "range": 5,
+        "intensity": 0.5,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000003-rdb/1/0/9",
+        "position": {
+          "x": 67,
+          "y": 15.400001,
+          "z": -30.4
+        },
+        "range": 5,
+        "intensity": 0.5,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000006-rdb/0/-1/1",
+        "position": {
+          "x": 3.2,
+          "y": 34.6,
+          "z": 34.2
+        },
+        "range": 5,
+        "intensity": 0.5,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000006-rdb/0/-1/11",
+        "position": {
+          "x": 35.8,
+          "y": 15.45,
+          "z": 3.2000008
+        },
+        "range": 12,
+        "intensity": 1.1,
+        "color": {
+          "x": 0.93,
+          "y": 0.84,
+          "z": 0.49
+        }
+      },
+      {
+        "id": "light-flat/b0000006-rdb/0/-1/3",
+        "position": {
+          "x": 34.4,
+          "y": 41,
+          "z": 48
+        },
+        "range": 5,
+        "intensity": 0.5,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000006-rdb/0/-1/6",
+        "position": {
+          "x": 4.6,
+          "y": 21.800001,
+          "z": 16.400002
+        },
+        "range": 5,
+        "intensity": 0.5,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000006-rdb/0/-1/7",
+        "position": {
+          "x": 15.8,
+          "y": 15.400001,
+          "z": 20.800001
+        },
+        "range": 5,
+        "intensity": 0.5,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000006-rdb/0/-1/8",
+        "position": {
+          "x": 4.2000003,
+          "y": 15.400001,
+          "z": 15
+        },
+        "range": 5,
+        "intensity": 0.5,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000006-rdb/0/-1/9",
+        "position": {
+          "x": 12.8,
+          "y": 34.65,
+          "z": 3.2000008
+        },
+        "range": 12,
+        "intensity": 1.1,
+        "color": {
+          "x": 0.93,
+          "y": 0.84,
+          "z": 0.49
+        }
+      },
+      {
+        "id": "light-flat/b0000009-rdb/-1/0/1",
+        "position": {
+          "x": -29.6,
+          "y": 34.6,
+          "z": -3.2
+        },
+        "range": 5,
+        "intensity": 0.5,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000009-rdb/-1/0/2",
+        "position": {
+          "x": -48,
+          "y": 34.6,
+          "z": -17
+        },
+        "range": 5,
+        "intensity": 0.5,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000009-rdb/-1/0/4",
+        "position": {
+          "x": -47,
+          "y": 15.400001,
+          "z": -36.2
+        },
+        "range": 5,
+        "intensity": 0.5,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000009-rdb/-1/0/5",
+        "position": {
+          "x": -34.800003,
+          "y": 34.65,
+          "z": -48
+        },
+        "range": 12,
+        "intensity": 1.1,
+        "color": {
+          "x": 0.93,
+          "y": 0.84,
+          "z": 0.49
+        }
+      },
+      {
+        "id": "light-flat/b0000009-rdb/-1/0/7",
+        "position": {
+          "x": -15.400002,
+          "y": 15.45,
+          "z": -48
+        },
+        "range": 12,
+        "intensity": 1.1,
+        "color": {
+          "x": 0.93,
+          "y": 0.84,
+          "z": 0.49
+        }
+      },
+      {
+        "id": "light-flat/b0000012-rdb/0/1/1",
+        "position": {
+          "x": 3.4,
+          "y": 33.600002,
+          "z": -68.4
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000012-rdb/0/1/10",
+        "position": {
+          "x": 2,
+          "y": 21,
+          "z": -92.4
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000012-rdb/0/1/11",
+        "position": {
+          "x": 21.2,
+          "y": 14,
+          "z": -76.8
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000012-rdb/0/1/12",
+        "position": {
+          "x": 24.2,
+          "y": 14,
+          "z": -76.8
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000012-rdb/0/1/13",
+        "position": {
+          "x": 3.2,
+          "y": 14.8,
+          "z": -87.600006
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000012-rdb/0/1/16",
+        "position": {
+          "x": 27.800001,
+          "y": 14.6,
+          "z": -100.4
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000012-rdb/0/1/2",
+        "position": {
+          "x": 3.4,
+          "y": 33.600002,
+          "z": -66
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000012-rdb/0/1/3",
+        "position": {
+          "x": 21.2,
+          "y": 14,
+          "z": -73.8
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000012-rdb/0/1/4",
+        "position": {
+          "x": 24.2,
+          "y": 14,
+          "z": -73.8
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000012-rdb/0/1/5",
+        "position": {
+          "x": 7,
+          "y": 14.8,
+          "z": -75.6
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000012-rdb/0/1/6",
+        "position": {
+          "x": 43.2,
+          "y": 14.6,
+          "z": -74.875
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/b0000012-rdb/0/1/8",
+        "position": {
+          "x": 16,
+          "y": 34.7,
+          "z": -101.2
+        },
+        "range": 10,
+        "intensity": 1.5,
+        "color": {
+          "x": 1,
+          "y": 0.95,
+          "z": 0.78
+        }
+      },
+      {
+        "id": "light-flat/b0000012-rdb/0/1/9",
+        "position": {
+          "x": 15.325,
+          "y": 27.4,
+          "z": -87.875
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/0",
+        "position": {
+          "x": 15.675,
+          "y": 15.25,
+          "z": -6.25
+        },
+        "range": 12,
+        "intensity": 1.1,
+        "color": {
+          "x": 0.93,
+          "y": 0.84,
+          "z": 0.49
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/10",
+        "position": {
+          "x": 3.3500001,
+          "y": 8.45,
+          "z": -22.050001
+        },
+        "range": 10,
+        "intensity": 0.8,
+        "color": {
+          "x": 1,
+          "y": 0.97,
+          "z": 0.87
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/100",
+        "position": {
+          "x": 16.15,
+          "y": 0.675,
+          "z": -42.15
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/108",
+        "position": {
+          "x": 35.475002,
+          "y": 45.475002,
+          "z": -30.675001
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/109",
+        "position": {
+          "x": 36.4,
+          "y": 14.6,
+          "z": -37.175
+        },
+        "range": 15,
+        "intensity": 0.75,
+        "color": {
+          "x": 1,
+          "y": 0.93,
+          "z": 0.62
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/11",
+        "position": {
+          "x": 16,
+          "y": 8.1,
+          "z": -17.125
+        },
+        "range": 12,
+        "intensity": 0.75,
+        "color": {
+          "x": 1,
+          "y": 0.92,
+          "z": 0.72
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/110",
+        "position": {
+          "x": 36.4,
+          "y": 14.6,
+          "z": -33.100002
+        },
+        "range": 15,
+        "intensity": 0.75,
+        "color": {
+          "x": 1,
+          "y": 0.93,
+          "z": 0.62
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/111",
+        "position": {
+          "x": 34.65,
+          "y": 8.525,
+          "z": -35.65
+        },
+        "range": 12,
+        "intensity": 1.1,
+        "color": {
+          "x": 0.93,
+          "y": 0.84,
+          "z": 0.49
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/112",
+        "position": {
+          "x": 48.350002,
+          "y": 14.575001,
+          "z": -34.325
+        },
+        "range": 12,
+        "intensity": 0.75,
+        "color": {
+          "x": 1,
+          "y": 0.92,
+          "z": 0.72
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/113",
+        "position": {
+          "x": 36.05,
+          "y": 14.525001,
+          "z": -48.725002
+        },
+        "range": 12,
+        "intensity": 0.75,
+        "color": {
+          "x": 1,
+          "y": 0.92,
+          "z": 0.72
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/114",
+        "position": {
+          "x": 38.025,
+          "y": 1.8000001,
+          "z": -35.2
+        },
+        "range": 10,
+        "intensity": 0.8,
+        "color": {
+          "x": 1,
+          "y": 0.97,
+          "z": 0.87
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/123",
+        "position": {
+          "x": 38.8,
+          "y": 27.400002,
+          "z": -37.5
+        },
+        "range": 15,
+        "intensity": 0.75,
+        "color": {
+          "x": 1,
+          "y": 0.93,
+          "z": 0.62
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/124",
+        "position": {
+          "x": 38.8,
+          "y": 27.400002,
+          "z": -35.9
+        },
+        "range": 15,
+        "intensity": 0.75,
+        "color": {
+          "x": 1,
+          "y": 0.93,
+          "z": 0.62
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/125",
+        "position": {
+          "x": 38.8,
+          "y": 27.400002,
+          "z": -34.3
+        },
+        "range": 15,
+        "intensity": 0.75,
+        "color": {
+          "x": 1,
+          "y": 0.93,
+          "z": 0.62
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/126",
+        "position": {
+          "x": 36.025,
+          "y": 46,
+          "z": -44.825
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/127",
+        "position": {
+          "x": 36.025,
+          "y": 46,
+          "z": -40.425
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/130",
+        "position": {
+          "x": 42.575,
+          "y": 27.400002,
+          "z": -49.2
+        },
+        "range": 15,
+        "intensity": 0.75,
+        "color": {
+          "x": 1,
+          "y": 0.93,
+          "z": 0.62
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/131",
+        "position": {
+          "x": 49.225002,
+          "y": 8.000001,
+          "z": -42.8
+        },
+        "range": 5,
+        "intensity": 0.5,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/20",
+        "position": {
+          "x": 9.425,
+          "y": 18.35,
+          "z": -13.3
+        },
+        "range": 10,
+        "intensity": 0.8,
+        "color": {
+          "x": 1,
+          "y": 0.97,
+          "z": 0.87
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/21",
+        "position": {
+          "x": 6.6,
+          "y": 18.35,
+          "z": -16.225
+        },
+        "range": 10,
+        "intensity": 0.8,
+        "color": {
+          "x": 1,
+          "y": 0.97,
+          "z": 0.87
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/24",
+        "position": {
+          "x": 13.650001,
+          "y": 34.225002,
+          "z": -25.45
+        },
+        "range": 15,
+        "intensity": 0.65,
+        "color": {
+          "x": 1,
+          "y": 0.92,
+          "z": 0.6
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/25",
+        "position": {
+          "x": 2.3,
+          "y": 34.45,
+          "z": -0.45000002
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/26",
+        "position": {
+          "x": 0.375,
+          "y": 34.5,
+          "z": -2.5
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/27",
+        "position": {
+          "x": 2.175,
+          "y": 47.15,
+          "z": -8.675
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/28",
+        "position": {
+          "x": 10.575,
+          "y": 48.7,
+          "z": -19
+        },
+        "range": 3.3333333,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/29",
+        "position": {
+          "x": 13.675,
+          "y": 48.7,
+          "z": -18.775
+        },
+        "range": 3.3333333,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/30",
+        "position": {
+          "x": 15.275001,
+          "y": 48.7,
+          "z": -16.1
+        },
+        "range": 3.3333333,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/31",
+        "position": {
+          "x": 18.25,
+          "y": 48.7,
+          "z": -17.050001
+        },
+        "range": 3.3333333,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/32",
+        "position": {
+          "x": 12.150001,
+          "y": 48.7,
+          "z": -17.575
+        },
+        "range": 3.3333333,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/33",
+        "position": {
+          "x": 16.800001,
+          "y": 48.675,
+          "z": -17.925001
+        },
+        "range": 3.3333333,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/34",
+        "position": {
+          "x": 1.6750001,
+          "y": 32.95,
+          "z": -24.2
+        },
+        "range": 5,
+        "intensity": 0.5,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/36",
+        "position": {
+          "x": 26.15,
+          "y": 33.774998,
+          "z": -1.95
+        },
+        "range": 15,
+        "intensity": 0.75,
+        "color": {
+          "x": 1,
+          "y": 0.93,
+          "z": 0.62
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/38",
+        "position": {
+          "x": 42.575,
+          "y": 27.400002,
+          "z": -2.125
+        },
+        "range": 15,
+        "intensity": 0.75,
+        "color": {
+          "x": 1,
+          "y": 0.93,
+          "z": 0.62
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/53",
+        "position": {
+          "x": 36.25,
+          "y": 14.6,
+          "z": -14.150001
+        },
+        "range": 15,
+        "intensity": 0.75,
+        "color": {
+          "x": 1,
+          "y": 0.93,
+          "z": 0.62
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/54",
+        "position": {
+          "x": 36.25,
+          "y": 14.6,
+          "z": -18.225
+        },
+        "range": 15,
+        "intensity": 0.75,
+        "color": {
+          "x": 1,
+          "y": 0.93,
+          "z": 0.62
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/55",
+        "position": {
+          "x": 49.375,
+          "y": 8.4,
+          "z": -8.275001
+        },
+        "range": 10,
+        "intensity": 0.8,
+        "color": {
+          "x": 1,
+          "y": 0.97,
+          "z": 0.87
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/56",
+        "position": {
+          "x": 31.6,
+          "y": 1.8000001,
+          "z": -16.125
+        },
+        "range": 10,
+        "intensity": 0.8,
+        "color": {
+          "x": 1,
+          "y": 0.97,
+          "z": 0.87
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/59",
+        "position": {
+          "x": 38.8,
+          "y": 27.400002,
+          "z": -15.2
+        },
+        "range": 15,
+        "intensity": 0.75,
+        "color": {
+          "x": 1,
+          "y": 0.93,
+          "z": 0.62
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/60",
+        "position": {
+          "x": 38.8,
+          "y": 27.400002,
+          "z": -13.6
+        },
+        "range": 15,
+        "intensity": 0.75,
+        "color": {
+          "x": 1,
+          "y": 0.93,
+          "z": 0.62
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/61",
+        "position": {
+          "x": 38.8,
+          "y": 27.400002,
+          "z": -16.800001
+        },
+        "range": 15,
+        "intensity": 0.75,
+        "color": {
+          "x": 1,
+          "y": 0.93,
+          "z": 0.62
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/62",
+        "position": {
+          "x": 48.45,
+          "y": 43.35,
+          "z": -8.625
+        },
+        "range": 12,
+        "intensity": 0.75,
+        "color": {
+          "x": 1,
+          "y": 0.92,
+          "z": 0.72
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/63",
+        "position": {
+          "x": 46.600002,
+          "y": 33.7,
+          "z": -16.15
+        },
+        "range": 12,
+        "intensity": 0.75,
+        "color": {
+          "x": 1,
+          "y": 0.92,
+          "z": 0.72
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/64",
+        "position": {
+          "x": 35.675,
+          "y": 7.4,
+          "z": -15.675
+        },
+        "range": 3.3333333,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/65",
+        "position": {
+          "x": 33.825,
+          "y": 7.4,
+          "z": -15.725
+        },
+        "range": 3.3333333,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/66",
+        "position": {
+          "x": 37.175,
+          "y": 46.75,
+          "z": -16.025
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 0.68,
+          "y": 1,
+          "z": 0.94
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/67",
+        "position": {
+          "x": 38.925,
+          "y": 38.9,
+          "z": -12.125
+        },
+        "range": 20,
+        "intensity": 1.1,
+        "color": {
+          "x": 0.95,
+          "y": 0.91,
+          "z": 0.63
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/68",
+        "position": {
+          "x": 35.2,
+          "y": 13.375,
+          "z": -6.8
+        },
+        "range": 20,
+        "intensity": 1.1,
+        "color": {
+          "x": 0.95,
+          "y": 0.91,
+          "z": 0.63
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/69",
+        "position": {
+          "x": 42.4,
+          "y": 13.400001,
+          "z": -15.8
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/76",
+        "position": {
+          "x": 24.2,
+          "y": 24,
+          "z": -32.425
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/8",
+        "position": {
+          "x": 14.575,
+          "y": 40.600002,
+          "z": -19.225
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/80",
+        "position": {
+          "x": 21.075,
+          "y": 8.475,
+          "z": -31.375
+        },
+        "range": 10,
+        "intensity": 0.8,
+        "color": {
+          "x": 1,
+          "y": 0.97,
+          "z": 0.87
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/81",
+        "position": {
+          "x": 9.725,
+          "y": 18.325,
+          "z": -37.975002
+        },
+        "range": 10,
+        "intensity": 0.8,
+        "color": {
+          "x": 1,
+          "y": 0.97,
+          "z": 0.87
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/82",
+        "position": {
+          "x": 6.625,
+          "y": 18.35,
+          "z": -35.225002
+        },
+        "range": 10,
+        "intensity": 0.8,
+        "color": {
+          "x": 1,
+          "y": 0.97,
+          "z": 0.87
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/83",
+        "position": {
+          "x": 13.025001,
+          "y": 21.025002,
+          "z": -42.825
+        },
+        "range": 10,
+        "intensity": 0.8,
+        "color": {
+          "x": 1,
+          "y": 0.97,
+          "z": 0.87
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/88",
+        "position": {
+          "x": 10.2,
+          "y": 26.225,
+          "z": -44.675
+        },
+        "range": 20,
+        "intensity": 1.1,
+        "color": {
+          "x": 0.95,
+          "y": 0.91,
+          "z": 0.63
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/89",
+        "position": {
+          "x": 2.6000001,
+          "y": 46.9,
+          "z": -29.9
+        },
+        "range": 12,
+        "intensity": 1.1,
+        "color": {
+          "x": 0.93,
+          "y": 0.84,
+          "z": 0.49
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/9",
+        "position": {
+          "x": 23.800001,
+          "y": 24,
+          "z": -18.7
+        },
+        "range": 10,
+        "intensity": 1,
+        "color": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/92",
+        "position": {
+          "x": 22,
+          "y": 30.775002,
+          "z": -48.425
+        },
+        "range": 3.3333333,
+        "intensity": 0.6,
+        "color": {
+          "x": 1,
+          "y": 0.99,
+          "z": 0.82
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/93",
+        "position": {
+          "x": 19.9,
+          "y": 32.5,
+          "z": -46.625
+        },
+        "range": 3.3333333,
+        "intensity": 0.6,
+        "color": {
+          "x": 1,
+          "y": 0.99,
+          "z": 0.82
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/94",
+        "position": {
+          "x": 19.95,
+          "y": 32.524998,
+          "z": -47.825
+        },
+        "range": 3.3333333,
+        "intensity": 0.6,
+        "color": {
+          "x": 1,
+          "y": 0.99,
+          "z": 0.82
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/95",
+        "position": {
+          "x": 18.9,
+          "y": 32.524998,
+          "z": -45.975002
+        },
+        "range": 3.3333333,
+        "intensity": 0.6,
+        "color": {
+          "x": 1,
+          "y": 0.99,
+          "z": 0.82
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/96",
+        "position": {
+          "x": 17.875,
+          "y": 32.5,
+          "z": -46.075
+        },
+        "range": 3.3333333,
+        "intensity": 0.6,
+        "color": {
+          "x": 1,
+          "y": 0.99,
+          "z": 0.82
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/97",
+        "position": {
+          "x": 18.95,
+          "y": 32.524998,
+          "z": -48.65
+        },
+        "range": 3.3333333,
+        "intensity": 0.6,
+        "color": {
+          "x": 1,
+          "y": 0.99,
+          "z": 0.82
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/98",
+        "position": {
+          "x": 17.825,
+          "y": 32.5,
+          "z": -48.475002
+        },
+        "range": 3.3333333,
+        "intensity": 0.6,
+        "color": {
+          "x": 1,
+          "y": 0.99,
+          "z": 0.82
+        }
+      },
+      {
+        "id": "light-flat/s0000999-rdb/0/0/99",
+        "position": {
+          "x": 17.35,
+          "y": 32.5,
+          "z": -47.25
+        },
+        "range": 3.3333333,
+        "intensity": 0.6,
+        "color": {
+          "x": 1,
+          "y": 0.99,
+          "z": 0.82
+        }
+      },
+      {
         "id": "light/b0000003-rdb/1/0/0",
         "position": {
           "x": 54.4,
@@ -417473,7 +419317,8 @@
           "z": -17.2
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000003-rdb/1/0/1",
@@ -417483,7 +419328,8 @@
           "z": -8
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000003-rdb/1/0/10",
@@ -417493,7 +419339,8 @@
           "z": -48
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000003-rdb/1/0/2",
@@ -417503,7 +419350,8 @@
           "z": -3.2
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000003-rdb/1/0/3",
@@ -417513,7 +419361,8 @@
           "z": -34.8
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000003-rdb/1/0/4",
@@ -417523,7 +419372,8 @@
           "z": -30.4
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000003-rdb/1/0/5",
@@ -417533,7 +419383,8 @@
           "z": -36
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000003-rdb/1/0/6",
@@ -417543,7 +419394,8 @@
           "z": -48
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000003-rdb/1/0/7",
@@ -417553,7 +419405,8 @@
           "z": -28.800001
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000003-rdb/1/0/8",
@@ -417563,7 +419416,8 @@
           "z": -48
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000003-rdb/1/0/9",
@@ -417573,7 +419427,8 @@
           "z": -43.600002
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000006-rdb/0/-1/0",
@@ -417583,7 +419438,8 @@
           "z": 34
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000006-rdb/0/-1/1",
@@ -417593,7 +419449,8 @@
           "z": 48
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000006-rdb/0/-1/2",
@@ -417603,7 +419460,8 @@
           "z": 16.400002
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000006-rdb/0/-1/3",
@@ -417613,7 +419471,8 @@
           "z": 20.800001
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000006-rdb/0/-1/4",
@@ -417623,7 +419482,8 @@
           "z": 15.200001
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000006-rdb/0/-1/5",
@@ -417633,7 +419493,8 @@
           "z": 3.2000008
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000006-rdb/0/-1/6",
@@ -417643,7 +419504,8 @@
           "z": 3.2000008
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000009-rdb/-1/0/0",
@@ -417653,7 +419515,8 @@
           "z": -3.2
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000009-rdb/-1/0/1",
@@ -417663,7 +419526,8 @@
           "z": -17.2
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000009-rdb/-1/0/2",
@@ -417673,7 +419537,8 @@
           "z": -36
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000009-rdb/-1/0/3",
@@ -417683,7 +419548,8 @@
           "z": -48
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000009-rdb/-1/0/4",
@@ -417693,7 +419559,8 @@
           "z": -48
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000012-rdb/0/1/0",
@@ -417703,7 +419570,8 @@
           "z": -67.2
         },
         "range": 6.75,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000012-rdb/0/1/1",
@@ -417713,7 +419581,8 @@
           "z": -75.2
         },
         "range": 15,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000012-rdb/0/1/2",
@@ -417723,7 +419592,8 @@
           "z": -76
         },
         "range": 3.75,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000012-rdb/0/1/3",
@@ -417733,7 +419603,8 @@
           "z": -74.4
         },
         "range": 3.75,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000012-rdb/0/1/4",
@@ -417743,7 +419614,8 @@
           "z": -101.2
         },
         "range": 4.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000012-rdb/0/1/5",
@@ -417753,7 +419625,8 @@
           "z": -88
         },
         "range": 4.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000012-rdb/0/1/6",
@@ -417763,7 +419636,8 @@
           "z": -92.4
         },
         "range": 3.75,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000012-rdb/0/1/7",
@@ -417773,7 +419647,8 @@
           "z": -87.2
         },
         "range": 3,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/b0000012-rdb/0/1/8",
@@ -417783,7 +419658,8 @@
           "z": -99.600006
         },
         "range": 3,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/0",
@@ -417793,7 +419669,8 @@
           "z": -19.325
         },
         "range": 5.625,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/1",
@@ -417803,7 +419680,8 @@
           "z": -18.775
         },
         "range": 3.75,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/10",
@@ -417813,7 +419691,8 @@
           "z": -14.95
         },
         "range": 6.75,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/11",
@@ -417823,7 +419702,8 @@
           "z": -8.675
         },
         "range": 6.75,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/12",
@@ -417833,7 +419713,8 @@
           "z": -16.125
         },
         "range": 6,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/13",
@@ -417843,7 +419724,8 @@
           "z": -8.575
         },
         "range": 5.625,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/14",
@@ -417853,7 +419735,8 @@
           "z": -16.2
         },
         "range": 5.625,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/15",
@@ -417863,7 +419746,8 @@
           "z": -15.625
         },
         "range": 6,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/16",
@@ -417873,7 +419757,8 @@
           "z": -16.075
         },
         "range": 5.625,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/17",
@@ -417883,7 +419768,8 @@
           "z": -12.85
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/18",
@@ -417893,7 +419779,8 @@
           "z": -6.525
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/19",
@@ -417903,7 +419790,8 @@
           "z": -2.25
         },
         "range": 6.375,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/2",
@@ -417913,7 +419801,8 @@
           "z": -14.825
         },
         "range": 6.75,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/20",
@@ -417923,7 +419812,8 @@
           "z": -14.8
         },
         "range": 6,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/21",
@@ -417933,7 +419823,8 @@
           "z": -32.425
         },
         "range": 3.75,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/22",
@@ -417943,7 +419834,8 @@
           "z": -36.95
         },
         "range": 6.75,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/23",
@@ -417953,7 +419845,8 @@
           "z": -31.75
         },
         "range": 5.625,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/24",
@@ -417963,7 +419856,8 @@
           "z": -43.025
         },
         "range": 6.75,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/25",
@@ -417973,7 +419867,8 @@
           "z": -25.7
         },
         "range": 3.75,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/26",
@@ -417983,7 +419878,8 @@
           "z": -44.65
         },
         "range": 6.75,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/27",
@@ -417993,7 +419889,8 @@
           "z": -29.9
         },
         "range": 6.375,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/28",
@@ -418003,7 +419900,8 @@
           "z": -47.2
         },
         "range": 6.75,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/29",
@@ -418013,7 +419911,8 @@
           "z": -42.125
         },
         "range": 8.25,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/3",
@@ -418023,7 +419922,8 @@
           "z": -21.75
         },
         "range": 6,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/30",
@@ -418033,7 +419933,8 @@
           "z": -36.2
         },
         "range": 6.75,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/31",
@@ -418043,7 +419944,8 @@
           "z": -30.550001
         },
         "range": 7.5,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/32",
@@ -418053,7 +419955,8 @@
           "z": -35.65
         },
         "range": 5.625,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/33",
@@ -418063,7 +419966,8 @@
           "z": -34.325
         },
         "range": 5.25,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/34",
@@ -418073,7 +419977,8 @@
           "z": -48.725002
         },
         "range": 5.25,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/35",
@@ -418083,7 +419988,8 @@
           "z": -35.2
         },
         "range": 5.25,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/36",
@@ -418093,7 +419999,8 @@
           "z": -42.5
         },
         "range": 6.75,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/37",
@@ -418103,7 +420010,8 @@
           "z": -49.125
         },
         "range": 6,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/38",
@@ -418113,7 +420021,8 @@
           "z": -42.3
         },
         "range": 6,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/4",
@@ -418123,7 +420032,8 @@
           "z": -1.4
         },
         "range": 7.125,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/5",
@@ -418133,7 +420043,8 @@
           "z": -17.15
         },
         "range": 5.625,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/6",
@@ -418143,7 +420054,8 @@
           "z": -17.6
         },
         "range": 8.25,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/7",
@@ -418153,7 +420065,8 @@
           "z": -24.125
         },
         "range": 5.625,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/8",
@@ -418163,7 +420076,8 @@
           "z": -6.2000003
         },
         "range": 8.25,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       },
       {
         "id": "light/s0000999-rdb/0/0/9",
@@ -418173,7 +420087,8 @@
           "z": -2
         },
         "range": 6.375,
-        "intensity": 1
+        "intensity": 1,
+        "color": null
       }
     ],
     "billboards": [

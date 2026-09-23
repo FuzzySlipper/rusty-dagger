@@ -64,6 +64,19 @@ export type InventoryAction = {
   readonly item: string;
   readonly targetGrid?: number;
   readonly targetEquipment?: string;
+} | {
+  readonly action: 'inventory-drop';
+  readonly revision: string;
+  readonly item: string;
+  readonly amount: number;
+} | {
+  readonly action: 'inventory-inspect';
+  readonly revision: string;
+  readonly item: string;
+} | {
+  readonly action: 'inventory-use';
+  readonly revision: string;
+  readonly item: string;
 };
 
 type MoveSource = { readonly key: string; readonly revision: string };
@@ -259,6 +272,14 @@ export function mountInventory(
       move(selected, { grid: Number(details.gridTarget.value) });
     } else if (button.dataset.inventoryAction === 'move-equipment' && details.equipmentTarget.value) {
       move(selected, { equipment: details.equipmentTarget.value });
+    } else if (button.dataset.inventoryAction === 'drop') {
+      const quantity = Number(details.dropQuantity.value);
+      if (Number.isSafeInteger(quantity) && quantity > 0)
+        claim({ action: 'inventory-drop', revision: selected.revision, item: selected.key, amount: quantity });
+    } else if (button.dataset.inventoryAction === 'inspect') {
+      claim({ action: 'inventory-inspect', revision: selected.revision, item: selected.key });
+    } else if (button.dataset.inventoryAction === 'use') {
+      claim({ action: 'inventory-use', revision: selected.revision, item: selected.key });
     }
   };
 
@@ -333,6 +354,9 @@ function createDetails(): {
   readonly element: HTMLElement;
   readonly gridTarget: HTMLSelectElement;
   readonly equipmentTarget: HTMLSelectElement;
+  readonly dropQuantity: HTMLInputElement;
+  readonly inspect: HTMLButtonElement;
+  readonly use: HTMLButtonElement;
   render(item: InventoryItem | undefined, slots: readonly EquipmentSlot[]): void;
 } {
   const element = document.createElement('section');
@@ -356,13 +380,34 @@ function createDetails(): {
   moveEquipment.type = 'button';
   moveEquipment.dataset.inventoryAction = 'move-equipment';
   moveEquipment.textContent = 'Equip in slot';
-  actions.append(gridTarget, moveGrid, equipmentTarget, moveEquipment);
+  const dropQuantity = document.createElement('input');
+  dropQuantity.type = 'number';
+  dropQuantity.min = '1';
+  dropQuantity.step = '1';
+  dropQuantity.value = '1';
+  dropQuantity.setAttribute('aria-label', 'Drop quantity');
+  const drop = document.createElement('button');
+  drop.type = 'button';
+  drop.dataset.inventoryAction = 'drop';
+  drop.textContent = 'Drop on ground';
+  const inspect = document.createElement('button');
+  inspect.type = 'button';
+  inspect.dataset.inventoryAction = 'inspect';
+  inspect.textContent = 'Inspect';
+  const use = document.createElement('button');
+  use.type = 'button';
+  use.dataset.inventoryAction = 'use';
+  use.textContent = 'Use';
+  actions.append(gridTarget, moveGrid, equipmentTarget, moveEquipment, dropQuantity, drop, inspect, use);
   element.append(heading, name, description, metadata, actions);
 
   return {
     element,
     gridTarget,
     equipmentTarget,
+    dropQuantity,
+    inspect,
+    use,
     render(item, slots): void {
       name.textContent = item?.label ?? 'Select an item';
       description.textContent = item?.details ?? 'Choose an item, then choose a pack or equipment destination.';
@@ -380,6 +425,14 @@ function createDetails(): {
       gridTarget.disabled = item === undefined;
       equipmentTarget.disabled = item === undefined || equipmentTarget.options.length === 0;
       moveEquipment.disabled = equipmentTarget.disabled;
+      dropQuantity.disabled = item === undefined;
+      drop.disabled = item === undefined;
+      inspect.disabled = item === undefined;
+      use.disabled = item === undefined;
+      if (item !== undefined) {
+        dropQuantity.max = item.quantity;
+        if (Number(dropQuantity.value) > Number(item.quantity)) dropQuantity.value = item.quantity;
+      }
     },
   };
 }

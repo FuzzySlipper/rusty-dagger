@@ -116,6 +116,62 @@ public static class MobileSourceMetadata
                 // The archer carries the same donor RangedAttack1Anims sequence as the thief.
                 links: new("C", "EnemyHumanMove", "EnemyHumanBark", "EnemyHumanAttack", ParrySounds: true, BloodIndex: 0, MapChance: 0),
                 rangedAttackFrames: RangedAttack([3, 2, 0, 0, 0, DamageBeatMarker, 1, 1, 2, 3])),
+            // EnemyBasics human mobiles 128-146 use their male texture as the source portrait
+            // for this non-gendered mobile publication. The individual archive, attack frames,
+            // loot link, parry flag, and map chance remain donor facts.
+            Human(128, "Mage", 486, MageAttack(), false, 3),
+            Human(129, "Spellsword", 476, SpellswordAttack(), true, 1),
+            Human(130, "Battlemage", 490, BattlemageAttack(), true, 2),
+            Human(131, "Sorcerer", 478, SorcererAttack(), false, 3),
+            Human(132, "Healer", 486, MageAttack(), false, 1),
+            Human(133, "Nightblade", 490, BattlemageAttack(), true, 1),
+            Human(134, "Bard", 484, HumanAttack(), true, 2),
+            Human(135, "Burglar", 484, HumanAttack(), true, 1),
+            Human(136, "Rogue", 480, HumanAttack(), true, 1),
+            Human(137, "Acrobat", 484, HumanAttack(), true, 0),
+            Human(139, "Assassin", 480, HumanAttack(), true, 0),
+            Human(140, "Monk", 488, HeavyHumanAttack(), true, 1),
+            Human(142, "Ranger", 482, ArcherAttack(), true, 1),
+            Human(143, "Barbarian", 488, HeavyHumanAttack(), true, 1),
+            Human(144, "Warrior", 488, HeavyHumanAttack(), true, 1),
+            Human(145, "Knight", 488, HeavyHumanAttack(), true, 1),
+            Human(146, "CityWatch", 399, CityWatchAttack(), true, 0, ranged: false),
+            CreateMobile(2, "Spriggan", 257, new(new(406), 3), Attack([0, 1, DamageBeatMarker, 2, 3, 3, 3]), animation: Arena2MobileAnimationSource.Ordinary, links: new("B", "EnemySprigganMove", "EnemySprigganBark", "EnemySprigganAttack", ParrySounds: false, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(5, "Sabertooth Tiger", 260, new(new(401), 3), Attack([0, 1, 2, DamageBeatMarker, 3, 4, 5]), animation: Arena2MobileAnimationSource.Ordinary, links: new(null, "EnemyTigerMove", "EnemyTigerBark", "EnemyTigerAttack", ParrySounds: false, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(6, "Spider", 261, new(new(401), 4), Attack([0, 1, DamageBeatMarker, 2, 3, 4, 5]), animation: Arena2MobileAnimationSource.Ordinary, links: new(null, "EnemySpiderMove", "EnemySpiderBark", "EnemySpiderAttack", ParrySounds: false, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(8, "Centaur", 263, new(new(406), 0), Attack([0, 1, 1, 1, 2, DamageBeatMarker, 3, 3, 4], Alternate(50, [0, 1, 1, 1, 2, DamageBeatMarker, 3, 3, 2, 1, 1, DamageBeatMarker, 2, 3, 3, 4])), animation: Arena2MobileAnimationSource.Ordinary, links: new("C", "EnemyCentaurMove", "EnemyCentaurBark", "EnemyCentaurAttack", ParrySounds: true, BloodIndex: 0, MapChance: 1)),
+            CreateMobile(9, "Werewolf", 264, new(new(96), 5), Attack([0, 1, DamageBeatMarker, 2, DamageBeatMarker, 2]), animation: new(Arena2MobileFrameGroup.Move), links: new(null, "EnemyWerewolfMove", "EnemyWerewolfBark", "EnemyWerewolfAttack", ParrySounds: false, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(10, "Nymph", 265, new(new(406), 2), Attack([0, 1, 2, 3, 4, DamageBeatMarker, 5]), animation: Arena2MobileAnimationSource.Ordinary, links: new("C", "EnemyNymphMove", "EnemyNymphBark", "EnemyNymphAttack", ParrySounds: false, BloodIndex: 0, MapChance: 1)),
+            CreateMobile(11, "Slaughterfish", 266, new(new(305), 1), Attack([0, DamageBeatMarker, 1, 2, 3, 4, DamageBeatMarker, 5, 0], Alternate(33, [0, 3, DamageBeatMarker, 5, 4, 3, 3, DamageBeatMarker, 5, 4, 3, DamageBeatMarker, 5, 0]), Alternate(33, [0, 3, DamageBeatMarker, 5, 0])), animation: new(Arena2MobileFrameGroup.Move), links: new(null, "EnemyEelMove", "EnemyEelBark", "EnemyEelAttack", ParrySounds: false, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(12, "Orc Sergeant", 267, new(new(96), 2), Attack([0, DamageBeatMarker, 1, 2, 3, 4, DamageBeatMarker, 5, 0], Alternate(50, [5, 4, 3, DamageBeatMarker, 2, 1, 0])), animation: Arena2MobileAnimationSource.Ordinary, links: new("A", "EnemyOrcSergeantMove", "EnemyOrcSergeantBark", "EnemyOrcSergeantAttack", ParrySounds: true, BloodIndex: 0, MapChance: 1)),
+            CreateMobile(13, "Harpy", 268, new(new(406), 4), Attack([0, 1, 2, DamageBeatMarker, 3]), animation: new(Arena2MobileFrameGroup.Move, MoveFramesPerSecond: 10F), links: new("D", "EnemyHarpyMove", "EnemyHarpyBark", "EnemyHarpyAttack", ParrySounds: false, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(14, "Wereboar", 269, new(new(96), 5), Attack([0, DamageBeatMarker, 1, 2, 2]), animation: new(Arena2MobileFrameGroup.Move), links: new(null, "EnemyWereboarMove", "EnemyWereboarBark", "EnemyWereboarAttack", ParrySounds: false, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(16, "Giant", 271, new(new(406), 1), Attack([0, 1, DamageBeatMarker, 2, 3, 4, DamageBeatMarker, 5]), animation: Arena2MobileAnimationSource.Ordinary, links: new("F", "EnemyGiantMove", "EnemyGiantBark", "EnemyGiantAttack", ParrySounds: false, BloodIndex: 0, MapChance: 1)),
+            CreateMobile(17, "Zombie", 272, new(new(306), 4), Attack([0, 1, 2, DamageBeatMarker, 3, 4], Alternate(50, [0, 2, DamageBeatMarker, 3, 4])), animation: Arena2MobileAnimationSource.Ordinary, links: new("G", "EnemyZombieMove", "EnemyZombieBark", "EnemyZombieAttack", ParrySounds: false, BloodIndex: 0, MapChance: 1)),
+            CreateMobile(18, "Ghost", 273, new(new(306), 0), Attack([0, 1, DamageBeatMarker, 2, 3]), animation: new(Arena2MobileFrameGroup.Move), links: new("I", "EnemyGhostMove", "EnemyGhostBark", "EnemyGhostAttack", ParrySounds: false, BloodIndex: 2, MapChance: 1)),
+            CreateMobile(19, "Mummy", 274, new(new(306), 5), Attack([0, 1, 2, DamageBeatMarker, 3, 4]), animation: Arena2MobileAnimationSource.Ordinary, links: new("E", "EnemyMummyMove", "EnemyMummyBark", "EnemyMummyAttack", ParrySounds: false, BloodIndex: 2, MapChance: 1)),
+            CreateMobile(20, "Giant Scorpion", 275, new(new(401), 5), Attack([0, 1, DamageBeatMarker, 3, 2, 1, 0]), animation: new(Arena2MobileFrameGroup.Move), links: new(null, "EnemyScorpionMove", "EnemyScorpionBark", "EnemyScorpionAttack", ParrySounds: false, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(21, "Orc Shaman", 276, new(new(96), 2), Attack([0, 1, DamageBeatMarker, 3, 2, 1, 0], Alternate(20, [0, DamageBeatMarker, 4, 5, 0]), Alternate(20, [0, 1, DamageBeatMarker, 3, 2, 1, 0, DamageBeatMarker, 4, 5, 0])), animation: Arena2MobileAnimationSource.Ordinary, links: new("U", "EnemyOrcShamanMove", "EnemyOrcShamanBark", "EnemyOrcShamanAttack", ParrySounds: true, BloodIndex: 0, MapChance: 3)),
+            CreateMobile(22, "Gargoyle", 277, new(new(96), 1), Attack([0, 2, 1, 2, 3, DamageBeatMarker, 4, 0]), animation: Arena2MobileAnimationSource.Ordinary, links: new(null, "EnemyGargoyleMove", "EnemyGargoyleBark", "EnemyGargoyleAttack", ParrySounds: false, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(23, "Wraith", 278, new(new(306), 0), Attack([0, 1, 2, DamageBeatMarker, 3]), animation: new(Arena2MobileFrameGroup.Move), links: new("I", "EnemyWraithMove", "EnemyWraithBark", "EnemyWraithAttack", ParrySounds: false, BloodIndex: 2, MapChance: 1)),
+            CreateMobile(24, "Orc Warlord", 279, new(new(96), 2), Attack([0, 1, DamageBeatMarker, 2, 3, 4, DamageBeatMarker, 5], Alternate(33, [4, DamageBeatMarker, 5, 0]), Alternate(33, [0, 1, DamageBeatMarker, 2, 3, 4, DamageBeatMarker, 5, 0, 4, DamageBeatMarker, 5, 0])), animation: Arena2MobileAnimationSource.Ordinary, links: new("T", "EnemyOrcWarlordMove", "EnemyOrcWarlordBark", "EnemyOrcWarlordAttack", ParrySounds: true, BloodIndex: 0, MapChance: 2)),
+            CreateMobile(25, "Frost Daedra", 280, new(new(400), 3), Attack([0, 1, DamageBeatMarker, 2, 3, DamageBeatMarker, 4, 5, 0], Alternate(50, [DamageBeatMarker, 4, 5, 0])), animation: Arena2MobileAnimationSource.Ordinary, links: new("J", "EnemyFrostDaedraMove", "EnemyFrostDaedraBark", "EnemyFrostDaedraAttack", ParrySounds: true, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(26, "Fire Daedra", 281, new(new(400), 2), Attack([0, 1, DamageBeatMarker, 2, 3, DamageBeatMarker, 4], Alternate(50, [3, DamageBeatMarker, 4])), animation: Arena2MobileAnimationSource.Ordinary, links: new("J", "EnemyFireDaedraMove", "EnemyFireDaedraBark", "EnemyFireDaedraAttack", ParrySounds: true, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(27, "Daedroth", 282, new(new(400), 1), Attack([0, 1, DamageBeatMarker, 2, 3, 4, DamageBeatMarker, 5], Alternate(33, [4, DamageBeatMarker, 5, 0]), Alternate(33, [0, 1, DamageBeatMarker, 2, 3, 4, DamageBeatMarker, 5, 0, 4, DamageBeatMarker, 5, 0])), animation: Arena2MobileAnimationSource.Ordinary, links: new("E", "EnemyLesserDaedraMove", "EnemyLesserDaedraBark", "EnemyLesserDaedraAttack", ParrySounds: true, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(28, "Vampire", 283, new(new(96), 3), Attack([0, 1, 2, 3, DamageBeatMarker, 4, 5]), animation: Arena2MobileAnimationSource.Ordinary, links: new("Q", "EnemyFemaleVampireMove", "EnemyFemaleVampireBark", "EnemyFemaleVampireAttack", ParrySounds: false, BloodIndex: 0, MapChance: 3)),
+            CreateMobile(29, "Daedra Seducer", 284, new(new(400), 6), Attack([0, 1, DamageBeatMarker, 2]), animation: Arena2MobileAnimationSource.Ordinary, links: new("Q", "EnemySeducerMove", "EnemySeducerBark", "EnemySeducerAttack", ParrySounds: false, BloodIndex: 0, MapChance: 1)),
+            CreateMobile(30, "Vampire Ancient", 285, new(new(96), 3), Attack([0, 1, 2, 3, DamageBeatMarker, 4, 5]), animation: Arena2MobileAnimationSource.Ordinary, links: new("Q", "EnemyVampireMove", "EnemyVampireBark", "EnemyVampireAttack", ParrySounds: false, BloodIndex: 0, MapChance: 3)),
+            CreateMobile(31, "Daedra Lord", 286, new(new(400), 4), Attack([0, 1, DamageBeatMarker, 2, 3, DamageBeatMarker, 4], Alternate(33, [3, DamageBeatMarker, 4, 0, DamageBeatMarker, 4, 3, DamageBeatMarker, 4, 0, DamageBeatMarker, 4, 3]), Alternate(33, [0, 1, DamageBeatMarker, 2, 1, 0, 1, DamageBeatMarker, 2, 1, 0])), animation: Arena2MobileAnimationSource.Ordinary, links: new("S", "EnemyDaedraLordMove", "EnemyDaedraLordBark", "EnemyDaedraLordAttack", ParrySounds: true, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(32, "Lich", 287, new(new(306), 2), Attack([0, 1, 1, 2, DamageBeatMarker, 3, 4, 4]), animation: Arena2MobileAnimationSource.Ordinary, links: new("S", "EnemyLichMove", "EnemyLichBark", "EnemyLichAttack", ParrySounds: false, BloodIndex: 2, MapChance: 4)),
+            CreateMobile(33, "Ancient Lich", 288, new(new(306), 3), Attack([0, 1, 1, 2, DamageBeatMarker, 3, 4, 4]), animation: Arena2MobileAnimationSource.Ordinary, links: new("S", "EnemyLichKingMove", "EnemyLichKingBark", "EnemyLichKingAttack", ParrySounds: false, BloodIndex: 2, MapChance: 4)),
+            CreateMobile(34, "Dragonling", 289, new(new(96), 0), Attack([0, 1, 2, DamageBeatMarker, 3]), animation: new(Arena2MobileFrameGroup.Move, MoveFramesPerSecond: 10F), links: new(null, "EnemyFaeryDragonMove", "EnemyFaeryDragonBark", "EnemyFaeryDragonAttack", ParrySounds: false, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(35, "Fire Atronach", 290, new(new(405), 2), Attack([0, DamageBeatMarker, 1, 2, 3, 4]), animation: Arena2MobileAnimationSource.Ordinary, links: new(null, "EnemyFireAtronachMove", "EnemyFireAtronachBark", "EnemyFireAtronachAttack", ParrySounds: false, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(36, "Iron Atronach", 291, new(new(405), 1), Attack([0, 1, 2, DamageBeatMarker, 3, 4]), animation: Arena2MobileAnimationSource.Ordinary, links: new(null, "EnemyIronAtronachMove", "EnemyIronAtronachBark", "EnemyIronAtronachAttack", ParrySounds: true, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(37, "Flesh Atronach", 292, new(new(405), 0), Attack([0, 1, 2, DamageBeatMarker, 3, 4]), animation: Arena2MobileAnimationSource.Ordinary, links: new(null, "EnemyFleshAtronachMove", "EnemyFleshAtronachBark", "EnemyFleshAtronachAttack", ParrySounds: false, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(38, "Ice Atronach", 293, new(new(405), 3), Attack([0, 1, 2, DamageBeatMarker, 3, 4], Alternate(50, [0, DamageBeatMarker, 3, 4])), animation: Arena2MobileAnimationSource.Ordinary, links: new(null, "EnemyIceAtronachMove", "EnemyIceAtronachBark", "EnemyIceAtronachAttack", ParrySounds: true, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(40, "Dragonling", 295, new(new(96), 0), Attack([0, 1, DamageBeatMarker, 2, 3]), animation: new(Arena2MobileFrameGroup.Move, MoveFramesPerSecond: 10F), links: new(null, "EnemyFaeryDragonMove", "EnemyFaeryDragonBark", "EnemyFaeryDragonAttack", ParrySounds: false, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(41, "Dreugh", 296, new(new(305), 0), Attack([0, 1, 2, 3, DamageBeatMarker, 4, 5, DamageBeatMarker, 6, 7], Alternate(33, [0, 1, 2, 3, DamageBeatMarker, 4]), Alternate(33, [0, 5, DamageBeatMarker, 6, 7])), animation: new(Arena2MobileFrameGroup.Move), links: new("R", "EnemyDreughMove", "EnemyDreughBark", "EnemyDreughAttack", ParrySounds: false, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(42, "Lamia", 297, new(new(305), 2), Attack([0, DamageBeatMarker, 1, 2, 3, 4, DamageBeatMarker, 5, 0], Alternate(33, [0, 3, DamageBeatMarker, 5, 4, 3, 3, DamageBeatMarker, 5, 4, 3, DamageBeatMarker, 5, 0]), Alternate(33, [0, 3, DamageBeatMarker, 5, 0])), animation: new(Arena2MobileFrameGroup.Move), links: new("R", "EnemyLamiaMove", "EnemyLamiaBark", "EnemyLamiaAttack", ParrySounds: false, BloodIndex: 0, MapChance: 0)),
         ];
 
         HashSet<Arena2MobileId> ids = [];
@@ -142,6 +198,31 @@ public static class MobileSourceMetadata
     {
         return new(new(id), sourceName, new(textureArchive), corpse, attackSequence, rangedAttackFrames, animation ?? Arena2MobileAnimationSource.Ordinary, links ?? Unlinked(id));
     }
+
+    private static Arena2MobileSource Human(byte id, string sourceName, ushort textureArchive, Arena2MobileAttackSequence attack,
+        bool parry, int mapChance, bool ranged = true) =>
+        CreateMobile(id, sourceName, textureArchive, new(new(380), 1), attack,
+            links: new(HumanLoot(id), "EnemyHumanMove", "EnemyHumanBark", "EnemyHumanAttack", parry, 0, mapChance),
+            rangedAttackFrames: ranged ? RangedAttack([3, 2, 0, 0, 0, DamageBeatMarker, 1, 1, 2, 3]) : null);
+
+    private static string HumanLoot(byte id) => id switch
+    {
+        128 => "U", 129 => "P", 130 or 131 or 132 or 133 => "U", 134 or 135 or 136 or 137 or 138 or 139 or 140 => "O",
+        141 or 142 => "C", 143 or 144 or 145 or 146 => "T", _ => throw new ArgumentOutOfRangeException(nameof(id)),
+    };
+
+    private static Arena2MobileAttackSequence MageAttack() => Attack([0, 1, DamageBeatMarker, 3, 2, 1, 0, DamageBeatMarker, 5, 4, 0],
+        Alternate(33, [0, 1, DamageBeatMarker, 3, 2, 1, 0]), Alternate(33, [0, DamageBeatMarker, 5, 4, 0]));
+    private static Arena2MobileAttackSequence SpellswordAttack() => Attack([0, 1, DamageBeatMarker, 2, 3, 4, 5],
+        Alternate(33, [5, 4, 3, DamageBeatMarker, 2, 1, 0]), Alternate(33, [0, 1, DamageBeatMarker, 2, 2, 1, 0]));
+    private static Arena2MobileAttackSequence BattlemageAttack() => Attack([0, 1, DamageBeatMarker, 2, 3, 4, DamageBeatMarker, 5, 0],
+        Alternate(33, [4, 4, DamageBeatMarker, 5, 0, 0]), Alternate(33, [4, DamageBeatMarker, 5, 0, 0, 1, DamageBeatMarker, 2, 3, 4, DamageBeatMarker, 5, 0]));
+    private static Arena2MobileAttackSequence SorcererAttack() => Attack([0, 1, 2, DamageBeatMarker, 3, 4, 5], Alternate(50, [4, 5, DamageBeatMarker, 3, 2, 1, 0]));
+    private static Arena2MobileAttackSequence HumanAttack() => BattlemageAttack();
+    private static Arena2MobileAttackSequence HeavyHumanAttack() => Attack([0, 0, 1, DamageBeatMarker, 2, 2, 1, 0],
+        Alternate(33, [0, 1, DamageBeatMarker, 2, 3, 4, 5]), Alternate(33, [5, 5, 3, DamageBeatMarker, 2, 1, 0]));
+    private static Arena2MobileAttackSequence ArcherAttack() => Attack([0, 1, DamageBeatMarker, 2, 3, 4, DamageBeatMarker, 5], Alternate(50, [3, 4, DamageBeatMarker, 5, 0]));
+    private static Arena2MobileAttackSequence CityWatchAttack() => Attack([0, 1, DamageBeatMarker, 2, 3, 4]);
 
     /// <summary>
     /// The donor's table carries these facts for every mobile it lists, so a supported

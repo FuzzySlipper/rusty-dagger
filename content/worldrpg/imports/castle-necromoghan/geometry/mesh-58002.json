@@ -1,0 +1,105 @@
+{
+  "asset": "58002",
+  "payload": {
+    "layout": {
+      "vertexCount": 4,
+      "indexCount": 6,
+      "indexWidth": "u32",
+      "attributes": [
+        {
+          "name": "position",
+          "components": 3,
+          "kind": "f32"
+        },
+        {
+          "name": "normal",
+          "components": 3,
+          "kind": "f32"
+        },
+        {
+          "name": "uv",
+          "components": 2,
+          "kind": "f32"
+        }
+      ]
+    },
+    "groups": [
+      {
+        "materialSlot": 0,
+        "start": 0,
+        "count": 6
+      }
+    ],
+    "bounds": {
+      "min": [
+        -1.6,
+        0.2,
+        -1.6
+      ],
+      "max": [
+        1.6,
+        0.2,
+        1.6
+      ]
+    },
+    "source": {
+      "kind": "inline",
+      "positions": [
+        -1.6,
+        0.2,
+        1.6,
+        1.6,
+        0.2,
+        1.6,
+        1.6,
+        0.2,
+        -1.6,
+        -1.6,
+        0.2,
+        -1.6
+      ],
+      "normals": [
+        -0,
+        1,
+        0,
+        -0,
+        1,
+        0,
+        -0,
+        1,
+        0,
+        -0,
+        1,
+        0
+      ],
+      "uvs": [
+        1024,
+        0,
+        0,
+        0,
+        0,
+        1024,
+        1024,
+        1024
+      ],
+      "indices": [
+        0,
+        1,
+        2,
+        0,
+        2,
+        3
+      ]
+    },
+    "provenance": "staticAsset"
+  },
+  "materialSlots": [
+    {
+      "slot": 0,
+      "material": "material/texture-22-2"
+    }
+  ],
+  "collision": {
+    "kind": "visualOnly"
+  }
+}

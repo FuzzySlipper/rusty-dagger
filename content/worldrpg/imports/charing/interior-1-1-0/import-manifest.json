@@ -1,0 +1,3310 @@
+{
+  "schemaVersion": 1,
+  "importerId": "daggerfall-import/rmb-exterior-normalizer",
+  "importerVersion": 1,
+  "sources": [
+    {
+      "sourcePath": "arena2/AMAP00I0.IMG",
+      "contentHash": "d804ffcdb3033e48321db3ddb8b722ed93ab9913afcc60d20e41bd80cfec12e1",
+      "byteLen": 64000
+    },
+    {
+      "sourcePath": "arena2/AMAP01I0.IMG",
+      "contentHash": "3a865bf27744dcc573f2dc60b9962e96260797b969e68f7cd7228ba90532741b",
+      "byteLen": 525
+    },
+    {
+      "sourcePath": "arena2/ARCH3D.BSA",
+      "contentHash": "a51a9e149168814c4a14dc80bb93d38f153be18dc9754be44bc9c7b25dd46a85",
+      "byteLen": 27143532
+    },
+    {
+      "sourcePath": "arena2/ART_PAL.COL",
+      "contentHash": "8744e48e64017a94ee72ec27045a07384b82f45b7dec2041123c0697730a499a",
+      "byteLen": 776
+    },
+    {
+      "sourcePath": "arena2/BANK00I0.IMG",
+      "contentHash": "1d1122821846a6bf75f6ccf8cff03e0578c3e86ca065b917554aa449616c67d9",
+      "byteLen": 40737
+    },
+    {
+      "sourcePath": "arena2/BLOCKS.BSA",
+      "contentHash": "6f5a4c8d9401c1b00ef83eaac9b0c6c32f53cef6eaa4c7d7027deb739bde4795",
+      "byteLen": 32884997
+    },
+    {
+      "sourcePath": "arena2/BOOK00I0.IMG",
+      "contentHash": "17e9379b0cf078872ae3208434943ca07c563b496d0bd6760d65e55735a98625",
+      "byteLen": 64000
+    },
+    {
+      "sourcePath": "arena2/CHGN00I0.IMG",
+      "contentHash": "3e25f3ffa33d25a3e5b963e066f5fd03465e84c3405adcf937a88732ee76e5b7",
+      "byteLen": 64768
+    },
+    {
+      "sourcePath": "arena2/CLIMATE.PAK",
+      "contentHash": "6032403010707ed09394a9b72bf3418d3450ccc99f28e4c8451771f5d7e54cd0",
+      "byteLen": 14771
+    },
+    {
+      "sourcePath": "arena2/DAGGER.SND",
+      "contentHash": "fbb6195ba72f9b2787b659e38afd9ed92d95ca185916d8bdd28ba947b986f3e2",
+      "byteLen": 7661766
+    },
+    {
+      "sourcePath": "arena2/DIE_00I0.IMG",
+      "contentHash": "af893c52b2cf9a7b8bcd073fbc6ea1ead04c7d725596d3da490c411fab723b0f",
+      "byteLen": 64768
+    },
+    {
+      "sourcePath": "arena2/FMAP0I00.IMG",
+      "contentHash": "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b",
+      "byteLen": 12
+    },
+    {
+      "sourcePath": "arena2/FMAP0I01.IMG",
+      "contentHash": "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b",
+      "byteLen": 12
+    },
+    {
+      "sourcePath": "arena2/FMAP0I05.IMG",
+      "contentHash": "b3422fe92cda4ae63c7e364d944891113801d0018c26189400978341d342d406",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I09.IMG",
+      "contentHash": "1e6888bf89145be4685b825aad5a12cf340cbcb407bce27b571263dc03404339",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I11.IMG",
+      "contentHash": "0b4ba60c28d425292969f18ab031b99c6f680bec42760717a5b957a82558a96e",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I16.IMG",
+      "contentHash": "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b",
+      "byteLen": 12
+    },
+    {
+      "sourcePath": "arena2/FMAP0I17.IMG",
+      "contentHash": "2704fcb361376554df4d8655814283da0ef131b7fb3019e635e8148468d10dc5",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I18.IMG",
+      "contentHash": "d512ed41a9963a8700dc86f105f076a165b73f3f0cad99c0cc6346484dfaa54c",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I19.IMG",
+      "contentHash": "cbd19317b2b7970b738665d14981d8f84322aa82361d5bfdbcee8bfb8468e6c6",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I20.IMG",
+      "contentHash": "c5bb26b5b78b20c60702696fb305fb7cb99a1acec669bf4649b4e589d5c27b35",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I21.IMG",
+      "contentHash": "7ab70f9a7a0fe072918fcd8d90b1a74c92160853f7a08d180b9780aaf2893b1d",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I22.IMG",
+      "contentHash": "10b8603eb5a1fa4cd8c3c36c569d60929d470d3c264c81cb05dbf5bc2a255736",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I23.IMG",
+      "contentHash": "c86099d005e59320c242fb32d920e777eb76c7b3d360de05714ba3d819700a0c",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I26.IMG",
+      "contentHash": "6a8924b9376d0c3de9690979a5bda3788306e4f5c9c89fc662d2af25da67a63e",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I32.IMG",
+      "contentHash": "6a7157b53048b6671b2bd86a16366e7b95892f180647f31c14b4ad1cbf8b5851",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I33.IMG",
+      "contentHash": "9e6d6d384e8a1461a4ef3fc5f93f445bc30f78ea66868c3808a1eb68e175ba6f",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I34.IMG",
+      "contentHash": "4cb7db58b045b1bfe3824ef167f3af12db42131a282e6ebccf4e6f515abdb386",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I35.IMG",
+      "contentHash": "219271497a1a85d76fdab170b31cbbba6279ff18e87c06dacd7c26804fd5e0fc",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I36.IMG",
+      "contentHash": "9a4c82f4dd30234dd32299f1941a7f43ace04cff9160c89434bf62f63f1fb48b",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I37.IMG",
+      "contentHash": "a904eebe95314eabdce5d8e8f8705a01f51a14491e4efdf09c9d8a68c4e7c45c",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I38.IMG",
+      "contentHash": "f5baf338d1caacec344bc839e5d59f50c20dd98d25d919642f6f2f52a4b99cd8",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I39.IMG",
+      "contentHash": "3cd67e8814d97eb89ac610b32367304370e55f447c4cfbb4b0246244e416692a",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I40.IMG",
+      "contentHash": "011945581a80cad22d69f6bf4a72155862d25f4b7b9ee05797eec7c16da2e598",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I41.IMG",
+      "contentHash": "ce697e99efb60f37a8650a9bc8c4dd6731e97d5892d8f414124004dcca06fa7e",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I42.IMG",
+      "contentHash": "f23765aef15ab2951575190378675fdca1e9590bf12cfdddc3c56d7e2cfb0404",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I43.IMG",
+      "contentHash": "de98cf7995d118db2dec8ae77a60cfd71d67bf80d4a4750818b5fbdd66fe29bb",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I44.IMG",
+      "contentHash": "06787d35716669aae2c201e9f2f7dc95a8ca8e9b74b96258aad714c7d700ae58",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I45.IMG",
+      "contentHash": "63f2f0020bd92ddbd3510c14789474861575403b4518c891b024ad0fc19777c1",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I46.IMG",
+      "contentHash": "1c3c09e65523e03c21b2ab334a59866194c4b0a07589908579014b0c8c97aa58",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I47.IMG",
+      "contentHash": "16c67d0771d2b65908aeca2c7ffb685cac744a2d6f860a83200ae0952a8ce27d",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I48.IMG",
+      "contentHash": "b2e4fdc34a5bed4fff16adddf1166b680bbb9c39e58a377947363aa7c9837784",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I49.IMG",
+      "contentHash": "700785376f8079cf8788b500ec14337d5360dec2ddee789894e3b6594b98aac9",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I50.IMG",
+      "contentHash": "2aaee49e7adf1895b6861903fcb08bec21c782998501aa649cd8fd1f8436cd69",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I51.IMG",
+      "contentHash": "bc8a002b1b2638657af47f435450d7befa72ece0a20c6ed6eb215649f138e41a",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I52.IMG",
+      "contentHash": "64e8f3817e7fde78b2a04ae9ac71d80cd26ebcb0e81d225725ef74665396ea21",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I53.IMG",
+      "contentHash": "786894fdfc78b7ab8460db965adc27f7f0f8c8367a53f94c84d63b65162e63f4",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I54.IMG",
+      "contentHash": "fe240de066e16260187ea640acd0d3a5c22f0dbc2cbb8ece8b1b21bfe60c1a97",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I55.IMG",
+      "contentHash": "c1af8b0afe6304bd4a4145943500375965cac6c43908c9346c3ea7946c8c2d4d",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I56.IMG",
+      "contentHash": "23a13a026fbda8f3fe881a14c5cb602c56698a28e98a9b6a4419d682fdb7c7ef",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I57.IMG",
+      "contentHash": "ac81631c6d207191b9c3f62a0f9f42807aab6a66091388a64a4c743145370e1d",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I58.IMG",
+      "contentHash": "94616e8853789a142e55c3ce32845203d381553cd04a1bc6c8a6a2bfaaf20b11",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I59.IMG",
+      "contentHash": "c501642b593da1c4fabbaffe1979c24e548f16e91066543e8a98e3535272093d",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I60.IMG",
+      "contentHash": "1f58d1bba5860ecb8287006ecef7dc068764c18b8ab56640bc747431cbeb1628",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP0I61.IMG",
+      "contentHash": "c073df952c4a83b045b43b02e3041ba7f6275ac1470aaabbfd2d4e796380948a",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAPAI00.IMG",
+      "contentHash": "916eb4108b3545766c06cceb6692038cd40fd8d9d6fc3198a8840ff11b68ba7f",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAPAI01.IMG",
+      "contentHash": "c791e23843ac57d2bc0750818c6e1d12e75b15c350dd865d6ef855cff5ac5f88",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAPAI16.IMG",
+      "contentHash": "810d1b2c2df31d1db80a9dde1a10ed65dc39e605d408358b18e85c077e45c76a",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAPBI00.IMG",
+      "contentHash": "0cd7003b47d462381aad1328816344bee0fa1776f17ba624685040fc6ae0f053",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAPBI01.IMG",
+      "contentHash": "63f090781dfb7444515a6a8dd761e52c123409a6f6989a556bf17d6b73656d57",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAPBI16.IMG",
+      "contentHash": "bfd5b67b7432996ec740a11dd55d0292a27ffc2a15a46f3116a1a2d96f4ce155",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAPCI01.IMG",
+      "contentHash": "32b5a6357af743262f7d96223b8f5fd9c4eac30cec79c14a3d71b920d9c8e25c",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAPCI16.IMG",
+      "contentHash": "187681b6d4dbee5b30d5b0e9187878d2d1dd01c3b2cf4eadcf9c61f17771c7ba",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAPDI01.IMG",
+      "contentHash": "b1374b7781745206ca302d2791a90555ce89cf46d88dd54b46411acf1d1b1f5f",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAPDI16.IMG",
+      "contentHash": "cc865742b969fa8e4a51e21f57acb9a3b1eb11d9a21a4e98a2da545fce981ae8",
+      "byteLen": 51212
+    },
+    {
+      "sourcePath": "arena2/FMAP_PAL.COL",
+      "contentHash": "32aca196dc282d1941b4e6d3d452533d872b0fab1f7f018e5c233f57e2e8dcf4",
+      "byteLen": 776
+    },
+    {
+      "sourcePath": "arena2/FONT0000.FNT",
+      "contentHash": "88ce9dbef899c783b5a3be1ababa8aeeed93cf8926651ff5572f85e63be15d86",
+      "byteLen": 8644
+    },
+    {
+      "sourcePath": "arena2/FONT0001.FNT",
+      "contentHash": "f5d20e484e8875d994d182e056478be583ab0a5d0abb005f7d374b30bf8cec96",
+      "byteLen": 8644
+    },
+    {
+      "sourcePath": "arena2/FONT0002.FNT",
+      "contentHash": "3769c29579da65c28f77472697c1eb808c61561ca2b2066020355c1b54a22349",
+      "byteLen": 8644
+    },
+    {
+      "sourcePath": "arena2/FONT0003.FNT",
+      "contentHash": "53d4b92cfcd0d2158d9af2c2d6fa0f97736db571e80b8b2476ceae944673ef54",
+      "byteLen": 8644
+    },
+    {
+      "sourcePath": "arena2/FONT0004.FNT",
+      "contentHash": "c75f65130cf35196477d7cb4b90234f09ac60499e6788b521a144128c4d433e0",
+      "byteLen": 8644
+    },
+    {
+      "sourcePath": "arena2/GILD00I0.IMG",
+      "contentHash": "ecc9ff86035142db9ecb0550022a9aa1594b98fcd459af2e65ff0ab13ec45140",
+      "byteLen": 6642
+    },
+    {
+      "sourcePath": "arena2/GILD01I0.IMG",
+      "contentHash": "b0bb6302970e826578ddba3079d86cf09051f2a69d963ee27a09a2d3c9019595",
+      "byteLen": 6642
+    },
+    {
+      "sourcePath": "arena2/INFO00I0.IMG",
+      "contentHash": "96d1ade7b51633ec5a8484e7f0400d1b400743ec550ce27873f95c62eab2ca96",
+      "byteLen": 64000
+    },
+    {
+      "sourcePath": "arena2/INVE00I0.IMG",
+      "contentHash": "ebbe1b8615db14c8c7011b8a2958b53bc7d43e3d8ee9ac40bd19f6134bee4b66",
+      "byteLen": 64000
+    },
+    {
+      "sourcePath": "arena2/INVE08I0.IMG",
+      "contentHash": "f7aca19c0c039a0eb39fb3125ea1d56396f4cb4695889e3c4fbed1d784e5d33e",
+      "byteLen": 7422
+    },
+    {
+      "sourcePath": "arena2/INVE10I0.IMG",
+      "contentHash": "2a0330875302f75547c653d0fcf2d93d66cb54062455416911ebac85b7426385",
+      "byteLen": 7422
+    },
+    {
+      "sourcePath": "arena2/INVE11I0.IMG",
+      "contentHash": "63490b0d9af2f4be47573ce890169059c2f82d5af63c11807c71bce40510bbb6",
+      "byteLen": 7422
+    },
+    {
+      "sourcePath": "arena2/INVE12I0.IMG",
+      "contentHash": "b245a5ef3315423fff64dde1a51b1f2c07b4a4f1b7d755828e15e1757c3c5356",
+      "byteLen": 7422
+    },
+    {
+      "sourcePath": "arena2/INVE14I0.IMG",
+      "contentHash": "5e22b480843239f705004e6473bc505b53d2988287051a73a66ee05b67a7427f",
+      "byteLen": 7422
+    },
+    {
+      "sourcePath": "arena2/MAIN00I0.IMG",
+      "contentHash": "a482cc6b23d2945c32b58de88453c5abf229cc7a48a7f3401612ed3430a87ec5",
+      "byteLen": 14732
+    },
+    {
+      "sourcePath": "arena2/MAIN03I0.IMG",
+      "contentHash": "fc757cd5ba9a538428b2859a318830e55ea28dcd95c9acd75086875cd0d0f6d3",
+      "byteLen": 140
+    },
+    {
+      "sourcePath": "arena2/MAIN04I0.IMG",
+      "contentHash": "3d64562ae43baf2cc87a5fbb391a587339cbfdfee47c931c565b985f4d06585f",
+      "byteLen": 140
+    },
+    {
+      "sourcePath": "arena2/MAIN05I0.IMG",
+      "contentHash": "56b28071d389d21c5b5ca2d3df3008d042ba2dbb0744f812eee3e4bcfb45c910",
+      "byteLen": 140
+    },
+    {
+      "sourcePath": "arena2/MAP.PAL",
+      "contentHash": "37780ae5d5669957cd13f528b6766d032f307675911a2dfbe33c3ad7d0a65fb5",
+      "byteLen": 768
+    },
+    {
+      "sourcePath": "arena2/MAPS.BSA",
+      "contentHash": "8b5550bfcac03b6f605842568fdbfb7cc6bbed7ace5999c33c900ad286fc24be",
+      "byteLen": 22129312
+    },
+    {
+      "sourcePath": "arena2/PAL.PAL",
+      "contentHash": "42b8da761c310cfd7f4949e95bbe7dbda19b490dc5e11746857a89808b826f99",
+      "byteLen": 776
+    },
+    {
+      "sourcePath": "arena2/PICK02I0.IMG",
+      "contentHash": "20d3e5daf6bfed90d928602f05c9a9e61dce259759ffa149c514761c5561dc26",
+      "byteLen": 64768
+    },
+    {
+      "sourcePath": "arena2/PICK03I0.IMG",
+      "contentHash": "d3b99cbe6d182fda6849dfbf6ed33e50a6e64ca29f550082c0f57cd825b7e1c0",
+      "byteLen": 64768
+    },
+    {
+      "sourcePath": "arena2/PRIS00I0.IMG",
+      "contentHash": "3e790a47860d25b255de31a2aec35bae736b855e856b0309b0721de2c905d04d",
+      "byteLen": 64768
+    },
+    {
+      "sourcePath": "arena2/REST00I0.IMG",
+      "contentHash": "7f4bec7fa54cf633f786de30c763ae1ccbccfddfad5bec2c801acf4c550da42c",
+      "byteLen": 6326
+    },
+    {
+      "sourcePath": "arena2/REST01I0.IMG",
+      "contentHash": "8d9f0c27b38393ec9f9064041b6376352ea751d16fbc4de30ea09aecfe9d856a",
+      "byteLen": 4317
+    },
+    {
+      "sourcePath": "arena2/REST02I0.IMG",
+      "contentHash": "a5f49e72a85093e22503942ea57f02ba19952dfd2e8bc47e31a55eb634ec57a4",
+      "byteLen": 4317
+    },
+    {
+      "sourcePath": "arena2/SHOP00I0.IMG",
+      "contentHash": "bf13a875e558bae609e47cb12d228244c7ee250146b956f3343653e5c1f951b7",
+      "byteLen": 1011
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.000",
+      "contentHash": "b6adacc9b6a7f604bb82d82136c593c9d23b59d9c3576a041ecc01951afae680",
+      "byteLen": 2586
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.067",
+      "contentHash": "0f627b0b9a1437f8e0abb761c111c208dd5ec64b27803aa842a4a204b0c22789",
+      "byteLen": 21274
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.074",
+      "contentHash": "13fcbefcc6409e4551aa4eaa48c5f60361f688b98d6fda32a5846094c56e911e",
+      "byteLen": 35034
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.087",
+      "contentHash": "d986b6e1c16fb81353ccdbdb127cee86638933609463bc4849fd2c5acd67e553",
+      "byteLen": 40234
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.090",
+      "contentHash": "16fca391e4a5139e4fe372eb256b21d36f8f8b57b266535244ec6d69bb494564",
+      "byteLen": 49898
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.092",
+      "contentHash": "ca3412ff0a4d2ac91908d7220643a937908534d3167d5f2ea7035f5981ed4786",
+      "byteLen": 50570
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.096",
+      "contentHash": "63538968d94c63a2701f28b25fb3baebaac92fd1d94eb592900b86bd4268eb1c",
+      "byteLen": 36154
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.116",
+      "contentHash": "e3cd886af6836e82c157d327f2ac4e74abd275d9942cda36745062dca48db918",
+      "byteLen": 35594
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.144",
+      "contentHash": "b4209193b358c5ba46d56f2d6cb38a3b811b55498ed99fe11f375c7f38b7c00f",
+      "byteLen": 35594
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.207",
+      "contentHash": "c70500ca419af434cde9a5ed88993c3b01fe6d7c371bd83095a9d9456c29c29c",
+      "byteLen": 19786
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.216",
+      "contentHash": "f79ff477e8f7332ad67962debf2dc3d8330554c6f159d89f2a439a295cbe420b",
+      "byteLen": 58906
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.234",
+      "contentHash": "1a09989588c486b7b5348832a331520421c7d3ab47b6765aa3f1bf921a9812d3",
+      "byteLen": 51106
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.245",
+      "contentHash": "7273a1117041104a7d10485c3635b96f48e56c4f2337a6a7b78dee9b836c8447",
+      "byteLen": 79857
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.255",
+      "contentHash": "ea0084dc4250f69d4ef63c9b6aab76365bc8a08ac654f6b23b0ab0eca33c1f0e",
+      "byteLen": 149788
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.256",
+      "contentHash": "62b333323a00be3565948ca2f7f2151488b2d37ec8d3908f05404d1dae62b44c",
+      "byteLen": 65466
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.257",
+      "contentHash": "8457a0dfd6548779ace607efff650cb69e90b40c7adf2349a5de58e510df9258",
+      "byteLen": 292775
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.258",
+      "contentHash": "c6a2b93cc5f3315653dc6eff77ce017a8a5e1bd00aa8ade1c63f1301cfa38533",
+      "byteLen": 82779
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.259",
+      "contentHash": "ea43837fa24ca2cd978a24324ff4f09f7a2e8eaf0e45f4c38bd89ccf2797a74f",
+      "byteLen": 350931
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.260",
+      "contentHash": "6704421df0f856b1582ce10d6c54a9a405621a066bffe917c6476c70f597fc44",
+      "byteLen": 117695
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.261",
+      "contentHash": "972926b02f8d8a87a36bbbeb718f7fdec98e8723257c6670cb863396eb8556d1",
+      "byteLen": 405766
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.262",
+      "contentHash": "bde194db19924836019540b55d237c6c4e040772812bc889a4654a66364126b8",
+      "byteLen": 362576
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.263",
+      "contentHash": "f977ba88b8e131c2de0e95ae0ffa8cc24f8058f449a232034edf30e069f2ab11",
+      "byteLen": 383682
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.264",
+      "contentHash": "47ac1f566198ff3f97a9095946e874b2937036e10cec7d2a4a0fe4fd429b3d18",
+      "byteLen": 95612
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.265",
+      "contentHash": "e73ad5aa225b6b517254279b6ef6065681187195ae303156dffeacf87fd5155f",
+      "byteLen": 131107
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.266",
+      "contentHash": "bf1366f1985b3debc25cef31914d36075a24611a75e4b85f83eb546456e9804c",
+      "byteLen": 290423
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.267",
+      "contentHash": "8b2ff3640bf7acc20e24352075a47f30c525da58772cb8d1a06baeff02f5cdaa",
+      "byteLen": 379810
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.268",
+      "contentHash": "eb104ccebc683936034f7dbeef21e75a11973b3ab0d67140f0e48d72f85a68f7",
+      "byteLen": 132370
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.269",
+      "contentHash": "31100801985195a44f19cf532eda760268f05bb92517f70940a7093a8a27e74a",
+      "byteLen": 92284
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.270",
+      "contentHash": "0ff25c02bcafea04b905547b2428303a98e325bd3350a62f4aa901d3f6237c76",
+      "byteLen": 292402
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.271",
+      "contentHash": "ed6f46e4b93a39ba12de50703aea539975e12f19e537bd1dc51236dc9b4fdb3f",
+      "byteLen": 408158
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.272",
+      "contentHash": "be499871b73b1aabcc41a64aee0b0dbcca2bcc40b91f20dda449ef5611d5ce8a",
+      "byteLen": 262256
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.273",
+      "contentHash": "5a62832b1aafa426dfa78baaceb877dd0971f52928e92409d2209ac05c46514e",
+      "byteLen": 153509
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.274",
+      "contentHash": "024d7751addcf4a81f7f91aabc0d46db7590f4abfe73427b3bbf78c42dc2da50",
+      "byteLen": 210356
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.275",
+      "contentHash": "2bab5967a95a99d11161d1021767377ab28d870f0b142e1b61d49fa96472cb1f",
+      "byteLen": 260764
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.276",
+      "contentHash": "912783da167643bf8b31be4d621d45bef6c66272d4f87a195340fc6e4bf93228",
+      "byteLen": 375518
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.277",
+      "contentHash": "0826551bb14df5349381ef242ef63765a4f61b0c190fdbdd3114f0b01d9f01fe",
+      "byteLen": 460511
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.278",
+      "contentHash": "47ac259544af6e243cb1c88d4ce66d6e9aafd6a7d9859430f55c51ab6d4e41c9",
+      "byteLen": 102616
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.279",
+      "contentHash": "26b2bb8c987b34780ae9867a7c2f8f69de96e1aea73733e7353564b123b57376",
+      "byteLen": 403352
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.280",
+      "contentHash": "4926d2ccdce2412155354a89dcd7d13391ef90ef1cfc074b5b71c36348931856",
+      "byteLen": 427791
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.281",
+      "contentHash": "7a07e136f26ef71be3964718337bfc77f87e255a8e64481005277cdbeae05099",
+      "byteLen": 448860
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.282",
+      "contentHash": "9d856264c65b8a5299a270e2b750f3eb637019e63d125037e8b8b4292303d68a",
+      "byteLen": 385216
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.283",
+      "contentHash": "b1ff26e76caaf8b983268e23ae7da34f1057fa4ad5840c80e96fcc85bcc1a9b1",
+      "byteLen": 250944
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.284",
+      "contentHash": "6aab43b7f175688df06553c5f84da7a05a57c5486b959d65b7fa4bc607ac5042",
+      "byteLen": 232972
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.285",
+      "contentHash": "8e5012f4a4e0eb132db25443db8e68d0e3f180a4c2e39f1551808aadba0332d9",
+      "byteLen": 261039
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.286",
+      "contentHash": "a02c7b476c5d88c9fda7a8292061abaf43be57003f7f708230a29f5fe9377ba8",
+      "byteLen": 198688
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.287",
+      "contentHash": "9b1b0b1ca0bbc8e5b13c9046498cf3040a926c0efd3e69a80da5d4e48de713eb",
+      "byteLen": 318232
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.288",
+      "contentHash": "06fe5658b2910e75e44179f3ad50dc9e00ae231d26e9c985f274943f2af27c4c",
+      "byteLen": 358215
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.289",
+      "contentHash": "e6b2ad953de4bd4b36fc4242cc86ff636fa3541f67a3c40e9df2fdc78cccfb1f",
+      "byteLen": 88501
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.290",
+      "contentHash": "b0ecdf90a79c58fdc3eea18c4f3a850cf3e6e06516365bf1b6e185970edc847b",
+      "byteLen": 231367
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.291",
+      "contentHash": "b405fa5893e04dc6f8e064ff0d5b4505f82a5bcc612df6c082c25d1aacdff62e",
+      "byteLen": 234797
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.292",
+      "contentHash": "4d0aca7a1938fcd758b1e77e25bdd257469a5eaff31bbdf5842c2424efdf2fea",
+      "byteLen": 224933
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.293",
+      "contentHash": "98cbe905cff4f2f900da446d36ade8349b6654070e0d811a7981230feaaa9f41",
+      "byteLen": 275956
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.295",
+      "contentHash": "e6b2ad953de4bd4b36fc4242cc86ff636fa3541f67a3c40e9df2fdc78cccfb1f",
+      "byteLen": 88501
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.296",
+      "contentHash": "75c2f3b048cf7e05dd0d37acf61e7f0aa561e27508c63728395391649899a721",
+      "byteLen": 421951
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.297",
+      "contentHash": "ba4c8a1ed21bb5e73d17c335a459631a811bdf9037019e6663469bbece39b5f1",
+      "byteLen": 253928
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.305",
+      "contentHash": "185fca6f49c1f9dd10288e34e0115912e02ef2be48f418bb0c7d5a7565f06cb1",
+      "byteLen": 18602
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.306",
+      "contentHash": "17b4e6c9614766f3bdae65b6e4728e6e589a1ef815a83fca6737283de8ab07a1",
+      "byteLen": 40506
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.380",
+      "contentHash": "5f7255f09d942e86cdcf559c8123c969382fd1fbf8c3d6d783d6dd40763fa4c5",
+      "byteLen": 27519
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.399",
+      "contentHash": "6452156c4da7d095ee3abf94d82ff8213eec8ed7f34220b615d1a9c65d6f6a94",
+      "byteLen": 290653
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.400",
+      "contentHash": "cdc057a7bdcf50b02b8bcfa75b26c0c3ebe95b4ba69ab9abbd3ea3c467ff86e6",
+      "byteLen": 40810
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.401",
+      "contentHash": "ed01c0564fe92a4707f14dd47e46ae12bc008c19efc85bf6e4ac597f19cde89e",
+      "byteLen": 40506
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.405",
+      "contentHash": "bcc3b09e845ff6c5cdeceb578eb1d3d6dbd35e3041ea17c5bdf2df442397c48a",
+      "byteLen": 23002
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.406",
+      "contentHash": "96f59d7192d9c5c859029caed812c49b627a3c9d8f0c45657bf4e301d183e4a3",
+      "byteLen": 38458
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.476",
+      "contentHash": "2fd1e27994cb6073826694dfdc9922d6b27bca1dd6fc0a535dec45ecd108f203",
+      "byteLen": 423348
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.478",
+      "contentHash": "f8b0b4103e18d110ec72f4b762266bc32ce43a438df3626f6f2940d3335a3119",
+      "byteLen": 381401
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.480",
+      "contentHash": "f22572fd376a33f418ed1865846a9e7666adaa9c35cda6e926e764cc25838173",
+      "byteLen": 344037
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.482",
+      "contentHash": "01651358a870c7f97c58bcb88354c2db7c58efeacfd21487439822f00416ba08",
+      "byteLen": 355018
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.484",
+      "contentHash": "32c3c0e4f78792041c78d6555753cba819a593336bbc91771c6b90dccbd166c7",
+      "byteLen": 327366
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.486",
+      "contentHash": "0d94b2fcde6f3d9003a27559d755cdced21a50cb8df5353c723de4d331839f58",
+      "byteLen": 437984
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.488",
+      "contentHash": "f9df038100494f4ac8f90af99d6fdf05b385a7cfe639778cccd016b76ac6eb36",
+      "byteLen": 365829
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.490",
+      "contentHash": "680caed0e59d03b05567fa20ff5df8015f2a0c3f5ea009cfb5e8c71fb3737696",
+      "byteLen": 438653
+    },
+    {
+      "sourcePath": "arena2/TITL00I0.IMG",
+      "contentHash": "52119f35c30e9d0f91753aebe1040fb190b7c60970b4392c61846a53e75cb27c",
+      "byteLen": 64768
+    },
+    {
+      "sourcePath": "arena2/TMAP00I0.IMG",
+      "contentHash": "741b0c1e00344b962bf1c203ed4d3b0a8efa16e132082ff2f2ea1b94f508aaac",
+      "byteLen": 64000
+    },
+    {
+      "sourcePath": "arena2/TOWN00I0.IMG",
+      "contentHash": "c80ce471fb4f7b2a06b0a063be0e9f92ae9b58b60b535acb162faa1b6c5feeb6",
+      "byteLen": 3212
+    },
+    {
+      "sourcePath": "arena2/TRAV00I0.IMG",
+      "contentHash": "54e5218d0bec832637d452f168f3df082484e33d9fe3c450499c1fc92166c9a0",
+      "byteLen": 64012
+    },
+    {
+      "sourcePath": "arena2/TRAV01I0.IMG",
+      "contentHash": "f242d288f2adbf53ba6f004df9ab4a16e7d2449dc1bc2861940b92ff147bd0dc",
+      "byteLen": 3938
+    },
+    {
+      "sourcePath": "arena2/TRAV01I1.IMG",
+      "contentHash": "b9922dfc31ac7baaa7e06fafa812031d407c988f8fe8a811125da580673dcb22",
+      "byteLen": 3938
+    },
+    {
+      "sourcePath": "arena2/TRAV02I0.IMG",
+      "contentHash": "add9a9d59cac20b11a3bb6c9e7e1bb25f1534f5b1c0b8f488fce86edc3cc8d5c",
+      "byteLen": 64012
+    },
+    {
+      "sourcePath": "arena2/TRAV0I00.IMG",
+      "contentHash": "1a00d8449dea174b4b48ecaefaf6292ce877ef7b672168f4cddb2563116a034a",
+      "byteLen": 64000
+    },
+    {
+      "sourcePath": "arena2/TRAV0I01.IMG",
+      "contentHash": "9ed4084b18cd5ac5066558b5722387e69b4f5943ca2f90005d5434b222b1820b",
+      "byteLen": 64000
+    },
+    {
+      "sourcePath": "arena2/TRAV0I03.IMG",
+      "contentHash": "9615bce0dbad1b832dbd665dec820bc0b031db427331159fb550fdc219431623",
+      "byteLen": 990
+    },
+    {
+      "sourcePath": "arena2/TRAV0I04.IMG",
+      "contentHash": "4413a118cd70b2f1afa83b119857a30ddbe977864499e826d9915b575a79e4f3",
+      "byteLen": 21420
+    },
+    {
+      "sourcePath": "arena2/TRAVAI05.IMG",
+      "contentHash": "c348033cdc21651b4756ec1df70e1f78b776688895b4ef583afd5263bfcaa83e",
+      "byteLen": 452
+    },
+    {
+      "sourcePath": "arena2/TRAVBI05.IMG",
+      "contentHash": "36b3056f445f23bb6406f7f8c972544d3fa6e39b92be9ba28b721560046965a2",
+      "byteLen": 452
+    },
+    {
+      "sourcePath": "arena2/TRAVCI05.IMG",
+      "contentHash": "1a1b308aadb4fd9ed6ec9de18f0db8c60d0a7e62b96e9a1026324545a61286cf",
+      "byteLen": 452
+    },
+    {
+      "sourcePath": "arena2/TRAVDI05.IMG",
+      "contentHash": "1dac86f71aeed0ecc2f470da162ca0b2b6812bcfab216970a8422a6da99f8d73",
+      "byteLen": 452
+    },
+    {
+      "sourcePath": "arena2/WEAPON00.CIF",
+      "contentHash": "66847e6af3a8d4e5bec76892d1bd68eae9ef40f2a99a6da9845b750494dcf95d",
+      "byteLen": 65873
+    },
+    {
+      "sourcePath": "arena2/WEAPON01.CIF",
+      "contentHash": "9d0c7bbf1cdb277e20b4e71e3adecb490b7a3427e8ed096bd17fd959e8a76160",
+      "byteLen": 83784
+    },
+    {
+      "sourcePath": "arena2/WEAPON02.CIF",
+      "contentHash": "707746fb170007077bdaf4066bb4ab3b88cb8bbdfa91cb93c9dde5b505d5c8a3",
+      "byteLen": 163844
+    },
+    {
+      "sourcePath": "arena2/WEAPON03.CIF",
+      "contentHash": "aed79afe12e94867203f1ee66b2e9cf52fccbd53ba13f1fc5fa9a8f706843ae6",
+      "byteLen": 53758
+    },
+    {
+      "sourcePath": "arena2/WEAPON04.CIF",
+      "contentHash": "046c2c9e2bbd2d661f42fc3fafc299d0eb2a296ad239ac9a3a87dc566e28ef7a",
+      "byteLen": 58595
+    },
+    {
+      "sourcePath": "arena2/WEAPON05.CIF",
+      "contentHash": "a847de0783ee083ea81c5977f805683ebf58b903208b4cd847a4dfeadf357a4c",
+      "byteLen": 94287
+    },
+    {
+      "sourcePath": "arena2/WEAPON06.CIF",
+      "contentHash": "67642f10aae4930898fe22be173cc391b119eb4c81e26445e91ce7c83f2cb211",
+      "byteLen": 167709
+    },
+    {
+      "sourcePath": "arena2/WEAPON07.CIF",
+      "contentHash": "55b823821a81980449ff7c461339dc3e7d291f207de61efd28ce481b8122a45a",
+      "byteLen": 186665
+    },
+    {
+      "sourcePath": "arena2/WEAPON08.CIF",
+      "contentHash": "51f82efeb8fae856fd26355479022409607eb096c67946c8a34a76d416ad1f29",
+      "byteLen": 135225
+    },
+    {
+      "sourcePath": "arena2/WEAPON09.CIF",
+      "contentHash": "452285e8b5b81ac5d837969f33f9cfe50b938a467dbae70a9f68a662d0088e10",
+      "byteLen": 61951
+    },
+    {
+      "sourcePath": "arena2/WEAPON10.CIF",
+      "contentHash": "5ec3789a52f50c2848f7be434128183ae06c62b1909fed63a66082c91ee06964",
+      "byteLen": 76298
+    },
+    {
+      "sourcePath": "arena2/WEAPON11.CIF",
+      "contentHash": "0fa7db84d2846cb6b9ffb84a7ecbbbd765103f3e63569d7d0e0dcb0bcf6c3ec1",
+      "byteLen": 71464
+    },
+    {
+      "sourcePath": "authored-ui/ui-authored-assets.json",
+      "contentHash": "ec5656b12b9a05fbf18a9b8da0204e6936dfc9ee5d93f5b21d86fc6faebc8c91",
+      "byteLen": 1835
+    },
+    {
+      "sourcePath": "authored-ui/ui-original/inventory-grid-slot-slate-v1.png",
+      "contentHash": "f19aca28a45f24c61cc55af1ee2be864a742ffcdb5f8f7fd46e4cd55b643a7b3",
+      "byteLen": 1970798
+    },
+    {
+      "sourcePath": "authored-ui/ui-original/inventory-panel-slate-v1.png",
+      "contentHash": "a54e0ca6bcc5f9ec2df87cb967365b844f0f9a7572150005a7eddcd1d448805c",
+      "byteLen": 2387369
+    },
+    {
+      "sourcePath": "authored-ui/ui-original/inventory-titlebar-slate-v1.png",
+      "contentHash": "80d2fe6b0c7f9fb089d3d2ca6fb6a0ec053331bb1874ceb94c3dad8341d584d2",
+      "byteLen": 1671134
+    }
+  ],
+  "artifacts": [
+    {
+      "relativePath": "geometry/index.json",
+      "contentHash": "9b34230a5e18c7257b3d6066b8b4840da3fb589718d9e6691ed0c55ebdfd45c6",
+      "byteLen": 13312,
+      "dependsOnPaths": [
+        "geometry/mesh-1000.json",
+        "geometry/mesh-12402.json",
+        "geometry/mesh-2000.json",
+        "geometry/mesh-3400.json",
+        "geometry/mesh-3402.json",
+        "geometry/mesh-3404.json",
+        "geometry/mesh-41000.json",
+        "geometry/mesh-41032.json",
+        "geometry/mesh-41106.json",
+        "geometry/mesh-41108.json",
+        "geometry/mesh-41113.json",
+        "geometry/mesh-41116.json",
+        "geometry/mesh-41120.json",
+        "geometry/mesh-41124.json"
+      ]
+    },
+    {
+      "relativePath": "geometry/mesh-1000.json",
+      "contentHash": "ddc91458e09461d59fe7d6914b8aeee929e83d0bf8d0111f50af6d762c175b8d",
+      "byteLen": 2028,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-12402.json",
+      "contentHash": "5495e7e1f1092a47e8b7ec40236fe5766090f1349473b56755566ccee88ce5b5",
+      "byteLen": 21742,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-2000.json",
+      "contentHash": "c71715d3f730c4b2208b3488892933b0f8b25b3a6808a43ef305d1d8a37ce206",
+      "byteLen": 1613,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-3400.json",
+      "contentHash": "dbc3ad2e197b61ae9e87a9375477b5f8acc00d7fbd89ac2174cd5eb032f94ccb",
+      "byteLen": 4557,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-3402.json",
+      "contentHash": "f866412ee5469f1d1770d5d11a8eb263bd50012eda6382e2b1b3c11a8284f536",
+      "byteLen": 3272,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-3404.json",
+      "contentHash": "4feecf95b1ad30fcfdb35b850e7ce54cfddddf12ac98fccf841130061ce57960",
+      "byteLen": 2056,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41000.json",
+      "contentHash": "f04d1f69732a330ffebd7ff191b24bdcfe6188c302bc1e3cbd079076564cda1f",
+      "byteLen": 17909,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41032.json",
+      "contentHash": "172165b69876e1eec6c371253a355556bb56770a07c4a1accc731b6a2ed19ba7",
+      "byteLen": 7306,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41106.json",
+      "contentHash": "240e994e0d38d3dfaa4c9edd7cea27df3191cafbe2a9c3720c2bd003a9957e52",
+      "byteLen": 8494,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41108.json",
+      "contentHash": "c02266501924a33abc9193d853d3238f87a0f5c6c6f154268ae1e2a8d46c40df",
+      "byteLen": 12066,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41113.json",
+      "contentHash": "b8f3fce35ce2741b3c2384ca0796745700547723d725b0ebffec7ac8e8667388",
+      "byteLen": 13125,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41116.json",
+      "contentHash": "5cbc9c86f72a359cde6eb1c12e89d029aa3d39a21852452b8fb61d38dae7a947",
+      "byteLen": 3403,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41120.json",
+      "contentHash": "9f0a3d79067e2af3afc23d53e319b7e784bd9b552a9e9c78897571d8f375a5a9",
+      "byteLen": 10837,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41124.json",
+      "contentHash": "3fb17eb7796a575c76a544dc52f7d494d1a2268c8d0212db14fa4280f841be1a",
+      "byteLen": 3490,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/audio/clips/audio-melee-dagger-swing.wav",
+      "contentHash": "52bef8e0b2e58e8ea4d9b00a5071d5c44f9beda27d57b0832c2e2d60046984fd",
+      "byteLen": 1331,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/audio/clips/audio-melee-hit-1.wav",
+      "contentHash": "f3ea121cbd10d9fca4c930c4a1af4a128a706db415eacac111b39b224d3048c8",
+      "byteLen": 2173,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/audio/clips/audio-melee-hit-2.wav",
+      "contentHash": "3ff1249ae08cdce8e60e1f55a6a99cbaedba7d2b81c77ce62974f8496a90aebc",
+      "byteLen": 2460,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/audio/clips/audio-melee-hit-3.wav",
+      "contentHash": "23e17b41bbe3e10c8b5f442af4b2fd1f8c2263a04c107376f017b95c4bcd76b1",
+      "byteLen": 2921,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/audio/clips/audio-melee-hit-4.wav",
+      "contentHash": "5c61b90bd743f7f14f8be916beee202d7345174e7cf7a6d95cc452fec0ea1710",
+      "byteLen": 2670,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/audio/clips/audio-melee-hit-5.wav",
+      "contentHash": "7baa35eb158a9cfe756a6aef3027bd0f00817d4f0c4ba27f1abb77fab6cb73d4",
+      "byteLen": 3557,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/classic/manifest.json",
+      "contentHash": "6e1f8f5f8c88e64ee95af5382c55ec04661419ff06e52d3fdc4465b7f1f532a3",
+      "byteLen": 1279440,
+      "dependsOnPaths": [
+        "media/audio/clips/audio-melee-dagger-swing.wav",
+        "media/audio/clips/audio-melee-hit-1.wav",
+        "media/audio/clips/audio-melee-hit-2.wav",
+        "media/audio/clips/audio-melee-hit-3.wav",
+        "media/audio/clips/audio-melee-hit-4.wav",
+        "media/audio/clips/audio-melee-hit-5.wav",
+        "media/combat/weapon-00-atlas.png",
+        "media/combat/weapon-03-atlas.png",
+        "media/combat/weapon-axe-atlas.png",
+        "media/combat/weapon-bow-atlas.png",
+        "media/combat/weapon-dagger-steel-atlas.png",
+        "media/combat/weapon-flail-atlas.png",
+        "media/combat/weapon-longblade-atlas.png",
+        "media/combat/weapon-mace-atlas.png",
+        "media/combat/weapon-staff-atlas.png",
+        "media/combat/weapon-unarmed-atlas.png",
+        "media/combat/weapon-warhammer-atlas.png",
+        "media/combat/weapon-werecreature-atlas.png",
+        "media/effects/effect-blood-0-atlas.png",
+        "media/effects/effect-blood-1-atlas.png",
+        "media/effects/effect-blood-2-atlas.png",
+        "media/effects/effect-sparkle-magic-atlas.png",
+        "media/fonts/font-classic-0000-atlas.png",
+        "media/fonts/font-classic-0001-atlas.png",
+        "media/fonts/font-classic-0002-atlas.png",
+        "media/fonts/font-classic-0003-atlas.png",
+        "media/fonts/font-classic-0004-atlas.png",
+        "media/maps/map-amap00i0.png",
+        "media/maps/map-amap01i0.png",
+        "media/maps/map-fmap0i05.png",
+        "media/maps/map-fmap0i09.png",
+        "media/maps/map-fmap0i11.png",
+        "media/maps/map-fmap0i17.png",
+        "media/maps/map-fmap0i18.png",
+        "media/maps/map-fmap0i19.png",
+        "media/maps/map-fmap0i20.png",
+        "media/maps/map-fmap0i21.png",
+        "media/maps/map-fmap0i22.png",
+        "media/maps/map-fmap0i23.png",
+        "media/maps/map-fmap0i26.png",
+        "media/maps/map-fmap0i32.png",
+        "media/maps/map-fmap0i33.png",
+        "media/maps/map-fmap0i34.png",
+        "media/maps/map-fmap0i35.png",
+        "media/maps/map-fmap0i36.png",
+        "media/maps/map-fmap0i37.png",
+        "media/maps/map-fmap0i38.png",
+        "media/maps/map-fmap0i39.png",
+        "media/maps/map-fmap0i40.png",
+        "media/maps/map-fmap0i41.png",
+        "media/maps/map-fmap0i42.png",
+        "media/maps/map-fmap0i43.png",
+        "media/maps/map-fmap0i44.png",
+        "media/maps/map-fmap0i45.png",
+        "media/maps/map-fmap0i46.png",
+        "media/maps/map-fmap0i47.png",
+        "media/maps/map-fmap0i48.png",
+        "media/maps/map-fmap0i49.png",
+        "media/maps/map-fmap0i50.png",
+        "media/maps/map-fmap0i51.png",
+        "media/maps/map-fmap0i52.png",
+        "media/maps/map-fmap0i53.png",
+        "media/maps/map-fmap0i54.png",
+        "media/maps/map-fmap0i55.png",
+        "media/maps/map-fmap0i56.png",
+        "media/maps/map-fmap0i57.png",
+        "media/maps/map-fmap0i58.png",
+        "media/maps/map-fmap0i59.png",
+        "media/maps/map-fmap0i60.png",
+        "media/maps/map-fmap0i61.png",
+        "media/maps/map-fmapai00.png",
+        "media/maps/map-fmapai01.png",
+        "media/maps/map-fmapai16.png",
+        "media/maps/map-fmapbi00.png",
+        "media/maps/map-fmapbi01.png",
+        "media/maps/map-fmapbi16.png",
+        "media/maps/map-fmapci01.png",
+        "media/maps/map-fmapci16.png",
+        "media/maps/map-fmapdi01.png",
+        "media/maps/map-fmapdi16.png",
+        "media/maps/map-tmap00i0.png",
+        "media/maps/map-town00i0.png",
+        "media/maps/map-trav00i0.png",
+        "media/maps/map-trav01i0.png",
+        "media/maps/map-trav01i1.png",
+        "media/maps/map-trav02i0.png",
+        "media/maps/map-trav0i00.png",
+        "media/maps/map-trav0i01.png",
+        "media/maps/map-trav0i03.png",
+        "media/maps/map-trav0i04.png",
+        "media/maps/map-travai05.png",
+        "media/maps/map-travbi05.png",
+        "media/maps/map-travci05.png",
+        "media/maps/map-travdi05.png",
+        "media/ui/authored/inventory-grid-slot-slate-v1.png",
+        "media/ui/authored/inventory-skin-panel-slate-v1.png",
+        "media/ui/authored/inventory-titlebar-slate-v1.png",
+        "media/ui/hud-chrome-main.png",
+        "media/ui/hud-vital-fatigue.png",
+        "media/ui/hud-vital-health.png",
+        "media/ui/hud-vital-magicka.png",
+        "media/ui/inventory-icons/inventory-icon-arrow.png",
+        "media/ui/inventory-icons/inventory-icon-buckler.png",
+        "media/ui/inventory-icons/inventory-icon-gold-piece.png",
+        "media/ui/inventory-icons/inventory-icon-iron-battle-axe.png",
+        "media/ui/inventory-icons/inventory-icon-iron-boots.png",
+        "media/ui/inventory-icons/inventory-icon-iron-broadsword.png",
+        "media/ui/inventory-icons/inventory-icon-iron-claymore.png",
+        "media/ui/inventory-icons/inventory-icon-iron-cuirass.png",
+        "media/ui/inventory-icons/inventory-icon-iron-dagger.png",
+        "media/ui/inventory-icons/inventory-icon-iron-dai-katana.png",
+        "media/ui/inventory-icons/inventory-icon-iron-flail.png",
+        "media/ui/inventory-icons/inventory-icon-iron-gauntlets.png",
+        "media/ui/inventory-icons/inventory-icon-iron-greaves.png",
+        "media/ui/inventory-icons/inventory-icon-iron-helm.png",
+        "media/ui/inventory-icons/inventory-icon-iron-katana.png",
+        "media/ui/inventory-icons/inventory-icon-iron-left-pauldron.png",
+        "media/ui/inventory-icons/inventory-icon-iron-long-bow.png",
+        "media/ui/inventory-icons/inventory-icon-iron-longsword.png",
+        "media/ui/inventory-icons/inventory-icon-iron-mace.png",
+        "media/ui/inventory-icons/inventory-icon-iron-right-pauldron.png",
+        "media/ui/inventory-icons/inventory-icon-iron-saber.png",
+        "media/ui/inventory-icons/inventory-icon-iron-short-bow.png",
+        "media/ui/inventory-icons/inventory-icon-iron-shortsword.png",
+        "media/ui/inventory-icons/inventory-icon-iron-staff.png",
+        "media/ui/inventory-icons/inventory-icon-iron-tanto.png",
+        "media/ui/inventory-icons/inventory-icon-iron-wakazashi.png",
+        "media/ui/inventory-icons/inventory-icon-iron-war-axe.png",
+        "media/ui/inventory-icons/inventory-icon-iron-warhammer.png",
+        "media/ui/inventory-icons/inventory-icon-kite-shield.png",
+        "media/ui/inventory-icons/inventory-icon-round-shield.png",
+        "media/ui/inventory-icons/inventory-icon-tower-shield.png",
+        "media/ui/screen-character-generation.png",
+        "media/ui/screen-death.png",
+        "media/ui/screen-pick-02.png",
+        "media/ui/screen-prison.png",
+        "media/ui/screen-start-menu.png",
+        "media/ui/screen-title.png",
+        "media/ui/window-bank-panel.png",
+        "media/ui/window-book-reader.png",
+        "media/ui/window-character-sheet-chrome.png",
+        "media/ui/window-guild-member.png",
+        "media/ui/window-guild-service.png",
+        "media/ui/window-inventory-chrome.png",
+        "media/ui/window-merchant-buttons-buy.png",
+        "media/ui/window-merchant-buttons-identify.png",
+        "media/ui/window-merchant-buttons-repair.png",
+        "media/ui/window-merchant-buttons-sell-gold.png",
+        "media/ui/window-merchant-buttons-sell.png",
+        "media/ui/window-merchant-cost.png",
+        "media/ui/window-rest-hours-past.png",
+        "media/ui/window-rest-hours-remaining.png",
+        "media/ui/window-rest-panel.png"
+      ]
+    },
+    {
+      "relativePath": "media/combat/weapon-00-atlas.png",
+      "contentHash": "92ec6a4c7b9251421c23cd1b8d36c4010d6b621a196817e59a39ce8e76790a1c",
+      "byteLen": 57273,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/combat/weapon-03-atlas.png",
+      "contentHash": "b0dc64ffb1c19e35c6c8b6514f7b51e42eb9a8e7f5e65cd5c8e2f92809cc8101",
+      "byteLen": 47476,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/combat/weapon-axe-atlas.png",
+      "contentHash": "c798b0fc2b020f884ae0a2087bec37353ea92bd6801ff0c21eb7d6b29e383036",
+      "byteLen": 107552,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/combat/weapon-bow-atlas.png",
+      "contentHash": "46bde93e450f451bba9808d5c7503d24de592c1c091f78a25e365317622283eb",
+      "byteLen": 48784,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/combat/weapon-dagger-steel-atlas.png",
+      "contentHash": "d8b5c9659660acf879d2a5b37ae0f60e2c061c3d0861f9fd9c35db30b4b9ecdc",
+      "byteLen": 147440,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/combat/weapon-flail-atlas.png",
+      "contentHash": "a6110bed99e8f2256b45183fd3ff45893ee59077bbf79208d62e1526f568ff83",
+      "byteLen": 144384,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/combat/weapon-longblade-atlas.png",
+      "contentHash": "00ef2ce36dfa20a270fce247a2a18def60f018d16629b12ff3e5fd7460798186",
+      "byteLen": 43970,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/combat/weapon-mace-atlas.png",
+      "contentHash": "3396f9e85fd9bc4f2dd33f58ebc944acc8b6f2c2dc3d94b93b9c30db1a57d023",
+      "byteLen": 72564,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/combat/weapon-staff-atlas.png",
+      "contentHash": "ea721afaa27c69aa6ae5a101070926e947cbd98b5492ea664e5c933d05da4f98",
+      "byteLen": 55623,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/combat/weapon-unarmed-atlas.png",
+      "contentHash": "340b964f9f9192d7449a676d024f334ab314b174e090a0e31f0e04d9e886a858",
+      "byteLen": 76662,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/combat/weapon-warhammer-atlas.png",
+      "contentHash": "d54d736b20738bcd8acef94616489a67249cc6167d4be1c14d5c57c709c94afc",
+      "byteLen": 136646,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/combat/weapon-werecreature-atlas.png",
+      "contentHash": "e590a06ee813606a0219d29b68dc55e0ae63696f2596ef2740366b5e284daba0",
+      "byteLen": 68862,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-0-corpse.png",
+      "contentHash": "ecb5088c51721a80d369399cffbbe35cbf76c6416316541b7e926c645037e23d",
+      "byteLen": 2535,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-0.png",
+      "contentHash": "9f4b6d7c73afe4cb63f0081d6435d8ba1b901f9ad91e2db589aade137299e340",
+      "byteLen": 124501,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-1-corpse.png",
+      "contentHash": "6169a351ea53613c32331754ae9405f11c04d48658430ede6b3b8c307d5f644e",
+      "byteLen": 2348,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-1.png",
+      "contentHash": "41ec62b495319b2a5513e1426cc1c045a9bd94d9b840eb5bca00d1acfd56c46c",
+      "byteLen": 101518,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-10-corpse.png",
+      "contentHash": "2badfd22b23aa399c860b47cc31bf2917fd88198567f000628026957e4167e23",
+      "byteLen": 2005,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-10.png",
+      "contentHash": "40557356f219e19d655fef8bc8d0b1fd7f5252116271ca6f518bffd350317be3",
+      "byteLen": 131413,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-11-corpse.png",
+      "contentHash": "bd98c8e92390971c9dec822887d91e47fea2b961f1a377a9f80f262fcf0733a4",
+      "byteLen": 3446,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-11.png",
+      "contentHash": "635528a1c785bfe442f318cd11caa0bad309173995be22f6a3d0f9e4f8a777d9",
+      "byteLen": 250024,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-12-corpse.png",
+      "contentHash": "f42092c7085799f077feddc2e4dfc0b42a1906911803f461e6a10e09c9249637",
+      "byteLen": 3458,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-12.png",
+      "contentHash": "5fd960d4661f1570b6fd0aab1396864eb4beefa5c91b99a20053b2e6dfe69cc4",
+      "byteLen": 351931,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-128-corpse.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-128.png",
+      "contentHash": "d5739c1f7cfe441fbf05763945e6b6dc08b1434b22abd9652e045e238081122e",
+      "byteLen": 423917,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-129-corpse.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-129.png",
+      "contentHash": "3b4eea46ea41826c5b2ac825f05712b6237a3836b668b42d775c5345aeba631d",
+      "byteLen": 447908,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-13-corpse.png",
+      "contentHash": "b62aa302dea8a6009534957dbcefe8cc145906562dc4d46cd523045cbdf8e08e",
+      "byteLen": 3095,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-13.png",
+      "contentHash": "8491221cb37224e3f444932a28f520755efa7e45f2d88ac12e292fb6a39d1a4f",
+      "byteLen": 136499,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-130-corpse.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-130.png",
+      "contentHash": "3949782fb01e809fffc46bda5dcd23a63b8fc4192fa3ea6447d6cccee1075bdc",
+      "byteLen": 364211,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-131-corpse.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-131.png",
+      "contentHash": "63d362bf97f6bf0e386ab79955995c93026110f6e97226e6a10b48e8817ab11d",
+      "byteLen": 398314,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-132-corpse.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-132.png",
+      "contentHash": "d5739c1f7cfe441fbf05763945e6b6dc08b1434b22abd9652e045e238081122e",
+      "byteLen": 423917,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-133-corpse.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-133.png",
+      "contentHash": "3949782fb01e809fffc46bda5dcd23a63b8fc4192fa3ea6447d6cccee1075bdc",
+      "byteLen": 364211,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-134-corpse.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-134.png",
+      "contentHash": "7e0c99bae5d08fbeed322bb8dc79f6f8a63f4fb5fe7977cf81b56a3ac182fc3e",
+      "byteLen": 327921,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-135-corpse.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-135.png",
+      "contentHash": "7e0c99bae5d08fbeed322bb8dc79f6f8a63f4fb5fe7977cf81b56a3ac182fc3e",
+      "byteLen": 327921,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-136-corpse.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-136.png",
+      "contentHash": "4b9c432adc7a6866fe17e447609946d421d3f4cf22825590d9c8b9644baeadf3",
+      "byteLen": 347597,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-137-corpse.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-137.png",
+      "contentHash": "7e0c99bae5d08fbeed322bb8dc79f6f8a63f4fb5fe7977cf81b56a3ac182fc3e",
+      "byteLen": 327921,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-138-corpse.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-138.png",
+      "contentHash": "7e0c99bae5d08fbeed322bb8dc79f6f8a63f4fb5fe7977cf81b56a3ac182fc3e",
+      "byteLen": 327921,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-139-corpse.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-139.png",
+      "contentHash": "4b9c432adc7a6866fe17e447609946d421d3f4cf22825590d9c8b9644baeadf3",
+      "byteLen": 347597,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-14-corpse.png",
+      "contentHash": "a5cd514d9f7ed15632f065ab554d06e1a4b669061d577e1e0d7ecfea639fb7c1",
+      "byteLen": 2607,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-14.png",
+      "contentHash": "85ff9045ea638940440f690fbfb6c2d12fdde6b3f6901c00be9e5354ef36f972",
+      "byteLen": 75398,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-140-corpse.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-140.png",
+      "contentHash": "d6e744c9d77ecc31ad8703a993010eca93fe1784f63e0afe89f3b5a5331404ce",
+      "byteLen": 401065,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-141-corpse.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-141.png",
+      "contentHash": "59e9470407d70691e33ae86adb359f093a7a247c9f736fe9de825db1140f3186",
+      "byteLen": 351492,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-142-corpse.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-142.png",
+      "contentHash": "59e9470407d70691e33ae86adb359f093a7a247c9f736fe9de825db1140f3186",
+      "byteLen": 351492,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-143-corpse.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-143.png",
+      "contentHash": "d6e744c9d77ecc31ad8703a993010eca93fe1784f63e0afe89f3b5a5331404ce",
+      "byteLen": 401065,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-144-corpse.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-144.png",
+      "contentHash": "d6e744c9d77ecc31ad8703a993010eca93fe1784f63e0afe89f3b5a5331404ce",
+      "byteLen": 401065,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-145-corpse.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-145.png",
+      "contentHash": "d6e744c9d77ecc31ad8703a993010eca93fe1784f63e0afe89f3b5a5331404ce",
+      "byteLen": 401065,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-146-corpse.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-146.png",
+      "contentHash": "2db58ffc00576c707a1d963ae83eb573bc0ec8429795b46d9a0577cab25b6138",
+      "byteLen": 258288,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-15-corpse.png",
+      "contentHash": "c5595044ecfb096edb015cc07817e1cee716ebdb49bdf61caee75b93cf68bd3b",
+      "byteLen": 2695,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-15.png",
+      "contentHash": "d2f8fa2d5a9c80ca2aaa2db4644e3148f0fef865a7b9a12f0f70fbf272175c86",
+      "byteLen": 291985,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-16-corpse.png",
+      "contentHash": "8170696e8f17f23555f7396114a9c52246e12440d9d722338bfdec2dd950fc1d",
+      "byteLen": 4367,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-16.png",
+      "contentHash": "2f11e8eeb6cebd3a11b7124819d5625dfd4fe6f60355d7f1acdbc838c8ec82a5",
+      "byteLen": 432101,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-17-corpse.png",
+      "contentHash": "82f70b04bd213301e86979dedb809f660efb6e8a210967b602c91da97752dbf2",
+      "byteLen": 2620,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-17.png",
+      "contentHash": "48213c62d74770c1b7c06cd71436c73e532f796710600e542d7860ea43631a95",
+      "byteLen": 278492,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-18-corpse.png",
+      "contentHash": "27fd4bcdc5d0a4fef96bbe289ac337e96944ca3e08899995e5ae1dd91978997d",
+      "byteLen": 1175,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-18.png",
+      "contentHash": "2ec1d1b28e0efe0bc5f6c3141fd5218fbc63d0179a571b804305861aae9dcd18",
+      "byteLen": 21332,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-19-corpse.png",
+      "contentHash": "ee4b90d37c49ff8d58d519da74efe8503b015b0ab10fe5ce818759f724fe7dc6",
+      "byteLen": 3908,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-19.png",
+      "contentHash": "6eb69ab74812bef5c5699fb8048b1c5dd492ff0ada6b50e9923ce80906d461f0",
+      "byteLen": 223764,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-2-corpse.png",
+      "contentHash": "87aa4275afc5ba360377afeaa18fb32fb784cd7d88703fa2a2767111476f3f76",
+      "byteLen": 2616,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-2.png",
+      "contentHash": "9f2d3cb9c73b59a406504677223aa4800a02213f7477bf9596fe09851693b349",
+      "byteLen": 244218,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-20-corpse.png",
+      "contentHash": "2066b17e8ff081c88ff1b7eafba6be91456b4e95d66a1b0dc7a11f8ae7d796f9",
+      "byteLen": 3933,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-20.png",
+      "contentHash": "98a8c80e00e7dcc74f6c15c2bd1177d4cdcd1f89f2d3e1a223709259ce2b1d53",
+      "byteLen": 259460,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-21-corpse.png",
+      "contentHash": "f42092c7085799f077feddc2e4dfc0b42a1906911803f461e6a10e09c9249637",
+      "byteLen": 3458,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-21.png",
+      "contentHash": "f2fe2f85aae5fc3ee1800fff9ede3125150b9d3daf2a585a2e0d101a70c377bd",
+      "byteLen": 269362,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-22-corpse.png",
+      "contentHash": "e785142a416d5f8ec4a4989d16a7a92c3354f84467916656d6371c9ab2e6d795",
+      "byteLen": 3502,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-22.png",
+      "contentHash": "9b25842a77da2536746f6fefe6e4164ebde3e5143c530a110d723ba824d542b3",
+      "byteLen": 521710,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-23-corpse.png",
+      "contentHash": "27fd4bcdc5d0a4fef96bbe289ac337e96944ca3e08899995e5ae1dd91978997d",
+      "byteLen": 1175,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-23.png",
+      "contentHash": "4365a8c3ed3f3ee22d7cad4e7d9db22a9a57645bb11cc2a13d281feb18b45336",
+      "byteLen": 23091,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-24-corpse.png",
+      "contentHash": "f42092c7085799f077feddc2e4dfc0b42a1906911803f461e6a10e09c9249637",
+      "byteLen": 3458,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-24.png",
+      "contentHash": "e44482d40e6d0bf23e77d26bdd072323c37764892cd376d15301251958235ab4",
+      "byteLen": 384869,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-25-corpse.png",
+      "contentHash": "8f022ba06889f8ba87cef71aac3f1d273cf867bcd20290b341de1477a9f08196",
+      "byteLen": 2468,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-25.png",
+      "contentHash": "9bb00ea4705786b0bd1a2af8437475d41fdf904f58fbc04899b0a8a56511ddaa",
+      "byteLen": 484287,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-26-corpse.png",
+      "contentHash": "541fde16aea27fee5f040358366c0eb2b6c3ebc185af9530c83773de6b82fe2e",
+      "byteLen": 2357,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-26.png",
+      "contentHash": "5373ea08e544bfe590f18992ed23e04a470e11a14f6e2374d5e050078ce7e478",
+      "byteLen": 585608,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-27-corpse.png",
+      "contentHash": "5996d641267207d591487bc8fcf7523572d8d63d4365b8bb972c0661a33ae3bc",
+      "byteLen": 1958,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-27.png",
+      "contentHash": "13cf5bb05553dc97b8e0e45d76799e0eda167546a63445738891947e4808b14a",
+      "byteLen": 348888,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-28-corpse.png",
+      "contentHash": "2316cebfbdd92da21f13c5f29661c67727009e28031ba16447a18ad0367e4bc7",
+      "byteLen": 3709,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-28.png",
+      "contentHash": "3757f5cfa6e8197cbf0e4041358c66184bc35f1b68f60e9ad574388adae5ca4e",
+      "byteLen": 228835,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-29-corpse.png",
+      "contentHash": "767f14fc3e0ea9279e3b846cc285c532b7860bac7599e4d7b1246e49158f58c6",
+      "byteLen": 2708,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-29.png",
+      "contentHash": "76779077993adadee5e9a0c8f838af2afc20d8d4d0c258ff17b1acec0067e174",
+      "byteLen": 114162,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-3-corpse.png",
+      "contentHash": "f315c904d951015ed93e8d49e090c098587d0d1bc361a3981c487004774aca37",
+      "byteLen": 1356,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-3.png",
+      "contentHash": "ef0c812e67c0bdcd46935d7509672b83f236f5e403823076e4f4655f8b52aa43",
+      "byteLen": 92375,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-30-corpse.png",
+      "contentHash": "2316cebfbdd92da21f13c5f29661c67727009e28031ba16447a18ad0367e4bc7",
+      "byteLen": 3709,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-30.png",
+      "contentHash": "63b335665abd57f03db614dc9c5652c66ad0fe88ffee05c639fefcaef19276d7",
+      "byteLen": 229036,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-31-corpse.png",
+      "contentHash": "935990b87c7f0417e9337bd5658c78aacb3b916cf396a3b5a5775cdec2964d32",
+      "byteLen": 1749,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-31.png",
+      "contentHash": "b2f05e359345239b940e982109c4d05d0f6594b2ea1e1b0fcedc1c5163eb46b1",
+      "byteLen": 226790,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-32-corpse.png",
+      "contentHash": "26bef83a916bdec80692388814c4755ba969fb54ff2af1c4e6090725b0ac3b13",
+      "byteLen": 3762,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-32.png",
+      "contentHash": "e3facef30ac514157a73468b551e24f11ad160081353377f9938d2481f6dcde2",
+      "byteLen": 333288,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-33-corpse.png",
+      "contentHash": "82ceb98a51638cc8f1a3758cf7f21e0e8e3a95aacd090c34150a87d0d7893fb8",
+      "byteLen": 3763,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-33.png",
+      "contentHash": "151aa066778883fe69483f029c306be7cf3130bfac6e167e0622ce5358812742",
+      "byteLen": 403873,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-34-corpse.png",
+      "contentHash": "9ad130bbc8dac4c02e19f900eda6dcf7b257f492b2e151c2deaee5f9d1240beb",
+      "byteLen": 1702,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-34.png",
+      "contentHash": "cabe5c377ea4f134a6de84dd53cda5b91aa1fed2b640778a7165491e431832b5",
+      "byteLen": 66263,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-35-corpse.png",
+      "contentHash": "3b7ab20c3c3056ac3eeea4aceb33edc319b3f71a6f69c5e25db04897165a5149",
+      "byteLen": 2489,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-35.png",
+      "contentHash": "6ddd58ddb06775db6a6bbd61b4fd59fa1f8515ce9b6645734711bdc14c7b4988",
+      "byteLen": 267601,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-36-corpse.png",
+      "contentHash": "d0c8933cbeffd671e8f28326bf4cf51265467babd5c9df4daae6ba50f1919d3e",
+      "byteLen": 2771,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-36.png",
+      "contentHash": "05aada61419166b036c92d0600cb9fc6cc479e0cd41187a513bc44e78aca0410",
+      "byteLen": 234454,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-37-corpse.png",
+      "contentHash": "e3d30d2634f930afb34ccdabd682afd6700bf6f54cdd5775255d03449c5d44fe",
+      "byteLen": 2661,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-37.png",
+      "contentHash": "291d82db992ee1eb037664e33a02f886b5b4f9288e99e4d5dc7362e23722b65c",
+      "byteLen": 264136,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-38-corpse.png",
+      "contentHash": "402a8c215aa2aa12d180012cc2b005f8c1162edef45d92bf93be1124998ab625",
+      "byteLen": 2696,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-38.png",
+      "contentHash": "c385a1348aad1eb040978be5b4f127cfcfb2d36200c7bc99aacfa6f4df7e9872",
+      "byteLen": 224658,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-4-corpse.png",
+      "contentHash": "83a3b97ccb022a84585b44c2162dcb5750ec80bb75a154f9b7136dc8a780007f",
+      "byteLen": 3526,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-4.png",
+      "contentHash": "4e703bd49e5a665934348bd8eb0487e45e3e3ac47a6131f50cfdcefc0eddacf2",
+      "byteLen": 319416,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-40-corpse.png",
+      "contentHash": "9ad130bbc8dac4c02e19f900eda6dcf7b257f492b2e151c2deaee5f9d1240beb",
+      "byteLen": 1702,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-40.png",
+      "contentHash": "cabe5c377ea4f134a6de84dd53cda5b91aa1fed2b640778a7165491e431832b5",
+      "byteLen": 66263,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-41-corpse.png",
+      "contentHash": "6dd2f2cb2ee0b00efa93f1e342792fee8ad2f95716c3be699ef36f4e9e9550e0",
+      "byteLen": 1671,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-41.png",
+      "contentHash": "a1172ff40f30ab7869d02e4d4de65bf5c6645842daa11c6a054270d1a5efd53a",
+      "byteLen": 463710,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-42-corpse.png",
+      "contentHash": "6ad1a389c086c660f91b643164ffcc92f5673bc668a14618abb9a35d7c3884af",
+      "byteLen": 3431,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-42.png",
+      "contentHash": "de1861a8d04f2764783e6675871ffc132ac9c87b697c2cc72e229bc65ad7dcc5",
+      "byteLen": 257804,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-5-corpse.png",
+      "contentHash": "c301b3db87b80ac07d8fa266e57c0c1bdd398767d7e84ba398d4983439138725",
+      "byteLen": 2665,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-5.png",
+      "contentHash": "a1756f82a1457def0e2635c5c1eecbb9298b7b88bae0d5c67d44c4eb47ef34a7",
+      "byteLen": 196004,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-6-corpse.png",
+      "contentHash": "cc780c5eb56fe49dc122b75c7c1c5bcbc9f6917ea8a68cb7e1d37aa54edd2107",
+      "byteLen": 4838,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-6.png",
+      "contentHash": "a4b8fa53187481a0ef452987a7210accb1f2be475e96adcb5b26ebc23bc24484",
+      "byteLen": 400364,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-7-corpse.png",
+      "contentHash": "f42092c7085799f077feddc2e4dfc0b42a1906911803f461e6a10e09c9249637",
+      "byteLen": 3458,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-7.png",
+      "contentHash": "3232513b9a0cd86bcb56ff9b21275e489f7c6f0871410bcb00fe68352d45f83f",
+      "byteLen": 358319,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-8-corpse.png",
+      "contentHash": "85be21c21450b5a876878ebbc7c55297f827a667025a4c06ce81ee93b251d04b",
+      "byteLen": 2653,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-8.png",
+      "contentHash": "ca8ec76c87bf23e635885cf825ed9b80333a6f249f858067583306260cb3f66d",
+      "byteLen": 317092,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-9-corpse.png",
+      "contentHash": "a5cd514d9f7ed15632f065ab554d06e1a4b669061d577e1e0d7ecfea639fb7c1",
+      "byteLen": 2607,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-9.png",
+      "contentHash": "c08ad5fdd725196442d289ab3612d06e34cf930bac57f39bb1729b8f0259881c",
+      "byteLen": 82486,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-216-0.png",
+      "contentHash": "04a19948b0d2d295193d09f3b898f9686ea8740d69e7f4cdd3109ae7828c1c5c",
+      "byteLen": 570,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/manifest.json",
+      "contentHash": "aaecd922f4f9f5835262b6efef9d6fb0759f9b32900e2f573bb0dc20983d324b",
+      "byteLen": 8261508,
+      "dependsOnPaths": [
+        "media/dungeon/actors/mobile-0-corpse.png",
+        "media/dungeon/actors/mobile-0.png",
+        "media/dungeon/actors/mobile-1-corpse.png",
+        "media/dungeon/actors/mobile-1.png",
+        "media/dungeon/actors/mobile-10-corpse.png",
+        "media/dungeon/actors/mobile-10.png",
+        "media/dungeon/actors/mobile-11-corpse.png",
+        "media/dungeon/actors/mobile-11.png",
+        "media/dungeon/actors/mobile-12-corpse.png",
+        "media/dungeon/actors/mobile-12.png",
+        "media/dungeon/actors/mobile-128-corpse.png",
+        "media/dungeon/actors/mobile-128.png",
+        "media/dungeon/actors/mobile-129-corpse.png",
+        "media/dungeon/actors/mobile-129.png",
+        "media/dungeon/actors/mobile-13-corpse.png",
+        "media/dungeon/actors/mobile-13.png",
+        "media/dungeon/actors/mobile-130-corpse.png",
+        "media/dungeon/actors/mobile-130.png",
+        "media/dungeon/actors/mobile-131-corpse.png",
+        "media/dungeon/actors/mobile-131.png",
+        "media/dungeon/actors/mobile-132-corpse.png",
+        "media/dungeon/actors/mobile-132.png",
+        "media/dungeon/actors/mobile-133-corpse.png",
+        "media/dungeon/actors/mobile-133.png",
+        "media/dungeon/actors/mobile-134-corpse.png",
+        "media/dungeon/actors/mobile-134.png",
+        "media/dungeon/actors/mobile-135-corpse.png",
+        "media/dungeon/actors/mobile-135.png",
+        "media/dungeon/actors/mobile-136-corpse.png",
+        "media/dungeon/actors/mobile-136.png",
+        "media/dungeon/actors/mobile-137-corpse.png",
+        "media/dungeon/actors/mobile-137.png",
+        "media/dungeon/actors/mobile-138-corpse.png",
+        "media/dungeon/actors/mobile-138.png",
+        "media/dungeon/actors/mobile-139-corpse.png",
+        "media/dungeon/actors/mobile-139.png",
+        "media/dungeon/actors/mobile-14-corpse.png",
+        "media/dungeon/actors/mobile-14.png",
+        "media/dungeon/actors/mobile-140-corpse.png",
+        "media/dungeon/actors/mobile-140.png",
+        "media/dungeon/actors/mobile-141-corpse.png",
+        "media/dungeon/actors/mobile-141.png",
+        "media/dungeon/actors/mobile-142-corpse.png",
+        "media/dungeon/actors/mobile-142.png",
+        "media/dungeon/actors/mobile-143-corpse.png",
+        "media/dungeon/actors/mobile-143.png",
+        "media/dungeon/actors/mobile-144-corpse.png",
+        "media/dungeon/actors/mobile-144.png",
+        "media/dungeon/actors/mobile-145-corpse.png",
+        "media/dungeon/actors/mobile-145.png",
+        "media/dungeon/actors/mobile-146-corpse.png",
+        "media/dungeon/actors/mobile-146.png",
+        "media/dungeon/actors/mobile-15-corpse.png",
+        "media/dungeon/actors/mobile-15.png",
+        "media/dungeon/actors/mobile-16-corpse.png",
+        "media/dungeon/actors/mobile-16.png",
+        "media/dungeon/actors/mobile-17-corpse.png",
+        "media/dungeon/actors/mobile-17.png",
+        "media/dungeon/actors/mobile-18-corpse.png",
+        "media/dungeon/actors/mobile-18.png",
+        "media/dungeon/actors/mobile-19-corpse.png",
+        "media/dungeon/actors/mobile-19.png",
+        "media/dungeon/actors/mobile-2-corpse.png",
+        "media/dungeon/actors/mobile-2.png",
+        "media/dungeon/actors/mobile-20-corpse.png",
+        "media/dungeon/actors/mobile-20.png",
+        "media/dungeon/actors/mobile-21-corpse.png",
+        "media/dungeon/actors/mobile-21.png",
+        "media/dungeon/actors/mobile-22-corpse.png",
+        "media/dungeon/actors/mobile-22.png",
+        "media/dungeon/actors/mobile-23-corpse.png",
+        "media/dungeon/actors/mobile-23.png",
+        "media/dungeon/actors/mobile-24-corpse.png",
+        "media/dungeon/actors/mobile-24.png",
+        "media/dungeon/actors/mobile-25-corpse.png",
+        "media/dungeon/actors/mobile-25.png",
+        "media/dungeon/actors/mobile-26-corpse.png",
+        "media/dungeon/actors/mobile-26.png",
+        "media/dungeon/actors/mobile-27-corpse.png",
+        "media/dungeon/actors/mobile-27.png",
+        "media/dungeon/actors/mobile-28-corpse.png",
+        "media/dungeon/actors/mobile-28.png",
+        "media/dungeon/actors/mobile-29-corpse.png",
+        "media/dungeon/actors/mobile-29.png",
+        "media/dungeon/actors/mobile-3-corpse.png",
+        "media/dungeon/actors/mobile-3.png",
+        "media/dungeon/actors/mobile-30-corpse.png",
+        "media/dungeon/actors/mobile-30.png",
+        "media/dungeon/actors/mobile-31-corpse.png",
+        "media/dungeon/actors/mobile-31.png",
+        "media/dungeon/actors/mobile-32-corpse.png",
+        "media/dungeon/actors/mobile-32.png",
+        "media/dungeon/actors/mobile-33-corpse.png",
+        "media/dungeon/actors/mobile-33.png",
+        "media/dungeon/actors/mobile-34-corpse.png",
+        "media/dungeon/actors/mobile-34.png",
+        "media/dungeon/actors/mobile-35-corpse.png",
+        "media/dungeon/actors/mobile-35.png",
+        "media/dungeon/actors/mobile-36-corpse.png",
+        "media/dungeon/actors/mobile-36.png",
+        "media/dungeon/actors/mobile-37-corpse.png",
+        "media/dungeon/actors/mobile-37.png",
+        "media/dungeon/actors/mobile-38-corpse.png",
+        "media/dungeon/actors/mobile-38.png",
+        "media/dungeon/actors/mobile-4-corpse.png",
+        "media/dungeon/actors/mobile-4.png",
+        "media/dungeon/actors/mobile-40-corpse.png",
+        "media/dungeon/actors/mobile-40.png",
+        "media/dungeon/actors/mobile-41-corpse.png",
+        "media/dungeon/actors/mobile-41.png",
+        "media/dungeon/actors/mobile-42-corpse.png",
+        "media/dungeon/actors/mobile-42.png",
+        "media/dungeon/actors/mobile-5-corpse.png",
+        "media/dungeon/actors/mobile-5.png",
+        "media/dungeon/actors/mobile-6-corpse.png",
+        "media/dungeon/actors/mobile-6.png",
+        "media/dungeon/actors/mobile-7-corpse.png",
+        "media/dungeon/actors/mobile-7.png",
+        "media/dungeon/actors/mobile-8-corpse.png",
+        "media/dungeon/actors/mobile-8.png",
+        "media/dungeon/actors/mobile-9-corpse.png",
+        "media/dungeon/actors/mobile-9.png",
+        "media/dungeon/billboards/texture-216-0.png",
+        "media/dungeon/materials/texture-0-113.png",
+        "media/dungeon/materials/texture-0-114.png",
+        "media/dungeon/materials/texture-0-44.png",
+        "media/dungeon/materials/texture-0-73.png",
+        "media/dungeon/materials/texture-0-75.png",
+        "media/dungeon/materials/texture-0-76.png",
+        "media/dungeon/materials/texture-0-77.png",
+        "media/dungeon/materials/texture-0-78.png",
+        "media/dungeon/materials/texture-116-3.png",
+        "media/dungeon/materials/texture-116-4.png",
+        "media/dungeon/materials/texture-144-0.png",
+        "media/dungeon/materials/texture-144-1.png",
+        "media/dungeon/materials/texture-144-3.png",
+        "media/dungeon/materials/texture-144-4.png",
+        "media/dungeon/materials/texture-67-0.png",
+        "media/dungeon/materials/texture-67-14.png",
+        "media/dungeon/materials/texture-67-8.png",
+        "media/dungeon/materials/texture-74-1.png",
+        "media/dungeon/materials/texture-87-0.png",
+        "media/dungeon/materials/texture-87-1.png",
+        "media/dungeon/materials/texture-87-2.png",
+        "media/dungeon/materials/texture-87-3.png",
+        "media/dungeon/materials/texture-87-4.png",
+        "media/dungeon/materials/texture-90-0.png",
+        "media/dungeon/materials/texture-90-1.png",
+        "media/dungeon/materials/texture-90-5.png",
+        "media/dungeon/materials/texture-90-6.png",
+        "media/dungeon/materials/texture-90-7.png",
+        "media/dungeon/materials/texture-92-0.png",
+        "media/dungeon/materials/texture-92-1.png",
+        "media/dungeon/materials/texture-92-2.png"
+      ]
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-0-113.png",
+      "contentHash": "eda79aedd2bfdeab32761bc994a50b6228673933739f426e1f640a7a663ee6d1",
+      "byteLen": 102,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-0-114.png",
+      "contentHash": "a9139bc301e0cad97c6dc64bcdbec963522a3ec6575eec8dbeee84287f853898",
+      "byteLen": 102,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-0-44.png",
+      "contentHash": "a1265c577bc33cf42726f4ddd41780ab28986fb186b85010603b389e55aa21d7",
+      "byteLen": 105,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-0-73.png",
+      "contentHash": "9d66fd4306d7b176a0dfb4172f2917827e88492cbb00b1e01e6fa7633db913f2",
+      "byteLen": 104,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-0-75.png",
+      "contentHash": "8abee266f65014e198d97c83269d892b17a04cd405da39d68441825579e5ec49",
+      "byteLen": 105,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-0-76.png",
+      "contentHash": "c702588cbdb16e13f7db586e6800a5afdd088e93b83ca96eb17a07f4fd87226b",
+      "byteLen": 105,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-0-77.png",
+      "contentHash": "43666a2550e44df2894906f38756dfb06720d75452194c7b632cf71099fa9320",
+      "byteLen": 105,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-0-78.png",
+      "contentHash": "089992d194042a2bffefde14664ddec53d602aa06ee1c117b8c320895ebfb4cb",
+      "byteLen": 105,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-116-3.png",
+      "contentHash": "0a62e7582dedd55418b5feccf9fd22c0aadb65c42b849b496131dc66bd999772",
+      "byteLen": 2432,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-116-4.png",
+      "contentHash": "d798cd7a32eded9fcf081de40eda6f125a049578f652d307a934921ae7c2553d",
+      "byteLen": 2559,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-144-0.png",
+      "contentHash": "1d12eec88b5c140ce97c27f8ace71bf2256df0e8ad54570ee86f5c75beb1dfdb",
+      "byteLen": 2689,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-144-1.png",
+      "contentHash": "1d12eec88b5c140ce97c27f8ace71bf2256df0e8ad54570ee86f5c75beb1dfdb",
+      "byteLen": 2689,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-144-3.png",
+      "contentHash": "adac9bbcb0bb7a544b7adff67c732d8a5918b58b155b35934129f7c8a0a2eee3",
+      "byteLen": 3136,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-144-4.png",
+      "contentHash": "3fdea0a8ea8f83ad95d565154b6a7261658016cffb82ae10f4178abb5eb342ce",
+      "byteLen": 1629,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-67-0.png",
+      "contentHash": "4528d606467b7af4e4efdc36640aad10e349a4a5a8f212190c390e47f1260f23",
+      "byteLen": 1154,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-67-14.png",
+      "contentHash": "be33fb00a710104582d8595f57f442e964e5f1f1a3fdbe36454786d9ef5b3ff7",
+      "byteLen": 319,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-67-8.png",
+      "contentHash": "db52424d81a131e09d80a30a28fd6236c848cd3b8562d847b69ee5f1c867e121",
+      "byteLen": 309,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-74-1.png",
+      "contentHash": "4b275268ad816ea1a5c405070597a5e556aa3744a2cf359848e44fc38393dcb0",
+      "byteLen": 6919,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-87-0.png",
+      "contentHash": "8c11b3800cf52f19cf16751ef623d3e2c9ed88332018171ba5695f922ce30eee",
+      "byteLen": 2639,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-87-1.png",
+      "contentHash": "5ca7a3e12cc61187ac9e8fa87833af9ea60298345ab4d3b22e3d7c0ada501b37",
+      "byteLen": 851,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-87-2.png",
+      "contentHash": "dfb82ededb5dc03ba3ce20c4e07e02ff5d91e14beab33146e9e34993f7f11fd0",
+      "byteLen": 885,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-87-3.png",
+      "contentHash": "b4cdb05131ab370f0d74e5be1bedf55d2b11e3a3d922ad665167793966af742f",
+      "byteLen": 2924,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-87-4.png",
+      "contentHash": "40c963b173edefde232b9781dbcabe44684fe9dac14d26399d7876dc98ffd6e4",
+      "byteLen": 994,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-90-0.png",
+      "contentHash": "e553766829dcac13d1986921ca8d67bf13819632a5c87b4f01f27b555f0fe568",
+      "byteLen": 2056,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-90-1.png",
+      "contentHash": "d6da92d70ffeed2010c52e65f7ee7033cadd42a237f1abcf4db77137e9e00ae0",
+      "byteLen": 1085,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-90-5.png",
+      "contentHash": "7937e33b924777e0351e47a876507e378ee2d575bf9cb91115553fda7279c60f",
+      "byteLen": 2286,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-90-6.png",
+      "contentHash": "5de8f76fb3b9c0a9aaf11fa43653702e7ba17bfc67bea397e462082629f55748",
+      "byteLen": 950,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-90-7.png",
+      "contentHash": "b20948641cbbaece47eb724542809abe022dfc037bb09c1a16944ef7491c184f",
+      "byteLen": 442,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-92-0.png",
+      "contentHash": "75712578ce3907db39ef209873fe5d825e0b7b0388efc7445586ce4aaa5fecfc",
+      "byteLen": 664,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-92-1.png",
+      "contentHash": "03a73381db0750ff5fd0d0a749ed26705f0c13886a512c0a1fdb98b28c61c5ab",
+      "byteLen": 432,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-92-2.png",
+      "contentHash": "0e9d975364da14bfccbcd865109d9cd3df8e53dcad50cf5d96a1cab81a57fedb",
+      "byteLen": 590,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/effects/effect-blood-0-atlas.png",
+      "contentHash": "939e98d382d2ed3028cecf14a2dd3abf39a8ac89b8f6d270164c4837f2b48c0c",
+      "byteLen": 2824,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/effects/effect-blood-1-atlas.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/effects/effect-blood-2-atlas.png",
+      "contentHash": "34251af6cbe56e83c00032fee9fef3a87aabe51839ed1cd1f4d5798c5d79a161",
+      "byteLen": 391,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/effects/effect-sparkle-magic-atlas.png",
+      "contentHash": "356ea79ec4078d0cd4a3ddeebff987ef79cb012076a3b71f36a959f9fcc36a20",
+      "byteLen": 2465,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/fonts/font-classic-0000-atlas.png",
+      "contentHash": "49af7b4d851f9c11d6a86678505025664fe798a2ff191dcf9ed0d45c8f85d3f2",
+      "byteLen": 2545,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/fonts/font-classic-0001-atlas.png",
+      "contentHash": "e3669c2d60c399b3662c670a1d94a79800b58e3a4e54f9d00abbf3b8db9b6d44",
+      "byteLen": 3628,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/fonts/font-classic-0002-atlas.png",
+      "contentHash": "4311fbf7188c4ae4d354e3a54a0d05a808dc638f464c646dac7afef2117a82cf",
+      "byteLen": 1097,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/fonts/font-classic-0003-atlas.png",
+      "contentHash": "0b4ecb2ac56683ac4eeee614b109d3327328aa1e1ec3914e369eb9845291e581",
+      "byteLen": 2376,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/fonts/font-classic-0004-atlas.png",
+      "contentHash": "5b2870d0ebec14e497a045e6cd1e9e6e62053a72280038e1021e0bbf0041a69c",
+      "byteLen": 997,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-amap00i0.png",
+      "contentHash": "60cd0f2851020b9a820b50e5d263806156246049d8e454528c38ef3a8b4433e3",
+      "byteLen": 13056,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-amap01i0.png",
+      "contentHash": "d31d40a747cbc9c5b38c18323be409cf69b38ca5774d8c24906dc2ca4530f754",
+      "byteLen": 480,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i05.png",
+      "contentHash": "ea119b8c1525615c3314bc5678a4db4f5a5c07b41d72b88c796372f01a051826",
+      "byteLen": 4479,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i09.png",
+      "contentHash": "8c9b3156c62695fedef8431a121fb17d8c309f0e5eb45e902a403aea2dc91660",
+      "byteLen": 5336,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i11.png",
+      "contentHash": "29a9135360e657d6df499ef9532d2658f1c70444f4da30790405b34d463d8ff2",
+      "byteLen": 3537,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i17.png",
+      "contentHash": "3b0449a3f3d99d322af68c48b650792ef00020d118db88640a6ec581c189d5e7",
+      "byteLen": 4426,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i18.png",
+      "contentHash": "dc7663e48cc1a065ad50c19a201f725cdeb641efd99ec5c7737195f05d2fdf44",
+      "byteLen": 3954,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i19.png",
+      "contentHash": "8068ad41532d99ff5c1fdbdc9eb37a2edf71ec2bcf1f207db77471dce0485905",
+      "byteLen": 2590,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i20.png",
+      "contentHash": "ac189c155f398275e34364f8aef517e95db47bb837fcc042ec9f4f2f3337c3c2",
+      "byteLen": 4319,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i21.png",
+      "contentHash": "65f666773e96a4682064ba69ddae932ebe5cc9ca5f32d5543a2c8b929d4aefd8",
+      "byteLen": 3800,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i22.png",
+      "contentHash": "a475762db4d4c2dbee6715142bebeb012826b3d3a84ed1e0cd4e314ea34257cd",
+      "byteLen": 4905,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i23.png",
+      "contentHash": "eca75254b0c6828aa724b7d9df12067646faedc50674aab4d8821331c207632d",
+      "byteLen": 6121,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i26.png",
+      "contentHash": "6eb7a71e986f56ba1944d822ab929859ac73a89446a99b49c307833734405a74",
+      "byteLen": 5985,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i32.png",
+      "contentHash": "b21f43b997087b6919921f81cfcebb068d69555fd826664ab6348d39ef92ab0f",
+      "byteLen": 3927,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i33.png",
+      "contentHash": "33007c6502f76f3b0470fbfe45c01db6b272ecb213df8b1a0ad78fc2924581e8",
+      "byteLen": 5904,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i34.png",
+      "contentHash": "dc6a1ce4f1e2a393301c04fbabea77ba055c9b92f19d93384e9c60957bd5cb07",
+      "byteLen": 5868,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i35.png",
+      "contentHash": "a83b521d1bd7e6d06e922c7e07478f5582a541a5535fd915494a6220f9ccb5fa",
+      "byteLen": 5028,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i36.png",
+      "contentHash": "a62a951f2e68bed00deab1548a4d333fd4e4918564ef69a4d3f20cba56f70a12",
+      "byteLen": 4921,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i37.png",
+      "contentHash": "97bc66345baaf1cba35b114601c3a902f0d2589ff764de055ab1528e196ad05e",
+      "byteLen": 4718,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i38.png",
+      "contentHash": "c58d5916f9018561a2cf714e2e289127e95419f34d62d3d4589583e8ecf01c9b",
+      "byteLen": 4628,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i39.png",
+      "contentHash": "a605de0f2b67464d66791f8011bba028bfcaca64e6304a6f811cf91f9074bc3c",
+      "byteLen": 4282,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i40.png",
+      "contentHash": "bf169be79b993bb72de6bf70294727980168f2bf54d81e24a2c023b5cf1d6e81",
+      "byteLen": 4133,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i41.png",
+      "contentHash": "24d0020b5f3d07e2cd565a5219e6246ab037a96223e289cfecff2358398920ce",
+      "byteLen": 3739,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i42.png",
+      "contentHash": "808b5928b218aa6a21bec76f6f9b63f8e9fd2340d6ffb8122227a8e81140506f",
+      "byteLen": 4256,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i43.png",
+      "contentHash": "45cf7bf73d725209b258603c8b10cb13b23798419ca4c7d7252dbaccdc3740f5",
+      "byteLen": 2952,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i44.png",
+      "contentHash": "fce9cc28f715ec26827ba0e6df03823c924ccc82090d2de379bdd54861bf00bf",
+      "byteLen": 3494,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i45.png",
+      "contentHash": "237630ab9e4601063d24919149bd534a861d201e383868914df1ea9966a2f827",
+      "byteLen": 3549,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i46.png",
+      "contentHash": "4946e1af0301d1c8cbd2caf70f2e30ee23b0249e12e5fa8ab42639d6bc1502e1",
+      "byteLen": 4419,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i47.png",
+      "contentHash": "7531084ca15c91882e9a7d439e48fafcf0c70a6a528e5d6b95fe8ee0b636cee8",
+      "byteLen": 4112,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i48.png",
+      "contentHash": "23b2d7a292bf39a3f765eb82ff90d2e3eccf5a002883e9dcefd750f21370601c",
+      "byteLen": 4471,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i49.png",
+      "contentHash": "83e1e73239f013722ace3919854726da3842eef1bd2f3902ae137937b2c7549f",
+      "byteLen": 4547,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i50.png",
+      "contentHash": "af8c9e7601dafa2b6a7d62c0432f910c2d129efeeb5c91d46677b7da63141bb9",
+      "byteLen": 5299,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i51.png",
+      "contentHash": "058dff9644d2efe3fe8594125a1d8877b26391ce040b4fa70616397c65db1aca",
+      "byteLen": 5251,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i52.png",
+      "contentHash": "ee651ec2a01c634b2bf0e12012cf707b211e576d62e33ecb56d3dbde01640d4c",
+      "byteLen": 5337,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i53.png",
+      "contentHash": "845f44ab8a727d252f8227b316a2d21af2cbb8a2c269f03aec14d3ed69173569",
+      "byteLen": 3088,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i54.png",
+      "contentHash": "f4e8d8af7a20427a85b003f75b8d7846c0796872a52c8c295915d23cabd964e1",
+      "byteLen": 2888,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i55.png",
+      "contentHash": "ae45e0f2a1b82df1b76251712f4abc5ee903d02db5e137dba49756a1938b7a8d",
+      "byteLen": 3948,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i56.png",
+      "contentHash": "f93db0bc759195bce8cbb7933c089b63ca110ad163b5b899c8af71c0ebce0078",
+      "byteLen": 3891,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i57.png",
+      "contentHash": "41b0528190022ee1ceac231f450298833a093c227ec0b7e90f0021b176bc483a",
+      "byteLen": 5348,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i58.png",
+      "contentHash": "ed88158abdb313b5e0c1c82074965b60de8f6887a1b5c0040e64b18e2c5d40b6",
+      "byteLen": 4022,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i59.png",
+      "contentHash": "95559348ec995c126f6df8a8e9843ecad4043edf40d4ba469200b91a1de77563",
+      "byteLen": 3715,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i60.png",
+      "contentHash": "1c9cce7d77d0f27bd5b41a96eac58d060c3d9d53a6a11ae306823cf4155eda19",
+      "byteLen": 4335,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmap0i61.png",
+      "contentHash": "4f92bae1c9296fa925b389bf0c66ebda9faf4e9fa5e3ac033c86d82f4716159b",
+      "byteLen": 1626,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmapai00.png",
+      "contentHash": "239bd4c068b83e8715ca0f77d9087ae324bdecc40f4ecd6803579b74e9438d00",
+      "byteLen": 4483,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmapai01.png",
+      "contentHash": "8daf7cf9a5897286b915c9657845e7ec21c6c3e71436f03c7a6598b1d271f4c6",
+      "byteLen": 5901,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmapai16.png",
+      "contentHash": "ecc5d07955c8561ea36538c294691009d8ee2e10c4f0ce93e398ddbbd63e0509",
+      "byteLen": 6313,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmapbi00.png",
+      "contentHash": "a6891531527ad5729bf170b703b2e45ab5dbf5667dbb6b122125330cf353f937",
+      "byteLen": 3978,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmapbi01.png",
+      "contentHash": "18592b39122683b1a1bc28ed47cb3863672d4824ac805125f4110405bbccfa12",
+      "byteLen": 5301,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmapbi16.png",
+      "contentHash": "e9112c2909e03edf79c03d2c5c088b4ba074a2d4a576a597665e6384f00148d7",
+      "byteLen": 6583,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmapci01.png",
+      "contentHash": "d67a9d7a63638cda57e72a15fb5ce879dfd22951014d5621b1916786c6dbec42",
+      "byteLen": 4373,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmapci16.png",
+      "contentHash": "5f7279513929f89f1aa2677395f7245698bb7d366f87ef302331890f8832be8e",
+      "byteLen": 5850,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmapdi01.png",
+      "contentHash": "8f1084bce2f5f0b6b29bfd64278a8abb144ffe611ab2f289bb84de9e810d372d",
+      "byteLen": 4475,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-fmapdi16.png",
+      "contentHash": "36f45efe357d1e90435a6ecff9f8386876d89b7fc5883ace1d04df892311627a",
+      "byteLen": 6601,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-tmap00i0.png",
+      "contentHash": "567f2028ff86cb07ed6f5275e58f159bb0ce0be437d4c84582351a1aa330cf60",
+      "byteLen": 42568,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-town00i0.png",
+      "contentHash": "ea3cc45452fb15189937db744ab7c110ec1fb8a76fe5132a392a7f38acb9dad7",
+      "byteLen": 1788,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-trav00i0.png",
+      "contentHash": "22d0aa4efb820cd0dc17444a840c8c5a1403d4badcc3791643d7555849812925",
+      "byteLen": 10828,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-trav01i0.png",
+      "contentHash": "5f70163c3309de6e4255279b5ccb56f70bed85df71bbd8ecdd022f5e556162c7",
+      "byteLen": 2490,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-trav01i1.png",
+      "contentHash": "0b0f0e2591fdcc7f28a6c165366a84d4ac4d67d00511e65a20d2ae220df90b66",
+      "byteLen": 2225,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-trav02i0.png",
+      "contentHash": "fcbb88685f9700f601d1a3f14a971978dec77cbb8df0054a8cbdf6f9caf60948",
+      "byteLen": 5056,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-trav0i00.png",
+      "contentHash": "f6975b2fe0092d0dfce19dd0e8def57a9dc0a7024c3cd144fe8afe25c353cc1c",
+      "byteLen": 42265,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-trav0i01.png",
+      "contentHash": "fa3b2e87d0726b1d459aa638ace12d3ed9dd4d55b97797977579b31308c5f15d",
+      "byteLen": 3235,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-trav0i03.png",
+      "contentHash": "1c0346bd78ae36c2be749af041059695768eac4611d5686b579164acd4248055",
+      "byteLen": 896,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-trav0i04.png",
+      "contentHash": "5b3502678a5fba4c6477377451b4ff60721fb3b02414c7e18c13f6e66853ae3a",
+      "byteLen": 9208,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-travai05.png",
+      "contentHash": "111b735cab7b2eae329a072ec849cde02c11c5223e11d203082dd0c1731d8f4f",
+      "byteLen": 500,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-travbi05.png",
+      "contentHash": "a7c9d8d669ac64e9a2524a6dc25058706afe5b48546c1e7702cdf088180927e0",
+      "byteLen": 483,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-travci05.png",
+      "contentHash": "5557a95676fd6d3250e717ed5544421e2261e6da3bae51e5a26b794bfe75540f",
+      "byteLen": 463,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/maps/map-travdi05.png",
+      "contentHash": "7b08010c62f7d7980fe8adeec780ebdfd086718857e27309b0406ae64efa8642",
+      "byteLen": 490,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/authored/inventory-grid-slot-slate-v1.png",
+      "contentHash": "fe1d578fe5a8ef7a7fb7b74bdad5fab09458fdb8afe74895cdfe538eb01149d5",
+      "byteLen": 103350,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/authored/inventory-skin-panel-slate-v1.png",
+      "contentHash": "5a8c1e79eb36efbcf4a54d3e911c3a118f70580cba2490c6a330792bd33f8a49",
+      "byteLen": 102872,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/authored/inventory-titlebar-slate-v1.png",
+      "contentHash": "bc2f1b1e3ec4852aa156a9d149da4110bfce97afd03c3722e74926bf5a223fb4",
+      "byteLen": 40009,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/hud-chrome-main.png",
+      "contentHash": "2f587e1597475b606d24a3dcafec155c85b4d5485db3336a24b32ebf897cb233",
+      "byteLen": 9484,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/hud-vital-fatigue.png",
+      "contentHash": "844f73ab04722a176ee69cc4c0cec0acccd012f0c01856649dca96b25cc88634",
+      "byteLen": 226,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/hud-vital-health.png",
+      "contentHash": "d8ea5b3f369cc05c33d20ac5022eeb0711bedaac6afc7b97bfaba5956666d859",
+      "byteLen": 230,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/hud-vital-magicka.png",
+      "contentHash": "602ea19d376f6ab701bddd4a9e1d0d2fd097bad36f9c59b735e41b316d8ca52e",
+      "byteLen": 229,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-arrow.png",
+      "contentHash": "cb9f449c1fe00eb3de638827d1179d76c354efb3c4aaeeaf60bf2e4e5834266d",
+      "byteLen": 369,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-buckler.png",
+      "contentHash": "6637cd45341c80a840865f2d77024fb0028d90ac6b0d9c0a00629d7fff844daa",
+      "byteLen": 1299,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-gold-piece.png",
+      "contentHash": "fdf8435e0a6b2df47abf89f24005056646a658e746928866cc263cad9806643b",
+      "byteLen": 395,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-battle-axe.png",
+      "contentHash": "c5e54f650acbbc9b14753923c1da99b81eea9cd7b2e32f2738f6ccb78ba84eb1",
+      "byteLen": 583,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-boots.png",
+      "contentHash": "ed5dac4b1610c9df2e27691df8bf6212772bc5009f2d8766f12a24aa3e314378",
+      "byteLen": 1045,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-broadsword.png",
+      "contentHash": "ec5ea5b512b61134b70b8d0316a6ec4d34b4eef77c67160151f87f0217956eb2",
+      "byteLen": 884,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-claymore.png",
+      "contentHash": "4fb318a47008c14585c4112ddebf3f9e905f977acdd082d64e84b659093cc653",
+      "byteLen": 1198,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-cuirass.png",
+      "contentHash": "e15add29e1024495bfe21bb76b44d411a158666438a13b54e0dc2f43142a6527",
+      "byteLen": 918,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-dagger.png",
+      "contentHash": "0800ac3518abf1cfd04ff320d8a6442f3c4fd4829f4b111cb2bd2975e86b1e82",
+      "byteLen": 439,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-dai-katana.png",
+      "contentHash": "84dfc50bb236f16c2a1cc5096aa27315068130da37eafa00d6093e3977f41655",
+      "byteLen": 1108,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-flail.png",
+      "contentHash": "cada73184ece07806fca91d9b6652349d0984ffbe8f5850c14fdda856ebc034a",
+      "byteLen": 1108,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-gauntlets.png",
+      "contentHash": "d11dc752d0dce47332a89a1eed78c7077a0694aa94912ed77c25499c712d3bbd",
+      "byteLen": 698,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-greaves.png",
+      "contentHash": "4a4da50b9d8050df85b0201bd1cde28d21b639e57d100d2a063375a31bbbbe10",
+      "byteLen": 903,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-helm.png",
+      "contentHash": "d140862a3cf9e3324cc8f87148ebd792c63ab36bfaea8effc9d8ae40e474a3ff",
+      "byteLen": 543,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-katana.png",
+      "contentHash": "281383b6f9de5153834fe194c6f1ede9f71d00a6a166bad620e20ec05bd48fd0",
+      "byteLen": 407,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-left-pauldron.png",
+      "contentHash": "455fb7cc586340e08a6ab44881fd8f220dcaa8e8a900e7e05d4a5bb77b7e75b3",
+      "byteLen": 738,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-long-bow.png",
+      "contentHash": "30f922c85c14ad05e1cefd01aa349da2babe6a6067610b840ab0905a1810c894",
+      "byteLen": 570,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-longsword.png",
+      "contentHash": "174482cd1d03ffc2cf35af862d35fdeae2795286a09536287cff0cc51d064736",
+      "byteLen": 630,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-mace.png",
+      "contentHash": "342dc17ec3e38bfc1a9f44230dc9325877720352b12085795eb5dd5f41e837f9",
+      "byteLen": 601,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-right-pauldron.png",
+      "contentHash": "bb2a5feb800f3dfde58d59d0c656d55136d083c459faf28219f53ea70d59d9a0",
+      "byteLen": 485,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-saber.png",
+      "contentHash": "6f8354537028fb747f40036215e048045adfb13a9e5cd70a415b1fa7883504c6",
+      "byteLen": 663,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-short-bow.png",
+      "contentHash": "3ec6ddec0691ddfa9548def7840449bd4882b3d8f07fda3c1a1ed197ecc45370",
+      "byteLen": 465,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-shortsword.png",
+      "contentHash": "1eecaa294c4d24b4580d331fea2675a4ecbe07be613b90293291b483fbf13e9a",
+      "byteLen": 583,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-staff.png",
+      "contentHash": "4a0f554d6b9c0457a9ecc1358d7c40b30bbee66d4fea3687cb7fd1359e4ab09c",
+      "byteLen": 1180,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-tanto.png",
+      "contentHash": "7ce75bbf0934cf906d613355d60d6ce34c5701629e4fba85e781f7228dfe042b",
+      "byteLen": 203,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-wakazashi.png",
+      "contentHash": "8d1b4d930bc167eb70a872ecd078a5a11a46a7a95d9408dc9ab8c8ef80721aa9",
+      "byteLen": 290,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-war-axe.png",
+      "contentHash": "c31d72b3682e3b365f95c6f52b02dc821cda3c138cb8e341f791a8bbdd538259",
+      "byteLen": 979,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-warhammer.png",
+      "contentHash": "8311337f61c7046b66e3787239fcd0499323d33c1c3a51a7578862b3d827f46f",
+      "byteLen": 1048,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-kite-shield.png",
+      "contentHash": "4a8f426efb381dd35bdebc97dbc5af603e2193c60f0f7ca9bc6ea005a5169e3d",
+      "byteLen": 2038,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-round-shield.png",
+      "contentHash": "a2387bda301b9f301e39b863e8db362fcce4a299b641db52c6cbad85cf58b662",
+      "byteLen": 1767,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-tower-shield.png",
+      "contentHash": "fc3880adee522189498dbf116f52d4d2542b1222ca6507ad8cfb95650bcaf041",
+      "byteLen": 2457,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/screen-character-generation.png",
+      "contentHash": "07fda9a04c9179789e34cfad57afefedd298cc17ba0ddfca92805791e7f56484",
+      "byteLen": 21244,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/screen-death.png",
+      "contentHash": "792feeb481c4e587acc6f4d627d331336c0c50d13c59b996252c88ed14b34289",
+      "byteLen": 63124,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/screen-pick-02.png",
+      "contentHash": "d05e1accee5d4bb03950969f6654b26e4a941d4c76bd4e300adce6d7f15126df",
+      "byteLen": 41063,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/screen-prison.png",
+      "contentHash": "2bc15220a4359d4517a028d07e46d2a818a48f317c52125b4dc98e8b86dd8ad4",
+      "byteLen": 43450,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/screen-start-menu.png",
+      "contentHash": "1853159a1bfe841d8f1f9d7099a40b9851ecc49f2f6fede12b78e1fdc4c72b83",
+      "byteLen": 41081,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/screen-title.png",
+      "contentHash": "c0a99b8f0d4ef48c578ff73ed5f40c172f048bad1ed619fd6a79339b861b9203",
+      "byteLen": 44933,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-bank-panel.png",
+      "contentHash": "a02eeb48c42648f8502309bf9cfcc836237c303637823da0ab2457a9a4e625e7",
+      "byteLen": 18345,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-book-reader.png",
+      "contentHash": "387c5044af65e3687cffa4ea46a6f584974dd89ab91ea37eb7d14509fd45f31a",
+      "byteLen": 3789,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-character-sheet-chrome.png",
+      "contentHash": "10b005fc1385cd2612ead1dfd0bf79374e9b8a2ca7c4731ca1b83305330de818",
+      "byteLen": 35236,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-guild-member.png",
+      "contentHash": "875882585c4034979e59c6a26d35ad9f8b74539ab3d1b3f1716c9beeffe86c9f",
+      "byteLen": 3631,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-guild-service.png",
+      "contentHash": "2911b48a9bf1f05026fe9652210932dce6ac4bf3872d8d78b451c59021fd9d06",
+      "byteLen": 3615,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-inventory-chrome.png",
+      "contentHash": "24b3fd3f6c5e7ade04ff18d79e623aa4247853878b15dfc7d79ad744c1526cd9",
+      "byteLen": 25725,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-merchant-buttons-buy.png",
+      "contentHash": "7b83d0767ed6971c8ce10d7b07b876da845756342e9fe8121c484dce077fdc30",
+      "byteLen": 3995,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-merchant-buttons-identify.png",
+      "contentHash": "ce7e299f5757c7eddc5d6677028ad96ed89127e50cddbb1d437ab2d35730b0ea",
+      "byteLen": 4023,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-merchant-buttons-repair.png",
+      "contentHash": "593fdaae18e33b5f3a0387f114cfa1bd0b06480dad2e34fd1f058f06682512f4",
+      "byteLen": 4018,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-merchant-buttons-sell-gold.png",
+      "contentHash": "1ba947a2a970327f3bd4ce87a6dace0ff3b0af5a948f5bc0773a4526ac1574d1",
+      "byteLen": 4029,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-merchant-buttons-sell.png",
+      "contentHash": "e30551b560fcdb94e48437f80c24fbbf049a9201324b859aeaed2d10a657f147",
+      "byteLen": 4001,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-merchant-cost.png",
+      "contentHash": "804d678f18797dd1a41d4bc8997cf316b9bb88de1089e8d46fb9c304fb4a6bf5",
+      "byteLen": 771,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-rest-hours-past.png",
+      "contentHash": "4f3c9145100a772f1984f4b0f78a8651e357055b61a7f8e6b4e1487dac84dcbf",
+      "byteLen": 2524,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-rest-hours-remaining.png",
+      "contentHash": "348ed6484f2b15d2d04f76327459f420f22369b22f86accff37cea701de4a72b",
+      "byteLen": 2560,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-rest-panel.png",
+      "contentHash": "659e59a8af5a496d972af1cb2a64eb75961bacdc57362f2beeb8e8d34bdb836b",
+      "byteLen": 3502,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "normalized.json",
+      "contentHash": "88d7081da32365abdf487d59a6693f12dfe340665da7fea0ea6350e2c98674e5",
+      "byteLen": 177288,
+      "dependsOnPaths": [
+        "geometry/index.json",
+        "geometry/mesh-1000.json",
+        "geometry/mesh-12402.json",
+        "geometry/mesh-2000.json",
+        "geometry/mesh-3400.json",
+        "geometry/mesh-3402.json",
+        "geometry/mesh-3404.json",
+        "geometry/mesh-41000.json",
+        "geometry/mesh-41032.json",
+        "geometry/mesh-41106.json",
+        "geometry/mesh-41108.json",
+        "geometry/mesh-41113.json",
+        "geometry/mesh-41116.json",
+        "geometry/mesh-41120.json",
+        "geometry/mesh-41124.json",
+        "media/classic/manifest.json",
+        "media/dungeon/manifest.json",
+        "resources/charing/interior-1-1-0/catalog.json",
+        "spatial/charing/interior-1-1-0/collision-navigation.json",
+        "spatial/charing/interior-1-1-0/static-mesh.json"
+      ]
+    },
+    {
+      "relativePath": "resources/charing/interior-1-1-0/catalog.json",
+      "contentHash": "b171ca1b94b14cbbf193fbaa3e8b4ba6d50b63c84ae40bf5c8479422cd1e5326",
+      "byteLen": 14891,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "sources/manifest.json",
+      "contentHash": "7e4fb51ee2e564adde6b771dd633e3e032149097a80d9cb36cf578bc146a904b",
+      "byteLen": 6847744,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/charing/interior-1-1-0/collision-navigation.json",
+      "contentHash": "f38ca142ec4ff34172409574ccfcfa8ff11a3961cb929b9f06272881b4645c22",
+      "byteLen": 126075,
+      "dependsOnPaths": [
+        "spatial/charing/interior-1-1-0/static-mesh.json"
+      ]
+    },
+    {
+      "relativePath": "spatial/charing/interior-1-1-0/static-mesh.json",
+      "contentHash": "e4da3bb3467e0ffff02cb53f5886c5d09e440c737f4b636870db798cc439bcac",
+      "byteLen": 116934,
+      "dependsOnPaths": []
+    }
+  ]
+}

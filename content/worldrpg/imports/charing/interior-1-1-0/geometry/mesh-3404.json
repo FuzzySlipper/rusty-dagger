@@ -1,0 +1,148 @@
+{
+  "asset": "3404",
+  "payload": {
+    "layout": {
+      "vertexCount": 8,
+      "indexCount": 12,
+      "indexWidth": "u32",
+      "attributes": [
+        {
+          "name": "position",
+          "components": 3,
+          "kind": "f32"
+        },
+        {
+          "name": "normal",
+          "components": 3,
+          "kind": "f32"
+        },
+        {
+          "name": "uv",
+          "components": 2,
+          "kind": "f32"
+        }
+      ]
+    },
+    "groups": [
+      {
+        "materialSlot": 0,
+        "start": 0,
+        "count": 6
+      },
+      {
+        "materialSlot": 0,
+        "start": 6,
+        "count": 6
+      }
+    ],
+    "bounds": {
+      "min": [
+        0,
+        -1.575,
+        -1.45
+      ],
+      "max": [
+        0,
+        1.575,
+        1.45
+      ]
+    },
+    "source": {
+      "kind": "inline",
+      "positions": [
+        0,
+        1.575,
+        -1.45,
+        0,
+        -1.575,
+        -1.45,
+        0,
+        -1.575,
+        -0,
+        0,
+        1.575,
+        -0,
+        0,
+        1.575,
+        -0,
+        0,
+        -1.575,
+        -0,
+        0,
+        -1.575,
+        1.45,
+        0,
+        1.575,
+        1.45
+      ],
+      "normals": [
+        -1,
+        0,
+        0,
+        -1,
+        0,
+        0,
+        -1,
+        0,
+        0,
+        -1,
+        0,
+        0,
+        -1,
+        0,
+        0,
+        -1,
+        0,
+        0,
+        -1,
+        0,
+        0,
+        -1,
+        0,
+        0
+      ],
+      "uvs": [
+        0,
+        0,
+        0,
+        2048,
+        1024,
+        2048,
+        1024,
+        0,
+        0,
+        0,
+        0,
+        2048,
+        1024,
+        2048,
+        1024,
+        0
+      ],
+      "indices": [
+        0,
+        1,
+        2,
+        0,
+        2,
+        3,
+        4,
+        5,
+        6,
+        4,
+        6,
+        7
+      ]
+    },
+    "provenance": "staticAsset"
+  },
+  "materialSlots": [
+    {
+      "slot": 0,
+      "material": "material/texture-144-0"
+    }
+  ],
+  "collision": {
+    "kind": "visualOnly"
+  }
+}

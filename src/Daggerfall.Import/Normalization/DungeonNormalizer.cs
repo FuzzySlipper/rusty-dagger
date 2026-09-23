@@ -409,9 +409,17 @@ public static class DungeonNormalizer
                     continue;
                 }
 
-                AddPlacement();
                 (ushort archiveId, ushort recordId) = RemapTexture(flat.TextureArchive, flat.TextureRecord);
                 TextureInfo texture = ResolveTexture(archiveId, recordId);
+                string lightId = $"light-flat/{blockPlacementId}/{index}";
+                if (DaggerfallInteriorLightFacts.TryProject(lightId, flat, position, ToMetres(texture.Height), out NormalizedLightPlacement light))
+                {
+                    AddPlacement();
+                    lights.Add(light);
+                    AddProvenance(lightId, "rdb-interior-light-flat", blocks.Source, index);
+                }
+
+                AddPlacement();
                 string id = $"billboard/{blockPlacementId}/{index}";
                 billboards.Add(new(id, texture.SpriteId, position, new(ToMetres(texture.Width), ToMetres(texture.Height))));
                 AddProvenance(id, "rdb-billboard", blocks.Source, index);

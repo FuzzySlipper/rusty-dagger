@@ -8,6 +8,7 @@ using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Policies;
+using WorldRpg.Rulesets.Daggerfall.World;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
 using SlotId = WorldRpg.Kit.Inventory.EquipmentSlotId;
@@ -110,6 +111,47 @@ public sealed class DaggerfallItemConditionServiceTests
     }
 
     [Fact]
+    public void Refuel_adds_only_the_supplied_condition_units_and_clamps_at_the_lantern_capacity()
+    {
+        using Fixture f = new();
+        UniqueItem lantern = f.Materialize(151, "template-248", condition: 60, maximumCondition: 100);
+
+        DaggerfallItemConditionResult first = f.Service.Refuel(lantern, 25);
+        DaggerfallItemConditionResult capped = f.Service.Refuel(lantern, 25);
+
+        Assert.Equal((DaggerfallItemConditionOutcome.Repaired, 85), (first.Outcome, first.Metadata.CurrentCondition));
+        Assert.Equal((DaggerfallItemConditionOutcome.Repaired, 100), (capped.Outcome, capped.Metadata.CurrentCondition));
+        Assert.Equal(DaggerfallItemConditionOutcome.AlreadyRepaired, f.Service.Refuel(lantern, 1).Outcome);
+    }
+
+    [Fact]
+    public void Using_oil_refuels_a_lantern_and_consumes_exactly_one_real_oil_stack_unit()
+    {
+        using Fixture f = new();
+        UniqueItem lantern = f.Materialize(161, "template-248", condition: 60, maximumCondition: 100);
+        DaggerfallItemDefinition oilDefinition = f.Definitions.RequireItem(new DaggerfallItemId("template-252"));
+        InventoryStackId oil = InventoryStackId.Parse("condition.oil");
+        f.Inventory.Grant(new InventoryGrant(new InventoryItemId(oilDefinition.Id.Value), oil, 2));
+        f.Instances.RegisterDefaultStack(DaggerfallItemOwner.Player, f.Inventory.Read().Stacks.Single(stack => stack.Id == oil), oilDefinition);
+        DaggerfallSiteRecord active = f.Definitions.Locations.Records.First();
+        DaggerfallInventoryUseService use = new(f.Inventory, f.Definitions, f.Instances,
+            new DaggerfallUniqueItemAllocator(1_000), new DaggerfallSiteContext(f.Definitions.Locations, active.Id, null, []),
+            DispatchProxy.Create<IRandomService, UnusedRandom>(), f.Service);
+
+        DaggerfallInventoryUseResult result = use.Use($"stack:{oil.Value}", f.Inventory.Read().StoreRevision);
+
+        Assert.True(result.Applied, result.Message);
+        Assert.Equal(61, f.Service.Read(161).Current);
+        Assert.Equal(1UL, f.Inventory.Read().Stacks.Single(stack => stack.Id == oil).Quantity);
+        Assert.Equal(lantern.EntityId, f.Inventory.Read().UniqueItems.Single().Entity.Value);
+        _ = f.Inventory.Destroy(lantern);
+        DaggerfallInventoryUseResult missingLantern = use.Use($"stack:{oil.Value}", f.Inventory.Read().StoreRevision);
+        Assert.False(missingLantern.Applied);
+        Assert.Equal("You need a lantern to use this oil.", missingLantern.Message);
+        Assert.Equal(1UL, f.Inventory.Read().Stacks.Single(stack => stack.Id == oil).Quantity);
+    }
+
+    [Fact]
     public void Identification_persists_through_transfer_and_reload_while_unknown_magic_remains_distinct()
     {
         using Fixture f = new();
@@ -160,7 +202,7 @@ public sealed class DaggerfallItemConditionServiceTests
         using Fixture f = new();
         const string magicKey = "magic-item.0010";
         DaggerfallMagicItemDefinition magic = f.Definitions.Magic.MagicItems[magicKey];
-        UniqueItem sword = f.CreatePlainSword(404);
+        UniqueItem sword = f.CreatePlainWeapon(404, 115, "daedric");
         string plainItemId = f.Instances.RequireUnique(404).ItemId;
         Assert.Equal(EquipmentMoveOutcome.Applied, f.Moves.MoveToSlot(sword, new SlotId("right-hand")).Outcome);
         List<DaggerfallEquipmentChange> changes = [];
@@ -179,6 +221,21 @@ public sealed class DaggerfallItemConditionServiceTests
         Assert.Equal(result.Metadata, restored);
         Assert.Equal(DaggerfallItemConditionOutcome.AlreadyEnchanted, f.Service.Enchant(sword, magicKey).Outcome);
         Assert.Equal(EquipmentMoveOutcome.Applied, f.Moves.MoveToSlot(sword, new SlotId("right-hand")).Outcome);
+        Assert.Contains(f.Equipment.Read().Assignments, assignment => assignment.Item == sword);
+    }
+
+    [Fact]
+    public void Ineligible_artifact_quote_cannot_unequip_or_mutate_a_plain_item()
+    {
+        using Fixture f = new();
+        UniqueItem sword = f.CreatePlainSword(405);
+        Assert.Equal(EquipmentMoveOutcome.Applied, f.Moves.MoveToSlot(sword, new SlotId("right-hand")).Outcome);
+        DaggerfallItemInstanceMetadata before = f.Instances.RequireUnique(405);
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => f.Service.Enchant(sword, "magic-item.0000"));
+
+        Assert.Contains("artifact template", error.Message, StringComparison.Ordinal);
+        Assert.Equal(before, f.Instances.RequireUnique(405));
         Assert.Contains(f.Equipment.Read().Assignments, assignment => assignment.Item == sword);
     }
 
@@ -236,10 +293,13 @@ public sealed class DaggerfallItemConditionServiceTests
         }
 
         internal UniqueItem CreatePlainSword(ulong durable)
+            => CreatePlainWeapon(durable, 113, "iron");
+
+        internal UniqueItem CreatePlainWeapon(ulong durable, int templateIndex, string material)
         {
             IRandomService random = DispatchProxy.Create<IRandomService, UnusedRandom>();
             DaggerfallCreatedItem created = new DaggerfallItemFactory(Definitions, random).Create(new(
-                "Weapons", "condition.sword", DaggerfallItemOwner.Player, TemplateIndex: 113, Material: "iron", Variant: 0));
+                "Weapons", "condition.sword", DaggerfallItemOwner.Player, TemplateIndex: templateIndex, Material: material, Variant: 0));
             new DaggerfallItemFactory(Definitions, random).Materialize(created, Inventory, Instances,
                 unique: new DurableIdentityReference(DurableIdentityKind.Item, durable));
             Rusty.Engine.Mechanics.UniqueInventoryItem item = Inventory.Read().UniqueItems.Single(item =>

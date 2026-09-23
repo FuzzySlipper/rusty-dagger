@@ -1,0 +1,610 @@
+{
+  "asset": "mesh/door/b0000012-rdb/2/-1/37",
+  "payload": {
+    "layout": {
+      "vertexCount": 20,
+      "indexCount": 30,
+      "indexWidth": "u32",
+      "attributes": [
+        {
+          "name": "position",
+          "components": 3,
+          "kind": "f32"
+        },
+        {
+          "name": "normal",
+          "components": 3,
+          "kind": "f32"
+        },
+        {
+          "name": "uv",
+          "components": 2,
+          "kind": "f32"
+        }
+      ]
+    },
+    "groups": [
+      {
+        "materialSlot": 7,
+        "start": 0,
+        "count": 18
+      },
+      {
+        "materialSlot": 44,
+        "start": 18,
+        "count": 12
+      }
+    ],
+    "bounds": {
+      "min": [
+        -0,
+        0.024999619,
+        -1.049084E-07
+      ],
+      "max": [
+        1.2000122,
+        2.2250004,
+        0.14999962
+      ]
+    },
+    "source": {
+      "kind": "inline",
+      "positions": [
+        1.3113383E-08,
+        2.2250004,
+        0.14999962,
+        1.2000122,
+        2.2250004,
+        0.14999951,
+        1.2000122,
+        2.2250004,
+        -1.049084E-07,
+        -0,
+        2.2250004,
+        0,
+        1.2000122,
+        2.2250004,
+        0.14999951,
+        1.2000122,
+        0.024999619,
+        0.14999951,
+        1.2000122,
+        0.024999619,
+        -1.049084E-07,
+        1.2000122,
+        2.2250004,
+        -1.049084E-07,
+        -0,
+        2.2250004,
+        0,
+        -0,
+        0.024999619,
+        0,
+        1.3113383E-08,
+        0.024999619,
+        0.14999962,
+        1.3113383E-08,
+        2.2250004,
+        0.14999962,
+        1.3113383E-08,
+        2.2250004,
+        0.14999962,
+        1.3113383E-08,
+        0.024999619,
+        0.14999962,
+        1.2000122,
+        0.024999619,
+        0.14999951,
+        1.2000122,
+        2.2250004,
+        0.14999951,
+        1.2000122,
+        2.2250004,
+        -1.049084E-07,
+        1.2000122,
+        0.024999619,
+        -1.049084E-07,
+        -0,
+        0.024999619,
+        0,
+        -0,
+        2.2250004,
+        0
+      ],
+      "normals": [
+        -0,
+        1,
+        0,
+        -0,
+        1,
+        0,
+        -0,
+        1,
+        0,
+        -0,
+        1,
+        0,
+        1,
+        0,
+        -8.742278E-08,
+        1,
+        0,
+        -8.742278E-08,
+        1,
+        0,
+        -8.742278E-08,
+        1,
+        0,
+        -8.742278E-08,
+        -1,
+        0,
+        8.742278E-08,
+        -1,
+        0,
+        8.742278E-08,
+        -1,
+        0,
+        8.742278E-08,
+        -1,
+        0,
+        8.742278E-08,
+        8.742278E-08,
+        -0,
+        1,
+        8.742278E-08,
+        -0,
+        1,
+        8.742278E-08,
+        -0,
+        1,
+        8.742278E-08,
+        -0,
+        1,
+        -8.742278E-08,
+        0,
+        -1,
+        -8.742278E-08,
+        0,
+        -1,
+        -8.742278E-08,
+        0,
+        -1,
+        -8.742278E-08,
+        0,
+        -1
+      ],
+      "uvs": [
+        0,
+        0,
+        0,
+        2,
+        2,
+        2,
+        2,
+        0,
+        0,
+        0,
+        0,
+        2,
+        2,
+        2,
+        2,
+        0,
+        0,
+        0,
+        0,
+        2,
+        2,
+        2,
+        2,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1,
+        0,
+        1,
+        0,
+        1,
+        1,
+        0,
+        1,
+        0,
+        0
+      ],
+      "indices": [
+        0,
+        1,
+        2,
+        0,
+        2,
+        3,
+        4,
+        5,
+        6,
+        4,
+        6,
+        7,
+        8,
+        9,
+        10,
+        8,
+        10,
+        11,
+        12,
+        13,
+        14,
+        12,
+        14,
+        15,
+        16,
+        17,
+        18,
+        16,
+        18,
+        19
+      ]
+    },
+    "provenance": "staticAsset"
+  },
+  "materialSlots": [
+    {
+      "slot": 0,
+      "material": "material/texture-0-124"
+    },
+    {
+      "slot": 1,
+      "material": "material/texture-0-43"
+    },
+    {
+      "slot": 2,
+      "material": "material/texture-0-44"
+    },
+    {
+      "slot": 3,
+      "material": "material/texture-0-45"
+    },
+    {
+      "slot": 4,
+      "material": "material/texture-0-74"
+    },
+    {
+      "slot": 5,
+      "material": "material/texture-0-75"
+    },
+    {
+      "slot": 6,
+      "material": "material/texture-0-76"
+    },
+    {
+      "slot": 7,
+      "material": "material/texture-0-77"
+    },
+    {
+      "slot": 8,
+      "material": "material/texture-0-78"
+    },
+    {
+      "slot": 9,
+      "material": "material/texture-0-79"
+    },
+    {
+      "slot": 10,
+      "material": "material/texture-0-89"
+    },
+    {
+      "slot": 11,
+      "material": "material/texture-1-24"
+    },
+    {
+      "slot": 12,
+      "material": "material/texture-1-57"
+    },
+    {
+      "slot": 13,
+      "material": "material/texture-1-60"
+    },
+    {
+      "slot": 14,
+      "material": "material/texture-120-0"
+    },
+    {
+      "slot": 15,
+      "material": "material/texture-120-2"
+    },
+    {
+      "slot": 16,
+      "material": "material/texture-120-3"
+    },
+    {
+      "slot": 17,
+      "material": "material/texture-120-4"
+    },
+    {
+      "slot": 18,
+      "material": "material/texture-121-0"
+    },
+    {
+      "slot": 19,
+      "material": "material/texture-121-1"
+    },
+    {
+      "slot": 20,
+      "material": "material/texture-121-2"
+    },
+    {
+      "slot": 21,
+      "material": "material/texture-121-3"
+    },
+    {
+      "slot": 22,
+      "material": "material/texture-122-0"
+    },
+    {
+      "slot": 23,
+      "material": "material/texture-122-1"
+    },
+    {
+      "slot": 24,
+      "material": "material/texture-122-2"
+    },
+    {
+      "slot": 25,
+      "material": "material/texture-122-3"
+    },
+    {
+      "slot": 26,
+      "material": "material/texture-122-4"
+    },
+    {
+      "slot": 27,
+      "material": "material/texture-123-0"
+    },
+    {
+      "slot": 28,
+      "material": "material/texture-123-2"
+    },
+    {
+      "slot": 29,
+      "material": "material/texture-123-3"
+    },
+    {
+      "slot": 30,
+      "material": "material/texture-123-4"
+    },
+    {
+      "slot": 31,
+      "material": "material/texture-124-0"
+    },
+    {
+      "slot": 32,
+      "material": "material/texture-124-1"
+    },
+    {
+      "slot": 33,
+      "material": "material/texture-124-2"
+    },
+    {
+      "slot": 34,
+      "material": "material/texture-124-3"
+    },
+    {
+      "slot": 35,
+      "material": "material/texture-146-1"
+    },
+    {
+      "slot": 36,
+      "material": "material/texture-168-0"
+    },
+    {
+      "slot": 37,
+      "material": "material/texture-168-2"
+    },
+    {
+      "slot": 38,
+      "material": "material/texture-168-3"
+    },
+    {
+      "slot": 39,
+      "material": "material/texture-22-0"
+    },
+    {
+      "slot": 40,
+      "material": "material/texture-22-2"
+    },
+    {
+      "slot": 41,
+      "material": "material/texture-321-0"
+    },
+    {
+      "slot": 42,
+      "material": "material/texture-321-1"
+    },
+    {
+      "slot": 43,
+      "material": "material/texture-321-2"
+    },
+    {
+      "slot": 44,
+      "material": "material/texture-374-0"
+    },
+    {
+      "slot": 45,
+      "material": "material/texture-374-2"
+    },
+    {
+      "slot": 46,
+      "material": "material/texture-41-0"
+    },
+    {
+      "slot": 47,
+      "material": "material/texture-41-1"
+    },
+    {
+      "slot": 48,
+      "material": "material/texture-449-1"
+    },
+    {
+      "slot": 49,
+      "material": "material/texture-450-11"
+    },
+    {
+      "slot": 50,
+      "material": "material/texture-450-7"
+    },
+    {
+      "slot": 51,
+      "material": "material/texture-46-1"
+    },
+    {
+      "slot": 52,
+      "material": "material/texture-46-2"
+    },
+    {
+      "slot": 53,
+      "material": "material/texture-67-0"
+    },
+    {
+      "slot": 54,
+      "material": "material/texture-67-1"
+    },
+    {
+      "slot": 55,
+      "material": "material/texture-67-11"
+    },
+    {
+      "slot": 56,
+      "material": "material/texture-67-14"
+    },
+    {
+      "slot": 57,
+      "material": "material/texture-67-15"
+    },
+    {
+      "slot": 58,
+      "material": "material/texture-67-2"
+    },
+    {
+      "slot": 59,
+      "material": "material/texture-67-6"
+    },
+    {
+      "slot": 60,
+      "material": "material/texture-67-8"
+    },
+    {
+      "slot": 61,
+      "material": "material/texture-71-0"
+    },
+    {
+      "slot": 62,
+      "material": "material/texture-71-1"
+    },
+    {
+      "slot": 63,
+      "material": "material/texture-71-2"
+    },
+    {
+      "slot": 64,
+      "material": "material/texture-72-0"
+    },
+    {
+      "slot": 65,
+      "material": "material/texture-72-2"
+    },
+    {
+      "slot": 66,
+      "material": "material/texture-90-2"
+    },
+    {
+      "slot": 67,
+      "material": "material/texture-90-3"
+    },
+    {
+      "slot": 68,
+      "material": "material/texture-92-10"
+    },
+    {
+      "slot": 69,
+      "material": "material/texture-92-11"
+    },
+    {
+      "slot": 70,
+      "material": "material/texture-92-12"
+    },
+    {
+      "slot": 71,
+      "material": "material/texture-92-3"
+    },
+    {
+      "slot": 72,
+      "material": "material/texture-92-4"
+    },
+    {
+      "slot": 73,
+      "material": "material/texture-92-5"
+    },
+    {
+      "slot": 74,
+      "material": "material/texture-92-6"
+    },
+    {
+      "slot": 75,
+      "material": "material/texture-92-7"
+    },
+    {
+      "slot": 76,
+      "material": "material/texture-92-8"
+    },
+    {
+      "slot": 77,
+      "material": "material/texture-93-0"
+    },
+    {
+      "slot": 78,
+      "material": "material/texture-93-1"
+    },
+    {
+      "slot": 79,
+      "material": "material/texture-93-2"
+    },
+    {
+      "slot": 80,
+      "material": "material/texture-93-4"
+    },
+    {
+      "slot": 81,
+      "material": "material/texture-93-5"
+    },
+    {
+      "slot": 82,
+      "material": "material/texture-93-6"
+    },
+    {
+      "slot": 83,
+      "material": "material/texture-93-7"
+    },
+    {
+      "slot": 84,
+      "material": "material/texture-93-8"
+    },
+    {
+      "slot": 85,
+      "material": "material/texture-94-0"
+    },
+    {
+      "slot": 86,
+      "material": "material/texture-94-1"
+    },
+    {
+      "slot": 87,
+      "material": "material/texture-95-0"
+    }
+  ],
+  "collision": {
+    "kind": "visualOnly"
+  }
+}

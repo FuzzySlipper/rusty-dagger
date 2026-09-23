@@ -15,6 +15,28 @@ namespace Daggerfall.Import.Tests;
 public sealed class MonsterArchiveTests
 {
     [Fact]
+    public void RetainsEveryHumanEncounterMobileWithItsEnemyBasicsArchiveAndCorpse()
+    {
+        Dictionary<byte, ushort> expectedArchives = new()
+        {
+            [128] = 486, [129] = 476, [130] = 490, [131] = 478, [132] = 486, [133] = 490,
+            [134] = 484, [135] = 484, [136] = 480, [137] = 484, [138] = 484, [139] = 480,
+            [140] = 488, [141] = 482, [142] = 482, [143] = 488, [144] = 488, [145] = 488, [146] = 399,
+        };
+
+        Arena2MobileSource[] humans = [.. MobileSourceMetadata.All.Where(source => source.Id.Value is >= 128 and <= 146)];
+        Assert.Equal(expectedArchives.Keys, humans.Select(source => source.Id.Value).Order());
+        Assert.All(humans, source =>
+        {
+            Assert.Equal(expectedArchives[source.Id.Value], source.TextureArchive.Value);
+            Assert.Equal((ushort)380, source.Corpse!.Value.TextureArchive.Value);
+            Assert.Equal((ushort)1, source.Corpse.Value.Record);
+        });
+        Assert.Null(humans.Single(source => source.Id.Value == 146).RangedAttackFrames);
+        Assert.All(humans.Where(source => source.Id.Value != 146), source => Assert.NotNull(source.RangedAttackFrames));
+    }
+
+    [Fact]
     public void Enumerates_every_named_record_of_the_supplied_archive()
     {
         MonsterArchiveInventory inventory = ReadInventory();
@@ -84,13 +106,12 @@ public sealed class MonsterArchiveTests
     {
         MonsterArchiveInventory inventory = ReadInventory();
 
-        // The eight mobiles this repository supports are the ones with source media and
+        // The human enemy corpus and the original dungeon mobiles retain source media and
         // link facts; every other archive record names the mobile it belongs to and says
         // that nothing supported carries it.
         Assert.Equal(
-            MobileSourceMetadata.All.Select(source => source.Id.Value).Order(),
+            MobileSourceMetadata.All.Select(source => source.Id.Value).Intersect(inventory.Records.Select(record => record.MobileId)).Order(),
             inventory.Records.Where(record => record.IsLinked).Select(record => record.MobileId).Distinct().Order());
-        Assert.Equal(89, inventory.Unlinked.Count());
         Assert.All(inventory.Unlinked, record =>
         {
             Assert.Contains($"Mobile {record.MobileId}", record.Note, StringComparison.Ordinal);

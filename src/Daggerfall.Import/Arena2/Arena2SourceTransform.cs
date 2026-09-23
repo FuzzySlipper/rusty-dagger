@@ -33,6 +33,8 @@ public static class Arena2SourceTransform
     private const float RawRotationUnitsPerTurn = 2048F;
     private const float DegreesPerTurn = 360F;
     private const float RawBlockSide = 2048F;
+    private const float RawRmbBlockSide = 4096F;
+    private const float RmbRotationDivisor = 5.68888888888889F;
 
     /// <summary>
     /// Converts an ARCH3D mesh point to DFU-compatible importer space. Arena2
@@ -88,6 +90,49 @@ public static class Arena2SourceTransform
             localPoint.YMetres + origin.YMetres,
             localPoint.ZMetres + origin.ZMetres,
             nameof(localPoint));
+    }
+
+    /// <summary>Returns the donor RMB grid origin for one MAPPITEM exterior block.</summary>
+    public static Arena2ImportPoint ToExteriorBlockOrigin(MapsExteriorBlock block)
+    {
+        ArgumentNullException.ThrowIfNull(block);
+        float blockSideMetres = RawRmbBlockSide * GlobalScaleMetres;
+        return CreatePoint(block.X * blockSideMetres, 0F, block.Y * blockSideMetres, nameof(block));
+    }
+
+    /// <summary>Applies an exterior RMB grid origin to a local importer-space point.</summary>
+    public static Arena2ImportPoint PlaceInExteriorBlock(Arena2ImportPoint localPoint, MapsExteriorBlock block)
+    {
+        EnsureFinite(localPoint.XMetres, nameof(localPoint));
+        EnsureFinite(localPoint.YMetres, nameof(localPoint));
+        EnsureFinite(localPoint.ZMetres, nameof(localPoint));
+        Arena2ImportPoint origin = ToExteriorBlockOrigin(block);
+        return CreatePoint(localPoint.XMetres + origin.XMetres, localPoint.YMetres + origin.YMetres, localPoint.ZMetres + origin.ZMetres, nameof(localPoint));
+    }
+
+    /// <summary>
+    /// Converts an RMB model position to the donor's local block frame. The caller applies its
+    /// building-subrecord transform or exterior block origin explicitly.
+    /// </summary>
+    public static Arena2ImportPoint ToRmbImportPoint(int x, int y, int z) =>
+        CreatePoint(x * GlobalScaleMetres, -y * GlobalScaleMetres, z * GlobalScaleMetres, "RMB position");
+
+    /// <summary>
+    /// Returns the local transform origin a building subrecord supplies: its source Z origin is
+    /// measured from the opposite RMB edge, matching the donor's <c>RMBDimension - ZPos</c>.
+    /// </summary>
+    public static Arena2ImportPoint ToRmbBuildingOrigin(RmbBuildingSlot building)
+    {
+        ArgumentNullException.ThrowIfNull(building);
+        return CreatePoint(building.X * GlobalScaleMetres, 0F, (RawRmbBlockSide - building.Z) * GlobalScaleMetres, nameof(building));
+    }
+
+    /// <summary>Converts the donor's RMB yaw units to the same source Euler convention as its layout.</summary>
+    public static float ToRmbYawDegrees(int sourceYaw)
+    {
+        float degrees = -sourceYaw / RmbRotationDivisor;
+        EnsureFinite(degrees, nameof(sourceYaw));
+        return degrees;
     }
 
     /// <summary>

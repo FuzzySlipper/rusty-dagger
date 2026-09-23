@@ -117,27 +117,53 @@ public sealed record Arena2MediaBundlePublication(
         GeometryPublication geometry)
     {
         ArgumentNullException.ThrowIfNull(dungeon);
+        dungeon.Validate();
+        return CreateCore(dungeon.Document, dungeon.SpatialPublication, dungeonMedia, classicMedia, geometry, compactNormalizedJson: false);
+    }
+
+    /// <summary>Publishes RMB spatial output through the same media and artifact closure as an RDB location.</summary>
+    public static Arena2MediaBundlePublication Create(
+        RmbExteriorNormalizationResult rmb,
+        Arena2DungeonMediaPublication dungeonMedia,
+        Arena2ClassicMediaPublication classicMedia,
+        GeometryPublication geometry)
+    {
+        ArgumentNullException.ThrowIfNull(rmb);
+        rmb.Validate();
+        return CreateCore(rmb.Document, rmb.SpatialPublication, dungeonMedia, classicMedia, geometry, compactNormalizedJson: true);
+    }
+
+    private static Arena2MediaBundlePublication CreateCore(
+        NormalizedImportDocument spatialDocument,
+        DungeonSpatialPublication spatial,
+        Arena2DungeonMediaPublication dungeonMedia,
+        Arena2ClassicMediaPublication classicMedia,
+        GeometryPublication geometry,
+        bool compactNormalizedJson)
+    {
+        ArgumentNullException.ThrowIfNull(spatialDocument);
+        ArgumentNullException.ThrowIfNull(spatial);
         ArgumentNullException.ThrowIfNull(dungeonMedia);
         ArgumentNullException.ThrowIfNull(classicMedia);
         ArgumentNullException.ThrowIfNull(geometry);
-        dungeon.Validate();
+        spatialDocument.Validate();
         geometry.Validate();
 
         ValidateDungeonMedia(dungeonMedia);
         ValidateClassicMedia(classicMedia);
 
-        ImportProvenance mergedProvenance = MergeProvenance(dungeon.Document.Provenance, classicMedia.Sources);
-        NormalizedImportDocument document = (dungeon.Document with { Provenance = mergedProvenance }).Canonicalize();
+        ImportProvenance mergedProvenance = MergeProvenance(spatialDocument.Provenance, classicMedia.Sources);
+        NormalizedImportDocument document = (spatialDocument with { Provenance = mergedProvenance }).Canonicalize();
         document.Validate();
-        dungeon.SpatialPublication.ValidateAgainst(document);
+        spatial.ValidateAgainst(document);
 
-        DungeonMediaManifestSidecar dungeonSidecar = CreateDungeonSidecar(dungeon.SpatialPublication, dungeonMedia);
+        DungeonMediaManifestSidecar dungeonSidecar = CreateDungeonSidecar(spatial, dungeonMedia);
         ClassicMediaManifestSidecar classicSidecar = CreateClassicSidecar(classicMedia);
         ValidatePersistedSidecars(dungeonSidecar, classicSidecar);
         byte[] dungeonSidecarBytes = SerializeSidecar(dungeonSidecar);
         byte[] classicSidecarBytes = SerializeSidecar(classicSidecar);
 
-        Dictionary<string, string> spatialPathsById = dungeon.SpatialPublication.Artifacts
+        Dictionary<string, string> spatialPathsById = spatial.Artifacts
             .ToDictionary(artifact => artifact.Id, artifact => artifact.RelativePath, StringComparer.Ordinal);
         Dictionary<string, string> geometryPathsById = geometry.Artifacts
             .ToDictionary(artifact => artifact.Id, artifact => artifact.RelativePath, StringComparer.Ordinal);
@@ -146,7 +172,7 @@ public sealed record Arena2MediaBundlePublication(
                 artifact.RelativePath,
                 artifact.Bytes.Span,
                 artifact.DependsOnArtifactIds.Select(id => geometryPathsById[id]).ToArray())),
-            .. dungeon.SpatialPublication.Artifacts.Select(artifact => new ImportPublicationArtifact(
+            .. spatial.Artifacts.Select(artifact => new ImportPublicationArtifact(
                 artifact.RelativePath,
                 artifact.Bytes.Span,
                 artifact.DependsOnArtifactIds.Select(id => spatialPathsById[id]).ToArray())),
@@ -163,14 +189,16 @@ public sealed record Arena2MediaBundlePublication(
         ];
 
         string[] normalizedDependencies = [
-            .. dungeon.SpatialPublication.Artifacts.Select(artifact => artifact.RelativePath),
+            .. spatial.Artifacts.Select(artifact => artifact.RelativePath),
             .. geometry.Artifacts.Select(artifact => artifact.RelativePath),
             DungeonMediaManifestRelativePath,
             ClassicMediaManifestRelativePath,
         ];
         artifacts.Add(new ImportPublicationArtifact(
             NormalizedDocumentRelativePath,
-            NormalizedImportSerializer.Serialize(document),
+            compactNormalizedJson
+                ? NormalizedImportSerializer.SerializeCompact(document)
+                : NormalizedImportSerializer.Serialize(document),
             normalizedDependencies));
 
         return new(document, ImportPublicationPlan.Create(mergedProvenance, artifacts));
@@ -333,11 +361,6 @@ public sealed record Arena2MediaBundlePublication(
 
             foreach (DungeonActorSpriteStateLayout state in actor.States)
             {
-                if (state.FramesPerOrientation > int.MaxValue / 8)
-                {
-                    throw new InvalidOperationException("Persisted dungeon actor state frame count exceeds the supported range.");
-                }
-
                 state.Validate();
                 ValidateStateRange(state);
                 if (descriptor.FramesPerSecond is not null && state.Playback.FramesPerSecond != descriptor.FramesPerSecond
@@ -1039,7 +1062,7 @@ public sealed record Arena2MediaBundlePublication(
 
     private static void ValidateStateRange(DungeonActorSpriteStateLayout state)
     {
-        int expectedCount = checked(8 * state.FramesPerOrientation);
+        int expectedCount = state.Frames.Count;
         IReadOnlyList<int> expected = Enumerable.Range(state.FrameStart, expectedCount).ToArray();
         IReadOnlyList<int> actual = state.Frames.OrderBy(frame => frame.AtlasFrameIndex).Select(frame => frame.AtlasFrameIndex).ToArray();
         if (!actual.SequenceEqual(expected))

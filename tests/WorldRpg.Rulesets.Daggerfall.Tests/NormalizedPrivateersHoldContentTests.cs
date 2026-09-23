@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Numerics;
 using Rusty.Engine;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
@@ -80,10 +81,89 @@ public sealed class NormalizedPrivateersHoldContentTests
         Assert.NotEmpty(inputs.Materials);
         Assert.Equal(inputs.Materials.Count, inputs.Materials.Select(material => material.Slot).Distinct().Count());
         Assert.NotEmpty(inputs.ActorSprites);
+        DaggerfallSiteLight firstLight = Assert.Single(inputs.Lights, light => light.Id == "light/b0000003-rdb/1/0/0");
+        Assert.Equal(new WorldPoint(54.4F, 34.4F, -17.2F), firstLight.Position);
+        Assert.Equal(7.5F, firstLight.Range);
+        Assert.Equal(1F, firstLight.Intensity);
         Assert.All(inputs.ActorSprites.Values, sprite => Assert.InRange(sprite.Frames.Count, 1, 4096));
         Assert.Equal("weapon.dagger.steel", Assert.IsType<NormalizedClassicWeapon>(inputs.ClassicPresentation.Weapons["weapon.dagger.steel"]).ResourceId);
         Assert.Equal("weapon.dagger.steel", inputs.ClassicPresentation.CompatibleItemVisuals["iron-dagger"]);
         Assert.Equal(["blood0", "blood1", "blood2", "magicSparkle"], inputs.ClassicPresentation.Effects.Select(effect => effect.Name));
+    }
+
+    [Fact]
+    public void Reads_the_donor_treasure_billboard_for_ground_container_projection()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = PrivateersHoldContent.Read(GeneratedContent(root),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
+
+        Assert.NotNull(inputs.GroundContainerSprite);
+        NormalizedGroundContainerSprite visual = inputs.GroundContainerSprite!;
+        Assert.Equal("worldrpg/imports/privateers-hold/media/dungeon/billboards/texture-216-0.png", visual.TexturePath);
+        Assert.Equal(new Vector2(.5F, .5F), visual.Pivot);
+        Assert.Equal(new Vector2(.975F, .65F), visual.Size);
+        Assert.Equal(0u, visual.InitialFrameId);
+        Assert.Single(visual.Frames);
+        Assert.Equal(39, visual.Frames[0].Width);
+        Assert.Equal(26, visual.Frames[0].Height);
+    }
+
+    [Fact]
+    public void Admits_a_shared_attack_script_when_a_real_direction_has_fewer_source_frames()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = PrivateersHoldContent.Read(GeneratedContent(root),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
+
+        NormalizedActorSprite mobile = inputs.MobileSprites[30];
+        Assert.Equal([0, 1, 2, 3, -1, 4, 5], Assert.Single(mobile.AttackSequences).SourceFrames);
+        NormalizedSpriteState attack = mobile.States["primaryAttack"];
+        Assert.Equal(6, attack.SelectOrientation(0).Count);
+        Assert.Equal(5, attack.SelectOrientation(1).Count);
+        Assert.Equal(5, attack.SelectOrientation(7).Count);
+    }
+
+    [Fact]
+    public void Admits_castle_necromoghan_as_a_distinct_normalized_destination_profile()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+
+        PrivateersHoldInputs destination = PrivateersHoldContent.Read(GeneratedContent(root),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+        DaggerfallSiteProfiles profiles = new([destination]);
+
+        Assert.Equal(new DaggerfallSiteId(17, 9), destination.Site);
+        Assert.Equal("worldrpg/imports/castle-necromoghan/spatial/castle-necromoghan/collision-navigation.json", destination.SpatialArtifact.Path);
+        Assert.Empty(destination.Project.Actors);
+        Assert.Equal(125, destination.Doors.Count);
+        Assert.Same(destination, profiles.Require(destination.ProfileKey));
+    }
+
+    [Fact]
+    public void Admits_exterior_and_interior_profiles_at_the_same_geographic_site_by_logical_profile_identity()
+    {
+        DaggerfallSiteId charing = new(17, 4);
+        PrivateersHoldInputs exterior = new(new ProjectFacts(new WorldPoint(0, 0, 0), new Dictionary<long, AuthoredActor>()),
+            new SpatialContentArtifact("spatial/charing/exterior.json", default, 1), new ContentArtifact("mesh/charing/exterior.json", default),
+            new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene), new PlayerInitialLook(0, 0), [], new Dictionary<long, NormalizedActorSprite>(),
+            site: charing, profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: "worldrpg/imports/charing/exterior");
+        PrivateersHoldInputs interior = new(new ProjectFacts(new WorldPoint(1, 0, 0), new Dictionary<long, AuthoredActor>()),
+            new SpatialContentArtifact("spatial/charing/interior-1-1-0.json", default, 2), new ContentArtifact("mesh/charing/interior-1-1-0.json", default),
+            new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene), new PlayerInitialLook(0, 0), [], new Dictionary<long, NormalizedActorSprite>(),
+            site: charing, profileKind: DaggerfallWorldProfileKind.Interior, logicalProfileId: "worldrpg/imports/charing/interior-1-1-0");
+
+        DaggerfallSiteProfiles profiles = new([exterior, interior]);
+
+        Assert.Equal(charing, exterior.ProfileKey.Site);
+        Assert.Equal(charing, interior.ProfileKey.Site);
+        Assert.NotEqual(exterior.ProfileKey, interior.ProfileKey);
+        Assert.Same(exterior, profiles.Require(exterior.ProfileKey));
+        Assert.Same(interior, profiles.Require(interior.ProfileKey));
+        Assert.Throws<InvalidOperationException>(() => profiles.RequireUniqueSite(charing));
     }
 
     [Fact]
@@ -200,7 +280,7 @@ public sealed class NormalizedPrivateersHoldContentTests
     private static ProductContent GeneratedContent(string root)
     {
         string contentRoot = Path.Combine(root, "content");
-        ProductContentFile[] files = Directory.GetFiles(Path.Combine(contentRoot, "worldrpg/imports/privateers-hold"), "*", SearchOption.AllDirectories)
+        ProductContentFile[] files = Directory.GetFiles(Path.Combine(contentRoot, "worldrpg/imports"), "*", SearchOption.AllDirectories)
             .Select(path => new ProductContentFile(Encoding.UTF8.GetBytes(Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/')), File.ReadAllBytes(path)))
             .ToArray();
         return new ProductContent(files);

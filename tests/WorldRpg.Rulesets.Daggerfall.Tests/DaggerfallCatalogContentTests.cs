@@ -22,7 +22,7 @@ public sealed class DaggerfallCatalogContentTests
         Assert.DoesNotContain(definitions.Actors.Values, actor => actor.MobileId == 39);
         Assert.Equal(31, definitions.Items.Count);
         Assert.Equal(25, definitions.EquipmentSlots.Count);
-        Assert.Equal(6, definitions.Actions.Count);
+        Assert.Equal(7, definitions.Actions.Count);
         Assert.Equal(22, definitions.LootTables.Count);
         Assert.Equal(12, definitions.ArmorValuesByMaterial.Count);
         Assert.NotEmpty(definitions.RequireActor(new DaggerfallActorId("player")).Loadout);
@@ -40,7 +40,7 @@ public sealed class DaggerfallCatalogContentTests
         Assert.Equal("right-hand", definitions.RequireActor(new DaggerfallActorId("player")).Loadout[0].EquipSlot!.Value.Value);
         Assert.Equal(8, definitions.RequireActor(new DaggerfallActorId("player")).HitPointsPerLevel);
         Assert.Equal(5, definitions.Actions["melee-attack"].StaminaCost);
-        Assert.Equal(["archer-shot", "melee-attack", "monster-strike", "power-attack", "skeleton-strike", "thief-strike"], definitions.Actions.Values.OrderBy(action => action.Id).Select(action => action.Id));
+        Assert.Equal(["archer-shot", "enemy-class-equipped-melee", "melee-attack", "monster-strike", "power-attack", "skeleton-strike", "thief-strike"], definitions.Actions.Values.OrderBy(action => action.Id).Select(action => action.Id));
         Assert.Equal(0, definitions.Actions["monster-strike"].AttackRangeIndex);
         Assert.Null(definitions.Actions["monster-strike"].MinimumDamage);
         Assert.Equal(0.75, definitions.Actions["melee-attack"].CooldownSeconds);
@@ -82,6 +82,26 @@ public sealed class DaggerfallCatalogContentTests
     }
 
     [Fact]
+    public void HumanEncounterActorsResolveSourceCareerCombatLootAndCasterCapability()
+    {
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallActorDefinition mage = definitions.RequireActor(new DaggerfallActorId("encounter-mage"));
+        DaggerfallActorDefinition warrior = definitions.RequireActor(new DaggerfallActorId("encounter-warrior"));
+        DaggerfallActorDefinition rogue = definitions.RequireActor(new DaggerfallActorId("encounter-rogue"));
+        DaggerfallActorDefinition guard = definitions.RequireActor(new DaggerfallActorId("encounter-city-watch-the-haltmeister"));
+
+        Assert.Equal((128, "class00", "U"), (mage.MobileId, mage.Career, mage.LootTableKey));
+        Assert.Equal((144, "class16", "T"), (warrior.MobileId, warrior.Career, warrior.LootTableKey));
+        Assert.Equal((136, "class08", "O"), (rogue.MobileId, rogue.Career, rogue.LootTableKey));
+        Assert.Equal((146, "class18", "T"), (guard.MobileId, guard.Career, guard.LootTableKey));
+        Assert.All([mage, warrior, rogue, guard], actor => Assert.Equal("enemy-class-equipped-melee", actor.ActionId));
+        Assert.True(definitions.Mobiles.Mobiles[128].RequiresEnemySpellBehavior);
+        Assert.False(definitions.Mobiles.Mobiles[131].RequiresEnemySpellBehavior);
+        Assert.Equal(35, mage.Stats[DaggerfallMechanicsIds.LongBlade]);
+        Assert.Equal(35, warrior.Stats[new DaggerfallStatId("archery")]);
+    }
+
+    [Fact]
     public void LootTablesMatchTheCompleteClassicDonorMatrix()
     {
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
@@ -97,8 +117,8 @@ public sealed class DaggerfallCatalogContentTests
         DaggerfallLootResult result = DaggerfallLootPolicy.Generate(definitions, "C", 1, (_, minimum, _) => minimum);
 
         Assert.Equal(["weapons", "armor", "creature1", "creature2", "creature3", "plant1", "plant2", "misc1", "misc2", "magic", "books", "religious"], result.Categories.Select(category => category.Category));
-        Assert.All(result.Categories, category => Assert.Equal(3, category.Rolls.Count));
-        Assert.All(result.Categories.Where(category => category.Category is "weapons" or "armor"), category => Assert.All(category.Rolls, roll => Assert.True(roll.Success)));
+        Assert.Equal([6, 4, 4, 4, 4, 5, 5, 4, 3, 3, 3, 3], result.Categories.Select(category => category.Rolls.Count));
+        Assert.All(result.Categories.Where(category => category.Category is "weapons" or "armor"), category => Assert.All(category.Rolls, roll => Assert.Equal(roll.Chance > 0, roll.Success)));
         Assert.All(result.Categories, category => Assert.All(category.Rolls, roll => Assert.Equal(roll.Roll < roll.Chance, roll.Success)));
     }
 

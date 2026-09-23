@@ -1,5 +1,7 @@
 using WorldRpg.Rulesets.Daggerfall.Content;
 using Rusty.Engine;
+using WorldRpg.Kit.World;
+using WorldRpg.Kit.Controls;
 
 namespace WorldRpg.Rulesets.Daggerfall.World;
 
@@ -28,9 +30,10 @@ internal sealed class DaggerfallSiteContext
     private readonly IReadOnlyList<DaggerfallSiteRecord> _ordered;
     private readonly HashSet<DaggerfallSiteId> _discovered = [];
     private DaggerfallBuildingNameService? _buildingNames;
+    private DaggerfallSiteReturnPose? _returnPose;
 
     internal DaggerfallSiteContext(DaggerfallLocationSet locations)
-        : this(locations, null, null, [])
+        : this(locations, null, null, null, [])
     {
     }
 
@@ -38,6 +41,16 @@ internal sealed class DaggerfallSiteContext
         DaggerfallLocationSet locations,
         DaggerfallSiteId? active,
         DaggerfallSiteId? returnAnchor,
+        IEnumerable<DaggerfallSiteId> discovered)
+        : this(locations, active, returnAnchor, null, discovered)
+    {
+    }
+
+    internal DaggerfallSiteContext(
+        DaggerfallLocationSet locations,
+        DaggerfallSiteId? active,
+        DaggerfallSiteId? returnAnchor,
+        DaggerfallSiteReturnPose? returnPose,
         IEnumerable<DaggerfallSiteId> discovered)
     {
         ArgumentNullException.ThrowIfNull(locations);
@@ -64,6 +77,12 @@ internal sealed class DaggerfallSiteContext
             }
 
             ReturnAnchor = Require(anchor).Id;
+            _returnPose = returnPose ?? throw new ArgumentException("A restored return anchor requires its exact return pose.", nameof(returnPose));
+            _returnPose.Validate();
+        }
+        else if (returnPose is not null)
+        {
+            throw new ArgumentException("A restored return pose requires a return anchor.", nameof(returnPose));
         }
 
         foreach (DaggerfallSiteId id in discovered)
@@ -81,6 +100,9 @@ internal sealed class DaggerfallSiteContext
 
     /// <summary>The site a <see cref="Leave"/> returns to, or null when the player is not inside a site.</summary>
     internal DaggerfallSiteId? ReturnAnchor { get; private set; }
+
+    /// <summary>The exact pose retained with the return site while a destination projection is active.</summary>
+    internal DaggerfallSiteReturnPose? ReturnPose => _returnPose;
 
     /// <summary>
     /// The region the session is in, which is what every donor formula that takes a region index reads.
@@ -161,8 +183,9 @@ internal sealed class DaggerfallSiteContext
     /// them.
     /// </summary>
     /// <remarks>
-    /// The site the player was already at becomes the anchor, so entering an interior from an exterior
-    /// and from a different interior both leave a truthful place to return to. Entering a site reveals
+    /// The site the player was already at becomes the geographic anchor when it changes. Projection
+    /// transitions that must retain a same-site exterior/interior return use the pose overload;
+    /// entering a site reveals
     /// it, which is the one per-site change this context owns.
     /// </remarks>
     internal void Enter(DaggerfallSiteId id)
@@ -177,15 +200,67 @@ internal sealed class DaggerfallSiteContext
         Reveal(record);
     }
 
+    /// <summary>
+    /// Enters a destination after runtime admission has accepted it, retaining the actual source pose
+    /// that an exit restores.  The caller must not invoke this while merely preparing a candidate.
+    /// </summary>
+    internal void Enter(DaggerfallSiteId id, WorldPoint sourcePosition, float sourceYawRadians, float sourcePitchRadians)
+    {
+        if (!float.IsFinite(sourcePosition.X) || !float.IsFinite(sourcePosition.Y) || !float.IsFinite(sourcePosition.Z))
+            throw new ArgumentOutOfRangeException(nameof(sourcePosition), "A return position must be finite.");
+        if (!float.IsFinite(sourceYawRadians) || !float.IsFinite(sourcePitchRadians))
+            throw new ArgumentOutOfRangeException(nameof(sourceYawRadians), "A return look must be finite.");
+        DaggerfallSiteRecord record = Require(id);
+        if (Active is { } previous)
+        {
+            ReturnAnchor = previous;
+            _returnPose = new DaggerfallSiteReturnPose(sourcePosition, sourceYawRadians, sourcePitchRadians);
+        }
+        Active = record.Id;
+        Reveal(record);
+    }
+
     /// <summary>Returns the player to the site they entered from, clearing the anchor.</summary>
     internal void Leave()
     {
         Active = ReturnAnchor;
         ReturnAnchor = null;
+        _returnPose = null;
     }
+
+    /// <summary>Returns the destination and exact pose without mutating; commit with <see cref="Leave"/> only after it admits.</summary>
+    internal DaggerfallSiteReturnDestination RequireReturnDestination() => ReturnAnchor is { } site && _returnPose is { } pose
+        ? new(site, pose)
+        : throw new InvalidOperationException("The active site has no saved return destination and pose.");
 
     /// <summary>Reveals a site without moving the player there.</summary>
     internal void Discover(DaggerfallSiteId id) => Reveal(Require(id));
+
+    /// <summary>Captures live context for a transition that has admitted resources but has not committed its site change.</summary>
+    internal DaggerfallSiteContextCheckpoint CaptureCheckpoint() => new(Active, ReturnAnchor, _returnPose, [.. _discovered]);
+
+    /// <summary>Restores a checkpoint from the same admitted location set after a transition commit fails.</summary>
+    internal void RestoreCheckpoint(DaggerfallSiteContextCheckpoint checkpoint)
+    {
+        ArgumentNullException.ThrowIfNull(checkpoint);
+        if (checkpoint.Active is { } active) _ = Require(active);
+        if (checkpoint.ReturnAnchor is { } returned)
+        {
+            if (checkpoint.Active is null) throw new ArgumentException("A site checkpoint cannot return from no active site.", nameof(checkpoint));
+            _ = Require(returned);
+            (checkpoint.ReturnPose ?? throw new ArgumentException("A site checkpoint return anchor requires its exact pose.", nameof(checkpoint))).Validate();
+        }
+        else if (checkpoint.ReturnPose is not null)
+        {
+            throw new ArgumentException("A site checkpoint return pose requires a return anchor.", nameof(checkpoint));
+        }
+        foreach (DaggerfallSiteId discovered in checkpoint.Discovered) _ = Require(discovered);
+        Active = checkpoint.Active;
+        ReturnAnchor = checkpoint.ReturnAnchor;
+        _returnPose = checkpoint.ReturnPose;
+        _discovered.Clear();
+        _discovered.UnionWith(checkpoint.Discovered);
+    }
 
     /// <summary>
     /// Records that play revealed a site, which is only a change when the bundle had not already said so.
@@ -207,5 +282,27 @@ internal sealed class DaggerfallSiteContext
     internal DaggerfallSiteSave Capture() => new(
         Active is { } active ? new DaggerfallSiteIdSave(active.Region, active.Index) : null,
         ReturnAnchor is { } anchor ? new DaggerfallSiteIdSave(anchor.Region, anchor.Index) : null,
-        [.. _discovered.OrderBy(id => id.Region).ThenBy(id => id.Index).Select(id => new DaggerfallSiteIdSave(id.Region, id.Index))]);
+        [.. _discovered.OrderBy(id => id.Region).ThenBy(id => id.Index).Select(id => new DaggerfallSiteIdSave(id.Region, id.Index))],
+        _returnPose is { } pose ? new DaggerfallSiteReturnPoseSave(pose.Position.X, pose.Position.Y, pose.Position.Z, pose.YawRadians, pose.PitchRadians) : null);
 }
+
+/// <summary>Return placement retained by a site context; it is product state, never a runtime entity handle.</summary>
+internal sealed record DaggerfallSiteReturnPose(WorldPoint Position, float YawRadians, float PitchRadians)
+{
+    internal void Validate()
+    {
+        if (!float.IsFinite(Position.X) || !float.IsFinite(Position.Y) || !float.IsFinite(Position.Z))
+            throw new ArgumentOutOfRangeException(nameof(Position), "A return position must be finite.");
+        if (!float.IsFinite(YawRadians) || !float.IsFinite(PitchRadians))
+            throw new ArgumentOutOfRangeException(nameof(YawRadians), "A return look must be finite.");
+    }
+}
+
+internal sealed record DaggerfallSiteReturnDestination(DaggerfallSiteId Site, DaggerfallSiteReturnPose Pose);
+
+/// <summary>In-memory transition checkpoint; it holds only durable site identity and pose facts.</summary>
+internal sealed record DaggerfallSiteContextCheckpoint(
+    DaggerfallSiteId? Active,
+    DaggerfallSiteId? ReturnAnchor,
+    DaggerfallSiteReturnPose? ReturnPose,
+    DaggerfallSiteId[] Discovered);

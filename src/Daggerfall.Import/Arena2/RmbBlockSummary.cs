@@ -31,8 +31,14 @@ public sealed record RmbObjectCounts(int Objects, int Flats, int Sections, int P
         + (Doors * DoorRecordBytes);
 }
 
+/// <summary>One source ground tile in an RMB block's fixed header.</summary>
+public sealed record RmbGroundTile(byte X, byte Y, byte TextureRecord, bool Rotated, bool Flipped);
+
 /// <summary>One building sub-record of an RMB block header: its slot data and both of its halves.</summary>
 /// <param name="Index">The slot's ordinal, which is the sub-record's ordinal in the block.</param>
+/// <param name="X">The donor sub-record's X position within its RMB block.</param>
+/// <param name="Z">The donor sub-record's Z position within its RMB block.</param>
+/// <param name="YRotation">The donor sub-record yaw, in classic rotation units.</param>
 /// <param name="ByteLength">The bytes the donor steps over for this sub-record, padding included.</param>
 /// <param name="PaddingBytes">The bytes the sub-record reserves past what its halves occupy.</param>
 /// <param name="BuildingType">The building type byte the slot carries.</param>
@@ -43,6 +49,9 @@ public sealed record RmbObjectCounts(int Objects, int Flats, int Sections, int P
 /// <param name="Interior">What the sub-record's inside half declares.</param>
 public sealed record RmbBuildingSlot(
     int Index,
+    int X,
+    int Z,
+    int YRotation,
     int ByteLength,
     int PaddingBytes,
     byte BuildingType,
@@ -74,7 +83,14 @@ public sealed record RmbBlockSummary(
     int Misc3dObjects,
     int MiscFlatObjects,
     IReadOnlyList<RmbBuildingSlot> Buildings,
-    int TrailingBytes);
+    int TrailingBytes)
+{
+    /// <summary>All 16-by-16 ground tiles read from the source FLD header.</summary>
+    public IReadOnlyList<RmbGroundTile> GroundTiles { get; init; } = [];
+
+    /// <summary>The source 64-by-64 automap occupancy bytes used to conservatively retain outdoor ground.</summary>
+    public IReadOnlyList<byte> AutoMapData { get; init; } = [];
+}
 
 /// <summary>
 /// Reads the fixed part of an RMB block header: its counts, the building sub-records it declares and
@@ -98,9 +114,9 @@ public sealed record RmbBlockSummary(
 /// remainder is published rather than assumed away.
 /// </para>
 /// <para>
-/// What this deliberately does not read: ground tiles, ground scenery, the automap, the header's other
-/// name slots, and the placements inside either half. Those belong to the tasks that publish dungeon and
-/// exterior assemblies; this is the inventory those tasks start from.
+/// This reader retains the ground tiles and automap because RMB exterior assembly needs their source
+/// collision/navigation facts. Ground scenery, the header's other name slots, and the placements inside
+/// either half remain outside this bounded header summary.
 /// </para>
 /// </remarks>
 public static class RmbBlockSummaryReader
@@ -110,6 +126,10 @@ public static class RmbBlockSummaryReader
 
     /// <summary>The bytes the header occupies before the declared sub-records begin.</summary>
     public const int HeaderBytes = 6776;
+    private const int GroundTilesOffset = 1739;
+    private const int GroundTileCount = 16 * 16;
+    private const int AutoMapOffset = 2251;
+    private const int AutoMapBytes = 64 * 64;
 
     /// <summary>Bytes one sub-record's own header occupies: five counts and six uninterpreted words.</summary>
     public const int SubRecordHeaderBytes = 17;
@@ -183,9 +203,13 @@ public static class RmbBlockSummaryReader
                 return false;
             }
 
+            int positionOffset = offset + CountsBytes + (index * 20);
             int slotOffset = offset + BuildingDataOffset + (index * BuildingDataSlotBytes);
             buildings.Add(new RmbBuildingSlot(
                 index,
+                ReadInt32(bytes, positionOffset + 8),
+                ReadInt32(bytes, positionOffset + 12),
+                ReadInt32(bytes, positionOffset + 16),
                 size,
                 size - used,
                 bytes[slotOffset + 24],
@@ -217,6 +241,13 @@ public static class RmbBlockSummaryReader
             }
         }
 
+        List<RmbGroundTile> groundTiles = new(GroundTileCount);
+        for (int y = 0; y < 16; y++)
+        for (int x = 0; x < 16; x++)
+        {
+            byte bitfield = bytes[offset + GroundTilesOffset + (y * 16) + x];
+            groundTiles.Add(new RmbGroundTile((byte)x, (byte)y, (byte)(bitfield & 0x3f), (bitfield & 0x40) != 0, (bitfield & 0x80) != 0));
+        }
         summary = new RmbBlockSummary(
             Text(bytes, offset + NameOffset, NameSlotBytes),
             otherNames,
@@ -224,13 +255,22 @@ public static class RmbBlockSummaryReader
             misc3dObjects,
             miscFlatObjects,
             buildings,
-            (int)(length - accounted));
+            (int)(length - accounted))
+        {
+            GroundTiles = groundTiles,
+            AutoMapData = bytes.Skip(offset + AutoMapOffset).Take(AutoMapBytes).ToArray(),
+        };
         return true;
     }
 
     /// <summary>Reads one half's five declared counts, which lead its seventeen-byte header.</summary>
     private static RmbObjectCounts Counts(byte[] bytes, int offset) =>
         new(bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3], bytes[offset + 4]);
+
+    private static int ReadInt32(byte[] bytes, int offset) => bytes[offset]
+        | (bytes[offset + 1] << 8)
+        | (bytes[offset + 2] << 16)
+        | (bytes[offset + 3] << 24);
 
     /// <summary>Reads one fixed thirteen-byte name slot, which the source terminates with a zero byte.</summary>
     private static string Text(byte[] bytes, int offset, int length)

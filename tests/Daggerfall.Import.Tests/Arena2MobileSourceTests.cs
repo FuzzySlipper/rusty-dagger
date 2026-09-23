@@ -48,7 +48,8 @@ public sealed class Arena2MobileSourceTests
     [Fact]
     public void UnknownMobileIdRemainsAbsentFromTheSourceTable()
     {
-        Assert.False(MobileSourceMetadata.TryGet(new(42), out Arena2MobileSource? source));
+        // Mobile 39 is the donor horse entry, explicitly outside the encounter corpus.
+        Assert.False(MobileSourceMetadata.TryGet(new(39), out Arena2MobileSource? source));
         Assert.Null(source);
     }
 

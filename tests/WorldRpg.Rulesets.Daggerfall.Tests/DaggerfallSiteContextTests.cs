@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
@@ -232,6 +233,36 @@ public sealed class DaggerfallSiteContextTests
     }
 
     [Fact]
+    public void Persists_the_exact_source_pose_with_a_return_site()
+    {
+        DaggerfallDefinitions definitions = Read();
+        DaggerfallSiteId settlement = new(17, 4);
+        DaggerfallSiteId dungeon = new(17, 9);
+        WorldPoint sourcePosition = new(17.25F, 3.5F, -22.75F);
+        DaggerfallSiteContext before = Context();
+
+        before.Enter(settlement);
+        before.Enter(dungeon, sourcePosition, 1.25F, -0.3F);
+        DaggerfallSiteReturnDestination returnDestination = before.RequireReturnDestination();
+        Assert.Equal(settlement, returnDestination.Site);
+        Assert.Equal(sourcePosition, returnDestination.Pose.Position);
+        Assert.Equal(1.25F, returnDestination.Pose.YawRadians);
+        Assert.Equal(-0.3F, returnDestination.Pose.PitchRadians);
+
+        DaggerfallSiteSave saved = DaggerfallSavePayload.Read(DaggerfallSavePayload.Encode(Payload(before.Capture()))).Site;
+        Assert.Equal(new DaggerfallSiteIdSave(17, 4), saved.ReturnAnchor);
+        Assert.Equal(new DaggerfallSiteReturnPoseSave(17.25F, 3.5F, -22.75F, 1.25F, -0.3F), saved.ReturnPose);
+        DaggerfallSiteContext restored = new(definitions.Locations, ToId(saved.Active), ToId(saved.ReturnAnchor),
+            new DaggerfallSiteReturnPose(new WorldPoint(saved.ReturnPose!.X, saved.ReturnPose.Y, saved.ReturnPose.Z), saved.ReturnPose.YawRadians, saved.ReturnPose.PitchRadians),
+            saved.Discovered.Select(id => id.Require()));
+        Assert.Equal(returnDestination, restored.RequireReturnDestination());
+
+        restored.Leave();
+        Assert.Equal(settlement, restored.Active);
+        Assert.Null(restored.ReturnPose);
+    }
+
+    [Fact]
     public void Round_trips_a_saved_site_the_scenario_never_names()
     {
         DaggerfallDefinitions definitions = Read();
@@ -408,7 +439,11 @@ public sealed class DaggerfallSiteContextTests
         1,
         new DaggerfallInventorySave([], [], []),
         [],
-        new DurableIdentityState([new KindAllocatorState(DurableIdentityKind.Actor, 1, [], []), new KindAllocatorState(DurableIdentityKind.Item, 1, [], [])]),
+        new DurableIdentityState([
+            new KindAllocatorState(DurableIdentityKind.Actor, 1, [], []),
+            new KindAllocatorState(DurableIdentityKind.Item, 1, [], []),
+            new KindAllocatorState(DurableIdentityKind.Container, 1, [], []),
+        ]),
         [],
         new DaggerfallCalendarSave(1, 1, 1, 0, 0, 0, 0d),
         site ?? throw new ArgumentNullException(nameof(site)),

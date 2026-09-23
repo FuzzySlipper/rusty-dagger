@@ -1,0 +1,14 @@
+{
+  "kind": "worldrpg.game-bundle",
+  "id": "daggerfall.castle-necromoghan",
+  "ruleset": "daggerfall",
+  "contentPacks": [
+    { "id": "daggerfall.base" },
+    { "id": "daggerfall.blocks" },
+    { "id": "daggerfall.privateers-hold" },
+    { "id": "daggerfall.castle-necromoghan" },
+    { "id": "daggerfall.charing-exterior" },
+    { "id": "daggerfall.charing-interior-1-1-0" }
+  ],
+  "tuning": { "id": "daggerfall.defaults" }
+}

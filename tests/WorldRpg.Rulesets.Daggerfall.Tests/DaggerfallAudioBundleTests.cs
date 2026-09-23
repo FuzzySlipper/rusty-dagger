@@ -75,6 +75,7 @@ public sealed class DaggerfallAudioBundleTests
             new PlayerInitialLook(0F, 0F),
             [],
             new Dictionary<long, NormalizedActorSprite>(),
+            mobileSprites: null,
             [
                 new NormalizedAudioClip(mediaId, contentPath, default),
                 new NormalizedAudioClip("hit1", "worldrpg/imports/privateers-hold/media/audio/clips/audio-melee-hit-1.wav", default),

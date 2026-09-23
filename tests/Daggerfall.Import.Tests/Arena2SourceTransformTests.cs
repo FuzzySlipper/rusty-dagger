@@ -27,6 +27,21 @@ public sealed class Arena2SourceTransformTests
     }
 
     [Fact]
+    public void PreservesTheDonorRmbGridAndBuildingOrigins()
+    {
+        MapsExteriorBlock exterior = new("TVRNAA07.RMB", 2, 3);
+        Arena2ImportPoint gridOrigin = Arena2SourceTransform.ToExteriorBlockOrigin(exterior);
+        Arena2ImportPoint placed = Arena2SourceTransform.PlaceInExteriorBlock(Arena2SourceTransform.ToRmbImportPoint(100, -40, 200), exterior);
+        RmbBuildingSlot building = new(0, 800, 1200, 512, 34, 0, 0, 0, 0, 0, new(0, 0, 0, 0, 0), new(0, 0, 0, 0, 0));
+        Arena2ImportPoint buildingOrigin = Arena2SourceTransform.ToRmbBuildingOrigin(building);
+
+        Assert.Equal(new Arena2ImportPoint(204.8F, 0F, 307.2F), gridOrigin);
+        Assert.Equal(new Arena2ImportPoint(207.3F, 1F, 312.2F), placed);
+        Assert.Equal(new Arena2ImportPoint(20F, 0F, 72.4F), buildingOrigin);
+        Assert.Equal(-90F, Arena2SourceTransform.ToRmbYawDegrees(512));
+    }
+
+    [Fact]
     public void ConvertsNegatedRdbRotationsFrom2048UnitsPerTurn()
     {
         RdbModelSource model = new(0, 0, 0, 512, -1024, 2048, 0, "", "", 0, null);

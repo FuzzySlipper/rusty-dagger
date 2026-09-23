@@ -96,6 +96,49 @@ public sealed class Arena2DungeonMediaPublicationTests
     }
 
     [Fact]
+    public void PublishesAnExplicitRuntimeHumanMobileOutsideThePlacedDungeonActors()
+    {
+        List<Arena2DungeonMediaSource> sources = [.. CreateSources(),
+            new("arena2/TEXTURE.380", CreateTextureArchive(20)),
+            new("arena2/TEXTURE.482", CreateTextureArchive(25))];
+        Arena2DungeonMediaPublication publication = Arena2DungeonMediaPublication.Create(CreateRequest() with
+        {
+            Sources = new Arena2DungeonMediaSourceSet(sources),
+            RuntimeActorResources = ["actor/mobile-141"],
+        });
+
+        Assert.Equal(new byte[] { 0, 141 }, publication.Actors.Select(actor => actor.MobileId.Value));
+        DungeonActorSpriteMedia archer = publication.Actors.Single(actor => actor.MobileId.Value == 141);
+        Assert.Equal("Archer", archer.SourceName);
+        Assert.NotNull(archer.Corpse);
+        Assert.Contains(archer.States, state => state.State == DungeonActorSpriteState.RangedAttack1);
+    }
+
+    [Fact]
+    public void RetainsTheDifferentSourceFrameCountsOfEachDirection()
+    {
+        Arena2DungeonMediaRequest request = CreateActorRequest(30, 285) with
+        {
+            Sources = new Arena2DungeonMediaSourceSet(
+            [
+                new("arena2/PAL.PAL", File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/PAL.PAL"))),
+                new("arena2/TEXTURE.002", File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/TEXTURE.002"))),
+                new("arena2/TEXTURE.096", File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/TEXTURE.096"))),
+                new("arena2/TEXTURE.285", File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/TEXTURE.285"))),
+            ]),
+        };
+
+        DungeonActorSpriteStateLayout attack = Assert.Single(Arena2DungeonMediaPublication.Create(request).Actors).States
+            .Single(state => state.State == DungeonActorSpriteState.PrimaryAttack);
+        int[] sourceFrameCounts = attack.Frames.GroupBy(frame => frame.Orientation)
+            .OrderBy(group => group.Key).Select(group => group.Count()).ToArray();
+        Assert.Equal(8, sourceFrameCounts.Length);
+        Assert.Equal(6, sourceFrameCounts[0]);
+        Assert.Equal(5, sourceFrameCounts[1]);
+        Assert.Equal(6, attack.FramesPerOrientation);
+    }
+
+    [Fact]
     public void PublishesTheDonorRangedGroupOnlyForAMobileThatDeclaresIt()
     {
         DungeonActorSpriteMedia archer = Assert.Single(Arena2DungeonMediaPublication.Create(CreateActorRequest(141, 482, actorRecordCount: 25)).Actors);
@@ -352,6 +395,13 @@ public sealed class Arena2DungeonMediaPublicationTests
         new("arena2/TEXTURE.401", CreateTextureArchive(2)),
     ];
 
+    private static string RepositoryRoot()
+    {
+        DirectoryInfo? directory = new(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md"))) directory = directory.Parent;
+        return directory?.FullName ?? throw new DirectoryNotFoundException("Could not locate the Rusty Dagger repository root.");
+    }
+
     private static NormalizedImportDocument CreateDungeon()
     {
         const string artifactId = "artifact/fixture";
@@ -449,6 +499,7 @@ public sealed class Arena2DungeonMediaPublicationTests
 
         return bytes;
     }
+
 
     private static byte[] CreateAsymmetricTransparentTextureArchive(int recordCount)
     {
