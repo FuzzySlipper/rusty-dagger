@@ -81,7 +81,11 @@ public sealed class NormalizedRuntimeSeamTests
             _ = original.AdvanceElapsedTime(361);
             DaggerfallLevelUpSave pending = Assert.IsType<DaggerfallLevelUpSave>(original.State.LevelUps.Pending);
             Assert.Equal(1, original.State.Progression.Level);
+            long wagonId = original.State.Wagon.EnsureCreated().Id;
             saved = DaggerfallSavePayload.Read(original.CaptureSave());
+            Assert.NotNull(saved.RegionalPrices);
+            Assert.Equal(original.State.RegionalPrices.Factors, saved.RegionalPrices.Factors);
+            Assert.Equal(wagonId, Assert.IsType<WorldRpg.Rulesets.Daggerfall.Modules.Transport.DaggerfallWagonSave>(saved.Wagon).Id);
             AssertLevelUpEqual(pending, Assert.IsType<DaggerfallLevelUpSave>(saved.LevelUp));
         }
 
@@ -91,6 +95,9 @@ public sealed class NormalizedRuntimeSeamTests
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
+        Assert.Equal(saved.RegionalPrices!.Factors, restored.State.RegionalPrices.Factors);
+        Assert.Equal(saved.RegionalPrices.LastAdvancedDay, restored.State.RegionalPrices.LastAdvancedDay);
+        Assert.Equal(saved.Wagon!.Id, restored.State.Wagon.Current?.Id);
 
         DaggerfallLevelUpSave restoredPending = Assert.IsType<DaggerfallLevelUpSave>(restored.State.LevelUps.Pending);
         AssertLevelUpEqual(Assert.IsType<DaggerfallLevelUpSave>(saved.LevelUp), restoredPending);
@@ -890,6 +897,145 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Admitted_wall_checks_reach_skill_progression_and_save_with_live_movement_caller()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        spatial.FloorHit = request => request.Direction.Y == 0f
+            ? default(SpatialHit) with { Present = true, Normal = new Vector3(0f, 0f, 1f) }
+            : default;
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: RandomMinimum.Create());
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+
+        session.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
+        for (ulong step = 2; step <= 49; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
+
+        Assert.Equal(1, session.State.Progression.SkillUses["climbing"]);
+        DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
+        Assert.True(saved.Climbing.Attached);
+        Assert.Equal(1, saved.SkillUses.Counters.Single(counter => counter.Skill == "climbing").Uses);
+        Assert.Contains(spatial.StepRequests, request => request.Config.Vertical.Gravity == 0f && request.Motion.ControlledVelocity.Y > 0f);
+
+        ContentFake resumedContent = new(releases);
+        PopulateContent(resumedContent, inputs);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs,
+            DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
+        Assert.True(DaggerfallSavePayload.Read(restored.CaptureSave()).Climbing.Attached);
+        Assert.Equal(1, restored.State.Progression.SkillUses["climbing"]);
+    }
+
+    [Fact]
+    public void Live_effect_grant_drives_levitation_then_expiry_restores_gravity()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        DaggerfallEffectCatalog effects = new([
+            new DaggerfallEffectDefinition("levitation-test", "levitation-test", DaggerfallEffectStacking.Stack, 1, 1,
+                MovementProtection: new DaggerfallMovementProtection(false, GrantsLevitation: true)),
+        ]);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults, effects);
+        using JsonDocument state = JsonDocument.Parse("{}");
+        _ = session.State.Effects.Start(new DaggerfallEffectRequest("levitation-instance", "levitation-test", "test-source",
+            null, DaggerfallActorIdentity.PlayerEntityId, "classic", null, null, 1, 5, state.RootElement));
+        double staminaBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current;
+
+        session.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.Space)]));
+        Assert.True(session.State.Effects.GrantsLevitation(DaggerfallActorIdentity.PlayerEntityId));
+        Assert.Equal(0f, spatial.StepRequests[^1].Config.Vertical.Gravity);
+        Assert.Equal(4f, spatial.StepRequests[^1].Motion.ControlledVelocity.Y);
+        Assert.Equal(staminaBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
+
+        session.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.Key, InputEdge.Released, keyboard: KeyboardControl.Space)]));
+        Assert.Equal(0f, spatial.StepRequests[^1].Motion.ControlledVelocity.Y);
+        Assert.Equal(0f, spatial.StepRequests[^1].Config.Vertical.Gravity);
+
+        ContentFake resumedContent = new(releases);
+        PopulateContent(resumedContent, inputs);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs,
+            DaggerfallTuning.Defaults, session.CaptureSave(), RandomMinimum.Create(), effects);
+        Assert.True(restored.State.Effects.GrantsLevitation(DaggerfallActorIdentity.PlayerEntityId));
+        restored.Update(new ProductUpdate(OuterUpdate(3), []));
+        Assert.Equal(0f, resumedSpatial.StepRequests[^1].Config.Vertical.Gravity);
+
+        Assert.True(session.State.Effects.Cancel(EffectInstanceId.Parse("levitation-instance")));
+        session.Update(new ProductUpdate(OuterUpdate(3), []));
+        Assert.False(session.State.Effects.GrantsLevitation(DaggerfallActorIdentity.PlayerEntityId));
+        Assert.True(spatial.StepRequests[^1].Config.Vertical.Gravity > 0f);
+        Assert.Equal(0f, spatial.StepRequests[^1].Motion.ControlledVelocity.Y);
+    }
+
+    [Fact]
+    public void Dungeon_visibility_records_only_engine_seen_placement_and_restores_it()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallDungeonMapGeometry target = inputs.DungeonMap!.GeometryPlacements.Single(geometry => geometry.PlacementId == "model/b0000003-rdb/1/0/11");
+        Vector3 point = target.SamplePoints[2]; // Unique within the admitted 0.5 m collision tolerance.
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        spatial.KeepPosition = true;
+        spatial.FloorHit = _ => default(SpatialHit) with
+        {
+            Present = true,
+            Kind = SpatialHitKind.StaticMesh,
+            Point = point,
+            Normal = Vector3.UnitY,
+            Distance = 1d,
+        };
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        session.State.PlayerControl.Restore(new WorldPoint(point.X, point.Y + 1f, point.Z), default);
+
+        session.Update(new ProductUpdate(OuterUpdate(12), []));
+
+        DaggerfallDungeonDiscoverySnapshot discovered = Assert.Single(DaggerfallSavePayload.Read(session.CaptureSave()).DungeonDiscovery);
+        Assert.Contains(target.PlacementId, discovered.DiscoveredPlacementIds);
+        Assert.True(discovered.DiscoveredPlacementIds.Length < inputs.DungeonMap.GeometryPlacements.Count);
+
+        DaggerfallDungeonMapGeometry overlapA = inputs.DungeonMap.GeometryPlacements.Single(geometry => geometry.PlacementId == "model/s0000999-rdb/0/0/108");
+        DaggerfallDungeonMapGeometry overlapB = inputs.DungeonMap.GeometryPlacements.Single(geometry => geometry.PlacementId == "model/s0000999-rdb/0/0/115");
+        point = (Vector3.Max(overlapA.BoundsMin, overlapB.BoundsMin)
+            + Vector3.Min(overlapA.BoundsMax, overlapB.BoundsMax)) * .5f;
+        session.Update(new ProductUpdate(OuterUpdate(24), []));
+        DaggerfallDungeonDiscoverySnapshot afterAmbiguousHit = Assert.Single(DaggerfallSavePayload.Read(session.CaptureSave()).DungeonDiscovery);
+        Assert.DoesNotContain(overlapA.PlacementId, afterAmbiguousHit.DiscoveredPlacementIds);
+        Assert.DoesNotContain(overlapB.PlacementId, afterAmbiguousHit.DiscoveredPlacementIds);
+        DaggerfallDungeonSurfaceCell ambiguousCell = DaggerfallDungeonSurfaceCell.At(point);
+        Assert.Contains(ambiguousCell, afterAmbiguousHit.DiscoveredSurfaceCells);
+
+        ContentFake resumedContent = new(releases);
+        PopulateContent(resumedContent, inputs);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs,
+            DaggerfallTuning.Defaults, session.CaptureSave(), RandomMinimum.Create());
+        DaggerfallDungeonDiscoverySnapshot restoredMap = Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).DungeonDiscovery);
+        Assert.Equal(discovered.DiscoveredPlacementIds, restoredMap.DiscoveredPlacementIds);
+        Assert.Contains(ambiguousCell, restoredMap.DiscoveredSurfaceCells);
+    }
+
+    [Fact]
     public void A_pad_button_asks_the_dom_for_the_menu_action_that_opens_that_panel()
     {
         string root = RepositoryRoot();
@@ -1533,6 +1679,8 @@ public sealed class NormalizedRuntimeSeamTests
         using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
         {
             Assert.Equal(inputs.Lights.Count + 1, appearance.LightRequests.Count);
+            Assert.All(appearance.LightRequests, request => Assert.InRange(request.LogicalId, 1UL, (1UL << 53) - 1UL));
+            Assert.Equal(appearance.LightRequests.Count, appearance.LightRequests.Select(request => request.LogicalId).Distinct().Count());
             LightRequest ambient = Assert.Single(appearance.LightRequests, request => request.Descriptor.Kind == LightKind.Ambient);
             Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.Dungeon, ambient.Descriptor.Intensity);
             Assert.Equal(new Color(0F, 0F, 0F, 1F), engine.BackgroundColors.Single());
@@ -2730,10 +2878,12 @@ public sealed class NormalizedRuntimeSeamTests
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
         PrivateersHoldInputs inputs = ReadInputs(root);
         // Day 103 of the year is the eighteenth holiday, kept in region 17 alone; Charing is its city.
-        DaggerfallSavePayload saved = CapturedSave(root) with
+        DaggerfallSavePayload baseline = CapturedSave(root);
+        DaggerfallSavePayload saved = baseline with
         {
             Calendar = new DaggerfallCalendarSave(405, 3, 12, 12, 0, 0, 0d),
             Site = new DaggerfallSiteSave(new DaggerfallSiteIdSave(17, 4), null, []),
+            RegionalPrices = baseline.RegionalPrices with { LastAdvancedDay = new DaggerfallCalendar(405, 3, 12, 12, 0, 0).DayNumber },
         };
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -2769,10 +2919,12 @@ public sealed class NormalizedRuntimeSeamTests
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
         PrivateersHoldInputs inputs = ReadInputs(root);
         // An hour before midnight on the eve of region 17's eighteenth holiday, at its city.
-        DaggerfallSavePayload saved = CapturedSave(root) with
+        DaggerfallSavePayload baseline = CapturedSave(root);
+        DaggerfallSavePayload saved = baseline with
         {
             Calendar = new DaggerfallCalendarSave(405, 3, 11, 23, 0, 0, 0d),
             Site = new DaggerfallSiteSave(new DaggerfallSiteIdSave(17, 4), null, []),
+            RegionalPrices = baseline.RegionalPrices with { LastAdvancedDay = new DaggerfallCalendar(405, 3, 11, 23, 0, 0).DayNumber },
         };
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -2797,10 +2949,12 @@ public sealed class NormalizedRuntimeSeamTests
         string root = RepositoryRoot();
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
         PrivateersHoldInputs inputs = ReadInputs(root);
-        DaggerfallSavePayload saved = CapturedSave(root) with
+        DaggerfallSavePayload baseline = CapturedSave(root);
+        DaggerfallSavePayload saved = baseline with
         {
             Calendar = new DaggerfallCalendarSave(405, 3, 12, 12, 0, 0, 0d),
             Site = new DaggerfallSiteSave(new DaggerfallSiteIdSave(17, 179), null, []),
+            RegionalPrices = baseline.RegionalPrices with { LastAdvancedDay = new DaggerfallCalendar(405, 3, 12, 12, 0, 0).DayNumber },
         };
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -4496,6 +4650,12 @@ public sealed class NormalizedRuntimeSeamTests
         CorpseContainer sourceCorpse = session.Corpses[sourceActorId];
         int sourceCorpseStacks = session.State.Containers.Read(sourceCorpse.Owner).Stacks.Count;
         DaggerfallRdbDoorId sourceDoor = source.Doors.First().Id;
+        DaggerfallDungeonDiscovery sourceDiscovery = session.State.DungeonDiscoveries[source.ProfileKey];
+        Assert.True(sourceDiscovery.ObserveDoor(sourceDoor));
+        Vector3 observedSurface = source.DungeonMap!.GeometryPlacements.First().SamplePoints[0];
+        Assert.True(sourceDiscovery.ObserveSurface(observedSurface));
+        int partialCellCount = sourceDiscovery.Capture().DiscoveredSurfaceCells.Length;
+        Assert.Equal(1, partialCellCount);
         Assert.Equal(DaggerfallDoorOperationResult.Started, session.Doors.Open(sourceDoor, DaggerfallDoorOperationSource.DungeonAction));
         DaggerfallDoorMotion sourceDoorMotion = session.Doors.Read(sourceDoor).Motion;
         long sourceArcher = Assert.Single(source.Project.Actors.Values, placement => placement.ActorId == new DaggerfallActorId("archer")).EntityId;
@@ -4516,6 +4676,9 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(-.2f, session.State.PlayerControl.PitchRadians);
         Assert.Equal(3, spatial.ReplaceCalls);
         Assert.Equal(sourceDoorMotion, session.Doors.Read(sourceDoor).Motion);
+        Assert.True(sourceDiscovery.IsDoorDiscovered(sourceDoor));
+        Assert.Equal(partialCellCount, sourceDiscovery.Capture().DiscoveredSurfaceCells.Length);
+        Assert.Equal(sourceDoorMotion, Assert.Single(DaggerfallSavePayload.Read(session.CaptureSave()).Doors, door => door.Id == sourceDoor).Motion);
         Assert.True(session.Corpses.ContainsKey(sourceActorId));
         Assert.Equal(sourceCorpseStacks, session.State.Containers.Read(session.Corpses[sourceActorId].Owner).Stacks.Count);
         Assert.Equal(actorPosition, session.State.Actors.Get(sourceActorId).Position);
@@ -7072,6 +7235,12 @@ public sealed class NormalizedRuntimeSeamTests
             nameof(ISpatialService.ReplaceContentArtifact) => Replace((SpatialContentArtifactReplaceRequest)arguments![0]!),
             nameof(ISpatialService.ReadContentArtifact) => Read(),
             nameof(ISpatialService.ProposeCharacterStep) => Step((CharacterStepRequest)arguments![0]!),
+            // These general session tests have no authored trigger contact. Action trigger
+            // edge behavior is exercised by its dedicated Spatial fake.
+            nameof(ISpatialService.RegisterTrigger) => null,
+            nameof(ISpatialService.SetTriggerActive) => default(SpatialTriggerLifecycleReceipt),
+            nameof(ISpatialService.RestoreTriggers) => default(SpatialTriggerRestoreReceipt),
+            nameof(ISpatialService.ReconcileTriggers) => default(SpatialTriggerReceipt),
             // Navigation is not under test here: an honest no-path receipt leaves the
             // actor's pose intact instead of reporting a bogus waypoint.
             nameof(ISpatialService.EvaluateNavigationStep) => NoNavigationPath((NavigationStepRequest)arguments![0]!),

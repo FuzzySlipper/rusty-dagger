@@ -2491,7 +2491,7 @@ internal static partial class Program
         try
         {
             ImportPublicationWriter.Write(plan, first);
-            ImportPublicationWriter.Write(BuildPlan(options), second);
+            ImportPublicationWriter.Write(AttachSourceManifest(BuildPlan(options), options.Arena2Directory, options.InventoryFile), second);
             IReadOnlyDictionary<string, ContentDigest> firstHashes = HashClosure(first);
             IReadOnlyDictionary<string, ContentDigest> secondHashes = HashClosure(second);
             if (firstHashes.Count != secondHashes.Count || firstHashes.Any(entry => !secondHashes.TryGetValue(entry.Key, out ContentDigest hash) || hash != entry.Value))

@@ -9,6 +9,7 @@ internal sealed record DaggerfallMobileDefinition(
     string DonorName,
     string Identity,
     bool CastsMagic,
+    bool SeesThroughInvisibility,
     string? Actor,
     string Disposition,
     string Behaviour,

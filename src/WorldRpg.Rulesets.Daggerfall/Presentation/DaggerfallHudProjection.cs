@@ -41,7 +41,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         string? controlDiagnostic = null,
         DaggerfallActivationView? activation = null,
         DaggerfallQuestPresentation? quests = null,
-        DaggerfallNotebookPresentation? notebook = null)
+        DaggerfallNotebookPresentation? notebook = null,
+        DaggerfallTransportPresentation? transport = null)
     {
         UiValueBuilder builder = new();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
@@ -102,6 +103,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         if (activation is not null) fields = [.. fields, ("activation", builder.Object(("mode", builder.String(activation.Mode)), ("message", builder.String(activation.Message)), ("applied", builder.Boolean(activation.Applied))))];
         if (quests is not null) fields = [.. fields, ("quests", Quests(builder, quests))];
         if (notebook is not null) fields = [.. fields, ("notebook", Notebook(builder, notebook))];
+        if (transport is not null) fields = [.. fields, ("transport", Transport(builder, transport))];
         if (inventory is not null) fields = [.. fields, ("inventory", Inventory(builder, inventory))];
         // Contents are an affordance the same way focus is: a dead or paused product refuses the take
         // its gate would otherwise honour, so the panel is published only in the mode that lets the
@@ -125,6 +127,34 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         uint root = builder.Object(fields);
         ui.PublishProjection(new UiProjection(_hud, ++_sequence, builder.Build(root)));
     }
+
+    private static uint Transport(UiValueBuilder builder, DaggerfallTransportPresentation transport) => builder.Object(
+        ("mode", builder.String(transport.Mode.ToString().ToLowerInvariant())),
+        ("onShip", builder.Boolean(transport.OnShip)),
+        ("canRun", builder.Boolean(transport.CanRun)),
+        ("travelModifier", builder.Number(transport.TravelModifier)),
+        ("oceanMinutesPerMapPixel", builder.Number(transport.OceanMinutesPerMapPixel)),
+        ("options", builder.Array(transport.Options.Select(option => builder.Object(
+            ("id", builder.String(option.Id)),
+            ("mode", builder.String(option.Mode.ToString().ToLowerInvariant())),
+            ("available", builder.Boolean(option.Available)),
+            ("selected", builder.Boolean(option.Selected)),
+            ("label", builder.String(option.Label)),
+            ("message", builder.String(option.Message)),
+            ("travelModifier", builder.Number(option.TravelModifier)))).ToArray())),
+        ("wagon", builder.Object(
+            ("exists", builder.Boolean(transport.Wagon.Exists)),
+            ("accessible", builder.Boolean(transport.Wagon.Accessible)),
+            ("id", transport.Wagon.Id is long wagonId ? builder.Number(wagonId) : builder.Null()),
+            ("usedClassicUnits", builder.Number(transport.Wagon.UsedClassicUnits)),
+            ("capacityClassicUnits", builder.Number(transport.Wagon.CapacityClassicUnits)),
+            ("storeRevision", transport.Wagon.StoreRevision is ulong revision
+                ? builder.String(revision.ToString(CultureInfo.InvariantCulture)) : builder.Null()),
+            ("message", builder.String(transport.Wagon.Message)),
+            ("items", builder.Array(transport.Wagon.Items.Select(item => builder.Object(
+                ("key", builder.String(item.Key)),
+                ("definition", builder.String(item.Definition)),
+                ("quantity", builder.String(item.Quantity)))).ToArray())))));
 
     private static uint Quests(UiValueBuilder builder, DaggerfallQuestPresentation quests) => builder.Object(
         ("deliveries", builder.Array(quests.Deliveries.Select(message => QuestMessage(builder, message)).ToArray())),

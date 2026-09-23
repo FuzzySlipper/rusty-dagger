@@ -1,3 +1,4 @@
+using System.Numerics;
 using Rusty.Engine;
 using Rusty.Engine.Entities;
 using WorldRpg.Kit.Actors;
@@ -19,6 +20,8 @@ internal sealed partial class DaggerfallSession
 {
     private DaggerfallActivationModule? _activation;
     private readonly DaggerfallActivationPresentation _activationPresentation = new();
+    private DaggerfallDialogueService? _dialogue;
+    private DaggerfallDungeonActionTriggerRuntime _actionTriggers = null!;
 
     /// <summary>
     /// Wires activation after spatial, actor, and corpse owners exist. The normal session
@@ -27,14 +30,27 @@ internal sealed partial class DaggerfallSession
     private void InitializeActivation(IEngineContext engine, DaggerfallLootInteractionTuning reach)
     {
         ArgumentNullException.ThrowIfNull(engine);
+        _dialogue = new DaggerfallDialogueService(
+            State.Npcs,
+            State.Actors,
+            State.Social,
+            State.SkillUses,
+            State.Actors.Player.Stats,
+            _definitions,
+            _random,
+            () => _site.ActiveSite,
+            () => State.Character.Identity,
+            view => _activationPresentation.SetDialogue(view),
+            message => Presentation.SetOutcome(message));
         _activation = new DaggerfallActivationModule(
             new InteractionTargetingService(engine.Perception, _spatial, State.Actors.Entities),
             reach,
             new DaggerfallActivationContributions(
                 new DaggerfallCorpseActivationOwner(_corpseLoot, _lootUi, State.Actors, _facts),
-                new DaggerfallDoorActivationOwner(_doors),
+                new DaggerfallDoorActivationOwner(_doors, TriggerDungeonDoorActions),
                 new DaggerfallPortalActivationOwner(_siteProjection.Portals, ResolvePortalDestination, TryTransitionTo),
-                new DaggerfallGroundActivationOwner(_groundContainers, _lootUi)));
+                new DaggerfallGroundActivationOwner(_groundContainers, _lootUi),
+                npc: _dialogue));
     }
 
     private DaggerfallWorldProfileKey ResolvePortalDestination(string logicalProfile) =>
@@ -61,6 +77,7 @@ internal sealed partial class DaggerfallSession
             "bash" => DaggerfallActivationMode.Bash,
             _ => throw new InvalidOperationException($"Parsed activation mode '{action.Mode}' is not declared."),
         };
+        if (mode != DaggerfallActivationMode.Talk) _dialogue?.Close();
         _activation.ChangeMode(mode);
         _activationPresentation.SetMode(mode);
         Presentation.SetOutcome(_activationPresentation.View.Message);
@@ -74,6 +91,10 @@ internal sealed partial class DaggerfallSession
     private bool TryActivateContextual(LookReceipt look)
     {
         if (_activation is null) return false;
+        // PlayerActivate in the donor receives a direct event from the object under the cursor before
+        // the ordinary door/container owner runs. Resolve the same Engine hit first so an action
+        // object can mutate the shared variable store even when no ordinary activation owner claims it.
+        _ = TryTriggerDungeonActionRay(look.Forward, _tuning.LootInteraction.MaximumDistance, DaggerfallDungeonActionEvent.Direct);
         DaggerfallActivationOutcome outcome = _activation.Activate(
             State.Actors.Player.Actor.Entity,
             State.PlayerControl,
@@ -81,6 +102,108 @@ internal sealed partial class DaggerfallSession
         _activationPresentation.Report(outcome);
         Presentation.SetOutcome(outcome.Message);
         return true;
+    }
+
+    /// <summary>Routes one static or action-door Engine hit to the normalized graph for the active profile.</summary>
+    private bool TryTriggerDungeonActionRay(Vector3 direction, double maximumDistance, DaggerfallDungeonActionEvent @event)
+    {
+        if (!float.IsFinite(direction.X) || !float.IsFinite(direction.Y) || !float.IsFinite(direction.Z)
+            || direction.LengthSquared() <= .000001f
+            || !double.IsFinite(maximumDistance) || maximumDistance <= 0d
+            || !State.DungeonActions.TryGetValue(_activeProfileKey, out DaggerfallDungeonActionGraph? graph)
+            || State.PlayerControl.Position is not WorldPoint position)
+            return false;
+
+        Vector3 rayOrigin = position.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight;
+        ReadOnlyMemory<SpatialEntityCollider> actionEntities = _actionTriggers.ActiveRayEntities();
+        SpatialHit hit = _spatial.CastRay(
+            rayOrigin,
+            direction,
+            (float)maximumDistance,
+            actionEntities,
+            _doors.CharacterEnvironment());
+        if (!hit.Present) return false;
+
+        if (hit.Kind == SpatialHitKind.Entity)
+        {
+            DaggerfallDoorView? door = _doors.All.FirstOrDefault(value => value.Entity.Value == hit.Entity);
+            if (door is { } selectedDoor)
+            {
+                return ReportDungeonActions(graph.TriggerForDoor(selectedDoor.Id, @event));
+            }
+            if (_actionTriggers.TryResolveAction(new EntityId(hit.Entity), out string? actionId))
+                return ReportDungeonAction(graph.Trigger(actionId, @event));
+            return false;
+        }
+
+        if (hit.Kind == SpatialHitKind.StaticMesh && _siteProjection.Inputs.DungeonMap is DaggerfallDungeonMapContent map)
+        {
+            DaggerfallDungeonMapGeometry? placement = PlacementAt(map, hit.Point);
+            if (placement is not null)
+            {
+                DaggerfallDungeonActionDispatch? dispatch = graph.TriggerForPlacement(placement.PlacementId, @event);
+                return ReportDungeonAction(dispatch);
+            }
+        }
+        return false;
+    }
+
+    private bool ReportDungeonAction(DaggerfallDungeonActionDispatch? dispatch)
+    {
+        if (dispatch is null) return false;
+        DaggerfallDungeonActionExecution? diagnostic = dispatch.Executions.LastOrDefault(execution =>
+            execution.Diagnostic is not null
+            && (execution.Outcome is DaggerfallDungeonActionOutcome.UnsupportedAction
+                or DaggerfallDungeonActionOutcome.MissingTarget
+                or DaggerfallDungeonActionOutcome.InvalidVariable
+                or DaggerfallDungeonActionOutcome.CycleSuppressed
+                || execution.Diagnostic.Contains("unknown source trigger", StringComparison.Ordinal)));
+        if (diagnostic?.Diagnostic is { Length: > 0 } message) Presentation.SetOutcome(message);
+        return dispatch.Applied;
+    }
+
+    private bool ReportDungeonActions(IReadOnlyList<DaggerfallDungeonActionDispatch> dispatches)
+    {
+        bool applied = false;
+        foreach (DaggerfallDungeonActionDispatch dispatch in dispatches)
+            applied |= ReportDungeonAction(dispatch);
+        return applied;
+    }
+
+    /// <summary>Resolves an Engine surface point only when exactly one normalized placement owns it.</summary>
+    private DaggerfallDungeonMapGeometry? PlacementAt(DaggerfallDungeonMapContent content, Vector3 point)
+    {
+        float tolerance = (float)_tuning.Spatial.CollisionVoxelSize;
+        DaggerfallDungeonMapGeometry? matched = null;
+        foreach (DaggerfallDungeonMapGeometry geometry in content.GeometryPlacements.Where(geometry =>
+            point.X >= geometry.BoundsMin.X - tolerance && point.X <= geometry.BoundsMax.X + tolerance
+            && point.Y >= geometry.BoundsMin.Y - tolerance && point.Y <= geometry.BoundsMax.Y + tolerance
+            && point.Z >= geometry.BoundsMin.Z - tolerance && point.Z <= geometry.BoundsMax.Z + tolerance))
+        {
+            if (matched is not null) return null;
+            matched = geometry;
+        }
+        return matched;
+    }
+
+    private void TriggerDungeonDoorActions(DaggerfallRdbDoorId door)
+    {
+        if (State.DungeonActions.TryGetValue(_activeProfileKey, out DaggerfallDungeonActionGraph? graph))
+            _ = ReportDungeonActions(graph.TriggerForDoor(door, DaggerfallDungeonActionEvent.Door));
+    }
+
+    private Vector3 HorizontalFacing(bool backward)
+    {
+        (float sinYaw, float cosYaw) = MathF.SinCos(State.PlayerControl.YawRadians);
+        float sign = backward ? -1f : 1f;
+        return new(sinYaw * sign, 0f, -cosYaw * sign);
+    }
+
+    private Vector3 HorizontalRight(bool left)
+    {
+        (float sinYaw, float cosYaw) = MathF.SinCos(State.PlayerControl.YawRadians);
+        float sign = left ? -1f : 1f;
+        return new(cosYaw * sign, 0f, sinYaw * sign);
     }
 
     /// <summary>The current corpse owner composed into the activation seam.</summary>
@@ -199,9 +322,10 @@ internal sealed partial class DaggerfallSession
         private readonly DaggerfallDoorRuntime _doors;
         private readonly IReadOnlyDictionary<DaggerfallRdbDoorId, DurableIdentityReference> _identities;
 
-        internal DaggerfallDoorActivationOwner(DaggerfallDoorRuntime doors)
+        internal DaggerfallDoorActivationOwner(DaggerfallDoorRuntime doors, Action<DaggerfallRdbDoorId> triggerDungeonActions)
         {
             _doors = doors ?? throw new ArgumentNullException(nameof(doors));
+            _triggerDungeonActions = triggerDungeonActions ?? throw new ArgumentNullException(nameof(triggerDungeonActions));
             Dictionary<DaggerfallRdbDoorId, DurableIdentityReference> identities = [];
             HashSet<DurableIdentityReference> assigned = [];
             foreach (DaggerfallDoorView door in _doors.All)
@@ -213,6 +337,8 @@ internal sealed partial class DaggerfallSession
             }
             _identities = identities;
         }
+
+        private readonly Action<DaggerfallRdbDoorId> _triggerDungeonActions;
 
         public IEnumerable<DaggerfallActivationTarget> DoorTargets()
         {
@@ -244,6 +370,8 @@ internal sealed partial class DaggerfallSession
                 : door.Motion is DaggerfallDoorMotion.Open or DaggerfallDoorMotion.Opening
                     ? _doors.Close(id, DaggerfallDoorOperationSource.Player)
                     : _doors.Open(id, DaggerfallDoorOperationSource.Player);
+            if (result == DaggerfallDoorOperationResult.Started)
+                _triggerDungeonActions(id);
             return new(result == DaggerfallDoorOperationResult.Started, Message(result, door.Motion));
         }
 

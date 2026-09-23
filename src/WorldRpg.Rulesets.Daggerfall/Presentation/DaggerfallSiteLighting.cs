@@ -36,12 +36,16 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         _ambientLevel = AmbientLevel(calendar);
 
         List<Light> created = [];
+        HashSet<ulong> lightIds = [_ambientId];
         try
         {
             foreach (DaggerfallSiteLight light in inputs.Lights)
             {
+                ulong lightId = StableLogicalId(inputs.ProfileKey.LogicalId, light.Id);
+                if (!lightIds.Add(lightId))
+                    throw new InvalidOperationException($"Site light '{light.Id}' collides with another admitted light identity.");
                 LightRequest request = new(
-                    StableLogicalId(inputs.ProfileKey.LogicalId, light.Id),
+                    lightId,
                     false,
                     0,
                     new LightDescriptor(
@@ -123,8 +127,10 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     {
         const ulong offset = 14695981039346656037UL;
         const ulong prime = 1099511628211UL;
+        const ulong jsonSafeMaximum = (1UL << 53) - 1UL;
         ulong hash = offset;
         foreach (char value in $"site-light:{profile}:{id}") { hash ^= value; hash *= prime; }
-        return hash;
+        // Engine publishes light IDs through JSON; keep stable identities inside that exact range.
+        return (hash % jsonSafeMaximum) + 1UL;
     }
 }

@@ -3,7 +3,7 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>The small DOM projection for contextual activation; the DOM sends semantic actions back.</summary>
-internal sealed record DaggerfallActivationView(string Mode, string Message, bool Applied);
+internal sealed record DaggerfallActivationView(string Mode, string Message, bool Applied, DaggerfallDialogueView? Dialogue = null);
 
 /// <summary>
 /// Ruleset-owned activation projection state. The HUD adapter supplies the callback when it publishes
@@ -25,6 +25,8 @@ internal sealed class DaggerfallActivationPresentation
         ArgumentNullException.ThrowIfNull(outcome);
         _view = _view with { Message = outcome.Message, Applied = outcome.Applied };
     }
+
+    internal void SetDialogue(DaggerfallDialogueView? dialogue) => _view = _view with { Dialogue = dialogue };
 
     internal void Publish(Action<DaggerfallActivationView> publish)
     {

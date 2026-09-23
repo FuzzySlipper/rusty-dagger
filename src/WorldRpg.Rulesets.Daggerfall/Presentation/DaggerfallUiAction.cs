@@ -7,7 +7,8 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
     string? PrimarySkills = null, string? MajorSkills = null, string? MinorSkills = null, string? Advantages = null, string? Disadvantages = null, int? HitPointsPerLevel = null,
     string? Attribute = null, string? BackgroundAnswers = null, string? AttributeAllocations = null, string? SkillAllocations = null, ulong? Amount = null,
     string? QuestInstance = null, int? QuestMessage = null, int? QuestChoice = null, string? QuestPrompt = null,
-    string? Note = null, string? Text = null, int? Page = null, int? Destination = null);
+    string? Note = null, string? Text = null, int? Page = null, int? Destination = null,
+    string? Tone = null, string? Topic = null);
 
 /// <summary>The small Daggerfall player-action wire contract, consumed during admitted updates.</summary>
 internal static class DaggerfallUiAction
@@ -22,7 +23,7 @@ internal static class DaggerfallUiAction
             JsonElement root = document.RootElement;
             if (root.ValueKind != JsonValueKind.Object) return null;
             HashSet<string> fields = new(StringComparer.Ordinal);
-            string? action = null, revision = null, item = null, targetEquipment = null, container = null, key = null, label = null, name = null, race = null, gender = null, career = null, mode = null, primarySkills = null, majorSkills = null, minorSkills = null, advantages = null, disadvantages = null, attribute = null, backgroundAnswers = null, attributeAllocations = null, skillAllocations = null, questInstance = null, questPrompt = null, note = null, text = null;
+            string? action = null, revision = null, item = null, targetEquipment = null, container = null, key = null, label = null, name = null, race = null, gender = null, career = null, mode = null, primarySkills = null, majorSkills = null, minorSkills = null, advantages = null, disadvantages = null, attribute = null, backgroundAnswers = null, attributeAllocations = null, skillAllocations = null, questInstance = null, questPrompt = null, note = null, text = null, tone = null, topic = null;
             int? targetGrid = null, faceIndex = null, reflexes = null, hitPointsPerLevel = null, questMessage = null, page = null, destination = null;
             ulong? amount = null;
             bool confirm = false;
@@ -89,6 +90,8 @@ internal static class DaggerfallUiAction
                     case "questPrompt": questPrompt = value; break;
                     case "note": note = value; break;
                     case "text": text = value; break;
+                    case "tone": tone = value; break;
+                    case "topic": topic = value; break;
                     default: return null;
                 }
             }
@@ -188,6 +191,30 @@ internal static class DaggerfallUiAction
                 return fields.SetEquals(["action", "mode"])
                     && mode is "grab" or "info" or "talk" or "steal" or "bash"
                     ? new(action, Mode: mode) : null;
+            if (action == "transport-select")
+                return fields.SetEquals(["action", "mode"])
+                    && mode is "foot" or "horse" or "cart"
+                    ? new(action, Mode: mode) : null;
+            if (action is "transport-toggle" or "transport-leave-ship")
+                return fields.SetEquals(["action"]) ? new(action) : null;
+            if (action is "wagon-put" or "wagon-take")
+                return (fields.SetEquals(["action", "revision", "item"])
+                    || fields.SetEquals(["action", "revision", "item", "amount"]))
+                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
+                    ? new(action, Revision: revision, Item: item, Amount: amount) : null;
+            if (action == "dialogue-tone")
+                return fields.SetEquals(["action", "revision", "tone"])
+                    && !string.IsNullOrWhiteSpace(revision)
+                    && tone is "polite" or "normal" or "blunt"
+                    ? new(action, Revision: revision, Tone: tone) : null;
+            if (action == "dialogue-topic")
+                return fields.SetEquals(["action", "revision", "topic"])
+                    && !string.IsNullOrWhiteSpace(revision)
+                    && topic is "directions" or "news"
+                    ? new(action, Revision: revision, Topic: topic) : null;
+            if (action == "dialogue-close")
+                return fields.SetEquals(["action", "revision"]) && !string.IsNullOrWhiteSpace(revision)
+                    ? new(action, Revision: revision) : null;
             if (action == "quest-choice")
                 return fields.SetEquals(["action", "questInstance", "questMessage", "questPrompt", "questChoice"])
                     && !string.IsNullOrWhiteSpace(questInstance) && !string.IsNullOrWhiteSpace(questPrompt) && questMessage is > 0 && questChoice is not null

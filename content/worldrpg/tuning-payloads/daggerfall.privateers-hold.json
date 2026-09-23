@@ -83,7 +83,20 @@
     "jumpFatigueCost": 11,
     "jumpBaseSpeed": 4.5,
     "jumpSkillMultiplier": 0.5,
-    "crouchedJumpMultiplier": 0.8
+    "crouchedJumpMultiplier": 0.8,
+    "climbingFatiguePerGameMinute": 22,
+    "levitationVerticalSpeed": 4.0
+  },
+  "climbing": {
+    "startCheckSeconds": 0.7689556,
+    "continueCheckSeconds": 0.823881,
+    "regainCheckSeconds": 0.274627,
+    "startBaseChance": 70,
+    "graspBaseChance": 40,
+    "continueBaseChance": 50,
+    "regainBaseChance": 20,
+    "speedDivisor": 3.0,
+    "enhancedSpeedMultiplier": 2.0
   },
   "camera": {
     "eyeHeight": 0.75,

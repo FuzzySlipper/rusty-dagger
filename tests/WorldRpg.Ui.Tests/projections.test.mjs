@@ -83,6 +83,58 @@ test('status rows preserve owner-published order and disappear when removed', ()
   } finally { f.dispose(); }
 });
 
+test('transport projection exposes land selection and keeps ship boarding disabled without ownership', () => {
+  const f = fixture();
+  try {
+    f.publish({ transport: {
+      mode: 'foot', onShip: false, canRun: true, travelModifier: 256, oceanMinutesPerMapPixel: 255,
+      options: [
+        { id: 'foot', mode: 'foot', available: true, selected: true, label: 'Foot', message: 'Walk.', travelModifier: 256 },
+        { id: 'horse', mode: 'horse', available: true, selected: false, label: 'Horse', message: 'Ride.', travelModifier: 128 },
+        { id: 'cart', mode: 'cart', available: false, selected: false, label: 'Cart', message: 'No cart.', travelModifier: 192 },
+        { id: 'ship', mode: 'ship', available: true, selected: false, label: 'Ship', message: 'Board.', travelModifier: 256 },
+      ],
+      wagon: { exists: false, accessible: false, id: null, usedClassicUnits: 0, capacityClassicUnits: 300000, storeRevision: null, message: 'Unavailable.', items: [] },
+    } });
+    f.root.querySelector('[data-action="transport"]').click();
+    const horse = f.root.querySelector('[data-transport-mode="horse"]');
+    horse.click();
+    assert.deepEqual(f.actions.at(-1), { action: 'transport-select', mode: 'horse' });
+    f.root.querySelector('[data-action="transport-toggle"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'transport-toggle' });
+    const ship = f.root.querySelector('[data-transport-mode="ship"]');
+    assert.equal(ship.disabled, true);
+    ship.click();
+    assert.notEqual(f.actions.at(-1)?.action, 'transport-board-ship');
+  } finally { f.dispose(); }
+});
+
+test('accessible wagon projection sends revision guarded put and take selections', () => {
+  const f = fixture();
+  try {
+    f.publish({
+      inventory: {
+        revision: '21:2:0', message: 'Inventory ready.', equipmentChange: null,
+        items: [{ key: 'stack:pack.gold', definition: 'gold-piece', label: 'Gold piece', quantity: '4', weight: 0, value: 1, details: 'Coins', icon: null, condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [] }],
+        slots: [],
+      },
+      transport: {
+        mode: 'cart', onShip: false, canRun: true, travelModifier: 192, oceanMinutesPerMapPixel: 255,
+        options: [{ id: 'cart', mode: 'cart', available: true, selected: true, label: 'Cart', message: 'Cart.', travelModifier: 192 }],
+        wagon: {
+          exists: true, accessible: true, id: 7, usedClassicUnits: 12, capacityClassicUnits: 300000, storeRevision: '8', message: 'Available.',
+          items: [{ key: 'stack:daggerfall.wagon.7.gold', definition: 'gold-piece', quantity: '2' }],
+        },
+      },
+    });
+    f.root.querySelector('[data-action="transport"]').click();
+    f.root.querySelector('[data-action="wagon-put"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'wagon-put', revision: '21:2:0', item: 'stack:pack.gold', amount: 4 });
+    f.root.querySelector('[data-action="wagon-take"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'wagon-take', revision: '21:2:0', item: 'stack:daggerfall.wagon.7.gold', amount: 2 });
+  } finally { f.dispose(); }
+});
+
 test('inventory renders the ruleset-owned completed equip cue without claiming a readiness gate', () => {
   const f = fixture();
   try {

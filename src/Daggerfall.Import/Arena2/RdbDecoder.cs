@@ -16,7 +16,8 @@ public sealed record RdbModelSource(
     string Description,
     byte SoundIndex,
     RdbActionSource? Action,
-    uint TriggerFlagStartingLock = 0);
+    uint TriggerFlagStartingLock = 0,
+    int ObjectOffset = -1);
 
 /// <summary>Raw RDB flat source record. Marker and mobile fields retain their source meaning only.</summary>
 public sealed record RdbFlatSource(
@@ -30,7 +31,8 @@ public sealed record RdbFlatSource(
     byte SoundIndex,
     ushort FactionOrMobileId,
     int NextObjectOffset,
-    byte Action);
+    byte Action,
+    int ObjectOffset = -1);
 
 /// <summary>Raw RDB light source record.</summary>
 public sealed record RdbLightSource(int X, int Y, int Z, ushort Radius);
@@ -293,13 +295,13 @@ public static class RdbDecoder
             switch (type)
             {
                 case 0x01:
-                    models.Add(DecodeModel(bytes, source, resourceOffset, x, y, z, modelIds, descriptions));
+                    models.Add(DecodeModel(bytes, source, nodeOffset, resourceOffset, x, y, z, modelIds, descriptions));
                     break;
                 case 0x02:
                     lights.Add(DecodeLight(bytes, source, resourceOffset, x, y, z));
                     break;
                 case 0x03:
-                    flats.Add(DecodeFlat(bytes, source, resourceOffset, x, y, z));
+                    flats.Add(DecodeFlat(bytes, source, nodeOffset, resourceOffset, x, y, z));
                     break;
                 default:
                     throw new Arena2FormatException(source, nodeOffset + 20, $"unsupported RDB object type 0x{type:X2}");
@@ -314,7 +316,7 @@ public static class RdbDecoder
         }
     }
 
-    private static RdbModelSource DecodeModel(ReadOnlySpan<byte> bytes, string source, int offset, int x, int y, int z, IReadOnlyList<string> modelIds, IReadOnlyList<string> descriptions)
+    private static RdbModelSource DecodeModel(ReadOnlySpan<byte> bytes, string source, int objectOffset, int offset, int x, int y, int z, IReadOnlyList<string> modelIds, IReadOnlyList<string> descriptions)
     {
         RequireRange(bytes, offset, ModelResourceBytes, source, "RDB model resource");
         CheckedLittleEndianReader reader = At(bytes, source, offset, "RDB model resource");
@@ -331,7 +333,7 @@ public static class RdbDecoder
         }
 
         RdbActionSource? action = actionOffset > 0 ? DecodeAction(bytes, source, actionOffset) : null;
-        return new RdbModelSource(x, y, z, xRotation, yRotation, zRotation, modelIndex, modelIds[modelIndex], descriptions[modelIndex], soundIndex, action, triggerFlagStartingLock);
+        return new RdbModelSource(x, y, z, xRotation, yRotation, zRotation, modelIndex, modelIds[modelIndex], descriptions[modelIndex], soundIndex, action, triggerFlagStartingLock, objectOffset);
     }
 
     private static RdbActionSource DecodeAction(ReadOnlySpan<byte> bytes, string source, int offset)
@@ -350,7 +352,7 @@ public static class RdbDecoder
         return new RdbLightSource(x, y, z, reader.ReadUInt16());
     }
 
-    private static RdbFlatSource DecodeFlat(ReadOnlySpan<byte> bytes, string source, int offset, int x, int y, int z)
+    private static RdbFlatSource DecodeFlat(ReadOnlySpan<byte> bytes, string source, int objectOffset, int offset, int x, int y, int z)
     {
         RequireRange(bytes, offset, FlatResourceBytes, source, "RDB flat resource");
         CheckedLittleEndianReader reader = At(bytes, source, offset, "RDB flat resource");
@@ -360,7 +362,7 @@ public static class RdbDecoder
         byte soundIndex = reader.ReadByte();
         int nextObjectOffset = reader.ReadInt32();
         byte action = reader.ReadByte();
-        return new RdbFlatSource(x, y, z, (ushort)(bitfield >> 7), (ushort)(bitfield & 0x7F), flags, magnitude, soundIndex, (ushort)(magnitude | (soundIndex << 8)), nextObjectOffset, action);
+        return new RdbFlatSource(x, y, z, (ushort)(bitfield >> 7), (ushort)(bitfield & 0x7F), flags, magnitude, soundIndex, (ushort)(magnitude | (soundIndex << 8)), nextObjectOffset, action, objectOffset);
     }
 
     private static CheckedLittleEndianReader At(ReadOnlySpan<byte> bytes, string source, int offset, string context)

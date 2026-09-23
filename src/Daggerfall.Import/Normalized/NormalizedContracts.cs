@@ -100,6 +100,23 @@ public sealed record NormalizedImportDocument(
         }
 
         World.Validate(Meshes.Select(mesh => mesh.Id).ToHashSet(StringComparer.Ordinal), resourceIds);
+        Dictionary<string, HashSet<NormalizedVector3>> verticesByMesh = Meshes.ToDictionary(
+            mesh => mesh.Id,
+            mesh => mesh.Vertices.ToHashSet(),
+            StringComparer.Ordinal);
+        foreach (NormalizedGeometryPlacement placement in World.GeometryPlacements)
+        {
+            HashSet<NormalizedVector3> placementMeshVertices = placement.MeshIds
+                .SelectMany(meshId => verticesByMesh[meshId])
+                .ToHashSet();
+            foreach (NormalizedVector3 sample in placement.SamplePoints)
+            {
+                if (!placementMeshVertices.Contains(sample))
+                {
+                    throw new InvalidOperationException($"Normalized geometry placement '{placement.Id}' sample is not a vertex of its contributing source meshes.");
+                }
+            }
+        }
     }
 
     internal static void RequireSchemaVersion(int schemaVersion, string name)
@@ -736,6 +753,82 @@ public sealed record NormalizedDoorPlacement(
     }
 }
 
+/// <summary>One source model placement, bounded independently from the material-group meshes it contributes to.</summary>
+public sealed record NormalizedGeometryPlacement(
+    string Id,
+    NormalizedBounds Bounds,
+    IReadOnlyList<string> MeshIds,
+    string? DoorId = null)
+{
+    /// <summary>Deterministically selected source vertices for Engine visibility probes.</summary>
+    public IReadOnlyList<NormalizedVector3> SamplePoints { get; init; } = [];
+
+    public NormalizedGeometryPlacement Canonicalize() => this with
+    {
+        MeshIds = MeshIds.OrderBy(meshId => meshId, StringComparer.Ordinal).ToArray(),
+    };
+
+    public void Validate(IReadOnlySet<string> meshIds, IReadOnlyDictionary<string, NormalizedDoorPlacement> doors)
+    {
+        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
+        ArgumentNullException.ThrowIfNull(Bounds);
+        Bounds.Validate();
+        ArgumentNullException.ThrowIfNull(MeshIds);
+        ArgumentNullException.ThrowIfNull(SamplePoints);
+        if (MeshIds.Count == 0)
+        {
+            throw new InvalidOperationException("A normalized geometry placement requires at least one contributing mesh.");
+        }
+
+        NormalizedImportDocument.ValidateUnique(MeshIds, meshId => meshId, "geometry placement mesh");
+        foreach (string meshId in MeshIds)
+        {
+            NormalizedImportDocument.RequireReference(meshId, meshIds, nameof(MeshIds));
+        }
+
+        if (SamplePoints.Count is < 2 or > 4)
+        {
+            throw new InvalidOperationException("A normalized geometry placement requires two to four source surface samples.");
+        }
+        if (SamplePoints.Distinct().Count() != SamplePoints.Count)
+        {
+            throw new InvalidOperationException($"Normalized geometry placement '{Id}' repeats a source surface sample.");
+        }
+
+        foreach (NormalizedVector3 point in SamplePoints)
+        {
+            point.Validate(nameof(SamplePoints));
+            if (point.X < Bounds.Minimum.X || point.X > Bounds.Maximum.X
+                || point.Y < Bounds.Minimum.Y || point.Y > Bounds.Maximum.Y
+                || point.Z < Bounds.Minimum.Z || point.Z > Bounds.Maximum.Z)
+            {
+                throw new InvalidOperationException($"Normalized geometry placement '{Id}' has a surface sample outside its source bounds.");
+            }
+        }
+
+        if (DoorId is not null)
+        {
+            NormalizedImportDocument.RequireLogicalId(DoorId, nameof(DoorId));
+            if (!doors.TryGetValue(DoorId, out NormalizedDoorPlacement? door))
+            {
+                throw new InvalidOperationException($"Normalized geometry placement '{Id}' refers to unknown door '{DoorId}'.");
+            }
+
+            foreach (string meshId in MeshIds)
+            {
+                if (!door.VisualMeshIds.Contains(meshId, StringComparer.Ordinal))
+                {
+                    throw new InvalidOperationException($"Normalized geometry placement '{Id}' refers to mesh '{meshId}', which is not a visual mesh of door '{DoorId}'.");
+                }
+            }
+        }
+        else if (doors.Values.Any(door => door.VisualMeshIds.Intersect(MeshIds, StringComparer.Ordinal).Any()))
+        {
+            throw new InvalidOperationException($"Normalized static geometry placement '{Id}' cannot refer to an action-door visual mesh.");
+        }
+    }
+}
+
 public sealed record NormalizedWorld(
     int SchemaVersion,
     string VisualMeshAssetId,
@@ -751,6 +844,12 @@ public sealed record NormalizedWorld(
 {
     public const int CurrentSchemaVersion = 1;
 
+    /// <summary>Source action nodes and their normalized forward links.</summary>
+    public IReadOnlyList<NormalizedDungeonAction> Actions { get; init; } = [];
+
+    /// <summary>Placement-scoped source geometry when the normalizer has placement identities.</summary>
+    public IReadOnlyList<NormalizedGeometryPlacement> GeometryPlacements { get; init; } = [];
+
     public NormalizedWorld Canonicalize() => this with
     {
         MeshIds = MeshIds.OrderBy(id => id, StringComparer.Ordinal).ToArray(),
@@ -759,6 +858,10 @@ public sealed record NormalizedWorld(
         Actors = Actors.OrderBy(actor => actor.Id, StringComparer.Ordinal).ToArray(),
         Treasures = Treasures.OrderBy(treasure => treasure.Id, StringComparer.Ordinal).ToArray(),
         Doors = Doors.OrderBy(door => door.Id, StringComparer.Ordinal).Select(door => door.Canonicalize()).ToArray(),
+        Actions = Actions.OrderBy(action => action.Id, StringComparer.Ordinal)
+            .Select(action => action.Canonicalize()).ToArray(),
+        GeometryPlacements = GeometryPlacements.OrderBy(placement => placement.Id, StringComparer.Ordinal)
+            .Select(placement => placement.Canonicalize()).ToArray(),
     };
 
     public void Validate(IReadOnlySet<string> meshIds, IReadOnlySet<string> resourceIds)
@@ -792,6 +895,8 @@ public sealed record NormalizedWorld(
         ArgumentNullException.ThrowIfNull(Actors);
         ArgumentNullException.ThrowIfNull(Treasures);
         ArgumentNullException.ThrowIfNull(Doors);
+        ArgumentNullException.ThrowIfNull(Actions);
+        ArgumentNullException.ThrowIfNull(GeometryPlacements);
         NormalizedImportDocument.ValidateUnique(Lights, light => light.Id, "light placement");
         NormalizedImportDocument.ValidateUnique(Billboards, billboard => billboard.Id, "billboard placement");
         NormalizedImportDocument.ValidateUnique(Actors, actor => actor.Id, "actor placement");
@@ -802,6 +907,30 @@ public sealed record NormalizedWorld(
         foreach (NormalizedActorPlacement actor in Actors) actor.Validate(resourceIds);
         foreach (NormalizedTreasurePlacement treasure in Treasures) treasure.Validate(resourceIds);
         foreach (NormalizedDoorPlacement door in Doors) door.Validate(resourceIds, meshIds);
+
+        NormalizedImportDocument.ValidateUnique(Actions, action => action.Id, "dungeon action");
+        HashSet<string> actionIds = Actions.Select(action => action.Id).ToHashSet(StringComparer.Ordinal);
+        HashSet<string> doorIds = Doors.Select(door => door.Id).ToHashSet(StringComparer.Ordinal);
+        foreach (NormalizedDungeonAction action in Actions)
+        {
+            action.Validate(actionIds, doorIds);
+        }
+
+        NormalizedImportDocument.ValidateUnique(GeometryPlacements, placement => placement.Id, "geometry placement");
+        Dictionary<string, NormalizedDoorPlacement> doorsById = Doors.ToDictionary(door => door.Id, StringComparer.Ordinal);
+        foreach (NormalizedGeometryPlacement placement in GeometryPlacements)
+        {
+            placement.Validate(meshIds, doorsById);
+        }
+
+        if (GeometryPlacements.Count > 0)
+        {
+            HashSet<string> placedMeshIds = GeometryPlacements.SelectMany(placement => placement.MeshIds).ToHashSet(StringComparer.Ordinal);
+            if (!placedMeshIds.SetEquals(MeshIds))
+            {
+                throw new InvalidOperationException("Normalized geometry placements must collectively reference every world mesh exactly by ID membership.");
+            }
+        }
     }
 }
 

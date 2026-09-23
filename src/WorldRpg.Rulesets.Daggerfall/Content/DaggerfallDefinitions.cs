@@ -28,6 +28,7 @@ internal static class DaggerfallActorKinds
 /// <summary>Skill keys the enemy language formulas can answer with, in pack vocabulary spelling.</summary>
 internal static class DaggerfallSkills
 {
+    internal const string Stealth = "stealth";
     internal const string Etiquette = "etiquette";
     internal const string Streetwise = "streetwise";
     internal const string Orcish = "orcish";
@@ -62,6 +63,7 @@ internal static class DaggerfallMechanicsIds
     internal static readonly DaggerfallStatId Dodging = new("dodging");
     internal static readonly DaggerfallStatId Running = new("running");
     internal static readonly DaggerfallStatId Jumping = new("jumping");
+    internal static readonly DaggerfallStatId Climbing = new("climbing");
     internal static readonly DaggerfallStatId LongBlade = new("long-blade");
     internal static readonly DaggerfallStatId HandToHand = new("hand-to-hand");
     internal static readonly DaggerfallStatId HealthMaximum = new("health-maximum");

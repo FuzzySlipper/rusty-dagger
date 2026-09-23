@@ -7,6 +7,7 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Modules.Encounters;
+using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -47,6 +48,15 @@ internal sealed record DaggerfallSavePayload(
     /// <summary>Movement work accumulated before its next calendar-minute fatigue charge.</summary>
     [JsonRequired]
     public DaggerfallLocomotionSave Locomotion { get; init; } = new(0d);
+    /// <summary>Current wall attachment and the donor check timers, independent of transient physical keys.</summary>
+    [JsonRequired]
+    public DaggerfallClimbingSave Climbing { get; init; } = new(false, false, 0f, 0f);
+    /// <summary>Profile-scoped dungeon exploration, independent of active geometry or door motion.</summary>
+    [JsonRequired]
+    public DaggerfallDungeonDiscoverySnapshot[] DungeonDiscovery { get; init; } = [];
+    /// <summary>Profile-scoped normalized dungeon action state, including activation counts and cooldowns.</summary>
+    [JsonRequired]
+    public DaggerfallDungeonActionGraphSnapshot[] DungeonActions { get; init; } = [];
     /// <summary>Resolved encounter outcomes, including outcomes selected before an actor materializes.</summary>
     [JsonRequired]
     public DaggerfallEncounterRuntimeSave Encounters { get; init; } = new([]);
@@ -59,6 +69,15 @@ internal sealed record DaggerfallSavePayload(
     /// <summary>The last donor quest-provided free skill training time, when one has occurred.</summary>
     [JsonRequired]
     public DaggerfallQuestTrainingSave QuestTraining { get; init; } = new(null);
+    /// <summary>Resolved market factors at the last applied calendar day.</summary>
+    [JsonRequired]
+    public DaggerfallRegionalPriceSave RegionalPrices { get; init; } = null!;
+    /// <summary>Current mount or ship choice and its return pose.</summary>
+    [JsonRequired]
+    public DaggerfallTransportSave Transport { get; init; } = DaggerfallTransportSave.Foot;
+    /// <summary>The persistent wagon owner and its Engine-backed inventory, if one exists.</summary>
+    [JsonRequired]
+    public DaggerfallWagonSave? Wagon { get; init; }
     [JsonRequired]
     public DaggerfallNotebookSave Notebook { get; init; } = new([], [], null, 0, 0);
     /// <summary>The dynamic identity kinds owned by the current Daggerfall ruleset.</summary>
@@ -98,6 +117,20 @@ internal sealed record DaggerfallSavePayload(
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(inputs);
         Notebook.Validate(definitions, definitions.TextPresentation);
+        if (Transport.OnShip || Transport.Mode is DaggerfallTransportMode.Horse or DaggerfallTransportMode.Cart)
+        {
+            DaggerfallWorldProfileKey activeProfile = Site.ActiveProfile?.Require()
+                ?? throw new ArgumentException("Saved transport state requires an active world profile.");
+            if (activeProfile.Kind != DaggerfallWorldProfileKind.Exterior)
+                throw new ArgumentException("Saved riding or ship state cannot be active inside a building or dungeon.");
+            if (Transport.Mode is DaggerfallTransportMode.Horse or DaggerfallTransportMode.Cart)
+            {
+                string requiredItem = Transport.Mode == DaggerfallTransportMode.Horse
+                    ? DaggerfallTransportPolicy.HorseItemId : DaggerfallTransportPolicy.CartItemId;
+                if (!Inventory.UniqueItems.Any(item => StringComparer.Ordinal.Equals(item.ItemId, requiredItem)))
+                    throw new ArgumentException($"Saved {Transport.Mode} transport requires its owned item in player inventory.");
+            }
+        }
         HashSet<DaggerfallWorldProfileKey> admittedGroundProfiles = profiles is null
             ? [inputs.ProfileKey]
             : [.. profiles.Keys];
@@ -108,6 +141,64 @@ internal sealed record DaggerfallSavePayload(
                 throw new ArgumentException($"Saved ground container {ground.Id} names an unadmitted world profile '{profile.LogicalId}'.");
         }
         HashSet<DaggerfallRdbDoorId> selectedDoors = [.. inputs.Doors.Select(door => door.Id)];
+        HashSet<DaggerfallWorldProfileKey> discoveryProfiles = [];
+        foreach (DaggerfallDungeonDiscoverySnapshot snapshot in DungeonDiscovery)
+        {
+            ArgumentNullException.ThrowIfNull(snapshot);
+            if (!discoveryProfiles.Add(snapshot.Profile))
+                throw new ArgumentException($"Saved dungeon discovery repeats profile '{snapshot.Profile.LogicalId}'.");
+            PrivateersHoldInputs selected = snapshot.Profile == inputs.ProfileKey
+                ? inputs
+                : (profiles ?? throw new ArgumentException("Saved dungeon discovery requires admitted site profiles.")).Require(snapshot.Profile);
+            DaggerfallDungeonMapContent map = selected.DungeonMap
+                ?? throw new ArgumentException($"Saved dungeon discovery names non-dungeon profile '{snapshot.Profile.LogicalId}'.");
+            _ = new DaggerfallDungeonDiscovery(snapshot.Profile, map, snapshot);
+        }
+        HashSet<string> actionProfiles = new(StringComparer.Ordinal);
+        foreach (DaggerfallDungeonActionGraphSnapshot snapshot in DungeonActions)
+        {
+            ArgumentNullException.ThrowIfNull(snapshot);
+            snapshot.Validate();
+            if (!actionProfiles.Add(snapshot.ProfileId))
+                throw new ArgumentException($"Saved dungeon action state repeats profile '{snapshot.ProfileId}'.");
+
+            PrivateersHoldInputs selected;
+            if (StringComparer.Ordinal.Equals(inputs.ProfileKey.LogicalId, snapshot.ProfileId))
+            {
+                selected = inputs;
+            }
+            else if (profiles is null)
+            {
+                throw new ArgumentException($"Saved dungeon action state names an unadmitted world profile '{snapshot.ProfileId}'.");
+            }
+            else
+            {
+                DaggerfallWorldProfileKey[] matches = profiles.Keys
+                    .Where(key => StringComparer.Ordinal.Equals(key.LogicalId, snapshot.ProfileId))
+                    .ToArray();
+                if (matches.Length != 1)
+                    throw new ArgumentException($"Saved dungeon action state names an unadmitted or ambiguous world profile '{snapshot.ProfileId}'.");
+                selected = profiles.Require(matches[0]);
+            }
+            if (!StringComparer.Ordinal.Equals(selected.ProfileKey.LogicalId, snapshot.ProfileId))
+                throw new ArgumentException($"Saved dungeon action state names an unadmitted world profile '{snapshot.ProfileId}'.");
+
+            // Constructing a graph validates every saved node against the selected normalized
+            // action closure. Variables are validated separately by the payload; this temporary
+            // store keeps restore validation free of runtime session state.
+            _ = new DaggerfallDungeonActionGraph(
+                snapshot.ProfileId,
+                selected.DungeonActions,
+                new DaggerfallVariableStore(definitions.QuestSources.Tables.Globals.Lookup),
+                snapshot);
+        }
+        if (profiles is null && DungeonActions.Any(snapshot =>
+                !StringComparer.Ordinal.Equals(snapshot.ProfileId, inputs.ProfileKey.LogicalId)))
+            throw new ArgumentException("Saved dungeon action state names a world profile not admitted by the selected content.");
+        // Action snapshots are sparse by design. A save can be captured before an admitted
+        // destination has ever been visited; that profile is reconstructed from its authored
+        // normalized actions on the next admission. Snapshots that are present still have to pass
+        // the exact graph/node validation above, and an unadmitted profile is rejected above.
         HashSet<DaggerfallRdbDoorId> savedDoors = [];
         foreach (DaggerfallDoorSave door in Doors)
         {
@@ -222,6 +313,15 @@ internal sealed record DaggerfallSavePayload(
                 throw new ArgumentException($"Saved ground container {ground.Id} is not live in the persisted identity ledger.");
             ValidateInventory(ground.Inventory, definitions, uniqueItems, DaggerfallItemOwner.Ground(ground.Id), requireEquipment: false);
         }
+        if (Wagon is { } wagon)
+        {
+            wagon.Validate();
+            if (groundIds.Contains(wagon.Id))
+                throw new ArgumentException($"Saved wagon {wagon.Id} collides with a ground container.");
+            if (savedLedger.Classify(new DurableIdentityReference(DurableIdentityKind.Container, checked((ulong)wagon.Id))) != DurableIdentityClassification.Live)
+                throw new ArgumentException($"Saved wagon {wagon.Id} is not live in the persisted identity ledger.");
+            ValidateInventory(wagon.Inventory, definitions, uniqueItems, DaggerfallItemOwner.Wagon(wagon.Id), requireEquipment: false);
+        }
         HashSet<long> actorInventories = [];
         foreach (DaggerfallActorInventorySave inventory in ActorInventories)
         {
@@ -269,6 +369,8 @@ internal sealed record DaggerfallSavePayload(
             AddQuestStacks(questStacks, DaggerfallItemOwner.Corpse(corpse.ActorId), corpse.Stacks);
         foreach (DaggerfallGroundContainerSave ground in GroundContainers)
             AddQuestStacks(questStacks, DaggerfallItemOwner.Ground(ground.Id), ground.Inventory.Stacks);
+        if (Wagon is { } questWagon)
+            AddQuestStacks(questStacks, DaggerfallItemOwner.Wagon(questWagon.Id), questWagon.Inventory.Stacks);
         foreach (DaggerfallActorInventorySave inventory in ActorInventories)
             AddQuestStacks(questStacks, DaggerfallItemOwner.Actor(inventory.EntityId), inventory.Inventory.Stacks);
         Quests.ValidateBindings(combatants, savedLedger, locations, questStacks);
@@ -302,6 +404,11 @@ internal sealed record DaggerfallSavePayload(
         Services.Validate();
         ArgumentNullException.ThrowIfNull(QuestTraining);
         QuestTraining.Validate();
+        ArgumentNullException.ThrowIfNull(RegionalPrices);
+        RegionalPrices.Validate();
+        ArgumentNullException.ThrowIfNull(Transport);
+        Transport.Validate();
+        Wagon?.Validate();
         ArgumentNullException.ThrowIfNull(Notebook);
         Notebook.Validate();
         ArgumentNullException.ThrowIfNull(Identities);
@@ -328,6 +435,16 @@ internal sealed record DaggerfallSavePayload(
         Currency.Validate();
         ArgumentNullException.ThrowIfNull(Locomotion);
         Locomotion.Validate();
+        ArgumentNullException.ThrowIfNull(Climbing);
+        Climbing.Validate();
+        ArgumentNullException.ThrowIfNull(DungeonDiscovery);
+        foreach (DaggerfallDungeonDiscoverySnapshot snapshot in DungeonDiscovery) ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(DungeonActions);
+        foreach (DaggerfallDungeonActionGraphSnapshot snapshot in DungeonActions)
+        {
+            ArgumentNullException.ThrowIfNull(snapshot);
+            snapshot.Validate();
+        }
         ArgumentNullException.ThrowIfNull(Encounters);
         Encounters.Validate();
         ArgumentNullException.ThrowIfNull(Character);

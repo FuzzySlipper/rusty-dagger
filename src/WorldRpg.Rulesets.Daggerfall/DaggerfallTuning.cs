@@ -17,7 +17,8 @@ internal sealed record DaggerfallTuning(
     DaggerfallStaminaRecoveryTuning StaminaRecovery,
     DaggerfallPresentationAudioTuning PresentationAudio,
     DaggerfallProgressionTuning Progression,
-    DaggerfallSiteLightingTuning SiteLighting)
+    DaggerfallSiteLightingTuning SiteLighting,
+    DaggerfallClimbingTuning Climbing)
 {
     internal static DaggerfallTuning Defaults { get; } = new(
         // Screen-space mouse Y increases downward; Engine camera pitch increases upward.
@@ -46,7 +47,8 @@ internal sealed record DaggerfallTuning(
         new DaggerfallStaminaRecoveryTuning(5d, 2d),
         new DaggerfallPresentationAudioTuning(1F, 1F, 0F, 1F),
         new DaggerfallProgressionTuning(EnableExperimentalKillExperience: false),
-        DaggerfallSiteLightingTuning.Classic);
+        DaggerfallSiteLightingTuning.Classic,
+        DaggerfallClimbingTuning.Classic);
 
     internal DaggerfallTuning Validate() => this with
     {
@@ -63,6 +65,7 @@ internal sealed record DaggerfallTuning(
         PresentationAudio = PresentationAudio.Validate(),
         Progression = Progression.Validate(),
         SiteLighting = SiteLighting.Validate(),
+        Climbing = Climbing.Validate(),
     };
 
     internal static DaggerfallTuning Read(ReadOnlySpan<byte> payload)
@@ -87,6 +90,7 @@ internal sealed record DaggerfallTuning(
         JsonElement presentationAudio = root.GetProperty("presentationAudio");
         JsonElement progression = root.GetProperty("progression");
         JsonElement siteLighting = root.GetProperty("siteLighting");
+        JsonElement climbing = root.GetProperty("climbing");
         return new DaggerfallTuning(
             new PlayerControlTuning(
                 controls.GetProperty("lookSensitivity").GetSingle(),
@@ -115,7 +119,9 @@ internal sealed record DaggerfallTuning(
                 locomotion.GetProperty("jumpFatigueCost").GetInt32(),
                 locomotion.GetProperty("jumpBaseSpeed").GetSingle(),
                 locomotion.GetProperty("jumpSkillMultiplier").GetSingle(),
-                locomotion.GetProperty("crouchedJumpMultiplier").GetSingle()),
+                locomotion.GetProperty("crouchedJumpMultiplier").GetSingle(),
+                locomotion.GetProperty("climbingFatiguePerGameMinute").GetInt32(),
+                locomotion.GetProperty("levitationVerticalSpeed").GetSingle()),
             new FirstPersonCameraTuning(
                 camera.GetProperty("eyeHeight").GetSingle(),
                 camera.GetProperty("fieldOfViewYDegrees").GetDouble(),
@@ -149,7 +155,17 @@ internal sealed record DaggerfallTuning(
                 siteLighting.GetProperty("interiorNight").GetSingle(),
                 siteLighting.GetProperty("dungeon").GetSingle(),
                 siteLighting.GetProperty("exteriorNoon").GetSingle(),
-                siteLighting.GetProperty("exteriorNight").GetSingle()))
+                siteLighting.GetProperty("exteriorNight").GetSingle()),
+            new DaggerfallClimbingTuning(
+                climbing.GetProperty("startCheckSeconds").GetSingle(),
+                climbing.GetProperty("continueCheckSeconds").GetSingle(),
+                climbing.GetProperty("regainCheckSeconds").GetSingle(),
+                climbing.GetProperty("startBaseChance").GetInt32(),
+                climbing.GetProperty("graspBaseChance").GetInt32(),
+                climbing.GetProperty("continueBaseChance").GetInt32(),
+                climbing.GetProperty("regainBaseChance").GetInt32(),
+                climbing.GetProperty("speedDivisor").GetSingle(),
+                climbing.GetProperty("enhancedSpeedMultiplier").GetSingle()))
             .Validate();
     }
 

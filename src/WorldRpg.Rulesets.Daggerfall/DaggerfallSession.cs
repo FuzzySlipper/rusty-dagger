@@ -11,6 +11,7 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 using WorldRpg.Rulesets.Daggerfall.Modules.Encounters;
+using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Kit;
@@ -46,6 +47,10 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private readonly DaggerfallVitalityConsequences _vitality;
     private readonly DaggerfallStaminaRecoveryModule _staminaRecovery;
     private readonly DaggerfallLocomotionPolicy _locomotion;
+    private readonly DaggerfallClimbingPolicy _climbing;
+    private readonly DaggerfallLevitationPolicy _levitation = new();
+    private readonly DaggerfallDungeonVisibility _dungeonVisibility;
+    private bool _verticalMovementDriven;
     private readonly DaggerfallEnemyBehaviorModule _enemyBehavior;
     private readonly DaggerfallCorpseLootModule _corpseLoot;
     private readonly DaggerfallGroundContainers _groundContainers;
@@ -207,12 +212,38 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             _controlEngine = engine;
             _input = new PlayerInputSystem(tuning.PlayerControl, DaggerfallInput.Controls, DaggerfallInput.Bindings, tuning.ControllerInput);
             _locomotion = new DaggerfallLocomotionPolicy(tuning.Locomotion, _controlSettings);
+            _climbing = new DaggerfallClimbingPolicy(tuning.Climbing);
             _spatial = new SpatialMovementSystem(engine.Spatial, engine.Content, inputs.SpatialArtifact, tuning.Spatial);
+            _dungeonVisibility = new DaggerfallDungeonVisibility(_spatial, tuning.Spatial.CollisionVoxelSize);
             partiallyConstructed.Add(_spatial);
+            foreach ((DaggerfallWorldProfileKey key, PrivateersHoldInputs admitted) in ActionProfiles(inputs, profiles))
+            {
+                DaggerfallDungeonActionGraphSnapshot? snapshot = saved?.DungeonActions
+                    .SingleOrDefault(value => StringComparer.Ordinal.Equals(value.ProfileId, key.LogicalId));
+                State.DungeonActions.Add(key, new DaggerfallDungeonActionGraph(
+                    key.LogicalId,
+                    admitted.DungeonActions,
+                    State.Variables,
+                    snapshot));
+            }
+            foreach (DaggerfallDungeonDiscoverySnapshot snapshot in saved?.DungeonDiscovery ?? [])
+            {
+                PrivateersHoldInputs admitted = snapshot.Profile == inputs.ProfileKey
+                    ? inputs
+                    : (profiles ?? throw new ArgumentException("Saved dungeon discovery requires admitted site profiles.", nameof(saved))).Require(snapshot.Profile);
+                DaggerfallDungeonMapContent map = admitted.DungeonMap
+                    ?? throw new ArgumentException($"Saved dungeon discovery names non-dungeon profile '{snapshot.Profile.LogicalId}'.", nameof(saved));
+                State.DungeonDiscoveries.Add(snapshot.Profile, new DaggerfallDungeonDiscovery(snapshot.Profile, map, snapshot));
+            }
+            if (inputs.DungeonMap is { } initialMap && !State.DungeonDiscoveries.ContainsKey(_activeProfileKey))
+                State.DungeonDiscoveries.Add(_activeProfileKey, new DaggerfallDungeonDiscovery(_activeProfileKey, initialMap));
             // The selected site's normalized RDB doors restore their Engine pose/collider projection
             // before activation can query them and before the first character step consumes them.
             _siteProjection = DaggerfallSiteProjection.Create(engine, State.Actors.Entities, _random, tuning, _time.Calendar, inputs, AudioFor(inputs), saved?.Doors);
             partiallyConstructed.Add(_siteProjection);
+            _actionTriggers = new DaggerfallDungeonActionTriggerRuntime(
+                State.Actors.Entities, engine.Spatial, _spatial, ActionProfiles(inputs, profiles), _activeProfileKey);
+            partiallyConstructed.Add(_actionTriggers);
             // Dynamic actors restore before the site projection, while authored placements are
             // already in ActorSprites.  Admit their mobile media here without replaying any item
             // creation or combat rolls.
@@ -271,7 +302,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 new ActorNavigationCoordinator(engine.Spatial, _spatial.Session),
                 State.Actors,
                 State.Kit.Attacks,
-                tuning.EnemyBehavior);
+                tuning.EnemyBehavior,
+                contextProvider: BuildEnemyPerceptionContext,
+                recordSkillUse: use => State.SkillUses.Record(use));
             _authoredEntityIds = DaggerActorFactory.AdmittedAuthoredEntityIds(inputs, playerDefinition.Loadout);
             if (saved is null)
             {
@@ -298,6 +331,17 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 State.Currency, _uniqueItems, () => _time.Calendar, () => _site.ActiveSite is { } active
                     ? new DaggerfallNpcSite(active.Id.Region, active.Name, string.Empty)
                     : null, saved?.Services);
+            State.SkillTraining = new DaggerfallSkillTrainingService(State.Services, State.Npcs, State.Social,
+                State.Progression, State.SkillUses, State.QuestTraining, State.Actors.Player.Stats,
+                tuning.Locomotion, () => _time.Calendar, seconds => { _ = AdvanceElapsedTime(seconds); });
+            State.RegionalPrices = new DaggerfallRegionalPriceState(definitions.Factions, _random,
+                _time.Calendar.DayNumber, saved?.RegionalPrices);
+            State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
+            State.TradeQuotes = new DaggerfallTradeQuoteService(definitions, new DaggerfallItemValuation(definitions),
+                State.RegionalPrices);
+            State.Transport = new DaggerfallTransportPolicy();
+            State.Wagon = new DaggerfallWagonStorage(State.Containers, State.ItemInstances, definitions,
+                playerEntity, _actorIdentities);
             _corpseLoot = new DaggerfallCorpseLootModule(
                 engine.Perception,
                 _spatial,
@@ -336,7 +380,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 compositionIdentity,
                 DaggerfallUiArt.Read(engine.Content, inputs.ClassicPresentation.InventoryIcons.Values));
             partiallyConstructed.Add(_hud);
-            _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion);
+            _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing);
             if (saved is not null)
             {
                 foreach (DaggerfallSiteDeltaSave delta in saved.SiteDeltas)
@@ -352,6 +396,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                     throw new ArgumentException("Saved encounter references a world profile not admitted by the current bundle.", nameof(saved));
                 _encounters.Restore(saved.Encounters, DynamicActorDefinitions(), TombstonedActorIds(saved));
                 _persistence.Restore(saved);
+                _actionTriggers.RebaseRestoredPlayer(State.PlayerControl, playerEntity);
             }
         }
         catch (Exception constructionFailure)
@@ -369,6 +414,37 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// <summary>The selected site's one authoritative RDB door owner for activation, spells, and dungeon actions.</summary>
     internal DaggerfallDoorRuntime Doors => _doors;
 
+    private static IReadOnlyList<(DaggerfallWorldProfileKey Key, PrivateersHoldInputs Inputs)> ActionProfiles(
+        PrivateersHoldInputs active,
+        DaggerfallSiteProfiles? profiles)
+    {
+        ArgumentNullException.ThrowIfNull(active);
+        if (profiles is null) return [(active.ProfileKey, active)];
+
+        Dictionary<DaggerfallWorldProfileKey, PrivateersHoldInputs> admitted = [];
+        foreach (DaggerfallWorldProfileKey key in profiles.Keys)
+            admitted.Add(key, profiles.Require(key));
+        admitted.TryAdd(active.ProfileKey, active);
+        if (admitted.Keys.Select(key => key.LogicalId).Distinct(StringComparer.Ordinal).Count() != admitted.Count)
+            throw new ArgumentException("Admitted world profiles must use distinct logical ids for action graph save identity.", nameof(profiles));
+        return admitted.OrderBy(entry => entry.Key.Site.Region)
+            .ThenBy(entry => entry.Key.Site.Index)
+            .ThenBy(entry => entry.Key.LogicalId, StringComparer.Ordinal)
+            .Select(entry => (entry.Key, entry.Value))
+            .ToArray();
+    }
+
+    private void EnsureDungeonActionGraph(DaggerfallWorldProfileKey key, PrivateersHoldInputs inputs)
+    {
+        key.Validate();
+        ArgumentNullException.ThrowIfNull(inputs);
+        _actionTriggers.AdmitProfile(key, inputs);
+        if (State.DungeonActions.ContainsKey(key)) return;
+        if (inputs.ProfileKey != key)
+            throw new InvalidOperationException($"World profile '{key.LogicalId}' action graph was paired with '{inputs.ProfileKey.LogicalId}'.");
+        State.DungeonActions.Add(key, new DaggerfallDungeonActionGraph(key.LogicalId, inputs.DungeonActions, State.Variables));
+    }
+
     /// <summary>Admits the full selected site catalog once composition has constructed this session.</summary>
     internal void AdmitSiteProfiles(DaggerfallSiteProfiles profiles)
     {
@@ -382,6 +458,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         if (_siteAudioBundles is not null)
             foreach (DaggerfallWorldProfileKey key in profiles.Keys) _ = _siteAudioBundles.Require(key);
         _siteProfiles = profiles;
+        foreach (DaggerfallWorldProfileKey key in profiles.Keys)
+            EnsureDungeonActionGraph(key, profiles.Require(key));
     }
 
     private DaggerfallAudioBundle? AudioFor(PrivateersHoldInputs inputs) => _siteAudioBundles?.Require(inputs.ProfileKey);
@@ -585,7 +663,18 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             _siteDeltas[sourceProfile] = committedSourceDelta;
             _siteDeltas.Remove(destination);
             _activeProfileKey = destination;
+            if (destination.Kind != DaggerfallWorldProfileKind.Exterior)
+                State.Transport.ForceFootOnInteriorTransition();
             _returnProfileKey = returnDestination is null ? sourceProfile : null;
+            _enemyBehavior.ClearPerceptionMemory();
+            if (target.DungeonMap is { } destinationMap)
+            {
+                if (!State.DungeonDiscoveries.TryGetValue(destination, out DaggerfallDungeonDiscovery? discovery))
+                    State.DungeonDiscoveries.Add(destination, discovery = new DaggerfallDungeonDiscovery(destination, destinationMap));
+                discovery.BeginVisit();
+            }
+            EnsureDungeonActionGraph(destination, target);
+            _actionTriggers.ActivateProfile(destination);
         }
         catch (Exception failure)
         {
@@ -621,6 +710,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             foreach ((DaggerfallWorldProfileKey key, DaggerfallSiteRuntimeDelta delta) in sourceDeltas) _siteDeltas.Add(key, delta);
             _activeProfileKey = sourceProfile;
             _returnProfileKey = sourceReturnProfile;
+            try { _actionTriggers.ActivateProfile(sourceProfile); }
+            catch (Exception rollbackFailure) { failures.Add(rollbackFailure); }
             if (playerRelocated)
             {
                 try { ApplyRelocation(sourcePosition, sourceYawRadians, sourcePitchRadians); }
@@ -634,6 +725,19 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             catch (Exception disposeFailure) { failures.Add(disposeFailure); }
             if (failures.Count == 1) throw;
             throw new AggregateException("Site transition failed and source restoration was incomplete.", failures);
+        }
+
+        if (relocatedActorId is null
+            && State.DungeonDiscoveries.TryGetValue(sourceProfile, out DaggerfallDungeonDiscovery? sourceDiscovery)
+            && source.Inputs.DungeonMap is { } sourceMap)
+        {
+            DaggerfallDungeonMapMarker? usedPortal = sourceMap.Markers
+                .Where(marker => marker.Kind == DaggerfallDungeonMapMarkerKind.Portal
+                    && marker.DestinationLogicalProfile == destination.LogicalId)
+                .OrderBy(marker => Vector3.DistanceSquared(marker.Position.ToVector(), sourcePosition.ToVector()))
+                .FirstOrDefault();
+            if (usedPortal is not null && Vector3.DistanceSquared(usedPortal.Position.ToVector(), sourcePosition.ToVector()) <= 9f)
+                sourceDiscovery.RevealMarker(usedPortal.Id);
         }
 
         // Releasing the old projection happens only after every durable and live owner has
@@ -705,6 +809,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         if (!float.IsFinite(pitchRadians)) throw new ArgumentOutOfRangeException(nameof(pitchRadians));
         _input.Neutralize();
         _locomotion.Neutralize();
+        _climbing.Detach();
+        _verticalMovementDriven = false;
         _lootUi.CloseAll();
         State.PlayerControl.YawRadians = yawRadians;
         State.PlayerControl.PitchRadians = pitchRadians;
@@ -1011,7 +1117,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     public RulesetSavePayload CaptureSave()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        return _persistence.Capture(_latestUpdateGeneration, _latestSimulationStep, _dynamicActors, _encounters, _siteDeltas, _activeProfileKey, _returnProfileKey);
+        return _persistence.Capture(_latestUpdateGeneration, _latestSimulationStep, _dynamicActors, _encounters,
+            _siteDeltas, _activeProfileKey, _returnProfileKey, State.DungeonDiscoveries, State.DungeonActions);
     }
 
     private static DaggerfallSiteId? ToSiteId(DaggerfallSiteIdSave? id) => id?.Require();
@@ -1108,6 +1215,14 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 case "character-level-allocate":
                 case "character-level-commit": if (playing) ChangeLevelUp(action!); break;
                 case "activation-mode": if (playing) ApplyActivationMode(action!); break;
+                case "dialogue-tone":
+                case "dialogue-topic":
+                case "dialogue-close": if (playing || modal) _ = ApplyDialogueAction(action!); break;
+                case "transport-select":
+                case "transport-toggle":
+                case "transport-leave-ship": if (playing) ChangeTransport(action!); break;
+                case "wagon-put":
+                case "wagon-take": if (playing) ChangeWagon(action!); break;
                 case "quest-choice":
                     if ((playing || modal) && State.Quests.ChoosePrompt(State.Variables, action!.QuestInstance!, action.QuestMessage!.Value, action.QuestPrompt!, action.QuestChoice!.Value))
                         Presentation.SetOutcome("Quest choice recorded.");
@@ -1201,6 +1316,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         DaggerfallCalendar calendarBefore = _time.Calendar;
         long minuteBefore = MinuteIndex(calendarBefore);
         _time.Advance(deltaSeconds * facts.AdmittedStepCount);
+        State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
         _siteProjection.Lighting.UpdateAmbient(_time.Calendar);
         State.Quests.AdvanceClocks(State.Variables, calendarBefore, _time.Calendar);
         State.Social.AdvanceElapsedMinutes(minuteBefore, MinuteIndex(_time.Calendar));
@@ -1236,7 +1352,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         {
             if (inputEvent.ValueKind != InputValueKind.ProductPayload
                 || !inputEvent.PayloadContract.Span.SequenceEqual("dagger.ui.action.v1"u8)) continue;
-            if (DaggerfallUiAction.Parse(inputEvent.PayloadData.Span)?.Action is "loot" or "activation-mode") return true;
+            if (DaggerfallUiAction.Parse(inputEvent.PayloadData.Span)?.Action is "loot" or "activation-mode" or "dialogue-topic") return true;
         }
 
         return false;
@@ -1346,6 +1462,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         DaggerfallCalendar calendarBefore = _time.Calendar;
         long minuteBefore = MinuteIndex(calendarBefore);
         DaggerfallCalendarAdvance advance = _time.AdvanceInterval(gameSeconds, consequences ?? []);
+        State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
         _siteProjection.Lighting.UpdateAmbient(_time.Calendar);
         State.Quests.AdvanceClocks(State.Variables, calendarBefore, _time.Calendar);
         // Daily conditions and ordinary source-order operations observe the same admitted calendar
@@ -1366,6 +1483,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         DaggerfallCalendar calendarBefore = _time.Calendar;
         long minuteBefore = MinuteIndex(calendarBefore);
         _ = _time.AdvanceInterval(gameSeconds, []);
+        State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
         _siteProjection.Lighting.UpdateAmbient(_time.Calendar);
         State.Quests.AdvanceClocks(State.Variables, calendarBefore, _time.Calendar);
         State.SkillUses.RaiseSkills(_time.Calendar.ToAbsoluteSeconds());
@@ -1421,6 +1539,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     {
         _latestUpdateGeneration = generation;
         _latestSimulationStep = simulationStep;
+        if (State.DungeonActions.TryGetValue(_activeProfileKey, out DaggerfallDungeonActionGraph? actionGraph))
+            actionGraph.Advance(update.DeltaSeconds);
         State.Kit.AttackExecution.ObserveTimeline(generation, simulationStep);
         _input.Apply(State.PlayerControl, update);
         // The Engine still receives an ordinary character step (grounding and gravity remain its
@@ -1428,11 +1548,61 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         bool alive = State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current > 0d;
         if (!State.Encumbrance.Read().CanMove || !alive) update.PlanarIntent = Vector2.Zero;
         bool canMove = State.Encumbrance.Read().CanMove && alive;
-        DaggerfallLocomotionStep locomotion = _locomotion.BeginStep([.. update.Inputs], update.DeltaSeconds, State.Actors.Player.Stats, canMove);
+        State.Transport.Reconcile(State.Inventory.Read(), new DaggerfallTransportAccessContext(
+            IsIndoor: _activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior,
+            IsDungeon: _activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon));
+        DaggerfallLocomotionStep locomotion = _locomotion.BeginStep([.. update.Inputs], update.DeltaSeconds,
+            State.Actors.Player.Stats, canMove, State.Transport);
         CharacterMotion motionBefore = State.PlayerControl.Motion;
+        WorldPoint? positionBefore = State.PlayerControl.Position;
         _doors.Advance(update.DeltaSeconds);
-        CharacterStepReceipt? movement = _spatial.Step(State.PlayerControl, update, _doors.CharacterEnvironment(), locomotion.Controls);
-        DaggerfallLanding? landing = _locomotion.CompleteStep(locomotion, motionBefore, movement, update.DeltaSeconds * _tuning.Time.GameSecondsPerRealSecond, State.Actors.Player.Stats, use => State.SkillUses.Record(use));
+        CharacterStepEnvironment doorEnvironment = _doors.CharacterEnvironment();
+        bool wallAhead = _spatial.TryProbeClimbWall(State.PlayerControl, CharacterWallProbeDirection.Forward, out SpatialHit forwardHit, doorEnvironment)
+            && MathF.Abs(forwardHit.Normal.Y) <= .06f;
+        bool wallAtFeet = _climbing.IsAttached
+            && _spatial.TryProbeClimbWallAtFeet(State.PlayerControl, CharacterWallProbeDirection.Forward, out SpatialHit footHit, doorEnvironment)
+            && MathF.Abs(footHit.Normal.Y) <= .06f;
+        bool wallBehind = !motionBefore.Grounded && locomotion.ForwardIntent < 0f
+            && _spatial.TryProbeClimbWall(State.PlayerControl, CharacterWallProbeDirection.Backward, out SpatialHit rearHit, doorEnvironment)
+            && MathF.Abs(rearHit.Normal.Y) <= .06f;
+        DaggerfallClimbStep climb = _climbing.BeginStep(locomotion, motionBefore, wallAhead, wallAtFeet, wallBehind,
+            canMove && State.Transport.IsOnFoot,
+            State.Actors.Player.Stats, State.Character.Race.Id == "khajiit",
+            State.Effects.EnhancesClimbing(DaggerfallActorIdentity.PlayerEntityId),
+            update.DeltaSeconds, () => checked((int)_random.DrawKeyed(new KeyedRngRequest(
+                CombatRandomKey.Seed, "daggerfall.climbing.v1", $"generation:{generation}:step:{simulationStep}", 1, 100)).Value));
+        DaggerfallLevitationStep levitation = _levitation.Resolve(new DaggerfallLevitationContext(
+            State.Effects.GrantsLevitation(DaggerfallActorIdentity.PlayerEntityId),
+            Swimming: false,
+            Climbing: climb.Climbing,
+            CanMove: canMove,
+            UpHeld: locomotion.UpHeld,
+            DownHeld: locomotion.DownHeld,
+            VerticalSpeed: _tuning.Locomotion.LevitationVerticalSpeed));
+        locomotion = locomotion with
+        {
+            Controls = locomotion.Controls with
+            {
+                VerticalVelocity = climb.VerticalVelocity ?? levitation.VerticalVelocity,
+                CrouchRequested = !levitation.IsLevitating && locomotion.Controls.CrouchRequested,
+            },
+            Climbing = climb.Climbing,
+            Running = !levitation.IsLevitating && locomotion.Running,
+            JumpRequested = !levitation.IsLevitating && locomotion.JumpRequested,
+        };
+        bool releasedVerticalDrive = _verticalMovementDriven && !locomotion.Controls.VerticalVelocity.HasValue;
+        CharacterStepReceipt? movement = _spatial.Step(State.PlayerControl, update, doorEnvironment, locomotion.Controls);
+        if (movement is not null) _verticalMovementDriven = locomotion.Controls.VerticalVelocity.HasValue;
+        if (movement is not null && actionGraph is not null)
+            _ = ReportDungeonActions(_actionTriggers.Reconcile(actionGraph, State.PlayerControl,
+                State.Actors.Player.Actor.Entity, simulationStep));
+        if (movement is not null && State.DungeonDiscoveries.TryGetValue(_activeProfileKey, out DaggerfallDungeonDiscovery? discovery))
+            _dungeonVisibility.Observe(discovery, State.PlayerControl, _doors, doorEnvironment, simulationStep, _tuning.Camera.EyeHeight);
+        CharacterMotion landingBefore = releasedVerticalDrive && positionBefore is WorldPoint releasePosition
+            ? motionBefore with { PeakY = releasePosition.Y, FallOriginY = releasePosition.Y }
+            : motionBefore;
+        DaggerfallLanding? landing = _locomotion.CompleteStep(locomotion, landingBefore, movement, update.DeltaSeconds * _tuning.Time.GameSecondsPerRealSecond, State.Actors.Player.Stats, use => State.SkillUses.Record(use));
+        _climbing.CompleteStep(climb, movement, use => State.SkillUses.Record(use));
         if (_vitality.ResolveLanding(State.Actors.Player.Actor, landing, State.Effects.PreventsFallDamage(DaggerfallActorIdentity.PlayerEntityId)) is { } fall)
             AppendDamage(fall, DaggerfallDamageCause.Fall, 0);
         _camera.Update(State.PlayerControl);
@@ -1447,7 +1617,13 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         // in the same Engine delivery, and it must follow the same no-attack rule as a DOM loot action.
         bool contextualInteraction = update.IsRequested(DaggerfallInput.Interact);
         if (!contextualInteraction && update.IsRequested(DaggerfallInput.Attack) && _appearance.CanStartPlayerAttack)
+        {
             State.Kit.Attacks.TryPlayerMelee(State.PlayerControl, currentLook, generation, simulationStep, update.DeltaSeconds, _facts);
+            // WeaponManager sends Attack to an action on the environment after the ordinary hit
+            // query. The safe Engine hit reports a static surface rather than a source id, so the
+            // normalized placement resolver above is the product-side identity join.
+            _ = TryTriggerDungeonActionRay(currentLook.Forward, _tuning.MeleeTargeting.MaximumDistance, DaggerfallDungeonActionEvent.Attack);
+        }
         if (contextualInteraction)
             _ = TryActivateContextual(currentLook);
         // A panel button asks the DOM for a panel during ordinary play, which is where the keyboard's
@@ -1478,7 +1654,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         _disposed = true;
         // DisposeAll walks backward: projection door entities must release before the actor store.
         Exception? failure = null;
-        try { DisposeAll([_hud, _camera, _spatial, State.Actors, _siteProjection, State.Effects, .. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }]); }
+        try { DisposeAll([_hud, _camera, _spatial, State.Actors, _siteProjection, State.Effects, _actionTriggers, .. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }]); }
         catch (Exception exception) { failure = exception; }
         // Site lighting may have retained an interior background after its resources were
         // released; clear that product-owned camera state only after the final projection dispose.
@@ -1534,7 +1710,12 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     private void PublishPresentation()
     {
-        _hud.Publish(State.Actors.Player, State.Progression, Presentation, _mode, State.PlayerControl, Slots, _inventoryUi.Read(), _lootUi.Read(), _characterUi.Read(State.Actors.Player, State.Progression), LatestPanelRequest, _saveSlots, _saveSlotDiagnostic, _controlSettings, _controlDiagnostic, ActivationView, State.Quests.ReadPresentation(QuestTextContext), _notebook.Read());
+        _hud.Publish(State.Actors.Player, State.Progression, Presentation, _mode, State.PlayerControl, Slots,
+            _inventoryUi.Read(), _lootUi.Read(), _characterUi.Read(State.Actors.Player, State.Progression),
+            LatestPanelRequest, _saveSlots, _saveSlotDiagnostic, _controlSettings, _controlDiagnostic,
+            ActivationView, State.Quests.ReadPresentation(QuestTextContext), _notebook.Read(),
+            DaggerfallTransportProjection.Read(State.Transport, State.Inventory.Read(), TransportAccess(),
+                ownsShip: false, wagon: State.Wagon));
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors, _groundContainers.All);
