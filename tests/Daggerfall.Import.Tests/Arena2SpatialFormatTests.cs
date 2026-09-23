@@ -91,8 +91,11 @@ public sealed class Arena2SpatialFormatTests
         RdbBlockSource block = RdbDecoder.Decode(fixture, "block.rdb");
         RdbModelSource model = Assert.Single(block.Models);
         Assert.Equal("42", model.ModelId);
+        Assert.Equal(6024, model.ObjectOffset);
         Assert.True(RdbSourceClassification.HasActionDoorTag(model));
-        Assert.True(RdbSourceClassification.IsStartMarker(Assert.Single(block.Flats)));
+        RdbFlatSource flat = Assert.Single(block.Flats);
+        Assert.Equal(6049, flat.ObjectOffset);
+        Assert.True(RdbSourceClassification.IsStartMarker(flat));
         Assert.Equal((ushort)512, Assert.Single(block.Lights).Radius);
 
         fixture[6024..6028].CopyTo(fixture.AsSpan(6024, 4));

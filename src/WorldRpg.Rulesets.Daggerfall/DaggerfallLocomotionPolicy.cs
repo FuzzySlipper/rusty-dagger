@@ -4,6 +4,7 @@ using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
+using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -17,6 +18,7 @@ internal sealed class DaggerfallLocomotionPolicy
     private FpsInput _input;
     private bool _jumpInFlight;
     private double _runningGameSeconds;
+    private double _climbingGameSeconds;
 
     internal DaggerfallLocomotionPolicy(DaggerfallLocomotionTuning tuning, DaggerfallControlSettings controls)
     {
@@ -31,27 +33,33 @@ internal sealed class DaggerfallLocomotionPolicy
     internal void Neutralize() => _input.Physical.Clear();
 
     /// <summary>Builds one Engine command from the current physical controls and live player mechanics.</summary>
-    internal DaggerfallLocomotionStep BeginStep(ReadOnlySpan<ProductInputEvent> inputs, float seconds, StatsComponent stats, bool canMove)
+    internal DaggerfallLocomotionStep BeginStep(ReadOnlySpan<ProductInputEvent> inputs, float seconds, StatsComponent stats, bool canMove,
+        DaggerfallTransportPolicy? transport = null)
     {
         ArgumentNullException.ThrowIfNull(stats);
         FpsInputFrame frame = _input.Consume(inputs, seconds);
         Track stamina = stats.GetTrack(Stamina);
         bool hasJumpFatigue = stamina.Current >= _tuning.JumpFatigueCost;
-        bool running = canMove && stamina.Current > 0d && frame.SprintHeld;
+        bool onFoot = transport?.IsOnFoot ?? true;
+        bool running = canMove && onFoot && stamina.Current > 0d && frame.SprintHeld;
         bool crouching = !running && frame.CrouchHeld;
+        if (!onFoot) crouching = false;
         int speed = stats.GetStat(Speed).ValueInt;
         int runningSkill = stats.GetStat(Running).ValueInt;
         int jumpingSkill = stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Jumping.Value)).ValueInt;
-        float groundSpeed = running ? RunSpeed(speed, runningSkill) : crouching ? CrouchSpeed(speed) : WalkSpeed(speed);
+        float groundSpeed = !onFoot
+            ? (float)transport!.MovementSpeed(speed, _tuning.ClassicToEngineSpeedRatio)
+            : running ? RunSpeed(speed, runningSkill) : crouching ? CrouchSpeed(speed) : WalkSpeed(speed);
         CharacterStepControls controls = new(
-            JumpPressed: canMove && hasJumpFatigue && frame.JumpPressed,
-            JumpHeld: canMove && hasJumpFatigue && frame.JumpHeld,
+            JumpPressed: canMove && onFoot && hasJumpFatigue && frame.JumpPressed,
+            JumpHeld: canMove && onFoot && hasJumpFatigue && frame.JumpHeld,
             CrouchRequested: crouching,
             ForwardSpeed: groundSpeed,
             BackwardSpeed: groundSpeed,
             StrafeSpeed: groundSpeed,
             JumpSpeed: JumpSpeed(jumpingSkill, crouching));
-        return new(controls, running, canMove && hasJumpFatigue && (frame.JumpPressed || frame.JumpHeld));
+        return new(controls, running, canMove && onFoot && hasJumpFatigue && (frame.JumpPressed || frame.JumpHeld),
+            frame.Movement.Y, frame.CrouchHeld, UpHeld: frame.JumpHeld, DownHeld: frame.CrouchHeld);
     }
 
     /// <summary>Charges and records only accepted Engine motion, never an input request that Engine kept grounded or blocked.</summary>
@@ -63,7 +71,9 @@ internal sealed class DaggerfallLocomotionPolicy
         if (receipt is not { } accepted) return null;
 
         bool moved = accepted.Displacement.X != 0f || accepted.Displacement.Z != 0f;
-        if (step.Running && moved)
+        if (step.Climbing)
+            _climbingGameSeconds += gameSeconds;
+        if (step.Running && !step.Climbing && moved)
         {
             _runningGameSeconds += gameSeconds;
             recordSkillUse(new DaggerfallSkillUse(DaggerfallMechanicsIds.Running.Value, DaggerfallSkillUseReason.Running, DaggerfallSkillUseOutcome.Accepted));
@@ -93,11 +103,15 @@ internal sealed class DaggerfallLocomotionPolicy
         ArgumentNullException.ThrowIfNull(stats);
         Track stamina = stats.GetTrack(Stamina);
         long minutes = checked(after - before);
-        long runningMinutes = Math.Min(minutes, checked((long)Math.Ceiling(_runningGameSeconds / DaggerfallCalendar.SecondsPerMinute)));
-        long idleMinutes = checked(minutes - runningMinutes);
-        double fatigue = checked((runningMinutes * (long)_tuning.RunningFatiguePerGameMinute) + (idleMinutes * (long)_tuning.IdleFatiguePerGameMinute));
+        long climbingMinutes = Math.Min(minutes, checked((long)Math.Ceiling(_climbingGameSeconds / DaggerfallCalendar.SecondsPerMinute)));
+        long runningMinutes = Math.Min(minutes - climbingMinutes, checked((long)Math.Ceiling(_runningGameSeconds / DaggerfallCalendar.SecondsPerMinute)));
+        long idleMinutes = checked(minutes - climbingMinutes - runningMinutes);
+        double fatigue = checked((climbingMinutes * (long)_tuning.ClimbingFatiguePerGameMinute)
+            + (runningMinutes * (long)_tuning.RunningFatiguePerGameMinute)
+            + (idleMinutes * (long)_tuning.IdleFatiguePerGameMinute));
         _ = stamina.Spend(Math.Min(stamina.Current, fatigue));
         _runningGameSeconds = 0d;
+        _climbingGameSeconds = 0d;
     }
 
     internal float WalkSpeed(int liveSpeed)
@@ -118,13 +132,14 @@ internal sealed class DaggerfallLocomotionPolicy
         return crouching ? speed * _tuning.CrouchedJumpMultiplier : speed;
     }
 
-    internal DaggerfallLocomotionSave Capture() => new(_runningGameSeconds);
+    internal DaggerfallLocomotionSave Capture() => new(_runningGameSeconds, _climbingGameSeconds);
 
     internal void Restore(DaggerfallLocomotionSave saved)
     {
         ArgumentNullException.ThrowIfNull(saved);
         saved.Validate();
         _runningGameSeconds = saved.RunningGameSeconds;
+        _climbingGameSeconds = saved.ClimbingGameSeconds;
         _jumpInFlight = false;
     }
 
@@ -143,7 +158,8 @@ internal sealed class DaggerfallLocomotionPolicy
     }
 }
 
-internal readonly record struct DaggerfallLocomotionStep(CharacterStepControls Controls, bool Running, bool JumpRequested);
+internal readonly record struct DaggerfallLocomotionStep(CharacterStepControls Controls, bool Running, bool JumpRequested,
+    float ForwardIntent = 0f, bool CrouchHeld = false, bool Climbing = false, bool UpHeld = false, bool DownHeld = false);
 
 /// <summary>
 /// One actual airborne-to-supported transition reported by the Engine character controller.
@@ -169,7 +185,9 @@ internal sealed record DaggerfallLocomotionTuning(
     int JumpFatigueCost,
     float JumpBaseSpeed,
     float JumpSkillMultiplier,
-    float CrouchedJumpMultiplier)
+    float CrouchedJumpMultiplier,
+    int ClimbingFatiguePerGameMinute = 22,
+    float LevitationVerticalSpeed = 4f)
 {
     internal static DaggerfallLocomotionTuning Classic { get; } = new(39.5f, 150f, 50f, 1.35f, 200f, 30, 11, 88, 11, 4.5f, .5f, .8f);
 
@@ -178,19 +196,23 @@ internal sealed record DaggerfallLocomotionTuning(
         if (!float.IsFinite(ClassicToEngineSpeedRatio) || ClassicToEngineSpeedRatio <= 0f) throw new ArgumentOutOfRangeException(nameof(ClassicToEngineSpeedRatio));
         if (!float.IsFinite(WalkBase) || !float.IsFinite(CrouchBase) || !float.IsFinite(RunBaseMultiplier) || !float.IsFinite(RunningSkillDivisor)
             || !float.IsFinite(JumpBaseSpeed) || !float.IsFinite(JumpSkillMultiplier) || !float.IsFinite(CrouchedJumpMultiplier)
-            || RunningSkillDivisor <= 0f || RunBaseMultiplier <= 0f || JumpBaseSpeed <= 0f || JumpSkillMultiplier < 0f || CrouchedJumpMultiplier <= 0f) throw new ArgumentOutOfRangeException(nameof(WalkBase));
-        if (MinimumWalkSpeedAttribute < 0 || IdleFatiguePerGameMinute < 0 || RunningFatiguePerGameMinute < 0 || JumpFatigueCost <= 0)
+            || !float.IsFinite(LevitationVerticalSpeed)
+            || RunningSkillDivisor <= 0f || RunBaseMultiplier <= 0f || JumpBaseSpeed <= 0f || JumpSkillMultiplier < 0f || CrouchedJumpMultiplier <= 0f
+            || LevitationVerticalSpeed <= 0f) throw new ArgumentOutOfRangeException(nameof(WalkBase));
+        if (MinimumWalkSpeedAttribute < 0 || IdleFatiguePerGameMinute < 0 || RunningFatiguePerGameMinute < 0
+            || ClimbingFatiguePerGameMinute < 0 || JumpFatigueCost <= 0)
             throw new ArgumentOutOfRangeException(nameof(MinimumWalkSpeedAttribute));
         return this;
     }
 }
 
 /// <summary>Durable movement work awaiting the next calendar-minute fatigue charge; physical held input is deliberately not saved.</summary>
-internal sealed record DaggerfallLocomotionSave(double RunningGameSeconds)
+internal sealed record DaggerfallLocomotionSave(double RunningGameSeconds, double ClimbingGameSeconds = 0d)
 {
     internal void Validate()
     {
-        if (!double.IsFinite(RunningGameSeconds) || RunningGameSeconds < 0d)
+        if (!double.IsFinite(RunningGameSeconds) || RunningGameSeconds < 0d
+            || !double.IsFinite(ClimbingGameSeconds) || ClimbingGameSeconds < 0d)
             throw new ArgumentOutOfRangeException(nameof(RunningGameSeconds));
     }
 }

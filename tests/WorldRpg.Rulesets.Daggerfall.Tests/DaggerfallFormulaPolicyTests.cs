@@ -30,6 +30,17 @@ public sealed class DaggerfallFormulaPolicyTests
         Assert.Equal(12, DaggerfallFormulaPolicy.SkillAdvancementMultiplier("medical"));
         Assert.Equal((4, 8), DaggerfallFormulaPolicy.HitPointsPerLevelRollBounds(8));
         Assert.Equal(3, DaggerfallFormulaPolicy.HitPointsPerLevelUp(4, 40));
+        Assert.Equal(156, DaggerfallFormulaPolicy.CalculateStealthChance(25f, 80));
+        Assert.Equal(156, DaggerfallFormulaPolicy.CalculateStealthChance(25d, 80));
+        Assert.Equal(26, DaggerfallFormulaPolicy.CalculateEnemyPacificationChance(
+            DaggerfallSkills.Etiquette, 60, 50, weaponSheathed: true));
+        Assert.True(DaggerfallFormulaPolicy.CalculateEnemyPacification(
+            DaggerfallSkills.Etiquette, 60, 50, weaponSheathed: true, roll: 25));
+        Assert.False(DaggerfallFormulaPolicy.CalculateEnemyPacification(
+            DaggerfallSkills.Etiquette, 60, 50, weaponSheathed: true, roll: 26));
+        Assert.True(DaggerfallFormulaPolicy.CalculateEnemyPacification(
+            DaggerfallSkills.Etiquette, 60, 50, weaponSheathed: true,
+            comprehendLanguagesBonus: 5, roll: 30));
     }
 
     [Fact]

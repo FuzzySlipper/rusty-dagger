@@ -124,4 +124,29 @@ public sealed class DaggerfallUiActionTests
     [InlineData("{\"action\":\"quest-choice\",\"questInstance\":\"quest:1\",\"questMessage\":1010,\"questChoice\":3,\"questPrompt\":\"prompt:1\",\"item\":\"x\"}", false)]
     public void Quest_choice_actions_name_the_pending_prompt_once(string json, bool accepted) =>
         Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
+
+    [Theory]
+    [InlineData("{\"action\":\"dialogue-tone\",\"revision\":\"3\",\"tone\":\"polite\"}", true)]
+    [InlineData("{\"action\":\"dialogue-tone\",\"revision\":\"3\",\"tone\":\"shout\"}", false)]
+    [InlineData("{\"action\":\"dialogue-tone\",\"tone\":\"polite\"}", false)]
+    [InlineData("{\"action\":\"dialogue-tone\",\"revision\":\"3\",\"tone\":\"normal\",\"topic\":\"news\"}", false)]
+    [InlineData("{\"action\":\"dialogue-topic\",\"revision\":\"3\",\"topic\":\"directions\"}", true)]
+    [InlineData("{\"action\":\"dialogue-topic\",\"revision\":\"3\",\"topic\":\"quest\"}", false)]
+    [InlineData("{\"action\":\"dialogue-close\",\"revision\":\"3\"}", true)]
+    [InlineData("{\"action\":\"dialogue-close\"}", false)]
+    public void Dialogue_actions_require_a_live_revision_and_exact_choices(string json, bool accepted) =>
+        Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
+
+    [Theory]
+    [InlineData("{\"action\":\"transport-select\",\"mode\":\"horse\"}", true)]
+    [InlineData("{\"action\":\"transport-select\",\"mode\":\"ship\"}", false)]
+    [InlineData("{\"action\":\"transport-select\"}", false)]
+    [InlineData("{\"action\":\"transport-toggle\"}", true)]
+    [InlineData("{\"action\":\"transport-toggle\",\"mode\":\"horse\"}", false)]
+    [InlineData("{\"action\":\"wagon-put\",\"revision\":\"1:2\",\"item\":\"stack:gold-piece\",\"amount\":5}", true)]
+    [InlineData("{\"action\":\"wagon-take\",\"revision\":\"1:2\",\"item\":\"unique:1002\"}", true)]
+    [InlineData("{\"action\":\"wagon-put\",\"item\":\"stack:gold-piece\"}", false)]
+    [InlineData("{\"action\":\"wagon-put\",\"revision\":\"1:2\",\"item\":\"stack:gold-piece\",\"amount\":0}", false)]
+    public void Transport_and_wagon_actions_require_exact_modes_and_guarded_item_selections(string json, bool accepted) =>
+        Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
 }

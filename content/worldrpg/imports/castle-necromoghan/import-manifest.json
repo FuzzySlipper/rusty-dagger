@@ -5127,8 +5127,8 @@
     },
     {
       "relativePath": "normalized.json",
-      "contentHash": "b7f88af58782eb9c0379eb722b4a09e993dc30947727fada9eb1fc1fd6e84c44",
-      "byteLen": 14582361,
+      "contentHash": "f07f941237a164a1b3eb9255fce926087f78590f97768ea014cd0a915165fad6",
+      "byteLen": 15472249,
       "dependsOnPaths": [
         "geometry/index.json",
         "geometry/mesh-41006.json",

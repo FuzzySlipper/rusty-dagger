@@ -312,11 +312,13 @@ public static class DungeonNormalizer
         private readonly SortedSet<string> referencedMeshIds = new(StringComparer.Ordinal);
         private readonly List<GeometryUnresolvedMeshReference> unresolvedMeshReferences = [];
         private readonly HashSet<string> unresolvedMeshIds = new(StringComparer.Ordinal);
-        private readonly Dictionary<(ushort Archive, ushort Record, bool ParticipatesInCollision, string? DoorId), GeometryBuilder> geometry = [];
+        private readonly Dictionary<GeometryGroupKey, GeometryBuilder> geometry = [];
+        private readonly List<GeometryPlacementDraft> geometryPlacements = [];
         private readonly List<NormalizedLightPlacement> lights = [];
         private readonly List<NormalizedBillboardPlacement> billboards = [];
         private readonly List<NormalizedActorPlacement> actors = [];
         private readonly List<NormalizedTreasurePlacement> treasures = [];
+        private readonly List<NormalizedDungeonAction> actions = [];
         private readonly List<DoorDraft> doorDrafts = [];
         private readonly List<DungeonRecordProvenance> provenance = [];
         private NormalizedMarker? startMarker;
@@ -466,6 +468,8 @@ public static class DungeonNormalizer
                 }
 
                 Matrix3 rotation = Matrix3.ForModel(model);
+                HashSet<GeometryGroupKey> placementMeshKeys = [];
+                List<NormalizedVector3> placementVertices = [];
                 foreach (Arch3dPlane plane in mesh.Planes)
                 {
                     if (plane.Points.Count < 3)
@@ -479,7 +483,8 @@ public static class DungeonNormalizer
                     // an eventual ruleset can render its source state, but it
                     // must not become static collision before that policy
                     // exists.
-                    GeometryBuilder group = Geometry(archiveId, recordId, texture.MaterialId, !actionDoor, actionDoor ? doorId : null);
+                    GeometryGroupKey geometryKey = new(archiveId, recordId, !actionDoor, actionDoor ? doorId : null);
+                    GeometryBuilder group = Geometry(geometryKey, texture.MaterialId);
                     List<NormalizedVector3> polygon = new(plane.Points.Count);
                     List<NormalizedVector2> uvs = new(plane.Points.Count);
                     foreach (Arch3dPoint point in plane.Points)
@@ -497,8 +502,17 @@ public static class DungeonNormalizer
 
                     NormalizedVector3 normal = MeshGeometry.Normal(polygon);
                     group.AddPolygon(polygon, uvs, normal, AddVertices, AddTriangles);
+                    placementMeshKeys.Add(geometryKey);
+                    placementVertices.AddRange(polygon);
+                }
+
+                if (placementVertices.Count > 0)
+                {
+                    geometryPlacements.Add(new GeometryPlacementDraft(modelId, doorId, placementMeshKeys, placementVertices));
                 }
             }
+
+            AddActions(block, blockPlacementId, reference);
         }
 
         public DungeonNormalizationResult Build()
@@ -516,22 +530,21 @@ public static class DungeonNormalizer
             string visualMeshAssetId = $"mesh/{locationSlug}";
             List<NormalizedMesh> meshes = [];
             List<NormalizedVector3> allVertices = [];
+            Dictionary<GeometryGroupKey, string> meshIdsByGeometry = [];
             Dictionary<string, List<string>> visualMeshIdsByDoor = new(StringComparer.Ordinal);
-            foreach (((ushort archiveId, ushort recordId, bool participatesInCollision, string? doorId), GeometryBuilder group) in geometry
+            foreach ((GeometryGroupKey key, GeometryBuilder group) in geometry
                 .OrderBy(pair => pair.Key.Archive).ThenBy(pair => pair.Key.Record).ThenByDescending(pair => pair.Key.ParticipatesInCollision).ThenBy(pair => pair.Key.DoorId, StringComparer.Ordinal))
             {
-                string participation = participatesInCollision ? "static" : "action-visual";
-                string id = doorId is null
-                    ? $"mesh/{locationSlug}/texture-{archiveId}-{recordId}/{participation}"
-                    : $"mesh/{doorId}/texture-{archiveId}-{recordId}/{participation}";
+                string id = MeshId(locationSlug, key);
                 meshes.Add(group.ToMesh(id, staticMeshArtifactId));
                 allVertices.AddRange(group.Vertices);
-                if (doorId is not null)
+                meshIdsByGeometry.Add(key, id);
+                if (key.DoorId is not null)
                 {
-                    if (!visualMeshIdsByDoor.TryGetValue(doorId, out List<string>? doorMeshIds))
+                    if (!visualMeshIdsByDoor.TryGetValue(key.DoorId, out List<string>? doorMeshIds))
                     {
                         doorMeshIds = [];
-                        visualMeshIdsByDoor.Add(doorId, doorMeshIds);
+                        visualMeshIdsByDoor.Add(key.DoorId, doorMeshIds);
                     }
 
                     doorMeshIds.Add(id);
@@ -555,6 +568,17 @@ public static class DungeonNormalizer
                     Action: door.Action))
                 .ToList();
             List<NormalizedResourceCatalogEntry> resources = ResourceCatalog(resourceCatalogArtifactId, doors);
+            NormalizedGeometryPlacement[] normalizedGeometryPlacements = geometryPlacements
+                .Select(placement => new NormalizedGeometryPlacement(
+                    placement.Id,
+                    MeshGeometry.Bounds(placement.Vertices),
+                    placement.MeshKeys.Select(key => meshIdsByGeometry[key]).ToArray(),
+                    placement.DoorId)
+                {
+                    SamplePoints = SelectSurfaceSamples(placement.Vertices),
+                })
+                .OrderBy(placement => placement.Id, StringComparer.Ordinal)
+                .ToArray();
             NormalizedWorld world = new(
                 NormalizedWorld.CurrentSchemaVersion,
                 visualMeshAssetId,
@@ -566,7 +590,11 @@ public static class DungeonNormalizer
                 billboards,
                 actors,
                 treasures,
-                doors);
+                doors)
+            {
+                Actions = actions,
+                GeometryPlacements = normalizedGeometryPlacements,
+            };
             DungeonSpatialPublication spatialPublication = DungeonSpatialPublication.Create(
                 staticMeshArtifactId,
                 $"spatial/{locationSlug}/static-mesh.json",
@@ -614,6 +642,85 @@ public static class DungeonNormalizer
         }
 
         private static float ToMetres(int sourceUnits) => sourceUnits * SourceUnitMetres;
+
+        private void AddActions(RdbBlockSource block, string blockPlacementId, MapsDungeonBlock reference)
+        {
+            Dictionary<int, string> actionIdsByOffset = new();
+            Dictionary<int, string?> doorIdsByOffset = new();
+            foreach ((RdbModelSource model, int index) in block.Models.Select((model, index) => (model, index)))
+            {
+                if (model.Action is null || model.ObjectOffset <= 0)
+                    continue;
+
+                string id = $"action/{blockPlacementId}/model-{index}";
+                if (!actionIdsByOffset.TryAdd(model.ObjectOffset, id))
+                    throw new InvalidOperationException($"RDB block '{blockPlacementId}' repeats action object offset {model.ObjectOffset}.");
+
+                doorIdsByOffset[model.ObjectOffset] = RdbSourceClassification.HasActionDoorTag(model)
+                    || RdbSourceClassification.HasSpecialDoorAction(model)
+                    ? $"door/{blockPlacementId}/{index}"
+                    : null;
+            }
+
+            foreach ((RdbFlatSource flat, int index) in block.Flats.Select((flat, index) => (flat, index)))
+            {
+                // Offset zero is Arena2's absolute null-link sentinel. Preserve that authored node
+                // even when all other action fields are zero; only the negative no-object sentinel
+                // can prove that a flat carries no action record at all.
+                if (flat.ObjectOffset <= 0 || flat.Action == 0 && flat.Flags == 0 && flat.NextObjectOffset < 0)
+                    continue;
+
+                string id = $"action/{blockPlacementId}/flat-{index}";
+                if (!actionIdsByOffset.TryAdd(flat.ObjectOffset, id))
+                    throw new InvalidOperationException($"RDB block '{blockPlacementId}' repeats action object offset {flat.ObjectOffset}.");
+                doorIdsByOffset[flat.ObjectOffset] = null;
+            }
+
+            foreach ((RdbModelSource model, int index) in block.Models.Select((model, index) => (model, index)))
+            {
+                if (model.Action is not { } action || model.ObjectOffset <= 0)
+                    continue;
+
+                string id = actionIdsByOffset[model.ObjectOffset];
+                actions.Add(new(
+                    id,
+                    model.ObjectOffset,
+                    model.TriggerFlagStartingLock,
+                    action.Flags,
+                    action.Axis,
+                    action.Duration,
+                    action.Magnitude,
+                    action.NextObjectOffset,
+                    action.NextObjectOffset > 0 && actionIdsByOffset.TryGetValue(action.NextObjectOffset, out string? next) ? next : null,
+                    doorIdsByOffset[model.ObjectOffset],
+                    IsFlat: false,
+                    SoundIndex: model.SoundIndex,
+                    Position: null));
+                AddProvenance(id, "rdb-action-model", blocks.Source, model.ObjectOffset);
+            }
+
+            foreach ((RdbFlatSource flat, int index) in block.Flats.Select((flat, index) => (flat, index)))
+            {
+                if (flat.ObjectOffset <= 0 || !actionIdsByOffset.TryGetValue(flat.ObjectOffset, out string? id))
+                    continue;
+
+                actions.Add(new(
+                    id,
+                    flat.ObjectOffset,
+                    flat.Flags,
+                    flat.Action,
+                    flat.Magnitude,
+                    0,
+                    flat.Magnitude,
+                    flat.NextObjectOffset,
+                    flat.NextObjectOffset > 0 && actionIdsByOffset.TryGetValue(flat.NextObjectOffset, out string? next) ? next : null,
+                    DoorId: null,
+                    IsFlat: true,
+                    SoundIndex: flat.SoundIndex,
+                    Position: MeshGeometry.ToRightHanded(Place(flat.X, flat.Y, flat.Z, reference))));
+                AddProvenance(id, "rdb-action-flat", blocks.Source, flat.ObjectOffset);
+            }
+        }
 
         private static int StartingLockValue(uint sourceValue, string source, int modelIndex)
         {
@@ -666,16 +773,41 @@ public static class DungeonNormalizer
             return OfflineNavigationDeriver.Derive($"navigation/{Slug(layout.LocationName)}", artifactId, meshes, request.Navigation);
         }
 
-        private GeometryBuilder Geometry(ushort archiveId, ushort recordId, string materialId, bool participatesInCollision, string? doorId)
+        private GeometryBuilder Geometry(GeometryGroupKey key, string materialId)
         {
-            (ushort Archive, ushort Record, bool ParticipatesInCollision, string? DoorId) key = (archiveId, recordId, participatesInCollision, doorId);
             if (!geometry.TryGetValue(key, out GeometryBuilder? group))
             {
-                group = new GeometryBuilder(materialId, participatesInCollision);
+                group = new GeometryBuilder(materialId, key.ParticipatesInCollision);
                 geometry.Add(key, group);
             }
 
             return group;
+        }
+
+        private static string MeshId(string locationSlug, GeometryGroupKey key)
+        {
+            string participation = key.ParticipatesInCollision ? "static" : "action-visual";
+            return key.DoorId is null
+                ? $"mesh/{locationSlug}/texture-{key.Archive}-{key.Record}/{participation}"
+                : $"mesh/{key.DoorId}/texture-{key.Archive}-{key.Record}/{participation}";
+        }
+
+        private static NormalizedVector3[] SelectSurfaceSamples(IReadOnlyList<NormalizedVector3> placementVertices)
+        {
+            NormalizedVector3[] distinctVertices = placementVertices.Distinct().ToArray();
+            if (distinctVertices.Length < 2)
+            {
+                throw new InvalidOperationException("A dungeon model placement must contain at least two distinct source vertices for map visibility samples.");
+            }
+
+            if (distinctVertices.Length <= 4)
+            {
+                return distinctVertices;
+            }
+
+            int last = distinctVertices.Length - 1;
+            int[] indices = [0, last / 3, (last * 2) / 3, last];
+            return indices.Select(index => distinctVertices[index]).Distinct().ToArray();
         }
 
         private TextureInfo ResolveTexture(ushort archiveId, ushort recordId)
@@ -806,6 +938,10 @@ public static class DungeonNormalizer
     private sealed record TextureInfo(ushort Archive, ushort Record, int Width, int Height, string TextureId, string MaterialId, string SpriteId);
 
     private sealed record DoorDraft(string Id, string DoorResourceId, NormalizedVector3 Position, NormalizedVector3 RotationDegrees, string Kind, int StartingLockValue, NormalizedDoorAction? Action);
+
+    private readonly record struct GeometryGroupKey(ushort Archive, ushort Record, bool ParticipatesInCollision, string? DoorId);
+
+    private sealed record GeometryPlacementDraft(string Id, string? DoorId, IReadOnlySet<GeometryGroupKey> MeshKeys, IReadOnlyList<NormalizedVector3> Vertices);
 
     private readonly record struct Matrix3(float M11, float M12, float M13, float M21, float M22, float M23, float M31, float M32, float M33)
     {

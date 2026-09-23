@@ -35,6 +35,127 @@ public sealed class DungeonNormalizerTests
     }
 
     [Fact]
+    public void Preserves_unrecognized_negative_rdb_action_link_sentinels_as_source_facts()
+    {
+        DungeonLogicalSource[] sources = CreateSources();
+        Replace(sources, "BLOCKS.BSA", CreateNamedBsa(("S0000007.RDB", CreateRdbFixture(
+            modelDescription: "DOR",
+            actionFlags: 0x10,
+            actionNextObjectOffset: -2))));
+
+        DungeonNormalizationResult result = DungeonNormalizer.Normalize(Request(sources));
+
+        Assert.Equal(-2, Assert.Single(result.Document.World.Actions).NextObjectOffset);
+        Assert.Equal(-2, Assert.Single(result.Document.World.Doors).Action!.NextObjectOffset);
+    }
+
+    [Fact]
+    public void Emits_distinct_source_placement_bounds_when_models_share_an_aggregate_mesh()
+    {
+        DungeonLogicalSource[] sources = CreateSources();
+        Replace(sources, "BLOCKS.BSA", CreateNamedBsa(("S0000007.RDB", CreateRdbFixtureWithModels(["42", "42"]))));
+
+        DungeonNormalizationResult result = DungeonNormalizer.Normalize(Request(sources));
+
+        NormalizedGeometryPlacement[] placements = result.Document.World.GeometryPlacements.OrderBy(value => value.Id, StringComparer.Ordinal).ToArray();
+        Assert.Equal(2, placements.Length);
+        Assert.Equal(["model/s0000007-rdb/1/1/0", "model/s0000007-rdb/1/1/1"], placements.Select(value => value.Id));
+        Assert.All(placements, placement => Assert.Equal(["mesh/fixture-hold/texture-2-0/static"], placement.MeshIds));
+        Assert.NotEqual(placements[0].Bounds.Minimum, placements[1].Bounds.Minimum);
+        Assert.NotEqual(placements[0].Bounds.Maximum, placements[1].Bounds.Maximum);
+        Assert.All(placements, placement => Assert.InRange(placement.SamplePoints.Count, 2, 4));
+        Assert.All(placements, placement => Assert.All(placement.SamplePoints, point =>
+            Assert.Contains(point, result.Document.Meshes.Single(mesh => mesh.Id == placement.MeshIds[0]).Vertices)));
+        result.Document.Validate();
+    }
+
+    [Fact]
+    public void Publishes_raw_action_parameters_and_resolved_source_links()
+    {
+        DungeonLogicalSource[] sources = CreateSources();
+        Replace(sources, "BLOCKS.BSA", CreateNamedBsa(("S0000007.RDB", CreateRdbFixture(actionFlags: 0x1F))));
+
+        DungeonNormalizationResult result = DungeonNormalizer.Normalize(Request(sources));
+
+        NormalizedDungeonAction action = Assert.Single(result.Document.World.Actions);
+        Assert.Equal("action/s0000007-rdb/1/1/model-0", action.Id);
+        Assert.Equal(6024, action.SourceOffset);
+        Assert.Equal(0u, action.TriggerFlag);
+        Assert.Equal((byte)0x1F, action.ActionFlag);
+        Assert.Equal((byte)1, action.Axis);
+        Assert.Equal((ushort)30, action.Duration);
+        Assert.Equal((ushort)90, action.Magnitude);
+        Assert.Equal(-1, action.NextObjectOffset);
+        Assert.Null(action.NextActionId);
+        Assert.Equal((byte)0, action.SoundIndex);
+        result.Document.Validate();
+    }
+
+    [Fact]
+    public void Resolves_rdb_action_links_to_stable_placement_action_ids()
+    {
+        DungeonLogicalSource[] sources = CreateSources();
+        Replace(sources, "BLOCKS.BSA", CreateNamedBsa(("S0000007.RDB", CreateRdbFixtureWithModels(
+            ["42", "42"],
+            actionFlags: 0x1E,
+            actionNextObjectOffset: 6049))));
+
+        DungeonNormalizationResult result = DungeonNormalizer.Normalize(Request(sources));
+
+        NormalizedDungeonAction[] actions = result.Document.World.Actions
+            .OrderBy(action => action.SourceOffset)
+            .ToArray();
+        Assert.Equal(2, actions.Length);
+        Assert.Equal(6024, actions[0].SourceOffset);
+        Assert.Equal(6049, actions[1].SourceOffset);
+        Assert.Equal("action/s0000007-rdb/1/1/model-1", actions[0].NextActionId);
+        Assert.Equal("action/s0000007-rdb/1/1/model-1", actions[1].NextActionId);
+        result.Document.Validate();
+    }
+
+    [Fact]
+    public void Treats_zero_next_object_offset_as_the_source_null_link()
+    {
+        DungeonLogicalSource[] sources = CreateSources();
+        Replace(sources, "BLOCKS.BSA", CreateNamedBsa(("S0000007.RDB", CreateRdbFixtureWithModels(
+            ["42", "42"],
+            actionFlags: 0x1E,
+            actionNextObjectOffset: 0))));
+
+        DungeonNormalizationResult result = DungeonNormalizer.Normalize(Request(sources));
+
+        NormalizedDungeonAction[] actions = result.Document.World.Actions
+            .OrderBy(action => action.SourceOffset)
+            .ToArray();
+        Assert.Equal(2, actions.Length);
+        Assert.All(actions, action =>
+        {
+            Assert.Equal(0, action.NextObjectOffset);
+            Assert.Null(action.NextActionId);
+        });
+        result.Document.Validate();
+    }
+
+    [Fact]
+    public void Carries_flat_action_source_position_into_normalized_content()
+    {
+        DungeonLogicalSource[] sources = CreateSources();
+        Replace(sources, "BLOCKS.BSA", CreateNamedBsa(("S0000007.RDB", CreateRdbFixture(
+            flatTextureArchive: 2,
+            flatTextureRecord: 0,
+            flatAction: 0x1F))));
+
+        DungeonNormalizationResult result = DungeonNormalizer.Normalize(Request(sources));
+
+        NormalizedDungeonAction action = Assert.Single(result.Document.World.Actions);
+        Assert.True(action.IsFlat);
+        Assert.Equal(0u, action.TriggerFlag);
+        Assert.Equal((byte)0x1F, action.ActionFlag);
+        Assert.Equal(Assert.Single(result.Document.World.Billboards).Position, action.Position!.Value);
+        result.Document.Validate();
+    }
+
+    [Fact]
     public void NormalizationIsIndependentOfCallerSourceOrderingAndCopiesSourceBytes()
     {
         DungeonLogicalSource[] sources = CreateSources();
@@ -357,8 +478,11 @@ public sealed class DungeonNormalizerTests
         ushort factionOrMobileId = 0,
         string modelDescription = "MOD",
         uint triggerFlagStartingLock = 0,
-        byte actionFlags = 0) =>
-        CreateRdbFixtureWithModels(["42"], flatTextureArchive, flatTextureRecord, factionOrMobileId, modelDescription, triggerFlagStartingLock, actionFlags);
+        byte actionFlags = 0,
+        int actionNextObjectOffset = -1,
+        byte flatAction = 0,
+        int flatNextObjectOffset = -1) =>
+        CreateRdbFixtureWithModels(["42"], flatTextureArchive, flatTextureRecord, factionOrMobileId, modelDescription, triggerFlagStartingLock, actionFlags, actionNextObjectOffset, flatAction, flatNextObjectOffset);
 
     /// <summary>
     /// Builds an RDB block whose single cell places one model per entry of <paramref name="modelIds"/>, in
@@ -373,7 +497,10 @@ public sealed class DungeonNormalizerTests
         ushort factionOrMobileId = 0,
         string modelDescription = "MOD",
         uint triggerFlagStartingLock = 0,
-        byte actionFlags = 0)
+        byte actionFlags = 0,
+        int actionNextObjectOffset = -1,
+        byte flatAction = 0,
+        int flatNextObjectOffset = -1)
     {
         // The classic RDB layout the decoder reads: a 20-byte header, a fixed 750-entry model-reference
         // table, one cell root, then 25-byte object nodes and their resources.
@@ -415,14 +542,15 @@ public sealed class DungeonNormalizerTests
         BitConverter.GetBytes((ushort)((flatTextureArchive << 7) | flatTextureRecord)).CopyTo(data, flatResource);
         data[flatResource + 4] = (byte)factionOrMobileId;
         data[flatResource + 5] = (byte)(factionOrMobileId >> 8);
-        BitConverter.GetBytes(-1).CopyTo(data, flatResource + 6);
+        BitConverter.GetBytes(flatNextObjectOffset).CopyTo(data, flatResource + 6);
+        data[flatResource + 10] = flatAction;
         BitConverter.GetBytes((ushort)512).CopyTo(data, lightResource + 8);
         if (actionFlags != 0)
         {
             data[actionResource] = 1;
             BitConverter.GetBytes((ushort)30).CopyTo(data, actionResource + 1);
             BitConverter.GetBytes((ushort)90).CopyTo(data, actionResource + 3);
-            BitConverter.GetBytes(-1).CopyTo(data, actionResource + 5);
+            BitConverter.GetBytes(actionNextObjectOffset).CopyTo(data, actionResource + 5);
             data[actionResource + 9] = actionFlags;
         }
         return data;

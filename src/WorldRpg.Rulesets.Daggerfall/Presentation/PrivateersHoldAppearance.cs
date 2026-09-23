@@ -37,6 +37,8 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private ViewmodelVisual? viewmodel;
     private bool weaponDrawn = true;
     internal bool CanStartPlayerAttack => weaponDrawn && viewmodel?.Strike != true;
+    /// <summary>Reads the authored weapon draw state without conflating it with an active strike.</summary>
+    internal bool IsWeaponDrawn => weaponDrawn;
     internal void ToggleWeaponDrawn() => weaponDrawn = !weaponDrawn;
     // Appearance object identities must be exactly representable in browser snapshots.
     // These transient product visuals use a disjoint descending pool, not resource hashes.

@@ -68,6 +68,25 @@
 .dagger-menu .dagger-composition { position: static; max-width: none; margin-bottom: 18px; }
 .dagger-menu [hidden] { display: none; }
 
+.dagger-dialogue {
+  width: min(34rem, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 22px;
+  border: 1px solid #d4b56b;
+  background: #151712;
+  color: #f2e3ba;
+  box-shadow: 0 12px 44px rgb(0 0 0 / .7);
+}
+.dagger-dialogue::backdrop { background: rgb(0 0 0 / .65); }
+.dagger-dialogue h2 { margin: 0 0 12px; font-size: 1.2rem; }
+.dagger-dialogue p { line-height: 1.5; white-space: pre-wrap; }
+.dagger-dialogue label { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
+.dagger-dialogue select, .dagger-dialogue button { padding: 8px 12px; border: 1px solid #d4b56b; background: #312817; color: #f7e7bd; font: inherit; cursor: pointer; }
+.dagger-dialogue-topics { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+.dagger-dialogue-diagnostics { padding-left: 1.2rem; color: #cab882; font: .72rem ui-monospace, monospace; }
+.dagger-dialogue-close { margin-top: 10px; }
+
 .dagger-menu.has-inventory { width: min(72rem, calc(100vw - 24px)); }
 .dagger-menu.has-inventory > h1 { font-size: 1rem; margin-bottom: 8px; }
 .dagger-inventory-root { margin-bottom: 12px; }

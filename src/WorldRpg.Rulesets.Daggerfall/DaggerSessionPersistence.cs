@@ -39,19 +39,24 @@ internal sealed class DaggerSessionPersistence
     private readonly DaggerfallEffectLifecycle _effects;
     private readonly Func<DaggerfallDoorRuntime> _doors;
     private readonly DaggerfallLocomotionPolicy _locomotion;
+    private readonly DaggerfallClimbingPolicy _climbing;
     internal DaggerSessionPersistence(DaggerfallState state, DaggerfallCorpseLootModule corpses, DaggerfallGroundContainers groundContainers, DaggerfallBookNotebook notebook,
         DaggerfallUniqueItemAllocator uniqueItems, FirstPersonCameraSystem camera, DaggerfallWorldTime time, DaggerfallSiteContext site,
-        DaggerfallEffectLifecycle effects, Func<DaggerfallDoorRuntime> doors, DaggerfallLocomotionPolicy locomotion)
+        DaggerfallEffectLifecycle effects, Func<DaggerfallDoorRuntime> doors, DaggerfallLocomotionPolicy locomotion,
+        DaggerfallClimbingPolicy climbing)
     {
         ArgumentNullException.ThrowIfNull(doors);
         ArgumentNullException.ThrowIfNull(locomotion);
-        State = state; _corpseLoot = corpses; _groundContainers = groundContainers ?? throw new ArgumentNullException(nameof(groundContainers)); _notebook = notebook ?? throw new ArgumentNullException(nameof(notebook)); _uniqueItems = uniqueItems; _camera = camera; _time = time; _site = site; _effects = effects; _doors = doors; _locomotion = locomotion;
+        ArgumentNullException.ThrowIfNull(climbing);
+        State = state; _corpseLoot = corpses; _groundContainers = groundContainers ?? throw new ArgumentNullException(nameof(groundContainers)); _notebook = notebook ?? throw new ArgumentNullException(nameof(notebook)); _uniqueItems = uniqueItems; _camera = camera; _time = time; _site = site; _effects = effects; _doors = doors; _locomotion = locomotion; _climbing = climbing;
     }
-    internal RulesetSavePayload Capture(ulong? generation, ulong? step, IReadOnlyDictionary<long, DaggerfallActorId> dynamicActors, DaggerfallEncounterRuntime encounters, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> siteDeltas, DaggerfallWorldProfileKey activeProfile, DaggerfallWorldProfileKey? returnProfile)
+    internal RulesetSavePayload Capture(ulong? generation, ulong? step, IReadOnlyDictionary<long, DaggerfallActorId> dynamicActors, DaggerfallEncounterRuntime encounters, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> siteDeltas, DaggerfallWorldProfileKey activeProfile, DaggerfallWorldProfileKey? returnProfile, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallDungeonDiscovery> dungeonDiscoveries, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallDungeonActionGraph> dungeonActions)
     {
         ArgumentNullException.ThrowIfNull(dynamicActors);
         ArgumentNullException.ThrowIfNull(encounters);
         ArgumentNullException.ThrowIfNull(siteDeltas);
+        ArgumentNullException.ThrowIfNull(dungeonDiscoveries);
+        ArgumentNullException.ThrowIfNull(dungeonActions);
         PlayerControlState control = State.PlayerControl;
         WorldPoint playerPosition = control.Position
             ?? throw new InvalidOperationException("Daggerfall cannot save without a player position.");
@@ -130,7 +135,16 @@ internal sealed class DaggerSessionPersistence
             Currency = State.Currency.Capture(),
             Services = State.Services.Capture(),
             QuestTraining = State.QuestTraining.Capture(),
+            RegionalPrices = State.RegionalPrices.Capture(),
+            Transport = State.Transport.Capture(),
+            Wagon = State.Wagon.Capture(),
             Locomotion = _locomotion.Capture(),
+            Climbing = _climbing.Capture(),
+            DungeonDiscovery = dungeonDiscoveries.Values.OrderBy(value => value.Profile.Site.Region)
+                .ThenBy(value => value.Profile.Site.Index).ThenBy(value => value.Profile.LogicalId, StringComparer.Ordinal)
+                .Select(value => value.Capture()).ToArray(),
+            DungeonActions = dungeonActions.Values.OrderBy(value => value.ProfileId, StringComparer.Ordinal)
+                .Select(value => value.Capture()).ToArray(),
             Encounters = encounters.Capture(),
             Notebook = _notebook.Capture(),
             GroundContainers = _groundContainers.Persisted.OrderBy(container => container.Id).Select(container =>
@@ -235,12 +249,15 @@ internal sealed class DaggerSessionPersistence
         State.Progression.AdvanceTo(saved.Experience, saved.Level);
         State.SkillUses.Restore(saved.SkillUses);
         _locomotion.Restore(saved.Locomotion);
+        _climbing.Restore(saved.Climbing);
         State.LevelUps.Restore(saved.LevelUp);
         State.Quests.Restore(saved.Quests);
 
         ApplyInventory(saved.Inventory, State.Inventory, State.Equipment, DaggerfallItemOwner.Player);
         ApplyActorInventories(saved.ActorInventories);
         _groundContainers.Restore(saved.GroundContainers);
+        if (saved.Wagon is { } wagon) State.Wagon.Restore(wagon);
+        State.Transport.Restore(saved.Transport);
         _notebook.Restore(saved.Notebook);
 
         WorldPoint position = new(saved.Player.X, saved.Player.Y, saved.Player.Z);

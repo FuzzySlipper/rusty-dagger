@@ -46,12 +46,24 @@ interface DaggerHud {
   readonly panelRequest?: PanelRequest | null;
   readonly saveSlots?: SaveSlotProjection;
   readonly controls?: ControlsProjection;
-  readonly activation?: { readonly mode: string; readonly message: string; readonly applied: boolean };
+  readonly activation?: { readonly mode: string; readonly message: string; readonly applied: boolean; readonly dialogue?: DialogueProjection | null };
+  readonly transport?: TransportProjection | null;
   readonly quests?: QuestPresentation;
   readonly notebook?: NotebookProjection;
   readonly view?: { readonly yawRadians: number; readonly pitchRadians: number; readonly interaction: string };
   readonly slots?: readonly { readonly owner: string; readonly id: string; readonly label: string; readonly detail: string; readonly order: number }[];
   readonly focus?: { readonly interaction: string; readonly container: string; readonly close: string } | null;
+}
+
+interface DialogueProjection {
+  readonly revision: string;
+  readonly targetLabel: string;
+  readonly greeting: string;
+  readonly tone: string;
+  readonly question: string | null;
+  readonly reply: string | null;
+  readonly topics: readonly { readonly id: string; readonly label: string }[];
+  readonly diagnostics: readonly string[];
 }
 
 interface QuestMessageProjection {
@@ -80,6 +92,53 @@ type SaveSlotAction =
   | { readonly action: 'save-slot'; readonly key?: string; readonly label: string; readonly confirm?: boolean }
   | { readonly action: 'load-slot'; readonly key: string }
   | { readonly action: 'delete-slot'; readonly key: string; readonly confirm?: boolean };
+
+type TransportMode = 'foot' | 'horse' | 'cart' | 'ship';
+
+interface TransportOptionProjection {
+  readonly id: string;
+  readonly mode: string;
+  readonly available: boolean;
+  readonly selected: boolean;
+  readonly label: string;
+  readonly message: string;
+  readonly travelModifier: number;
+}
+
+interface TransportItemProjection {
+  readonly key: string;
+  readonly definition: string;
+  readonly quantity: string | number;
+}
+
+interface WagonProjection {
+  readonly exists: boolean;
+  readonly accessible: boolean;
+  readonly id: number | null;
+  readonly usedClassicUnits: number;
+  readonly capacityClassicUnits: number;
+  readonly storeRevision: string | number | null;
+  readonly message: string;
+  readonly items: readonly TransportItemProjection[];
+}
+
+interface TransportProjection {
+  readonly mode: string;
+  readonly onShip: boolean;
+  readonly canRun: boolean;
+  readonly travelModifier: number;
+  readonly oceanMinutesPerMapPixel: number;
+  readonly options: readonly TransportOptionProjection[];
+  readonly wagon: WagonProjection;
+}
+
+type TransportAction =
+  | { readonly action: 'transport-select'; readonly mode: Exclude<TransportMode, 'ship'> }
+  | { readonly action: 'transport-toggle' }
+  | { readonly action: 'transport-board-ship' }
+  | { readonly action: 'transport-leave-ship' }
+  | { readonly action: 'wagon-put'; readonly revision: string; readonly item: string; readonly amount?: number }
+  | { readonly action: 'wagon-take'; readonly revision: string; readonly item: string; readonly amount?: number };
 
 /** A panel the player asked for on a device the DOM has no channel of its own for. */
 interface PanelRequest {
@@ -137,6 +196,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
         <button data-action="resume" autofocus>Return to game</button>
         <button data-action="inventory">Inventory &amp; equipment · I</button>
         <button data-action="character">Character · C</button>
+        <button data-action="transport">Travel &amp; transport</button>
         <button data-action="journal">Journal &amp; notes</button>
         <button data-action="loot">Activate aimed target · F</button>
         <label>Activation mode <select class="dagger-activation-mode"><option value="grab">Grab</option><option value="info">Information</option><option value="talk">Talk</option><option value="steal">Steal</option><option value="bash">Bash</option></select></label>
@@ -156,6 +216,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       <div class="dagger-controls-root" hidden></div>
       <div class="dagger-inventory-root" hidden></div>
       <div class="dagger-character-root" hidden></div>
+      <div class="dagger-transport-root" hidden></div>
       <div class="dagger-notebook-root" hidden></div>
       <div class="dagger-loot-root" hidden></div>
       <section class="dagger-save-slots" hidden aria-label="Save slots">
@@ -173,6 +234,16 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       <section class="dagger-tools" hidden><p>Sprite Workbench is a separate authoring application. Start it from the repository terminal:</p><pre>bash src/scripts/run-sprite-workbench.sh</pre><p>Edits save to authoring/sprites/privateers-hold.json.</p><a class="dagger-workbench-link" target="_blank" rel="noopener">Open Sprite Workbench ↗</a></section>
       <button data-action="back">Back to menu</button>
       </div>
+    </dialog>
+    <dialog class="dagger-dialogue" aria-labelledby="dagger-dialogue-title">
+      <h2 id="dagger-dialogue-title" class="dagger-dialogue-target"></h2>
+      <p class="dagger-dialogue-greeting" aria-live="polite"></p>
+      <label>Tone <select class="dagger-dialogue-tone"><option value="polite">Polite</option><option value="normal">Normal</option><option value="blunt">Blunt</option></select></label>
+      <p class="dagger-dialogue-question" aria-live="polite"></p>
+      <p class="dagger-dialogue-reply" aria-live="polite"></p>
+      <div class="dagger-dialogue-topics"></div>
+      <ul class="dagger-dialogue-diagnostics" aria-label="Text diagnostics"></ul>
+      <button class="dagger-dialogue-close" type="button">End conversation</button>
     </dialog>`;
   root.append(shell);
 
@@ -198,6 +269,10 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   const entryScreen = shell.querySelector<HTMLImageElement>('.dagger-entry-screen')!;
   const inventoryRoot = shell.querySelector<HTMLElement>('.dagger-inventory-root')!;
   const inventoryView = mountInventory(inventoryRoot, (action) => context.intents?.claim('dagger.ui', {
+    kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
+  }));
+  const transportRoot = shell.querySelector<HTMLElement>('.dagger-transport-root')!;
+  const transportView = mountTransport(transportRoot, action => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
   }));
   const controlsRoot = shell.querySelector<HTMLElement>('.dagger-controls-root')!;
@@ -235,6 +310,41 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     });
   };
   const menu = shell.querySelector<HTMLDialogElement>('dialog')!;
+  const dialogueWindow = shell.querySelector<HTMLDialogElement>('.dagger-dialogue')!;
+  const dialogueTarget = shell.querySelector<HTMLElement>('.dagger-dialogue-target')!;
+  const dialogueGreeting = shell.querySelector<HTMLElement>('.dagger-dialogue-greeting')!;
+  const dialogueTone = shell.querySelector<HTMLSelectElement>('.dagger-dialogue-tone')!;
+  const dialogueQuestion = shell.querySelector<HTMLElement>('.dagger-dialogue-question')!;
+  const dialogueReply = shell.querySelector<HTMLElement>('.dagger-dialogue-reply')!;
+  const dialogueTopics = shell.querySelector<HTMLElement>('.dagger-dialogue-topics')!;
+  const dialogueDiagnostics = shell.querySelector<HTMLElement>('.dagger-dialogue-diagnostics')!;
+  let currentDialogue: DialogueProjection | null = null;
+  dialogueTone.addEventListener('change', () => {
+    if (currentDialogue) context.intents?.claim('dagger.ui', {
+      kind: 'product-payload', contract: 'dagger.ui.action.v1',
+      data: { action: 'dialogue-tone', revision: currentDialogue.revision, tone: dialogueTone.value },
+    });
+  });
+  dialogueTopics.addEventListener('click', event => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-topic]');
+    if (button?.dataset.topic && currentDialogue) context.intents?.claim('dagger.ui', {
+      kind: 'product-payload', contract: 'dagger.ui.action.v1',
+      data: { action: 'dialogue-topic', revision: currentDialogue.revision, topic: button.dataset.topic },
+    });
+  });
+  shell.querySelector<HTMLButtonElement>('.dagger-dialogue-close')!.addEventListener('click', () => {
+    if (currentDialogue) context.intents?.claim('dagger.ui', {
+      kind: 'product-payload', contract: 'dagger.ui.action.v1',
+      data: { action: 'dialogue-close', revision: currentDialogue.revision },
+    });
+  });
+  dialogueWindow.addEventListener('cancel', event => {
+    event.preventDefault();
+    if (currentDialogue) context.intents?.claim('dagger.ui', {
+      kind: 'product-payload', contract: 'dagger.ui.action.v1',
+      data: { action: 'dialogue-close', revision: currentDialogue.revision },
+    });
+  });
   const menuTitle = shell.querySelector<HTMLElement>('#dagger-menu-title')!;
   const home = shell.querySelector<HTMLElement>('.dagger-menu-home')!;
   const panel = shell.querySelector<HTMLElement>('.dagger-menu-panel')!;
@@ -259,14 +369,14 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       if (host.isConnected) host.textContent = `Debug console unavailable: ${error instanceof Error ? error.message : String(error)}`;
     });
   };
-  let activePanel: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings' | null = null;
+  let activePanel: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'transport' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings' | null = null;
   const showHome = (): void => {
     controlsView.cancel();
     const previous = activePanel;
     if (previous === 'debug') closeDebug();
     if (previous === 'loot') closeLoot();
     activePanel = null;
-    menu.classList.remove('has-inventory', 'has-character', 'has-journal', 'has-loot', 'has-debug');
+    menu.classList.remove('has-inventory', 'has-character', 'has-transport', 'has-journal', 'has-loot', 'has-debug');
     home.hidden = false;
     panel.hidden = true;
     menuTitle.textContent = 'Game menu';
@@ -294,7 +404,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     else if (menu.open) closeMenu();
     else openMenu();
   };
-  const showPanel = (action: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings'): void => {
+  const showPanel = (action: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'transport' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings'): void => {
     if (!menu.open) openMenu();
     if (activePanel === 'loot' && action !== 'loot') closeLoot();
     if (activePanel === 'debug') closeDebug();
@@ -305,6 +415,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     tools.hidden = action !== 'tools';
     inventoryRoot.hidden = action !== 'inventory';
     characterRoot.hidden = action !== 'character';
+    transportRoot.hidden = action !== 'transport';
     notebookRoot.hidden = action !== 'journal';
     lootRoot.hidden = action !== 'loot';
     saveSlotsRoot.hidden = action !== 'save-slots';
@@ -314,11 +425,12 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     shell.querySelector<HTMLButtonElement>('[data-action="loot-exit"]')!.hidden = action !== 'loot';
     menu.classList.toggle('has-inventory', action === 'inventory');
     menu.classList.toggle('has-character', action === 'character');
+    menu.classList.toggle('has-transport', action === 'transport');
     menu.classList.toggle('has-journal', action === 'journal');
     menu.classList.toggle('has-loot', action === 'loot');
     menu.classList.toggle('has-debug', action === 'debug');
     menuTitle.textContent = action === 'settings' ? 'Control settings' : action === 'diagnostics' ? 'Composition diagnostics'
-      : action === 'inventory' ? 'Inventory & equipment' : action === 'character' ? 'Character' : action === 'journal' ? 'Journal & notes'
+      : action === 'inventory' ? 'Inventory & equipment' : action === 'character' ? 'Character' : action === 'transport' ? 'Travel & transport' : action === 'journal' ? 'Journal & notes'
       : action === 'loot' ? 'Loot' : action === 'debug' ? 'Engine debug console'
       : action === 'save-slots' ? (saveSlotMode === 'save' ? 'Save game' : 'Load game') : 'Sprite animation tool';
     if (action === 'character') {
@@ -364,7 +476,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     else if (action === 'loot') claim('loot');
     else if (action === 'save-game') showSaveSlots('save');
     else if (action === 'load-game') showSaveSlots('load');
-    else if (action === 'settings' || action === 'diagnostics' || action === 'tools' || action === 'inventory' || action === 'character' || action === 'journal' || action === 'debug') showPanel(action);
+    else if (action === 'settings' || action === 'diagnostics' || action === 'tools' || action === 'inventory' || action === 'character' || action === 'transport' || action === 'journal' || action === 'debug') showPanel(action);
   };
   const onMenuClick = (event: MouseEvent): void => {
     const action = (event.target as HTMLElement).closest<HTMLButtonElement>('button')?.dataset.action;
@@ -540,6 +652,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     }
 
     if (value.inventory) inventoryView.update(value.inventory);
+    transportView.update(isTransportProjection(value.transport) ? value.transport : null, value.inventory);
     if (value.character && isCharacterProjection(value.character)) characterView.update(value.character);
     if (value.notebook) notebookView.update(value.notebook);
     // A pad button reaches the product, not this DOM, so the panel it asked for arrives here as the
@@ -588,6 +701,30 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     if (value.controls) controlsView.update(value.controls);
     if (value.activation) activationMode.value = value.activation.mode;
     activationMode.disabled = value.mode !== 'playing';
+    const dialogue = value.activation?.dialogue ?? null;
+    currentDialogue = dialogue;
+    if (dialogue === null) {
+      if (dialogueWindow.open) dialogueWindow.close();
+    } else {
+      dialogueTarget.textContent = dialogue.targetLabel;
+      dialogueGreeting.textContent = dialogue.greeting;
+      dialogueTone.value = dialogue.tone;
+      dialogueQuestion.textContent = dialogue.question ?? '';
+      dialogueReply.textContent = dialogue.reply ?? '';
+      dialogueTopics.replaceChildren(...dialogue.topics.map(topic => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.topic = topic.id;
+        button.textContent = topic.label;
+        return button;
+      }));
+      dialogueDiagnostics.replaceChildren(...dialogue.diagnostics.map(detail => {
+        const item = document.createElement('li');
+        item.textContent = detail;
+        return item;
+      }));
+      if (!dialogueWindow.open) dialogueWindow.showModal();
+    }
     view.textContent = value.view ? viewSummary(value.view) : '';
     status.replaceChildren(...(value.slots ?? []).map(row => { const item = document.createElement('p'); item.textContent = `${row.label}: ${row.detail}`; return item; }));
     const focus = value.focus ?? null;
@@ -607,6 +744,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     closeDebug();
     controlsView.dispose();
     inventoryView.dispose();
+    transportView.dispose();
     characterView.dispose();
     notebookView.dispose();
     lootView.dispose();
@@ -622,6 +760,218 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     lootStylesheet.remove();
     shell.remove();
   } };
+}
+
+function mountTransport(root: HTMLElement, claim: (action: TransportAction) => void): {
+  update(value: TransportProjection | null, inventory?: InventoryProjection): void;
+  dispose(): void;
+} {
+  const shell = document.createElement('section');
+  shell.className = 'dagger-transport';
+  shell.setAttribute('aria-label', 'Travel and transport');
+  const heading = document.createElement('h2');
+  heading.textContent = 'Travel & transport';
+  const status = document.createElement('p');
+  status.className = 'dagger-transport-status';
+  status.setAttribute('role', 'status');
+  status.setAttribute('aria-live', 'polite');
+  const summary = document.createElement('p');
+  summary.className = 'dagger-transport-summary';
+  const optionsHeading = document.createElement('h3');
+  optionsHeading.textContent = 'Travel mode';
+  const options = document.createElement('div');
+  options.className = 'dagger-transport-options';
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.dataset.action = 'transport-toggle';
+  toggle.textContent = 'Toggle mount';
+  const wagon = document.createElement('section');
+  wagon.className = 'dagger-transport-wagon';
+  wagon.setAttribute('aria-label', 'Wagon storage');
+  const wagonHeading = document.createElement('h3');
+  wagonHeading.textContent = 'Wagon storage';
+  const wagonStatus = document.createElement('p');
+  wagonStatus.className = 'dagger-transport-wagon-status';
+  wagonStatus.setAttribute('role', 'status');
+  const wagonContentsHeading = document.createElement('h4');
+  wagonContentsHeading.textContent = 'Stored items';
+  const wagonContents = document.createElement('ul');
+  wagonContents.className = 'dagger-transport-wagon-items';
+  const packHeading = document.createElement('h4');
+  packHeading.textContent = 'Store from pack';
+  const packContents = document.createElement('ul');
+  packContents.className = 'dagger-transport-pack-items';
+  wagon.append(wagonHeading, wagonStatus, wagonContentsHeading, wagonContents, packHeading, packContents);
+  shell.append(heading, status, summary, optionsHeading, options, toggle, wagon);
+  root.append(shell);
+
+  let current: TransportProjection | null = null;
+  let currentInventory: InventoryProjection | undefined;
+  let disposed = false;
+
+  const itemQuantity = (quantity: string | number): string => String(quantity);
+  const safeAmount = (quantity: string | number): number | undefined => {
+    const parsed = typeof quantity === 'number' ? quantity : Number(quantity);
+    return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
+  };
+  const itemLabel = (definition: string): string => definition.replaceAll('-', ' ');
+  const revision = (): string => currentInventory?.revision ?? '';
+  const sendItem = (action: 'wagon-put' | 'wagon-take', item: TransportItemProjection): void => {
+    const currentRevision = revision();
+    if (!currentRevision) return;
+    const amount = item.key.startsWith('stack:') ? safeAmount(item.quantity) : undefined;
+    claim(amount === undefined
+      ? { action, revision: currentRevision, item: item.key }
+      : { action, revision: currentRevision, item: item.key, amount });
+  };
+  const renderItem = (item: TransportItemProjection, action: 'wagon-put' | 'wagon-take', disabled: boolean): HTMLLIElement => {
+    const row = document.createElement('li');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.action = action;
+    button.dataset.item = item.key;
+    button.disabled = disabled;
+    button.textContent = `${action === 'wagon-put' ? 'Store' : 'Take'} ${itemLabel(item.definition)} × ${itemQuantity(item.quantity)}`;
+    button.title = item.key;
+    button.addEventListener('click', () => sendItem(action, item));
+    row.append(button);
+    return row;
+  };
+
+  const render = (): void => {
+    if (disposed) return;
+    options.replaceChildren();
+    wagonContents.replaceChildren();
+    packContents.replaceChildren();
+    if (current === null) {
+      status.textContent = 'Transport projection unavailable.';
+      summary.textContent = '';
+      toggle.disabled = true;
+      wagonStatus.textContent = 'Wagon storage is unavailable.';
+      return;
+    }
+
+    const mode = normalizeTransportMode(current.mode);
+    const selected = current.options.find(option => option.selected)?.label ?? mode ?? 'Foot';
+    status.textContent = current.onShip ? 'You are aboard a ship.' : `${selected} travel selected.`;
+    summary.textContent = `Travel modifier ${current.travelModifier}; ocean travel ${current.oceanMinutesPerMapPixel} minutes per map pixel; running ${current.canRun ? 'allowed' : 'unavailable'}.`;
+    toggle.disabled = current.onShip;
+    toggle.textContent = current.onShip ? 'Leave ship before choosing a mount' : 'Toggle mount';
+    toggle.title = current.onShip ? 'Ship travel is a separate state.' : 'Choose horse, cart, or foot through the ruleset policy.';
+
+    for (const option of current.options) {
+      const optionMode = normalizeTransportMode(option.mode);
+      if (optionMode === null) continue;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.transportMode = optionMode;
+      button.textContent = `${option.label}${option.selected ? ' · selected' : ''}`;
+      button.title = option.message;
+      if (optionMode === 'ship') {
+        // Ship possession/access is owned by the future property task. A saved on-ship state may
+        // still be left, but the DOM never invents an enabled boarding affordance from this view.
+        button.disabled = !current.onShip;
+        button.textContent = current.onShip ? 'Leave ship' : `${option.label} · unavailable`;
+        if (current.onShip) button.addEventListener('click', () => claim({ action: 'transport-leave-ship' }));
+      } else {
+        button.disabled = current.onShip || !option.available;
+        if (!button.disabled) button.addEventListener('click', () => claim({ action: 'transport-select', mode: optionMode }));
+      }
+      options.append(button);
+    }
+    const wagonView = current.wagon;
+    wagonStatus.textContent = `${wagonView.message} ${formatClassicUnits(wagonView.usedClassicUnits)} / ${formatClassicUnits(wagonView.capacityClassicUnits)} classic weight units.`;
+    if (!wagonView.accessible) return;
+    const currentRevision = revision();
+    for (const item of wagonView.items) wagonContents.append(renderItem(item, 'wagon-take', !currentRevision));
+    for (const item of currentInventory?.items ?? []) {
+      const equipped = item.equippedSlots.length !== 0;
+      const invalidQuantity = item.key.startsWith('stack:') && safeAmount(item.quantity) === undefined;
+      const transportation = item.definition === 'template-93' || item.definition === 'template-94';
+      packContents.append(renderItem(item, 'wagon-put', !currentRevision || equipped || invalidQuantity || transportation));
+    }
+    if (wagonView.items.length === 0) {
+      const empty = document.createElement('li');
+      empty.textContent = 'The wagon is empty.';
+      wagonContents.append(empty);
+    }
+    if ((currentInventory?.items.length ?? 0) === 0) {
+      const empty = document.createElement('li');
+      empty.textContent = 'Your pack has no transferable items.';
+      packContents.append(empty);
+    }
+  };
+
+  toggle.addEventListener('click', () => {
+    if (!toggle.disabled) claim({ action: 'transport-toggle' });
+  });
+  return {
+    update(value, inventory): void {
+      if (disposed) return;
+      current = value;
+      currentInventory = inventory;
+      render();
+    },
+    dispose(): void {
+      if (disposed) return;
+      disposed = true;
+      shell.remove();
+    },
+  };
+}
+
+function normalizeTransportMode(value: string): TransportMode | null {
+  const mode = value.toLowerCase();
+  return mode === 'foot' || mode === 'horse' || mode === 'cart' || mode === 'ship' ? mode : null;
+}
+
+function isTransportProjection(value: unknown): value is TransportProjection {
+  if (typeof value !== 'object' || value === null || !('options' in value) || !Array.isArray(value.options)
+    || !('wagon' in value) || !isWagonProjection(value.wagon)) return false;
+  const candidate = value as Partial<TransportProjection>;
+  return typeof candidate.mode === 'string'
+    && typeof candidate.onShip === 'boolean'
+    && typeof candidate.canRun === 'boolean'
+    && typeof candidate.travelModifier === 'number' && Number.isFinite(candidate.travelModifier)
+    && typeof candidate.oceanMinutesPerMapPixel === 'number' && Number.isFinite(candidate.oceanMinutesPerMapPixel)
+    && Array.isArray(candidate.options) && candidate.options.every(isTransportOptionProjection);
+}
+
+function isTransportOptionProjection(value: unknown): value is TransportOptionProjection {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Partial<TransportOptionProjection>;
+  return typeof candidate.id === 'string'
+    && typeof candidate.mode === 'string'
+    && typeof candidate.available === 'boolean'
+    && typeof candidate.selected === 'boolean'
+    && typeof candidate.label === 'string'
+    && typeof candidate.message === 'string'
+    && typeof candidate.travelModifier === 'number' && Number.isFinite(candidate.travelModifier);
+}
+
+function isWagonProjection(value: unknown): value is WagonProjection {
+  if (typeof value !== 'object' || value === null || !('items' in value) || !Array.isArray(value.items)) return false;
+  const candidate = value as Partial<WagonProjection>;
+  return typeof candidate.exists === 'boolean'
+    && typeof candidate.accessible === 'boolean'
+    && (candidate.id === null || typeof candidate.id === 'number')
+    && typeof candidate.usedClassicUnits === 'number' && Number.isFinite(candidate.usedClassicUnits)
+    && typeof candidate.capacityClassicUnits === 'number' && Number.isFinite(candidate.capacityClassicUnits)
+    && (candidate.storeRevision === null || typeof candidate.storeRevision === 'string' || typeof candidate.storeRevision === 'number')
+    && typeof candidate.message === 'string'
+    && Array.isArray(candidate.items) && candidate.items.every(isTransportItemProjection);
+}
+
+function isTransportItemProjection(value: unknown): value is TransportItemProjection {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Partial<TransportItemProjection>;
+  return typeof candidate.key === 'string'
+    && typeof candidate.definition === 'string'
+    && (typeof candidate.quantity === 'string' || typeof candidate.quantity === 'number');
+}
+
+function formatClassicUnits(value: number): string {
+  return Number.isFinite(value) ? Math.max(0, value).toLocaleString() : 'unknown';
 }
 
 export function isHud(value: unknown): value is DaggerHud {

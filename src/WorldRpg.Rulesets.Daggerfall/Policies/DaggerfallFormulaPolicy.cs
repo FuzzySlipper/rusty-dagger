@@ -1,6 +1,7 @@
 namespace WorldRpg.Rulesets.Daggerfall.Policies;
 
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules;
 
 /// <summary>
 /// Named, compiled Daggerfall formulas.  The donor catalogs are evidence for
@@ -63,6 +64,87 @@ internal static class DaggerfallFormulaPolicy
         return distance > GraceDistanceMetres
             ? checked((int)((distance - GraceDistanceMetres) * HealthPerMetre))
             : 0;
+    }
+
+    /// <summary>Donor CalculateClimbingChance: racial and effect bonuses precede the skill clamp; luck is added after interpolation.</summary>
+    internal static int CalculateClimbingChance(int climbingSkill, int luck, bool khajiit, bool enhancedClimbing, int basePercentSuccess)
+    {
+        int effectiveSkill = checked(climbingSkill + (khajiit ? 30 : 0));
+        if (enhancedClimbing) effectiveSkill = checked(effectiveSkill * 2);
+        effectiveSkill = Math.Clamp(effectiveSkill, 5, 95);
+        float luckBonus = Math.Clamp(luck * .01f, 0f, 1f) * 10f;
+        return (int)(basePercentSuccess + ((100 - basePercentSuccess) * (effectiveSkill * .01f)) + luckBonus);
+    }
+
+    /// <summary>
+    /// Donor <c>FormulaHelper.CalculateStealthChance</c>, expressed over the
+    /// normalized Engine distance and the already-resolved player skill. The
+    /// classic distance conversion intentionally truncates before the fixed
+    /// point shift; callers own the random roll that compares this chance.
+    /// </summary>
+    internal static int CalculateStealthChance(float distanceToTarget, int targetStealthSkill) =>
+        CalculateStealthChance((double)distanceToTarget, targetStealthSkill);
+
+    internal static int CalculateStealthChance(double distanceToTarget, int targetStealthSkill)
+    {
+        if (!double.IsFinite(distanceToTarget) || distanceToTarget < 0d)
+            throw new ArgumentOutOfRangeException(nameof(distanceToTarget));
+        if (targetStealthSkill is < 0 or > 100)
+            throw new ArgumentOutOfRangeException(nameof(targetStealthSkill));
+
+        int classicDistance = checked((int)(distanceToTarget / DaggerfallPerceptionQueryDefaults.ClassicGlobalScale));
+        return checked(2 * ((classicDistance * targetStealthSkill) >> 10));
+    }
+
+    /// <summary>
+    /// Donor <c>FormulaHelper.CalculateEnemyPacification</c>'s chance term.
+    /// Etiquette and Streetwise use their social skill scaling; language skills
+    /// use their direct skill value. The caller supplies the independent
+    /// 0..199 roll to the boolean overload below.
+    /// </summary>
+    internal static int CalculateEnemyPacificationChance(
+        string languageSkill,
+        int languageSkillValue,
+        int personality,
+        bool weaponSheathed,
+        int comprehendLanguagesBonus = 0)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(languageSkill);
+        if (languageSkillValue is < 0 or > 100)
+            throw new ArgumentOutOfRangeException(nameof(languageSkillValue));
+        if (personality is < 0 or > 100)
+            throw new ArgumentOutOfRangeException(nameof(personality));
+        if (comprehendLanguagesBonus < 0)
+            throw new ArgumentOutOfRangeException(nameof(comprehendLanguagesBonus));
+
+        int chance = languageSkill is DaggerfallSkills.Etiquette or DaggerfallSkills.Streetwise
+            ? (languageSkillValue / 10) + (personality / 5)
+            : languageSkillValue + (personality / 10);
+        return checked(chance + (weaponSheathed ? 10 : -25) + comprehendLanguagesBonus);
+    }
+
+    /// <summary>Compares a caller-owned classic pacification roll in [0, 200).</summary>
+    internal static bool CalculateEnemyPacification(
+        string languageSkill,
+        int languageSkillValue,
+        int personality,
+        bool weaponSheathed,
+        int roll) =>
+        CalculateEnemyPacification(languageSkill, languageSkillValue, personality, weaponSheathed, 0, roll);
+
+    /// <summary>Compares a caller-owned classic pacification roll after effect bonus.</summary>
+    internal static bool CalculateEnemyPacification(
+        string languageSkill,
+        int languageSkillValue,
+        int personality,
+        bool weaponSheathed,
+        int comprehendLanguagesBonus,
+        int roll)
+    {
+        if (roll is < 0 or >= 200)
+            throw new ArgumentOutOfRangeException(nameof(roll));
+        return roll < CalculateEnemyPacificationChance(languageSkill, languageSkillValue, personality,
+            weaponSheathed, comprehendLanguagesBonus);
     }
 
     /// <summary>Donor FormulaHelper fatigue consequence: two fatigue points per accepted health point, in Daggerfall units.</summary>

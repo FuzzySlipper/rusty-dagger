@@ -457,6 +457,9 @@ public sealed class DaggerfallSiteContextTests
             DaggerfallCharacterReflexes.Average, "class00"))
     {
         Quests = new([]),
+        RegionalPrices = new(0, Enumerable.Repeat(
+            WorldRpg.Rulesets.Daggerfall.Policies.DaggerfallRegionalEconomyPolicy.NeutralRegionalAdjustment,
+            WorldRpg.Rulesets.Daggerfall.Policies.DaggerfallRegionalEconomyPolicy.RegionCount).ToArray()),
     };
 
     private static DaggerfallStatsSave EmptyStats() => new(StatsComponentCapture.Capture(new StatsComponent()), []);

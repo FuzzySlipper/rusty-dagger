@@ -151,6 +151,27 @@ internal sealed class DaggerfallSkillUseReactions
         return new DaggerfallLevelProgress(CurrentLevelUpSkillSum, next, PendingLevelUp);
     }
 
+    /// <summary>Reads a current permanent player skill through the progression owner's vocabulary.</summary>
+    internal int PermanentSkillValue(string skill)
+    {
+        DaggerfallStatId id = RequireSkill(skill);
+        return Permanent(id);
+    }
+
+    /// <summary>Applies a paid training increase to the permanent skill used by level eligibility.</summary>
+    /// <remarks>Training has its own policy and cap; it does not create ordinary skill-use tally.</remarks>
+    internal bool TryTrainPermanentSkill(string skill, int maximum, out int trainedValue)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(maximum);
+        DaggerfallStatId id = RequireSkill(skill);
+        int current = Permanent(id);
+        trainedValue = current;
+        if (current >= maximum || current >= MaximumSkillValue) return false;
+        DaggerfallStatModifiers.AdjustPermanent(_stats, id, 1);
+        trainedValue = Permanent(id);
+        return true;
+    }
+
     /// <summary>Starts classic level eligibility from the skill set a newly committed career grants.</summary>
     internal void RebaseForCareerSelection()
     {
@@ -273,6 +294,14 @@ internal sealed class DaggerfallSkillUseReactions
     }
 
     private int Permanent(DaggerfallStatId skill) => checked((int)_stats.GetStat(StatId.Parse(skill.Value)).BaseValue);
+
+    private DaggerfallStatId RequireSkill(string requested)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(requested);
+        return _skills.SingleOrDefault(skill => string.Equals(skill.Value, requested, StringComparison.Ordinal)) is { Value.Length: > 0 } found
+            ? found
+            : throw new ArgumentException($"Daggerfall progression names unknown skill '{requested}'.", nameof(requested));
+    }
 
     private int ScaleUsesForReflexes(int uses)
     {

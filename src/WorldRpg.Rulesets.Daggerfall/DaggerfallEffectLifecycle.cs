@@ -46,7 +46,31 @@ internal enum DaggerfallEffectStacking
 }
 
 /// <summary>Typed movement meaning supplied by compiled effect families; the movement owner never infers it from effect names.</summary>
-internal readonly record struct DaggerfallMovementProtection(bool PreventsFallDamage);
+internal readonly record struct DaggerfallMovementProtection(bool PreventsFallDamage, bool GrantsLevitation = false, bool EnhancesClimbing = false);
+
+/// <summary>
+/// Typed perception meaning supplied by a compiled effect family. Perception reads this
+/// projection instead of inferring concealment or language bonuses from effect keys or payloads.
+/// </summary>
+internal readonly record struct DaggerfallPerceptionEffectState(
+    bool Invisible = false,
+    bool Blending = false,
+    bool Shade = false,
+    int ComprehendLanguagesBonus = 0)
+{
+    internal DaggerfallPerceptionEffectState Validate()
+    {
+        if (ComprehendLanguagesBonus < 0)
+            throw new ArgumentOutOfRangeException(nameof(ComprehendLanguagesBonus));
+        return this;
+    }
+
+    internal DaggerfallPerceptionEffectState Combine(DaggerfallPerceptionEffectState other) => new DaggerfallPerceptionEffectState(
+        Invisible || other.Invisible,
+        Blending || other.Blending,
+        Shade || other.Shade,
+        checked(ComprehendLanguagesBonus + other.ComprehendLanguagesBonus)).Validate();
+}
 
 /// <summary>One compiled Daggerfall effect policy. Future effect families provide their own payload and state meaning here.</summary>
 internal sealed record DaggerfallEffectDefinition(
@@ -58,7 +82,8 @@ internal sealed record DaggerfallEffectDefinition(
     Func<DaggerfallActiveEffect, IEnumerable<IActiveEffectContribution>>? Apply = null,
     Action<DaggerfallActiveEffect>? MagicRound = null,
     Func<DaggerfallActiveEffect, IEnumerable<IActiveEffectContribution>>? Resume = null,
-    DaggerfallMovementProtection MovementProtection = default)
+    DaggerfallMovementProtection MovementProtection = default,
+    DaggerfallPerceptionEffectState Perception = default)
 {
     internal EffectDefinition ToEngineDefinition(string source) => new(
         EffectDefinitionId.Parse($"daggerfall.{Key}"),
@@ -172,6 +197,30 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
     internal bool PreventsFallDamage(long targetId) => _effects.Values.Any(effect =>
         checked((long)effect.Lifecycle.Context.Target.Value) == targetId
         && effect.Definition.MovementProtection.PreventsFallDamage);
+
+    internal bool GrantsLevitation(long targetId) => _effects.Values.Any(effect =>
+        checked((long)effect.Lifecycle.Context.Target.Value) == targetId
+        && effect.Definition.MovementProtection.GrantsLevitation);
+
+    internal bool EnhancesClimbing(long targetId) => _effects.Values.Any(effect =>
+        checked((long)effect.Lifecycle.Context.Target.Value) == targetId
+        && effect.Definition.MovementProtection.EnhancesClimbing);
+
+    /// <summary>
+    /// Projects the active typed perception meanings for one target. The lifecycle owns the
+    /// active-effect set, so callers never maintain a second concealment or comprehension cache.
+    /// </summary>
+    internal DaggerfallPerceptionEffectState PerceptionFor(long targetId)
+    {
+        if (targetId <= 0) throw new ArgumentOutOfRangeException(nameof(targetId));
+        DaggerfallPerceptionEffectState perception = default;
+        foreach (DaggerfallActiveEffect effect in Active)
+        {
+            if (checked((long)effect.Lifecycle.Context.Target.Value) != targetId) continue;
+            perception = perception.Combine(effect.Definition.Perception);
+        }
+        return perception.Validate();
+    }
 
     internal DaggerfallEffectAdmissionOutcome Start(DaggerfallEffectRequest request)
     {
