@@ -314,6 +314,8 @@ public static class DungeonNormalizer
         private readonly HashSet<string> unresolvedMeshIds = new(StringComparer.Ordinal);
         private readonly Dictionary<GeometryGroupKey, GeometryBuilder> geometry = [];
         private readonly List<GeometryPlacementDraft> geometryPlacements = [];
+        private readonly List<ActionModelDraft> actionModelDrafts = [];
+        private readonly List<NormalizedVector3> worldBoundsVertices = [];
         private readonly List<NormalizedLightPlacement> lights = [];
         private readonly List<NormalizedBillboardPlacement> billboards = [];
         private readonly List<NormalizedActorPlacement> actors = [];
@@ -436,6 +438,8 @@ public static class DungeonNormalizer
                 bool ordinaryActionDoor = RdbSourceClassification.HasActionDoorTag(model);
                 bool specialDoorAction = RdbSourceClassification.HasSpecialDoorAction(model);
                 bool actionDoor = ordinaryActionDoor || specialDoorAction;
+                bool actionModel = model.Action is not null && model.ObjectOffset > 0;
+                string? actionId = actionModel ? $"action/{blockPlacementId}/model-{index}" : null;
                 string? doorId = null;
                 if (actionDoor)
                 {
@@ -470,6 +474,7 @@ public static class DungeonNormalizer
                 Matrix3 rotation = Matrix3.ForModel(model);
                 HashSet<GeometryGroupKey> placementMeshKeys = [];
                 List<NormalizedVector3> placementVertices = [];
+                List<NormalizedVector3> localModelVertices = [];
                 foreach (Arch3dPlane plane in mesh.Planes)
                 {
                     if (plane.Points.Count < 3)
@@ -479,13 +484,22 @@ public static class DungeonNormalizer
 
                     (ushort archiveId, ushort recordId) = RemapTexture(plane.TextureArchive, plane.TextureRecord);
                     TextureInfo texture = ResolveTexture(archiveId, recordId);
-                    // Action-door model geometry remains in the visual mesh so
-                    // an eventual ruleset can render its source state, but it
-                    // must not become static collision before that policy
-                    // exists.
-                    GeometryGroupKey geometryKey = new(archiveId, recordId, !actionDoor, actionDoor ? doorId : null);
+                    // Action-bearing models need one local mesh assembly per
+                    // source placement. Their current pose is a separate
+                    // Engine Transform, so neither render nor collision data
+                    // is baked into the immutable world mesh.
+                    GeometryGroupKey geometryKey = new(
+                        archiveId,
+                        recordId,
+                        // Collision participation is independent of static placement. Movable
+                        // action and door models keep their source collision triangles so the
+                        // runtime can admit them under their current Engine transforms.
+                        true,
+                        actionDoor ? doorId : null,
+                        actionId);
                     GeometryBuilder group = Geometry(geometryKey, texture.MaterialId);
                     List<NormalizedVector3> polygon = new(plane.Points.Count);
+                    List<NormalizedVector3> worldPolygon = new(plane.Points.Count);
                     List<NormalizedVector2> uvs = new(plane.Points.Count);
                     foreach (Arch3dPoint point in plane.Points)
                     {
@@ -495,7 +509,11 @@ public static class DungeonNormalizer
                             rotated.XMetres + ToMetres(model.X) + origin.XMetres,
                             rotated.YMetres - ToMetres(model.Y) + origin.YMetres,
                             rotated.ZMetres + ToMetres(model.Z) + origin.ZMetres);
-                        polygon.Add(MeshGeometry.ToRightHanded(placed));
+                        NormalizedVector3 worldPoint = MeshGeometry.ToRightHanded(placed);
+                        worldPolygon.Add(worldPoint);
+                        polygon.Add(actionModel
+                            ? MeshGeometry.ToRightHanded(local)
+                            : worldPoint);
                         Arena2TextureUv uv = Arena2SourceTransform.ToTextureUv(point, texture.Width, texture.Height);
                         uvs.Add(new(uv.U, uv.V));
                     }
@@ -503,12 +521,31 @@ public static class DungeonNormalizer
                     NormalizedVector3 normal = MeshGeometry.Normal(polygon);
                     group.AddPolygon(polygon, uvs, normal, AddVertices, AddTriangles);
                     placementMeshKeys.Add(geometryKey);
-                    placementVertices.AddRange(polygon);
+                    placementVertices.AddRange(worldPolygon);
+                    worldBoundsVertices.AddRange(worldPolygon);
+                    if (actionModel)
+                        localModelVertices.AddRange(polygon);
                 }
 
-                if (placementVertices.Count > 0)
+                if (placementVertices.Count > 0 && !actionModel && !actionDoor)
                 {
-                    geometryPlacements.Add(new GeometryPlacementDraft(modelId, doorId, placementMeshKeys, placementVertices));
+                    geometryPlacements.Add(new GeometryPlacementDraft(modelId, null, placementMeshKeys, placementVertices));
+                }
+
+                if (actionModel && localModelVertices.Count > 0)
+                {
+                    Arena2EulerDegrees degrees = Arena2SourceTransform.ToEulerDegrees(model);
+                    actionModelDrafts.Add(new(
+                        actionId!,
+                        model.ModelId,
+                        model.Description,
+                        model.ModelIndex,
+                        model.SoundIndex,
+                        doorId,
+                        MeshGeometry.ToRightHanded(Place(model.X, model.Y, model.Z, reference)),
+                        new(degrees.X, degrees.Y, degrees.Z),
+                        placementMeshKeys,
+                        localModelVertices));
                 }
             }
 
@@ -517,9 +554,9 @@ public static class DungeonNormalizer
 
         public DungeonNormalizationResult Build()
         {
-            if (geometry.Count == 0)
+            if (geometry.Count == 0 || worldBoundsVertices.Count == 0)
             {
-                throw new InvalidOperationException("Dungeon normalization produced no static geometry.");
+                throw new InvalidOperationException("Dungeon normalization produced no drawable model geometry.");
             }
 
             string locationSlug = Slug(layout.LocationName);
@@ -529,15 +566,19 @@ public static class DungeonNormalizer
             string resourceCatalogArtifactId = $"artifact/{root}/resource-catalog";
             string visualMeshAssetId = $"mesh/{locationSlug}";
             List<NormalizedMesh> meshes = [];
-            List<NormalizedVector3> allVertices = [];
             Dictionary<GeometryGroupKey, string> meshIdsByGeometry = [];
             Dictionary<string, List<string>> visualMeshIdsByDoor = new(StringComparer.Ordinal);
             foreach ((GeometryGroupKey key, GeometryBuilder group) in geometry
-                .OrderBy(pair => pair.Key.Archive).ThenBy(pair => pair.Key.Record).ThenByDescending(pair => pair.Key.ParticipatesInCollision).ThenBy(pair => pair.Key.DoorId, StringComparer.Ordinal))
+                .OrderBy(pair => pair.Key.Archive).ThenBy(pair => pair.Key.Record)
+                .ThenByDescending(pair => pair.Key.ParticipatesInCollision)
+                .ThenBy(pair => pair.Key.DoorId, StringComparer.Ordinal)
+                .ThenBy(pair => pair.Key.ActionId, StringComparer.Ordinal))
             {
                 string id = MeshId(locationSlug, key);
-                meshes.Add(group.ToMesh(id, staticMeshArtifactId));
-                allVertices.AddRange(group.Vertices);
+                string artifactId = key.ActionId is { } actionId
+                    ? ActionModelArtifactId(staticMeshArtifactId, actionId)
+                    : staticMeshArtifactId;
+                meshes.Add(group.ToMesh(id, artifactId));
                 meshIdsByGeometry.Add(key, id);
                 if (key.DoorId is not null)
                 {
@@ -551,8 +592,18 @@ public static class DungeonNormalizer
                 }
             }
 
-            NormalizedBounds bounds = MeshGeometry.Bounds(allVertices);
-            NormalizedNavigationSurface navigation = Navigation(spatialArtifactId, meshes);
+            NormalizedBounds bounds = MeshGeometry.Bounds(worldBoundsVertices);
+            HashSet<string> movableMeshIds = geometry.Keys
+                .Where(key => key.ActionId is not null || key.DoorId is not null)
+                .Select(key => meshIdsByGeometry[key])
+                .ToHashSet(StringComparer.Ordinal);
+            HashSet<string> staticMeshIds = meshes
+                .Where(mesh => mesh.MaterialGroups.Any(group => group.ParticipatesInCollision)
+                    && !movableMeshIds.Contains(mesh.Id))
+                .Select(mesh => mesh.Id)
+                .ToHashSet(StringComparer.Ordinal);
+            NormalizedMesh[] staticGeometry = meshes.Where(mesh => staticMeshIds.Contains(mesh.Id)).ToArray();
+            NormalizedNavigationSurface navigation = Navigation(spatialArtifactId, staticGeometry);
             List<NormalizedDoorPlacement> doors = doorDrafts
                 .OrderBy(door => door.Id, StringComparer.Ordinal)
                 .Select(door => new NormalizedDoorPlacement(
@@ -594,6 +645,21 @@ public static class DungeonNormalizer
             {
                 Actions = actions,
                 GeometryPlacements = normalizedGeometryPlacements,
+                StaticMeshIds = staticGeometry.Select(mesh => mesh.Id).ToArray(),
+                ActionModels = actionModelDrafts
+                    .Select(draft => new NormalizedActionModelPlacement(
+                        draft.ActionId,
+                        draft.ModelId,
+                        draft.Description,
+                        draft.ModelIndex,
+                        draft.RawIndex,
+                        draft.DoorId,
+                        draft.Position,
+                        draft.RotationDegrees,
+                        MeshGeometry.Bounds(draft.LocalVertices),
+                        draft.MeshKeys.Select(key => meshIdsByGeometry[key]).ToArray(),
+                        ActionModelArtifactId(staticMeshArtifactId, draft.ActionId)))
+                    .ToArray(),
             };
             DungeonSpatialPublication spatialPublication = DungeonSpatialPublication.Create(
                 staticMeshArtifactId,
@@ -695,7 +761,8 @@ public static class DungeonNormalizer
                     doorIdsByOffset[model.ObjectOffset],
                     IsFlat: false,
                     SoundIndex: model.SoundIndex,
-                    Position: null));
+                    Position: null,
+                    RawIndex: model.SoundIndex));
                 AddProvenance(id, "rdb-action-model", blocks.Source, model.ObjectOffset);
             }
 
@@ -717,7 +784,8 @@ public static class DungeonNormalizer
                     DoorId: null,
                     IsFlat: true,
                     SoundIndex: flat.SoundIndex,
-                    Position: MeshGeometry.ToRightHanded(Place(flat.X, flat.Y, flat.Z, reference))));
+                    Position: MeshGeometry.ToRightHanded(Place(flat.X, flat.Y, flat.Z, reference)),
+                    RawIndex: flat.SoundIndex));
                 AddProvenance(id, "rdb-action-flat", blocks.Source, flat.ObjectOffset);
             }
         }
@@ -786,11 +854,18 @@ public static class DungeonNormalizer
 
         private static string MeshId(string locationSlug, GeometryGroupKey key)
         {
-            string participation = key.ParticipatesInCollision ? "static" : "action-visual";
+            string participation = key.ActionId is not null || key.DoorId is not null
+                ? "action-visual"
+                : "static";
+            if (key.ActionId is { } actionId)
+                return $"mesh/action/{Slug(actionId["action/".Length..])}/texture-{key.Archive}-{key.Record}/{participation}";
             return key.DoorId is null
                 ? $"mesh/{locationSlug}/texture-{key.Archive}-{key.Record}/{participation}"
                 : $"mesh/{key.DoorId}/texture-{key.Archive}-{key.Record}/{participation}";
         }
+
+        private static string ActionModelArtifactId(string staticMeshArtifactId, string actionId) =>
+            $"{staticMeshArtifactId}/action/{Slug(actionId["action/".Length..])}";
 
         private static NormalizedVector3[] SelectSurfaceSamples(IReadOnlyList<NormalizedVector3> placementVertices)
         {
@@ -939,9 +1014,21 @@ public static class DungeonNormalizer
 
     private sealed record DoorDraft(string Id, string DoorResourceId, NormalizedVector3 Position, NormalizedVector3 RotationDegrees, string Kind, int StartingLockValue, NormalizedDoorAction? Action);
 
-    private readonly record struct GeometryGroupKey(ushort Archive, ushort Record, bool ParticipatesInCollision, string? DoorId);
+    private readonly record struct GeometryGroupKey(ushort Archive, ushort Record, bool ParticipatesInCollision, string? DoorId, string? ActionId);
 
     private sealed record GeometryPlacementDraft(string Id, string? DoorId, IReadOnlySet<GeometryGroupKey> MeshKeys, IReadOnlyList<NormalizedVector3> Vertices);
+
+    private sealed record ActionModelDraft(
+        string ActionId,
+        string ModelId,
+        string Description,
+        ushort ModelIndex,
+        byte RawIndex,
+        string? DoorId,
+        NormalizedVector3 Position,
+        NormalizedVector3 RotationDegrees,
+        IReadOnlySet<GeometryGroupKey> MeshKeys,
+        IReadOnlyList<NormalizedVector3> LocalVertices);
 
     private readonly record struct Matrix3(float M11, float M12, float M13, float M21, float M22, float M23, float M31, float M32, float M33)
     {

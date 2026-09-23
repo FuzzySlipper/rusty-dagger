@@ -53,6 +53,36 @@ interface DaggerHud {
   readonly view?: { readonly yawRadians: number; readonly pitchRadians: number; readonly interaction: string };
   readonly slots?: readonly { readonly owner: string; readonly id: string; readonly label: string; readonly detail: string; readonly order: number }[];
   readonly focus?: { readonly interaction: string; readonly container: string; readonly close: string } | null;
+  readonly dungeonText?: { readonly actionId: string; readonly kind: string; readonly text: string; readonly revision: string; readonly requiresAnswer: boolean } | null;
+  readonly death?: DeathProjection | null;
+  readonly rest?: RestProjection | null;
+}
+
+interface RestProjection {
+  readonly hasResult: boolean;
+  readonly revision: string;
+  readonly mode: string | null;
+  readonly requestedSeconds: number;
+  readonly elapsedSeconds: number;
+  readonly recoveryHours: number;
+  readonly healthRecovered: number;
+  readonly fatigueRecovered: number;
+  readonly spellPointsRecovered: number;
+  readonly interruption: string;
+  readonly message: string | null;
+}
+
+interface DeathProjection {
+  readonly active: boolean;
+  readonly screen: string;
+  readonly revision: string;
+  readonly message: string;
+  readonly controlsSuppressed: boolean;
+  readonly cameraEffect: string;
+  readonly fadeEffect: string;
+  readonly audioCue: string;
+  readonly choices: readonly { readonly action: string; readonly id: string; readonly label: string; readonly available: boolean }[];
+  readonly selected: string | null;
 }
 
 interface DialogueProjection {
@@ -187,7 +217,25 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     <p class="dagger-outcome" role="status">Awaiting projection…</p>
     <section class="dagger-quests" aria-live="polite"></section>
     <p class="dagger-view" aria-live="polite"></p><section class="dagger-status"></section><button class="dagger-focus-close" hidden></button>
-    <div class="dagger-death" role="alert" hidden><img class="dagger-death-screen" alt="You have died."></div>
+    <div class="dagger-death" role="alertdialog" aria-labelledby="dagger-death-title" aria-describedby="dagger-death-message" hidden>
+      <img class="dagger-death-screen" alt="You have died.">
+      <div class="dagger-death-fade" aria-hidden="true"></div>
+      <section class="dagger-death-panel">
+        <h1 id="dagger-death-title">You have died.</h1>
+        <p class="dagger-death-message" id="dagger-death-message"></p>
+        <label class="dagger-death-load">Load saved game <select class="dagger-death-load-slot"><option value="">Choose a saved game</option></select></label>
+        <div class="dagger-death-actions">
+          <button class="dagger-death-new" type="button">New game</button>
+          <button class="dagger-death-load-button" type="button">Load game</button>
+          <button class="dagger-death-quit" type="button">Quit to title</button>
+        </div>
+      </section>
+    </div>
+    <section class="dagger-dungeon-text" role="dialog" aria-label="Dungeon text" hidden>
+      <p class="dagger-dungeon-text-body"></p>
+      <form class="dagger-dungeon-text-answer" hidden><label>Answer <input maxlength="256" autocomplete="off"></label><button type="submit">Answer</button></form>
+      <button class="dagger-dungeon-text-close" type="button">Continue</button>
+    </section>
     <div class="dagger-entry" role="dialog" aria-label="Title" hidden><img class="dagger-entry-screen" alt="Rusty Dagger"><button class="dagger-entry-begin" type="button">Begin</button></div>
     <button class="dagger-menu-toggle" type="button" data-action="menu" aria-haspopup="dialog">Menu · Esc</button>
     <dialog class="dagger-menu" aria-labelledby="dagger-menu-title">
@@ -197,9 +245,10 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
         <button data-action="inventory">Inventory &amp; equipment · I</button>
         <button data-action="character">Character · C</button>
         <button data-action="transport">Travel &amp; transport</button>
+        <button data-action="rest">Rest &amp; loiter</button>
         <button data-action="journal">Journal &amp; notes</button>
         <button data-action="loot">Activate aimed target · F</button>
-        <label>Activation mode <select class="dagger-activation-mode"><option value="grab">Grab</option><option value="info">Information</option><option value="talk">Talk</option><option value="steal">Steal</option><option value="bash">Bash</option></select></label>
+        <label>Activation mode <select class="dagger-activation-mode"><option value="grab">Grab</option><option value="info">Information</option><option value="talk">Talk</option><option value="steal">Steal / Lockpick</option><option value="bash">Bash</option></select></label>
         <button data-action="save-game">Save game</button>
         <button data-action="load-game">Load game</button>
         <button data-action="debug">Engine debug console</button>
@@ -217,6 +266,16 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       <div class="dagger-inventory-root" hidden></div>
       <div class="dagger-character-root" hidden></div>
       <div class="dagger-transport-root" hidden></div>
+      <section class="dagger-rest-root" hidden aria-label="Rest and loiter">
+        <h2>Rest &amp; loiter</h2>
+        <p class="dagger-rest-status" role="status" aria-live="polite">Choose a rest action.</p>
+        <label>Hours <input class="dagger-rest-hours" type="number" min="0" max="99" step="1" value="1"></label>
+        <div class="dagger-rest-actions">
+          <button type="button" data-action="rest" data-rest-mode="timed">Rest for hours</button>
+          <button type="button" data-action="rest" data-rest-mode="until-healed">Rest until healed</button>
+          <button type="button" data-action="rest" data-rest-mode="loiter">Loiter</button>
+        </div>
+      </section>
       <div class="dagger-notebook-root" hidden></div>
       <div class="dagger-loot-root" hidden></div>
       <section class="dagger-save-slots" hidden aria-label="Save slots">
@@ -265,6 +324,31 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   });
   const deathRoot = shell.querySelector<HTMLElement>('.dagger-death')!;
   const deathScreen = shell.querySelector<HTMLImageElement>('.dagger-death-screen')!;
+  const deathMessage = shell.querySelector<HTMLElement>('.dagger-death-message')!;
+  const deathLoadSlot = shell.querySelector<HTMLSelectElement>('.dagger-death-load-slot')!;
+  const deathNew = shell.querySelector<HTMLButtonElement>('.dagger-death-new')!;
+  const deathLoad = shell.querySelector<HTMLButtonElement>('.dagger-death-load-button')!;
+  const deathQuit = shell.querySelector<HTMLButtonElement>('.dagger-death-quit')!;
+  const dungeonTextRoot = shell.querySelector<HTMLElement>('.dagger-dungeon-text')!;
+  const dungeonTextBody = shell.querySelector<HTMLElement>('.dagger-dungeon-text-body')!;
+  const dungeonTextForm = shell.querySelector<HTMLFormElement>('.dagger-dungeon-text-answer')!;
+  const dungeonTextAnswer = dungeonTextForm.querySelector<HTMLInputElement>('input')!;
+  const dungeonTextClose = shell.querySelector<HTMLButtonElement>('.dagger-dungeon-text-close')!;
+  let currentDungeonText: NonNullable<DaggerHud['dungeonText']> | null = null;
+  dungeonTextForm.addEventListener('submit', event => {
+    event.preventDefault();
+    if (!currentDungeonText?.requiresAnswer) return;
+    context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: 'dagger.ui.action.v1', data: {
+      action: 'dungeon-text-answer', revision: currentDungeonText.revision,
+      item: currentDungeonText.actionId, text: dungeonTextAnswer.value,
+    } });
+  });
+  dungeonTextClose.addEventListener('click', () => {
+    if (!currentDungeonText) return;
+    context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: 'dagger.ui.action.v1', data: {
+      action: 'dungeon-text-close', revision: currentDungeonText.revision, item: currentDungeonText.actionId,
+    } });
+  });
   const entryRoot = shell.querySelector<HTMLElement>('.dagger-entry')!;
   const entryScreen = shell.querySelector<HTMLImageElement>('.dagger-entry-screen')!;
   const inventoryRoot = shell.querySelector<HTMLElement>('.dagger-inventory-root')!;
@@ -275,6 +359,27 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   const transportView = mountTransport(transportRoot, action => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
   }));
+  const restRoot = shell.querySelector<HTMLElement>('.dagger-rest-root')!;
+  const restStatus = shell.querySelector<HTMLElement>('.dagger-rest-status')!;
+  const restHours = shell.querySelector<HTMLInputElement>('.dagger-rest-hours')!;
+  const submitRest = (mode: string): void => {
+    if (mode === 'until-healed') {
+      context.intents?.claim('dagger.ui', {
+        kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'rest', mode },
+      });
+      return;
+    }
+    const rawHours = restHours.value.trim();
+    const hours = Number(rawHours);
+    if (rawHours.length === 0 || !Number.isSafeInteger(hours) || hours < 0) {
+      restStatus.textContent = 'Enter a whole number of hours.';
+      restHours.focus();
+      return;
+    }
+    context.intents?.claim('dagger.ui', {
+      kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'rest', mode, hours },
+    });
+  };
   const controlsRoot = shell.querySelector<HTMLElement>('.dagger-controls-root')!;
   const controlsView = mountControls(controlsRoot, action => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
@@ -299,6 +404,17 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   let saveSlotMode: 'save' | 'load' = 'save';
   let saveConfirm = false;
   let deleteConfirm = false;
+  const claimDeath = (action: string, key?: string): void => context.intents?.claim('dagger.ui', {
+    kind: 'product-payload', contract: 'dagger.ui.action.v1', data: key ? { action, key } : { action },
+  });
+  deathNew.addEventListener('click', () => claimDeath('death-new-game'));
+  deathLoad.addEventListener('click', () => {
+    if (deathLoadSlot.value) claimDeath('death-load-game', deathLoadSlot.value);
+  });
+  deathQuit.addEventListener('click', () => claimDeath('death-quit'));
+  deathLoadSlot.addEventListener('change', () => {
+    deathLoad.disabled = deathLoadSlot.value.length === 0;
+  });
   const lootView = mountLoot(lootRoot, action => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
   }));
@@ -320,27 +436,27 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   const dialogueDiagnostics = shell.querySelector<HTMLElement>('.dagger-dialogue-diagnostics')!;
   let currentDialogue: DialogueProjection | null = null;
   dialogueTone.addEventListener('change', () => {
-    if (currentDialogue) context.intents?.claim('dagger.ui', {
+    if (!deadMode && currentDialogue) context.intents?.claim('dagger.ui', {
       kind: 'product-payload', contract: 'dagger.ui.action.v1',
       data: { action: 'dialogue-tone', revision: currentDialogue.revision, tone: dialogueTone.value },
     });
   });
   dialogueTopics.addEventListener('click', event => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-topic]');
-    if (button?.dataset.topic && currentDialogue) context.intents?.claim('dagger.ui', {
+    if (!deadMode && button?.dataset.topic && currentDialogue) context.intents?.claim('dagger.ui', {
       kind: 'product-payload', contract: 'dagger.ui.action.v1',
       data: { action: 'dialogue-topic', revision: currentDialogue.revision, topic: button.dataset.topic },
     });
   });
   shell.querySelector<HTMLButtonElement>('.dagger-dialogue-close')!.addEventListener('click', () => {
-    if (currentDialogue) context.intents?.claim('dagger.ui', {
+    if (!deadMode && currentDialogue) context.intents?.claim('dagger.ui', {
       kind: 'product-payload', contract: 'dagger.ui.action.v1',
       data: { action: 'dialogue-close', revision: currentDialogue.revision },
     });
   });
   dialogueWindow.addEventListener('cancel', event => {
     event.preventDefault();
-    if (currentDialogue) context.intents?.claim('dagger.ui', {
+    if (!deadMode && currentDialogue) context.intents?.claim('dagger.ui', {
       kind: 'product-payload', contract: 'dagger.ui.action.v1',
       data: { action: 'dialogue-close', revision: currentDialogue.revision },
     });
@@ -369,14 +485,14 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       if (host.isConnected) host.textContent = `Debug console unavailable: ${error instanceof Error ? error.message : String(error)}`;
     });
   };
-  let activePanel: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'transport' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings' | null = null;
+  let activePanel: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings' | null = null;
   const showHome = (): void => {
     controlsView.cancel();
     const previous = activePanel;
     if (previous === 'debug') closeDebug();
     if (previous === 'loot') closeLoot();
     activePanel = null;
-    menu.classList.remove('has-inventory', 'has-character', 'has-transport', 'has-journal', 'has-loot', 'has-debug');
+    menu.classList.remove('has-inventory', 'has-character', 'has-transport', 'has-rest', 'has-journal', 'has-loot', 'has-debug');
     home.hidden = false;
     panel.hidden = true;
     menuTitle.textContent = 'Game menu';
@@ -390,8 +506,8 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     closeDebug();
     activePanel = null;
     menu.close();
-    context.ui.setInteractionMode(titleMode ? 'interface' : 'gameplay');
-    if (!titleMode) context.ui.focusGameplay();
+    context.ui.setInteractionMode(titleMode || deadMode ? 'interface' : 'gameplay');
+    if (!titleMode && !deadMode) context.ui.focusGameplay();
   };
   const openMenu = (): void => {
     controllerDirection = 0;
@@ -400,11 +516,12 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     showHome();
   };
   const dismiss = (): void => {
+    if (deadMode) return;
     if (activePanel !== null) showHome();
     else if (menu.open) closeMenu();
     else openMenu();
   };
-  const showPanel = (action: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'transport' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings'): void => {
+  const showPanel = (action: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings'): void => {
     if (!menu.open) openMenu();
     if (activePanel === 'loot' && action !== 'loot') closeLoot();
     if (activePanel === 'debug') closeDebug();
@@ -416,6 +533,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     inventoryRoot.hidden = action !== 'inventory';
     characterRoot.hidden = action !== 'character';
     transportRoot.hidden = action !== 'transport';
+    restRoot.hidden = action !== 'rest';
     notebookRoot.hidden = action !== 'journal';
     lootRoot.hidden = action !== 'loot';
     saveSlotsRoot.hidden = action !== 'save-slots';
@@ -426,11 +544,12 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     menu.classList.toggle('has-inventory', action === 'inventory');
     menu.classList.toggle('has-character', action === 'character');
     menu.classList.toggle('has-transport', action === 'transport');
+    menu.classList.toggle('has-rest', action === 'rest');
     menu.classList.toggle('has-journal', action === 'journal');
     menu.classList.toggle('has-loot', action === 'loot');
     menu.classList.toggle('has-debug', action === 'debug');
     menuTitle.textContent = action === 'settings' ? 'Control settings' : action === 'diagnostics' ? 'Composition diagnostics'
-      : action === 'inventory' ? 'Inventory & equipment' : action === 'character' ? 'Character' : action === 'transport' ? 'Travel & transport' : action === 'journal' ? 'Journal & notes'
+      : action === 'inventory' ? 'Inventory & equipment' : action === 'character' ? 'Character' : action === 'transport' ? 'Travel & transport' : action === 'rest' ? 'Rest & loiter' : action === 'journal' ? 'Journal & notes'
       : action === 'loot' ? 'Loot' : action === 'debug' ? 'Engine debug console'
       : action === 'save-slots' ? (saveSlotMode === 'save' ? 'Save game' : 'Load game') : 'Sprite animation tool';
     if (action === 'character') {
@@ -476,10 +595,15 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     else if (action === 'loot') claim('loot');
     else if (action === 'save-game') showSaveSlots('save');
     else if (action === 'load-game') showSaveSlots('load');
-    else if (action === 'settings' || action === 'diagnostics' || action === 'tools' || action === 'inventory' || action === 'character' || action === 'transport' || action === 'journal' || action === 'debug') showPanel(action);
+    else if (action === 'settings' || action === 'diagnostics' || action === 'tools' || action === 'inventory' || action === 'character' || action === 'transport' || action === 'rest' || action === 'journal' || action === 'debug') showPanel(action);
   };
   const onMenuClick = (event: MouseEvent): void => {
-    const action = (event.target as HTMLElement).closest<HTMLButtonElement>('button')?.dataset.action;
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button');
+    const action = button?.dataset.action;
+    if (action === 'rest' && button?.dataset.restMode) {
+      submitRest(button.dataset.restMode);
+      return;
+    }
     if (action === 'save-slot') {
       const key = saveSlotsSelect.value || undefined;
       const label = saveSlotsLabel.value.trim();
@@ -532,7 +656,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     if (event.code === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
-      if (!event.repeat) dismiss();
+      if (!event.repeat && !deadMode) dismiss();
       return;
     }
     if (menu.open || event.ctrlKey || event.altKey || event.metaKey
@@ -542,7 +666,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   // The Engine owns controller sampling and interface/gameplay arbitration.
   // This adapter assigns only DOM menu meaning and reuses click/menu handlers.
   let controllerDirection = 0;
-  const controllerScope = (): HTMLElement | null => menu.open ? menu : !entryRoot.hidden ? entryRoot : null;
+  const controllerScope = (): HTMLElement | null => menu.open ? menu : !deathRoot.hidden ? deathRoot : !entryRoot.hidden ? entryRoot : null;
   const focusControllerItem = (direction: number): void => {
     const scope = controllerScope();
     if (scope === null) return;
@@ -594,6 +718,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   let artCooldown = 0;
   let deadMode = false;
   let titleMode = false;
+  let currentDeath: DeathProjection | null = null;
   // The entry screen is the mode's own screen: the mode shows the published artifact, and the one thing
   // the screen does is ask the product to begin. The product decides, so the answer is the mode changing
   // rather than this hiding itself.
@@ -605,7 +730,11 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       context.ui.setInteractionMode(titleMode ? 'interface' : 'gameplay');
       if (!titleMode) context.ui.focusGameplay();
     }
-    if (!titleMode) return;
+    if (!titleMode) {
+      if (!deadMode && !menu.open) context.ui.setInteractionMode('gameplay');
+      return;
+    }
+    context.ui.setInteractionMode('interface');
     const entry = image(screenForMode(TITLE_MODE)!);
     if (entry !== null) entryScreen.src = entry;
   };
@@ -618,10 +747,51 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   const requestArt = (revision: string): void => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'art-request', revision },
   });
-  const redrawArt = (): void => {
+  const redrawDeath = (death: DeathProjection | null): void => {
     deathRoot.hidden = !deadMode;
-    const death = image(screenForMode('dead')!);
-    if (deadMode && death !== null) deathScreen.src = death;
+    menuToggle.hidden = deadMode;
+    if (!deadMode) {
+      if (!titleMode && !menu.open) context.ui.setInteractionMode('gameplay');
+      return;
+    }
+    context.ui.setInteractionMode('interface');
+    deathMessage.textContent = death?.message ?? 'You have died.';
+    deathRoot.dataset.cameraEffect = death?.cameraEffect ?? 'fall';
+    deathRoot.dataset.fadeEffect = death?.fadeEffect ?? 'to-black';
+    deathRoot.dataset.audioCue = death?.audioCue ?? 'player-death';
+    const choices = death?.choices ?? [
+      { action: 'death-new-game', id: 'new-game', label: 'New game', available: true },
+      { action: 'death-load-game', id: 'load-game', label: 'Load game', available: saveSlots.entries.length > 0 },
+      { action: 'death-quit', id: 'quit-to-title', label: 'Quit to title', available: true },
+    ];
+    const findChoice = (action: string) => choices.find(choice => choice.action === action);
+    const selected = death?.selected ?? null;
+    const newChoice = findChoice('death-new-game');
+    const loadChoice = findChoice('death-load-game');
+    const quitChoice = findChoice('death-quit');
+    deathNew.textContent = newChoice?.label ?? 'New game';
+    deathLoad.textContent = loadChoice?.label ?? 'Load game';
+    deathQuit.textContent = quitChoice?.label ?? 'Quit to title';
+    deathNew.disabled = selected !== null || newChoice?.available === false;
+    deathQuit.disabled = selected !== null || quitChoice?.available === false;
+
+    const selectedSlot = deathLoadSlot.value;
+    deathLoadSlot.replaceChildren(new Option('Choose a saved game', ''));
+    for (const entry of saveSlots.entries) deathLoadSlot.add(new Option(entry.label, entry.key));
+    deathLoadSlot.value = saveSlots.entries.some(entry => entry.key === selectedSlot) ? selectedSlot : '';
+    const loadAvailable = loadChoice?.available ?? saveSlots.entries.length > 0;
+    deathLoadSlot.disabled = selected !== null || !loadAvailable;
+    deathLoad.disabled = selected !== null || !loadAvailable || deathLoadSlot.value.length === 0;
+    if (death?.screen) {
+      const screen = image(death.screen);
+      if (screen !== null) deathScreen.src = screen;
+    } else {
+      const screen = image(screenForMode('dead')!);
+      if (screen !== null) deathScreen.src = screen;
+    }
+  };
+  const redrawArt = (): void => {
+    redrawDeath(currentDeath);
     redrawEntry();
     // The panels memo their own state revision, so art that arrived after the state it draws has to
     // ask them to paint again rather than re-send a projection they would ignore.
@@ -655,10 +825,24 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     transportView.update(isTransportProjection(value.transport) ? value.transport : null, value.inventory);
     if (value.character && isCharacterProjection(value.character)) characterView.update(value.character);
     if (value.notebook) notebookView.update(value.notebook);
+    const dungeonText = value.dungeonText ?? null;
+    if (dungeonText?.revision !== currentDungeonText?.revision || dungeonText?.actionId !== currentDungeonText?.actionId)
+      dungeonTextAnswer.value = '';
+    currentDungeonText = dungeonText;
+    dungeonTextRoot.hidden = dungeonText === null || value.mode === 'dead';
+    if (dungeonText !== null) {
+      dungeonTextBody.textContent = dungeonText.text;
+      dungeonTextForm.hidden = !dungeonText.requiresAnswer;
+      dungeonTextClose.textContent = dungeonText.requiresAnswer ? 'Cancel' : 'Continue';
+    }
+    if (value.rest && isRestProjection(value.rest)) {
+      restStatus.textContent = value.rest.message
+        ?? (value.rest.hasResult ? `Rested for ${formatRestHours(value.rest.elapsedSeconds)}.` : 'Choose a rest action.');
+    }
     // A pad button reaches the product, not this DOM, so the panel it asked for arrives here as the
     // menu action that opens it. Each revision is performed once; the request itself stays published.
     const panelRequest = value.panelRequest ?? null;
-    if (panelRequest !== null && panelRequest.revision !== lastPanelRevision) {
+    if (!deadMode && panelRequest !== null && panelRequest.revision !== lastPanelRevision) {
       lastPanelRevision = panelRequest.revision;
       runMenuAction(panelRequest.panel);
     }
@@ -679,13 +863,11 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       return row;
     }));
     // Death outranks every other mode, so the screen the mode owns replaces the HUD rather than
-    // joining it; the image is the published artifact this mode exists to show.
+    // joining it; its semantic choices and effects arrive in the same projection as the image.
     deadMode = value.mode === 'dead';
-    deathRoot.hidden = !deadMode;
-    if (deadMode) {
-      const death = image(screenForMode('dead')!);
-      if (death !== null) deathScreen.src = death;
-    }
+    if (deadMode && menu.open) closeMenu();
+    currentDeath = isDeathProjection(value.death) ? value.death : null;
+    redrawDeath(currentDeath);
 
     // The entry screen is the mode's screen, the way the death screen is the dead mode's: the mode
     // value decides which one is up, and the artifact the mode names is what it shows.
@@ -701,7 +883,10 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     if (value.controls) controlsView.update(value.controls);
     if (value.activation) activationMode.value = value.activation.mode;
     activationMode.disabled = value.mode !== 'playing';
-    const dialogue = value.activation?.dialogue ?? null;
+    // Dead mode owns the whole interaction surface. An activation projection can remain in the
+    // retained snapshot for one delivery, but it must not reopen a native dialogue over the death
+    // choices or leave a close action aimed at a session that has already stopped ordinary input.
+    const dialogue = deadMode ? null : value.activation?.dialogue ?? null;
     currentDialogue = dialogue;
     if (dialogue === null) {
       if (dialogueWindow.open) dialogueWindow.close();
@@ -735,6 +920,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     if (isSaveSlots(value.saveSlots)) {
       saveSlots = value.saveSlots;
       redrawSaveSlots();
+      if (deadMode) redrawDeath(currentDeath);
     }
     composition.replaceChildren(...diagnosticRows(value.composition));
   }) ?? (() => {});
@@ -970,6 +1156,27 @@ function isTransportItemProjection(value: unknown): value is TransportItemProjec
     && (typeof candidate.quantity === 'string' || typeof candidate.quantity === 'number');
 }
 
+function isRestProjection(value: unknown): value is RestProjection {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Partial<RestProjection>;
+  return typeof candidate.hasResult === 'boolean'
+    && typeof candidate.revision === 'string'
+    && (candidate.mode === null || typeof candidate.mode === 'string')
+    && typeof candidate.requestedSeconds === 'number' && Number.isFinite(candidate.requestedSeconds)
+    && typeof candidate.elapsedSeconds === 'number' && Number.isFinite(candidate.elapsedSeconds)
+    && typeof candidate.recoveryHours === 'number' && Number.isFinite(candidate.recoveryHours)
+    && typeof candidate.healthRecovered === 'number' && Number.isFinite(candidate.healthRecovered)
+    && typeof candidate.fatigueRecovered === 'number' && Number.isFinite(candidate.fatigueRecovered)
+    && typeof candidate.spellPointsRecovered === 'number' && Number.isFinite(candidate.spellPointsRecovered)
+    && typeof candidate.interruption === 'string'
+    && (candidate.message === null || typeof candidate.message === 'string');
+}
+
+function formatRestHours(seconds: number): string {
+  const hours = seconds / 3600;
+  return Number.isInteger(hours) ? String(hours) : hours.toFixed(2);
+}
+
 function formatClassicUnits(value: number): string {
   return Number.isFinite(value) ? Math.max(0, value).toLocaleString() : 'unknown';
 }
@@ -1034,6 +1241,25 @@ function isSaveSlots(value: unknown): value is SaveSlotProjection {
     && 'label' in entry && typeof entry.label === 'string'
     && 'savedAtUtc' in entry && typeof entry.savedAtUtc === 'string'
     && 'ruleset' in entry && typeof entry.ruleset === 'string');
+}
+
+function isDeathProjection(value: unknown): value is DeathProjection {
+  if (typeof value !== 'object' || value === null || !('choices' in value) || !Array.isArray(value.choices)) return false;
+  const candidate = value as Partial<DeathProjection>;
+  return typeof candidate.active === 'boolean'
+    && typeof candidate.screen === 'string'
+    && typeof candidate.revision === 'string'
+    && typeof candidate.message === 'string'
+    && typeof candidate.controlsSuppressed === 'boolean'
+    && typeof candidate.cameraEffect === 'string'
+    && typeof candidate.fadeEffect === 'string'
+    && typeof candidate.audioCue === 'string'
+    && (candidate.selected === null || typeof candidate.selected === 'string')
+    && candidate.choices!.every(choice => typeof choice === 'object' && choice !== null
+      && 'action' in choice && typeof choice.action === 'string'
+      && 'id' in choice && typeof choice.id === 'string'
+      && 'label' in choice && typeof choice.label === 'string'
+      && 'available' in choice && typeof choice.available === 'boolean');
 }
 
 function viewSummary(view: NonNullable<DaggerHud['view']>): string {

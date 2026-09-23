@@ -33,11 +33,29 @@
 .dagger-vitals strong { font: 700 .95rem ui-monospace, monospace; }
 .dagger-outcome { bottom: 70px; left: 24px; min-height: 1.3em; margin: 0; position: absolute; color: #f6ddb0; }
 
-/* Death outranks the HUD: the published screen the mode owns covers it. The image is delivered by the
-   product from admitted content, so this stylesheet carries layout only. */
-.dagger-death { position: absolute; inset: 0; display: grid; place-items: center; background: #05060a; pointer-events: auto; }
+/* Death outranks the HUD: the published screen the mode owns covers it. The fade is a DOM-owned
+   presentation effect driven by the ruleset's semantic effect value, so the screen does not merely
+   expose an unused data attribute. */
+.dagger-death { position: absolute; inset: 0; display: grid; place-items: center; background: #05060a; pointer-events: auto; isolation: isolate; overflow: hidden; }
 .dagger-death[hidden] { display: none; }
 .dagger-death-screen { max-width: min(100%, 1280px); max-height: 100%; image-rendering: pixelated; }
+.dagger-death-fade { position: absolute; inset: 0; z-index: 1; background: #000; opacity: 0; pointer-events: none; transition: opacity 900ms linear; }
+.dagger-death[data-fade-effect="to-black"] .dagger-death-fade { opacity: 1; }
+.dagger-death-panel { position: absolute; z-index: 2; bottom: 10%; width: min(32rem, calc(100vw - 2rem)); padding: 1.2rem; display: grid; gap: .8rem; background: rgb(8 9 11 / .92); border: 1px solid #c6a05a; box-shadow: 0 12px 44px rgb(0 0 0 / .7); }
+.dagger-death-panel h1 { margin: 0; font-size: 1.5rem; }
+.dagger-death-message { min-height: 1.3em; margin: 0; color: #f6ddb0; }
+.dagger-death-load { display: grid; gap: .35rem; color: #b9ae8c; font: .78rem ui-monospace, monospace; }
+.dagger-death-load select { padding: .55rem; color: #f7e7bd; background: #151712; border: 1px solid #aa9c7a; font: inherit; }
+.dagger-death-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+.dagger-death-actions button { padding: .65rem 1rem; border: 1px solid #d4b56b; background: #312817; color: #f7e7bd; font: 700 .8rem ui-monospace, monospace; cursor: pointer; }
+.dagger-death-actions button:disabled, .dagger-death-load select:disabled { opacity: .55; cursor: default; }
+
+.dagger-dungeon-text { position: absolute; left: 50%; top: 50%; width: min(36rem, calc(100vw - 2rem)); transform: translate(-50%, -50%); padding: 1.4rem; background: rgba(8, 9, 11, .96); border: 1px solid #c6a05a; pointer-events: auto; white-space: pre-wrap; }
+.dagger-dungeon-text[hidden], .dagger-dungeon-text-answer[hidden] { display: none; }
+.dagger-dungeon-text-body { margin: 0 0 1rem; line-height: 1.45; }
+.dagger-dungeon-text-answer { display: flex; align-items: end; gap: .6rem; margin-bottom: 1rem; }
+.dagger-dungeon-text-answer label { display: grid; flex: 1; gap: .35rem; }
+.dagger-dungeon-text-answer input { width: 100%; padding: .4rem; color: #f2e3ba; background: #151515; border: 1px solid #aa9c7a; }
 
 /* The entry screen the title mode owns, laid out the way the death screen is: the published artifact
    fills the frame and this stylesheet carries layout only. */

@@ -75,6 +75,8 @@ internal enum DaggerfallDungeonActionOutcome
     NoAction,
     UnsupportedAction,
     InvalidVariable,
+    RejectedOperation,
+    AwaitingAnswer,
 }
 
 /// <summary>
@@ -96,7 +98,8 @@ internal sealed record DaggerfallDungeonActionDefinition(
     bool IsFlat = false,
     double CooldownSeconds = 0d,
     byte SoundIndex = 0,
-    Vector3? SourcePosition = null)
+    Vector3? SourcePosition = null,
+    byte RawIndex = 0)
 {
     internal DaggerfallDungeonActionDefinition Validate(IReadOnlySet<string> actionIds)
     {
@@ -182,6 +185,7 @@ internal sealed class DaggerfallDungeonActionGraph
 {
     private readonly string _profileId;
     private readonly DaggerfallVariableStore _variables;
+    private readonly Func<DaggerfallDungeonActionDefinition, DaggerfallDungeonActionExecution?>? _executeFamilyAction;
     private readonly IReadOnlyDictionary<string, DaggerfallDungeonActionDefinition> _definitions;
     private readonly Dictionary<string, NodeState> _states;
     private readonly HashSet<string> _dispatching = new(StringComparer.Ordinal);
@@ -189,11 +193,13 @@ internal sealed class DaggerfallDungeonActionGraph
         string profileId,
         IEnumerable<DaggerfallDungeonActionDefinition> definitions,
         DaggerfallVariableStore variables,
-        DaggerfallDungeonActionGraphSnapshot? restored = null)
+        DaggerfallDungeonActionGraphSnapshot? restored = null,
+        Func<DaggerfallDungeonActionDefinition, DaggerfallDungeonActionExecution?>? executeFamilyAction = null)
     {
         if (string.IsNullOrWhiteSpace(profileId)) throw new ArgumentException("A dungeon action graph requires its profile id.", nameof(profileId));
         ArgumentNullException.ThrowIfNull(definitions);
         _variables = variables ?? throw new ArgumentNullException(nameof(variables));
+        _executeFamilyAction = executeFamilyAction;
         _profileId = profileId;
 
         DaggerfallDungeonActionDefinition[] ordered = definitions
@@ -242,6 +248,28 @@ internal sealed class DaggerfallDungeonActionGraph
         List<DaggerfallDungeonActionExecution> executions = [];
         Dispatch(actionId, @event, executions);
         return new(actionId, @event, executions);
+    }
+
+    /// <summary>Continues an admitted input-text link after its answer was accepted.</summary>
+    internal DaggerfallDungeonActionDispatch ContinueAcceptedAnswer(string actionId)
+    {
+        if (!_definitions.TryGetValue(actionId, out DaggerfallDungeonActionDefinition? definition)
+            || definition.ActionFlag != (byte)DaggerfallDungeonActionFlag.ShowTextWithInput)
+            throw new ArgumentException($"'{actionId}' is not an admitted input-text action.", nameof(actionId));
+        List<DaggerfallDungeonActionExecution> executions = [];
+        if (definition.NextObjectOffset > 0)
+        {
+            if (definition.NextActionId is null)
+                executions.Add(new(actionId, DaggerfallDungeonActionOutcome.MissingTarget,
+                    Diagnostic: $"Dungeon answer '{actionId}' preserves next-object offset {definition.NextObjectOffset} without an admitted target."));
+            else
+            {
+                _dispatching.Add(actionId);
+                try { Dispatch(definition.NextActionId, DaggerfallDungeonActionEvent.ActionObject, executions); }
+                finally { _dispatching.Remove(actionId); }
+            }
+        }
+        return new(actionId, DaggerfallDungeonActionEvent.ActionObject, executions);
     }
 
     /// <summary>
@@ -329,6 +357,14 @@ internal sealed class DaggerfallDungeonActionGraph
             state.ActivationCount = checked(state.ActivationCount + 1);
             state.RemainingCooldownSeconds = definition.CooldownSeconds;
 
+            if (definition.ActionFlag == (byte)DaggerfallDungeonActionFlag.ShowTextWithInput)
+            {
+                // The donor's answer dialog suspends the linked action. Its continuation is
+                // dispatched once by ContinueAcceptedAnswer, never by another activation.
+                executions.Add(Apply(definition, missingTarget: false));
+                return;
+            }
+
             // The donor activates the next object before running this node's delegate.
             // A missing normalized target remains an explicit failure, never a silent end.
             bool missingTarget = false;
@@ -394,6 +430,9 @@ internal sealed class DaggerfallDungeonActionGraph
                     Diagnostic: $"Dungeon action '{definition.Id}' cannot set global variable {definition.Axis}: {exception.Message}");
             }
         }
+
+        if (_executeFamilyAction?.Invoke(definition) is { } familyResult)
+            return familyResult;
 
         if (!Enum.IsDefined((DaggerfallDungeonActionFlag)definition.ActionFlag))
         {

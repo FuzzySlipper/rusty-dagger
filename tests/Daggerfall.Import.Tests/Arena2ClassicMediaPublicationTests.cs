@@ -19,8 +19,8 @@ public sealed class Arena2ClassicMediaPublicationTests
 
         // Five service screens and their donor companions are thirteen more artifacts and resources:
         // naming an image admits it.
-        Assert.Equal(83, first.Artifacts.Count);
-        Assert.Equal(83, first.MediaManifest.Resources.Count);
+        Assert.Equal(84, first.Artifacts.Count);
+        Assert.Equal(84, first.MediaManifest.Resources.Count);
         Assert.Empty(first.MapMedia);
         // Thirteen more admitted source files, because those images are read as well as named.
         Assert.Equal(52, first.Sources.Count);
@@ -68,7 +68,7 @@ public sealed class Arena2ClassicMediaPublicationTests
             werecreature.Actions.Where(action => action.Action != ClassicDaggerWeaponAction.Idle).Select(action => (action.SourceRecordOrdinal, action.Alignment, action.ScreenOffset)));
         Assert.Equal(4, first.Effects.Count);
         Assert.All(first.Effects, effect => Assert.False(effect.Timing.Loop));
-        Assert.Equal(6, first.Audio.Count);
+        Assert.Equal(7, first.Audio.Count);
 // Six windows, one mode screen, and the service panels the donor windows read, each part of a
         // screen the donor composes from several images published under its own media identity.
         Assert.Equal(25, first.UiImages.Count);
@@ -445,7 +445,7 @@ public sealed class Arena2ClassicMediaPublicationTests
             Read(arena2, "TEXTURE.207"), Read(arena2, "TEXTURE.216"), Read(arena2, "TEXTURE.234"), Read(arena2, "TEXTURE.245"), Read(arena2, "FONT0003.FNT"), Read(arena2, "WEAPON00.CIF"), Read(arena2, "WEAPON03.CIF"), Read(arena2, "WEAPON11.CIF"), Read(arena2, "FONT0000.FNT"), Read(arena2, "FONT0001.FNT"), Read(arena2, "FONT0002.FNT"), Read(arena2, "FONT0004.FNT"), ReadCorpusMapMedia(arena2), Read(arena2, "FMAP_PAL.COL"), Read(arena2, "MAP.PAL")));
 
         Assert.Equal(31, WeaponActions(publication, "weapon.dagger.steel").Sum(action => action.FrameCount));
-        Assert.Equal(83 + 67, publication.Artifacts.Count);
+        Assert.Equal(83 + 68, publication.Artifacts.Count);
         Assert.Equal(50 + 70 + 2, publication.Sources.Count);
         AssertPng(Artifact(publication, "media/combat/weapon-dagger-steel-atlas.png"), 3840, 600);
         Assert.All(publication.Audio, clip => Assert.Equal(11_025U, clip.SampleRate));
@@ -550,7 +550,7 @@ public sealed class Arena2ClassicMediaPublicationTests
         CreatePalette(),
         CreateTextureArchive(4),
         CreatePalette(),
-        CreateNumericBsa(113),
+        CreateNumericBsa(459),
         CreateHeaderedImage(1),
         CreateHeaderedImage(2),
         CreateHeaderedImage(3),

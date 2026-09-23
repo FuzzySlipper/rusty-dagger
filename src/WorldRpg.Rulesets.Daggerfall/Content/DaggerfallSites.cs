@@ -92,14 +92,36 @@ internal sealed record DaggerfallSiteRecord(
     DaggerfallSiteId Id,
     string Name,
     int MapId,
+    int Longitude,
+    int Latitude,
     int DungeonType,
     DaggerfallSiteKind Kind,
-    bool Discovered)
+    bool Discovered,
+    DaggerfallSiteExterior? Exterior = null)
 {
     internal int Region => Id.Region;
 
     internal int Index => Id.Index;
+
+    /// <summary>Classic 1000 by 500 wilderness map pixel containing this site.</summary>
+    internal int MapPixelX => Longitude / 128;
+    internal int MapPixelY => 499 - (Latitude / 128);
 }
+
+/// <summary>Normalized terrain footprint of one exterior location, in its map pixel's terrain tiles.</summary>
+internal sealed record DaggerfallSiteExterior(
+    int MapPixelX,
+    int MapPixelY,
+    int Width,
+    int Height,
+    int TileOriginX,
+    int TileOriginY,
+    bool UsesCustomLocationPosition,
+    int BlendClearance,
+    int MinX,
+    int MaxX,
+    int MinY,
+    int MaxY);
 
 internal static class DaggerfallSiteKinds
 {

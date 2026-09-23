@@ -8,6 +8,8 @@ using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
+using WorldRpg.Rulesets.Daggerfall.Guilds;
+using WorldRpg.Rulesets.Daggerfall.Banking;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -43,6 +45,8 @@ internal sealed class DaggerfallState(PlayerControlState playerControl, ActorsSt
     internal DaggerfallNpcRegistry Npcs { get; } = npcs;
     /// <summary>Persistent Daggerfall reputation, reaction, and guild-membership policy for talk, services, and quests.</summary>
     internal DaggerfallSocialState Social { get; } = social;
+    /// <summary>Guild admission and rank policy over the canonical social membership records.</summary>
+    internal DaggerfallGuildMembershipPolicy GuildMembership { get; set; } = null!;
     /// <summary>Daggerfall instance meaning paired with Engine-backed stacks and unique items.</summary>
     internal DaggerfallItemInstances ItemInstances { get; } = itemInstances;
     /// <summary>The committed player identity and its cancellable creation draft.</summary>
@@ -53,6 +57,8 @@ internal sealed class DaggerfallState(PlayerControlState playerControl, ActorsSt
     internal DaggerfallEncumbrancePolicy Encumbrance { get; set; } = null!;
     /// <summary>Inventory-backed coins, letters of credit, and the one persistent bank balance.</summary>
     internal DaggerfallCurrencyService Currency { get; set; } = null!;
+    /// <summary>Regional account balances partitioning the currency settlement account.</summary>
+    internal DaggerfallRegionalBankState Bank { get; set; } = null!;
     /// <summary>Typed Daggerfall service admission, quotes, outcomes, and pending concrete work.</summary>
     internal DaggerfallServiceTransactions Services { get; set; } = null!;
     /// <summary>Permanent skill training through the current service and progression owners.</summary>

@@ -14,6 +14,8 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Encounters;
 using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
+using WorldRpg.Rulesets.Daggerfall.Guilds;
+using WorldRpg.Rulesets.Daggerfall.Banking;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Ai;
@@ -30,7 +32,7 @@ using KitUniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Concrete Daggerfall composition of catalog policy, module state, and named Engine capabilities.</summary>
-internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, ISaveRequestingGameSession, IPlayerPreferencesSession
+internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, ISaveRequestingGameSession, IPlayerPreferencesSession, IPlayerDefeatOutcomeSession
 {
 
     /// <summary>Admitted world seconds a panel request stands before the DOM is assumed not to need it.</summary>
@@ -46,6 +48,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private readonly DaggerCombatRules _combat;
     private readonly DaggerfallVitalityConsequences _vitality;
     private readonly DaggerfallStaminaRecoveryModule _staminaRecovery;
+    private readonly CombatResolution _combatResolution;
     private readonly DaggerfallLocomotionPolicy _locomotion;
     private readonly DaggerfallClimbingPolicy _climbing;
     private readonly DaggerfallLevitationPolicy _levitation = new();
@@ -170,6 +173,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             _random = engine.Random;
             tuning = tuning.Validate();
             _definitions = definitions;
+            _dungeonText = new DaggerfallDungeonTextActions(new DaggerfallTextResolver(definitions.Text));
             _encounters = new DaggerfallEncounterRuntime(definitions, _random);
             Cinematics = cinematicContent is null ? null : new DaggerfallCinematicPresentation(engine, cinematicContent, definitions.Cinematics);
             if (Cinematics is not null) partiallyConstructed.Add(Cinematics);
@@ -224,7 +228,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                     key.LogicalId,
                     admitted.DungeonActions,
                     State.Variables,
-                    snapshot));
+                    snapshot,
+                    ExecuteDungeonFamilyAction));
             }
             foreach (DaggerfallDungeonDiscoverySnapshot snapshot in saved?.DungeonDiscovery ?? [])
             {
@@ -239,7 +244,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 State.DungeonDiscoveries.Add(_activeProfileKey, new DaggerfallDungeonDiscovery(_activeProfileKey, initialMap));
             // The selected site's normalized RDB doors restore their Engine pose/collider projection
             // before activation can query them and before the first character step consumes them.
-            _siteProjection = DaggerfallSiteProjection.Create(engine, State.Actors.Entities, _random, tuning, _time.Calendar, inputs, AudioFor(inputs), saved?.Doors);
+            _siteProjection = DaggerfallSiteProjection.Create(engine, State.Actors.Entities, _random, tuning, _time.Calendar,
+                inputs, AudioFor(inputs), _spatial, saved?.Doors, saved?.DungeonMotion);
             partiallyConstructed.Add(_siteProjection);
             _actionTriggers = new DaggerfallDungeonActionTriggerRuntime(
                 State.Actors.Entities, engine.Spatial, _spatial, ActionProfiles(inputs, profiles), _activeProfileKey);
@@ -264,6 +270,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             TargetingService targeting = new(engine.Perception, _spatial, State.Actors, new DaggerTargetingPolicy(authored, tuning.MeleeTargeting));
             _staminaRecovery = new DaggerfallStaminaRecoveryModule(tuning.StaminaRecovery);
             CombatResolution combatRules = new();
+            _combatResolution = combatRules;
             _vitality = new DaggerfallVitalityConsequences(combatRules);
             State.Effects = new DaggerfallEffectLifecycle(State.Actors, effects ?? DaggerfallDiseasePolicy.CreateCatalog(
                 _random,
@@ -281,6 +288,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 authored,
                 tuning.Progression.EnableExperimentalKillExperience);
             State.SkillUses = new DaggerfallSkillUseReactions(State.Progression, State.Actors.Player.Stats, definitions, () => State.Character.Career);
+            State.GuildMembership = new DaggerfallGuildMembershipPolicy(State.Social,
+                State.SkillUses.PermanentSkillValue, DaggerfallGuildPolicyCatalog.CoreGuilds);
             State.Quests.BindRuntime(new DaggerfallQuestRuntime(State.Progression, State.Actors.Player.Stats, definitions,
                 State.QuestTraining, tuning.Locomotion, _random, () => _time.Calendar, AdvanceQuestTraining));
             State.Character.BindCareerCommitted(State.SkillUses.RebaseForCareerSelection);
@@ -327,6 +336,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             State.Npcs.Identities = _actorIdentities;
             State.Encumbrance = new DaggerfallEncumbrancePolicy(State.Inventory, State.Actors.Player.Stats);
             State.Currency = new DaggerfallCurrencyService(definitions, State.Inventory, State.ItemInstances, State.Encumbrance, _uniqueItems, saved?.Currency);
+            State.Bank = new DaggerfallRegionalBankState(State.Currency, State.Inventory, State.ItemInstances, saved?.Bank);
             State.Services = new DaggerfallServiceTransactions(State.Npcs, State.Social, State.Inventory, State.ItemInstances,
                 State.Currency, _uniqueItems, () => _time.Calendar, () => _site.ActiveSite is { } active
                     ? new DaggerfallNpcSite(active.Id.Region, active.Name, string.Empty)
@@ -356,11 +366,13 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 _uniqueItems,
                 State.Progression,
                 tuning.LootInteraction,
-                State.Character);
+                State.Character,
+                _actorIdentities);
             _groundContainers = new DaggerfallGroundContainers(containers, State.ItemInstances, playerEntity, _actorIdentities, _activeProfileKey);
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored, () => State.Kit.Targeting.LastEvidence);
             _inventoryUi = new DaggerfallInventoryPresentation(_equipmentMoves, definitions, inputs.ClassicPresentation.InventoryIcons,
                 State.Encumbrance, State.Currency);
+            _inventoryUi.UseBank(State.Bank, ActiveBankRegion);
             _inventoryUi.UseItemValuation(new DaggerfallItemValuation(definitions), State.ItemInstances, DaggerfallItemOwner.Player,
                 entity => State.Actors.Entities.IdentityOf(new Rusty.Engine.Entities.EntityId(entity)).Value);
             _inventoryUi.UseItemCondition(_itemCondition);
@@ -371,6 +383,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             _lootUi = new DaggerfallLootPresentation(_corpseLoot, _inventoryUi, _groundContainers);
             InitializeActivation(engine, tuning.LootInteraction);
             _characterUi = new DaggerfallCharacterPresentation(definitions, State.Character, playerDefinition, equipmentCoordinator, State.LevelUps, State.Social, State.SkillUses);
+            _characterUi.UseGuildMembership(State.GuildMembership, () => checked((int)_time.Calendar.DayNumber));
             _characterUi.UseItemPresentation(_inventoryUi);
             // The DOM's art comes from admitted content by media identity, so a session reads the
             // published closure once and publishes it to the UI that draws it.
@@ -380,13 +393,14 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 compositionIdentity,
                 DaggerfallUiArt.Read(engine.Content, inputs.ClassicPresentation.InventoryIcons.Values));
             partiallyConstructed.Add(_hud);
-            _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing);
+            _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, _dungeonText);
             if (saved is not null)
             {
                 foreach (DaggerfallSiteDeltaSave delta in saved.SiteDeltas)
                 {
                     DaggerfallWorldProfileKey id = delta.Profile.Require();
-                    if (!_siteDeltas.TryAdd(id, new DaggerfallSiteRuntimeDelta(delta.Actors, delta.DynamicActors, delta.ActorInventories, delta.Corpses, delta.Doors, delta.Effects)))
+                    if (!_siteDeltas.TryAdd(id, new DaggerfallSiteRuntimeDelta(delta.Actors, delta.DynamicActors, delta.ActorInventories,
+                        delta.Corpses, delta.Doors, delta.Effects, delta.Motion)))
                         throw new ArgumentException($"Saved site state repeats inactive site '{id}'.", nameof(saved));
                 }
                 HashSet<string> admittedEncounterProfiles = _siteProfiles is null
@@ -396,13 +410,24 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                     throw new ArgumentException("Saved encounter references a world profile not admitted by the current bundle.", nameof(saved));
                 _encounters.Restore(saved.Encounters, DynamicActorDefinitions(), TombstonedActorIds(saved));
                 _persistence.Restore(saved);
+                _appearance.SyncRestoredDefeat(State.Actors);
+                RestoreDungeonText(saved.DungeonText);
                 _actionTriggers.RebaseRestoredPlayer(State.PlayerControl, playerEntity);
+            }
+            if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior)
+            {
+                if (saved?.ExteriorResidency is { } exterior)
+                    RestoreExteriorResidency(exterior);
+                else
+                    UpdateExteriorResidency();
             }
         }
         catch (Exception constructionFailure)
         {
             List<Exception> failures = [constructionFailure];
             try { DisposeAll(partiallyConstructed); }
+            catch (Exception cleanupFailure) { failures.Add(cleanupFailure); }
+            try { DisposeExteriorAppearance(); }
             catch (Exception cleanupFailure) { failures.Add(cleanupFailure); }
             if (failures.Count == 1) throw;
             throw new AggregateException(failures);
@@ -442,7 +467,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         if (State.DungeonActions.ContainsKey(key)) return;
         if (inputs.ProfileKey != key)
             throw new InvalidOperationException($"World profile '{key.LogicalId}' action graph was paired with '{inputs.ProfileKey.LogicalId}'.");
-        State.DungeonActions.Add(key, new DaggerfallDungeonActionGraph(key.LogicalId, inputs.DungeonActions, State.Variables));
+        State.DungeonActions.Add(key, new DaggerfallDungeonActionGraph(key.LogicalId, inputs.DungeonActions,
+            State.Variables, executeFamilyAction: ExecuteDungeonFamilyAction));
     }
 
     /// <summary>Admits the full selected site catalog once composition has constructed this session.</summary>
@@ -599,11 +625,14 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         DaggerfallSiteProjection source = _siteProjection;
         DaggerfallWorldProfileKey sourceProfile = _activeProfileKey;
         DaggerfallWorldProfileKey? sourceReturnProfile = _returnProfileKey;
+        DaggerfallServiceProvider? sourceBankProvider = _bankProvider;
         DaggerfallSiteContextCheckpoint sourceSite = _site.CaptureCheckpoint();
         float sourceYawRadians = State.PlayerControl.YawRadians;
         float sourcePitchRadians = State.PlayerControl.PitchRadians;
         Dictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> sourceDeltas = new(_siteDeltas);
-        DaggerfallSiteRuntimeDelta sourceDelta = _persistence.CaptureSiteDelta(source.Inputs, source.Doors, _dynamicActors);
+        DaggerfallSiteRuntimeDelta sourceDelta = _persistence.CaptureSiteDelta(source.Inputs, source.Doors,
+            source.Motion, _dynamicActors);
+        DaggerfallExteriorCellResidencySave? sourceExterior = CaptureExteriorResidency();
         DaggerfallDynamicActorSave? relocatedDynamic = relocatedActorId is long requestedActor
             ? sourceDelta.DynamicActors.SingleOrDefault(actor => actor.EntityId == requestedActor)
                 ?? throw new InvalidOperationException($"Dynamic actor {requestedActor} was not captured in the active site delta.")
@@ -618,12 +647,21 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         bool sourceActorsUnloaded = false;
         bool groundProfileSwitched = false;
         bool playerRelocated = false;
+        bool exteriorCleared = false;
         DaggerfallSiteRuntimeDelta committedSourceDelta = sourceDelta;
         try
         {
-            candidate = DaggerfallSiteProjection.Create(_engine, State.Actors.Entities, _random, _tuning, _time.Calendar, target, AudioFor(target), destinationDelta?.Doors);
+            candidate = DaggerfallSiteProjection.Create(_engine, State.Actors.Entities, _random, _tuning, _time.Calendar,
+                target, AudioFor(target), _spatial, destinationDelta?.Doors, destinationDelta?.Motion,
+                deferMotionCollisionAdmission: true);
+            if (sourceExterior is not null)
+            {
+                ClearExteriorResidency();
+                exteriorCleared = true;
+            }
             _spatial.ReplaceContent(target.SpatialArtifact);
             spatialReplaced = true;
+            candidate.ActivateMotionCollisionResidency();
             UnloadSiteActors(source.Inputs, sourceDelta);
             sourceActorsUnloaded = true;
             _siteProjection = candidate;
@@ -663,6 +701,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             _siteDeltas[sourceProfile] = committedSourceDelta;
             _siteDeltas.Remove(destination);
             _activeProfileKey = destination;
+            _bankProvider = null;
+            if (destination.Kind == DaggerfallWorldProfileKind.Exterior)
+                UpdateExteriorResidency();
             if (destination.Kind != DaggerfallWorldProfileKind.Exterior)
                 State.Transport.ForceFootOnInteriorTransition();
             _returnProfileKey = returnDestination is null ? sourceProfile : null;
@@ -701,6 +742,13 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             {
                 try { _spatial.ReplaceContent(source.Inputs.SpatialArtifact); }
                 catch (Exception rollbackFailure) { failures.Add(rollbackFailure); }
+                // Whole-content replacement removes every incremental resident collider. Drop the
+                // destination coordinator's remembered set before restoring the source window;
+                // otherwise overlapping cells would be skipped as already admitted.
+                try { ClearExteriorResidency(); }
+                catch (Exception rollbackFailure) { failures.Add(rollbackFailure); }
+                try { source.RebuildMotionCollisionResidency(); }
+                catch (Exception rollbackFailure) { failures.Add(rollbackFailure); }
             }
             try { source.Lighting.ApplyBackground(); }
             catch (Exception rollbackFailure) { failures.Add(rollbackFailure); }
@@ -710,6 +758,17 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             foreach ((DaggerfallWorldProfileKey key, DaggerfallSiteRuntimeDelta delta) in sourceDeltas) _siteDeltas.Add(key, delta);
             _activeProfileKey = sourceProfile;
             _returnProfileKey = sourceReturnProfile;
+            _bankProvider = sourceBankProvider;
+            if (sourceExterior is { } priorExterior && exteriorCleared)
+            {
+                try { RestoreExteriorResidency(priorExterior); }
+                catch (Exception rollbackFailure) { failures.Add(rollbackFailure); }
+            }
+            else if (_exteriorResidency is { IsInitialized: true })
+            {
+                try { ClearExteriorResidency(); }
+                catch (Exception rollbackFailure) { failures.Add(rollbackFailure); }
+            }
             try { _actionTriggers.ActivateProfile(sourceProfile); }
             catch (Exception rollbackFailure) { failures.Add(rollbackFailure); }
             if (playerRelocated)
@@ -743,6 +802,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         // Releasing the old projection happens only after every durable and live owner has
         // committed to the destination. A disposal failure therefore leaves the destination as
         // the honest current state instead of pretending the torn-down source can be restored.
+        CancelDungeonTextOnUnload();
         source.Dispose();
         return true;
     }
@@ -773,6 +833,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             _appearance.AddActor(saved.EntityId, sprite);
         }
         _persistence.RestoreSiteDelta(delta);
+        _appearance.SyncRestoredDefeat(State.Actors);
     }
 
     private static DaggerfallSiteRuntimeDelta DynamicActorDelta(DaggerfallSiteRuntimeDelta source, long actorId) =>
@@ -861,7 +922,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             // detached its durable facts, so retire that owner with the site actor rather than
             // leaving an unreachable native container alive across the transition.
             State.ItemInstances.RemoveOwner(DaggerfallItemOwner.Corpse(actor.DurableId));
-            State.Actors.Entities.Destroy(new DurableIdentityReference(DurableIdentityKind.Container, checked((ulong)actor.DurableId)));
+            _corpseLoot.Unload(actor.DurableId);
             State.Actors.Entities.Destroy(ActorsState.Identity(actor.DurableId));
         }
     }
@@ -909,7 +970,11 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 }
             }
         }
-        if (delta is not null) _persistence.RestoreSiteDelta(delta);
+        if (delta is not null)
+        {
+            _persistence.RestoreSiteDelta(delta);
+            _appearance.SyncRestoredDefeat(State.Actors);
+        }
     }
 
     /// <summary>
@@ -1004,9 +1069,11 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         _lootUi.CloseActor(durableId);
         _ = State.Effects.CancelActorReferences(durableId);
         DestroyOwnedItems(durableId);
-        State.Actors.Entities.Destroy(new DurableIdentityReference(DurableIdentityKind.Container, checked((ulong)durableId)));
+        _corpseLoot.Retire(durableId);
         State.Actors.Entities.Destroy(ActorsState.Identity(durableId));
         _actorIdentities.Remove(new DurableIdentityReference(DurableIdentityKind.Actor, checked((ulong)durableId)));
+        if (State.Npcs.All.Any(npc => npc.DurableId == durableId && npc.Kind == DaggerfallNpcKind.Civilian))
+            State.Npcs.SetPresence(durableId, DaggerfallNpcPresence.Removed);
     }
 
     private void GroundActor(ActorState actor)
@@ -1118,7 +1185,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         return _persistence.Capture(_latestUpdateGeneration, _latestSimulationStep, _dynamicActors, _encounters,
-            _siteDeltas, _activeProfileKey, _returnProfileKey, State.DungeonDiscoveries, State.DungeonActions);
+            _siteDeltas, _activeProfileKey, _returnProfileKey, State.DungeonDiscoveries, State.DungeonActions,
+            _siteProjection.CaptureMotion(), CaptureExteriorResidency());
     }
 
     private static DaggerfallSiteId? ToSiteId(DaggerfallSiteIdSave? id) => id?.Require();
@@ -1192,12 +1260,24 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         // whichever order the Engine delivers them in, swinging on the frame a container opens is
         // the "unintended attack" this task exists to prevent.
         bool opensInteraction = playing && ContainsInteractionAction(input);
+        bool restSubmitted = false;
         foreach (ProductInputEvent inputEvent in input)
         {
             firstStep.Add(inputEvent);
             if (inputEvent.ValueKind != InputValueKind.ProductPayload
                 || !inputEvent.PayloadContract.Span.SequenceEqual("dagger.ui.action.v1"u8)) continue;
             DaggerfallPlayerUiAction? action = DaggerfallUiAction.Parse(inputEvent.PayloadData.Span);
+            // Death owns the session's input while the Host decides the resulting replacement.
+            // Consume every payload here so held or stale ordinary actions cannot mutate state
+            // while the death choices are visible.
+            if (_mode == ProductMode.Dead)
+            {
+                // Art requests are presentation maintenance, so a reloaded death screen can still
+                // recover its admitted image while gameplay and menu actions remain suppressed.
+                if (action?.Action == "art-request") _hud.RequestArt();
+                else HandleDeathAction(action);
+                continue;
+            }
             switch (action?.Action)
             {
                 // The entry screen's own action is the product's to answer, so the session knows the
@@ -1221,6 +1301,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 case "transport-select":
                 case "transport-toggle":
                 case "transport-leave-ship": if (playing) ChangeTransport(action!); break;
+                case "rest": if (playing && !restSubmitted) { ChangeRest(action!); restSubmitted = true; } break;
                 case "wagon-put":
                 case "wagon-take": if (playing) ChangeWagon(action!); break;
                 case "quest-choice":
@@ -1228,6 +1309,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                         Presentation.SetOutcome("Quest choice recorded.");
                     else Presentation.SetOutcome("Quest choice rejected: this prompt is no longer pending or the choice is invalid.");
                     break;
+                case "dungeon-text-answer":
+                case "dungeon-text-close": if (playing || modal) ApplyDungeonTextInput(action!); break;
                 case "attack": if (playing && !opensInteraction) firstStep.Request(DaggerfallInput.Attack); break;
                 // A reloaded DOM holds no art and asks for the revision it is missing; the projection
                 // answers on its next snapshot rather than a second delivery channel existing.
@@ -1246,6 +1329,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 case "currency-withdraw-gold": if (playing || modal) ChangeCurrency(action!); break;
                 case "currency-deposit-letters": if (playing || modal) ChangeCurrency(action!); break;
                 case "currency-withdraw-letter": if (playing || modal) ChangeCurrency(action!); break;
+                case "bank-transfer": if (playing || modal) ChangeCurrency(action!); break;
                 case "character": break;
                 case "loot": if (playing) firstStep.Request(DaggerfallInput.Interact); break;
                 case "loot-close": if (playing || modal) _lootUi.Close(action!.Container); break;
@@ -1293,6 +1377,15 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                     break;
                 default: Presentation.SetOutcome("Unrecognized player UI action."); break;
             }
+        }
+
+        if (restSubmitted)
+        {
+            // Explicit elapsed time already passed through the one calendar and its consumers.
+            // The same input slice must not also apply an ordinary realtime step or attack.
+            DeliverFacts();
+            PublishPresentation();
+            return;
         }
 
         if (!playing)
@@ -1352,7 +1445,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         {
             if (inputEvent.ValueKind != InputValueKind.ProductPayload
                 || !inputEvent.PayloadContract.Span.SequenceEqual("dagger.ui.action.v1"u8)) continue;
-            if (DaggerfallUiAction.Parse(inputEvent.PayloadData.Span)?.Action is "loot" or "activation-mode" or "dialogue-topic") return true;
+            if (DaggerfallUiAction.Parse(inputEvent.PayloadData.Span)?.Action is "loot" or "activation-mode" or "dialogue-topic" or "rest") return true;
         }
 
         return false;
@@ -1377,7 +1470,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             // entry screen, has no loot container to follow, so this asks for nothing rather than
             // dragging the world into ordinary play behind the product's back.
             if (_mode is not (ProductMode.Playing or ProductMode.Modal)) return null;
-            bool open = _lootUi.Read() is not null;
+            bool open = _lootUi.Read() is not null || _dungeonTextProjection is not null;
             return open == (_mode == ProductMode.Modal) ? null : open ? ProductMode.Modal : ProductMode.Playing;
         }
     }
@@ -1406,6 +1499,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     public void ReportSaveOutcome(string message)
     {
         Presentation.SetOutcome(message);
+        ReopenDeathChoicesAfterSaveOutcome();
         PublishPresentation();
     }
 
@@ -1414,6 +1508,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     {
         _saveSlots = slots?.ToArray() ?? throw new ArgumentNullException(nameof(slots));
         _saveSlotDiagnostic = diagnostic;
+        SetDeathLoadAvailability(_saveSlots.Count > 0);
         PublishPresentation();
     }
 
@@ -1428,6 +1523,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         _mode = mode;
         _input.Neutralize();
         _locomotion.Neutralize();
+        ApplyDeathPresentationMode(mode);
         Presentation.SetOutcome(ModalMessage());
         PublishPresentation();
     }
@@ -1435,7 +1531,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// <summary>What the outcome line says while a mode other than ordinary play holds the world.</summary>
     private string ModalMessage() => _mode switch
     {
-        ProductMode.Modal => _lootUi.Read() is not null ? _lootUi.Message : "Interaction open.",
+        ProductMode.Modal => _dungeonTextProjection is not null ? "Dungeon text open."
+            : _lootUi.Read() is not null ? _lootUi.Message : "Interaction open.",
         ProductMode.Dead => "You have died.",
         ProductMode.Paused => "Paused.",
         // The entry screen says its own thing; a status line would compete with the screen that is up.
@@ -1457,7 +1554,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// </summary>
     internal DaggerfallCalendarAdvance AdvanceElapsedTime(long gameSeconds,
         IReadOnlyList<(int Identity, long SecondsFromNow)>? consequences = null,
-        DaggerfallEncounterRequest? encounter = null)
+        DaggerfallEncounterRequest? encounter = null,
+        bool deferSkillAdvancement = false)
     {
         DaggerfallCalendar calendarBefore = _time.Calendar;
         long minuteBefore = MinuteIndex(calendarBefore);
@@ -1468,8 +1566,11 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         // Daily conditions and ordinary source-order operations observe the same admitted calendar
         // after rest, travel, prison, or another interval, including an interval with no clock expiry.
         State.Quests.Advance(State.Variables, _time.Calendar);
-        State.SkillUses.RaiseSkills(_time.Calendar.ToAbsoluteSeconds());
-        State.LevelUps.BeginIfEligible();
+        if (!deferSkillAdvancement)
+        {
+            State.SkillUses.RaiseSkills(_time.Calendar.ToAbsoluteSeconds());
+            State.LevelUps.BeginIfEligible();
+        }
         State.Social.AdvanceElapsedMinutes(minuteBefore, MinuteIndex(_time.Calendar));
         AdvanceEffectsForCalendar(calendarBefore, ordinaryPlay: false);
         if (advance.AppliedSeconds > 0 && encounter is not null) QueueEncounter(encounter);
@@ -1556,7 +1657,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         CharacterMotion motionBefore = State.PlayerControl.Motion;
         WorldPoint? positionBefore = State.PlayerControl.Position;
         _doors.Advance(update.DeltaSeconds);
-        CharacterStepEnvironment doorEnvironment = _doors.CharacterEnvironment();
+        _siteProjection.AdvanceMotion(update.DeltaSeconds);
+        CharacterStepEnvironment doorEnvironment = _siteProjection.CharacterEnvironment(State.PlayerControl.Motion);
         bool wallAhead = _spatial.TryProbeClimbWall(State.PlayerControl, CharacterWallProbeDirection.Forward, out SpatialHit forwardHit, doorEnvironment)
             && MathF.Abs(forwardHit.Normal.Y) <= .06f;
         bool wallAtFeet = _climbing.IsAttached
@@ -1593,6 +1695,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         bool releasedVerticalDrive = _verticalMovementDriven && !locomotion.Controls.VerticalVelocity.HasValue;
         CharacterStepReceipt? movement = _spatial.Step(State.PlayerControl, update, doorEnvironment, locomotion.Controls);
         if (movement is not null) _verticalMovementDriven = locomotion.Controls.VerticalVelocity.HasValue;
+        if (movement is not null && _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior)
+            UpdateExteriorResidency();
         if (movement is not null && actionGraph is not null)
             _ = ReportDungeonActions(_actionTriggers.Reconcile(actionGraph, State.PlayerControl,
                 State.Actors.Player.Actor.Entity, simulationStep));
@@ -1609,6 +1713,22 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         if (!alive || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d) return;
         _ = _encounters.MaterializePending(_activeProfileKey.LogicalId, (definition, pose, level) => SpawnActor(definition, pose, level));
         _enemyBehavior.Update(State.PlayerControl, generation, simulationStep, update.DeltaSeconds, _facts);
+        // Enemy attack-start facts must reach presentation before the post-enemy actions below.
+        // A hit marker is consumed by the outer admitted update after this simulation step; if
+        // that swing is already in flight, keep input and progression behind its same boundary.
+        // Immediate (no damage-frame) swings are resolved here so a lethal result also stops the
+        // remainder of this step. DeliverFacts remains a stable-batch boundary; any facts emitted
+        // by these reactions wait for the existing caller boundary below.
+        DeliverFacts();
+        ApplyAttackImpacts();
+        // Enemy reactions resolve inside this admitted step. A lethal reaction owns the rest of
+        // the step: do not recover stamina, toggle equipment, attack, activate a target, or advance
+        // quests after the player has been defeated. DeliverFacts still runs at the caller boundary,
+        // so the mode transition and death presentation are published from the committed outcome.
+        if (State.Actors.Player.IsDefeated
+            || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d)
+            return;
+        if (_appearance.HasPendingEnemyHitTarget(DaggerfallActorIdentity.PlayerEntityId)) return;
         LookReceipt currentLook = _input.ResolveCurrentLook(State.PlayerControl);
         _staminaRecovery.Update(State.Actors.Player.Stats, update.DeltaSeconds);
         if (update.IsRequested(DaggerfallInput.ToggleWeapon)) _appearance.ToggleWeaponDrawn();
@@ -1656,6 +1776,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         Exception? failure = null;
         try { DisposeAll([_hud, _camera, _spatial, State.Actors, _siteProjection, State.Effects, _actionTriggers, .. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }]); }
         catch (Exception exception) { failure = exception; }
+        try { DisposeExteriorAppearance(); }
+        catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         // Site lighting may have retained an interior background after its resources were
         // released; clear that product-owned camera state only after the final projection dispose.
         try { _engine.CameraView.ClearSkyBackground(default); }
@@ -1715,7 +1837,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             LatestPanelRequest, _saveSlots, _saveSlotDiagnostic, _controlSettings, _controlDiagnostic,
             ActivationView, State.Quests.ReadPresentation(QuestTextContext), _notebook.Read(),
             DaggerfallTransportProjection.Read(State.Transport, State.Inventory.Read(), TransportAccess(),
-                ownsShip: false, wagon: State.Wagon));
+                ownsShip: false, wagon: State.Wagon), _dungeonTextProjection, _deathPresentation.View, RestView);
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors, _groundContainers.All);

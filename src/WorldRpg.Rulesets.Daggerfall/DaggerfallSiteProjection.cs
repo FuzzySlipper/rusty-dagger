@@ -3,6 +3,7 @@ using Rusty.Engine.Entities;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Kit.World;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -16,10 +17,11 @@ internal sealed class DaggerfallSiteProjection : IDisposable
 {
     private bool _disposed;
 
-    private DaggerfallSiteProjection(PrivateersHoldInputs inputs, DaggerfallDoorRuntime doors, PrivateersHoldAppearance appearance, DaggerfallSiteLighting lighting, DaggerfallSitePortalRuntime portals)
+    private DaggerfallSiteProjection(PrivateersHoldInputs inputs, DaggerfallDoorRuntime doors, DaggerfallDungeonMotionProjection motion, PrivateersHoldAppearance appearance, DaggerfallSiteLighting lighting, DaggerfallSitePortalRuntime portals)
     {
         Inputs = inputs;
         Doors = doors;
+        Motion = motion;
         Appearance = appearance;
         Lighting = lighting;
         Portals = portals;
@@ -27,6 +29,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
 
     internal PrivateersHoldInputs Inputs { get; }
     internal DaggerfallDoorRuntime Doors { get; }
+    internal DaggerfallDungeonMotionProjection Motion { get; }
     internal PrivateersHoldAppearance Appearance { get; }
     internal DaggerfallSiteLighting Lighting { get; }
     internal DaggerfallSitePortalRuntime Portals { get; }
@@ -39,24 +42,31 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         DaggerfallCalendar calendar,
         PrivateersHoldInputs inputs,
         DaggerfallAudioBundle? audioBundle,
-        IEnumerable<DaggerfallDoorSave>? restoredDoors = null)
+        SpatialMovementSystem spatialMovement,
+        IEnumerable<DaggerfallDoorSave>? restoredDoors = null,
+        DaggerfallDungeonMotionSnapshot? restoredMotion = null,
+        bool deferMotionCollisionAdmission = false)
     {
         ArgumentNullException.ThrowIfNull(engine);
         ArgumentNullException.ThrowIfNull(actors);
         ArgumentNullException.ThrowIfNull(random);
         ArgumentNullException.ThrowIfNull(tuning);
         ArgumentNullException.ThrowIfNull(inputs);
-        DaggerfallDoorRuntime doors = new(actors.Store, random, inputs.Doors, restoredDoors);
+        ArgumentNullException.ThrowIfNull(spatialMovement);
+        DaggerfallDoorRuntime doors = new(actors, random, inputs.Doors, inputs.ProfileKey.LogicalId, restoredDoors);
+        DaggerfallDungeonMotionProjection? motion = null;
         PrivateersHoldAppearance? appearance = null;
         DaggerfallSiteLighting? lighting = null;
         DaggerfallSitePortalRuntime? portals = null;
         try
         {
+            motion = new(actors, engine.Spatial, spatialMovement.Session, doors, inputs.ProfileKey.LogicalId,
+                inputs.DungeonActions, inputs.DungeonActionModels, restoredMotion, deferMotionCollisionAdmission);
             appearance = new(engine.Content, engine.Graphics, inputs, engine.Audio,
-                tuning.PresentationAudio, random, audioBundle, doors);
+                tuning.PresentationAudio, random, audioBundle, doors, motion);
             lighting = new(engine.Graphics, engine.CameraView, inputs, tuning.SiteLighting, calendar);
             portals = new(actors, inputs.ProfileKey, inputs.Portals);
-            return new(inputs, doors, appearance, lighting, portals);
+            return new(inputs, doors, motion, appearance, lighting, portals);
         }
         catch
         {
@@ -67,11 +77,38 @@ internal sealed class DaggerfallSiteProjection : IDisposable
                 finally
                 {
                     try { appearance?.Dispose(); }
-                    finally { doors.Dispose(); }
+                    finally
+                    {
+                        try { motion?.Dispose(); }
+                        finally { doors.Dispose(); }
+                    }
                 }
             }
             throw;
         }
+    }
+
+    internal void AdvanceMotion(double deltaSeconds) => Motion.Advance(deltaSeconds);
+
+    internal DaggerfallDungeonMotionActivation ActivateMotion(string actionId) => Motion.Activate(actionId);
+
+    internal DaggerfallDungeonMotionSnapshot CaptureMotion() => Motion.Capture();
+
+    internal void ActivateMotionCollisionResidency() => Motion.ActivateCollisionResidency();
+
+    internal void RebuildMotionCollisionResidency() => Motion.RebuildCollisionResidency();
+
+    internal CharacterStepEnvironment CharacterEnvironment(CharacterMotion motion)
+    {
+        CharacterStepEnvironment motionModels = Motion.CharacterEnvironment();
+        // Motion models already enter Engine Spatial as exact triangle instances. Projecting the
+        // same models as call-local CharacterObstacle AABBs duplicates their collision and can
+        // over-block. Entity-bound triangle support/carry awaits the Engine capability tracked by
+        // the owning task; retain only the existing door obstacle/support facts here.
+        _ = motion;
+        CharacterStepEnvironment doors = Doors.CharacterEnvironment();
+        CharacterObstacle[] obstacles = [.. doors.Obstacles.ToArray(), .. motionModels.Obstacles.ToArray()];
+        return new CharacterStepEnvironment(doors.Support, obstacles);
     }
 
     public void Dispose()
@@ -84,6 +121,8 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         try { Appearance.Dispose(); }
         catch (Exception exception) { (failures ??= []).Add(exception); }
         try { Portals.Dispose(); }
+        catch (Exception exception) { (failures ??= []).Add(exception); }
+        try { Motion.Dispose(); }
         catch (Exception exception) { (failures ??= []).Add(exception); }
         try { Doors.Dispose(); }
         catch (Exception exception) { (failures ??= []).Add(exception); }
@@ -154,4 +193,5 @@ internal sealed record DaggerfallSiteRuntimeDelta(
     DaggerfallActorInventorySave[] ActorInventories,
     DaggerfallCorpseSave[] Corpses,
     DaggerfallDoorSave[] Doors,
-    DaggerfallActiveEffectSave[] Effects);
+    DaggerfallActiveEffectSave[] Effects,
+    DaggerfallDungeonMotionSnapshot? Motion = null);

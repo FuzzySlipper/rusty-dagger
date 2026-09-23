@@ -51,6 +51,29 @@ public sealed class DaggerfallDungeonActionGraphTests
     }
 
     [Fact]
+    public void Input_text_waits_for_an_accepted_answer_before_running_its_link_once()
+    {
+        DaggerfallDungeonActionDefinition question = new("question", 10, 2,
+            (byte)DaggerfallDungeonActionFlag.ShowTextWithInput, 0, 0, 0, 20, "reward");
+        DaggerfallDungeonActionDefinition reward = new("reward", 20, 0,
+            (byte)DaggerfallDungeonActionFlag.SetGlobalVar, 7, 0, 0, -1, null);
+        DaggerfallVariableStore variables = Variables();
+        DaggerfallDungeonActionGraph graph = new("profile", [question, reward], variables,
+            executeFamilyAction: action => new(action.Id, DaggerfallDungeonActionOutcome.AwaitingAnswer));
+
+        DaggerfallDungeonActionDispatch shown = graph.Trigger("question", DaggerfallDungeonActionEvent.Direct);
+        Assert.Equal(DaggerfallDungeonActionOutcome.AwaitingAnswer, Assert.Single(shown.Executions).Outcome);
+        Assert.False(variables.Read(new(DaggerfallVariableScope.Global, 0, 7)));
+        Assert.Equal((0UL, 0d), graph.State["reward"]);
+
+        DaggerfallDungeonActionDispatch accepted = graph.ContinueAcceptedAnswer("question");
+        Assert.Equal(DaggerfallDungeonActionOutcome.Applied, Assert.Single(accepted.Executions).Outcome);
+        Assert.True(variables.Read(new(DaggerfallVariableScope.Global, 0, 7)));
+        Assert.Equal((1UL, 0d), graph.State["question"]);
+        Assert.Equal((1UL, 0d), graph.State["reward"]);
+    }
+
+    [Fact]
     public void Activate_without_a_resolved_next_object_reports_the_missing_target()
     {
         DaggerfallDungeonActionDefinition definition = new("activate", 1, 2, 0x1E, 0, 0, 0, -2, null);

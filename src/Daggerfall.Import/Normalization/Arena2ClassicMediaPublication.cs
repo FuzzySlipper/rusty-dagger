@@ -202,7 +202,7 @@ public enum ClassicEffect
     MagicSparkle,
 }
 
-/// <summary>The fixed melee sounds selected from DAGGER.SND.</summary>
+/// <summary>The fixed presentation sounds selected from DAGGER.SND.</summary>
 public enum ClassicDaggerAudioClip
 {
     Swing,
@@ -211,6 +211,8 @@ public enum ClassicDaggerAudioClip
     Hit3,
     Hit4,
     Hit5,
+    /// <summary>Classic player death pain cue (donor sound ID 405).</summary>
+    PlayerDeath,
 }
 
 /// <summary>The classic chrome images preserved by the compact UI pack.</summary>
@@ -758,6 +760,7 @@ public sealed record Arena2ClassicMediaPublication(
         new(ClassicDaggerAudioClip.Hit3, "audio.melee.hit.3", 110),
         new(ClassicDaggerAudioClip.Hit4, "audio.melee.hit.4", 111),
         new(ClassicDaggerAudioClip.Hit5, "audio.melee.hit.5", 112),
+        new(ClassicDaggerAudioClip.PlayerDeath, "audio.player.death", 405),
     ];
 
     private static readonly UiImageSource[] UiImageSources =

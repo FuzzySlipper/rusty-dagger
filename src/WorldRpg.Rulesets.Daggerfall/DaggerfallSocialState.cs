@@ -13,7 +13,7 @@ internal enum DaggerfallFactionReputationChange
 internal sealed record DaggerfallGuildMembership(int GuildGroup, int FactionId, int Rank, int LastRankChangeDay, int NotedByGuild);
 
 /// <summary>One current guild affiliation as it appears on the character sheet.</summary>
-internal sealed record DaggerfallSocialAffiliationView(string Faction, string GuildGroup, int Rank, int Reputation, int Recognition);
+internal sealed record DaggerfallSocialAffiliationView(string Faction, string GuildGroup, int Rank, int Reputation, int Recognition, int FactionId = 0);
 
 /// <summary>The reusable reaction answer for a faction, NPC talk, a service, or a quest condition.</summary>
 internal readonly record struct DaggerfallFactionReaction(int FactionId, int FactionReputation, int PersonalReputation)
@@ -195,7 +195,7 @@ internal sealed class DaggerfallSocialState
         {
             DaggerfallFactionDefinition faction = RequireFaction(membership.FactionId);
             return new DaggerfallSocialAffiliationView(faction.Name, faction.GuildGroupName, membership.Rank,
-                FactionReputation(faction.Id), membership.NotedByGuild);
+                FactionReputation(faction.Id), membership.NotedByGuild, faction.Id);
         }).ToArray();
 
     /// <summary>Joins the faction's guild group at rank zero; a different variant must be left first.</summary>

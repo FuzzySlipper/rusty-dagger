@@ -20,6 +20,13 @@ public sealed class DaggerfallDungeonDiscoveryTests
             Path.Combine(root, "content/worldrpg/imports/privateers-hold/normalized.json")));
         JsonElement world = normalized.RootElement.GetProperty("world");
         JsonElement sourcePlacements = world.GetProperty("geometryPlacements");
+        HashSet<string> staticMeshIds = world.GetProperty("staticMeshIds").EnumerateArray()
+            .Select(value => value.GetString()!)
+            .ToHashSet(StringComparer.Ordinal);
+        HashSet<string> doorVisualMeshIds = world.GetProperty("doors").EnumerateArray()
+            .SelectMany(door => door.GetProperty("visualMeshIds").EnumerateArray())
+            .Select(value => value.GetString()!)
+            .ToHashSet(StringComparer.Ordinal);
         Dictionary<string, HashSet<Vector3>> sourceVerticesByMesh = normalized.RootElement.GetProperty("meshes").EnumerateArray()
             .ToDictionary(
                 mesh => mesh.GetProperty("id").GetString()!,
@@ -52,7 +59,9 @@ public sealed class DaggerfallDungeonDiscoveryTests
         Assert.Contains(map.GeometryPlacements.SelectMany(placement => placement.MeshIds.Select(meshId => (meshId, placement)))
             .GroupBy(value => value.meshId, value => value.placement),
             group => group.Count() > 1 && group.Select(value => (value.BoundsMin, value.BoundsMax)).Distinct().Count() > 1);
-        Assert.Contains(map.GeometryPlacements, value => value.DoorId is not null);
+        Assert.NotEmpty(doorVisualMeshIds);
+        Assert.Empty(doorVisualMeshIds.Intersect(staticMeshIds));
+        Assert.All(map.GeometryPlacements.SelectMany(placement => placement.MeshIds), meshId => Assert.Contains(meshId, staticMeshIds));
 
         DaggerfallDungeonMapMarker entrance = Assert.Single(map.Markers, value => value.Kind == DaggerfallDungeonMapMarkerKind.Entrance);
         JsonElement sourceEntrance = world.GetProperty("enterMarker");

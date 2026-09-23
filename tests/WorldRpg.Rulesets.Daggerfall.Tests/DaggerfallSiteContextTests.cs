@@ -19,6 +19,24 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallSiteContextTests
 {
     [Fact]
+    public void Published_exteriors_retain_their_exact_map_pixel_and_flattening_bounds()
+    {
+        DaggerfallSiteContext context = Context();
+        Assert.Equal(15251, context.Records.Count);
+        foreach (DaggerfallSiteRecord site in context.Records)
+        {
+            DaggerfallSiteExterior exterior = Assert.IsType<DaggerfallSiteExterior>(site.Exterior);
+            Assert.Equal(site.MapPixelX, exterior.MapPixelX);
+            Assert.Equal(site.MapPixelY, exterior.MapPixelY);
+            Assert.InRange(exterior.MinX, 0, DaggerfallTerrainSurfaceBuilder.SampleDimension - 2);
+            Assert.InRange(exterior.MaxX, exterior.MinX, DaggerfallTerrainSurfaceBuilder.SampleDimension - 2);
+            Assert.InRange(exterior.MinY, 0, DaggerfallTerrainSurfaceBuilder.SampleDimension - 2);
+            Assert.InRange(exterior.MaxY, exterior.MinY, DaggerfallTerrainSurfaceBuilder.SampleDimension - 2);
+        }
+        Assert.Equal(15251, context.Records.Select(site => (site.MapPixelX, site.MapPixelY)).Distinct().Count());
+    }
+
+    [Fact]
     public void Identifies_a_site_by_region_and_index_when_its_name_is_shared()
     {
         DaggerfallSiteContext site = Context();
@@ -97,7 +115,7 @@ public sealed class DaggerfallSiteContextTests
         // pack's own order would answer differently here, and two identical sessions would write
         // different save bytes.
         static DaggerfallSiteRecord Record(int region, int index) =>
-            new(new DaggerfallSiteId(region, index), $"Shared {region}", index, 0, DaggerfallSiteKind.HomeFarms, false);
+            new(new DaggerfallSiteId(region, index), $"Shared {region}", index, 0, 0, 0, DaggerfallSiteKind.HomeFarms, false);
         DaggerfallLocationSet scrambled = new(
             [(2, 5), (0, 9), (2, 1), (0, 3)],
             [Record(2, 5), Record(0, 9), Record(2, 1), Record(0, 3)],
@@ -457,6 +475,7 @@ public sealed class DaggerfallSiteContextTests
             DaggerfallCharacterReflexes.Average, "class00"))
     {
         Quests = new([]),
+        DungeonMotion = new DaggerfallDungeonMotionSnapshot("test-site-profile", []),
         RegionalPrices = new(0, Enumerable.Repeat(
             WorldRpg.Rulesets.Daggerfall.Policies.DaggerfallRegionalEconomyPolicy.NeutralRegionalAdjustment,
             WorldRpg.Rulesets.Daggerfall.Policies.DaggerfallRegionalEconomyPolicy.RegionCount).ToArray()),

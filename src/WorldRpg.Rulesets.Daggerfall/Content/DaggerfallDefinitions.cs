@@ -17,17 +17,19 @@ internal static class DaggerfallActorIdentity
     internal const long PlayerEntityId = 1;
 }
 
-/// <summary>Published actor kinds. The pack admits player, monster and enemy-class only.</summary>
+/// <summary>Published actor kinds plus the explicit runtime civilian binding.</summary>
 internal static class DaggerfallActorKinds
 {
     internal const string Player = "player";
     internal const string Monster = "monster";
     internal const string EnemyClass = "enemy-class";
+    internal const string Civilian = "civilian";
 }
 
 /// <summary>Skill keys the enemy language formulas can answer with, in pack vocabulary spelling.</summary>
 internal static class DaggerfallSkills
 {
+    internal const string Lockpicking = "lockpicking";
     internal const string Stealth = "stealth";
     internal const string Etiquette = "etiquette";
     internal const string Streetwise = "streetwise";

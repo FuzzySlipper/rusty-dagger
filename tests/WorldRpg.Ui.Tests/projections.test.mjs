@@ -51,6 +51,67 @@ function fixture() {
   };
 }
 
+test('death projection renders semantic choices, selected save slots, and suppresses the menu', () => {
+  const f = fixture();
+  try {
+    const death = (selected = null) => ({
+      active: true, screen: 'screen.death', revision: '4', message: 'You have died.', controlsSuppressed: true,
+      cameraEffect: 'fall', fadeEffect: 'to-black', audioCue: 'player-death', selected,
+      choices: [
+        { action: 'death-new-game', id: 'new-game', label: 'New game', available: selected === null },
+        { action: 'death-load-game', id: 'load-game', label: 'Load game', available: selected === null },
+        { action: 'death-quit', id: 'quit-to-title', label: 'Quit to title', available: selected === null },
+      ],
+    });
+    f.publish({ mode: 'dead', death: death(), saveSlots: {
+      entries: [{ key: 'slot-1', label: 'Before the dungeon', savedAtUtc: '2026-09-23T00:00:00Z', ruleset: 'test' }], diagnostic: null,
+    } });
+    const root = f.root.querySelector('.dagger-death');
+    assert.equal(root.hidden, false);
+    assert.equal(f.root.querySelector('.dagger-menu-toggle').hidden, true);
+    assert.equal(f.root.querySelector('.dagger-death-message').textContent, 'You have died.');
+    assert.equal(f.root.querySelector('.dagger-death-load-slot').options.length, 2);
+
+    const select = f.root.querySelector('.dagger-death-load-slot');
+    select.value = 'slot-1';
+    select.dispatchEvent(new window.Event('change', { bubbles: true }));
+    f.root.querySelector('.dagger-death-load-button').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'death-load-game', key: 'slot-1' });
+
+    f.publish({ mode: 'dead', death: death('load-game') });
+    assert.equal(f.root.querySelector('.dagger-death-new').disabled, true);
+    assert.equal(f.root.querySelector('.dagger-death-quit').disabled, true);
+    f.publish({ mode: 'playing', death: { ...death(), active: false, controlsSuppressed: false, cameraEffect: 'none', fadeEffect: 'none', audioCue: 'none' } });
+    assert.equal(root.hidden, true);
+  } finally { f.dispose(); }
+});
+
+test('death closes retained dialogue and exposes a real fade consumer', () => {
+  const f = fixture();
+  try {
+    const dialogue = {
+      revision: 'dialogue-4', targetLabel: 'A guard', greeting: 'Halt.', tone: 'normal',
+      question: 'Who goes there?', reply: null, topics: [{ id: 'name', label: 'Ask name' }], diagnostics: [],
+    };
+    f.publish({ mode: 'playing', activation: { mode: 'talk', message: '', applied: true, dialogue } });
+    const dialogueWindow = f.root.querySelector('.dagger-dialogue');
+    assert.equal(dialogueWindow.open, true);
+    const actionsBeforeDeath = f.actions.length;
+
+    f.publish({ mode: 'dead', activation: { mode: 'talk', message: '', applied: true, dialogue }, death: {
+      active: true, screen: 'screen.death', revision: '5', message: 'You have died.', controlsSuppressed: true,
+      cameraEffect: 'fall', fadeEffect: 'to-black', audioCue: 'player-death', selected: null,
+      choices: [{ action: 'death-new-game', id: 'new-game', label: 'New game', available: true }],
+    } });
+
+    assert.equal(dialogueWindow.open, false);
+    assert.equal(f.root.querySelector('.dagger-death-fade').getAttribute('aria-hidden'), 'true');
+    assert.equal(f.root.querySelector('.dagger-death').dataset.fadeEffect, 'to-black');
+    f.root.querySelector('.dagger-dialogue-close').click();
+    assert.equal(f.actions.length, actionsBeforeDeath, 'A retained dialogue close cannot cross the death gate.');
+  } finally { f.dispose(); }
+});
+
 test('focus close follows the current projected interaction and null clears its token', () => {
   const f = fixture();
   try {
@@ -106,6 +167,35 @@ test('transport projection exposes land selection and keeps ship boarding disabl
     assert.equal(ship.disabled, true);
     ship.click();
     assert.notEqual(f.actions.at(-1)?.action, 'transport-board-ship');
+  } finally { f.dispose(); }
+});
+
+test('rest panel sends semantic durations and shows the ruleset elapsed outcome', () => {
+  const f = fixture();
+  try {
+    f.publish();
+    f.root.querySelector('[data-action="rest"]:not([data-rest-mode])').click();
+    const panel = f.root.querySelector('.dagger-rest-root');
+    assert.equal(panel.hidden, false);
+    const hours = panel.querySelector('.dagger-rest-hours');
+    hours.value = '2';
+    panel.querySelector('[data-rest-mode="timed"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'rest', mode: 'timed', hours: 2 });
+    hours.value = '-1';
+    const count = f.actions.length;
+    panel.querySelector('[data-rest-mode="loiter"]').click();
+    assert.equal(f.actions.length, count);
+    assert.match(panel.querySelector('.dagger-rest-status').textContent, /whole number/);
+    panel.querySelector('[data-rest-mode="until-healed"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'rest', mode: 'until-healed' });
+    f.publish({ rest: {
+      hasResult: true, revision: '1', mode: 'Timed', requestedSeconds: 7200,
+      elapsedSeconds: 3600, recoveryHours: 1, healthRecovered: 3,
+      fatigueRecovered: 8, spellPointsRecovered: 2, interruption: 'Encounter',
+      message: 'Your rest was interrupted by an encounter.',
+    } });
+    assert.equal(panel.querySelector('.dagger-rest-status').textContent,
+      'Your rest was interrupted by an encounter.');
   } finally { f.dispose(); }
 });
 

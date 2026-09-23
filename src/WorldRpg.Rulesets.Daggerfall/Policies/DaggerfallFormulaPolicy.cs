@@ -211,17 +211,51 @@ internal static class DaggerfallFormulaPolicy
         return Math.Max(selected.MinimumRecoveryRate, recovery);
     }
 
+    /// <summary>FORM-01.CalculateHealthRecoveryRate, with the donor's integer floor and minimum of one.</summary>
+    internal static int CalculateHealthRecoveryRate(int endurance, int medical, int maximumHealth, bool rapidHealing, DaggerfallFormulaTuning? tuning = null) =>
+        HealthRecoveryRate(endurance, medical, maximumHealth, rapidHealing, tuning);
+
     internal static int FatigueRecoveryRate(int maximumFatigue, DaggerfallFormulaTuning? tuning = null)
     {
         DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
         return Math.Max(selected.MinimumRecoveryRate, FloorDivide(maximumFatigue, selected.RecoveryDivisor));
     }
 
+    /// <summary>FORM-01.CalculateFatigueRecoveryRate, retaining the donor's maximum-fatigue divisor.</summary>
+    internal static int CalculateFatigueRecoveryRate(int maximumFatigue, DaggerfallFormulaTuning? tuning = null) =>
+        FatigueRecoveryRate(maximumFatigue, tuning);
+
     internal static int SpellPointRecoveryRate(int maximumMagicka, bool noRegeneration, DaggerfallFormulaTuning? tuning = null)
     {
         DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
         if (noRegeneration) return 0;
         return Math.Max(selected.MinimumRecoveryRate, FloorDivide(maximumMagicka, selected.RecoveryDivisor));
+    }
+
+    /// <summary>FORM-01.CalculateSpellPointRecoveryRate, including the no-regeneration career branch.</summary>
+    internal static int CalculateSpellPointRecoveryRate(int maximumMagicka, bool noRegeneration, DaggerfallFormulaTuning? tuning = null) =>
+        SpellPointRecoveryRate(maximumMagicka, noRegeneration, tuning);
+
+    /// <summary>
+    /// Donor <c>FormulaHelper.CalculateInteriorLockpickingChance</c> for an
+    /// animating interior door. The level contribution is deliberately kept in
+    /// this overload; exterior doors use a separate donor formula without it.
+    /// </summary>
+    internal static int CalculateInteriorLockpickingChance(int level, int lockValue, int lockpickingSkill)
+    {
+        int chance = checked((5 * (level - lockValue)) + lockpickingSkill);
+        return Math.Clamp(chance, 5, 95);
+    }
+
+    /// <summary>
+    /// Donor <c>FormulaHelper.CalculateExteriorLockpickingChance</c> for a
+    /// building door leading to an interior. Its lock penalty is independent of
+    /// player level and retains the donor's [5, 95] clamp.
+    /// </summary>
+    internal static int CalculateExteriorLockpickingChance(int lockValue, int lockpickingSkill)
+    {
+        int chance = checked(lockpickingSkill - (5 * lockValue));
+        return Math.Clamp(chance, 5, 95);
     }
 
     /// <summary>Donor <c>FormulaHelper.CalculateBackstabChance</c>: an accepted facing-away opportunity contributes the live skill to hit chance.</summary>

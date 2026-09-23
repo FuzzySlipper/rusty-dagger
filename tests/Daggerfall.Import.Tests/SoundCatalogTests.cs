@@ -26,7 +26,7 @@ public sealed class SoundCatalogTests
         Assert.Equal(Enumerable.Range(0, 459), catalog.Clips.Select(clip => clip.Ordinal));
         Assert.Equal(catalog.Clips.Select(clip => clip.Ordinal), catalog.Clips.Select(clip => clip.Ordinal).Order());
 
-        // Every clip carries a numeric identity and a stated reason, and the six the product publishes
+        // Every clip carries a numeric identity and a stated reason, and the seven the product publishes
         // are admitted while the rest say they have no consumer rather than being absent.
         // The numeric identity is not unique in this archive: four hundred and fifty-nine records carry
         // four hundred and fifty-eight distinct numbers, so exactly one number appears twice. That is
@@ -35,8 +35,8 @@ public sealed class SoundCatalogTests
         Assert.Equal(458, catalog.Clips.Select(clip => clip.NumericId).Distinct().Count());
         Assert.Single(catalog.Clips.GroupBy(clip => clip.NumericId), group => group.Count() == 2);
         Assert.All(catalog.Clips, clip => Assert.False(string.IsNullOrWhiteSpace(clip.Reason)));
-        Assert.Equal(6, catalog.Clips.Count(clip => clip.Disposition == DaggerfallSoundClipDisposition.Admitted));
-        Assert.Equal(452, catalog.Clips.Count(clip => clip.Disposition == DaggerfallSoundClipDisposition.ReadableNoConsumer));
+        Assert.Equal(7, catalog.Clips.Count(clip => clip.Disposition == DaggerfallSoundClipDisposition.Admitted));
+        Assert.Equal(451, catalog.Clips.Count(clip => clip.Disposition == DaggerfallSoundClipDisposition.ReadableNoConsumer));
 
         // One record of the four hundred and fifty-nine carries no sample bytes at all, and it is the
         // case the task asks to be explicit rather than omitted: the catalog states it, names why, and
@@ -51,13 +51,14 @@ public sealed class SoundCatalogTests
         // an admission that named one only inside a sentence would not be a reference it could follow.
         Assert.Equal("audio.melee.dagger.swing", catalog.Clips[106].MediaId);
         Assert.Equal("audio.melee.hit.5", catalog.Clips[112].MediaId);
+        Assert.Equal("audio.player.death", catalog.Clips[405].MediaId);
         Assert.All(catalog.Clips.Where(clip => clip.Disposition != DaggerfallSoundClipDisposition.Admitted), clip => Assert.Null(clip.MediaId));
         Assert.All(catalog.Clips.Where(clip => clip.Disposition == DaggerfallSoundClipDisposition.Admitted),
             clip => Assert.Contains(clip.MediaId!, clip.Reason, StringComparison.Ordinal));
 
         // The donor's own names are the usage candidates, transcribed from its clip enum: three
         // hundred and seventy-three of the four hundred and fifty-nine clips are named there, and the
-        // six this product publishes are named differently on purpose - the donor's 'SwingHighPitch'
+        // seven this product publishes are named differently on purpose - the donor's 'SwingHighPitch'
         // is published as 'audio.melee.dagger.swing', so both the original name and the product's
         // identity are carried rather than one replacing the other.
         // The donor's enum has three hundred and seventy-four named entries and one of them is 'None',
@@ -66,6 +67,7 @@ public sealed class SoundCatalogTests
         Assert.Equal("SwingHighPitch", catalog.Clips[106].UsageCandidate);
         Assert.Equal("Hit1", catalog.Clips[108].UsageCandidate);
         Assert.Equal("Hit5", catalog.Clips[112].UsageCandidate);
+        Assert.Equal("WoodElfMalePain1", catalog.Clips[405].UsageCandidate);
 
         // The record with no sample bytes is the one the donor itself marks as invalid, which is what
         // makes its disposition a fact about the archive rather than a shortcoming of this reader.
@@ -100,8 +102,8 @@ public sealed class SoundCatalogTests
         // The admitted set is the publication's own audio manifests, so these two records of the same
         // fact cannot drift: an entry the catalog calls admitted is one the publication emitted.
         DaggerfallSoundClip[] admitted = [.. catalog.Clips.Where(clip => clip.Disposition == DaggerfallSoundClipDisposition.Admitted)];
-        Assert.Equal(6, admitted.Length);
-        Assert.Equal([106, 108, 109, 110, 111, 112], admitted.Select(clip => clip.Ordinal));
+        Assert.Equal(7, admitted.Length);
+        Assert.Equal([106, 108, 109, 110, 111, 112, 405], admitted.Select(clip => clip.Ordinal));
         Assert.Equal(
             publication.Audio.Select(audio => (audio.SourceRecordOrdinal, audio.MediaId)).OrderBy(entry => entry.SourceRecordOrdinal),
             admitted.Select(clip => (clip.Ordinal, clip.MediaId!)).OrderBy(entry => entry.Item1));
@@ -198,7 +200,7 @@ public sealed class SoundCatalogTests
         Assert.Contains("no sample bytes", unsupported.Message, StringComparison.Ordinal);
     }
 
-    /// <summary>The six clips the product publishes today, stated here so the identity test does not read them off the producer.</summary>
+    /// <summary>The seven clips the product publishes today, stated here so the identity test does not read them off the producer.</summary>
     private static IReadOnlyList<DaggerfallSoundAdmission> Admissions() =>
     [
         new(106, "audio.melee.dagger.swing"),
@@ -207,6 +209,7 @@ public sealed class SoundCatalogTests
         new(110, "audio.melee.hit.3"),
         new(111, "audio.melee.hit.4"),
         new(112, "audio.melee.hit.5"),
+        new(405, "audio.player.death"),
     ];
 
     private static SoundArchive RepositoryArchive() => SoundArchive.Parse(File.ReadAllBytes(Corpus("DAGGER.SND")), Arena2ClassicMediaPublication.DaggerSoundSourcePath);

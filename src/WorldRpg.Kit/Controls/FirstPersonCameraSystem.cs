@@ -62,15 +62,21 @@ public sealed class FirstPersonCameraSystem : IDisposable
         }
     }
 
-    public void Update(PlayerControlState player)
+    /// <summary>
+    /// Updates the one Engine-owned camera. The optional eye-height offset lets a product realize
+    /// a presentation pose, such as a defeat fall, without creating a second camera or mutating
+    /// the authoritative player control state.
+    /// </summary>
+    public void Update(PlayerControlState player, float eyeHeightOffset = 0f)
     {
         if (_disposed) return;
         if (!ReferenceEquals(_player, player))
         {
             throw new InvalidOperationException("A first-person camera remains bound to its constructed player control state.");
         }
+        if (!float.IsFinite(eyeHeightOffset)) throw new ArgumentOutOfRangeException(nameof(eyeHeightOffset));
 
-        _cameraView.UpdateCamera(new CameraUpdateRequest(_camera, Descriptor(_player)));
+        _cameraView.UpdateCamera(new CameraUpdateRequest(_camera, Descriptor(_player, eyeHeightOffset)));
     }
 
     /// <summary>The derived eye point submitted to the Engine camera descriptor.</summary>
@@ -90,9 +96,9 @@ public sealed class FirstPersonCameraSystem : IDisposable
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 
-    private CameraDescriptor Descriptor(PlayerControlState player)
+    private CameraDescriptor Descriptor(PlayerControlState player, float eyeHeightOffset = 0f)
     {
-        WorldPoint viewpoint = ViewpointFor(player);
+        WorldPoint viewpoint = ViewpointFor(player, eyeHeightOffset);
         return new CameraDescriptor(
             new CameraPose(
                 viewpoint.ToVector(),
@@ -109,9 +115,9 @@ public sealed class FirstPersonCameraSystem : IDisposable
             FullViewport);
     }
 
-    private WorldPoint ViewpointFor(PlayerControlState player)
+    private WorldPoint ViewpointFor(PlayerControlState player, float eyeHeightOffset = 0f)
     {
         WorldPoint position = player.Position ?? throw new InvalidOperationException("A first-person camera requires a player position.");
-        return WorldPoint.From(position.ToVector() + (Vector3.UnitY * _tuning.EyeHeight));
+        return WorldPoint.From(position.ToVector() + (Vector3.UnitY * (_tuning.EyeHeight + eyeHeightOffset)));
     }
 }

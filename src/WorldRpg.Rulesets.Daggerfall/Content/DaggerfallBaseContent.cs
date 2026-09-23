@@ -344,8 +344,8 @@ internal static class DaggerfallBaseContent
             int index = Integer(location, "index", diagnostics);
             string name = Text(location, "name", diagnostics);
             int mapId = Integer(location, "mapId", diagnostics);
-            _ = Integer(location, "longitude", diagnostics);
-            _ = Integer(location, "latitude", diagnostics);
+            int longitude = Integer(location, "longitude", diagnostics);
+            int latitude = Integer(location, "latitude", diagnostics);
             int dungeonType = Integer(location, "dungeonType", diagnostics);
             bool discovered = Boolean(location, "discovered", diagnostics);
 
@@ -371,7 +371,9 @@ internal static class DaggerfallBaseContent
             // section is still readable, but a site consumer would answer from a kind nobody published.
             if (DaggerfallSiteKinds.TryResolve(locationType, out DaggerfallSiteKind kind))
             {
-                records.Add(new DaggerfallSiteRecord(new DaggerfallSiteId(region, index), name, mapId, dungeonType, kind, discovered));
+                DaggerfallSiteExterior? exterior = ReadSiteExterior(location, region, index, longitude, latitude, diagnostics);
+                records.Add(new DaggerfallSiteRecord(new DaggerfallSiteId(region, index), name, mapId,
+                    longitude, latitude, dungeonType, kind, discovered, exterior));
             }
             else
             {
@@ -480,6 +482,33 @@ internal static class DaggerfallBaseContent
         }
 
         return new DaggerfallLocationSet([.. keys], [.. records], dungeons, gaps, regions);
+    }
+
+    private static DaggerfallSiteExterior? ReadSiteExterior(JsonElement location, int region, int index,
+        int longitude, int latitude, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!location.TryGetProperty("exterior", out JsonElement value)) return null;
+        JsonElement exterior = Object(value, $"location {region}/{index} exterior", diagnostics);
+        int mapPixelX = Integer(exterior, "mapPixelX", diagnostics);
+        int mapPixelY = Integer(exterior, "mapPixelY", diagnostics);
+        int width = Integer(exterior, "width", diagnostics);
+        int height = Integer(exterior, "height", diagnostics);
+        int tileOriginX = Integer(exterior, "tileOriginX", diagnostics);
+        int tileOriginY = Integer(exterior, "tileOriginY", diagnostics);
+        bool custom = Boolean(exterior, "usesCustomLocationPosition", diagnostics);
+        int clearance = Integer(exterior, "blendClearance", diagnostics);
+        JsonElement rect = Object(Property(exterior, "flattenRect", diagnostics),
+            $"location {region}/{index} terrain rectangle", diagnostics);
+        int minX = Integer(rect, "minX", diagnostics);
+        int maxX = Integer(rect, "maxX", diagnostics);
+        int minY = Integer(rect, "minY", diagnostics);
+        int maxY = Integer(rect, "maxY", diagnostics);
+        if (mapPixelX != longitude / 128 || mapPixelY != 499 - latitude / 128)
+            diagnostics.Add($"Published location {region}/{index} terrain map pixel disagrees with its world coordinates.");
+        if (width <= 0 || height <= 0 || clearance is not 2 and not 3 || maxX < minX || maxY < minY)
+            diagnostics.Add($"Published location {region}/{index} has invalid normalized exterior terrain bounds.");
+        return new DaggerfallSiteExterior(mapPixelX, mapPixelY, width, height, tileOriginX, tileOriginY,
+            custom, clearance, minX, maxX, minY, maxY);
     }
 
     /// <summary>

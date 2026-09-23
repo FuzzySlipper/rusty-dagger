@@ -7,6 +7,8 @@ using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Presentation;
 using WorldRpg.Kit.Progression;
+using WorldRpg.Rulesets.Daggerfall.Policies;
+using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
@@ -42,7 +44,10 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         DaggerfallActivationView? activation = null,
         DaggerfallQuestPresentation? quests = null,
         DaggerfallNotebookPresentation? notebook = null,
-        DaggerfallTransportPresentation? transport = null)
+        DaggerfallTransportPresentation? transport = null,
+        DaggerfallDungeonTextProjection? dungeonText = null,
+        DaggerfallDeathView? death = null,
+        DaggerfallRestView? rest = null)
     {
         UiValueBuilder builder = new();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
@@ -104,6 +109,14 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         if (quests is not null) fields = [.. fields, ("quests", Quests(builder, quests))];
         if (notebook is not null) fields = [.. fields, ("notebook", Notebook(builder, notebook))];
         if (transport is not null) fields = [.. fields, ("transport", Transport(builder, transport))];
+        fields = [.. fields, ("dungeonText", dungeonText is null ? builder.Null() : builder.Object(
+            ("actionId", builder.String(dungeonText.ActionId)),
+            ("kind", builder.String(dungeonText.Kind.ToString())),
+            ("text", builder.String(dungeonText.Text)),
+            ("revision", builder.String(dungeonText.Revision.ToString(CultureInfo.InvariantCulture))),
+            ("requiresAnswer", builder.Boolean(dungeonText.Kind == DaggerfallDungeonTextActionKind.ShowTextWithInput))))];
+        fields = [.. fields, ("death", death is null ? builder.Null() : Death(builder, death))];
+        fields = [.. fields, ("rest", rest is null ? builder.Null() : Rest(builder, rest))];
         if (inventory is not null) fields = [.. fields, ("inventory", Inventory(builder, inventory))];
         // Contents are an affordance the same way focus is: a dead or paused product refuses the take
         // its gate would otherwise honour, so the panel is published only in the mode that lets the
@@ -150,11 +163,52 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("capacityClassicUnits", builder.Number(transport.Wagon.CapacityClassicUnits)),
             ("storeRevision", transport.Wagon.StoreRevision is ulong revision
                 ? builder.String(revision.ToString(CultureInfo.InvariantCulture)) : builder.Null()),
-            ("message", builder.String(transport.Wagon.Message)),
-            ("items", builder.Array(transport.Wagon.Items.Select(item => builder.Object(
-                ("key", builder.String(item.Key)),
-                ("definition", builder.String(item.Definition)),
-                ("quantity", builder.String(item.Quantity)))).ToArray())))));
+                ("message", builder.String(transport.Wagon.Message)),
+                ("items", builder.Array(transport.Wagon.Items.Select(item => builder.Object(
+                    ("key", builder.String(item.Key)),
+                    ("definition", builder.String(item.Definition)),
+                    ("quantity", builder.String(item.Quantity)))).ToArray())))));
+
+    private static uint Death(UiValueBuilder builder, DaggerfallDeathView death) => builder.Object(
+        ("active", builder.Boolean(death.Active)),
+        ("screen", builder.String(death.Screen)),
+        ("revision", builder.String(death.Revision.ToString(CultureInfo.InvariantCulture))),
+        ("message", builder.String(death.Message)),
+        ("controlsSuppressed", builder.Boolean(death.ControlsSuppressed)),
+        ("cameraEffect", builder.String(death.CameraEffect == DaggerfallDeathCameraEffect.Fall ? "fall" : "none")),
+        ("fadeEffect", builder.String(death.FadeEffect == DaggerfallDeathFadeEffect.ToBlack ? "to-black" : "none")),
+        ("audioCue", builder.String(death.AudioCue == DaggerfallDeathAudioCue.PlayerDeath ? "player-death" : "none")),
+        ("choices", builder.Array(death.Choices.Select(choice => builder.Object(
+            ("action", builder.String(choice.Action)),
+            ("id", builder.String(choice.Id switch
+            {
+                DaggerfallDeathChoiceId.NewGame => "new-game",
+                DaggerfallDeathChoiceId.LoadGame => "load-game",
+                DaggerfallDeathChoiceId.QuitToTitle => "quit-to-title",
+                _ => "unknown",
+            })),
+            ("label", builder.String(choice.Label)),
+            ("available", builder.Boolean(choice.Available)))).ToArray())),
+        ("selected", death.Selected is { } selected ? builder.String(selected switch
+        {
+            DaggerfallDeathChoiceId.NewGame => "new-game",
+            DaggerfallDeathChoiceId.LoadGame => "load-game",
+            DaggerfallDeathChoiceId.QuitToTitle => "quit-to-title",
+            _ => "unknown",
+        }) : builder.Null()));
+
+    private static uint Rest(UiValueBuilder builder, DaggerfallRestView rest) => builder.Object(
+        ("hasResult", builder.Boolean(rest.HasResult)),
+        ("revision", builder.String(rest.Revision.ToString(CultureInfo.InvariantCulture))),
+        ("mode", rest.Mode is null ? builder.Null() : builder.String(rest.Mode)),
+        ("requestedSeconds", builder.Number(rest.RequestedSeconds)),
+        ("elapsedSeconds", builder.Number(rest.ElapsedSeconds)),
+        ("recoveryHours", builder.Number(rest.RecoveryHours)),
+        ("healthRecovered", builder.Number(rest.HealthRecovered)),
+        ("fatigueRecovered", builder.Number(rest.FatigueRecovered)),
+        ("spellPointsRecovered", builder.Number(rest.SpellPointsRecovered)),
+        ("interruption", builder.String(rest.Interruption.ToString().ToLowerInvariant())),
+        ("message", rest.Message is null ? builder.Null() : builder.String(rest.Message)));
 
     private static uint Quests(UiValueBuilder builder, DaggerfallQuestPresentation quests) => builder.Object(
         ("deliveries", builder.Array(quests.Deliveries.Select(message => QuestMessage(builder, message)).ToArray())),
@@ -202,6 +256,11 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("currency", value.Currency is { } currency ? builder.Object(
                 ("gold", builder.String(currency.Gold.ToString(CultureInfo.InvariantCulture))), ("lettersOfCredit", builder.String(currency.LettersOfCredit.ToString(CultureInfo.InvariantCulture))),
                 ("accountGold", builder.String(currency.AccountGold.ToString(CultureInfo.InvariantCulture)))) : builder.Null()),
+            ("bank", value.Bank is { } bank ? builder.Object(
+                ("currentRegion", builder.Number(bank.CurrentRegion)),
+                ("currentBalance", builder.String(bank.CurrentBalance)),
+                ("accounts", builder.Array(bank.Accounts.Select(account => builder.Object(
+                    ("region", builder.Number(account.Region)), ("gold", builder.String(account.Gold)))).ToArray()))) : builder.Null()),
             ("equipmentChange", value.EquipmentChange is { } change ? builder.Object(
                 ("cue", builder.String(change.Cue)), ("rightHandDelayMilliseconds", builder.Number(change.RightHandDelayMilliseconds)),
                 ("leftHandDelayMilliseconds", builder.Number(change.LeftHandDelayMilliseconds))) : builder.Null()),
@@ -230,6 +289,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
     {
         uint Stat(CharacterStatPresentation stat) => builder.Object(("id", builder.String(stat.Id)),
             ("label", builder.String(stat.Label)), ("value", builder.Number(stat.Value)), ("permanent", builder.Number(stat.Permanent)));
+        uint Requirement(CharacterGuildRequirementPresentation? rank) => rank is null ? builder.Null() : builder.Object(
+            ("rank", builder.Number(rank.Rank)), ("reputation", builder.Number(rank.Reputation)),
+            ("highSkill", builder.Number(rank.HighSkill)), ("lowSkill", builder.Number(rank.LowSkill)));
         uint creation = value.Creation is null ? builder.Null() : Creation(builder, value.Creation);
         uint identity = value.Identity is null ? builder.Null() : Identity(builder, value.Identity);
         return builder.Object(("name", builder.String(value.Name)),
@@ -251,7 +313,11 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("affiliations", builder.Array(value.Affiliations.Select(affiliation => builder.Object(
                 ("faction", builder.String(affiliation.Faction)), ("guildGroup", builder.String(affiliation.GuildGroup)),
                 ("rank", builder.Number(affiliation.Rank)), ("reputation", builder.Number(affiliation.Reputation)),
-                ("recognition", builder.Number(affiliation.Recognition)))).ToArray())),
+                ("recognition", builder.Number(affiliation.Recognition)),
+                ("currentRequirement", Requirement(affiliation.CurrentRequirement)),
+                ("nextRequirement", Requirement(affiliation.NextRequirement)),
+                ("daysUntilReview", affiliation.DaysUntilReview is int days ? builder.Number(days) : builder.Null()),
+                ("privileges", builder.Array((affiliation.Privileges ?? []).Select(builder.String).ToArray())))).ToArray())),
             ("history", value.History is null ? builder.Null() : builder.Object(("biography", builder.Array(value.History.Biography.Select(builder.String).ToArray())))),
             ("grantedSkills", builder.Array((value.GrantedSkills ?? []).Select(skill => builder.Object(
                 ("id", builder.String(skill.SkillId)), ("tier", builder.String(skill.Tier.ToString().ToLowerInvariant())))).ToArray())),

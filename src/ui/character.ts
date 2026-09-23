@@ -28,7 +28,13 @@ export interface CharacterAffiliation {
   readonly rank: number;
   readonly reputation: number;
   readonly recognition: number;
+  readonly currentRequirement?: GuildRankRequirement | null;
+  readonly nextRequirement?: GuildRankRequirement | null;
+  readonly daysUntilReview?: number | null;
+  readonly privileges?: readonly string[];
 }
+
+interface GuildRankRequirement { readonly rank: number; readonly reputation: number; readonly highSkill: number; readonly lowSkill: number; }
 
 export interface CharacterHistory { readonly biography: readonly string[]; }
 
@@ -183,7 +189,10 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
       })));
       renderRows(affiliations.rows, (value.affiliations ?? []).map(affiliation => ({
         label: affiliation.faction,
-        value: `${affiliation.guildGroup || 'Guild'} · Rank ${format(affiliation.rank)} · Reputation ${format(affiliation.reputation)} · Recognition ${format(affiliation.recognition)}`,
+        value: `${affiliation.guildGroup || 'Guild'} · Rank ${format(affiliation.rank)} · Reputation ${format(affiliation.reputation)} · Recognition ${format(affiliation.recognition)}`
+          + (affiliation.nextRequirement ? ` · Next rank ${format(affiliation.nextRequirement.rank)}: reputation ${format(affiliation.nextRequirement.reputation)}, skills ${format(affiliation.nextRequirement.highSkill)}/${format(affiliation.nextRequirement.lowSkill)}` : '')
+          + (affiliation.daysUntilReview != null ? ` · Review in ${format(affiliation.daysUntilReview)} days` : '')
+          + (affiliation.privileges?.length ? ` · Privileges: ${affiliation.privileges.join(', ')}` : ''),
         testid: `character-sheet-affiliation-${affiliation.faction}`,
       })));
       renderRows(history.rows, (value.history?.biography ?? []).map((line, index) => ({
@@ -320,7 +329,19 @@ function isAffiliation(value: unknown): value is CharacterAffiliation {
     && 'guildGroup' in value && typeof value.guildGroup === 'string'
     && 'rank' in value && isNumber(value.rank)
     && 'reputation' in value && isNumber(value.reputation)
-    && 'recognition' in value && isNumber(value.recognition);
+    && 'recognition' in value && isNumber(value.recognition)
+    && (!('currentRequirement' in value) || value.currentRequirement === null || isGuildRankRequirement(value.currentRequirement))
+    && (!('nextRequirement' in value) || value.nextRequirement === null || isGuildRankRequirement(value.nextRequirement))
+    && (!('daysUntilReview' in value) || value.daysUntilReview === null || isNumber(value.daysUntilReview))
+    && (!('privileges' in value) || Array.isArray(value.privileges) && value.privileges.every(item => typeof item === 'string'));
+}
+
+function isGuildRankRequirement(value: unknown): value is GuildRankRequirement {
+  return typeof value === 'object' && value !== null
+    && 'rank' in value && isNumber(value.rank)
+    && 'reputation' in value && isNumber(value.reputation)
+    && 'highSkill' in value && isNumber(value.highSkill)
+    && 'lowSkill' in value && isNumber(value.lowSkill);
 }
 
 function isHistory(value: unknown): value is CharacterHistory {

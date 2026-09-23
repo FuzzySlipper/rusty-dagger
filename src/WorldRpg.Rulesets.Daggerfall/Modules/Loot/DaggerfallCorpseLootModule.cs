@@ -40,6 +40,9 @@ internal sealed class DaggerfallCorpseLootModule
     private readonly DaggerfallCharacterState _character;
     private readonly DaggerfallLootPopulation _population;
     private readonly CorpseLootCoordinator _corpseLoot;
+    // A corpse container is a durable product object even though its Engine
+    // owner is recreated whenever its actor is materialized again.
+    private readonly DaggerfallCorpseIdentityLedger _identityLedger;
 
     internal DaggerfallCorpseLootModule(
         IPerceptionService perception,
@@ -55,7 +58,8 @@ internal sealed class DaggerfallCorpseLootModule
         DaggerfallUniqueItemAllocator uniqueItems,
         ProgressionState progression,
         DaggerfallLootInteractionTuning tuning,
-        DaggerfallCharacterState character)
+        DaggerfallCharacterState character,
+        DurableIdentityAllocator? identities = null)
     {
         _perception = perception ?? throw new ArgumentNullException(nameof(perception));
         _spatial = spatial ?? throw new ArgumentNullException(nameof(spatial));
@@ -73,6 +77,7 @@ internal sealed class DaggerfallCorpseLootModule
         _character = character ?? throw new ArgumentNullException(nameof(character));
         _population = new DaggerfallLootPopulation(_catalog, random, _uniqueItems);
         _corpseLoot = new CorpseLootCoordinator(_actors.Entities, _containers);
+        _identityLedger = new DaggerfallCorpseIdentityLedger(identities);
     }
 
     // Focused module tests can exercise corpse ownership with no player inventory/stat fixture.
@@ -88,7 +93,8 @@ internal sealed class DaggerfallCorpseLootModule
 
     internal IReadOnlyDictionary<long, CorpseContainer> Corpses => _actors.All
         .Select(actor => actor.Actor.TryGet<CorpseLootComponent>(out CorpseLootComponent? corpse) && corpse is not null
-            ? new CorpseContainer(actor.DurableId, corpse.Owner, corpse.OriginatingSequence, corpse.HasRegisteredInventory, corpse.IsInteractable)
+            ? new CorpseContainer(actor.DurableId, corpse.Owner, corpse.OriginatingSequence, corpse.HasRegisteredInventory, corpse.IsInteractable,
+                _identityLedger.IdentityOf(actor.DurableId, corpse.Owner, _actors.Entities))
             : null)
         .Where(corpse => corpse is not null)
         .Cast<CorpseContainer>()
@@ -98,6 +104,15 @@ internal sealed class DaggerfallCorpseLootModule
 
     /// <summary>Recreates durable corpse ownership and current Engine contents without re-running loot policy.</summary>
     internal void Restore(IReadOnlyList<DaggerfallCorpseSave> saved)
+        => Restore(saved, savedIdentities: null);
+
+    /// <summary>
+    /// Restores current corpse contents using the identity captured by the save owner.
+    /// The optional map keeps this module usable by older focused fixtures; the live
+    /// session supplies it so a container identity never changes across save/load.
+    /// </summary>
+    internal void Restore(IReadOnlyList<DaggerfallCorpseSave> saved,
+        IReadOnlyDictionary<long, DurableIdentityReference>? savedIdentities)
     {
         ArgumentNullException.ThrowIfNull(saved);
         foreach (DaggerfallCorpseSave value in saved.OrderBy(corpse => corpse.ActorId))
@@ -107,8 +122,9 @@ internal sealed class DaggerfallCorpseLootModule
                 throw new ArgumentException($"Saved corpse '{value.ActorId}' does not correspond to a defeated registered actor.", nameof(saved));
             if (actor.Actor.TryGet<CorpseLootComponent>(out _))
                 throw new InvalidOperationException("Corpse state can only be restored into a fresh session.");
+            DurableIdentityReference identity = RestoreContainerIdentity(value.ActorId, savedIdentities);
             CorpseLootComponent corpse = _corpseLoot.Restore(
-                CorpseIdentity(value.ActorId),
+                identity,
                 CorpseType,
                 value.OriginatingSequence,
                 value.IsRegistered,
@@ -128,27 +144,45 @@ internal sealed class DaggerfallCorpseLootModule
     {
         if (!_actors.TryGet(fact.ActorId, out ActorState? state)
             || fact.ActorId <= 0
+            || fact.ActorId == DaggerfallActorIdentity.PlayerEntityId
             || !state.IsDefeated
-            || !_definitions.TryGetValue(fact.ActorId, out DaggerfallActorDefinition? actor)) return;
+            || !_definitions.TryGetValue(fact.ActorId, out DaggerfallActorDefinition? actor)
+            || actor.Kind == DaggerfallActorKinds.Player) return;
 
         if (state.Actor.TryGet<CorpseLootComponent>(out _)) return;
 
+        DurableIdentityReference corpseIdentity = _identityLedger.Allocate(fact.ActorId, _actors.Entities);
+
         // A corpse is a distinct container, even when the actor already has a quiver.
-        DaggerfallLootPopulationResult generated = _population.Generate(new DaggerfallLootPopulationRequest(
-            new DaggerfallLootPopulationId("corpse", checked((ulong)fact.ActorId)),
-            DaggerfallItemOwner.Corpse(fact.ActorId),
-            actor.LootTableKey ?? "-",
-            _progression.Level,
-            fact.OriginatingGeneration,
-            fact.OriginatingSequence,
-            _character.Identity.RaceId,
-            _character.Identity.Gender == DaggerfallCharacterGender.Male ? "male" : "female",
-            _character.Identity.Gender == DaggerfallCharacterGender.Male ? "MensClothing" : "WomensClothing"));
-        // Donor RemoveLootContainer disables interaction but preserves the
-        // corpse marker. Even an empty generated corpse is targetable once so
-        // the player receives a truthful semantic result.
-        state.Actor.Add(_corpseLoot.Create(CorpseIdentity(fact.ActorId), CorpseType, fact.OriginatingSequence, generated.Seeds));
-        _population.RegisterGeneratedMetadata(generated, _itemInstances);
+        try
+        {
+            DaggerfallLootPopulationResult? generated = actor.LootTableKey is string tableKey
+                ? _population.Generate(new DaggerfallLootPopulationRequest(
+                    new DaggerfallLootPopulationId("corpse", checked((ulong)fact.ActorId)),
+                    DaggerfallItemOwner.Corpse(fact.ActorId),
+                    tableKey,
+                    _progression.Level,
+                    fact.OriginatingGeneration,
+                    fact.OriginatingSequence,
+                    _character.Identity.RaceId,
+                    _character.Identity.Gender == DaggerfallCharacterGender.Male ? "male" : "female",
+                    _character.Identity.Gender == DaggerfallCharacterGender.Male ? "MensClothing" : "WomensClothing"))
+                : null;
+            // Donor RemoveLootContainer disables interaction but preserves the
+            // corpse marker. Even an empty generated corpse is targetable once so
+            // the player receives a truthful semantic result.
+            state.Actor.Add(_corpseLoot.Create(corpseIdentity, CorpseType, fact.OriginatingSequence, generated?.Seeds ?? []));
+            if (generated is not null)
+                _population.RegisterGeneratedMetadata(generated, _itemInstances);
+        }
+        catch
+        {
+            // Allocation is committed before the Engine container is created. A
+            // failed materialization is still a real retirement from the durable
+            // identity perspective; never let its number be handed out again.
+            _identityLedger.Abort(corpseIdentity, fact.ActorId);
+            throw;
+        }
     }
 
     /// <summary>Reads Engine visibility and prepares, but does not publish, an explicit loot action.</summary>
@@ -322,7 +356,29 @@ internal sealed class DaggerfallCorpseLootModule
     }
 
     private static readonly EntityTypeId CorpseType = new("daggerfall.corpse");
-    private static DurableIdentityReference CorpseIdentity(long actorId) => new(DurableIdentityKind.Container, checked((ulong)actorId));
+
+    /// <summary>
+    /// Releases the live Engine owner for a site unload while retaining the
+    /// product identity and corpse state for a later restore.
+    /// </summary>
+    internal bool Unload(long actorId)
+        => _identityLedger.Unload(actorId, _actors.Entities);
+
+    /// <summary>
+    /// Removes a corpse owner when its actor is actually retired.  Unloading
+    /// calls <see cref="Unload"/> instead, so only this path tombstones the
+    /// container identity.
+    /// </summary>
+    internal bool Retire(long actorId)
+        => _identityLedger.Retire(actorId, _actors.Entities);
+
+    /// <summary>Returns the stable container identity for a live or unloaded corpse.</summary>
+    internal bool TryGetContainerIdentity(long actorId, out DurableIdentityReference identity) =>
+        _identityLedger.TryGet(actorId, out identity);
+
+    private DurableIdentityReference RestoreContainerIdentity(long actorId,
+        IReadOnlyDictionary<long, DurableIdentityReference>? savedIdentities)
+        => _identityLedger.Restore(actorId, savedIdentities, _actors.Entities);
 
     private static IReadOnlyList<InventoryContainerSeed> RestoreSeeds(DaggerfallCorpseSave value) => value.Stacks
         .Select(stack => new InventoryContainerSeed(new InventoryItemId(stack.ItemId), stack.Quantity, Stack: InventoryStackId.Parse(stack.StackId)))
@@ -360,7 +416,8 @@ internal sealed class DaggerfallCorpseLootModule
 }
 
 /// <summary>Ruleset-owned durable mapping from a defeated actor to its Engine inventory owner.</summary>
-internal sealed record CorpseContainer(long ActorId, EntityId Owner, ulong OriginatingSequence, bool IsRegistered, bool IsInteractable);
+internal sealed record CorpseContainer(long ActorId, EntityId Owner, ulong OriginatingSequence, bool IsRegistered, bool IsInteractable,
+    DurableIdentityReference ContainerIdentity);
 
 /// <summary>One validated take request: the selection and revision a take applies, if it commits.</summary>
 internal sealed record PendingCorpseLoot(long ActorId, CorpseLootComponent Corpse, IReadOnlyList<LootAwardedFact> Facts, bool IsEmpty,
@@ -372,3 +429,114 @@ internal sealed record CorpseLootCommitEvidence(long ActorId, bool Committed, st
 /// <summary>Copied Engine visibility receipt and the deterministic corpse choice for one explicit interaction.</summary>
 internal sealed record CorpseLootEvidence(PerceptionQueryRequest Request, PerceptionReadoutLeaseReceipt Receipt, long? SelectedActorId);
 internal sealed record GeneratedLootSeed(InventoryContainerSeed Seed, DaggerfallItemInstanceMetadata? Metadata);
+
+/// <summary>
+/// Durable actor-to-corpse ownership.  Runtime Engine entities are deliberately
+/// outside this ledger: unloading destroys only the current owner, while actual
+/// retirement tombstones the container identity.
+/// </summary>
+internal sealed class DaggerfallCorpseIdentityLedger
+{
+    private readonly DurableIdentityAllocator? _identities;
+    private readonly Dictionary<long, DurableIdentityReference> _values = [];
+
+    internal DaggerfallCorpseIdentityLedger(DurableIdentityAllocator? identities) => _identities = identities;
+
+    internal DurableIdentityReference Allocate(long actorId, EntityDirectory entities)
+    {
+        if (actorId <= 0) throw new ArgumentOutOfRangeException(nameof(actorId));
+        ArgumentNullException.ThrowIfNull(entities);
+        if (_values.TryGetValue(actorId, out DurableIdentityReference existing))
+        {
+            if (entities.TryResolve(existing, out _))
+                throw new InvalidOperationException($"Actor {actorId} already has a live corpse container.");
+            if (_identities is not null && _identities.Classify(existing) != DurableIdentityClassification.Live)
+                throw new InvalidOperationException($"Actor {actorId} already owns a corpse container identity that is no longer live.");
+            return existing;
+        }
+
+        DurableIdentityReference identity = _identities?.Allocate(DurableIdentityKind.Container)
+            ?? new DurableIdentityReference(DurableIdentityKind.Container, checked((ulong)actorId));
+        _values.Add(actorId, identity);
+        return identity;
+    }
+
+    internal DurableIdentityReference IdentityOf(long actorId, EntityId owner, EntityDirectory entities)
+    {
+        ArgumentNullException.ThrowIfNull(entities);
+        if (_values.TryGetValue(actorId, out DurableIdentityReference identity)) return identity;
+        // Compatibility for a pre-ledger focused fixture that attached a corpse
+        // directly. Production creation and restore paths always record first.
+        identity = _identities is null
+            ? new DurableIdentityReference(DurableIdentityKind.Container, checked((ulong)actorId))
+            : entities.IdentityOf(owner);
+        _values.Add(actorId, identity);
+        return identity;
+    }
+
+    internal DurableIdentityReference Restore(long actorId,
+        IReadOnlyDictionary<long, DurableIdentityReference>? saved,
+        EntityDirectory entities)
+    {
+        ArgumentNullException.ThrowIfNull(entities);
+        if (actorId <= 0) throw new ArgumentOutOfRangeException(nameof(actorId));
+        if (_values.TryGetValue(actorId, out DurableIdentityReference existing))
+        {
+            if (saved is not null && saved.TryGetValue(actorId, out DurableIdentityReference savedExisting)
+                && savedExisting != existing)
+                throw new ArgumentException($"Saved corpse {actorId} changed its durable container identity.", nameof(saved));
+            return existing;
+        }
+
+        DurableIdentityReference identity;
+        if (saved is not null && saved.TryGetValue(actorId, out DurableIdentityReference savedIdentity))
+        {
+            identity = savedIdentity.Validate();
+            if (identity.Kind != DurableIdentityKind.Container)
+                throw new ArgumentException($"Saved corpse {actorId} names a non-container identity.", nameof(saved));
+            if (_identities is not null && _identities.Classify(identity) != DurableIdentityClassification.Live)
+                throw new ArgumentException($"Saved corpse {actorId} container identity {identity.Value} is not live in the durable ledger.", nameof(saved));
+        }
+        else
+        {
+            // Allocate records the mapping itself. Returning here avoids adding
+            // the same actor a second time below on the compatibility path.
+            return Allocate(actorId, entities);
+        }
+
+        _values.Add(actorId, identity);
+        return identity;
+    }
+
+    internal bool TryGet(long actorId, out DurableIdentityReference identity) => _values.TryGetValue(actorId, out identity);
+
+    internal bool TryRemove(long actorId, out DurableIdentityReference identity) => _values.Remove(actorId, out identity);
+
+    internal bool Unload(long actorId, EntityDirectory entities)
+    {
+        ArgumentNullException.ThrowIfNull(entities);
+        return _values.TryGetValue(actorId, out DurableIdentityReference identity)
+            && entities.Destroy(identity);
+    }
+
+    internal bool Retire(long actorId, EntityDirectory entities)
+    {
+        ArgumentNullException.ThrowIfNull(entities);
+        if (!TryRemove(actorId, out DurableIdentityReference identity)) return false;
+        entities.Destroy(identity);
+        Tombstone(identity);
+        return true;
+    }
+
+    internal void Abort(DurableIdentityReference identity, long actorId)
+    {
+        _values.Remove(actorId);
+        Tombstone(identity);
+    }
+
+    internal void Tombstone(DurableIdentityReference identity)
+    {
+        if (_identities is not null && _identities.Classify(identity) == DurableIdentityClassification.Live)
+            _identities.Remove(identity);
+    }
+}

@@ -128,6 +128,20 @@ public sealed class ActorNavigationAndCameraTests
         Assert.Equal(system.Viewpoint.ToVector(), camera.LastDescriptor.Pose.Position);
     }
 
+    [Fact]
+    public void Camera_presentation_offset_moves_the_existing_camera_without_moving_the_player()
+    {
+        CameraDouble camera = CameraDouble.Create();
+        PlayerControlState player = new(new WorldPoint(1f, 2f, 3f), 0f, 0f);
+        using FirstPersonCameraSystem system = new(camera.Service, player, new FirstPersonCameraTuning(1.5f, 75d, .1d, 100d));
+
+        system.Update(player, -1f);
+
+        Assert.Equal(new Vector3(1f, 2.5f, 3f), camera.LastDescriptor.Pose.Position);
+        Assert.Equal(new WorldPoint(1f, 2f, 3f), player.Position);
+        Assert.Equal(new WorldPoint(1f, 3.5f, 3f), system.Viewpoint);
+    }
+
     private static NavigationStepReceipt Receipt(NavigationPathOutcome outcome, Vector3 waypoint) => new(
         outcome, waypoint, default, 0, 0, 0, 0, 0, 0);
 

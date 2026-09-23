@@ -8,7 +8,7 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
     string? Attribute = null, string? BackgroundAnswers = null, string? AttributeAllocations = null, string? SkillAllocations = null, ulong? Amount = null,
     string? QuestInstance = null, int? QuestMessage = null, int? QuestChoice = null, string? QuestPrompt = null,
     string? Note = null, string? Text = null, int? Page = null, int? Destination = null,
-    string? Tone = null, string? Topic = null);
+    string? Tone = null, string? Topic = null, int? Hours = null);
 
 /// <summary>The small Daggerfall player-action wire contract, consumed during admitted updates.</summary>
 internal static class DaggerfallUiAction
@@ -24,14 +24,14 @@ internal static class DaggerfallUiAction
             if (root.ValueKind != JsonValueKind.Object) return null;
             HashSet<string> fields = new(StringComparer.Ordinal);
             string? action = null, revision = null, item = null, targetEquipment = null, container = null, key = null, label = null, name = null, race = null, gender = null, career = null, mode = null, primarySkills = null, majorSkills = null, minorSkills = null, advantages = null, disadvantages = null, attribute = null, backgroundAnswers = null, attributeAllocations = null, skillAllocations = null, questInstance = null, questPrompt = null, note = null, text = null, tone = null, topic = null;
-            int? targetGrid = null, faceIndex = null, reflexes = null, hitPointsPerLevel = null, questMessage = null, page = null, destination = null;
+            int? targetGrid = null, faceIndex = null, reflexes = null, hitPointsPerLevel = null, questMessage = null, page = null, destination = null, hours = null;
             ulong? amount = null;
             bool confirm = false;
             int? questChoice = null;
             foreach (JsonProperty property in root.EnumerateObject())
             {
                 if (!fields.Add(property.Name)) return null;
-                if (property.Name is "targetGrid" or "faceIndex" or "reflexes" or "hitPointsPerLevel" or "questMessage" or "page" or "destination")
+                if (property.Name is "targetGrid" or "faceIndex" or "reflexes" or "hitPointsPerLevel" or "questMessage" or "page" or "destination" or "hours")
                 {
                     if (!property.Value.TryGetInt32(out int grid)) return null;
                     if (property.Name == "targetGrid") targetGrid = grid;
@@ -40,7 +40,8 @@ internal static class DaggerfallUiAction
                     else if (property.Name == "hitPointsPerLevel") hitPointsPerLevel = grid;
                     else if (property.Name == "questMessage") questMessage = grid;
                     else if (property.Name == "page") page = grid;
-                    else destination = grid;
+                    else if (property.Name == "destination") destination = grid;
+                    else hours = grid;
                     continue;
                 }
                 if (property.Name == "amount")
@@ -141,6 +142,18 @@ internal static class DaggerfallUiAction
                 return fields.SetEquals(["action", "amount"]) && amount is not null ? new(action, Amount: amount) : null;
             if (action == "currency-deposit-letters")
                 return fields.SetEquals(["action"]) ? new(action) : null;
+            if (action == "bank-transfer")
+                return fields.SetEquals(["action", "amount", "destination"]) && amount is not null && destination is >= 0
+                    ? new(action, Amount: amount, Destination: destination) : null;
+            if (action == "dungeon-text-answer")
+                return fields.SetEquals(["action", "revision", "item", "text"])
+                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
+                    && text is { Length: <= 256 }
+                    ? new(action, Revision: revision, Item: item, Text: text) : null;
+            if (action == "dungeon-text-close")
+                return fields.SetEquals(["action", "revision", "item"])
+                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
+                    ? new(action, Revision: revision, Item: item) : null;
             if (action == "art-request")
                 return fields.SetEquals(["action", "revision"]) && !string.IsNullOrWhiteSpace(revision)
                     ? new(action, revision) : null;
@@ -165,6 +178,11 @@ internal static class DaggerfallUiAction
                 return fields.IsSubsetOf(["action", "key", "confirm"])
                     && !string.IsNullOrWhiteSpace(key)
                     ? new(action, Key: key, Confirm: confirm) : null;
+            if (action is "death-new-game" or "death-quit")
+                return fields.SetEquals(["action"]) ? new(action) : null;
+            if (action == "death-load-game")
+                return fields.SetEquals(["action", "key"]) && !string.IsNullOrWhiteSpace(key)
+                    ? new(action, Key: key) : null;
             if (action is "character-begin" or "character-cancel")
                 return fields.SetEquals(["action"]) ? new(action) : null;
             if (action == "character-level-allocate")
@@ -189,7 +207,7 @@ internal static class DaggerfallUiAction
             }
             if (action == "activation-mode")
                 return fields.SetEquals(["action", "mode"])
-                    && mode is "grab" or "info" or "talk" or "steal" or "bash"
+                    && mode is "grab" or "info" or "talk" or "steal" or "lockpick" or "bash"
                     ? new(action, Mode: mode) : null;
             if (action == "transport-select")
                 return fields.SetEquals(["action", "mode"])
@@ -197,6 +215,15 @@ internal static class DaggerfallUiAction
                     ? new(action, Mode: mode) : null;
             if (action is "transport-toggle" or "transport-leave-ship")
                 return fields.SetEquals(["action"]) ? new(action) : null;
+            if (action == "rest")
+            {
+                bool timedOrLoiter = mode is "timed" or "loiter";
+                bool untilHealed = mode == "until-healed";
+                bool shape = timedOrLoiter
+                    ? fields.SetEquals(["action", "mode", "hours"]) && hours is >= 0
+                    : untilHealed && fields.SetEquals(["action", "mode"]);
+                return shape ? new(action, Mode: mode, Hours: hours) : null;
+            }
             if (action is "wagon-put" or "wagon-take")
                 return (fields.SetEquals(["action", "revision", "item"])
                     || fields.SetEquals(["action", "revision", "item", "amount"]))

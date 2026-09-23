@@ -4,6 +4,7 @@ using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.Progression;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Guilds;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
@@ -12,7 +13,12 @@ internal sealed record CharacterStatPresentation(string Id, string Label, long V
 internal sealed record CharacterResourcePresentation(string Id, string Label, long Current, long Maximum);
 internal sealed record CharacterProgressionPresentation(int Level, int Experience, int? SkillProgress = null, int? NextLevelSkillProgress = null, bool PendingLevelUp = false);
 internal sealed record CharacterEquipmentPresentation(string Label, string[] Slots, string Details, ItemConditionPresentation? Condition = null, bool Identified = true);
-internal sealed record CharacterAffiliationPresentation(string Faction, string GuildGroup, int Rank, int Reputation, int Recognition);
+internal sealed record CharacterGuildRequirementPresentation(int Rank, int Reputation, int HighSkill, int LowSkill);
+internal sealed record CharacterAffiliationPresentation(string Faction, string GuildGroup, int Rank, int Reputation, int Recognition,
+    CharacterGuildRequirementPresentation? CurrentRequirement = null,
+    CharacterGuildRequirementPresentation? NextRequirement = null,
+    int? DaysUntilReview = null,
+    string[]? Privileges = null);
 internal sealed record CharacterHistoryPresentation(string[] Biography);
 internal sealed record CharacterSheetPresentation(
     string Name,
@@ -118,6 +124,8 @@ internal sealed class DaggerfallCharacterPresentation
     private readonly DaggerfallLevelUpState? _levelUps;
     private readonly DaggerfallSocialState? _social;
     private readonly DaggerfallSkillUseReactions? _skills;
+    private DaggerfallGuildMembershipPolicy? _guildMembership;
+    private Func<int>? _currentDay;
     private DaggerfallInventoryPresentation? _items;
     private static readonly DaggerfallStatId[] ResistanceStats =
     [
@@ -175,6 +183,13 @@ internal sealed class DaggerfallCharacterPresentation
         _skills = skills ?? throw new ArgumentNullException(nameof(skills));
     }
 
+    internal void UseGuildMembership(DaggerfallGuildMembershipPolicy policy, Func<int> currentDay)
+    {
+        if (_guildMembership is not null) throw new InvalidOperationException("Guild membership projection is already configured.");
+        _guildMembership = policy ?? throw new ArgumentNullException(nameof(policy));
+        _currentDay = currentDay ?? throw new ArgumentNullException(nameof(currentDay));
+    }
+
     internal CharacterSheetPresentation Read(PlayerActorState player, ProgressionState progression)
     {
         ArgumentNullException.ThrowIfNull(player);
@@ -219,7 +234,17 @@ internal sealed class DaggerfallCharacterPresentation
     }
 
     private CharacterAffiliationPresentation[] Affiliations() => _social?.ReadAffiliations()
-        .Select(value => new CharacterAffiliationPresentation(value.Faction, value.GuildGroup, value.Rank, value.Reputation, value.Recognition))
+        .Select(value =>
+        {
+            if (_guildMembership is null || _currentDay is null || !_guildMembership.IsConfigured(value.FactionId))
+                return new CharacterAffiliationPresentation(value.Faction, value.GuildGroup, value.Rank, value.Reputation, value.Recognition);
+            DaggerfallGuildMembershipView guild = _guildMembership.Read(value.FactionId, _currentDay());
+            static CharacterGuildRequirementPresentation? Requirement(DaggerfallGuildRankRequirement? rank) => rank is null
+                ? null : new(rank.Rank, rank.MinimumReputation, rank.HighSkillMinimum, rank.LowSkillMinimum);
+            return new CharacterAffiliationPresentation(value.Faction, value.GuildGroup, value.Rank, value.Reputation, value.Recognition,
+                Requirement(guild.CurrentRankRequirement), Requirement(guild.NextRankRequirement), guild.DaysUntilReview,
+                [.. guild.Privileges]);
+        })
         .ToArray() ?? [];
 
     private static CharacterResourcePresentation Resource(PlayerActorState player, DaggerfallHudResourceDefinition resource)

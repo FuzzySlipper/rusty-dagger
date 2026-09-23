@@ -8,6 +8,7 @@ export interface InventoryProjection {
   readonly equipmentChange: EquipmentChange | null;
   readonly encumbrance?: Encumbrance | null;
   readonly currency?: CurrencyTotals | null;
+  readonly bank?: BankProjection | null;
 }
 
 export interface Encumbrance {
@@ -20,6 +21,17 @@ export interface CurrencyTotals {
   readonly gold: string;
   readonly lettersOfCredit: string;
   readonly accountGold: string;
+}
+
+export interface BankAccount {
+  readonly region: number;
+  readonly gold: string;
+}
+
+export interface BankProjection {
+  readonly currentRegion: number;
+  readonly currentBalance: string;
+  readonly accounts: readonly BankAccount[];
 }
 
 /** A completed ruleset-owned equipment change. Delay fields remain available to a later readiness owner. */
@@ -77,6 +89,15 @@ export type InventoryAction = {
   readonly action: 'inventory-use';
   readonly revision: string;
   readonly item: string;
+} | {
+  readonly action: 'currency-deposit-gold' | 'currency-withdraw-gold' | 'currency-withdraw-letter';
+  readonly amount: number;
+} | {
+  readonly action: 'currency-deposit-letters';
+} | {
+  readonly action: 'bank-transfer';
+  readonly amount: number;
+  readonly destination: number;
 };
 
 type MoveSource = { readonly key: string; readonly revision: string };
@@ -129,6 +150,8 @@ export function mountInventory(
   equipment.className = 'dagger-inventory-equipment';
   equipment.setAttribute('aria-label', 'Equipment slots');
   const details = createDetails();
+  const bankControls = createBankControls();
+  details.element.append(bankControls.element);
 
   gridSection.append(gridHeading, grid, overflowHeading, overflow);
   equipmentSection.append(equipmentHeading, equipment);
@@ -189,6 +212,7 @@ export function mountInventory(
     lastRevision = value.revision;
     lastMessage = value.message;
     status.textContent = equipmentStatus(value);
+    bankControls.render(value.bank ?? null);
     const byKey = new Map(value.items.map((item) => [item.key, item]));
     const byGrid = new Map(value.items.flatMap((item) => item.gridSlot === null || item.gridSlot < 0 || item.gridSlot >= GRID_SLOT_COUNT
       ? [] : [[item.gridSlot, item] as const]));
@@ -263,6 +287,23 @@ export function mountInventory(
     if (button.dataset.inventoryItem !== undefined) {
       const source = sourceFor(button.dataset.inventoryItem);
       if (source !== null) select(source);
+      return;
+    }
+    const bankAction = button.dataset.bankAction;
+    if (bankAction !== undefined) {
+      const parsedAmount = Number(bankControls.amount.value);
+      if (bankAction === 'currency-deposit-letters') {
+        claim({ action: bankAction });
+      } else if (Number.isSafeInteger(parsedAmount) && parsedAmount > 0 && parsedAmount <= 2_147_483_647) {
+        if (bankAction === 'bank-transfer') {
+          const destination = Number(bankControls.destination.value);
+          if (Number.isInteger(destination) && destination >= 0 && destination < 62)
+            claim({ action: bankAction, amount: parsedAmount, destination });
+        } else if (bankAction === 'currency-deposit-gold' || bankAction === 'currency-withdraw-gold'
+          || bankAction === 'currency-withdraw-letter') {
+          claim({ action: bankAction, amount: parsedAmount });
+        }
+      }
       return;
     }
     if (selected === null) return;
@@ -433,6 +474,81 @@ function createDetails(): {
         dropQuantity.max = item.quantity;
         if (Number(dropQuantity.value) > Number(item.quantity)) dropQuantity.value = item.quantity;
       }
+    },
+  };
+}
+
+function createBankControls(): {
+  readonly element: HTMLElement;
+  readonly amount: HTMLInputElement;
+  readonly destination: HTMLSelectElement;
+  render(value: BankProjection | null): void;
+} {
+  const section = document.createElement('section');
+  section.className = 'dagger-bank';
+  const heading = document.createElement('h3');
+  heading.textContent = 'Regional bank';
+  const active = document.createElement('p');
+  active.className = 'dagger-bank-active';
+  const balances = document.createElement('ul');
+  balances.className = 'dagger-bank-balances';
+  balances.setAttribute('aria-label', 'Regional account balances');
+  const amount = document.createElement('input');
+  amount.type = 'number';
+  amount.min = '1';
+  amount.max = '2147483647';
+  amount.step = '1';
+  amount.value = '100';
+  amount.setAttribute('aria-label', 'Bank transaction amount');
+  const destination = targetSelect('Transfer destination region');
+  const controls = document.createElement('div');
+  controls.className = 'dagger-bank-actions';
+  const actions: readonly [string, string][] = [
+    ['currency-deposit-gold', 'Deposit gold'],
+    ['currency-withdraw-gold', 'Withdraw gold'],
+    ['currency-deposit-letters', 'Deposit all letters'],
+    ['currency-withdraw-letter', 'Withdraw letter'],
+    ['bank-transfer', 'Transfer to region'],
+  ];
+  for (const [action, label] of actions) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.bankAction = action;
+    button.textContent = label;
+    controls.append(button);
+  }
+  section.append(heading, active, balances, amount, destination, controls);
+
+  return {
+    element: section,
+    amount,
+    destination,
+    render(value): void {
+      const enabled = value !== null;
+      section.hidden = !enabled;
+      amount.disabled = !enabled;
+      for (const button of Array.from(controls.querySelectorAll<HTMLButtonElement>('button'))) button.disabled = !enabled;
+      if (value === null) {
+        active.textContent = '';
+        balances.replaceChildren();
+        destination.replaceChildren();
+        destination.disabled = true;
+        return;
+      }
+      active.textContent = `Region ${value.currentRegion}: ${value.currentBalance} gold`;
+      balances.replaceChildren(...value.accounts.map((account) => {
+        const row = document.createElement('li');
+        row.textContent = `Region ${account.region}: ${account.gold}`;
+        if (account.region === value.currentRegion) row.className = 'is-current';
+        return row;
+      }));
+      const prior = destination.value;
+      destination.replaceChildren(...value.accounts.filter((account) => account.region !== value.currentRegion).map((account) => {
+        const option = new Option(`Region ${account.region}`, String(account.region));
+        return option;
+      }));
+      if (Array.from(destination.options).some((option) => option.value === prior)) destination.value = prior;
+      destination.disabled = destination.options.length === 0;
     },
   };
 }
