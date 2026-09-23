@@ -32,8 +32,8 @@ hash admission, revision guards, snapshots, and rollback. The recent refactors
 removed that machinery; this lane holds the removal until runtime gravity is
 established (see `docs/gameplay-design.md` and rusty-engine Board post 147).
 
-Optional lanes. Pick to a total of three to four reviewers, and pick lanes whose
-questions can disagree with each other:
+Optional lanes. In DSH, pick to a total of three to four reviewers, and pick lanes
+whose questions can disagree with each other. Codex/Prime mapping is below:
 
 | Lane | Use when |
 | --- | --- |
@@ -44,10 +44,15 @@ questions can disagree with each other:
 | [Test claims](lanes/test-claims.md) | the change adds or edits tests, or claims verification |
 
 Do not open a lane that repeats another lane's question in different words. Do
-not run the full roster to be safe: a trivial task is three reviewers, and a task
-that changes a boundary, a save contract, or an ownership seam is four.
+not run the full roster to be safe. Under the DSH roster, a trivial task is three
+reviewers, and a task that changes a boundary, a save contract, or an ownership
+seam is four. Codex/Prime uses the standing partners below instead of adding this
+roster on top of them.
 
-## Choosing the reviewer tool
+## DSH agents: choosing the reviewer tool
+
+The following tools, context behavior, settlement notices, and settled-reviewer
+messaging are valid for the DSH harness. They are not Codex tool names.
 
 | Tool | Context | Use for |
 | --- | --- | --- |
@@ -63,7 +68,7 @@ under review, and the command that demonstrates the behavior. Name the lane
 packet explicitly in the prompt; a reviewer gets the generic packet plus its own
 lane file, never the other lanes'.
 
-## Revision rounds
+### DSH revision rounds
 
 When a round's findings are addressed, `send_message` the same reviewer. State
 what changed, what was deliberately left alone and why, and which finding ids to
@@ -79,6 +84,45 @@ lane no longer matters.
 Open a fresh reviewer only when the revision is large enough that the old
 reviewer's accumulated position is itself a source of bias, and say so when you
 do.
+
+## Codex agents
+
+Use Codex's available collaboration tools, not DSH's `subagent_review` or
+`subagent_audit`. Reuse persistent sessions across tasks and review fixes.
+With `collaboration`, use `spawn_agent` for initial assignments, `send_message`
+for active-agent steering, and `followup_task` to start another assignment on an
+idle or completed agent. An idle-agent message alone does not start a turn.
+Use the documented equivalent when another Codex runtime exposes different tools.
+
+When Prime is selected, its standing team satisfies the review responsibilities:
+
+| Responsibility | Persistent Prime partner |
+| --- | --- |
+| Engine reuse | Upstream checker: `gpt-6-luna`, `max` |
+| Existing product reuse and unfinished task paths | Reuse checker: `gpt-6-luna`, `max` |
+| Runtime trust, correctness, and relevant optional review questions | Senior: `gpt-6-astra`, `medium` |
+
+Do not add a second roster or a fourth reviewer solely because the DSH rule
+calls for one. Assign relevant lane questions to these partners; add another
+reviewer only for a concrete independent question the standing team cannot
+usefully cover. Without Prime, retain the required review responsibilities with
+the available persistent Codex partners and the user's selected model settings.
+
+Give each partner the generic packet and the lane guidance relevant to its
+assigned questions. Prime's Senior may cover more than one complementary
+question; keep ownership explicit and avoid duplicate investigations. Preserve
+the main agent's implementation ownership and final judgment.
+
+Keep useful independent work moving during review. Use bounded waits when
+needed, avoid busy polling, and collect required results before claiming review
+completion. Send fixes back through `followup_task` to the same idle reviewer,
+with changed paths and finding IDs. Keep the standing sessions for the next
+task; replace only an unavailable session or one with a concrete context problem.
+
+Respect live slot limits. Defer optional helpers or do their work at the root
+rather than discarding a standing reviewer. State an unavailable review lane
+honestly; do not claim it ran. The selected Codex/Prime workflow does not launch
+an external Den review by default; honor an explicit task-owned external gate.
 
 ## Authority on disagreement
 

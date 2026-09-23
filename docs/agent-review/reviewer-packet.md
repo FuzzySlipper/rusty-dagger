@@ -33,8 +33,10 @@ summary in inherited history. The code may have moved since it was described.
 
 ## Scope discipline
 
-Review the lane you were given, and nothing else. Another reviewer owns the other
-questions; duplicating them wastes a round and muddies which lane found what.
+Review the questions you were assigned. DSH gives each reviewer one lane;
+Codex/Prime may give a persistent partner complementary lane questions as
+described in the workflow. Another reviewer owns unassigned questions;
+duplicating them wastes a round and muddies which lane found what.
 
 Do not report stylistic preferences unless they break a convention this
 repository states. Do not propose new scope, a broad redesign, or acceptance
@@ -73,7 +75,9 @@ wrong, say so once with evidence and let the root decide; scope decisions belong
 to the task and the user, not to you. Do not re-raise a declined finding in a
 later round.
 
-Use `send_message` only when an ambiguity actually blocks the review.
+In DSH, use `send_message` only when an ambiguity actually blocks the review.
+In Codex, use active-agent messages for blockers, material counterevidence, or
+focused questions; the root uses `followup_task` to restart an idle reviewer.
 
 ## Reporting
 
