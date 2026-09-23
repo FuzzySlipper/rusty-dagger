@@ -72,10 +72,14 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         appearance.Clear();
         Assert.Equal(0, appearance.ActiveCellCount);
         Assert.Equal(1, appearance.RetiredCellCount);
-        appearance.Publish([new AppearanceFact(900, false, 0, default, baseAppearance, true, RenderLayer.Scene)]);
+        List<AppearanceFact> snapshot =
+        [new AppearanceFact(900, false, 0, default, baseAppearance, true, RenderLayer.Scene)];
+        appearance.AppendFacts(snapshot);
+        graphics.PublishSnapshot(snapshot.ToArray());
+        appearance.CompleteAcceptedSnapshot();
 
-        AppearanceFact[] snapshot = Assert.Single(graphics.Snapshots);
-        Assert.Equal(900UL, snapshot[0].ObjectId);
+        AppearanceFact[] published = Assert.Single(graphics.Snapshots);
+        Assert.Equal(900UL, published[0].ObjectId);
         Assert.Equal(0, appearance.RetiredCellCount);
         Assert.Contains("appearance", graphics.Releases);
         Assert.Contains("mesh", graphics.Releases);

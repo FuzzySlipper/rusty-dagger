@@ -1,6 +1,7 @@
 using WorldRpg.Kit.Combat;
 using System.Numerics;
 using Rusty.Engine;
+using Rusty.Engine.Entities;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
@@ -37,9 +38,37 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private ViewmodelVisual? viewmodel;
     private bool weaponDrawn = true;
     internal bool CanStartPlayerAttack => weaponDrawn && viewmodel?.Strike != true;
+    /// <summary>
+    /// Reports an enemy hit swing whose authored damage frame has not been consumed yet.
+    /// The session uses this presentation-owned state to keep post-enemy actions behind the
+    /// same admitted animation boundary; it does not mirror combat health or create a second
+    /// combat queue.
+    /// </summary>
+    internal bool HasPendingEnemyHitTarget(long targetId) => actors.Values.Any(visual =>
+        visual.ActiveAttack is { Identity.Target: var target, Identity.Attacker: var attacker, Identity.Outcome: "hit", ImpactReported: false }
+        && target == targetId
+        && attacker != DaggerfallActorIdentity.PlayerEntityId);
     /// <summary>Reads the authored weapon draw state without conflating it with an active strike.</summary>
     internal bool IsWeaponDrawn => weaponDrawn;
     internal void ToggleWeaponDrawn() => weaponDrawn = !weaponDrawn;
+
+    /// <summary>
+    /// Registers a product-owned visual coordinator to contribute facts to this class's one
+    /// complete Engine appearance snapshot. The completion callback runs only after the snapshot
+    /// is accepted, which lets the coordinator retire resources without racing native readers.
+    /// </summary>
+    internal void SetSnapshotSupplement(
+        Action<List<AppearanceFact>>? appendFacts,
+        Action? snapshotAccepted)
+    {
+        appendSnapshotFacts = appendFacts;
+        completeSnapshot = snapshotAccepted;
+    }
+
+    /// <summary>Emits the admitted classic player-death cue through the Engine audio owner.</summary>
+    internal void PlayPlayerDeath(ulong generation, ulong simulationStep) =>
+        Emit("playerDeath", Event(DaggerfallActorIdentity.PlayerEntityId, DaggerfallActorIdentity.PlayerEntityId,
+            generation, simulationStep, "player-death"), 0);
     // Appearance object identities must be exactly representable in browser snapshots.
     // These transient product visuals use a disjoint descending pool, not resource hashes.
     private ulong nextVisualEntityId = (1UL << 53) - 1;
@@ -53,6 +82,8 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private readonly Dictionary<uint, Material> materialsBySlot = [];
     private readonly Dictionary<DaggerfallRdbDoorId, Appearance> doorVisuals = [];
     private readonly Dictionary<DaggerfallRdbDoorId, ulong> doorVisualEntityIds = [];
+    private readonly Dictionary<string, Appearance> actionModelVisuals = new(StringComparer.Ordinal);
+    private readonly DaggerfallDungeonMotionProjection? dungeonMotion;
     // Door source identities are not Engine entity IDs or durable actor IDs.  Keep their render
     // identities in this product-only visual range, below effect/viewmodel identities and above
     // every authored or dynamically allocated gameplay identity.
@@ -65,14 +96,17 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private readonly List<IDisposable> nextRetired = [];
     private Appearance? world;
     private readonly AuthoredWorldAppearance worldAppearance;
+    private Action<List<AppearanceFact>>? appendSnapshotFacts;
+    private Action? completeSnapshot;
     private bool disposed;
 
-    internal PrivateersHoldAppearance(IContentService content, IGraphicsService appearance, PrivateersHoldInputs inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallDoorRuntime? doors = null)
+    internal PrivateersHoldAppearance(IContentService content, IGraphicsService appearance, PrivateersHoldInputs inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallDoorRuntime? doors = null, DaggerfallDungeonMotionProjection? dungeonMotion = null)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(appearance);
         ArgumentNullException.ThrowIfNull(inputs);
         this.doors = doors;
+        this.dungeonMotion = dungeonMotion;
         this.appearance = appearance;
         this.content = content;
         this.audio = audio;
@@ -107,6 +141,29 @@ internal sealed class PrivateersHoldAppearance : IDisposable
                     .ToArray()));
                 doorVisuals.Add(door.Id, created);
                 doorVisualEntityIds.Add(door.Id, nextDoorVisualEntityId--);
+            }
+            if (dungeonMotion is not null)
+            {
+                foreach ((DaggerfallDungeonActionModelDefinition model, _) in dungeonMotion.Visuals)
+                {
+                    Appearance created = appearance.CreateStaticMeshFromContent(new StaticMeshContentAppearanceRequest(model.Visual.Path, worldAppearance.Tint));
+                    try
+                    {
+                        appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, model.Visual.Materials
+                            .Select(binding => materialsBySlot.TryGetValue(binding.WorldMaterialSlot, out Material? material)
+                                ? new MeshMaterialBinding(binding.MeshSlot, material)
+                                : throw new InvalidOperationException($"Action model '{model.ActionId}' refers to missing world material slot {binding.WorldMaterialSlot}."))
+                            .ToArray()));
+                        actionModelVisuals.Add(model.ActionId, created);
+                    }
+                    catch
+                    {
+                        List<Exception>? failures = null;
+                        Dispose(created, ref failures);
+                        if (failures is { Count: > 0 }) throw new AggregateException(failures);
+                        throw;
+                    }
+                }
             }
             foreach ((long entityId, NormalizedActorSprite sprite) in inputs.ActorSprites.OrderBy(pair => pair.Key))
             {
@@ -175,6 +232,15 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         if (world is { } staticWorld) facts.Add(new AppearanceFact(1, false, 0, worldAppearance.Transform, staticWorld, worldAppearance.Visible, worldAppearance.Layer));
         if (doors is not null) foreach (DaggerfallDoorView door in doors.All)
             if (doorVisuals.TryGetValue(door.Id, out Appearance? visual)) facts.Add(new AppearanceFact(doorVisualEntityIds[door.Id], false, 0, door.Pose, visual, true, RenderLayer.Scene));
+        if (dungeonMotion is not null)
+        {
+            foreach ((DaggerfallDungeonActionModelDefinition model, EntityId entity) in dungeonMotion.Visuals)
+            {
+                if (actionModelVisuals.TryGetValue(model.ActionId, out Appearance? visual)
+                    && dungeonMotion.TryGetTransform(model.ActionId, out Transform transform))
+                    facts.Add(new AppearanceFact(entity.Value, false, 0, transform, visual, true, RenderLayer.Scene));
+            }
+        }
         foreach (ActorState actor in actors.All)
         {
             if (!this.actors.TryGetValue(actor.DurableId, out ActorVisual? visual)) continue;
@@ -193,7 +259,22 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         {
             facts.Add(new AppearanceFact(weapon.EntityId, false, 0, weapon.Transform, weapon.Appearance, true, RenderLayer.Viewmodel));
         }
+        appendSnapshotFacts?.Invoke(facts);
         appearance.PublishSnapshot([.. facts]);
+        completeSnapshot?.Invoke();
+    }
+
+    /// <summary>
+    /// Reconciles restored actor defeat state with the presentation-owned live/corpse visual state.
+    /// This performs no death reaction, audio, loot, or reward work; those owners already restored
+    /// their canonical state before this projection sync.
+    /// </summary>
+    internal void SyncRestoredDefeat(ActorsState actors)
+    {
+        ArgumentNullException.ThrowIfNull(actors);
+        foreach (ActorState actor in actors.All.OrderBy(actor => actor.DurableId))
+            if (actor.IsDefeated)
+                TransitionToCorpse(actor.DurableId);
     }
 
     /// <summary>
@@ -387,7 +468,11 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         if (disposed) return;
         disposed = true;
         List<Exception>? failures = null;
-        try { appearance.PublishSnapshot(ReadOnlySpan<AppearanceFact>.Empty); }
+        try
+        {
+            appearance.PublishSnapshot(ReadOnlySpan<AppearanceFact>.Empty);
+            completeSnapshot?.Invoke();
+        }
         catch (Exception exception) { failures = [exception]; }
         foreach (ActorVisual visual in actors.Values.Reverse()) visual.Dispose(ref failures);
         foreach (GroundVisual visual in groundVisuals.Values.Reverse()) visual.Dispose(ref failures);
@@ -403,6 +488,8 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         foreach (Appearance visual in doorVisuals.Values.Reverse()) Dispose(visual, ref failures);
         doorVisuals.Clear();
         doorVisualEntityIds.Clear();
+        foreach (Appearance visual in actionModelVisuals.Values.Reverse()) Dispose(visual, ref failures);
+        actionModelVisuals.Clear();
         foreach (SpriteAtlas atlas in atlases.AsEnumerable().Reverse()) Dispose(atlas, ref failures);
         atlases.Clear();
         groundContainerAtlas = null;
@@ -723,6 +810,10 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private void EnsureRestState(long entityId, string requested)
     {
         if (!actors.TryGetValue(entityId, out ActorVisual? visual) || visual.Defeated || visual.State == requested) return;
+        // A behavior transition out of Attack cancels the presentation-owned swing along with
+        // the Kit pending attack. Without clearing this marker, a later idle playback receipt
+        // could be mistaken for the canceled strike and keep the session gated indefinitely.
+        visual.ActiveAttack = null;
         StartState(entityId, requested, visual);
     }
 
@@ -733,6 +824,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         if (visual.Live is { } live) Retire(live);
         visual.Playback = null;
         visual.Live = null;
+        visual.ActiveAttack = null;
         visual.Defeated = true;
     }
 

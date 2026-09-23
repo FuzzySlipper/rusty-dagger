@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
@@ -88,6 +89,75 @@ public sealed class DungeonNormalizerTests
         Assert.Equal(-1, action.NextObjectOffset);
         Assert.Null(action.NextActionId);
         Assert.Equal((byte)0, action.SoundIndex);
+        Assert.Equal(action.SoundIndex, action.RawIndex);
+        result.Document.Validate();
+    }
+
+    [Fact]
+    public void Separates_action_model_geometry_from_its_initial_transform_and_static_collision()
+    {
+        DungeonLogicalSource[] sources = CreateSources();
+        Replace(sources, "BLOCKS.BSA", CreateNamedBsa(("S0000007.RDB", CreateRdbFixture(
+            actionFlags: 0x01,
+            modelX: 12,
+            modelYRotation: 512,
+            modelSoundIndex: 0xBC))));
+
+        DungeonNormalizationResult result = DungeonNormalizer.Normalize(Request(sources));
+
+        NormalizedDungeonAction action = Assert.Single(result.Document.World.Actions);
+        NormalizedActionModelPlacement model = Assert.Single(result.Document.World.ActionModels);
+        Assert.Equal(action.Id, model.ActionId);
+        Assert.Equal("42", model.ModelId);
+        Assert.Equal("MOD", model.Description);
+        Assert.Equal((ushort)0, model.ModelIndex);
+        Assert.Equal((byte)0xBC, model.RawIndex);
+        Assert.Equal(action.SoundIndex, action.RawIndex);
+        Assert.Equal(new NormalizedVector3(51.5F, 0F, -51.2F), model.Position);
+        Assert.Equal(new NormalizedVector3(0F, -90F, 0F), model.RotationDegrees);
+        Assert.Empty(result.Document.World.StaticMeshIds!);
+        Assert.Empty(result.Document.World.GeometryPlacements);
+        Assert.All(model.MeshIds, meshId => Assert.Contains(meshId, result.Document.World.MeshIds));
+
+        NormalizedMesh localMesh = Assert.Single(result.Document.Meshes, mesh => mesh.Id == Assert.Single(model.MeshIds));
+        Assert.Equal(model.VisualArtifactId, localMesh.ArtifactId);
+        Assert.Contains(localMesh.MaterialGroups, group => group.ParticipatesInCollision);
+        Assert.Contains(new NormalizedVector3(0.025F, 0F, 0F), localMesh.Vertices);
+        Assert.Contains(new NormalizedVector3(0F, 0F, -0.025F), localMesh.Vertices);
+        Assert.Equal(model.LocalBounds, MeshBounds(localMesh.Vertices));
+        Assert.Empty(result.Document.Navigation!.Cells);
+
+        using JsonDocument visual = JsonDocument.Parse(Assert.Single(result.SpatialPublication.ActionModelVisuals).Artifact.Bytes);
+        JsonElement localPositions = visual.RootElement.GetProperty("payload").GetProperty("source").GetProperty("positions");
+        Assert.Contains(localPositions.EnumerateArray(), value => value.GetSingle() == 0.025F);
+        using JsonDocument staticVisual = JsonDocument.Parse(result.SpatialPublication.StaticMesh.Bytes);
+        Assert.Equal(0, staticVisual.RootElement.GetProperty("payload").GetProperty("source").GetProperty("positions").GetArrayLength());
+        using JsonDocument staticCollision = JsonDocument.Parse(result.SpatialPublication.CollisionNavigation.Bytes);
+        Assert.Equal(0, staticCollision.RootElement.GetProperty("collision").GetProperty("triangles").GetArrayLength());
+        Assert.Contains(result.Document.Artifacts, artifact => artifact.Id == model.VisualArtifactId);
+        result.Document.Validate();
+    }
+
+    [Fact]
+    public void Action_door_uses_one_shared_local_visual_artifact()
+    {
+        DungeonLogicalSource[] sources = CreateSources();
+        Replace(sources, "BLOCKS.BSA", CreateNamedBsa(("S0000007.RDB", CreateRdbFixture(
+            modelDescription: "DOR",
+            actionFlags: 0x01))));
+
+        DungeonNormalizationResult result = DungeonNormalizer.Normalize(Request(sources));
+
+        NormalizedDoorPlacement door = Assert.Single(result.Document.World.Doors);
+        NormalizedActionModelPlacement model = Assert.Single(result.Document.World.ActionModels);
+        DungeonDoorVisual doorVisual = Assert.Single(result.SpatialPublication.DoorVisuals);
+        DungeonActionModelVisual actionVisual = Assert.Single(result.SpatialPublication.ActionModelVisuals);
+        Assert.Equal(door.Id, model.DoorId);
+        Assert.Equal(model.VisualArtifactId, doorVisual.Artifact.Id);
+        Assert.Equal(actionVisual.Artifact.Id, doorVisual.Artifact.Id);
+        Assert.Equal(4, result.SpatialPublication.Artifacts.Count);
+        Assert.Empty(result.Document.World.StaticMeshIds!);
+        Assert.Empty(result.Document.World.GeometryPlacements);
         result.Document.Validate();
     }
 
@@ -181,7 +251,7 @@ public sealed class DungeonNormalizerTests
         DungeonLogicalSource[] missingModel = CreateSources();
         Replace(missingModel, "ARCH3D.BSA", CreateNumericBsa((99U, CreateArch3dFixture())));
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => DungeonNormalizer.Normalize(Request(missingModel)));
-        Assert.Contains("produced no static geometry", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("produced no drawable model geometry", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -337,7 +407,8 @@ public sealed class DungeonNormalizerTests
 
         Assert.Single(result.Document.World.Doors);
         NormalizedMesh visualDoor = Assert.Single(result.Document.Meshes, mesh => mesh.Id.EndsWith("/action-visual", StringComparison.Ordinal));
-        Assert.All(visualDoor.MaterialGroups, group => Assert.False(group.ParticipatesInCollision));
+        Assert.All(visualDoor.MaterialGroups, group => Assert.True(group.ParticipatesInCollision));
+        Assert.DoesNotContain(visualDoor.Id, result.Document.World.StaticMeshIds!);
         Assert.All(result.Document.World.MeshIds, meshId => Assert.Contains(result.Document.Meshes, mesh => mesh.Id == meshId));
         Assert.Equal([visualDoor.Id], Assert.Single(result.Document.World.Doors).VisualMeshIds);
         string collisionNavigation = Encoding.UTF8.GetString(result.SpatialPublication.CollisionNavigation.Bytes.Span);
@@ -389,6 +460,15 @@ public sealed class DungeonNormalizerTests
 
     private static DungeonNormalizationRequest Request(IEnumerable<DungeonLogicalSource> sources) =>
         DungeonNormalizationRequest.Create(new DungeonLogicalSourceSet(sources), 17, "Fixture Hold");
+
+    private static NormalizedBounds MeshBounds(IEnumerable<NormalizedVector3> vertices)
+    {
+        NormalizedVector3[] values = vertices.ToArray();
+        return new(
+            NormalizedBounds.CurrentSchemaVersion,
+            new(values.Min(value => value.X), values.Min(value => value.Y), values.Min(value => value.Z)),
+            new(values.Max(value => value.X), values.Max(value => value.Y), values.Max(value => value.Z)));
+    }
 
     private static DungeonLogicalSource[] CreateSources() =>
     [
@@ -481,8 +561,16 @@ public sealed class DungeonNormalizerTests
         byte actionFlags = 0,
         int actionNextObjectOffset = -1,
         byte flatAction = 0,
-        int flatNextObjectOffset = -1) =>
-        CreateRdbFixtureWithModels(["42"], flatTextureArchive, flatTextureRecord, factionOrMobileId, modelDescription, triggerFlagStartingLock, actionFlags, actionNextObjectOffset, flatAction, flatNextObjectOffset);
+        int flatNextObjectOffset = -1,
+        int modelX = 0,
+        int modelY = 0,
+        int modelZ = 0,
+        int modelXRotation = 0,
+        int modelYRotation = 0,
+        int modelZRotation = 0,
+        byte modelSoundIndex = 0) =>
+        CreateRdbFixtureWithModels(["42"], flatTextureArchive, flatTextureRecord, factionOrMobileId, modelDescription, triggerFlagStartingLock, actionFlags, actionNextObjectOffset, flatAction, flatNextObjectOffset,
+            modelX, modelY, modelZ, modelXRotation, modelYRotation, modelZRotation, modelSoundIndex);
 
     /// <summary>
     /// Builds an RDB block whose single cell places one model per entry of <paramref name="modelIds"/>, in
@@ -500,7 +588,14 @@ public sealed class DungeonNormalizerTests
         byte actionFlags = 0,
         int actionNextObjectOffset = -1,
         byte flatAction = 0,
-        int flatNextObjectOffset = -1)
+        int flatNextObjectOffset = -1,
+        int modelX = 0,
+        int modelY = 0,
+        int modelZ = 0,
+        int modelXRotation = 0,
+        int modelYRotation = 0,
+        int modelZRotation = 0,
+        byte modelSoundIndex = 0)
     {
         // The classic RDB layout the decoder reads: a 20-byte header, a fixed 750-entry model-reference
         // table, one cell root, then 25-byte object nodes and their resources.
@@ -530,11 +625,15 @@ public sealed class DungeonNormalizerTests
             Encoding.ASCII.GetBytes(modelIds[index] + "\0").CopyTo(data, reference);
             Encoding.ASCII.GetBytes(modelDescription).CopyTo(data, reference + 5);
             int resource = firstModelResource + (index * modelResourceBytes);
+            BitConverter.GetBytes(modelXRotation).CopyTo(data, resource);
+            BitConverter.GetBytes(modelYRotation).CopyTo(data, resource + 4);
+            BitConverter.GetBytes(modelZRotation).CopyTo(data, resource + 8);
             BitConverter.GetBytes((ushort)index).CopyTo(data, resource + 12);
             BitConverter.GetBytes(triggerFlagStartingLock).CopyTo(data, resource + 14);
+            data[resource + 18] = modelSoundIndex;
             if (actionFlags != 0) BitConverter.GetBytes(actionResource).CopyTo(data, resource + 19);
             int next = index + 1 < modelIds.Count ? firstModelNode + ((index + 1) * nodeBytes) : flatNode;
-            WriteNode(data, firstModelNode + (index * nodeBytes), next, [index, 0, 0], 1, resource);
+            WriteNode(data, firstModelNode + (index * nodeBytes), next, [modelX + index, modelY, modelZ], 1, resource);
         }
 
         WriteNode(data, flatNode, lightNode, [10, -20, 30], 3, flatResource);

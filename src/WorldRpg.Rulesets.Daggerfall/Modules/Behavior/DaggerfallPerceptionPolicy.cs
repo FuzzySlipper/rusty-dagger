@@ -87,6 +87,7 @@ internal sealed class DaggerfallEnemyPerceptionMemory
     internal bool Detected { get; set; }
     internal bool HasEncounteredPlayer { get; set; }
     internal bool Pacified { get; set; }
+    internal bool ForcedHostile { get; set; }
     internal long? LastStealthCheckMinute { get; set; }
     internal long? LastDirectSightMinute { get; set; }
 
@@ -95,6 +96,7 @@ internal sealed class DaggerfallEnemyPerceptionMemory
         Detected = false;
         HasEncounteredPlayer = false;
         Pacified = false;
+        ForcedHostile = false;
         LastStealthCheckMinute = null;
         LastDirectSightMinute = null;
     }

@@ -79,6 +79,19 @@ internal sealed class DaggerfallEnemyBehaviorModule
     internal bool IsPacified(long actorId) =>
         _senses.TryGetValue(actorId, out DaggerfallEnemyPerceptionMemory? memory) && memory.Pacified;
 
+    /// <summary>Applies a local action-door trespass to live enemies in the current site.</summary>
+    internal void MakeActiveEnemiesHostile()
+    {
+        foreach (ActorState actor in _actors.All)
+        {
+            if (actor.IsDefeated) continue;
+            if (!_senses.TryGetValue(actor.DurableId, out DaggerfallEnemyPerceptionMemory? memory))
+                _senses.Add(actor.DurableId, memory = new DaggerfallEnemyPerceptionMemory());
+            memory.Pacified = false;
+            memory.ForcedHostile = true;
+        }
+    }
+
     /// <summary>Clears remembered detection and pacification when a site leaves the live world.</summary>
     internal void ClearPerceptionMemory()
     {
@@ -152,6 +165,8 @@ internal sealed class DaggerfallEnemyBehaviorModule
 
         DaggerfallEnemyPerceptionContext context = _contextProvider?.Invoke(actorId)
             ?? DaggerfallEnemyPerceptionContext.Default(0);
+        if (memory.ForcedHostile)
+            context = context with { EnemyHostile = true, TargetPacified = false };
         DaggerfallEnemyPerceptionSource source = new(
             SeesThroughInvisibility: context.EnemySeesThroughInvisibility);
         DaggerfallEnemyPerceptionDecision decision = DaggerfallPerceptionPolicy.Evaluate(memory, pair,

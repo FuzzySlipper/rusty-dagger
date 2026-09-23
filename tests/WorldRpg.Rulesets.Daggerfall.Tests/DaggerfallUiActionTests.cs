@@ -66,6 +66,7 @@ public sealed class DaggerfallUiActionTests
     [InlineData("{\"action\":\"activation-mode\",\"mode\":\"info\"}", "info")]
     [InlineData("{\"action\":\"activation-mode\",\"mode\":\"talk\"}", "talk")]
     [InlineData("{\"action\":\"activation-mode\",\"mode\":\"steal\"}", "steal")]
+    [InlineData("{\"action\":\"activation-mode\",\"mode\":\"lockpick\"}", "lockpick")]
     [InlineData("{\"action\":\"activation-mode\",\"mode\":\"bash\"}", "bash")]
     [InlineData("{\"action\":\"activation-mode\",\"mode\":\"attack\"}", null)]
     [InlineData("{\"action\":\"activation-mode\"}", null)]
@@ -83,6 +84,16 @@ public sealed class DaggerfallUiActionTests
     [InlineData("{\"action\":\"delete-slot\",\"key\":\"slot-1\",\"confirm\":true}", true)]
     [InlineData("{\"action\":\"delete-slot\",\"key\":\"slot-1\",\"confirm\":\"yes\"}", false)]
     public void Save_slot_actions_are_small_and_exact(string json, bool accepted)
+        => Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
+
+    [Theory]
+    [InlineData("{\"action\":\"death-new-game\"}", true)]
+    [InlineData("{\"action\":\"death-quit\"}", true)]
+    [InlineData("{\"action\":\"death-load-game\",\"key\":\"slot-1\"}", true)]
+    [InlineData("{\"action\":\"death-load-game\"}", false)]
+    [InlineData("{\"action\":\"death-load-game\",\"key\":\"  \"}", false)]
+    [InlineData("{\"action\":\"death-new-game\",\"key\":\"slot-1\"}", false)]
+    public void Death_outcome_actions_require_the_exact_choice_shape(string json, bool accepted)
         => Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
 
     [Theory]
@@ -108,6 +119,10 @@ public sealed class DaggerfallUiActionTests
     [InlineData("{\"action\":\"currency-deposit-gold\"}", false)]
     [InlineData("{\"action\":\"currency-deposit-letters\"}", true)]
     [InlineData("{\"action\":\"currency-deposit-letters\",\"amount\":1}", false)]
+    [InlineData("{\"action\":\"bank-transfer\",\"amount\":250,\"destination\":4}", true)]
+    [InlineData("{\"action\":\"bank-transfer\",\"amount\":0,\"destination\":4}", false)]
+    [InlineData("{\"action\":\"bank-transfer\",\"amount\":250}", false)]
+    [InlineData("{\"action\":\"bank-transfer\",\"amount\":250,\"destination\":-1}", false)]
     public void Currency_actions_admit_only_explicit_nonzero_amounts(string json, bool accepted) =>
         Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
 
@@ -148,5 +163,18 @@ public sealed class DaggerfallUiActionTests
     [InlineData("{\"action\":\"wagon-put\",\"item\":\"stack:gold-piece\"}", false)]
     [InlineData("{\"action\":\"wagon-put\",\"revision\":\"1:2\",\"item\":\"stack:gold-piece\",\"amount\":0}", false)]
     public void Transport_and_wagon_actions_require_exact_modes_and_guarded_item_selections(string json, bool accepted) =>
+        Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
+
+    [Theory]
+    [InlineData("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":2}", true)]
+    [InlineData("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":0}", true)]
+    [InlineData("{\"action\":\"rest\",\"mode\":\"until-healed\"}", true)]
+    [InlineData("{\"action\":\"rest\",\"mode\":\"loiter\",\"hours\":3}", true)]
+    [InlineData("{\"action\":\"rest\",\"mode\":\"timed\"}", false)]
+    [InlineData("{\"action\":\"rest\",\"mode\":\"until-healed\",\"hours\":1}", false)]
+    [InlineData("{\"action\":\"rest\",\"mode\":\"loiter\",\"hours\":-1}", false)]
+    [InlineData("{\"action\":\"rest\",\"mode\":\"invalid\",\"hours\":1}", false)]
+    [InlineData("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":2,\"item\":\"unexpected\"}", false)]
+    public void Rest_actions_require_an_explicit_mode_and_duration_shape(string json, bool accepted) =>
         Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
 }

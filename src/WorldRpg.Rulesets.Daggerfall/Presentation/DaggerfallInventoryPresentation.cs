@@ -3,6 +3,7 @@ using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 using WorldRpg.Rulesets.Daggerfall.Policies;
+using WorldRpg.Rulesets.Daggerfall.Banking;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
@@ -12,8 +13,11 @@ internal sealed record InventoryItemPresentation(string Key, string Definition, 
 internal sealed record ItemConditionPresentation(int Current, int Maximum, int Percentage, bool Broken);
 internal sealed record EquipmentSlotPresentation(string Id, string Label, string? ItemKey);
 internal sealed record EquipmentChangePresentation(string Cue, int RightHandDelayMilliseconds, int LeftHandDelayMilliseconds);
+internal sealed record DaggerfallBankAccountPresentation(int Region, string Gold);
+internal sealed record DaggerfallBankPresentation(int CurrentRegion, string CurrentBalance, DaggerfallBankAccountPresentation[] Accounts);
 internal sealed record InventoryPresentation(string Revision, InventoryItemPresentation[] Items, EquipmentSlotPresentation[] Slots, string Message,
-    EquipmentChangePresentation? EquipmentChange = null, DaggerfallEncumbrance? Encumbrance = null, DaggerfallCurrencyTotals? Currency = null);
+    EquipmentChangePresentation? EquipmentChange = null, DaggerfallEncumbrance? Encumbrance = null, DaggerfallCurrencyTotals? Currency = null,
+    DaggerfallBankPresentation? Bank = null);
 
 /// <summary>Daggerfall inventory projection and UI-action translation; quantities and equipment remain Engine facts.</summary>
 internal sealed class DaggerfallInventoryPresentation
@@ -31,6 +35,8 @@ internal sealed class DaggerfallInventoryPresentation
     private DaggerfallGroundContainers? ground;
     private Func<WorldRpg.Kit.Controls.WorldPoint?>? groundPosition;
     private DaggerfallInventoryUseService? itemUse;
+    private DaggerfallRegionalBankState? bank;
+    private Func<int?>? currentRegion;
     internal event Action<DaggerfallReadableBook>? BookOpened;
     internal string Message { get; private set; } = "Drag items between the grid and compatible equipment slots.";
     internal DaggerfallEquipmentChange? LastEquipmentChange { get; private set; }
@@ -85,6 +91,39 @@ internal sealed class DaggerfallInventoryPresentation
         itemUse = use ?? throw new ArgumentNullException(nameof(use));
     }
 
+    internal void UseBank(DaggerfallRegionalBankState state, Func<int?> resolveCurrentRegion)
+    {
+        if (bank is not null) throw new InvalidOperationException("Regional bank presentation is already configured.");
+        bank = state ?? throw new ArgumentNullException(nameof(state));
+        currentRegion = resolveCurrentRegion ?? throw new ArgumentNullException(nameof(resolveCurrentRegion));
+    }
+
+    internal void ReportBankTransaction(DaggerfallBankTransactionOutcome outcome)
+    {
+        ArgumentNullException.ThrowIfNull(outcome);
+        string detail = outcome.Result switch
+        {
+            DaggerfallBankTransactionResult.Applied => AppliedBankMessage(outcome),
+            DaggerfallBankTransactionResult.InvalidRegion => "The selected region is outside Daggerfall's 62 classic regions.",
+            DaggerfallBankTransactionResult.SameRegion => "Choose a different destination region.",
+            DaggerfallBankTransactionResult.InvalidAmount => "Enter a positive amount.",
+            DaggerfallBankTransactionResult.LetterTooSmall => "A letter of credit must be worth at least 100 gold.",
+            DaggerfallBankTransactionResult.SourceLimitExceeded => "That amount exceeds Daggerfall's supported transaction limit.",
+            DaggerfallBankTransactionResult.InsufficientAccountBalance => "That regional account does not contain enough gold.",
+            DaggerfallBankTransactionResult.AccountBalanceLimit => "That regional account would exceed the classic account limit.",
+            DaggerfallBankTransactionResult.CurrencyMovementRejected => "The required gold or letter could not be moved from player inventory.",
+            DaggerfallBankTransactionResult.WagonUnavailable => "The wagon is unavailable here or does not hold enough gold.",
+            DaggerfallBankTransactionResult.InvalidWagonGoldOwnership => "Wagon gold ownership is inconsistent; no bank balance was changed.",
+            DaggerfallBankTransactionResult.WagonTransferPartiallyApplied => $"Moved {outcome.AmountMoved} gold from the wagon into your pack; the bank deposit did not complete.",
+            DaggerfallBankTransactionResult.NoLettersOfCredit => "You have no letters of credit to deposit.",
+            DaggerfallBankTransactionResult.InvalidLetterOwnership => "A letter of credit in player inventory is owned by another container.",
+            DaggerfallBankTransactionResult.InvalidLetterMetadata => "A letter of credit has missing or invalid value metadata.",
+            DaggerfallBankTransactionResult.LedgerMismatch => "The regional accounts do not match the bank settlement balance; no transaction was made.",
+            _ => "The bank transaction was not accepted.",
+        };
+        Message = detail;
+    }
+
     internal InventoryPresentation Read()
     {
         Rusty.Engine.Mechanics.InventoryView current = moves.ReadInventory();
@@ -94,12 +133,45 @@ internal sealed class DaggerfallInventoryPresentation
             .Concat(current.Stacks.Select(stack => (Key: StackKey(stack.Id), Definition: stack.Definition.Value, Quantity: stack.Quantity, Slots: Array.Empty<string>())))
             .OrderBy(item => item.Key, StringComparer.Ordinal).ToArray();
         moves.ReconcileLayout();
-        return new InventoryPresentation($"{current.StoreRevision}:{moves.LayoutRevision}:{MetadataRevision}", items.Select(item =>
+        int? region = bank is not null && currentRegion is not null ? currentRegion() : null;
+        return new InventoryPresentation($"{current.StoreRevision}:{moves.LayoutRevision}:{MetadataRevision}:{bank?.Revision}:{region}", items.Select(item =>
             DescribeItem(item.Key, item.Definition, item.Quantity, item.Slots.Length == 0 ? moves.GridPosition(item.Key) : null, item.Slots)).ToArray(),
             definitions.EquipmentSlots.Values.Select(slot => new EquipmentSlotPresentation(slot.Id.Value, Label(slot.Id.Value),
                 equipped.TryGet(new EquipmentSlotId(slot.Id.Value), out UniqueInventoryItem item) ? UniqueKey(item.EntityId) : null)).ToArray(), Message,
             LastEquipmentChange is { } change ? new(change.Cue.ToString().ToLowerInvariant(), change.Timing.RightHandMilliseconds, change.Timing.LeftHandMilliseconds) : null,
-            encumbrance?.Read(), currency?.Read());
+            encumbrance?.Read(), currency?.Read(), ReadBank());
+    }
+
+    private DaggerfallBankPresentation? ReadBank()
+    {
+        if (bank is null || currentRegion is null) return null;
+        if (currentRegion() is not int region) return null;
+        return new(region, bank.BalanceForRegion(region).ToString(CultureInfo.InvariantCulture),
+            bank.ReadBalances().Select(account => new DaggerfallBankAccountPresentation(account.Region,
+                account.Gold.ToString(CultureInfo.InvariantCulture))).ToArray());
+    }
+
+    private static string AppliedBankMessage(DaggerfallBankTransactionOutcome outcome)
+    {
+        string source = outcome.SourceRegion is int from ? $"Region {from}" : "player inventory";
+        string destination = outcome.DestinationRegion is int to ? $"region {to}" : "player inventory";
+        string movement = outcome.Kind switch
+        {
+            DaggerfallBankTransactionKind.DepositGold => $"Deposited {outcome.AmountMoved} gold into {destination}.",
+            DaggerfallBankTransactionKind.WithdrawGold => $"Withdrew {outcome.AmountMoved} gold from {source}.",
+            DaggerfallBankTransactionKind.DepositLettersOfCredit => $"Deposited letters worth {outcome.AmountMoved} gold into {destination}.",
+            DaggerfallBankTransactionKind.WithdrawLetterOfCredit => $"Withdrew a letter worth {outcome.AmountMoved} gold from {source}; fee {outcome.Fee} gold.",
+            DaggerfallBankTransactionKind.Transfer => $"Transferred {outcome.AmountMoved} gold from {source} to {destination}.",
+            _ => "Bank transaction completed.",
+        };
+        string balances = outcome.SourceRegion is int sourceRegion && outcome.DestinationRegion is int destinationRegion
+            ? $" Balances: region {sourceRegion} {outcome.SourceBalance}; region {destinationRegion} {outcome.DestinationBalance}."
+            : outcome.DestinationRegion is int depositedRegion
+                ? $" Region {depositedRegion} balance: {outcome.DestinationBalance}."
+                : outcome.SourceRegion is int withdrawnRegion
+                    ? $" Region {withdrawnRegion} balance: {outcome.SourceBalance}."
+                    : string.Empty;
+        return movement + balances;
     }
 
     /// <summary>

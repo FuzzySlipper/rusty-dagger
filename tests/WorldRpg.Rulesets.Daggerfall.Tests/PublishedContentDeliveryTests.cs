@@ -77,7 +77,7 @@ public sealed class PublishedContentDeliveryTests
         // The published group carries every classic descriptor and the sound catalog that describes
         // the archive. The inventory indexes both because both are admitted content.
         Assert.Contains("worldrpg/media/audio/classic-sound-catalog.json", listed);
-        Assert.Equal(154, listed.Count);
+        Assert.Equal(155, listed.Count);
 
         // The character canvases are admitted content in the same tree: they have their own generated
         // index beside them, and both indexes state the bytes they describe rather than trusting them.
@@ -378,7 +378,7 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal("worldrpg/media/maps/map-fmap0i17.png", identified["map.fmap0i17"].Path);
         Assert.Equal("worldrpg/media/fonts/font-classic-0000-atlas.png", identified["font.classic.0000"].Path);
         Assert.Equal("worldrpg/media/combat/weapon-werecreature-atlas.png", identified["weapon.werecreature"].Path);
-        Assert.Equal(153, identified.Count);
+        Assert.Equal(154, identified.Count);
 
         // The identities the group states are the identities the pack publishes for the same images,
         // so a consumer that asks by media name cannot be answered with a different artifact.
@@ -429,7 +429,7 @@ public sealed class PublishedContentDeliveryTests
         DaggerfallPublishedClassicMedia media = DaggerfallPublishedClassicMedia.Read(content, inputs.ClassicPresentation);
         DaggerfallPublishedClassicMedia castleMedia = DaggerfallPublishedClassicMedia.Read(content, castle.ClassicPresentation);
 
-        Assert.Equal(153, media.Paths.Count);
+        Assert.Equal(154, media.Paths.Count);
         Assert.Equal("worldrpg/media/maps/map-fmap0i17.png", media.Paths["map.fmap0i17"]);
         Assert.Equal("worldrpg/media/fonts/font-classic-0000-atlas.png", media.Paths["font.classic.0000"]);
         Assert.Equal("worldrpg/media/combat/weapon-werecreature-atlas.png", media.Paths["weapon.werecreature"]);
@@ -444,20 +444,20 @@ public sealed class PublishedContentDeliveryTests
 
         // The catalog is the availability record for the whole archive, delivered by name like any
         // other artifact, so a consumer can see every clip and its disposition rather than assuming
-        // the six the product plays today.
+        // the seven the product plays today.
         Assert.Equal(1, catalog.GetProperty("schemaVersion").GetInt32());
         JsonElement[] clips = [.. catalog.GetProperty("clips").EnumerateArray()];
         Assert.Equal(459, clips.Length);
         JsonElement[] admitted = [.. clips.Where(clip => clip.GetProperty("disposition").GetString() == "admitted")];
-        Assert.Equal(6, admitted.Length);
+        Assert.Equal(7, admitted.Length);
         Assert.All(clips.Where(clip => clip.GetProperty("disposition").GetString() != "admitted"), clip => Assert.Equal(JsonValueKind.Null, clip.GetProperty("mediaId").ValueKind));
 
         // Which archive clip each cue is belongs to the product rather than to the producer that just
         // stated it, so the binding is pinned here as literals: a republish that swapped two identities
         // would move the file and the importer's table together and otherwise stay green.
-        Assert.Equal([106, 108, 109, 110, 111, 112], admitted.Select(clip => clip.GetProperty("ordinal").GetInt32()));
+        Assert.Equal([106, 108, 109, 110, 111, 112, 405], admitted.Select(clip => clip.GetProperty("ordinal").GetInt32()));
         Assert.Equal(
-            ["audio.melee.dagger.swing", "audio.melee.hit.1", "audio.melee.hit.2", "audio.melee.hit.3", "audio.melee.hit.4", "audio.melee.hit.5"],
+            ["audio.melee.dagger.swing", "audio.melee.hit.1", "audio.melee.hit.2", "audio.melee.hit.3", "audio.melee.hit.4", "audio.melee.hit.5", "audio.player.death"],
             admitted.Select(clip => clip.GetProperty("mediaId").GetString()));
 
         // Every admitted reference resolves inside admitted content: the classic media manifest the

@@ -2355,9 +2355,15 @@
       "dependsOnPaths": []
     },
     {
+      "relativePath": "media/audio/clips/audio-player-death.wav",
+      "contentHash": "d6bc73a17f4febca54a9c036a99af955c9d3beff5f79016540964dc13d6723bb",
+      "byteLen": 2287,
+      "dependsOnPaths": []
+    },
+    {
       "relativePath": "media/classic/manifest.json",
-      "contentHash": "6e1f8f5f8c88e64ee95af5382c55ec04661419ff06e52d3fdc4465b7f1f532a3",
-      "byteLen": 1279440,
+      "contentHash": "111c688ba7799192bfb0a08f851ee52142a0f58c93586f125876f6b435e6a92b",
+      "byteLen": 1280231,
       "dependsOnPaths": [
         "media/audio/clips/audio-melee-dagger-swing.wav",
         "media/audio/clips/audio-melee-hit-1.wav",
@@ -2365,6 +2371,7 @@
         "media/audio/clips/audio-melee-hit-3.wav",
         "media/audio/clips/audio-melee-hit-4.wav",
         "media/audio/clips/audio-melee-hit-5.wav",
+        "media/audio/clips/audio-player-death.wav",
         "media/combat/weapon-00-atlas.png",
         "media/combat/weapon-03-atlas.png",
         "media/combat/weapon-axe-atlas.png",
@@ -5127,8 +5134,8 @@
     },
     {
       "relativePath": "normalized.json",
-      "contentHash": "f07f941237a164a1b3eb9255fce926087f78590f97768ea014cd0a915165fad6",
-      "byteLen": 15472249,
+      "contentHash": "c2747c86787aa922116bb487b25180f1ee427580fe7c30032ce6562fe36b8fe6",
+      "byteLen": 15337423,
       "dependsOnPaths": [
         "geometry/index.json",
         "geometry/mesh-41006.json",
@@ -5307,16 +5314,57 @@
         "media/classic/manifest.json",
         "media/dungeon/manifest.json",
         "resources/castle-necromoghan/catalog.json",
+        "spatial/castle-necromoghan/actions/b0000001-rdb-0--1-model-0.json",
+        "spatial/castle-necromoghan/actions/b0000001-rdb-1--1-model-0.json",
+        "spatial/castle-necromoghan/actions/b0000001-rdb-2-1-model-0.json",
+        "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-104.json",
+        "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-139.json",
+        "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-143.json",
+        "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-147.json",
+        "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-19.json",
+        "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-190.json",
+        "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-191.json",
+        "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-193.json",
+        "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-194.json",
+        "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-202.json",
+        "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-204.json",
+        "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-40.json",
+        "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-41.json",
+        "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-42.json",
+        "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-43.json",
+        "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-44.json",
+        "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-45.json",
+        "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-57.json",
+        "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-61.json",
+        "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-80.json",
+        "spatial/castle-necromoghan/actions/n0000058-rdb-1-0-model-52.json",
+        "spatial/castle-necromoghan/actions/n0000058-rdb-1-0-model-54.json",
+        "spatial/castle-necromoghan/actions/n0000058-rdb-1-0-model-56.json",
+        "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-106.json",
+        "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-107.json",
+        "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-109.json",
+        "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-21.json",
+        "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-23.json",
+        "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-24.json",
+        "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-25.json",
+        "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-26.json",
+        "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-27.json",
+        "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-28.json",
+        "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-29.json",
+        "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-47.json",
+        "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-48.json",
+        "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-5.json",
+        "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-51.json",
+        "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-6.json",
+        "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-76.json",
+        "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-77.json",
         "spatial/castle-necromoghan/collision-navigation.json",
-        "spatial/castle-necromoghan/doors/b0000001-rdb-0--1-0.json",
         "spatial/castle-necromoghan/doors/b0000001-rdb-0--1-1.json",
         "spatial/castle-necromoghan/doors/b0000001-rdb-0--1-10.json",
         "spatial/castle-necromoghan/doors/b0000001-rdb-0--1-17.json",
-        "spatial/castle-necromoghan/doors/b0000001-rdb-1--1-0.json",
         "spatial/castle-necromoghan/doors/b0000001-rdb-1--1-1.json",
         "spatial/castle-necromoghan/doors/b0000001-rdb-1--1-10.json",
         "spatial/castle-necromoghan/doors/b0000001-rdb-1--1-17.json",
-        "spatial/castle-necromoghan/doors/b0000001-rdb-2-1-0.json",
         "spatial/castle-necromoghan/doors/b0000001-rdb-2-1-1.json",
         "spatial/castle-necromoghan/doors/b0000001-rdb-2-1-10.json",
         "spatial/castle-necromoghan/doors/b0000001-rdb-2-1-17.json",
@@ -5360,17 +5408,13 @@
         "spatial/castle-necromoghan/doors/b0000012-rdb-2--1-38.json",
         "spatial/castle-necromoghan/doors/b0000012-rdb-2--1-5.json",
         "spatial/castle-necromoghan/doors/b0000012-rdb-2--1-9.json",
-        "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-104.json",
         "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-110.json",
         "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-111.json",
         "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-129.json",
         "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-142.json",
         "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-145.json",
         "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-146.json",
-        "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-147.json",
         "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-164.json",
-        "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-19.json",
-        "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-194.json",
         "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-195.json",
         "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-196.json",
         "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-197.json",
@@ -5380,13 +5424,6 @@
         "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-33.json",
         "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-34.json",
         "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-35.json",
-        "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-40.json",
-        "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-41.json",
-        "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-42.json",
-        "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-43.json",
-        "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-44.json",
-        "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-45.json",
-        "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-61.json",
         "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-75.json",
         "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-76.json",
         "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-77.json",
@@ -5413,20 +5450,12 @@
         "spatial/castle-necromoghan/doors/n0000058-rdb-1-0-88.json",
         "spatial/castle-necromoghan/doors/n0000058-rdb-1-0-89.json",
         "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-10.json",
-        "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-106.json",
-        "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-107.json",
         "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-11.json",
         "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-132.json",
         "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-133.json",
-        "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-47.json",
-        "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-48.json",
         "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-49.json",
-        "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-5.json",
-        "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-6.json",
         "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-7.json",
         "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-71.json",
-        "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-76.json",
-        "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-77.json",
         "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-78.json",
         "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-79.json",
         "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-8.json",
@@ -5449,18 +5478,276 @@
       "dependsOnPaths": []
     },
     {
+      "relativePath": "spatial/castle-necromoghan/actions/b0000001-rdb-0--1-model-0.json",
+      "contentHash": "0820c3a2d07077ad9347710da884312482e5649a4aeede6e4e5fd362bf1c38ba",
+      "byteLen": 3554,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/b0000001-rdb-1--1-model-0.json",
+      "contentHash": "d27b574bbfd20dfb14a20cb85616b4336e9678c63a4d10db8006522d1408749c",
+      "byteLen": 3554,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/b0000001-rdb-2-1-model-0.json",
+      "contentHash": "8ec927cf9144fbff482b21c7ffe850123755deed8570d48f279d1d2e1b2baafd",
+      "byteLen": 3553,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-104.json",
+      "contentHash": "afeb449be26c50633bda8ad934a3884997c30518a9655bcbf4b806941527170c",
+      "byteLen": 3893,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-139.json",
+      "contentHash": "1d05b1d49900c3a72998117cebf6a8290c84f9a2d48b3da62fd670ad0827cdd0",
+      "byteLen": 3959,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-143.json",
+      "contentHash": "01fcaeaa9fcac2b98cf2d56337b217e89793e1d2f7768e4d03e71be1a8377166",
+      "byteLen": 3959,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-147.json",
+      "contentHash": "05896dd1fcf10440cf0ee76d77c37bce6d6663b10c5afcab1bb33b5102cd05f0",
+      "byteLen": 3555,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-19.json",
+      "contentHash": "0182578cadbc1e321d82e43ca2e27f58f3ba5338922802d3cebda3fbfe72c248",
+      "byteLen": 3892,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-190.json",
+      "contentHash": "e67fe4f5d46198b58c86bb0ebd7d2fd943b713e8a3c1e474cc762c5d97f1f459",
+      "byteLen": 9331,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-191.json",
+      "contentHash": "01f6d966432305f1f1993cbe18d1b2887a0454e2862e785f1204c259c38084bd",
+      "byteLen": 4327,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-193.json",
+      "contentHash": "76bbc234bee17b46da41d000c7acffe89e06b02c828dc55db6189a2dcbd7b73d",
+      "byteLen": 3428,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-194.json",
+      "contentHash": "7c53676c4c677e652d8e2edafef158faa3a9262f3e20011feb679bb550434f1e",
+      "byteLen": 3555,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-202.json",
+      "contentHash": "1c934f4f2c96f1eff6744c34730670368e17fc130a4968409a5d8c95ae5a6f89",
+      "byteLen": 1531,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-204.json",
+      "contentHash": "69364ba7e5254555c4450e2e87084d2d673f03a6b373fe3c6492b7745eb33cf9",
+      "byteLen": 3626,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-40.json",
+      "contentHash": "67d2b6431d6f460f250fb04b3984729ec92076f95f7c9cac2dede56ce80b1e7f",
+      "byteLen": 3554,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-41.json",
+      "contentHash": "d7a882706021703e6249291f79135de85fc49a142a420abcee3dc2b4e95420e9",
+      "byteLen": 3554,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-42.json",
+      "contentHash": "10ce436f33cd16000a96796a2633fcabd23a5443811140ae232e0d7ac03cec40",
+      "byteLen": 3554,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-43.json",
+      "contentHash": "b5b6c933888dbd0518177088c8c2c718952efe340fc7677c1d0dc7ff4c74cc7a",
+      "byteLen": 3554,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-44.json",
+      "contentHash": "4f749c41892fb8a0753a9f0b9a20b83cd45f4cd225fdcc6188d02ebff946d68a",
+      "byteLen": 3554,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-45.json",
+      "contentHash": "858af9d5ad8d41a15ec97429173ec662bbbd525097f09025f7c284478ccd64fd",
+      "byteLen": 3554,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-57.json",
+      "contentHash": "58020f5cf1120b8191c1467cd8f878fc6bc55da8364fcf1dd504f638fa6d1372",
+      "byteLen": 4088,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-61.json",
+      "contentHash": "aed7f33a48be4453325c7ed973ec5e6dd09b453726d1aa6d7ba8240021119d3e",
+      "byteLen": 3554,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000034-rdb-2-0-model-80.json",
+      "contentHash": "429e0072d858052375a33d10516f3a880b03ace4784b64fa58396147ef085753",
+      "byteLen": 4320,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000058-rdb-1-0-model-52.json",
+      "contentHash": "d9a8fca29747eb33a645e14069c292dd5dd013ed27223a02b83a99989dac8c2c",
+      "byteLen": 3954,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000058-rdb-1-0-model-54.json",
+      "contentHash": "8ea2c64f8cbb99e6a6ede7c854528330600b0f6d3b75fa114cfa53351fe45a97",
+      "byteLen": 3958,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/n0000058-rdb-1-0-model-56.json",
+      "contentHash": "5530aef0f63fec09316c090289ade5a89c16107ef3ef88b32aed83504bcd56af",
+      "byteLen": 3966,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-106.json",
+      "contentHash": "211efdb94e109ef43086df842b4bdf2f7181b4fc063d9608fe83611d231127d2",
+      "byteLen": 3555,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-107.json",
+      "contentHash": "43ce08c5f087d0cd2019f16b698974bd6dc19b694177718a4668bb335003d7f5",
+      "byteLen": 3555,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-109.json",
+      "contentHash": "df96b17cede639bbfcf228e917ab47cbe5cccd7494fd325d645da727c6f85e2a",
+      "byteLen": 32863,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-21.json",
+      "contentHash": "b3944e50dca44642f9eea49e33e1f9e55b45248b16facef71679ff61fe21f0e2",
+      "byteLen": 3954,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-23.json",
+      "contentHash": "b7690dcf9860b75d940afefa97b0fd549f90996568054267c6c9600bfc0ff7a0",
+      "byteLen": 3958,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-24.json",
+      "contentHash": "5a3ea259d835495199c7d0d3080f900502a9c254382dd802cd70dc2a5133ad40",
+      "byteLen": 5179,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-25.json",
+      "contentHash": "e6516545088f58978b04826f64c34382a72391b9ef8c5e0d663944c720d64892",
+      "byteLen": 3958,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-26.json",
+      "contentHash": "32a26bbdb762480aa6a502ff88b82731e33537b7d4a332fc7e2d54f25f8f0365",
+      "byteLen": 5179,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-27.json",
+      "contentHash": "439773008edaf004d888a764bd660d5a46e2d50fe24d876e308b90a9e09442ff",
+      "byteLen": 3958,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-28.json",
+      "contentHash": "d913a486019a1c85cd8b50e863d8437149f7a40e9f70ee9e2eb9a551fc2435f8",
+      "byteLen": 5179,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-29.json",
+      "contentHash": "3abc13b6969234f93747535188fc7c80102954ce61152e922f5834f52a0d39fa",
+      "byteLen": 3966,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-47.json",
+      "contentHash": "524a5cbde0a84219051aaf04d5359a3642d4654a2a9c0e74a56a4ec2abe909ca",
+      "byteLen": 3554,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-48.json",
+      "contentHash": "b39e5e4133dce55f17823630cd184fc674f779aca65da7eb5fe6a5aef92dba39",
+      "byteLen": 3554,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-5.json",
+      "contentHash": "b662e9c0187e8d0ff6f0980a8b4440d06acde1007466981102179a2ea58ef925",
+      "byteLen": 3553,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-51.json",
+      "contentHash": "8d7896ed6e72ef04558560af231049f7af6f95583cf0a5d219ac0d9f49b59d34",
+      "byteLen": 8101,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-6.json",
+      "contentHash": "c1d7d1d085fcfc08da07d751de2d3fcefe8a51ac46f607a7413d8b1bc0ea73ec",
+      "byteLen": 3553,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-76.json",
+      "contentHash": "8fd08d803cb7948bfed04a5b7ffd2926b597dd2330d24f1bd30970b27d32f9ec",
+      "byteLen": 3554,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/castle-necromoghan/actions/w0000020-rdb-0-0-model-77.json",
+      "contentHash": "455c1807e7b8b688205c650c5e52c0b6044c535325e151c84906b1428866081f",
+      "byteLen": 3554,
+      "dependsOnPaths": []
+    },
+    {
       "relativePath": "spatial/castle-necromoghan/collision-navigation.json",
-      "contentHash": "7517ab4477feb13e7ad6fc2fb7e80dfa4c378f0ec555276be8ff341f19556be5",
-      "byteLen": 7055752,
+      "contentHash": "a701f91f86e7d284a3dc9d550d9a220ad9b953fb01ad989bdffcb8e98e8ea223",
+      "byteLen": 6910061,
       "dependsOnPaths": [
         "spatial/castle-necromoghan/static-mesh.json"
       ]
-    },
-    {
-      "relativePath": "spatial/castle-necromoghan/doors/b0000001-rdb-0--1-0.json",
-      "contentHash": "837db72aebc7f0745ba5e59abbe337f21c697d79ec84713a67eab141c21f694e",
-      "byteLen": 10361,
-      "dependsOnPaths": []
     },
     {
       "relativePath": "spatial/castle-necromoghan/doors/b0000001-rdb-0--1-1.json",
@@ -5481,12 +5768,6 @@
       "dependsOnPaths": []
     },
     {
-      "relativePath": "spatial/castle-necromoghan/doors/b0000001-rdb-1--1-0.json",
-      "contentHash": "5af3d41c3f6852a42d94bc54673b607081f8446c8887734ffe5f3ba7b70d977d",
-      "byteLen": 10361,
-      "dependsOnPaths": []
-    },
-    {
       "relativePath": "spatial/castle-necromoghan/doors/b0000001-rdb-1--1-1.json",
       "contentHash": "224b21d3c3b1e70c5463a72b6ae937e830edc25a9a176f925b895ed310b5121d",
       "byteLen": 10343,
@@ -5502,12 +5783,6 @@
       "relativePath": "spatial/castle-necromoghan/doors/b0000001-rdb-1--1-17.json",
       "contentHash": "4539d1be9a3be256fbf60f010a099e8159d0c26565c16ce4c995c7d2d5b09dc9",
       "byteLen": 10367,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "spatial/castle-necromoghan/doors/b0000001-rdb-2-1-0.json",
-      "contentHash": "6c9e53f2a943dd89aabbb7c4c1275cef8385a370eba76a8b8ea46b3230660994",
-      "byteLen": 10349,
       "dependsOnPaths": []
     },
     {
@@ -5769,12 +6044,6 @@
       "dependsOnPaths": []
     },
     {
-      "relativePath": "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-104.json",
-      "contentHash": "941b594d4a7a873d1f63b6627e7e5af949524d21de9e33e7f426e463f6121962",
-      "byteLen": 10635,
-      "dependsOnPaths": []
-    },
-    {
       "relativePath": "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-110.json",
       "contentHash": "ac9045d998fc08af48ab508ed9c8adbb862c427e2548337d963e62b95ad3b719",
       "byteLen": 10502,
@@ -5811,27 +6080,9 @@
       "dependsOnPaths": []
     },
     {
-      "relativePath": "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-147.json",
-      "contentHash": "b8ceaf85f0d934a04854f6924182aba565e597b5dc552bb7198a000bfc9f4a17",
-      "byteLen": 10345,
-      "dependsOnPaths": []
-    },
-    {
       "relativePath": "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-164.json",
       "contentHash": "7d45dd55211827b61eaa5abab0f52b7feb9b4fee94624bf22f4c1951b09efa0b",
       "byteLen": 10366,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-19.json",
-      "contentHash": "66b341d3cfbdc4a06a0431dafb13a9cd3cb068e5c23bf6ec3ed361fd2588ed04",
-      "byteLen": 10634,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-194.json",
-      "contentHash": "ba6b2e2a599c1dfab2e32dcabb9f4bfedb094dbe0bcb088c55e8b879aa99d4c2",
-      "byteLen": 10350,
       "dependsOnPaths": []
     },
     {
@@ -5886,48 +6137,6 @@
       "relativePath": "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-35.json",
       "contentHash": "eb0d4a644ebec456d48b773bd532b96fccc124f14bdd644a829d6e1b8aee5fa6",
       "byteLen": 10353,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-40.json",
-      "contentHash": "fa4017e77f250968c99b0edffa19e125ca98d68cce3a7dd5f6a7c2211d910d27",
-      "byteLen": 10314,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-41.json",
-      "contentHash": "9fc3b09d278d701231a29b1497b205d4c25ad7613f2407968e80661d06c1080a",
-      "byteLen": 10314,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-42.json",
-      "contentHash": "53d76a1c6aea3bca8c642dbef870f89b6fab821a89e2864bda457f390f83046e",
-      "byteLen": 10297,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-43.json",
-      "contentHash": "d89c791232e75f9b6f5d984600fcd1ba6b5470e6c80c6aec84da6835996af1f5",
-      "byteLen": 10296,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-44.json",
-      "contentHash": "b6edc289194f85e0b3e025fd3162ccc97358461f4620f879f5594a5901e40d8b",
-      "byteLen": 10301,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-45.json",
-      "contentHash": "86889fcfe95d37e9a4bf2cf2b7ad495e05c082dee451e2f20c5ccaa14c3e8365",
-      "byteLen": 10301,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "spatial/castle-necromoghan/doors/n0000034-rdb-2-0-61.json",
-      "contentHash": "738849e593e1335a0dff2653cd9d9ad94138f27237419de62640f0f1160cfbd5",
-      "byteLen": 10365,
       "dependsOnPaths": []
     },
     {
@@ -6087,18 +6296,6 @@
       "dependsOnPaths": []
     },
     {
-      "relativePath": "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-106.json",
-      "contentHash": "f4ec1d95774c0b56c8c2a4f07beff29e1d80cb77a972665e5c7ce1f2257dcb9a",
-      "byteLen": 10350,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-107.json",
-      "contentHash": "34d43769bfb5f33a32c5a3adc15be2d0edf4fd54eba5725205a5c4247a778724",
-      "byteLen": 10372,
-      "dependsOnPaths": []
-    },
-    {
       "relativePath": "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-11.json",
       "contentHash": "a8e71dedb10c88f6599e9798175d1bff7c4e25650f774aeead534a122d6b8881",
       "byteLen": 10301,
@@ -6117,33 +6314,9 @@
       "dependsOnPaths": []
     },
     {
-      "relativePath": "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-47.json",
-      "contentHash": "156e9e492e4b1a1d11680f4bf689bc35c4bd09dcde83e95d8e8208f432fb2251",
-      "byteLen": 10360,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-48.json",
-      "contentHash": "d5f687184009639c108f33d34a6b56cce0912ab9786e20a8a207e2c46c9992ea",
-      "byteLen": 10361,
-      "dependsOnPaths": []
-    },
-    {
       "relativePath": "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-49.json",
       "contentHash": "8eedf3d24798d367ecfcf8fc9fa813a88c353a0087726f16f2833d4814c70d6b",
       "byteLen": 10298,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-5.json",
-      "contentHash": "1652631fac521ada43676b559d10ec0b1684825930f893e3ce61ee5fd9a4862d",
-      "byteLen": 10365,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-6.json",
-      "contentHash": "6aaf5698ea1dac9e7353791ed70c25ad99b597d1f53ae1932bc132643ad45293",
-      "byteLen": 10359,
       "dependsOnPaths": []
     },
     {
@@ -6156,18 +6329,6 @@
       "relativePath": "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-71.json",
       "contentHash": "85d59cf9ae6f100a003025260ac91b08a1f52c41c35e9803f7d633dfe3aea89f",
       "byteLen": 10354,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-76.json",
-      "contentHash": "c136496892b966ac7d9146beb49bc8eb208455515a0229914898841d9eb7499c",
-      "byteLen": 10371,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "spatial/castle-necromoghan/doors/w0000020-rdb-0-0-77.json",
-      "contentHash": "3212d76a8d4893d77152ff852c002fe70f6fc1833c6921079b743925d672ab79",
-      "byteLen": 10366,
       "dependsOnPaths": []
     },
     {
@@ -6208,8 +6369,8 @@
     },
     {
       "relativePath": "spatial/castle-necromoghan/static-mesh.json",
-      "contentHash": "9883620e42d867a97bdfdd95252d71315f0a7bc0a2bba9dc7d2deb7553a3e02b",
-      "byteLen": 4403560,
+      "contentHash": "8195e83ca67625d1be3ba885e7a52971ca2a0994475ecac826dcc03ad669b073",
+      "byteLen": 4292594,
       "dependsOnPaths": []
     }
   ]

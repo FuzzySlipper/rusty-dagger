@@ -2083,9 +2083,15 @@
       "dependsOnPaths": []
     },
     {
+      "relativePath": "media/audio/clips/audio-player-death.wav",
+      "contentHash": "d6bc73a17f4febca54a9c036a99af955c9d3beff5f79016540964dc13d6723bb",
+      "byteLen": 2287,
+      "dependsOnPaths": []
+    },
+    {
       "relativePath": "media/classic/manifest.json",
-      "contentHash": "6e1f8f5f8c88e64ee95af5382c55ec04661419ff06e52d3fdc4465b7f1f532a3",
-      "byteLen": 1279440,
+      "contentHash": "111c688ba7799192bfb0a08f851ee52142a0f58c93586f125876f6b435e6a92b",
+      "byteLen": 1280231,
       "dependsOnPaths": [
         "media/audio/clips/audio-melee-dagger-swing.wav",
         "media/audio/clips/audio-melee-hit-1.wav",
@@ -2093,6 +2099,7 @@
         "media/audio/clips/audio-melee-hit-3.wav",
         "media/audio/clips/audio-melee-hit-4.wav",
         "media/audio/clips/audio-melee-hit-5.wav",
+        "media/audio/clips/audio-player-death.wav",
         "media/combat/weapon-00-atlas.png",
         "media/combat/weapon-03-atlas.png",
         "media/combat/weapon-axe-atlas.png",
@@ -4792,8 +4799,8 @@
     },
     {
       "relativePath": "normalized.json",
-      "contentHash": "9332f545b672757a3ae4d08bb0a9ac8de60f84df28ab0b52938dba835e23954c",
-      "byteLen": 8167381,
+      "contentHash": "eb5e32aaa692f1904ae8916e74a2f415937a001125c37dc0dbb40b3b13961387",
+      "byteLen": 8178518,
       "dependsOnPaths": [
         "geometry/index.json",
         "geometry/mesh-41017.json",
@@ -4936,6 +4943,12 @@
         "media/classic/manifest.json",
         "media/dungeon/manifest.json",
         "resources/privateer-s-hold/catalog.json",
+        "spatial/privateer-s-hold/actions/s0000999-rdb-0-0-model-128.json",
+        "spatial/privateer-s-hold/actions/s0000999-rdb-0-0-model-129.json",
+        "spatial/privateer-s-hold/actions/s0000999-rdb-0-0-model-163.json",
+        "spatial/privateer-s-hold/actions/s0000999-rdb-0-0-model-165.json",
+        "spatial/privateer-s-hold/actions/s0000999-rdb-0-0-model-166.json",
+        "spatial/privateer-s-hold/actions/s0000999-rdb-0-0-model-58.json",
         "spatial/privateer-s-hold/collision-navigation.json",
         "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-0.json",
         "spatial/privateer-s-hold/doors/b0000003-rdb-1-0-1.json",
@@ -5011,9 +5024,45 @@
       "dependsOnPaths": []
     },
     {
+      "relativePath": "spatial/privateer-s-hold/actions/s0000999-rdb-0-0-model-128.json",
+      "contentHash": "656dfcc4d0b596f4e2f290ae49029838ff343bcb21cfa5cea5c1186261f36aff",
+      "byteLen": 9820,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/actions/s0000999-rdb-0-0-model-129.json",
+      "contentHash": "c07e911138660629ee7b3da68f1cd49fb1467a97beb5109f582754999876f515",
+      "byteLen": 10714,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/actions/s0000999-rdb-0-0-model-163.json",
+      "contentHash": "060e2d9780d9478ccdbcddc49cfb42672b78f669daf26f44368be24993c9cc09",
+      "byteLen": 3959,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/actions/s0000999-rdb-0-0-model-165.json",
+      "contentHash": "1e11270dfa525fd8bd6587172e51e7bc34803cd6493d06e0f337cec343a1199e",
+      "byteLen": 11305,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/actions/s0000999-rdb-0-0-model-166.json",
+      "contentHash": "d8f8df27750a82bba72fc986a892480e788db71f7e002622eaa4ba2414be53e1",
+      "byteLen": 3965,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/actions/s0000999-rdb-0-0-model-58.json",
+      "contentHash": "c79ded20e7c0bec53a08a90807ae31ce3ea68cc9de6600904839da2c8f4e6141",
+      "byteLen": 29617,
+      "dependsOnPaths": []
+    },
+    {
       "relativePath": "spatial/privateer-s-hold/collision-navigation.json",
-      "contentHash": "ec550ca5d6505d78d24af8e9c41228c220da6c45bcda2b4d519a6ce24a908cd7",
-      "byteLen": 3639881,
+      "contentHash": "011f5dade3d838e559de8f8327877affc66c027e03d46e597e3961b7914c3210",
+      "byteLen": 3590099,
       "dependsOnPaths": [
         "spatial/privateer-s-hold/static-mesh.json"
       ]
@@ -5368,8 +5417,8 @@
     },
     {
       "relativePath": "spatial/privateer-s-hold/static-mesh.json",
-      "contentHash": "ec6da45208b2b790ebd6135faac564b9a8eb4aa0f24a26c95fe690b412e4f9b7",
-      "byteLen": 2434478,
+      "contentHash": "1a7f2d0b4285a28ecf0b001efe0eccb3d15d6f193f0fb3365ddd255ea4d55838",
+      "byteLen": 2368932,
       "dependsOnPaths": []
     }
   ]

@@ -47,7 +47,7 @@ internal sealed partial class DaggerfallSession
             reach,
             new DaggerfallActivationContributions(
                 new DaggerfallCorpseActivationOwner(_corpseLoot, _lootUi, State.Actors, _facts),
-                new DaggerfallDoorActivationOwner(_doors, TriggerDungeonDoorActions),
+                new DaggerfallDoorActivationOwner(_doors, TriggerDungeonDoorActions, ActivateDoorForce),
                 new DaggerfallPortalActivationOwner(_siteProjection.Portals, ResolvePortalDestination, TryTransitionTo),
                 new DaggerfallGroundActivationOwner(_groundContainers, _lootUi),
                 npc: _dialogue));
@@ -74,6 +74,7 @@ internal sealed partial class DaggerfallSession
             "info" => DaggerfallActivationMode.Info,
             "talk" => DaggerfallActivationMode.Talk,
             "steal" => DaggerfallActivationMode.Steal,
+            "lockpick" => DaggerfallActivationMode.Steal,
             "bash" => DaggerfallActivationMode.Bash,
             _ => throw new InvalidOperationException($"Parsed activation mode '{action.Mode}' is not declared."),
         };
@@ -91,17 +92,121 @@ internal sealed partial class DaggerfallSession
     private bool TryActivateContextual(LookReceipt look)
     {
         if (_activation is null) return false;
-        // PlayerActivate in the donor receives a direct event from the object under the cursor before
-        // the ordinary door/container owner runs. Resolve the same Engine hit first so an action
-        // object can mutate the shared variable store even when no ordinary activation owner claims it.
-        _ = TryTriggerDungeonActionRay(look.Forward, _tuning.LootInteraction.MaximumDistance, DaggerfallDungeonActionEvent.Direct);
-        DaggerfallActivationOutcome outcome = _activation.Activate(
-            State.Actors.Player.Actor.Entity,
-            State.PlayerControl,
-            look);
+        _preflightedDoorText.Clear();
+        // Keep the door identity observed before activation: opening disables its collider, but
+        // PlayerActivate invokes the ordinary door operation before its Direct action event.
+        DaggerfallRdbDoorId? actionDoor = FindDungeonDoorRay(look.Forward, _tuning.LootInteraction.MaximumDistance);
+        bool directDoorActionsDispatched = false;
+        if (actionDoor is { } gatedDoor
+            && TryTriggerDoorTextBeforeActivation(gatedDoor, out directDoorActionsDispatched))
+        {
+            _preflightedDoorText.Clear();
+            DaggerfallActivationOutcome blocked = new(true, "The door's warning stops you.");
+            _activationPresentation.Report(blocked);
+            Presentation.SetOutcome(blocked.Message);
+            return true;
+        }
+        DaggerfallActivationOutcome outcome;
+        try
+        {
+            outcome = _activation.Activate(
+                State.Actors.Player.Actor.Entity,
+                State.PlayerControl,
+                look);
+        }
+        finally { _preflightedDoorText.Clear(); }
+        if (actionDoor is { } door && !directDoorActionsDispatched
+            && State.DungeonActions.TryGetValue(_activeProfileKey, out DaggerfallDungeonActionGraph? graph))
+        {
+            if (ReportDungeonActions(graph.TriggerForDoor(door, DaggerfallDungeonActionEvent.Direct)))
+            {
+                DaggerfallDoorView current = _doors.Read(door);
+                string message = current.Motion switch
+                {
+                    DaggerfallDoorMotion.Opening => "The door begins to open.",
+                    DaggerfallDoorMotion.Closing => "The door begins to close.",
+                    DaggerfallDoorMotion.Open => "The door is open.",
+                    _ when current.IsLocked => "The door locks.",
+                    _ => "The door unlocks.",
+                };
+                outcome = new(true, message);
+            }
+        }
+        else if (!directDoorActionsDispatched)
+            _ = TryTriggerDungeonActionRay(look.Forward, _tuning.LootInteraction.MaximumDistance, DaggerfallDungeonActionEvent.Direct);
         _activationPresentation.Report(outcome);
         Presentation.SetOutcome(outcome.Message);
         return true;
+    }
+
+    /// <summary>
+    /// DoorText is the donor's first-contact warning. Its valid first display
+    /// owns the interaction and blocks the generic door operation; skipped or
+    /// already-displayed text lets the ordinary activation proceed.
+    /// </summary>
+    private readonly HashSet<string> _preflightedDoorText = new(StringComparer.Ordinal);
+
+    private bool TryTriggerDoorTextBeforeActivation(DaggerfallRdbDoorId door, out bool dispatched)
+    {
+        dispatched = false;
+        if (!State.DungeonActions.TryGetValue(_activeProfileKey, out DaggerfallDungeonActionGraph? graph))
+            return false;
+        string doorId = DaggerfallDungeonActionGraph.DoorSourceId(door);
+        DaggerfallDungeonActionDefinition[] doorTexts = graph.Definitions.Where(action =>
+            string.Equals(action.DoorId, doorId, StringComparison.Ordinal)
+            && action.ActionFlag == (byte)DaggerfallDungeonActionFlag.DoorText).ToArray();
+        if (doorTexts.Length == 0) return false;
+
+        dispatched = doorTexts.Any(action => DirectTrigger(action.TriggerFlag, action.DoorId is not null));
+        List<DaggerfallDungeonActionDispatch> dispatches = dispatched
+            ? [.. graph.TriggerForDoor(door, DaggerfallDungeonActionEvent.Direct)]
+            : [];
+        // A Door-triggered warning also precedes the first open. Dispatch only that text here;
+        // the normal Door event still runs the other linked actions after a later accepted open.
+        foreach (DaggerfallDungeonActionDefinition action in doorTexts.Where(action =>
+            DoorTrigger(action.TriggerFlag) && graph.State[action.Id].ActivationCount == 0))
+        {
+            dispatches.Add(graph.Trigger(action.Id, DaggerfallDungeonActionEvent.Door));
+            _preflightedDoorText.Add(action.Id);
+        }
+        if (dispatches.Count == 0) return false;
+        _ = ReportDungeonActions(dispatches);
+        foreach (DaggerfallDungeonActionExecution execution in dispatches.SelectMany(dispatch => dispatch.Executions))
+        {
+            if (execution.Outcome is not (DaggerfallDungeonActionOutcome.Applied or DaggerfallDungeonActionOutcome.AwaitingAnswer))
+                continue;
+            DaggerfallDungeonActionDefinition? definition = graph.Definitions.SingleOrDefault(action => action.Id == execution.ActionId);
+            if (definition?.ActionFlag != (byte)DaggerfallDungeonActionFlag.DoorText) continue;
+            if (_dungeonTextProjection is { Kind: DaggerfallDungeonTextActionKind.DoorText, ActionId: var actionId }
+                && string.Equals(actionId, execution.ActionId, StringComparison.Ordinal))
+                return true;
+        }
+        return false;
+    }
+
+    private static bool DirectTrigger(uint rawTrigger, bool doorAction)
+    {
+        uint trigger = doorAction && rawTrigger > 0x0A ? rawTrigger & 0x0F : rawTrigger;
+        return trigger is (uint)DaggerfallDungeonTriggerFlag.Direct
+            or (uint)DaggerfallDungeonTriggerFlag.Direct6
+            or (uint)DaggerfallDungeonTriggerFlag.MultiTrigger
+            or (uint)DaggerfallDungeonTriggerFlag.Collision09;
+    }
+
+    private static bool DoorTrigger(uint rawTrigger) =>
+        (rawTrigger > 0x0A ? rawTrigger & 0x0F : rawTrigger) == (uint)DaggerfallDungeonTriggerFlag.Door;
+
+    private DaggerfallRdbDoorId? FindDungeonDoorRay(Vector3 direction, double maximumDistance)
+    {
+        if (State.PlayerControl.Position is not WorldPoint position || direction.LengthSquared() <= .000001f)
+            return null;
+        SpatialHit hit = _spatial.CastRay(position.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight,
+            direction, (float)maximumDistance, _actionTriggers.ActiveRayEntities(),
+            _siteProjection.CharacterEnvironment(State.PlayerControl.Motion));
+        if (!hit.Present || hit.Kind != SpatialHitKind.Entity) return null;
+        foreach (DaggerfallDoorView door in _doors.All)
+            if (door.Entity.Value == hit.Entity) return door.Id;
+        return null;
     }
 
     /// <summary>Routes one static or action-door Engine hit to the normalized graph for the active profile.</summary>
@@ -121,7 +226,7 @@ internal sealed partial class DaggerfallSession
             direction,
             (float)maximumDistance,
             actionEntities,
-            _doors.CharacterEnvironment());
+            _siteProjection.CharacterEnvironment(State.PlayerControl.Motion));
         if (!hit.Present) return false;
 
         if (hit.Kind == SpatialHitKind.Entity)
@@ -156,10 +261,53 @@ internal sealed partial class DaggerfallSession
             && (execution.Outcome is DaggerfallDungeonActionOutcome.UnsupportedAction
                 or DaggerfallDungeonActionOutcome.MissingTarget
                 or DaggerfallDungeonActionOutcome.InvalidVariable
+                or DaggerfallDungeonActionOutcome.RejectedOperation
                 or DaggerfallDungeonActionOutcome.CycleSuppressed
                 || execution.Diagnostic.Contains("unknown source trigger", StringComparison.Ordinal)));
         if (diagnostic?.Diagnostic is { Length: > 0 } message) Presentation.SetOutcome(message);
         return dispatch.Applied;
+    }
+
+    private DaggerfallDungeonActionExecution? ExecuteDungeonFamilyAction(DaggerfallDungeonActionDefinition action)
+    {
+        if (DaggerfallDungeonDoorActions.Execute(action, _doors) is { } door) return door;
+        if (ActivateDungeonMotion(action) is { } motion) return motion;
+        ulong count = State.DungeonActions[_activeProfileKey].State[action.Id].ActivationCount;
+        DaggerfallDungeonHazardActionResult? hazard = DaggerfallDungeonHazardActions.Execute(action,
+            new(State.Actors.Player.Actor, State.Actors.Player.Actor, State.Progression.Level, count),
+            _combatResolution, _random);
+        if (hazard is not null)
+        {
+            if (hazard.HealthDamage is { } damage) AppendDamage(damage, DaggerfallDamageCause.Hazard, 0);
+            if (hazard.MagickaLost > 0d)
+                _facts.Append(new DungeonMagickaDrainedFact(DaggerfallActorIdentity.PlayerEntityId, action.Id,
+                    hazard.MagickaLost, _latestUpdateGeneration ?? 1UL, _latestSimulationStep ?? 1UL));
+            return hazard.Execution;
+        }
+        return ExecuteDungeonTextAction(action);
+    }
+
+    /// <summary>
+    /// Admits a normalized motion action through the active site's Engine-backed
+    /// projection. Non-motion flags return null so the named hazard and text
+    /// owners remain the next family handlers.
+    /// </summary>
+    private DaggerfallDungeonActionExecution? ActivateDungeonMotion(DaggerfallDungeonActionDefinition action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        if (!DaggerfallDungeonMotionPolicy.TryInterpret(action, modelDescription: null, out _)) return null;
+        if (!_siteProjection.Motion.TryGetEntity(action.Id, out _))
+        {
+            return new(action.Id, DaggerfallDungeonActionOutcome.MissingTarget,
+                Diagnostic: $"Dungeon motion action '{action.Id}' has no admitted action-model target.");
+        }
+
+        DaggerfallDungeonMotionActivation activation = _siteProjection.ActivateMotion(action.Id);
+        return activation == DaggerfallDungeonMotionActivation.IgnoredWhileMoving
+            ? new(action.Id, DaggerfallDungeonActionOutcome.AppliedWithoutChange,
+                Diagnostic: $"Dungeon motion action '{action.Id}' was retriggered while its tween was moving.")
+            : new(action.Id, DaggerfallDungeonActionOutcome.Applied,
+                Diagnostic: $"Dungeon motion action '{action.Id}' admitted {activation}.");
     }
 
     private bool ReportDungeonActions(IReadOnlyList<DaggerfallDungeonActionDispatch> dispatches)
@@ -189,7 +337,20 @@ internal sealed partial class DaggerfallSession
     private void TriggerDungeonDoorActions(DaggerfallRdbDoorId door)
     {
         if (State.DungeonActions.TryGetValue(_activeProfileKey, out DaggerfallDungeonActionGraph? graph))
-            _ = ReportDungeonActions(graph.TriggerForDoor(door, DaggerfallDungeonActionEvent.Door));
+        {
+            if (_preflightedDoorText.Count == 0)
+            {
+                _ = ReportDungeonActions(graph.TriggerForDoor(door, DaggerfallDungeonActionEvent.Door));
+                return;
+            }
+            string doorId = DaggerfallDungeonActionGraph.DoorSourceId(door);
+            _ = ReportDungeonActions(graph.Definitions
+                .Where(action => string.Equals(action.DoorId, doorId, StringComparison.Ordinal)
+                    && !_preflightedDoorText.Contains(action.Id))
+                .OrderBy(action => action.Id, StringComparer.Ordinal)
+                .Select(action => graph.Trigger(action.Id, DaggerfallDungeonActionEvent.Door))
+                .ToArray());
+        }
     }
 
     private Vector3 HorizontalFacing(bool backward)
@@ -322,15 +483,19 @@ internal sealed partial class DaggerfallSession
         private readonly DaggerfallDoorRuntime _doors;
         private readonly IReadOnlyDictionary<DaggerfallRdbDoorId, DurableIdentityReference> _identities;
 
-        internal DaggerfallDoorActivationOwner(DaggerfallDoorRuntime doors, Action<DaggerfallRdbDoorId> triggerDungeonActions)
+        internal DaggerfallDoorActivationOwner(
+            DaggerfallDoorRuntime doors,
+            Action<DaggerfallRdbDoorId> triggerDungeonActions,
+            Func<DaggerfallRdbDoorId, DaggerfallActivationMode, DaggerfallActivationOutcome> activateForce)
         {
             _doors = doors ?? throw new ArgumentNullException(nameof(doors));
             _triggerDungeonActions = triggerDungeonActions ?? throw new ArgumentNullException(nameof(triggerDungeonActions));
+            _activateForce = activateForce ?? throw new ArgumentNullException(nameof(activateForce));
             Dictionary<DaggerfallRdbDoorId, DurableIdentityReference> identities = [];
             HashSet<DurableIdentityReference> assigned = [];
             foreach (DaggerfallDoorView door in _doors.All)
             {
-                DurableIdentityReference identity = new(DurableIdentityKind.Resource, StableIdentity(door.Id));
+                DurableIdentityReference identity = _doors.IdentityOf(door.Id);
                 if (!assigned.Add(identity))
                     throw new InvalidOperationException($"RDB door identity hash collision for '{door.Id}'.");
                 identities.Add(door.Id, identity);
@@ -339,6 +504,7 @@ internal sealed partial class DaggerfallSession
         }
 
         private readonly Action<DaggerfallRdbDoorId> _triggerDungeonActions;
+        private readonly Func<DaggerfallRdbDoorId, DaggerfallActivationMode, DaggerfallActivationOutcome> _activateForce;
 
         public IEnumerable<DaggerfallActivationTarget> DoorTargets()
         {
@@ -362,14 +528,16 @@ internal sealed partial class DaggerfallSession
                 return new(true, Describe(door));
             if (selection.Mode == DaggerfallActivationMode.Talk)
                 return new(false, "The door does not answer.");
-            if (selection.Mode == DaggerfallActivationMode.Steal)
-                return new(false, "Lockpicking is not available yet.");
+            if (selection.Mode is DaggerfallActivationMode.Steal or DaggerfallActivationMode.Bash)
+            {
+                DaggerfallActivationOutcome forced = _activateForce(id, selection.Mode);
+                if (forced.Applied) _triggerDungeonActions(id);
+                return forced;
+            }
 
-            DaggerfallDoorOperationResult result = selection.Mode == DaggerfallActivationMode.Bash
-                ? _doors.Bash(id)
-                : door.Motion is DaggerfallDoorMotion.Open or DaggerfallDoorMotion.Opening
-                    ? _doors.Close(id, DaggerfallDoorOperationSource.Player)
-                    : _doors.Open(id, DaggerfallDoorOperationSource.Player);
+            DaggerfallDoorOperationResult result = door.Motion is DaggerfallDoorMotion.Open or DaggerfallDoorMotion.Opening
+                ? _doors.Close(id, DaggerfallDoorOperationSource.Player)
+                : _doors.Open(id, DaggerfallDoorOperationSource.Player);
             if (result == DaggerfallDoorOperationResult.Started)
                 _triggerDungeonActions(id);
             return new(result == DaggerfallDoorOperationResult.Started, Message(result, door.Motion));
@@ -392,23 +560,12 @@ internal sealed partial class DaggerfallSession
             DaggerfallDoorOperationResult.MagicallyHeld => "Magic holds the door fast.",
             DaggerfallDoorOperationResult.SpecialDoor => "This door only responds to its mechanism.",
             DaggerfallDoorOperationResult.BashFailed => "The door resists your blow.",
+            DaggerfallDoorOperationResult.LockpickFailed => "The lock resists your pick.",
             DaggerfallDoorOperationResult.AlreadyLocked => "The door is already locked.",
             DaggerfallDoorOperationResult.AlreadyUnlocked => "The door is already unlocked.",
             _ => "The door cannot be moved.",
         };
 
-        private static ulong StableIdentity(DaggerfallRdbDoorId id)
-        {
-            const ulong offset = 14695981039346656037UL;
-            const ulong prime = 1099511628211UL;
-            ulong hash = offset;
-            foreach (char character in id.ToString())
-            {
-                hash ^= character;
-                hash *= prime;
-            }
-            return hash == 0 ? 1UL : hash;
-        }
     }
 
 }

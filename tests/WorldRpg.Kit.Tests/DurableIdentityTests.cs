@@ -6,6 +6,27 @@ namespace WorldRpg.Kit.Tests;
 public sealed class DurableIdentityTests
 {
     [Fact]
+    public void Directory_resolution_keeps_unloaded_identity_distinct_from_never_issued_after_restore()
+    {
+        DurableIdentityAllocator identities = new(DurableIdentityKind.Actor, 100, [1]);
+        DurableIdentityReference actor = identities.Allocate(DurableIdentityKind.Actor);
+        DurableIdentityReference unknown = new(DurableIdentityKind.Actor, 101);
+        using EntityDirectory first = new();
+        first.Create(actor, new Rusty.Engine.Entities.EntityTypeId("actor"));
+        Assert.Equal(DurableEntityResolution.Materialized, first.Classify(actor, identities));
+
+        first.Destroy(actor);
+        Assert.Equal(DurableEntityResolution.Unloaded, first.Classify(actor, identities));
+        Assert.Equal(DurableEntityResolution.NeverIssued, first.Classify(unknown, identities));
+
+        DurableIdentityAllocator restored = DurableIdentityAllocator.Restore(identities.CaptureState());
+        using EntityDirectory second = new();
+        Assert.Equal(DurableEntityResolution.Unloaded, second.Classify(actor, restored));
+        second.Create(actor, new Rusty.Engine.Entities.EntityTypeId("actor"));
+        Assert.Equal(DurableEntityResolution.Materialized, second.Classify(actor, restored));
+    }
+
+    [Fact]
     public void Allocation_skips_reserved_identities_and_orders_the_cursor()
     {
         DurableIdentityAllocator identities = new(DurableIdentityKind.Item, 1_000, [1_000, 1_001, 500]);

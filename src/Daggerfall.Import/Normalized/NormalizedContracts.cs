@@ -99,7 +99,10 @@ public sealed record NormalizedImportDocument(
             throw new InvalidOperationException("A normalized navigation grid must be referenced by the normalized world.");
         }
 
-        World.Validate(Meshes.Select(mesh => mesh.Id).ToHashSet(StringComparer.Ordinal), resourceIds);
+        World.Validate(
+            Meshes.Select(mesh => mesh.Id).ToHashSet(StringComparer.Ordinal),
+            resourceIds,
+            artifactIds);
         Dictionary<string, HashSet<NormalizedVector3>> verticesByMesh = Meshes.ToDictionary(
             mesh => mesh.Id,
             mesh => mesh.Vertices.ToHashSet(),
@@ -116,6 +119,20 @@ public sealed record NormalizedImportDocument(
                     throw new InvalidOperationException($"Normalized geometry placement '{placement.Id}' sample is not a vertex of its contributing source meshes.");
                 }
             }
+        }
+
+        Dictionary<string, NormalizedMesh> meshesById = Meshes.ToDictionary(mesh => mesh.Id, StringComparer.Ordinal);
+        foreach (NormalizedActionModelPlacement model in World.ActionModels)
+        {
+            NormalizedVector3[] localVertices = model.MeshIds.SelectMany(id => meshesById[id].Vertices).ToArray();
+            NormalizedBounds actualBounds = new(
+                NormalizedBounds.CurrentSchemaVersion,
+                new(localVertices.Min(vertex => vertex.X), localVertices.Min(vertex => vertex.Y), localVertices.Min(vertex => vertex.Z)),
+                new(localVertices.Max(vertex => vertex.X), localVertices.Max(vertex => vertex.Y), localVertices.Max(vertex => vertex.Z)));
+            if (actualBounds != model.LocalBounds)
+                throw new InvalidOperationException($"Action model '{model.ActionId}' local bounds do not match its source mesh vertices.");
+            if (model.MeshIds.Any(id => !StringComparer.Ordinal.Equals(meshesById[id].ArtifactId, model.VisualArtifactId)))
+                throw new InvalidOperationException($"Action model '{model.ActionId}' source mesh facts must name its generated visual artifact.");
         }
     }
 
@@ -850,6 +867,12 @@ public sealed record NormalizedWorld(
     /// <summary>Placement-scoped source geometry when the normalizer has placement identities.</summary>
     public IReadOnlyList<NormalizedGeometryPlacement> GeometryPlacements { get; init; } = [];
 
+    /// <summary>World meshes assembled into the immutable static visual/collision bundle.</summary>
+    public IReadOnlyList<string>? StaticMeshIds { get; init; }
+
+    /// <summary>Action-bearing RDB model meshes kept local to their explicit instance transform.</summary>
+    public IReadOnlyList<NormalizedActionModelPlacement> ActionModels { get; init; } = [];
+
     public NormalizedWorld Canonicalize() => this with
     {
         MeshIds = MeshIds.OrderBy(id => id, StringComparer.Ordinal).ToArray(),
@@ -862,9 +885,15 @@ public sealed record NormalizedWorld(
             .Select(action => action.Canonicalize()).ToArray(),
         GeometryPlacements = GeometryPlacements.OrderBy(placement => placement.Id, StringComparer.Ordinal)
             .Select(placement => placement.Canonicalize()).ToArray(),
+        StaticMeshIds = (StaticMeshIds ?? MeshIds.Except(
+                Doors.SelectMany(door => door.VisualMeshIds)
+                    .Concat(ActionModels.SelectMany(model => model.MeshIds)), StringComparer.Ordinal).ToArray())
+            .OrderBy(id => id, StringComparer.Ordinal).ToArray(),
+        ActionModels = ActionModels.OrderBy(model => model.ActionId, StringComparer.Ordinal)
+            .Select(model => model.Canonicalize()).ToArray(),
     };
 
-    public void Validate(IReadOnlySet<string> meshIds, IReadOnlySet<string> resourceIds)
+    public void Validate(IReadOnlySet<string> meshIds, IReadOnlySet<string> resourceIds, IReadOnlySet<string> artifactIds)
     {
         if (SchemaVersion != CurrentSchemaVersion)
         {
@@ -897,6 +926,7 @@ public sealed record NormalizedWorld(
         ArgumentNullException.ThrowIfNull(Doors);
         ArgumentNullException.ThrowIfNull(Actions);
         ArgumentNullException.ThrowIfNull(GeometryPlacements);
+        ArgumentNullException.ThrowIfNull(ActionModels);
         NormalizedImportDocument.ValidateUnique(Lights, light => light.Id, "light placement");
         NormalizedImportDocument.ValidateUnique(Billboards, billboard => billboard.Id, "billboard placement");
         NormalizedImportDocument.ValidateUnique(Actors, actor => actor.Id, "actor placement");
@@ -916,6 +946,35 @@ public sealed record NormalizedWorld(
             action.Validate(actionIds, doorIds);
         }
 
+        NormalizedImportDocument.ValidateUnique(ActionModels, model => model.ActionId, "action model");
+        foreach (NormalizedActionModelPlacement model in ActionModels)
+        {
+            model.Validate(actionIds, doorIds, meshIds, artifactIds);
+            NormalizedDungeonAction action = Actions.Single(candidate => StringComparer.Ordinal.Equals(candidate.Id, model.ActionId));
+            if (action.IsFlat)
+                throw new InvalidOperationException($"Action model '{model.ActionId}' refers to a flat action, not an RDB model action.");
+            if (model.DoorId is not null)
+            {
+                NormalizedDoorPlacement door = Doors.Single(candidate => StringComparer.Ordinal.Equals(candidate.Id, model.DoorId));
+                if (!door.VisualMeshIds.ToHashSet(StringComparer.Ordinal).SetEquals(model.MeshIds))
+                    throw new InvalidOperationException($"Action model '{model.ActionId}' and door '{model.DoorId}' must share exactly one local visual mesh set.");
+            }
+        }
+
+        IReadOnlyList<string> staticMeshIds = StaticMeshIds ?? MeshIds.Except(
+            Doors.SelectMany(door => door.VisualMeshIds)
+                .Concat(ActionModels.SelectMany(model => model.MeshIds)), StringComparer.Ordinal).ToArray();
+        ArgumentNullException.ThrowIfNull(staticMeshIds);
+        NormalizedImportDocument.ValidateUnique(staticMeshIds, id => id, "static world mesh");
+        foreach (string meshId in staticMeshIds)
+            NormalizedImportDocument.RequireReference(meshId, meshIds, nameof(StaticMeshIds));
+        HashSet<string> movableMeshIds = Doors.SelectMany(door => door.VisualMeshIds)
+            .Concat(ActionModels.SelectMany(model => model.MeshIds))
+            .ToHashSet(StringComparer.Ordinal);
+        if (staticMeshIds.Intersect(movableMeshIds, StringComparer.Ordinal).Any()
+            || !staticMeshIds.Concat(movableMeshIds).ToHashSet(StringComparer.Ordinal).SetEquals(MeshIds))
+            throw new InvalidOperationException("Static, door, and action-model mesh admissions must cover every world mesh without static/dynamic overlap.");
+
         NormalizedImportDocument.ValidateUnique(GeometryPlacements, placement => placement.Id, "geometry placement");
         Dictionary<string, NormalizedDoorPlacement> doorsById = Doors.ToDictionary(door => door.Id, StringComparer.Ordinal);
         foreach (NormalizedGeometryPlacement placement in GeometryPlacements)
@@ -926,9 +985,9 @@ public sealed record NormalizedWorld(
         if (GeometryPlacements.Count > 0)
         {
             HashSet<string> placedMeshIds = GeometryPlacements.SelectMany(placement => placement.MeshIds).ToHashSet(StringComparer.Ordinal);
-            if (!placedMeshIds.SetEquals(MeshIds))
+            if (!placedMeshIds.SetEquals(staticMeshIds))
             {
-                throw new InvalidOperationException("Normalized geometry placements must collectively reference every world mesh exactly by ID membership.");
+                throw new InvalidOperationException("Normalized geometry placements must collectively reference every static world mesh exactly by ID membership.");
             }
         }
     }

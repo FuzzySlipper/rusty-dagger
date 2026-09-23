@@ -27,8 +27,8 @@
   "artifacts": [
     {
       "path": "worldrpg/media/audio/classic-sound-catalog.json",
-      "byteLength": 154009,
-      "sha256": "83eec6dbf5ef1f49009fd525711ecb8ff16bdb0b1f969aea5e2fb0f3c1887890"
+      "byteLength": 154000,
+      "sha256": "f1b9ba7cb2600365900fb2df51f11132cce386fb5883a938853f71e330e82aa9"
     },
     {
       "path": "worldrpg/media/audio/clips/audio-melee-dagger-swing.wav",
@@ -65,6 +65,12 @@
       "byteLength": 3557,
       "sha256": "7baa35eb158a9cfe756a6aef3027bd0f00817d4f0c4ba27f1abb77fab6cb73d4",
       "mediaId": "audio.melee.hit.5"
+    },
+    {
+      "path": "worldrpg/media/audio/clips/audio-player-death.wav",
+      "byteLength": 2287,
+      "sha256": "d6bc73a17f4febca54a9c036a99af955c9d3beff5f79016540964dc13d6723bb",
+      "mediaId": "audio.player.death"
     },
     {
       "path": "worldrpg/media/combat/weapon-00-atlas.png",

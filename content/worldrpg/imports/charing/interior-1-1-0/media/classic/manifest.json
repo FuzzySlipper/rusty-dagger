@@ -122,6 +122,26 @@
         "generatedFrames": null
       },
       {
+        "id": "audio.player.death",
+        "kind": "audio",
+        "relativePath": "media/audio/clips/audio-player-death.wav",
+        "contentDigest": "d6bc73a17f4febca54a9c036a99af955c9d3beff5f79016540964dc13d6723bb",
+        "byteLength": 2287,
+        "mimeType": "audio/wav",
+        "sourceWidth": 0,
+        "sourceHeight": 0,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
         "id": "effect.blood.0",
         "kind": "effectSprite",
         "relativePath": "media/effects/effect-blood-0-atlas.png",
@@ -39253,6 +39273,13 @@
       "mediaId": "audio.melee.hit.5",
       "sourceRecordOrdinal": 112,
       "sourceNumericId": 382,
+      "sampleRate": 11025
+    },
+    {
+      "clip": "playerDeath",
+      "mediaId": "audio.player.death",
+      "sourceRecordOrdinal": 405,
+      "sourceNumericId": 258,
       "sampleRate": 11025
     }
   ],

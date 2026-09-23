@@ -1127,9 +1127,15 @@
       "dependsOnPaths": []
     },
     {
+      "relativePath": "media/audio/clips/audio-player-death.wav",
+      "contentHash": "d6bc73a17f4febca54a9c036a99af955c9d3beff5f79016540964dc13d6723bb",
+      "byteLen": 2287,
+      "dependsOnPaths": []
+    },
+    {
       "relativePath": "media/classic/manifest.json",
-      "contentHash": "6e1f8f5f8c88e64ee95af5382c55ec04661419ff06e52d3fdc4465b7f1f532a3",
-      "byteLen": 1279440,
+      "contentHash": "111c688ba7799192bfb0a08f851ee52142a0f58c93586f125876f6b435e6a92b",
+      "byteLen": 1280231,
       "dependsOnPaths": [
         "media/audio/clips/audio-melee-dagger-swing.wav",
         "media/audio/clips/audio-melee-hit-1.wav",
@@ -1137,6 +1143,7 @@
         "media/audio/clips/audio-melee-hit-3.wav",
         "media/audio/clips/audio-melee-hit-4.wav",
         "media/audio/clips/audio-melee-hit-5.wav",
+        "media/audio/clips/audio-player-death.wav",
         "media/combat/weapon-00-atlas.png",
         "media/combat/weapon-03-atlas.png",
         "media/combat/weapon-axe-atlas.png",

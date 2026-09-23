@@ -358,6 +358,7 @@ public sealed class WorldRpgProduct : IEngineProduct
         ProductUpdateResult result = _session.Update(update);
         PersistRequestedPlayerPreferences();
         AdoptSessionRequest();
+        HonorPlayerDefeatOutcomeRequests();
         HonorSaveRequests();
 
         // The entry screen's own action leaves that mode after the session has run, not before: the
@@ -458,7 +459,62 @@ public sealed class WorldRpgProduct : IEngineProduct
     private void HonorSaveRequests()
     {
         if (_session is not ISaveRequestingGameSession requesting) return;
-        if (requesting.TakeSaveSlotRequest() is { } slotRequest) HonorSaveSlotRequest(requesting, slotRequest);
+        if (requesting.TakeSaveSlotRequest() is not { } slotRequest) return;
+        if (_mode == ProductMode.Dead)
+        {
+            requesting.ReportSaveOutcome("Save choices are unavailable after defeat.");
+            return;
+        }
+        HonorSaveSlotRequest(requesting, slotRequest);
+    }
+
+    /// <summary>
+    /// Routes the ruleset-neutral choices exposed by a defeated session. The session recognizes
+    /// Daggerfall's action payload; this Host only decides how a requested replacement or named
+    /// save operation is carried out. A defeat choice is valid only while the product owns Dead,
+    /// so a stale held action cannot replace a newly adopted session.
+    /// </summary>
+    private void HonorPlayerDefeatOutcomeRequests()
+    {
+        if (_session is not IPlayerDefeatOutcomeSession requesting
+            || requesting.TakePlayerDefeatOutcomeRequest() is not { } request)
+            return;
+
+        if (_mode != ProductMode.Dead)
+        {
+            requesting.ReportPlayerDefeatOutcome("The defeat choices are no longer available.");
+            return;
+        }
+
+        switch (request.Outcome)
+        {
+            case PlayerDefeatOutcome.NewGame:
+                Restart();
+                if (_session is IPlayerDefeatOutcomeSession replacement)
+                    replacement.ReportPlayerDefeatOutcome("New game started.");
+                return;
+            case PlayerDefeatOutcome.Load:
+                if (string.IsNullOrWhiteSpace(request.SaveKey))
+                {
+                    requesting.ReportPlayerDefeatOutcome("Choose a saved game to load.");
+                    return;
+                }
+                if (_session is ISaveRequestingGameSession saveRequesting)
+                {
+                    HonorSaveSlotRequest(saveRequesting, new(SaveSlotOperation.Load, request.SaveKey));
+                    return;
+                }
+                requesting.ReportPlayerDefeatOutcome("Load failed: the selected ruleset does not support save slots.");
+                return;
+            case PlayerDefeatOutcome.QuitToTitle:
+                QuitToTitle();
+                if (_session is IPlayerDefeatOutcomeSession title)
+                    title.ReportPlayerDefeatOutcome("Returned to the title.");
+                return;
+            default:
+                requesting.ReportPlayerDefeatOutcome("The defeat choice was not recognized.");
+                return;
+        }
     }
 
     private void HonorSaveSlotRequest(ISaveRequestingGameSession requesting, SaveSlotRequest request)

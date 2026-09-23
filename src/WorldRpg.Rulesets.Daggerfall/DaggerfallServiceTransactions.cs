@@ -279,7 +279,8 @@ internal sealed class DaggerfallServiceTransactions
         return ItemAvailable(request.Item) ? DaggerfallServiceDenial.None : DaggerfallServiceDenial.ItemChanged;
     }
 
-    private DaggerfallServiceDenial ProviderAvailable(DaggerfallServiceProvider provider)
+    /// <summary>Revalidates an already selected provider against the live NPC and site.</summary>
+    internal DaggerfallServiceDenial ProviderAvailable(DaggerfallServiceProvider provider)
     {
         DaggerfallNpc npc;
         try { npc = _npcs.Require(provider.NpcId); }

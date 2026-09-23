@@ -3650,10 +3650,10 @@
       "ordinal": 405,
       "numericId": 258,
       "byteLength": 2243,
-      "disposition": "readableNoConsumer",
+      "disposition": "admitted",
       "usageCandidate": "WoodElfMalePain1",
-      "mediaId": null,
-      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027WoodElfMalePain1\u0027, which no consumer here uses yet."
+      "mediaId": "audio.player.death",
+      "reason": "A published artifact carries clip 405 as \u0027audio.player.death\u0027; the donor names it \u0027WoodElfMalePain1\u0027."
     },
     {
       "ordinal": 406,

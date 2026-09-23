@@ -342,6 +342,32 @@ public interface IModeAwareGameSession
 }
 
 /// <summary>
+/// Optional session seam for the choices a player can make after defeat. The ruleset recognizes
+/// its own action payload and asks; the Host owns session replacement, title selection, and save
+/// storage. Keeping this seam ruleset-neutral lets the Host route new, load, and quit without
+/// interpreting a product's UI vocabulary or reading its save payload.
+/// </summary>
+public interface IPlayerDefeatOutcomeSession : IGameSession
+{
+    /// <summary>Takes the one defeat outcome request admitted by the ruleset, if any.</summary>
+    PlayerDefeatOutcomeRequest? TakePlayerDefeatOutcomeRequest();
+
+    /// <summary>Presents a Host-owned new-game or title outcome on the current session.</summary>
+    void ReportPlayerDefeatOutcome(string message);
+}
+
+/// <summary>The session replacement or persistence action requested by a defeated player.</summary>
+public enum PlayerDefeatOutcome
+{
+    NewGame,
+    Load,
+    QuitToTitle,
+}
+
+/// <summary>One ruleset-neutral player-defeat choice, optionally naming a Host save slot.</summary>
+public sealed record PlayerDefeatOutcomeRequest(PlayerDefeatOutcome Outcome, string? SaveKey = null);
+
+/// <summary>
 /// Optional session seam for ordinary named save-slot requests. The session interprets the
 /// player-facing actions and asks, because only the ruleset knows whether an action means
 /// anything in the current mode; the product owns catalog storage and any session replacement,

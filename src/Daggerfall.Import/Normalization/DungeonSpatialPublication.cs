@@ -56,6 +56,9 @@ public sealed record DungeonMaterialSlot(string MaterialResourceId, uint Slot);
 /// <summary>One action-door visual emitted apart from the immutable world mesh.</summary>
 public sealed record DungeonDoorVisual(string DoorId, GeneratedSpatialArtifact Artifact, IReadOnlyList<DungeonMaterialSlot> MaterialSlots);
 
+/// <summary>One action-model visual emitted in model-local coordinates.</summary>
+public sealed record DungeonActionModelVisual(string ActionId, GeneratedSpatialArtifact Artifact, IReadOnlyList<DungeonMaterialSlot> MaterialSlots);
+
 /// <summary>
 /// Deterministic spatial closure for one normalized location.  The static mesh
 /// is shaped exactly for Engine's content-backed static-mesh admission while
@@ -66,9 +69,22 @@ public sealed record DungeonSpatialPublication(
     GeneratedSpatialArtifact CollisionNavigation,
     GeneratedSpatialArtifact ResourceCatalog,
     IReadOnlyList<DungeonMaterialSlot> MaterialSlots,
-    IReadOnlyList<DungeonDoorVisual> DoorVisuals)
+    IReadOnlyList<DungeonDoorVisual> DoorVisuals,
+    IReadOnlyList<DungeonActionModelVisual> ActionModelVisuals)
 {
-    public IReadOnlyList<GeneratedSpatialArtifact> Artifacts => [StaticMesh, CollisionNavigation, ResourceCatalog, .. DoorVisuals.Select(visual => visual.Artifact)];
+    public IReadOnlyList<GeneratedSpatialArtifact> Artifacts
+    {
+        get
+        {
+            List<GeneratedSpatialArtifact> artifacts = [StaticMesh, CollisionNavigation, ResourceCatalog];
+            HashSet<string> seen = artifacts.Select(artifact => artifact.Id).ToHashSet(StringComparer.Ordinal);
+            foreach (DungeonActionModelVisual visual in ActionModelVisuals.OrderBy(value => value.ActionId, StringComparer.Ordinal))
+                if (seen.Add(visual.Artifact.Id)) artifacts.Add(visual.Artifact);
+            foreach (DungeonDoorVisual visual in DoorVisuals.OrderBy(value => value.DoorId, StringComparer.Ordinal))
+                if (seen.Add(visual.Artifact.Id)) artifacts.Add(visual.Artifact);
+            return artifacts;
+        }
+    }
 
     public IReadOnlyList<NormalizedArtifactDescriptor> ArtifactDescriptors => Artifacts
         .Select(artifact => artifact.ToDescriptor())
@@ -116,7 +132,16 @@ public sealed record DungeonSpatialPublication(
         foreach (NormalizedDoorPlacement door in world.Doors)
             foreach (string meshId in door.VisualMeshIds)
                 if (!doorsByMeshId.TryAdd(meshId, door)) throw new InvalidOperationException($"Action visual mesh '{meshId}' belongs to more than one door.");
-        NormalizedMesh[] staticMeshes = worldMeshes.Where(mesh => !doorsByMeshId.ContainsKey(mesh.Id)).ToArray();
+        HashSet<string> actionMeshIds = world.ActionModels.SelectMany(model => model.MeshIds).ToHashSet(StringComparer.Ordinal);
+        HashSet<string> movableMeshIds = doorsByMeshId.Keys.Concat(actionMeshIds).ToHashSet(StringComparer.Ordinal);
+        string[] staticMeshIds = world.StaticMeshIds?.ToArray()
+            ?? worldMeshes.Select(mesh => mesh.Id).Where(meshId => !movableMeshIds.Contains(meshId)).ToArray();
+        if (staticMeshIds.Intersect(movableMeshIds, StringComparer.Ordinal).Any()
+            || !staticMeshIds.Concat(movableMeshIds).ToHashSet(StringComparer.Ordinal).SetEquals(worldMeshIds))
+        {
+            throw new InvalidOperationException("Generated static and movable mesh admissions must partition the normalized world mesh collection.");
+        }
+        NormalizedMesh[] staticMeshes = staticMeshIds.Select(meshId => meshById[meshId]).ToArray();
 
         foreach (NormalizedResourceCatalogEntry resource in resources)
         {
@@ -145,10 +170,39 @@ public sealed record DungeonSpatialPublication(
         byte[] staticMesh = StaticMeshJson.Serialize(visualMeshAssetId, staticBounds, assembly);
         byte[] collisionNavigation = CollisionNavigationJson.Serialize(staticMeshArtifactId, bounds, staticMeshes, navigation);
         byte[] resourceCatalog = ResourceCatalogJson.Serialize(resources);
-        List<DungeonDoorVisual> doorVisuals = [];
         string directory = staticMeshRelativePath[..staticMeshRelativePath.LastIndexOf('/')];
+        List<DungeonActionModelVisual> actionVisuals = [];
+        Dictionary<string, DungeonActionModelVisual> actionVisualsById = new(StringComparer.Ordinal);
+        foreach (NormalizedActionModelPlacement model in world.ActionModels.OrderBy(value => value.ActionId, StringComparer.Ordinal))
+        {
+            NormalizedMesh[] localMeshes = model.MeshIds.Select(meshId => meshById[meshId]).ToArray();
+            MeshAssembly localAssembly = MeshAssembly.Create(localMeshes);
+            string fileName = ActionArtifactFileName(model.ActionId);
+            GeneratedSpatialArtifact artifact = new(
+                model.VisualArtifactId,
+                $"{directory}/actions/{fileName}.json",
+                StaticMeshJson.Serialize(
+                    $"mesh/action/{fileName}",
+                    model.LocalBounds,
+                    localAssembly),
+                []);
+            DungeonActionModelVisual visual = new(model.ActionId, artifact, localAssembly.MaterialSlots
+                .Select(binding => new DungeonMaterialSlot(binding.Material, checked((uint)binding.Slot))).ToArray());
+            actionVisuals.Add(visual);
+            actionVisualsById.Add(model.ActionId, visual);
+        }
+
+        List<DungeonDoorVisual> doorVisuals = [];
         foreach (NormalizedDoorPlacement door in world.Doors.OrderBy(door => door.Id, StringComparer.Ordinal))
         {
+            NormalizedActionModelPlacement? actionModel = world.ActionModels.SingleOrDefault(model => StringComparer.Ordinal.Equals(model.DoorId, door.Id));
+            if (actionModel is not null)
+            {
+                DungeonActionModelVisual sharedVisual = actionVisualsById[actionModel.ActionId];
+                doorVisuals.Add(new(door.Id, sharedVisual.Artifact, sharedVisual.MaterialSlots));
+                continue;
+            }
+
             NormalizedMesh[] localMeshes = door.VisualMeshIds.Select(meshId => Localize(meshById[meshId], door)).ToArray();
             MeshAssembly doorAssembly = MeshAssembly.Create(localMeshes, materialUniverse: materialUniverse);
             string suffix = door.Id["door/".Length..].Replace('/', '-');
@@ -164,7 +218,19 @@ public sealed record DungeonSpatialPublication(
             new GeneratedSpatialArtifact(collisionNavigationArtifactId, collisionNavigationRelativePath, collisionNavigation, [staticMeshArtifactId]),
             new GeneratedSpatialArtifact(resourceCatalogArtifactId, resourceCatalogRelativePath, resourceCatalog, []),
             Array.AsReadOnly(materialSlots),
-            doorVisuals);
+            doorVisuals,
+            actionVisuals);
+    }
+
+    private static string ActionArtifactFileName(string actionId)
+    {
+        const string prefix = "action/";
+        if (!actionId.StartsWith(prefix, StringComparison.Ordinal))
+            throw new ArgumentException($"Action model ID '{actionId}' must use the normalized action namespace.", nameof(actionId));
+        string suffix = actionId[prefix.Length..].Replace('/', '-');
+        if (suffix.Length == 0 || suffix.Any(character => !char.IsAsciiLetterOrDigit(character) && character != '-'))
+            throw new ArgumentException($"Action model ID '{actionId}' cannot form a generated artifact filename.", nameof(actionId));
+        return suffix.ToLowerInvariant();
     }
 
     private static NormalizedMesh Localize(NormalizedMesh mesh, NormalizedDoorPlacement door)

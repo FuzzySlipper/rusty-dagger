@@ -149,20 +149,6 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         _hasOrigin = false;
     }
 
-    /// <summary>
-    /// Merges terrain facts into the caller's complete product snapshot. Retired resources are
-    /// released only after Engine accepts that merged snapshot, preserving the appearance handle
-    /// lifetime contract during cell unloads and origin rebases.
-    /// </summary>
-    internal void Publish(ReadOnlySpan<AppearanceFact> baseFacts)
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        List<AppearanceFact> snapshot = [.. baseFacts.ToArray()];
-        AppendFacts(snapshot);
-        _graphics.PublishSnapshot(snapshot.ToArray());
-        CompleteAcceptedSnapshot();
-    }
-
     /// <summary>Returns the terrain facts that the next complete snapshot must include.</summary>
     internal AppearanceFact[] BuildFacts()
     {
@@ -187,7 +173,8 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
 
     /// <summary>
     /// Releases retained Engine resources after the caller has published a snapshot that no
-    /// longer references them. The caller should use <see cref="Publish"/> for ordinary unloads.
+    /// longer references them. The presentation owner invokes this after its complete snapshot
+    /// has been accepted.
     /// </summary>
     public void Dispose()
     {
