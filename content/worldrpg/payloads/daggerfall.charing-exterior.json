@@ -1,0 +1,174 @@
+{
+  "ruleset": "daggerfall",
+  "classicPresentation": {
+    "weaponVisuals": [
+      {
+        "itemId": "iron-dagger",
+        "resource": "weapon.dagger.steel"
+      },
+      {
+        "itemId": "iron-tanto",
+        "resource": "weapon.longblade"
+      },
+      {
+        "itemId": "iron-wakazashi",
+        "resource": "weapon.longblade"
+      },
+      {
+        "itemId": "iron-shortsword",
+        "resource": "weapon.longblade"
+      },
+      {
+        "itemId": "iron-broadsword",
+        "resource": "weapon.longblade"
+      },
+      {
+        "itemId": "iron-saber",
+        "resource": "weapon.longblade"
+      },
+      {
+        "itemId": "iron-katana",
+        "resource": "weapon.longblade"
+      },
+      {
+        "itemId": "iron-longsword",
+        "resource": "weapon.longblade"
+      },
+      {
+        "itemId": "iron-mace",
+        "resource": "weapon.mace"
+      },
+      {
+        "itemId": "iron-battle-axe",
+        "resource": "weapon.axe"
+      },
+      {
+        "itemId": "iron-claymore",
+        "resource": "weapon.longblade"
+      },
+      {
+        "itemId": "iron-dai-katana",
+        "resource": "weapon.longblade"
+      },
+      {
+        "itemId": "iron-staff",
+        "resource": "weapon.staff"
+      },
+      {
+        "itemId": "iron-flail",
+        "resource": "weapon.flail"
+      },
+      {
+        "itemId": "iron-warhammer",
+        "resource": "weapon.warhammer"
+      },
+      {
+        "itemId": "iron-war-axe",
+        "resource": "weapon.axe"
+      },
+      {
+        "itemId": "iron-short-bow",
+        "resource": "weapon.bow"
+      },
+      {
+        "itemId": "iron-long-bow",
+        "resource": "weapon.bow"
+      }
+    ],
+    "viewmodel": {
+      "renderOrder": 0
+    },
+    "unarmedVisual": "weapon.unarmed"
+  },
+  "startingState": {
+    "position": [
+      312.4,
+      3.2250001,
+      -365.2
+    ],
+    "look": {
+      "yawRadians": 0,
+      "pitchRadians": 0
+    },
+    "site": {
+      "region": 17,
+      "index": 4
+    }
+  },
+  "placements": [],
+  "world": {
+    "publicationRoot": "worldrpg/imports/charing/exterior",
+    "appearance": {
+      "tint": [
+        0.72,
+        0.7,
+        0.65,
+        1
+      ],
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "visible": true,
+      "layer": "scene"
+    },
+    "navigationGridId": 1,
+    "collisionNavigationPath": "spatial/charing/exterior/collision-navigation.json",
+    "staticMeshPath": "spatial/charing/exterior/static-mesh.json",
+    "profileKind": "exterior",
+    "rmbSource": {
+      "format": "rmb",
+      "region": 17,
+      "location": "Charing",
+      "mapId": 4326545,
+      "grid": {
+        "width": 6,
+        "height": 7
+      },
+      "portal": {
+        "buildingExteriorModel": {
+          "id": 124,
+          "positionRaw": [
+            0,
+            0,
+            0
+          ]
+        },
+        "buildingTransform": {
+          "xRaw": 1536,
+          "zRaw": 1920,
+          "yawRaw": 1536
+        },
+        "nearestWalkableNavigationCell": {
+          "column": 195,
+          "row": -109,
+          "supportHeight": 6.45
+        }
+      }
+    },
+    "transitions": [
+      {
+        "id": "charing-resial05-1-1-0",
+        "position": [
+          156.4,
+          6.45,
+          -86.8
+        ],
+        "radius": 2,
+        "destinationProfile": "worldrpg/imports/charing/interior-1-1-0"
+      }
+    ]
+  }
+}

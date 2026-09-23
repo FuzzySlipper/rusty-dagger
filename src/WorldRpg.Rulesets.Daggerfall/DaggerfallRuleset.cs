@@ -13,7 +13,15 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
     internal static readonly ContentPackId BlocksPack = new("daggerfall.blocks");
     internal static readonly ContentPackId PrivateersHoldPack = new("daggerfall.privateers-hold");
     internal static readonly ContentPackId FightersGuildQuestPack = new("daggerfall.quests.fighters");
-    internal static readonly IReadOnlyList<ContentPackId> ClassicQuestCorpusPacks = [new("daggerfall.quests.mages"), new("daggerfall.quests.temples"), new("daggerfall.quests.social"), new("daggerfall.quests.witches-commoners"), new("daggerfall.quests.merchants-vampires"), new("daggerfall.quests.disabled"), new("daggerfall.quests.nobility")];
+    internal static readonly IReadOnlyList<ContentPackId> ClassicQuestCorpusPacks =
+    [
+        new("daggerfall.quests.mages"), new("daggerfall.quests.temples"), new("daggerfall.quests.social"),
+        new("daggerfall.quests.witches-commoners"), new("daggerfall.quests.merchants-vampires"),
+        new("daggerfall.quests.disabled"), new("daggerfall.quests.nobility"),
+    ];
+    internal static readonly ContentPackId CastleNecromoghanPack = new("daggerfall.castle-necromoghan");
+    internal static readonly ContentPackId CharingExteriorPack = new("daggerfall.charing-exterior");
+    internal static readonly ContentPackId CharingInteriorPack = new("daggerfall.charing-interior-1-1-0");
 
     /// <summary>Creates the ordinary product ruleset with its admitted cinematic playback enabled.</summary>
     public DaggerfallRuleset() : this(videosEnabled: true) { }
@@ -44,7 +52,10 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             admitted.Audio,
             admitted.Content,
             _videosEnabled,
-            new DaggerfallQuestRuntimeAdmission(admitted.QuestReceipts), admitted.DisabledQuestSelection);
+            new DaggerfallQuestRuntimeAdmission(admitted.QuestReceipts),
+            admitted.Profiles,
+            admitted.DisabledQuestSelection);
+        session.AdmitSiteProfiles(admitted.Profiles);
         session.Site.AdmitBuildingNames(context.Engine.Random, admitted.Definitions, admitted.Blocks);
         return session;
     }
@@ -65,7 +76,9 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             admitted.Audio,
             admitted.Content,
             _videosEnabled,
-            new DaggerfallQuestRuntimeAdmission(admitted.QuestReceipts), admitted.DisabledQuestSelection);
+            new DaggerfallQuestRuntimeAdmission(admitted.QuestReceipts),
+            admitted.DisabledQuestSelection);
+        session.AdmitSiteProfiles(admitted.Profiles);
         session.Site.AdmitBuildingNames(context.Engine.Random, admitted.Definitions, admitted.Blocks);
         return session;
     }
@@ -83,20 +96,36 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> fightersGuildQuests = DaggerfallFightersGuildQuestCorpusContent.Read(selected.Content, fighters.Payload, definitions);
             ContentPack disabled = selected.RequireContentPack(new ContentPackId("daggerfall.quests.disabled"));
             DaggerfallDisabledQuestSelection disabledQuestSelection = DaggerfallDisabledQuestSelection.Read(selected.Content, disabled.Payload, definitions);
-            IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> classicQuestReceipts = [.. ClassicQuestCorpusPacks.Where(id => id.Value != "daggerfall.quests.disabled").SelectMany(id => DaggerfallClassicQuestCorpusContent.Read(selected.Content, selected.RequireContentPack(id).Payload, definitions, DaggerfallClassicQuestCorpusExpectations.Require(id.Value["daggerfall.quests.".Length..]))), .. disabledQuestSelection.Receipts];
+            IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> classicQuestReceipts =
+            [
+                .. ClassicQuestCorpusPacks.Where(id => id.Value != "daggerfall.quests.disabled")
+                    .SelectMany(id => DaggerfallClassicQuestCorpusContent.Read(selected.Content, selected.RequireContentPack(id).Payload, definitions, DaggerfallClassicQuestCorpusExpectations.Require(id.Value["daggerfall.quests.".Length..]))),
+                .. disabledQuestSelection.Receipts,
+            ];
+            ContentPack castle = selected.RequireContentPack(CastleNecromoghanPack);
+            PrivateersHoldInputs castleInputs = PrivateersHoldContent.Read(selected.Content, castle.Payload, definitions);
+            ContentPack charingExterior = selected.RequireContentPack(CharingExteriorPack);
+            PrivateersHoldInputs charingExteriorInputs = PrivateersHoldContent.Read(selected.Content, charingExterior.Payload, definitions);
+            ContentPack charingInterior = selected.RequireContentPack(CharingInteriorPack);
+            PrivateersHoldInputs charingInteriorInputs = PrivateersHoldContent.Read(selected.Content, charingInterior.Payload, definitions);
             DaggerfallPublishedClassicMedia classicMedia = DaggerfallPublishedClassicMedia.Read(selected.Content, inputs.ClassicPresentation);
+            _ = DaggerfallPublishedClassicMedia.Read(selected.Content, castleInputs.ClassicPresentation);
+            _ = DaggerfallPublishedClassicMedia.Read(selected.Content, charingExteriorInputs.ClassicPresentation);
+            _ = DaggerfallPublishedClassicMedia.Read(selected.Content, charingInteriorInputs.ClassicPresentation);
             DaggerfallTuning tuning = DaggerfallTuning.Read(selected.Tuning.Payload.Span);
-            return new DaggerfallAdmittedContent(definitions, blocks, inputs, [.. fightersGuildQuests, .. classicQuestReceipts], disabledQuestSelection, tuning, classicMedia, new DaggerfallAudioBundle(selected.Content, inputs.Audio), selected.Content);
+            DaggerfallSiteProfiles profiles = new([inputs, castleInputs, charingExteriorInputs, charingInteriorInputs]);
+            return new DaggerfallAdmittedContent(definitions, blocks, inputs, profiles, [.. fightersGuildQuests, .. classicQuestReceipts], disabledQuestSelection, tuning, classicMedia, new DaggerfallSiteAudioBundles(selected.Content, profiles), selected.Content);
         });
 
     private sealed record DaggerfallAdmittedContent(
         DaggerfallDefinitions Definitions,
         DaggerfallBlocksSnapshot Blocks,
         PrivateersHoldInputs Inputs,
+        DaggerfallSiteProfiles Profiles,
         IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> QuestReceipts,
         DaggerfallDisabledQuestSelection DisabledQuestSelection,
         DaggerfallTuning Tuning,
         DaggerfallPublishedClassicMedia ClassicMedia,
-        DaggerfallAudioBundle Audio,
+        DaggerfallSiteAudioBundles Audio,
         Rusty.Engine.ProductContent Content);
 }

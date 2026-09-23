@@ -57,6 +57,24 @@ public sealed class Arena2MediaBundlePublicationTests
     }
 
     [Fact]
+    public void CreatesTheSameCompleteClosureFromAnRmbSpatialResult()
+    {
+        DungeonNormalizationResult dungeon = CreateDungeon();
+        RmbExteriorNormalizationResult rmb = new(
+            dungeon.Document,
+            dungeon.SpatialPublication,
+            new MapsExteriorLayout(17, 4, "Charing", 4326545, 30864, 46984, 0, 1, 1, 'R', [new MapsExteriorBlock("RESIAL05.RMB", 1, 1)]),
+            new RmbBuildingSelection(1, 1, 0),
+            ["9004"]);
+
+        Arena2MediaBundlePublication publication = Arena2MediaBundlePublication.Create(rmb, CreateDungeonMedia(), CreateClassicMedia(), CreateGeometry());
+
+        Assert.Contains(publication.Plan.Artifacts, artifact => artifact.RelativePath == Arena2MediaBundlePublication.NormalizedDocumentRelativePath);
+        Assert.Contains(publication.Plan.Artifacts, artifact => artifact.RelativePath == "spatial/test/collision-navigation.json");
+        Assert.Contains(publication.Plan.Artifacts, artifact => artifact.RelativePath == "geometry/index.json");
+    }
+
+    [Fact]
     public void RejectsConflictingSourceProvenanceAndDuplicateMediaPaths()
     {
         DungeonNormalizationResult dungeon = CreateDungeon();

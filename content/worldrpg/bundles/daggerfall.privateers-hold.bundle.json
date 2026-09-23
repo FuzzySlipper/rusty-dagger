@@ -3,17 +3,50 @@
   "id": "daggerfall.privateers-hold",
   "ruleset": "daggerfall",
   "contentPacks": [
-    { "id": "daggerfall.base" },
-    { "id": "daggerfall.blocks" },
-    { "id": "daggerfall.privateers-hold" },
-    { "id": "daggerfall.quests.fighters" },
-    { "id": "daggerfall.quests.mages" },
-    { "id": "daggerfall.quests.temples" },
-    { "id": "daggerfall.quests.social" },
-    { "id": "daggerfall.quests.witches-commoners" },
-    { "id": "daggerfall.quests.merchants-vampires" },
-    { "id": "daggerfall.quests.disabled" },
-    { "id": "daggerfall.quests.nobility" }
+    {
+      "id": "daggerfall.base"
+    },
+    {
+      "id": "daggerfall.blocks"
+    },
+    {
+      "id": "daggerfall.privateers-hold"
+    },
+    {
+      "id": "daggerfall.castle-necromoghan"
+    },
+    {
+      "id": "daggerfall.charing-exterior"
+    },
+    {
+      "id": "daggerfall.charing-interior-1-1-0"
+    },
+    {
+      "id": "daggerfall.quests.fighters"
+    },
+    {
+      "id": "daggerfall.quests.mages"
+    },
+    {
+      "id": "daggerfall.quests.temples"
+    },
+    {
+      "id": "daggerfall.quests.social"
+    },
+    {
+      "id": "daggerfall.quests.witches-commoners"
+    },
+    {
+      "id": "daggerfall.quests.merchants-vampires"
+    },
+    {
+      "id": "daggerfall.quests.disabled"
+    },
+    {
+      "id": "daggerfall.quests.nobility"
+    }
   ],
-  "tuning": { "id": "daggerfall.defaults" }
+  "tuning": {
+    "id": "daggerfall.defaults"
+  }
 }

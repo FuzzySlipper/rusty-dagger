@@ -6,7 +6,8 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
     string? Name = null, string? Race = null, string? Gender = null, int? FaceIndex = null, int? Reflexes = null, string? Career = null, string? Mode = null,
     string? PrimarySkills = null, string? MajorSkills = null, string? MinorSkills = null, string? Advantages = null, string? Disadvantages = null, int? HitPointsPerLevel = null,
     string? Attribute = null, string? BackgroundAnswers = null, string? AttributeAllocations = null, string? SkillAllocations = null, ulong? Amount = null,
-    string? QuestInstance = null, int? QuestMessage = null, int? QuestChoice = null, string? QuestPrompt = null);
+    string? QuestInstance = null, int? QuestMessage = null, int? QuestChoice = null, string? QuestPrompt = null,
+    string? Note = null, string? Text = null, int? Page = null, int? Destination = null);
 
 /// <summary>The small Daggerfall player-action wire contract, consumed during admitted updates.</summary>
 internal static class DaggerfallUiAction
@@ -14,29 +15,31 @@ internal static class DaggerfallUiAction
     internal const string BeginAction = "begin";
     internal static DaggerfallPlayerUiAction? Parse(ReadOnlySpan<byte> payload)
     {
-        if (payload.IsEmpty || payload.Length > 1024) return null;
+        if (payload.IsEmpty || payload.Length > 4096) return null;
         try
         {
             using JsonDocument document = JsonDocument.Parse(payload.ToArray());
             JsonElement root = document.RootElement;
             if (root.ValueKind != JsonValueKind.Object) return null;
             HashSet<string> fields = new(StringComparer.Ordinal);
-            string? action = null, revision = null, item = null, targetEquipment = null, container = null, key = null, label = null, name = null, race = null, gender = null, career = null, mode = null, primarySkills = null, majorSkills = null, minorSkills = null, advantages = null, disadvantages = null, attribute = null, backgroundAnswers = null, attributeAllocations = null, skillAllocations = null, questInstance = null, questPrompt = null;
-            int? targetGrid = null, faceIndex = null, reflexes = null, hitPointsPerLevel = null, questMessage = null;
+            string? action = null, revision = null, item = null, targetEquipment = null, container = null, key = null, label = null, name = null, race = null, gender = null, career = null, mode = null, primarySkills = null, majorSkills = null, minorSkills = null, advantages = null, disadvantages = null, attribute = null, backgroundAnswers = null, attributeAllocations = null, skillAllocations = null, questInstance = null, questPrompt = null, note = null, text = null;
+            int? targetGrid = null, faceIndex = null, reflexes = null, hitPointsPerLevel = null, questMessage = null, page = null, destination = null;
             ulong? amount = null;
             bool confirm = false;
             int? questChoice = null;
             foreach (JsonProperty property in root.EnumerateObject())
             {
                 if (!fields.Add(property.Name)) return null;
-                if (property.Name is "targetGrid" or "faceIndex" or "reflexes" or "hitPointsPerLevel" or "questMessage")
+                if (property.Name is "targetGrid" or "faceIndex" or "reflexes" or "hitPointsPerLevel" or "questMessage" or "page" or "destination")
                 {
                     if (!property.Value.TryGetInt32(out int grid)) return null;
                     if (property.Name == "targetGrid") targetGrid = grid;
                     else if (property.Name == "faceIndex") faceIndex = grid;
                     else if (property.Name == "reflexes") reflexes = grid;
                     else if (property.Name == "hitPointsPerLevel") hitPointsPerLevel = grid;
-                    else questMessage = grid;
+                    else if (property.Name == "questMessage") questMessage = grid;
+                    else if (property.Name == "page") page = grid;
+                    else destination = grid;
                     continue;
                 }
                 if (property.Name == "amount")
@@ -84,6 +87,8 @@ internal static class DaggerfallUiAction
                     case "skillAllocations": skillAllocations = value; break;
                     case "questInstance": questInstance = value; break;
                     case "questPrompt": questPrompt = value; break;
+                    case "note": note = value; break;
+                    case "text": text = value; break;
                     default: return null;
                 }
             }
@@ -93,10 +98,42 @@ internal static class DaggerfallUiAction
                     || (targetGrid is null) == (targetEquipment is null) || fields.Count != 4) return null;
                 return new(action, revision, item, targetGrid, targetEquipment);
             }
+            if (action == "inventory-inspect")
+                return fields.SetEquals(["action", "revision", "item"])
+                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
+                    ? new(action, revision, item) : null;
+            if (action == "inventory-use")
+                return fields.SetEquals(["action", "revision", "item"])
+                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
+                    ? new(action, revision, item) : null;
+            if (action == "notebook-page")
+                return fields.SetEquals(["action", "revision", "page"]) && !string.IsNullOrWhiteSpace(revision) && page is >= 0
+                    ? new(action, Revision: revision, Page: page) : null;
+            if (action == "notebook-add")
+                return fields.SetEquals(["action", "revision", "text"]) && !string.IsNullOrWhiteSpace(revision) && ValidNotebookText(text)
+                    ? new(action, Revision: revision, Text: text) : null;
+            if (action == "notebook-edit")
+                return fields.SetEquals(["action", "revision", "note", "text"]) && !string.IsNullOrWhiteSpace(revision)
+                    && !string.IsNullOrWhiteSpace(note) && ValidNotebookText(text)
+                    ? new(action, Revision: revision, Note: note, Text: text) : null;
+            if (action == "notebook-remove")
+                return fields.SetEquals(["action", "revision", "note"]) && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(note)
+                    ? new(action, Revision: revision, Note: note) : null;
+            if (action == "notebook-move")
+                return fields.SetEquals(["action", "revision", "note", "destination"]) && !string.IsNullOrWhiteSpace(revision)
+                    && !string.IsNullOrWhiteSpace(note) && destination is >= 0
+                    ? new(action, Revision: revision, Note: note, Destination: destination) : null;
+            if (action == "inventory-drop")
+                return fields.SetEquals(["action", "revision", "item", "amount"])
+                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item) && amount is not null
+                    ? new(action, revision, item, Amount: amount) : null;
             if (action == "loot-take")
-                return fields.SetEquals(["action", "revision", "item", "container"])
-                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item) && !string.IsNullOrWhiteSpace(container)
-                    ? new(action, revision, item, Container: container) : null;
+            {
+                bool shape = fields.SetEquals(["action", "revision", "item", "container"])
+                    || fields.SetEquals(["action", "revision", "item", "container", "amount"]);
+                return shape && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item) && !string.IsNullOrWhiteSpace(container)
+                    ? new(action, revision, item, Container: container, Amount: amount) : null;
+            }
             if (action is "currency-deposit-gold" or "currency-withdraw-gold" or "currency-withdraw-letter")
                 return fields.SetEquals(["action", "amount"]) && amount is not null ? new(action, Amount: amount) : null;
             if (action == "currency-deposit-letters")
@@ -163,4 +200,6 @@ internal static class DaggerfallUiAction
         }
         catch (Exception error) when (error is JsonException or InvalidOperationException) { return null; }
     }
+
+    private static bool ValidNotebookText(string? value) => !string.IsNullOrWhiteSpace(value) && value.Length <= 2048;
 }

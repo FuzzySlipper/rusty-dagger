@@ -144,6 +144,8 @@ internal sealed record DaggerfallHudResourceDefinition(string Id, string Label, 
 /// <summary>Action-owned damage is allowed only for a fixed action without a donor actor range (the thief).</summary>
 internal sealed record DaggerfallActionDefinition(string Id, IReadOnlyList<string> Tags, string Interpretation, string Skill, int? AttackRangeIndex, int? MinimumDamage, int? MaximumDamage, int? StaminaCost, double? Reach, double? CooldownSeconds, int DamageBonus = 0);
 internal sealed record DaggerfallLootTableDefinition(string Key, int MinimumGold, int MaximumGold, IReadOnlyDictionary<string, int> Categories);
+/// <summary>The complete ordered classic encounter table corpus and its normalized source citation.</summary>
+internal sealed record DaggerfallEncounterSet(DaggerfallCatalogCitation Source, IReadOnlyList<IReadOnlyList<int>> Tables);
 /// <summary>Catalog metadata deliberately retained as data until a later ruleset-owned loot slice interprets it.</summary>
 internal sealed record DaggerfallDeferredLootCategoryPool(string Id, string Status, string Reason);
 /// <summary>Named, reviewed deviations from the donor corpus; these are documentation data, not behavior switches.</summary>
@@ -169,7 +171,8 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     DaggerfallTerrainSet terrain,
     DaggerfallItemTemplateSet itemTemplateCatalog,
     DaggerfallQuestSourceSet questSources,
-    DaggerfallCinematicSet cinematics)
+    DaggerfallCinematicSet cinematics,
+    DaggerfallEncounterSet? encounters = null)
 {
     /// <summary>The normalized reference catalogs a consumer resolves keys through.</summary>
     internal DaggerfallCatalogSet Catalogs { get; } = catalogs;
@@ -185,6 +188,9 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     /// actor this product places and to the behaviour, damage, health and media the donor states for it.
     /// </summary>
     internal DaggerfallMobileCatalogSet Mobiles { get; } = mobiles;
+
+    /// <summary>Retained source encounter tables consumed by the random encounter policy.</summary>
+    internal DaggerfallEncounterSet Encounters { get; } = encounters ?? new DaggerfallEncounterSet(new("legacy", "constructed-for-fixture"), []);
 
     /// <summary>
     /// The published name tables, loaded from the pack alone: each bank resolves to its donor

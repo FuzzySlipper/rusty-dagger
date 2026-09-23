@@ -165,6 +165,12 @@ public sealed record Arena2DungeonMediaRequest(
     /// </summary>
     public IReadOnlyList<AuthoredMediaOverlay> AuthoredOverlays { get; init; } = [];
 
+    /// <summary>Source mobile resource IDs selected by runtime tables rather than an RDB placement.</summary>
+    public IReadOnlyList<string> RuntimeActorResources { get; init; } = [];
+
+    /// <summary>Source billboard resource IDs selected by runtime tables rather than a world placement.</summary>
+    public IReadOnlyList<string> RuntimeBillboardResources { get; init; } = [];
+
     /// <summary>
     /// Typed, discoverable display defaults. Rulesets or authored overlays may
     /// replace these values without changing Arena2 layout interpretation.
@@ -190,6 +196,14 @@ public sealed record Arena2DungeonMediaRequest(
         Dungeon.Validate();
         Quotas.Validate();
         ArgumentNullException.ThrowIfNull(AuthoredOverlays);
+        ArgumentNullException.ThrowIfNull(RuntimeActorResources);
+        if (RuntimeActorResources.Any(string.IsNullOrWhiteSpace)
+            || RuntimeActorResources.Distinct(StringComparer.Ordinal).Count() != RuntimeActorResources.Count)
+            throw new ArgumentException("Runtime actor resources must be distinct non-empty source resource IDs.", nameof(RuntimeActorResources));
+        ArgumentNullException.ThrowIfNull(RuntimeBillboardResources);
+        if (RuntimeBillboardResources.Any(string.IsNullOrWhiteSpace)
+            || RuntimeBillboardResources.Distinct(StringComparer.Ordinal).Count() != RuntimeBillboardResources.Count)
+            throw new ArgumentException("Runtime billboard resources must be distinct non-empty source resource IDs.", nameof(RuntimeBillboardResources));
         ArgumentNullException.ThrowIfNull(DisplayProfile);
         DisplayProfile.Validate();
         if ((TextureLeaves is null) != string.IsNullOrWhiteSpace(TextureLeafConsumer))
@@ -341,10 +355,13 @@ public sealed record DungeonActorSpriteStateLayout(
         SourcePlayback.Validate();
         ArgumentNullException.ThrowIfNull(Playback);
         Playback.Validate();
-        if (FrameStart < 0 || FramesPerOrientation <= 0 || Frames is null || Frames.Count != checked(8 * FramesPerOrientation))
+        if (FrameStart < 0 || FramesPerOrientation <= 0 || Frames is null || Frames.Count < 8)
         {
-            throw new ArgumentException("A source state must contain one equal frame range for each of eight orientations.", nameof(Frames));
+            throw new ArgumentException("A source state must contain a frame range for each of eight orientations.", nameof(Frames));
         }
+
+        if (Frames.Select(frame => frame.Orientation).Distinct().Order().ToArray() is not [0, 1, 2, 3, 4, 5, 6, 7])
+            throw new ArgumentException("A source state must carry all eight source orientations.", nameof(Frames));
 
         foreach (DungeonMediaFrameLayout frame in Frames)
         {
@@ -520,7 +537,7 @@ public sealed record Arena2DungeonMediaPublication(
         EnforceSourceQuotas(request.Sources, request.Quotas);
 
         Arena2Palette palette = request.Sources.DecodePalette();
-        Selection selection = Select(request.Dungeon);
+        Selection selection = Select(request.Dungeon, request.RuntimeActorResources, request.RuntimeBillboardResources);
         EnforceExactTextureClosure(request.Sources, selection.RequiredArchives);
         if (request.TextureLeaves is not null)
         {
@@ -664,7 +681,7 @@ public sealed record Arena2DungeonMediaPublication(
                 selection.SpriteResourceId,
                 selection.Archive,
                 selection.Record,
-                new(sourceWorldSize.WidthMeters, sourceWorldSize.HeightMeters),
+                new(MathF.Round(sourceWorldSize.WidthMeters, 6), MathF.Round(sourceWorldSize.HeightMeters, 6)),
                 frameCount > 1 ? SourceBillboardPlayback : null,
                 layouts,
                 ToPublicationArtifact(artifact)));
@@ -711,11 +728,6 @@ public sealed record Arena2DungeonMediaPublication(
                     {
                         framesPerOrientation = frameCount;
                     }
-                    else if (framesPerOrientation != frameCount)
-                    {
-                        throw new InvalidOperationException($"Actor '{selection.ActorResourceId}' has non-uniform source frame counts for {state}.");
-                    }
-
                     Arena2RecordWorldSize size = MobileSourceMetadata.GetRecordWorldSize(info.Width, info.Height, info.ScaleX, info.ScaleY);
                     for (int sourceFrame = 0; sourceFrame < frameCount; sourceFrame++)
                     {
@@ -740,7 +752,8 @@ public sealed record Arena2DungeonMediaPublication(
                     sourcePlayback,
                     selection.Source.Animation.EffectiveFramesPerSecond(group),
                     frameStart,
-                    framesPerOrientation ?? throw new InvalidOperationException("An actor state requires eight source orientations.")));
+                    framesPerOrientation ?? throw new InvalidOperationException("An actor state requires eight source orientations."),
+                    sourceFrames.Count - frameStart));
             }
 
             EnforceFrameQuota(sourceFrames.Count, quotas, selection.ActorResourceId);
@@ -773,7 +786,7 @@ public sealed record Arena2DungeonMediaPublication(
                     state.SourcePlayback,
                     state.FrameStart,
                     state.FramesPerOrientation,
-                    layouts.Skip(state.FrameStart).Take(checked(8 * state.FramesPerOrientation)).ToArray()),
+                    layouts.Skip(state.FrameStart).Take(state.FrameCount).ToArray()),
                 state.SourceEffectiveFramesPerSecond)).ToArray();
             CorpseDraft? corpse = BuildCorpse(selection.Source, archives, palette, quotas, generated);
             drafts.Add(new(
@@ -1011,7 +1024,10 @@ public sealed record Arena2DungeonMediaPublication(
         }
     }
 
-    private static Selection Select(NormalizedImportDocument document)
+    private static Selection Select(
+        NormalizedImportDocument document,
+        IReadOnlyList<string> runtimeActorResources,
+        IReadOnlyList<string> runtimeBillboardResources)
     {
         Dictionary<string, NormalizedResourceCatalogEntry> resources = document.Resources.ToDictionary(resource => resource.Id, StringComparer.Ordinal);
         List<MaterialSelection> materials = [];
@@ -1031,6 +1047,7 @@ public sealed record Arena2DungeonMediaPublication(
 
         List<BillboardSelection> billboards = document.World.Billboards
             .Select(billboard => billboard.SpriteResourceId)
+            .Concat(runtimeBillboardResources)
             .Distinct(StringComparer.Ordinal)
             .OrderBy(value => value, StringComparer.Ordinal)
             .Select(id =>
@@ -1041,6 +1058,7 @@ public sealed record Arena2DungeonMediaPublication(
             .ToList();
         List<ActorSelection> actors = document.World.Actors
             .Select(actor => actor.ActorResourceId)
+            .Concat(runtimeActorResources)
             .Distinct(StringComparer.Ordinal)
             .OrderBy(value => value, StringComparer.Ordinal)
             .Select(actorId =>
@@ -1122,7 +1140,8 @@ public sealed record Arena2DungeonMediaPublication(
         DungeonSpritePlaybackSource SourcePlayback,
         float? SourceEffectiveFramesPerSecond,
         int FrameStart,
-        int FramesPerOrientation);
+        int FramesPerOrientation,
+        int FrameCount);
 
     private sealed record ActorStateDraft(DungeonActorSpriteStateLayout Layout, float? SourceEffectiveFramesPerSecond);
 

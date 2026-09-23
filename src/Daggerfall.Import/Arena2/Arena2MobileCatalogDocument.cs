@@ -20,6 +20,7 @@ public sealed record Arena2MobileTableEntry(
     string MoveSound,
     string BarkSound,
     string AttackSound,
+    string? LootTableKey,
     string MinMetalToHit,
     int MinDamage,
     int MaxDamage,
@@ -91,6 +92,7 @@ public static class Arena2MobileTable
                 Last(fields, "MoveSound"),
                 Last(fields, "BarkSound"),
                 Last(fields, "AttackSound"),
+                TextLiteral(fields, "LootTableKey"),
                 Last(fields, "MinMetalToHit"),
                 Number(fields, "MinDamage"),
                 Number(fields, "MaxDamage"),
@@ -118,6 +120,9 @@ public static class Arena2MobileTable
 
     private static bool Flag(Dictionary<string, string> fields, string field) =>
         fields.TryGetValue(field, out string? value) && string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+
+    private static string? TextLiteral(Dictionary<string, string> fields, string field) =>
+        fields.TryGetValue(field, out string? value) ? value.Trim().Trim('"') : null;
 
     /// <summary>
     /// Reads the donor's named constant, keeping the name rather than its numeric value: a behaviour or a
@@ -216,6 +221,7 @@ public static class Arena2MobileCatalogDocument
                     ["bark"] = entry.BarkSound,
                     ["attack"] = entry.AttackSound,
                 },
+                ["lootTableKey"] = entry.LootTableKey,
                 ["minMetalToHit"] = entry.MinMetalToHit,
                 ["damage"] = new JsonObject { ["minimum"] = entry.MinDamage, ["maximum"] = entry.MaxDamage },
                 ["health"] = new JsonObject { ["minimum"] = entry.MinHealth, ["maximum"] = entry.MaxHealth },

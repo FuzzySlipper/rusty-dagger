@@ -3,6 +3,7 @@ using Rusty.Engine;
 using Rusty.Engine.Entities;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.World;
+using System.Runtime.CompilerServices;
 
 namespace WorldRpg.Rulesets.Daggerfall.World;
 
@@ -133,6 +134,10 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
     private readonly EntityStore _store;
     private readonly IRandomService _random;
     private readonly Dictionary<DaggerfallRdbDoorId, Door> _doors = [];
+    // An EntityStore registers a component family once for its lifetime. Multiple site projections
+    // intentionally coexist while destination admission is being checked, so descriptor admission
+    // is tied to the store rather than to an individual site's door entities.
+    private static readonly ConditionalWeakTable<EntityStore, object> RegisteredStores = [];
     private bool _disposed;
 
     internal DaggerfallDoorRuntime(EntityStore store, IRandomService random, IEnumerable<DaggerfallRdbDoorDefinition> definitions,
@@ -143,8 +148,12 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         // These exact SDK component descriptors are registered before any door entity exists.
         // The actor store otherwise contains only product components, and an automatic descriptor
         // would not be usable by the named Engine projection adapters.
-        _store.Register(EngineComponentTypes.Transform);
-        _store.Register(EngineComponentTypes.SpatialCollider);
+        _ = RegisteredStores.GetValue(_store, static store =>
+        {
+            store.Register(EngineComponentTypes.Transform);
+            store.Register(EngineComponentTypes.SpatialCollider);
+            return new object();
+        });
         ArgumentNullException.ThrowIfNull(definitions);
         Dictionary<DaggerfallRdbDoorId, DaggerfallDoorSave> saves = (restored ?? [])
             .Select(save => save.Validate())

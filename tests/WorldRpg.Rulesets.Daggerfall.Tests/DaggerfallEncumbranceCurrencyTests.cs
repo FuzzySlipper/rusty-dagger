@@ -46,10 +46,13 @@ public sealed class DaggerfallEncumbranceCurrencyTests
         Assert.Equal(100UL, metadata.CreditValue);
         Assert.Equal(100UL, DaggerfallItemInstanceMetadata.Restore("template-275", metadata.Capture()).CreditValue);
         Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallItemInstanceMetadata.Restore("template-275", metadata.Capture() with { CreditValue = null }));
+        ulong letterIdentity = fixture.Inventory.GetDurableItemId(letter.Entity).Value;
         Assert.True(currency.DepositLetters());
         Assert.Equal(199UL, currency.Read().AccountGold);
         Assert.Equal(0UL, currency.Read().LettersOfCredit);
         Assert.Empty(fixture.Inventory.Read().UniqueItems);
+        Assert.Contains(letterIdentity, fixture.Unique.RemovedEntityIds);
+        Assert.Contains(fixture.Unique.CaptureState().Kinds.Single(kind => kind.Kind == DurableIdentityKind.Item).Removed, id => id == letterIdentity);
         Assert.Equal(new DaggerfallCurrencySave(199, 2), currency.Capture());
     }
 

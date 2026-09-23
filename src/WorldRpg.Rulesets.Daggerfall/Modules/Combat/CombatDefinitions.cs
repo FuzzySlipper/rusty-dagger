@@ -17,6 +17,8 @@ internal readonly record struct ExplicitMeleeRequest(long AttackerId, long Targe
     }
 }
 
+internal readonly record struct DaggerfallAdrenalineRush(bool Enabled, bool Improved);
+
 internal static class CombatRandomKey
 {
     internal const ulong Seed = 0;
@@ -27,6 +29,7 @@ internal static class CombatRandomKey
     internal const int BodySalt = 3;
     internal const int WeaponConditionSalt = 4;
     internal const int ArmorConditionSalt = 5;
+    internal const int CriticalStrikeSalt = 6;
     internal const string MediaAttackAlternateScope = "daggerfall.media.attack-alternate.v1";
     internal const int MediaAttackAlternateSalt = 41;
     internal const string MediaHitCueScope = "daggerfall.media.hit-cue.v1";

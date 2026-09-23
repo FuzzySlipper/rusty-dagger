@@ -22,6 +22,20 @@ public sealed class NormalizedContractTests
     }
 
     [Fact]
+    public void CompactSerializationRoundTripsAndRetainsTheFinalNewline()
+    {
+        NormalizedImportDocument document = CreateDocument();
+
+        byte[] indented = NormalizedImportSerializer.Serialize(document);
+        byte[] compact = NormalizedImportSerializer.SerializeCompact(document);
+        NormalizedImportDocument parsed = NormalizedImportSerializer.Deserialize(compact);
+
+        Assert.True(compact.Length < indented.Length);
+        Assert.Equal((byte)'\n', compact[^1]);
+        Assert.Equal(indented, NormalizedImportSerializer.Serialize(parsed));
+    }
+
+    [Fact]
     public void CanonicalSerializationSortsClosureAndPlacementsWithoutChangingGeometryOrder()
     {
         NormalizedImportDocument document = CreateDocument() with

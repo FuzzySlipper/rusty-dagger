@@ -48,7 +48,7 @@ internal static class DaggerfallCustomCareerPolicy
     private const int MinimumHp = 4, MaximumHp = 30, DefaultHp = 8, MinimumDifficulty = -12, MaximumDifficulty = 40;
     private static readonly HashSet<string> Advantages = new(StringComparer.Ordinal)
     {
-        "immunity", "increased-magery", "resistance",
+        "adrenaline-rush", "immunity", "increased-magery", "resistance",
     };
     private static readonly HashSet<string> Disadvantages = new(StringComparer.Ordinal)
     {

@@ -78,7 +78,7 @@ public sealed class DaggerfallFightersGuildQuestCorpusContentTests
         Assert.Contains("runner operation supports", failure.Message, StringComparison.Ordinal);
     }
 
-    private class RandomMinimum : DispatchProxy
+    internal class RandomMinimum : DispatchProxy
     {
         internal static IRandomService Create() => DispatchProxy.Create<IRandomService, RandomMinimum>();
 

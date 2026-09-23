@@ -10,8 +10,6 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// </summary>
 internal static class DaggerfallPlayerVitals
 {
-    private const int BaseHealth = 25;
-
     internal static DaggerfallVitalValues Initial(DaggerfallStatBases stats, DaggerfallCareerDefinition career)
     {
         ArgumentNullException.ThrowIfNull(stats);
@@ -40,7 +38,8 @@ internal static class DaggerfallPlayerVitals
             DaggerfallFormulaPolicy.SpellPoints(intelligence, career.SpellPointMultiplierMilli);
     }
 
-    private static int HealthBase(DaggerfallCareerDefinition career) => checked(BaseHealth + career.HitPointsPerLevel);
+    private static int HealthBase(DaggerfallCareerDefinition career) =>
+        DaggerfallFormulaPolicy.RollMaxHealth(1, career.HitPointsPerLevel, 0, static (_, _) => throw new InvalidOperationException("Level-one health never rolls."));
 
     private static int Value(StatsComponent stats, DaggerfallStatId id) =>
         stats.GetStat(StatId.Parse(id.Value)).ValueInt;

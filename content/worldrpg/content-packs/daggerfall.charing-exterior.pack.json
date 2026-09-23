@@ -1,0 +1,10 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.charing-exterior",
+  "ruleset": "daggerfall",
+  "dependencies": [
+    { "id": "daggerfall.base" }
+  ],
+  "description": "Normalized Charing RMB exterior profile.",
+  "payload": "worldrpg/payloads/daggerfall.charing-exterior.json"
+}

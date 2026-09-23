@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Daggerfall.Import.Publication;
 
 namespace Daggerfall.Import.Normalized;
 
@@ -644,12 +645,13 @@ public sealed record NormalizedMarker(string Id, NormalizedVector3 Position)
     }
 }
 
-public sealed record NormalizedLightPlacement(string Id, NormalizedVector3 Position, float Range, float Intensity)
+public sealed record NormalizedLightPlacement(string Id, NormalizedVector3 Position, float Range, float Intensity, NormalizedVector3? Color = null)
 {
     public void Validate()
     {
         NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
         Position.Validate(nameof(Position));
+        Color?.Validate(nameof(Color));
         NormalizedImportDocument.RequireFinite(Range, nameof(Range));
         NormalizedImportDocument.RequireFinite(Intensity, nameof(Intensity));
         if (Range < 0F || Intensity < 0F)
@@ -887,11 +889,21 @@ public static class NormalizedImportSerializer
     };
 
     public static byte[] Serialize(NormalizedImportDocument document)
+        => Serialize(document, Options);
+
+    /// <summary>
+    /// Writes the same canonical document with compact whitespace for bulk RMB
+    /// spatial publications. The final newline remains part of the contract.
+    /// </summary>
+    public static byte[] SerializeCompact(NormalizedImportDocument document)
+        => Serialize(document, PublishedJson.SectionCompact);
+
+    private static byte[] Serialize(NormalizedImportDocument document, JsonSerializerOptions options)
     {
         ArgumentNullException.ThrowIfNull(document);
         NormalizedImportDocument canonical = document.Canonicalize();
         canonical.Validate();
-        byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(canonical, Options);
+        byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(canonical, options);
         return bytes.Concat([Encoding.UTF8.GetBytes("\n")[0]]).ToArray();
     }
 

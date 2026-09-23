@@ -10,6 +10,8 @@ internal sealed record DaggerfallItemOwner(string Scope, long Id)
     internal static DaggerfallItemOwner Player { get; } = new("player", DaggerfallActorIdentity.PlayerEntityId);
     internal static DaggerfallItemOwner Actor(long id) => new("actor", id);
     internal static DaggerfallItemOwner Corpse(long actorId) => new("corpse", actorId);
+    /// <summary>A persistent dropped-item container in the currently loaded world.</summary>
+    internal static DaggerfallItemOwner Ground(long id) => new("ground", id);
     /// <summary>A remote wagon container is intentionally excluded from the player's carried load.</summary>
     internal static DaggerfallItemOwner Wagon(long id) => new("wagon", id);
     internal static DaggerfallItemOwner WorldTreasure(long id) => new("world-treasure", id);
@@ -17,7 +19,7 @@ internal sealed record DaggerfallItemOwner(string Scope, long Id)
 
     internal DaggerfallItemOwner Validate()
     {
-        if (Scope is not ("player" or "actor" or "corpse" or "wagon" or "world-treasure" or "encounter") || Id <= 0)
+        if (Scope is not ("player" or "actor" or "corpse" or "ground" or "wagon" or "world-treasure" or "encounter") || Id <= 0)
             throw new ArgumentException("Item ownership must name a known positive durable owner.");
         return this;
     }

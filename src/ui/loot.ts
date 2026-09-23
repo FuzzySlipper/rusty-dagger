@@ -8,7 +8,7 @@ export interface LootProjection {
   readonly message: string;
 }
 export type LootAction =
-  | { readonly action: 'loot-take'; readonly container: string; readonly revision: string; readonly item: string }
+  | { readonly action: 'loot-take'; readonly container: string; readonly revision: string; readonly item: string; readonly amount?: number }
   | { readonly action: 'loot-close'; readonly container: string };
 
 /** Stable DOM rows render C# values; a click only claims the selected item and revision. */
@@ -29,11 +29,15 @@ export function mountLoot(root: HTMLElement, claim: (action: LootAction) => void
   shell.append(heading, rows, empty, status);
   root.append(shell);
   let current: LootProjection | null = null;
-  const entries = new Map<string, { element: HTMLLIElement; label: HTMLElement; detail: HTMLElement; button: HTMLButtonElement; icon: HTMLImageElement }>();
+  const entries = new Map<string, { element: HTMLLIElement; label: HTMLElement; detail: HTMLElement; quantity: HTMLInputElement; button: HTMLButtonElement; icon: HTMLImageElement }>();
   const onClick = (event: MouseEvent): void => {
     const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-loot-item]') : null;
-    if (button?.dataset.lootItem && current)
-      claim({ action: 'loot-take', container: current.container, revision: current.revision, item: button.dataset.lootItem });
+    if (button?.dataset.lootItem && current) {
+      const quantity = button.closest('li')?.querySelector<HTMLInputElement>('[data-loot-quantity]');
+      const amount = quantity == null ? 1 : Number(quantity.value);
+      if (Number.isSafeInteger(amount) && amount > 0)
+        claim({ action: 'loot-take', container: current.container, revision: current.revision, item: button.dataset.lootItem, amount });
+    }
   };
   shell.addEventListener('click', onClick);
   const render = (value: LootProjection | null): void => {
@@ -68,15 +72,22 @@ export function mountLoot(root: HTMLElement, claim: (action: LootAction) => void
         const label = document.createElement('strong');
         const detail = document.createElement('p');
         text.append(label, detail);
+        const quantity = document.createElement('input');
+        quantity.type = 'number'; quantity.min = '1'; quantity.step = '1'; quantity.value = '1';
+        quantity.dataset.lootQuantity = item.key;
+        quantity.setAttribute('aria-label', `Take quantity for ${item.label}`);
         const button = document.createElement('button');
         button.type = 'button'; button.dataset.lootItem = item.key;
-        element.append(icon, text, button);
-        row = { element, icon, label, detail, button };
+        element.append(icon, text, quantity, button);
+        row = { element, icon, label, detail, quantity, button };
         entries.set(item.key, row); rows.append(element);
       }
       row.label.textContent = `${item.label} × ${item.quantity}`;
       row.detail.textContent = item.details;
-      row.button.textContent = item.key.startsWith('stack:') ? 'Take 1' : 'Take';
+      row.quantity.hidden = !item.key.startsWith('stack:');
+      row.quantity.max = item.quantity;
+      if (Number(row.quantity.value) > Number(item.quantity)) row.quantity.value = item.quantity;
+      row.button.textContent = item.key.startsWith('stack:') ? 'Take' : 'Take';
       row.button.setAttribute('aria-label', `${row.button.textContent} ${item.label}`);
       const iconSource = image(item.icon);
       row.icon.hidden = iconSource === null;

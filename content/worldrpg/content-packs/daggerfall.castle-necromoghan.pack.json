@@ -1,0 +1,10 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.castle-necromoghan",
+  "ruleset": "daggerfall",
+  "dependencies": [
+    { "id": "daggerfall.base" }
+  ],
+  "description": "Normalized Castle Necromoghan destination profile.",
+  "payload": "worldrpg/payloads/daggerfall.castle-necromoghan.json"
+}

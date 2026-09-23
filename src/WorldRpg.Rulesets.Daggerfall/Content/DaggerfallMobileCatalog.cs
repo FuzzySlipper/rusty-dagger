@@ -8,6 +8,7 @@ internal sealed record DaggerfallMobileDefinition(
     int DonorId,
     string DonorName,
     string Identity,
+    bool CastsMagic,
     string? Actor,
     string Disposition,
     string Behaviour,
@@ -22,6 +23,7 @@ internal sealed record DaggerfallMobileDefinition(
     string MoveSound,
     string BarkSound,
     string AttackSound,
+    string? LootTableKey,
     string MinMetalToHit,
     int MinimumDamage,
     int MaximumDamage,
@@ -36,6 +38,9 @@ internal sealed record DaggerfallMobileDefinition(
 {
     /// <summary>Whether this mobile is one the product places as an actor.</summary>
     internal bool IsPublished => Disposition is "published" or "published-variant";
+
+    /// <summary>EnemyBasics caster capability retained for the later compiled spell behavior (task #7083).</summary>
+    internal bool RequiresEnemySpellBehavior => CastsMagic;
 
     /// <summary>The damage range the donor states, or null when the mobile carries none.</summary>
     internal (int Minimum, int Maximum)? DamageRange =>

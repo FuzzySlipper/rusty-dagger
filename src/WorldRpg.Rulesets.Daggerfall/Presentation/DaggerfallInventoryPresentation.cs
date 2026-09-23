@@ -1,6 +1,7 @@
 using System.Globalization;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -27,6 +28,10 @@ internal sealed class DaggerfallInventoryPresentation
     private DaggerfallItemOwner? itemOwner;
     private Func<ulong, ulong>? uniqueIdentity;
     private DaggerfallItemConditionService? itemCondition;
+    private DaggerfallGroundContainers? ground;
+    private Func<WorldRpg.Kit.Controls.WorldPoint?>? groundPosition;
+    private DaggerfallInventoryUseService? itemUse;
+    internal event Action<DaggerfallReadableBook>? BookOpened;
     internal string Message { get; private set; } = "Drag items between the grid and compatible equipment slots.";
     internal DaggerfallEquipmentChange? LastEquipmentChange { get; private set; }
     internal ulong MetadataRevision => itemInstances?.Revision ?? 0;
@@ -64,6 +69,20 @@ internal sealed class DaggerfallInventoryPresentation
         if (itemInstances is null || itemOwner is null || uniqueIdentity is null)
             throw new InvalidOperationException("Inventory item condition requires durable item metadata.");
         itemCondition = condition ?? throw new ArgumentNullException(nameof(condition));
+    }
+
+    /// <summary>Connects player drops to the durable, positioned ground-container owner.</summary>
+    internal void UseGroundDrops(DaggerfallGroundContainers containers, Func<WorldRpg.Kit.Controls.WorldPoint?> position)
+    {
+        if (ground is not null) throw new InvalidOperationException("Inventory ground drops are already configured.");
+        ground = containers ?? throw new ArgumentNullException(nameof(containers));
+        groundPosition = position ?? throw new ArgumentNullException(nameof(position));
+    }
+
+    internal void UseItemActions(DaggerfallInventoryUseService use)
+    {
+        if (itemUse is not null) throw new InvalidOperationException("Inventory item use is already configured.");
+        itemUse = use ?? throw new ArgumentNullException(nameof(use));
     }
 
     internal InventoryPresentation Read()
@@ -120,6 +139,63 @@ internal sealed class DaggerfallInventoryPresentation
                 => $"Cannot place that item there. {result.Detail}",
             _ => $"Cannot place that item there. {result.Detail}",
         };
+    }
+
+    /// <summary>Publishes the authoritative current description for a still-contained inventory row.</summary>
+    internal void Inspect(DaggerfallPlayerUiAction action)
+    {
+        InventoryPresentation current = Read();
+        InventoryItemPresentation? row = action.Item is null ? null : current.Items.SingleOrDefault(item => item.Key == action.Item);
+        if (row is null) { Message = "That item is no longer in your inventory."; return; }
+        Message = $"{row.Label}: {row.Details}";
+    }
+
+    /// <summary>Routes a current item through a named domain operation; rejected or deferred use conserves it.</summary>
+    internal void Use(DaggerfallPlayerUiAction action)
+    {
+        if (itemUse is null) throw new InvalidOperationException("Inventory item use is not composed.");
+        InventoryPresentation current = Read();
+        if (action.Revision != current.Revision) { Message = "Inventory changed. Choose the item again."; return; }
+        InventoryItemPresentation? row = action.Item is null ? null : current.Items.SingleOrDefault(item => item.Key == action.Item);
+        if (row is null) { Message = "That item is no longer in your inventory."; return; }
+        DaggerfallInventoryUseResult result = itemUse.Use(row.Key, moves.ReadInventory().StoreRevision);
+        Message = result.Message;
+        if (result.OpenedBook is not null) BookOpened?.Invoke(result.OpenedBook);
+    }
+
+    /// <summary>Drops one explicit current stack quantity or one unequipped unique item into a durable ground pile.</summary>
+    internal void Drop(DaggerfallPlayerUiAction action)
+    {
+        if (ground is null || groundPosition is null) throw new InvalidOperationException("Inventory ground drops are not composed.");
+        InventoryPresentation current = Read();
+        if (action.Revision != current.Revision) { Message = "Inventory changed. Choose the item again."; return; }
+        InventoryItemPresentation? row = action.Item is null ? null : current.Items.SingleOrDefault(item => item.Key == action.Item);
+        if (row is null) { Message = "That item is no longer in your inventory."; return; }
+        ulong quantity = action.Amount ?? 1;
+        InventoryContainerSelection selection;
+        if (TryParseUnique(row, out UniqueInventoryItem unique))
+        {
+            if (quantity != 1) { Message = "A unique item can only be dropped once."; return; }
+            if (row.EquippedSlots.Length != 0) { Message = "Unequip that item before dropping it."; return; }
+            selection = new(new InventoryItemId(row.Definition), 1, UniqueEntityId: unique.EntityId);
+        }
+        else if (TryParseStack(row, out Rusty.Engine.Mechanics.InventoryStackId stack))
+        {
+            if (quantity == 0 || quantity > ulong.Parse(row.Quantity, CultureInfo.InvariantCulture)) { Message = "Choose a quantity still in that stack."; return; }
+            selection = new(new InventoryItemId(row.Definition), quantity, Stack: stack);
+        }
+        else { Message = "That item is no longer in your inventory."; return; }
+        WorldRpg.Kit.Controls.WorldPoint? position = groundPosition();
+        if (position is null) { Message = "You cannot drop an item without a world position."; return; }
+        try
+        {
+            _ = ground.Drop(selection, position.Value, ulong.Parse(current.Revision.Split(':')[0], CultureInfo.InvariantCulture));
+            Message = $"Dropped {row.Label}.";
+        }
+        catch (Exception rejection) when (rejection is InvalidOperationException or ArgumentException)
+        {
+            Message = $"Cannot drop that item. {rejection.Message}";
+        }
     }
 
     internal InventoryItemPresentation DescribeItem(string key, string itemId, ulong quantity, int? gridSlot = null, string[]? equippedSlots = null,

@@ -12,6 +12,7 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Kit;
+using WorldRpg.Kit.Ai;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Facts;
@@ -24,7 +25,7 @@ using KitUniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-internal sealed record DaggerActorAssembly(DaggerfallState State, Dictionary<long, DaggerfallActorDefinition> Definitions, DaggerfallActorDefinition PlayerDefinition);
+internal sealed record DaggerActorAssembly(DaggerfallState State, Dictionary<long, DaggerfallActorDefinition> Definitions, DaggerfallActorDefinition PlayerDefinition, DaggerfallMechanicsState Mechanics);
 
 /// <summary>Explicit entity/component construction from admitted Dagger definitions or current saves.</summary>
 internal static class DaggerActorFactory
@@ -154,10 +155,63 @@ internal static class DaggerActorFactory
             state.QuestTraining = new DaggerfallQuestTrainingState(saved?.QuestTraining);
             authored.Add(DaggerfallActorIdentity.PlayerEntityId, playerDefinition);
             if (saved is not null) MaterializeDynamicActors(random, actors, mechanics, definitions, saved, authored, inventoryStore);
-            return new(state, authored, playerDefinition);
+            return new(state, authored, playerDefinition, mechanics);
         }
         catch { actors.Dispose(); throw; }
     }
+
+    /// <summary>Materializes one selected site's authored placement into the existing canonical actor store.</summary>
+    internal static ActorState CreateAuthoredActor(IRandomService random, DaggerfallMechanicsState mechanics,
+        DaggerfallDefinitions definitions, ActorsState actors, InventoryStore inventoryStore,
+        IReadOnlyDictionary<InventoryItemId, ItemDefinition> items, DaggerfallItemInstances instances,
+        AuthoredActor source, DaggerfallActorSave? restored = null)
+    {
+        DaggerfallActorDefinition definition = definitions.RequireActor(source.ActorId);
+        ActorState actor = actors.CreateActor(source.EntityId, new EntityTypeId(definition.Id.Value),
+            mechanics.CreateStats(definition, InitialVitals(random, definition, source.EntityId)),
+            new ActorPose(source.Position, 0F), definition.Combat.Health.Value);
+        // Site transitions happen after the enemy behavior module has been composed.  Attach the
+        // same per-actor pursuit state here so a freshly admitted destination can take its first
+        // real update without relying on the initial roster pass.
+        actors.Store.Add(actor.Actor.Entity, new PursuitMemoryComponent());
+        if (restored is not null) RestoreStats(actor.Actor, restored.Stats);
+        RegisterActorInventory(actor, inventoryStore);
+        if (restored is null)
+        {
+            MechanicsInventoryCoordinator inventory = new(actor.Inventory, actors.Entities, items);
+            foreach ((DaggerfallLoadoutEntry entry, int ordinal) in definition.Loadout.Where(entry => definitions.RequireItem(entry.ItemId).IsFungible).Select((entry, ordinal) => (entry, ordinal)))
+            {
+                InventoryStackId stack = DaggerfallInventoryStackIds.ForInitialLoadout(source.EntityId, ordinal);
+                inventory.Grant(new InventoryGrant(new InventoryItemId(entry.ItemId.Value), stack, entry.Quantity));
+                instances.RegisterDefaultStack(DaggerfallItemOwner.Actor(source.EntityId), new InventoryStack(stack, ItemDefinitionId.Parse(entry.ItemId.Value), entry.Quantity), definitions.RequireItem(entry.ItemId));
+            }
+        }
+        return actor;
+    }
+
+    /// <summary>Recreates an inactive site's spawned actor with its durable identity and saved pose.</summary>
+    internal static ActorState CreateDynamicActor(IRandomService random, DaggerfallMechanicsState mechanics,
+        DaggerfallDefinitions definitions, ActorsState actors, InventoryStore inventoryStore,
+        Dictionary<long, DaggerfallActorDefinition> definitionsByActor, DaggerfallDynamicActorSave saved)
+    {
+        ArgumentNullException.ThrowIfNull(saved);
+        // Encounter class actors carry a spawn-time policy adjustment (including the thief
+        // action identity and zero flat reward).  The save intentionally stores the canonical
+        // definition identity, so reapply that pure policy while rebuilding the runtime binding.
+        DaggerfallActorDefinition definition = DaggerfallEncounterActors.ApplyEncounterClassPolicy(
+            definitions.RequireActor(new DaggerfallActorId(saved.Definition)));
+        ActorState actor = actors.CreateActor(saved.EntityId, new EntityTypeId(definition.Id.Value),
+            mechanics.CreateStats(definition, InitialVitals(random, definition, saved.EntityId)),
+            new ActorPose(new WorldPoint(saved.X, saved.Y, saved.Z), saved.HeadingRadians), definition.Combat.Health.Value);
+        // The behavior module's constructor only sees the initial roster.  Inactive-site dynamic
+        // actors are rebuilt later, so their canonical component must be attached at construction.
+        actors.Store.Add(actor.Actor.Entity, new PursuitMemoryComponent());
+        RestoreStats(actor.Actor, saved.Stats);
+        definitionsByActor.Add(saved.EntityId, definition);
+        RegisterActorInventory(actor, inventoryStore);
+        return actor;
+    }
+
     /// <summary>
     /// Rebuilds dynamically spawned actors from the save: fresh runtime entities bound to the same
     /// durable identities, stats restored from the saved boundary, and definition references
@@ -182,7 +236,8 @@ internal static class DaggerActorFactory
         ArgumentNullException.ThrowIfNull(inventoryStore);
         foreach (DaggerfallDynamicActorSave spawned in saved.DynamicActors.OrderBy(value => value.EntityId))
         {
-            DaggerfallActorDefinition definition = definitions.RequireActor(new DaggerfallActorId(spawned.Definition));
+            DaggerfallActorDefinition definition = DaggerfallEncounterActors.ApplyEncounterClassPolicy(
+                definitions.RequireActor(new DaggerfallActorId(spawned.Definition)));
             // Keyed draws are deterministic per identity, so this construction roll cannot skew
             // any other roll; the saved boundary replaces the whole component immediately after.
             ActorState actor = actors.CreateActor(spawned.EntityId, new EntityTypeId(definition.Id.Value),

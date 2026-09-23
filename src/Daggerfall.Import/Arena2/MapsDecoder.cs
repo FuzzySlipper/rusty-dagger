@@ -15,6 +15,30 @@ public sealed record MapsDungeonLayout(
     byte DungeonType,
     IReadOnlyList<MapsDungeonBlock> Blocks);
 
+/// <summary>One RMB block in an exterior location's donor grid.</summary>
+public sealed record MapsExteriorBlock(string SourceName, byte X, byte Y);
+
+/// <summary>
+/// Decoded MAPPITEM exterior facts and the RMB blocks laid out for one selected location.
+/// </summary>
+/// <remarks>
+/// The grid is source order: <see cref="MapsExteriorBlock.X"/> advances first, then
+/// <see cref="MapsExteriorBlock.Y"/>.  It deliberately preserves block-grid coordinates instead of
+/// pretending that an RMB block has already been transformed into runtime world units.
+/// </remarks>
+public sealed record MapsExteriorLayout(
+    int Region,
+    int LocationIndex,
+    string LocationName,
+    int MapId,
+    int Longitude,
+    int Latitude,
+    uint LocationId,
+    byte Width,
+    byte Height,
+    char Letter1,
+    IReadOnlyList<MapsExteriorBlock> Blocks);
+
 /// <summary>Decoder for region-linked MAPS.BSA source records.</summary>
 /// <summary>What happened when one region table was read.</summary>
 public enum MapsTableState
@@ -439,6 +463,25 @@ public static class MapsDecoder
         return new MapsDungeonLayout(region, locationIndex, locationName, mapId, locationId, longitude, latitude, dungeonType, blocks);
     }
 
+    /// <summary>
+    /// Reads the exact RMB-grid source layout of one named exterior location.
+    /// </summary>
+    /// <remarks>
+    /// This is the MAPPITEM path from the donor's <c>ReadMapPItem</c>, including its RMB-name
+    /// construction rules.  It is source admission only; the normalizer owns the later geometry and
+    /// coordinate conversion rather than this decoder inventing a runtime block size or collision
+    /// volume.
+    /// </remarks>
+    public static MapsExteriorLayout DecodeExteriorLayout(BsaArchive archive, int region, string locationName)
+    {
+        ArgumentNullException.ThrowIfNull(archive);
+        ArgumentException.ThrowIfNullOrWhiteSpace(locationName);
+        IReadOnlyList<string> names = DecodeLocationNames(archive, region);
+        int locationIndex = FindExactLocation(names, locationName, archive.Source);
+        (int mapId, int longitude, int latitude, _, _, _) = DecodeMapTable(GetNamedPayload(archive, "MAPTABLE", region), archive.Source, locationIndex);
+        return DecodeExteriorRecord(GetNamedPayload(archive, "MAPPITEM", region), archive.Source, names.Count, region, locationIndex, locationName, mapId, longitude, latitude);
+    }
+
     /// <summary>Applies the donor's world-coordinate to 1000-by-500 map-pixel projection.</summary>
     public static (int X, int Y) ToMapPixel(int longitude, int latitude) => (longitude / 128, 499 - (latitude / 128));
 
@@ -494,15 +537,91 @@ public static class MapsDecoder
 
     private static uint DecodeExteriorLocationId(ReadOnlyMemory<byte> data, string source, int locationCount, int locationIndex)
     {
-        int tableBytes = CheckedMultiply(locationCount, sizeof(uint), source, "MAPPITEM offset table");
-        int indexOffset = CheckedMultiply(locationIndex, sizeof(uint), source, "MAPPITEM offset entry");
-        uint relativeOffset = At(data.Span, source, indexOffset, "MAPPITEM offset entry").ReadUInt32();
-        int recordOffset = CheckedAdd(tableBytes, CheckedCount(relativeOffset, source, indexOffset, "MAPPITEM record offset"), source, "MAPPITEM record");
-        CheckedLittleEndianReader reader = At(data.Span, source, recordOffset, "MAPPITEM location record");
+        CheckedLittleEndianReader reader = ExteriorRecordReader(data, source, locationCount, locationIndex);
+        int recordOffset = reader.Position;
         int doorCount = CheckedCount(reader.ReadUInt32(), source, recordOffset, "MAPPITEM door count");
         reader.ReadBytes(CheckedMultiply(doorCount, 6, source, "MAPPITEM doors"));
         reader.ReadBytes(33);
         return reader.ReadUInt16();
+    }
+
+    private static MapsExteriorLayout DecodeExteriorRecord(
+        ReadOnlyMemory<byte> data,
+        string source,
+        int locationCount,
+        int region,
+        int locationIndex,
+        string locationName,
+        int mapId,
+        int longitude,
+        int latitude)
+    {
+        CheckedLittleEndianReader reader = ExteriorRecordReader(data, source, locationCount, locationIndex);
+        int doorCount = CheckedCount(reader.ReadUInt32(), source, reader.Position - sizeof(uint), "MAPPITEM door count");
+        reader.ReadBytes(CheckedMultiply(doorCount, 6, source, "MAPPITEM doors"));
+
+        // LocationRecordElement.Header, shared with MAPDITEM.  The fields before and after the
+        // location id are intentionally skipped here because the exterior normalization only owns
+        // its stable location identity and RMB grid; DecodeExteriorLocationId follows the same
+        // donor header offset.
+        reader.ReadBytes(33);
+        uint locationId = reader.ReadUInt16();
+        reader.ReadBytes(77);
+
+        int buildingCount = reader.ReadUInt16();
+        reader.ReadBytes(5);
+        reader.ReadBytes(CheckedMultiply(buildingCount, 26, source, "MAPPITEM building records"));
+
+        _ = reader.ReadNullTerminatedAscii(32); // another exterior name; the MAPNAMES identity is authoritative here.
+        _ = reader.ReadInt32(); // duplicate map id in the exterior payload
+        _ = reader.ReadUInt32(); // duplicate exterior location id
+        byte width = reader.ReadByte();
+        byte height = reader.ReadByte();
+        int blockCount = CheckedMultiply(width, height, source, "MAPPITEM exterior block grid");
+        if (blockCount > 64)
+            throw reader.Error($"MAPPITEM exterior grid {width}x{height} exceeds its 64 source block slots");
+        reader.ReadBytes(4);
+        char letter1 = (char)reader.ReadByte();
+        reader.ReadBytes(2);
+        ReadOnlySpan<byte> blockIndices = reader.ReadBytes(64);
+        ReadOnlySpan<byte> blockNumbers = reader.ReadBytes(64);
+        ReadOnlySpan<byte> blockCharacters = reader.ReadBytes(64);
+
+        List<MapsExteriorBlock> blocks = new(blockCount);
+        for (int index = 0; index < blockCount; index++)
+        {
+            blocks.Add(new MapsExteriorBlock(
+                ResolveRmbBlockName(blockIndices[index], blockNumbers[index], blockCharacters[index], letter1, reader),
+                checked((byte)(index % width)),
+                checked((byte)(index / width))));
+        }
+
+        return new MapsExteriorLayout(region, locationIndex, locationName, mapId, longitude, latitude, locationId, width, height, letter1, blocks);
+    }
+
+    private static CheckedLittleEndianReader ExteriorRecordReader(ReadOnlyMemory<byte> data, string source, int locationCount, int locationIndex)
+    {
+        int tableBytes = CheckedMultiply(locationCount, sizeof(uint), source, "MAPPITEM offset table");
+        int indexOffset = CheckedMultiply(locationIndex, sizeof(uint), source, "MAPPITEM offset entry");
+        uint relativeOffset = At(data.Span, source, indexOffset, "MAPPITEM offset entry").ReadUInt32();
+        int recordOffset = CheckedAdd(tableBytes, CheckedCount(relativeOffset, source, indexOffset, "MAPPITEM record offset"), source, "MAPPITEM record");
+        return At(data.Span, source, recordOffset, "MAPPITEM location record");
+    }
+
+    private static string ResolveRmbBlockName(byte blockIndex, byte blockNumber, byte blockCharacter, char letter1, CheckedLittleEndianReader reader)
+    {
+        if (blockIndex >= BlockRecordInventoryReader.RmbBlockPrefixes.Count)
+            throw reader.Error($"MAPPITEM block has unsupported RMB prefix index {blockIndex}");
+        int letter2Index = (2 * blockCharacter) >> 6;
+        if ((uint)letter2Index >= BlockRecordInventoryReader.RmbLetters2.Count)
+            throw reader.Error($"MAPPITEM block has unsupported RMB second-letter index {letter2Index}");
+
+        char first = (blockCharacter & 0x10) != 0 ? letter1 : 'A';
+        char second = BlockRecordInventoryReader.RmbLetters2[letter2Index];
+        string suffix = blockIndex is 13 or 14
+            ? string.Concat((char)((blockCharacter & 0x0F) + 'A'), blockNumber.ToString(System.Globalization.CultureInfo.InvariantCulture))
+            : blockNumber.ToString("00", System.Globalization.CultureInfo.InvariantCulture);
+        return $"{BlockRecordInventoryReader.RmbBlockPrefixes[blockIndex]}{first}{second}{suffix}.RMB";
     }
 
     private static (uint LocationId, IReadOnlyList<MapsDungeonBlock> Blocks) DecodeDungeonRecord(ReadOnlyMemory<byte> data, string source, uint exteriorLocationId)

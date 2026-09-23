@@ -42,6 +42,17 @@ internal sealed class DaggerfallItemConditionService(
 {
     internal DaggerfallItemCondition Read(ulong durableItemId) => Condition(instances.RequireUnique(durableItemId));
 
+    /// <summary>Returns the item-maker's pure capacity and spell-cost quotation without changing item condition or equipment.</summary>
+    internal DaggerfallItemEnchantmentQuote QuoteEnchantment(UniqueInventoryItem item, string magicItemKey)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(magicItemKey);
+        (_, DaggerfallItemInstanceMetadata metadata) = RequirePlayerItem(item);
+        DaggerfallMagicItemDefinition magic = definitions.Magic.MagicItems.TryGetValue(magicItemKey, out DaggerfallMagicItemDefinition? found)
+            ? found : throw new InvalidOperationException($"Magic item '{magicItemKey}' is not published.");
+        DaggerfallItemDefinition definition = definitions.RequireItem(new DaggerfallItemId(metadata.ItemId));
+        return DaggerfallMagicCostPolicy.QuoteItemEnchantment(definitions, definition, metadata, magic);
+    }
+
     /// <summary>Lowers condition by named classic units, clamps at zero, and unequips exactly once on the break transition.</summary>
     internal DaggerfallItemConditionResult Damage(UniqueInventoryItem item, int units)
     {
@@ -113,6 +124,23 @@ internal sealed class DaggerfallItemConditionService(
         return new(DaggerfallItemConditionOutcome.Repaired, durableItemId, repaired);
     }
 
+    /// <summary>Restores a bounded number of fuel condition units without changing durable identity.</summary>
+    internal DaggerfallItemConditionResult Refuel(UniqueInventoryItem item, int units)
+    {
+        if (units <= 0) throw new ArgumentOutOfRangeException(nameof(units));
+        (ulong durableItemId, DaggerfallItemInstanceMetadata metadata) = RequirePlayerItem(item);
+        if (metadata.MaximumCondition == 0)
+            throw new InvalidOperationException($"Item '{metadata.ItemId}' has no condition units to refuel.");
+        if (metadata.CurrentCondition == metadata.MaximumCondition)
+            return new(DaggerfallItemConditionOutcome.AlreadyRepaired, durableItemId, metadata);
+        DaggerfallItemInstanceMetadata refueled = metadata with
+        {
+            CurrentCondition = Math.Min(metadata.MaximumCondition, checked(metadata.CurrentCondition + units)),
+        };
+        instances.ReplaceUnique(durableItemId, refueled);
+        return new(DaggerfallItemConditionOutcome.Repaired, durableItemId, refueled);
+    }
+
     /// <summary>Discloses the published magic template for an existing enchanted instance without changing its identity.</summary>
     internal DaggerfallItemConditionResult Identify(UniqueInventoryItem item)
     {
@@ -140,6 +168,10 @@ internal sealed class DaggerfallItemConditionService(
             if (metadata.Enchantment == magic.Key) return new(DaggerfallItemConditionOutcome.AlreadyEnchanted, durableItemId, metadata);
             throw new InvalidOperationException($"Item '{metadata.ItemId}' already has enchantment '{metadata.Enchantment}'.");
         }
+        DaggerfallItemDefinition definition = definitions.RequireItem(new DaggerfallItemId(metadata.ItemId));
+        DaggerfallItemEnchantmentQuote quote = DaggerfallMagicCostPolicy.QuoteItemEnchantment(definitions, definition, metadata, magic);
+        if (!quote.Eligible)
+            throw new InvalidOperationException($"Magic item '{magic.Key}' cannot enchant item '{metadata.ItemId}': {quote.Reason}");
         string publishedMagicDefinition = DaggerfallMagicItemIds.For(metadata.ItemId, magic.Key);
         if (!definitions.TryResolveItem(new DaggerfallItemId(publishedMagicDefinition), out _))
             throw new InvalidOperationException($"Magic item '{magic.Key}' cannot enchant item definition '{metadata.ItemId}'.");

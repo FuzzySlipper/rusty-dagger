@@ -16,7 +16,8 @@ internal sealed record DaggerfallTuning(
     DaggerfallTimeTuning Time,
     DaggerfallStaminaRecoveryTuning StaminaRecovery,
     DaggerfallPresentationAudioTuning PresentationAudio,
-    DaggerfallProgressionTuning Progression)
+    DaggerfallProgressionTuning Progression,
+    DaggerfallSiteLightingTuning SiteLighting)
 {
     internal static DaggerfallTuning Defaults { get; } = new(
         // Screen-space mouse Y increases downward; Engine camera pitch increases upward.
@@ -44,7 +45,8 @@ internal sealed record DaggerfallTuning(
         new DaggerfallTimeTuning(12d),
         new DaggerfallStaminaRecoveryTuning(5d, 2d),
         new DaggerfallPresentationAudioTuning(1F, 1F, 0F, 1F),
-        new DaggerfallProgressionTuning(EnableExperimentalKillExperience: false));
+        new DaggerfallProgressionTuning(EnableExperimentalKillExperience: false),
+        DaggerfallSiteLightingTuning.Classic);
 
     internal DaggerfallTuning Validate() => this with
     {
@@ -60,6 +62,7 @@ internal sealed record DaggerfallTuning(
         StaminaRecovery = StaminaRecovery.Validate(),
         PresentationAudio = PresentationAudio.Validate(),
         Progression = Progression.Validate(),
+        SiteLighting = SiteLighting.Validate(),
     };
 
     internal static DaggerfallTuning Read(ReadOnlySpan<byte> payload)
@@ -83,6 +86,7 @@ internal sealed record DaggerfallTuning(
         JsonElement time = root.GetProperty("time");
         JsonElement presentationAudio = root.GetProperty("presentationAudio");
         JsonElement progression = root.GetProperty("progression");
+        JsonElement siteLighting = root.GetProperty("siteLighting");
         return new DaggerfallTuning(
             new PlayerControlTuning(
                 controls.GetProperty("lookSensitivity").GetSingle(),
@@ -139,7 +143,13 @@ internal sealed record DaggerfallTuning(
                 presentationAudio.GetProperty("pitch").GetSingle(),
                 presentationAudio.GetProperty("spatialBlend").GetSingle(),
                 presentationAudio.GetProperty("attenuation").GetSingle()),
-            new DaggerfallProgressionTuning(progression.GetProperty("enableExperimentalKillExperience").GetBoolean()))
+            new DaggerfallProgressionTuning(progression.GetProperty("enableExperimentalKillExperience").GetBoolean()),
+            new DaggerfallSiteLightingTuning(
+                siteLighting.GetProperty("interiorDay").GetSingle(),
+                siteLighting.GetProperty("interiorNight").GetSingle(),
+                siteLighting.GetProperty("dungeon").GetSingle(),
+                siteLighting.GetProperty("exteriorNoon").GetSingle(),
+                siteLighting.GetProperty("exteriorNight").GetSingle()))
             .Validate();
     }
 
@@ -317,6 +327,26 @@ internal sealed record DaggerfallPresentationAudioTuning(float Volume, float Pit
         if (!float.IsFinite(Pitch) || Pitch <= 0F) throw new ArgumentOutOfRangeException(nameof(Pitch));
         if (!float.IsFinite(SpatialBlend) || SpatialBlend is < 0F or > 1F) throw new ArgumentOutOfRangeException(nameof(SpatialBlend));
         if (!float.IsFinite(Attenuation) || Attenuation <= 0F) throw new ArgumentOutOfRangeException(nameof(Attenuation));
+        return this;
+    }
+}
+
+/// <summary>Neutral site fill from the donor's PlayerAdvanced prefab, independent of weather cues.</summary>
+internal sealed record DaggerfallSiteLightingTuning(
+    float InteriorDay,
+    float InteriorNight,
+    float Dungeon,
+    float ExteriorNoon,
+    float ExteriorNight)
+{
+    internal static DaggerfallSiteLightingTuning Classic { get; } = new(
+        160F / 255F, 100F / 255F, 75F / 255F, 150F / 255F, 50F / 255F);
+
+    internal DaggerfallSiteLightingTuning Validate()
+    {
+        foreach (float value in new[] { InteriorDay, InteriorNight, Dungeon, ExteriorNoon, ExteriorNight })
+            if (!float.IsFinite(value) || value is < 0F or > 1F)
+                throw new ArgumentOutOfRangeException(nameof(DaggerfallSiteLightingTuning), "Site ambient values must be finite normalized RGB levels.");
         return this;
     }
 }

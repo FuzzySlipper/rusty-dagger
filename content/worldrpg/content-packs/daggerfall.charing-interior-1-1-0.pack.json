@@ -1,0 +1,10 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.charing-interior-1-1-0",
+  "ruleset": "daggerfall",
+  "dependencies": [
+    { "id": "daggerfall.base" }
+  ],
+  "description": "Normalized Charing RESIAL05.RMB building 0 interior profile.",
+  "payload": "worldrpg/payloads/daggerfall.charing-interior-1-1-0.json"
+}

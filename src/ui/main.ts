@@ -5,6 +5,7 @@ import { adopt, heldRevision, image, type ArtRequestAction, type UiArt } from '.
 import { mountInventory, type InventoryProjection, type InventoryAction } from './inventory.js';
 import { mountCharacter, isCharacterProjection, type CharacterProjection, type CharacterAction } from './character.js';
 import { mountLoot, type LootProjection, type LootAction } from './loot.js';
+import { mountNotebook, type NotebookProjection, type NotebookAction } from './notebook.js';
 import { BEGIN_ACTION, TITLE_MODE, screenForMode } from './screens.js';
 
 interface ProjectionEnvelope {
@@ -27,7 +28,7 @@ interface ProductUiContext {
     focusGameplay(): void;
   };
   readonly projection?: { subscribe(listener: (projection: ProjectionEnvelope | null) => void): () => void };
-  readonly intents?: { claim(intent: string, value: { kind: 'product-payload'; contract: string; data: UiAction | ControlAction | CharacterAction | InventoryAction | LootAction | ArtRequestAction | SaveSlotAction }): void };
+  readonly intents?: { claim(intent: string, value: { kind: 'product-payload'; contract: string; data: UiAction | ControlAction | CharacterAction | InventoryAction | LootAction | NotebookAction | ArtRequestAction | SaveSlotAction }): void };
 }
 
 interface UiAction { readonly action: string; readonly [field: string]: string | number | boolean | undefined; }
@@ -46,6 +47,8 @@ interface DaggerHud {
   readonly saveSlots?: SaveSlotProjection;
   readonly controls?: ControlsProjection;
   readonly activation?: { readonly mode: string; readonly message: string; readonly applied: boolean };
+  readonly quests?: QuestPresentation;
+  readonly notebook?: NotebookProjection;
   readonly view?: { readonly yawRadians: number; readonly pitchRadians: number; readonly interaction: string };
   readonly slots?: readonly { readonly owner: string; readonly id: string; readonly label: string; readonly detail: string; readonly order: number }[];
   readonly focus?: { readonly interaction: string; readonly container: string; readonly close: string } | null;
@@ -134,6 +137,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
         <button data-action="resume" autofocus>Return to game</button>
         <button data-action="inventory">Inventory &amp; equipment · I</button>
         <button data-action="character">Character · C</button>
+        <button data-action="journal">Journal &amp; notes</button>
         <button data-action="loot">Activate aimed target · F</button>
         <label>Activation mode <select class="dagger-activation-mode"><option value="grab">Grab</option><option value="info">Information</option><option value="talk">Talk</option><option value="steal">Steal</option><option value="bash">Bash</option></select></label>
         <button data-action="save-game">Save game</button>
@@ -152,6 +156,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       <div class="dagger-controls-root" hidden></div>
       <div class="dagger-inventory-root" hidden></div>
       <div class="dagger-character-root" hidden></div>
+      <div class="dagger-notebook-root" hidden></div>
       <div class="dagger-loot-root" hidden></div>
       <section class="dagger-save-slots" hidden aria-label="Save slots">
         <p class="dagger-save-slots-diagnostic" role="status"></p>
@@ -203,6 +208,10 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   const characterView = mountCharacter(characterRoot, action => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
   }));
+  const notebookRoot = shell.querySelector<HTMLElement>('.dagger-notebook-root')!;
+  const notebookView = mountNotebook(notebookRoot, action => context.intents?.claim('dagger.ui', {
+    kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
+  }));
   const lootRoot = shell.querySelector<HTMLElement>('.dagger-loot-root')!;
   const saveSlotsRoot = shell.querySelector<HTMLElement>('.dagger-save-slots')!;
   const saveSlotsDiagnostic = shell.querySelector<HTMLElement>('.dagger-save-slots-diagnostic')!;
@@ -250,14 +259,14 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       if (host.isConnected) host.textContent = `Debug console unavailable: ${error instanceof Error ? error.message : String(error)}`;
     });
   };
-  let activePanel: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'loot' | 'debug' | 'save-slots' | 'settings' | null = null;
+  let activePanel: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings' | null = null;
   const showHome = (): void => {
     controlsView.cancel();
     const previous = activePanel;
     if (previous === 'debug') closeDebug();
     if (previous === 'loot') closeLoot();
     activePanel = null;
-    menu.classList.remove('has-inventory', 'has-character', 'has-loot', 'has-debug');
+    menu.classList.remove('has-inventory', 'has-character', 'has-journal', 'has-loot', 'has-debug');
     home.hidden = false;
     panel.hidden = true;
     menuTitle.textContent = 'Game menu';
@@ -285,7 +294,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     else if (menu.open) closeMenu();
     else openMenu();
   };
-  const showPanel = (action: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'loot' | 'debug' | 'save-slots' | 'settings'): void => {
+  const showPanel = (action: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings'): void => {
     if (!menu.open) openMenu();
     if (activePanel === 'loot' && action !== 'loot') closeLoot();
     if (activePanel === 'debug') closeDebug();
@@ -296,6 +305,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     tools.hidden = action !== 'tools';
     inventoryRoot.hidden = action !== 'inventory';
     characterRoot.hidden = action !== 'character';
+    notebookRoot.hidden = action !== 'journal';
     lootRoot.hidden = action !== 'loot';
     saveSlotsRoot.hidden = action !== 'save-slots';
     controlsRoot.hidden = action !== 'settings';
@@ -304,10 +314,11 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     shell.querySelector<HTMLButtonElement>('[data-action="loot-exit"]')!.hidden = action !== 'loot';
     menu.classList.toggle('has-inventory', action === 'inventory');
     menu.classList.toggle('has-character', action === 'character');
+    menu.classList.toggle('has-journal', action === 'journal');
     menu.classList.toggle('has-loot', action === 'loot');
     menu.classList.toggle('has-debug', action === 'debug');
     menuTitle.textContent = action === 'settings' ? 'Control settings' : action === 'diagnostics' ? 'Composition diagnostics'
-      : action === 'inventory' ? 'Inventory & equipment' : action === 'character' ? 'Character'
+      : action === 'inventory' ? 'Inventory & equipment' : action === 'character' ? 'Character' : action === 'journal' ? 'Journal & notes'
       : action === 'loot' ? 'Loot' : action === 'debug' ? 'Engine debug console'
       : action === 'save-slots' ? (saveSlotMode === 'save' ? 'Save game' : 'Load game') : 'Sprite animation tool';
     if (action === 'character') {
@@ -353,7 +364,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     else if (action === 'loot') claim('loot');
     else if (action === 'save-game') showSaveSlots('save');
     else if (action === 'load-game') showSaveSlots('load');
-    else if (action === 'settings' || action === 'diagnostics' || action === 'tools' || action === 'inventory' || action === 'character' || action === 'debug') showPanel(action);
+    else if (action === 'settings' || action === 'diagnostics' || action === 'tools' || action === 'inventory' || action === 'character' || action === 'journal' || action === 'debug') showPanel(action);
   };
   const onMenuClick = (event: MouseEvent): void => {
     const action = (event.target as HTMLElement).closest<HTMLButtonElement>('button')?.dataset.action;
@@ -530,6 +541,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
 
     if (value.inventory) inventoryView.update(value.inventory);
     if (value.character && isCharacterProjection(value.character)) characterView.update(value.character);
+    if (value.notebook) notebookView.update(value.notebook);
     // A pad button reaches the product, not this DOM, so the panel it asked for arrives here as the
     // menu action that opens it. Each revision is performed once; the request itself stays published.
     const panelRequest = value.panelRequest ?? null;
@@ -596,6 +608,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     controlsView.dispose();
     inventoryView.dispose();
     characterView.dispose();
+    notebookView.dispose();
     lootView.dispose();
     document.removeEventListener('keydown', onKeyDown, true);
     menu.removeEventListener('cancel', onCancel);

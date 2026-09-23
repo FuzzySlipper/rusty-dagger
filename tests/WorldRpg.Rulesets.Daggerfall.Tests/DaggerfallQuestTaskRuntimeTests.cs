@@ -430,7 +430,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
     }
 
     [Fact]
-    public void Instance_policy_rejects_duplicate_and_cyclic_children_then_removes_terminal_tombstones_after_a_week()
+    public void Instance_policy_rejects_duplicate_ids_and_cyclic_children_then_removes_terminal_tombstones_after_a_week()
     {
         DaggerfallDefinitions definitions = Definitions();
         DaggerfallQuestSourceDefinition[] sources = StartableSources(definitions, 3);
@@ -438,7 +438,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         DaggerfallQuestInstanceSave parent = new("parent", sources[0].SourceFile, sources[0].Name, DaggerfallQuestLifecycle.Active, null, [], []);
         instances.Start(parent);
 
-        Assert.Throws<ArgumentException>(() => instances.Start(parent with { InstanceId = "duplicate" }));
+        Assert.Throws<ArgumentException>(() => instances.Start(parent));
         Assert.Throws<ArgumentException>(() => instances.ScheduleChild("parent", sources[0].SourceFile, 0, "cycle"));
         instances.Start(new("child", sources[1].SourceFile, sources[1].Name, DaggerfallQuestLifecycle.Active, null, [], []) { ParentInstanceId = "parent" });
         instances.ScheduleChild("parent", sources[2].SourceFile, 0, "pending-child");

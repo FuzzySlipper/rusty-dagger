@@ -27,6 +27,9 @@ internal sealed class DaggerfallOpeningCinematics(DaggerfallCinematicPresentatio
         if (_failed) return EntryScreenStartupResult.Failed;
         if (_started) return EntryScreenStartupResult.Waiting;
         _started = true;
+
+        // This is deliberately an explicit caller-provided setting. An absent content lease does not
+        // stand in for disabled videos, because that would turn broken media admission into success.
         if (!_videosEnabled)
         {
             _completed = true;
@@ -38,6 +41,7 @@ internal sealed class DaggerfallOpeningCinematics(DaggerfallCinematicPresentatio
             Fail("Cinematic playback is enabled but the admitted cinematic content is unavailable.");
             return EntryScreenStartupResult.Failed;
         }
+
         return PlayNext() ? EntryScreenStartupResult.Waiting : EntryScreenStartupResult.Failed;
     }
 
@@ -63,6 +67,7 @@ internal sealed class DaggerfallOpeningCinematics(DaggerfallCinematicPresentatio
             Fail($"Cinematic '{result.Source}' returned unsupported terminal result '{result.Kind}'.");
             return;
         }
+
         _next++;
         if (_next == Sources.Length)
         {

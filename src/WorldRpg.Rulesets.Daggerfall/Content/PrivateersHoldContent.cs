@@ -58,6 +58,13 @@ internal static class PrivateersHoldContent
     {
         JsonElement world = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "world", diagnostics), "world", diagnostics);
         string publicationRoot = DaggerfallBaseContent.Text(world, "publicationRoot", diagnostics);
+        DaggerfallWorldProfileKind profileKind = DaggerfallBaseContent.Text(world, "profileKind", diagnostics) switch
+        {
+            "exterior" => DaggerfallWorldProfileKind.Exterior,
+            "interior" => DaggerfallWorldProfileKind.Interior,
+            "dungeon" => DaggerfallWorldProfileKind.Dungeon,
+            _ => InvalidProfileKind(diagnostics),
+        };
         if (!DaggerfallBaseContent.ValidId(publicationRoot.Replace('/', '-')) || publicationRoot.Contains("..", StringComparison.Ordinal))
         {
             diagnostics.Add("Privateer's Hold publicationRoot must be a stable relative logical path.");
@@ -65,8 +72,8 @@ internal static class PrivateersHoldContent
 
         string Prefix(string relativePath) => $"{publicationRoot.TrimEnd('/')}/{relativePath}";
         Dictionary<string, ContentSha256> artifacts = ReadImportArtifacts(files, Prefix("import-manifest.json"), publicationRoot, diagnostics);
-        string spatialPath = Prefix("spatial/privateer-s-hold/collision-navigation.json");
-        string meshPath = Prefix("spatial/privateer-s-hold/static-mesh.json");
+        string spatialPath = Prefix(DaggerfallBaseContent.Text(world, "collisionNavigationPath", diagnostics));
+        string meshPath = Prefix(DaggerfallBaseContent.Text(world, "staticMeshPath", diagnostics));
         string normalizedPath = Prefix("normalized.json");
         string mediaPath = Prefix("media/dungeon/manifest.json");
         string classicMediaPath = Prefix("media/classic/manifest.json");
@@ -77,14 +84,25 @@ internal static class PrivateersHoldContent
         ContentSha256 classicMediaHash = RequireArtifact(artifacts, classicMediaPath, diagnostics);
         ulong gridId = UnsignedInteger(world, "navigationGridId", diagnostics);
         AuthoredWorldAppearance worldAppearance = ReadWorldAppearance(DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(world, "appearance", diagnostics), "world.appearance", diagnostics), diagnostics);
+        IReadOnlyList<DaggerfallSitePortal> portals = ReadSitePortals(world, diagnostics);
+        IReadOnlyList<DaggerfallSiteAnchor> anchors = ReadSiteAnchors(world, start, diagnostics);
         Dictionary<long, AuthoredActor> actors = ReadNormalizedPlacements(root, definitions, diagnostics);
-        (IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<int, NormalizedActorSprite> sprites) = ReadDungeonMedia(
+        (IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<int, NormalizedActorSprite> sprites, NormalizedGroundContainerSprite? groundContainerSprite) = ReadDungeonMedia(
             files.GetExactlyOne(mediaPath),
             publicationRoot,
             artifacts,
             definitions,
             diagnostics);
-        IReadOnlyList<DaggerfallRdbDoorDefinition> doors = ReadNormalizedDoors(files.GetExactlyOne(normalizedPath), publicationRoot, artifacts, materials, diagnostics);
+        // Every normal encounter table can select any entry at a valid player level. Refuse a
+        // profile whose generated media closure cannot present one before gameplay rolls it.
+        foreach (int mobileId in definitions.Encounters.Tables.SelectMany(table => table).Distinct().Order())
+        {
+            if (!sprites.ContainsKey(mobileId))
+                diagnostics.Add($"World profile '{publicationRoot}' lacks generated media for encounter mobile '{mobileId}'.");
+        }
+        ReadOnlyMemory<byte>? normalizedWorld = files.GetExactlyOne(normalizedPath);
+        IReadOnlyList<DaggerfallSiteLight> lights = ReadNormalizedLights(normalizedWorld, diagnostics);
+        IReadOnlyList<DaggerfallRdbDoorDefinition> doors = ReadNormalizedDoors(normalizedWorld, publicationRoot, meshPath, artifacts, materials, diagnostics);
         (IReadOnlyList<NormalizedAudioClip> audio, NormalizedClassicPresentation classicPresentation) = ReadClassicPresentation(
             files, files.GetExactlyOne(classicMediaPath), publicationRoot, artifacts, diagnostics);
         classicPresentation = ReadClassicSelection(root, classicPresentation, definitions, diagnostics);
@@ -114,10 +132,134 @@ internal static class PrivateersHoldContent
             start.Look,
             materials,
             new ReadOnlyDictionary<long, NormalizedActorSprite>(actorSprites),
+            new ReadOnlyDictionary<int, NormalizedActorSprite>(sprites.ToDictionary()),
             audio,
             classicPresentation,
             start.Site,
-            doors);
+            doors,
+            profileKind,
+            publicationRoot,
+            portals,
+            anchors,
+            lights,
+            groundContainerSprite);
+    }
+
+    /// <summary>
+    /// Projects the importer-owned RDB light facts without reopening Arena2. The source record
+    /// has position and radius; older normalized records omitted a colour and retain donor-neutral white.
+    /// </summary>
+    private static IReadOnlyList<DaggerfallSiteLight> ReadNormalizedLights(ReadOnlyMemory<byte>? bytes, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (bytes is null)
+        {
+            diagnostics.Add("Normalized world closure must contain normalized.json for its source lights.");
+            return [];
+        }
+
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(bytes.Value);
+            JsonElement root = DaggerfallBaseContent.Object(document.RootElement, "normalized world", diagnostics);
+            JsonElement world = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "world", diagnostics), "normalized world.world", diagnostics);
+            Dictionary<string, DaggerfallSiteLight> lights = new(StringComparer.Ordinal);
+            foreach (JsonElement value in DaggerfallBaseContent.Array(world, "lights", diagnostics))
+            {
+                JsonElement light = DaggerfallBaseContent.Object(value, "normalized world light", diagnostics);
+                string id = DaggerfallBaseContent.Text(light, "id", diagnostics);
+                Vector3 position = ObjectVector3(DaggerfallBaseContent.Property(light, "position", diagnostics), $"normalized light '{id}' position", diagnostics);
+                float range = DaggerfallBaseContent.Number(light, "range", diagnostics);
+                float intensity = DaggerfallBaseContent.Number(light, "intensity", diagnostics);
+                Vector3 color = !light.TryGetProperty("color", out JsonElement colorValue)
+                    || colorValue.ValueKind == JsonValueKind.Null
+                    ? Vector3.One
+                    : ObjectVector3(colorValue, $"normalized light '{id}' color", diagnostics);
+                try
+                {
+                    DaggerfallSiteLight projected = new DaggerfallSiteLight(id, new WorldPoint(position.X, position.Y, position.Z), range, intensity, color).Validate();
+                    if (!lights.TryAdd(projected.Id, projected)) diagnostics.Add($"Normalized world repeats light '{projected.Id}'.");
+                }
+                catch (ArgumentException exception)
+                {
+                    diagnostics.Add($"Normalized light '{id}' is invalid: {exception.Message}");
+                }
+            }
+            return lights.Values.OrderBy(light => light.Id, StringComparer.Ordinal).ToArray();
+        }
+        catch (JsonException exception)
+        {
+            diagnostics.Add($"Normalized world closure is not valid JSON: {exception.Message}");
+            return [];
+        }
+    }
+
+    private static IReadOnlyList<DaggerfallSitePortal> ReadSitePortals(JsonElement world, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!world.TryGetProperty("transitions", out JsonElement section)) return [];
+        if (section.ValueKind != JsonValueKind.Array)
+        {
+            diagnostics.Add("world.transitions must be an array when supplied.");
+            return [];
+        }
+        Dictionary<string, DaggerfallSitePortal> portals = new(StringComparer.Ordinal);
+        foreach (JsonElement value in section.EnumerateArray())
+        {
+            JsonElement portal = DaggerfallBaseContent.Object(value, "world transition", diagnostics);
+            DaggerfallBaseContent.RejectDuplicateProperties(portal, "world transition", diagnostics);
+            try
+            {
+                DaggerfallSitePortal parsed = new DaggerfallSitePortal(
+                    DaggerfallBaseContent.Text(portal, "id", diagnostics),
+                    Point(DaggerfallBaseContent.Property(portal, "position", diagnostics), "world transition position", diagnostics),
+                    DaggerfallBaseContent.Number(portal, "radius", diagnostics),
+                    DaggerfallBaseContent.Text(portal, "destinationProfile", diagnostics)).Validate();
+                if (!portals.TryAdd(parsed.Id, parsed)) diagnostics.Add($"World transitions repeat portal '{parsed.Id}'.");
+            }
+            catch (Exception exception) when (exception is ArgumentException or ArgumentOutOfRangeException)
+            {
+                diagnostics.Add($"World transition is malformed: {exception.Message}");
+            }
+        }
+        return portals.Values.OrderBy(portal => portal.Id, StringComparer.Ordinal).ToArray();
+    }
+
+    private static IReadOnlyList<DaggerfallSiteAnchor> ReadSiteAnchors(JsonElement world, ScenarioStart start, DaggerfallContentDiagnostics diagnostics)
+    {
+        Dictionary<string, DaggerfallSiteAnchor> anchors = new(StringComparer.Ordinal)
+        {
+            ["start"] = new DaggerfallSiteAnchor("start", start.Position, start.Look.YawRadians, start.Look.PitchRadians).Validate(),
+        };
+        if (!world.TryGetProperty("anchors", out JsonElement section)) return anchors.Values.ToArray();
+        if (section.ValueKind != JsonValueKind.Array)
+        {
+            diagnostics.Add("world.anchors must be an array when supplied.");
+            return anchors.Values.ToArray();
+        }
+        foreach (JsonElement value in section.EnumerateArray())
+        {
+            JsonElement anchor = DaggerfallBaseContent.Object(value, "world anchor", diagnostics);
+            DaggerfallBaseContent.RejectDuplicateProperties(anchor, "world anchor", diagnostics);
+            try
+            {
+                DaggerfallSiteAnchor parsed = new DaggerfallSiteAnchor(
+                    DaggerfallBaseContent.Text(anchor, "id", diagnostics),
+                    Point(DaggerfallBaseContent.Property(anchor, "position", diagnostics), "world anchor position", diagnostics),
+                    DaggerfallBaseContent.Number(anchor, "yawRadians", diagnostics),
+                    DaggerfallBaseContent.Number(anchor, "pitchRadians", diagnostics)).Validate();
+                if (!anchors.TryAdd(parsed.Id, parsed)) diagnostics.Add($"World anchors repeat anchor '{parsed.Id}'.");
+            }
+            catch (Exception exception) when (exception is ArgumentException or ArgumentOutOfRangeException)
+            {
+                diagnostics.Add($"World anchor is malformed: {exception.Message}");
+            }
+        }
+        return anchors.Values.OrderBy(anchor => anchor.Id, StringComparer.Ordinal).ToArray();
+    }
+
+    private static DaggerfallWorldProfileKind InvalidProfileKind(DaggerfallContentDiagnostics diagnostics)
+    {
+        diagnostics.Add("Selected world profileKind must be exterior, interior, or dungeon.");
+        return DaggerfallWorldProfileKind.Dungeon;
     }
 
     /// <summary>
@@ -126,7 +268,7 @@ internal static class PrivateersHoldContent
     /// projects those normalized facts.  Door bounds come from the action visual meshes, whose
     /// geometry is deliberately excluded from the world's static collision artifact.
     /// </summary>
-    private static IReadOnlyList<DaggerfallRdbDoorDefinition> ReadNormalizedDoors(ReadOnlyMemory<byte>? bytes, string publicationRoot, IReadOnlyDictionary<string, ContentSha256> artifacts, IReadOnlyList<NormalizedMaterial> materials, DaggerfallContentDiagnostics diagnostics)
+    private static IReadOnlyList<DaggerfallRdbDoorDefinition> ReadNormalizedDoors(ReadOnlyMemory<byte>? bytes, string publicationRoot, string staticMeshPath, IReadOnlyDictionary<string, ContentSha256> artifacts, IReadOnlyList<NormalizedMaterial> materials, DaggerfallContentDiagnostics diagnostics)
     {
         if (bytes is null)
         {
@@ -149,6 +291,9 @@ internal static class PrivateersHoldContent
                 if (!artifacts.TryGetValue(path, out ContentSha256 hash)) diagnostics.Add($"Normalized artifact '{id}' is absent from the admitted import manifest.");
                 else if (!artifactById.TryAdd(id, new ContentArtifact(path, hash))) diagnostics.Add($"Normalized world repeats artifact '{id}'.");
             }
+            string? staticMeshArtifactId = artifactById.SingleOrDefault(pair => StringComparer.Ordinal.Equals(pair.Value.Path, staticMeshPath)).Key;
+            if (string.IsNullOrWhiteSpace(staticMeshArtifactId))
+                diagnostics.Add("Normalized world has no admitted static-mesh artifact for its action-door visuals.");
             Dictionary<string, uint> worldMaterialSlots = materials.Where(material => !string.IsNullOrWhiteSpace(material.MaterialResourceId))
                 .ToDictionary(material => material.MaterialResourceId, material => material.Slot, StringComparer.Ordinal);
             Dictionary<string, JsonElement> meshes = [];
@@ -231,7 +376,7 @@ internal static class PrivateersHoldContent
                 }
                 try
                 {
-                    string artifactId = $"artifact/dungeon/privateer-s-hold/static-mesh/door/{sourceId["door/".Length..].Replace('/', '-')}";
+                    string artifactId = $"{staticMeshArtifactId}/door/{sourceId["door/".Length..].Replace('/', '-')}";
                     if (!artifactById.TryGetValue(artifactId, out ContentArtifact? visualArtifact))
                     {
                         diagnostics.Add($"Normalized RDB door '{identity}' has no separately published visual artifact.");
@@ -362,14 +507,14 @@ internal static class PrivateersHoldContent
         catch (FormatException) { diagnostics.Add("Generated content digest must be a 64-character hexadecimal SHA-256."); return default; }
     }
 
-    private static (IReadOnlyList<NormalizedMaterial> Materials, IReadOnlyDictionary<int, NormalizedActorSprite> Sprites) ReadDungeonMedia(
+    private static (IReadOnlyList<NormalizedMaterial> Materials, IReadOnlyDictionary<int, NormalizedActorSprite> Sprites, NormalizedGroundContainerSprite? GroundContainerSprite) ReadDungeonMedia(
         ReadOnlyMemory<byte>? bytes,
         string publicationRoot,
         IReadOnlyDictionary<string, ContentSha256> artifacts,
         DaggerfallDefinitions definitions,
         DaggerfallContentDiagnostics diagnostics)
     {
-        if (bytes is null) { diagnostics.Add("Generated dungeon media manifest is unavailable."); return ([], new Dictionary<int, NormalizedActorSprite>()); }
+        if (bytes is null) { diagnostics.Add("Generated dungeon media manifest is unavailable."); return ([], new Dictionary<int, NormalizedActorSprite>(), null); }
         try
         {
             using JsonDocument document = JsonDocument.Parse(bytes.Value);
@@ -450,13 +595,41 @@ internal static class PrivateersHoldContent
                     Corpse = corpse,
                 })) diagnostics.Add($"Generated actor media repeats mobile '{mobileId}'.");
             }
-            return (Array.AsReadOnly(materials.OrderBy(material => material.Slot).ToArray()), new ReadOnlyDictionary<int, NormalizedActorSprite>(sprites));
+            NormalizedGroundContainerSprite? groundContainerSprite = ReadGroundContainerSprite(root, resources, diagnostics);
+            return (Array.AsReadOnly(materials.OrderBy(material => material.Slot).ToArray()), new ReadOnlyDictionary<int, NormalizedActorSprite>(sprites.ToDictionary()), groundContainerSprite);
         }
         catch (JsonException exception)
         {
             diagnostics.Add($"Generated dungeon media manifest is not valid JSON: {exception.Message}");
-            return ([], new Dictionary<int, NormalizedActorSprite>());
+            return ([], new Dictionary<int, NormalizedActorSprite>(), null);
         }
+    }
+
+    private static NormalizedGroundContainerSprite? ReadGroundContainerSprite(JsonElement root, IReadOnlyDictionary<string, MediaResource> resources, DaggerfallContentDiagnostics diagnostics)
+    {
+        const string resourceId = "sprite/texture-216-0";
+        if (!resources.TryGetValue(resourceId, out MediaResource? resource) || resource.Frames.Count == 0)
+        {
+            diagnostics.Add($"Generated dungeon media has no ground-container billboard '{resourceId}'.");
+            return null;
+        }
+
+        JsonElement billboard = DaggerfallBaseContent.Array(root, "billboards", diagnostics)
+            .FirstOrDefault(value => value.ValueKind == JsonValueKind.Object
+                && value.TryGetProperty("spriteResourceId", out JsonElement id)
+                && id.ValueKind == JsonValueKind.String
+                && id.GetString() == resourceId);
+        if (billboard.ValueKind != JsonValueKind.Object)
+        {
+            diagnostics.Add($"Generated dungeon media has no billboard descriptor '{resourceId}'.");
+            return null;
+        }
+
+        Vector2 pivot = GeneratedVector2(DaggerfallBaseContent.Property(billboard, "pivot", diagnostics), "ground-container.pivot", diagnostics);
+        Vector2 size = GeneratedVector2(DaggerfallBaseContent.Property(billboard, "worldSize", diagnostics), "ground-container.worldSize", diagnostics);
+        if (!PositiveFinite(size)) diagnostics.Add("Generated ground-container billboard has a non-positive world size.");
+        return new NormalizedGroundContainerSprite(resource.Path, resource.Hash, resource.AtlasWidth, resource.AtlasHeight,
+            resource.Frames, resource.Frames[0].Id, pivot, size);
     }
 
     private static NormalizedActorSprite ResolveActorPresentation(AuthoredActor actor, DaggerfallActorDefinition definition, NormalizedActorSprite sprite, DaggerfallContentDiagnostics diagnostics)
@@ -518,10 +691,8 @@ internal static class PrivateersHoldContent
             IReadOnlyList<uint> frames = orientations.TryGetValue(0, out IReadOnlyList<uint>? forward) ? forward : orientations.Values.FirstOrDefault() ?? [];
             bool completeSectors = orientations.Count == 8
                 && Enumerable.Range(0, 8).All(orientations.ContainsKey);
-            bool equalSectorFrames = completeSectors
-                && orientations.Values.Select(sequence => sequence.Count).Distinct().Count() == 1;
-            if (!completeSectors || !equalSectorFrames)
-                diagnostics.Add($"Generated actor mobile '{mobileId}' state '{name}' must provide eight equally-sized directional sectors.");
+            if (!completeSectors)
+                diagnostics.Add($"Generated actor mobile '{mobileId}' state '{name}' must provide all eight directional sectors.");
             if (!float.IsFinite(fps) || fps <= 0F || frames.Count == 0 || orientations.Values.Any(sequence => sequence.Any(frame => !texture.Frames.Any(atlas => atlas.Id == frame))))
                 diagnostics.Add($"Generated actor mobile '{mobileId}' state '{name}' has invalid playback frames.");
             if (!result.TryAdd(name, new NormalizedSpriteState(name, frames, fps, loops) { Orientations = orientations })) diagnostics.Add($"Generated actor mobile '{mobileId}' repeats state '{name}'.");
@@ -576,7 +747,13 @@ internal static class PrivateersHoldContent
 
     private static void AddAttack(IReadOnlyList<int> source, int chance, NormalizedSpriteState state, int mobileId, DaggerfallContentDiagnostics diagnostics, List<NormalizedAttackSequence> target, string stateName = "primaryAttack")
     {
-        if (chance is < 1 or > 100 || source.Count == 0 || source[^1] == -1 || state.Orientations.Values.Any(orientation => source.Any(frame => frame < -1 || frame >= orientation.Count)))
+        // EnemyBasics supplies one attack script for all eight records. Some genuine source
+        // records are shorter than that script's longest direction (e.g. mobile 30 record 6);
+        // DFU starts on the current record and abandons an out-of-range directional frame rather
+        // than manufacturing one. Validate the canonical initial direction here; the presentation
+        // direction switch makes the same per-record bound check before selecting a frame.
+        IReadOnlyList<uint> canonical = state.SelectOrientation(0);
+        if (chance is < 1 or > 100 || source.Count == 0 || source[^1] == -1 || source.Any(frame => frame < -1 || frame >= canonical.Count))
         {
             diagnostics.Add($"Generated actor mobile '{mobileId}' has an invalid attack sequence.");
             return;
@@ -1099,6 +1276,7 @@ internal sealed record NormalizedClassicPresentation(IReadOnlyDictionary<string,
 }
 internal sealed record ClassicViewmodelStyle(int RenderOrder);
 internal sealed record NormalizedClassicMediaResource(string Id, string Kind, string RelativePath, ContentSha256 Sha256, long ByteLength);
+internal sealed record NormalizedGroundContainerSprite(string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, uint InitialFrameId, Vector2 Pivot, Vector2 Size);
 internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, uint InitialFrameId, Vector2 Pivot, Vector2 Size)
 {
     internal IReadOnlyDictionary<string, NormalizedSpriteState> States { get; init; } = new ReadOnlyDictionary<string, NormalizedSpriteState>(new Dictionary<string, NormalizedSpriteState>());
@@ -1113,7 +1291,7 @@ internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 T
     internal NormalizedAttackSequence? RangedAttackSequence { get; init; }
     internal NormalizedActorSprite? Corpse { get; init; }
 }
-internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null, IReadOnlyList<DaggerfallRdbDoorDefinition>? doors = null)
+internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyDictionary<int, NormalizedActorSprite>? mobileSprites = null, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null, IReadOnlyList<DaggerfallRdbDoorDefinition>? doors = null, DaggerfallWorldProfileKind profileKind = DaggerfallWorldProfileKind.Dungeon, string? logicalProfileId = null, IReadOnlyList<DaggerfallSitePortal>? portals = null, IReadOnlyList<DaggerfallSiteAnchor>? anchors = null, IReadOnlyList<DaggerfallSiteLight>? lights = null, NormalizedGroundContainerSprite? groundContainerSprite = null)
 {
     internal ProjectFacts Project { get; } = project;
     internal SpatialContentArtifact SpatialArtifact { get; } = spatialArtifact;
@@ -1122,9 +1300,39 @@ internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentA
     internal PlayerInitialLook InitialLook { get; } = initialLook;
     internal IReadOnlyList<NormalizedMaterial> Materials { get; } = Array.AsReadOnly(materials.OrderBy(material => material.Slot).ToArray());
     internal IReadOnlyDictionary<long, NormalizedActorSprite> ActorSprites { get; } = new ReadOnlyDictionary<long, NormalizedActorSprite>(actorSprites.ToDictionary());
+    /// <summary>Published mobile media, resolved independently of the authored site placements for dynamic encounter actors.</summary>
+    internal IReadOnlyDictionary<int, NormalizedActorSprite> MobileSprites { get; } = new ReadOnlyDictionary<int, NormalizedActorSprite>((mobileSprites ?? new Dictionary<int, NormalizedActorSprite>()).ToDictionary());
     internal IReadOnlyList<NormalizedAudioClip> Audio { get; } = Array.AsReadOnly((audio ?? []).ToArray());
     internal NormalizedClassicPresentation ClassicPresentation { get; } = classicPresentation ?? NormalizedClassicPresentation.Empty;
+    internal DaggerfallWorldProfileKind ProfileKind { get; } = profileKind;
+    internal DaggerfallWorldProfileKey ProfileKey => Site is { } selected
+        ? new DaggerfallWorldProfileKey(selected, ProfileKind, logicalProfileId ?? "unscoped-profile").Validate()
+        : throw new InvalidOperationException("A selectable world profile must name its geographic site.");
     /// <summary>Normalized RDB action doors for this selected published world, in stable source identity order.</summary>
+    /// <summary>Source-derived interaction portals for this profile; destinations resolve only through admitted logical profiles.</summary>
+    internal IReadOnlyList<DaggerfallSitePortal> Portals { get; } = Array.AsReadOnly((portals ?? [])
+        .Select(portal => portal.Validate())
+        .OrderBy(portal => portal.Id, StringComparer.Ordinal)
+        .ToArray());
+    /// <summary>Named landing poses for relocation. Every normalized closure exposes its declared start as <c>start</c>.</summary>
+    internal IReadOnlyDictionary<string, DaggerfallSiteAnchor> Anchors { get; } = new ReadOnlyDictionary<string, DaggerfallSiteAnchor>((anchors ?? StartAnchor(project, initialLook))
+        .Select(anchor => anchor.Validate())
+        .ToDictionary(anchor => anchor.Id, StringComparer.Ordinal));
+    /// <summary>Source-normalized dungeon lights, ordered by their stable RDB placement identity.</summary>
+    internal IReadOnlyList<DaggerfallSiteLight> Lights { get; } = Array.AsReadOnly((lights ?? [])
+        .Select(light => light.Validate())
+        .OrderBy(light => light.Id, StringComparer.Ordinal)
+        .ToArray());
+    internal NormalizedGroundContainerSprite? GroundContainerSprite { get; } = groundContainerSprite;
+
+    internal DaggerfallSiteAnchor RequireAnchor(string id)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        return Anchors.TryGetValue(id, out DaggerfallSiteAnchor? anchor)
+            ? anchor
+            : throw new InvalidOperationException($"World profile '{ProfileKey.LogicalId}' has no anchor '{id}'.");
+    }
+
     internal IReadOnlyList<DaggerfallRdbDoorDefinition> Doors { get; } = Array.AsReadOnly((doors ?? [])
         .Select(door => door.Validate())
         .OrderBy(door => door.Id.SourceKey, StringComparer.Ordinal)
@@ -1138,6 +1346,10 @@ internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentA
     /// site and not an authority over a save: a save that records where the player is keeps them there.
     /// </summary>
     internal DaggerfallSiteId? Site { get; } = site;
+
+    private static IReadOnlyList<DaggerfallSiteAnchor> StartAnchor(ProjectFacts project, PlayerInitialLook look) => project.PlayerPosition is { } position
+        ? [new DaggerfallSiteAnchor("start", position, look.YawRadians, look.PitchRadians)]
+        : [];
 }
 
 internal sealed class ProjectFacts(WorldPoint? playerPosition, IReadOnlyDictionary<long, AuthoredActor> actors)

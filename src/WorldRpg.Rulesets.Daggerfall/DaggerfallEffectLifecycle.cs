@@ -294,6 +294,34 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
         checked((long)effect.Lifecycle.Context.Target.Value) == actorId
         || effect.Lifecycle.Context.Caster?.Value == checked((ulong)actorId));
 
+    /// <summary>
+    /// Detaches effects whose targets leave the live site while retaining their complete durable
+    /// requests for that site's delta. Effects on another live target remain active even when an
+    /// unloaded actor is their caster; their context keeps the caster identity without holding the
+    /// retired actor wrapper.
+    /// </summary>
+    internal DaggerfallActiveEffectSave[] SuspendTargets(IEnumerable<long> targetIds)
+    {
+        ArgumentNullException.ThrowIfNull(targetIds);
+        HashSet<long> targets = [.. targetIds];
+        DaggerfallActiveEffect[] suspended = Active
+            .Where(effect => targets.Contains(checked((long)effect.Lifecycle.Context.Target.Value)))
+            .ToArray();
+        DaggerfallActiveEffectSave[] saved = suspended.Select(Capture).ToArray();
+        foreach (DaggerfallActiveEffect effect in suspended)
+        {
+            long targetId = checked((long)effect.Lifecycle.Context.Target.Value);
+            LifecycleFor(targetId).Cancel(effect.Lifecycle.Context.Instance);
+            _effects.Remove(effect.Lifecycle.Context.Instance);
+        }
+        foreach (long targetId in targets)
+        {
+            if (Active.Any(effect => checked((long)effect.Lifecycle.Context.Target.Value) == targetId)) continue;
+            if (_lifecycles.Remove(targetId, out ActiveEffectLifecycle? lifecycle)) lifecycle.Dispose();
+        }
+        return saved;
+    }
+
     /// <summary>Ends effects that would retain a unique item identity before that item is destroyed.</summary>
     internal int CancelItemReferences(ulong itemId) => CancelMatching(effect =>
         effect.Lifecycle.Context.Item?.Value == itemId);
@@ -331,7 +359,9 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
         if (failures is not null) throw new AggregateException(failures);
     }
 
-    internal DaggerfallActiveEffectSave[] Capture() => Active.Select(effect => new DaggerfallActiveEffectSave(
+    internal DaggerfallActiveEffectSave[] Capture() => Active.Select(Capture).ToArray();
+
+    private static DaggerfallActiveEffectSave Capture(DaggerfallActiveEffect effect) => new(
         effect.Lifecycle.Context.Instance.Value,
         effect.Definition.Key,
         effect.Lifecycle.Context.Source.Key,
@@ -342,7 +372,7 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
         effect.Lifecycle.Context.Item?.Value,
         effect.Lifecycle.RemainingRounds,
         effect.Lifecycle.Stacks,
-        effect.State.Clone())).ToArray();
+        effect.State.Clone());
 
     private void AdvanceRounds(uint rounds)
     {

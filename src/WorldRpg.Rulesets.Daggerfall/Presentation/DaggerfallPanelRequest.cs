@@ -15,6 +15,7 @@ internal static class DaggerfallPanel
 {
     internal const string Inventory = "inventory";
     internal const string Character = "character";
+    internal const string Journal = "journal";
 
     /// <summary>The menu toggle the DOM's own Escape key performs.</summary>
     internal const string Menu = "menu";

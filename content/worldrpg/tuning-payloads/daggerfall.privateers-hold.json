@@ -122,5 +122,12 @@
   },
   "progression": {
     "enableExperimentalKillExperience": false
+  },
+  "siteLighting": {
+    "interiorDay": 0.6274509804,
+    "interiorNight": 0.3921568627,
+    "dungeon": 0.2941176471,
+    "exteriorNoon": 0.5882352941,
+    "exteriorNight": 0.1960784314
   }
 }
