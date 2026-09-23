@@ -53,6 +53,49 @@ public sealed partial class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Selected_rest_encounter_interrupts_at_its_minute_and_restores_the_queued_choice()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs source = ReadInputs(root);
+        PrivateersHoldInputs inputs = SameContentAt(source, source.ProfileKey.Site,
+            DaggerfallWorldProfileKind.Exterior, "rest-selected-encounter");
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: RandomMinimum.Create());
+        DaggerfallSavePayload saved;
+        long elapsed;
+        using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        {
+            DaggerfallCalendarSave before = DaggerfallSavePayload.Read(session.CaptureSave()).Calendar;
+            session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
+            elapsed = session.RestView.ElapsedSeconds;
+            Assert.InRange(elapsed, 1, 3599);
+            Assert.Equal(DaggerfallRestInterruption.Encounter, session.RestView.Interruption);
+            saved = DaggerfallSavePayload.Read(session.CaptureSave());
+            Assert.Equal(CalendarSeconds(before) + elapsed, CalendarSeconds(saved.Calendar));
+            DaggerfallEncounterResolution selected = Assert.Single(saved.Encounters.Resolved);
+            Assert.NotNull(selected.Choice.MobileId);
+            Assert.Null(selected.SpawnedActorId);
+        }
+
+        ContentFake resumedContent = new(releases);
+        PopulateContent(resumedContent, inputs);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service,
+            new AppearanceFake(releases), random: RandomMaximum.Create());
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root),
+            new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs,
+            DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMaximum.Create());
+        DaggerfallSavePayload after = DaggerfallSavePayload.Read(restored.CaptureSave());
+        Assert.Equal(saved.Calendar, after.Calendar);
+        Assert.Equal(JsonSerializer.Serialize(saved.Encounters), JsonSerializer.Serialize(after.Encounters));
+    }
+
+    [Fact]
     public void Rest_ui_action_advances_once_recovers_once_round_trips_and_refuses_town_camping()
     {
         string root = RepositoryRoot();
