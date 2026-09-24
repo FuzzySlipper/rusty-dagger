@@ -511,7 +511,7 @@ public sealed class DaggerfallDiseasePolicyTests
         new(instance, "classic-exposure", null, 1, [disease]);
 
     private static DaggerfallCareerDefinition Career(int resistance = 0, int immunity = 0, int low = 0, int critical = 0) =>
-        new("disease-career", "Disease career", [], [], [], [], [], 75, 2000, 1f, [], [], resistance, immunity, low, critical,
+        new("disease-career", "Disease career", [], [], [], [], [], 75, 2000, 1f, [], [], resistance, immunity, low, critical, 0, [],
             [], new DaggerfallCatalogCitation("test", "test"));
 
     private static System.Text.Json.JsonElement Json(string value)

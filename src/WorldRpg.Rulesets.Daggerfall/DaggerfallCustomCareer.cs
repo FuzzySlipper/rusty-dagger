@@ -48,11 +48,11 @@ internal static class DaggerfallCustomCareerPolicy
     private const int MinimumHp = 4, MaximumHp = 30, DefaultHp = 8, MinimumDifficulty = -12, MaximumDifficulty = 40;
     private static readonly HashSet<string> Advantages = new(StringComparer.Ordinal)
     {
-        "adrenaline-rush", "immunity", "increased-magery", "resistance",
+        "adrenaline-rush", "bonus-to-hit", "expertise", "immunity", "increased-magery", "resistance",
     };
     private static readonly HashSet<string> Disadvantages = new(StringComparer.Ordinal)
     {
-        "critical-weakness", "forbidden-armor", "forbidden-material", "forbidden-shield", "forbidden-weapon", "low-tolerance",
+        "critical-weakness", "forbidden-armor", "forbidden-material", "forbidden-shield", "forbidden-weapon", "low-tolerance", "phobia",
     };
     private static readonly Dictionary<string, int> TraitDifficulty = new(StringComparer.Ordinal)
     {
@@ -92,12 +92,30 @@ internal static class DaggerfallCustomCareerPolicy
         int criticalWeakness = Flags(choices.Disadvantages, "critical-weakness");
         int difficulty = Difficulty(choices);
         int multiplier = MageryMultiplier(choices.Advantages);
+        // The classic creator writes the enemy-type and weapon-trait choices into the career's
+        // attack-modifier byte and weapon-proficiency byte: a bonus-to-hit or phobia advantage for a
+        // group is that group's bonus or phobia bit, and an expertise advantage is that weapon skill's
+        // proficiency bit. The attack policy reads both off the career record exactly as for a
+        // preset class.
+        int attackModifierFlags = choices.Advantages.Concat(choices.Disadvantages).Aggregate(0, (flags, trait) => flags | (trait.Id, trait.Target) switch
+        {
+            ("bonus-to-hit", "undead") => 0x01, ("phobia", "undead") => 0x10,
+            ("bonus-to-hit", "daedra") => 0x02, ("phobia", "daedra") => 0x20,
+            ("bonus-to-hit", "humanoid") => 0x04, ("phobia", "humanoid") => 0x40,
+            ("bonus-to-hit", "animals") => 0x08, ("phobia", "animals") => 0x80,
+            _ => 0,
+        });
+        IReadOnlyList<string> expertProficiencies = [.. choices.Advantages
+            .Where(trait => trait.Id == "expertise")
+            .Select(trait => trait.Target!)
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)];
         string[] forbidden = choices.Disadvantages.Where(trait => trait.Id is "forbidden-armor" or "forbidden-material" or "forbidden-shield" or "forbidden-weapon")
             .Select(trait => $"{trait.Id}:{trait.Target}").Order(StringComparer.Ordinal).ToArray();
         DaggerfallCareerDefinition career = new(CareerId, choices.Name.Trim(), choices.PrimarySkills, choices.MajorSkills, choices.MinorSkills,
             attributeBase.Attributes, attributeBase.AttributeValues, choices.HitPointsPerLevel, multiplier,
             0.3f + (2.7f * (difficulty + 12) / 52f), Elements(resistance), Elements(immunity), resistance, immunity, lowTolerance, criticalWeakness,
-            forbidden, new DaggerfallCatalogCitation("F006", "custom:character-creation"));
+            attackModifierFlags, expertProficiencies, forbidden, new DaggerfallCatalogCitation("F006", "custom:character-creation"));
         return new(career, choices.Advantages, choices.Disadvantages, forbidden);
     }
 

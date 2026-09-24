@@ -91,6 +91,8 @@ public sealed record DaggerfallCareerRecord(
     int ImmunityFlags,
     int LowToleranceFlags,
     int CriticalWeaknessFlags,
+    int AttackModifierFlags,
+    IReadOnlyList<string> ExpertProficiencies,
     IReadOnlyList<string> ForbiddenEquipment,
     DaggerfallCatalogSource Source)
 {

@@ -40,7 +40,7 @@ internal sealed record DaggerfallTuning(
             MaximumStepHeight: .75f)),
         DaggerfallLocomotionTuning.Classic,
         new FirstPersonCameraTuning(.75f, 65d, .1d, 100d),
-        new DaggerfallMeleeTargetingTuning(2.25d, .5d),
+        new DaggerfallMeleeTargetingTuning(2.25d, .5d, .35d),
         new DaggerfallEnemyBehaviorTuning(12d, .5d, 3f, 32),
         new DaggerfallLootInteractionTuning(2.25d, .5d),
         new DaggerfallTimeTuning(12d),
@@ -129,7 +129,8 @@ internal sealed record DaggerfallTuning(
                 camera.GetProperty("farPlane").GetDouble()),
             new DaggerfallMeleeTargetingTuning(
                 meleeTargeting.GetProperty("maximumDistance").GetDouble(),
-                meleeTargeting.GetProperty("minimumFacingCosine").GetDouble()),
+                meleeTargeting.GetProperty("minimumFacingCosine").GetDouble(),
+                meleeTargeting.GetProperty("minimumSwingGestureRadians").GetDouble()),
             new DaggerfallEnemyBehaviorTuning(
                 enemyBehavior.GetProperty("detectionDistance").GetDouble(),
                 enemyBehavior.GetProperty("minimumFacingCosine").GetDouble(),
@@ -324,12 +325,13 @@ internal sealed record DaggerfallEnemyBehaviorTuning(
 }
 
 /// <summary>Ruleset-tunable query bounds for ordinary Daggerfall player melee.</summary>
-internal sealed record DaggerfallMeleeTargetingTuning(double MaximumDistance, double MinimumFacingCosine)
+internal sealed record DaggerfallMeleeTargetingTuning(double MaximumDistance, double MinimumFacingCosine, double MinimumSwingGestureRadians)
 {
     internal DaggerfallMeleeTargetingTuning Validate()
     {
         if (!double.IsFinite(MaximumDistance) || MaximumDistance <= 0d) throw new ArgumentOutOfRangeException(nameof(MaximumDistance));
         if (!double.IsFinite(MinimumFacingCosine) || MinimumFacingCosine is < -1d or > 1d) throw new ArgumentOutOfRangeException(nameof(MinimumFacingCosine));
+        if (!double.IsFinite(MinimumSwingGestureRadians) || MinimumSwingGestureRadians <= 0d) throw new ArgumentOutOfRangeException(nameof(MinimumSwingGestureRadians));
         return this;
     }
 }

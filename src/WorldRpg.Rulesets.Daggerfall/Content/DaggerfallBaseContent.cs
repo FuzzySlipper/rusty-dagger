@@ -1085,7 +1085,8 @@ internal static class DaggerfallBaseContent
                 Boolean(mobile, "parrySounds", diagnostics),
                 Integer(mobile, "mapChance", diagnostics),
                 Integer(mobile, "weight", diagnostics),
-                OptionalText(mobile, "team"));
+                OptionalText(mobile, "team"),
+                FlagByte(mobile, "attackModifierFlags", diagnostics));
 
             // A donor id identifies one mobile; two records claiming it would make a lookup ambiguous.
             if (!mobiles.TryAdd(donorId, definition))
@@ -2938,15 +2939,25 @@ internal static class DaggerfallBaseContent
             int immunityFlags = FlagByte(career, "immunityFlags", diagnostics);
             int lowToleranceFlags = FlagByte(career, "lowToleranceFlags", diagnostics);
             int criticalWeaknessFlags = FlagByte(career, "criticalWeaknessFlags", diagnostics);
+            int attackModifierFlags = FlagByte(career, "attackModifierFlags", diagnostics);
+            IReadOnlyList<string> expertProficiencies = ReadIds(career, "expertProficiencies", diagnostics);
             IReadOnlyList<string> forbiddenEquipment = ReadIds(career, "forbiddenEquipment", diagnostics);
             DaggerfallCareerDefinition definition = new(
                 id, name, primary, major, minor, careerAttributes, attributeValues, hitPoints, spellPointMultiplierMilli, multiplier, resistant, immune,
-                resistanceFlags, immunityFlags, lowToleranceFlags, criticalWeaknessFlags, forbiddenEquipment, ReadCitation(career, sources, diagnostics));
+                resistanceFlags, immunityFlags, lowToleranceFlags, criticalWeaknessFlags, attackModifierFlags, expertProficiencies, forbiddenEquipment, ReadCitation(career, sources, diagnostics));
             foreach (string skill in definition.SkillReferences)
             {
                 if (!skillKeys.Contains(skill, StringComparer.Ordinal))
                 {
                     diagnostics.Add($"Career '{id}' names skill '{skill}', which the catalog does not carry.");
+                }
+            }
+
+            foreach (string skill in expertProficiencies)
+            {
+                if (!skillKeys.Contains(skill, StringComparer.Ordinal))
+                {
+                    diagnostics.Add($"Career '{id}' claims expertise in skill '{skill}', which the catalog does not carry.");
                 }
             }
 

@@ -109,6 +109,8 @@ public static class DaggerfallCatalogBuilder
                 decoded.ImmunityFlags,
                 decoded.LowToleranceFlags,
                 decoded.CriticalWeaknessFlags,
+                decoded.AttackModifierFlags,
+                [.. ExpertProficiencySkills(decoded.WeaponArmorShields, skills)],
                 DaggerfallCareerEquipmentRestrictions.FromClassicFlags(decoded.ForbiddenMaterials, decoded.WeaponArmorShields),
                 new DaggerfallCatalogSource(carrier.Id, carrier.PathOrPattern)));
         }
@@ -184,6 +186,27 @@ public static class DaggerfallCatalogBuilder
             if ((flags & DaggerfallCatalogs.ElementFlagMasks[index]) != 0)
             {
                 yield return DaggerfallCatalogs.ElementKeys[index];
+            }
+        }
+    }
+
+    /// <summary>
+    /// The career's weapon-proficiency byte — the high byte of the classic weapon/armor/shields
+    /// field — read as skill keys. The donor matches these bits against a weapon's skill value:
+    /// bit <c>1 &lt;&lt; k</c> is the classic skill at vocabulary index <c>FirstWeaponSkillIndex +
+    /// k</c> — short blade, long blade, hand to hand, axe, blunt weapon and archery, contiguous
+    /// in the classic index space.
+    /// </summary>
+    private static IEnumerable<string> ExpertProficiencySkills(uint weaponArmorShields, IReadOnlyList<DaggerfallIndexedKey> skills)
+    {
+        const int proficiencyBitCount = 6;
+        const int firstWeaponSkillIndex = 28;
+        uint value = (weaponArmorShields >> 16) & ((1u << proficiencyBitCount) - 1);
+        for (int bit = 0; bit < proficiencyBitCount; bit++)
+        {
+            if ((value & (1u << bit)) != 0)
+            {
+                yield return skills[firstWeaponSkillIndex + bit].Id;
             }
         }
     }

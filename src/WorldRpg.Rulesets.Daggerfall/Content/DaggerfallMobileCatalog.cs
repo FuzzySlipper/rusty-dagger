@@ -35,7 +35,8 @@ internal sealed record DaggerfallMobileDefinition(
     bool ParrySounds,
     int MapChance,
     int Weight,
-    string Team)
+    string Team,
+    int AttackModifierFlags)
 {
     /// <summary>Whether this mobile is one the product places as an actor.</summary>
     internal bool IsPublished => Disposition is "published" or "published-variant";

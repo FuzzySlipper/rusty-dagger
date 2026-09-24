@@ -167,8 +167,13 @@ public static class Arena2MobileCatalogDocument
     /// <summary>The documented inventory record that owns the monster archive.</summary>
     public const string SourceRecordId = "CNT-007";
 
-    /// <summary>Builds the document's JSON from the donor table and the published pack.</summary>
-    public static Arena2MobileCatalogPublication Build(string donorEnemyBasics, string packJson, string donorPath)
+    /// <summary>
+    /// Builds the document's JSON from the donor table and the published pack. The mobile table is the
+    /// parameter authority; a supplied MONSTER.BSA inventory additionally supplies each mobile's career
+    /// attack-modifier byte, which lives in its <c>ENEMY###.CFG</c> record and not in the table.
+    /// </summary>
+    public static Arena2MobileCatalogPublication Build(
+        string donorEnemyBasics, string packJson, string donorPath, MonsterArchiveInventory? enemyConfigurations = null)
     {
         IReadOnlyList<Arena2MobileTableEntry> table = Arena2MobileTable.Read(donorEnemyBasics);
         JsonNode pack = JsonNode.Parse(packJson) ?? throw new InvalidOperationException("The published pack is not JSON.");
@@ -231,6 +236,7 @@ public static class Arena2MobileCatalogDocument
                 ["mapChance"] = entry.MapChance,
                 ["weight"] = entry.Weight,
                 ["team"] = entry.Team,
+                ["attackModifierFlags"] = AttackModifierFlags(enemyConfigurations, entry.Id),
             });
         }
 
@@ -245,4 +251,16 @@ public static class Arena2MobileCatalogDocument
             document.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }),
             table.Count, published, unpublished, human);
     }
+
+    /// <summary>
+    /// The career attack-modifier byte the classic <c>ENEMY###.CFG</c> record carries for one mobile:
+    /// the bonus and phobia bits its career applies against each enemy group. A mobile the supplied
+    /// archive carries no decoded configuration for — every human mobile among them — carries none.
+    /// </summary>
+    private static int AttackModifierFlags(MonsterArchiveInventory? enemyConfigurations, int mobileId) =>
+        enemyConfigurations is null ? 0 : enemyConfigurations.EnemyConfigurations
+            .Where(record => record.MobileId == mobileId && record.Configuration is not null)
+            .Select(record => (int)record.Configuration!.AttackModifierFlags)
+            .DefaultIfEmpty(0)
+            .Max();
 }

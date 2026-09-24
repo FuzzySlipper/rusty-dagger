@@ -1,4 +1,5 @@
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using Xunit;
 
@@ -56,13 +57,13 @@ public sealed class DaggerfallFormulaPolicyTests
     [Fact]
     public void Complete_hit_pipeline_keeps_body_weapon_armor_stats_skills_adrenaline_and_adjustments_in_donor_order()
     {
-        Assert.Equal(-10, DaggerfallFormulaPolicy.CalculateWeaponToHit("iron", DaggerfallFormulaPolicy.ClassicWeaponToHitMaterialModifiers));
-        Assert.Equal(0, DaggerfallFormulaPolicy.CalculateWeaponToHit("steel", DaggerfallFormulaPolicy.ClassicWeaponToHitMaterialModifiers));
+        Assert.Equal(-10, DaggerfallFormulaPolicy.CalculateWeaponToHit("iron", DaggerfallFormulaPolicy.ClassicWeaponMaterialModifiers));
+        Assert.Equal(0, DaggerfallFormulaPolicy.CalculateWeaponToHit("steel", DaggerfallFormulaPolicy.ClassicWeaponMaterialModifiers));
         Assert.Equal(30, DaggerfallFormulaPolicy.CalculateWeaponToHit("mithril"));
         Assert.Equal(30, DaggerfallFormulaPolicy.CalculateWeaponToHit("adamantium"));
         Assert.Equal(40, DaggerfallFormulaPolicy.CalculateWeaponToHit("ebony"));
-        Assert.Equal(50, DaggerfallFormulaPolicy.CalculateWeaponToHit("orcish", DaggerfallFormulaPolicy.ClassicWeaponToHitMaterialModifiers));
-        Assert.Equal(0, DaggerfallFormulaPolicy.CalculateWeaponToHit(null, DaggerfallFormulaPolicy.ClassicWeaponToHitMaterialModifiers));
+        Assert.Equal(50, DaggerfallFormulaPolicy.CalculateWeaponToHit("orcish", DaggerfallFormulaPolicy.ClassicWeaponMaterialModifiers));
+        Assert.Equal(0, DaggerfallFormulaPolicy.CalculateWeaponToHit(null, DaggerfallFormulaPolicy.ClassicWeaponMaterialModifiers));
         Assert.Equal(5, DaggerfallFormulaPolicy.CalculateAdrenalineRushToHit(true, false, 11.99d, 100d, false, false, 100d, 100d));
         Assert.Equal(0, DaggerfallFormulaPolicy.CalculateAdrenalineRushToHit(true, false, 12d, 100d, false, false, 100d, 100d));
         Assert.Equal(-8, DaggerfallFormulaPolicy.CalculateAdrenalineRushToHit(false, false, 100d, 100d, true, true, 11.99d, 100d));
@@ -290,5 +291,97 @@ public sealed class DaggerfallFormulaPolicyTests
         for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
             if (File.Exists(Path.Combine(current.FullName, "AGENTS.md"))) return current.FullName;
         throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
+    }
+
+    [Fact]
+    public void Swing_proficiency_and_racial_attack_modifiers_follow_the_donor_tables()
+    {
+        Assert.Equal((0, 0), DaggerfallFormulaPolicy.CalculateSwingModifiers(DaggerfallSwingDirection.None));
+        Assert.Equal((10, -4), DaggerfallFormulaPolicy.CalculateSwingModifiers(DaggerfallSwingDirection.StrikeUp));
+        Assert.Equal((5, -2), DaggerfallFormulaPolicy.CalculateSwingModifiers(DaggerfallSwingDirection.StrikeDownRight));
+        Assert.Equal((-5, 2), DaggerfallFormulaPolicy.CalculateSwingModifiers(DaggerfallSwingDirection.StrikeDownLeft));
+        Assert.Equal((-10, 4), DaggerfallFormulaPolicy.CalculateSwingModifiers(DaggerfallSwingDirection.StrikeDown));
+        Assert.Equal((0, 0), DaggerfallFormulaPolicy.CalculateSwingModifiers(DaggerfallSwingDirection.StrikeLeft));
+
+        Assert.Equal((0, 0), DaggerfallFormulaPolicy.CalculateProficiencyModifiers(expertProficiency: false, attackerLevel: 7));
+        Assert.Equal((7, 3), DaggerfallFormulaPolicy.CalculateProficiencyModifiers(expertProficiency: true, attackerLevel: 7));
+        Assert.Equal((1, 1), DaggerfallFormulaPolicy.CalculateProficiencyModifiers(expertProficiency: true, attackerLevel: 1));
+
+        // Dark Elf (4) with any weapon, Wood Elf (6) only with a bow, Redguard (2) with anything but a bow.
+        Assert.Equal((2, 2), DaggerfallFormulaPolicy.CalculateRacialModifiers(donorRaceId: 4, isArcheryWeapon: false, attackerLevel: 9));
+        Assert.Equal((2, 2), DaggerfallFormulaPolicy.CalculateRacialModifiers(donorRaceId: 4, isArcheryWeapon: true, attackerLevel: 9));
+        Assert.Equal((3, 3), DaggerfallFormulaPolicy.CalculateRacialModifiers(donorRaceId: 6, isArcheryWeapon: true, attackerLevel: 9));
+        Assert.Equal((0, 0), DaggerfallFormulaPolicy.CalculateRacialModifiers(donorRaceId: 6, isArcheryWeapon: false, attackerLevel: 9));
+        Assert.Equal((3, 3), DaggerfallFormulaPolicy.CalculateRacialModifiers(donorRaceId: 2, isArcheryWeapon: false, attackerLevel: 9));
+        Assert.Equal((0, 0), DaggerfallFormulaPolicy.CalculateRacialModifiers(donorRaceId: 2, isArcheryWeapon: true, attackerLevel: 9));
+        Assert.Equal((0, 0), DaggerfallFormulaPolicy.CalculateRacialModifiers(donorRaceId: 0, isArcheryWeapon: false, attackerLevel: 9));
+    }
+
+    [Fact]
+    public void Enemy_type_flags_pay_the_attackers_level_once_and_a_phobia_cancels_its_bonus()
+    {
+        // CLASS??.CFG / ENEMY???.CFG byte 10 bit pairs: Undead 0x01/0x10, Daedra 0x02/0x20,
+        // Humanoid 0x04/0x40, Animals 0x08/0x80, read per group independently.
+        Assert.Equal(10, DaggerfallFormulaPolicy.BonusOrPenaltyByEnemyType(0x01, DaggerfallEnemyGroup.Undead, 10));
+        Assert.Equal(-10, DaggerfallFormulaPolicy.BonusOrPenaltyByEnemyType(0x10, DaggerfallEnemyGroup.Undead, 10));
+        Assert.Equal(0, DaggerfallFormulaPolicy.BonusOrPenaltyByEnemyType(0x11, DaggerfallEnemyGroup.Undead, 10));
+        Assert.Equal(0, DaggerfallFormulaPolicy.BonusOrPenaltyByEnemyType(0x01, DaggerfallEnemyGroup.Daedra, 10));
+        Assert.Equal(2, DaggerfallFormulaPolicy.BonusOrPenaltyByEnemyType(0x02, DaggerfallEnemyGroup.Daedra, 2));
+        Assert.Equal(-7, DaggerfallFormulaPolicy.BonusOrPenaltyByEnemyType(0x40, DaggerfallEnemyGroup.Humanoid, 7));
+        Assert.Equal(5, DaggerfallFormulaPolicy.BonusOrPenaltyByEnemyType(0x08, DaggerfallEnemyGroup.Animals, 5));
+        Assert.Equal(0, DaggerfallFormulaPolicy.BonusOrPenaltyByEnemyType(0xFF, DaggerfallEnemyGroup.Animals, 3));
+        Assert.Equal(0, DaggerfallFormulaPolicy.BonusOrPenaltyByEnemyType(0xFF, DaggerfallEnemyGroup.None, 3));
+    }
+
+    [Fact]
+    public void Monster_natural_attacks_measure_the_players_reflexes_on_the_classic_table()
+    {
+        Assert.Equal(70, DaggerfallFormulaPolicy.MonsterAttackReflexChance(0));
+        Assert.Equal(60, DaggerfallFormulaPolicy.MonsterAttackReflexChance(1));
+        Assert.Equal(50, DaggerfallFormulaPolicy.MonsterAttackReflexChance(2));
+        Assert.Equal(40, DaggerfallFormulaPolicy.MonsterAttackReflexChance(3));
+        Assert.Equal(30, DaggerfallFormulaPolicy.MonsterAttackReflexChance(4));
+    }
+
+    [Fact]
+    public void Weapon_damage_applies_skeletal_rules_before_the_zero_floor_and_the_enemy_bonus_after_it()
+    {
+        Assert.Equal(6, DaggerfallFormulaPolicy.CalculateWeaponAttackDamage(
+            baseDamage: 5, damageModifier: 2, targetIsSkeletalWarrior: false, weaponIsEdged: true, weaponIsSilver: false,
+            strengthModifier: 0, materialDamageModifier: -1, enemyTypeModifier: 0));
+        // Against a Skeletal Warrior the donor halves bludgeoning and doubles silver before the floor.
+        Assert.Equal(1, DaggerfallFormulaPolicy.CalculateWeaponAttackDamage(
+            baseDamage: 5, damageModifier: 0, targetIsSkeletalWarrior: true, weaponIsEdged: false, weaponIsSilver: false,
+            strengthModifier: 0, materialDamageModifier: -1, enemyTypeModifier: 0));
+        Assert.Equal(9, DaggerfallFormulaPolicy.CalculateWeaponAttackDamage(
+            baseDamage: 5, damageModifier: 0, targetIsSkeletalWarrior: true, weaponIsEdged: true, weaponIsSilver: true,
+            strengthModifier: 0, materialDamageModifier: -1, enemyTypeModifier: 0));
+        // Silver means nothing to non-skeletal targets.
+        Assert.Equal(4, DaggerfallFormulaPolicy.CalculateWeaponAttackDamage(
+            baseDamage: 5, damageModifier: 0, targetIsSkeletalWarrior: false, weaponIsEdged: true, weaponIsSilver: true,
+            strengthModifier: 0, materialDamageModifier: -1, enemyTypeModifier: 0));
+        // A weak swing floors at zero, and the career's enemy-type bonus is paid on top of the floor.
+        Assert.Equal(0, DaggerfallFormulaPolicy.CalculateWeaponAttackDamage(
+            baseDamage: 2, damageModifier: 0, targetIsSkeletalWarrior: false, weaponIsEdged: true, weaponIsSilver: false,
+            strengthModifier: -4, materialDamageModifier: -1, enemyTypeModifier: 0));
+        Assert.Equal(18, DaggerfallFormulaPolicy.CalculateWeaponAttackDamage(
+            baseDamage: 2, damageModifier: 0, targetIsSkeletalWarrior: false, weaponIsEdged: true, weaponIsSilver: false,
+            strengthModifier: -4, materialDamageModifier: -1, enemyTypeModifier: 18));
+        // Hand-to-hand carries no material term and no internal floor; only the caller bounds the total.
+        Assert.Equal(14, DaggerfallFormulaPolicy.CalculateHandToHandAttackDamage(
+            baseDamage: 5, damageModifier: 1, strengthModifier: -4, enemyTypeModifier: 12));
+        Assert.Equal(5, DaggerfallFormulaPolicy.CalculateHandToHandAttackDamage(
+            baseDamage: 5, damageModifier: 0, strengthModifier: 0, enemyTypeModifier: 0));
+        // Backstab tripling is gated by the same level check as its roll.
+        Assert.Equal(15, DaggerfallFormulaPolicy.CalculateBackstabDamage(5, 12, rollSucceeded: true));
+        Assert.Equal(5, DaggerfallFormulaPolicy.CalculateBackstabDamage(5, 12, rollSucceeded: false));
+        Assert.Equal(5, DaggerfallFormulaPolicy.CalculateBackstabDamage(5, 1, rollSucceeded: true));
+        Assert.True(DaggerfallFormulaPolicy.WeaponIsEdged(DaggerfallSkills.LongBlade));
+        Assert.True(DaggerfallFormulaPolicy.WeaponIsEdged(DaggerfallSkills.Axe));
+        Assert.False(DaggerfallFormulaPolicy.WeaponIsEdged(DaggerfallSkills.BluntWeapon));
+        Assert.False(DaggerfallFormulaPolicy.WeaponIsEdged(DaggerfallSkills.Archery));
+        Assert.Equal(-1, DaggerfallFormulaPolicy.WeaponMaterialDamageModifier("iron", DaggerfallFormulaPolicy.ClassicWeaponMaterialModifiers));
+        Assert.Equal(6, DaggerfallFormulaPolicy.WeaponMaterialDamageModifier("daedric", DaggerfallFormulaPolicy.ClassicWeaponMaterialModifiers));
+        Assert.Equal(0, DaggerfallFormulaPolicy.WeaponMaterialDamageModifier(null, DaggerfallFormulaPolicy.ClassicWeaponMaterialModifiers));
     }
 }

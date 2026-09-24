@@ -1,0 +1,464 @@
+using System.Reflection;
+using Rusty.Engine;
+using Rusty.Engine.Entities;
+using Rusty.Engine.Mechanics;
+using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.Combat;
+using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.Facts;
+using WorldRpg.Kit.Inventory;
+using WorldRpg.Kit.World;
+using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Facts;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using Xunit;
+using SlotId = WorldRpg.Kit.Inventory.EquipmentSlotId;
+
+namespace WorldRpg.Rulesets.Daggerfall.Tests;
+
+/// <summary>
+/// The weapon, unarmed and enemy attack-set damage policy at the rules boundary the player swing
+/// and the AI attack capability actually enter: <see cref="DaggerCombatRules.TryPrepare"/>. Every
+/// scenario drives the one admitted resolution, and the scripted random records each keyed draw's
+/// requested range in order, so the ranges are the evidence that the donor's draw discipline —
+/// gates that skip their roll, reflex-gated slots, backstab rolls only above level one — survived
+/// into the product rather than being approximated by a flat roll.
+/// </summary>
+public sealed class DaggerCombatDamagePolicyTests
+{
+    [Fact]
+    public void An_armed_class_enemy_strikes_with_its_equipped_weapon_even_when_its_fists_would_hit_harder()
+    {
+        // DEC-03: classic equipped-enemy semantics. A high-skill brigand's unarmed swing would
+        // roll harder than its iron longsword (11-21 versus 2-16); DFU's stronger-unarmed fallback
+        // must not land, so the damage draw stays inside the weapon's authored range.
+        using DamagePolicyFixture fixture = new();
+        fixture.NpcHandToHandSkill(100);
+        fixture.NpcStrength(50);
+        fixture.EquipNpcWeapon(2, "iron-longsword", 9001);
+        fixture.Script(body: 3, critical: 1, hit: 1, damage: 7);
+
+        PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+
+        Assert.True(result.Admitted);
+        Assert.True(result.Outcome.Hit);
+        Assert.True(result.Outcome.Allowed);
+        Assert.Equal(6, result.Outcome.Damage); // 7 (weapon roll) - 1 (iron) + 0 (strength 50)
+        Assert.Equal((2, 16), Assert.Single(result.Ranges, range => range != (0, 19) && range != (1, 100)));
+    }
+
+    [Fact]
+    public void An_unarmed_monster_fights_with_its_authored_attack_set_and_every_slot_rolls_its_own_gate()
+    {
+        using DamagePolicyFixture fixture = new();
+        fixture.ReplaceActor(2, Definitions.RequireActor(new DaggerfallActorId("rat")) with
+        {
+            Attacks = [new DaggerfallAttackRange(1, 8), new(1, 8), new(1, 10)],
+        });
+        // Each slot independently passes reflex, critical and hit rolls before drawing damage.
+        fixture.ScriptMonster(0, (50, 1, 4), (50, 1, 5), (50, 1, 6));
+
+        PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+
+        Assert.True(result.Outcome.Hit);
+        Assert.True(result.Outcome.Allowed);
+        Assert.Equal(15, result.Outcome.Damage);
+        Assert.Equal(
+        [
+            (0, 19),
+            (1, 100), (1, 100), (1, 100), (1, 8),
+            (1, 100), (1, 100), (1, 100), (1, 8),
+            (1, 100), (1, 100), (1, 100), (1, 10),
+        ], result.Ranges);
+    }
+
+    [Fact]
+    public void A_slot_the_targets_reflexes_evade_never_reaches_its_hit_or_damage_roll()
+    {
+        using DamagePolicyFixture fixture = new();
+        fixture.ReplaceActor(2, Definitions.RequireActor(new DaggerfallActorId("rat")) with
+        {
+            Attacks = [new DaggerfallAttackRange(1, 8), new(1, 8), new(1, 10)],
+        });
+        // Slot 1's reflex roll (51) beats the 50 gate; the recorded sequence jumps from that roll
+        // straight to slot 2's reflex roll with no (1, 8) damage draw in between.
+        fixture.ScriptMonster(0, (50, 1, 4), (51, null, null), (50, 1, 6));
+
+        PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+
+        Assert.Equal(10, result.Outcome.Damage);
+        // Slot 0's damage (1, 8) is the only (1, 8) draw: slot 1 went from its reflex roll straight
+        // to slot 2's, and slot 2's later (1, 10) keeps the ranges distinguishable.
+        Assert.Equal(
+        [
+            (0, 19),
+            (1, 100), (1, 100), (1, 100), (1, 8),
+            (1, 100),
+            (1, 100), (1, 100), (1, 100), (1, 10),
+        ], result.Ranges);
+    }
+
+    [Fact]
+    public void A_slot_that_misses_the_rerolled_gate_or_has_no_authored_minimum_adds_no_damage_and_no_career_bonus()
+    {
+        using DamagePolicyFixture fixture = new();
+        // The vampire's classic enemy configuration carries the humanoid bonus (bit 0x04), so each
+        // landed natural-attack slot carries the attacker's level (19) on top of its damage.
+        fixture.ReplaceActor(2, Definitions.RequireActor(new DaggerfallActorId("vampire")) with
+        {
+            ActionId = "monster-strike",
+            Attacks = [new DaggerfallAttackRange(1, 3), new(0, 0), new(1, 3)],
+        });
+        // Slot 1 has no authored minimum and is skipped before any draw; slot 2's rerolled hit
+        // gate (98, above the clamped chance ceiling) refuses it after its reflex roll passed.
+        fixture.ScriptMonster(0, (50, 1, 3), (null, null, null), (50, 98, null));
+
+        PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+
+        Assert.Equal(22, result.Outcome.Damage); // (3 + 19) from slot 0 alone
+        Assert.Equal(
+        [
+            (0, 19),
+            (1, 100), (1, 100), (1, 100), (1, 3),
+            (1, 100), (1, 100), (1, 100),
+        ], result.Ranges);
+    }
+
+    [Fact]
+    public void A_weapon_below_the_target_material_immunity_hits_but_deals_no_damage()
+    {
+        // The donor returns before its damage roll when the weapon cannot scratch an immune target;
+        // the product draws the keyed hit first and stops before the damage roll, so an immune
+        // attempt never fabricates a damage draw and never reports a scratch.
+        using DamagePolicyFixture fixture = new();
+        fixture.ReplaceActor(2, Definitions.RequireActor(new DaggerfallActorId("rat")) with { MinimumMaterial = "silver" });
+        fixture.Script(body: 0, critical: 1, hit: 1);
+
+        PreparedResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
+
+        Assert.True(result.Admitted);
+        Assert.True(result.Outcome.Hit);
+        Assert.False(result.Outcome.Allowed);
+        Assert.Equal(0, result.Outcome.Damage);
+        Assert.DoesNotContain(result.Ranges, range => range != (0, 19) && range != (1, 100));
+    }
+
+    [Fact]
+    public void A_backstab_from_behind_triples_the_resolved_damage_only_when_its_roll_succeeds()
+    {
+        using DamagePolicyFixture fixture = new();
+        fixture.PutPlayerBehindTarget(2);
+        fixture.PlayerBackstabbingSkill(20);
+        fixture.Script(body: 0, critical: 1, hit: 1, damage: 5, backstabRoll: 10);
+
+        PreparedResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
+
+        Assert.True(result.Outcome.Hit);
+        Assert.Equal(12, result.Outcome.Damage); // (5 - 1 iron) * 3
+        Assert.Equal((1, 100), result.Ranges[^1]);
+    }
+
+    [Fact]
+    public void A_backstab_facing_the_player_never_rolls_and_never_triples()
+    {
+        using DamagePolicyFixture fixture = new();
+        fixture.PutPlayerBehindTarget(2, facingAway: false);
+        fixture.PlayerBackstabbingSkill(20);
+        fixture.Script(body: 0, critical: 1, hit: 1, damage: 5);
+
+        PreparedResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
+
+        Assert.Equal(4, result.Outcome.Damage); // 5 - 1 iron, never tripled
+        Assert.Equal(4, result.Ranges.Count);   // body, critical, hit, damage — no backstab roll
+    }
+
+    [Fact]
+    public void A_backstab_of_one_never_rolls_even_from_behind()
+    {
+        // The donor rolls backstab only above level one; a chance of one would triple every hit
+        // without a roll, so the roll and the tripling share the same eligibility gate.
+        using DamagePolicyFixture fixture = new();
+        fixture.PutPlayerBehindTarget(2);
+        fixture.PlayerBackstabbingSkill(1);
+        fixture.Script(body: 0, critical: 1, hit: 1, damage: 5);
+
+        PreparedResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
+
+        Assert.Equal(4, result.Outcome.Damage);
+        Assert.Equal(4, result.Ranges.Count);
+    }
+
+    [Fact]
+    public void A_weak_swing_below_the_damage_floor_resolves_to_zero_damage()
+    {
+        using DamagePolicyFixture fixture = new();
+        fixture.PlayerStrength(30); // DamageModifier (30 - 50) / 5 = -4
+        fixture.Script(body: 0, critical: 1, hit: 1, damage: 2);
+
+        PreparedResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
+
+        Assert.True(result.Outcome.Hit);
+        Assert.True(result.Outcome.Allowed);
+        Assert.Equal(0, result.Outcome.Damage); // 2 - 1 iron - 4 strength floors at zero
+    }
+
+    [Fact]
+    public void A_monsters_first_miss_does_not_cancel_later_hits()
+    {
+        using DamagePolicyFixture fixture = new();
+        fixture.ReplaceActor(2, Definitions.RequireActor(new DaggerfallActorId("rat")) with
+        {
+            Attacks = [new DaggerfallAttackRange(1, 8), new(1, 8), new(1, 10)],
+        });
+        fixture.ScriptMonster(0, (1, 100, null), (1, 1, 5), (1, 1, 6));
+        PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+
+        Assert.True(result.Outcome.Hit);
+        Assert.Equal(11, result.Outcome.Damage);
+        Assert.Equal(1, result.Outcome.Roll);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void A_monster_whose_slots_all_fail_reports_a_miss_without_damage(bool evaded)
+    {
+        using DamagePolicyFixture fixture = new();
+        fixture.ReplaceActor(2, Definitions.RequireActor(new DaggerfallActorId("rat")) with
+        {
+            Attacks = [new DaggerfallAttackRange(1, 8), new(1, 8), new(1, 10)],
+        });
+        var slot = (Reflex: (int?)(evaded ? 100 : 1), Hit: evaded ? null : (int?)100, Damage: (int?)null);
+        fixture.ScriptMonster(0, slot, slot, slot);
+        CountingContribution contribution = new();
+        fixture.Contribute(contribution);
+        PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+
+        Assert.True(result.Admitted);
+        Assert.False(result.Outcome.Hit);
+        Assert.Equal(0, result.Outcome.Damage);
+        Assert.Equal(evaded ? 0 : 3, contribution.HitCount);
+        Assert.Equal(0, contribution.DamageCount);
+    }
+
+    [Fact]
+    public void Each_monster_slot_uses_hit_contributions_and_the_combined_damage_is_resolved_once()
+    {
+        using DamagePolicyFixture fixture = new();
+        fixture.ReplaceActor(2, Definitions.RequireActor(new DaggerfallActorId("rat")) with
+        {
+            Attacks = [new DaggerfallAttackRange(1, 8), new(1, 8), new(1, 10)],
+        });
+        CountingContribution contribution = new(rejectFirst: true);
+        fixture.Contribute(contribution);
+        fixture.ScriptMonster(0, (1, 1, null), (1, 1, 5), (1, 1, 6));
+        PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+
+        Assert.True(result.Outcome.Hit);
+        Assert.Equal(11, result.Outcome.Damage);
+        Assert.Equal(3, contribution.HitCount);
+        Assert.Equal(1, contribution.DamageCount);
+    }
+
+    [Theory]
+    [InlineData("redguard", false, 0)]
+    [InlineData("dark-elf", false, 0)]
+    [InlineData("redguard", true, 4)]
+    [InlineData("dark-elf", true, 3)]
+    public void Racial_weapon_bonuses_require_an_equipped_weapon(string race, bool armed, int bonus)
+    {
+        AttackOutcome Attack(string selectedRace)
+        {
+            using DamagePolicyFixture fixture = new(armed);
+            fixture.PlayerRace(selectedRace, 12);
+            fixture.Script(body: 0, critical: 100, hit: 1, damage: 3);
+            return fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false)).Outcome;
+        }
+
+        AttackOutcome baseline = Attack("breton");
+        AttackOutcome racial = Attack(race);
+        Assert.True(racial.Hit);
+        Assert.Equal(baseline.Chance + bonus, racial.Chance);
+        Assert.Equal(baseline.Damage + bonus, racial.Damage);
+    }
+
+    private sealed class CountingContribution(bool rejectFirst = false) : ICombatContribution
+    {
+        internal int HitCount { get; private set; }
+        internal int DamageCount { get; private set; }
+        public void Hit(TryHitEvent interaction)
+        {
+            HitCount++;
+            if (rejectFirst && HitCount == 1) interaction.Hit = false;
+        }
+        public void Damage(DamageEvent interaction) => DamageCount++;
+    }
+
+    private static DaggerfallDefinitions Definitions => _definitions ??= DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+    private static DaggerfallDefinitions? _definitions;
+
+    /// <summary>
+    /// One staged attack arena: the payload player with their iron loadout, a brigand enemy (entity 2)
+    /// wearing the equipped-enemy action, and a scripted keyed random that records every requested
+    /// draw range in order.
+    /// </summary>
+    private sealed class DamagePolicyFixture : IDisposable
+    {
+        private readonly ActorsState _actors;
+        private readonly DaggerfallItemInstances _itemInstances = new();
+        private readonly Dictionary<long, DaggerfallActorDefinition> _authored = [];
+        private readonly Dictionary<long, MechanicsEquipmentCoordinator> _actorEquipment = [];
+        private readonly MechanicsEquipmentCoordinator _playerEquipment;
+        private readonly ScriptedRandom _scripted = (ScriptedRandom)(object)DispatchProxy.Create<IRandomService, ScriptedRandom>();
+        private readonly IRandomService _random;
+        private readonly DaggerCombatRules _combat;
+        private WorldPoint? _playerPosition;
+
+        private DaggerfallCharacterState? _character;
+
+        internal DamagePolicyFixture(bool armed = true)
+        {
+            DaggerfallDefinitions definitions = Definitions;
+            DaggerfallActorDefinition playerDefinition = definitions.RequireActor(new DaggerfallActorId("player"));
+            _random = (IRandomService)(object)_scripted;
+            _actors = new ActorsState();
+            PlayerActorState player = _actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId(playerDefinition.Id.Value),
+                new DaggerfallMechanicsState().CreateStats(playerDefinition, DaggerfallPlayerVitals.Initial(playerDefinition.Stats, definitions.Catalogs.RequireCareer("class00"))), "health");
+            _playerEquipment = BuildEquipment(player.Actor.Entity, player.Actor);
+            foreach (DaggerfallLoadoutEntry entry in playerDefinition.Loadout.Where(entry => entry.UniqueEntityId is not null))
+            {
+                _itemInstances.RegisterDefaultUnique(entry.UniqueEntityId!.Value, definitions.RequireItem(entry.ItemId), DaggerfallItemOwner.Player);
+                WorldRpg.Kit.Inventory.UniqueInventoryItem item = _playerEquipment.Materialize(
+                    new DurableIdentityReference(DurableIdentityKind.Item, entry.UniqueEntityId.Value), new InventoryItemId(entry.ItemId.Value));
+                if (entry.EquipSlot is DaggerfallEquipmentSlotId slot && (armed || slot.Value != "right-hand" && slot.Value != "left-hand"))
+                    _playerEquipment.Equip(item, [new SlotId(slot.Value)]);
+            }
+
+            // The default stage: an enemy-class brigand (entity 2) one metre from the player with
+            // the equipped-enemy action and nothing worn until a test hands it a weapon.
+            DaggerfallActorDefinition brigand = definitions.RequireActor(new DaggerfallActorId("thief")) with { ActionId = "enemy-class-equipped-melee" };
+            ActorState enemy = _actors.CreateActor(2, new EntityTypeId("brigand"),
+                new DaggerfallMechanicsState().CreateStats(brigand, new DaggerfallVitalValues(200, 100, 0)), new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health");
+            _authored[DaggerfallActorIdentity.PlayerEntityId] = playerDefinition;
+            _authored[2] = brigand;
+            _actorEquipment[2] = BuildEquipment(enemy.Actor.Entity, enemy.Actor);
+            _combat = new DaggerCombatRules(_random, _actors, _playerEquipment, _ => null, _itemInstances, definitions, _authored, null!,
+                actorEquipment: id => _actorEquipment.TryGetValue(id, out MechanicsEquipmentCoordinator? coordinator) ? coordinator : _playerEquipment,
+                playerPosition: () => _playerPosition, character: () => _character);
+        }
+
+        internal void Script(int body, int critical, int hit, int? damage = null, int? backstabRoll = null)
+        {
+            List<int> draws = [body, critical, hit];
+            if (damage is int weaponDamage) draws.Add(weaponDamage);
+            if (backstabRoll is int backstab) draws.Add(backstab);
+            _scripted.Feed(draws);
+        }
+
+        internal void ScriptMonster(int body, params (int? Reflex, int? Hit, int? Damage)[] slots)
+        {
+            List<int> draws = [body];
+            foreach (var slot in slots)
+            {
+                if (slot.Reflex is int reflex) draws.Add(reflex);
+                if (slot.Hit is int hit) draws.AddRange([1, hit]); // critical, then hit
+                if (slot.Damage is int damage) draws.Add(damage);
+            }
+            _scripted.Feed(draws);
+        }
+
+        internal void PlayerRace(string race, int level)
+        {
+            _character = new(Definitions, _actors.Player.Stats, Definitions.RequireActor(new DaggerfallActorId("player")));
+            _character.BeginChoices();
+            _character.ReplacePending(new DaggerfallCharacterCreationChoices("Review", race,
+                DaggerfallCharacterGender.Male, 0, DaggerfallCharacterReflexes.Average, "class00"));
+            _character.CommitChoices();
+            _actors.Player.Progression.AdvanceTo(500, level);
+            foreach (string skill in new[] { "long-blade", "hand-to-hand" })
+                _actors.Player.Stats.GetStat(StatId.Parse(skill)).BaseValue = 20;
+            PlayerStrength(50);
+        }
+
+        internal void Contribute(ICombatContribution contribution) => _combat.Rules.RegisterAction("monster-strike", contribution);
+
+        internal void PlayerStrength(int strength) => _actors.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Strength.Value)).BaseValue = strength;
+
+        internal void PlayerBackstabbingSkill(int skill) => _actors.Player.Stats.GetStat(StatId.Parse("backstabbing")).BaseValue = skill;
+
+        internal void NpcHandToHandSkill(int skill) => _actors.Get(2).Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.HandToHand.Value)).BaseValue = skill;
+
+        internal void NpcStrength(int strength) => _actors.Get(2).Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Strength.Value)).BaseValue = strength;
+
+        internal void EquipNpcWeapon(long actorId, string itemId, ulong uniqueId)
+        {
+            _itemInstances.RegisterDefaultUnique(uniqueId, Definitions.RequireItem(new DaggerfallItemId(itemId)), DaggerfallItemOwner.Actor(actorId));
+            _actorEquipment[actorId].Equip(
+                _actorEquipment[actorId].Materialize(new DurableIdentityReference(DurableIdentityKind.Item, uniqueId), new InventoryItemId(itemId)),
+                [new SlotId("right-hand")]);
+        }
+
+        internal void ReplaceActor(long entityId, DaggerfallActorDefinition definition) => _authored[entityId] = definition;
+
+        internal void PutPlayerBehindTarget(long targetEntityId, bool facingAway = true)
+        {
+            _playerPosition = new WorldPoint(0f, 0f, 0f);
+            _actors.Get(targetEntityId).ApplyPose(new ActorPose(new WorldPoint(0f, 0f, -1f), facingAway ? 0f : MathF.PI));
+        }
+
+        internal PreparedResolution Run(AttackRequest request)
+        {
+            FactBuffer<IProductFact> facts = new();
+            bool admitted = _combat.TryPrepare(request, facts, out PreparedAttack prepared);
+            return new PreparedResolution(admitted, prepared.Outcome, _scripted.Ranges);
+        }
+
+        public void Dispose() => _actors.Dispose();
+
+        private MechanicsEquipmentCoordinator BuildEquipment(EntityId owner, Actor actor)
+        {
+            InventoryStore world = new();
+            world.RegisterInventory(new InventoryState(owner));
+            world.RegisterEquipment(new EquipmentState(owner));
+            InventoryComponent inventory = new(world, owner);
+            EquipmentComponent equipment = new(world, owner);
+            actor.Add(inventory);
+            actor.Add(equipment);
+            var items = Definitions.Items.Values.Concat(Definitions.TemplateItems.Values).ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
+            var slots = Definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
+            return new MechanicsEquipmentCoordinator(inventory, equipment, _actors.Entities, items, slots);
+        }
+    }
+
+    private sealed record PreparedResolution(bool Admitted, AttackOutcome Outcome, IReadOnlyList<(int Minimum, int Maximum)> Ranges);
+
+    private class ScriptedRandom : DispatchProxy
+    {
+        private readonly List<int> _values = [];
+        private readonly List<(int Minimum, int Maximum)> _ranges = [];
+        private int _next;
+
+        internal void Feed(IEnumerable<int> values) => _values.AddRange(values);
+
+        internal IReadOnlyList<(int Minimum, int Maximum)> Ranges => _ranges;
+
+        protected override object? Invoke(MethodInfo? method, object?[]? arguments)
+        {
+            if (method?.Name != nameof(IRandomService.DrawKeyed)) throw new NotSupportedException(method?.Name);
+            KeyedRngRequest request = (KeyedRngRequest)arguments![0]!;
+            _ranges.Add(((int)request.Minimum, (int)request.Maximum));
+            if (_next >= _values.Count) throw new InvalidOperationException($"The scripted attack reached draw {_next + 1} with no scripted value.");
+            int value = _values[_next++];
+            if (value < request.Minimum || value > request.Maximum)
+                throw new InvalidOperationException($"Scripted draw {value} is outside [{request.Minimum}, {request.Maximum}].");
+            return new KeyedRngReceipt(value);
+        }
+    }
+
+    private static string RepositoryRoot()
+    {
+        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
+            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md"))) return current.FullName;
+        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
+    }
+}

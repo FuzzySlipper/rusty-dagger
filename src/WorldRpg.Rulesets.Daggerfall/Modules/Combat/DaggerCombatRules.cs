@@ -32,13 +32,15 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     private readonly DaggerfallItemConditionService? _itemCondition;
     private readonly DaggerfallDefinitions _catalog;
     private readonly IReadOnlyDictionary<string, int> _weaponMaterialRanks;
-    private readonly IReadOnlyDictionary<string, int> _weaponMaterialToHitModifiers;
+    private readonly IReadOnlyDictionary<string, int> _weaponMaterialModifiers;
     private readonly IReadOnlyDictionary<string, DaggerfallActionDefinition> _actions;
     private readonly IReadOnlyDictionary<long, DaggerfallActorDefinition> _definitions;
     private readonly Action<DaggerfallSkillUse>? _skillUses;
     private readonly Func<int> _playerBiographyAvoidHit;
     private readonly Func<long, DaggerfallAdrenalineRush> _adrenalineRush;
     private readonly Func<WorldPoint?> _playerPosition;
+    private readonly Func<DaggerfallCharacterState?> _character;
+    private readonly Func<DaggerfallSwingDirection> _playerSwing;
     internal AttackCapabilities<IProductFact> Attacks { get; }
     internal TargetingService Targeting { get; }
     internal AttackExecution<IProductFact> Execution { get; }
@@ -47,6 +49,8 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     // The pack's arrow item is the one ammunition the adopted ranged shots draw. A second ranged
     // action with different ammunition would move this name onto the authored action.
     private const string ArrowItemId = "arrow";
+    // The classic skeleton mobile: its mobile id, as the donor's skeleton-warrior damage adjustment keys on it.
+    private const int SkeletalWarriorMobileId = 15;
 
     internal DaggerCombatRules(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment,
         Func<long, MechanicsInventoryCoordinator?> actorInventories, DaggerfallItemInstances itemInstances,
@@ -54,7 +58,8 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         TargetingService targeting, Action<DaggerfallSkillUse>? skillUses = null, Func<int>? playerBiographyAvoidHit = null,
         Func<long, MechanicsEquipmentCoordinator>? actorEquipment = null, DaggerfallItemConditionService? itemCondition = null,
         CombatResolution? rules = null, Func<long, DaggerfallAdrenalineRush>? adrenalineRush = null,
-        Func<WorldPoint?>? playerPosition = null)
+        Func<WorldPoint?>? playerPosition = null, Func<DaggerfallCharacterState?>? character = null,
+        Func<DaggerfallSwingDirection>? playerSwing = null)
     {
         _random = random;
         Rules = rules ?? new CombatResolution();
@@ -67,13 +72,15 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         _itemCondition = itemCondition;
         _catalog = definitions;
         _weaponMaterialRanks = DaggerfallFormulaPolicy.ClassicWeaponMaterialRanks;
-        _weaponMaterialToHitModifiers = DaggerfallFormulaPolicy.ClassicWeaponToHitMaterialModifiers;
+        _weaponMaterialModifiers = DaggerfallFormulaPolicy.ClassicWeaponMaterialModifiers;
         _actions = definitions.Actions;
         _definitions = definitionsByEntity;
         _skillUses = skillUses;
         _playerBiographyAvoidHit = playerBiographyAvoidHit ?? (() => 0);
         _adrenalineRush = adrenalineRush ?? (_ => default);
         _playerPosition = playerPosition ?? (() => null);
+        _character = character ?? (() => null);
+        _playerSwing = playerSwing ?? (() => DaggerfallSwingDirection.None);
         Targeting = targeting;
         Attacks = new(PlayerId, Targeting, Execution, ReachOf, facts => facts.Append(new AttackRejectedFact(AttackRejection.MissingPlayerPosition)));
     }
@@ -106,7 +113,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
                 || action.CooldownSeconds is not double cooldown || action.Reach is not > 0d)
             { facts.Append(new AttackRejectedFact(AttackRejection.NoAttackPolicy, request.AttackerId)); return false; }
             attack = action.Interpretation == "enemy-equipped-melee"
-                ? ResolveEquippedEnemyAttack(request.AttackerId, cooldown)
+                ? ResolveEquippedEnemyAttack(attacker, cooldown)
                 : ResolveFixedAttack(attacker.Definition, action, cooldown);
             if (action.Interpretation == "fixed-ranged" && !TrySpendArrow(request.AttackerId, facts)) return false;
         }
@@ -118,9 +125,20 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         bool backstabOpportunity = BackstabOpportunity(attacker, target, request.Delayed);
         if (backstabOpportunity)
             _skillUses?.Invoke(new DaggerfallSkillUse("backstabbing", DaggerfallSkillUseReason.BackstabbingOpportunity, DaggerfallSkillUseOutcome.Accepted));
+        // The donor computes the swing, proficiency and racial attack modifiers once and rides both
+        // the hit roll and the damage roll with them; the career's enemy-type bonus and the backstab
+        // chance cross the same two rolls at their own points. Resolve them once here and carry them
+        // to both resolutions so one admitted attack shares one set of modifier values.
+        var modifiers = attacker.Id == PlayerId ? PlayerAttackModifiers(attack) : default;
+        int backstabChance = DaggerfallFormulaPolicy.CalculateBackstabChance(ReadStat(attacker, new DaggerfallStatId("backstabbing")), backstabOpportunity);
         int body = DaggerfallFormulaPolicy.CalculateStruckBodyPart(Draw(explicitRequest, attacker.Id, target.Id, CombatRandomKey.BodySalt, 0, 19, request.Delayed));
-        TryHitEvent hit = ResolveHit(participants, explicitRequest, attacker, target, attack, body, request.Delayed, backstabOpportunity);
-        DamageEvent? damage = hit.Hit ? ResolveDamage(participants, explicitRequest, attacker, target, attack, body, request.Delayed) : null;
+        if (attacker.Definition.Kind == DaggerfallActorKinds.Monster && attack.Skill == DaggerfallMechanicsIds.HandToHand.Value)
+        {
+            prepared = new(attack.CooldownSeconds, MonsterAttackSet(participants, explicitRequest, attacker, target, attack, body, request.Delayed));
+            return true;
+        }
+        TryHitEvent hit = ResolveHit(participants, explicitRequest, attacker, target, attack, body, request.Delayed, modifiers.ToHit, backstabChance);
+        DamageEvent? damage = hit.Hit ? ResolveDamage(participants, explicitRequest, attacker, target, attack, body, request.Delayed, modifiers.Damage, backstabChance) : null;
         prepared = new(attack.CooldownSeconds, new(hit.Hit, damage?.Allowed ?? true, body, damage?.Damage ?? 0, hit.Roll, hit.Chance));
         return true;
     }
@@ -316,20 +334,104 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         new Actor(_actors.Store, _actors.Entities.Resolve(ActorsState.Identity(target))), action);
 
     private TryHitEvent ResolveHit(CombatParticipants participants, ExplicitMeleeRequest request, Combatant attacker, Combatant target,
-        DaggerfallAttackDefinition attack, int body, bool enemy, bool backstabOpportunity) => Rules.TryHit(participants, hit =>
+        DaggerfallAttackDefinition attack, int body, bool enemy, int attackToHitMod, int backstabChance,
+        int hitSalt = CombatRandomKey.HitSalt, int criticalSalt = CombatRandomKey.CriticalStrikeSalt) => Rules.TryHit(participants, hit =>
     {
-        hit.Chance = HitChance(request, attacker, target, attack, body, enemy, backstabOpportunity);
-        hit.Roll = Draw(request, attacker.Id, target.Id, CombatRandomKey.HitSalt, 1, 100, enemy);
+        hit.Chance = HitChance(request, attacker, target, attack, body, enemy, attackToHitMod, backstabChance, criticalSalt);
+        hit.Roll = Draw(request, attacker.Id, target.Id, hitSalt, 1, 100, enemy);
     });
 
+    /// <summary>
+    /// Resolves the damage roll behind the accepted hit in the donor's order: a weapon whose material
+    /// cannot cut the target's minimum material rejects the attempt before anything rolls; the attack
+    /// then takes its damage through the hand-to-hand or weapon path, a
+    /// successful backstab roll triples what those paths produced, and the total is bounded at zero.
+    /// </summary>
+    /// <remarks>
+    /// The donor returns before its hit roll for an insufficient weapon material; here the shared hit
+    /// roll is keyed by (generation, step, attacker, target, salt) rather than by draw sequence, so
+    /// drawing it before rejecting the attempt cannot change any other roll's value.
+    /// </remarks>
     private DamageEvent ResolveDamage(CombatParticipants participants, ExplicitMeleeRequest request, Combatant attacker, Combatant target,
-        DaggerfallAttackDefinition attack, int body, bool enemy) => Rules.Damage(participants, damage =>
+        DaggerfallAttackDefinition attack, int body, bool enemy, int attackDamageMod, int backstabChance) => Rules.Damage(participants, damage =>
     {
         damage.Body = body;
-        int raw = Draw(request, attacker.Id, target.Id, CombatRandomKey.DamageSalt, attack.MinimumDamage, attack.MaximumDamage, enemy);
-        damage.Allowed = enemy || attack.Material is null || DaggerfallFormulaPolicy.CanHitMaterial(attack.Material, target.Definition.MinimumMaterial, _weaponMaterialRanks);
-        damage.Damage = Math.Max(1, checked(raw + StrengthModifier(attacker) + attack.DamageBonus));
+        if (attack.Material is not null && !DaggerfallFormulaPolicy.CanHitMaterial(attack.Material, target.Definition.MinimumMaterial, _weaponMaterialRanks))
+        {
+            damage.Allowed = false;
+            damage.Damage = 0;
+            return;
+        }
+
+        damage.Allowed = true;
+        int rolled = attack.Skill == DaggerfallMechanicsIds.HandToHand.Value
+            ? DaggerfallFormulaPolicy.CalculateHandToHandAttackDamage(
+                    Draw(request, attacker.Id, target.Id, CombatRandomKey.DamageSalt, attack.MinimumDamage, attack.MaximumDamage, enemy),
+                    checked(attackDamageMod + attack.DamageBonus),
+                    attacker.Id == PlayerId ? StrengthModifier(attacker) : 0,
+                    EnemyTypeBonus(attacker, target))
+            : DaggerfallFormulaPolicy.CalculateWeaponAttackDamage(
+                Draw(request, attacker.Id, target.Id, CombatRandomKey.DamageSalt, attack.MinimumDamage, attack.MaximumDamage, enemy),
+                checked(attackDamageMod + attack.DamageBonus),
+                target.Definition.Kind == DaggerfallActorKinds.Monster && target.Definition.MobileId == SkeletalWarriorMobileId,
+                DaggerfallFormulaPolicy.WeaponIsEdged(attack.Skill),
+                attack.Material == "silver",
+                StrengthModifier(attacker),
+                DaggerfallFormulaPolicy.WeaponMaterialDamageModifier(attack.Material, _weaponMaterialModifiers),
+                EnemyTypeBonus(attacker, target));
+        // The donor triples on a successful backstab roll only when the backstab chance exceeds one,
+        // so a one-point chance never rolls; the bounded zero floor is the donor's own final clamp.
+        if (backstabChance > 1)
+            rolled = DaggerfallFormulaPolicy.CalculateBackstabDamage(rolled, backstabChance,
+                Draw(request, attacker.Id, target.Id, CombatRandomKey.BackstabRollSalt, 1, 100, enemy) <= backstabChance);
+        damage.Damage = Math.Max(0, rolled);
     });
+
+    /// <summary>
+    /// A monster's natural attacks for one attempt: the classic loop works through up to three
+    /// authored attack slots, and each slot must clear the player's reflexes chance and the attack's
+    /// own hit chance before it rolls damage, with the career's enemy-type bonus carried only by a
+    /// slot that landed positive damage.
+    /// </summary>
+    /// <remarks>
+    /// The donor rolls the reflexes check even for slots whose minimum damage is zero; keyed draws are
+    /// addressed per (generation, step, attacker, target, salt) rather than by draw order, so skipping
+    /// those slots cannot shift any other roll. Every eligible slot resolves through the shared hit
+    /// rules independently. Damage contributions and application see the combined attack once.
+    /// </remarks>
+    private AttackOutcome MonsterAttackSet(CombatParticipants participants, ExplicitMeleeRequest request,
+        Combatant attacker, Combatant target, DaggerfallAttackDefinition attack, int body, bool enemy)
+    {
+        int enemyType = EnemyTypeBonus(attacker, target);
+        int reflexChance = DaggerfallFormulaPolicy.MonsterAttackReflexChance(ReadStat(PlayerCombatant(), DaggerfallMechanicsIds.Reflexes));
+        int total = 0;
+        bool landed = false;
+        TryHitEvent? representative = null;
+        int slots = Math.Min(3, attacker.Definition.Attacks.Count);
+        for (int slot = 0; slot < slots; slot++)
+        {
+            int slotMinimum = attacker.Definition.Attacks[slot].MinimumDamage;
+            if (slotMinimum <= 0) continue;
+            if (Draw(request, attacker.Id, target.Id, CombatRandomKey.MonsterReflexSaltBase + slot, 1, 100, enemy) > reflexChance) continue;
+            TryHitEvent hit = ResolveHit(participants, request, attacker, target, attack, body, enemy, 0, 0,
+                CombatRandomKey.MonsterHitSaltBase + slot, CombatRandomKey.MonsterCriticalSaltBase + slot);
+            // Retain a landed slot for the shared outcome, or the last miss when none landed.
+            if (hit.Hit || !landed) representative = hit;
+            if (!hit.Hit) continue;
+            landed = true;
+            int slotDamage = Draw(request, attacker.Id, target.Id, CombatRandomKey.MonsterDamageSaltBase + slot, slotMinimum, attacker.Definition.Attacks[slot].MaximumDamage, enemy);
+            total = checked(total + slotDamage);
+            if (slotDamage > 0) total = checked(total + enemyType);
+        }
+
+        DamageEvent? damage = landed ? Rules.Damage(participants, damage =>
+        {
+            damage.Body = body;
+            damage.Damage = Math.Max(0, total);
+        }) : null;
+        return new(landed, damage?.Allowed ?? true, body, damage?.Damage ?? 0,
+            representative?.Roll ?? 0, representative?.Chance ?? 0);
+    }
 
     private void ApplyDamage(CombatParticipants participants, long attacker, long target, int damage, int body, bool enemy,
         ulong generation, ulong step, FactBuffer<IProductFact> facts)
@@ -440,13 +542,22 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         return false;
     }
 
-    private DaggerfallAttackDefinition ResolveEquippedEnemyAttack(long actorId, double cooldown)
+    /// <summary>
+    /// One enemy attempt's attack: the equipped weapon's authored damage when the enemy wears one, and
+    /// the classic hand-to-hand range scaled by the actor's own hand-to-hand skill when it wears none.
+    /// A weapon-wielding enemy uses its equipped weapon even where its unarmed numbers would be
+    /// higher — the donor's stronger-unarmed substitution is a documented deviation it does not keep.
+    /// </summary>
+    private DaggerfallAttackDefinition ResolveEquippedEnemyAttack(Combatant attacker, double cooldown)
     {
-        DaggerfallEquippedWeapon? weapon = ReadWeapon(_actorEquipment(actorId).Read(), "right-hand")
-            ?? ReadWeapon(_actorEquipment(actorId).Read(), "left-hand");
+        DaggerfallEquippedWeapon? weapon = ReadWeapon(_actorEquipment(attacker.Id).Read(), "right-hand")
+            ?? ReadWeapon(_actorEquipment(attacker.Id).Read(), "left-hand");
         return weapon is { } selected
             ? new DaggerfallAttackDefinition(selected.Weapon.Skill, selected.Weapon.MinimumDamage, selected.Weapon.MaximumDamage, cooldown, selected.Material, Reach: 2d)
-            : new DaggerfallAttackDefinition(DaggerfallMechanicsIds.HandToHand.Value, 1, 2, cooldown, Reach: 2d);
+            : new DaggerfallAttackDefinition(DaggerfallMechanicsIds.HandToHand.Value,
+                DaggerfallFormulaPolicy.HandToHandMinimumDamage(ReadStat(attacker, DaggerfallMechanicsIds.HandToHand)),
+                DaggerfallFormulaPolicy.HandToHandMaximumDamage(ReadStat(attacker, DaggerfallMechanicsIds.HandToHand)),
+                cooldown, Reach: 2d);
     }
 
     private static DaggerfallAttackDefinition ResolveFixedAttack(DaggerfallActorDefinition actor, DaggerfallActionDefinition action, double cooldown) => action.AttackRangeIndex is int index
@@ -478,15 +589,20 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     private string PlayerWeaponSkill() => ReadWeapon(_equipment.Read(), "right-hand")?.Weapon.Skill
         ?? ReadWeapon(_equipment.Read(), "left-hand")?.Weapon.Skill
         ?? DaggerfallMechanicsIds.HandToHand.Value;
-    private int HitChance(ExplicitMeleeRequest request, Combatant attacker, Combatant target, DaggerfallAttackDefinition attack, int body, bool enemy, bool backstabOpportunity)
+    private int HitChance(ExplicitMeleeRequest request, Combatant attacker, Combatant target, DaggerfallAttackDefinition attack, int body, bool enemy, int attackToHitMod, int backstabChance, int criticalSalt)
     {
         int critical = ReadStat(attacker, new DaggerfallStatId("critical-strike"));
-        bool criticalSucceeded = Draw(request, attacker.Id, target.Id, CombatRandomKey.CriticalStrikeSalt, 1, 100, enemy) <= critical;
+        bool criticalSucceeded = Draw(request, attacker.Id, target.Id, criticalSalt, 1, 100, enemy) <= critical;
         DaggerfallAdrenalineRush attackerRush = _adrenalineRush(attacker.Id), targetRush = _adrenalineRush(target.Id);
+        // The donor assembles the skill value, the player's swing/proficiency/racial modifiers and the
+        // backstab chance into one chance-to-hit modifier, then adds the weapon material inside its
+        // weapon adjustment seam; an unarmed attempt never reaches that seam.
+        int chanceToHitMod = checked(ReadStat(attacker, new DaggerfallStatId(attack.Skill)) + attackToHitMod + backstabChance);
+        if (attack.Material is not null)
+            chanceToHitMod = DaggerfallFormulaPolicy.AdjustWeaponHitChanceMod(checked(
+                chanceToHitMod + DaggerfallFormulaPolicy.CalculateWeaponToHit(attack.Material, _weaponMaterialModifiers)));
         return DaggerfallFormulaPolicy.CalculateSuccessfulHitChance(
-            checked(ReadStat(attacker, new DaggerfallStatId(attack.Skill))
-                + DaggerfallFormulaPolicy.CalculateWeaponToHit(attack.Material, _weaponMaterialToHitModifiers)
-                + DaggerfallFormulaPolicy.CalculateBackstabChance(ReadStat(attacker, new DaggerfallStatId("backstabbing")), backstabOpportunity)),
+            chanceToHitMod,
             ArmorToHit(target, body),
             DaggerfallFormulaPolicy.CalculateAdrenalineRushToHit(attackerRush.Enabled, attackerRush.Improved, Health(attacker).Current, Health(attacker).Maximum.Value, targetRush.Enabled, targetRush.Improved, Health(target).Current, Health(target).Maximum.Value),
             DaggerfallFormulaPolicy.CalculateStatsToHit(ReadStat(attacker, DaggerfallMechanicsIds.Luck), ReadStat(target, DaggerfallMechanicsIds.Luck), ReadStat(attacker, DaggerfallMechanicsIds.Agility), ReadStat(target, DaggerfallMechanicsIds.Agility)),
@@ -545,6 +661,66 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     }
 
     private static Track Health(Combatant actor) => actor.Stats.GetTrack(TrackId.Parse(HealthTrack));
+
+    /// <summary>
+    /// The to-hit and damage modifiers a player attack carries into both the hit roll and the damage
+    /// roll. Swing and racial modifiers require a weapon; expert proficiency also applies to
+    /// hand-to-hand under the selected donor policy. An enemy attempt carries none of them.
+    /// </summary>
+    private (int ToHit, int Damage) PlayerAttackModifiers(DaggerfallAttackDefinition attack)
+    {
+        int level = _actors.Player.Progression.Level;
+        (int swingToHit, int swingDamage) = attack.Material is not null
+            ? DaggerfallFormulaPolicy.CalculateSwingModifiers(_playerSwing())
+            : (0, 0);
+        (int proficiencyToHit, int proficiencyDamage) = DaggerfallFormulaPolicy.CalculateProficiencyModifiers(
+            _character()?.Career.ExpertProficiencies.Contains(attack.Skill, StringComparer.Ordinal) == true, level);
+        (int racialToHit, int racialDamage) = attack.Material is not null
+            ? DaggerfallFormulaPolicy.CalculateRacialModifiers(DonorRaceId(), attack.Skill == DaggerfallSkills.Archery, level)
+            : (0, 0);
+        return (checked(swingToHit + proficiencyToHit + racialToHit), checked(swingDamage + proficiencyDamage + racialDamage));
+    }
+
+    /// <summary>
+    /// The career's bonus or penalty against the target's enemy group. The player acts through the
+    /// chosen career's attack-modifier byte, every other actor through its authored career or, for a
+    /// monster, the byte its classic enemy configuration record carried. A player target is humanoid
+    /// until character vampirism exists to move it, matching the donor's own pending case.
+    /// </summary>
+    private int EnemyTypeBonus(Combatant attacker, Combatant target)
+    {
+        int flags = AttackModifierFlagsFor(attacker);
+        return flags == 0 ? 0 : DaggerfallFormulaPolicy.BonusOrPenaltyByEnemyType(flags,
+            target.Id == PlayerId ? DaggerfallEnemyGroup.Humanoid : DaggerfallFormulaPolicy.EnemyGroupFor(target.Definition),
+            AttackerLevel(attacker));
+    }
+
+    private int AttackModifierFlagsFor(Combatant attacker)
+    {
+        if (attacker.Id == PlayerId) return _character()?.Career.AttackModifierFlags ?? 0;
+        if (attacker.Definition.Career is string careerId && _catalog.Catalogs.TryGetCareer(careerId, out DaggerfallCareerDefinition? career))
+            return career.AttackModifierFlags;
+        return _catalog.Mobiles.ForActor(attacker.Definition.Id.Value)?.AttackModifierFlags ?? 0;
+    }
+
+    private int AttackerLevel(Combatant attacker) => attacker.Id == PlayerId
+        ? _actors.Player.Progression.Level
+        : attacker.Definition.Level ?? 0;
+
+    private Combatant PlayerCombatant() => TryResolve(PlayerId, out Combatant player)
+        ? player
+        : throw new InvalidOperationException("A monster's natural attacks measure the player's reflexes, and no player combatant is available to measure.");
+
+    /// <summary>
+    /// The donor's race number for the player's race: the donor's racial attack modifiers are keyed by
+    /// classic race index rather than the product's race identity. A character with no catalogued race
+    /// carries no racial modifier.
+    /// </summary>
+    private int DonorRaceId() => _character() is DaggerfallCharacterState character
+        && _catalog.Catalogs.TryGetRace(character.Identity.RaceId, out DaggerfallRaceDefinition? race)
+        ? race.DonorRaceId
+        : 0;
+
     internal static int CalculateHitChance(int skill, int struckArmor, int attackerLuck, int targetLuck, int attackerAgility, int targetAgility, int targetDodge, int targetBiographyAvoidHit = 0) => DaggerfallFormulaPolicy.CalculateHitChance(skill, struckArmor, attackerLuck, targetLuck, attackerAgility, targetAgility, targetDodge, targetBiographyAvoidHit);
     private int StrengthModifier(Combatant attacker) => DaggerfallFormulaPolicy.DamageModifier(ReadStat(attacker, DaggerfallMechanicsIds.Strength));
     private static int ReadStat(Combatant actor, DaggerfallStatId stat) =>

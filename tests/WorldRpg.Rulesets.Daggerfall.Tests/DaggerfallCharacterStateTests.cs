@@ -132,6 +132,41 @@ public sealed class DaggerfallCharacterStateTests
     }
 
     [Fact]
+    public void Preset_careers_publish_their_classic_attack_modifier_flags_and_expert_proficiencies()
+    {
+        Create(out DaggerfallDefinitions definitions, out _);
+
+        // The classic CLASS??.CFG attack-modifier byte and weapon-proficiency bits, as the
+        // supplied corpus carries them: the assassin fears nothing, the archer is an archery expert.
+        Assert.Equal(0x04, definitions.Catalogs.RequireCareer("class11").AttackModifierFlags);
+        Assert.Equal(["archery"], definitions.Catalogs.RequireCareer("class13").ExpertProficiencies);
+        Assert.All(definitions.Catalogs.Careers.Where(career => career.Id != "class11"),
+            career => Assert.Equal(0, career.AttackModifierFlags));
+        Assert.All(definitions.Catalogs.Careers.Where(career => career.Id != "class13"),
+            career => Assert.Empty(career.ExpertProficiencies));
+    }
+
+    [Fact]
+    public void A_custom_class_carries_its_bonus_phobia_and_expertise_choices_in_the_same_career_fields()
+    {
+        DaggerfallCharacterState character = Create(out _, out _);
+        character.BeginChoices();
+        DaggerfallCustomCareerChoices custom = new("Nightblade",
+            ["mysticism", "alteration", "thaumaturgy"], ["illusion", "destruction", "restoration"],
+            ["medical", "short-blade", "blunt-weapon", "dragonish", "daedric", "dodging"], 12,
+            [new DaggerfallCustomCareerTrait("bonus-to-hit", "undead"), new DaggerfallCustomCareerTrait("expertise", "archery")],
+            [new DaggerfallCustomCareerTrait("phobia", "animals")]);
+        character.ReplacePending(new DaggerfallCharacterCreationChoices("Aubk-i", "khajiit", DaggerfallCharacterGender.Female, 3,
+            DaggerfallCharacterReflexes.High, DaggerfallCustomCareerPolicy.CareerId, custom));
+        character.CommitChoices();
+
+        // The attack policy reads one flag byte for preset and custom careers alike: undead bonus
+        // 0x01 and animal phobia 0x80, with the weapon expertise recorded as an expert proficiency.
+        Assert.Equal(0x01 | 0x80, character.Career.AttackModifierFlags);
+        Assert.Equal(["archery"], character.Career.ExpertProficiencies);
+    }
+
+    [Fact]
     public void Custom_class_reports_duplicate_skills_conflicting_traits_and_out_of_range_difficulty()
     {
         DaggerfallCharacterState character = Create(out DaggerfallDefinitions definitions, out _);
