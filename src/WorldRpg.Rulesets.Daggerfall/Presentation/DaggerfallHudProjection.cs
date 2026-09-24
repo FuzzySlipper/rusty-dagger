@@ -9,6 +9,7 @@ using WorldRpg.Kit.Presentation;
 using WorldRpg.Kit.Progression;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.World;
+using WorldRpg.Rulesets.Daggerfall.Travel;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
@@ -47,7 +48,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         DaggerfallTransportPresentation? transport = null,
         DaggerfallDungeonTextProjection? dungeonText = null,
         DaggerfallDeathView? death = null,
-        DaggerfallRestView? rest = null)
+        DaggerfallRestView? rest = null,
+        DaggerfallTravelPresentation? travel = null)
     {
         UiValueBuilder builder = new();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
@@ -117,6 +119,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("requiresAnswer", builder.Boolean(dungeonText.Kind == DaggerfallDungeonTextActionKind.ShowTextWithInput))))];
         fields = [.. fields, ("death", death is null ? builder.Null() : Death(builder, death))];
         fields = [.. fields, ("rest", rest is null ? builder.Null() : Rest(builder, rest))];
+        if (travel is not null) fields = [.. fields, ("travel", Travel(builder, travel))];
         if (inventory is not null) fields = [.. fields, ("inventory", Inventory(builder, inventory))];
         // Contents are an affordance the same way focus is: a dead or paused product refuses the take
         // its gate would otherwise honour, so the panel is published only in the mode that lets the
@@ -140,6 +143,33 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         uint root = builder.Object(fields);
         ui.PublishProjection(new UiProjection(_hud, ++_sequence, builder.Build(root)));
     }
+
+    private static uint Travel(UiValueBuilder builder, DaggerfallTravelPresentation travel) => builder.Object(
+        ("destinations", builder.Array(travel.Destinations.Select(destination => builder.Object(
+            ("region", builder.Number(destination.Id.Region)),
+            ("index", builder.Number(destination.Id.Index)),
+            ("name", builder.String(destination.Name)),
+            ("kind", builder.String(destination.Kind.ToString())))).ToArray())),
+        ("message", travel.Message is null ? builder.Null() : builder.String(travel.Message)),
+        ("quote", travel.Quote is null ? builder.Null() : builder.Object(
+            ("identity", builder.String(travel.Quote.Identity)),
+            ("destination", builder.String(travel.Quote.Destination.Name)),
+            ("minutes", builder.Number(travel.Quote.TravelMinutes)),
+            ("distance", builder.Number(travel.Quote.DistanceMapPixels)),
+            ("oceanPixels", builder.Number(travel.Quote.OceanPixels)),
+            ("innCost", builder.Number(travel.Quote.InnCost)),
+            ("shipCost", builder.Number(travel.Quote.ShipCost)),
+            ("totalCost", builder.Number(travel.Quote.TotalCost)),
+            ("options", builder.Object(
+                ("cautious", builder.Boolean(travel.Quote.Options.SpeedCautious)),
+                ("inn", builder.Boolean(travel.Quote.Options.SleepModeInn)),
+                ("ship", builder.Boolean(travel.Quote.Options.TravelShip)),
+                ("hasHorse", builder.Boolean(travel.Quote.Options.HasHorse)),
+                ("hasCart", builder.Boolean(travel.Quote.Options.HasCart)),
+                ("hasShip", builder.Boolean(travel.Quote.Options.HasShip)),
+                ("availableGold", builder.String(travel.Quote.Options.AvailableGold.ToString(CultureInfo.InvariantCulture))),
+                ("availableGoldPieces", builder.String(travel.Quote.Options.AvailableGoldPieces.ToString(CultureInfo.InvariantCulture))))),
+            ("canAfford", builder.Boolean(travel.Quote.CanAfford)))));
 
     private static uint Transport(UiValueBuilder builder, DaggerfallTransportPresentation transport) => builder.Object(
         ("mode", builder.String(transport.Mode.ToString().ToLowerInvariant())),
@@ -259,6 +289,13 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("bank", value.Bank is { } bank ? builder.Object(
                 ("currentRegion", builder.Number(bank.CurrentRegion)),
                 ("currentBalance", builder.String(bank.CurrentBalance)),
+                ("maximumNewLoan", builder.String(bank.MaximumNewLoan.ToString(CultureInfo.InvariantCulture))),
+                ("loan", bank.Loan is { } loan ? builder.Object(
+                    ("principal", builder.String(loan.Principal)),
+                    ("remaining", builder.String(loan.Remaining)),
+                    ("dueMinute", builder.Number(loan.DueMinute)),
+                    ("daysRemaining", builder.Number(loan.DaysRemaining)),
+                    ("defaulted", builder.Boolean(loan.Defaulted))) : builder.Null()),
                 ("accounts", builder.Array(bank.Accounts.Select(account => builder.Object(
                     ("region", builder.Number(account.Region)), ("gold", builder.String(account.Gold)))).ToArray()))) : builder.Null()),
             ("equipmentChange", value.EquipmentChange is { } change ? builder.Object(

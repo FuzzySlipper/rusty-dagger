@@ -116,6 +116,7 @@ public static class RmbExteriorNormalizer
         private readonly HashSet<(int X, int Z)> outdoorNavigationCells = [];
         private NormalizedMarker? startMarker;
         private NormalizedMarker? enterMarker;
+        private NormalizedInteriorBuilding? interiorBuilding;
 
         public void AddExterior(MapsExteriorBlock reference)
         {
@@ -173,6 +174,8 @@ public static class RmbExteriorNormalizer
             (RmbBlockSummary summary, RmbBlockPlacements placements, _) = ReadBlock(reference);
             if (buildingIndex >= summary.Buildings.Count)
                 throw new ArgumentOutOfRangeException(nameof(buildingIndex), $"RMB block '{reference.SourceName}' has {summary.Buildings.Count} buildings, not {buildingIndex + 1}.");
+            RmbBuildingSlot selected = summary.Buildings[buildingIndex];
+            interiorBuilding = new(reference.X, reference.Y, reference.SourceName, buildingIndex, selected.BuildingType, selected.FactionId);
             // The donor's DaggerfallInterior creates this half in its own local frame; it does not carry the
             // exterior block or building-subrecord transform into the interior scene.
             foreach (RmbModelPlacement model in placements.Buildings[buildingIndex].Interior.Models)
@@ -285,7 +288,10 @@ public static class RmbExteriorNormalizer
                     new NormalizedResourceCatalogEntry(NormalizedResourceCatalogEntry.CurrentSchemaVersion, pair.Value.TextureId, NormalizedResourceKind.Texture, resourcesId, [], []),
                     new NormalizedResourceCatalogEntry(NormalizedResourceCatalogEntry.CurrentSchemaVersion, pair.Value.MaterialId, NormalizedResourceKind.Material, resourcesId, [pair.Value.TextureId], []),
                 }).ToList();
-            NormalizedWorld world = new(NormalizedWorld.CurrentSchemaVersion, $"mesh/{root}", meshes.Select(mesh => mesh.Id).ToArray(), navigation.Id, startMarker, enterMarker, [], [], [], [], []);
+            NormalizedWorld world = new(NormalizedWorld.CurrentSchemaVersion, $"mesh/{root}", meshes.Select(mesh => mesh.Id).ToArray(), navigation.Id, startMarker, enterMarker, [], [], [], [], [])
+            {
+                InteriorBuilding = interiorBuilding,
+            };
             DungeonSpatialPublication spatial = DungeonSpatialPublication.Create(staticId, $"spatial/{slug}/{profile}/static-mesh.json", collisionId,
                 $"spatial/{slug}/{profile}/collision-navigation.json", resourcesId, $"resources/{slug}/{profile}/catalog.json", world.VisualMeshAssetId, bounds, meshes, world, navigation, resources);
             NormalizedImportDocument document = new NormalizedImportDocument(NormalizedImportDocument.CurrentSchemaVersion,

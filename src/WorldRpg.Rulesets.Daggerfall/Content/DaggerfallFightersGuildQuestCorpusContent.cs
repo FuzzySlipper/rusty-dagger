@@ -48,9 +48,7 @@ internal static class DaggerfallFightersGuildQuestCorpusContent
             List<DaggerfallQuestDiagnosticDefinition> diagnostics = [.. source.Diagnostics, .. DaggerfallQuestTaskCompiler.Assess(source)];
             try
             {
-                foreach (DaggerfallQuestClockDefinition clock in DaggerfallQuestClockCompiler.Compile(source))
-                    if (DaggerfallQuestClockCompiler.UnsupportedTravelCondition(clock) is { } reason)
-                        diagnostics.Add(new DaggerfallQuestDiagnosticDefinition(1, clock.Symbol, reason));
+                _ = DaggerfallQuestClockCompiler.Compile(source);
             }
             catch (ArgumentException exception) { diagnostics.Add(new DaggerfallQuestDiagnosticDefinition(1, sourceFile, exception.Message)); }
             receipts.Add(new(name, sourceFile, diagnostics.Count == 0, diagnostics));

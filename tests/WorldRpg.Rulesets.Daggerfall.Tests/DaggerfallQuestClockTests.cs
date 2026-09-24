@@ -31,22 +31,30 @@ public sealed class DaggerfallQuestClockTests
     }
 
     [Fact]
-    public void Travel_derived_donor_forms_are_reported_until_the_quest_place_owner_can_supply_them()
+    public void Travel_derived_donor_forms_validate_sampled_state_and_destination_start()
     {
         DaggerfallQuestSourceDefinition source = Source(Clock(1, "clock _traveltime_ 00:00 0 flag 17 range 0 2"));
         DaggerfallQuestClockDefinition derived = Assert.Single(DaggerfallQuestClockCompiler.Compile(source));
         DaggerfallQuestTaskProgram program = DaggerfallQuestTaskCompiler.Compile(source);
-        DaggerfallQuestClockState dormant = new("traveltime", 0, 0, 17, 0, 2, false, false);
+        DaggerfallQuestClockState sampled = new("traveltime", 216000, 216000, 17, 0, 2, false, false);
         DaggerfallQuestClockState destination = new("2place", 0, 0, 0, 0, 0, false, false);
 
-        Assert.Contains("travel-derived", DaggerfallQuestClockCompiler.UnsupportedTravelCondition(derived), StringComparison.Ordinal);
-        DaggerfallQuestClockCompiler.ValidateSavedState("quest:travel", [derived], [dormant]);
-        Assert.Throws<ArgumentException>(() => DaggerfallQuestClockCompiler.ValidateSavedState("quest:travel", [derived], [dormant with { Enabled = true }]));
-        DaggerfallQuestRuntimeInstance runtime = Runtime(source, program, [dormant]);
-        NotSupportedException exception = Assert.Throws<NotSupportedException>(() => runtime.StartClock("traveltime"));
-        Assert.Contains("#8051", exception.Message, StringComparison.Ordinal);
-        Assert.False(Assert.Single(runtime.Capture().Clocks).Enabled);
-        Assert.Contains("destination travel", DaggerfallQuestClockCompiler.UnsupportedStartCondition(destination), StringComparison.Ordinal);
+        Assert.True(DaggerfallQuestClockCompiler.UsesTravelDuration(derived));
+        DaggerfallQuestClockCompiler.ValidateSavedState("quest:travel", [derived], [sampled]);
+        Assert.Throws<ArgumentException>(() => DaggerfallQuestClockCompiler.ValidateSavedState("quest:travel", [derived], [sampled with { RemainingSeconds = 216001 }]));
+        DaggerfallQuestRuntimeInstance runtime = Runtime(source, program, [sampled]);
+        Assert.True(runtime.StartClock("traveltime"));
+        Assert.Equal(sampled.StartingSeconds, Assert.Single(runtime.Capture().Clocks).StartingSeconds);
+        DaggerfallQuestSourceDefinition destinationSource = Source(Clock(1, "clock _2place_ 00:00"));
+        DaggerfallQuestClockDefinition destinationDefinition = Assert.Single(DaggerfallQuestClockCompiler.Compile(destinationSource));
+        DaggerfallQuestRuntimeInstance destinationRuntime = Runtime(destinationSource,
+            DaggerfallQuestTaskCompiler.Compile(destinationSource), [destination]);
+        destinationRuntime.TravelClockSeconds = (_, symbol) => symbol == "place" ? 86400 : throw new Exception("wrong place");
+        Assert.True(destinationRuntime.StartClock("2place"));
+        Assert.Equal(86400, Assert.Single(destinationRuntime.Capture().Clocks).RemainingSeconds);
+        DaggerfallQuestClockCompiler.ValidateSavedState("quest:destination", [destinationDefinition], destinationRuntime.Capture().Clocks);
+        DaggerfallQuestRuntimeInstance restored = new(destinationRuntime.Capture(), program);
+        Assert.Equal(86400, Assert.Single(restored.Capture().Clocks).RemainingSeconds);
     }
 
     [Fact]

@@ -114,6 +114,8 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             _ = DaggerfallPublishedClassicMedia.Read(selected.Content, charingInteriorInputs.ClassicPresentation);
             DaggerfallTuning tuning = DaggerfallTuning.Read(selected.Tuning.Payload.Span);
             DaggerfallSiteProfiles profiles = new([inputs, castleInputs, charingExteriorInputs, charingInteriorInputs]);
+            foreach (DaggerfallWorldProfileKey key in profiles.Keys)
+                profiles.Require(key).InteriorBuilding?.ValidateAgainst(blocks);
             return new DaggerfallAdmittedContent(definitions, blocks, inputs, profiles, [.. fightersGuildQuests, .. classicQuestReceipts], disabledQuestSelection, tuning, classicMedia, new DaggerfallSiteAudioBundles(selected.Content, profiles), selected.Content);
         });
 

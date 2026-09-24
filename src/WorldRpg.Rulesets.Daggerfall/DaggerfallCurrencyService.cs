@@ -64,6 +64,22 @@ internal sealed class DaggerfallCurrencyService
 
     internal DaggerfallCurrencySave Capture() => new(_accountGold, _nextGoldStack);
 
+    /// <summary>Settles a loan/property credit directly in the existing account ledger.</summary>
+    internal bool TryCreditAccount(ulong amount)
+    {
+        if (amount == 0 || amount > ulong.MaxValue - _accountGold) return false;
+        _accountGold += amount;
+        return true;
+    }
+
+    /// <summary>Settles a loan/property debit directly in the existing account ledger.</summary>
+    internal bool TryDebitAccount(ulong amount)
+    {
+        if (amount == 0 || amount > _accountGold) return false;
+        _accountGold -= amount;
+        return true;
+    }
+
     /// <summary>
     /// Pays carried gold and admits any immediate service grants through one Engine inventory
     /// candidate.  The service owner has already decided pricing and meaning; this owner selects
@@ -87,6 +103,64 @@ internal sealed class DaggerfallCurrencyService
 
         _inventory.CommitAtomic(spends, awards);
         foreach (InventoryConsume spent in spends)
+        {
+            InventoryStack? current = _inventory.Read().Stacks.SingleOrDefault(stack => stack.Id == spent.Stack);
+            if (current is not { Quantity: > 0 } && _instances.ContainsStack(DaggerfallItemOwner.Player, spent.Stack))
+                _instances.RemoveStack(DaggerfallItemOwner.Player, spent.Stack);
+        }
+        return true;
+    }
+
+    /// <summary>Spends carried currency in the donor's gold-if-sufficient, otherwise letter-first order.</summary>
+    internal bool TrySpendCarried(ulong amount)
+    {
+        if (amount == 0) return false;
+        DaggerfallCurrencyTotals funds = Read();
+        if (funds.Gold >= amount) return TrySpendGold(amount, []);
+        if (funds.LettersOfCredit < amount - funds.Gold) return false;
+
+        ulong remaining = amount;
+        var letters = _inventory.Read().UniqueItems
+            .Where(item => item.Definition.Value == LetterItem)
+            .OrderBy(item => _inventory.GetDurableItemId(item.Entity).Value)
+            .Select(item => (Item: item, Id: _inventory.GetDurableItemId(item.Entity).Value,
+                Metadata: _instances.RequireUnique(_inventory.GetDurableItemId(item.Entity).Value)))
+            .ToArray();
+        if (letters.Any(letter => letter.Metadata.Owner != DaggerfallItemOwner.Player
+            || letter.Metadata.CreditValue is not > 0)) return false;
+        List<WorldRpg.Kit.Inventory.UniqueInventoryItem> retired = [];
+        List<ulong> retiredIds = [];
+        (ulong Id, DaggerfallItemInstanceMetadata Metadata)? partial = null;
+        foreach (var (item, id, metadata) in letters)
+        {
+            if (remaining == 0) break;
+            ulong value = metadata.CreditValue!.Value;
+            if (remaining < value)
+            {
+                partial = (id, metadata with { CreditValue = value - remaining });
+                remaining = 0;
+            }
+            else
+            {
+                retired.Add(new WorldRpg.Kit.Inventory.UniqueInventoryItem(item.Entity.Value, new InventoryItemId(LetterItem)));
+                retiredIds.Add(id);
+                remaining -= value;
+            }
+        }
+        List<InventoryConsume> coins = [];
+        foreach (InventoryStack stack in _inventory.Read().Stacks.Where(IsGold).OrderBy(stack => stack.Id.Value, StringComparer.Ordinal))
+        {
+            if (remaining == 0) break;
+            ulong spent = Math.Min(remaining, stack.Quantity);
+            if (spent > 0) coins.Add(new InventoryConsume(stack.Id, spent));
+            remaining -= spent;
+        }
+        if (remaining != 0) return false;
+        if (retired.Count > 0 || coins.Count > 0)
+            _inventory.CommitAtomic(coins, [], retired);
+        foreach (ulong id in retiredIds) _instances.RemoveUnique(id);
+        if (partial is { } adjusted) _instances.ReplaceUnique(adjusted.Id, adjusted.Metadata);
+        foreach (InventoryConsume spent in coins)
         {
             InventoryStack? current = _inventory.Read().Stacks.SingleOrDefault(stack => stack.Id == spent.Stack);
             if (current is not { Quantity: > 0 } && _instances.ContainsStack(DaggerfallItemOwner.Player, spent.Stack))

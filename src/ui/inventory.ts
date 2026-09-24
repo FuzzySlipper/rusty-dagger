@@ -32,6 +32,9 @@ export interface BankProjection {
   readonly currentRegion: number;
   readonly currentBalance: string;
   readonly accounts: readonly BankAccount[];
+  readonly maximumNewLoan: string;
+  readonly loan: { readonly principal: string; readonly remaining: string; readonly dueMinute: number;
+    readonly daysRemaining: number; readonly defaulted: boolean } | null;
 }
 
 /** A completed ruleset-owned equipment change. Delay fields remain available to a later readiness owner. */
@@ -98,6 +101,9 @@ export type InventoryAction = {
   readonly action: 'bank-transfer';
   readonly amount: number;
   readonly destination: number;
+} | {
+  readonly action: 'bank-loan-issue' | 'bank-loan-repay-account' | 'bank-loan-repay-carried';
+  readonly amount: number;
 };
 
 type MoveSource = { readonly key: string; readonly revision: string };
@@ -300,7 +306,8 @@ export function mountInventory(
           if (Number.isInteger(destination) && destination >= 0 && destination < 62)
             claim({ action: bankAction, amount: parsedAmount, destination });
         } else if (bankAction === 'currency-deposit-gold' || bankAction === 'currency-withdraw-gold'
-          || bankAction === 'currency-withdraw-letter') {
+          || bankAction === 'currency-withdraw-letter' || bankAction === 'bank-loan-issue'
+          || bankAction === 'bank-loan-repay-account' || bankAction === 'bank-loan-repay-carried') {
           claim({ action: bankAction, amount: parsedAmount });
         }
       }
@@ -493,6 +500,8 @@ function createBankControls(): {
   const balances = document.createElement('ul');
   balances.className = 'dagger-bank-balances';
   balances.setAttribute('aria-label', 'Regional account balances');
+  const loan = document.createElement('p');
+  loan.className = 'dagger-bank-loan';
   const amount = document.createElement('input');
   amount.type = 'number';
   amount.min = '1';
@@ -509,6 +518,9 @@ function createBankControls(): {
     ['currency-deposit-letters', 'Deposit all letters'],
     ['currency-withdraw-letter', 'Withdraw letter'],
     ['bank-transfer', 'Transfer to region'],
+    ['bank-loan-issue', 'Borrow into this account'],
+    ['bank-loan-repay-account', 'Repay from this account'],
+    ['bank-loan-repay-carried', 'Repay with carried currency, then account'],
   ];
   for (const [action, label] of actions) {
     const button = document.createElement('button');
@@ -517,7 +529,7 @@ function createBankControls(): {
     button.textContent = label;
     controls.append(button);
   }
-  section.append(heading, active, balances, amount, destination, controls);
+  section.append(heading, active, loan, balances, amount, destination, controls);
 
   return {
     element: section,
@@ -530,12 +542,18 @@ function createBankControls(): {
       for (const button of Array.from(controls.querySelectorAll<HTMLButtonElement>('button'))) button.disabled = !enabled;
       if (value === null) {
         active.textContent = '';
+        loan.textContent = '';
         balances.replaceChildren();
         destination.replaceChildren();
         destination.disabled = true;
         return;
       }
       active.textContent = `Region ${value.currentRegion}: ${value.currentBalance} gold`;
+      loan.textContent = value.loan === null
+        ? `No outstanding loan. Maximum new loan ${value.maximumNewLoan} gold.`
+        : value.loan.defaulted
+          ? `Defaulted loan: ${value.loan.remaining} gold remains.`
+          : `Loan: ${value.loan.remaining} gold remains; ${value.loan.daysRemaining} days until due.`;
       balances.replaceChildren(...value.accounts.map((account) => {
         const row = document.createElement('li');
         row.textContent = `Region ${account.region}: ${account.gold}`;

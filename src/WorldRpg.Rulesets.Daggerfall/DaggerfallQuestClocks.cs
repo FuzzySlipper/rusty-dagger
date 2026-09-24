@@ -49,21 +49,10 @@ internal static class DaggerfallQuestClockCompiler
         return [.. clocks];
     }
 
-    internal static string? UnsupportedTravelCondition(DaggerfallQuestClockDefinition clock)
-    {
-        if ((clock.Flag & 16) != 0)
-            return $"flag {clock.Flag} requires the donor's travel-derived duration";
-        if ((clock.Flag & 1) != 0 && clock.MaxRange > 0 && clock.MinimumSeconds == 0)
-            return $"flag {clock.Flag} with range {clock.MinRange} {clock.MaxRange} requires the donor's travel-derived fallback duration";
-        return null;
-    }
+    internal static bool UsesTravelDuration(DaggerfallQuestClockDefinition clock) =>
+        (clock.Flag & 16) != 0 || ((clock.Flag & 1) != 0 && clock.MaxRange > 0 && clock.MinimumSeconds == 0);
 
-    internal static string? UnsupportedStartCondition(DaggerfallQuestClockState clock)
-    {
-        if (clock.Symbol.StartsWith("2", StringComparison.Ordinal) && clock.StartingSeconds == 0)
-            return "the donor's _2..._ destination travel duration";
-        return UnsupportedTravelCondition(new(clock.Symbol, clock.StartingSeconds, clock.StartingSeconds, clock.Flag, clock.MinRange, clock.MaxRange));
-    }
+    internal static bool IsDestinationClock(string symbol) => symbol.StartsWith('2') && symbol.Length > 1;
 
     internal static void ValidateSavedState(string owner, IReadOnlyList<DaggerfallQuestClockDefinition> definitions,
         IReadOnlyList<DaggerfallQuestClockState> clocks)
@@ -77,16 +66,15 @@ internal static class DaggerfallQuestClockCompiler
             if (!string.Equals(clock.Symbol, definition.Symbol, StringComparison.Ordinal)
                 || clock.Flag != definition.Flag || clock.MinRange != definition.MinRange || clock.MaxRange != definition.MaxRange)
                 throw new ArgumentException($"Quest instance '{owner}' clock state at position {index} does not match its definition.");
-            if (UnsupportedTravelCondition(definition) is not null)
-            {
-                if (clock.StartingSeconds != 0 || clock.RemainingSeconds != 0 || clock.Enabled || clock.Finished)
-                    throw new ArgumentException($"Quest instance '{owner}' clock '{clock.Symbol}' requires #8051 travel policy before it can leave its dormant state.");
-                continue;
-            }
-            if (clock.StartingSeconds < definition.MinimumSeconds || clock.StartingSeconds > definition.MaximumSeconds
+            bool destinationSampled = IsDestinationClock(clock.Symbol)
+                && definition.MinimumSeconds == 0 && definition.MaximumSeconds == 0;
+            bool destinationDormant = destinationSampled && clock.StartingSeconds == 0
+                && clock.RemainingSeconds == 0 && !clock.Enabled && !clock.Finished;
+            if (!destinationDormant && (((UsesTravelDuration(definition) || destinationSampled) ? clock.StartingSeconds <= 0
+                    : clock.StartingSeconds < definition.MinimumSeconds || clock.StartingSeconds > definition.MaximumSeconds)
                 || clock.RemainingSeconds < 0 || clock.RemainingSeconds > clock.StartingSeconds
                 || (clock.Finished && (clock.Enabled || clock.RemainingSeconds != 0))
-                || (!clock.Finished && clock.RemainingSeconds == 0))
+                || (!clock.Finished && clock.RemainingSeconds == 0)))
                 throw new ArgumentException($"Quest instance '{owner}' clock '{clock.Symbol}' has incompatible remaining state.");
         }
     }

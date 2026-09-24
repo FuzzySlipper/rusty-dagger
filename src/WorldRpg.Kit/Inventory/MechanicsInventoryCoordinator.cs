@@ -150,14 +150,21 @@ public sealed class MechanicsInventoryCoordinator
     /// identities before calling this method; the Engine remains responsible for capacity,
     /// containment, and all-or-nothing publication.
     /// </summary>
-    public void CommitAtomic(IEnumerable<InventoryConsume> consumes, IEnumerable<InventoryAtomicGrant> grants)
+    public void CommitAtomic(IEnumerable<InventoryConsume> consumes, IEnumerable<InventoryAtomicGrant> grants,
+        IEnumerable<UniqueInventoryItem>? destroys = null)
     {
         ArgumentNullException.ThrowIfNull(consumes);
         ArgumentNullException.ThrowIfNull(grants);
         InventoryConsume[] payments = consumes.Select(consume => consume.Validate()).ToArray();
         InventoryAtomicGrant[] awards = grants.Select(grant => grant.Validate()).ToArray();
-        if (payments.Length == 0 && awards.Length == 0)
-            throw new ArgumentException("An atomic inventory commit requires a payment or grant.");
+        UniqueInventoryItem[] retired = (destroys ?? []).ToArray();
+        if (payments.Length == 0 && awards.Length == 0 && retired.Length == 0)
+            throw new ArgumentException("An atomic inventory commit requires a payment, grant, or unique-item removal.");
+        (EntityId Entity, DurableIdentityReference Identity)[] retiredEntities = [.. retired.Select(item =>
+        {
+            EntityId entity = RequireUniqueEntity(item);
+            return (entity, GetDurableItemId(entity));
+        })];
 
         List<DurableIdentityReference> created = [];
         try
@@ -165,6 +172,8 @@ public sealed class MechanicsInventoryCoordinator
             using InventoryEdit candidate = Component.Store.Prepare();
             foreach (InventoryConsume payment in payments)
                 candidate.Consume(Component.Owner, payment.Stack, payment.Quantity);
+            foreach ((EntityId entity, _) in retiredEntities)
+                candidate.DestroyUnique(entity);
             foreach (InventoryAtomicGrant award in awards)
             {
                 ItemDefinition definition = RequireDefinition(award.Item);
@@ -184,6 +193,8 @@ public sealed class MechanicsInventoryCoordinator
                 }
             }
             candidate.Publish();
+            foreach ((_, DurableIdentityReference identity) in retiredEntities)
+                Entities.Destroy(identity);
         }
         catch
         {

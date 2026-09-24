@@ -156,7 +156,20 @@ internal static class PrivateersHoldContent
             groundContainerSprite,
             dungeonMap,
             dungeonActions,
-            actionModels);
+            actionModels,
+            ReadInteriorBuilding(normalizedWorld, profileKind, diagnostics));
+    }
+
+    private static DaggerfallInteriorBuilding? ReadInteriorBuilding(ReadOnlyMemory<byte>? bytes,
+        DaggerfallWorldProfileKind kind, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (bytes is null) return null;
+        try { return DaggerfallInteriorBuilding.Read(bytes.Value, kind); }
+        catch (Exception error) when (error is JsonException or ArgumentException or InvalidOperationException or KeyNotFoundException or FormatException or OverflowException)
+        {
+            diagnostics.Add($"Normalized interior building metadata is malformed: {error.Message}");
+            return null;
+        }
     }
 
     /// <summary>
@@ -2035,7 +2048,7 @@ internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 T
     internal NormalizedAttackSequence? RangedAttackSequence { get; init; }
     internal NormalizedActorSprite? Corpse { get; init; }
 }
-internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyDictionary<int, NormalizedActorSprite>? mobileSprites = null, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null, IReadOnlyList<DaggerfallRdbDoorDefinition>? doors = null, DaggerfallWorldProfileKind profileKind = DaggerfallWorldProfileKind.Dungeon, string? logicalProfileId = null, IReadOnlyList<DaggerfallSitePortal>? portals = null, IReadOnlyList<DaggerfallSiteAnchor>? anchors = null, IReadOnlyList<DaggerfallSiteLight>? lights = null, NormalizedGroundContainerSprite? groundContainerSprite = null, DaggerfallDungeonMapContent? dungeonMap = null, IReadOnlyList<DaggerfallDungeonActionDefinition>? dungeonActions = null, IReadOnlyList<DaggerfallDungeonActionModelDefinition>? dungeonActionModels = null)
+internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyDictionary<int, NormalizedActorSprite>? mobileSprites = null, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null, IReadOnlyList<DaggerfallRdbDoorDefinition>? doors = null, DaggerfallWorldProfileKind profileKind = DaggerfallWorldProfileKind.Dungeon, string? logicalProfileId = null, IReadOnlyList<DaggerfallSitePortal>? portals = null, IReadOnlyList<DaggerfallSiteAnchor>? anchors = null, IReadOnlyList<DaggerfallSiteLight>? lights = null, NormalizedGroundContainerSprite? groundContainerSprite = null, DaggerfallDungeonMapContent? dungeonMap = null, IReadOnlyList<DaggerfallDungeonActionDefinition>? dungeonActions = null, IReadOnlyList<DaggerfallDungeonActionModelDefinition>? dungeonActionModels = null, DaggerfallInteriorBuilding? interiorBuilding = null)
 {
     internal ProjectFacts Project { get; } = project;
     internal SpatialContentArtifact SpatialArtifact { get; } = spatialArtifact;
@@ -2049,6 +2062,7 @@ internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentA
     internal IReadOnlyList<NormalizedAudioClip> Audio { get; } = Array.AsReadOnly((audio ?? []).ToArray());
     internal NormalizedClassicPresentation ClassicPresentation { get; } = classicPresentation ?? NormalizedClassicPresentation.Empty;
     internal DaggerfallWorldProfileKind ProfileKind { get; } = profileKind;
+    internal DaggerfallInteriorBuilding? InteriorBuilding { get; } = interiorBuilding?.Validate();
     internal DaggerfallWorldProfileKey ProfileKey => Site is { } selected
         ? new DaggerfallWorldProfileKey(selected, ProfileKind, logicalProfileId ?? "unscoped-profile").Validate()
         : throw new InvalidOperationException("A selectable world profile must name its geographic site.");

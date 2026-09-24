@@ -52,6 +52,33 @@ internal sealed class DaggerfallRegionalBankState
     internal DaggerfallRegionalBankSave Capture() => new(
         _balances.Select((balance, region) => new DaggerfallBankAccountSave(region, balance)).ToArray());
 
+    /// <summary>Issues a bank-owned credit into one regional account without inventing a second balance.</summary>
+    internal bool TryCreditAccount(int region, ulong amount)
+    {
+        if (!DaggerfallRegionalBankPolicy.IsValidRegion(region) || amount == 0
+            || amount > (ulong)DaggerfallRegionalBankPolicy.MaximumTransactionAmount
+            || !LedgerMatches() || !CanIncrease(_balances[region], amount)
+            || !_currency.TryCreditAccount(amount)) return false;
+        _balances[region] += amount;
+        Touch();
+        return true;
+    }
+
+    /// <summary>Repays or spends from a regional account through the same settlement ledger.</summary>
+    internal bool TryDebitAccount(int region, ulong amount)
+    {
+        if (!CanDebitAccount(region, amount)
+            || !_currency.TryDebitAccount(amount)) return false;
+        _balances[region] -= amount;
+        Touch();
+        return true;
+    }
+
+    internal bool CanDebitAccount(int region, ulong amount) =>
+        DaggerfallRegionalBankPolicy.IsValidRegion(region) && amount > 0
+        && amount <= (ulong)DaggerfallRegionalBankPolicy.MaximumTransactionAmount
+        && LedgerMatches() && _balances[region] >= amount;
+
     internal DaggerfallBankTransactionOutcome DepositGold(int region, long amount)
         => DepositGold(region, amount, null, null);
 

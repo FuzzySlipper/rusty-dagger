@@ -73,9 +73,11 @@ internal sealed class DaggerfallGuildPolicyDefinition
         bool neverExpels = false,
         IEnumerable<DaggerfallGuildPrivilegeDefinition>? privileges = null,
         int reviewIntervalDays = DaggerfallGuildMembershipPolicy.DefaultReviewIntervalDays,
-        IEnumerable<DaggerfallGuildRankRequirement>? rankRequirements = null)
+        IEnumerable<DaggerfallGuildRankRequirement>? rankRequirements = null,
+        int? reputationFactionId = null)
     {
         if (factionId <= 0) throw new ArgumentOutOfRangeException(nameof(factionId), factionId, "A guild faction identity is positive.");
+        if (reputationFactionId is <= 0) throw new ArgumentOutOfRangeException(nameof(reputationFactionId), "A reputation faction identity is positive.");
         ArgumentNullException.ThrowIfNull(guildSkills);
         if (reviewIntervalDays <= 0) throw new ArgumentOutOfRangeException(nameof(reviewIntervalDays), reviewIntervalDays, "A guild review interval is positive.");
 
@@ -96,6 +98,7 @@ internal sealed class DaggerfallGuildPolicyDefinition
         foreach (DaggerfallGuildRankRequirement requirement in ranks) requirement.Validate();
 
         FactionId = factionId;
+        ReputationFactionId = reputationFactionId ?? factionId;
         GuildSkills = Array.AsReadOnly(skills);
         NeverExpels = neverExpels;
         Privileges = Array.AsReadOnly(benefits);
@@ -104,6 +107,7 @@ internal sealed class DaggerfallGuildPolicyDefinition
     }
 
     internal int FactionId { get; }
+    internal int ReputationFactionId { get; }
     internal IReadOnlyList<string> GuildSkills { get; }
     internal bool NeverExpels { get; }
     internal IReadOnlyList<DaggerfallGuildPrivilegeDefinition> Privileges { get; }
@@ -203,6 +207,7 @@ internal sealed class DaggerfallGuildMembershipPolicy
         {
             if (!_social.GuildEligibility(definition.FactionId).IsGuild)
                 throw new ArgumentException($"Faction {definition.FactionId} does not name an admitted guild.", nameof(definitions));
+            _ = _social.FactionReputation(definition.ReputationFactionId);
         }
         if (values.Select(definition => definition.FactionId).Distinct().Count() != values.Length)
             throw new ArgumentException("Guild policy definitions must name distinct factions.", nameof(definitions));
@@ -213,7 +218,7 @@ internal sealed class DaggerfallGuildMembershipPolicy
     internal DaggerfallGuildRankAssessment Assess(int factionId)
     {
         DaggerfallGuildPolicyDefinition definition = RequireDefinition(factionId);
-        int reputation = _social.GuildEligibility(factionId).Reputation;
+        int reputation = _social.FactionReputation(definition.ReputationFactionId);
         List<DaggerfallGuildRankCheck> checks = [];
         int highest = -1;
         bool blocked = false;
@@ -258,7 +263,7 @@ internal sealed class DaggerfallGuildMembershipPolicy
         string[] privileges = isMember
             ? [.. definition.Privileges.Where(privilege => privilege.MinimumRank <= rank).Select(privilege => privilege.Id)]
             : [];
-        return new(factionId, guildGroup, isMember, rank, eligibility.Reputation, lastRankChangeDay,
+        return new(factionId, guildGroup, isMember, rank, assessment.Reputation, lastRankChangeDay,
             recognition, daysUntilReview, current, next, assessment.HighestQualifiedRank, Array.AsReadOnly(privileges));
     }
 
@@ -410,18 +415,6 @@ internal static class DaggerfallGuildPolicyCatalog
     internal const int ThievesFactionId = 42;
     internal const int DarkBrotherhoodFactionId = 108;
 
-    internal static IReadOnlyList<DaggerfallGuildPolicyDefinition> CoreGuilds { get; } =
-        Array.AsReadOnly(new[]
-        {
-            new DaggerfallGuildPolicyDefinition(FightersFactionId,
-                ["archery", "axe", "blunt-weapon", "giantish", "long-blade", "orcish", "short-blade"]),
-            new DaggerfallGuildPolicyDefinition(MagesFactionId,
-                ["alteration", "destruction", "illusion", "mysticism", "restoration", "thaumaturgy"]),
-            new DaggerfallGuildPolicyDefinition(ThievesFactionId,
-                ["backstabbing", "climbing", "lockpicking", "pickpocket", "short-blade", "stealth", "streetwise"],
-                neverExpels: true),
-            new DaggerfallGuildPolicyDefinition(DarkBrotherhoodFactionId,
-                ["archery", "backstabbing", "climbing", "critical-strike", "daedric", "destruction", "short-blade", "stealth", "streetwise"],
-                neverExpels: true),
-        });
+    internal static IReadOnlyList<DaggerfallGuildPolicyDefinition> CoreGuilds =>
+        DaggerfallConcreteGuildCatalog.StandaloneMembershipPolicies;
 }

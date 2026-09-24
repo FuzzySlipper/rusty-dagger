@@ -74,7 +74,7 @@ internal static class DaggerfallClassicQuestCorpusContent
                 .Select(diagnostic => $"{diagnostic.Line}\0{diagnostic.Text}\0{diagnostic.Reason}")];
             if (!publishedSourceDiagnostics.SequenceEqual(actualSourceDiagnostics)) throw new DaggerfallContentException([$"Classic quest receipt '{sourceFile}' does not retain exact source diagnostics."]);
             List<DaggerfallQuestDiagnosticDefinition> diagnostics = [.. source.Diagnostics, .. DaggerfallQuestTaskCompiler.Assess(source)];
-            try { foreach (DaggerfallQuestClockDefinition clock in DaggerfallQuestClockCompiler.Compile(source)) if (DaggerfallQuestClockCompiler.UnsupportedTravelCondition(clock) is { } reason) diagnostics.Add(new(1, clock.Symbol, reason)); }
+            try { _ = DaggerfallQuestClockCompiler.Compile(source); }
             catch (ArgumentException exception) { diagnostics.Add(new(1, sourceFile, exception.Message)); }
             if (availability == "notOffered") diagnostics.Add(new(1, sourceFile, "Disabled classic quest entries are not ordinary offers."));
             if (name == "R0C11Y28")
