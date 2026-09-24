@@ -7,6 +7,7 @@ import { mountCharacter, isCharacterProjection, type CharacterProjection, type C
 import { mountLoot, type LootProjection, type LootAction } from './loot.js';
 import { mountNotebook, type NotebookProjection, type NotebookAction } from './notebook.js';
 import { BEGIN_ACTION, TITLE_MODE, screenForMode } from './screens.js';
+import { mountTravel, isTravelProjection, type TravelProjection } from './travel.js';
 
 interface ProjectionEnvelope {
   readonly contract: string;
@@ -48,6 +49,7 @@ interface DaggerHud {
   readonly controls?: ControlsProjection;
   readonly activation?: { readonly mode: string; readonly message: string; readonly applied: boolean; readonly dialogue?: DialogueProjection | null };
   readonly transport?: TransportProjection | null;
+  readonly travel?: TravelProjection | null;
   readonly quests?: QuestPresentation;
   readonly notebook?: NotebookProjection;
   readonly view?: { readonly yawRadians: number; readonly pitchRadians: number; readonly interaction: string };
@@ -357,6 +359,9 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   }));
   const transportRoot = shell.querySelector<HTMLElement>('.dagger-transport-root')!;
   const transportView = mountTransport(transportRoot, action => context.intents?.claim('dagger.ui', {
+    kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
+  }));
+  const travelView = mountTravel(transportRoot, action => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
   }));
   const restRoot = shell.querySelector<HTMLElement>('.dagger-rest-root')!;
@@ -823,6 +828,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
 
     if (value.inventory) inventoryView.update(value.inventory);
     transportView.update(isTransportProjection(value.transport) ? value.transport : null, value.inventory);
+    travelView.update(isTravelProjection(value.travel) ? value.travel : null);
     if (value.character && isCharacterProjection(value.character)) characterView.update(value.character);
     if (value.notebook) notebookView.update(value.notebook);
     const dungeonText = value.dungeonText ?? null;
@@ -931,6 +937,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     controlsView.dispose();
     inventoryView.dispose();
     transportView.dispose();
+    travelView.dispose();
     characterView.dispose();
     notebookView.dispose();
     lootView.dispose();

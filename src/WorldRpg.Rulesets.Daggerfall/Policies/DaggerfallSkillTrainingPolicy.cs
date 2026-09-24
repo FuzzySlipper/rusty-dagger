@@ -12,7 +12,7 @@ internal sealed record DaggerfallSkillTrainingProviderPolicy(
 /// <remarks>
 /// Service faction IDs and skill lists follow the donor's GuildNpcServices, guild TrainingSkills,
 /// and Temple.GetTrainingSkills definitions. Membership is checked against the owning guild or
-/// deity faction, rather than the trainer's separate service faction.
+/// temple membership variant, rather than the trainer's separate service faction.
 /// </remarks>
 internal static class DaggerfallSkillTrainingPolicy
 {
@@ -35,22 +35,23 @@ internal static class DaggerfallSkillTrainingPolicy
             [839] = Provider(839, 108, true,
                 "archery", "backstabbing", "climbing", "critical-strike", "daedric", "destruction", "dodging", "running", "short-blade", "stealth", "streetwise", "swimming"),
 
-            // Temples admit training without membership; their member price still follows deity affiliation.
-            [247] = Provider(247, 26, false,
+            // Temples admit training without membership; their member price follows the
+            // concrete group-17 temple membership rather than its deity parent.
+            [247] = Provider(247, Guilds.DaggerfallConcreteGuildCatalog.AkatoshTempleFactionId, false,
                 "alteration", "archery", "daedric", "destruction", "dragonish", "long-blade", "running", "stealth", "swimming"),
-            [241] = Provider(241, 21, false,
+            [241] = Provider(241, Guilds.DaggerfallConcreteGuildCatalog.ArkayTempleFactionId, false,
                 "axe", "backstabbing", "climbing", "critical-strike", "daedric", "destruction", "medical", "restoration", "short-blade"),
-            [250] = Provider(250, 29, false,
+            [250] = Provider(250, Guilds.DaggerfallConcreteGuildCatalog.DibellaTempleFactionId, false,
                 "daedric", "etiquette", "harpy", "illusion", "lockpicking", "long-blade", "nymph", "orcish", "restoration", "streetwise"),
-            [249] = Provider(249, 27, false,
+            [249] = Provider(249, Guilds.DaggerfallConcreteGuildCatalog.JulianosTempleFactionId, false,
                 "alteration", "critical-strike", "daedric", "impish", "lockpicking", "mercantile", "mysticism", "short-blade", "thaumaturgy"),
-            [254] = Provider(254, 35, false,
+            [254] = Provider(254, Guilds.DaggerfallConcreteGuildCatalog.KynarethTempleFactionId, false,
                 "archery", "climbing", "daedric", "destruction", "dodging", "dragonish", "harpy", "illusion", "jumping", "running", "stealth"),
-            [245] = Provider(245, 24, false,
+            [245] = Provider(245, Guilds.DaggerfallConcreteGuildCatalog.MaraTempleFactionId, false,
                 "archery", "critical-strike", "daedric", "etiquette", "harpy", "illusion", "medical", "nymph", "restoration", "streetwise"),
-            [252] = Provider(252, 33, false,
+            [252] = Provider(252, Guilds.DaggerfallConcreteGuildCatalog.StendarrTempleFactionId, false,
                 "axe", "blunt-weapon", "critical-strike", "daedric", "dodging", "medical", "orcish", "restoration", "spriggan"),
-            [243] = Provider(243, 22, false,
+            [243] = Provider(243, Guilds.DaggerfallConcreteGuildCatalog.ZenitharTempleFactionId, false,
                 "blunt-weapon", "centaurian", "daedric", "etiquette", "giantish", "harpy", "mercantile", "orcish", "pickpocket", "spriggan", "streetwise", "thaumaturgy"),
         };
 

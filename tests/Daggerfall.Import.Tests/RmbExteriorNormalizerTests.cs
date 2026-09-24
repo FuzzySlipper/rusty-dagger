@@ -39,6 +39,16 @@ public sealed class RmbExteriorNormalizerTests
         Assert.Equal(exterior.SpatialPublication.CollisionNavigation.Bytes.ToArray(), exteriorAgain.SpatialPublication.CollisionNavigation.Bytes.ToArray());
         Assert.Equal("RESIAL05.RMB", interior.Layout.Blocks.Single(block => block.X == 1 && block.Y == 1).SourceName);
         Assert.Equal(new RmbBuildingSelection(1, 1, 0), interior.Building);
+        Assert.Null(exterior.Document.World.InteriorBuilding);
+        NormalizedInteriorBuilding building = Assert.IsType<NormalizedInteriorBuilding>(interior.Document.World.InteriorBuilding);
+        Assert.Equal((1, 1, "RESIAL05.RMB", 0), (building.BlockX, building.BlockY, building.SourceKey, building.BuildingIndex));
+        BsaArchive blockArchive = BsaArchive.Parse(sources.Require("BLOCKS.BSA").Bytes.Span, sources.Require("BLOCKS.BSA").Label);
+        // The source slot selected for geometry must also supply the published access facts.
+        Assert.True(blockArchive.TryGetByName(building.SourceKey, out BsaRecord? sourceRecord));
+        byte[] sourceBytes = blockArchive.GetPayload(sourceRecord!).ToArray();
+        Assert.True(RmbBlockSummaryReader.TryRead(sourceBytes, blockArchive.Source, 0, sourceBytes.Length, out RmbBlockSummary? summary, out _));
+        Assert.Equal((summary!.Buildings[0].BuildingType, summary.Buildings[0].FactionId), ((byte)building.BuildingType, (ushort)building.FactionId));
+        Assert.Equal(building, NormalizedImportSerializer.Deserialize(NormalizedImportSerializer.Serialize(interior.Document)).World.InteriorBuilding);
         Assert.NotEmpty(interior.Document.Meshes);
         Assert.NotEmpty(interior.Document.Navigation!.Cells);
         Assert.Equal(new NormalizedMarker("marker/enter", new NormalizedVector3(8F, 0F, 4.8F)), interior.Document.World.EnterMarker);

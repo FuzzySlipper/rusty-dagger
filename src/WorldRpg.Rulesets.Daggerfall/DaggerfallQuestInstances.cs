@@ -4,6 +4,7 @@ using Rusty.Engine;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
+using WorldRpg.Rulesets.Daggerfall.Travel;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -264,6 +265,7 @@ internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[
 /// <summary>Mutable runtime representation of one quest; save DTOs are captured only at explicit boundaries.</summary>
 internal sealed class DaggerfallQuestRuntimeInstance
 {
+    internal Func<DaggerfallQuestRuntimeInstance, string?, long>? TravelClockSeconds { get; set; }
     internal DaggerfallQuestRuntimeInstance(DaggerfallQuestInstanceSave saved, DaggerfallQuestTaskProgram program)
     {
         ArgumentNullException.ThrowIfNull(saved);
@@ -305,8 +307,13 @@ internal sealed class DaggerfallQuestRuntimeInstance
         int index = Array.FindIndex(Clocks, clock => clock.Symbol == symbol);
         if (index < 0) return false;
         DaggerfallQuestClockState clock = Clocks[index];
-        if (DaggerfallQuestClockCompiler.UnsupportedStartCondition(clock) is { } condition)
-            throw new NotSupportedException($"Quest clock '{symbol}' requires {condition}; #8051 owns the missing quest-place/travel policy.");
+        if (DaggerfallQuestClockCompiler.IsDestinationClock(symbol) && clock.StartingSeconds == 0)
+        {
+            long seconds = TravelClockSeconds?.Invoke(this, symbol[1..])
+                ?? throw new NotSupportedException($"Quest clock '{symbol}' has no admitted travel route calculator.");
+            if (seconds <= 0) throw new InvalidOperationException($"Quest clock '{symbol}' resolved a nonpositive destination duration.");
+            clock = clock with { StartingSeconds = seconds, RemainingSeconds = seconds };
+        }
         if (!clock.Finished) Clocks[index] = clock with { Enabled = true };
         return true;
     }
@@ -348,6 +355,7 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
     private readonly Dictionary<string, DaggerfallQuestRuntimeInstance> _instances = new(StringComparer.Ordinal);
     private readonly Dictionary<string, DaggerfallQuestStartSave> _pendingStarts = new(StringComparer.Ordinal);
     private DaggerfallQuestRuntime? _runtime;
+    private Func<DaggerfallSiteId, long>? _travelMinutes;
     private const long TombstoneRetentionSeconds = 7 * 24 * 60 * 60;
 
     internal DaggerfallQuestInstances(DaggerfallDefinitions definitions, IRandomService random, DaggerfallQuestRuntimeAdmission? admission = null, DaggerfallDisabledQuestSelection? disabledSelection = null)
@@ -367,6 +375,41 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
 
     /// <summary>Binds the one session's live player and elapsed-time owners after composition completes.</summary>
     internal void BindRuntime(DaggerfallQuestRuntime runtime) => _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+
+    /// <summary>Uses the session's one route calculator for travel-derived quest deadlines.</summary>
+    internal void BindTravelMinutes(Func<DaggerfallSiteId, long> travelMinutes)
+    {
+        _travelMinutes = travelMinutes ?? throw new ArgumentNullException(nameof(travelMinutes));
+        foreach (DaggerfallQuestRuntimeInstance instance in _instances.Values)
+            instance.TravelClockSeconds = ResolveTravelClockSeconds;
+    }
+
+    private long ResolveTravelClockSeconds(DaggerfallQuestRuntimeInstance instance, string? destinationSymbol) =>
+        ResolveTravelClockSeconds(instance.Resources, destinationSymbol);
+
+    private long ResolveTravelClockSeconds(IReadOnlyList<DaggerfallQuestResourceState> resources, string? destinationSymbol)
+    {
+        Func<DaggerfallSiteId, long> route = _travelMinutes
+            ?? throw new NotSupportedException("Travel-derived quest clocks require the admitted route calculator.");
+        DaggerfallQuestResourceState[] places = [.. resources.Where(resource => resource.Binding.Kind == DaggerfallQuestResourceBindingKind.Place
+            && (destinationSymbol is null || resource.Symbol == destinationSymbol))];
+        if (places.Length == 0)
+            throw new NotSupportedException(destinationSymbol is null
+                ? "Travel-derived quest clock has no bound Place resource."
+                : $"Travel-derived quest clock has no bound Place resource '{destinationSymbol}'.");
+        long totalMinutes = 0;
+        foreach (DaggerfallQuestResourceState place in places)
+        {
+            DaggerfallSiteId site = place.Binding.Places[0].Require();
+            long minutes = route(site);
+            if (minutes < 0) throw new InvalidOperationException($"Travel-derived quest clock has a negative route to {site.Region}:{site.Index}.");
+            totalMinutes = checked(totalMinutes + Math.Max(1440, minutes));
+        }
+        // Clock.cs applies the 2.5 return multiplier once to the combined minute count. The
+        // _2place_ timer is one-way and samples its route only when its start action executes.
+        long seconds = DaggerfallTravelPolicy.ToQuestSeconds(totalMinutes);
+        return destinationSymbol is null ? DaggerfallTravelPolicy.ReturnTripSeconds(seconds) : seconds;
+    }
 
     internal DaggerfallQuestPresentation ReadPresentation(Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestMessageContext> context)
     {
@@ -411,11 +454,11 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
         DaggerfallQuestClockDefinition[] clocks = DaggerfallQuestClockCompiler.Compile(_definitions.QuestSources.Resolve(instance.SourceFile));
         DaggerfallQuestRuntimeInstance started = new(instance with { Tasks = DaggerfallQuestTaskCompiler.InitialState(program), Clocks = [.. clocks.Select(clock =>
         {
-            long duration = DaggerfallQuestClockCompiler.UnsupportedTravelCondition(clock) is not null ? 0
+            long duration = DaggerfallQuestClockCompiler.UsesTravelDuration(clock) ? ResolveTravelClockSeconds(instance.Resources, null)
                 : clock.MaximumSeconds == clock.MinimumSeconds ? clock.MinimumSeconds
                 : _random.DrawKeyed(new KeyedRngRequest(0, "daggerfall.quest.clock", $"{instance.InstanceId}:{clock.Symbol}", clock.MinimumSeconds, clock.MaximumSeconds)).Value;
             return new DaggerfallQuestClockState(clock.Symbol, duration, duration, clock.Flag, clock.MinRange, clock.MaxRange, false, false);
-        })] }, program);
+        })] }, program) { TravelClockSeconds = ResolveTravelClockSeconds };
         if (!_instances.TryAdd(started.InstanceId, started)) throw new ArgumentException($"Quest instance '{started.InstanceId}' already exists.");
         return started.Capture();
     }
@@ -502,7 +545,7 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
         foreach (DaggerfallQuestInstanceSave instance in saved.Instances)
         {
             DaggerfallQuestTaskProgram program = Program(instance.SourceFile);
-            restored.Add(instance.InstanceId, new DaggerfallQuestRuntimeInstance(instance, program));
+            restored.Add(instance.InstanceId, new DaggerfallQuestRuntimeInstance(instance, program) { TravelClockSeconds = ResolveTravelClockSeconds });
         }
         _instances.Clear();
         foreach ((string id, DaggerfallQuestRuntimeInstance instance) in restored) _instances.Add(id, instance);

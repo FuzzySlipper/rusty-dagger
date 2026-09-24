@@ -846,6 +846,19 @@ public sealed record NormalizedGeometryPlacement(
     }
 }
 
+/// <summary>A selected building instance in the containing site's exterior block grid.</summary>
+public sealed record NormalizedInteriorBuilding(int BlockX, int BlockY, string SourceKey, int BuildingIndex, int BuildingType, int FactionId)
+{
+    public void Validate()
+    {
+        if (BlockX is < 0 or > 255 || BlockY is < 0 or > 255 || BuildingIndex < 0)
+            throw new InvalidOperationException("An interior building must identify a valid placed block and building slot.");
+        NormalizedImportDocument.RequireLogicalId(SourceKey, nameof(SourceKey));
+        if (BuildingType is < 0 or > 255 || FactionId is < 0 or > 65535)
+            throw new InvalidOperationException("An interior building has invalid source type or faction.");
+    }
+}
+
 public sealed record NormalizedWorld(
     int SchemaVersion,
     string VisualMeshAssetId,
@@ -860,6 +873,9 @@ public sealed record NormalizedWorld(
     IReadOnlyList<NormalizedDoorPlacement> Doors)
 {
     public const int CurrentSchemaVersion = 1;
+
+    /// <summary>Source-selected building instance; absent for worlds without a building selection.</summary>
+    public NormalizedInteriorBuilding? InteriorBuilding { get; init; }
 
     /// <summary>Source action nodes and their normalized forward links.</summary>
     public IReadOnlyList<NormalizedDungeonAction> Actions { get; init; } = [];
@@ -919,6 +935,7 @@ public sealed record NormalizedWorld(
 
         StartMarker?.Validate();
         EnterMarker?.Validate();
+        InteriorBuilding?.Validate();
         ArgumentNullException.ThrowIfNull(Lights);
         ArgumentNullException.ThrowIfNull(Billboards);
         ArgumentNullException.ThrowIfNull(Actors);

@@ -9,6 +9,9 @@ using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Modules.Encounters;
 using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using WorldRpg.Rulesets.Daggerfall.Banking;
+using WorldRpg.Rulesets.Daggerfall.Property;
+using WorldRpg.Rulesets.Daggerfall.Crime;
+using WorldRpg.Rulesets.Daggerfall.Guilds;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -55,6 +58,14 @@ internal sealed record DaggerfallSavePayload(
     /// <summary>The current regional account partition; carried coins and letters stay in inventory state.</summary>
     [JsonRequired]
     public DaggerfallRegionalBankSave Bank { get; init; } = DaggerfallRegionalBankSave.Empty;
+    [JsonRequired]
+    public DaggerfallLoansSave Loans { get; init; } = DaggerfallLoansSave.Empty;
+    [JsonRequired]
+    public DaggerfallPropertySave Property { get; init; } = DaggerfallPropertySave.Empty;
+    [JsonRequired]
+    public DaggerfallCrimeSave Crime { get; init; } = new([], [], [], 0, 0, 0, 0);
+    [JsonRequired]
+    public DaggerfallKnightlyOrderClaimStateSave KnightlyClaims { get; init; } = DaggerfallKnightlyOrderClaimStateSave.Empty;
     /// <summary>Movement work accumulated before its next calendar-minute fatigue charge.</summary>
     [JsonRequired]
     public DaggerfallLocomotionSave Locomotion { get; init; } = new(0d);
@@ -357,6 +368,16 @@ internal sealed record DaggerfallSavePayload(
                 throw new ArgumentException($"Saved wagon {wagon.Id} is not live in the persisted identity ledger.");
             ValidateInventory(wagon.Inventory, definitions, uniqueItems, DaggerfallItemOwner.Wagon(wagon.Id), requireEquipment: false);
         }
+        foreach (DaggerfallPropertyStorageSave storage in Property.Storage)
+        {
+            ulong containerId = checked((ulong)storage.ContainerId);
+            if (!containerIdentities.Add(containerId))
+                throw new ArgumentException($"Saved property storage container {containerId} collides with another container.");
+            if (savedLedger.Classify(new DurableIdentityReference(DurableIdentityKind.Container, containerId)) != DurableIdentityClassification.Live)
+                throw new ArgumentException($"Saved property storage container {containerId} is not live in the persisted identity ledger.");
+            ValidateInventory(storage.Inventory, definitions, uniqueItems,
+                DaggerfallItemOwner.Property(storage.ContainerId), requireEquipment: false);
+        }
         HashSet<long> actorInventories = [];
         foreach (DaggerfallActorInventorySave inventory in ActorInventories)
         {
@@ -490,6 +511,14 @@ internal sealed record DaggerfallSavePayload(
         Currency.Validate();
         ArgumentNullException.ThrowIfNull(Bank);
         Bank.Validate();
+        ArgumentNullException.ThrowIfNull(Loans);
+        Loans.Validate();
+        ArgumentNullException.ThrowIfNull(Property);
+        Property.Validate();
+        ArgumentNullException.ThrowIfNull(Crime);
+        Crime.Validate();
+        ArgumentNullException.ThrowIfNull(KnightlyClaims);
+        KnightlyClaims.Validate();
         ulong regionalBankTotal = 0;
         foreach (DaggerfallBankAccountSave account in Bank.Accounts)
             regionalBankTotal = checked(regionalBankTotal + account.Gold);
@@ -559,6 +588,9 @@ internal sealed record DaggerfallSavePayload(
         }
         if (Wagon is { } savedWagon && !containerIdentities.Add(checked((ulong)savedWagon.Id)))
             throw new ArgumentException("Saved wagon identity must be distinct from corpse and ground containers.");
+        foreach (DaggerfallPropertyStorageSave storage in Property.Storage)
+            if (!containerIdentities.Add(checked((ulong)storage.ContainerId)))
+                throw new ArgumentException($"Saved property storage container {storage.ContainerId} collides with another container.");
         foreach (DaggerfallSiteDeltaSave delta in SiteDeltas)
         foreach (DaggerfallCorpseSave corpse in delta.Corpses)
             if (!containerIdentities.Add(corpse.ContainerId))

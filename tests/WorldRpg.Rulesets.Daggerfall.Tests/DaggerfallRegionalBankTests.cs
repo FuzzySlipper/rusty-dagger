@@ -5,6 +5,7 @@ using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Banking;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
+using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -191,6 +192,109 @@ public sealed class DaggerfallRegionalBankTests
         Assert.Throws<ArgumentException>(() => fixture.Bank(currency, mismatched));
     }
 
+    [Fact]
+    public void Loan_issue_due_settlement_and_restore_use_the_real_bank_and_social_owners()
+    {
+        using Fixture fixture = new();
+        DaggerfallCurrencyService currency = fixture.Currency();
+        DaggerfallRegionalBankState bank = fixture.Bank(currency);
+        DaggerfallLoanSettlementAdapter settlement = DaggerfallLoanSettlementAdapter.ForBank(bank, currency);
+        DaggerfallLoanState loans = new();
+        DaggerfallSocialState social = new(fixture.Definitions.Factions);
+
+        Assert.True(loans.Issue(17, 1, 100, DaggerfallCalendar.Start, settlement).Approved);
+        Assert.Equal(100UL, bank.BalanceForRegion(17));
+        Assert.Equal(110UL, loans.Read(17)!.Remaining);
+        Assert.Equal(DaggerfallLoanIssueResult.AlreadyHaveLoan,
+            loans.Issue(17, 1, 100, DaggerfallCalendar.Start, settlement).Result);
+
+        DaggerfallCalendar overdue = DaggerfallCalendar.FromAbsoluteSeconds((loans.Read(17)!.DueMinute + 1) * 60);
+        Assert.Single(loans.AdvanceDue(overdue, bank, currency, settlement, social, fixture.Definitions.Factions));
+        Assert.Equal(0UL, bank.BalanceForRegion(17));
+        Assert.Equal(10UL, loans.Read(17)!.Remaining);
+        Assert.True(loans.Read(17)!.Defaulted);
+        Assert.Equal(-10, social.RegionalReputation(17));
+        Assert.Empty(loans.AdvanceDue(overdue, bank, currency, settlement, social, fixture.Definitions.Factions));
+        Assert.Equal(-10, social.RegionalReputation(17));
+
+        DaggerfallLoanState restored = new(loans.Capture());
+        fixture.GrantGold(10);
+        Assert.True(restored.Repay(17, 10, fromAccount: false, bank, currency, settlement).Applied);
+        Assert.Equal(0UL, restored.Read(17)!.Remaining);
+        Assert.True(restored.Read(17)!.Defaulted);
+        Assert.Equal(0UL, currency.Read().Gold);
+        Assert.Equal(DaggerfallLoanIssueResult.AlreadyDefaulted,
+            restored.Issue(17, 1, 100, overdue, settlement).Result);
+    }
+
+    [Fact]
+    public void Loan_issue_refuses_a_full_regional_account_without_creating_debt()
+    {
+        using Fixture fixture = new();
+        DaggerfallCurrencyService currency = fixture.Currency((ulong)int.MaxValue);
+        DaggerfallRegionalBankState bank = fixture.Bank(currency, fixture.Accounts((17, (ulong)int.MaxValue)));
+        DaggerfallLoanState loans = new();
+
+        Assert.Equal(DaggerfallLoanIssueResult.AccountLimitReached,
+            loans.Issue(17, 1, 100, DaggerfallCalendar.Start,
+                DaggerfallLoanSettlementAdapter.ForBank(bank, currency)).Result);
+        Assert.Null(loans.Read(17));
+        Assert.Equal((ulong)int.MaxValue, bank.BalanceForRegion(17));
+    }
+
+    [Fact]
+    public void Loan_repayment_combines_carried_currency_then_the_regional_account()
+    {
+        using Fixture fixture = new();
+        DaggerfallCurrencyService currency = fixture.Currency();
+        DaggerfallRegionalBankState bank = fixture.Bank(currency);
+        DaggerfallLoanSettlementAdapter settlement = DaggerfallLoanSettlementAdapter.ForBank(bank, currency);
+        DaggerfallLoanState coinsLoan = new();
+        Assert.True(coinsLoan.Issue(17, 1, 100, DaggerfallCalendar.Start, settlement).Approved);
+        fixture.GrantGold(50);
+
+        Assert.True(coinsLoan.Repay(17, 110, fromAccount: false, bank, currency, settlement).Applied);
+        Assert.Null(coinsLoan.Read(17));
+        Assert.Equal(0UL, currency.Read().Gold);
+        Assert.Equal(40UL, bank.BalanceForRegion(17));
+
+        DaggerfallLoanState letterLoan = new();
+        Assert.True(letterLoan.Issue(18, 1, 100, DaggerfallCalendar.Start, settlement).Approved);
+        fixture.GrantLetter(100);
+        Assert.True(letterLoan.Repay(18, 110, fromAccount: false, bank, currency, settlement).Applied);
+        Assert.Null(letterLoan.Read(18));
+        Assert.Equal(0UL, currency.Read().LettersOfCredit);
+        Assert.Equal(90UL, bank.BalanceForRegion(18));
+
+        DaggerfallLoanState partialLetterLoan = new();
+        Assert.True(partialLetterLoan.Issue(19, 1, 100, DaggerfallCalendar.Start, settlement).Approved);
+        fixture.GrantLetter(125);
+        Assert.True(partialLetterLoan.Repay(19, 110, fromAccount: false, bank, currency, settlement).Applied);
+        Assert.Null(partialLetterLoan.Read(19));
+        Assert.Equal(15UL, currency.Read().LettersOfCredit);
+        Assert.Equal(100UL, bank.BalanceForRegion(19));
+
+    }
+
+    [Fact]
+    public void Loan_repayment_combines_a_full_letter_and_coin_shortfall_in_one_inventory_commit()
+    {
+        using Fixture fixture = new();
+        DaggerfallCurrencyService currency = fixture.Currency();
+        DaggerfallRegionalBankState bank = fixture.Bank(currency);
+        DaggerfallLoanSettlementAdapter settlement = DaggerfallLoanSettlementAdapter.ForBank(bank, currency);
+        DaggerfallLoanState loan = new();
+        Assert.True(loan.Issue(20, 1, 100, DaggerfallCalendar.Start, settlement).Approved);
+        fixture.GrantGold(10);
+        fixture.GrantLetter(100);
+
+        Assert.True(loan.Repay(20, 110, fromAccount: false, bank, currency, settlement).Applied);
+        Assert.Null(loan.Read(20));
+        Assert.Equal(0UL, currency.Read().Gold);
+        Assert.Equal(0UL, currency.Read().LettersOfCredit);
+        Assert.Equal(100UL, bank.BalanceForRegion(20));
+    }
+
     private sealed class Fixture : IDisposable
     {
         private readonly EntityDirectory _entities = new();
@@ -206,6 +310,7 @@ public sealed class DaggerfallRegionalBankTests
         internal EntityId Player { get; }
         internal DaggerfallItemInstances Instances { get; } = new();
         internal DaggerfallUniqueItemAllocator Unique => _unique;
+        internal DaggerfallDefinitions Definitions => _definitions;
 
         internal Fixture()
         {

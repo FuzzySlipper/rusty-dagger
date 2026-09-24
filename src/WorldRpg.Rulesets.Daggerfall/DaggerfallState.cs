@@ -9,7 +9,9 @@ using WorldRpg.Rulesets.Daggerfall.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using WorldRpg.Rulesets.Daggerfall.Guilds;
+using WorldRpg.Rulesets.Daggerfall.Crime;
 using WorldRpg.Rulesets.Daggerfall.Banking;
+using WorldRpg.Rulesets.Daggerfall.Property;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -45,8 +47,13 @@ internal sealed class DaggerfallState(PlayerControlState playerControl, ActorsSt
     internal DaggerfallNpcRegistry Npcs { get; } = npcs;
     /// <summary>Persistent Daggerfall reputation, reaction, and guild-membership policy for talk, services, and quests.</summary>
     internal DaggerfallSocialState Social { get; } = social;
+    internal DaggerfallCrimeState Crime { get; set; } = null!;
     /// <summary>Guild admission and rank policy over the canonical social membership records.</summary>
     internal DaggerfallGuildMembershipPolicy GuildMembership { get; set; } = null!;
+    internal DaggerfallConcreteGuildMembershipRuntime ConcreteGuildMembership { get; set; } = null!;
+    internal DaggerfallConcreteGuildServiceRuntime ConcreteGuildServices { get; set; } = null!;
+    internal DaggerfallKnightlyOrderClaimState KnightlyClaims { get; set; } = null!;
+    internal DaggerfallKnightlyOrderClaimRuntime KnightlyClaimActions { get; set; } = null!;
     /// <summary>Daggerfall instance meaning paired with Engine-backed stacks and unique items.</summary>
     internal DaggerfallItemInstances ItemInstances { get; } = itemInstances;
     /// <summary>The committed player identity and its cancellable creation draft.</summary>
@@ -59,6 +66,8 @@ internal sealed class DaggerfallState(PlayerControlState playerControl, ActorsSt
     internal DaggerfallCurrencyService Currency { get; set; } = null!;
     /// <summary>Regional account balances partitioning the currency settlement account.</summary>
     internal DaggerfallRegionalBankState Bank { get; set; } = null!;
+    internal DaggerfallLoanState Loans { get; set; } = null!;
+    internal DaggerfallPropertyState Property { get; set; } = null!;
     /// <summary>Typed Daggerfall service admission, quotes, outcomes, and pending concrete work.</summary>
     internal DaggerfallServiceTransactions Services { get; set; } = null!;
     /// <summary>Permanent skill training through the current service and progression owners.</summary>

@@ -16,6 +16,9 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Guilds;
 using WorldRpg.Rulesets.Daggerfall.Banking;
+using WorldRpg.Rulesets.Daggerfall.Travel;
+using WorldRpg.Rulesets.Daggerfall.Property;
+using WorldRpg.Rulesets.Daggerfall.Crime;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Ai;
@@ -210,6 +213,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                     ToSiteReturnPose(restoredSite.ReturnPose),
                     restoredSite.Discovered.Select(id => id.Require()))
                 : new World.DaggerfallSiteContext(definitions.Locations, inputs.Site, null, []);
+            _travelPolicy = new DaggerfallTravelPolicy(_site, definitions.Grids);
             _siteProfiles = profiles;
             _activeProfileKey = saved?.Site.ActiveProfile?.Require() ?? inputs.ProfileKey;
             _returnProfileKey = saved?.Site.ReturnProfile?.Require();
@@ -289,9 +293,11 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 tuning.Progression.EnableExperimentalKillExperience);
             State.SkillUses = new DaggerfallSkillUseReactions(State.Progression, State.Actors.Player.Stats, definitions, () => State.Character.Career);
             State.GuildMembership = new DaggerfallGuildMembershipPolicy(State.Social,
-                State.SkillUses.PermanentSkillValue, DaggerfallGuildPolicyCatalog.CoreGuilds);
+                State.SkillUses.PermanentSkillValue, DaggerfallConcreteGuildCatalog.AllMembershipPolicies);
+            State.ConcreteGuildMembership = new DaggerfallConcreteGuildMembershipRuntime(State.GuildMembership);
             State.Quests.BindRuntime(new DaggerfallQuestRuntime(State.Progression, State.Actors.Player.Stats, definitions,
                 State.QuestTraining, tuning.Locomotion, _random, () => _time.Calendar, AdvanceQuestTraining));
+            State.Quests.BindTravelMinutes(site => _travelPolicy.CautiousQuestLegMinutes(QuestTravelOrigin(), site));
             State.Character.BindCareerCommitted(State.SkillUses.RebaseForCareerSelection);
             State.LevelUps = new DaggerfallLevelUpState(State.Progression, State.SkillUses, State.Actors.Player.Stats,
                 definitions, () => State.Character.Career, _random, _rewards);
@@ -337,10 +343,19 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             State.Encumbrance = new DaggerfallEncumbrancePolicy(State.Inventory, State.Actors.Player.Stats);
             State.Currency = new DaggerfallCurrencyService(definitions, State.Inventory, State.ItemInstances, State.Encumbrance, _uniqueItems, saved?.Currency);
             State.Bank = new DaggerfallRegionalBankState(State.Currency, State.Inventory, State.ItemInstances, saved?.Bank);
+            State.Loans = new DaggerfallLoanState(saved?.Loans);
+            State.Property = new DaggerfallPropertyState(saved?.Property);
+            InitializePropertyStorage(saved?.Property);
+            State.Crime = new DaggerfallCrimeState(saved?.Crime);
             State.Services = new DaggerfallServiceTransactions(State.Npcs, State.Social, State.Inventory, State.ItemInstances,
                 State.Currency, _uniqueItems, () => _time.Calendar, () => _site.ActiveSite is { } active
                     ? new DaggerfallNpcSite(active.Id.Region, active.Name, string.Empty)
                     : null, saved?.Services);
+            State.ConcreteGuildServices = new DaggerfallConcreteGuildServiceRuntime(
+                State.GuildMembership, State.Npcs, State.Services);
+            State.KnightlyClaims = new DaggerfallKnightlyOrderClaimState(saved?.KnightlyClaims);
+            State.KnightlyClaimActions = new DaggerfallKnightlyOrderClaimRuntime(
+                State.ConcreteGuildServices, State.KnightlyClaims, _random);
             State.SkillTraining = new DaggerfallSkillTrainingService(State.Services, State.Npcs, State.Social,
                 State.Progression, State.SkillUses, State.QuestTraining, State.Actors.Player.Stats,
                 tuning.Locomotion, () => _time.Calendar, seconds => { _ = AdvanceElapsedTime(seconds); });
@@ -373,6 +388,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             _inventoryUi = new DaggerfallInventoryPresentation(_equipmentMoves, definitions, inputs.ClassicPresentation.InventoryIcons,
                 State.Encumbrance, State.Currency);
             _inventoryUi.UseBank(State.Bank, ActiveBankRegion);
+            _inventoryUi.UseLoans(State.Loans, () => _time.Calendar, () => State.Progression.Level);
             _inventoryUi.UseItemValuation(new DaggerfallItemValuation(definitions), State.ItemInstances, DaggerfallItemOwner.Player,
                 entity => State.Actors.Entities.IdentityOf(new Rusty.Engine.Entities.EntityId(entity)).Value);
             _inventoryUi.UseItemCondition(_itemCondition);
@@ -393,7 +409,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 compositionIdentity,
                 DaggerfallUiArt.Read(engine.Content, inputs.ClassicPresentation.InventoryIcons.Values));
             partiallyConstructed.Add(_hud);
-            _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, _dungeonText);
+            _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, _dungeonText, CapturePropertyStorage);
             if (saved is not null)
             {
                 foreach (DaggerfallSiteDeltaSave delta in saved.SiteDeltas)
@@ -1301,6 +1317,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 case "transport-select":
                 case "transport-toggle":
                 case "transport-leave-ship": if (playing) ChangeTransport(action!); break;
+                case "travel-search":
+                case "travel-preview": if (playing || modal) ChangeTravel(action!); break;
                 case "rest": if (playing && !restSubmitted) { ChangeRest(action!); restSubmitted = true; } break;
                 case "wagon-put":
                 case "wagon-take": if (playing) ChangeWagon(action!); break;
@@ -1330,6 +1348,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 case "currency-deposit-letters": if (playing || modal) ChangeCurrency(action!); break;
                 case "currency-withdraw-letter": if (playing || modal) ChangeCurrency(action!); break;
                 case "bank-transfer": if (playing || modal) ChangeCurrency(action!); break;
+                case "bank-loan-issue":
+                case "bank-loan-repay-account":
+                case "bank-loan-repay-carried": if (playing || modal) ChangeLoan(action!); break;
                 case "character": break;
                 case "loot": if (playing) firstStep.Request(DaggerfallInput.Interact); break;
                 case "loot-close": if (playing || modal) _lootUi.Close(action!.Container); break;
@@ -1413,6 +1434,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         _siteProjection.Lighting.UpdateAmbient(_time.Calendar);
         State.Quests.AdvanceClocks(State.Variables, calendarBefore, _time.Calendar);
         State.Social.AdvanceElapsedMinutes(minuteBefore, MinuteIndex(_time.Calendar));
+        AdvanceLoans();
         AdvanceEffectsForCalendar(calendarBefore, ordinaryPlay: true);
         AnnounceHoliday();
         AgePanelRequest(deltaSeconds * facts.AdmittedStepCount);
@@ -1572,6 +1594,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             State.LevelUps.BeginIfEligible();
         }
         State.Social.AdvanceElapsedMinutes(minuteBefore, MinuteIndex(_time.Calendar));
+        AdvanceLoans();
         AdvanceEffectsForCalendar(calendarBefore, ordinaryPlay: false);
         if (advance.AppliedSeconds > 0 && encounter is not null) QueueEncounter(encounter);
         AnnounceHoliday();
@@ -1590,6 +1613,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         State.SkillUses.RaiseSkills(_time.Calendar.ToAbsoluteSeconds());
         State.LevelUps.BeginIfEligible();
         State.Social.AdvanceElapsedMinutes(minuteBefore, MinuteIndex(_time.Calendar));
+        AdvanceLoans();
         AdvanceEffectsForCalendar(calendarBefore, ordinaryPlay: false);
         AnnounceHoliday();
     }
@@ -1837,7 +1861,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             LatestPanelRequest, _saveSlots, _saveSlotDiagnostic, _controlSettings, _controlDiagnostic,
             ActivationView, State.Quests.ReadPresentation(QuestTextContext), _notebook.Read(),
             DaggerfallTransportProjection.Read(State.Transport, State.Inventory.Read(), TransportAccess(),
-                ownsShip: false, wagon: State.Wagon), _dungeonTextProjection, _deathPresentation.View, RestView);
+                ownsShip: false, wagon: State.Wagon), _dungeonTextProjection, _deathPresentation.View, RestView,
+            ReadTravelPresentation());
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors, _groundContainers.All);

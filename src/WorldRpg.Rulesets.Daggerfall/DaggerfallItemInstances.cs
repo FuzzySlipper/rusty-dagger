@@ -14,12 +14,14 @@ internal sealed record DaggerfallItemOwner(string Scope, long Id)
     internal static DaggerfallItemOwner Ground(long id) => new("ground", id);
     /// <summary>A remote wagon container is intentionally excluded from the player's carried load.</summary>
     internal static DaggerfallItemOwner Wagon(long id) => new("wagon", id);
+    /// <summary>A durable property container remains attached to its owned or retained property.</summary>
+    internal static DaggerfallItemOwner Property(long id) => new("property", id);
     internal static DaggerfallItemOwner WorldTreasure(long id) => new("world-treasure", id);
     internal static DaggerfallItemOwner Encounter(long id) => new("encounter", id);
 
     internal DaggerfallItemOwner Validate()
     {
-        if (Scope is not ("player" or "actor" or "corpse" or "ground" or "wagon" or "world-treasure" or "encounter") || Id <= 0)
+        if (Scope is not ("player" or "actor" or "corpse" or "ground" or "wagon" or "property" or "world-treasure" or "encounter") || Id <= 0)
             throw new ArgumentException("Item ownership must name a known positive durable owner.");
         return this;
     }

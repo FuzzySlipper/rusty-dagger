@@ -8,7 +8,8 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
     string? Attribute = null, string? BackgroundAnswers = null, string? AttributeAllocations = null, string? SkillAllocations = null, ulong? Amount = null,
     string? QuestInstance = null, int? QuestMessage = null, int? QuestChoice = null, string? QuestPrompt = null,
     string? Note = null, string? Text = null, int? Page = null, int? Destination = null,
-    string? Tone = null, string? Topic = null, int? Hours = null);
+    string? Tone = null, string? Topic = null, int? Hours = null, int? Region = null,
+    bool Cautious = false, bool Inn = false, bool Ship = false);
 
 /// <summary>The small Daggerfall player-action wire contract, consumed during admitted updates.</summary>
 internal static class DaggerfallUiAction
@@ -24,14 +25,14 @@ internal static class DaggerfallUiAction
             if (root.ValueKind != JsonValueKind.Object) return null;
             HashSet<string> fields = new(StringComparer.Ordinal);
             string? action = null, revision = null, item = null, targetEquipment = null, container = null, key = null, label = null, name = null, race = null, gender = null, career = null, mode = null, primarySkills = null, majorSkills = null, minorSkills = null, advantages = null, disadvantages = null, attribute = null, backgroundAnswers = null, attributeAllocations = null, skillAllocations = null, questInstance = null, questPrompt = null, note = null, text = null, tone = null, topic = null;
-            int? targetGrid = null, faceIndex = null, reflexes = null, hitPointsPerLevel = null, questMessage = null, page = null, destination = null, hours = null;
+            int? targetGrid = null, faceIndex = null, reflexes = null, hitPointsPerLevel = null, questMessage = null, page = null, destination = null, hours = null, region = null;
             ulong? amount = null;
-            bool confirm = false;
+            bool confirm = false, cautious = false, inn = false, ship = false;
             int? questChoice = null;
             foreach (JsonProperty property in root.EnumerateObject())
             {
                 if (!fields.Add(property.Name)) return null;
-                if (property.Name is "targetGrid" or "faceIndex" or "reflexes" or "hitPointsPerLevel" or "questMessage" or "page" or "destination" or "hours")
+                if (property.Name is "targetGrid" or "faceIndex" or "reflexes" or "hitPointsPerLevel" or "questMessage" or "page" or "destination" or "hours" or "region")
                 {
                     if (!property.Value.TryGetInt32(out int grid)) return null;
                     if (property.Name == "targetGrid") targetGrid = grid;
@@ -41,7 +42,8 @@ internal static class DaggerfallUiAction
                     else if (property.Name == "questMessage") questMessage = grid;
                     else if (property.Name == "page") page = grid;
                     else if (property.Name == "destination") destination = grid;
-                    else hours = grid;
+                    else if (property.Name == "hours") hours = grid;
+                    else region = grid;
                     continue;
                 }
                 if (property.Name == "amount")
@@ -50,10 +52,13 @@ internal static class DaggerfallUiAction
                     amount = parsed;
                     continue;
                 }
-                if (property.Name == "confirm")
+                if (property.Name is "confirm" or "cautious" or "inn" or "ship")
                 {
                     if (property.Value.ValueKind is not JsonValueKind.True and not JsonValueKind.False) return null;
-                    confirm = property.Value.GetBoolean();
+                    if (property.Name == "confirm") confirm = property.Value.GetBoolean();
+                    else if (property.Name == "cautious") cautious = property.Value.GetBoolean();
+                    else if (property.Name == "inn") inn = property.Value.GetBoolean();
+                    else ship = property.Value.GetBoolean();
                     continue;
                 }
                 if (property.Name == "questChoice")
@@ -145,6 +150,16 @@ internal static class DaggerfallUiAction
             if (action == "bank-transfer")
                 return fields.SetEquals(["action", "amount", "destination"]) && amount is not null && destination is >= 0
                     ? new(action, Amount: amount, Destination: destination) : null;
+            if (action is "bank-loan-issue" or "bank-loan-repay-account" or "bank-loan-repay-carried")
+                return fields.SetEquals(["action", "amount"]) && amount is not null
+                    ? new(action, Amount: amount) : null;
+            if (action == "travel-search")
+                return fields.SetEquals(["action", "text"]) && text is { Length: <= 80 }
+                    ? new(action, Text: text) : null;
+            if (action == "travel-preview")
+                return fields.SetEquals(["action", "region", "destination", "cautious", "inn", "ship"])
+                    && region is >= 0 && destination is >= 0
+                    ? new(action, Region: region, Destination: destination, Cautious: cautious, Inn: inn, Ship: ship) : null;
             if (action == "dungeon-text-answer")
                 return fields.SetEquals(["action", "revision", "item", "text"])
                     && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)

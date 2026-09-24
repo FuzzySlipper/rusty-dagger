@@ -4,6 +4,7 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Banking;
+using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
@@ -14,7 +15,9 @@ internal sealed record ItemConditionPresentation(int Current, int Maximum, int P
 internal sealed record EquipmentSlotPresentation(string Id, string Label, string? ItemKey);
 internal sealed record EquipmentChangePresentation(string Cue, int RightHandDelayMilliseconds, int LeftHandDelayMilliseconds);
 internal sealed record DaggerfallBankAccountPresentation(int Region, string Gold);
-internal sealed record DaggerfallBankPresentation(int CurrentRegion, string CurrentBalance, DaggerfallBankAccountPresentation[] Accounts);
+internal sealed record DaggerfallLoanPresentation(string Principal, string Remaining, long DueMinute, bool Defaulted, long DaysRemaining);
+internal sealed record DaggerfallBankPresentation(int CurrentRegion, string CurrentBalance, DaggerfallBankAccountPresentation[] Accounts,
+    DaggerfallLoanPresentation? Loan, long MaximumNewLoan);
 internal sealed record InventoryPresentation(string Revision, InventoryItemPresentation[] Items, EquipmentSlotPresentation[] Slots, string Message,
     EquipmentChangePresentation? EquipmentChange = null, DaggerfallEncumbrance? Encumbrance = null, DaggerfallCurrencyTotals? Currency = null,
     DaggerfallBankPresentation? Bank = null);
@@ -36,6 +39,9 @@ internal sealed class DaggerfallInventoryPresentation
     private Func<WorldRpg.Kit.Controls.WorldPoint?>? groundPosition;
     private DaggerfallInventoryUseService? itemUse;
     private DaggerfallRegionalBankState? bank;
+    private DaggerfallLoanState? loans;
+    private Func<DaggerfallCalendar>? loanCalendar;
+    private Func<int>? loanLevel;
     private Func<int?>? currentRegion;
     internal event Action<DaggerfallReadableBook>? BookOpened;
     internal string Message { get; private set; } = "Drag items between the grid and compatible equipment slots.";
@@ -98,6 +104,13 @@ internal sealed class DaggerfallInventoryPresentation
         currentRegion = resolveCurrentRegion ?? throw new ArgumentNullException(nameof(resolveCurrentRegion));
     }
 
+    internal void UseLoans(DaggerfallLoanState state, Func<DaggerfallCalendar> calendar, Func<int> level)
+    {
+        loans = state ?? throw new ArgumentNullException(nameof(state));
+        loanCalendar = calendar ?? throw new ArgumentNullException(nameof(calendar));
+        loanLevel = level ?? throw new ArgumentNullException(nameof(level));
+    }
+
     internal void ReportBankTransaction(DaggerfallBankTransactionOutcome outcome)
     {
         ArgumentNullException.ThrowIfNull(outcome);
@@ -146,9 +159,14 @@ internal sealed class DaggerfallInventoryPresentation
     {
         if (bank is null || currentRegion is null) return null;
         if (currentRegion() is not int region) return null;
+        DaggerfallLoanRecord? loan = loans?.Read(region);
+        long now = loanCalendar is null ? 0 : DaggerfallLoanPolicy.ClassicMinute(loanCalendar());
         return new(region, bank.BalanceForRegion(region).ToString(CultureInfo.InvariantCulture),
             bank.ReadBalances().Select(account => new DaggerfallBankAccountPresentation(account.Region,
-                account.Gold.ToString(CultureInfo.InvariantCulture))).ToArray());
+                account.Gold.ToString(CultureInfo.InvariantCulture))).ToArray(),
+            loan is null ? null : new(loan.Principal.ToString(CultureInfo.InvariantCulture), loan.Remaining.ToString(CultureInfo.InvariantCulture),
+                loan.DueMinute, loan.Defaulted, loan.Remaining == 0 ? 0 : Math.Max(0, (loan.DueMinute - now) / DaggerfallLoanPolicy.MinutesPerDay)),
+            loanLevel is null ? 0 : DaggerfallLoanPolicy.CalculateMaxBankLoan(loanLevel()));
     }
 
     private static string AppliedBankMessage(DaggerfallBankTransactionOutcome outcome)

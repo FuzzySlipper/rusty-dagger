@@ -1,6 +1,7 @@
 using System.Numerics;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Guilds;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Modules.Encounters;
 using WorldRpg.Rulesets.Daggerfall.Policies;
@@ -112,14 +113,18 @@ internal sealed partial class DaggerfallSession
         if (State.PlayerControl.Position is null) return new(false, Message: "You cannot rest before the player has a world position.");
         if (_activeProfileKey.LogicalId.Length == 0) return new(false, Message: "You cannot rest without an admitted world profile.");
 
-        // The donor permits wilderness and dungeon camping, refuses camping in a town exterior,
-        // and requires an owned/rented room or a guild privilege inside a town building. Rusty Dagger
-        // has no admitted room, ownership, or guild-rest fact yet, so accepting an interior here would
-        // silently grant a privilege the current content cannot prove.
+        // An interior needs proof of the exact placed building and a current room, property, or guild
+        // privilege. The normalized profile carries that source identity; unknown interiors stay closed.
         if (!_site.TryFind(_activeProfileKey.Site, out DaggerfallSiteRecord site))
             return new(false, Message: "You cannot rest without an admitted location record.");
         if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Interior)
-            return new(false, Message: "You cannot rest in this interior until a room or guild privilege is admitted.");
+        {
+            DaggerfallInteriorBuilding? building = _siteProfiles?.Require(_activeProfileKey).InteriorBuilding;
+            if (FightersGuildRestAllowed(building, State.GuildMembership, _activeProfileKey.Site.Region,
+                checked((int)_time.Calendar.DayNumber)))
+                return new(true);
+            return new(false, Message: "You cannot rest in this interior without an admitted room or guild privilege.");
+        }
         if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior
             && CurrentExteriorCell() is { } current
             && _definitions.Grids.Climate.GetCell(current.X, current.Y).Value is not (224 or 225 or 226 or 227 or 228 or 229 or 230 or 231 or 232))
@@ -132,6 +137,17 @@ internal sealed partial class DaggerfallSession
                 return new(false, Message: "Camping in a town is not permitted.");
         }
         return new(true);
+    }
+
+    internal static bool FightersGuildRestAllowed(DaggerfallInteriorBuilding? building,
+        DaggerfallGuildMembershipPolicy membership, int region, int day)
+    {
+        if (building is not { BuildingType: 11, FactionId: DaggerfallConcreteGuildCatalog.FightersFactionId })
+            return false;
+        DaggerfallGuildMembershipView member = membership.Read(DaggerfallConcreteGuildCatalog.FightersFactionId, day);
+        DaggerfallConcreteGuildDefinition guild = DaggerfallConcreteGuildCatalog.ForFaction(DaggerfallConcreteGuildCatalog.FightersFactionId);
+        return DaggerfallConcreteGuildPolicy.EvaluateService(guild, DaggerfallConcreteGuildService.Rest,
+            new DaggerfallGuildServiceContext(member.IsMember, member.Rank, CurrentRegion: region)).Eligible;
     }
 
     /// <summary>

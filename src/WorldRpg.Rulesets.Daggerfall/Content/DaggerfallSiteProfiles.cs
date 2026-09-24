@@ -102,6 +102,8 @@ internal sealed class DaggerfallSiteProfiles
             if (profile.Site is not DaggerfallSiteId)
                 throw new ArgumentException("A transition profile must name its selected Daggerfall site.", nameof(profiles));
             DaggerfallWorldProfileKey key = profile.ProfileKey.Validate();
+            if (profile.InteriorBuilding is not null && key.Kind != DaggerfallWorldProfileKind.Interior)
+                throw new ArgumentException("Only an interior profile can name a placed building.", nameof(profiles));
             if (!admitted.TryAdd(key, profile))
                 throw new ArgumentException($"The selected content repeats world profile '{key.LogicalId}'.", nameof(profiles));
         }

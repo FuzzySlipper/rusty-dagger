@@ -12,6 +12,16 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class NormalizedPrivateersHoldContentTests
 {
     [Fact]
+    public void Admits_selected_interior_building_from_the_checked_normalized_publication()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = PrivateersHoldContent.Read(GeneratedContent(root),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.charing-interior-1-1-0.json")), definitions);
+        Assert.Equal(new DaggerfallInteriorBuilding(1, 1, new("RESIAL05.RMB", 0), 18, 0), inputs.InteriorBuilding);
+    }
+
+    [Fact]
     public void Every_extracted_fixed_enemy_is_present_with_its_original_mobile_and_position()
     {
         string root = RepositoryRoot();
