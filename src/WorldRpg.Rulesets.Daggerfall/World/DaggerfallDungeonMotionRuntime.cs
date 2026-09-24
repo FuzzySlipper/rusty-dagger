@@ -86,8 +86,8 @@ internal sealed record DaggerfallDungeonMotionSnapshot(
 /// <summary>
 /// Daggerfall's two-endpoint motion state over explicit Engine entity targets. It writes only
 /// canonical Engine Transform values; appearance and spatial callers consume those values through
-/// their existing Engine projections. Moving mesh collision uses exact Engine triangle residency.
-/// Character support/carry is unavailable until Engine can bind resident mesh instances to entities.
+/// their existing Engine projections. Moving mesh collision uses exact Engine triangle residency,
+/// and the motion projection supplies entity-bound mesh instances for Engine support/carry.
 /// </summary>
 internal sealed class DaggerfallDungeonMotionRuntime
 {

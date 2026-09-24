@@ -35,6 +35,7 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
     private readonly Vector3[] _collisionVertices;
     private readonly Triangle[] _collisionTriangles;
     private readonly Dictionary<ulong, Transform> _residentTransforms = [];
+    private readonly Dictionary<ulong, (Vector3 Linear, Vector3 Angular)> _meshVelocities = [];
     private bool _collisionAdmissionActive;
     private bool _disposed;
 
@@ -138,17 +139,35 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
     }
 
     /// <summary>
-    /// Motion models contribute exact triangle collision through Spatial residency. The current
-    /// safe character API cannot bind that instance to the moving entity for support/carry, so do
-    /// not also project its bounds as a blocking CharacterObstacle AABB.
+    /// Motion models contribute exact triangle collision and stable entity-bound support through
+    /// Spatial residency. Do not also project their bounds as call-local AABB obstacles.
     /// </summary>
-    internal CharacterStepEnvironment CharacterEnvironment() => CharacterStepEnvironment.Empty;
+    internal CharacterStepEnvironment CharacterEnvironment()
+    {
+        ThrowIfDisposed();
+        CharacterMeshInstance[] meshInstances = _collisionModels.Values
+            .Where(model => _residentTransforms.ContainsKey(model.InstanceId))
+            .OrderBy(model => model.Definition.ActionId, StringComparer.Ordinal)
+            .Select(model =>
+            {
+                EntityId entity = model.Definition.DoorIdentity is DaggerfallRdbDoorId doorIdentity
+                    ? _doors.Read(doorIdentity).Entity
+                    : model.Entity;
+                (Vector3 linear, Vector3 angular) = _meshVelocities.GetValueOrDefault(model.InstanceId);
+                return new CharacterMeshInstance(model.InstanceId, entity.Value, linear, angular);
+            })
+            .ToArray();
+        return new CharacterStepEnvironment(
+            default,
+            ReadOnlyMemory<CharacterObstacle>.Empty,
+            meshInstances);
+    }
 
     internal DaggerfallDungeonMotionActivation Activate(string actionId)
     {
         ThrowIfDisposed();
         DaggerfallDungeonMotionActivation result = _motion.Activate(actionId);
-        SyncCollisionInstances();
+        SyncCollisionInstances(deltaSeconds: 0d);
         return result;
     }
 
@@ -156,7 +175,7 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
     {
         ThrowIfDisposed();
         _motion.Advance(deltaSeconds);
-        SyncCollisionInstances();
+        SyncCollisionInstances(deltaSeconds);
     }
 
     internal DaggerfallDungeonMotionSnapshot Capture() => _motion.Capture();
@@ -176,6 +195,7 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
     {
         ThrowIfDisposed();
         _residentTransforms.Clear();
+        _meshVelocities.Clear();
         List<StaticMeshInstance> instances = BuildInstances().ToList();
         if (_collisionAssets.Length != 0 || instances.Count != 0)
         {
@@ -189,7 +209,10 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
                 Array.Empty<ulong>()));
         }
         foreach (StaticMeshInstance instance in instances)
+        {
             _residentTransforms.Add(instance.Id, instance.Transform);
+            _meshVelocities.Add(instance.Id, (Vector3.Zero, Vector3.Zero));
+        }
         _collisionAdmissionActive = true;
     }
 
@@ -275,8 +298,10 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
         return instances.ToArray();
     }
 
-    private void SyncCollisionInstances()
+    private void SyncCollisionInstances(double deltaSeconds)
     {
+        if (!double.IsFinite(deltaSeconds) || deltaSeconds < 0d)
+            throw new ArgumentOutOfRangeException(nameof(deltaSeconds));
         if (!_collisionAdmissionActive || _disposed || _collisionModels.Count == 0) return;
         List<StaticMeshInstance> upserts = [];
         List<ulong> removals = [];
@@ -303,13 +328,24 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
                     _residentTransforms.Remove(item.InstanceId);
                     removals.Add(item.InstanceId);
                 }
+                _meshVelocities.Remove(item.InstanceId);
                 continue;
             }
-            if (!wasResident || previous != transform)
+            if (!wasResident)
             {
                 upserts.Add(new StaticMeshInstance(item.InstanceId, item.AssetId, transform));
                 _residentTransforms[item.InstanceId] = transform;
+                _meshVelocities[item.InstanceId] = (Vector3.Zero, Vector3.Zero);
+                continue;
             }
+
+            (Vector3 linear, Vector3 angular) = deltaSeconds > 0d
+                ? PoseVelocity(previous, transform, deltaSeconds)
+                : (Vector3.Zero, Vector3.Zero);
+            _meshVelocities[item.InstanceId] = (linear, angular);
+            if (previous == transform) continue;
+            upserts.Add(new StaticMeshInstance(item.InstanceId, item.AssetId, transform));
+            _residentTransforms[item.InstanceId] = transform;
         }
         if (upserts.Count == 0 && removals.Count == 0) return;
         _ = _spatial.ApplyCollisionResidency(new CollisionResidencyRequest(
@@ -320,6 +356,20 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
             upserts.ToArray(),
             Array.Empty<ulong>(),
             removals.ToArray()));
+    }
+
+    private static (Vector3 Linear, Vector3 Angular) PoseVelocity(Transform previous, Transform current, double deltaSeconds)
+    {
+        float inverseDelta = checked((float)(1d / deltaSeconds));
+        Vector3 linear = (current.Translation - previous.Translation) * inverseDelta;
+        Quaternion delta = Quaternion.Normalize(current.Rotation * Quaternion.Inverse(previous.Rotation));
+        if (delta.W < 0f) delta = new Quaternion(-delta.X, -delta.Y, -delta.Z, -delta.W);
+        float halfAngle = MathF.Acos(Math.Clamp(delta.W, -1f, 1f));
+        float sine = MathF.Sin(halfAngle);
+        if (MathF.Abs(sine) <= 1e-6f) return (linear, Vector3.Zero);
+        Vector3 axis = new(delta.X / sine, delta.Y / sine, delta.Z / sine);
+        Vector3 angular = axis * (2f * halfAngle * inverseDelta);
+        return (linear, angular);
     }
 
     private static void EnsureSpatialComponents(EntityStore store)

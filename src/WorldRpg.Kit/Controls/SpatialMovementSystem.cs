@@ -4,9 +4,20 @@ using Rusty.Engine;
 namespace WorldRpg.Kit.Controls;
 
 /// <summary>Call-local facts supplied for one proposal; the Engine does not retain product support or obstacle ownership.</summary>
-public readonly record struct CharacterStepEnvironment(CharacterSupport Support, ReadOnlyMemory<CharacterObstacle> Obstacles)
+public readonly record struct CharacterStepEnvironment(
+    CharacterSupport Support,
+    ReadOnlyMemory<CharacterObstacle> Obstacles,
+    ReadOnlyMemory<CharacterMeshInstance> MeshInstances)
 {
-    public static CharacterStepEnvironment Empty { get; } = new(default, ReadOnlyMemory<CharacterObstacle>.Empty);
+    public CharacterStepEnvironment(CharacterSupport support, ReadOnlyMemory<CharacterObstacle> obstacles)
+        : this(support, obstacles, ReadOnlyMemory<CharacterMeshInstance>.Empty)
+    {
+    }
+
+    public static CharacterStepEnvironment Empty { get; } = new(
+        default,
+        ReadOnlyMemory<CharacterObstacle>.Empty,
+        ReadOnlyMemory<CharacterMeshInstance>.Empty);
 }
 
 /// <summary>Horizontal direction used by a call-local wall contact query.</summary>
@@ -164,6 +175,7 @@ public sealed class SpatialMovementSystem : IDisposable
             motion,
             stepEnvironment.Support,
             stepEnvironment.Obstacles,
+            stepEnvironment.MeshInstances,
             config,
             command);
         CharacterStepReceipt receipt = _spatial.ProposeCharacterStep(request);
