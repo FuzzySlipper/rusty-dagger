@@ -154,7 +154,7 @@ public sealed class DaggerfallConcreteGuildRuntimeTests
 
         Assert.True(offered.Offered);
         DaggerfallKnightlyArmorOffer offer = Assert.IsType<DaggerfallKnightlyArmorOffer>(offered.Offer);
-        Assert.Equal(3, offer.TemplateIndices.Count);
+        Assert.Equal(4, offer.TemplateIndices.Count);
         Assert.All(offer.TemplateIndices, template => Assert.InRange(template, 102, 108));
         Assert.Equal("iron", offer.Material);
 
