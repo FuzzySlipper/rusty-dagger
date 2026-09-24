@@ -376,16 +376,24 @@ internal static partial class Program
     private static int RunMobileCatalogCommand(IReadOnlyList<string> args)
     {
         bool update = args.Contains("--update", StringComparer.Ordinal);
-        if (args.Count != (update ? 6 : 5) || args[1] != "--donor" || args[3] != "--pack")
+        bool archive = args.Contains("--archive", StringComparer.Ordinal);
+        if ((args.Count != (update ? 6 : 5) && args.Count != (update ? 8 : 7))
+            || args[1] != "--donor" || args[3] != "--pack" || (archive && args[5] != "--archive"))
         {
-            throw new ArgumentException("usage: daggerfall-import-tool mobile-catalog --donor ENEMY_BASICS.cs --pack PACK.json [--update]");
+            throw new ArgumentException("usage: daggerfall-import-tool mobile-catalog --donor ENEMY_BASICS.cs --pack PACK.json [--archive MONSTER.BSA] [--update]");
         }
 
         string donorFile = args[2];
         string packFile = args[4];
         if (!File.Exists(donorFile)) throw new FileNotFoundException($"The donor's static mobile table is required to publish mobile parameters and is not at '{donorFile}'.", donorFile);
+        if (archive && !File.Exists(args[6])) throw new FileNotFoundException($"A mobile's career attack-modifier byte lives in its MONSTER.BSA configuration record and is not at '{args[6]}'.", args[6]);
+        // The attack-modifier byte is not in the donor's table; it lives in each mobile's ENEMY###.CFG
+        // career record. Without the archive the catalog publishes zero flags for every mobile.
+        MonsterArchiveInventory? enemyConfigurations = archive
+            ? MonsterArchiveInventory.Enumerate(File.ReadAllBytes(args[6]), Path.GetFileName(args[6]))
+            : null;
         Arena2MobileCatalogPublication publication = Arena2MobileCatalogDocument.Build(
-            File.ReadAllText(donorFile), File.ReadAllText(packFile), "research/daggerfall-unity/Assets/Scripts/Utility/EnemyBasics.cs");
+            File.ReadAllText(donorFile), File.ReadAllText(packFile), "research/daggerfall-unity/Assets/Scripts/Utility/EnemyBasics.cs", enemyConfigurations);
         Console.WriteLine($"mobile catalog: {publication.Mobiles} donor mobiles, {publication.Published} published, {publication.HumanMobiles} human mobiles, {publication.Unpublished} unpublished");
         if (!update)
         {

@@ -243,6 +243,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
         double before = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
         double staminaBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current;
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         ProductInputEvent pressed = Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack");
         session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d), [pressed, pressed]);
         double after = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
@@ -390,6 +391,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             session.State.ItemInstances, definitions, authored, targeting,
             actorEquipment: session.State.EquipmentFor, itemCondition: session.ItemCondition);
 
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         int healthBeforeSteelHit = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).ValueInt;
         int conditionBeforeSteelHit = session.State.ItemInstances.RequireUnique(steelIdentity.Value).CurrentCondition;
         steelCombat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 9, 30, .125), facts);
@@ -2436,6 +2438,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
         double healthBefore = session.State.Actors.Get(2000).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current;
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
         Assert.True(session.State.Actors.Get(2000).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current < healthBefore);
     }
@@ -3554,6 +3557,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         // The generated class actor enters the same defeat/corpse owner as an authored mobile;
         // its normalized T loot table is populated through the canonical corpse coordinator.
         session.State.Actors.Get(actorId).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, actorId, 1, 1, .125));
         Assert.True(session.State.Actors.Get(actorId).IsDefeated);
         Assert.True(session.Corpses.TryGetValue(actorId, out CorpseContainer? corpse));
@@ -3617,6 +3621,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         // would honestly refuse the same swing (steel gate) and never produce the corpse.
         long spawned = session.SpawnActor("rat", new ActorPose(playerPosition, 0f));
         session.State.Actors.Get(spawned).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, spawned, 1, 1, .125));
         Assert.True(session.State.Actors.Get(spawned).IsDefeated);
         Assert.True(session.Corpses.ContainsKey(spawned));
@@ -3991,6 +3996,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         WorldPoint playerPosition = session.State.PlayerControl.Position ?? throw new InvalidOperationException("The test session has no player position.");
         long spawned = session.SpawnActor("rat", new ActorPose(playerPosition with { Z = playerPosition.Z - 1f }, 0f));
         session.State.Actors.Get(spawned).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, spawned, 1, 1, .125));
         Assert.True(session.Corpses.ContainsKey(spawned));
         AimActivationAt(session, spawned);
@@ -4095,6 +4101,7 @@ public sealed partial class NormalizedRuntimeSeamTests
 
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
         double healthBefore = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         session.Update(AttackUpdate());
 
         TargetingEvidence evidence = Assert.IsType<TargetingEvidence>(session.LastMeleeTargeting);
@@ -4123,6 +4130,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
         session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
         AimActivationAt(session, 2000);
         CorpseContainer corpse = session.Corpses[2000];
@@ -4557,6 +4565,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         WorldPoint playerPosition = session.State.PlayerControl.Position ?? throw new InvalidOperationException("The test session has no player position.");
         long corpse = session.SpawnActor("rat", new ActorPose(playerPosition with { Z = playerPosition.Z - 1f }, 0f));
         session.State.Actors.Get(corpse).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, corpse, 1, 1, .125));
         Assert.True(session.Corpses.ContainsKey(corpse));
 
@@ -4962,6 +4971,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         WorldPoint actorPosition = new(21f, 4f, -13f);
         sourceActor.ApplyPose(new ActorPose(actorPosition, .4f));
         sourceActor.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, sourceActorId, 1, 1, .125));
         Assert.True(session.Corpses.ContainsKey(sourceActorId));
         CorpseContainer sourceCorpse = session.Corpses[sourceActorId];
@@ -5463,6 +5473,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
         session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
         AimActivationAt(session, 2000);
         CorpseContainer corpse = session.Corpses[2000];
@@ -6577,6 +6588,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
         session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
         AimActivationAt(session, 2000);
         CorpseContainer corpse = session.Corpses[2000];
@@ -6738,6 +6750,7 @@ public sealed partial class NormalizedRuntimeSeamTests
 
             // One lootable corpse within reach, mirroring the session-level loot fixture.
             session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+            session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
             session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
             AimActivationAt(session, 2000);
             CorpseContainer corpse = session.Corpses[2000];
@@ -6790,6 +6803,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
         session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
         AimActivationAt(session, 2000);
         CorpseContainer corpse = session.Corpses[2000];
@@ -6876,6 +6890,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
         session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
         AimActivationAt(session, 2000);
         CorpseContainer corpse = session.Corpses[2000];
@@ -7086,6 +7101,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             static void Kill(DaggerfallSession session, long target)
             {
                 session.State.Actors.Get(target).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+                session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
                 session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, target, 1, 1, .125));
             }
             Kill(original, 2000);

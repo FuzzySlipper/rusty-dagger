@@ -34,6 +34,8 @@ internal sealed record DaggerfallCareerDefinition(
     int ImmunityFlags,
     int LowToleranceFlags,
     int CriticalWeaknessFlags,
+    int AttackModifierFlags,
+    IReadOnlyList<string> ExpertProficiencies,
     IReadOnlyList<string> ForbiddenEquipment,
     DaggerfallCatalogCitation Source)
 {

@@ -26,7 +26,7 @@ internal static class DaggerfallActorKinds
     internal const string Civilian = "civilian";
 }
 
-/// <summary>Skill keys the enemy language formulas can answer with, in pack vocabulary spelling.</summary>
+/// <summary>Pack skill keys shared across formulas, in pack vocabulary spelling.</summary>
 internal static class DaggerfallSkills
 {
     internal const string Lockpicking = "lockpicking";
@@ -42,6 +42,13 @@ internal static class DaggerfallSkills
     internal const string Spriggan = "spriggan";
     internal const string Centaurian = "centaurian";
     internal const string Impish = "impish";
+    internal const string ShortBlade = "short-blade";
+    internal const string LongBlade = "long-blade";
+    internal const string Axe = "axe";
+    internal const string BluntWeapon = "blunt-weapon";
+    internal const string Archery = "archery";
+    internal const string HandToHand = "hand-to-hand";
+    internal const string Backstabbing = "backstabbing";
 }
 
 internal static class DaggerfallMechanicsIds

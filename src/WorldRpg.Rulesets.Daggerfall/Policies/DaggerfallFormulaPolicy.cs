@@ -2,6 +2,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Policies;
 
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 /// <summary>
 /// Named, compiled Daggerfall formulas.  The donor catalogs are evidence for
@@ -263,6 +264,141 @@ internal static class DaggerfallFormulaPolicy
 
     internal static int CalculateBackstabChance(int skill, bool targetFacingAway) => BackstabChance(skill, targetFacingAway);
 
+    /// <summary>
+    /// Donor <c>FormulaHelper.CalculateBackstabDamage</c>: with a backstabbing level above one and a
+    /// successful d100 roll at or under that level the struck damage triples. The caller owns the
+    /// keyed roll and only draws it when the level admits one, matching the donor's short-circuit.
+    /// </summary>
+    internal static int CalculateBackstabDamage(int damage, int backstabbingLevel, bool rollSucceeded) =>
+        backstabbingLevel > 1 && rollSucceeded ? checked(damage * 3) : damage;
+
+    /// <summary>
+    /// Donor <c>FormulaHelper.CalculateSwingModifiers</c> over the weapon states of the player's
+    /// on-screen weapon. The donor reaches this only for the player, and only the drawn weapon can
+    /// carry a state, so the caller passes <see cref="DaggerfallSwingDirection.None"/> for
+    /// hand-to-hand attacks and for every non-player attacker.
+    /// </summary>
+    internal static (int ToHit, int Damage) CalculateSwingModifiers(DaggerfallSwingDirection swing) => swing switch
+    {
+        DaggerfallSwingDirection.StrikeUp => (10, -4),
+        DaggerfallSwingDirection.StrikeDownRight => (5, -2),
+        DaggerfallSwingDirection.StrikeDownLeft => (-5, 2),
+        DaggerfallSwingDirection.StrikeDown => (-10, 4),
+        _ => (0, 0),
+    };
+
+    /// <summary>
+    /// Donor <c>FormulaHelper.CalculateProficiencyModifiers</c>: an expert proficiency in the skill
+    /// the attack uses adds the attacker's level to chance and <c>level / 3 + 1</c> to damage. The
+    /// donor's second arm grants the hand-to-hand expert the same modifiers while unarmed; its own
+    /// comment notes classic never applied unarmed proficiency, and the provisional donor baseline
+    /// (DEC-11) keeps the live code, so callers pass whether the attack's skill is expert.
+    /// </summary>
+    internal static (int ToHit, int Damage) CalculateProficiencyModifiers(bool expertProficiency, int attackerLevel) =>
+        expertProficiency ? (attackerLevel, checked(attackerLevel / 3 + 1)) : (0, 0);
+
+    /// <summary>
+    /// Donor <c>FormulaHelper.CalculateRacialModifiers</c>, entirely guarded by the donor's weapon
+    /// check: a Dark Elf adds <c>level / 4</c> to chance and damage with any weapon, a Wood Elf adds
+    /// <c>level / 3</c> with a bow, and a Redguard adds <c>level / 3</c> with any other non-bow
+    /// weapon. The caller passes zero modifiers when the attack carries no weapon.
+    /// </summary>
+    internal static (int ToHit, int Damage) CalculateRacialModifiers(int donorRaceId, bool isArcheryWeapon, int attackerLevel)
+    {
+        if (donorRaceId == DonorRaceDarkElf) return (attackerLevel / 4, attackerLevel / 4);
+        if (isArcheryWeapon) return donorRaceId == DonorRaceWoodElf ? (attackerLevel / 3, attackerLevel / 3) : (0, 0);
+        return donorRaceId == DonorRaceRedguard ? (attackerLevel / 3, attackerLevel / 3) : (0, 0);
+    }
+
+    private const int DonorRaceDarkElf = 4;
+    private const int DonorRaceWoodElf = 6;
+    private const int DonorRaceRedguard = 2;
+
+    /// <summary>
+    /// Donor <c>FormulaHelper.GetBonusOrPenaltyByEnemyType</c> over the attacker's career
+    /// attack-modifier flags: a Bonus flag for the target's classic enemy group adds the attacker's
+    /// level, a Phobia flag subtracts it. Flag layout from <c>CLASS??.CFG</c> and the
+    /// <c>ENEMY???.CFG</c> records inside MONSTER.BSA at byte 10: Undead 0x01 bonus / 0x10 phobia,
+    /// Daedra 0x02 / 0x20, Humanoid 0x04 / 0x40, Animals 0x08 / 0x80. The donor reads both bits per
+    /// group independently, so a career carrying both nets zero for that group.
+    /// </summary>
+    internal static int BonusOrPenaltyByEnemyType(int attackModifierFlags, DaggerfallEnemyGroup targetGroup, int attackerLevel) =>
+        targetGroup switch
+        {
+            DaggerfallEnemyGroup.Undead => CareerAttackModifier(attackModifierFlags, 0x01, 0x10, attackerLevel),
+            DaggerfallEnemyGroup.Daedra => CareerAttackModifier(attackModifierFlags, 0x02, 0x20, attackerLevel),
+            DaggerfallEnemyGroup.Humanoid => CareerAttackModifier(attackModifierFlags, 0x04, 0x40, attackerLevel),
+            DaggerfallEnemyGroup.Animals => CareerAttackModifier(attackModifierFlags, 0x08, 0x80, attackerLevel),
+            _ => 0,
+        };
+
+    private static int CareerAttackModifier(int attackModifierFlags, int bonusBit, int phobiaBit, int attackerLevel)
+    {
+        int modifier = 0;
+        if ((attackModifierFlags & bonusBit) != 0) modifier += attackerLevel;
+        if ((attackModifierFlags & phobiaBit) != 0) modifier -= attackerLevel;
+        return modifier;
+    }
+
+    /// <summary>
+    /// Donor <c>FormulaHelper.CalculateWeaponAttackDamage</c> in source order: the weapon's base
+    /// damage roll plus the caller-accumulated damage modifiers, then the Skeletal Warrior weapon
+    /// rules, the strength modifier, and the weapon material modifier; a total below one becomes
+    /// zero before the career bonus or penalty for the target's enemy group applies. The caller
+    /// supplies the keyed base roll from the attack's authored minimum and maximum.
+    /// </summary>
+    internal static int CalculateWeaponAttackDamage(int baseDamage, int damageModifier, bool targetIsSkeletalWarrior,
+        bool weaponIsEdged, bool weaponIsSilver, int strengthModifier, int materialDamageModifier, int enemyTypeModifier)
+    {
+        int damage = checked(baseDamage + damageModifier);
+        if (targetIsSkeletalWarrior)
+        {
+            // Classic halved non-edged damage against Skeletal Warriors and doubled silver. The
+            // donor reads the classic item flag 0x10 off DaggerfallUnityItem.flags; DFU leaves that
+            // bit zero for every created item and its item template carries only isBluntWeapon, so
+            // the classic edged property is represented by the weapon's skill instead — blades and
+            // axes are edged, blunt weapons, bows and unarmed strikes are not.
+            if (!weaponIsEdged) damage /= 2;
+            if (weaponIsSilver) damage = checked(damage * 2);
+        }
+        damage = checked(damage + strengthModifier + materialDamageModifier);
+        if (damage < 1) damage = 0;
+        damage = checked(damage + enemyTypeModifier);
+        return AdjustWeaponAttackDamage(damage);
+    }
+
+    /// <summary>
+    /// Donor <c>FormulaHelper.CalculateHandToHandAttackDamage</c>: the live-skill base roll plus the
+    /// caller-accumulated damage modifiers, the strength modifier for the player only (the donor's
+    /// <c>player</c> gate), and the career bonus or penalty for the target's enemy group. Unlike the
+    /// weapon path this donor path keeps negative totals; the shared clamp at the end of
+    /// <c>CalculateAttackDamage</c> is what bounds them to zero.
+    /// </summary>
+    internal static int CalculateHandToHandAttackDamage(int baseDamage, int damageModifier, int strengthModifier, int enemyTypeModifier) =>
+        checked(baseDamage + damageModifier + strengthModifier + enemyTypeModifier);
+
+    /// <summary>Donor <c>FormulaHelper.AdjustWeaponAttackDamage</c>: a mod-hook seam, identity in DFU.</summary>
+    internal static int AdjustWeaponAttackDamage(int damage) => damage;
+
+    /// <summary>Donor <c>FormulaHelper.AdjustWeaponHitChanceMod</c>: a mod-hook seam, identity in DFU.</summary>
+    internal static int AdjustWeaponHitChanceMod(int chanceToHitModifier) => chanceToHitModifier;
+
+    /// <summary>
+    /// Donor monster multi-attack dodge gate: each of the up-to-three attack slots is attempted only
+    /// when a d100 lands under <c>50 − 10 × (player reflexes − 2)</c>. The donor applies no clamp here;
+    /// a reflexes value of seven or more refuses every slot and one or two accepts every roll.
+    /// </summary>
+    internal static int MonsterAttackReflexChance(int playerReflexes) => 50 - 10 * (playerReflexes - 2);
+
+    /// <summary>
+    /// The classic edged property behind the Skeletal Warrior rule: the donor's item flag 0x10 has
+    /// no per-record carrier in the product pack (its item template knows only isBluntWeapon), so
+    /// the weapon's skill states it — blades and axes cut, blunt weapons, bows and unarmed strikes
+    /// do not, which matches the classic weapon corpus the flag described.
+    /// </summary>
+    internal static bool WeaponIsEdged(string weaponSkill) => weaponSkill
+        is DaggerfallSkills.ShortBlade or DaggerfallSkills.LongBlade or DaggerfallSkills.Axe;
+
     /// <summary>Classic skill-sum progression, kept separate from the live XP experiment.</summary>
     internal static int ClassicPlayerLevel(int currentLevelUpSkills, int startingLevelUpSkills, DaggerfallFormulaTuning? tuning = null)
     {
@@ -337,7 +473,7 @@ internal static class DaggerfallFormulaPolicy
     /// Donor <c>CalculateWeaponToHit</c>: the weapon's material modifier is a
     /// separate table from the minimum-metal rank used by material eligibility.
     /// </summary>
-    internal static int CalculateWeaponToHit(string? weaponMaterial) => CalculateWeaponToHit(weaponMaterial, ClassicWeaponToHitMaterialModifiers);
+    internal static int CalculateWeaponToHit(string? weaponMaterial) => CalculateWeaponToHit(weaponMaterial, ClassicWeaponMaterialModifiers);
 
     internal static int CalculateWeaponToHit(string? weaponMaterial, IReadOnlyDictionary<string, int> weaponMaterialModifiers)
     {
@@ -349,6 +485,17 @@ internal static class DaggerfallFormulaPolicy
         return weaponMaterialModifiers.TryGetValue(weaponMaterial, out int modifier)
             ? checked(modifier * 10)
             : 0;
+    }
+
+    /// <summary>
+    /// The same donor <c>GetWeaponMaterialModifier</c> table enters
+    /// <c>CalculateWeaponAttackDamage</c> unscaled, unlike the ten-fold to-hit use:
+    /// the donor's comment notes the in-game display that suggests otherwise is wrong.
+    /// </summary>
+    internal static int WeaponMaterialDamageModifier(string? weaponMaterial, IReadOnlyDictionary<string, int> weaponMaterialModifiers)
+    {
+        ArgumentNullException.ThrowIfNull(weaponMaterialModifiers);
+        return weaponMaterial is null || !weaponMaterialModifiers.TryGetValue(weaponMaterial, out int modifier) ? 0 : modifier;
     }
 
     /// <summary>Donor <c>CalculateArmorToHit</c>: the selected body part's already-composed live armor value.</summary>
@@ -439,11 +586,12 @@ internal static class DaggerfallFormulaPolicy
     };
 
     /// <summary>
-    /// Donor <c>DaggerfallUnityItem.GetWeaponMaterialModifier</c> values used by
-    /// <c>CalculateWeaponToHit</c>. Steel and silver share the zero modifier;
-    /// mithril and adamantium share the three modifier.
+    /// Donor <c>DaggerfallUnityItem.GetWeaponMaterialModifier</c>, the single weapon-material table
+    /// feeding both <c>CalculateWeaponToHit</c> and the material term of
+    /// <c>CalculateWeaponAttackDamage</c>. Steel and silver share the zero modifier; mithril and
+    /// adamantium share the three modifier.
     /// </summary>
-    internal static IReadOnlyDictionary<string, int> ClassicWeaponToHitMaterialModifiers { get; } = new Dictionary<string, int>(StringComparer.Ordinal)
+    internal static IReadOnlyDictionary<string, int> ClassicWeaponMaterialModifiers { get; } = new Dictionary<string, int>(StringComparer.Ordinal)
     {
         ["iron"] = -1, ["steel"] = 0, ["silver"] = 0, ["elven"] = 1, ["dwarven"] = 2,
         ["mithril"] = 3, ["adamantium"] = 3, ["ebony"] = 4, ["orcish"] = 5, ["daedric"] = 6,

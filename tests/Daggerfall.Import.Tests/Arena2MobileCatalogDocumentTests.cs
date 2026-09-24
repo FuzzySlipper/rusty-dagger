@@ -1,3 +1,5 @@
+using System.Buffers.Binary;
+using System.Text;
 using System.Text.Json.Nodes;
 using Daggerfall.Import.Arena2;
 using Xunit;
@@ -84,6 +86,69 @@ public sealed class Arena2MobileCatalogDocumentTests
             Assert.NotNull(mobile!["damage"]);
             Assert.False(string.IsNullOrEmpty(mobile["behaviour"]!.GetValue<string>()));
         });
+    }
+
+    [Fact]
+    public void PublishesEachMobilesEnemyTypeAttackFlagsFromItsEnemyConfiguration()
+    {
+        // ENEMY???.CFG shares the CLASS??CFG record shape, whose byte 10 names the classic
+        // enemy-type attack-modifier flags; a mobile with no configuration carries no flags.
+        byte[] configuration = File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/CLASS00.CFG"));
+        configuration[10] = 0x04; // the humanoid bonus bit
+        MonsterArchiveInventory enemyConfigurations = MonsterArchiveInventory.Enumerate(
+            EnemyArchive(("ENEMY000.CFG", configuration)), "MONSTER.BSA");
+
+        Arena2MobileCatalogPublication publication = Arena2MobileCatalogDocument.Build(
+            Donor(), Pack(), "donor/EnemyBasics.cs", enemyConfigurations: enemyConfigurations);
+        JsonArray mobiles = JsonNode.Parse(publication.Json)!["mobiles"]!.AsArray();
+
+        Assert.Equal(0x04, mobiles.Single(mobile => mobile!["donorId"]!.GetValue<int>() == 0)!["attackModifierFlags"]!.GetValue<int>());
+        Assert.All(mobiles.Where(mobile => mobile!["donorId"]!.GetValue<int>() != 0),
+            mobile => Assert.Equal(0, mobile!["attackModifierFlags"]!.GetValue<int>()));
+    }
+
+    [Fact]
+    public void TheRealEnemyConfigurationsCarryTheClassicBonusForTheVampireAndItsKin()
+    {
+        string donorPath = "/home/research/daggerfall-unity/Assets/Scripts/Utility/EnemyBasics.cs";
+        string archivePath = Path.Combine(RepositoryRoot(), "local/arena2/MONSTER.BSA");
+        if (!File.Exists(donorPath) || !File.Exists(archivePath)) return;
+
+        Arena2MobileCatalogPublication publication = Arena2MobileCatalogDocument.Build(
+            File.ReadAllText(donorPath),
+            File.ReadAllText(Path.Combine(RepositoryRoot(), "content", "worldrpg", "payloads", "daggerfall.base.json")),
+            donorPath,
+            enemyConfigurations: MonsterArchiveInventory.Enumerate(File.ReadAllBytes(archivePath), "MONSTER.BSA"));
+        JsonArray mobiles = JsonNode.Parse(publication.Json)!["mobiles"]!.AsArray();
+
+        // The supplied classic corpus pays the humanoid bonus for the vampire (28) and the
+        // zombie (30) families and nothing for the rat (0).
+        Assert.Equal(0x04, mobiles.Single(mobile => mobile!["donorId"]!.GetValue<int>() == 28)!["attackModifierFlags"]!.GetValue<int>());
+        Assert.Equal(0, mobiles.Single(mobile => mobile!["donorId"]!.GetValue<int>() == 0)!["attackModifierFlags"]!.GetValue<int>());
+    }
+
+    /// <summary>Builds a named BSA in the layout <see cref="MonsterArchiveInventory"/> reads.</summary>
+    private static byte[] EnemyArchive(params (string Name, byte[] Payload)[] records)
+    {
+        const int HeaderBytes = 4;
+        const int DirectoryEntryBytes = 18;
+        int payloadBytes = records.Sum(record => record.Payload.Length);
+        byte[] archive = new byte[HeaderBytes + payloadBytes + (records.Length * DirectoryEntryBytes)];
+        BinaryPrimitives.WriteInt16LittleEndian(archive.AsSpan(0, 2), (short)records.Length);
+        BinaryPrimitives.WriteUInt16LittleEndian(archive.AsSpan(2, 2), 0x0100);
+        int payloadOffset = HeaderBytes;
+        int directoryOffset = HeaderBytes + payloadBytes;
+        for (int index = 0; index < records.Length; index++)
+        {
+            records[index].Payload.CopyTo(archive, payloadOffset);
+            Span<byte> entry = archive.AsSpan(directoryOffset + (index * DirectoryEntryBytes), DirectoryEntryBytes);
+            entry.Clear();
+            Encoding.ASCII.GetBytes(records[index].Name).CopyTo(entry);
+            BinaryPrimitives.WriteInt32LittleEndian(entry[14..], records[index].Payload.Length);
+            payloadOffset += records[index].Payload.Length;
+        }
+
+        return archive;
     }
 
     private static string RepositoryRoot()

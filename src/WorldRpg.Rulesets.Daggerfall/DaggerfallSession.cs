@@ -49,6 +49,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private readonly SpatialMovementSystem _spatial;
     private readonly FirstPersonCameraSystem _camera;
     private readonly DaggerCombatRules _combat;
+    // The player's weapon swing gesture, read from the look turns each admitted update commits and
+    // consumed by the weapon attack it admits.
+    private readonly DaggerfallSwingTracker _playerSwings;
     private readonly DaggerfallVitalityConsequences _vitality;
     private readonly DaggerfallStaminaRecoveryModule _staminaRecovery;
     private readonly CombatResolution _combatResolution;
@@ -304,12 +307,13 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             _equipmentMoves = new DaggerfallEquipmentMoves(inventory, equipmentCoordinator, definitions,
                 () => State.Character.Career.ForbiddenEquipment, State.ItemInstances);
             _itemCondition = new DaggerfallItemConditionService(definitions, State.ItemInstances, _equipmentMoves);
+            _playerSwings = new DaggerfallSwingTracker(_tuning.MeleeTargeting.MinimumSwingGestureRadians);
             _combat = new DaggerCombatRules(_random, State.Actors, State.Equipment, State.InventoryFor, State.ItemInstances, definitions, authored, targeting, use => State.SkillUses.Record(use),
                 () => State.Character.Background?.Modifiers.AvoidHit ?? 0, State.EquipmentFor, _itemCondition, combatRules,
                 actorId => actorId == DaggerfallActorIdentity.PlayerEntityId
                     && State.Character.CustomCareer?.Advantages.Any(trait => trait.Id == "adrenaline-rush") == true
                     ? new DaggerfallAdrenalineRush(Enabled: true, Improved: false) : default,
-                () => State.PlayerControl.Position);
+                () => State.PlayerControl.Position, () => State.Character, _playerSwings.TryGesture);
             State.Kit = new(State.Actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, State.Inventory, State.Equipment);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
                 engine.Perception,
@@ -1754,6 +1758,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             return;
         if (_appearance.HasPendingEnemyHitTarget(DaggerfallActorIdentity.PlayerEntityId)) return;
         LookReceipt currentLook = _input.ResolveCurrentLook(State.PlayerControl);
+        // The swing gesture is measured from the look turns this admitted update committed, so the
+        // attack below reads the gesture the player actually drew in the moments before it.
+        _playerSwings.Observe(update.DeltaSeconds, State.PlayerControl.YawRadians, State.PlayerControl.PitchRadians);
         _staminaRecovery.Update(State.Actors.Player.Stats, update.DeltaSeconds);
         if (update.IsRequested(DaggerfallInput.ToggleWeapon)) _appearance.ToggleWeaponDrawn();
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
