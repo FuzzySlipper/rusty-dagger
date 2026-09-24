@@ -37,9 +37,9 @@ internal sealed record DaggerfallKnightlyArmorOffer(
         if (!string.Equals(Material, Policies.DaggerfallItemMaterialPolicy.WeaponMaterials[Rank], StringComparison.Ordinal))
             throw new ArgumentException("Knightly armor material does not match the donor rank band.", nameof(Material));
         ArgumentNullException.ThrowIfNull(TemplateIndices);
-        if (TemplateIndices.Count is < 3 or > 6
+        if (TemplateIndices.Count is < 4 or > 7
             || TemplateIndices.Any(index => index is < 102 or > 108))
-            throw new ArgumentException("A knightly armor offer contains three to six classic armor templates.", nameof(TemplateIndices));
+            throw new ArgumentException("A knightly armor offer contains four to seven classic armor templates.", nameof(TemplateIndices));
         return this;
     }
 
@@ -174,7 +174,7 @@ internal sealed class DaggerfallKnightlyOrderClaimRuntime
         _random = random ?? throw new ArgumentNullException(nameof(random));
     }
 
-    /// <summary>Builds the donor's three-to-six armor choices without changing claim state.</summary>
+    /// <summary>Builds the donor's four-to-seven armor choices without changing claim state.</summary>
     internal DaggerfallKnightlyArmorOfferResult OfferArmor(
         int factionId,
         int currentDay,
@@ -190,7 +190,8 @@ internal sealed class DaggerfallKnightlyOrderClaimRuntime
 
         int rank = service.Membership.Rank;
         string key = $"{factionId}:{rank}:{offerKey}";
-        int count = Draw(key + ":count", 3, 6);
+        // The donor draws a start value from [3, 7), then loops down through zero.
+        int count = Draw(key + ":count", 3, 6) + 1;
         int[] templates = Enumerable.Range(0, count)
             .Select(index => Draw($"{key}:template:{index}", 102, 108))
             .ToArray();
