@@ -101,14 +101,25 @@ internal sealed class DaggerfallSiteProjection : IDisposable
     internal CharacterStepEnvironment CharacterEnvironment(CharacterMotion motion)
     {
         CharacterStepEnvironment motionModels = Motion.CharacterEnvironment();
-        // Motion models already enter Engine Spatial as exact triangle instances. Projecting the
-        // same models as call-local CharacterObstacle AABBs duplicates their collision and can
-        // over-block. Entity-bound triangle support/carry awaits the Engine capability tracked by
-        // the owning task; retain only the existing door obstacle/support facts here.
+        // Motion models enter Engine Spatial as exact triangle instances bound to their current
+        // entity identities. Passing those instances lets Engine resolve support and carry from
+        // retained triangle geometry; projecting the same models as AABB obstacles would duplicate
+        // collision and over-block.
         _ = motion;
         CharacterStepEnvironment doors = Doors.CharacterEnvironment();
+        return CombineCharacterEnvironments(doors, motionModels);
+    }
+
+    internal static CharacterStepEnvironment CombineCharacterEnvironments(
+        CharacterStepEnvironment doors,
+        CharacterStepEnvironment motionModels)
+    {
+        CharacterMeshInstance[] meshInstances = [.. doors.MeshInstances.ToArray(), .. motionModels.MeshInstances.ToArray()];
+        HashSet<ulong> meshEntities = meshInstances.Select(mesh => mesh.Entity).ToHashSet();
         CharacterObstacle[] obstacles = [.. doors.Obstacles.ToArray(), .. motionModels.Obstacles.ToArray()];
-        return new CharacterStepEnvironment(doors.Support, obstacles);
+        if (meshEntities.Count != 0)
+            obstacles = obstacles.Where(obstacle => !meshEntities.Contains(obstacle.Entity)).ToArray();
+        return new CharacterStepEnvironment(doors.Support, obstacles, meshInstances);
     }
 
     public void Dispose()
