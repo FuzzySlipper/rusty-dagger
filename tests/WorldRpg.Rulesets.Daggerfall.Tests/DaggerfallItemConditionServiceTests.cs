@@ -244,6 +244,12 @@ public sealed class DaggerfallItemConditionServiceTests
                 result.Metadata.CurrentCondition, result.Metadata.MaximumCondition));
         Assert.Equal(DaggerfallItemConditionOutcome.AlreadyEnchanted, f.Service.Enchant(sword, setting.Key).Outcome);
         Assert.Equal(setting.Key, f.Instances.RequireUnique(406).Enchantment);
+        // A setting-enchanted item is a normal item everywhere else: its metadata round-trips and it
+        // presents as the ordinary item named by what the setting does, not as an unpublished template.
+        DaggerfallItemInstanceMetadata stored = f.Instances.RequireUnique(406);
+        Assert.Equal(stored, DaggerfallItemInstanceMetadata.Restore(stored.ItemId, stored.Capture()));
+        InventoryItemPresentation row = Assert.Single(f.Presentation.Read().Items);
+        Assert.Equal((true, "Condition: 2400/2400 (100%); One Quarter More"), (row.Identified, row.Details));
     }
 
     [Fact]

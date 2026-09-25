@@ -745,6 +745,9 @@ internal sealed record DaggerfallSavePayload(
             throw new ArgumentException($"Book item '{itemId}' has no selected book identity.");
         }
         if (restored.Enchantment is not { } enchantment) return restored;
+        // An item maker's setting is a legitimate enchantment with no published magic item, so it is
+        // stored on the item as it stands rather than being required to name a template.
+        if (DaggerfallEnchantmentSettings.TryResolve(enchantment, out _)) return restored;
         if (!definitions.Magic.MagicItems.ContainsKey(enchantment))
             throw new ArgumentException($"Saved item '{itemId}' names unpublished magic metadata '{enchantment}'.");
         string suffix = $"-magic-{enchantment.Replace('.', '-')}";
