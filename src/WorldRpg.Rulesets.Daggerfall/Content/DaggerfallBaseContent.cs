@@ -3392,7 +3392,8 @@ internal static class DaggerfallBaseContent
             "loot-matrix-uses-fall-exe-errata",
             // Ranged shots draw one arrow, preroll their combat outcome, and travel through the
             // admitted session update, where admitted static geometry on the release line stops them.
-            // What remains is presentation: the flight still renders no arrow, so the visible missile
+            // The flight still only tests whether the target moved away from its release aim and never
+            // collides with an intervening actor's body, and it renders no arrow: the visible missile
             // waits on an authored arrow visual rather than a substitute shape.
             "ranged-shots-preroll-their-outcome-and-render-no-arrow",
         ];
