@@ -48,9 +48,13 @@ internal sealed class DaggerfallItemConditionService(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(magicItemKey);
         (_, DaggerfallItemInstanceMetadata metadata) = RequirePlayerItem(item);
+        DaggerfallItemDefinition definition = definitions.RequireItem(new DaggerfallItemId(metadata.ItemId));
+        // The quotation entry point answers for both kinds of enchantment an item can receive, exactly as
+        // the action that applies them does.
+        if (DaggerfallEnchantmentSettings.TryResolve(magicItemKey, out DaggerfallEnchantmentSetting setting))
+            return DaggerfallMagicCostPolicy.QuoteItemEnchantment(definition, metadata, setting);
         DaggerfallMagicItemDefinition magic = definitions.Magic.MagicItems.TryGetValue(magicItemKey, out DaggerfallMagicItemDefinition? found)
             ? found : throw new InvalidOperationException($"Magic item '{magicItemKey}' is not published.");
-        DaggerfallItemDefinition definition = definitions.RequireItem(new DaggerfallItemId(metadata.ItemId));
         return DaggerfallMagicCostPolicy.QuoteItemEnchantment(definitions, definition, metadata, magic);
     }
 
@@ -148,7 +152,9 @@ internal sealed class DaggerfallItemConditionService(
         (ulong durableItemId, DaggerfallItemInstanceMetadata metadata) = RequirePlayerItem(item);
         if (metadata.Enchantment is null || metadata.Identified)
             return new(DaggerfallItemConditionOutcome.AlreadyIdentified, durableItemId, metadata, metadata.CurrentCondition);
-        RequireMagic(metadata);
+        // A setting has no published template to disclose, so it is identified by its own param meaning;
+        // anything else must still name a published magic item.
+        if (!DaggerfallEnchantmentSettings.TryResolve(metadata.Enchantment, out _)) RequireMagic(metadata);
         DaggerfallItemInstanceMetadata identified = metadata with { Identified = true };
         instances.ReplaceUnique(durableItemId, identified);
         return new(DaggerfallItemConditionOutcome.Identified, durableItemId, identified, metadata.CurrentCondition);
