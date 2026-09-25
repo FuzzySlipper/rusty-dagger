@@ -69,8 +69,10 @@ internal sealed record DaggerfallPoisonArchetype(
 /// order and which classic effects it applies, including the effect rows the donor's switch interprets.
 /// This table owns what the records do not carry: the onset window, the duration window and the per-tick
 /// magnitude of each arm, which the donor states as its own constants rather than reading from the record.
-/// Joining the two is the consumer's work; until it does, an archetype's variant numbers are the donor's
-/// (128 onwards) and its names are the donor's spelling of the record's.
+/// It also owns the twelfth: the classic spell file this corpus was imported from carries eleven poison
+/// records and the lycanthropy record that shares their naming, so Aegrotat exists only in the donor's
+/// table. Joining the two is the consumer's work; until it does, an archetype's variant numbers are the
+/// donor's (128 onwards) and its names are the donor's spelling of the record's.
 /// </remarks>
 internal static class DaggerfallPoisonArchetypes
 {
