@@ -6,6 +6,24 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
+/// The draw identity a poison's onset, duration and arms come from, in the shape the combat owner uses.
+/// </summary>
+/// <remarks>
+/// The key carries the draw's own ordinal rather than a wall clock, so the same sequence of minutes draws
+/// the same values when a session is replayed. Carrying that ordinal across a save belongs with the save
+/// step; until then a reloaded session starts its own sequence.
+/// </remarks>
+internal static class DaggerfallPoisonRandomKey
+{
+    internal const ulong Seed = 0;
+    internal const string Scope = "dagger.poison.v1";
+    internal const string MinuteScope = "dagger.poison.minute.v1";
+
+    internal static string For(long entityId, long ordinal, string arm) =>
+        $"entity:{entityId}:draw:{ordinal}:arm:{arm}";
+}
+
+/// <summary>
 /// Holds one poison per afflicted actor and gives it its minute, applying each arm through the owner that
 /// already guarantees that vital or attribute.
 /// </summary>

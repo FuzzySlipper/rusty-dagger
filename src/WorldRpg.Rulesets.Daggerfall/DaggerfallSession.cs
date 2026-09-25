@@ -53,6 +53,10 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     // consumed by the weapon attack it admits.
     private readonly DaggerfallSwingTracker _playerSwings;
     private readonly DaggerfallVitalityConsequences _vitality;
+    // The poisons the session's actors carry, and the ordinal its draws advance on so a replay inside a
+    // session draws the same values.
+    private readonly DaggerfallPoisonRuntime _poisons;
+    private long _poisonDraws;
     private readonly DaggerfallStaminaRecoveryModule _staminaRecovery;
     private readonly CombatResolution _combatResolution;
     private readonly DaggerfallLocomotionPolicy _locomotion;
@@ -351,6 +355,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 () => State.PlayerControl.Position, NearbyCreatures, InSunlight, _itemCondition, InHolyPlace,
                 amount => _vitality.ResolveHeldEnchantmentDamage(State.Actors.Player.Actor, amount));
             State.HeldEnchantments = _heldEnchantments;
+            _poisons = new DaggerfallPoisonRuntime(_vitality, PoisonRoll);
+            State.Poisons = _poisons;
             State.Encumbrance = new DaggerfallEncumbrancePolicy(State.Inventory, State.Actors.Player.Stats,
                 () => _heldEnchantments.CarryMultiplier);
             _heldEnchantments.Refresh();
@@ -1729,6 +1735,17 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         return _encounters.Select(request, generation, _activeProfileKey.LogicalId, new ActorPose(pose, State.PlayerControl.YawRadians));
     }
 
+    /// <summary>
+    /// Draws one poison bound through the Engine's keyed service, so a replay inside a session draws the
+    /// same values rather than whatever the process clock says.
+    /// </summary>
+    private int PoisonRoll(int minimum, int maximum) => checked((int)_random.DrawKeyed(new KeyedRngRequest(
+        DaggerfallPoisonRandomKey.Seed,
+        DaggerfallPoisonRandomKey.Scope,
+        DaggerfallPoisonRandomKey.For(DaggerfallActorIdentity.PlayerEntityId, ++_poisonDraws, DaggerfallPoisonRandomKey.MinuteScope),
+        minimum,
+        maximum)).Value);
+
     private void AdvanceEffectsForCalendar(DaggerfallCalendar before, bool ordinaryPlay)
     {
         long minuteBefore = MinuteIndex(before);
@@ -1742,11 +1759,13 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         {
             State.Effects.AdvanceOrdinaryRound();
             State.HeldEnchantments.AdvanceRounds(1);
+            _ = _poisons.AdvanceMinutes(1);
             return;
         }
 
         _ = State.Effects.AdvanceElapsedRounds(minutes);
         State.HeldEnchantments.AdvanceRounds(checked((int)Math.Min(minutes, int.MaxValue)));
+        _ = _poisons.AdvanceMinutes(checked((int)Math.Min(minutes, int.MaxValue)));
     }
 
     private static long MinuteIndex(DaggerfallCalendar calendar) =>

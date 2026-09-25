@@ -39,6 +39,9 @@ internal sealed class DaggerfallState(PlayerControlState playerControl, ActorsSt
 
     /// <summary>The enchantments the player's worn items hold, recomputed from what they are worn on.</summary>
     internal DaggerfallHeldEnchantments HeldEnchantments { get; set; } = null!;
+
+    /// <summary>The poisons the session's actors carry, and the damage a completed one still holds.</summary>
+    internal DaggerfallPoisonRuntime Poisons { get; set; } = null!;
     internal MechanicsEquipmentCoordinator Equipment { get; } = equipment;
     internal MechanicsInventoryContainerCoordinator Containers { get; } = containers;
     /// <summary>The one managed inventory store every actor inventory and equipment registers in.</summary>
