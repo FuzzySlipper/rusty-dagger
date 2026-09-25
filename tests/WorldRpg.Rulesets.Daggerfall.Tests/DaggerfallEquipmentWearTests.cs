@@ -305,13 +305,6 @@ public sealed class DaggerfallEquipmentWearTests
     private static DaggerfallDefinitions Definitions => _definitions ??= TestPayload.Definitions;
     private static DaggerfallDefinitions? _definitions;
 
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md"))) return current.FullName;
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
-    }
-
     /// <summary>
     /// One staged wear arena: the loadout player with authored item conditions, a brigand (entity 2) that
     /// wears whatever weapon a test hands it, the real condition service, and a scripted keyed random.

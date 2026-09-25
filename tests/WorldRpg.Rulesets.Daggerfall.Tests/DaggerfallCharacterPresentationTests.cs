@@ -185,10 +185,4 @@ public sealed class DaggerfallCharacterPresentationTests
         }
     }
 
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md"))) return current.FullName;
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
-    }
 }

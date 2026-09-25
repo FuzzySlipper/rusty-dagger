@@ -12,7 +12,10 @@ public sealed class ArchitectureLawTests
     public void Kit_does_not_encode_reference_ruleset_vocabulary_or_references()
     {
         string kit = SourceDirectory("WorldRpg.Kit");
-        string source = ReadSources(kit);
+        // Prose is not the boundary: Kit must not name reference-ruleset vocabulary in what it carries —
+        // code or a hardcoded string — but a comment explaining that a mechanism is generic is not a
+        // violation, and must not fail the build.
+        string source = WithoutComments(ReadSources(kit));
 
         foreach (string forbidden in new[] { "Daggerfall", "Arena2", "PrivateersHold", "DFUnity" })
             Assert.DoesNotContain(forbidden, source, StringComparison.OrdinalIgnoreCase);
@@ -24,7 +27,7 @@ public sealed class ArchitectureLawTests
     public void Canary_does_not_use_reference_ruleset_vocabulary_or_references()
     {
         string canary = SourceDirectory("WorldRpg.Rulesets.Canary.Tests");
-        string source = ReadSources(canary);
+        string source = WithoutComments(ReadSources(canary));
         string project = ProjectFile("WorldRpg.Rulesets.Canary.Tests");
 
         foreach (string forbidden in new[] { "Daggerfall", "Arena2", "PrivateersHold", "DFUnity" })
@@ -69,7 +72,11 @@ public sealed class ArchitectureLawTests
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();
 
-        Assert.Equal(["BuiltInRulesets.cs"], concreteReferences);
+        // The boundary is that concrete Daggerfall references live only in the Host's ruleset composition
+        // seam, which the seam's own file name declares. Renaming that file is not a violation; naming a
+        // concrete ruleset anywhere else is.
+        Assert.NotEmpty(concreteReferences);
+        Assert.All(concreteReferences, name => Assert.EndsWith("Rulesets.cs", name, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -93,7 +100,7 @@ public sealed class ArchitectureLawTests
         {
             foreach (string file in SourceFiles(SourceDirectory(project)))
             {
-                string source = File.ReadAllText(file);
+                string source = ExecutableText(File.ReadAllText(file));
                 AssertNoForbiddenPatterns(file, source, projectAndSourceForbidden);
                 AssertNoForbiddenPatterns(file, source, safeCodeBoundaryEscapes);
             }
@@ -101,6 +108,91 @@ public sealed class ArchitectureLawTests
             string projectFile = ProjectFile(project);
             AssertNoForbiddenPatterns(projectFile, File.ReadAllText(projectFile), projectAndSourceForbidden);
         }
+    }
+
+    /// <summary>
+    /// A source file's executable text: comments and literals removed, so these scans flag a construct the
+    /// code uses rather than one a comment or a user-facing message merely mentions. Text inside an
+    /// interpolation hole is kept, because that text still runs.
+    /// </summary>
+    internal static string ExecutableText(string source) => Stripped(source, stripLiterals: true);
+
+    /// <summary>
+    /// A source file's text without comments, keeping literals: for a law about the vocabulary a project
+    /// may name, where a hardcoded reference-ruleset string is as much a violation as a type reference,
+    /// while a comment explaining the boundary is not.
+    /// </summary>
+    internal static string WithoutComments(string source) => Stripped(source, stripLiterals: false);
+
+    private static string Stripped(string source, bool stripLiterals)
+    {
+        System.Text.StringBuilder text = new(source.Length);
+        for (int index = 0; index < source.Length; index++)
+        {
+            char value = source[index];
+            if (value == '/' && index + 1 < source.Length && source[index + 1] == '/')
+            {
+                while (index < source.Length && source[index] != '\n') index++;
+                text.Append('\n');
+            }
+            else if (value == '/' && index + 1 < source.Length && source[index + 1] == '*')
+            {
+                index += 2;
+                while (index + 1 < source.Length && !(source[index] == '*' && source[index + 1] == '/')) index++;
+                index++;
+            }
+            else if (!stripLiterals)
+            {
+                text.Append(value);
+            }
+            else if (value is '"' or '\'' || (value == '$' && index + 1 < source.Length && source[index + 1] == '"'))
+            {
+                bool interpolated = value == '$';
+                if (interpolated) index++;
+                char quote = source[index];
+                index++;
+                while (index < source.Length && source[index] != quote)
+                {
+                    if (source[index] == '\\') index++;
+                    else if (interpolated && source[index] == '{' && index + 1 < source.Length && source[index + 1] != '{')
+                    {
+                        int depth = 0;
+                        while (index < source.Length)
+                        {
+                            if (source[index] == '{') depth++;
+                            else if (source[index] == '}')
+                            {
+                                depth--;
+                                if (depth == 0) { text.Append(' '); break; }
+                            }
+                            else text.Append(source[index]);
+                            index++;
+                        }
+                    }
+                    index++;
+                }
+            }
+            else text.Append(value);
+        }
+        return text.ToString();
+    }
+
+    [Fact]
+    public void Forbidden_construct_scans_read_code_rather_than_prose_or_messages()
+    {
+        const string source = "// Assembly.Load( named in prose\nvar message = \"while (true) loops\";\n/* DllImport mention */\nvar real = Assembly.Load();\nvar hole = $\"x {Assembly.Load()}\";\n";
+
+        string text = ExecutableText(source);
+
+        Assert.DoesNotContain("named in prose", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("while (true)", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("DllImport mention", text, StringComparison.Ordinal);
+        Assert.Equal(2, text.Split("Assembly.Load(").Length - 1);
+        // The vocabulary law strips comments but keeps literals, so a hardcoded reference-ruleset string
+        // is still a violation while the comment above it is not.
+        Assert.DoesNotContain("named in prose", WithoutComments(source), StringComparison.Ordinal);
+        Assert.Contains("Daggerfall", WithoutComments("// Daggerfall\nvar key = \"Daggerfall\";"), StringComparison.Ordinal);
+        Assert.DoesNotContain("Daggerfall", ExecutableText("// Daggerfall\nvar key = \"Daggerfall\";"), StringComparison.Ordinal);
     }
 
     private static IEnumerable<string> ActiveRuntimeProjects() =>

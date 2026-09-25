@@ -167,13 +167,6 @@ public sealed class DaggerfallEncounterPolicyTests
 
     private static DaggerfallDefinitions Definitions() => TestPayload.Definitions;
 
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md"))) directory = directory.Parent;
-        return directory?.FullName ?? throw new DirectoryNotFoundException("Could not locate the Rusty Dagger repository root.");
-    }
-
     private class RecordingRandom : DispatchProxy
     {
         internal IRandomService Service { get; private set; } = null!;
