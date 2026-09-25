@@ -4495,8 +4495,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         double separation = definitions.Actions.Values.Where(action => action.Interpretation == "fixed-melee").Max(action => action.Reach!.Value) + 1d;
         perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 1d, PerceptionPairKind.Visible, 1d));
 
-        double healthBefore = PlayerHealth(session);
-        double beforeHealth = healthBefore;
+        double beforeHealth = PlayerHealth(session);
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredRangedMarker(archer));
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         for (ulong step = 2; step <= 120 && session.Presentation.LastOutcome is null; step++)
@@ -4506,6 +4505,55 @@ public sealed partial class NormalizedRuntimeSeamTests
         // and the line tells the player the world was in the way rather than that they were missed.
         Assert.Equal(beforeHealth, PlayerHealth(session));
         Assert.Contains("blocked by cover", session.Presentation.LastOutcome ?? string.Empty);
+
+        // The Engine answered exactly one query, and it was the shot's own line: it runs at the
+        // player, and it starts clear of the muzzle so a shooter standing against geometry is not
+        // read as its own cover.
+        float eye = DaggerfallTuning.Defaults.Camera.EyeHeight;
+        Vector3 shooter = session.State.Actors.Get(archer).Position.ToVector() + Vector3.UnitY * eye;
+        Vector3 aim = session.State.PlayerControl.Position!.Value.ToVector() + Vector3.UnitY * eye;
+        Vector3 line = Vector3.Normalize(aim - shooter);
+        SpatialRaycastRequest cast = Assert.Single(spatial.FloorProbes.Where(request =>
+            MathF.Abs((float)(request.MaxDistance - (Vector3.Distance(shooter, aim) - .3f))) < .05f));
+        Assert.Equal(line.X, cast.Direction.X, 2);
+        Assert.Equal(line.Y, cast.Direction.Y, 2);
+        Assert.Equal(line.Z, cast.Direction.Z, 2);
+        Assert.Equal(shooter.X + line.X * .3f, cast.Origin.X, 2);
+        Assert.Equal(shooter.Z + line.Z * .3f, cast.Origin.Z, 2);
+    }
+
+    [Fact]
+    public void An_actor_between_the_archer_and_the_player_does_not_stop_the_shot()
+    {
+        // The shot stops at admitted world geometry, not at a body: an intervening actor is not cover,
+        // which is what keeps the StaticMesh answer the only blocking one.
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        spatial.KeepPosition = true;
+        spatial.FloorHit = request => request.Direction.Y < -.5f
+            ? default
+            : default(SpatialHit) with { Present = true, Kind = SpatialHitKind.Entity };
+        PerceptionFake perception = PerceptionFake.Create();
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        const long archer = 2004;
+        double separation = definitions.Actions.Values.Where(action => action.Interpretation == "fixed-melee").Max(action => action.Reach!.Value) + 1d;
+        perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 1d, PerceptionPairKind.Visible, 1d));
+
+        double beforeHealth = PlayerHealth(session);
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredRangedMarker(archer));
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+        for (ulong step = 2; step <= 240 && PlayerHealth(session) == beforeHealth; step++)
+            session.Update(new ProductUpdate(OuterUpdate(step), []));
+
+        Assert.True(PlayerHealth(session) < beforeHealth, "an actor in the way is not cover, so the arrow still lands");
+        Assert.DoesNotContain("blocked by cover", session.Presentation.LastOutcome ?? string.Empty);
     }
 
     [Fact]

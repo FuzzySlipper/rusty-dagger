@@ -279,7 +279,9 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     }
 
     // DFU DaggerfallMissile moves at 25m/s. The accepted ruleset approximation uses a 0.45m
-    // target-position dodge radius; its missing static-cover cast and visual arrow are documented above.
+    // target-position dodge radius and asks the caller's cover query about the release line; it still
+    // renders no arrow and does not collide with an intervening actor's body, which the erratum and
+    // the receiving task for the projectile visual record.
     private const double ArrowSpeedMetersPerSecond = 25d;
     private const float ArrowDodgeRadiusMeters = .45f;
     private readonly record struct RangedShotIdentity(ulong Generation, long AttackerId, long TargetId, ulong ReleaseStep);
