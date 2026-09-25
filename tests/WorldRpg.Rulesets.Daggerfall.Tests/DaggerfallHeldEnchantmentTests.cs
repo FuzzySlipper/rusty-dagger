@@ -444,6 +444,34 @@ public sealed class DaggerfallHeldEnchantmentTests
             new DaggerfallMagicEnchantmentDefinition("test", 99, 0, "test", null, false), out _));
     }
 
+    [Fact]
+    public void The_settings_table_validates_and_a_broken_row_is_reported()
+    {
+        // Every load reads the compiled table through this, so the checks have to be the ones that would
+        // catch a transcription: a key that does not name its own type and param, an undefined classic
+        // type, a param below the donor's sentinel, an empty meaning, a zero cost or a repeated pair.
+        Assert.Empty(DaggerfallEnchantmentSettings.Validate(DaggerfallEnchantmentSettings.All));
+
+        DaggerfallEnchantmentSetting sound = DaggerfallEnchantmentSettings.All[0];
+        string[] problems = [.. DaggerfallEnchantmentSettings.Validate(
+        [
+            sound with { Key = "wrong" },
+            sound with { Type = 99 },
+            sound with { Param = -2 },
+            sound with { Meaning = " " },
+            sound with { Cost = 0 },
+            sound,
+            sound,
+        ])];
+
+        Assert.Contains(problems, problem => problem.Contains("does not name type", StringComparison.Ordinal));
+        Assert.Contains(problems, problem => problem.Contains("does not define", StringComparison.Ordinal));
+        Assert.Contains(problems, problem => problem.Contains("below the donor's single-setting sentinel", StringComparison.Ordinal));
+        Assert.Contains(problems, problem => problem.Contains("has no param meaning", StringComparison.Ordinal));
+        Assert.Contains(problems, problem => problem.Contains("costs nothing", StringComparison.Ordinal));
+        Assert.Contains(problems, problem => problem.Contains("repeats type", StringComparison.Ordinal));
+    }
+
     /// <summary>The donor's own item-maker settings, addressed by the key a worn item carries.</summary>
     private static int SettingCost(int type, int param) =>
         DaggerfallEnchantmentSettings.All.Single(setting => setting.Type == type && setting.Param == param).Cost;
