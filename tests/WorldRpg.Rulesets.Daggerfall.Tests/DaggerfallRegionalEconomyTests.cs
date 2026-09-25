@@ -175,6 +175,16 @@ public sealed class DaggerfallRegionalEconomyTests
             [plain], 10, 50, 50, 0, null).Quote);
 
         Assert.Equal(ordinary.ShopSubtotal, enchanted.ShopSubtotal);
+
+        // The identified half of the same rule: an identified setting is worth the ordinary item too, so a
+        // regression that invented a magic value for it would fail here.
+        DaggerfallTradeLine identifiedEnchanted = new(definition, metadata with { Enchantment = setting, Identified = true }, 1);
+        DaggerfallTradeLine identifiedPlain = new(definition, metadata with { Identified = true }, 1);
+        DaggerfallTradeQuote identifiedSettingQuote = Assert.IsType<DaggerfallTradeQuote>(service.Quote(DaggerfallTradeSide.BuyFromMerchant,
+            [identifiedEnchanted], 10, 50, 50, 0, null).Quote);
+        DaggerfallTradeQuote identifiedPlainQuote = Assert.IsType<DaggerfallTradeQuote>(service.Quote(DaggerfallTradeSide.BuyFromMerchant,
+            [identifiedPlain], 10, 50, 50, 0, null).Quote);
+        Assert.Equal(identifiedPlainQuote.ShopSubtotal, identifiedSettingQuote.ShopSubtotal);
     }
 
     private static DaggerfallCreatedItem MagicItem(DaggerfallDefinitions definitions)

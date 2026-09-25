@@ -52,6 +52,23 @@ public sealed class DaggerfallItemConditionServiceTests
     }
 
     [Fact]
+    public void Identifying_an_unidentified_setting_enchantment_succeeds()
+    {
+        // A save may carry an unidentified setting, so identifying it must disclose what the setting does
+        // rather than demand a published magic template it does not have.
+        using Fixture f = new();
+        UniqueItem sword = f.CreatePlainWeapon(407, 115, "daedric");
+        string settingKey = DaggerfallEnchantmentSettings.All.Single(candidate => candidate.Type == 7 && candidate.Param == 0).Key;
+        DaggerfallItemInstanceMetadata before = f.Instances.RequireUnique(407);
+        f.Instances.ReplaceUnique(407, before with { Enchantment = settingKey, Identified = false });
+
+        DaggerfallItemConditionResult result = f.Service.Identify(sword);
+
+        Assert.Equal(DaggerfallItemConditionOutcome.Identified, result.Outcome);
+        Assert.True(f.Instances.RequireUnique(407).Identified);
+    }
+
+    [Fact]
     public void An_item_makers_setting_survives_a_save_and_restore()
     {
         // The save path used to require a published magic item, so an item the item maker had enchanted
@@ -274,6 +291,11 @@ public sealed class DaggerfallItemConditionServiceTests
         Assert.Equal(stored, DaggerfallItemInstanceMetadata.Restore(stored.ItemId, stored.Capture()));
         InventoryItemPresentation row = Assert.Single(f.Presentation.Read().Items);
         Assert.Equal((true, "Condition: 2400/2400 (100%); One Quarter More"), (row.Identified, row.Details));
+        // An identified setting leaves the item's value alone rather than standing in for a magic template.
+        Assert.Equal(f.Definitions.RequireItem(new DaggerfallItemId(stored.ItemId)).Value, row.Value);
+        // The quotation entry point answers for a setting too, at the donor's own cost.
+        DaggerfallItemEnchantmentQuote quote = f.Service.QuoteEnchantment(sword, setting.Key);
+        Assert.Equal((true, setting.Cost), (quote.Eligible, quote.RequiredPoints));
     }
 
     [Fact]
