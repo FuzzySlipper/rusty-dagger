@@ -356,6 +356,16 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 amount => _vitality.ResolveHeldEnchantmentDamage(State.Actors.Player.Actor, amount));
             State.HeldEnchantments = _heldEnchantments;
             _poisons = new DaggerfallPoisonRuntime(_vitality, PoisonRoll);
+            if (saved?.Poisons is { } savedPoisons)
+            {
+                _poisonDraws = savedPoisons.Records.Length == 0 ? 0 : checked((long)savedPoisons.Records.Max(record => record.Entity));
+                // Only the player can carry a poison today, because nothing afflicts anyone else yet: delivery
+                // through strikes and drug use is the step that gives the other actors carriers, and this
+                // resolver gains their lookup then. A record naming any other entity is refused by Restore
+                // rather than quietly dropped.
+                _poisons.Restore(savedPoisons, entity =>
+                    State.Actors.Player.Actor.Entity.Value == (ulong)entity ? State.Actors.Player.Actor : null);
+            }
             State.Poisons = _poisons;
             State.Encumbrance = new DaggerfallEncumbrancePolicy(State.Inventory, State.Actors.Player.Stats,
                 () => _heldEnchantments.CarryMultiplier);

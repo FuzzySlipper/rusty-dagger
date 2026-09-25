@@ -2,6 +2,7 @@ using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using Rusty.Engine;
+using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
