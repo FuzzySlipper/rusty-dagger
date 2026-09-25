@@ -300,6 +300,28 @@ public sealed class DaggerfallHeldEnchantmentTests
     }
 
     [Fact]
+    public void A_setting_applied_by_the_item_maker_reaches_the_held_contribution()
+    {
+        // The whole loop in one fact: the item maker puts a weight-allowance setting on a plain item, the
+        // player wears it, and the carry maximum the encumbrance owner answers with grows by a quarter.
+        using Fixture fixture = new();
+        long plain = fixture.MaximumCarryUnits();
+
+        // A daedric longsword: iron carries no enchantment power, so the item maker refuses it, as
+        // classic did, and a one-handed blade keeps the fixture's single-slot bookkeeping.
+        fixture.EnchantAndWear("template-120-daedric", 9101, type: 7, param: 0);
+        fixture.Refresh();
+
+        Assert.Equal(1.25d, fixture.CarryMultiplier);
+        Assert.Equal((long)(plain * 1.25d), fixture.MaximumCarryUnits());
+
+        fixture.Unequip(9101);
+        fixture.Refresh();
+        Assert.Equal(1d, fixture.CarryMultiplier);
+        Assert.Equal(plain, fixture.MaximumCarryUnits());
+    }
+
+    [Fact]
     public void A_worn_talent_enchantment_sets_the_talent_the_combat_owner_reads()
     {
         using Fixture fixture = new();
@@ -418,6 +440,7 @@ public sealed class DaggerfallHeldEnchantmentTests
         private readonly MechanicsEquipmentCoordinator _equipment;
         private readonly DaggerfallEncumbrancePolicy _encumbrance;
         private readonly DaggerfallHeldEnchantments _held;
+        private readonly DaggerfallItemConditionService _conditions;
         private readonly Dictionary<ulong, WorldPoint> _positions = [];
         private IReadOnlyList<DaggerfallNearbyCreature> _nearby = [];
         private bool _sunlight;
@@ -442,6 +465,8 @@ public sealed class DaggerfallHeldEnchantmentTests
                 .ToDictionary(slot => new WorldRpg.Kit.Inventory.EquipmentSlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
             MechanicsInventoryCoordinator coordinator = new(inventory, _actors.Entities, items);
             _equipment = new MechanicsEquipmentCoordinator(inventory, equipment, _actors.Entities, items, slots);
+            DaggerfallEquipmentMoves moves = new(coordinator, _equipment, Definitions, itemInstances: _instances);
+            _conditions = new DaggerfallItemConditionService(Definitions, _instances, moves);
             _held = new DaggerfallHeldEnchantments(_equipment, _instances, MagicItems, player.Stats, _actors.Entities, PlayerEntity,
                 () => _calendar, () => _positions.TryGetValue(DaggerfallActorIdentity.PlayerEntityId, out WorldPoint position) ? position : new WorldPoint(0f, 0f, 0f),
                 () => _nearby, () => _sunlight);
@@ -494,6 +519,25 @@ public sealed class DaggerfallHeldEnchantmentTests
             Authored[key] = new DaggerfallMagicItemDefinition(key, 0L, key, 0, 0, 0, 0, 0, 0,
                 [new DaggerfallMagicEnchantmentDefinition($"{key}.enchantment.1", type, param, "authored", null, false)]);
             EquipEnchanted(itemId, uniqueId, key, equip);
+        }
+
+        /// <summary>Puts a setting on a player item through the real item-maker action, then wears it.</summary>
+        internal void EnchantAndWear(string itemId, ulong uniqueId, int type, int param)
+        {
+            DaggerfallItemDefinition definition = Definitions.RequireItem(new DaggerfallItemId(itemId));
+            int condition = Definitions.AuthoredMaximumCondition(definition);
+            _instances.RegisterUnique(uniqueId, DaggerfallItemInstanceMetadata.Default(definition, DaggerfallItemOwner.Player) with
+            {
+                CurrentCondition = condition,
+                MaximumCondition = condition,
+            });
+            WorldRpg.Kit.Inventory.UniqueInventoryItem item = _equipment.Materialize(
+                new DurableIdentityReference(DurableIdentityKind.Item, uniqueId), new InventoryItemId(itemId));
+            _conditions.Enchant(item, SettingKey(type, param));
+            // Wear it where its own handedness allows, as the other fixtures do.
+            _equipment.Equip(item, definition.Weapon?.Handedness == "both"
+                ? [new WorldRpg.Kit.Inventory.EquipmentSlotId("right-hand"), new WorldRpg.Kit.Inventory.EquipmentSlotId("left-hand")]
+                : [new WorldRpg.Kit.Inventory.EquipmentSlotId("right-hand")]);
         }
 
         internal void Unequip(ulong uniqueId)
