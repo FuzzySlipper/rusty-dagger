@@ -25,15 +25,31 @@ internal enum DaggerfallPoisonPhase
 internal sealed class DaggerfallPoisonAffliction
 {
     internal DaggerfallPoisonAffliction(DaggerfallPoisonArchetype archetype, int minutesToStart, int minutesRemaining)
+        : this(archetype, minutesToStart, minutesRemaining, allowsComplete: false)
+    {
+    }
+
+    private DaggerfallPoisonAffliction(DaggerfallPoisonArchetype archetype, int minutesToStart, int minutesRemaining, bool allowsComplete)
     {
         ArgumentNullException.ThrowIfNull(archetype);
         if (minutesToStart < 0)
             throw new ArgumentOutOfRangeException(nameof(minutesToStart), minutesToStart, "A poison cannot start before now.");
-        if (minutesRemaining < 1)
+        if (minutesRemaining < 1 && !allowsComplete)
             throw new ArgumentOutOfRangeException(nameof(minutesRemaining), minutesRemaining, "A poison lasts at least one minute.");
         Archetype = archetype;
         MinutesToStart = minutesToStart;
         MinutesRemaining = minutesRemaining;
+    }
+
+    /// <summary>
+    /// The affliction a reload finds: a poison that has run its course and is carried only for the attribute
+    /// damage it left, which is a state a fresh affliction cannot be constructed in because every poison
+    /// that starts has at least one minute to give.
+    /// </summary>
+    internal static DaggerfallPoisonAffliction AlreadyComplete(DaggerfallPoisonArchetype archetype)
+    {
+        ArgumentNullException.ThrowIfNull(archetype);
+        return new DaggerfallPoisonAffliction(archetype, minutesToStart: 0, minutesRemaining: 0, allowsComplete: true);
     }
 
     internal DaggerfallPoisonArchetype Archetype { get; }

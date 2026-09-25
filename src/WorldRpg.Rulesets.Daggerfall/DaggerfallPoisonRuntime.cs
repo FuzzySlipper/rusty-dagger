@@ -6,6 +6,54 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
+/// One poison a save carries: which actor has it, which archetype it is, where it is in its course, and the
+/// instance name its attribute arms own.
+/// </summary>
+/// <remarks>
+/// The attribute contributions themselves are deliberately absent. They live on the actor as stat sources
+/// and the stats save already rebuilds them from their identities, so carrying them here as well would give
+/// the same number two owners; what a reload needs from this record is the affliction and the instance that
+/// names the sources it has to find again.
+/// </remarks>
+internal sealed record DaggerfallPoisonRecord(
+    long Entity,
+    int Variant,
+    int MinutesToStart,
+    int MinutesRemaining,
+    string Instance)
+{
+    internal void Validate()
+    {
+        if (!DaggerfallPoisonArchetypes.TryResolve(Variant, out _))
+            throw new ArgumentException($"Poison save names variant {Variant}, which is not one of the twelve.", nameof(Variant));
+        if (MinutesToStart < 0 || MinutesRemaining < 0)
+            throw new ArgumentException("Poison save carries a negative minute.", nameof(MinutesToStart));
+        if (string.IsNullOrWhiteSpace(Instance))
+            throw new ArgumentException("Poison save carries no instance name for the arms it owns.", nameof(Instance));
+    }
+}
+
+/// <summary>The poisons a save carries, one actor's ongoing poison and its residue together.</summary>
+internal sealed record DaggerfallPoisonsSave(DaggerfallPoisonRecord[] Records)
+{
+    internal static DaggerfallPoisonsSave Empty { get; } = new([]);
+
+    internal DaggerfallPoisonsSave Validate()
+    {
+        ArgumentNullException.ThrowIfNull(Records);
+        HashSet<string> instances = new(StringComparer.Ordinal);
+        foreach (DaggerfallPoisonRecord record in Records)
+        {
+            ArgumentNullException.ThrowIfNull(record);
+            record.Validate();
+            if (!instances.Add(record.Instance))
+                throw new ArgumentException($"Poison save repeats instance '{record.Instance}'.", nameof(Records));
+        }
+        return this;
+    }
+}
+
+/// <summary>
 /// The draw identity a poison's onset, duration and arms come from, in the shape the combat owner uses.
 /// </summary>
 /// <remarks>
@@ -70,6 +118,68 @@ internal sealed class DaggerfallPoisonRuntime
     /// <summary>Whether an actor carries attribute damage a poison left on it.</summary>
     internal bool HasPersistingDamage(Actor actor) =>
         _states.TryGetValue(actor, out List<DaggerfallPoisonState>? states) && states.Any(state => state.Totals.Count > 0);
+
+    /// <summary>What a save carries: every poison held, ordered so the same state saves the same way.</summary>
+    internal DaggerfallPoisonsSave Capture()
+    {
+        DaggerfallPoisonRecord[] records =
+        [
+            .. _states
+                .SelectMany(pair => pair.Value.Select(state => new DaggerfallPoisonRecord(
+                    checked((long)pair.Key.Entity.Value),
+                    state.Affliction.Archetype.Variant,
+                    state.Affliction.MinutesToStart,
+                    state.Affliction.MinutesRemaining,
+                    state.Instance)))
+                .OrderBy(record => record.Entity)
+                .ThenBy(record => record.Instance, StringComparer.Ordinal),
+        ];
+        return new DaggerfallPoisonsSave(records).Validate();
+    }
+
+    /// <summary>
+    /// Takes back the poisons a save carried. A poison still running resumes where it stood; a completed one
+    /// comes back as the residue it is, with the attribute totals it owns read off the sources the stats save
+    /// has already restored, so a cure can still take them off.
+    /// </summary>
+    internal void Restore(DaggerfallPoisonsSave saved, Func<long, Actor?> resolve)
+    {
+        ArgumentNullException.ThrowIfNull(saved);
+        ArgumentNullException.ThrowIfNull(resolve);
+        saved.Validate();
+        foreach (DaggerfallPoisonRecord record in saved.Records)
+        {
+            if (!DaggerfallPoisonArchetypes.TryResolve(record.Variant, out DaggerfallPoisonArchetype archetype)) continue;
+            Actor actor = resolve(record.Entity)
+                ?? throw new InvalidOperationException($"Poison save names entity {record.Entity}, which this session does not carry.");
+            DaggerfallPoisonAffliction affliction = record.MinutesRemaining < 1 && record.MinutesToStart < 1
+                ? DaggerfallPoisonAffliction.AlreadyComplete(archetype)
+                : new DaggerfallPoisonAffliction(archetype, record.MinutesToStart, record.MinutesRemaining);
+            DaggerfallPoisonState state = new(affliction, record.Instance);
+            RebuildTotals(actor, state);
+            if (!_states.TryGetValue(actor, out List<DaggerfallPoisonState>? carried)) _states[actor] = carried = [];
+            carried.Add(state);
+        }
+    }
+
+    /// <summary>
+    /// Reads back what a restored poison holds on an attribute, from the source the stats save rebuilt. A
+    /// source that is no longer there means the damage is no longer on the actor either, so nothing is held.
+    /// </summary>
+    private static void RebuildTotals(Actor actor, DaggerfallPoisonState state)
+    {
+        StatsComponent stats = actor.Get<StatsComponent>();
+        foreach (DaggerfallPoisonEffect effect in state.Affliction.Archetype.Effects)
+        {
+            if (effect.Target != DaggerfallPoisonTarget.Attribute) continue;
+            PoisonArmKey key = new(AttributeId(effect.Attribute!), effect.IsPositive);
+            EffectSourceIdentity identity = IdentityFor(actor.Entity, state, key);
+            Stat stat = stats.GetStat(StatId.Parse(key.Stat.Value));
+            StatSource? source = stat.Sources.FirstOrDefault(candidate => candidate.Identity == identity);
+            if (source is null || source.Contributions.Count == 0) continue;
+            if (source.Contributions[0].Contribution is StatContribution.Add add) state.Totals[key] = checked((int)add.Amount);
+        }
+    }
 
     /// <summary>
     /// Afflicts an actor with one classic variant. An actor already carrying a poison keeps the worse of

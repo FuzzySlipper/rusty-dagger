@@ -154,6 +154,40 @@ public sealed class DaggerfallPoisonRuntimeTests
     }
 
     [Fact]
+    public void A_poison_a_save_carries_comes_back_where_it_stood_and_for_what_it_left()
+    {
+        // What a save carries is the affliction and the instance its arms own; the arms themselves come back
+        // from the stats save, which is what the restore reads to find the damage a completed poison left.
+        using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
+        Actor victim = AttributedActor(fixture);
+        DaggerfallPoisonRuntime source = Runtime();
+        double strength = Stat(victim, DaggerfallMechanicsIds.Strength);
+
+        // One poison completed with a drain behind it, and one still running with most of its course left.
+        Assert.True(source.Afflict(victim, 131));
+        Assert.Equal(90, source.AdvanceMinutes(50));
+        Assert.True(source.Afflict(victim, 129));
+        DaggerfallPoisonsSave saved = source.Capture();
+        double drained = Stat(victim, DaggerfallMechanicsIds.Strength);
+
+        Assert.Equal(2, saved.Records.Length);
+        Assert.Equal(2, source.Count);
+
+        DaggerfallPoisonRuntime restored = Runtime();
+        restored.Restore(saved, entity => entity == checked((long)victim.Entity.Value) ? victim : null);
+
+        Assert.Equal(2, restored.Count);
+        Assert.Equal(129, restored.Affliction(victim)!.Archetype.Variant);
+        Assert.True(restored.Affliction(victim)!.MinutesRemaining > 1);
+        Assert.True(restored.HasPersistingDamage(victim));
+
+        // And the drain it came back with is still there to be cured, not silently re-applied.
+        Assert.Equal(drained, Stat(victim, DaggerfallMechanicsIds.Strength));
+        Assert.True(restored.Cure(victim));
+        Assert.Equal(strength, Stat(victim, DaggerfallMechanicsIds.Strength));
+    }
+
+    [Fact]
     public void A_second_poison_only_takes_over_when_it_has_more_left_to_give()
     {
         using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
