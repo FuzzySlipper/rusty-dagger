@@ -1,3 +1,4 @@
+using WorldRpg.Rulesets.Daggerfall.Content;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -91,4 +92,113 @@ public sealed class DaggerfallPoisonPolicyTests
     }
 
     private static DaggerfallPoisonExposure Exposure() => new(TargetId: 2, TargetLevel: 5, CareerImmune: false, RaceImmune: false, Willpower: 50);
+
+    [Fact]
+    public void The_classic_poison_archetypes_are_the_donors_own_table()
+    {
+        // The donor builds all twelve variants from constants in its poison effect, so the ruleset owns
+        // the table and this pins it: order, variant numbers, the weapon-poison/drug split, and the two
+        // windows each archetype rolls.
+        Assert.Empty(DaggerfallPoisonArchetypes.Validate(DaggerfallPoisonArchetypes.All));
+        Assert.Equal(12, DaggerfallPoisonArchetypes.All.Count);
+        Assert.Equal(Enumerable.Range(128, 12), DaggerfallPoisonArchetypes.All.Select(archetype => archetype.Variant));
+        Assert.All(DaggerfallPoisonArchetypes.All, archetype => Assert.Equal(archetype.Variant, (int)Enum.Parse<DaggerfallPoisonVariant>(archetype.Name.Replace("_", string.Empty))));
+        Assert.Equal(
+            ["Nux_Vomica", "Arsenic", "Moonseed", "Drothweed", "Somnalius", "Pyrrhic_Acid", "Magebane", "Thyrwort", "Indulcet", "Sursum", "Quaesto_Vil", "Aegrotat"],
+            DaggerfallPoisonArchetypes.All.Select(archetype => archetype.Name));
+
+        // 0-7 are weapon poisons and 8-11 are drugs; the donor splits them at the ninth variant.
+        Assert.Equal(
+            [.. Enumerable.Repeat(DaggerfallPoisonKind.WeaponPoison, 8), .. Enumerable.Repeat(DaggerfallPoisonKind.Drug, 4)],
+            DaggerfallPoisonArchetypes.All.Select(archetype => archetype.Kind));
+
+        (int OnsetMin, int OnsetMax, int DurationMin, int DurationMax)[] windows =
+        [
+            (4, 4, 3, 10), (10, 10, 20, 1000), (0, 0, 1, 4), (5, 10, 5, 30), (0, 0, 2, 10), (0, 0, 1, 2),
+            (2, 2, 5, 20), (0, 0, 1, 3), (2, 12, 2, 6), (1, 4, 2, 2), (2, 12, 1, 4), (0, 0, 5, 20),
+        ];
+        Assert.Equal(windows, DaggerfallPoisonArchetypes.All.Select(archetype =>
+            (archetype.MinimumOnsetMinutes, archetype.MaximumOnsetMinutes, archetype.MinimumDurationMinutes, archetype.MaximumDurationMinutes)));
+
+        // Every archetype's key is the one the admission policy reports, so nothing names an effect twice.
+        Assert.All(DaggerfallPoisonArchetypes.All, archetype =>
+            Assert.Equal(archetype.Key, DaggerfallPoisonPolicy.EffectKey((DaggerfallPoisonVariant)archetype.Variant)));
+    }
+
+    [Fact]
+    public void A_poison_tick_is_the_donors_own_effect_and_its_positive_arms_are_marked()
+    {
+        // The donor rolls these with an exclusive maximum, so the inclusive bounds here are already one
+        // lower than its argument; the arms that help the victim are the ones a cure has to take back.
+        DaggerfallPoisonArchetype nux = DaggerfallPoisonArchetypes.All.Single(archetype => archetype.Variant == 128);
+        DaggerfallPoisonArchetype arsenic = DaggerfallPoisonArchetypes.All.Single(archetype => archetype.Variant == 129);
+        DaggerfallPoisonArchetype drothweed = DaggerfallPoisonArchetypes.All.Single(archetype => archetype.Variant == 131);
+        DaggerfallPoisonArchetype indulcet = DaggerfallPoisonArchetypes.All.Single(archetype => archetype.Variant == 136);
+        DaggerfallPoisonArchetype sursum = DaggerfallPoisonArchetypes.All.Single(archetype => archetype.Variant == 137);
+        DaggerfallPoisonArchetype quaesto = DaggerfallPoisonArchetypes.All.Single(archetype => archetype.Variant == 138);
+        DaggerfallPoisonArchetype aegrotat = DaggerfallPoisonArchetypes.All.Single(archetype => archetype.Variant == 139);
+
+        Assert.Equal([new DaggerfallPoisonEffect(DaggerfallPoisonTarget.Health, null, 2, 11)], nux.Effects);
+        Assert.Equal(
+            [new DaggerfallPoisonEffect(DaggerfallPoisonTarget.Health, null, 2, 2), new DaggerfallPoisonEffect(DaggerfallPoisonTarget.Attribute, "endurance", -1, -1)],
+            arsenic.Effects);
+        Assert.Equal(
+            [new DaggerfallPoisonEffect(DaggerfallPoisonTarget.Attribute, "strength", -9, -5),
+             new DaggerfallPoisonEffect(DaggerfallPoisonTarget.Attribute, "agility", -4, -1),
+             new DaggerfallPoisonEffect(DaggerfallPoisonTarget.Attribute, "speed", -4, -1)],
+            drothweed.Effects);
+
+        // The four drugs are also the ones that help their victim somewhere: luck, strength, fatigue and
+        // magicka respectively. Those arms are marked so the ending can take them back.
+        Assert.Equal([new DaggerfallPoisonEffect(DaggerfallPoisonTarget.Fatigue, null, 10, 99),
+            new DaggerfallPoisonEffect(DaggerfallPoisonTarget.Attribute, "luck", 4, 9, IsPositive: true)], indulcet.Effects);
+        Assert.Equal([new DaggerfallPoisonEffect(DaggerfallPoisonTarget.Attribute, "intelligence", -29, -10),
+            new DaggerfallPoisonEffect(DaggerfallPoisonTarget.Attribute, "strength", 5, 19, IsPositive: true)], sursum.Effects);
+        Assert.Equal([new DaggerfallPoisonEffect(DaggerfallPoisonTarget.Attribute, "willpower", -3, -1),
+            new DaggerfallPoisonEffect(DaggerfallPoisonTarget.Fatigue, null, 5, 9, IsPositive: true)], quaesto.Effects);
+        Assert.Equal([new DaggerfallPoisonEffect(DaggerfallPoisonTarget.Attribute, "endurance", -4, -1),
+            new DaggerfallPoisonEffect(DaggerfallPoisonTarget.Magicka, null, 5, 9, IsPositive: true)], aegrotat.Effects);
+        Assert.Equal(4, DaggerfallPoisonArchetypes.All.SelectMany(archetype => archetype.Effects).Count(effect => effect.IsPositive));
+
+        // A broken row is reported rather than accepted.
+        DaggerfallPoisonArchetype sound = DaggerfallPoisonArchetypes.All[0];
+        Assert.NotEmpty(DaggerfallPoisonArchetypes.Validate([sound with { Variant = 999 }]));
+        Assert.NotEmpty(DaggerfallPoisonArchetypes.Validate([sound with { Effects = [] }]));
+        Assert.NotEmpty(DaggerfallPoisonArchetypes.Validate([sound with { MinimumDurationMinutes = 0 }]));
+        Assert.NotEmpty(DaggerfallPoisonArchetypes.Validate([sound, sound]));
+    }
+
+    [Fact]
+    public void The_pack_carries_the_twelve_archetypes_as_classic_records()
+    {
+        // The archetype table owns the donor's onset and magnitude constants; the pack owns the names,
+        // the variant order and which classic effects each poison applies. The two must agree, so this
+        // pins the record half the table is joined to: twelve bang-named spell records in the table's own
+        // order, plus one that is not a poison at all (the lycanthropy record shares the naming).
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        List<DaggerfallSpellDefinition> records = [.. definitions.Magic.Spells.Values
+            .Where(spell => spell.Name.StartsWith('!'))
+            .OrderBy(spell => spell.Identity)];
+        // Eleven of the twelve archetypes are in the pack, in the table's own order; the twelfth is not,
+        // and the last bang-named record is a different affliction that shares the naming. That gap is
+        // recorded here rather than smoothed over: either the classic set this pack was imported from
+        // lacks the twelfth, or the importer drops it, and until that is settled the donor's table is the
+        // only source for it.
+        Assert.Equal(12, records.Count);
+        Assert.Equal(
+            ["!Nux Vomica", "!Arsenic", "!Moonseed", "!Drothweed", "!Somnalius", "!Pyrrhic Acid",
+             "!Magebane", "!Thyrwort", "!Indulcet", "!Sursum", "!Quaesto Vil"],
+            records.Take(11).Select(spell => spell.Name));
+        Assert.Equal("!Lycanthropy", records[11].Name);
+        Assert.DoesNotContain(records, spell => spell.Name.Contains("Aegrotat", StringComparison.Ordinal));
+        Assert.Equal(Enumerable.Range(71, 11), records.Take(11).Select(spell => spell.Identity));
+        Assert.All(records.Take(11), spell => Assert.NotEmpty(spell.Effects));
+
+        // The table's names are the donor's spelling of the same archetypes, in the records' order, so the
+        // eleven join by position and the twelfth stands on the donor's table alone.
+        Assert.Equal(
+            records.Take(11).Select(spell => spell.Name[1..].Replace(" ", string.Empty)),
+            DaggerfallPoisonArchetypes.All.Take(11).Select(archetype => archetype.Name.Replace("_", string.Empty)));
+        Assert.Equal("Aegrotat", DaggerfallPoisonArchetypes.All[11].Name);
+    }
 }
