@@ -129,6 +129,25 @@ internal sealed class DaggerfallItemConditionService(
         return new(DaggerfallItemConditionOutcome.Repaired, durableItemId, repaired, metadata.CurrentCondition);
     }
 
+    /// <summary>
+    /// Raises condition by bounded units up to the authored maximum, without changing durable identity.
+    /// Unlike <see cref="Repair"/>, which restores an item whole, this is the steady restoration a worn
+    /// enchantment performs on the round cadence.
+    /// </summary>
+    internal DaggerfallItemConditionResult Restore(UniqueInventoryItem item, int units)
+    {
+        if (units <= 0) throw new ArgumentOutOfRangeException(nameof(units));
+        (ulong durableItemId, DaggerfallItemInstanceMetadata metadata) = RequirePlayerItem(item);
+        if (metadata.MaximumCondition == 0)
+            throw new InvalidOperationException($"Item '{metadata.ItemId}' has no condition units to restore.");
+        long restored = Math.Min(checked((long)metadata.MaximumCondition), checked((long)metadata.CurrentCondition + units));
+        if (restored == metadata.CurrentCondition)
+            return new(DaggerfallItemConditionOutcome.AlreadyRepaired, durableItemId, metadata, metadata.CurrentCondition);
+        DaggerfallItemInstanceMetadata updated = metadata with { CurrentCondition = checked((int)restored) };
+        instances.ReplaceUnique(durableItemId, updated);
+        return new(DaggerfallItemConditionOutcome.Repaired, durableItemId, updated, metadata.CurrentCondition);
+    }
+
     /// <summary>Restores a bounded number of fuel condition units without changing durable identity.</summary>
     internal DaggerfallItemConditionResult Refuel(UniqueInventoryItem item, int units)
     {

@@ -348,7 +348,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             State.Npcs.Identities = _actorIdentities;
             _heldEnchantments = new DaggerfallHeldEnchantments(State.Equipment, State.ItemInstances, definitions.Magic.MagicItems,
                 State.Actors.Player.Stats, State.Actors.Entities, State.Actors.Player.Actor.Entity, () => _time.Calendar,
-                () => State.PlayerControl.Position, NearbyCreatures, InSunlight);
+                () => State.PlayerControl.Position, NearbyCreatures, InSunlight, _itemCondition, InHolyPlace,
+                amount => _vitality.ResolveHeldEnchantmentDamage(State.Actors.Player.Actor, amount));
             State.HeldEnchantments = _heldEnchantments;
             State.Encumbrance = new DaggerfallEncumbrancePolicy(State.Inventory, State.Actors.Player.Stats,
                 () => _heldEnchantments.CarryMultiplier);
@@ -848,6 +849,14 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         _time.Calendar.IsDay,
         insideStructure: _activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior,
         inPrison: false);
+
+    /// <summary>
+    /// Whether the player stands in a holy place, which the donor's worn condition payloads and its
+    /// career damage traits both read. No site classification answers it yet, so this is false and a
+    /// payload carrying that condition never acts; when one lands it is wired here and both readers
+    /// pick it up at once.
+    /// </summary>
+    private bool InHolyPlace() => false;
 
     /// <summary>
     /// The living creatures a worn enchantment's near-creature condition can see: the group the
