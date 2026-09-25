@@ -14,6 +14,19 @@ internal sealed class DaggerfallVitalityConsequences
 
     internal DaggerfallVitalityConsequences(CombatResolution combat) => _combat = combat ?? throw new ArgumentNullException(nameof(combat));
 
+    /// <summary>
+    /// Applies the damage a worn enchantment does to its wearer, at the same health boundary combat and
+    /// movement use, so an enchantment that takes the last point of health defeats its wearer the way any
+    /// other accepted damage does rather than leaving a track at zero.
+    /// </summary>
+    internal DamageResult ResolveHeldEnchantmentDamage(Actor player, int damage)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        if (damage <= 0) throw new ArgumentOutOfRangeException(nameof(damage));
+        Track health = player.Get<StatsComponent>().GetTrack(HealthTrack);
+        return _combat.ApplyToHealth(new CombatParticipants(player, player, "held enchantment"), damage, 0, health).Result;
+    }
+
     /// <summary>Applies only the Engine-reported landing, never an input or a locally integrated trajectory.</summary>
     internal DamageResult? ResolveLanding(Actor player, DaggerfallLanding? landing, bool preventsFallDamage)
     {

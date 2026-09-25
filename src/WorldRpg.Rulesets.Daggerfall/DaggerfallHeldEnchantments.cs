@@ -41,9 +41,12 @@ internal sealed class DaggerfallHeldEnchantments
     private const int ExtraSpellPointsType = 3;
     private const int IncreasedWeightAllowanceType = 7;
     private const int RegeneratesHealthType = 5;
+    private const int RepairsObjectsType = 8;
     private const int EnhancesSkillType = 10;
     private const int StrengthensArmorType = 12;
     private const int ImprovesTalentsType = 13;
+    private const int ItemDeterioratesType = 16;
+    private const int UserTakesDamageType = 17;
 
     internal const int EnhancedSkillPoints = 15;
 
@@ -62,6 +65,19 @@ internal sealed class DaggerfallHeldEnchantments
     /// </summary>
     internal const int RegeneratedHealthPerTick = 1;
     internal const int RoundsPerRegeneration = 4;
+
+    /// <summary>
+    /// The donor's item condition and wearer damage payloads act on the same beat as regeneration: one
+    /// condition unit, or one health point, per source per fourth magic round.
+    /// </summary>
+    internal const int HeldConditionUnitsPerTick = 1;
+    internal const int WearerDamagePerTick = 1;
+    private const int AllTheTimeCondition = 0;
+    private const int SunlightCondition = 1;
+    private const int HolyPlacesCondition = 2;
+    // UserTakesDamage numbers its own params from zero: 0 is in sunlight, 1 is in holy places.
+    private const int WearerSunlightCondition = 0;
+    private const int WearerHolyPlacesCondition = 1;
     private const int AlwaysRegenerates = 0;
     private const int SunlightRegenerates = 1;
     private const int DarknessRegenerates = 2;
@@ -90,6 +106,9 @@ internal sealed class DaggerfallHeldEnchantments
     private readonly Func<WorldPoint?> _playerPosition;
     private readonly Func<IReadOnlyList<DaggerfallNearbyCreature>> _nearby;
     private readonly Func<bool> _playerInSunlight;
+    private readonly DaggerfallItemConditionService? _itemCondition;
+    private readonly Func<bool>? _playerInHolyPlace;
+    private readonly Action<int>? _damageWearer;
     private readonly List<AppliedContribution> _applied = [];
     // Indexed by the donor's RegensHealth params: always, in sunlight, in darkness, and one slot for a
     // param the donor never names, which counts for cleanup but never contributes a tick.
@@ -98,13 +117,17 @@ internal sealed class DaggerfallHeldEnchantments
     // The donor counts magic rounds since startup or load and resets that count on either, so the
     // every-fourth-round beat is anchored to the session rather than to the calendar's absolute minute.
     private long _roundsSinceStart;
+    // Whether any worn item carries one of the payloads that act on the beat, so an ordinary advance
+    // does not re-read equipment it has nothing to do with.
+    private bool _conditionPayloads;
     private int _regenerationTotal => _regeneration[AlwaysRegenerates] + _regeneration[SunlightRegenerates]
         + _regeneration[DarknessRegenerates];
 
     internal DaggerfallHeldEnchantments(MechanicsEquipmentCoordinator equipment, DaggerfallItemInstances instances,
         IReadOnlyDictionary<string, DaggerfallMagicItemDefinition> magicItems, StatsComponent playerStats, EntityDirectory entities, EntityId actor,
         Func<DaggerfallCalendar> calendar, Func<WorldPoint?> playerPosition, Func<IReadOnlyList<DaggerfallNearbyCreature>> nearby,
-        Func<bool>? playerInSunlight = null)
+        Func<bool>? playerInSunlight = null, DaggerfallItemConditionService? itemCondition = null,
+        Func<bool>? playerInHolyPlace = null, Action<int>? damageWearer = null)
     {
         _equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
@@ -116,6 +139,9 @@ internal sealed class DaggerfallHeldEnchantments
         _playerPosition = playerPosition ?? throw new ArgumentNullException(nameof(playerPosition));
         _nearby = nearby ?? throw new ArgumentNullException(nameof(nearby));
         _playerInSunlight = playerInSunlight ?? (() => false);
+        _itemCondition = itemCondition;
+        _playerInHolyPlace = playerInHolyPlace;
+        _damageWearer = damageWearer;
     }
 
     /// <summary>The talents the worn items improve right now.</summary>
@@ -153,6 +179,7 @@ internal sealed class DaggerfallHeldEnchantments
         Talents = default;
         double carry = 1d;
         int armor = 0;
+        bool conditionPayloads = false;
         Array.Clear(_regeneration);
 
         foreach (WorldRpg.Kit.Inventory.EquipmentAssignment assignment in read.Assignments)
@@ -177,6 +204,9 @@ internal sealed class DaggerfallHeldEnchantments
                     case RegeneratesHealthType:
                         _regeneration[RegenerationCondition(enchantment.Param)]++;
                         break;
+                    case RepairsObjectsType or ItemDeterioratesType or UserTakesDamageType:
+                        conditionPayloads = true;
+                        break;
                     case ImprovesTalentsType:
                         Talents = Talent(enchantment.Param) switch
                         {
@@ -192,6 +222,7 @@ internal sealed class DaggerfallHeldEnchantments
 
         CarryMultiplier = carry;
         ArmorValueModifier = armor;
+        _conditionPayloads = conditionPayloads;
     }
 
     /// <summary>
@@ -214,9 +245,16 @@ internal sealed class DaggerfallHeldEnchantments
             // the count that preceded it: the session's first round is a beat, not its fourth.
             if ((_roundsSinceStart + round - 1) % RoundsPerRegeneration == 0) ticks++;
         _roundsSinceStart += rounds;
-        if (ticks == 0 || _regenerationTotal == 0) return;
+        if (ticks == 0) return;
 
         bool sunlight = _playerInSunlight();
+        RegenerateHealth(ticks, sunlight);
+        if (_conditionPayloads) ApplyWornPayloads(ticks, sunlight);
+    }
+
+    /// <summary>Raises health for the regeneration sources a beat's sunlight leaves active.</summary>
+    private void RegenerateHealth(int ticks, bool sunlight)
+    {
         int sources = _regeneration[AlwaysRegenerates]
             + _regeneration[sunlight ? SunlightRegenerates : DarknessRegenerates];
         if (sources == 0) return;
@@ -229,6 +267,65 @@ internal sealed class DaggerfallHeldEnchantments
         if (restored == current) return;
         health.SetCurrent(restored, clamp: true);
     }
+
+    /// <summary>
+    /// Applies the worn payloads that act on the beat: an item that deteriorates loses one condition unit
+    /// under its param's condition, an item that repairs objects restores one to each worn item, and an
+    /// item that takes its wearer's health costs one point under its param's condition. Each acts per
+    /// source, so two such items do twice in a beat, exactly as the donor's per-bundle round does.
+    /// </summary>
+    private void ApplyWornPayloads(int ticks, bool sunlight)
+    {
+        bool holyPlaces = _playerInHolyPlace?.Invoke() ?? false;
+        foreach (WorldRpg.Kit.Inventory.EquipmentAssignment assignment in _equipment.Read().Assignments)
+        {
+            if (!TryEnchantments(assignment, out IReadOnlyList<DaggerfallMagicEnchantmentDefinition> enchantments)) continue;
+            DurableIdentityReference identity = _entities.IdentityOf(new EntityId(assignment.Item.EntityId));
+            if (!_instances.ContainsUnique(identity.Value)) continue;
+            DaggerfallItemInstanceMetadata metadata = _instances.RequireUnique(identity.Value);
+            bool carriesCondition = metadata.MaximumCondition > 0;
+            foreach (DaggerfallMagicEnchantmentDefinition enchantment in enchantments)
+            {
+                switch (enchantment.Type)
+                {
+                    case ItemDeterioratesType when carriesCondition && ItemConditionHolds(enchantment.Param, sunlight, holyPlaces):
+                        _itemCondition?.Damage(assignment.Item, checked(ticks * HeldConditionUnitsPerTick));
+                        break;
+                    case RepairsObjectsType when carriesCondition:
+                        _itemCondition?.Restore(assignment.Item, checked(ticks * HeldConditionUnitsPerTick));
+                        break;
+                    case UserTakesDamageType when WearerConditionHolds(enchantment.Param, sunlight, holyPlaces):
+                        _damageWearer?.Invoke(checked(ticks * WearerDamagePerTick));
+                        break;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Whether an item's deterioration acts now. Its three params are all the time, in sunlight and in
+    /// holy places. A param outside them never acts, and a condition the product cannot answer yet is
+    /// wired by its caller rather than assumed here.
+    /// </summary>
+    private static bool ItemConditionHolds(int param, bool sunlight, bool holyPlaces) => param switch
+    {
+        AllTheTimeCondition => true,
+        SunlightCondition => sunlight,
+        HolyPlacesCondition => holyPlaces,
+        _ => false,
+    };
+
+    /// <summary>
+    /// Whether the damage a worn item does its wearer acts now. This payload has no all-the-time arm: its
+    /// two params are in sunlight and in holy places, so param 0 is the sunlight one rather than a
+    /// condition-free case.
+    /// </summary>
+    private static bool WearerConditionHolds(int param, bool sunlight, bool holyPlaces) => param switch
+    {
+        WearerSunlightCondition => sunlight,
+        WearerHolyPlacesCondition => holyPlaces,
+        _ => false,
+    };
 
     private void Apply(WorldRpg.Kit.Inventory.EquipmentAssignment assignment, DaggerfallMagicEnchantmentDefinition enchantment, DaggerfallStatId statId, int amount)
     {

@@ -2,6 +2,7 @@ using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.Combat;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.World;
@@ -511,6 +512,116 @@ public sealed class DaggerfallHeldEnchantmentTests
         Assert.Contains(problems, problem => problem.Contains("repeats type", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void A_worn_deterioration_enchantment_costs_its_item_one_condition_unit_each_beat()
+    {
+        // The donor's ItemDeteriorates takes one condition unit from its own item on every fourth magic
+        // round, under the condition its param names; the all-the-time param is always one of them.
+        using Fixture fixture = new();
+        fixture.EnchantAndWear("template-120-daedric", 9201, type: 16, param: 0);
+        // Four condition units of headroom, since one unit falls on every beat.
+        fixture.SetConditionUnits(9201, maximum: 5, condition: 5);
+        int maximum = fixture.MaximumCondition(9201);
+
+        // The first round after the session starts is itself a beat, so four rounds are one beat.
+        fixture.Advance(4);
+        Assert.Equal(maximum - 1, fixture.Condition(9201));
+
+        fixture.Advance(4);
+        Assert.Equal(maximum - 2, fixture.Condition(9201));
+
+        fixture.Advance(1);
+        Assert.Equal(maximum - 3, fixture.Condition(9201));
+        Assert.True(fixture.IsWorn(9201));
+    }
+
+    [Fact]
+    public void A_deterioration_condition_that_does_not_hold_leaves_its_item_alone()
+    {
+        // Param 1 is in sunlight: the item only pays while the wearer stands in it.
+        using Fixture fixture = new();
+        fixture.EnchantAndWear("template-120-daedric", 9202, type: 16, param: 1);
+        fixture.SetConditionUnits(9202, maximum: 5, condition: 5);
+
+        // Two beats pass in the dark and cost nothing; the next one, in sunlight, costs a unit.
+        fixture.Advance(8);
+        Assert.Equal(5, fixture.Condition(9202));
+
+        fixture.Sunlight = true;
+        fixture.Advance(4);
+        Assert.Equal(4, fixture.Condition(9202));
+    }
+
+    [Fact]
+    public void An_item_deteriorated_to_nothing_leaves_the_equipment_through_the_break_path()
+    {
+        using Fixture fixture = new();
+        fixture.EnchantAndWear("template-120-daedric", 9203, type: 16, param: 0);
+        fixture.SetCondition(9203, 1);
+
+        fixture.Advance(4);
+
+        Assert.Equal(0, fixture.Condition(9203));
+        Assert.False(fixture.IsWorn(9203));
+    }
+
+    [Fact]
+    public void A_worn_repair_enchantment_restores_one_unit_each_beat_up_to_the_maximum()
+    {
+        using Fixture fixture = new();
+        fixture.EnchantAndWear("template-120-daedric", 9204, type: 8, param: -1);
+        // Give it a budget to climb: one unit per beat, and never past the maximum.
+        fixture.SetConditionUnits(9204, maximum: 3, condition: 1);
+        int maximum = fixture.MaximumCondition(9204);
+
+        fixture.Advance(4);
+        Assert.Equal(2, fixture.Condition(9204));
+
+        fixture.Advance(4);
+        Assert.Equal(maximum, fixture.Condition(9204));
+
+        fixture.Advance(8);
+        Assert.Equal(maximum, fixture.Condition(9204));
+    }
+
+    [Fact]
+    public void A_worn_damage_enchantment_costs_its_wearer_health_under_its_condition()
+    {
+        // The donor's UserTakesDamage params are in sunlight and in holy places: no all-the-time arm.
+        using Fixture fixture = new();
+        fixture.EnchantAndWear("template-120-daedric", 9205, type: 17, param: 0);
+        double health = fixture.Health();
+
+        // No sunlight, so the two beats in this interval cost nothing.
+        fixture.Advance(8);
+        Assert.Equal(health, fixture.Health());
+
+        fixture.Sunlight = true;
+        fixture.Advance(4);
+        Assert.Equal(health - 1, fixture.Health());
+
+        fixture.Advance(4);
+        Assert.Equal(health - 2, fixture.Health());
+    }
+
+    [Fact]
+    public void The_holy_place_condition_acts_only_when_its_caller_answers_yes()
+    {
+        // The payload answers to the condition its caller reports. No site classification answers the
+        // product's holy-place question yet, so the session wires it false and this arm is inert in play;
+        // the fact proves which half is missing by answering yes here and watching it act.
+        using Fixture fixture = new();
+        fixture.EnchantAndWear("template-120-daedric", 9206, type: 17, param: 1);
+        double health = fixture.Health();
+
+        fixture.Advance(8);
+        Assert.Equal(health, fixture.Health());
+
+        fixture.InHolyPlace = true;
+        fixture.Advance(4);
+        Assert.Equal(health - 1, fixture.Health());
+    }
+
     /// <summary>The donor's own item-maker settings, addressed by the key a worn item carries.</summary>
     private static int SettingCost(int type, int param) =>
         DaggerfallEnchantmentSettings.All.Single(setting => setting.Type == type && setting.Param == param).Cost;
@@ -529,6 +640,7 @@ public sealed class DaggerfallHeldEnchantmentTests
         private readonly Dictionary<ulong, WorldPoint> _positions = [];
         private IReadOnlyList<DaggerfallNearbyCreature> _nearby = [];
         private bool _sunlight;
+        private readonly CombatResolution _combat = new();
         private DaggerfallCalendar _calendar = new(405, 0, 1, 12, 0, 0);
 
         internal Fixture()
@@ -554,7 +666,7 @@ public sealed class DaggerfallHeldEnchantmentTests
             _conditions = new DaggerfallItemConditionService(Definitions, _instances, moves);
             _held = new DaggerfallHeldEnchantments(_equipment, _instances, MagicItems, player.Stats, _actors.Entities, PlayerEntity,
                 () => _calendar, () => _positions.TryGetValue(DaggerfallActorIdentity.PlayerEntityId, out WorldPoint position) ? position : new WorldPoint(0f, 0f, 0f),
-                () => _nearby, () => _sunlight);
+                () => _nearby, () => _sunlight, _conditions, () => InHolyPlace, DamagePlayer);
             _encumbrance = new DaggerfallEncumbrancePolicy(coordinator, player.Stats, () => _held.CarryMultiplier);
         }
 
@@ -623,6 +735,7 @@ public sealed class DaggerfallHeldEnchantmentTests
             _equipment.Equip(item, definition.Weapon?.Handedness == "both"
                 ? [new WorldRpg.Kit.Inventory.EquipmentSlotId("right-hand"), new WorldRpg.Kit.Inventory.EquipmentSlotId("left-hand")]
                 : [new WorldRpg.Kit.Inventory.EquipmentSlotId("right-hand")]);
+            Refresh();
         }
 
         internal void Unequip(ulong uniqueId)
@@ -637,6 +750,37 @@ public sealed class DaggerfallHeldEnchantmentTests
         internal void AdvanceRounds(int minutes) => _held.AdvanceRounds(minutes);
 
         internal bool Sunlight { set => _sunlight = value; }
+
+        /// <summary>Whether the product can answer the holy-place condition; no classification does yet.</summary>
+        internal bool InHolyPlace { get; set; }
+
+        /// <summary>Applies wearer damage exactly as the session does, through the combat health boundary.</summary>
+        private void DamagePlayer(int amount) => _combat.ApplyToHealth(
+            new CombatParticipants(_actors.Player.Actor, _actors.Player.Actor, "held enchantment"), amount, 0,
+            _actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)));
+
+        /// <summary>Advances the magic rounds the session advances, on the same beat.</summary>
+        internal void Advance(int minutes) => _held.AdvanceRounds(minutes);
+
+        internal int Condition(ulong uniqueId) => _instances.RequireUnique(uniqueId).CurrentCondition;
+
+        internal int MaximumCondition(ulong uniqueId) => _instances.RequireUnique(uniqueId).MaximumCondition;
+
+        /// <summary>Gives an item an explicit condition budget, for a fact that needs room to wear it down.</summary>
+        internal void SetConditionUnits(ulong uniqueId, int maximum, int condition)
+        {
+            DaggerfallItemInstanceMetadata metadata = _instances.RequireUnique(uniqueId);
+            _instances.ReplaceUnique(uniqueId, metadata with { CurrentCondition = condition, MaximumCondition = maximum });
+        }
+
+        internal void SetCondition(ulong uniqueId, int condition)
+        {
+            DaggerfallItemInstanceMetadata metadata = _instances.RequireUnique(uniqueId);
+            _instances.ReplaceUnique(uniqueId, metadata with { CurrentCondition = condition });
+        }
+
+        internal bool IsWorn(ulong uniqueId) => _equipment.Read().Assignments.Any(assignment =>
+            _actors.Entities.IdentityOf(new EntityId(assignment.Item.EntityId)).Value == uniqueId);
 
         internal int Health() => checked((int)_actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current);
 
