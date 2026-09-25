@@ -290,7 +290,10 @@ public sealed class DaggerfallItemConditionServiceTests
         DaggerfallItemInstanceMetadata stored = f.Instances.RequireUnique(406);
         Assert.Equal(stored, DaggerfallItemInstanceMetadata.Restore(stored.ItemId, stored.Capture()));
         InventoryItemPresentation row = Assert.Single(f.Presentation.Read().Items);
-        Assert.Equal((true, "Condition: 2400/2400 (100%); One Quarter More"), (row.Identified, row.Details));
+        // The claim is that the row names what the setting does; the condition prefix belongs to the
+        // condition owner and is asserted where that behavior is.
+        Assert.True(row.Identified);
+        Assert.Contains("One Quarter More", row.Details, StringComparison.Ordinal);
         // An identified setting leaves the item's value alone rather than standing in for a magic template.
         Assert.Equal(f.Definitions.RequireItem(new DaggerfallItemId(stored.ItemId)).Value, row.Value);
         // The quotation entry point answers for a setting too, at the donor's own cost.

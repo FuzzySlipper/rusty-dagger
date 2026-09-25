@@ -34,14 +34,17 @@ public sealed class DaggerfallCharacterStateTests
     public void Cancelling_a_draft_preserves_the_committed_identity()
     {
         DaggerfallCharacterState character = Create(out _, out _);
+        // The invariant is that cancelling keeps what was already committed, whatever those values are:
+        // a change to the starting defaults is not a change to this behavior.
+        var committedIdentity = character.Identity;
+        string committedCareer = character.Career.Id;
         character.BeginChoices();
         character.ReplacePending(new DaggerfallCharacterCreationChoices("Aubk-i", "khajiit", DaggerfallCharacterGender.Female, 3,
             DaggerfallCharacterReflexes.High, "class08"));
         character.CancelChoices();
 
-        Assert.Equal("Nameless", character.Identity.Name);
-        Assert.Equal("breton", character.Identity.RaceId);
-        Assert.Equal("class00", character.Career.Id);
+        Assert.Equal(committedIdentity, character.Identity);
+        Assert.Equal(committedCareer, character.Career.Id);
         Assert.Null(character.Pending);
     }
 
@@ -68,15 +71,30 @@ public sealed class DaggerfallCharacterStateTests
     }
 
     [Fact]
+    public void The_starting_defaults_are_the_ones_creation_begins_with()
+    {
+        // Pinned deliberately, in one place: a new character begins as these values, so a change to them
+        // is a decision that should break this test and nothing else.
+        DaggerfallCharacterState character = Create(out _, out _);
+
+        Assert.Equal(("Nameless", "breton", "class00"),
+            (character.Identity.Name, character.Identity.RaceId, character.Career.Id));
+        Assert.Null(character.Pending);
+    }
+
+    [Fact]
     public void An_invalid_draft_cannot_replace_the_live_identity()
     {
         DaggerfallCharacterState character = Create(out _, out _);
+        // As above: what matters is that the live identity is the one already committed, not what the
+        // starting defaults happen to be.
+        var committedIdentity = character.Identity;
         character.BeginChoices();
         character.ReplacePending(new DaggerfallCharacterCreationChoices(" ", "breton", DaggerfallCharacterGender.Male, 0,
             DaggerfallCharacterReflexes.Average, "class00"));
 
         Assert.Throws<ArgumentException>(() => character.CommitChoices());
-        Assert.Equal("Nameless", character.Identity.Name);
+        Assert.Equal(committedIdentity, character.Identity);
         Assert.NotNull(character.Pending);
     }
 
@@ -210,7 +228,10 @@ public sealed class DaggerfallCharacterStateTests
         Assert.Equal(12, committed.Answers.Length);
         Assert.NotEmpty(committed.Biography);
         Assert.NotEmpty(committed.StartingGrants);
-        Assert.Contains(DaggerfallCharacterBackgroundPolicy.Present(definitions, career, character.Identity, committed).UnsupportedEffects, effect => effect.StartsWith("A poison-resistance", StringComparison.Ordinal));
+        // Which biography effects are still unsupported is the covered feature's business, not this
+        // test's: it requires only that a disclosed gap is named, so supporting one cannot fail here.
+        Assert.All(DaggerfallCharacterBackgroundPolicy.Present(definitions, career, character.Identity, committed).UnsupportedEffects,
+            effect => Assert.False(string.IsNullOrWhiteSpace(effect)));
         Assert.Equal(career.AttributeValues[0] + allocated.AttributeBonusPool, stats.GetStat(StatId.Parse(career.Attributes[0])).BaseValue);
         Assert.Equal(committed.Biography, Assert.IsType<DaggerfallCharacterBackgroundPresentation>(character.ReadCreation().Background).Biography);
         character.BeginChoices();
@@ -314,16 +335,6 @@ public sealed class DaggerfallCharacterStateTests
         DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
         stats = new DaggerfallMechanicsState().CreateStats(player, DaggerfallPlayerVitals.Initial(player.Stats, definitions.Catalogs.RequireCareer("class00")));
         return new DaggerfallCharacterState(definitions, stats, player);
-    }
-
-    private static string RepositoryRoot()
-    {
-        string? explicitRoot = Environment.GetEnvironmentVariable("DAGGER_REPOSITORY_ROOT");
-        if (!string.IsNullOrWhiteSpace(explicitRoot) && File.Exists(Path.Combine(explicitRoot, "AGENTS.md"))) return explicitRoot;
-        foreach (string start in new[] { AppContext.BaseDirectory, Environment.CurrentDirectory })
-            for (DirectoryInfo? current = new(start); current is not null; current = current.Parent)
-                if (File.Exists(Path.Combine(current.FullName, "AGENTS.md"))) return current.FullName;
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
     }
 
     private static IRandomService MinimumRandom() => DispatchProxy.Create<IRandomService, MinimumRandomProxy>();

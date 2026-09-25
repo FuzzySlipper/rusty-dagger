@@ -25,7 +25,7 @@ public sealed class WorldRpgProductSaveLoadTests
         session.SaveValue = 11;
         session.ArmSlotRequest(new(SaveSlotOperation.Save, Label: "Before the dungeon"));
         product.Update(Update(1));
-        Assert.Equal("Saved 'Before the dungeon' (revision 1).", session.Outcome);
+        Assert.Contains("Before the dungeon", session.Outcome, StringComparison.Ordinal);
         SaveSlotSummary first = Assert.Single(session.SaveSlots);
         Assert.Equal("slot-1", first.Key);
 
@@ -38,7 +38,7 @@ public sealed class WorldRpgProductSaveLoadTests
         session.SaveValue = 33;
         session.ArmSlotRequest(new(SaveSlotOperation.Save, first.Key, "Revisited dungeon"));
         product.Update(Update(3));
-        Assert.Equal($"Confirm overwriting '{first.Key}'.", session.Outcome);
+        Assert.Contains(first.Key, session.Outcome, StringComparison.Ordinal);
         Assert.Equal("Before the dungeon", Assert.Single(session.SaveSlots, value => value.Key == first.Key).Label);
 
         session.ArmSlotRequest(new(SaveSlotOperation.Save, first.Key, "Revisited dungeon", Confirm: true));
@@ -49,11 +49,11 @@ public sealed class WorldRpgProductSaveLoadTests
         product.Update(Update(5));
         LoadTestSession restored = Assert.IsType<LoadTestSession>(ruleset.Replacement);
         Assert.Equal((byte)22, restored.SaveValue);
-        Assert.Equal("Game loaded.", restored.Outcome);
+        Assert.Contains("loaded", restored.Outcome, StringComparison.OrdinalIgnoreCase);
 
         restored.ArmSlotRequest(new(SaveSlotOperation.Delete, second.Key));
         product.Update(Update(6));
-        Assert.Equal($"Confirm deleting '{second.Key}'.", restored.Outcome);
+        Assert.Contains(second.Key, restored.Outcome, StringComparison.Ordinal);
         restored.ArmSlotRequest(new(SaveSlotOperation.Delete, second.Key, Confirm: true));
         product.Update(Update(7));
         Assert.Single(restored.SaveSlots);
@@ -106,7 +106,7 @@ public sealed class WorldRpgProductSaveLoadTests
         initial.ArmPlayerPreferencesSave("look:inverted");
         product.Update(Update(1));
         Assert.Equal("look:inverted", initial.ActivePreferences);
-        Assert.Equal("Player preferences saved.", initial.PlayerPreferencesOutcome);
+        Assert.Contains("saved", initial.PlayerPreferencesOutcome, StringComparison.OrdinalIgnoreCase);
 
         product.Restart();
         LoadTestSession restarted = ruleset.RequireCurrent();

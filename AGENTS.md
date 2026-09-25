@@ -257,6 +257,12 @@ or a new follow-up task — and the source task's record points at it. A note th
 task became narrower does not hold the requirement: a concern is only passed on
 while some task is still carrying it.
 
+Tests are evidence of intended behavior, not an independent source of product
+authority. When an authorized change supersedes an existing expectation, update,
+replace, or remove the affected test in the same change. Do not preserve obsolete
+production behavior, add compatibility machinery, or abandon the requested design
+merely to satisfy an old test.
+
 ## Git
 
 Commit and push the work of a turn or task directly. This is a solo repository

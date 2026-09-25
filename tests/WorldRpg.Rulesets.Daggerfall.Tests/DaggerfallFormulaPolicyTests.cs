@@ -286,13 +286,6 @@ public sealed class DaggerfallFormulaPolicyTests
 
     private static DaggerfallDefinitions LoadDefinitions() => TestPayload.Definitions;
 
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md"))) return current.FullName;
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
-    }
-
     [Fact]
     public void Swing_proficiency_and_racial_attack_modifiers_follow_the_donor_tables()
     {
