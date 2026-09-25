@@ -279,6 +279,23 @@ public sealed class DaggerfallHeldEnchantmentTests
     }
 
     [Fact]
+    public void A_talent_setting_applied_by_the_item_maker_sets_the_talent_the_combat_owner_reads()
+    {
+        // The last payload family #8069 owns without an end-to-end proof: an improved-adrenaline-rush
+        // setting put on by the item maker reaches the talent state the combat formula reads.
+        using Fixture fixture = new();
+        Assert.False(fixture.Talents.AdrenalineRush);
+
+        fixture.EnchantAndWear("template-120-daedric", 9104, type: 13, param: 2);
+        fixture.Refresh();
+        Assert.True(fixture.Talents.AdrenalineRush);
+
+        fixture.Unequip(9104);
+        fixture.Refresh();
+        Assert.False(fixture.Talents.AdrenalineRush);
+    }
+
+    [Fact]
     public void A_worn_carry_allowance_enchantment_extends_the_one_encumbrance_maximum()
     {
         // The encumbrance owner answers with the strength formula scaled by whatever the worn items
