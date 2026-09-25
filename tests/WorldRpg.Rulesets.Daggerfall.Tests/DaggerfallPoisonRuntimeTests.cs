@@ -45,6 +45,26 @@ public sealed class DaggerfallPoisonRuntimeTests
     // into the session, and these facts return with it.
 
     [Fact]
+    public void A_session_advancing_time_ticks_the_poison_its_player_carries()
+    {
+        // The runtime is not a mechanism waiting for a caller: the session owns it and gives it the minutes
+        // it advances. Moonseed acts at once and lasts up to four minutes, so six elapsed minutes take health
+        // whatever the draws inside its windows were.
+        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        DaggerfallSession session = fixture.Session;
+        Actor player = session.State.Actors.Player.Actor;
+        double before = Track(player, DaggerfallMechanicsIds.Health);
+
+        Assert.True(session.State.Poisons.Afflict(player, 130));
+        Assert.True(session.State.Poisons.IsAfflicted(player));
+
+        _ = session.AdvanceElapsedTime(361);
+
+        Assert.True(Track(player, DaggerfallMechanicsIds.Health) < before);
+        Assert.False(session.State.Poisons.IsAfflicted(player));
+    }
+
+    [Fact]
     public void A_second_poison_only_takes_over_when_it_has_more_left_to_give()
     {
         using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
