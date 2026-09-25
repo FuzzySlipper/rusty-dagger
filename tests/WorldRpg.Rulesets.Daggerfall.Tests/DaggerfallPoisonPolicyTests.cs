@@ -180,10 +180,10 @@ public sealed class DaggerfallPoisonPolicyTests
             .Where(spell => spell.Name.StartsWith('!'))
             .OrderBy(spell => spell.Identity)];
         // Eleven of the twelve archetypes are in the pack, in the table's own order; the twelfth is not,
-        // and the last bang-named record is a different affliction that shares the naming. That gap is
-        // recorded here rather than smoothed over: either the classic set this pack was imported from
-        // lacks the twelfth, or the importer drops it, and until that is settled the donor's table is the
-        // only source for it.
+        // and the last bang-named record is a different affliction that shares the naming. That is settled
+        // at the source, not assumed: the classic spell file itself carries eleven poison records plus the
+        // lycanthropy one, so the twelfth exists only in the donor's table and no importer filter is
+        // hiding it. An assertion rather than a comment, because the next reader will wonder.
         Assert.Equal(12, records.Count);
         Assert.Equal(
             ["!Nux Vomica", "!Arsenic", "!Moonseed", "!Drothweed", "!Somnalius", "!Pyrrhic Acid",
