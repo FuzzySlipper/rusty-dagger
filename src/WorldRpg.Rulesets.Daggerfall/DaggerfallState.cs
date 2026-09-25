@@ -36,6 +36,9 @@ internal sealed class DaggerfallState(PlayerControlState playerControl, ActorsSt
     internal ActorsState Actors { get; } = actors;
     internal ProgressionState Progression => Actors.Player.Progression;
     internal MechanicsInventoryCoordinator Inventory { get; } = inventory;
+
+    /// <summary>The enchantments the player's worn items hold, recomputed from what they are worn on.</summary>
+    internal DaggerfallHeldEnchantments HeldEnchantments { get; set; } = null!;
     internal MechanicsEquipmentCoordinator Equipment { get; } = equipment;
     internal MechanicsInventoryContainerCoordinator Containers { get; } = containers;
     /// <summary>The one managed inventory store every actor inventory and equipment registers in.</summary>

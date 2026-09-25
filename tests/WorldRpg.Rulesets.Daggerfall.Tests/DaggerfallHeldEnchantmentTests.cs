@@ -61,6 +61,69 @@ public sealed class DaggerfallHeldEnchantmentTests
     }
 
     [Fact]
+    public void A_worn_regeneration_heals_on_every_fourth_round_and_catches_up()
+    {
+        // The donor's RegensHealth restores one point every fourth magic round, one tick per worn
+        // source, and a catch-up interval restores for every fourth round it covered.
+        using Fixture fixture = new();
+        int maximum = fixture.HealthMaximum();
+        fixture.SetHealth(maximum - 10);
+        fixture.EquipEnchanted("iron-cuirass", 8001, "magic-item.0051", equip: true);  // Lord's Mail, all the time
+        fixture.Refresh();
+
+        fixture.AdvanceRounds(firstMinuteIndex: 0, minutes: 3);
+        Assert.Equal(maximum - 10, fixture.Health());
+
+        fixture.AdvanceRounds(firstMinuteIndex: 3, minutes: 1);
+        Assert.Equal(maximum - 9, fixture.Health());
+
+        // Eight more rounds cover two fourth-round beats rather than one.
+        fixture.AdvanceRounds(firstMinuteIndex: 4, minutes: 8);
+        Assert.Equal(maximum - 7, fixture.Health());
+
+        // The donor clamps at the maximum rather than overhealing.
+        fixture.SetHealth(maximum - 1);
+        fixture.AdvanceRounds(firstMinuteIndex: 12, minutes: 4);
+        Assert.Equal(maximum, fixture.Health());
+        fixture.AdvanceRounds(firstMinuteIndex: 16, minutes: 4);
+        Assert.Equal(maximum, fixture.Health());
+
+        fixture.Unequip(8001);
+        fixture.Refresh();
+        fixture.SetHealth(maximum - 4);
+        fixture.AdvanceRounds(firstMinuteIndex: 20, minutes: 8);
+        Assert.Equal(maximum - 4, fixture.Health());
+    }
+
+    [Fact]
+    public void A_worn_regeneration_heals_only_under_the_condition_it_names()
+    {
+        using Fixture fixture = new();
+        int maximum = fixture.HealthMaximum();
+        fixture.SetHealth(maximum - 10);
+        fixture.EquipEnchanted("iron-cuirass", 8002, "test.regen-sunlight", equip: true);
+        fixture.EquipEnchanted("tower-shield", 8003, "test.regen-darkness", equip: true);
+        fixture.Refresh();
+
+        // Daylight outdoors: only the sunlight source ticks, so one point per fourth round.
+        fixture.Sunlight = true;
+        fixture.AdvanceRounds(firstMinuteIndex: 0, minutes: 4);
+        Assert.Equal(maximum - 9, fixture.Health());
+
+        // Darkness: only the darkness source ticks.
+        fixture.Sunlight = false;
+        fixture.AdvanceRounds(firstMinuteIndex: 4, minutes: 4);
+        Assert.Equal(maximum - 8, fixture.Health());
+
+        // Two sources whose condition holds at the same time tick twice in a round.
+        fixture.EquipEnchanted("iron-longsword", 8004, "test.regen-sunlight", equip: true);
+        fixture.Refresh();
+        fixture.Sunlight = true;
+        fixture.AdvanceRounds(firstMinuteIndex: 8, minutes: 4);
+        Assert.Equal(maximum - 6, fixture.Health());
+    }
+
+    [Fact]
     public void The_donors_held_conditions_answer_for_every_param_they_name()
     {
         using Fixture fixture = new();
@@ -225,6 +288,7 @@ public sealed class DaggerfallHeldEnchantmentTests
         private readonly DaggerfallHeldEnchantments _held;
         private readonly Dictionary<ulong, WorldPoint> _positions = [];
         private IReadOnlyList<DaggerfallNearbyCreature> _nearby = [];
+        private bool _sunlight;
         private DaggerfallCalendar _calendar = new(405, 0, 1, 12, 0, 0);
 
         internal Fixture()
@@ -248,7 +312,7 @@ public sealed class DaggerfallHeldEnchantmentTests
             _equipment = new MechanicsEquipmentCoordinator(inventory, equipment, _actors.Entities, items, slots);
             _held = new DaggerfallHeldEnchantments(_equipment, _instances, MagicItems, player.Stats, _actors.Entities, PlayerEntity,
                 () => _calendar, () => _positions.TryGetValue(DaggerfallActorIdentity.PlayerEntityId, out WorldPoint position) ? position : new WorldPoint(0f, 0f, 0f),
-                () => _nearby);
+                () => _nearby, () => _sunlight);
             _encumbrance = new DaggerfallEncumbrancePolicy(coordinator, player.Stats, () => _held.CarryMultiplier);
         }
 
@@ -298,6 +362,17 @@ public sealed class DaggerfallHeldEnchantmentTests
 
         internal void Refresh() => _held.Refresh();
 
+        internal void AdvanceRounds(long firstMinuteIndex, int minutes) => _held.AdvanceRounds(firstMinuteIndex, minutes);
+
+        internal bool Sunlight { set => _sunlight = value; }
+
+        internal int Health() => checked((int)_actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current);
+
+        internal int HealthMaximum() => checked((int)_actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Maximum.Value);
+
+        internal void SetHealth(int value) =>
+            _actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).SetCurrent(value, clamp: true);
+
         internal double CarryMultiplier => _held.CarryMultiplier;
 
         internal DaggerfallHeldTalents Talents => _held.Talents;
@@ -333,6 +408,8 @@ public sealed class DaggerfallHeldEnchantmentTests
             yield return Setting("test.spell-points", 3, 1);      // ExtraSpellPts during spring
             yield return Setting("test.extra-weight", 7, 0);      // IncreasedWeightAllowance one quarter
             yield return Setting("test.talents", 13, 2);          // ImprovesTalents adrenaline rush
+            yield return Setting("test.regen-sunlight", 5, 1);    // RegensHealth in sunlight
+            yield return Setting("test.regen-darkness", 5, 2);    // RegensHealth in darkness
         }
 
         private static DaggerfallMagicItemDefinition Setting(string key, int type, int param) => new(
