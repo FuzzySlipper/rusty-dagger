@@ -344,8 +344,10 @@ public sealed class DaggerfallHeldEnchantmentTests
         // items, so a worn item can hold a payload no published item carries. Counts, costs and params
         // are the donor's: EnhancesSkill prices all 35 skills alike, ExtraSpellPts runs seasons at 500
         // then moons at 200 then creature groups at 700-1000, weight is 400/600, talents 500/600/600,
-        // regeneration 4000/3000/3000 for always/sunlight/darkness, and StrengthensArmor is param -1.
-        Assert.Equal(35 + 11 + 2 + 3 + 3 + 1, DaggerfallEnchantmentSettings.All.Count);
+        // regeneration 4000/3000/3000 for always/sunlight/darkness, StrengthensArmor and RepairsObjects
+        // are single settings at param -1, and the detriments are priced negatively: ItemDeteriorates
+        // -3000/-1500/-500, UserTakesDamage -6000/-1000, WeakensArmor -700.
+        Assert.Equal(35 + 11 + 2 + 3 + 3 + 1 + 1 + 1 + 3 + 2, DaggerfallEnchantmentSettings.All.Count);
         Assert.All(DaggerfallEnchantmentSettings.All, setting => Assert.Equal(setting.Key, $"enchantment.{setting.Type}.{setting.Param}"));
 
         Assert.Equal(900, SettingCost(10, 29));                       // long blade, the donor's flat price
@@ -359,6 +361,12 @@ public sealed class DaggerfallHeldEnchantmentTests
         Assert.Equal(4000, SettingCost(5, 0));                        // regeneration all the time
         Assert.Equal(3000, SettingCost(5, 2));                        // regeneration in darkness
         Assert.Equal(700, SettingCost(12, -1));                       // strengthened armor
+        Assert.Equal(900, SettingCost(8, -1));                        // repairs objects
+        Assert.Equal(-700, SettingCost(24, -1));                      // weakens armor, a detriment
+        Assert.Equal(-3000, SettingCost(16, 0));                      // deteriorates all the time
+        Assert.Equal(-500, SettingCost(16, 2));                       // deteriorates in holy places
+        Assert.Equal(-6000, SettingCost(17, 0));                      // damages its wearer in sunlight
+        Assert.Equal(-1000, SettingCost(17, 1));                      // damages its wearer in holy places
 
         // Each setting resolves to the effect shape the held owner applies, and an unknown key does not.
         DaggerfallEnchantmentSetting setting = DaggerfallEnchantmentSettings.All.Single(candidate => candidate.Type == 3 && candidate.Param == 7);
