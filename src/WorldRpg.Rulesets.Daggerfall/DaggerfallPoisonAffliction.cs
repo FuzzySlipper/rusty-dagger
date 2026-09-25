@@ -67,6 +67,19 @@ internal sealed class DaggerfallPoisonAffliction
         return Archetype.Effects;
     }
 
+    /// <summary>What the affliction still has to give: the onset it waits out plus the ticks it has left.</summary>
+    internal int TotalMinutesRemaining => MinutesToStart + MinutesRemaining;
+
+    /// <summary>
+    /// Whether a newly applied poison should take this one's place. A second dose does not shorten a
+    /// poison already running, so the new one wins only when it has more left to give than what is there.
+    /// </summary>
+    internal bool SupersededBy(DaggerfallPoisonAffliction candidate)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+        return candidate.TotalMinutesRemaining > TotalMinutesRemaining;
+    }
+
     /// <summary>
     /// Ends the affliction where it stands, for a cure. The arms already given are not taken back here:
     /// the caller knows which of them landed and reverses those.
