@@ -117,7 +117,9 @@ public sealed class DaggerfallHeldEnchantmentTests
         using Fixture fixture = new();
         int maximum = fixture.HealthMaximum();
         fixture.SetHealth(maximum - 10);
-        fixture.EquipEnchanted("iron-cuirass", 9001, "test.regen-unknown", equip: true);
+        // The owner's invalid-param path: no published item and no setting carries this payload, so it
+        // is authored here to prove an unnamed param contributes nothing rather than healing always.
+        fixture.EquipAuthored("iron-cuirass", 9001, type: 5, param: 9, equip: true);
         fixture.Refresh();
 
         fixture.Sunlight = true;
@@ -157,8 +159,8 @@ public sealed class DaggerfallHeldEnchantmentTests
         using Fixture fixture = new();
         int maximum = fixture.HealthMaximum();
         fixture.SetHealth(maximum - 10);
-        fixture.EquipEnchanted("iron-cuirass", 8002, "test.regen-sunlight", equip: true);
-        fixture.EquipEnchanted("tower-shield", 8003, "test.regen-darkness", equip: true);
+        fixture.EquipEnchanted("iron-cuirass", 8002, SettingKey(5, 1), equip: true);
+        fixture.EquipEnchanted("tower-shield", 8003, SettingKey(5, 2), equip: true);
         fixture.Refresh();
 
         // Daylight outdoors: only the sunlight source ticks, so one point per fourth round.
@@ -172,7 +174,7 @@ public sealed class DaggerfallHeldEnchantmentTests
         Assert.Equal(maximum - 8, fixture.Health());
 
         // Two sources whose condition holds at the same time tick twice in a round.
-        fixture.EquipEnchanted("iron-longsword", 8004, "test.regen-sunlight", equip: true);
+        fixture.EquipEnchanted("iron-longsword", 8004, SettingKey(5, 1), equip: true);
         fixture.Refresh();
         fixture.Sunlight = true;
         fixture.AdvanceRounds(minutes: 4);
@@ -284,7 +286,7 @@ public sealed class DaggerfallHeldEnchantmentTests
         long plain = fixture.MaximumCarryUnits();
         Assert.Equal(1d, fixture.CarryMultiplier);
 
-        fixture.EquipEnchanted("iron-cuirass", 7001, "test.extra-weight", equip: true);
+        fixture.EquipEnchanted("iron-cuirass", 7001, SettingKey(7, 0), equip: true);
         fixture.Refresh();
 
         Assert.Equal(1.25d, fixture.CarryMultiplier);
@@ -302,7 +304,7 @@ public sealed class DaggerfallHeldEnchantmentTests
         using Fixture fixture = new();
         Assert.False(fixture.Talents.AdrenalineRush);
 
-        fixture.EquipEnchanted("iron-cuirass", 7002, "test.talents", equip: true);
+        fixture.EquipEnchanted("iron-cuirass", 7002, SettingKey(13, 2), equip: true);
         fixture.Refresh();
         Assert.True(fixture.Talents.AdrenalineRush);
 
@@ -317,7 +319,7 @@ public sealed class DaggerfallHeldEnchantmentTests
         using Fixture fixture = new();
         int plain = fixture.MagickaMaximum();
 
-        fixture.EquipEnchanted("iron-cuirass", 7003, "test.spell-points", equip: true);
+        fixture.EquipEnchanted("iron-cuirass", 7003, SettingKey(3, 1), equip: true);
         fixture.Calendar = fixture.Calendar with { Month = 3 };   // a spring month: the condition holds
         fixture.Refresh();
         Assert.Equal(plain + 75, fixture.MagickaMaximum());
@@ -334,6 +336,46 @@ public sealed class DaggerfallHeldEnchantmentTests
         fixture.Refresh();
         Assert.Equal(plain, fixture.MagickaMaximum());
     }
+
+    [Fact]
+    public void The_item_makers_settings_are_the_donors_own_table()
+    {
+        // The donor enumerates these from each effect class rather than publishing them with its magic
+        // items, so a worn item can hold a payload no published item carries. Counts, costs and params
+        // are the donor's: EnhancesSkill prices all 35 skills alike, ExtraSpellPts runs seasons at 500
+        // then moons at 200 then creature groups at 700-1000, weight is 400/600, talents 500/600/600,
+        // regeneration 4000/3000/3000 for always/sunlight/darkness, and StrengthensArmor is param -1.
+        Assert.Equal(35 + 11 + 2 + 3 + 3 + 1, DaggerfallEnchantmentSettings.All.Count);
+        Assert.All(DaggerfallEnchantmentSettings.All, setting => Assert.Equal(setting.Key, $"enchantment.{setting.Type}.{setting.Param}"));
+
+        Assert.Equal(900, SettingCost(10, 29));                       // long blade, the donor's flat price
+        Assert.Equal(500, SettingCost(3, 0));                         // during winter
+        Assert.Equal(200, SettingCost(3, 5));                         // during half moon
+        Assert.Equal(1000, SettingCost(3, 10));                       // near animals
+        Assert.Equal(400, SettingCost(7, 0));
+        Assert.Equal(600, SettingCost(7, 1));
+        Assert.Equal(500, SettingCost(13, 0));                        // improved acute hearing
+        Assert.Equal(600, SettingCost(13, 2));                        // improved adrenaline rush
+        Assert.Equal(4000, SettingCost(5, 0));                        // regeneration all the time
+        Assert.Equal(3000, SettingCost(5, 2));                        // regeneration in darkness
+        Assert.Equal(700, SettingCost(12, -1));                       // strengthened armor
+
+        // Each setting resolves to the effect shape the held owner applies, and an unknown key does not.
+        DaggerfallEnchantmentSetting setting = DaggerfallEnchantmentSettings.All.Single(candidate => candidate.Type == 3 && candidate.Param == 7);
+        DaggerfallMagicEnchantmentDefinition effect = DaggerfallEnchantmentSettings.ToEffect(setting);
+        Assert.Equal(3, effect.Type);
+        Assert.Equal(7, effect.Param);
+        Assert.Equal("near-undead", effect.ParamMeaning);
+        Assert.False(DaggerfallEnchantmentSettings.TryResolve("enchantment.5.9", out _));
+        Assert.False(DaggerfallEnchantmentSettings.TryResolve("magic-item.0050", out _));
+    }
+
+    /// <summary>The donor's own item-maker settings, addressed by the key a worn item carries.</summary>
+    private static int SettingCost(int type, int param) =>
+        DaggerfallEnchantmentSettings.All.Single(setting => setting.Type == type && setting.Param == param).Cost;
+
+    private static string SettingKey(int type, int param) =>
+        DaggerfallEnchantmentSettings.All.Single(setting => setting.Type == type && setting.Param == param).Key;
 
     private sealed class Fixture : IDisposable
     {
@@ -374,6 +416,9 @@ public sealed class DaggerfallHeldEnchantmentTests
 
         internal EntityId PlayerEntity { get; }
 
+        private Dictionary<string, DaggerfallMagicItemDefinition> MagicItems => Published.Concat(Authored)
+            .ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal);
+
         internal DaggerfallCalendar Calendar { get => _calendar; set => _calendar = value; }
 
         internal WorldPoint Position { set => _positions[DaggerfallActorIdentity.PlayerEntityId] = value; }
@@ -407,6 +452,14 @@ public sealed class DaggerfallHeldEnchantmentTests
                 : definition.Shield is not null ? ["left-hand"] : ["right-hand", "left-hand"];
             string slot = candidates.First(candidate => !taken.Contains(candidate));
             _equipment.Equip(item, [new WorldRpg.Kit.Inventory.EquipmentSlotId(slot)]);
+        }
+
+        internal void EquipAuthored(string itemId, ulong uniqueId, int type, int param, bool equip = false)
+        {
+            string key = $"authored.{type}.{param}";
+            Authored[key] = new DaggerfallMagicItemDefinition(key, 0L, key, 0, 0, 0, 0, 0, 0,
+                [new DaggerfallMagicEnchantmentDefinition($"{key}.enchantment.1", type, param, "authored", null, false)]);
+            EquipEnchanted(itemId, uniqueId, key, equip);
         }
 
         internal void Unequip(ulong uniqueId)
@@ -448,30 +501,14 @@ public sealed class DaggerfallHeldEnchantmentTests
         private static DaggerfallDefinitions Definitions { get; } = DaggerfallBaseContent.Read(
             File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
 
-        /// <summary>
-        /// The published magic items plus the item-maker payloads the corpus cannot wear yet: the donor
-        /// enumerates those as settings rather than as pre-generated items, and Den #8583 publishes
-        /// them. Authoring them here is what lets each payload's own dispatch be asserted.
-        /// </summary>
-        private static Dictionary<string, DaggerfallMagicItemDefinition> MagicItems { get; } = Published()
-            .Concat(Authored())
-            .ToDictionary(item => item.Key, StringComparer.Ordinal);
+        /// <summary>Payloads authored by a fact that needs one no published item or setting carries.</summary>
+        private readonly Dictionary<string, DaggerfallMagicItemDefinition> Authored = new(StringComparer.Ordinal);
 
-        private static IEnumerable<DaggerfallMagicItemDefinition> Published() => Definitions.Magic.MagicItems.Values;
+        /// <summary>The published magic items a worn item can name.</summary>
+        private static Dictionary<string, DaggerfallMagicItemDefinition> Published { get; } =
+            Definitions.Magic.MagicItems.Values.ToDictionary(item => item.Key, StringComparer.Ordinal);
 
-        private static IEnumerable<DaggerfallMagicItemDefinition> Authored()
-        {
-            yield return Setting("test.spell-points", 3, 1);      // ExtraSpellPts during spring
-            yield return Setting("test.extra-weight", 7, 0);      // IncreasedWeightAllowance one quarter
-            yield return Setting("test.talents", 13, 2);          // ImprovesTalents adrenaline rush
-            yield return Setting("test.regen-sunlight", 5, 1);    // RegensHealth in sunlight
-            yield return Setting("test.regen-darkness", 5, 2);    // RegensHealth in darkness
-            yield return Setting("test.regen-unknown", 5, 9);     // RegensHealth with a param it never named
-        }
 
-        private static DaggerfallMagicItemDefinition Setting(string key, int type, int param) => new(
-            key, 0L, key, 0, 0, 0, 0, 0, 0,
-            [new DaggerfallMagicEnchantmentDefinition($"{key}.enchantment.1", type, param, "authored", null, false)]);
 
         private static string RepositoryRoot()
         {
