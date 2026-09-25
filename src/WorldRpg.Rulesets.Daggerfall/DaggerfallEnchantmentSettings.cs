@@ -81,8 +81,15 @@ internal static class DaggerfallEnchantmentSettings
 
     private static readonly Dictionary<string, DaggerfallEnchantmentSetting> ByKey = Build();
 
+    private static readonly Dictionary<(int Type, int Param), int> CostsByTypeParam =
+        ByKey.Values.ToDictionary(setting => (setting.Type, setting.Param), setting => setting.Cost);
+
     /// <summary>Every setting the item maker offers, in a stable order.</summary>
     internal static IReadOnlyList<DaggerfallEnchantmentSetting> All { get; } = [.. ByKey.Values];
+
+    /// <summary>The donor's enchant cost for a classic payload the item maker offers.</summary>
+    internal static bool TryCost(int type, int param, out int cost) =>
+        CostsByTypeParam.TryGetValue((type, param), out cost);
 
     /// <summary>The setting a worn item's enchantment key names, when it names one of these.</summary>
     internal static bool TryResolve(string key, out DaggerfallEnchantmentSetting setting) =>

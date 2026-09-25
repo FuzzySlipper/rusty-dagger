@@ -236,16 +236,17 @@ internal static class DaggerfallMagicCostPolicy
     // Only these non-spell forms occur on retained regular MAGIC.DEF templates. Their values are
     // the item-maker settings from the donor effect classes, retained explicitly rather than
     // pretending every non-spell enchantment has a spell price.
-    private static bool TryGetNonSpellEnchantmentCost(DaggerfallMagicEnchantmentDefinition value, out int cost)
+    /// <summary>
+    /// The retained item-maker cost of one non-spell enchantment payload. Two payloads belong to
+    /// published magic items the item maker does not offer and stay here; every payload it does offer
+    /// keeps its cost in the settings catalog, which is the donor's own table.
+    /// </summary>
+    internal static bool TryGetNonSpellEnchantmentCost(DaggerfallMagicEnchantmentDefinition value, out int cost)
     {
-        cost = (value.Type, value.Param) switch
-        {
-            (6, 1) => 1000, // VampiricEffect.WhenStrikes
-            (9, -1) => 1500, // AbsorbsSpells
-            (10, 7) => 900, // EnhancesSkill.Archery
-            _ => 0,
-        };
-        return (value.Type, value.Param) is (6, 1) or (9, -1) or (10, 7);
+        ArgumentNullException.ThrowIfNull(value);
+        if ((value.Type, value.Param) is (6, 1)) { cost = 1000; return true; }   // VampiricEffect.WhenStrikes
+        if ((value.Type, value.Param) is (9, -1)) { cost = 1500; return true; }  // AbsorbsSpells
+        return DaggerfallEnchantmentSettings.TryCost(value.Type, value.Param, out cost);
     }
     private static int MaterialMultiplier(string material, bool weapon) => material switch
     {
