@@ -325,7 +325,14 @@ internal sealed class DaggerfallInventoryPresentation
         string conditionDetail = condition.Maximum == 0 ? string.Empty : $"Condition: {condition.Current}/{condition.Maximum} ({condition.Percentage}%); ";
         if (metadata.Enchantment is null) return new(baseLabel, conditionDetail + Details(definition), presentedCondition, true);
         if (!definitions.Magic.MagicItems.TryGetValue(metadata.Enchantment, out DaggerfallMagicItemDefinition? magic))
-            throw new InvalidOperationException($"Item '{metadata.ItemId}' names unpublished magic metadata '{metadata.Enchantment}'.");
+        {
+            // An item maker's setting has no template of its own: it presents the ordinary item, named by
+            // what the setting does when the item is identified.
+            if (!DaggerfallEnchantmentSettings.TryResolve(metadata.Enchantment, out DaggerfallEnchantmentSetting setting))
+                throw new InvalidOperationException($"Item '{metadata.ItemId}' names unpublished magic metadata '{metadata.Enchantment}'.");
+            return new(baseLabel, conditionDetail + (metadata.Identified ? Label(setting.Meaning) : "Unidentified magical item"),
+                presentedCondition, metadata.Identified);
+        }
         if (!metadata.Identified)
             return new(baseLabel, conditionDetail + "Unidentified magical item", presentedCondition, false);
         string namedMagic = magic.Name.Replace("%it", baseLabel, StringComparison.Ordinal);
