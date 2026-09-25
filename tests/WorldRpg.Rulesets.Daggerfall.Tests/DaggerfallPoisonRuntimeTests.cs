@@ -126,6 +126,34 @@ public sealed class DaggerfallPoisonRuntimeTests
     }
 
     [Fact]
+    public void A_second_poison_does_not_heal_the_damage_the_first_one_left()
+    {
+        // The reason the runtime holds a list per actor rather than one poison: the damage a completed poison
+        // did persists, so taking a second poison must not quietly give it back. The older poison stops
+        // running and keeps its own arms, which a cure then takes off with everything else.
+        using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
+        Actor victim = AttributedActor(fixture);
+        DaggerfallPoisonRuntime poison = Runtime();
+        double strength = Stat(victim, DaggerfallMechanicsIds.Strength);
+
+        Assert.True(poison.Afflict(victim, 131));
+        Assert.Equal(90, poison.AdvanceMinutes(50));
+        double drained = Stat(victim, DaggerfallMechanicsIds.Strength);
+        Assert.True(drained < strength);
+        Assert.Equal(DaggerfallPoisonPhase.Complete, poison.Affliction(victim)!.Phase);
+
+        // Arsenic outlasts what is left of Drothweed, so it takes over; the drain stays.
+        Assert.True(poison.Afflict(victim, 129));
+        Assert.Equal(129, poison.Affliction(victim)!.Archetype.Variant);
+        Assert.Equal(drained, Stat(victim, DaggerfallMechanicsIds.Strength));
+        Assert.Equal(2, poison.Count);
+
+        Assert.True(poison.Cure(victim));
+        Assert.Equal(strength, Stat(victim, DaggerfallMechanicsIds.Strength));
+        Assert.False(poison.IsAfflicted(victim));
+    }
+
+    [Fact]
     public void A_second_poison_only_takes_over_when_it_has_more_left_to_give()
     {
         using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
