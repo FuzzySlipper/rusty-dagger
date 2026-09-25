@@ -26,8 +26,9 @@ public sealed class DaggerfallAudioBundleTests
         DaggerfallAudioBundle audio = new(content, [new NormalizedAudioClip(mediaId, contentPath, default)]);
         AudioFake engineAudio = AudioFake.Create();
 
-        // Metadata discovery does not make the WAV one of ProductContent's eager files.
-        Assert.Contains(content.ListBundles(), bundle => bundle.Id == DaggerfallAudioBundle.BundleId);
+        // Metadata discovery does not make the WAV one of ProductContent's eager files. The pair hands the
+        // listing back as a memory now rather than a sequence, so it is materialized to be searched.
+        Assert.Contains(content.ListBundles().ToArray(), bundle => bundle.Id == DaggerfallAudioBundle.BundleId);
         Assert.False(content.TryReadFile(contentPath, out _));
         Assert.Empty(contentService.OpenBundleRequests);
 
