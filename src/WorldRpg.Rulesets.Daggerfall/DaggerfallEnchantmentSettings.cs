@@ -21,8 +21,12 @@ internal static class DaggerfallEnchantmentSettings
     internal const int RegeneratesHealthType = 5;
     internal const int ExtraSpellPointsType = 3;
     internal const int IncreasedWeightAllowanceType = 7;
+    internal const int RepairsObjectsType = 8;
     internal const int EnhancesSkillType = 10;
     internal const int StrengthensArmorType = 12;
+    internal const int ItemDeterioratesType = 16;
+    internal const int UserTakesDamageType = 17;
+    internal const int WeakensArmorType = 24;
     internal const int ImprovesTalentsType = 13;
 
     /// <summary>Keys a worn item can name, in the donor's own enumeration order.</summary>
@@ -56,6 +60,18 @@ internal static class DaggerfallEnchantmentSettings
     private static readonly (string Meaning, int Cost)[] RegenerationParams =
     [
         ("all-the-time", 4000), ("in-sunlight", 3000), ("in-darkness", 3000),
+    ];
+
+    // The four condition payloads: what a worn item costs its owner. The donor prices a detriment
+    // negatively — it makes the item cheaper — and an advantage positively.
+    private static readonly (string Meaning, int Cost)[] DeteriorationParams =
+    [
+        ("all-the-time", -3000), ("in-sunlight", -1500), ("in-holy-places", -500),
+    ];
+
+    private static readonly (string Meaning, int Cost)[] DamageParams =
+    [
+        ("in-sunlight", -6000), ("in-holy-places", -1000),
     ];
 
     private static readonly (string Meaning, int Cost)[] TalentParams =
@@ -95,6 +111,12 @@ internal static class DaggerfallEnchantmentSettings
         for (int param = 0; param < RegenerationParams.Length; param++)
             Add(RegeneratesHealthType, param, RegenerationParams[param].Cost, RegenerationParams[param].Meaning);
         Add(StrengthensArmorType, -1, 700, "strengthened-armor");
+        Add(RepairsObjectsType, -1, 900, "repairs-objects");
+        Add(WeakensArmorType, -1, -700, "weakened-armor");
+        for (int param = 0; param < DeteriorationParams.Length; param++)
+            Add(ItemDeterioratesType, param, DeteriorationParams[param].Cost, DeteriorationParams[param].Meaning);
+        for (int param = 0; param < DamageParams.Length; param++)
+            Add(UserTakesDamageType, param, DamageParams[param].Cost, DamageParams[param].Meaning);
         for (int param = 0; param < WeightParams.Length; param++)
             Add(IncreasedWeightAllowanceType, param, WeightParams[param].Cost, WeightParams[param].Meaning);
         for (int param = 0; param < TalentParams.Length; param++)
