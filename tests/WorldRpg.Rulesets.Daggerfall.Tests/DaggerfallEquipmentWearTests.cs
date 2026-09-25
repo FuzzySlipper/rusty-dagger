@@ -172,6 +172,33 @@ public sealed class DaggerfallEquipmentWearTests
     }
 
     [Fact]
+    public void A_broken_pair_of_greaves_reports_the_donors_plural_from_the_wear_path()
+    {
+        using WearFixture fixture = new();
+        fixture.EquipEnemyWeapon("iron-longsword", 9001);
+        // The instance a materialized pair of greaves really is, in the slot the classic legs roll
+        // wears: neither the item identifier nor the authored lookup states the plural here, only the
+        // native template the definition carries.
+        fixture.EquipPlayerItem("template-104-iron", 4001, "legs-armor");
+        fixture.SetCondition(fixture.PlayerItem(4001), 1);
+        // A body roll of 17 is the classic table's legs.
+        fixture.Script(body: 17, critical: 50, hit: 1, damage: 15);
+
+        IReadOnlyList<IProductFact> facts = fixture.RunEnemyAttack();
+
+        EquipmentWornFact broken = Assert.Single(facts.OfType<EquipmentWornFact>(), fact => fact.Broken);
+        Assert.True(broken.PluralBreak, "the donor's greaves break in the plural");
+        // The line is the donor's published plural message with the item substituted.
+        PresentationState presentation = new(string.Empty);
+        DaggerfallOutcomePresentation outcome = new(presentation,
+            new Dictionary<long, DaggerfallActorDefinition> { [Enemy] = Definitions.RequireActor(new DaggerfallActorId("rat")) },
+            text: Definitions.Text);
+        outcome.React(new AttackHitFact(Enemy, DaggerfallActorIdentity.PlayerEntityId, 5, 5, 3, EnemyAttack: true, 1, 1));
+        outcome.React(broken);
+        Assert.EndsWith("template-104-iron have broken.", presentation.LastOutcome);
+    }
+
+    [Fact]
     public void A_hit_that_breaks_a_player_item_unequips_it_once_and_reports_one_break()
     {
         using WearFixture fixture = new();
