@@ -95,6 +95,43 @@ internal static class DaggerfallEnchantmentSettings
     /// <summary>Every setting the item maker offers, in a stable order.</summary>
     internal static IReadOnlyList<DaggerfallEnchantmentSetting> All { get; } = [.. ByKey.Values];
 
+    /// <summary>
+    /// The problems with a settings table, empty when it is sound. The catalog is compiled fixed data, so
+    /// this guards a transcription: a key that does not name its own type and param, a type the classic
+    /// set does not define, a param below the donor's single-setting sentinel, an empty or duplicated
+    /// type-and-param, or a cost of nothing at all.
+    /// </summary>
+    internal static IReadOnlyList<string> Validate(IEnumerable<DaggerfallEnchantmentSetting> settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        List<string> problems = [];
+        HashSet<(int Type, int Param)> seen = [];
+        foreach (DaggerfallEnchantmentSetting setting in settings)
+        {
+            if (setting.Key != $"enchantment.{setting.Type}.{setting.Param}")
+                problems.Add($"Enchantment setting '{setting.Key}' does not name type {setting.Type} and param {setting.Param}.");
+            if (!KnownTypes.Contains(setting.Type))
+                problems.Add($"Enchantment setting '{setting.Key}' names classic type {setting.Type}, which this table does not define.");
+            if (setting.Param < -1)
+                problems.Add($"Enchantment setting '{setting.Key}' names param {setting.Param}, below the donor's single-setting sentinel.");
+            if (string.IsNullOrWhiteSpace(setting.Meaning))
+                problems.Add($"Enchantment setting '{setting.Key}' has no param meaning.");
+            if (setting.Cost == 0)
+                problems.Add($"Enchantment setting '{setting.Key}' costs nothing.");
+            if (!seen.Add((setting.Type, setting.Param)))
+                problems.Add($"Enchantment setting '{setting.Key}' repeats type {setting.Type} and param {setting.Param}.");
+        }
+        return problems;
+    }
+
+    /// <summary>The classic enchantment types this table carries.</summary>
+    private static readonly HashSet<int> KnownTypes =
+    [
+        RegeneratesHealthType, ExtraSpellPointsType, IncreasedWeightAllowanceType, RepairsObjectsType,
+        EnhancesSkillType, StrengthensArmorType, ImprovesTalentsType, ItemDeterioratesType,
+        UserTakesDamageType, WeakensArmorType,
+    ];
+
     /// <summary>The donor's enchant cost for a classic payload the item maker offers.</summary>
     internal static bool TryCost(int type, int param, out int cost) =>
         CostsByTypeParam.TryGetValue((type, param), out cost);

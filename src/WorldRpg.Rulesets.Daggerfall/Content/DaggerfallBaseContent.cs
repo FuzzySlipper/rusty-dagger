@@ -57,6 +57,8 @@ internal static class DaggerfallBaseContent
             DaggerfallCinematicSet cinematics = ReadCinematics(root, diagnostics);
             ValidateReferences(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, mobiles, hud, diagnostics);
             ValidateCatalog(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, lootCategoryPools, donorErrata, diagnostics);
+            foreach (string problem in DaggerfallEnchantmentSettings.Validate(DaggerfallEnchantmentSettings.All))
+                diagnostics.Add(problem);
             diagnostics.ThrowIfAny();
             return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles, names, rumors, biographies, grids, books, factions, terrain, itemTemplatesCatalog, questSources, cinematics, encounters)
             {
