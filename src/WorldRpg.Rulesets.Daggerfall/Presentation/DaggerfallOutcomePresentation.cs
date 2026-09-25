@@ -51,6 +51,14 @@ internal sealed class DaggerfallOutcomePresentation(
             // actor it landed on; a swing that landed on the player names the attacker, because "Hit
             // player for 5 damage" tells the player nothing they did not already know and nothing about
             // which of the enemies in front of them is doing it.
+            // A shot that met cover is not a miss: nothing about the roll or the target decided it, and
+            // the player needs to know the world was in the way.
+            case RangedShotBlockedFact blocked:
+                _lineIsResult = true;
+                presentation.SetOutcome(blocked.AttackerId == DaggerfallActorIdentity.PlayerEntityId
+                    ? "Shot blocked by cover"
+                    : $"{Name(blocked.AttackerId)}'s shot is blocked by cover");
+                break;
             case AttackMissedFact missed when Actor(missed.EnemyAttack ? missed.AttackerId : missed.TargetId, out DaggerfallActorDefinition definition):
                 _lineIsResult = true;
                 presentation.SetOutcome(missed.EnemyAttack

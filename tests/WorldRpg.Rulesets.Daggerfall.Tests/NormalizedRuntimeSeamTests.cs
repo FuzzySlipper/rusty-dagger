@@ -4472,6 +4472,43 @@ public sealed partial class NormalizedRuntimeSeamTests
     /// state and the damage that lands are the ruleset's answer to it.
     /// </remarks>
     [Fact]
+    public void Static_cover_between_the_archer_and_the_player_stops_the_shot()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        spatial.KeepPosition = true;
+        // A wall across every horizontal query, while the floor probe the movement owner uses still
+        // sees no obstruction.
+        spatial.FloorHit = request => request.Direction.Y < -.5f
+            ? default
+            : default(SpatialHit) with { Present = true, Kind = SpatialHitKind.StaticMesh };
+        PerceptionFake perception = PerceptionFake.Create();
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        const long archer = 2004;
+        double separation = definitions.Actions.Values.Where(action => action.Interpretation == "fixed-melee").Max(action => action.Reach!.Value) + 1d;
+        perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 1d, PerceptionPairKind.Visible, 1d));
+
+        double healthBefore = PlayerHealth(session);
+        double beforeHealth = healthBefore;
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredRangedMarker(archer));
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+        for (ulong step = 2; step <= 120 && session.Presentation.LastOutcome is null; step++)
+            session.Update(new ProductUpdate(OuterUpdate(step), []));
+
+        // The release happened and the line was obstructed, so the shot died on the cover: no damage,
+        // and the line tells the player the world was in the way rather than that they were missed.
+        Assert.Equal(beforeHealth, PlayerHealth(session));
+        Assert.Contains("blocked by cover", session.Presentation.LastOutcome ?? string.Empty);
+    }
+
+    [Fact]
     public void The_archer_damages_the_player_from_beyond_melee_reach_without_closing()
     {
         string root = RepositoryRoot();
