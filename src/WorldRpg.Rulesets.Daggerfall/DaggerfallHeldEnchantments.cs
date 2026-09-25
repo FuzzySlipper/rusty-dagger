@@ -40,6 +40,7 @@ internal sealed class DaggerfallHeldEnchantments
     // belong to their own owners rather than to the worn-state contributions.
     private const int ExtraSpellPointsType = 3;
     private const int IncreasedWeightAllowanceType = 7;
+    private const int RegeneratesHealthType = 5;
     private const int EnhancesSkillType = 10;
     private const int StrengthensArmorType = 12;
     private const int ImprovesTalentsType = 13;
@@ -54,6 +55,16 @@ internal sealed class DaggerfallHeldEnchantments
     internal const int StrengthenedArmorValue = -5;
     internal const int ExtraSpellPoints = 75;
     internal const double NearbyCreatureMeters = 18d;
+
+    /// <summary>
+    /// The donor's health regeneration: one point every fourth magic round, per worn source, which is
+    /// fifteen points an hour apiece.
+    /// </summary>
+    internal const int RegeneratedHealthPerTick = 1;
+    internal const int RoundsPerRegeneration = 4;
+    private const int AlwaysRegenerates = 0;
+    private const int SunlightRegenerates = 1;
+    private const int DarknessRegenerates = 2;
 
     /// <summary>
     /// The classic skill order the enchantment param indexes, mirroring the donor's
@@ -77,12 +88,17 @@ internal sealed class DaggerfallHeldEnchantments
     private readonly Func<DaggerfallCalendar> _calendar;
     private readonly Func<WorldPoint?> _playerPosition;
     private readonly Func<IReadOnlyList<DaggerfallNearbyCreature>> _nearby;
+    private readonly Func<bool> _playerInSunlight;
     private readonly List<AppliedContribution> _applied = [];
+    // Indexed by the donor's RegensHealth params: always, in sunlight, in darkness.
+    private readonly int[] _regeneration = new int[3];
     private HeldSignature? _signature;
+    private int _regenerationTotal => _regeneration[AlwaysRegenerates] + _regeneration[SunlightRegenerates] + _regeneration[DarknessRegenerates];
 
     internal DaggerfallHeldEnchantments(MechanicsEquipmentCoordinator equipment, DaggerfallItemInstances instances,
         IReadOnlyDictionary<string, DaggerfallMagicItemDefinition> magicItems, StatsComponent playerStats, EntityDirectory entities, EntityId actor,
-        Func<DaggerfallCalendar> calendar, Func<WorldPoint?> playerPosition, Func<IReadOnlyList<DaggerfallNearbyCreature>> nearby)
+        Func<DaggerfallCalendar> calendar, Func<WorldPoint?> playerPosition, Func<IReadOnlyList<DaggerfallNearbyCreature>> nearby,
+        Func<bool>? playerInSunlight = null)
     {
         _equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
@@ -93,6 +109,7 @@ internal sealed class DaggerfallHeldEnchantments
         _calendar = calendar ?? throw new ArgumentNullException(nameof(calendar));
         _playerPosition = playerPosition ?? throw new ArgumentNullException(nameof(playerPosition));
         _nearby = nearby ?? throw new ArgumentNullException(nameof(nearby));
+        _playerInSunlight = playerInSunlight ?? (() => false);
     }
 
     /// <summary>The talents the worn items improve right now.</summary>
@@ -103,6 +120,9 @@ internal sealed class DaggerfallHeldEnchantments
 
     /// <summary>The armor-value shift the worn items give, zero when none strengthens armor.</summary>
     internal int ArmorValueModifier { get; private set; }
+
+    /// <summary>How many worn sources regenerate health, one tick each.</summary>
+    internal int RegeneratingSources => _regenerationTotal;
 
     /// <summary>
     /// Recomputes every held contribution when what they depend on changed: the equipment revision
@@ -127,6 +147,7 @@ internal sealed class DaggerfallHeldEnchantments
         Talents = default;
         double carry = 1d;
         int armor = 0;
+        Array.Clear(_regeneration);
 
         foreach (WorldRpg.Kit.Inventory.EquipmentAssignment assignment in read.Assignments)
         {
@@ -147,6 +168,9 @@ internal sealed class DaggerfallHeldEnchantments
                     case StrengthensArmorType:
                         armor = StrengthenedArmorValue;
                         break;
+                    case RegeneratesHealthType:
+                        _regeneration[RegenerationCondition(enchantment.Param)]++;
+                        break;
                     case ImprovesTalentsType:
                         Talents = Talent(enchantment.Param) switch
                         {
@@ -162,6 +186,35 @@ internal sealed class DaggerfallHeldEnchantments
 
         CarryMultiplier = carry;
         ArmorValueModifier = armor;
+    }
+
+    /// <summary>
+    /// Applies what the worn items do on the rounds that just elapsed. The cadence is the round index
+    /// itself — one magic round is one game minute — so ordinary play, rest and travel all regenerate on
+    /// the donor's every-fourth-round beat without a counter to keep or restore, and a catch-up interval
+    /// regenerates for every fourth round it covered rather than once.
+    /// </summary>
+    /// <param name="firstMinuteIndex">The minute index the elapsed interval started from.</param>
+    /// <param name="minutes">How many magic rounds that interval covered.</param>
+    internal void AdvanceRounds(long firstMinuteIndex, int minutes)
+    {
+        if (minutes <= 0 || _regenerationTotal == 0) return;
+        int ticks = 0;
+        for (int round = 1; round <= minutes; round++)
+            if ((firstMinuteIndex + round) % RoundsPerRegeneration == 0) ticks++;
+        if (ticks == 0) return;
+
+        bool sunlight = _playerInSunlight();
+        int sources = _regeneration[AlwaysRegenerates] + _regeneration[sunlight ? SunlightRegenerates : DarknessRegenerates];
+        if (sources == 0) return;
+
+        Track health = _stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
+        long maximum = checked((long)health.Maximum.Value);
+        long current = checked((long)health.Current);
+        long restored = Math.Min(maximum, checked(current + checked((long)ticks * sources * RegeneratedHealthPerTick)));
+        // A wearer already at full health is not a change, and the donor's IncreaseHealth clamps there.
+        if (restored == current) return;
+        health.SetCurrent(restored, clamp: true);
     }
 
     private void Apply(WorldRpg.Kit.Inventory.EquipmentAssignment assignment, DaggerfallMagicEnchantmentDefinition enchantment, DaggerfallStatId statId, int amount)
@@ -283,6 +336,15 @@ internal sealed class DaggerfallHeldEnchantments
         if (IsNear(nearby, DaggerfallEnemyGroup.Animals)) signature |= 8;
         return signature;
     }
+
+    /// <summary>The donor's RegensHealth params: all the time, in sunlight, in darkness.</summary>
+    private static int RegenerationCondition(int param) => param switch
+    {
+        0 => AlwaysRegenerates,
+        1 => SunlightRegenerates,
+        2 => DarknessRegenerates,
+        _ => AlwaysRegenerates,
+    };
 
     internal static double WeightMultiplier(int param) => param switch
     {

@@ -348,7 +348,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             State.Npcs.Identities = _actorIdentities;
             _heldEnchantments = new DaggerfallHeldEnchantments(State.Equipment, State.ItemInstances, definitions.Magic.MagicItems,
                 State.Actors.Player.Stats, State.Actors.Entities, State.Actors.Player.Actor.Entity, () => _time.Calendar,
-                () => State.PlayerControl.Position, NearbyCreatures);
+                () => State.PlayerControl.Position, NearbyCreatures, InSunlight);
+            State.HeldEnchantments = _heldEnchantments;
             State.Encumbrance = new DaggerfallEncumbrancePolicy(State.Inventory, State.Actors.Player.Stats,
                 () => _heldEnchantments.CarryMultiplier);
             _heldEnchantments.Refresh();
@@ -837,6 +838,13 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         source.Dispose();
         return true;
     }
+
+    /// <summary>
+    /// Whether the player stands in sunlight, which the donor reads as daytime while not inside: an
+    /// exterior site in daylight. Everything else — a dungeon, or an exterior at night — is darkness,
+    /// which is what the worn regeneration conditions divide on.
+    /// </summary>
+    private bool InSunlight() => _siteProjection.Inputs.DungeonMap is null && _time.Calendar.IsDay;
 
     /// <summary>
     /// The living creatures a worn enchantment's near-creature condition can see: the group the
@@ -1707,7 +1715,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     private void AdvanceEffectsForCalendar(DaggerfallCalendar before, bool ordinaryPlay)
     {
-        long minutes = MinuteIndex(_time.Calendar) - MinuteIndex(before);
+        long minuteBefore = MinuteIndex(before);
+        long minutes = MinuteIndex(_time.Calendar) - minuteBefore;
         if (minutes <= 0) return;
 
         // The normal path is expressed as its normal one-round operation.  Multiple minutes (whether
@@ -1716,10 +1725,12 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         if (ordinaryPlay && minutes == 1)
         {
             State.Effects.AdvanceOrdinaryRound();
+            State.HeldEnchantments.AdvanceRounds(minuteBefore, 1);
             return;
         }
 
         _ = State.Effects.AdvanceElapsedRounds(minutes);
+        State.HeldEnchantments.AdvanceRounds(minuteBefore, checked((int)Math.Min(minutes, int.MaxValue)));
     }
 
     private static long MinuteIndex(DaggerfallCalendar calendar) =>
