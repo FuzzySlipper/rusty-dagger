@@ -11,6 +11,7 @@ using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using Xunit;
 using SlotId = WorldRpg.Kit.Inventory.EquipmentSlotId;
 
@@ -282,6 +283,60 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.Equal(baseline.Damage + bonus, racial.Damage);
     }
 
+    [Fact]
+    public void A_targeted_player_swing_admits_its_timing_and_lands_only_when_the_hit_frame_arrives()
+    {
+        // The donor runs its melee damage when the swing animation reaches FPSWeapon's hit frame, so a
+        // targeted swing hands its impact to the shared pending state and publishes the tick time the
+        // viewmodel has to play at.
+        using DamagePolicyFixture fixture = new();
+        fixture.Script(body: 9, critical: 50, hit: 1, damage: 10);
+        AttackRequest request = new(DaggerfallActorIdentity.PlayerEntityId, 2, 5, 9, .125d, Delayed: true);
+
+        IReadOnlyList<IProductFact> admitted = fixture.StartSwing(request, out bool started);
+
+        Assert.True(started);
+        PlayerAttackStartedFact opening = Assert.Single(admitted.OfType<PlayerAttackStartedFact>());
+        Assert.Equal(2L, opening.TargetId);
+        Assert.Equal(DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(50), opening.FrameSeconds, 6);
+        Assert.DoesNotContain(admitted, fact => fact is AttackHitFact or AttackMissedFact);
+
+        IReadOnlyList<IProductFact> impact = fixture.DeliverImpact(request);
+
+        Assert.Contains(impact, fact => fact is AttackHitFact { TargetId: 2 });
+    }
+
+    [Fact]
+    public void A_swing_whose_animation_never_reaches_its_hit_frame_delivers_nothing()
+    {
+        using DamagePolicyFixture fixture = new();
+        fixture.Script(body: 9, critical: 50, hit: 1, damage: 10);
+        AttackRequest request = new(DaggerfallActorIdentity.PlayerEntityId, 2, 5, 9, .125d, Delayed: true);
+        _ = fixture.StartSwing(request, out bool started);
+        Assert.True(started);
+
+        IReadOnlyList<IProductFact> impact = fixture.DeliverImpact(request, expired: true);
+
+        Assert.DoesNotContain(impact, fact => fact is AttackHitFact or AttackMissedFact or EquipmentWornFact);
+        // A delivered or expired swing leaves nothing pending, so the next admitted swing is ready.
+        Assert.True(fixture.IsSwingReady(DaggerfallActorIdentity.PlayerEntityId, 5, 40));
+    }
+
+    [Fact]
+    public void An_unaimed_player_swing_resolves_immediately_and_reports_nothing_in_reach()
+    {
+        // No target means no animation frame to wait for: the swing resolves in its own update, spends
+        // its stamina once, and says what the melee query found.
+        using DamagePolicyFixture fixture = new();
+        AttackRequest request = new(DaggerfallActorIdentity.PlayerEntityId, null, 5, 9, .125d, Delayed: false);
+
+        IReadOnlyList<IProductFact> facts = fixture.StartSwing(request, out bool started);
+
+        Assert.True(started);
+        Assert.Equal(new PlayerAttackStartedFact(5, 9), Assert.Single(facts.OfType<PlayerAttackStartedFact>()));
+        Assert.Contains(new AttackRejectedFact(AttackRejection.NoTargetInReach), facts);
+    }
+
     private sealed class CountingContribution(bool rejectFirst = false) : ICombatContribution
     {
         internal int HitCount { get; private set; }
@@ -411,6 +466,33 @@ public sealed class DaggerCombatDamagePolicyTests
             FactBuffer<IProductFact> facts = new();
             bool admitted = _combat.TryPrepare(request, facts, out PreparedAttack prepared);
             return new PreparedResolution(admitted, prepared.Outcome, _scripted.Ranges);
+        }
+
+        /// <summary>Admits one swing through the shared attack lifecycle and delivers what it published.</summary>
+        internal IReadOnlyList<IProductFact> StartSwing(AttackRequest request, out bool admitted)
+        {
+            FactBuffer<IProductFact> facts = new();
+            admitted = _combat.Execution.Start(request, facts);
+            return Delivered(facts);
+        }
+
+        /// <summary>Delivers the swing's animation hit frame, or its expiry when the animation never reached one.</summary>
+        internal IReadOnlyList<IProductFact> DeliverImpact(AttackRequest request, bool expired = false)
+        {
+            FactBuffer<IProductFact> facts = new();
+            _combat.Execution.ApplyImpacts([new AttackImpactNotice(request.AttackerId, request.TargetId!.Value,
+                request.Generation, request.SimulationStep, expired)], request.Generation, facts);
+            return Delivered(facts);
+        }
+
+        internal bool IsSwingReady(long attackerId, ulong generation, ulong step) =>
+            _combat.Execution.IsReady(attackerId, generation, step);
+
+        private static IReadOnlyList<IProductFact> Delivered(FactBuffer<IProductFact> facts)
+        {
+            List<IProductFact> collected = [];
+            facts.Deliver(collected.Add);
+            return collected;
         }
 
         public void Dispose() => _actors.Dispose();

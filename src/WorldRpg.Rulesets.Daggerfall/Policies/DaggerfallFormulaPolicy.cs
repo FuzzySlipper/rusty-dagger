@@ -772,6 +772,27 @@ internal static class DaggerfallFormulaPolicy
     }
 
     /// <summary>
+    /// FORM-04.GetMeleeWeaponAnimTime: how long one classic weapon animation frame lasts for a player at
+    /// the given live speed. The donor computes <c>3 * (115 - LiveSpeed) / classicFrameUpdate</c> with
+    /// its 980 frame constant, so a hastened swing plays every frame sooner and a slowed one later; that
+    /// same tick time is the donor's melee swing timing. Donor:
+    /// <c>FormulaHelper.GetMeleeWeaponAnimTime</c>.
+    /// </summary>
+    internal static double MeleeWeaponAnimationSeconds(int liveSpeed)
+    {
+        if (liveSpeed < 0 || liveSpeed > MaxStatValue()) throw new ArgumentOutOfRangeException(nameof(liveSpeed));
+        return MeleeAnimationSpeedFactor * (MeleeAnimationSpeedBaseline - liveSpeed) / ClassicFrameUpdate;
+    }
+
+    /// <summary>
+    /// The classic weapon animation frame a melee swing's damage lands on. The donor's FPSWeapon
+    /// reports frame 2 for every melee weapon and frame 5 for a bow, and WeaponManager runs its melee
+    /// damage when the playing swing's current frame reaches it, which is why one swing is not one
+    /// instant.
+    /// </summary>
+    internal const int MeleeWeaponHitFrame = 2;
+
+    /// <summary>
     /// The donor's item-condition display unit. Items without condition use are complete rather than
     /// dividing by zero; otherwise the classic integer percentage truncates toward zero.
     /// </summary>
@@ -807,6 +828,12 @@ internal static class DaggerfallFormulaPolicy
     /// <summary>One in five light hits still costs a condition unit: the donor's <c>Dice100.SuccessRoll(20)</c>.</summary>
     private const int MinimumWearChance = 20;
 
+    /// <summary>The donor's weapon-animation frame clock every melee tick time is measured against.</summary>
+    private const double ClassicFrameUpdate = 980d;
+
+    /// <summary>The donor's melee animation scaling: three times the shortfall below live speed 115.</summary>
+    private const int MeleeAnimationSpeedFactor = 3;
+    private const int MeleeAnimationSpeedBaseline = 115;
 
     /// <summary>Donor base body weights for class enemies by gender, in classic units.</summary>
     private const int FemaleClassBaseWeight = 240;

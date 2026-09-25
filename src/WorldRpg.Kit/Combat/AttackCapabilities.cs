@@ -15,7 +15,10 @@ public sealed class AttackCapabilities<TFact>(long playerId, TargetingService ta
     {
         if (player.Position is null) { targeting.Clear(); missingPosition(facts); return; }
         long? target = targeting.Select(player.Position, look.Forward, reach(playerId));
-        execution.Start(new(playerId, target, generation, step, delta, false), facts);
+        // A swing that found a target delivers at its animation's hit frame, and the shared pending
+        // state is the only owner of that delay. A swing that found nothing has no frame to wait for,
+        // so it resolves inside this update and reports why nothing was in reach.
+        execution.Start(new(playerId, target, generation, step, delta, target is not null), facts);
     }
     public bool TryBeginEnemyAttack(long attacker, long target, ulong generation, ulong step, double delta, FactBuffer<TFact> facts) =>
         execution.Start(new(attacker, target, generation, step, delta, true), facts);

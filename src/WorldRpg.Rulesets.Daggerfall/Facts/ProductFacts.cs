@@ -20,8 +20,14 @@ internal sealed record DungeonMagickaDrainedFact(long TargetActorId, string Acti
     ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
 internal enum AttackRejection { MissingPlayerPosition, NoTargetInReach, UnknownExplicitCombatant, TargetDefeated, Cooldown, NoAttackPolicy, InsufficientStamina, StaminaSpendNotAccepted, InsufficientWeaponMaterial, EmptyQuiver }
 internal sealed record AttackRejectedFact(AttackRejection Reason, long? ActorId = null) : IProductFact;
-/// <summary>One player melee swing passed cooldown and stamina admission, independently of its target outcome.</summary>
-internal sealed record PlayerAttackStartedFact(ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
+/// <summary>
+/// One player melee swing passed cooldown and stamina admission, independently of its target outcome.
+/// A swing with a target delivers its impact when the strike animation reaches the classic hit frame,
+/// so <paramref name="FrameSeconds"/> carries that animation's tick time and <paramref name="TargetId"/>
+/// its admitted target. An admitted swing with neither resolves inside its own update.
+/// </summary>
+internal sealed record PlayerAttackStartedFact(ulong OriginatingGeneration, ulong OriginatingSimulationStep,
+    long? TargetId = null, double FrameSeconds = 0d) : IProductFact;
 /// <summary>
 /// One enemy melee swing began. The attack's outcome is already decided, so the
 /// presentation can play the matching strike, but nothing has been applied yet:
