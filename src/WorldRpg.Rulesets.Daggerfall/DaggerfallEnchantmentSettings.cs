@@ -9,13 +9,21 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal readonly record struct DaggerfallEnchantmentSetting(string Key, int Type, int Param, int Cost, string Meaning);
 
 /// <summary>
-/// The enchantment settings the classic item maker offers. The donor enumerates them from each effect
-/// class's own table rather than publishing them alongside MAGIC.DEF's pre-generated items, so an item
-/// can hold a payload that no published magic item carries — the held stat, weight, talent and
-/// condition payloads among them. They are classic fixed data recorded by the donor classes, not
-/// authored pack values, which is the same disposition the disease matrix has: the ruleset owns the
-/// table and a worn item names one of its keys exactly as it names a magic item.
+/// The enchantment settings this project's held and condition work needs. The donor enumerates its full
+/// item-maker offering from each effect class's own table rather than publishing it alongside MAGIC.DEF's
+/// pre-generated items, so an item can hold a payload that no published magic item carries — the held
+/// stat, weight, talent, regeneration, armor-strength and condition payloads among them. They are classic
+/// fixed data recorded by the donor classes, not authored pack values, which is the same disposition the
+/// disease matrix has: the ruleset owns the table and a worn item names one of its keys exactly as it
+/// names a magic item.
 /// </summary>
+/// <remarks>
+/// This is not the donor's complete offering: its cast-when-*, potent-versus, low-damage-versus,
+/// health-leech, soul-bound, feather-weight, extra-weight and reputation tables are not enumerated here,
+/// because no task has needed them yet. Their costs are still quotable where the cost policy retains
+/// them (see <c>DaggerfallMagicCostPolicy.TryGetNonSpellEnchantmentCost</c>), and a further family
+/// belongs here only when a consumer asks for it.
+/// </remarks>
 internal static class DaggerfallEnchantmentSettings
 {
     internal const int RegeneratesHealthType = 5;

@@ -254,14 +254,17 @@ internal static class DaggerfallMagicCostPolicy
     // the item-maker settings from the donor effect classes, retained explicitly rather than
     // pretending every non-spell enchantment has a spell price.
     /// <summary>
-    /// The retained item-maker cost of one non-spell enchantment payload. Two payloads belong to
-    /// published magic items the item maker does not offer and stay here; every payload it does offer
-    /// keeps its cost in the settings catalog, which is the donor's own table.
+    /// The retained item-maker cost of one non-spell enchantment payload. The donor offers these payloads
+    /// at its item maker too, so they are costed here rather than in the settings catalog, which
+    /// enumerates the families this product's held and condition work needs; a payload the catalog does
+    /// not enumerate yet is costed here as well, because the donor prices it all the same.
     /// </summary>
     internal static bool TryGetNonSpellEnchantmentCost(DaggerfallMagicEnchantmentDefinition value, out int cost)
     {
         ArgumentNullException.ThrowIfNull(value);
-        if ((value.Type, value.Param) is (6, 1)) { cost = 1000; return true; }   // VampiricEffect.WhenStrikes
+        // VampiricEffect: param 0 at range, param 1 when strikes. DFU offers both at the item maker.
+        if ((value.Type, value.Param) is (6, 0)) { cost = 2000; return true; }
+        if ((value.Type, value.Param) is (6, 1)) { cost = 1000; return true; }
         if ((value.Type, value.Param) is (9, -1)) { cost = 1500; return true; }  // AbsorbsSpells
         return DaggerfallEnchantmentSettings.TryCost(value.Type, value.Param, out cost);
     }
