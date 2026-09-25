@@ -13,7 +13,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 internal sealed class DaggerfallOutcomePresentation(
     PresentationState presentation,
     IReadOnlyDictionary<long, DaggerfallActorDefinition> actors,
-    Func<TargetingEvidence?>? meleeEvidence = null)
+    Func<TargetingEvidence?>? meleeEvidence = null,
+    DaggerfallTextSet? text = null)
 {
     // Whether the published line reports something that happened rather than something that did not.
     private bool _lineIsResult;
@@ -68,11 +69,12 @@ internal sealed class DaggerfallOutcomePresentation(
                 presentation.AppendOutcome($"looted {loot.Quantity} {loot.ItemId}");
                 break;
             // The donor reports only the break, never the condition loss that led to it, and names the
-            // item rather than the blow: "iron longsword has broken". Boots, gauntlets and greaves take
-            // the donor's plural phrasing. The clause appends to the hit that caused it, so the player
-            // reads what the swing did and what it cost.
+            // item rather than the blow. The wording and the plural set both come from owners: the
+            // published donor message for the break's authored plurality, which the wear site resolved
+            // from the item's native template. The clause appends to the hit that caused it, so the
+            // player reads what the swing did and what it cost.
             case EquipmentWornFact { Broken: true } worn:
-                presentation.AppendOutcome($"{worn.ItemId} {(PluralBreakItem(worn.ItemId) ? "have" : "has")} broken");
+                presentation.AppendOutcome(BreakLine(worn));
                 break;
             case CorpseSearchedEmptyFact:
                 presentation.SetOutcome("Corpse is empty");
@@ -94,11 +96,18 @@ internal sealed class DaggerfallOutcomePresentation(
 
     private string Name(long entityId) => Actor(entityId, out DaggerfallActorDefinition definition) ? definition.Id.Value : $"actor {entityId}";
 
-    /// <summary>The donor's own plural set for a break: boots, gauntlets and greaves break in the plural.</summary>
-    private static bool PluralBreakItem(string itemId) =>
-        itemId.EndsWith("boots", StringComparison.Ordinal)
-        || itemId.EndsWith("gauntlets", StringComparison.Ordinal)
-        || itemId.EndsWith("greaves", StringComparison.Ordinal);
+    /// <summary>
+    /// The donor's break line: its published message for a singular or plural break, with the item
+    /// substituted for the placeholder the message itself declares. A pack that carries no such message
+    /// still reports the break in this line's own words rather than dropping what happened.
+    /// </summary>
+    private string BreakLine(EquipmentWornFact worn)
+    {
+        DaggerfallTextKey key = new(DaggerfallTextKind.Internal, worn.PluralBreak ? "itemHasBrokenPlural" : "itemHasBroken");
+        if (text is null || text.Resolve(key, out DaggerfallTextValue? value) is not DaggerfallTextResolution.Resolved)
+            return $"{worn.ItemId} {(worn.PluralBreak ? "have" : "has")} broken";
+        return string.Concat(value!.TextRuns).Replace("%s", worn.ItemId, StringComparison.Ordinal);
+    }
 
     private bool Actor(long entityId, out DaggerfallActorDefinition definition) => actors.TryGetValue(entityId, out definition!);
 }

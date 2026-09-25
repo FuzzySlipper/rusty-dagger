@@ -469,12 +469,14 @@ internal sealed class PrivateersHoldAppearance : IDisposable
                 weapon.ImpactReported = true;
                 attackImpacts.Add(new AttackImpactNotice(pending.Attacker, pending.Target, pending.Generation, pending.SimulationStep, Expired: false));
             }
-            if (weapon.Strike && receipt.Readout.Completed)
+            if (weapon.Strike && receipt.Readout.Completed && receipt.Advanced)
             {
-                // A swing that ended without reaching its hit frame must not land later.
+                // A swing that truly ended without reaching its hit frame must not land later. A
+                // receipt that reports completion without advancing is not authoritative, so the
+                // swing stays live for the frame that can still deliver it.
                 RetireUnreportedImpact();
                 if (weapon.CompletedOuterUpdate) StartWeaponAction("idle");
-                else if (receipt.Advanced) weapon.CompletedOuterUpdate = true;
+                else weapon.CompletedOuterUpdate = true;
             }
             weapon.LastOuterUpdate = identity;
         }
@@ -630,6 +632,13 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         if (presentationEvent.Outcome == "hit" && !hasDamageFrame) Emit(hitCue, presentationEvent, 0);
         return hasDamageFrame;
     }
+
+    /// <summary>
+    /// Retires an unfinished player swing at a boundary that ends this appearance's lifetime, so the
+    /// shared attack state cannot stay charged against a viewmodel nothing will advance again. The
+    /// caller drains <see cref="TakeAttackImpacts"/> before the appearance goes away.
+    /// </summary>
+    internal void RetirePendingSwing() => RetireUnreportedImpact();
 
     /// <summary>Retires a strike's admitted impact that its animation never delivered.</summary>
     private void RetireUnreportedImpact()

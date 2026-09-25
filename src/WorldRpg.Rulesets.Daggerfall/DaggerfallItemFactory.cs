@@ -36,9 +36,7 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
         int? bookId = SelectBook(template, request);
         int? potionRecipeKey = SelectPotionRecipe(template, request);
         ulong? creditValue = SelectCreditValue(template, request);
-        // ItemBuilder.SetItem initializes ordinary templates from hitPoints, then its material
-        // routine scales weapon and plate condition before the item can enter an inventory.
-        int condition = template.Index == 131 ? 0 : DaggerfallItemMaterialPolicy.Apply(template, material).MaximumCondition;
+        int condition = StartingCondition(template, material);
         string? enchantment = null;
         ulong quantity = SelectQuantity(template, request, material);
         InventoryItemId item = new(MaterializedItemId(template, material));
@@ -268,6 +266,20 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
         if (quantity == 0 || quantity > _definitions.RequireItem(new DaggerfallItemId(MaterializedItemId(template, material))).MaximumQuantity)
             throw new ArgumentOutOfRangeException(nameof(request), $"Template {template.Index} quantity is outside its Engine-backed range.");
         return quantity;
+    }
+
+    /// <summary>
+    /// The condition units one instance of this template enters play with: ItemBuilder initializes an
+    /// ordinary template from its hit points, then its material routine scales weapon and plate
+    /// condition, and the donor's arrow template carries no budget at all. A definition that authors no
+    /// weapon or armor material keeps the unscaled hit points the routines answer for its group. This is
+    /// the one owner of that rule; the authored-loadout path asks it rather than restating it.
+    /// </summary>
+    internal static int StartingCondition(DaggerfallItemTemplateDefinition template, string? material)
+    {
+        ArgumentNullException.ThrowIfNull(template);
+        if (template.Index == 131) return 0;
+        return material is null or "none" ? template.HitPoints : DaggerfallItemMaterialPolicy.Apply(template, material).MaximumCondition;
     }
 
     private static string MaterializedItemId(DaggerfallItemTemplateDefinition template, string material) =>
