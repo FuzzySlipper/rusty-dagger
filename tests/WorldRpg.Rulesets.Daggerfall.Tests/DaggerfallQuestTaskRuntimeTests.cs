@@ -421,7 +421,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         DaggerfallQuestRuntimeInstance runtime = Runtime(source);
 
         DaggerfallQuestTaskRunner.Advance(runtime, Program(source), new(new Dictionary<string, int>(StringComparer.Ordinal)),
-            DaggerfallCalendar.Start, lifecycle: new DaggerfallQuestInstances(Definitions(), RandomMinimum.Create()));
+            DaggerfallCalendar.Start, lifecycle: Instances(Definitions()));
 
         DaggerfallQuestTaskRuntimeState task = Assert.Single(runtime.Tasks, task => task.Symbol == "headless.3");
         Assert.True(task.OperationCompleted[0]);
@@ -434,7 +434,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
     {
         DaggerfallDefinitions definitions = Definitions();
         DaggerfallQuestSourceDefinition[] sources = StartableSources(definitions, 3);
-        DaggerfallQuestInstances instances = new(definitions, RandomMinimum.Create());
+        DaggerfallQuestInstances instances = Instances(definitions);
         DaggerfallQuestInstanceSave parent = new("parent", sources[0].SourceFile, sources[0].Name, DaggerfallQuestLifecycle.Active, null, [], []);
         instances.Start(parent);
 
@@ -463,7 +463,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
     {
         DaggerfallDefinitions definitions = Definitions();
         DaggerfallQuestSourceDefinition[] sources = StartableSources(definitions, 2);
-        DaggerfallQuestInstances instances = new(definitions, RandomMinimum.Create());
+        DaggerfallQuestInstances instances = Instances(definitions);
         instances.Start(new("parent", sources[0].SourceFile, sources[0].Name, DaggerfallQuestLifecycle.Active, null, [], []));
         instances.Start(new("child", sources[1].SourceFile, sources[1].Name, DaggerfallQuestLifecycle.Active, null, [], []) { ParentInstanceId = "parent" });
 
@@ -471,15 +471,15 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         DaggerfallQuestInstanceSave parent = Assert.Single(saved.Instances, instance => instance.InstanceId == "parent");
         DaggerfallQuestInstanceSave child = Assert.Single(saved.Instances, instance => instance.InstanceId == "child");
 
-        Assert.Throws<ArgumentException>(() => new DaggerfallQuestInstances(definitions, RandomMinimum.Create()).Restore(saved with
+        Assert.Throws<ArgumentException>(() => Instances(definitions).Restore(saved with
         {
             Instances = [parent with { ParentInstanceId = "child" }, child],
         }));
-        Assert.Throws<ArgumentException>(() => new DaggerfallQuestInstances(definitions, RandomMinimum.Create()).Restore(saved with
+        Assert.Throws<ArgumentException>(() => Instances(definitions).Restore(saved with
         {
             Instances = [parent, child with { ParentInstanceId = "missing" }],
         }));
-        Assert.Throws<ArgumentException>(() => new DaggerfallQuestInstances(definitions, RandomMinimum.Create()).Restore(saved with
+        Assert.Throws<ArgumentException>(() => Instances(definitions).Restore(saved with
         {
             PendingStarts = [new("pending", sources[0].SourceFile, "missing", 0)],
         }));
@@ -504,7 +504,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         operationState[operationIndex] = new("not-a-compiled-target", "unrelated-child");
         tasks[taskIndex] = tasks[taskIndex] with { OperationState = operationState };
 
-        Assert.Throws<ArgumentException>(() => new DaggerfallQuestInstances(definitions, RandomMinimum.Create()).Restore(saved with
+        Assert.Throws<ArgumentException>(() => Instances(definitions).Restore(saved with
         {
             Instances = [instance with { Tasks = tasks }],
         }));
@@ -514,7 +514,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
     public void Start_quest_is_independent_when_its_parent_ends_before_the_queued_start()
     {
         DaggerfallDefinitions definitions = DefinitionsWithLifecycleFixtures();
-        DaggerfallQuestInstances instances = new(definitions, RandomMinimum.Create());
+        DaggerfallQuestInstances instances = Instances(definitions);
         DaggerfallQuestSourceDefinition parent = definitions.QuestSources.Resolve("startparent.txt");
         instances.Start(new("parent", parent.SourceFile, parent.Name, DaggerfallQuestLifecycle.Active, null, [], []));
 
@@ -531,7 +531,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
     public void Restore_keeps_a_completed_run_quest_receipt_after_its_child_tombstone_expires()
     {
         DaggerfallDefinitions definitions = DefinitionsWithLifecycleFixtures();
-        DaggerfallQuestInstances instances = new(definitions, RandomMinimum.Create());
+        DaggerfallQuestInstances instances = Instances(definitions);
         DaggerfallQuestSourceDefinition parent = definitions.QuestSources.Resolve("runparent.txt");
         instances.Start(new("parent", parent.SourceFile, parent.Name, DaggerfallQuestLifecycle.Active, null, [], []));
         DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal));
@@ -550,7 +550,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         Assert.DoesNotContain(saved.Instances, instance => instance.InstanceId == childId);
         Assert.Equal(DaggerfallQuestLifecycle.Active, Assert.Single(saved.Instances).Lifecycle);
 
-        DaggerfallQuestInstances restored = new(definitions, RandomMinimum.Create());
+        DaggerfallQuestInstances restored = Instances(definitions);
         restored.Restore(saved);
         Assert.Equal("parent", Assert.Single(restored.All).InstanceId);
     }
@@ -559,7 +559,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
     public void Plain_child_end_uses_the_run_quest_failure_branch()
     {
         DaggerfallDefinitions definitions = DefinitionsWithLifecycleFixtures();
-        DaggerfallQuestInstances instances = new(definitions, RandomMinimum.Create());
+        DaggerfallQuestInstances instances = Instances(definitions);
         DaggerfallQuestSourceDefinition parent = definitions.QuestSources.Resolve("endparent.txt");
         instances.Start(new("parent", parent.SourceFile, parent.Name, DaggerfallQuestLifecycle.Active, null, [], []));
         DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal));
@@ -636,7 +636,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         DaggerfallQuestTrainingState training = new();
         DaggerfallQuestRuntime runtime = new(new ProgressionState(), stats, definitions, training, DaggerfallLocomotionTuning.Classic, RandomMinimum.Create(), () => calendar,
             seconds => calendar = calendar.Advance(seconds, out _));
-        DaggerfallQuestInstances instances = new(definitions, RandomMinimum.Create());
+        DaggerfallQuestInstances instances = Instances(definitions);
         instances.BindRuntime(runtime);
         DaggerfallQuestSourceDefinition source = definitions.QuestSources.Resolve("trainquest.txt");
         instances.Start(new("training", source.SourceFile, source.Name, DaggerfallQuestLifecycle.Active, null, [], []));
@@ -662,7 +662,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         DaggerfallQuestTrainingState training = new();
         DaggerfallQuestRuntime runtime = new(progression, stats, definitions, training, DaggerfallLocomotionTuning.Classic, RandomMinimum.Create(), () => calendar,
             seconds => calendar = calendar.Advance(seconds, out _));
-        DaggerfallQuestInstances instances = new(definitions, RandomMinimum.Create());
+        DaggerfallQuestInstances instances = Instances(definitions);
         instances.BindRuntime(runtime);
         DaggerfallQuestSourceDefinition source = definitions.QuestSources.Resolve("rearmtraining.txt");
         instances.Start(new("rearm-training", source.SourceFile, source.Name, DaggerfallQuestLifecycle.Active, null, [], []));
@@ -709,6 +709,19 @@ public sealed class DaggerfallQuestTaskRuntimeTests
 
     private static DaggerfallQuestTaskProgram Program(DaggerfallQuestSourceDefinition source) => DaggerfallQuestTaskCompiler.Compile(source);
 
+    /// <summary>The leg a lifecycle test's quest clock measures: the session binds the real admitted
+    /// route calculator before anything starts, and these tests only need a deterministic duration.
+    /// </summary>
+    private const long QuestLegMinutes = 60;
+
+    /// <summary>One lifecycle owner carrying the session-bound travel owner these tests would otherwise lack.</summary>
+    private static DaggerfallQuestInstances Instances(DaggerfallDefinitions definitions)
+    {
+        DaggerfallQuestInstances instances = new(definitions, RandomMinimum.Create());
+        instances.BindTravelMinutes(_ => QuestLegMinutes);
+        return instances;
+    }
+
     private static DaggerfallQuestInstancesSave RoundTrip(DaggerfallQuestInstancesSave saved) =>
         (DaggerfallQuestInstancesSave)JsonSerializer.Deserialize(
             JsonSerializer.Serialize(saved, typeof(DaggerfallQuestInstancesSave), DaggerfallSaveJsonContext.Default),
@@ -721,15 +734,17 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         {
             DaggerfallQuestTaskProgram program = Program(source);
             if (!matches(program)) continue;
-            DaggerfallQuestInstances instances = new(definitions, RandomMinimum.Create());
+            DaggerfallQuestInstances instances = Instances(definitions);
             try
             {
                 instances.Start(new("quest", source.SourceFile, source.Name, DaggerfallQuestLifecycle.Active, null, [], []));
                 return (instances, source);
             }
-            catch (ArgumentException)
+            catch (Exception error) when (error is ArgumentException or NotSupportedException)
             {
-                // The normalized corpus correctly rejects sources with unresolved authored bindings; continue to an admitted source.
+                // The normalized corpus correctly rejects sources with unresolved authored bindings, and a
+                // travel-derived clock needs the live session's bound place resources and route calculator,
+                // which a bare lifecycle fixture does not carry. Continue to an admitted source.
             }
         }
         throw new Xunit.Sdk.XunitException("The normalized corpus contained no startable matching quest source.");
@@ -742,13 +757,14 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         {
             try
             {
-                new DaggerfallQuestInstances(definitions, RandomMinimum.Create())
+                Instances(definitions)
                     .Start(new("probe", source.SourceFile, source.Name, DaggerfallQuestLifecycle.Active, null, [], []));
                 sources.Add(source);
             }
-            catch (ArgumentException)
+            catch (Exception error) when (error is ArgumentException or NotSupportedException)
             {
-                // A source with unresolved normalized bindings is not an eligible lifecycle test fixture.
+                // A source with unresolved normalized bindings, or one whose clock needs the live session's
+                // travel owners, is not an eligible lifecycle test fixture.
             }
             if (sources.Count == count) return [.. sources];
         }
