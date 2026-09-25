@@ -87,13 +87,14 @@ internal static class DaggerfallPoisonPolicy
     /// The effect key the donor builds for a variant: <c>Poison-</c> plus its own enum identifier, which
     /// carries an underscore wherever the classic name is two words.
     /// </summary>
-    internal static string EffectKey(DaggerfallPoisonVariant variant) => variant switch
+    internal static string EffectKey(DaggerfallPoisonVariant variant)
     {
-        DaggerfallPoisonVariant.NuxVomica => "Poison-Nux_Vomica",
-        DaggerfallPoisonVariant.PyrrhicAcid => "Poison-Pyrrhic_Acid",
-        DaggerfallPoisonVariant.QuaestoVil => "Poison-Quaesto_Vil",
-        _ => $"Poison-{variant}",
-    };
+        // The archetype table names every variant, so it answers the key; a variant outside the classic
+        // twelve keeps the donor's own fallback shape rather than inventing a name.
+        return DaggerfallPoisonArchetypes.TryResolve((int)variant, out DaggerfallPoisonArchetype archetype)
+            ? archetype.Key
+            : $"Poison-{variant}";
+    }
 
     /// <summary>The donor's own poison identity for a classic value, or null when nothing carries it.</summary>
     internal static DaggerfallPoisonVariant? VariantFor(int classicValue) =>
