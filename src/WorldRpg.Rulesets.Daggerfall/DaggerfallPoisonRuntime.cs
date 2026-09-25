@@ -148,20 +148,23 @@ internal sealed class DaggerfallPoisonRuntime
     {
         int amount = _roll(effect.Minimum, effect.Maximum);
         if (amount == 0) return;
+        // Two encodings meet here and the archetype table is explicit about both: a vital arm records how
+        // much it moves and carries its direction in the positive flag, while an attribute arm records the
+        // signed change itself, because a poison drains some attributes and a drug raises others.
         switch (effect.Target)
         {
-            case DaggerfallPoisonTarget.Health when amount > 0:
+            case DaggerfallPoisonTarget.Health when !effect.IsPositive && amount > 0:
                 _ = _vitality.ResolvePoisonDamage(actor, amount);
                 return;
             case DaggerfallPoisonTarget.Fatigue:
-                Adjust(actor, DaggerfallMechanicsIds.Stamina, amount);
+                Adjust(actor, DaggerfallMechanicsIds.Stamina, effect.IsPositive ? amount : -amount);
                 return;
             case DaggerfallPoisonTarget.Magicka:
-                Adjust(actor, DaggerfallMechanicsIds.Magicka, amount);
+                Adjust(actor, DaggerfallMechanicsIds.Magicka, effect.IsPositive ? amount : -amount);
                 return;
             case DaggerfallPoisonTarget.Attribute:
                 Stat stat = actor.Get<StatsComponent>().GetStat(StatId.Parse(effect.Attribute!));
-                state.Applied.Add(new AppliedPoisonArm(stat, stat.AddModifier(-amount), effect.IsPositive));
+                state.Applied.Add(new AppliedPoisonArm(stat, stat.AddModifier(amount), effect.IsPositive));
                 return;
             default:
                 return;

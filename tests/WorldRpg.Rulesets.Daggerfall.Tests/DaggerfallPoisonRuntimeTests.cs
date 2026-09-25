@@ -1,6 +1,9 @@
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using Rusty.Engine;
+using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Kit.Combat;
 using Xunit;
@@ -19,6 +22,23 @@ public sealed class DaggerfallPoisonRuntimeTests
 
     private static double Track(Actor actor, DaggerfallTrackId id) =>
         actor.Get<StatsComponent>().GetTrack(TrackId.Parse(id.Value)).Current;
+
+    private static double Stat(Actor actor, DaggerfallStatId id) =>
+        actor.Get<StatsComponent>().GetStat(StatId.Parse(id.Value)).Value;
+
+    /// <summary>
+    /// A second actor that carries the attributes, which a poison's attribute arm needs: the shared combat
+    /// fixture's actor has the two vital tracks and no attributes, because combat never reads them there.
+    /// </summary>
+    private static Actor AttributedActor(DaggerCombatFixture fixture)
+    {
+        DaggerfallActorDefinition player = fixture.Definitions.RequireActor(new DaggerfallActorId("player"));
+        DaggerfallMechanicsState mechanics = new();
+        StatsComponent stats = mechanics.CreateStats(
+            player,
+            DaggerfallPlayerVitals.Initial(player.Stats, fixture.Definitions.Catalogs.RequireCareer("class00")));
+        return fixture.Actors.CreateActor(3, new EntityTypeId("nymph"), stats, new ActorPose(new WorldPoint(0f, 0f, 0f), 0f), "health").Actor;
+    }
 
     [Fact]
     public void A_poison_waits_its_onset_and_then_takes_health_every_minute()
@@ -39,11 +59,6 @@ public sealed class DaggerfallPoisonRuntimeTests
         Assert.Equal(before - 77, Track(player, DaggerfallMechanicsIds.Health));
     }
 
-    // The attribute and drug arms are not asserted here: the shared combat fixture builds an actor that
-    // carries the two vital tracks and no attributes, and a poison's attribute arm is a stat modifier. A
-    // stats-complete actor belongs to the fixture the poison owner will be tested through once it is wired
-    // into the session, and these facts return with it.
-
     [Fact]
     public void A_session_advancing_time_ticks_the_poison_its_player_carries()
     {
@@ -62,6 +77,52 @@ public sealed class DaggerfallPoisonRuntimeTests
 
         Assert.True(Track(player, DaggerfallMechanicsIds.Health) < before);
         Assert.False(session.State.Poisons.IsAfflicted(player));
+    }
+
+    [Fact]
+    public void Attribute_damage_a_poison_did_stays_after_it_runs_its_course()
+    {
+        // The donor says it plainly: attribute damage persists until the victim heals or is cured. So a
+        // completed poison is still carried, holding what it has to take back.
+        using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
+        Actor victim = AttributedActor(fixture);
+        DaggerfallPoisonRuntime poison = Runtime();
+        double strength = Stat(victim, DaggerfallMechanicsIds.Strength);
+
+        Assert.True(poison.Afflict(victim, 131));
+        // The answer counts the arms that acted, not the ticks: Drothweed waits up to ten minutes and then
+        // drains three attributes a minute for up to thirty, so fifty minutes spend the whole window.
+        Assert.Equal(90, poison.AdvanceMinutes(50));
+
+        // Every tick of the window drains strength, so the stat is below where it started; what matters
+        // here is that it stays there when the poison completes.
+        Assert.True(Stat(victim, DaggerfallMechanicsIds.Strength) < strength);
+        Assert.Equal(DaggerfallPoisonPhase.Complete, poison.Affliction(victim)!.Phase);
+        Assert.True(poison.HasPersistingDamage(victim));
+
+        Assert.True(poison.Cure(victim));
+        Assert.Equal(strength, Stat(victim, DaggerfallMechanicsIds.Strength));
+        Assert.Equal(0, poison.Count);
+    }
+
+    [Fact]
+    public void A_drug_gives_back_what_it_gave_when_its_course_ends()
+    {
+        // The other half of the donor's line: a drug's helping arms are removed when the poison completes,
+        // while the harm it did stands.
+        using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
+        Actor victim = AttributedActor(fixture);
+        DaggerfallPoisonRuntime poison = Runtime();
+        double luck = Stat(victim, DaggerfallMechanicsIds.Luck);
+        double stamina = Track(victim, DaggerfallMechanicsIds.Stamina);
+
+        Assert.True(poison.Afflict(victim, 136));
+        // Indulcet waits up to twelve minutes and acts for up to six, two arms to the minute.
+        Assert.Equal(12, poison.AdvanceMinutes(20));
+
+        Assert.Equal(luck, Stat(victim, DaggerfallMechanicsIds.Luck));
+        Assert.True(Track(victim, DaggerfallMechanicsIds.Stamina) < stamina);
+        Assert.False(poison.IsAfflicted(victim));
     }
 
     [Fact]
