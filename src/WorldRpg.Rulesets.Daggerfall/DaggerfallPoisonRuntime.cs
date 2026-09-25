@@ -61,7 +61,7 @@ internal sealed class DaggerfallPoisonRuntime
 
     /// <summary>Whether an actor's completed poison still holds attribute damage on it.</summary>
     internal bool HasPersistingDamage(Actor actor) =>
-        _states.TryGetValue(actor, out DaggerfallPoisonState? state) && state.Applied.Count > 0;
+        _states.TryGetValue(actor, out DaggerfallPoisonState? state) && state.Totals.Count > 0;
 
     /// <summary>
     /// Afflicts an actor with one classic variant. An actor already carrying a poison keeps the worse of
@@ -104,7 +104,7 @@ internal sealed class DaggerfallPoisonRuntime
                 }
                 if (state.Affliction.Phase != DaggerfallPoisonPhase.Complete) continue;
                 Complete(actor, state);
-                if (state.Applied.Count == 0) _states.Remove(actor);
+                if (state.Totals.Count == 0) _states.Remove(actor);
                 break;
             }
         }
@@ -129,20 +129,79 @@ internal sealed class DaggerfallPoisonRuntime
     private static void Complete(Actor actor, DaggerfallPoisonState state)
     {
         if (state.Affliction.Archetype.Kind != DaggerfallPoisonKind.Drug) return;
-        for (int index = state.Applied.Count - 1; index >= 0; index--)
+        foreach (PoisonArmKey key in state.Totals.Keys.Where(key => key.IsPositive).ToArray())
         {
-            AppliedPoisonArm arm = state.Applied[index];
-            if (!arm.IsPositive) continue;
-            arm.Stat!.RemoveModifier(arm.Handle);
-            state.Applied.RemoveAt(index);
+            Withdraw(actor, state, key);
         }
     }
 
     private static void Reverse(Actor actor, DaggerfallPoisonState state)
     {
-        foreach (AppliedPoisonArm arm in state.Applied) arm.Stat!.RemoveModifier(arm.Handle);
-        state.Applied.Clear();
+        foreach (PoisonArmKey key in state.Totals.Keys.ToArray()) Withdraw(actor, state, key);
     }
+
+    /// <summary>
+    /// Takes one of a poison's arms back off the actor. The arm is a stat source rather than a handle, so
+    /// removing it is removing that source, which is also what a reload rebuilds it from.
+    /// </summary>
+    private static void Withdraw(Actor actor, DaggerfallPoisonState state, PoisonArmKey key)
+    {
+        StatsComponent stats = actor.Get<StatsComponent>();
+        EffectSourceIdentity identity = IdentityFor(actor.Entity, key);
+        Stat stat = stats.GetStat(StatId.Parse(key.Stat.Value));
+        stat.SetSources(StatId.Parse(key.Stat.Value), [.. stat.Sources.Where(source => source.Identity != identity)]);
+        state.Totals.Remove(key);
+    }
+
+    /// <summary>
+    /// Adds one attribute arm to what the poison has already made of that attribute and writes the running
+    /// total back as the source's contribution. Accumulating rather than keeping a modifier per minute keeps
+    /// the actor's modifier list as long as the poison, not as long as its course.
+    /// </summary>
+    private static void Accumulate(Actor actor, DaggerfallPoisonState state, DaggerfallPoisonEffect effect, int amount)
+    {
+        PoisonArmKey key = new(AttributeId(effect.Attribute!), effect.IsPositive);
+        int total = state.Totals.GetValueOrDefault(key) + amount;
+        state.Totals[key] = total;
+        StatsComponent stats = actor.Get<StatsComponent>();
+        EffectSourceIdentity identity = IdentityFor(actor.Entity, key);
+        Stat stat = stats.GetStat(StatId.Parse(key.Stat.Value));
+        List<StatSource> sources = [.. stat.Sources.Where(source => source.Identity != identity)];
+        sources.Add(new StatSource(
+            identity,
+            SourceDefinitionId.Parse("daggerfall.poison"),
+            priority: 0,
+            [new StatContributionDefinition(
+                StatId.Parse(key.Stat.Value),
+                StackingGroupId.Parse($"daggerfall.poison.{key.Stat.Value}"),
+                MechanicsStackingPolicy.Sum,
+                new StatContribution.Add(total))]));
+        stat.SetSources(StatId.Parse(key.Stat.Value), sources);
+    }
+
+    /// <summary>
+    /// The source a poison's arm owns on one attribute. Its effect instance names the attribute and whether
+    /// the arm helps, so a reload rebuilds the same identity from the saved affliction.
+    /// </summary>
+    private static EffectSourceIdentity IdentityFor(EntityId actor, PoisonArmKey key) => new(
+        actor,
+        EffectInstanceId.Parse($"poison.{key.Stat.Value}.{(key.IsPositive ? "help" : "harm")}"),
+        1,
+        SourceDefinitionId.Parse("daggerfall.poison"));
+
+    /// <summary>The attribute an archetype's arm names, in the product's own vocabulary.</summary>
+    private static DaggerfallStatId AttributeId(string attribute) => attribute switch
+    {
+        "strength" => DaggerfallMechanicsIds.Strength,
+        "intelligence" => DaggerfallMechanicsIds.Intelligence,
+        "willpower" => DaggerfallMechanicsIds.Willpower,
+        "agility" => DaggerfallMechanicsIds.Agility,
+        "endurance" => DaggerfallMechanicsIds.Endurance,
+        "personality" => DaggerfallMechanicsIds.Personality,
+        "speed" => DaggerfallMechanicsIds.Speed,
+        "luck" => DaggerfallMechanicsIds.Luck,
+        _ => throw new InvalidOperationException($"Poison archetype names attribute '{attribute}', which the product does not carry."),
+    };
 
     private void Apply(Actor actor, DaggerfallPoisonState state, DaggerfallPoisonEffect effect)
     {
@@ -163,8 +222,7 @@ internal sealed class DaggerfallPoisonRuntime
                 Adjust(actor, DaggerfallMechanicsIds.Magicka, effect.IsPositive ? amount : -amount);
                 return;
             case DaggerfallPoisonTarget.Attribute:
-                Stat stat = actor.Get<StatsComponent>().GetStat(StatId.Parse(effect.Attribute!));
-                state.Applied.Add(new AppliedPoisonArm(stat, stat.AddModifier(amount), effect.IsPositive));
+                Accumulate(actor, state, effect, amount);
                 return;
             default:
                 return;
@@ -190,9 +248,15 @@ internal sealed class DaggerfallPoisonRuntime
     private sealed class DaggerfallPoisonState(DaggerfallPoisonAffliction affliction)
     {
         internal DaggerfallPoisonAffliction Affliction { get; } = affliction;
-        internal List<AppliedPoisonArm> Applied { get; } = [];
+
+        /// <summary>
+        /// What the poison has made of each attribute it touches, keyed by the stat and whether the arm that
+        /// made it helps: a source carries the running total, so the poison does not have to hold a handle
+        /// for every minute that passed.
+        /// </summary>
+        internal Dictionary<PoisonArmKey, int> Totals { get; } = [];
     }
 
-    /// <summary>One arm of a poison that is on the actor as a modifier, with the handle that takes it off.</summary>
-    private sealed record AppliedPoisonArm(Stat Stat, StatModifierHandle Handle, bool IsPositive);
+    /// <summary>One attribute a poison touches, and whether that arm helps its victim.</summary>
+    private readonly record struct PoisonArmKey(DaggerfallStatId Stat, bool IsPositive);
 }
