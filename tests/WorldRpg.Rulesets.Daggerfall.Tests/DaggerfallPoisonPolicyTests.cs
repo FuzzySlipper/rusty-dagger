@@ -201,4 +201,57 @@ public sealed class DaggerfallPoisonPolicyTests
             DaggerfallPoisonArchetypes.All.Take(11).Select(archetype => archetype.Name.Replace("_", string.Empty)));
         Assert.Equal("Aegrotat", DaggerfallPoisonArchetypes.All[11].Name);
     }
+
+    [Fact]
+    public void Every_archetype_the_pack_carries_a_record_for_joins_to_it()
+    {
+        // The join is by name, not by counting records: the record spells a poison for display and the
+        // donor spells it for an enum, so the two are compared by their letters and digits alone. Eleven
+        // join; the twelfth joins to nothing because the classic file never carried it.
+        IReadOnlyList<DaggerfallPoisonArchetypeRecord> joined = DaggerfallPoisonCatalogue.Join(TestPayload.Definitions);
+
+        Assert.Equal(DaggerfallPoisonArchetypes.All.Count, joined.Count);
+        Assert.Equal(
+            DaggerfallPoisonArchetypes.All.Select(archetype => archetype.Name),
+            joined.Select(entry => entry.Name));
+        Assert.Equal(11, joined.Count(entry => entry.HasRecord));
+        Assert.All(joined.Where(entry => entry.HasRecord), entry =>
+        {
+            Assert.Equal($"!{entry.Name.Replace("_", string.Empty)}", entry.Record!.Name.Replace(" ", string.Empty));
+            Assert.NotEmpty(entry.RecordedEffects);
+        });
+
+        // The archetype the classic file lacks is the one the donor alone defines, and it says so rather
+        // than borrowing another poison's record.
+        DaggerfallPoisonArchetypeRecord absent = joined.Single(entry => !entry.HasRecord);
+        Assert.Equal("Aegrotat", absent.Name);
+        Assert.Empty(absent.RecordedEffects);
+
+        // The lycanthropy record shares the bang naming and joins to no archetype, which is what keeps it
+        // out of the catalogue rather than pairing it with whichever poison sorted next.
+        Assert.DoesNotContain(joined, entry => entry.Name.Contains("Lycanthropy", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void An_archetype_resolves_by_its_classic_variant_with_the_record_beside_it()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+
+        Assert.True(DaggerfallPoisonCatalogue.TryResolve(definitions, 129, out DaggerfallPoisonArchetypeRecord arsenic));
+        Assert.Equal("Arsenic", arsenic.Name);
+        Assert.True(arsenic.HasRecord);
+        Assert.Equal(2, arsenic.Archetype.Effects.Count);
+        // The record declares one row for Arsenic - the health damage - while the archetype has two arms,
+        // the second being the endurance drain the donor adds. So the record identifies an archetype and
+        // corroborates it; it is not what a tick is built from, because not every arm has a row.
+        Assert.Single(arsenic.RecordedEffects);
+        Assert.DoesNotContain(arsenic.RecordedEffects, effect => effect.Type == 7);
+        Assert.True(DaggerfallPoisonCatalogue.TryResolve(definitions, 131, out DaggerfallPoisonArchetypeRecord drothweed));
+        // Drothweed is the other way round: its three attribute drains do have rows.
+        Assert.Equal(3, drothweed.RecordedEffects.Count);
+        Assert.Equal(3, drothweed.Archetype.Effects.Count);
+
+        Assert.False(DaggerfallPoisonCatalogue.TryResolve(definitions, 127, out _));
+        Assert.False(DaggerfallPoisonCatalogue.TryResolve(definitions, 140, out _));
+    }
 }
