@@ -101,11 +101,14 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     {
         prepared = default;
         if (!TryResolve(request.AttackerId, out Combatant attacker)) { Refused(AttackRefusal.UnknownActor, facts); return false; }
+        // Whether an attack is the player's or an enemy's decides the admission policy, the random
+        // scope and which facts describe it. Delivery timing is a separate question: a targeted
+        // player swing and every enemy swing wait for their animation's impact frame.
+        bool enemyAttack = request.AttackerId != PlayerId;
         DaggerfallAttackDefinition attack;
-        if (!request.Delayed)
+        if (!enemyAttack)
         {
-            if (!TryAdmitPlayerAttack(request.Generation, request.SimulationStep, request.FixedDeltaSeconds,
-                request.Action is string action ? new DaggerfallActionId(action) : null, out attack, facts)) return false;
+            if (!TryAdmitPlayerAttack(request, attacker, out attack, facts)) return false;
         }
         else
         {
@@ -122,7 +125,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         if (!TryResolve(targetId, out Combatant target)) { Refused(AttackRefusal.UnknownActor, facts); return false; }
         ExplicitMeleeRequest explicitRequest = new(request.AttackerId, targetId, request.Generation, request.SimulationStep, request.FixedDeltaSeconds);
         CombatParticipants participants = Participants(attacker.Id, targetId, request.Action ?? attacker.Definition.ActionId ?? "attack");
-        bool backstabOpportunity = BackstabOpportunity(attacker, target, request.Delayed);
+        bool backstabOpportunity = BackstabOpportunity(attacker, target);
         if (backstabOpportunity)
             _skillUses?.Invoke(new DaggerfallSkillUse("backstabbing", DaggerfallSkillUseReason.BackstabbingOpportunity, DaggerfallSkillUseOutcome.Accepted));
         // The donor computes the swing, proficiency and racial attack modifiers once and rides both
@@ -131,42 +134,44 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         // to both resolutions so one admitted attack shares one set of modifier values.
         var modifiers = attacker.Id == PlayerId ? PlayerAttackModifiers(attack) : default;
         int backstabChance = DaggerfallFormulaPolicy.CalculateBackstabChance(ReadStat(attacker, new DaggerfallStatId("backstabbing")), backstabOpportunity);
-        int body = DaggerfallFormulaPolicy.CalculateStruckBodyPart(Draw(explicitRequest, attacker.Id, target.Id, CombatRandomKey.BodySalt, 0, 19, request.Delayed));
+        int body = DaggerfallFormulaPolicy.CalculateStruckBodyPart(Draw(explicitRequest, attacker.Id, target.Id, CombatRandomKey.BodySalt, 0, 19, enemyAttack));
         if (attacker.Definition.Kind == DaggerfallActorKinds.Monster && attack.Skill == DaggerfallMechanicsIds.HandToHand.Value)
         {
-            prepared = new(attack.CooldownSeconds, MonsterAttackSet(participants, explicitRequest, attacker, target, attack, body, request.Delayed));
+            prepared = new(attack.CooldownSeconds, MonsterAttackSet(participants, explicitRequest, attacker, target, attack, body, enemyAttack));
             return true;
         }
-        TryHitEvent hit = ResolveHit(participants, explicitRequest, attacker, target, attack, body, request.Delayed, modifiers.ToHit, backstabChance);
-        DamageEvent? damage = hit.Hit ? ResolveDamage(participants, explicitRequest, attacker, target, attack, body, request.Delayed, modifiers.Damage, backstabChance) : null;
+        TryHitEvent hit = ResolveHit(participants, explicitRequest, attacker, target, attack, body, enemyAttack, modifiers.ToHit, backstabChance);
+        DamageEvent? damage = hit.Hit ? ResolveDamage(participants, explicitRequest, attacker, target, attack, body, enemyAttack, modifiers.Damage, backstabChance) : null;
         prepared = new(attack.CooldownSeconds, new(hit.Hit, damage?.Allowed ?? true, body, damage?.Damage ?? 0, hit.Roll, hit.Chance));
         return true;
     }
     public void Started(AttackRequest request, PreparedAttack attack, FactBuffer<IProductFact> facts)
     {
-        if (request.Delayed) facts.Append(new EnemyAttackStartedFact(request.AttackerId, request.TargetId!.Value, attack.Outcome.Hit, request.Generation, request.SimulationStep));
+        // A player swing announces itself at admission, where its guard and stamina cost live; an
+        // enemy swing announces the decision its authored damage frame will carry out.
+        if (request.AttackerId != PlayerId) facts.Append(new EnemyAttackStartedFact(request.AttackerId, request.TargetId!.Value, attack.Outcome.Hit, request.Generation, request.SimulationStep));
     }
     public void Apply(AttackRequest request, PreparedAttack attack, FactBuffer<IProductFact> facts)
     {
         if (request.TargetId is not long target)
         { facts.Append(new AttackRejectedFact(AttackRejection.NoTargetInReach)); return; }
         AttackOutcome outcome = attack.Outcome;
+        bool enemyAttack = request.AttackerId != PlayerId;
         // This is the one admitted resolution boundary an enemy attempt reaches. The donor tallies
         // Dodging before damage, so a resolved miss contributes too; a rejected or unknown attack
         // never reaches this method and therefore cannot manufacture a use.
         if (request.AttackerId != PlayerId && target == PlayerId)
             _skillUses?.Invoke(new DaggerfallSkillUse(DaggerfallMechanicsIds.Dodging.Value, DaggerfallSkillUseReason.DodgingEnemyAttack, DaggerfallSkillUseOutcome.Attempted));
         if (!outcome.Hit)
-        { facts.Append(new AttackMissedFact(request.AttackerId, target, outcome.Roll, outcome.Chance, request.Delayed, request.Generation, request.SimulationStep)); return; }
+        { facts.Append(new AttackMissedFact(request.AttackerId, target, outcome.Roll, outcome.Chance, enemyAttack, request.Generation, request.SimulationStep)); return; }
         if (!outcome.Allowed)
         { facts.Append(new AttackRejectedFact(AttackRejection.InsufficientWeaponMaterial)); return; }
-        bool enemyAttack = request.AttackerId != PlayerId;
         string action = request.Action ?? _definitions[request.AttackerId].ActionId ?? "attack";
         // Capture the weapon skill at the admitted operation boundary. Applying the hit may break
         // the weapon through physical wear and unequip it before the skill-use reaction runs.
         string? playerWeaponSkill = request.AttackerId == PlayerId ? PlayerWeaponSkill() : null;
         ApplyDamage(Participants(request.AttackerId, target, action), request.AttackerId, target, outcome.Damage, outcome.Body,
-            request.Delayed, request.Generation, request.SimulationStep, facts);
+            enemyAttack, request.Generation, request.SimulationStep, facts);
         if (request.AttackerId == PlayerId)
         {
             _skillUses?.Invoke(new DaggerfallSkillUse(playerWeaponSkill!, DaggerfallSkillUseReason.WeaponHit, DaggerfallSkillUseOutcome.Succeeded));
@@ -286,14 +291,10 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         return true;
     }
 
-    private bool TryAdmitPlayerAttack(ulong generation, ulong simulationStep, double fixedDeltaSeconds, DaggerfallActionId? action, out DaggerfallAttackDefinition attack, FactBuffer<IProductFact> facts)
+    private bool TryAdmitPlayerAttack(AttackRequest request, Combatant player, out DaggerfallAttackDefinition attack, FactBuffer<IProductFact> facts)
     {
-        if (!TryResolve(PlayerId, out Combatant player))
-        {
-            attack = default!;
-            facts.Append(new AttackRejectedFact(AttackRejection.UnknownExplicitCombatant));
-            return false;
-        }
+        ulong generation = request.Generation, simulationStep = request.SimulationStep;
+        DaggerfallActionId? action = request.Action is string requested ? new DaggerfallActionId(requested) : null;
         string? selectedActionId = action?.Value ?? player.Definition.ActionId;
         if (selectedActionId is null || !_actions.TryGetValue(selectedActionId, out DaggerfallActionDefinition? playerAction) || playerAction.Interpretation != "player-equipped-melee" || playerAction.CooldownSeconds is not double playerCooldown || playerAction.StaminaCost is not int staminaCost)
         {
@@ -313,7 +314,12 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
                 playerCooldown,
                 DamageBonus: playerAction.DamageBonus);
         if (!SpendPlayerStamina(player, staminaCost, facts)) return false;
-        facts.Append(new PlayerAttackStartedFact(generation, simulationStep));
+        // A targeted swing hands its timing to the strike animation: the tick time the classic
+        // animation plays at, and the target whose impact frame will deliver it.
+        bool deferred = request.Delayed && request.TargetId is not null;
+        facts.Append(new PlayerAttackStartedFact(generation, simulationStep,
+            deferred ? request.TargetId : null,
+            deferred ? DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(ReadStat(player, DaggerfallMechanicsIds.Speed)) : 0d));
         return true;
     }
 
@@ -641,9 +647,9 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
             DaggerfallFormulaPolicy.CalculateAdjustmentsToHit(target.Definition.Kind == DaggerfallActorKinds.Monster, target.Id == PlayerId ? _playerBiographyAvoidHit() : 0));
     }
 
-    private bool BackstabOpportunity(Combatant attacker, Combatant target, bool delayed)
+    private bool BackstabOpportunity(Combatant attacker, Combatant target)
     {
-        if (delayed || attacker.Id != PlayerId || target.Id == PlayerId || !_actors.TryGet(target.Id, out ActorState targetActor)
+        if (attacker.Id != PlayerId || target.Id == PlayerId || !_actors.TryGet(target.Id, out ActorState targetActor)
             || _playerPosition() is not WorldPoint playerPosition)
             return false;
 

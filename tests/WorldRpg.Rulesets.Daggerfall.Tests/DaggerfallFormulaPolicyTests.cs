@@ -334,6 +334,21 @@ public sealed class DaggerfallFormulaPolicyTests
     }
 
     [Fact]
+    public void Melee_weapon_animation_tick_time_follows_the_donor_speed_scaling()
+    {
+        // Donor: 3 * (115 - LiveSpeed) / 980 seconds per classic weapon animation frame, so a faster
+        // player's swing reaches its hit frame sooner and a slower player's later.
+        Assert.Equal(3d * (115 - 50) / 980d, DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(50), 9);
+        Assert.Equal(3d * (115 - 100) / 980d, DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(100), 9);
+        Assert.Equal(3d * 115 / 980d, DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(0), 9);
+        Assert.True(DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(80) < DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(20));
+        // The classic swing's damage frame is the donor's own constant for every melee weapon.
+        Assert.Equal(2, DaggerfallFormulaPolicy.MeleeWeaponHitFrame);
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(-1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(101));
+    }
+
+    [Fact]
     public void Monster_natural_attacks_measure_the_players_reflexes_on_the_classic_table()
     {
         Assert.Equal(70, DaggerfallFormulaPolicy.MonsterAttackReflexChance(0));

@@ -3,6 +3,7 @@ using System.Numerics;
 using Rusty.Engine;
 using Rusty.Engine.Entities;
 using WorldRpg.Rulesets.Daggerfall.Facts;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
@@ -336,9 +337,15 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         switch (fact)
         {
             case PlayerAttackStartedFact started:
-                PresentationEventIdentity swing = Event(DaggerfallActorIdentity.PlayerEntityId, 0, started.OriginatingGeneration, started.OriginatingSimulationStep, "swing");
+                PresentationEventIdentity swing = Event(DaggerfallActorIdentity.PlayerEntityId, started.TargetId ?? 0, started.OriginatingGeneration, started.OriginatingSimulationStep, "swing");
                 if (deliveredEvents.Contains(swing)) break;
-                StartWeaponStrike(swing);
+                // The viewmodel plays the swing at the tick time the rules published, and its hit
+                // frame is what delivers the admitted impact. A viewmodel that cannot play the
+                // authored strike has no frame to wait for, so the impact lands in this update
+                // rather than being withheld by a presentation the composition does not have.
+                if (!StartWeaponStrike(swing, started.FrameSeconds, started.TargetId))
+                    attackImpacts.Add(new AttackImpactNotice(DaggerfallActorIdentity.PlayerEntityId, started.TargetId ?? 0,
+                        started.OriginatingGeneration, started.OriginatingSimulationStep, Expired: false));
                 Emit("swing", swing, 0);
                 deliveredEvents.Add(swing);
                 break;
@@ -454,8 +461,18 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         if (viewmodel is { } weapon && weapon.Playback is { } weaponPlayback && weapon.LastOuterUpdate != identity)
         {
             SpritePlaybackAdvanceLeaseReceipt receipt = appearance.AdvanceSpritePlayback(new SpritePlaybackAdvanceRequest(weaponPlayback));
+            // The classic swing's damage lands on its hit frame. One decided swing owns one beat, so
+            // the first frame at or past it reports and later frames of the same swing do not.
+            if (weapon.Strike && weapon.PendingImpact is { } pending && !weapon.ImpactReported
+                && receipt.Readout.FrameIndex >= DaggerfallFormulaPolicy.MeleeWeaponHitFrame)
+            {
+                weapon.ImpactReported = true;
+                attackImpacts.Add(new AttackImpactNotice(pending.Attacker, pending.Target, pending.Generation, pending.SimulationStep, Expired: false));
+            }
             if (weapon.Strike && receipt.Readout.Completed)
             {
+                // A swing that ended without reaching its hit frame must not land later.
+                RetireUnreportedImpact();
                 if (weapon.CompletedOuterUpdate) StartWeaponAction("idle");
                 else if (receipt.Advanced) weapon.CompletedOuterUpdate = true;
             }
@@ -614,6 +631,14 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         return hasDamageFrame;
     }
 
+    /// <summary>Retires a strike's admitted impact that its animation never delivered.</summary>
+    private void RetireUnreportedImpact()
+    {
+        if (viewmodel is not { PendingImpact: { } pending, ImpactReported: false }) return;
+        attackImpacts.Add(new AttackImpactNotice(pending.Attacker, pending.Target, pending.Generation, pending.SimulationStep, Expired: true));
+        viewmodel.PendingImpact = null;
+    }
+
     /// <summary>Drains the swings whose authored damage frame was reached or passed this update.</summary>
     internal IReadOnlyList<AttackImpactNotice> TakeAttackImpacts()
     {
@@ -698,15 +723,28 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         }
     }
 
-    private void StartWeaponStrike(PresentationEventIdentity identity)
+    /// <summary>
+    /// Plays the swing the player's admitted attack chose. Answers whether a strike animation started:
+    /// a viewmodel-less or action-less composition reports false so the caller can land the impact in
+    /// the update that admitted it instead of waiting for a frame nothing will play.
+    /// </summary>
+    private bool StartWeaponStrike(PresentationEventIdentity identity, double frameSeconds = 0d, long? target = null)
     {
-        if (viewmodel is null) return;
+        if (viewmodel is null) return false;
         string[] choices = ["strikeDown", "strikeDownLeft", "strikeLeft", "strikeRight", "strikeDownRight", "strikeUp"];
         int selected = random is null ? 0 : checked((int)random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, "daggerfall.media.weapon-strike.v1", CombatRandomKey.For(identity.Generation, identity.SimulationStep, identity.Attacker, identity.Target, 44), 0, choices.Length - 1)).Value);
-        StartWeaponAction(choices[selected]);
+        string name = choices[selected];
+        if (!viewmodel.Weapon.Actions.ContainsKey(name)) return false;
+        // A new swing replaces whatever the last one left undelivered, then owns the impact its own
+        // hit frame will deliver; an untargeted swing has none.
+        RetireUnreportedImpact();
+        viewmodel.PendingImpact = target is long aimed ? identity with { Target = aimed } : null;
+        viewmodel.ImpactReported = false;
+        StartWeaponAction(name, frameSeconds);
+        return true;
     }
 
-    private void StartWeaponAction(string name)
+    private void StartWeaponAction(string name, double frameSeconds = 0d)
     {
         if (viewmodel is null || !viewmodel.Weapon.Actions.TryGetValue(name, out NormalizedClassicWeaponAction? action)) return;
         NormalizedClassicWeapon weapon = viewmodel.Weapon;
@@ -718,8 +756,12 @@ internal sealed class PrivateersHoldAppearance : IDisposable
             // letterboxing cannot expose a cut-off hand or blade inside the view.
             float alignment = action.Alignment switch { "left" => 0F, "right" => 1F, _ => .5F };
             appearance.SetSpriteViewport(new SpriteViewportUpdateRequest(viewmodel.Appearance, true, Vector2.Zero, Vector2.One, new Vector2(alignment, 0F), SpriteViewportFit.Contain));
+            // The classic weapon animation's authored table rate is its authoring default; the tick
+            // time the rules published for this swing (FORM-04.GetMeleeWeaponAnimTime) is what the
+            // donor actually plays at, so a hastened or slowed player swings at that rate.
+            double framesPerSecond = frameSeconds > 0d ? 1d / frameSeconds : action.FramesPerSecond;
             SpritePlaybackFrame[] frames = SpriteAtlasAdapter.ToPlaybackFrames((action.Sequence ?? Enumerable.Range(action.FrameStart, action.FrameCount).ToArray())
-                .Select(index => weapon.Frames.Single(frame => frame.Id == index).Id).ToArray(), action.FramesPerSecond);
+                .Select(index => weapon.Frames.Single(frame => frame.Id == index).Id).ToArray(), checked((float)framesPerSecond));
             staged = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(viewmodel.Appearance, viewmodel.Atlas, frames, Array.Empty<SpritePlaybackMarker>(), action.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
             appearance.ControlSpritePlayback(new SpritePlaybackControlRequest(staged, SpritePlaybackControl.Start));
             SpritePlayback? old = viewmodel.Playback;
@@ -737,6 +779,9 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private void RetireViewmodel()
     {
         if (viewmodel is not { } weapon) return;
+        // A retired viewmodel can never reach its strike's hit frame, so its admitted impact is
+        // retired with it instead of landing later from nothing.
+        RetireUnreportedImpact();
         viewmodel = null;
         Retire(weapon);
     }
@@ -930,6 +975,9 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         internal Appearance Appearance { get; } = appearance;
         internal SpritePlayback? Playback { get; set; }
         internal bool Strike { get; set; }
+        /// <summary>The move this weapon swing delivers when its animation reaches the hit frame, if any.</summary>
+        internal PresentationEventIdentity? PendingImpact { get; set; }
+        internal bool ImpactReported { get; set; }
         internal bool CompletedOuterUpdate { get; set; }
         internal AppearanceOuterUpdate? LastOuterUpdate { get; set; }
         internal void Dispose(ref List<Exception>? failures)

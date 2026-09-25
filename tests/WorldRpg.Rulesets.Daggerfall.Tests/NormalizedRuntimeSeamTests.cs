@@ -26,6 +26,7 @@ using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
@@ -2195,6 +2196,67 @@ public sealed partial class NormalizedRuntimeSeamTests
         presentation.UpdateRightHandEquipment(RightHand("iron-longsword"));
         presentation.Publish(EmptyActors());
         Assert.DoesNotContain(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel);
+    }
+
+    [Fact]
+    public void A_targeted_swing_plays_at_its_published_tick_and_delivers_on_the_classic_hit_frame()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        content.Add("weapon/dagger.png", Hash);
+        AppearanceFake appearance = new(releases);
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
+
+        presentation.BeginAdmittedUpdate();
+        presentation.React(new PlayerAttackStartedFact(2, 3, TargetId: 12, FrameSeconds: .25d));
+        presentation.CompleteAdmittedUpdate();
+
+        // The published tick time replaces the authored table rate, so every strike frame lasts it.
+        SpritePlaybackCreateRequest strike = appearance.PlaybackRequests.Last();
+        Assert.All(strike.Frames.Span.ToArray(), frame => Assert.Equal(.25d, frame.DurationSeconds, 6));
+
+        // Frames before the classic hit frame decide nothing.
+        appearance.AdvanceReceiptForAll = Reading(1, 1u);
+        presentation.Advance(OuterUpdate(1));
+        Assert.Empty(presentation.TakeAttackImpacts());
+
+        // The hit frame delivers the admitted swing exactly once.
+        appearance.AdvanceReceiptForAll = Reading(DaggerfallFormulaPolicy.MeleeWeaponHitFrame, (uint)DaggerfallFormulaPolicy.MeleeWeaponHitFrame);
+        presentation.Advance(OuterUpdate(2));
+        AttackImpactNotice impact = Assert.Single(presentation.TakeAttackImpacts());
+        Assert.Equal(DaggerfallActorIdentity.PlayerEntityId, impact.AttackerId);
+        Assert.Equal(12, impact.TargetId);
+        Assert.False(impact.Expired);
+
+        // Later frames of the same swing deliver nothing more.
+        appearance.AdvanceReceiptForAll = Reading(DaggerfallFormulaPolicy.MeleeWeaponHitFrame + 1u, (uint)DaggerfallFormulaPolicy.MeleeWeaponHitFrame);
+        presentation.Advance(OuterUpdate(3));
+        Assert.Empty(presentation.TakeAttackImpacts());
+    }
+
+    [Fact]
+    public void A_swing_that_ends_before_its_hit_frame_expires_its_impact_instead_of_landing_late()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        content.Add("weapon/dagger.png", Hash);
+        AppearanceFake appearance = new(releases);
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
+
+        presentation.BeginAdmittedUpdate();
+        presentation.React(new PlayerAttackStartedFact(2, 3, TargetId: 12, FrameSeconds: .25d));
+        presentation.CompleteAdmittedUpdate();
+        Assert.Empty(presentation.TakeAttackImpacts());
+
+        appearance.AdvanceReceiptForAll = new SpritePlaybackAdvanceLeaseReceipt(
+            default, new SpritePlaybackReadout(1, 1, SpritePlaybackState.Completed, 0d, 0, 0, true), true);
+        presentation.Advance(OuterUpdate(1));
+
+        AttackImpactNotice expired = Assert.Single(presentation.TakeAttackImpacts());
+        Assert.Equal(12, expired.TargetId);
+        Assert.True(expired.Expired);
     }
 
     [Fact]
@@ -6015,6 +6077,10 @@ public sealed partial class NormalizedRuntimeSeamTests
         };
     }
 
+    /// <summary>One advance receipt reading the given frame of a playing sprite.</summary>
+    private static SpritePlaybackAdvanceLeaseReceipt Reading(uint frameId, uint frameIndex) =>
+        new(default, new SpritePlaybackReadout(frameId, frameIndex, SpritePlaybackState.Playing, 0d, 0, 0, false), true);
+
     private static PrivateersHoldAppearance.ActorVisual Visual(PrivateersHoldAppearance presentation)
     {
         FieldInfo field = typeof(PrivateersHoldAppearance).GetField("actors", BindingFlags.Instance | BindingFlags.NonPublic)!;
@@ -6411,6 +6477,10 @@ public sealed partial class NormalizedRuntimeSeamTests
 
         // The next advanced frame reaches the authored damage frame and the swing lands.
         presentation.Advance(OuterUpdate(2));
+        FieldInfo probeField = typeof(PrivateersHoldAppearance).GetField("viewmodel", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        object? probe = probeField.GetValue(presentation);
+        string probeText = probe is null ? "no-viewmodel" : $"strike={probe.GetType().GetProperty("Strike", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)?.GetValue(probe)} pending={probe.GetType().GetProperty("PendingImpact", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)?.GetValue(probe)} reported={probe.GetType().GetProperty("ImpactReported", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)?.GetValue(probe)} advances={appearance.AdvanceRequests.Count}";
+        Assert.True(false, probeText);
         AttackImpactNotice impact = Assert.Single(presentation.TakeAttackImpacts());
         Assert.False(impact.Expired);
     }
