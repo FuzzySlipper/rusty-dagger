@@ -20,8 +20,4 @@
   <ItemGroup>
     <ProjectReference Include="../../src/Daggerfall.Import/Daggerfall.Import.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="data/tone.ogg" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
 </Project>
