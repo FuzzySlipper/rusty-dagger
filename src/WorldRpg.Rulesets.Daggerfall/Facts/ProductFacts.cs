@@ -27,7 +27,7 @@ internal sealed record AttackRejectedFact(AttackRejection Reason, long? ActorId 
 /// its admitted target. An admitted swing with neither resolves inside its own update.
 /// </summary>
 internal sealed record PlayerAttackStartedFact(ulong OriginatingGeneration, ulong OriginatingSimulationStep,
-    long? TargetId = null, double FrameSeconds = 0d) : IProductFact;
+    long? TargetId = null, double FrameSeconds = 0d, int HitFrame = 2) : IProductFact;
 /// <summary>
 /// One enemy melee swing began. The attack's outcome is already decided, so the
 /// presentation can play the matching strike, but nothing has been applied yet:

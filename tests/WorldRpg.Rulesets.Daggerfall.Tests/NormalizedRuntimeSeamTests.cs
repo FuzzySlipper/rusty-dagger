@@ -733,7 +733,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             new PerceptionPair(checked((ulong)placement.EntityId), (ulong)DaggerfallActorIdentity.PlayerEntityId, 0.5d, 1d, PerceptionPairKind.Visible, 1d))]);
         using DaggerfallSession session = new(engine.Context, withoutPolicies, inputs, DaggerfallTuning.Defaults);
         double healthBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
-        appearance.AdvanceReceiptForAll = CrossedMarker(1);
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
 
         session.Update(new ProductUpdate(OuterUpdate(1), []));
 
@@ -2246,6 +2246,35 @@ public sealed partial class NormalizedRuntimeSeamTests
         appearance.AdvanceReceiptForAll = Reading(DaggerfallFormulaPolicy.MeleeWeaponHitFrame + 1u, (uint)DaggerfallFormulaPolicy.MeleeWeaponHitFrame);
         presentation.Advance(OuterUpdate(3));
         Assert.Empty(presentation.TakeAttackImpacts());
+    }
+
+    [Fact]
+    public void A_swing_completion_that_did_not_advance_does_not_end_the_players_swing()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        content.Add("weapon/dagger.png", Hash);
+        AppearanceFake appearance = new(releases);
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
+        presentation.BeginAdmittedUpdate();
+        presentation.React(new PlayerAttackStartedFact(2, 3, TargetId: 12, FrameSeconds: .25d));
+        presentation.CompleteAdmittedUpdate();
+        Assert.Empty(presentation.TakeAttackImpacts());
+
+        // A receipt that reports completion without advancing is not authoritative, so the swing stays
+        // live for the frame that can still deliver its impact.
+        appearance.AdvanceReceiptForAll = new SpritePlaybackAdvanceLeaseReceipt(
+            default, new SpritePlaybackReadout(1, 1, SpritePlaybackState.Completed, 0d, 0, 0, true), false);
+        presentation.Advance(OuterUpdate(1));
+        Assert.Empty(presentation.TakeAttackImpacts());
+
+        appearance.AdvanceReceiptForAll = Reading(2, 2);
+        presentation.Advance(OuterUpdate(2));
+
+        AttackImpactNotice impact = Assert.Single(presentation.TakeAttackImpacts());
+        Assert.Equal(12, impact.TargetId);
+        Assert.False(impact.Expired);
     }
 
     [Fact]
@@ -4220,15 +4249,23 @@ public sealed partial class NormalizedRuntimeSeamTests
         ProductInputEvent pressed = Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack");
 
         session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d), [pressed]));
+        double targetHealth = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
+        double playerHealth = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
 
         // The swing is admitted, charged and still in flight: the projection playing it owns the
         // impact frame, so the shared state holds the attack even long past its cooldown.
         Assert.False(session.State.Kit.AttackExecution.IsReady(DaggerfallActorIdentity.PlayerEntityId, 1, 500));
 
+        double targetHealthBeforeTransition = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
+        Assert.Equal(targetHealth, targetHealthBeforeTransition);
         Assert.True(session.TryTransitionTo(castle.ProfileKey));
 
         // The departing projection could not deliver that frame, so the charge is retired with it —
-        // the damage never lands, and melee is admitted again instead of staying charged forever.
+        // the admitted swing never landed on anything, and melee is admitted again instead of staying
+        // charged forever. The target itself left with the source site, so its health is read before
+        // the transition.
+        Assert.Equal(targetHealth, targetHealthBeforeTransition);
+        Assert.Equal(playerHealth, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
         Assert.True(session.State.Kit.AttackExecution.IsReady(DaggerfallActorIdentity.PlayerEntityId, 1, 500));
     }
 
@@ -4461,7 +4498,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         // The archer sees the player at that separation, facing them, with the line clear.
         perception.Receipt = Receipt(new PerceptionPair(checked((ulong)archer), 1, separation, 1d, PerceptionPairKind.Visible, 1d));
         // The swing is decided and released on its authored frame, but the arrow is still in flight.
-        appearance.AdvanceReceiptForAll = CrossedMarker(1);
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredRangedMarker(archer));
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
 
@@ -4524,7 +4561,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 1d, PerceptionPairKind.Visible, 1d));
         double healthBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
 
-        appearance.AdvanceReceiptForAll = CrossedMarker(1);
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredRangedMarker(archer));
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         WorldPoint releaseAim = session.State.PlayerControl.Position!.Value;
         session.State.PlayerControl.Restore(new WorldPoint(releaseAim.X + 1f, releaseAim.Y, releaseAim.Z), default);
@@ -4600,7 +4637,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         using (DaggerfallSession original = CreateArcherSession(root, definitions, inputs, releases, out AppearanceFake appearance, out PerceptionFake perception))
         {
             perception.Receipt = Receipt(new PerceptionPair(2004, 1, 4d, 1d, PerceptionPairKind.Visible, 1d));
-            appearance.AdvanceReceiptForAll = CrossedMarker(1);
+            appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredRangedMarker(2004));
             original.Update(new ProductUpdate(OuterUpdate(1), []));
             healthAtRelease = original.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
             saved = original.CaptureSave();
@@ -4638,7 +4675,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         double healthBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
         // The swing is decided on the admitted step and lands when its authored damage
         // frame is reached, so the update that carries the crossing is the one that hurts.
-        appearance.AdvanceReceiptForAll = CrossedMarker(1);
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[2000].State);
         double healthAfterAttack = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
@@ -4691,7 +4728,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         perception.Receipt = Receipt(
             new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d),
             new PerceptionPair(1, checked((ulong)corpse), 1d, 1d, PerceptionPairKind.Visible, 1d));
-        appearance.AdvanceReceiptForAll = CrossedMarker(1);
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
 
         session.Update(new ProductUpdate(OuterUpdate(1), [
             Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "interact"),
@@ -6382,7 +6419,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         using DaggerfallSession resumed = DaggerfallSession.Restore(engine.Context, composition, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
         long resumedHealth = PlayerHealth(resumed);
 
-        resumedAppearance.AdvanceReceiptForAll = CrossedMarker(1);
+        resumedAppearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
         resumed.Update(new ProductUpdate(OuterUpdate(2), []));
 
         Assert.Equal(resumedHealth, PlayerHealth(resumed));
@@ -6444,7 +6481,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         // Still visible, but beyond the authored reach: the behaviour chases instead
         // of attacking, which cancels the swing already in flight.
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, 5d, 1d, PerceptionPairKind.Visible, 5d));
-        appearance.AdvanceReceiptForAll = CrossedMarker(1);
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
         session.Update(new ProductUpdate(OuterUpdate(2), []));
 
         Assert.Equal(EnemyBehaviorState.Chase, session.LastEnemyBehavior[2000].State);
@@ -6461,7 +6498,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         session.Update(new ProductUpdate(OuterUpdate(1), []));
 
         session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(-999, clamp: true);
-        appearance.AdvanceReceiptForAll = CrossedMarker(1);
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
         session.Update(new ProductUpdate(OuterUpdate(2), []));
 
         Assert.Equal(EnemyBehaviorState.Dead, session.LastEnemyBehavior[2000].State);
@@ -6486,7 +6523,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         Assert.Equal(healthBefore, PlayerHealth(session));
 
         // A crossing arriving afterwards cannot land the expired swing.
-        appearance.AdvanceReceiptForAll = CrossedMarker(1);
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
         session.Update(new ProductUpdate(OuterUpdate(3), []));
         Assert.Equal(healthBefore, PlayerHealth(session));
     }
@@ -6605,7 +6642,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[2000].State);
         Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
 
-        appearance.AdvanceReceiptForAll = CrossedMarker(1);
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
         session.Update(new ProductUpdate(OuterUpdate(2), []));
         double healthAfterImpact = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
         Assert.True(healthAfterImpact < healthBefore);
@@ -6636,7 +6673,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         // Losing sight cancels the swing; a crossing from the already-playing animation
         // must not land the strike the attacker is no longer making.
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 0d, PerceptionPairKind.Occluded, 0d));
-        appearance.AdvanceReceiptForAll = CrossedMarker(1);
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
         session.Update(new ProductUpdate(OuterUpdate(2), []));
 
         Assert.Equal(EnemyBehaviorState.Idle, session.LastEnemyBehavior[2000].State);
@@ -7412,6 +7449,33 @@ public sealed partial class NormalizedRuntimeSeamTests
         Array.Empty<SpritePlaybackMarkerCrossing>(),
         new SpritePlaybackReadout(frame, 1, SpritePlaybackState.Completed, 0D, 0, frame, true),
         true);
+
+    /// <summary>
+    /// The damage marker the placed actor's own authored melee sequence publishes. A fixture that
+    /// fabricates the crossing the appearance would emit names the marker the author designated for the
+    /// actor actually swinging, derived here from the same content the session loads.
+    /// </summary>
+    private static ulong AuthoredMeleeMarker(long placedEntityId) => AuthoredMarker(placedEntityId, "primaryFrames");
+
+    /// <summary>The damage marker the placed archer's authored ranged sequence publishes.</summary>
+    private static ulong AuthoredRangedMarker(long placedEntityId) => AuthoredMarker(placedEntityId, "rangedFrames");
+
+    private static ulong AuthoredMarker(long placedEntityId, string framesProperty)
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        JsonObject profile = JsonNode.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")))!.AsObject();
+        JsonObject placement = profile["placements"]!.AsArray().Select(value => value!.AsObject())
+            .Single(value => value["entityId"]!.GetValue<long>() == placedEntityId);
+        DaggerfallActorDefinition actor = definitions.RequireActor(new DaggerfallActorId(placement["actor"]!.GetValue<string>()));
+        JsonObject media = JsonNode.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/privateers-hold/media/dungeon/manifest.json")))!.AsObject();
+        JsonObject mobile = media["actors"]!.AsArray().Select(value => value!.AsObject())
+            .Single(value => value["mobileId"]!.GetValue<int>() == actor.MobileId);
+        List<int> frames = [.. mobile["sourceAttackSequence"]![framesProperty]!.AsArray().Select(value => value!.GetValue<int>())];
+        int index = frames.IndexOf(-1);
+        Assert.True(index >= 0, $"placed actor {placedEntityId} has no authored damage frame in {framesProperty}");
+        return checked((ulong)index + 1);
+    }
 
     /// <summary>A crossing of the named authored marker, identified the way the product identifies it.</summary>
     private static SpritePlaybackAdvanceLeaseReceipt CrossedMarker(uint frame, ulong markerId = 2, ulong crossing = 1) => new(

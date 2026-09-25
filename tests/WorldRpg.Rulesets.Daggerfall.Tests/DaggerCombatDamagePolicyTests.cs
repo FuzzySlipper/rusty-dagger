@@ -364,6 +364,63 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.Empty(fixture.DeliverImpact(request).Where(fact => fact is AttackHitFact or AttackMissedFact));
     }
 
+    [Fact]
+    public void A_player_bow_shot_draws_one_arrow_and_pays_the_donors_bow_cooldown()
+    {
+        // The bow's cadence is FORM-04.GetBowCooldownTime over live speed rather than an authored
+        // number, the shot is refused before admission when the quiver is empty, and the released
+        // arrow travels through the same ranged delivery the archer uses.
+        using DamagePolicyFixture fixture = new(armed: false);
+        fixture.EquipPlayerBow("iron-short-bow", 3001);
+        fixture.GivePlayerArrows(3);
+        fixture.Script(body: 9, critical: 50, hit: 1, damage: 10);
+        AttackRequest request = new(DaggerfallActorIdentity.PlayerEntityId, 2, 5, 9, .125d, Delayed: true);
+
+        IReadOnlyList<IProductFact> admitted = fixture.StartSwing(request, out bool started);
+
+        Assert.True(started);
+        PlayerAttackStartedFact opening = Assert.Single(admitted.OfType<PlayerAttackStartedFact>());
+        Assert.Equal(2L, opening.TargetId);
+        Assert.Equal(5, opening.HitFrame);   // the donor's bow animation releases on frame 5
+        Assert.Equal(2UL, fixture.PlayerArrows());
+        // (10 * (100 - 50) + 800) / 980 seconds, latched in 0.125s steps.
+        Assert.Equal((ulong)Math.Ceiling((10d * (100 - 50) + 800) / 980d / .125d), fixture.CooldownRemaining(DaggerfallActorIdentity.PlayerEntityId, 5, 9));
+        Assert.DoesNotContain(admitted, fact => fact is AttackHitFact or AttackMissedFact);
+
+        // The release is queued for flight, and the arrival is what lands the hit.
+        Assert.Empty(fixture.DeliverImpact(request));
+        IReadOnlyList<IProductFact> arrived = fixture.AdvanceFlight(5, 10);
+        Assert.Single(arrived.OfType<AttackHitFact>());
+    }
+
+    [Fact]
+    public void A_player_bow_shot_with_an_empty_quiver_is_refused_before_it_is_admitted()
+    {
+        using DamagePolicyFixture fixture = new(armed: false);
+        fixture.EquipPlayerBow("iron-short-bow", 3001);
+        fixture.Script(body: 9, critical: 50, hit: 1, damage: 10);
+
+        IReadOnlyList<IProductFact> facts = fixture.StartSwing(
+            new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 5, 9, .125d, Delayed: true), out bool started);
+
+        Assert.False(started);
+        Assert.Contains(new AttackRejectedFact(AttackRejection.EmptyQuiver, DaggerfallActorIdentity.PlayerEntityId), facts);
+        Assert.DoesNotContain(facts, fact => fact is PlayerAttackStartedFact);
+        Assert.True(fixture.IsSwingReady(DaggerfallActorIdentity.PlayerEntityId, 5, 500));
+    }
+
+    [Fact]
+    public void A_held_bow_carries_the_authored_ranged_reach_and_a_swing_keeps_its_own()
+    {
+        using DamagePolicyFixture fixture = new(armed: false);
+
+        Assert.Equal(2.25d, fixture.ReachOf(DaggerfallActorIdentity.PlayerEntityId));
+
+        fixture.EquipPlayerBow("iron-short-bow", 3001);
+
+        Assert.Equal(10d, fixture.ReachOf(DaggerfallActorIdentity.PlayerEntityId));
+    }
+
     private sealed class CountingContribution(bool rejectFirst = false) : ICombatContribution
     {
         internal int HitCount { get; private set; }
@@ -390,6 +447,7 @@ public sealed class DaggerCombatDamagePolicyTests
         private readonly DaggerfallItemInstances _itemInstances = new();
         private readonly Dictionary<long, DaggerfallActorDefinition> _authored = [];
         private readonly Dictionary<long, MechanicsEquipmentCoordinator> _actorEquipment = [];
+        private readonly Dictionary<long, MechanicsInventoryCoordinator> _actorInventories = [];
         private readonly MechanicsEquipmentCoordinator _playerEquipment;
         private readonly ScriptedRandom _scripted = (ScriptedRandom)(object)DispatchProxy.Create<IRandomService, ScriptedRandom>();
         private readonly IRandomService _random;
@@ -406,7 +464,7 @@ public sealed class DaggerCombatDamagePolicyTests
             _actors = new ActorsState();
             PlayerActorState player = _actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId(playerDefinition.Id.Value),
                 new DaggerfallMechanicsState().CreateStats(playerDefinition, DaggerfallPlayerVitals.Initial(playerDefinition.Stats, definitions.Catalogs.RequireCareer("class00"))), "health");
-            _playerEquipment = BuildEquipment(player.Actor.Entity, player.Actor);
+            _playerEquipment = BuildEquipment(player.Actor.Entity, DaggerfallActorIdentity.PlayerEntityId, player.Actor);
             foreach (DaggerfallLoadoutEntry entry in playerDefinition.Loadout.Where(entry => entry.UniqueEntityId is not null))
             {
                 _itemInstances.RegisterDefaultUnique(entry.UniqueEntityId!.Value, definitions.RequireItem(entry.ItemId), DaggerfallItemOwner.Player);
@@ -423,8 +481,10 @@ public sealed class DaggerCombatDamagePolicyTests
                 new DaggerfallMechanicsState().CreateStats(brigand, new DaggerfallVitalValues(200, 100, 0)), new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health");
             _authored[DaggerfallActorIdentity.PlayerEntityId] = playerDefinition;
             _authored[2] = brigand;
-            _actorEquipment[2] = BuildEquipment(enemy.Actor.Entity, enemy.Actor);
-            _combat = new DaggerCombatRules(_random, _actors, _playerEquipment, _ => null, _itemInstances, definitions, _authored, null!,
+            _actorEquipment[2] = BuildEquipment(enemy.Actor.Entity, 2, enemy.Actor);
+            _combat = new DaggerCombatRules(_random, _actors, _playerEquipment,
+                id => _actorInventories.TryGetValue(id, out MechanicsInventoryCoordinator? quiver) ? quiver : null,
+                _itemInstances, definitions, _authored, null!,
                 actorEquipment: id => _actorEquipment.TryGetValue(id, out MechanicsEquipmentCoordinator? coordinator) ? coordinator : _playerEquipment,
                 playerPosition: () => _playerPosition, character: () => _character);
         }
@@ -471,6 +531,42 @@ public sealed class DaggerCombatDamagePolicyTests
         internal void NpcHandToHandSkill(int skill) => _actors.Get(2).Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.HandToHand.Value)).BaseValue = skill;
 
         internal void NpcStrength(int strength) => _actors.Get(2).Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Strength.Value)).BaseValue = strength;
+
+        /// <summary>Hands the player a bow, which is the weapon the attack input then looses with. A bow
+        /// is held in both hands, so the fixture hands it the two slots the item definition requires.</summary>
+        internal void EquipPlayerBow(string itemId, ulong uniqueId)
+        {
+            _itemInstances.RegisterDefaultUnique(uniqueId, Definitions.RequireItem(new DaggerfallItemId(itemId)), DaggerfallItemOwner.Player);
+            _playerEquipment.Equip(
+                _playerEquipment.Materialize(new DurableIdentityReference(DurableIdentityKind.Item, uniqueId), new InventoryItemId(itemId)),
+                [new SlotId("right-hand"), new SlotId("left-hand")]);
+        }
+
+        internal void GivePlayerArrows(ulong quantity) =>
+            _actorInventories[DaggerfallActorIdentity.PlayerEntityId].Grant(
+                new InventoryGrant(new InventoryItemId("arrow"), InventoryStackId.Parse("test.quiver"), quantity));
+
+        internal ulong PlayerArrows() => _actorInventories[DaggerfallActorIdentity.PlayerEntityId].Read().Stacks
+            .Where(stack => stack.Definition.Value == "arrow").Aggregate(0UL, (total, stack) => total + stack.Quantity);
+
+        internal double? ReachOf(long actorId) => _combat.ReachOf(actorId);
+
+        internal ulong CooldownRemaining(long actorId, ulong generation, ulong step) =>
+            _combat.Execution.CaptureCooldowns(generation, step).Single(cooldown => cooldown.AttackerId == actorId).RemainingSteps;
+
+        /// <summary>Advances the ruleset's own ranged delivery until the released shot has arrived.</summary>
+        internal IReadOnlyList<IProductFact> AdvanceFlight(ulong generation, ulong step, int steps = 4)
+        {
+            FactBuffer<IProductFact> facts = new();
+            Dictionary<long, WorldPoint> positions = new()
+            {
+                [DaggerfallActorIdentity.PlayerEntityId] = new WorldPoint(0f, 0f, 1f),
+                [2] = _actors.Get(2).Position,
+            };
+            for (int index = 0; index < steps; index++)
+                _combat.AdvanceRangedFlight(generation, checked(step + (ulong)index), .125d, positions, facts);
+            return Delivered(facts);
+        }
 
         internal void EquipNpcWeapon(long actorId, string itemId, ulong uniqueId)
         {
@@ -527,7 +623,7 @@ public sealed class DaggerCombatDamagePolicyTests
 
         public void Dispose() => _actors.Dispose();
 
-        private MechanicsEquipmentCoordinator BuildEquipment(EntityId owner, Actor actor)
+        private MechanicsEquipmentCoordinator BuildEquipment(EntityId owner, long durableId, Actor actor)
         {
             InventoryStore world = new();
             world.RegisterInventory(new InventoryState(owner));
@@ -538,6 +634,8 @@ public sealed class DaggerCombatDamagePolicyTests
             actor.Add(equipment);
             var items = Definitions.Items.Values.Concat(Definitions.TemplateItems.Values).ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
             var slots = Definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
+            // Ranged attacks draw from the same coordinator the actor's inventory component owns.
+            _actorInventories[durableId] = new MechanicsInventoryCoordinator(inventory, _actors.Entities, items);
             return new MechanicsEquipmentCoordinator(inventory, equipment, _actors.Entities, items, slots);
         }
     }

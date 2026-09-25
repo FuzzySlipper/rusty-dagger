@@ -785,12 +785,29 @@ internal static class DaggerfallFormulaPolicy
     }
 
     /// <summary>
-    /// The classic weapon animation frame a melee swing's damage lands on. The donor's FPSWeapon
+    /// FORM-04.GetBowCooldownTime: how long a bow keeps the player from loosing again, from live speed.
+    /// The donor computes <c>(10 * (100 - LiveSpeed) + 800) / classicFrameUpdate</c> with its 980 frame
+    /// constant and latches it when an attack finishes, so a faster archer nocks sooner. Donor:
+    /// <c>FormulaHelper.GetBowCooldownTime</c>, used by WeaponManager's bow cooldown.
+    /// </summary>
+    internal static double BowCooldownSeconds(int liveSpeed)
+    {
+        if (liveSpeed < 0 || liveSpeed > MaxStatValue()) throw new ArgumentOutOfRangeException(nameof(liveSpeed));
+        return (10 * (100 - liveSpeed) + 800) / ClassicFrameUpdate;
+    }
+
+    /// <summary>The classic weapon animation frame a melee swing's damage lands on. The donor's FPSWeapon
     /// reports frame 2 for every melee weapon and frame 5 for a bow, and WeaponManager runs its melee
     /// damage when the playing swing's current frame reaches it, which is why one swing is not one
     /// instant.
     /// </summary>
     internal const int MeleeWeaponHitFrame = 2;
+
+    /// <summary>
+    /// The classic bow animation frame a loosed arrow leaves on: the donor's FPSWeapon reports frame 5
+    /// for a bow where every melee weapon reports frame 2.
+    /// </summary>
+    internal const int BowWeaponHitFrame = 5;
 
     /// <summary>
     /// The donor's item-condition display unit. Items without condition use are complete rather than

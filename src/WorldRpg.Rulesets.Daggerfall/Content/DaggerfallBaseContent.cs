@@ -2807,11 +2807,14 @@ internal static class DaggerfallBaseContent
             double? reach = action.Reach;
             if (action.Skill != "equipped" && !vocabulary.Skills.Any(skill => skill.Value == action.Skill)) diagnostics.Add($"Action '{action.Id}' refers to unknown skill '{action.Skill}'.");
             if (action.Tags.Distinct(StringComparer.Ordinal).Count() != action.Tags.Count) diagnostics.Add($"Action '{action.Id}' repeats a tag.");
-            if (action.CooldownSeconds is not double cooldown || cooldown <= 0d) diagnostics.Add($"Action '{action.Id}' must define a positive cooldown.");
+            // A bow's cadence is the donor's formula over live speed, not an authored number, so exactly
+            // one owner states it per interpretation rather than both agreeing by luck.
+            if (action.Interpretation != "player-equipped-ranged" && (action.CooldownSeconds is not double cooldown || cooldown <= 0d)) diagnostics.Add($"Action '{action.Id}' must define a positive cooldown.");
+            if (action.Interpretation == "player-equipped-ranged" && action.CooldownSeconds is not null) diagnostics.Add($"Action '{action.Id}' takes its cooldown from FORM-04.GetBowCooldownTime and must not author one.");
             bool directRange = action.MinimumDamage is not null || action.MaximumDamage is not null;
             bool fixedReach = action.Interpretation is "fixed-melee" or "fixed-ranged";
             if (fixedReach && (action.AttackRangeIndex is not null) == directRange) diagnostics.Add($"Fixed action '{action.Id}' must use exactly one direct damage range or actor attackRangeIndex.");
-            if (action.Interpretation == "player-equipped-melee" && (action.AttackRangeIndex is not null || directRange || action.StaminaCost is not > 0)) diagnostics.Add($"Player-equipped action '{action.Id}' must own a positive stamina cost and use equipped weapon damage.");
+            if (action.Interpretation is "player-equipped-melee" or "player-equipped-ranged" && (action.AttackRangeIndex is not null || directRange || action.StaminaCost is not > 0)) diagnostics.Add($"Player-equipped action '{action.Id}' must own a positive stamina cost and use equipped weapon damage.");
             if ((fixedReach || action.Interpretation == "enemy-equipped-melee") && action.StaminaCost is not null) diagnostics.Add($"Fixed action '{action.Id}' must not declare player stamina cost.");
             // How far an attack carries is the attack's own property. A fixed action without a reach would
             // have to borrow one from somewhere else, which is how a bow and a dagger ended up reaching the
@@ -2825,7 +2828,7 @@ internal static class DaggerfallBaseContent
             // at impact time, so the behaviour gate is the admission, and a reach past what an attacker
             // perceives would mean a shot that only ever fires if something else already put the player
             // there.
-            if (action.Interpretation == "fixed-ranged" && reach > MaximumRangedReach) diagnostics.Add($"Ranged action '{action.Id}' reaches {reach} beyond the range an attacker perceives '{MaximumRangedReach}'.");
+            if (action.Interpretation is "fixed-ranged" or "player-equipped-ranged" && reach > MaximumRangedReach) diagnostics.Add($"Ranged action '{action.Id}' reaches {reach} beyond the range an attacker perceives '{MaximumRangedReach}'.");
         }
     }
 
@@ -3303,15 +3306,17 @@ internal static class DaggerfallBaseContent
             int? minimum = hasMinimum && minimumValue.TryGetInt32(out int parsedMinimum) ? parsedMinimum : null;
             int? maximum = hasMaximum && maximumValue.TryGetInt32(out int parsedMaximum) ? parsedMaximum : null;
             bool directRange = hasMinimum || hasMaximum;
-            bool validDamageShape = interpretation is "player-equipped-melee" or "enemy-equipped-melee"
+            bool validDamageShape = interpretation is "player-equipped-melee" or "enemy-equipped-melee" or "player-equipped-ranged"
                 ? attackRangeIndex is null && !directRange
                 : (attackRangeIndex is not null) != directRange;
             bool valid = ValidId(id)
-                && interpretation is "player-equipped-melee" or "fixed-melee" or "fixed-ranged" or "enemy-equipped-melee"
+                && interpretation is "player-equipped-melee" or "player-equipped-ranged" or "fixed-melee" or "fixed-ranged" or "enemy-equipped-melee"
                 && tags.Length > 0 && tags.All(ValidId)
                 && (skill == "equipped" || ValidId(skill))
                 && reach is null or >= 0 and <= 100
-                && cooldown is > 0 and <= 60
+                // A bow's cadence is FORM-04.GetBowCooldownTime over live speed, so the ranged player
+                // action must not carry an authored cooldown the admission policy would ignore.
+                && (interpretation == "player-equipped-ranged" ? cooldown is null : cooldown is > 0 and <= 60)
                 && stamina is null or > 0 and <= 10_000
                 && attackRangeIndex is null or >= 0 and <= 16
                 && damageBonus is >= -MaximumAuthoredDamage and <= MaximumAuthoredDamage
@@ -3337,7 +3342,7 @@ internal static class DaggerfallBaseContent
         int[] expectedClasses = Enumerable.Range(128, 19).ToArray();
         int[] actualClasses = actors.Values.Where(actor => actor.Kind == DaggerfallActorKinds.EnemyClass).Select(actor => actor.MobileId ?? -1).Order().ToArray();
         if (actors.Count != 62 || actors.Values.Count(actor => actor.Kind == "monster") != 42 || !actualMobiles.SequenceEqual(expectedMobiles) || !actualClasses.SequenceEqual(expectedClasses) || !actors.TryGetValue(new("thief"), out DaggerfallActorDefinition? thief) || thief.MobileId != 138 || !actors.TryGetValue(new("archer"), out DaggerfallActorDefinition? archer) || archer.MobileId != 141) diagnostics.Add("Daggerfall actor roster must contain every monster mobile, every class mobile 128 through 146, and player.");
-        if (items.Count != 31 || slots.Count != 25 || actions.Count != 7 || loot.Count != 22 || armorValues.Count != 12) diagnostics.Add("Daggerfall catalog cardinality does not match the adopted donor snapshot.");
+        if (items.Count != 31 || slots.Count != 25 || actions.Count != 8 || loot.Count != 22 || armorValues.Count != 12) diagnostics.Add("Daggerfall catalog cardinality does not match the adopted donor snapshot.");
         if (armorValues.Values.Any(value => value > MaximumAuthoredArmor)) diagnostics.Add("Armor values by material exceed the Daggerfall policy bound.");
         if (!actors.TryGetValue(new("player"), out DaggerfallActorDefinition? player) || player.Loadout.Count == 0) diagnostics.Add("Daggerfall player loadout is required.");
         if (!loot.ContainsKey("-") || Enumerable.Range('A', 21).Select(value => ((char)value).ToString()).Any(key => !loot.ContainsKey(key))) diagnostics.Add("Daggerfall loot keys must be '-' and A through U.");
@@ -3355,8 +3360,12 @@ internal static class DaggerfallBaseContent
             // authored here rather than read from it.
             ["archer-shot"] = ("fixed-ranged", "archery", ["attack", "ranged"]),
             ["enemy-class-equipped-melee"] = ("enemy-equipped-melee", "equipped", ["attack", "melee"]),
+            // The player's bow is the mirror of the archer's shot: the same skill and the same authored
+            // reach, driven by the equipped weapon instead of a mobile's fixed action. Its cadence is the
+            // donor's formula, so it deliberately authors no cooldown.
+            ["bow-shot"] = ("player-equipped-ranged", "archery", ["attack", "ranged"]),
         };
-        if (actions.Count != expectedActions.Count || actions.Any(pair => !expectedActions.TryGetValue(pair.Key, out (string Interpretation, string Skill, string[] Tags) expected) || pair.Value.Interpretation != expected.Interpretation || pair.Value.Skill != expected.Skill || !pair.Value.Tags.SequenceEqual(expected.Tags))) diagnostics.Add("Actions must be the exact six adopted ids, interpretations, skills, and tags.");
+        if (actions.Count != expectedActions.Count || actions.Any(pair => !expectedActions.TryGetValue(pair.Key, out (string Interpretation, string Skill, string[] Tags) expected) || pair.Value.Interpretation != expected.Interpretation || pair.Value.Skill != expected.Skill || !pair.Value.Tags.SequenceEqual(expected.Tags))) diagnostics.Add("Actions must be the exact eight adopted ids, interpretations, skills, and tags.");
         if (!actions.TryGetValue("melee-attack", out DaggerfallActionDefinition? melee) || melee.StaminaCost != 5 || melee.MinimumDamage is not null || melee.MaximumDamage is not null || melee.AttackRangeIndex is not null
             || !actions.TryGetValue("power-attack", out DaggerfallActionDefinition? power) || power.StaminaCost != 25 || power.DamageBonus != 4 || power.MinimumDamage is not null || power.MaximumDamage is not null || power.AttackRangeIndex is not null
             || !actions.TryGetValue("monster-strike", out DaggerfallActionDefinition? monsterAction) || monsterAction.AttackRangeIndex != 0 || monsterAction.MinimumDamage is not null || monsterAction.MaximumDamage is not null
