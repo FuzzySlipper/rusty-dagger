@@ -77,6 +77,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     internal const ulong GroundContainerFirstIdentity = 2_000_000_000_000UL;
     private readonly DurableIdentityAllocator _actorIdentities;
     private readonly Dictionary<long, DaggerfallActorDefinition> _definitionsByActor;
+    private DaggerfallHeldEnchantments _heldEnchantments = null!;
     private readonly Dictionary<long, DaggerfallActorId> _dynamicActors = [];
     private readonly DaggerfallDefinitions _definitions;
     private readonly DaggerfallMechanicsState _mechanics;
@@ -312,7 +313,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 () => State.Character.Background?.Modifiers.AvoidHit ?? 0, State.EquipmentFor, _itemCondition, combatRules,
                 actorId => actorId == DaggerfallActorIdentity.PlayerEntityId
                     && State.Character.CustomCareer?.Advantages.Any(trait => trait.Id == "adrenaline-rush") == true
-                    ? new DaggerfallAdrenalineRush(Enabled: true, Improved: false) : default,
+                    ? new DaggerfallAdrenalineRush(Enabled: true, Improved: _heldEnchantments.Talents.AdrenalineRush) : default,
                 () => State.PlayerControl.Position, () => State.Character, _playerSwings.TryGesture, ShotBlockedByCover);
             State.Kit = new(State.Actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, State.Inventory, State.Equipment);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
@@ -344,7 +345,12 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
             _uniqueItems = DaggerfallUniqueItemAllocator.Sharing(_actorIdentities);
             State.Npcs.Identities = _actorIdentities;
-            State.Encumbrance = new DaggerfallEncumbrancePolicy(State.Inventory, State.Actors.Player.Stats);
+            _heldEnchantments = new DaggerfallHeldEnchantments(State.Equipment, State.ItemInstances, definitions,
+                State.Actors.Player.Stats, State.Actors.Entities, State.Actors.Player.Actor.Entity, () => _time.Calendar,
+                () => State.PlayerControl.Position, NearbyCreatures);
+            State.Encumbrance = new DaggerfallEncumbrancePolicy(State.Inventory, State.Actors.Player.Stats,
+                () => _heldEnchantments.CarryMultiplier);
+            _heldEnchantments.Refresh();
             State.Currency = new DaggerfallCurrencyService(definitions, State.Inventory, State.ItemInstances, State.Encumbrance, _uniqueItems, saved?.Currency);
             State.Bank = new DaggerfallRegionalBankState(State.Currency, State.Inventory, State.ItemInstances, saved?.Bank);
             State.Loans = new DaggerfallLoanState(saved?.Loans);
@@ -832,6 +838,22 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     }
 
     /// <summary>
+    /// The living creatures a worn enchantment's near-creature condition can see: their authored
+    /// mobile, which carries the donor's own enemy grouping, and where they stand now.
+    /// </summary>
+    private IReadOnlyList<DaggerfallNearbyCreature> NearbyCreatures()
+    {
+        List<DaggerfallNearbyCreature> nearby = [];
+        foreach (ActorState actor in State.Actors.All)
+        {
+            if (actor.IsDefeated) continue;
+            if (!_definitionsByActor.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition)) continue;
+            nearby.Add(new DaggerfallNearbyCreature(definition.MobileId, actor.Position));
+        }
+        return nearby;
+    }
+
+    /// <summary>
     /// Whether admitted static geometry stands between a shot's release and its aim, asked of the
     /// Engine's own segment query at chest height. A shooter standing inside geometry would otherwise
     /// report every shot as blocked, so the segment starts clear of the muzzle.
@@ -1269,6 +1291,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         {
             _appearance.Advance(update.Facts);
             ApplyAttackImpacts();
+            _heldEnchantments.Refresh();
             UpdateRangedFlight(update.Facts);
             PublishPresentation();
         }

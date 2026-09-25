@@ -27,11 +27,18 @@ internal sealed class DaggerfallEncumbrancePolicy
     private const int TemplateWeightToClassicUnits = 100;
     private readonly MechanicsInventoryCoordinator _playerInventory;
     private readonly StatsComponent _playerStats;
+    private readonly Func<double> _carryMultiplier;
 
-    internal DaggerfallEncumbrancePolicy(MechanicsInventoryCoordinator playerInventory, StatsComponent playerStats)
+    /// <summary>
+    /// The carried maximum is the strength formula times whatever the worn items allow, so a
+    /// weight-allowance enchantment extends this owner's answer instead of adding a second one.
+    /// </summary>
+    internal DaggerfallEncumbrancePolicy(MechanicsInventoryCoordinator playerInventory, StatsComponent playerStats,
+        Func<double>? carryMultiplier = null)
     {
         _playerInventory = playerInventory ?? throw new ArgumentNullException(nameof(playerInventory));
         _playerStats = playerStats ?? throw new ArgumentNullException(nameof(playerStats));
+        _carryMultiplier = carryMultiplier ?? (() => 1d);
     }
 
     internal DaggerfallEncumbrance Read() => new(CurrentClassicUnits(_playerInventory.Read()), MaximumClassicUnits());
@@ -77,7 +84,12 @@ internal sealed class DaggerfallEncumbrancePolicy
     private long MaximumClassicUnits()
     {
         int strength = _playerStats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Strength.Value)).ValueInt;
-        return checked((long)DaggerfallFormulaPolicy.MaxEncumbrance(strength) * DaggerfallEncumbrance.ClassicUnitsPerKilogram);
+        double multiplier = _carryMultiplier();
+        if (!double.IsFinite(multiplier) || multiplier < 1d) throw new InvalidOperationException("Carry multiplier must be finite and at least one.");
+        long baseUnits = checked((long)DaggerfallFormulaPolicy.MaxEncumbrance(strength) * DaggerfallEncumbrance.ClassicUnitsPerKilogram);
+        // The donor scales the maximum with a float multiplier; the product keeps the classic integer
+        // unit and truncates, which can only ever take back a fraction of one 2.5g unit.
+        return checked((long)(baseUnits * multiplier));
     }
 
     internal static bool IsGold(DaggerfallItemDefinition definition) => definition.Id.Value == GoldPiece || definition.Template?.Index == 276;
