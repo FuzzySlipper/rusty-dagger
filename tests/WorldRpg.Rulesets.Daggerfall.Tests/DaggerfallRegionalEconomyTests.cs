@@ -154,6 +154,29 @@ public sealed class DaggerfallRegionalEconomyTests
         { CurrentCondition = currentCondition, MaximumCondition = maximumCondition };
     }
 
+    [Fact]
+    public void An_item_makers_enchantment_is_valued_like_any_other_unidentified_one()
+    {
+        // A setting has no published magic item, so quoting a setting-enchanted item must not be rejected
+        // as unpublished metadata: it keeps the ordinary item's value until identification, exactly as an
+        // unidentified published enchantment does.
+        DaggerfallDefinitions definitions = LoadDefinitions();
+        string setting = DaggerfallEnchantmentSettings.All.Single(candidate => candidate.Type == 7 && candidate.Param == 0).Key;
+        DaggerfallItemDefinition definition = definitions.RequireItem(new DaggerfallItemId("iron-longsword"));
+        DaggerfallItemInstanceMetadata metadata = DaggerfallItemInstanceMetadata.Default(definition, DaggerfallItemOwner.Player);
+        DaggerfallRegionalPriceState prices = PriceState(definitions);
+        DaggerfallTradeQuoteService service = new(definitions, new DaggerfallItemValuation(definitions), prices);
+        DaggerfallTradeLine unidentified = new(definition, metadata with { Enchantment = setting, Identified = false }, 1);
+        DaggerfallTradeLine plain = new(definition, metadata with { Identified = false }, 1);
+
+        DaggerfallTradeQuote enchanted = Assert.IsType<DaggerfallTradeQuote>(service.Quote(DaggerfallTradeSide.BuyFromMerchant,
+            [unidentified], 10, 50, 50, 0, null).Quote);
+        DaggerfallTradeQuote ordinary = Assert.IsType<DaggerfallTradeQuote>(service.Quote(DaggerfallTradeSide.BuyFromMerchant,
+            [plain], 10, 50, 50, 0, null).Quote);
+
+        Assert.Equal(ordinary.ShopSubtotal, enchanted.ShopSubtotal);
+    }
+
     private static DaggerfallCreatedItem MagicItem(DaggerfallDefinitions definitions)
     {
         DaggerfallCreatedItem created = new DaggerfallItemFactory(definitions, MinimumRandom()).Create(new DaggerfallItemCreateRequest(
