@@ -88,8 +88,7 @@ public sealed class DaggerfallDungeonActionModelContentTests
     public void Shipped_privateers_hold_keeps_action_meshes_model_local_and_out_of_static_geometry()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(
-            Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = GeneratedContent(root);
         PrivateersHoldInputs inputs = PrivateersHoldContent.Read(content,
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);

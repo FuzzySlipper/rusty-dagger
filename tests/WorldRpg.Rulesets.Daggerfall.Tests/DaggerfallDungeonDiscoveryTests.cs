@@ -74,8 +74,7 @@ public sealed class DaggerfallDungeonDiscoveryTests
     public void Castle_dungeon_content_admits_each_source_placement_with_visibility_samples()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(
-            Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = PrivateersHoldContent.Read(
             GeneratedContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")),
@@ -169,8 +168,7 @@ public sealed class DaggerfallDungeonDiscoveryTests
     public void Authored_transition_is_a_stable_portal_marker_that_remains_hidden_until_revealed()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(
-            Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         JsonObject payload = JsonNode.Parse(File.ReadAllBytes(
             Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")))!.AsObject();
         payload["world"]!["transitions"] = new JsonArray(new JsonObject
@@ -200,8 +198,7 @@ public sealed class DaggerfallDungeonDiscoveryTests
     private static (string Root, PrivateersHoldInputs Inputs) ReadPrivateersHold()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(
-            Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = GeneratedContent(root);
         PrivateersHoldInputs inputs = PrivateersHoldContent.Read(content,
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);

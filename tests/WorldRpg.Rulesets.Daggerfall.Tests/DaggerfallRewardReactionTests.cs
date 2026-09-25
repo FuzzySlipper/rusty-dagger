@@ -333,7 +333,7 @@ public sealed class DaggerfallRewardReactionTests
             : throw new NotSupportedException(method?.Name);
     }
 
-    private static DaggerfallDefinitions LoadDefinitions() => DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+    private static DaggerfallDefinitions LoadDefinitions() => TestPayload.Definitions;
 
     private static string RepositoryRoot()
     {

@@ -102,7 +102,7 @@ public sealed class DaggerfallNamesRumorsBiographiesTests
     }
 
     private static DaggerfallDefinitions Definitions() =>
-        DaggerfallBaseContent.Read(File.ReadAllBytes(PackPath()));
+        TestPayload.Definitions;
 
     private static byte[] Payload(Action<JsonObject> mutate)
     {

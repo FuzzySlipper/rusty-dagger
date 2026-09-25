@@ -12,7 +12,7 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
     public void Admits_each_published_category_and_derives_readiness_from_the_current_compiler()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         IReadOnlyDictionary<string, int> expected = new Dictionary<string, int>
         {
             ["mages"] = 18, ["temples"] = 24, ["social"] = 45, ["witches-commoners"] = 30,
@@ -34,7 +34,7 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
     public void Rejects_category_and_catalog_metadata_corruption_before_runtime_admission()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         JsonObject payload = JsonNode.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.temples.json")))!.AsObject();
         payload["categories"]![0]!["catalogGroup"] = "MagesGuild";
 
@@ -48,7 +48,7 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
     public void Rejects_a_deleted_category_and_its_receipts_against_the_ruleset_contract()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         JsonObject payload = JsonNode.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.temples.json")))!.AsObject();
         JsonArray categories = payload["categories"]!.AsArray();
         categories.RemoveAt(1);
@@ -67,7 +67,7 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
     public void Retains_vampire_and_nobility_special_cases_as_diagnostics_instead_of_excluding_sources()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> vampire = DaggerfallClassicQuestCorpusContent.Read(
             new ProductContent(Array.Empty<ProductContentFile>()),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.merchants-vampires.json")), definitions, DaggerfallClassicQuestCorpusExpectations.Require("merchants-vampires"));

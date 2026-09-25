@@ -773,7 +773,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
 
     private static DaggerfallDefinitions Definitions()
     {
-        return DaggerfallBaseContent.Read(File.ReadAllBytes(BasePayloadPath()));
+        return TestPayload.Definitions;
     }
 
     private static DaggerfallDefinitions DefinitionsWithLifecycleFixtures(bool hasRewardMessage = true)

@@ -258,7 +258,7 @@ public sealed class DaggerfallReferenceCatalogTests
         return Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(pack.ToJsonString())));
     }
 
-    private static DaggerfallDefinitions ReadPack() => DaggerfallBaseContent.Read(File.ReadAllBytes(PackPath()));
+    private static DaggerfallDefinitions ReadPack() => TestPayload.Definitions;
 
     private static string PackPath() => Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json");
 

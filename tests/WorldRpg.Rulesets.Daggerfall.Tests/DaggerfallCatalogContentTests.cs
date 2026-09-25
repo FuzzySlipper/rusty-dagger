@@ -11,7 +11,7 @@ public sealed class DaggerfallCatalogContentTests
     [Fact]
     public void LoadsTheCompleteDonorCatalogWithTheExplicitHorseGap()
     {
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
 
         Assert.Equal(9, definitions.Vocabulary.Attributes.Count);
         Assert.Equal(35, definitions.Vocabulary.Skills.Count);
@@ -66,7 +66,7 @@ public sealed class DaggerfallCatalogContentTests
     [Fact]
     public void ArcherRetainsItsDistinctClassicClassCareerIdentity()
     {
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
 
         // Daggerfall Unity loads class enemy 141 from CLASS13.CFG; its EnemyBasics record assigns KnightsAndMages and loot C.
         DaggerfallActorDefinition archer = definitions.RequireActor(new DaggerfallActorId("archer"));
@@ -90,7 +90,7 @@ public sealed class DaggerfallCatalogContentTests
     [Fact]
     public void HumanEncounterActorsResolveSourceCareerCombatLootAndCasterCapability()
     {
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallActorDefinition mage = definitions.RequireActor(new DaggerfallActorId("encounter-mage"));
         DaggerfallActorDefinition warrior = definitions.RequireActor(new DaggerfallActorId("encounter-warrior"));
         DaggerfallActorDefinition rogue = definitions.RequireActor(new DaggerfallActorId("encounter-rogue"));
@@ -110,7 +110,7 @@ public sealed class DaggerfallCatalogContentTests
     [Fact]
     public void LootTablesMatchTheCompleteClassicDonorMatrix()
     {
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         string actual = string.Join(';', definitions.LootTables.Values.OrderBy(table => table.Key).Select(table => $"{table.Key}:{table.MinimumGold}-{table.MaximumGold}[{string.Join(',', table.Categories.OrderBy(pair => pair.Key).Select(pair => $"{pair.Key}={pair.Value}"))}]"));
         const string expected = "-:0-0[];A:1-10[armor=5,clothing=4,magic=2,misc2=2,weapons=5];B:0-0[plant1=10,plant2=10];C:2-20[armor=5,books=2,creature1=5,creature2=5,creature3=5,magic=3,misc1=5,misc2=2,plant1=10,plant2=10,religious=2,weapons=25];D:1-4[creature1=6,creature2=6,creature3=6,misc1=6,plant1=6,plant2=6,religious=4];E:20-80[armor=10,books=2,clothing=4,magic=3,misc2=1,religious=15,weapons=10];F:4-30[armor=50,creature1=5,creature2=5,creature3=5,magic=1,misc1=2,misc2=3,plant1=2,plant2=2,weapons=50];G:3-15[armor=50,clothing=5,magic=1,misc2=3,weapons=50];H:2-10[clothing=2,magic=1,weapons=100];I:0-0[magic=2,religious=5];J:50-150[armor=5,magic=3,weapons=5];K:1-10[armor=5,books=5,creature1=3,creature2=3,creature3=3,magic=3,misc1=3,misc2=2,plant1=3,plant2=3,religious=100,weapons=5];L:1-20[armor=50,clothing=75,creature1=3,creature2=3,creature3=3,magic=1,misc1=3,misc2=5,religious=3,weapons=50];M:1-15[armor=10,books=2,clothing=15,creature1=1,creature2=1,creature3=1,magic=1,misc1=2,misc2=3,plant1=1,plant2=1,religious=1,weapons=10];N:1-80[armor=5,books=5,clothing=20,creature1=5,creature2=5,creature3=5,magic=1,misc1=5,misc2=2,plant1=5,plant2=5,religious=5,weapons=5];O:5-20[armor=10,creature1=1,creature2=1,creature3=1,magic=2,misc1=1,plant1=1,plant2=1,weapons=15];P:5-20[armor=5,books=10,creature1=5,creature2=5,creature3=5,magic=2,misc1=5,misc2=5,plant1=5,plant2=5,weapons=10];Q:20-80[armor=10,books=5,clothing=35,creature1=8,creature2=8,creature3=8,magic=3,misc1=2,misc2=3,plant1=2,plant2=2,weapons=25];R:5-20[armor=5,creature1=3,creature2=3,creature3=3,magic=2,misc1=5,weapons=15];S:50-125[armor=10,books=5,creature1=5,creature2=5,creature3=5,magic=3,misc1=15,misc2=5,plant1=5,plant2=5,weapons=10];T:20-80[armor=100,magic=1,weapons=100];U:7-30[armor=10,books=2,creature1=5,creature2=5,creature3=5,magic=2,misc1=10,misc2=2,plant1=5,plant2=5,religious=10,weapons=10]";
         Assert.Equal(expected, actual);
@@ -119,7 +119,7 @@ public sealed class DaggerfallCatalogContentTests
     [Fact]
     public void LootReceiptsFollowTheCompleteAdoptedCategoryOrder()
     {
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallLootResult result = DaggerfallLootPolicy.Generate(definitions, "C", 1, (_, minimum, _) => minimum);
 
         Assert.Equal(["weapons", "armor", "creature1", "creature2", "creature3", "plant1", "plant2", "misc1", "misc2", "magic", "books", "religious"], result.Categories.Select(category => category.Category));
@@ -140,7 +140,7 @@ public sealed class DaggerfallCatalogContentTests
     [Fact]
     public void RequiresAProvenanceAndDispositionForEveryItemTemplateTarget()
     {
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
 
         // FALL.EXE is not supplied, so every one of the classic 288 targets resolves to the
         // donor's exported table and says what its entry rests on. The ledger is what keeps a
@@ -312,7 +312,7 @@ public sealed class DaggerfallCatalogContentTests
     [Fact]
     public void SemanticFingerprintDoesNotDependOnTheProcessCulture()
     {
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         CultureInfo original = CultureInfo.CurrentCulture;
         try
         {

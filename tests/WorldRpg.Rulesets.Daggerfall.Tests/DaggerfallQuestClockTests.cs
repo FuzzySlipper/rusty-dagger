@@ -61,7 +61,7 @@ public sealed class DaggerfallQuestClockTests
     public void Published_compiled_quest_clock_lines_have_no_unclaimed_option_text()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
 
         foreach (DaggerfallQuestSourceDefinition source in definitions.QuestSources.Quests.Values.Where(source => source.Disposition == DaggerfallQuestDisposition.Compiled))
             _ = DaggerfallQuestClockCompiler.Compile(source);

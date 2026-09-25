@@ -200,7 +200,7 @@ public sealed class DaggerfallSkillTrainingServiceTests
     {
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "content/worldrpg/payloads/daggerfall.base.json"))) directory = directory.Parent;
-        return DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(directory!.FullName, "content/worldrpg/payloads/daggerfall.base.json")));
+        return TestPayload.Definitions;
     }
 
     private sealed class Fixture : IDisposable
@@ -246,7 +246,7 @@ public sealed class DaggerfallSkillTrainingServiceTests
             if (level > 1) Progression.AdvanceTo(0, level);
             DirectoryInfo? directory = new(AppContext.BaseDirectory);
             while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "content/worldrpg/payloads/daggerfall.base.json"))) directory = directory.Parent;
-            Definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(directory!.FullName, "content/worldrpg/payloads/daggerfall.base.json")));
+            Definitions = TestPayload.Definitions;
             DaggerfallActorDefinition player = Definitions.RequireActor(new DaggerfallActorId("player"));
             DaggerfallCareerDefinition defaultCareer = Definitions.Catalogs.RequireCareer("class00");
             Stats = new DaggerfallMechanicsState().CreateStats(player, DaggerfallPlayerVitals.Initial(player.Stats, defaultCareer));

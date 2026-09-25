@@ -23,7 +23,7 @@ public sealed class DaggerfallTextResolverTests
     [Fact]
     public void Covers_every_retained_handled_symbol_in_the_published_macro_inventory()
     {
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(PackPath()));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         // Internal_Strings.csv carries building templates and other donor-managed strings. Their
         // macros need an actual building/site formula context, so this generic presentation resolver
         // continues to cover the non-internal text families; BuildingNameService covers %ef/%rt/%cn.

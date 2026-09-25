@@ -18,7 +18,7 @@ public sealed class DaggerCombatFatigueConsequencesTests
     [InlineData("lamia")]
     public void Retained_monster_fatigue_callers_apply_the_donor_formula_after_an_accepted_hit(string sourceId)
     {
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallActorDefinition playerDefinition = definitions.RequireActor(new DaggerfallActorId("player"));
         DaggerfallActorDefinition sourceDefinition = definitions.RequireActor(new DaggerfallActorId(sourceId));
         using ActorsState actors = new();
@@ -60,7 +60,7 @@ public sealed class DaggerCombatFatigueConsequencesTests
     [Fact]
     public void Fatigue_loss_reports_the_bounded_live_loss_when_the_target_is_nearly_exhausted()
     {
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         using ActorsState actors = new();
         actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), Stats(health: 100d, stamina: 20d), "health");
         actors.CreateActor(2, new EntityTypeId("nymph"), Stats(health: 100d, stamina: 600d), new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health");

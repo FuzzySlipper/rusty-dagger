@@ -142,7 +142,7 @@ public sealed class DaggerfallBuildingNameServiceTests
     {
         string root = RepositoryRoot();
         return (
-            DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json"))),
+            TestPayload.Definitions,
             DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.blocks.json"))));
     }
 

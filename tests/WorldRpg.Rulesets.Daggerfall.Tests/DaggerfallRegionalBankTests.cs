@@ -317,7 +317,7 @@ public sealed class DaggerfallRegionalBankTests
             DirectoryInfo? directory = new(AppContext.BaseDirectory);
             while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "content/worldrpg/payloads/daggerfall.base.json")))
                 directory = directory.Parent;
-            _definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(directory!.FullName, "content/worldrpg/payloads/daggerfall.base.json")));
+            _definitions = TestPayload.Definitions;
             Dictionary<InventoryItemId, ItemDefinition> items = _definitions.Items.Values.Concat(_definitions.TemplateItems.Values)
                 .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
             Player = _entities.Create(new DurableIdentityReference(DurableIdentityKind.Actor, 1), new EntityTypeId("test.player"));

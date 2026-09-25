@@ -74,8 +74,7 @@ public sealed class DaggerfallTerrainSurfaceBuilderTests
     [Fact]
     public void Builds_the_published_privateers_hold_cell_and_keeps_its_real_borders_continuous()
     {
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(
-            Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallTerrainSet terrain = definitions.Terrain;
         Assert.Equal(25, terrain.GetHeight(109, 158));
         Assert.Equal(25, terrain.GetSamples(109, 158).Length);

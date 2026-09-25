@@ -310,7 +310,7 @@ public sealed class DaggerfallCharacterStateTests
 
     private static DaggerfallCharacterState Create(out DaggerfallDefinitions definitions, out StatsComponent stats)
     {
-        definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+        definitions = TestPayload.Definitions;
         DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
         stats = new DaggerfallMechanicsState().CreateStats(player, DaggerfallPlayerVitals.Initial(player.Stats, definitions.Catalogs.RequireCareer("class00")));
         return new DaggerfallCharacterState(definitions, stats, player);

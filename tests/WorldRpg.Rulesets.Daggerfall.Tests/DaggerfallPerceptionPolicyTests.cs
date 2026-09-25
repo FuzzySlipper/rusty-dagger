@@ -350,8 +350,7 @@ public sealed class DaggerfallPerceptionPolicyTests
     public void Mobile_catalog_publishes_enemy_basics_true_sight_flags()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(
-            Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         int[] trueSightMobiles = [1, 15, 18, 19, 23, 25, 26, 27, 28, 29, 30, 31, 32];
 
         foreach (int mobileId in trueSightMobiles)
