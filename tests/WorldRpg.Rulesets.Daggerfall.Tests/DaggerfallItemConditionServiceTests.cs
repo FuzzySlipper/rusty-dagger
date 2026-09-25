@@ -247,6 +247,35 @@ public sealed class DaggerfallItemConditionServiceTests
     }
 
     [Fact]
+    public void Every_item_maker_payload_family_can_be_applied_to_an_eligible_item()
+    {
+        // One representative per payload family the item maker offers within a weapon's capacity, plus a
+        // detriment, which the donor prices negatively and which therefore cannot be a lone payment.
+        (int Type, int Param)[] families = [(3, 0), (3, 7), (7, 0), (7, 1), (10, 29), (10, 33), (12, -1), (13, 0), (13, 2)];
+        using Fixture f = new();
+        ulong durable = 500;
+        foreach ((int type, int param) in families)
+        {
+            DaggerfallEnchantmentSetting setting = DaggerfallEnchantmentSettings.All.Single(candidate => candidate.Type == type && candidate.Param == param);
+            UniqueItem item = f.CreatePlainWeapon(durable, 115, "daedric");
+            int condition = f.Instances.RequireUnique(durable).CurrentCondition;
+
+            DaggerfallItemConditionResult result = f.Service.Enchant(item, setting.Key);
+
+            Assert.Equal(DaggerfallItemConditionOutcome.Enchanted, result.Outcome);
+            Assert.Equal(setting.Key, f.Instances.RequireUnique(durable).Enchantment);
+            Assert.Equal(condition, f.Instances.RequireUnique(durable).CurrentCondition);
+            durable++;
+        }
+
+        DaggerfallEnchantmentSetting detriment = DaggerfallEnchantmentSettings.All.Single(candidate => candidate.Type == 24 && candidate.Param == -1);
+        UniqueItem cursed = f.CreatePlainWeapon(durable, 115, "daedric");
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => f.Service.Enchant(cursed, detriment.Key));
+        Assert.Contains("negative construction payment", error.Message, StringComparison.Ordinal);
+        Assert.Null(f.Instances.RequireUnique(durable).Enchantment);
+    }
+
+    [Fact]
     public void Ineligible_artifact_quote_cannot_unequip_or_mutate_a_plain_item()
     {
         using Fixture f = new();
