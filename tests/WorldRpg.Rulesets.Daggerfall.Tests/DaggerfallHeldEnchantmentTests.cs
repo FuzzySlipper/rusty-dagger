@@ -6,6 +6,7 @@ using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
@@ -376,6 +377,31 @@ public sealed class DaggerfallHeldEnchantmentTests
         Assert.Equal("near-undead", effect.ParamMeaning);
         Assert.False(DaggerfallEnchantmentSettings.TryResolve("enchantment.5.9", out _));
         Assert.False(DaggerfallEnchantmentSettings.TryResolve("magic-item.0050", out _));
+    }
+
+    [Fact]
+    public void The_enchantment_cost_table_prices_every_item_maker_setting()
+    {
+        // The cost policy's non-spell table used to know three payloads; it now answers from the settings
+        // catalog for every payload the item maker offers, which is what lets the enchant action price
+        // one. The two published-only payloads stay in the policy.
+        static int Cost(int type, int param)
+        {
+            Assert.True(DaggerfallMagicCostPolicy.TryGetNonSpellEnchantmentCost(
+                new DaggerfallMagicEnchantmentDefinition("test", type, param, "test", null, false), out int cost));
+            return cost;
+        }
+
+        Assert.Equal(1000, Cost(6, 1));      // VampiricEffect.WhenStrikes
+        Assert.Equal(1500, Cost(9, -1));     // AbsorbsSpells
+        Assert.Equal(900, Cost(10, 29));     // EnhancesSkill, long blade
+        Assert.Equal(900, Cost(10, 7));      // EnhancesSkill, the donor prices every skill alike
+        Assert.Equal(4000, Cost(5, 0));      // RegensHealth all the time
+        Assert.Equal(700, Cost(12, -1));     // StrengthensArmor
+        Assert.Equal(600, Cost(13, 2));      // ImprovesTalents adrenaline rush
+        Assert.Equal(-3000, Cost(16, 0));    // ItemDeteriorates all the time, a detriment
+        Assert.False(DaggerfallMagicCostPolicy.TryGetNonSpellEnchantmentCost(
+            new DaggerfallMagicEnchantmentDefinition("test", 99, 0, "test", null, false), out _));
     }
 
     /// <summary>The donor's own item-maker settings, addressed by the key a worn item carries.</summary>
