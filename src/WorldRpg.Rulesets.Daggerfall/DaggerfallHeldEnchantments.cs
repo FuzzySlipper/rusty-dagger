@@ -157,8 +157,8 @@ internal sealed class DaggerfallHeldEnchantments
 
         foreach (WorldRpg.Kit.Inventory.EquipmentAssignment assignment in read.Assignments)
         {
-            if (!TryEnchantments(assignment, out DaggerfallMagicItemDefinition? magic)) continue;
-            foreach (DaggerfallMagicEnchantmentDefinition enchantment in magic.Enchantments)
+            if (!TryEnchantments(assignment, out IReadOnlyList<DaggerfallMagicEnchantmentDefinition> enchantments)) continue;
+            foreach (DaggerfallMagicEnchantmentDefinition enchantment in enchantments)
             {
                 switch (enchantment.Type)
                 {
@@ -248,14 +248,25 @@ internal sealed class DaggerfallHeldEnchantments
         _applied.Add(new AppliedContribution(statId, identity));
     }
 
-    private bool TryEnchantments(WorldRpg.Kit.Inventory.EquipmentAssignment assignment, out DaggerfallMagicItemDefinition magic)
+    /// <summary>
+    /// What a worn item's enchantment key applies: a published magic item's own payloads, or one of the
+    /// item maker's settings, which no published item carries. Both answer the same effect shape, so the
+    /// applied contributions have one path.
+    /// </summary>
+    private bool TryEnchantments(WorldRpg.Kit.Inventory.EquipmentAssignment assignment,
+        out IReadOnlyList<DaggerfallMagicEnchantmentDefinition> enchantments)
     {
-        magic = null!;
+        enchantments = [];
         if (_entities.IdentityOf(new EntityId(assignment.Item.EntityId)) is not { Kind: DurableIdentityKind.Item } identity) return false;
         if (!_instances.ContainsUnique(identity.Value)) return false;
         if (_instances.RequireUnique(identity.Value).Enchantment is not { } key) return false;
-        if (!_magicItems.TryGetValue(key, out DaggerfallMagicItemDefinition? published)) return false;
-        magic = published;
+        if (_magicItems.TryGetValue(key, out DaggerfallMagicItemDefinition? published))
+        {
+            enchantments = published.Enchantments;
+            return true;
+        }
+        if (!DaggerfallEnchantmentSettings.TryResolve(key, out DaggerfallEnchantmentSetting setting)) return false;
+        enchantments = [DaggerfallEnchantmentSettings.ToEffect(setting)];
         return true;
     }
 
