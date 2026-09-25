@@ -33,6 +33,13 @@ internal sealed record AttackMissedFact(long AttackerId, long TargetId, int Roll
 internal sealed record AttackHitFact(long AttackerId, long TargetId, int CalculatedDamage, double ActualHealthLost,
     int StruckBody, bool EnemyAttack, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
 internal sealed record LootAwardedFact(long ActorId, string ItemId, ulong Quantity, ulong OriginatingSequence) : IProductFact;
+/// <summary>
+/// One item's condition changed through an accepted physical hit, carrying the break that the change
+/// caused. Effects and presentation observe this result instead of running wear again: the hit already
+/// resolved, and the item's owner is whoever was wearing or swinging it.
+/// </summary>
+internal sealed record EquipmentWornFact(long OwnerActorId, ulong DurableItemId, string ItemId,
+    int PreviousCondition, int CurrentCondition, bool Broken, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
 /// <summary>Explicit interaction emptied the defeated actor's durable loot container.</summary>
 internal sealed record CorpseLootedFact(long ActorId) : IProductFact;
 /// <summary>One explicit interaction confirmed that a defeated actor left no generated loot.</summary>

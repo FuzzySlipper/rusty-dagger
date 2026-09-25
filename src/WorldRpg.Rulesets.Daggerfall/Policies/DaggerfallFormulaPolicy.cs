@@ -730,6 +730,48 @@ internal static class DaggerfallFormulaPolicy
     }
 
     /// <summary>
+    /// FORM-05.DamageEquipment: which equipment one accepted physical hit wears, in the donor's order.
+    /// Classic only wears anything for a weapon strike — an unarmed or natural attack leaves armour
+    /// untouched — and a shield covering the struck body part takes the wear instead of that part's
+    /// armour. Donor: <c>FormulaHelper.DamageEquipment</c>.
+    /// </summary>
+    internal static DaggerfallStruckEquipment DamageEquipment(bool weaponStrike, bool shieldCoversStruckBodyPart, bool armourAtStruckBodyPart)
+    {
+        if (!weaponStrike) return DaggerfallStruckEquipment.None;
+        if (shieldCoversStruckBodyPart) return DaggerfallStruckEquipment.Shield;
+        return armourAtStruckBodyPart ? DaggerfallStruckEquipment.Armour : DaggerfallStruckEquipment.Weapon;
+    }
+
+    /// <summary>
+    /// The condition units a physical hit scales to before the donor's one-unit floor: ten percent of
+    /// the damage with half units rounded up, so damage below five scales to nothing and the floor
+    /// roll decides. Donor: <c>(10 * damage + 50) / 100</c>.
+    /// </summary>
+    internal static int ConditionDamageScale(int damage)
+    {
+        if (damage < 0) throw new ArgumentOutOfRangeException(nameof(damage));
+        return (10 * damage + 50) / 100;
+    }
+
+    /// <summary>
+    /// FORM-05.ApplyConditionDamageThroughPhysicalHit: the condition units one accepted physical hit
+    /// takes off one item. A scaled amount above zero always wears; only a zero keeps the classic
+    /// one-unit floor, which a roll of 20 or less on the donor's hundred-sided die grants. Donor:
+    /// <c>FormulaHelper.ApplyConditionDamageThroughPhysicalHit</c>.
+    /// </summary>
+    /// <remarks>
+    /// The donor short-circuits its die, so a caller must not draw <paramref name="minimumWearRoll"/>
+    /// when <see cref="ConditionDamageScale"/> already answered above zero: the wear of a solid blow
+    /// is not a matter of luck, and the classic draw sequence contains no roll there.
+    /// </remarks>
+    internal static int ApplyConditionDamageThroughPhysicalHit(int damage, int minimumWearRoll)
+    {
+        if (minimumWearRoll is < 1 or > 100) throw new ArgumentOutOfRangeException(nameof(minimumWearRoll));
+        int amount = ConditionDamageScale(damage);
+        return amount == 0 && minimumWearRoll <= MinimumWearChance ? 1 : amount;
+    }
+
+    /// <summary>
     /// The donor's item-condition display unit. Items without condition use are complete rather than
     /// dividing by zero; otherwise the classic integer percentage truncates toward zero.
     /// </summary>
@@ -762,6 +804,10 @@ internal static class DaggerfallFormulaPolicy
     /// <summary>Classic weight counts carried items at four times their listed weight.</summary>
     private const int WeightCarriedToClassicUnits = 4;
 
+    /// <summary>One in five light hits still costs a condition unit: the donor's <c>Dice100.SuccessRoll(20)</c>.</summary>
+    private const int MinimumWearChance = 20;
+
+
     /// <summary>Donor base body weights for class enemies by gender, in classic units.</summary>
     private const int FemaleClassBaseWeight = 240;
     private const int MaleClassBaseWeight = 350;
@@ -776,6 +822,15 @@ internal static class DaggerfallFormulaPolicy
         ["orcish"] = 15, ["harpy"] = 15, ["giantish"] = 15, ["dragonish"] = 15, ["nymph"] = 15,
         ["daedric"] = 15, ["spriggan"] = 15, ["centaurian"] = 15, ["impish"] = 15, ["running"] = 50,
     };
+}
+
+/// <summary>Which equipment one accepted physical hit wears.</summary>
+internal enum DaggerfallStruckEquipment
+{
+    None,
+    Weapon,
+    Shield,
+    Armour,
 }
 
 /// <summary>Named profile values used by <see cref="DaggerfallFormulaPolicy"/>.</summary>

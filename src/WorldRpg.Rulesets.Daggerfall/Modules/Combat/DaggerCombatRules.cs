@@ -160,6 +160,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         { facts.Append(new AttackMissedFact(request.AttackerId, target, outcome.Roll, outcome.Chance, request.Delayed, request.Generation, request.SimulationStep)); return; }
         if (!outcome.Allowed)
         { facts.Append(new AttackRejectedFact(AttackRejection.InsufficientWeaponMaterial)); return; }
+        bool enemyAttack = request.AttackerId != PlayerId;
         string action = request.Action ?? _definitions[request.AttackerId].ActionId ?? "attack";
         // Capture the weapon skill at the admitted operation boundary. Applying the hit may break
         // the weapon through physical wear and unequip it before the skill-use reaction runs.
@@ -449,7 +450,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
                 applied.CalculatedDamage, applied.ActualHealthLost, generation, step));
         if (applied.ActualHealthLost > 0d)
             ApplyFatigueConsequence(attacker, target, applied.Damage, generation, step, facts);
-        if (applied.Damage > 0) ApplyPhysicalWear(attacker, target, body, applied.Damage, enemy, generation, step);
+        if (applied.Damage > 0) ApplyPhysicalWear(attacker, target, body, applied.Damage, enemy, generation, step, facts);
     }
 
     /// <summary>
@@ -471,32 +472,54 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     }
 
     /// <summary>
-    /// Physical wear happens only after the one accepted hit result. The donor charges the struck
-    /// weapon and either a covering shield or the armor for the rolled body part; separate keyed
-    /// draws preserve the donor's independent minimum-wear rolls without adding a second hit path.
+    /// Physical wear happens only after the one accepted hit result. Classic wears equipment only for a
+    /// weapon strike, so an unarmed or natural attack leaves the target's armour untouched: the donor
+    /// reaches its whole wear block from the branch that has a weapon in hand. The attacker's weapon
+    /// wears first, then the shield covering the struck body part, or that part's armour when no shield
+    /// covers it. Separate keyed draws preserve the donor's independent minimum-wear rolls without
+    /// adding a second hit path.
     /// </summary>
-    private void ApplyPhysicalWear(long attacker, long target, int body, int damage, bool enemy, ulong generation, ulong step)
+    private void ApplyPhysicalWear(long attacker, long target, int body, int damage, bool enemy, ulong generation, ulong step, FactBuffer<IProductFact> facts)
     {
         if (_itemCondition is null) return;
-        if (EquippedWeapon(attacker) is WorldRpg.Kit.Inventory.UniqueInventoryItem weapon)
-            DamageCondition(weapon, attacker, ConditionUnits(attacker, target, damage, enemy, generation, step, CombatRandomKey.WeaponConditionSalt));
-        if (EquippedDefence(target, body) is WorldRpg.Kit.Inventory.UniqueInventoryItem defence)
-            DamageCondition(defence, target, ConditionUnits(attacker, target, damage, enemy, generation, step, CombatRandomKey.ArmorConditionSalt));
+        if (EquippedWeapon(attacker) is not WorldRpg.Kit.Inventory.UniqueInventoryItem weapon) return;
+        WorldRpg.Kit.Inventory.UniqueInventoryItem? shield = EquippedShield(target, body);
+        WorldRpg.Kit.Inventory.UniqueInventoryItem? armour = shield is null ? EquippedArmour(target, body) : null;
+        DaggerfallStruckEquipment struck = DaggerfallFormulaPolicy.DamageEquipment(
+            weaponStrike: true, shieldCoversStruckBodyPart: shield is not null, armourAtStruckBodyPart: armour is not null);
+        DamageCondition(weapon, attacker, ConditionUnits(attacker, target, damage, enemy, generation, step, CombatRandomKey.WeaponConditionSalt), generation, step, facts);
+        WorldRpg.Kit.Inventory.UniqueInventoryItem? struckItem = struck switch
+        {
+            DaggerfallStruckEquipment.Shield => shield,
+            DaggerfallStruckEquipment.Armour => armour,
+            _ => null,
+        };
+        if (struckItem is { } worn)
+            DamageCondition(worn, target, ConditionUnits(attacker, target, damage, enemy, generation, step, CombatRandomKey.ArmorConditionSalt), generation, step, facts);
     }
 
-    private void DamageCondition(WorldRpg.Kit.Inventory.UniqueInventoryItem item, long owner, int units)
+    /// <summary>
+    /// One item's wear: the condition service owns the durable mutation and the break's single
+    /// equipment removal, and the emitted fact is how the rest of the product sees the result.
+    /// </summary>
+    private void DamageCondition(WorldRpg.Kit.Inventory.UniqueInventoryItem item, long owner, int units,
+        ulong generation, ulong step, FactBuffer<IProductFact> facts)
     {
         if (units <= 0) return;
-        if (owner == PlayerId) _ = _itemCondition!.Damage(item, units);
-        else _ = _itemCondition!.Damage(item, DaggerfallItemOwner.Actor(owner), _actorEquipment(owner), units);
+        DaggerfallItemConditionResult result = owner == PlayerId
+            ? _itemCondition!.Damage(item, units)
+            : _itemCondition!.Damage(item, DaggerfallItemOwner.Actor(owner), _actorEquipment(owner), units);
+        facts.Append(new EquipmentWornFact(owner, result.DurableItemId, result.Metadata.ItemId,
+            result.PreviousCondition, result.Metadata.CurrentCondition,
+            result.Outcome == DaggerfallItemConditionOutcome.Broken, generation, step));
     }
 
     private int ConditionUnits(long attacker, long target, int damage, bool enemy, ulong generation, ulong step, int salt)
     {
-        int units = checked((10 * damage + 50) / 100);
-        return units != 0 || Draw(new ExplicitMeleeRequest(attacker, target, generation, step, 1d), attacker, target, salt, 1, 100, enemy) > 20
-            ? units
-            : 1;
+        int scaled = DaggerfallFormulaPolicy.ConditionDamageScale(damage);
+        if (scaled != 0) return scaled;
+        return DaggerfallFormulaPolicy.ApplyConditionDamageThroughPhysicalHit(damage,
+            Draw(new ExplicitMeleeRequest(attacker, target, generation, step, 1d), attacker, target, salt, 1, 100, enemy));
     }
 
     private WorldRpg.Kit.Inventory.UniqueInventoryItem? EquippedWeapon(long owner)
@@ -508,17 +531,25 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         return null;
     }
 
-    private WorldRpg.Kit.Inventory.UniqueInventoryItem? EquippedDefence(long owner, int body)
+    /// <summary>A shield the owner wears in the left hand when it covers the struck body part, if any.</summary>
+    private WorldRpg.Kit.Inventory.UniqueInventoryItem? EquippedShield(long owner, int body)
     {
         EquipmentRead equipment = owner == PlayerId ? _equipment.Read() : _actorEquipment(owner).Read();
-        if (equipment.TryGet(new WorldRpg.Kit.Inventory.EquipmentSlotId("left-hand"), out WorldRpg.Kit.Inventory.UniqueInventoryItem shield)
+        return equipment.TryGet(new WorldRpg.Kit.Inventory.EquipmentSlotId("left-hand"), out WorldRpg.Kit.Inventory.UniqueInventoryItem shield)
             && _catalog.RequireItem(new DaggerfallItemId(shield.Definition.Value)) is { Shield: not null } shieldDefinition
-            && ShieldCovers(shieldDefinition, body)) return shield;
+            && ShieldCovers(shieldDefinition, body)
+            ? shield : null;
+    }
+
+    /// <summary>Armour worn on the struck body part. Classic never wears the armour a shield already covers.</summary>
+    private WorldRpg.Kit.Inventory.UniqueInventoryItem? EquippedArmour(long owner, int body)
+    {
         string slot = body switch
         {
             0 => "head", 1 => "right-arm", 2 => "left-arm", 3 => "chest-armor",
             4 => "gloves", 5 => "legs-armor", 6 => "feet", _ => throw new ArgumentOutOfRangeException(nameof(body)),
         };
+        EquipmentRead equipment = owner == PlayerId ? _equipment.Read() : _actorEquipment(owner).Read();
         return equipment.TryGet(new WorldRpg.Kit.Inventory.EquipmentSlotId(slot), out WorldRpg.Kit.Inventory.UniqueInventoryItem armor)
             && _catalog.RequireItem(new DaggerfallItemId(armor.Definition.Value)).Armor is not null ? armor : null;
     }

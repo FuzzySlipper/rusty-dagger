@@ -79,7 +79,17 @@ internal static class DaggerActorFactory
                 KitUniqueInventoryItem item = equipmentCoordinator.Materialize(
                     new DurableIdentityReference(DurableIdentityKind.Item, entry.UniqueEntityId!.Value),
                     new InventoryItemId(entry.ItemId.Value));
-                itemInstances.RegisterDefaultUnique(entry.UniqueEntityId.Value, definitions.RequireItem(entry.ItemId), DaggerfallItemOwner.Player);
+                // A starting weapon, shield or suit of armour enters play with the condition its native
+                // template and material author. Anything else would put a one-unit wear budget on gear
+                // that the first landed physical hit takes to nothing.
+                DaggerfallItemDefinition loadoutDefinition = definitions.RequireItem(entry.ItemId);
+                int condition = definitions.AuthoredMaximumCondition(loadoutDefinition);
+                itemInstances.RegisterUnique(entry.UniqueEntityId.Value,
+                    DaggerfallItemInstanceMetadata.Default(loadoutDefinition, DaggerfallItemOwner.Player) with
+                    {
+                        CurrentCondition = condition,
+                        MaximumCondition = condition,
+                    });
                 if (entry.EquipSlot is DaggerfallEquipmentSlotId slot)
                 {
                     equipmentCoordinator.Equip(
