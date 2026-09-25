@@ -71,28 +71,74 @@ public sealed class DaggerfallHeldEnchantmentTests
         fixture.EquipEnchanted("iron-cuirass", 8001, "magic-item.0051", equip: true);  // Lord's Mail, all the time
         fixture.Refresh();
 
-        fixture.AdvanceRounds(firstMinuteIndex: 0, minutes: 3);
+        fixture.AdvanceRounds(minutes: 3);
         Assert.Equal(maximum - 10, fixture.Health());
 
-        fixture.AdvanceRounds(firstMinuteIndex: 3, minutes: 1);
+        fixture.AdvanceRounds(minutes: 1);
         Assert.Equal(maximum - 9, fixture.Health());
 
         // Eight more rounds cover two fourth-round beats rather than one.
-        fixture.AdvanceRounds(firstMinuteIndex: 4, minutes: 8);
+        fixture.AdvanceRounds(minutes: 8);
         Assert.Equal(maximum - 7, fixture.Health());
 
         // The donor clamps at the maximum rather than overhealing.
         fixture.SetHealth(maximum - 1);
-        fixture.AdvanceRounds(firstMinuteIndex: 12, minutes: 4);
+        fixture.AdvanceRounds(minutes: 4);
         Assert.Equal(maximum, fixture.Health());
-        fixture.AdvanceRounds(firstMinuteIndex: 16, minutes: 4);
+        fixture.AdvanceRounds(minutes: 4);
         Assert.Equal(maximum, fixture.Health());
 
         fixture.Unequip(8001);
         fixture.Refresh();
         fixture.SetHealth(maximum - 4);
-        fixture.AdvanceRounds(firstMinuteIndex: 20, minutes: 8);
+        fixture.AdvanceRounds(minutes: 8);
         Assert.Equal(maximum - 4, fixture.Health());
+    }
+
+    [Fact]
+    public void Sunlight_is_the_donors_reading_of_daytime_outside_every_structure()
+    {
+        // The donor reads daytime while the player is not inside anything, so a building is darkness by
+        // day exactly as a dungeon is, and prison is darkness whatever the sky says.
+        Assert.True(DaggerfallHeldEnchantments.InSunlight(isDay: true, insideStructure: false, inPrison: false));
+        Assert.False(DaggerfallHeldEnchantments.InSunlight(isDay: false, insideStructure: false, inPrison: false));
+        Assert.False(DaggerfallHeldEnchantments.InSunlight(isDay: true, insideStructure: true, inPrison: false));
+        Assert.False(DaggerfallHeldEnchantments.InSunlight(isDay: true, insideStructure: false, inPrison: true));
+    }
+
+    [Fact]
+    public void A_regeneration_outside_the_donors_params_never_heals()
+    {
+        using Fixture fixture = new();
+        int maximum = fixture.HealthMaximum();
+        fixture.SetHealth(maximum - 10);
+        fixture.EquipEnchanted("iron-cuirass", 9001, "test.regen-unknown", equip: true);
+        fixture.Refresh();
+
+        fixture.Sunlight = true;
+        fixture.AdvanceRounds(minutes: 40);
+        Assert.Equal(maximum - 10, fixture.Health());
+
+        fixture.Sunlight = false;
+        fixture.AdvanceRounds(minutes: 40);
+        Assert.Equal(maximum - 10, fixture.Health());
+    }
+
+    [Fact]
+    public void A_very_long_interval_regenerates_no_further_than_the_effect_cap()
+    {
+        // The donor bounds elapsed catch-up, and the effect lifecycle's cap is that same bound, so a
+        // held payload cannot out-heal the effects running beside it.
+        using Fixture fixture = new();
+        int maximum = fixture.HealthMaximum();
+        fixture.EquipEnchanted("iron-cuirass", 9002, "magic-item.0051", equip: true);
+        fixture.Refresh();
+
+        fixture.SetHealth(1);
+        fixture.AdvanceRounds(minutes: int.MaxValue);
+
+        int cap = checked((int)DaggerfallEffectLifecycle.MaximumElapsedCatchupRounds);
+        Assert.Equal(Math.Min(maximum, 1 + (cap / 4)), fixture.Health());
     }
 
     [Fact]
@@ -107,19 +153,19 @@ public sealed class DaggerfallHeldEnchantmentTests
 
         // Daylight outdoors: only the sunlight source ticks, so one point per fourth round.
         fixture.Sunlight = true;
-        fixture.AdvanceRounds(firstMinuteIndex: 0, minutes: 4);
+        fixture.AdvanceRounds(minutes: 4);
         Assert.Equal(maximum - 9, fixture.Health());
 
         // Darkness: only the darkness source ticks.
         fixture.Sunlight = false;
-        fixture.AdvanceRounds(firstMinuteIndex: 4, minutes: 4);
+        fixture.AdvanceRounds(minutes: 4);
         Assert.Equal(maximum - 8, fixture.Health());
 
         // Two sources whose condition holds at the same time tick twice in a round.
         fixture.EquipEnchanted("iron-longsword", 8004, "test.regen-sunlight", equip: true);
         fixture.Refresh();
         fixture.Sunlight = true;
-        fixture.AdvanceRounds(firstMinuteIndex: 8, minutes: 4);
+        fixture.AdvanceRounds(minutes: 4);
         Assert.Equal(maximum - 6, fixture.Health());
     }
 
@@ -362,7 +408,7 @@ public sealed class DaggerfallHeldEnchantmentTests
 
         internal void Refresh() => _held.Refresh();
 
-        internal void AdvanceRounds(long firstMinuteIndex, int minutes) => _held.AdvanceRounds(firstMinuteIndex, minutes);
+        internal void AdvanceRounds(int minutes) => _held.AdvanceRounds(minutes);
 
         internal bool Sunlight { set => _sunlight = value; }
 
@@ -410,6 +456,7 @@ public sealed class DaggerfallHeldEnchantmentTests
             yield return Setting("test.talents", 13, 2);          // ImprovesTalents adrenaline rush
             yield return Setting("test.regen-sunlight", 5, 1);    // RegensHealth in sunlight
             yield return Setting("test.regen-darkness", 5, 2);    // RegensHealth in darkness
+            yield return Setting("test.regen-unknown", 5, 9);     // RegensHealth with a param it never named
         }
 
         private static DaggerfallMagicItemDefinition Setting(string key, int type, int param) => new(

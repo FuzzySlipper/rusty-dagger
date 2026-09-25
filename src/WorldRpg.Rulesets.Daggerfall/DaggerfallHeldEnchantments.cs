@@ -65,6 +65,7 @@ internal sealed class DaggerfallHeldEnchantments
     private const int AlwaysRegenerates = 0;
     private const int SunlightRegenerates = 1;
     private const int DarknessRegenerates = 2;
+    private const int NeverRegenerates = 3;
 
     /// <summary>
     /// The classic skill order the enchantment param indexes, mirroring the donor's
@@ -91,9 +92,13 @@ internal sealed class DaggerfallHeldEnchantments
     private readonly Func<bool> _playerInSunlight;
     private readonly List<AppliedContribution> _applied = [];
     // Indexed by the donor's RegensHealth params: always, in sunlight, in darkness.
-    private readonly int[] _regeneration = new int[3];
+    private readonly int[] _regeneration = new int[4];
     private HeldSignature? _signature;
-    private int _regenerationTotal => _regeneration[AlwaysRegenerates] + _regeneration[SunlightRegenerates] + _regeneration[DarknessRegenerates];
+    // The donor counts magic rounds since startup or load and resets that count on either, so the
+    // every-fourth-round beat is anchored to the session rather than to the calendar's absolute minute.
+    private long _roundsSinceStart;
+    private int _regenerationTotal => _regeneration[AlwaysRegenerates] + _regeneration[SunlightRegenerates]
+        + _regeneration[DarknessRegenerates];
 
     internal DaggerfallHeldEnchantments(MechanicsEquipmentCoordinator equipment, DaggerfallItemInstances instances,
         IReadOnlyDictionary<string, DaggerfallMagicItemDefinition> magicItems, StatsComponent playerStats, EntityDirectory entities, EntityId actor,
@@ -194,18 +199,22 @@ internal sealed class DaggerfallHeldEnchantments
     /// the donor's every-fourth-round beat without a counter to keep or restore, and a catch-up interval
     /// regenerates for every fourth round it covered rather than once.
     /// </summary>
-    /// <param name="firstMinuteIndex">The minute index the elapsed interval started from.</param>
     /// <param name="minutes">How many magic rounds that interval covered.</param>
-    internal void AdvanceRounds(long firstMinuteIndex, int minutes)
+    internal void AdvanceRounds(int minutes)
     {
-        if (minutes <= 0 || _regenerationTotal == 0) return;
+        if (minutes <= 0) return;
+        // The donor bounds its own catch-up well below a year of minutes; the effect lifecycle's cap is
+        // that same bound, reused here so a held payload cannot out-heal the effects beside it.
+        int rounds = Math.Min(minutes, checked((int)DaggerfallEffectLifecycle.MaximumElapsedCatchupRounds));
         int ticks = 0;
-        for (int round = 1; round <= minutes; round++)
-            if ((firstMinuteIndex + round) % RoundsPerRegeneration == 0) ticks++;
-        if (ticks == 0) return;
+        for (int round = 1; round <= rounds; round++)
+            if ((_roundsSinceStart + round) % RoundsPerRegeneration == 0) ticks++;
+        _roundsSinceStart += rounds;
+        if (ticks == 0 || _regenerationTotal == 0) return;
 
         bool sunlight = _playerInSunlight();
-        int sources = _regeneration[AlwaysRegenerates] + _regeneration[sunlight ? SunlightRegenerates : DarknessRegenerates];
+        int sources = _regeneration[AlwaysRegenerates]
+            + _regeneration[sunlight ? SunlightRegenerates : DarknessRegenerates];
         if (sources == 0) return;
 
         Track health = _stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
@@ -337,14 +346,23 @@ internal sealed class DaggerfallHeldEnchantments
         return signature;
     }
 
-    /// <summary>The donor's RegensHealth params: all the time, in sunlight, in darkness.</summary>
+    /// <summary>
+    /// The donor's RegensHealth params: all the time, in sunlight, in darkness. The donor leaves its
+    /// own switch without a default, so a param it does not name never regenerates.
+    /// </summary>
     private static int RegenerationCondition(int param) => param switch
     {
         0 => AlwaysRegenerates,
         1 => SunlightRegenerates,
         2 => DarknessRegenerates,
-        _ => AlwaysRegenerates,
+        _ => NeverRegenerates,
     };
+
+    /// <summary>
+    /// Whether the player stands in sunlight, exactly as the donor reads it: daytime, not inside any
+    /// structure — a building counts as much as a dungeon — and not in prison.
+    /// </summary>
+    internal static bool InSunlight(bool isDay, bool insideStructure, bool inPrison) => isDay && !insideStructure && !inPrison;
 
     internal static double WeightMultiplier(int param) => param switch
     {
