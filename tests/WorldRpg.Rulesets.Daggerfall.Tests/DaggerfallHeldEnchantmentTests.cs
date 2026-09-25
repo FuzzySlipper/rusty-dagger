@@ -71,15 +71,20 @@ public sealed class DaggerfallHeldEnchantmentTests
         fixture.EquipEnchanted("iron-cuirass", 8001, "magic-item.0051", equip: true);  // Lord's Mail, all the time
         fixture.Refresh();
 
-        fixture.AdvanceRounds(minutes: 3);
-        Assert.Equal(maximum - 10, fixture.Health());
-
+        // The donor reads its round count before the round it serves, so the first round after a load is
+        // itself a beat and the next one comes three rounds later.
         fixture.AdvanceRounds(minutes: 1);
         Assert.Equal(maximum - 9, fixture.Health());
 
-        // Eight more rounds cover two fourth-round beats rather than one.
+        fixture.AdvanceRounds(minutes: 3);
+        Assert.Equal(maximum - 9, fixture.Health());
+
+        fixture.AdvanceRounds(minutes: 1);
+        Assert.Equal(maximum - 8, fixture.Health());
+
+        // Eight rounds from a count of five carry two beats, at counts eight and twelve.
         fixture.AdvanceRounds(minutes: 8);
-        Assert.Equal(maximum - 7, fixture.Health());
+        Assert.Equal(maximum - 6, fixture.Health());
 
         // The donor clamps at the maximum rather than overhealing.
         fixture.SetHealth(maximum - 1);
@@ -134,11 +139,16 @@ public sealed class DaggerfallHeldEnchantmentTests
         fixture.EquipEnchanted("iron-cuirass", 9002, "magic-item.0051", equip: true);
         fixture.Refresh();
 
+        // The bound is the donor's own two days of minutes, and it is the lifecycle's bound, not a
+        // second number: doubling it or changing the shared constant must fail here.
+        Assert.Equal(2880u, DaggerfallEffectLifecycle.MaximumElapsedCatchupRounds);
         fixture.SetHealth(1);
         fixture.AdvanceRounds(minutes: int.MaxValue);
+        Assert.Equal(maximum, fixture.Health());
 
-        int cap = checked((int)DaggerfallEffectLifecycle.MaximumElapsedCatchupRounds);
-        Assert.Equal(Math.Min(maximum, 1 + (cap / 4)), fixture.Health());
+        fixture.SetHealth(1);
+        fixture.AdvanceRounds(minutes: 100_000);
+        Assert.Equal(maximum, fixture.Health());
     }
 
     [Fact]
