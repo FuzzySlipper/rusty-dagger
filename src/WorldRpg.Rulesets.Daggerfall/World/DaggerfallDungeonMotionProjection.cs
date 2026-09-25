@@ -265,8 +265,11 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
             uint firstVertex = checked((uint)vertices.Count);
             uint firstTriangle = checked((uint)triangles.Count);
             vertices.AddRange(item.Definition.CollisionVertices);
-            foreach (Triangle triangle in item.Definition.CollisionTriangles)
-                triangles.Add(new(firstVertex + triangle.A, firstVertex + triangle.B, firstVertex + triangle.C));
+            // The Engine slices each asset's own vertices and triangles out of these shared arrays, so a
+            // triangle index stays local to its own asset exactly as the authored model carries it.
+            // Offset indices name vertices the asset's slice does not hold, which Engine rejects
+            // outright instead of resolving them against the neighbouring asset's vertices.
+            triangles.AddRange(item.Definition.CollisionTriangles);
             assets.Add(new StaticMeshAsset(
                 item.AssetId,
                 firstVertex,
