@@ -29,6 +29,21 @@ internal static class DaggerfallTemplateItemDefinitions
         [110] = "round-shield", [111] = "kite-shield", [112] = "tower-shield",
     };
 
+    /// <summary>
+    /// The native template an authored weapon, armor or ammunition item materializes from. An authored
+    /// item carries the interpreted shape the product publishes; its native record carries the hit
+    /// points and material scaling that become the instance's condition, so a caller that needs the
+    /// authored condition asks for the template rather than inventing one from the item's name.
+    /// </summary>
+    internal static int? TemplateIndexForAuthoredItem(DaggerfallItemId id)
+    {
+        foreach ((int index, string authored) in WeaponSources)
+            if (string.Equals(id.Value, authored, StringComparison.Ordinal)) return index;
+        foreach ((int index, string authored) in ArmorSources)
+            if (string.Equals(id.Value, authored, StringComparison.Ordinal)) return index;
+        return string.Equals(id.Value, "arrow", StringComparison.Ordinal) ? 131 : null;
+    }
+
     internal static IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> Create(
         DaggerfallItemTemplateSet templates,
         IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> authored,

@@ -29,6 +29,7 @@ internal sealed record DaggerfallItemConditionResult(
     DaggerfallItemConditionOutcome Outcome,
     ulong DurableItemId,
     DaggerfallItemInstanceMetadata Metadata,
+    int PreviousCondition,
     DaggerfallEquipmentChange? EquipmentChange = null);
 
 /// <summary>
@@ -96,7 +97,7 @@ internal sealed class DaggerfallItemConditionService(
         if (metadata.MaximumCondition == 0)
             throw new InvalidOperationException($"Item '{metadata.ItemId}' has no condition units.");
         if (metadata.CurrentCondition == 0)
-            return new(DaggerfallItemConditionOutcome.AlreadyBroken, durableItemId, metadata);
+            return new(DaggerfallItemConditionOutcome.AlreadyBroken, durableItemId, metadata, metadata.CurrentCondition);
 
         int current = Math.Max(0, checked(metadata.CurrentCondition - units));
         DaggerfallEquipmentChange? removed = null;
@@ -107,8 +108,8 @@ internal sealed class DaggerfallItemConditionService(
         DaggerfallItemInstanceMetadata changed = metadata with { CurrentCondition = current };
         instances.ReplaceUnique(durableItemId, changed);
         if (current != 0)
-            return new(DaggerfallItemConditionOutcome.Damaged, durableItemId, changed);
-        return new(DaggerfallItemConditionOutcome.Broken, durableItemId, changed, removed);
+            return new(DaggerfallItemConditionOutcome.Damaged, durableItemId, changed, metadata.CurrentCondition);
+        return new(DaggerfallItemConditionOutcome.Broken, durableItemId, changed, metadata.CurrentCondition, removed);
     }
 
     /// <summary>Restores an existing condition-bearing item to its authored maximum without changing durable identity.</summary>
@@ -118,10 +119,10 @@ internal sealed class DaggerfallItemConditionService(
         if (metadata.MaximumCondition == 0)
             throw new InvalidOperationException($"Item '{metadata.ItemId}' has no condition units to repair.");
         if (metadata.CurrentCondition == metadata.MaximumCondition)
-            return new(DaggerfallItemConditionOutcome.AlreadyRepaired, durableItemId, metadata);
+            return new(DaggerfallItemConditionOutcome.AlreadyRepaired, durableItemId, metadata, metadata.CurrentCondition);
         DaggerfallItemInstanceMetadata repaired = metadata with { CurrentCondition = metadata.MaximumCondition };
         instances.ReplaceUnique(durableItemId, repaired);
-        return new(DaggerfallItemConditionOutcome.Repaired, durableItemId, repaired);
+        return new(DaggerfallItemConditionOutcome.Repaired, durableItemId, repaired, metadata.CurrentCondition);
     }
 
     /// <summary>Restores a bounded number of fuel condition units without changing durable identity.</summary>
@@ -132,13 +133,13 @@ internal sealed class DaggerfallItemConditionService(
         if (metadata.MaximumCondition == 0)
             throw new InvalidOperationException($"Item '{metadata.ItemId}' has no condition units to refuel.");
         if (metadata.CurrentCondition == metadata.MaximumCondition)
-            return new(DaggerfallItemConditionOutcome.AlreadyRepaired, durableItemId, metadata);
+            return new(DaggerfallItemConditionOutcome.AlreadyRepaired, durableItemId, metadata, metadata.CurrentCondition);
         DaggerfallItemInstanceMetadata refueled = metadata with
         {
             CurrentCondition = Math.Min(metadata.MaximumCondition, checked(metadata.CurrentCondition + units)),
         };
         instances.ReplaceUnique(durableItemId, refueled);
-        return new(DaggerfallItemConditionOutcome.Repaired, durableItemId, refueled);
+        return new(DaggerfallItemConditionOutcome.Repaired, durableItemId, refueled, metadata.CurrentCondition);
     }
 
     /// <summary>Discloses the published magic template for an existing enchanted instance without changing its identity.</summary>
@@ -146,11 +147,11 @@ internal sealed class DaggerfallItemConditionService(
     {
         (ulong durableItemId, DaggerfallItemInstanceMetadata metadata) = RequirePlayerItem(item);
         if (metadata.Enchantment is null || metadata.Identified)
-            return new(DaggerfallItemConditionOutcome.AlreadyIdentified, durableItemId, metadata);
+            return new(DaggerfallItemConditionOutcome.AlreadyIdentified, durableItemId, metadata, metadata.CurrentCondition);
         RequireMagic(metadata);
         DaggerfallItemInstanceMetadata identified = metadata with { Identified = true };
         instances.ReplaceUnique(durableItemId, identified);
-        return new(DaggerfallItemConditionOutcome.Identified, durableItemId, identified);
+        return new(DaggerfallItemConditionOutcome.Identified, durableItemId, identified, metadata.CurrentCondition);
     }
 
     /// <summary>
@@ -165,7 +166,7 @@ internal sealed class DaggerfallItemConditionService(
             ? found : throw new InvalidOperationException($"Magic item '{magicItemKey}' is not published.");
         if (metadata.Enchantment is not null)
         {
-            if (metadata.Enchantment == magic.Key) return new(DaggerfallItemConditionOutcome.AlreadyEnchanted, durableItemId, metadata);
+            if (metadata.Enchantment == magic.Key) return new(DaggerfallItemConditionOutcome.AlreadyEnchanted, durableItemId, metadata, metadata.CurrentCondition);
             throw new InvalidOperationException($"Item '{metadata.ItemId}' already has enchantment '{metadata.Enchantment}'.");
         }
         DaggerfallItemDefinition definition = definitions.RequireItem(new DaggerfallItemId(metadata.ItemId));
@@ -186,7 +187,7 @@ internal sealed class DaggerfallItemConditionService(
             MaximumCondition = magic.Uses,
         };
         instances.ReplaceUnique(durableItemId, enchanted);
-        return new(DaggerfallItemConditionOutcome.Enchanted, durableItemId, enchanted, unequipped.Change);
+        return new(DaggerfallItemConditionOutcome.Enchanted, durableItemId, enchanted, metadata.CurrentCondition, unequipped.Change);
     }
 
     internal DaggerfallItemCondition Condition(DaggerfallItemInstanceMetadata metadata) =>

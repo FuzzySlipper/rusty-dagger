@@ -67,6 +67,13 @@ internal sealed class DaggerfallOutcomePresentation(
             case LootAwardedFact loot:
                 presentation.AppendOutcome($"looted {loot.Quantity} {loot.ItemId}");
                 break;
+            // The donor reports only the break, never the condition loss that led to it, and names the
+            // item rather than the blow: "iron longsword has broken". Boots, gauntlets and greaves take
+            // the donor's plural phrasing. The clause appends to the hit that caused it, so the player
+            // reads what the swing did and what it cost.
+            case EquipmentWornFact { Broken: true } worn:
+                presentation.AppendOutcome($"{worn.ItemId} {(PluralBreakItem(worn.ItemId) ? "have" : "has")} broken");
+                break;
             case CorpseSearchedEmptyFact:
                 presentation.SetOutcome("Corpse is empty");
                 break;
@@ -86,6 +93,12 @@ internal sealed class DaggerfallOutcomePresentation(
     }
 
     private string Name(long entityId) => Actor(entityId, out DaggerfallActorDefinition definition) ? definition.Id.Value : $"actor {entityId}";
+
+    /// <summary>The donor's own plural set for a break: boots, gauntlets and greaves break in the plural.</summary>
+    private static bool PluralBreakItem(string itemId) =>
+        itemId.EndsWith("boots", StringComparison.Ordinal)
+        || itemId.EndsWith("gauntlets", StringComparison.Ordinal)
+        || itemId.EndsWith("greaves", StringComparison.Ordinal);
 
     private bool Actor(long entityId, out DaggerfallActorDefinition definition) => actors.TryGetValue(entityId, out definition!);
 }

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
@@ -333,4 +334,24 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     /// <summary>The Daggerfall presentation owner for normalized lookup, layout and global macro expansion.</summary>
     internal DaggerfallTextResolver TextPresentation { get; } = new(text);
     internal DaggerfallActorDefinition RequireActor(DaggerfallActorId id) => Actors.TryGetValue(id, out DaggerfallActorDefinition? actor) ? actor : throw new InvalidOperationException($"Daggerfall definitions do not contain actor '{id.Value}'.");
+
+    /// <summary>
+    /// The condition units an authored item instance starts with: its native template's hit points
+    /// adjusted by the item's own material, exactly as the item factory initializes a created instance
+    /// before it can enter an inventory. An item with no native weapon, armor or ammunition template —
+    /// a gem, a book, a coin — carries one unit rather than an invented wear budget, and the donor's
+    /// arrow template carries none.
+    /// </summary>
+    internal int AuthoredMaximumCondition(DaggerfallItemDefinition definition)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        if (DaggerfallTemplateItemDefinitions.TemplateIndexForAuthoredItem(definition.Id) is not int index
+            || !ItemTemplateCatalog.Templates.TryGetValue(index, out DaggerfallItemTemplateDefinition? template))
+            return 1;
+        if (template.Index == 131) return 0;
+        string material = definition.Weapon?.Material ?? definition.Armor?.Material ?? "none";
+        return material == "none"
+            ? template.HitPoints
+            : DaggerfallItemMaterialPolicy.Apply(template, material).MaximumCondition;
+    }
 }
