@@ -11,18 +11,12 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>Which natural talents the worn items improve, as the donor's own params name them.</summary>
 internal readonly record struct DaggerfallHeldTalents(bool AcuteHearing, bool Athleticism, bool AdrenalineRush);
 
-/// <summary>A living creature that can satisfy a held enchantment's "near" condition.</summary>
-internal readonly record struct DaggerfallNearbyCreature(int? MobileId, WorldPoint Position);
-
-/// <summary>The donor's enemy groups, which is the vocabulary its near-creature conditions use.</summary>
-internal enum DaggerfallCreatureGroup
-{
-    None,
-    Undead,
-    Daedra,
-    Humanoid,
-    Animals,
-}
+/// <summary>
+/// A living creature that can satisfy a held enchantment's "near" condition, already grouped the way
+/// the donor groups it: the ruleset's own enemy-group policy answers that, so this owner never
+/// re-derives a grouping from a mobile id.
+/// </summary>
+internal readonly record struct DaggerfallNearbyCreature(DaggerfallEnemyGroup Group, WorldPoint Position);
 
 /// <summary>
 /// The enchantments the player's worn items hold. Daggerfall's item enchantments are "held" effect
@@ -47,9 +41,17 @@ internal sealed class DaggerfallHeldEnchantments
     private const int ExtraSpellPointsType = 3;
     private const int IncreasedWeightAllowanceType = 7;
     private const int EnhancesSkillType = 10;
+    private const int StrengthensArmorType = 12;
     private const int ImprovesTalentsType = 13;
 
     internal const int EnhancedSkillPoints = 15;
+
+    /// <summary>
+    /// The donor's StrengthensArmor shifts the wearer's armor value down by five, and a lower armor
+    /// value is the stronger rating. It sets one modifier rather than adding per item, so two worn
+    /// sources leave the same rating rather than doubling it.
+    /// </summary>
+    internal const int StrengthenedArmorValue = -5;
     internal const int ExtraSpellPoints = 75;
     internal const double NearbyCreatureMeters = 18d;
 
@@ -68,7 +70,7 @@ internal sealed class DaggerfallHeldEnchantments
 
     private readonly MechanicsEquipmentCoordinator _equipment;
     private readonly DaggerfallItemInstances _instances;
-    private readonly DaggerfallDefinitions _definitions;
+    private readonly IReadOnlyDictionary<string, DaggerfallMagicItemDefinition> _magicItems;
     private readonly StatsComponent _stats;
     private readonly EntityDirectory _entities;
     private readonly EntityId _actor;
@@ -79,12 +81,12 @@ internal sealed class DaggerfallHeldEnchantments
     private HeldSignature? _signature;
 
     internal DaggerfallHeldEnchantments(MechanicsEquipmentCoordinator equipment, DaggerfallItemInstances instances,
-        DaggerfallDefinitions definitions, StatsComponent playerStats, EntityDirectory entities, EntityId actor,
+        IReadOnlyDictionary<string, DaggerfallMagicItemDefinition> magicItems, StatsComponent playerStats, EntityDirectory entities, EntityId actor,
         Func<DaggerfallCalendar> calendar, Func<WorldPoint?> playerPosition, Func<IReadOnlyList<DaggerfallNearbyCreature>> nearby)
     {
         _equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
-        _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
+        _magicItems = magicItems ?? throw new ArgumentNullException(nameof(magicItems));
         _stats = playerStats ?? throw new ArgumentNullException(nameof(playerStats));
         _entities = entities ?? throw new ArgumentNullException(nameof(entities));
         _actor = actor;
@@ -98,6 +100,9 @@ internal sealed class DaggerfallHeldEnchantments
 
     /// <summary>What the worn items add to the player's carry allowance, ×1 when nothing does.</summary>
     internal double CarryMultiplier { get; private set; } = 1d;
+
+    /// <summary>The armor-value shift the worn items give, zero when none strengthens armor.</summary>
+    internal int ArmorValueModifier { get; private set; }
 
     /// <summary>
     /// Recomputes every held contribution when what they depend on changed: the equipment revision
@@ -121,6 +126,7 @@ internal sealed class DaggerfallHeldEnchantments
         _applied.Clear();
         Talents = default;
         double carry = 1d;
+        int armor = 0;
 
         foreach (WorldRpg.Kit.Inventory.EquipmentAssignment assignment in read.Assignments)
         {
@@ -138,6 +144,9 @@ internal sealed class DaggerfallHeldEnchantments
                     case IncreasedWeightAllowanceType:
                         carry = Math.Max(carry, WeightMultiplier(enchantment.Param));
                         break;
+                    case StrengthensArmorType:
+                        armor = StrengthenedArmorValue;
+                        break;
                     case ImprovesTalentsType:
                         Talents = Talent(enchantment.Param) switch
                         {
@@ -152,6 +161,7 @@ internal sealed class DaggerfallHeldEnchantments
         }
 
         CarryMultiplier = carry;
+        ArmorValueModifier = armor;
     }
 
     private void Apply(WorldRpg.Kit.Inventory.EquipmentAssignment assignment, DaggerfallMagicEnchantmentDefinition enchantment, DaggerfallStatId statId, int amount)
@@ -178,7 +188,7 @@ internal sealed class DaggerfallHeldEnchantments
         if (_entities.IdentityOf(new EntityId(assignment.Item.EntityId)) is not { Kind: DurableIdentityKind.Item } identity) return false;
         if (!_instances.ContainsUnique(identity.Value)) return false;
         if (_instances.RequireUnique(identity.Value).Enchantment is not { } key) return false;
-        if (!_definitions.Magic.MagicItems.TryGetValue(key, out DaggerfallMagicItemDefinition? published)) return false;
+        if (!_magicItems.TryGetValue(key, out DaggerfallMagicItemDefinition? published)) return false;
         magic = published;
         return true;
     }
@@ -212,20 +222,21 @@ internal sealed class DaggerfallHeldEnchantments
         4 => IsMoon(calendar, MoonPhase.Full),
         5 => IsMoon(calendar, MoonPhase.HalfWax) || IsMoon(calendar, MoonPhase.HalfWane),
         6 => IsMoon(calendar, MoonPhase.New),
-        7 => IsNear(nearby, DaggerfallCreatureGroup.Undead),
-        8 => IsNear(nearby, DaggerfallCreatureGroup.Daedra),
-        9 => IsNear(nearby, DaggerfallCreatureGroup.Humanoid),
-        10 => IsNear(nearby, DaggerfallCreatureGroup.Animals),
+        7 => IsNear(nearby, DaggerfallEnemyGroup.Undead),
+        8 => IsNear(nearby, DaggerfallEnemyGroup.Daedra),
+        9 => IsNear(nearby, DaggerfallEnemyGroup.Humanoid),
+        10 => IsNear(nearby, DaggerfallEnemyGroup.Animals),
         _ => false,
     };
 
-    private bool IsNear(IReadOnlyList<DaggerfallNearbyCreature> nearby, DaggerfallCreatureGroup group)
+    private bool IsNear(IReadOnlyList<DaggerfallNearbyCreature> nearby, DaggerfallEnemyGroup group)
     {
         if (_playerPosition() is not WorldPoint player) return false;
         foreach (DaggerfallNearbyCreature creature in nearby)
         {
-            if (CreatureGroup(creature.MobileId) != group) continue;
-            if (Distance(player, creature.Position) <= NearbyCreatureMeters) return true;
+            if (creature.Group != group) continue;
+            // The donor's lookup keeps every object strictly inside the radius.
+            if (Distance(player, creature.Position) < NearbyCreatureMeters) return true;
         }
         return false;
     }
@@ -266,10 +277,10 @@ internal sealed class DaggerfallHeldEnchantments
     private int NearbySignature(IReadOnlyList<DaggerfallNearbyCreature> nearby)
     {
         int signature = 0;
-        if (IsNear(nearby, DaggerfallCreatureGroup.Undead)) signature |= 1;
-        if (IsNear(nearby, DaggerfallCreatureGroup.Daedra)) signature |= 2;
-        if (IsNear(nearby, DaggerfallCreatureGroup.Humanoid)) signature |= 4;
-        if (IsNear(nearby, DaggerfallCreatureGroup.Animals)) signature |= 8;
+        if (IsNear(nearby, DaggerfallEnemyGroup.Undead)) signature |= 1;
+        if (IsNear(nearby, DaggerfallEnemyGroup.Daedra)) signature |= 2;
+        if (IsNear(nearby, DaggerfallEnemyGroup.Humanoid)) signature |= 4;
+        if (IsNear(nearby, DaggerfallEnemyGroup.Animals)) signature |= 8;
         return signature;
     }
 
@@ -286,20 +297,6 @@ internal sealed class DaggerfallHeldEnchantments
         1 => DaggerfallHeldTalentKind.Athleticism,
         2 => DaggerfallHeldTalentKind.AdrenalineRush,
         _ => DaggerfallHeldTalentKind.None,
-    };
-
-    /// <summary>
-    /// The donor's own enemy grouping (<c>FormulaHelper.GetEnemyEntityEnemyGroup</c>), keyed by mobile
-    /// as its own monster-career enumeration orders them. A creature the donor leaves ungrouped stays
-    /// ungrouped here rather than being guessed into a category.
-    /// </summary>
-    internal static DaggerfallCreatureGroup CreatureGroup(int? mobileId) => mobileId switch
-    {
-        0 or 3 or 4 or 5 or 6 or 11 or 20 or 34 or 39 or 40 => DaggerfallCreatureGroup.Animals,
-        1 or 2 or 7 or 8 or 9 or 10 or 12 or 13 or 14 or 16 or 21 or 22 or 24 or 41 or 42 => DaggerfallCreatureGroup.Humanoid,
-        15 or 17 or 18 or 19 or 23 or 28 or 30 or 32 or 33 => DaggerfallCreatureGroup.Undead,
-        25 or 26 or 27 or 29 or 31 => DaggerfallCreatureGroup.Daedra,
-        _ => DaggerfallCreatureGroup.None,
     };
 
     internal enum DaggerfallHeldTalentKind { None, AcuteHearing, Athleticism, AdrenalineRush }

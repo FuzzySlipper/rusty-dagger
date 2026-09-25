@@ -394,6 +394,26 @@ public sealed class DaggerCombatDamagePolicyTests
     }
 
     [Fact]
+    public void A_strengthened_armor_value_makes_the_worn_player_harder_to_hit()
+    {
+        // StrengthensArmor shifts the wearer's armor value down by five, and the classic hit chance
+        // adds that value: a lower value must mean a lower chance to hit, not a higher one.
+        using DamagePolicyFixture plain = new(armed: true);
+        plain.EquipNpcWeapon(2, "iron-longsword", 9001);
+        plain.Script(body: 5, critical: 50, hit: 1, damage: 7);
+        PreparedResolution unarmoured = plain.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+
+        using DamagePolicyFixture strengthened = new(armed: true, armorValueShift: -5);
+        strengthened.EquipNpcWeapon(2, "iron-longsword", 9001);
+        strengthened.Script(body: 5, critical: 50, hit: 1, damage: 7);
+        PreparedResolution armoured = strengthened.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+
+        Assert.True(unarmoured.Admitted && armoured.Admitted);
+        Assert.Equal(unarmoured.Outcome.Chance - 5, armoured.Outcome.Chance);
+        Assert.Equal(unarmoured.Outcome.Hit, armoured.Outcome.Hit);
+    }
+
+    [Fact]
     public void A_shot_that_meets_cover_lands_nothing_and_says_so()
     {
         // Static geometry on the release line stops the missile before the target: neither the roll
@@ -479,7 +499,7 @@ public sealed class DaggerCombatDamagePolicyTests
 
         private DaggerfallCharacterState? _character;
 
-        internal DamagePolicyFixture(bool armed = true, Func<WorldPoint, WorldPoint, bool>? coverBlocks = null)
+        internal DamagePolicyFixture(bool armed = true, Func<WorldPoint, WorldPoint, bool>? coverBlocks = null, int armorValueShift = 0)
         {
             DaggerfallDefinitions definitions = Definitions;
             DaggerfallActorDefinition playerDefinition = definitions.RequireActor(new DaggerfallActorId("player"));
@@ -509,7 +529,8 @@ public sealed class DaggerCombatDamagePolicyTests
                 id => _actorInventories.TryGetValue(id, out MechanicsInventoryCoordinator? quiver) ? quiver : null,
                 _itemInstances, definitions, _authored, null!,
                 actorEquipment: id => _actorEquipment.TryGetValue(id, out MechanicsEquipmentCoordinator? coordinator) ? coordinator : _playerEquipment,
-                playerPosition: () => _playerPosition, character: () => _character, coverBlocksShot: coverBlocks);
+                playerPosition: () => _playerPosition, character: () => _character, coverBlocksShot: coverBlocks,
+                armorValueModifier: () => armorValueShift);
         }
 
         internal void Script(int body, int critical, int hit, int? damage = null, int? backstabRoll = null)

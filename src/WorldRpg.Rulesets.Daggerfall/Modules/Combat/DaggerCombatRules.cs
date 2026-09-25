@@ -43,6 +43,8 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     private readonly Func<DaggerfallSwingDirection> _playerSwing;
     /// <summary>Whether admitted static geometry stands between a shot's release and its aim.</summary>
     private readonly Func<WorldPoint, WorldPoint, bool>? coverBlocksShot;
+    /// <summary>The armor-value shift the defender's worn enchantments give, zero when none do.</summary>
+    private readonly Func<int> _armorValueModifier;
     internal AttackCapabilities<IProductFact> Attacks { get; }
     internal TargetingService Targeting { get; }
     internal AttackExecution<IProductFact> Execution { get; }
@@ -61,7 +63,8 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         Func<long, MechanicsEquipmentCoordinator>? actorEquipment = null, DaggerfallItemConditionService? itemCondition = null,
         CombatResolution? rules = null, Func<long, DaggerfallAdrenalineRush>? adrenalineRush = null,
         Func<WorldPoint?>? playerPosition = null, Func<DaggerfallCharacterState?>? character = null,
-        Func<DaggerfallSwingDirection>? playerSwing = null, Func<WorldPoint, WorldPoint, bool>? coverBlocksShot = null)
+        Func<DaggerfallSwingDirection>? playerSwing = null, Func<WorldPoint, WorldPoint, bool>? coverBlocksShot = null,
+        Func<int>? armorValueModifier = null)
     {
         _random = random;
         Rules = rules ?? new CombatResolution();
@@ -84,6 +87,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         _character = character ?? (() => null);
         _playerSwing = playerSwing ?? (() => DaggerfallSwingDirection.None);
         this.coverBlocksShot = coverBlocksShot;
+        _armorValueModifier = armorValueModifier ?? (() => 0);
         Targeting = targeting;
         Attacks = new(PlayerId, Targeting, Execution, ReachOf, facts => facts.Append(new AttackRejectedFact(AttackRejection.MissingPlayerPosition)));
     }
@@ -762,6 +766,13 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
             else if (item.Shield is { } shield && assignment.Slot.Value == "left-hand" && ShieldCovers(item, body))
                 equipmentBonus = checked(equipmentBonus + (shield.Armor * 5));
         }
+
+        // A worn StrengthensArmor enchantment shifts the defender's whole armor value, which is why it
+        // applies once here rather than to any one piece the way a material's rating does. The donor
+        // shifts the value down to make armour stronger, and this ruleset accumulates the value's
+        // complement — ArmorToHit below turns the bonus back into the value the hit chance adds — so
+        // the shift is subtracted from the bonus rather than added to it.
+        if (target.Id == PlayerId) equipmentBonus = checked(equipmentBonus - _armorValueModifier());
 
         int equipmentArmor = checked(100 - equipmentBonus);
         return target.Definition.Kind switch
