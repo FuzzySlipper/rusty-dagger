@@ -162,30 +162,46 @@ internal sealed class DaggerfallItemConditionService(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(magicItemKey);
         (ulong durableItemId, DaggerfallItemInstanceMetadata metadata) = RequirePlayerItem(item);
-        DaggerfallMagicItemDefinition magic = definitions.Magic.MagicItems.TryGetValue(magicItemKey, out DaggerfallMagicItemDefinition? found)
-            ? found : throw new InvalidOperationException($"Magic item '{magicItemKey}' is not published.");
-        if (metadata.Enchantment is not null)
+        if (metadata.Enchantment is { } existing)
         {
-            if (metadata.Enchantment == magic.Key) return new(DaggerfallItemConditionOutcome.AlreadyEnchanted, durableItemId, metadata, metadata.CurrentCondition);
-            throw new InvalidOperationException($"Item '{metadata.ItemId}' already has enchantment '{metadata.Enchantment}'.");
+            if (existing == magicItemKey) return new(DaggerfallItemConditionOutcome.AlreadyEnchanted, durableItemId, metadata, metadata.CurrentCondition);
+            throw new InvalidOperationException($"Item '{metadata.ItemId}' already has enchantment '{existing}'.");
         }
         DaggerfallItemDefinition definition = definitions.RequireItem(new DaggerfallItemId(metadata.ItemId));
-        DaggerfallItemEnchantmentQuote quote = DaggerfallMagicCostPolicy.QuoteItemEnchantment(definitions, definition, metadata, magic);
+        // A published magic item brings its own template, uses and published identity; an item maker's
+        // setting brings only its donor cost, so the item keeps its condition and its own identity.
+        DaggerfallMagicItemDefinition? magic = null;
+        DaggerfallItemEnchantmentQuote quote;
+        if (DaggerfallEnchantmentSettings.TryResolve(magicItemKey, out DaggerfallEnchantmentSetting setting))
+        {
+            quote = DaggerfallMagicCostPolicy.QuoteItemEnchantment(definition, metadata, setting);
+        }
+        else
+        {
+            magic = definitions.Magic.MagicItems.TryGetValue(magicItemKey, out DaggerfallMagicItemDefinition? found)
+                ? found : throw new InvalidOperationException($"Magic item '{magicItemKey}' is not published.");
+            quote = DaggerfallMagicCostPolicy.QuoteItemEnchantment(definitions, definition, metadata, magic);
+        }
         if (!quote.Eligible)
-            throw new InvalidOperationException($"Magic item '{magic.Key}' cannot enchant item '{metadata.ItemId}': {quote.Reason}");
-        string publishedMagicDefinition = DaggerfallMagicItemIds.For(metadata.ItemId, magic.Key);
-        if (!definitions.TryResolveItem(new DaggerfallItemId(publishedMagicDefinition), out _))
-            throw new InvalidOperationException($"Magic item '{magic.Key}' cannot enchant item definition '{metadata.ItemId}'.");
+            throw new InvalidOperationException($"Enchantment '{magicItemKey}' cannot enchant item '{metadata.ItemId}': {quote.Reason}");
+        if (magic is not null)
+        {
+            string publishedMagicDefinition = DaggerfallMagicItemIds.For(metadata.ItemId, magic.Key);
+            if (!definitions.TryResolveItem(new DaggerfallItemId(publishedMagicDefinition), out _))
+                throw new InvalidOperationException($"Magic item '{magic.Key}' cannot enchant item definition '{metadata.ItemId}'.");
+        }
         EquipmentMoveResult unequipped = equipment.UnequipForEnchantment(item);
         if (unequipped.Outcome != EquipmentMoveOutcome.Applied)
             throw new InvalidOperationException($"Item '{metadata.ItemId}' could not be unequipped before enchanting: {unequipped.Detail}");
-        DaggerfallItemInstanceMetadata enchanted = metadata with
-        {
-            Enchantment = magic.Key,
-            Identified = true,
-            CurrentCondition = magic.Uses,
-            MaximumCondition = magic.Uses,
-        };
+        DaggerfallItemInstanceMetadata enchanted = magic is null
+            ? metadata with { Enchantment = magicItemKey, Identified = true }
+            : metadata with
+            {
+                Enchantment = magic.Key,
+                Identified = true,
+                CurrentCondition = magic.Uses,
+                MaximumCondition = magic.Uses,
+            };
         instances.ReplaceUnique(durableItemId, enchanted);
         return new(DaggerfallItemConditionOutcome.Enchanted, durableItemId, enchanted, metadata.CurrentCondition, unequipped.Change);
     }
@@ -198,7 +214,10 @@ internal sealed class DaggerfallItemConditionService(
     {
         if (!definitions.TryResolveItem(new DaggerfallItemId(metadata.ItemId), out _))
             throw new InvalidOperationException($"Item instance names unpublished definition '{metadata.ItemId}'.");
-        if (metadata.Enchantment is not null) _ = RequireMagic(metadata);
+        // An item maker's setting is a legitimate enchantment that has no published magic item, so it is
+        // not held to the published-template requirement here; anything else still is.
+        if (metadata.Enchantment is { } enchantment && !DaggerfallEnchantmentSettings.TryResolve(enchantment, out _))
+            _ = RequireMagic(metadata);
     }
 
     private void RequireItemMetadata(UniqueInventoryItem item, DaggerfallItemInstanceMetadata metadata)

@@ -225,6 +225,28 @@ public sealed class DaggerfallItemConditionServiceTests
     }
 
     [Fact]
+    public void Enchanting_with_an_item_makers_setting_keeps_the_items_own_condition()
+    {
+        // A setting has no template and no uses, so the item keeps its condition and its own identity
+        // while gaining the enchantment and identification; a magic item's uses are not copied onto it.
+        using Fixture f = new();
+        DaggerfallEnchantmentSetting setting = DaggerfallEnchantmentSettings.All.Single(candidate => candidate.Type == 7 && candidate.Param == 0);
+        // Daedric carries the largest enchantment capacity, as the published-item fact above uses.
+        UniqueItem sword = f.CreatePlainWeapon(406, 115, "daedric");
+        DaggerfallItemInstanceMetadata before = f.Instances.RequireUnique(406);
+        Assert.Equal(EquipmentMoveOutcome.Applied, f.Moves.MoveToSlot(sword, new SlotId("right-hand")).Outcome);
+
+        DaggerfallItemConditionResult result = f.Service.Enchant(sword, setting.Key);
+
+        Assert.Equal(DaggerfallItemConditionOutcome.Enchanted, result.Outcome);
+        Assert.Equal((before.ItemId, setting.Key, true, before.CurrentCondition, before.MaximumCondition),
+            (result.Metadata.ItemId, result.Metadata.Enchantment, result.Metadata.Identified,
+                result.Metadata.CurrentCondition, result.Metadata.MaximumCondition));
+        Assert.Equal(DaggerfallItemConditionOutcome.AlreadyEnchanted, f.Service.Enchant(sword, setting.Key).Outcome);
+        Assert.Equal(setting.Key, f.Instances.RequireUnique(406).Enchantment);
+    }
+
+    [Fact]
     public void Ineligible_artifact_quote_cannot_unequip_or_mutate_a_plain_item()
     {
         using Fixture f = new();
