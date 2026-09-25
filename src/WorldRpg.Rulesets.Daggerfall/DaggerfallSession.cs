@@ -840,11 +840,14 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     }
 
     /// <summary>
-    /// Whether the player stands in sunlight, which the donor reads as daytime while not inside: an
-    /// exterior site in daylight. Everything else — a dungeon, or an exterior at night — is darkness,
-    /// which is what the worn regeneration conditions divide on.
+    /// Whether the player stands in sunlight. The donor reads daytime while not inside any structure,
+    /// so a shop, home or guild counts as darkness by day exactly as a dungeon does. The donor also
+    /// exempts prison; no product state reaches prison yet, so that input is false until one does.
     /// </summary>
-    private bool InSunlight() => _siteProjection.Inputs.DungeonMap is null && _time.Calendar.IsDay;
+    private bool InSunlight() => DaggerfallHeldEnchantments.InSunlight(
+        _time.Calendar.IsDay,
+        insideStructure: _activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior,
+        inPrison: false);
 
     /// <summary>
     /// The living creatures a worn enchantment's near-creature condition can see: the group the
@@ -1504,6 +1507,10 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         // while a mode holds the world still.
         Presentation.Advance(deltaSeconds * facts.AdmittedStepCount);
 
+        // The worn set is recomputed before the round advances, so a payload that ticks with the clock
+        // reads the body the player is wearing now rather than the one the previous update saw.
+        State.HeldEnchantments.Refresh();
+
         // Ordering within this one admitted update is clock, magic rounds, then calendar consumers
         // and simulation.  A normal game minute is one magic round; a larger admitted interval uses
         // the same lifecycle catch-up path as rest, travel, and prison, so no second effect timer can
@@ -1725,12 +1732,12 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         if (ordinaryPlay && minutes == 1)
         {
             State.Effects.AdvanceOrdinaryRound();
-            State.HeldEnchantments.AdvanceRounds(minuteBefore, 1);
+            State.HeldEnchantments.AdvanceRounds(1);
             return;
         }
 
         _ = State.Effects.AdvanceElapsedRounds(minutes);
-        State.HeldEnchantments.AdvanceRounds(minuteBefore, checked((int)Math.Min(minutes, int.MaxValue)));
+        State.HeldEnchantments.AdvanceRounds(checked((int)Math.Min(minutes, int.MaxValue)));
     }
 
     private static long MinuteIndex(DaggerfallCalendar calendar) =>
