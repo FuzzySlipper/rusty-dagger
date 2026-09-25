@@ -341,6 +341,29 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.Contains(new AttackRejectedFact(AttackRejection.NoTargetInReach), facts);
     }
 
+    [Fact]
+    public void A_cancelled_swing_never_lands_and_keeps_the_cadence_it_already_spent()
+    {
+        // One admitted swing latches its cooldown at admission. When the swing is cancelled before its
+        // impact frame — leaving reach, losing sight, dying or unloading — only the damage is cancelled;
+        // the charge stands, and the next swing waits for the authored cadence like any other.
+        using DamagePolicyFixture fixture = new();
+        fixture.EquipNpcWeapon(2, "iron-longsword", 9001);
+        fixture.Script(body: 3, critical: 1, hit: 1, damage: 7);
+        AttackRequest request = new(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true);
+
+        IReadOnlyList<IProductFact> admitted = fixture.StartSwing(request, out bool started);
+        Assert.True(started);
+        Assert.DoesNotContain(admitted, fact => fact is AttackHitFact or AttackMissedFact);
+        Assert.False(fixture.IsSwingReady(2, 5, 500));
+
+        fixture.CancelSwing(2, 5);
+
+        Assert.False(fixture.IsSwingReady(2, 5, 9));      // the cancellation costs the charge
+        Assert.True(fixture.IsSwingReady(2, 5, 500));      // and the charge elapses on its authored cadence
+        Assert.Empty(fixture.DeliverImpact(request).Where(fact => fact is AttackHitFact or AttackMissedFact));
+    }
+
     private sealed class CountingContribution(bool rejectFirst = false) : ICombatContribution
     {
         internal int HitCount { get; private set; }
@@ -492,6 +515,8 @@ public sealed class DaggerCombatDamagePolicyTests
         internal bool IsSwingReady(long attackerId, ulong generation, ulong step) =>
             _combat.Execution.IsReady(attackerId, generation, step);
 
+        /// <summary>The one cancellation owner: the pending swing is dropped and its cooldown stands.</summary>
+        internal void CancelSwing(long attackerId, ulong generation) => _combat.Execution.Interrupt(attackerId, generation);
 
         private static IReadOnlyList<IProductFact> Delivered(FactBuffer<IProductFact> facts)
         {
