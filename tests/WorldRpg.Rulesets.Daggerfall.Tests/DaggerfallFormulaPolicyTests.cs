@@ -342,6 +342,14 @@ public sealed class DaggerfallFormulaPolicyTests
         Assert.Equal(3d * (115 - 100) / 980d, DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(100), 9);
         Assert.Equal(3d * 115 / 980d, DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(0), 9);
         Assert.True(DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(80) < DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(20));
+        // FORM-04.GetBowCooldownTime: (10 * (100 - LiveSpeed) + 800) / 980 seconds, and the donor's
+        // bow animation releases on its own frame rather than the melee one.
+        Assert.Equal((10d * (100 - 50) + 800) / 980d, DaggerfallFormulaPolicy.BowCooldownSeconds(50), 9);
+        Assert.Equal((10d * (100 - 100) + 800) / 980d, DaggerfallFormulaPolicy.BowCooldownSeconds(100), 9);
+        Assert.True(DaggerfallFormulaPolicy.BowCooldownSeconds(80) < DaggerfallFormulaPolicy.BowCooldownSeconds(20));
+        Assert.Equal(5, DaggerfallFormulaPolicy.BowWeaponHitFrame);
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallFormulaPolicy.BowCooldownSeconds(-1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallFormulaPolicy.BowCooldownSeconds(101));
         // The classic swing's damage frame is the donor's own constant for every melee weapon.
         Assert.Equal(2, DaggerfallFormulaPolicy.MeleeWeaponHitFrame);
         Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(-1));

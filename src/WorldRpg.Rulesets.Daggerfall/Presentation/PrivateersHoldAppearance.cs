@@ -343,7 +343,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
                 // frame is what delivers the admitted impact. A viewmodel that cannot play the
                 // authored strike has no frame to wait for, so the impact lands in this update
                 // rather than being withheld by a presentation the composition does not have.
-                if (!StartWeaponStrike(swing, started.FrameSeconds, started.TargetId))
+                if (!StartWeaponStrike(swing, started.FrameSeconds, started.TargetId, started.HitFrame))
                     attackImpacts.Add(new AttackImpactNotice(DaggerfallActorIdentity.PlayerEntityId, started.TargetId ?? 0,
                         started.OriginatingGeneration, started.OriginatingSimulationStep, Expired: false));
                 Emit("swing", swing, 0);
@@ -468,7 +468,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
             // The classic swing's damage lands on its hit frame. One decided swing owns one beat, so
             // the first frame at or past it reports and later frames of the same swing do not.
             if (weapon.Strike && weapon.PendingImpact is { } pending && !weapon.ImpactReported
-                && receipt.Readout.FrameIndex >= DaggerfallFormulaPolicy.MeleeWeaponHitFrame)
+                && receipt.Readout.FrameIndex >= weapon.HitFrame)
             {
                 weapon.ImpactReported = true;
                 attackImpacts.Add(new AttackImpactNotice(pending.Attacker, pending.Target, pending.Generation, pending.SimulationStep, Expired: false));
@@ -746,7 +746,8 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     /// a viewmodel-less or action-less composition reports false so the caller can land the impact in
     /// the update that admitted it instead of waiting for a frame nothing will play.
     /// </summary>
-    private bool StartWeaponStrike(PresentationEventIdentity identity, double frameSeconds = 0d, long? target = null)
+    private bool StartWeaponStrike(PresentationEventIdentity identity, double frameSeconds = 0d, long? target = null,
+        int hitFrame = DaggerfallFormulaPolicy.MeleeWeaponHitFrame)
     {
         if (viewmodel is null) return false;
         string[] choices = ["strikeDown", "strikeDownLeft", "strikeLeft", "strikeRight", "strikeDownRight", "strikeUp"];
@@ -758,6 +759,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         RetireUnreportedImpact();
         viewmodel.PendingImpact = target is long aimed ? identity with { Target = aimed } : null;
         viewmodel.ImpactReported = false;
+        viewmodel.HitFrame = hitFrame;
         StartWeaponAction(name, frameSeconds);
         return true;
     }
@@ -995,6 +997,8 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         internal bool Strike { get; set; }
         /// <summary>The move this weapon swing delivers when its animation reaches the hit frame, if any.</summary>
         internal PresentationEventIdentity? PendingImpact { get; set; }
+        /// <summary>The frame of this swing's own animation that releases its impact.</summary>
+        internal int HitFrame { get; set; } = DaggerfallFormulaPolicy.MeleeWeaponHitFrame;
         internal bool ImpactReported { get; set; }
         internal bool CompletedOuterUpdate { get; set; }
         internal AppearanceOuterUpdate? LastOuterUpdate { get; set; }

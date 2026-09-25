@@ -228,16 +228,30 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
             {
                 AttackOutcome outcome = shot.Release.Attack.Outcome;
                 facts.Append(new AttackMissedFact(shot.Release.Request.AttackerId, targetId, outcome.Roll, outcome.Chance,
-                    EnemyAttack: true, shot.Release.Request.Generation, shot.Release.Request.SimulationStep));
+                    EnemyAttack: shot.Release.Request.AttackerId != PlayerId, shot.Release.Request.Generation, shot.Release.Request.SimulationStep));
                 continue;
             }
             Execution.ApplyDeferredImpact(shot.Release, facts);
         }
     }
 
-    private bool IsRangedAction(long attackerId) => _definitions.TryGetValue(attackerId, out DaggerfallActorDefinition? actor)
-        && actor.ActionId is string actionId && _actions.TryGetValue(actionId, out DaggerfallActionDefinition? action)
-        && action.Interpretation == "fixed-ranged";
+    /// <summary>A shot is any attack whose own action carries it to a target beyond a swing: the
+    /// enemy's authored fixed-ranged action, or the player's ranged action while a bow is held.</summary>
+    private bool IsRangedAction(long attackerId)
+    {
+        if (attackerId == PlayerId) return PlayerHoldsBow() && RangedPlayerActionId() is not null;
+        return _definitions.TryGetValue(attackerId, out DaggerfallActorDefinition? actor)
+            && actor.ActionId is string actionId && _actions.TryGetValue(actionId, out DaggerfallActionDefinition? action)
+            && action.Interpretation == "fixed-ranged";
+    }
+
+    /// <summary>The bow the player is holding, in either hand, if any.</summary>
+    private bool PlayerHoldsBow()
+    {
+        EquipmentRead equipment = _equipment.Read();
+        return ReadWeapon(equipment, "right-hand") is { Weapon.Skill: var right } && right == DaggerfallSkills.Archery
+            || ReadWeapon(equipment, "left-hand") is { Weapon.Skill: var left } && left == DaggerfallSkills.Archery;
+    }
 
     private bool IsLiveCombatant(long actorId)
     {
@@ -295,15 +309,33 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     {
         ulong generation = request.Generation, simulationStep = request.SimulationStep;
         DaggerfallActionId? action = request.Action is string requested ? new DaggerfallActionId(requested) : null;
-        string? selectedActionId = action?.Value ?? player.Definition.ActionId;
-        if (selectedActionId is null || !_actions.TryGetValue(selectedActionId, out DaggerfallActionDefinition? playerAction) || playerAction.Interpretation != "player-equipped-melee" || playerAction.CooldownSeconds is not double playerCooldown || playerAction.StaminaCost is not int staminaCost)
+        EquipmentRead equipment = _equipment.Read();
+        DaggerfallEquippedWeapon? equippedWeapon = ReadWeapon(equipment, "right-hand") ?? ReadWeapon(equipment, "left-hand");
+        bool bowShot = equippedWeapon is { } heldWeapon && heldWeapon.Weapon.Skill == DaggerfallSkills.Archery;
+        string? selectedActionId = action?.Value ?? (bowShot ? RangedPlayerActionId() : player.Definition.ActionId);
+        if (selectedActionId is null || !_actions.TryGetValue(selectedActionId, out DaggerfallActionDefinition? playerAction)
+            || playerAction.Interpretation is not ("player-equipped-melee" or "player-equipped-ranged")
+            || playerAction.StaminaCost is not int staminaCost
+            || playerAction.Interpretation == "player-equipped-ranged" && !bowShot)
         {
             attack = default!;
             facts.Append(new AttackRejectedFact(AttackRejection.NoAttackPolicy));
             return false;
         }
-        EquipmentRead equipment = _equipment.Read();
-        DaggerfallEquippedWeapon? equippedWeapon = ReadWeapon(equipment, "right-hand") ?? ReadWeapon(equipment, "left-hand");
+        bool ranged = playerAction.Interpretation == "player-equipped-ranged";
+        // A bow's cadence is the donor's own formula over live speed; a swing's is the action's.
+        if (!ranged && playerAction.CooldownSeconds is not double)
+        {
+            attack = default!;
+            facts.Append(new AttackRejectedFact(AttackRejection.NoAttackPolicy));
+            return false;
+        }
+        double playerCooldown = ranged
+            ? DaggerfallFormulaPolicy.BowCooldownSeconds(ReadStat(player, DaggerfallMechanicsIds.Speed))
+            : playerAction.CooldownSeconds!.Value;
+        // The shot is refused before it is admitted, from the same quiver owner the enemy archer uses,
+        // so a player with an empty quiver stops shooting rather than silently missing.
+        if (ranged && !TrySpendArrow(PlayerId, facts)) { attack = default!; return false; }
         attack = equippedWeapon is { } selectedWeapon
             ? new DaggerfallAttackDefinition(selectedWeapon.Weapon.Skill, selectedWeapon.Weapon.MinimumDamage, selectedWeapon.Weapon.MaximumDamage,
                 playerCooldown, selectedWeapon.Material, playerAction.DamageBonus)
@@ -319,9 +351,20 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         bool deferred = request.Delayed && request.TargetId is not null;
         facts.Append(new PlayerAttackStartedFact(generation, simulationStep,
             deferred ? request.TargetId : null,
-            deferred ? DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(ReadStat(player, DaggerfallMechanicsIds.Speed)) : 0d));
+            deferred ? DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(ReadStat(player, DaggerfallMechanicsIds.Speed)) : 0d,
+            ranged ? DaggerfallFormulaPolicy.BowWeaponHitFrame : DaggerfallFormulaPolicy.MeleeWeaponHitFrame));
         return true;
     }
+
+    /// <summary>
+    /// The authored action a player's bow looses with. The action declares the interpretation; nothing
+    /// hardcodes an action id, so renaming the authored action in the pack is enough.
+    /// </summary>
+    private string? RangedPlayerActionId() => _actions.Values
+        .Where(value => value.Interpretation == "player-equipped-ranged")
+        .Select(value => value.Id)
+        .OrderBy(value => value, StringComparer.Ordinal)
+        .FirstOrDefault();
 
     private bool SpendPlayerStamina(Combatant player, int staminaCost, FactBuffer<IProductFact> facts)
     {
@@ -614,12 +657,23 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     /// The behavior owner reads this to decide whether the player is in reach, so the gate that decides an
     /// attack happens and the attack that then resolves use one number from one place.
     /// </remarks>
-    public double? ReachOf(long entityId) => _definitions.TryGetValue(entityId, out DaggerfallActorDefinition? attacker)
-        && attacker.ActionId is { } actionId
-        && _actions.TryGetValue(actionId, out DaggerfallActionDefinition? action)
-        && action.Reach is > 0d
-        ? action.Reach
-        : null;
+    public double? ReachOf(long entityId)
+    {
+        if (entityId == PlayerId)
+        {
+            string? selected = PlayerHoldsBow()
+                ? RangedPlayerActionId()
+                : _definitions.TryGetValue(PlayerId, out DaggerfallActorDefinition? player) ? player.ActionId : null;
+            return selected is not null && _actions.TryGetValue(selected, out DaggerfallActionDefinition? playerAction) && playerAction.Reach is > 0d
+                ? playerAction.Reach : null;
+        }
+        return _definitions.TryGetValue(entityId, out DaggerfallActorDefinition? attacker)
+            && attacker.ActionId is { } actionId
+            && _actions.TryGetValue(actionId, out DaggerfallActionDefinition? action)
+            && action.Reach is > 0d
+            ? action.Reach
+            : null;
+    }
     private DaggerfallEquippedWeapon? ReadWeapon(EquipmentRead equipment, string slot)
     {
         if (!equipment.TryGet(new WorldRpg.Kit.Inventory.EquipmentSlotId(slot), out WorldRpg.Kit.Inventory.UniqueInventoryItem item)

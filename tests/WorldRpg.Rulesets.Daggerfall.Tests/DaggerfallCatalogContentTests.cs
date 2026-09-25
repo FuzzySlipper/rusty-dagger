@@ -22,7 +22,7 @@ public sealed class DaggerfallCatalogContentTests
         Assert.DoesNotContain(definitions.Actors.Values, actor => actor.MobileId == 39);
         Assert.Equal(31, definitions.Items.Count);
         Assert.Equal(25, definitions.EquipmentSlots.Count);
-        Assert.Equal(7, definitions.Actions.Count);
+        Assert.Equal(8, definitions.Actions.Count);
         Assert.Equal(22, definitions.LootTables.Count);
         Assert.Equal(12, definitions.ArmorValuesByMaterial.Count);
         Assert.NotEmpty(definitions.RequireActor(new DaggerfallActorId("player")).Loadout);
@@ -40,7 +40,13 @@ public sealed class DaggerfallCatalogContentTests
         Assert.Equal("right-hand", definitions.RequireActor(new DaggerfallActorId("player")).Loadout[0].EquipSlot!.Value.Value);
         Assert.Equal(8, definitions.RequireActor(new DaggerfallActorId("player")).HitPointsPerLevel);
         Assert.Equal(5, definitions.Actions["melee-attack"].StaminaCost);
-        Assert.Equal(["archer-shot", "enemy-class-equipped-melee", "melee-attack", "monster-strike", "power-attack", "skeleton-strike", "thief-strike"], definitions.Actions.Values.OrderBy(action => action.Id).Select(action => action.Id));
+        Assert.Equal(["archer-shot", "bow-shot", "enemy-class-equipped-melee", "melee-attack", "monster-strike", "power-attack", "skeleton-strike", "thief-strike"], definitions.Actions.Values.OrderBy(action => action.Id).Select(action => action.Id));
+        // The player's bow: the archer's reach and skill, no authored cooldown (FORM-04 owns it) and the
+        // same fatigue cost a swing pays.
+        Assert.Equal(10d, definitions.Actions["bow-shot"].Reach);
+        Assert.Equal("archery", definitions.Actions["bow-shot"].Skill);
+        Assert.Null(definitions.Actions["bow-shot"].CooldownSeconds);
+        Assert.Equal(5, definitions.Actions["bow-shot"].StaminaCost);
         Assert.Equal(0, definitions.Actions["monster-strike"].AttackRangeIndex);
         Assert.Null(definitions.Actions["monster-strike"].MinimumDamage);
         Assert.Equal(0.75, definitions.Actions["melee-attack"].CooldownSeconds);
