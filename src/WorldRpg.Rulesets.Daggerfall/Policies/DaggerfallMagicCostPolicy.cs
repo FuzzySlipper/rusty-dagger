@@ -131,8 +131,9 @@ internal static class DaggerfallMagicCostPolicy
                 return new(capacity, 0, false, $"{magic.Key} has no retained item-maker cost for {enchantment.ParamMeaning} ({enchantment.Type}, {enchantment.Param}).");
             total = checked(total + cost);
         }
-        if (total < 0)
-            return new(capacity, 0, false, $"{magic.Key} would produce a negative construction payment.");
+        // The donor sums raw costs including the negative ones its detriments carry and charges gold only
+        // on the powers, so a drawback-only build is legal and pays nothing: the total is retained as it
+        // stands rather than refused.
         int required = checked((int)total);
         return required <= capacity ? new(capacity, required, true, null) : new(capacity, required, false, "The item lacks enchantment capacity.");
     }
@@ -149,8 +150,7 @@ internal static class DaggerfallMagicCostPolicy
         int capacity = ItemEnchantmentPower(item, metadata);
         if (!TryGetNonSpellEnchantmentCost(DaggerfallEnchantmentSettings.ToEffect(setting), out int cost))
             return new(capacity, 0, false, $"{setting.Key} has no retained item-maker cost for {setting.Meaning}.");
-        if (cost < 0)
-            return new(capacity, 0, false, $"{setting.Key} would produce a negative construction payment.");
+        // As with a published magic item, a detriment's negative cost is retained rather than refused.
         return cost <= capacity ? new(capacity, cost, true, null) : new(capacity, cost, false, "The item lacks enchantment capacity.");
     }
 

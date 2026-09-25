@@ -268,11 +268,15 @@ public sealed class DaggerfallItemConditionServiceTests
             durable++;
         }
 
+        // A detriment carries a negative donor cost, and the donor sums raw costs: a drawback-only build
+        // is legal and pays nothing, so it lands like any other setting and keeps the item's condition.
         DaggerfallEnchantmentSetting detriment = DaggerfallEnchantmentSettings.All.Single(candidate => candidate.Type == 24 && candidate.Param == -1);
         UniqueItem cursed = f.CreatePlainWeapon(durable, 115, "daedric");
-        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => f.Service.Enchant(cursed, detriment.Key));
-        Assert.Contains("negative construction payment", error.Message, StringComparison.Ordinal);
-        Assert.Null(f.Instances.RequireUnique(durable).Enchantment);
+        int cursedCondition = f.Instances.RequireUnique(durable).CurrentCondition;
+        DaggerfallItemConditionResult cursedResult = f.Service.Enchant(cursed, detriment.Key);
+        Assert.Equal(DaggerfallItemConditionOutcome.Enchanted, cursedResult.Outcome);
+        Assert.Equal((detriment.Key, cursedCondition),
+            (f.Instances.RequireUnique(durable).Enchantment, f.Instances.RequireUnique(durable).CurrentCondition));
     }
 
     [Fact]
