@@ -240,18 +240,26 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1d, 1d, PerceptionPairKind.Visible, 1d));
-        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
         double before = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
         double staminaBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current;
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         ProductInputEvent pressed = Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack");
-        session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d), [pressed, pressed]);
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d), [pressed, pressed]));
+        // Two copies of one press are one admitted swing and one stamina charge, and the damage itself
+        // waits for the classic hit frame of the swing the viewmodel is playing.
+        Assert.Equal(before, session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current);
+        Assert.True(session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current < staminaBefore);
+        appearance.AdvanceReceiptForAll = Reading(2, 2);
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 2, 60, 3, 0, 1d / 60d), []));
         double after = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
         Assert.True(after < before);
-        Assert.True(session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current < staminaBefore);
-        session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 2, 1, 1, 100, 60, 3, 0, 1d / 60d),
-            [Input(InputEventKind.MappedDigital, InputEdge.Held, x: 1, phase: InputPhase.Held, intent: "attack")]);
+        // Held input cannot start a second swing while the first is still playing.
+        appearance.AdvanceReceiptForAll = null;
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 2, 1, 1, 100, 60, 3, 0, 1d / 60d),
+            [Input(InputEventKind.MappedDigital, InputEdge.Held, x: 1, phase: InputPhase.Held, intent: "attack")]));
         Assert.Equal(after, session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current);
     }
 
@@ -278,6 +286,9 @@ public sealed partial class NormalizedRuntimeSeamTests
         ProductUpdateFacts first = new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d);
 
         session.Update(new ProductUpdate(first, [pressed]));
+        // The operation is decided and charged at admission; the delivered hit is what tallies it.
+        appearance.AdvanceReceiptForAll = Reading(2, 2);
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 2, 60, 1, 0, 1d / 60d), []));
         Assert.Equal(1, session.State.Progression.SkillUses["long-blade"]);
         Assert.Equal(1, session.State.Progression.SkillUses["critical-strike"]);
 
@@ -294,6 +305,8 @@ public sealed partial class NormalizedRuntimeSeamTests
         session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 3, 3, 60, 1, 0, 1d / 60d), []));
         appearance.AdvanceReceiptForAll = null;
         session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 100, 100, 60, 1, 0, 1d / 60d), [pressed]));
+        appearance.AdvanceReceiptForAll = Reading(2, 2);
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 101, 101, 60, 1, 0, 1d / 60d), []));
         Assert.Equal(2, session.State.Progression.SkillUses["long-blade"]);
         Assert.Equal(2, session.State.Progression.SkillUses["critical-strike"]);
 
@@ -4159,7 +4172,8 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
-        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
 
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
         double healthBefore = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
@@ -4174,7 +4188,48 @@ public sealed partial class NormalizedRuntimeSeamTests
         Assert.Equal(2.25d, evidence.Request.Observers.Span[0].MaximumDistance);
         Assert.Equal(.5d, evidence.Request.Observers.Span[0].MinimumFacingCosine);
         Assert.Equal(1, evidence.Receipt.Pairs.Length);
+        // The visibility receipt selects the target at admission; that same target takes the swing's
+        // damage when the animation reaches its hit frame.
+        Assert.Equal(healthBefore, session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current);
+        appearance.AdvanceReceiptForAll = Reading(2, 2);
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 0, 1, 1, 1, 60, 1, 0, 1d / 60d), []));
         Assert.True(session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current < healthBefore);
+    }
+
+    [Fact]
+    public void A_transition_mid_swing_retires_the_swing_it_can_no_longer_deliver()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        PrivateersHoldInputs castle = PrivateersHoldContent.Read(FullContent(root),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        PopulateContent(content, castle);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        spatial.KeepPosition = true;
+        PerceptionFake perception = PerceptionFake.Create();
+        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1d, 1d, PerceptionPairKind.Visible, 1d));
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        session.AdmitSiteProfiles(new DaggerfallSiteProfiles([inputs, castle]));
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
+        ProductInputEvent pressed = Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack");
+
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d), [pressed]));
+
+        // The swing is admitted, charged and still in flight: the projection playing it owns the
+        // impact frame, so the shared state holds the attack even long past its cooldown.
+        Assert.False(session.State.Kit.AttackExecution.IsReady(DaggerfallActorIdentity.PlayerEntityId, 1, 500));
+
+        Assert.True(session.TryTransitionTo(castle.ProfileKey));
+
+        // The departing projection could not deliver that frame, so the charge is retired with it —
+        // the damage never lands, and melee is admitted again instead of staying charged forever.
+        Assert.True(session.State.Kit.AttackExecution.IsReady(DaggerfallActorIdentity.PlayerEntityId, 1, 500));
     }
 
     [Fact]
@@ -6346,7 +6401,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             new[]
             {
                 new SpritePlaybackMarkerCrossing(1, 3, 1, 0, 1),
-                new SpritePlaybackMarkerCrossing(1, 3, 1, 0, 2),
+                new SpritePlaybackMarkerCrossing(4, 3, 1, 0, 2),
             },
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 2, false),
             true));
@@ -6477,10 +6532,6 @@ public sealed partial class NormalizedRuntimeSeamTests
 
         // The next advanced frame reaches the authored damage frame and the swing lands.
         presentation.Advance(OuterUpdate(2));
-        FieldInfo probeField = typeof(PrivateersHoldAppearance).GetField("viewmodel", BindingFlags.Instance | BindingFlags.NonPublic)!;
-        object? probe = probeField.GetValue(presentation);
-        string probeText = probe is null ? "no-viewmodel" : $"strike={probe.GetType().GetProperty("Strike", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)?.GetValue(probe)} pending={probe.GetType().GetProperty("PendingImpact", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)?.GetValue(probe)} reported={probe.GetType().GetProperty("ImpactReported", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)?.GetValue(probe)} advances={appearance.AdvanceRequests.Count}";
-        Assert.True(false, probeText);
         AttackImpactNotice impact = Assert.Single(presentation.TakeAttackImpacts());
         Assert.False(impact.Expired);
     }

@@ -43,9 +43,11 @@ public sealed class DaggerfallEquipmentWearTests
         IReadOnlyList<IProductFact> facts = fixture.RunEnemyAttack();
 
         // Ten percent of the accepted damage, rounded to nearest, charged on both items without a floor
-        // roll: the swing's own weapon and the armour that covered the struck body part.
-        int units = DaggerfallFormulaPolicy.ConditionDamageScale(AppliedDamage(facts));
-        Assert.True(units > 0);
+        // roll: the swing's own weapon and the armour that covered the struck body part. The accepted
+        // hit is 13, whose ten percent rounds up to one unit; stated as a literal rather than read back
+        // from the formula the rules call, so a change to the donor's rounding fails here too.
+        Assert.Equal(13, AppliedDamage(facts));
+        const int units = 1;
         Assert.Equal(enemyWeapon - units, fixture.Condition(9001));
         Assert.Equal(playerArmour - units, fixture.Condition(1003));
         Assert.Equal(playerWeapon, fixture.Condition(1001));
@@ -152,14 +154,21 @@ public sealed class DaggerfallEquipmentWearTests
         fixture.Script(body: 6, critical: 50, hit: 1, damage: 15);
         int shield = fixture.Condition(2001);
         int cuirass = fixture.Condition(1003);
+        int enemyWeapon = fixture.Condition(9001);
 
         IReadOnlyList<IProductFact> facts = fixture.RunEnemyAttack();
 
-        int units = DaggerfallFormulaPolicy.ConditionDamageScale(AppliedDamage(facts));
+        // The covering shield takes the defence's wear, and it does not excuse the swing's own weapon:
+        // one accepted hit still costs both items their single unit.
+        Assert.Equal(13, AppliedDamage(facts));
+        const int units = 1;
         Assert.Equal(shield - units, fixture.Condition(2001));
         Assert.Equal(cuirass, fixture.Condition(1003));
-        Assert.Contains(facts.OfType<EquipmentWornFact>(),
-            fact => fact.DurableItemId == 2001 && fact.OwnerActorId == DaggerfallActorIdentity.PlayerEntityId);
+        Assert.Equal(enemyWeapon - units, fixture.Condition(9001));
+        EquipmentWornFact[] worn = [.. facts.OfType<EquipmentWornFact>()];
+        Assert.Equal(2, worn.Length);
+        Assert.Equal([Enemy, DaggerfallActorIdentity.PlayerEntityId], worn.Select(fact => fact.OwnerActorId));
+        Assert.Contains(worn, fact => fact.DurableItemId == 2001 && fact.OwnerActorId == DaggerfallActorIdentity.PlayerEntityId);
     }
 
     [Fact]
@@ -245,17 +254,21 @@ public sealed class DaggerfallEquipmentWearTests
     {
         PresentationState presentation = new(string.Empty);
         DaggerfallOutcomePresentation outcome = new(presentation,
-            new Dictionary<long, DaggerfallActorDefinition> { [Enemy] = Definitions.RequireActor(new DaggerfallActorId("rat")) });
+            new Dictionary<long, DaggerfallActorDefinition> { [Enemy] = Definitions.RequireActor(new DaggerfallActorId("rat")) },
+            text: Definitions.Text);
         outcome.React(new AttackHitFact(Enemy, DaggerfallActorIdentity.PlayerEntityId, 5, 5, 3, EnemyAttack: true, 1, 1));
 
-        outcome.React(new EquipmentWornFact(DaggerfallActorIdentity.PlayerEntityId, 1001, "iron-longsword", 2, 0, Broken: true, 1, 1));
-        Assert.Equal("rat hit you for 5 damage; iron-longsword has broken", presentation.LastOutcome);
+        // The line is the donor's own published message with the item substituted for its placeholder.
+        outcome.React(new EquipmentWornFact(DaggerfallActorIdentity.PlayerEntityId, 1001, "iron-longsword", false, 2, 0, Broken: true, 1, 1));
+        Assert.Equal("rat hit you for 5 damage; iron-longsword has broken.", presentation.LastOutcome);
 
-        outcome.React(new EquipmentWornFact(DaggerfallActorIdentity.PlayerEntityId, 2001, "iron-greaves", 4, 0, Broken: true, 1, 1));
-        Assert.EndsWith("iron-greaves have broken", presentation.LastOutcome);
+        // The plural set is the donor's authored template rule, carried by the fact: greaves break in
+        // the plural whatever the identifier they are materialized under looks like.
+        outcome.React(new EquipmentWornFact(DaggerfallActorIdentity.PlayerEntityId, 2001, "template-104-iron", true, 4, 0, Broken: true, 1, 1));
+        Assert.EndsWith("template-104-iron have broken.", presentation.LastOutcome);
         // Only a break is reported: condition that merely fell is the weapon wear the player never saw.
-        outcome.React(new EquipmentWornFact(DaggerfallActorIdentity.PlayerEntityId, 1001, "iron-longsword", 10, 7, Broken: false, 1, 1));
-        Assert.EndsWith("iron-greaves have broken", presentation.LastOutcome);
+        outcome.React(new EquipmentWornFact(DaggerfallActorIdentity.PlayerEntityId, 1001, "iron-longsword", false, 10, 7, Broken: false, 1, 1));
+        Assert.EndsWith("template-104-iron have broken.", presentation.LastOutcome);
     }
 
     /// <summary>The health the hit actually took, which is the amount classic scales equipment wear from.</summary>

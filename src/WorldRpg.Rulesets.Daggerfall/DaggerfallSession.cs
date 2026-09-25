@@ -388,7 +388,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 State.Character,
                 _actorIdentities);
             _groundContainers = new DaggerfallGroundContainers(containers, State.ItemInstances, playerEntity, _actorIdentities, _activeProfileKey);
-            _outcomes = new DaggerfallOutcomePresentation(Presentation, authored, () => State.Kit.Targeting.LastEvidence);
+            _outcomes = new DaggerfallOutcomePresentation(Presentation, authored, () => State.Kit.Targeting.LastEvidence, definitions.Text);
             _inventoryUi = new DaggerfallInventoryPresentation(_equipmentMoves, definitions, inputs.ClassicPresentation.InventoryIcons,
                 State.Encumbrance, State.Currency);
             _inventoryUi.UseBank(State.Bank, ActiveBankRegion);
@@ -822,9 +822,27 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         // Releasing the old projection happens only after every durable and live owner has
         // committed to the destination. A disposal failure therefore leaves the destination as
         // the honest current state instead of pretending the torn-down source can be restored.
+        // A swing the departing projection was still timing ends with it: retire and hand its
+        // impact back to the shared state here, inside the generation that admitted it, so the
+        // player is not left charged against an animation that no longer exists.
+        RetireDepartingSwing(source);
         CancelDungeonTextOnUnload();
         source.Dispose();
         return true;
+    }
+
+    /// <summary>
+    /// Retires the departing projection's unfinished swing. The notice it publishes belongs to the
+    /// generation that admitted the swing, so it is applied with that generation rather than the
+    /// destination's, and the caller's normal fact boundary publishes any consequence.
+    /// </summary>
+    private void RetireDepartingSwing(DaggerfallSiteProjection source)
+    {
+        source.Appearance.RetirePendingSwing();
+        IReadOnlyList<AttackImpactNotice> impacts = source.Appearance.TakeAttackImpacts();
+        if (impacts.Count == 0) return;
+        if (_latestUpdateGeneration is not ulong generation) return;
+        State.Kit.AttackExecution.ApplyImpacts(impacts, generation, _facts);
     }
 
     private void ApplyActorRelocation(long actorId, DaggerfallSiteAnchor anchor)

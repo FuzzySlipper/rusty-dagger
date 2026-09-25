@@ -298,12 +298,16 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.True(started);
         PlayerAttackStartedFact opening = Assert.Single(admitted.OfType<PlayerAttackStartedFact>());
         Assert.Equal(2L, opening.TargetId);
-        Assert.Equal(DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(50), opening.FrameSeconds, 6);
+        // Stated from the donor's own arithmetic rather than read back from the formula the rules
+        // call: 3 * (115 - 50) / 980 seconds per frame.
+        Assert.Equal(3d * (115 - 50) / 980d, opening.FrameSeconds, 6);
         Assert.DoesNotContain(admitted, fact => fact is AttackHitFact or AttackMissedFact);
 
         IReadOnlyList<IProductFact> impact = fixture.DeliverImpact(request);
 
-        Assert.Contains(impact, fact => fact is AttackHitFact { TargetId: 2 });
+        // One admitted swing delivers one impact, however many animation frames follow it.
+        Assert.Equal(2L, Assert.Single(impact.OfType<AttackHitFact>()).TargetId);
+        Assert.Empty(fixture.DeliverImpact(request));
     }
 
     [Fact]
@@ -487,6 +491,7 @@ public sealed class DaggerCombatDamagePolicyTests
 
         internal bool IsSwingReady(long attackerId, ulong generation, ulong step) =>
             _combat.Execution.IsReady(attackerId, generation, step);
+
 
         private static IReadOnlyList<IProductFact> Delivered(FactBuffer<IProductFact> facts)
         {

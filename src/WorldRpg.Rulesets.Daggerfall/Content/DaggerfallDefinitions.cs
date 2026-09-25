@@ -336,11 +336,10 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     internal DaggerfallActorDefinition RequireActor(DaggerfallActorId id) => Actors.TryGetValue(id, out DaggerfallActorDefinition? actor) ? actor : throw new InvalidOperationException($"Daggerfall definitions do not contain actor '{id.Value}'.");
 
     /// <summary>
-    /// The condition units an authored item instance starts with: its native template's hit points
-    /// adjusted by the item's own material, exactly as the item factory initializes a created instance
-    /// before it can enter an inventory. An item with no native weapon, armor or ammunition template —
-    /// a gem, a book, a coin — carries one unit rather than an invented wear budget, and the donor's
-    /// arrow template carries none.
+    /// The condition units an authored item instance starts with, asked of the one owner of that rule so
+    /// an authored loadout and a created instance cannot disagree. An item with no native weapon, armor
+    /// or ammunition template — a gem, a book, a coin — carries one unit rather than an invented wear
+    /// budget, and the donor's arrow template carries none.
     /// </summary>
     internal int AuthoredMaximumCondition(DaggerfallItemDefinition definition)
     {
@@ -348,10 +347,6 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
         if (DaggerfallTemplateItemDefinitions.TemplateIndexForAuthoredItem(definition.Id) is not int index
             || !ItemTemplateCatalog.Templates.TryGetValue(index, out DaggerfallItemTemplateDefinition? template))
             return 1;
-        if (template.Index == 131) return 0;
-        string material = definition.Weapon?.Material ?? definition.Armor?.Material ?? "none";
-        return material == "none"
-            ? template.HitPoints
-            : DaggerfallItemMaterialPolicy.Apply(template, material).MaximumCondition;
+        return DaggerfallItemFactory.StartingCondition(template, definition.Weapon?.Material ?? definition.Armor?.Material);
     }
 }

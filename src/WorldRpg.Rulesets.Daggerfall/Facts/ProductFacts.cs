@@ -42,9 +42,11 @@ internal sealed record LootAwardedFact(long ActorId, string ItemId, ulong Quanti
 /// <summary>
 /// One item's condition changed through an accepted physical hit, carrying the break that the change
 /// caused. Effects and presentation observe this result instead of running wear again: the hit already
-/// resolved, and the item's owner is whoever was wearing or swinging it.
+/// resolved, and the item's owner is whoever was wearing or swinging it. <paramref name="PluralBreak"/>
+/// carries the donor's authored plural set (boots, gauntlets, greaves) resolved from the item's native
+/// template, so a reader never re-derives content meaning from the identifier it prints.
 /// </summary>
-internal sealed record EquipmentWornFact(long OwnerActorId, ulong DurableItemId, string ItemId,
+internal sealed record EquipmentWornFact(long OwnerActorId, ulong DurableItemId, string ItemId, bool PluralBreak,
     int PreviousCondition, int CurrentCondition, bool Broken, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
 /// <summary>Explicit interaction emptied the defeated actor's durable loot container.</summary>
 internal sealed record CorpseLootedFact(long ActorId) : IProductFact;

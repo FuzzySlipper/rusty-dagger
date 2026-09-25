@@ -515,7 +515,13 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         DaggerfallItemConditionResult result = owner == PlayerId
             ? _itemCondition!.Damage(item, units)
             : _itemCondition!.Damage(item, DaggerfallItemOwner.Actor(owner), _actorEquipment(owner), units);
+        // The plural break belongs to the item's native template, not to the identifier the line
+        // prints: a materialized 'template-104-iron' instance is the donor's greaves.
+        int? templateIndex = _catalog.TryResolveItem(new DaggerfallItemId(item.Definition.Value), out DaggerfallItemDefinition wornDefinition)
+            ? DaggerfallTemplateItemDefinitions.TemplateIndexForAuthoredItem(wornDefinition.Id) ?? wornDefinition.Template?.Index
+            : null;
         facts.Append(new EquipmentWornFact(owner, result.DurableItemId, result.Metadata.ItemId,
+            DaggerfallTemplateItemDefinitions.BreaksInPlural(templateIndex),
             result.PreviousCondition, result.Metadata.CurrentCondition,
             result.Outcome == DaggerfallItemConditionOutcome.Broken, generation, step));
     }

@@ -30,6 +30,17 @@ internal static class DaggerfallTemplateItemDefinitions
     };
 
     /// <summary>
+    /// The native templates whose donor text breaks in the plural: boots, gauntlets and greaves are
+    /// named as pairs and take "have broken" where every other item takes "has broken". Donor:
+    /// <c>DaggerfallUnityItem.ItemBreaks</c>, which selects the message by these template indices.
+    /// </summary>
+    private static readonly int[] PluralBreakTemplates = [103, 104, 108];
+
+    /// <summary>The donor's own plural break set, asked by native template rather than by item name.</summary>
+    internal static bool BreaksInPlural(int? templateIndex) =>
+        templateIndex is int index && Array.IndexOf(PluralBreakTemplates, index) >= 0;
+
+    /// <summary>
     /// The native template an authored weapon, armor or ammunition item materializes from. An authored
     /// item carries the interpreted shape the product publishes; its native record carries the hit
     /// points and material scaling that become the instance's condition, so a caller that needs the
