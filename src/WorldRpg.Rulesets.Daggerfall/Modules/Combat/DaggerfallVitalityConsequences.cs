@@ -27,6 +27,19 @@ internal sealed class DaggerfallVitalityConsequences
         return _combat.ApplyToHealth(new CombatParticipants(player, player, "held enchantment"), damage, 0, health).Result;
     }
 
+    /// <summary>
+    /// Applies the damage a poison does to its victim, at the same health boundary combat and movement use,
+    /// so a poison that takes the last point of health defeats its victim through the ordinary consequence
+    /// path rather than leaving a track at zero.
+    /// </summary>
+    internal DamageResult ResolvePoisonDamage(Actor victim, int damage)
+    {
+        ArgumentNullException.ThrowIfNull(victim);
+        if (damage <= 0) throw new ArgumentOutOfRangeException(nameof(damage));
+        Track health = victim.Get<StatsComponent>().GetTrack(HealthTrack);
+        return _combat.ApplyToHealth(new CombatParticipants(victim, victim, "poison"), damage, 0, health).Result;
+    }
+
     /// <summary>Applies only the Engine-reported landing, never an input or a locally integrated trajectory.</summary>
     internal DamageResult? ResolveLanding(Actor player, DaggerfallLanding? landing, bool preventsFallDamage)
     {
