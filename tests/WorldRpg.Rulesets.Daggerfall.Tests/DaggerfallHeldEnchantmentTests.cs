@@ -322,6 +322,23 @@ public sealed class DaggerfallHeldEnchantmentTests
     }
 
     [Fact]
+    public void A_setting_applied_by_the_item_maker_raises_the_skill_it_names()
+    {
+        // The skill payload the corpus' own artifacts carry, proven through the item maker instead of a
+        // directly registered instance: the classic param names long blade, the donor's amount is 15.
+        using Fixture fixture = new();
+        int baseSkill = fixture.Skill("long-blade");
+
+        fixture.EnchantAndWear("template-120-daedric", 9102, type: 10, param: 29);
+        fixture.Refresh();
+        Assert.Equal(baseSkill + 15, fixture.Skill("long-blade"));
+
+        fixture.Unequip(9102);
+        fixture.Refresh();
+        Assert.Equal(baseSkill, fixture.Skill("long-blade"));
+    }
+
+    [Fact]
     public void A_worn_talent_enchantment_sets_the_talent_the_combat_owner_reads()
     {
         using Fixture fixture = new();
@@ -414,6 +431,7 @@ public sealed class DaggerfallHeldEnchantmentTests
             return cost;
         }
 
+        Assert.Equal(2000, Cost(6, 0));      // VampiricEffect at range
         Assert.Equal(1000, Cost(6, 1));      // VampiricEffect.WhenStrikes
         Assert.Equal(1500, Cost(9, -1));     // AbsorbsSpells
         Assert.Equal(900, Cost(10, 29));     // EnhancesSkill, long blade
