@@ -52,6 +52,30 @@ public sealed class DaggerfallItemConditionServiceTests
     }
 
     [Fact]
+    public void An_item_makers_setting_survives_a_save_and_restore()
+    {
+        // The save path used to require a published magic item, so an item the item maker had enchanted
+        // could not be stored at all. A setting is now stored as it stands and comes back on the item.
+        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        DaggerfallSavePayload saved = DaggerfallSavePayload.Read(fixture.Session.CaptureSave());
+        DaggerfallUniqueSave target = saved.Inventory.UniqueItems.First();
+        string settingKey = DaggerfallEnchantmentSettings.All.Single(candidate => candidate.Type == 7 && candidate.Param == 0).Key;
+        DaggerfallSavePayload enchanted = saved with
+        {
+            Inventory = saved.Inventory with
+            {
+                UniqueItems = saved.Inventory.UniqueItems.Select(item => item.EntityId == target.EntityId
+                    ? item with { Metadata = item.Metadata with { Enchantment = settingKey, Identified = true } }
+                    : item).ToArray(),
+            },
+        };
+
+        using DaggerfallSession restored = fixture.Restore(DaggerfallSavePayload.Encode(enchanted));
+
+        Assert.Equal(settingKey, restored.State.ItemInstances.RequireUnique(target.EntityId).Enchantment);
+    }
+
+    [Fact]
     public void Restore_rejects_unknown_or_incompatible_enchantment_metadata_before_materializing_items()
     {
         using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
