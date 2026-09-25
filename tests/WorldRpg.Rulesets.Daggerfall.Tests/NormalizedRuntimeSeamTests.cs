@@ -1801,11 +1801,11 @@ public sealed partial class NormalizedRuntimeSeamTests
         AppearanceFake appearance = new(releases);
         AudioRecorder audio = AudioRecorder.Create();
         appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
-            new[] { new SpritePlaybackMarkerCrossing(1, 3, 1, 0, 1) },
+            new[] { new SpritePlaybackMarkerCrossing(2, 3, 1, 0, 1) },
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 1, false),
             true));
         appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
-            new[] { new SpritePlaybackMarkerCrossing(1, 3, 1, 0, 1) },
+            new[] { new SpritePlaybackMarkerCrossing(2, 3, 1, 0, 1) },
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 2, false),
             true));
 
@@ -2068,7 +2068,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1]), audio.Service);
         presentation.React(new EnemyAttackStartedFact(11, 12, true, 2, 3));
         appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
-            new[] { new SpritePlaybackMarkerCrossing(1, 3, 1, 0, 1) },
+            new[] { new SpritePlaybackMarkerCrossing(2, 3, 1, 0, 1) },
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Completed, 0D, 0, 1, true),
             false));
 
@@ -2090,7 +2090,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1]), audio.Service);
         presentation.React(new EnemyAttackStartedFact(11, 12, false, 2, 3));
         appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
-            new[] { new SpritePlaybackMarkerCrossing(1, 3, 1, 0, 1) },
+            new[] { new SpritePlaybackMarkerCrossing(2, 3, 1, 0, 1) },
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 1, false),
             true));
 
@@ -6400,7 +6400,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
             new[]
             {
-                new SpritePlaybackMarkerCrossing(1, 3, 1, 0, 1),
+                new SpritePlaybackMarkerCrossing(2, 3, 1, 0, 1),
                 new SpritePlaybackMarkerCrossing(4, 3, 1, 0, 2),
             },
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 2, false),
@@ -6520,7 +6520,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Completed, 0D, 0, 1, true),
             false));
         appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
-            new[] { new SpritePlaybackMarkerCrossing(1, 3, 1, 0, 1) },
+            new[] { new SpritePlaybackMarkerCrossing(2, 3, 1, 0, 1) },
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 2, false),
             true));
         using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1]), audio.Service);
@@ -6534,6 +6534,29 @@ public sealed partial class NormalizedRuntimeSeamTests
         presentation.Advance(OuterUpdate(2));
         AttackImpactNotice impact = Assert.Single(presentation.TakeAttackImpacts());
         Assert.False(impact.Expired);
+    }
+
+    [Fact]
+    public void A_marker_the_author_did_not_designate_as_the_damage_frame_lands_no_strike()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AppearanceFake appearance = new(releases);
+        AudioRecorder audio = AudioRecorder.Create();
+        // Engine's marker contract is deliberately semantics-free, so the strike beat is the crossing
+        // whose identity is the authored damage frame. This sequence publishes markers 2 and 4; a
+        // crossing of anything else names no beat, and it must neither sound nor land.
+        appearance.AdvanceReceiptForAll = new SpritePlaybackAdvanceLeaseReceipt(
+            new[] { new SpritePlaybackMarkerCrossing(3, 3, 1, 0, 1) },
+            new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 1, false),
+            true);
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1, -1, 0]), audio.Service);
+        presentation.React(new EnemyAttackStartedFact(11, 12, true, 3, 4));
+
+        presentation.Advance(OuterUpdate(1));
+
+        Assert.Empty(presentation.TakeAttackImpacts());
+        Assert.Empty(audio.Emits);
     }
 
     [Fact]
@@ -7390,8 +7413,9 @@ public sealed partial class NormalizedRuntimeSeamTests
         new SpritePlaybackReadout(frame, 1, SpritePlaybackState.Completed, 0D, 0, frame, true),
         true);
 
-    private static SpritePlaybackAdvanceLeaseReceipt CrossedMarker(uint frame, ulong crossing = 1) => new(
-        new[] { new SpritePlaybackMarkerCrossing(1, 3, 1, 0, crossing) },
+    /// <summary>A crossing of the named authored marker, identified the way the product identifies it.</summary>
+    private static SpritePlaybackAdvanceLeaseReceipt CrossedMarker(uint frame, ulong markerId = 2, ulong crossing = 1) => new(
+        new[] { new SpritePlaybackMarkerCrossing(markerId, 3, 1, 0, crossing) },
         new SpritePlaybackReadout(frame, 1, SpritePlaybackState.Playing, 0D, 0, frame, false),
         true);
 

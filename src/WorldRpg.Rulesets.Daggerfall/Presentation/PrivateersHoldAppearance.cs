@@ -422,10 +422,14 @@ internal sealed class PrivateersHoldAppearance : IDisposable
                     if (crossing.CrossingSequence <= visual.LastMarkerCrossing) continue;
                     visual.LastMarkerCrossing = crossing.CrossingSequence;
                     if (visual.ActiveAttack is not { } crossingAttack) continue;
-                    // One decided swing owns one strike beat, even when the authored
-                    // sequence carries several damage frames: the first crossing sounds
-                    // and reports, and later frames of the same swing do neither.
+                    // One decided swing owns one strike beat, even when the authored sequence carries
+                    // several damage frames: the first damage-frame crossing sounds and reports, and
+                    // later beats of the same swing do neither. Engine's marker contract is
+                    // deliberately semantics-free, so the beat is identified by the marker the author
+                    // designated as the damage frame; any other marker kind crossing this swing (a cue,
+                    // an alternate beat) names a frame that is not the strike and lands nothing.
                     if (crossingAttack.ImpactReported) continue;
+                    if (crossingAttack.DamageMarkerId is not ulong damageMarker || crossing.MarkerId != damageMarker) continue;
                     visual.ActiveAttack = crossingAttack with { ImpactReported = true };
                     if (crossingAttack.Identity.Outcome == "hit") Emit(crossingAttack.HitCue, crossingAttack.Identity, crossing.CrossingSequence);
                     attackImpacts.Add(new AttackImpactNotice(crossingAttack.Identity.Attacker, crossingAttack.Identity.Target, crossingAttack.Identity.Generation, crossingAttack.Identity.SimulationStep, Expired: false));
@@ -627,8 +631,13 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         }
         StartState(entityId, stateName, visual, selected);
         string hitCue = SelectHitCue(presentationEvent);
-        visual.ActiveAttack = new ActiveAttackPresentation(presentationEvent, hitCue);
-        bool hasDamageFrame = selected.SourceFrames.Contains(-1);
+        // The authored damage frame is the playback marker at its own source position: a source step
+        // number is carried as a marker, and its identity is that step's place in the sequence.
+        ulong? damageMarker = null;
+        for (int index = 0; index < selected.SourceFrames.Count; index++)
+            if (selected.SourceFrames[index] == -1) { damageMarker = checked((ulong)index + 1); break; }
+        visual.ActiveAttack = new ActiveAttackPresentation(presentationEvent, hitCue, damageMarker);
+        bool hasDamageFrame = damageMarker is not null;
         if (presentationEvent.Outcome == "hit" && !hasDamageFrame) Emit(hitCue, presentationEvent, 0);
         return hasDamageFrame;
     }
@@ -1005,5 +1014,5 @@ internal sealed class PrivateersHoldAppearance : IDisposable
 
     internal readonly record struct PresentationEventIdentity(ulong Generation, ulong SimulationStep, long Attacker, long Target, string Outcome);
     internal readonly record struct AppearanceOuterUpdate(ulong Generation, ulong ControlRevision, ulong SimulationStep, uint AdmittedStepCount);
-    internal readonly record struct ActiveAttackPresentation(PresentationEventIdentity Identity, string HitCue, bool ImpactReported = false);
+    internal readonly record struct ActiveAttackPresentation(PresentationEventIdentity Identity, string HitCue, ulong? DamageMarkerId = null, bool ImpactReported = false);
 }
