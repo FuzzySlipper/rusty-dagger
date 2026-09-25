@@ -394,6 +394,29 @@ public sealed class DaggerCombatDamagePolicyTests
     }
 
     [Fact]
+    public void A_shot_that_meets_cover_lands_nothing_and_says_so()
+    {
+        // Static geometry on the release line stops the missile before the target: neither the roll
+        // nor the aim decides anything, so nothing about the target is damaged or reported as a miss.
+        using DamagePolicyFixture fixture = new(armed: false, coverBlocks: (origin, aim) => origin != aim);
+        fixture.EquipPlayerBow("iron-short-bow", 3001);
+        fixture.GivePlayerArrows(3);
+        fixture.Script(body: 9, critical: 50, hit: 1, damage: 10);
+        AttackRequest request = new(DaggerfallActorIdentity.PlayerEntityId, 2, 5, 9, .125d, Delayed: true);
+        fixture.StartSwing(request, out bool started);
+        Assert.True(started);
+
+        Assert.Empty(fixture.DeliverImpact(request));
+        IReadOnlyList<IProductFact> arrived = fixture.AdvanceFlight(5, 10);
+
+        RangedShotBlockedFact blocked = Assert.Single(arrived.OfType<RangedShotBlockedFact>());
+        Assert.Equal(DaggerfallActorIdentity.PlayerEntityId, blocked.AttackerId);
+        Assert.Equal(2L, blocked.TargetId);
+        Assert.Empty(arrived.OfType<AttackHitFact>());
+        Assert.Empty(arrived.OfType<AttackMissedFact>());
+    }
+
+    [Fact]
     public void A_player_bow_shot_with_an_empty_quiver_is_refused_before_it_is_admitted()
     {
         using DamagePolicyFixture fixture = new(armed: false);
@@ -456,7 +479,7 @@ public sealed class DaggerCombatDamagePolicyTests
 
         private DaggerfallCharacterState? _character;
 
-        internal DamagePolicyFixture(bool armed = true)
+        internal DamagePolicyFixture(bool armed = true, Func<WorldPoint, WorldPoint, bool>? coverBlocks = null)
         {
             DaggerfallDefinitions definitions = Definitions;
             DaggerfallActorDefinition playerDefinition = definitions.RequireActor(new DaggerfallActorId("player"));
@@ -486,7 +509,7 @@ public sealed class DaggerCombatDamagePolicyTests
                 id => _actorInventories.TryGetValue(id, out MechanicsInventoryCoordinator? quiver) ? quiver : null,
                 _itemInstances, definitions, _authored, null!,
                 actorEquipment: id => _actorEquipment.TryGetValue(id, out MechanicsEquipmentCoordinator? coordinator) ? coordinator : _playerEquipment,
-                playerPosition: () => _playerPosition, character: () => _character);
+                playerPosition: () => _playerPosition, character: () => _character, coverBlocksShot: coverBlocks);
         }
 
         internal void Script(int body, int critical, int hit, int? damage = null, int? backstabRoll = null)

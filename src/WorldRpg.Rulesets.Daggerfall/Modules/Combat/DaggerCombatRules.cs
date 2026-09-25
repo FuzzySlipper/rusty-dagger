@@ -41,6 +41,8 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     private readonly Func<WorldPoint?> _playerPosition;
     private readonly Func<DaggerfallCharacterState?> _character;
     private readonly Func<DaggerfallSwingDirection> _playerSwing;
+    /// <summary>Whether admitted static geometry stands between a shot's release and its aim.</summary>
+    private readonly Func<WorldPoint, WorldPoint, bool>? coverBlocksShot;
     internal AttackCapabilities<IProductFact> Attacks { get; }
     internal TargetingService Targeting { get; }
     internal AttackExecution<IProductFact> Execution { get; }
@@ -59,7 +61,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         Func<long, MechanicsEquipmentCoordinator>? actorEquipment = null, DaggerfallItemConditionService? itemCondition = null,
         CombatResolution? rules = null, Func<long, DaggerfallAdrenalineRush>? adrenalineRush = null,
         Func<WorldPoint?>? playerPosition = null, Func<DaggerfallCharacterState?>? character = null,
-        Func<DaggerfallSwingDirection>? playerSwing = null)
+        Func<DaggerfallSwingDirection>? playerSwing = null, Func<WorldPoint, WorldPoint, bool>? coverBlocksShot = null)
     {
         _random = random;
         Rules = rules ?? new CombatResolution();
@@ -81,6 +83,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         _playerPosition = playerPosition ?? (() => null);
         _character = character ?? (() => null);
         _playerSwing = playerSwing ?? (() => DaggerfallSwingDirection.None);
+        this.coverBlocksShot = coverBlocksShot;
         Targeting = targeting;
         Attacks = new(PlayerId, Targeting, Execution, ReachOf, facts => facts.Append(new AttackRejectedFact(AttackRejection.MissingPlayerPosition)));
     }
@@ -182,8 +185,10 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     /// <summary>
     /// The authored release frame consumes the pending attack, while a fixed-ranged attack stays
     /// in this ruleset-owned transient queue until the session's admitted update advances it.
-    /// Daggerfall Unity uses a travelling missile; this approximation has no rendered arrow or
-    /// static-cover SphereCast yet, so only the target's current position can dodge the release aim.
+    /// Daggerfall Unity uses a travelling missile; this approximation still renders no arrow, so only
+    /// the target's current position can dodge the release aim. Admitted static geometry between the
+    /// release and the aim is asked of the caller's own Engine query: a shot that meets cover lands
+    /// nowhere.
     /// </summary>
     private bool DeferRangedImpact(DeferredAttackImpact impact, FactBuffer<IProductFact> facts)
     {
@@ -204,6 +209,14 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
                 || release.Request.TargetId is not long targetId || !IsLiveCombatant(targetId)
                 || !positions.TryGetValue(release.Request.AttackerId, out WorldPoint origin)
                 || !positions.TryGetValue(targetId, out WorldPoint aim)) continue;
+
+            // Cover is asked once, on the line the shot was released along: a missile that meets a wall
+            // dies there, so neither the shooter's roll nor the target's later movement decides it.
+            if (coverBlocksShot is not null && coverBlocksShot(origin, aim))
+            {
+                facts.Append(new RangedShotBlockedFact(release.Request.AttackerId, targetId, generation, simulationStep));
+                continue;
+            }
 
             ulong arrival = checked(simulationStep + RequiredFlightSteps(origin, aim, fixedDeltaSeconds));
             RangedShotIdentity identity = new(generation, release.Request.AttackerId, targetId, simulationStep);

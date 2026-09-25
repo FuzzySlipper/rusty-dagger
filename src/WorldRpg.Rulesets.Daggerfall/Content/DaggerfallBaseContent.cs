@@ -3391,12 +3391,12 @@ internal static class DaggerfallBaseContent
             "bows-retain-donor-both-hands-policy",
             "loot-matrix-uses-fall-exe-errata",
             // Ranged shots draw one arrow, preroll their combat outcome, and travel through the
-            // admitted session update. This ruleset approximation has no rendered arrow and no
-            // static-cover SphereCast, so the flight only tests whether the target moved away from
-            // its release aim.
-            "ranged-shots-preroll-their-outcome-and-ignore-cover",
+            // admitted session update, where admitted static geometry on the release line stops them.
+            // What remains is presentation: the flight still renders no arrow, so the visible missile
+            // waits on an authored arrow visual rather than a substitute shape.
+            "ranged-shots-preroll-their-outcome-and-render-no-arrow",
         ];
-        if (!errata.Select(erratum => erratum.Id).Order().SequenceEqual(expectedErrata.Order())) diagnostics.Add("Donor errata must name mobile 39, the Chain2 omission, the bow two-hand policy, the loot errata and the ranged delivery exactly.");
+        if (!errata.Select(erratum => erratum.Id).Order().SequenceEqual(expectedErrata.Order())) diagnostics.Add("Donor errata must name mobile 39, the Chain2 omission, the bow two-hand policy, the loot errata and what the ranged delivery still approximates exactly.");
     }
 
     internal static JsonElement Property(JsonElement value, string property, DaggerfallContentDiagnostics diagnostics)

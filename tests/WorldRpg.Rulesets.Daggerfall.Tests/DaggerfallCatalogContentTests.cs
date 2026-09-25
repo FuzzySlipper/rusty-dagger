@@ -34,7 +34,7 @@ public sealed class DaggerfallCatalogContentTests
         DaggerfallActorDefinition archerDefinition = definitions.RequireActor(new DaggerfallActorId("archer"));
         Assert.Equal(new[] { (Item: new DaggerfallItemId("arrow"), Quantity: 12UL) }, archerDefinition.Loadout.Select(entry => (entry.ItemId, entry.Quantity)).ToArray());
         Assert.Equal(new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 40, 41, 42 }, definitions.Actors.Values.Where(actor => actor.Kind == "monster").Select(actor => actor.MobileId!.Value).Order());
-        Assert.Equal(new[] { "mobile-39-horse-is-explicitly-absent", "chain2-material-alias-is-not-authored", "bows-retain-donor-both-hands-policy", "loot-matrix-uses-fall-exe-errata", "ranged-shots-preroll-their-outcome-and-ignore-cover" }.Order(), definitions.DonorErrata.Select(erratum => erratum.Id).Order());
+        Assert.Equal(new[] { "mobile-39-horse-is-explicitly-absent", "chain2-material-alias-is-not-authored", "bows-retain-donor-both-hands-policy", "loot-matrix-uses-fall-exe-errata", "ranged-shots-preroll-their-outcome-and-render-no-arrow" }.Order(), definitions.DonorErrata.Select(erratum => erratum.Id).Order());
         Assert.All(definitions.LootCategoryPools, pool => Assert.Equal("deferred", pool.Status));
         Assert.Equal("both", definitions.Items[new DaggerfallItemId("iron-short-bow")].Weapon!.Handedness);
         Assert.Equal("right-hand", definitions.RequireActor(new DaggerfallActorId("player")).Loadout[0].EquipSlot!.Value.Value);

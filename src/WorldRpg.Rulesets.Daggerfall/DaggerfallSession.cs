@@ -313,7 +313,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 actorId => actorId == DaggerfallActorIdentity.PlayerEntityId
                     && State.Character.CustomCareer?.Advantages.Any(trait => trait.Id == "adrenaline-rush") == true
                     ? new DaggerfallAdrenalineRush(Enabled: true, Improved: false) : default,
-                () => State.PlayerControl.Position, () => State.Character, _playerSwings.TryGesture);
+                () => State.PlayerControl.Position, () => State.Character, _playerSwings.TryGesture, ShotBlockedByCover);
             State.Kit = new(State.Actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, State.Inventory, State.Equipment);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
                 engine.Perception,
@@ -830,6 +830,26 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         source.Dispose();
         return true;
     }
+
+    /// <summary>
+    /// Whether admitted static geometry stands between a shot's release and its aim, asked of the
+    /// Engine's own segment query at chest height. A shooter standing inside geometry would otherwise
+    /// report every shot as blocked, so the segment starts clear of the muzzle.
+    /// </summary>
+    private bool ShotBlockedByCover(WorldPoint origin, WorldPoint aim)
+    {
+        Vector3 from = origin.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight;
+        Vector3 to = aim.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight;
+        Vector3 delta = to - from;
+        float distance = delta.Length();
+        if (!float.IsFinite(distance) || distance <= CoverCastStartMeters) return false;
+        Vector3 direction = delta / distance;
+        SpatialHit hit = _spatial.CastRay(from + direction * CoverCastStartMeters, direction, distance - CoverCastStartMeters);
+        return hit.Present && hit.Kind == SpatialHitKind.StaticMesh;
+    }
+
+    /// <summary>How far along the shot the cover query starts, clear of the shooter's own position.</summary>
+    private const float CoverCastStartMeters = .3f;
 
     /// <summary>
     /// Retires the departing projection's unfinished swing. The notice it publishes belongs to the

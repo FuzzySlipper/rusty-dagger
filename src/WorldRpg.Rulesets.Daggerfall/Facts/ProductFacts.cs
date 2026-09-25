@@ -34,6 +34,11 @@ internal sealed record PlayerAttackStartedFact(ulong OriginatingGeneration, ulon
 /// the damage lands when the authored damage frame is reached.
 /// </summary>
 internal sealed record EnemyAttackStartedFact(long AttackerId, long TargetId, bool WillHit, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
+/// <summary>
+/// A released shot met admitted static geometry before its aim. The missile died on the cover, so
+/// nothing about the target's dodge or the shooter's roll decided anything.
+/// </summary>
+internal sealed record RangedShotBlockedFact(long AttackerId, long TargetId, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
 internal sealed record AttackMissedFact(long AttackerId, long TargetId, int Roll, int Chance, bool EnemyAttack, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
 /// <summary>Physical contact is distinct from accepted health loss; body follows the donor table.</summary>
 internal sealed record AttackHitFact(long AttackerId, long TargetId, int CalculatedDamage, double ActualHealthLost,
