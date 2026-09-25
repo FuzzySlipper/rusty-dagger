@@ -339,6 +339,28 @@ public sealed class DaggerfallHeldEnchantmentTests
     }
 
     [Fact]
+    public void A_conditional_spell_point_setting_reaches_the_worn_contribution()
+    {
+        // The conditional payload of #8583's requirement, through the real action: a during-spring
+        // setting adds its 75 points in a spring month and nothing outside one.
+        using Fixture fixture = new();
+        int plain = fixture.MagickaMaximum();
+
+        fixture.EnchantAndWear("template-120-daedric", 9103, type: 3, param: 1);
+        fixture.Calendar = fixture.Calendar with { Month = 3 };
+        fixture.Refresh();
+        Assert.Equal(plain + 75, fixture.MagickaMaximum());
+
+        fixture.Calendar = fixture.Calendar with { Month = 0 };
+        fixture.Refresh();
+        Assert.Equal(plain, fixture.MagickaMaximum());
+
+        fixture.Unequip(9103);
+        fixture.Refresh();
+        Assert.Equal(plain, fixture.MagickaMaximum());
+    }
+
+    [Fact]
     public void A_worn_talent_enchantment_sets_the_talent_the_combat_owner_reads()
     {
         using Fixture fixture = new();
