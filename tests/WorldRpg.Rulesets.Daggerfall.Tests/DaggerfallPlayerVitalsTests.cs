@@ -93,7 +93,7 @@ public sealed class DaggerfallPlayerVitalsTests
     }
 
     private static DaggerfallDefinitions Definitions() =>
-        DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+        TestPayload.Definitions;
 
     private static string RepositoryRoot()
     {

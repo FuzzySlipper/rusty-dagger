@@ -96,7 +96,7 @@ public sealed class DaggerfallEncounterPolicyTests
     [Fact]
     public void PersistsASelectedClassEncounterBeforeItMaterializesWithoutAnotherDraw()
     {
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         RecordingRandom recording = RecordingRandom.Create();
         DaggerfallEncounterRuntime first = new(definitions, recording.Service);
         ActorPose pose = new(new WorldPoint(3, 4, 5), 0.5f);
@@ -165,7 +165,7 @@ public sealed class DaggerfallEncounterPolicyTests
 
     private static int Minimum(string id, int minimum, int maximum) => minimum;
 
-    private static DaggerfallDefinitions Definitions() => DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+    private static DaggerfallDefinitions Definitions() => TestPayload.Definitions;
 
     private static string RepositoryRoot()
     {

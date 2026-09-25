@@ -253,7 +253,7 @@ public sealed class DaggerfallConcreteGuildRuntimeTests
     {
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "content/worldrpg/payloads/daggerfall.base.json"))) directory = directory.Parent;
-        return DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(directory!.FullName, "content/worldrpg/payloads/daggerfall.base.json")));
+        return TestPayload.Definitions;
     }
 
     private static DaggerfallServiceProvider Provider(Fixture fixture, int factionId, string service)

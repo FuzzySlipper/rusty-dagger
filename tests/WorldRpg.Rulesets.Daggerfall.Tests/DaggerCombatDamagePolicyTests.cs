@@ -476,7 +476,7 @@ public sealed class DaggerCombatDamagePolicyTests
         public void Damage(DamageEvent interaction) => DamageCount++;
     }
 
-    private static DaggerfallDefinitions Definitions => _definitions ??= DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+    private static DaggerfallDefinitions Definitions => _definitions ??= TestPayload.Definitions;
     private static DaggerfallDefinitions? _definitions;
 
     /// <summary>

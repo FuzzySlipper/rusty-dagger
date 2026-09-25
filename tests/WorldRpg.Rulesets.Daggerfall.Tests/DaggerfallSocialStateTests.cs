@@ -160,7 +160,7 @@ public sealed class DaggerfallSocialStateTests
     private static DaggerfallDefinitions Definitions()
     {
         string root = FindRepositoryRoot();
-        return DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        return TestPayload.Definitions;
     }
 
     private static string FindRepositoryRoot()

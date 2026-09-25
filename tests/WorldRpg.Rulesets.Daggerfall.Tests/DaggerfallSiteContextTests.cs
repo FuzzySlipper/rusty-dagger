@@ -485,7 +485,7 @@ public sealed class DaggerfallSiteContextTests
 
     private static DaggerfallSiteContext Context() => new(Read().Locations);
 
-    private static DaggerfallDefinitions Read() => DaggerfallBaseContent.Read(File.ReadAllBytes(PackPath()));
+    private static DaggerfallDefinitions Read() => TestPayload.Definitions;
 
     private static string PackPath() => Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json");
 

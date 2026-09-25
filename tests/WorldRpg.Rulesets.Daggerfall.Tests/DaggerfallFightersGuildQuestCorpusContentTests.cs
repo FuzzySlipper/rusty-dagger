@@ -12,7 +12,7 @@ public sealed class DaggerfallFightersGuildQuestCorpusContentTests
     public void Admits_all_twenty_receipts_and_reports_compiler_diagnostics_per_source()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> receipts = DaggerfallFightersGuildQuestCorpusContent.Read(
             new ProductContent(Array.Empty<ProductContentFile>()),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.fighters.json")), definitions);
@@ -32,7 +32,7 @@ public sealed class DaggerfallFightersGuildQuestCorpusContentTests
     public void Actual_instance_start_and_restore_refuse_a_non_runnable_selected_source()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> receipts = DaggerfallFightersGuildQuestCorpusContent.Read(
             new ProductContent(Array.Empty<ProductContentFile>()),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.fighters.json")), definitions);
@@ -52,7 +52,7 @@ public sealed class DaggerfallFightersGuildQuestCorpusContentTests
     public void Rejects_a_duplicate_or_metadata_substitution_against_the_admitted_catalog()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         JsonObject payload = JsonNode.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.fighters.json")))!.AsObject();
         JsonArray quests = payload["quests"]!.AsArray();
         quests[1]!["name"] = quests[0]!["name"]!.GetValue<string>();

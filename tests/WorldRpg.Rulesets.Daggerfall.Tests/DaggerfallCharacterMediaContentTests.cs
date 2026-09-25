@@ -152,7 +152,7 @@ public sealed class DaggerfallCharacterMediaContentTests
         Assert.Contains("which no location record carries", error.Message, StringComparison.Ordinal);
     }
 
-    private static DaggerfallDefinitions Read() => DaggerfallBaseContent.Read(File.ReadAllBytes(PackPath()));
+    private static DaggerfallDefinitions Read() => TestPayload.Definitions;
 
     private static string PackPath() => Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json");
 

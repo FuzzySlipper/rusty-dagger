@@ -302,7 +302,7 @@ public sealed class DaggerfallEquipmentWearTests
     private static int AppliedDamage(IReadOnlyList<IProductFact> facts) =>
         (int)Math.Truncate(Assert.Single(facts.OfType<AttackHitFact>()).ActualHealthLost);
 
-    private static DaggerfallDefinitions Definitions => _definitions ??= DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+    private static DaggerfallDefinitions Definitions => _definitions ??= TestPayload.Definitions;
     private static DaggerfallDefinitions? _definitions;
 
     private static string RepositoryRoot()

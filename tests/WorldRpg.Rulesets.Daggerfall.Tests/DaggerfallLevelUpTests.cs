@@ -81,7 +81,7 @@ public sealed class DaggerfallLevelUpTests
 
     private static (DaggerfallLevelUpState LevelUps, ProgressionState Progression, StatsComponent Stats, RecordingRandom Random) Eligible()
     {
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
         DaggerfallCareerDefinition career = definitions.Catalogs.RequireCareer("class00");
         ProgressionState progression = new();

@@ -20,7 +20,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Exterior_rest_selects_location_and_wilderness_night_encounters_from_the_live_cell()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs source = ReadInputs(root);
         foreach (bool wilderness in new[] { false, true })
         {
@@ -56,7 +56,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Selected_rest_encounter_interrupts_at_its_minute_and_restores_the_queued_choice()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs source = ReadInputs(root);
         PrivateersHoldInputs inputs = SameContentAt(source, source.ProfileKey.Site,
             DaggerfallWorldProfileKind.Exterior, "rest-selected-encounter");
@@ -99,7 +99,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Rest_ui_action_advances_once_recovers_once_round_trips_and_refuses_town_camping()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);

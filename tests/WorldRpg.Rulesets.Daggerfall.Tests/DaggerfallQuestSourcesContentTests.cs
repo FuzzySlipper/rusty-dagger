@@ -64,7 +64,7 @@ public sealed class DaggerfallQuestSourcesContentTests
     private static DaggerfallDefinitions Definitions()
     {
         string root = RepositoryRoot();
-        return DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        return TestPayload.Definitions;
     }
 
     private static string RepositoryRoot()

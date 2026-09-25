@@ -44,7 +44,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Selected_RDB_door_visuals_share_their_runtime_pose_and_keep_the_appearance_snapshot_unique()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -67,7 +67,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Ordinary_rest_opens_a_saved_level_allocation_that_commits_one_health_gain_after_reload()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -127,7 +127,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Quest_instances_keep_same_definition_runs_and_typed_bindings_across_save_restore()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -232,7 +232,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Mapped_attack_press_reaches_combat_once_without_held_or_catchup_replay()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -268,7 +268,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = RepositoryRoot();
         PrivateersHoldInputs inputs = ReadInputs(root);
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -345,7 +345,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = RepositoryRoot();
         PrivateersHoldInputs inputs = ReadInputs(root);
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -430,7 +430,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = RepositoryRoot();
         PrivateersHoldInputs inputs = ReadInputs(root);
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -457,7 +457,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = RepositoryRoot();
         PrivateersHoldInputs inputs = ReadInputs(root);
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -665,7 +665,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         RulesetSavePayload payload = session.CaptureSave();
 
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -709,7 +709,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void An_attacker_with_no_authored_reach_stays_idle_at_point_blank_range()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         Dictionary<DaggerfallActorId, DaggerfallActorDefinition> unreached =
             definitions.Actors.ToDictionary(pair => pair.Key, pair => pair.Value with { ActionId = null });
@@ -837,7 +837,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void A_pad_alone_moves_and_turns_the_player_on_the_ordinary_input_path()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -867,7 +867,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Over_capacity_player_still_receives_an_engine_step_but_cannot_propose_planar_movement()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -891,7 +891,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Engine_reported_landing_applies_one_lethal_fall_and_disables_later_player_movement()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -916,7 +916,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Admitted_wall_checks_reach_skill_progression_and_save_with_live_movement_caller()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -952,7 +952,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Live_effect_grant_drives_levitation_then_expiry_restores_gravity()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -1001,7 +1001,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Dungeon_visibility_records_only_engine_seen_placement_and_restores_it()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         DaggerfallDungeonMapGeometry target = inputs.DungeonMap!.GeometryPlacements.Single(geometry => geometry.PlacementId == "model/b0000003-rdb/1/0/11");
         Vector3 point = target.SamplePoints[2]; // Unique within the admitted 0.5 m collision tolerance.
@@ -1055,7 +1055,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void A_pad_button_asks_the_dom_for_the_menu_action_that_opens_that_panel()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -1150,7 +1150,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void A_panel_request_is_an_event_that_stops_standing_once_the_dom_has_had_its_chance()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -1173,7 +1173,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void A_melee_request_that_found_nothing_reports_what_the_query_actually_saw()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -1198,7 +1198,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void A_held_attack_button_cannot_hide_what_actually_happened()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallActorDefinition rat = definitions.RequireActor(new DaggerfallActorId("rat"));
         PresentationState presentation = new("Ready");
         DaggerfallOutcomePresentation outcomes = new(presentation, new Dictionary<long, DaggerfallActorDefinition> { [2008] = rat });
@@ -1226,7 +1226,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void The_archer_carries_a_ranged_policy_its_donor_record_supports()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
 
         // The archer's policy is a fact about the source, not a preference: its published donor record
         // declares a ranged attack group and carries no melee damage range at all, so the attack it is
@@ -1267,7 +1267,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Every_placed_attacker_has_a_policy_keyed_on_a_skill_it_carries()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<DaggerfallActorId> swinging = [];
         foreach (AuthoredActor placement in inputs.Project.Actors.Values)
@@ -1299,7 +1299,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Two_panel_buttons_in_one_slice_leave_the_later_request_standing()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -1324,7 +1324,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Realtime_substeps_reuse_postlook_held_movement_with_one_sequence_each()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         // The authored start pose is π. With yaw wrapping enabled, the
         // admitted positive pointer delta crosses into [-π, π), rather than
@@ -1359,7 +1359,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Direct_axis_is_first_substep_only_while_held_input_continues()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -1381,7 +1381,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Direct_digital_movement_is_first_substep_only()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -1403,7 +1403,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Native_step_failure_keeps_applied_input_without_claiming_rollback()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -1560,7 +1560,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Authored_actor_presentation_resolves_rest_state_and_effective_playback_without_mobile_specific_runtime_policy()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         string scenario = File.ReadAllText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
 
         PrivateersHoldInputs ratInputs = PrivateersHoldContent.Read(ImportContent(root), Encoding.UTF8.GetBytes(scenario), definitions);
@@ -1586,7 +1586,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Normalized_media_parses_an_imported_preferred_rest_state_and_rejects_unknown_presentation_states()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         byte[] scenario = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
 
         ProductContent withImportedPreference = MutateDungeonMedia(root, media => media["actors"]!.AsArray()
@@ -1684,7 +1684,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Site_projection_owns_normalized_lights_and_clears_the_inside_background()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -2014,7 +2014,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         };
 
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -2391,7 +2391,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Normalized_media_rejects_invalid_sector_loop_and_per_sector_attack_index()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         byte[] payload = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
 
         Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateDungeonMedia(root, media => FirstActorState(media, "idle")["frames"]!.AsArray()[0]!["orientation"] = 8), payload, definitions));
@@ -2438,7 +2438,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Normalized_classic_audio_requires_a_contiguous_canonical_hit_cue_family()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         byte[] payload = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
 
         Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media =>
@@ -2457,7 +2457,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Normalized_classic_sidecar_rejects_noncanonical_source_records_ranges_frames_effects_and_descriptors()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         byte[] payload = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
 
         Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => media["weaponMedia"]!.AsArray()[0]!["actions"]!.AsArray()[0]!["frameStart"] = -1), payload, definitions));
@@ -2483,7 +2483,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Host_admits_one_realtime_update_and_releases_the_normalized_session_owners()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         List<string> releases = [];
         ContentFake content = new(releases);
         PrivateersHoldInputs inputs = ReadInputs(root);
@@ -2533,7 +2533,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         Assert.Equal(.5f * DaggerfallTuning.Defaults.PlayerControl.LookSensitivity, player.PitchRadians, precision: 6);
 
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -2551,7 +2551,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Backstab_opportunity_requires_an_accepted_operation_and_survives_replay_and_save_load()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -2630,7 +2630,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Session_fixed_steps_restore_exhausted_player_stamina()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -2650,7 +2650,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Current_save_roundtrip_rebuilds_stats_aliases_sources_tracks_and_modifier_handles()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake sourceContent = new(releases);
@@ -2716,7 +2716,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Session_save_restore_retains_social_reaction_and_guild_eligibility_without_a_loaded_npc()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         DaggerfallFactionDefinition faction = definitions.Factions.Factions[15];
         List<string> releases = [];
@@ -2814,7 +2814,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         Assert.Equal(3, saved.State.GetProperty("ticks").GetInt32());
 
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -2854,7 +2854,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Session_save_restore_rebinds_source_backed_effect_without_mutating_live_stats_or_replaying_start()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake sourceContent = new(releases);
@@ -2982,7 +2982,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Restoring_onto_a_holiday_at_a_settlement_announces_once()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         // Day 103 of the year is the eighteenth holiday, kept in region 17 alone; Charing is its city.
         DaggerfallSavePayload baseline = CapturedSave(root);
@@ -3023,7 +3023,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Crossing_midnight_into_a_holiday_announces()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         // An hour before midnight on the eve of region 17's eighteenth holiday, at its city.
         DaggerfallSavePayload baseline = CapturedSave(root);
@@ -3054,7 +3054,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void A_dungeon_session_never_announces()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         DaggerfallSavePayload baseline = CapturedSave(root);
         DaggerfallSavePayload saved = baseline with
@@ -3087,7 +3087,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Current_save_rejects_malformed_bytes_and_missing_content_definitions_before_a_session_is_published()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         DaggerfallSavePayload saved = CapturedSave(root);
         Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Read(new RulesetSavePayload(DaggerfallRuleset.Identity, "{"u8)));
@@ -3117,7 +3117,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Current_save_rejects_book_identity_that_is_not_a_readable_catalog_book()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         DaggerfallSavePayload valid = CapturedSave(root);
         DaggerfallItemDefinition nonBook = definitions.TemplateItems.Values
@@ -3162,7 +3162,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Current_save_rejects_ground_container_for_an_unadmitted_world_profile()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         DaggerfallSavePayload valid = CapturedSave(root);
         DaggerfallWorldProfileKey unknown = inputs.ProfileKey with { LogicalId = "unadmitted-profile" };
@@ -3188,7 +3188,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Current_save_keeps_relative_cooldown_but_starts_a_fresh_spatial_continuation()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake sourceContent = new(releases);
@@ -3223,7 +3223,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Host_save_close_reopen_resumes_a_fresh_daggerfall_session_with_current_state()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
         InMemoryPersistenceService persistence = new();
@@ -3324,7 +3324,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Default_disease_catalog_restores_live_modifiers_without_replaying_damage_and_cures_its_source()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -3440,7 +3440,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         };
 
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         InMemoryPersistenceService persistence = new();
@@ -3582,7 +3582,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Spawned_actors_register_retire_and_restore_with_distinct_state()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         long authoredPlacement = inputs.Project.Actors.Keys.Order().First();
         RulesetSavePayload payload;
@@ -3709,7 +3709,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         // KeyNotFoundException instead of showing no loot. The retire now closes the container
         // and the mode machine follows back to play through the ordinary Read-null path.
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -3754,7 +3754,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Activation_mode_change_consumes_a_coincident_attack_without_starting_melee()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -3787,7 +3787,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Contextual_action_door_opens_before_its_direct_link_without_reversing_in_the_same_input()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs source = ReadInputs(root);
         PrivateersHoldInputs castle = PrivateersHoldContent.Read(FullContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
@@ -3844,7 +3844,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Door_text_first_click_blocks_the_real_door_and_second_click_opens_it(int trigger)
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs source = ReadInputs(root);
         PrivateersHoldInputs castle = PrivateersHoldContent.Read(FullContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
@@ -3920,7 +3920,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Lockpick_activation_records_failed_skill_once_and_restores_door_attribution()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -3998,7 +3998,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Dungeon_text_modal_preserves_answer_continuation_and_linked_displays()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -4064,7 +4064,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Direct_interaction_input_consumes_a_coincident_direct_attack()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -4086,7 +4086,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Contextual_activation_opens_the_current_corpse_with_one_visibility_query()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -4122,7 +4122,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Session_book_use_opens_a_retained_reader_and_persists_its_notes_through_restore()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -4170,7 +4170,7 @@ public sealed partial class NormalizedRuntimeSeamTests
 
     private static DaggerfallSavePayload CapturedSave(string root)
     {
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -4193,7 +4193,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Ordinary_attack_uses_the_engine_visibility_receipt_then_the_shared_explicit_melee_policy()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -4229,7 +4229,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void A_transition_mid_swing_retires_the_swing_it_can_no_longer_deliver()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         PrivateersHoldInputs castle = PrivateersHoldContent.Read(FullContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
@@ -4273,7 +4273,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Loot_ui_actions_open_without_transfer_then_take_one_at_the_admitted_boundary_and_close()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -4321,7 +4321,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Corpse_loot_uses_engine_visibility_and_transfers_to_the_player_only_after_explicit_interaction()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -4424,7 +4424,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Empty_corpse_is_explicitly_searchable_once_without_an_engine_inventory_owner()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -4475,7 +4475,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Static_cover_between_the_archer_and_the_player_stops_the_shot()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -4528,7 +4528,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         // The shot stops at admitted world geometry, not at a body: an intervening actor is not cover,
         // which is what keeps the StaticMesh answer the only blocking one.
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -4560,7 +4560,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void The_archer_damages_the_player_from_beyond_melee_reach_without_closing()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -4630,7 +4630,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void An_archer_shot_misses_when_the_player_leaves_its_release_aim_during_flight()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -4662,7 +4662,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Ranged_flight_discards_stale_generations_and_retires_missing_attackers()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -4713,7 +4713,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void A_save_after_ranged_release_drops_the_transient_in_flight_shot()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         ResolvedCompositionIdentity composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
         List<string> releases = [];
@@ -4745,7 +4745,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Enemy_behavior_uses_engine_visibility_then_shared_combat_and_transitions_without_replaying_damage()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -4789,7 +4789,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Lethal_enemy_resolution_does_not_activate_a_corpse_from_the_same_step()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -4828,7 +4828,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Daggerfall_target_selection_accepts_engine_inclusive_boundaries_and_rejects_other_engine_classifications()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -4862,7 +4862,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Daggerfall_target_selection_excludes_defeated_actors_and_uses_durable_ids_over_runtime_ids()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -5029,7 +5029,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Paused_mode_holds_enemy_facts_stamina_and_sprite_playback_until_play_resumes()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -5082,7 +5082,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         };
 
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake sourceContent = new(releases);
@@ -5172,7 +5172,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     private static DaggerfallSession FreshSession(DaggerfallEffectCatalog? effects = null)
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -5189,7 +5189,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Site_transition_replaces_the_admitted_world_and_restores_the_source_pose_on_return()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs source = ReadInputs(root);
         PrivateersHoldInputs destination = PrivateersHoldContent.Read(FullContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
@@ -5265,7 +5265,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Site_light_resources_retire_on_transition_and_rebuild_on_save_restore()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
         PrivateersHoldInputs destination = ReadProfile(root, admitted, definitions, "daggerfall.castle-necromoghan.json");
@@ -5312,7 +5312,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Charing_portals_enter_and_return_between_profiles_that_share_a_geographic_site()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
         PrivateersHoldInputs exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
         PrivateersHoldInputs interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
@@ -5380,7 +5380,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Dynamic_actor_target_effect_suspends_with_an_inactive_site_and_resumes_after_save_return()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
         PrivateersHoldInputs destination = PrivateersHoldContent.Read(admitted,
@@ -5470,7 +5470,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Rejected_site_admission_keeps_the_source_world_and_actors_live()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs source = ReadInputs(root);
         PrivateersHoldInputs destination = PrivateersHoldContent.Read(FullContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
@@ -5495,7 +5495,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void A_post_relocation_camera_rejection_restores_source_context_pose_and_save_state()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
         PrivateersHoldInputs destination = PrivateersHoldContent.Read(admitted,
@@ -5533,7 +5533,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Actor_only_relocation_recovers_source_after_committed_transition_release_failure()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
         PrivateersHoldInputs destination = PrivateersHoldContent.Read(admitted,
@@ -5571,7 +5571,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Named_relocation_resets_control_state_preserves_player_and_round_trips_through_save()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
         PrivateersHoldInputs destination = PrivateersHoldContent.Read(admitted,
@@ -5655,7 +5655,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Save_restore_of_an_active_destination_retains_the_unloaded_return_site()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
         PrivateersHoldInputs destination = PrivateersHoldContent.Read(admitted,
@@ -5700,7 +5700,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     private static DaggerfallSession LootableSession(out AppearanceFake appearance)
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -5781,7 +5781,7 @@ public sealed partial class NormalizedRuntimeSeamTests
 
     private static PrivateersHoldInputs ReadInputs(string root)
     {
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         return PrivateersHoldContent.Read(ImportContent(root), File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
     }
 
@@ -5856,7 +5856,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void The_projection_carries_the_published_ui_art_the_dom_draws()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         List<string> releases = [];
         ContentFake content = new(releases);
         PrivateersHoldInputs inputs = ReadInputs(root);
@@ -6050,7 +6050,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         ContentFake content = new(releases);
         PrivateersHoldInputs inputs = ReadInputs(root);
         PopulateContent(content, inputs);
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
 
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
@@ -6096,7 +6096,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         ContentFake content = new(releases);
         PrivateersHoldInputs inputs = ReadInputs(root);
         PopulateContent(content, inputs);
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
 
         // A group whose inventory no longer describes the death screen must refuse to start rather
@@ -6306,7 +6306,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = RepositoryRoot();
         PrivateersHoldInputs inputs = ReadInputs(root);
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -6353,7 +6353,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = RepositoryRoot();
         PrivateersHoldInputs inputs = ReadInputs(root);
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -6391,7 +6391,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = RepositoryRoot();
         PrivateersHoldInputs inputs = ReadInputs(root);
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -6433,7 +6433,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void A_restored_session_keeps_the_quiver_count_its_save_carried()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake sourceContent = new(releases);
@@ -6480,7 +6480,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void A_save_taken_mid_swing_keeps_the_charge_and_never_replays_the_strike()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         ResolvedCompositionIdentity composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
         List<string> releases = [];
@@ -6708,7 +6708,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void An_enemy_swing_lands_once_at_its_damage_frame_and_never_on_the_decision_update()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -6741,7 +6741,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void An_enemy_swing_cancelled_before_its_damage_frame_never_lands_late()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -6774,7 +6774,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void The_entry_screen_mode_holds_the_world_and_names_itself_on_the_wire()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -6843,7 +6843,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Product_modes_gate_gameplay_input_and_world_time_while_the_modal_keeps_acting()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -7058,7 +7058,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         // A take must now move the item, deliver its facts, and republish within the same modal
         // update, with the panel still open and the world still held.
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -7145,7 +7145,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Loot_transfer_at_the_player_capacity_boundary_leaves_both_engine_containers_unchanged()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -7191,7 +7191,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Currency_actions_mutate_inventory_backed_values_and_restore_their_letter_identity()
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         int? bankRegion = null;
         List<string> releases = [];
@@ -7276,7 +7276,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         // deleted payload copy silently dropped duplicate loadout ids from the reservation set
         // while construction threw; this pins the unified strict behavior.
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
 
@@ -7298,7 +7298,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         // Structural evidence for publish-once: three admitted steps advance the world three
         // times, but graphics/UI publication happens exactly once, after animation impacts.
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -7341,7 +7341,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         // registered-empty corpse, and an empty unregistered corpse, with durable identity
         // agreement into the next allocation.
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake sourceContent = new(releases);
@@ -7499,7 +7499,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     private static (DaggerfallSession Session, AppearanceFake Appearance, PerceptionFake Perception) VisibleEnemySession(List<string> releases, double distance = 1d)
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -7548,7 +7548,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     private static ulong AuthoredMarker(long placedEntityId, string framesProperty)
     {
         string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         JsonObject profile = JsonNode.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")))!.AsObject();
         JsonObject placement = profile["placements"]!.AsArray().Select(value => value!.AsObject())
             .Single(value => value["entityId"]!.GetValue<long>() == placedEntityId);
@@ -7698,7 +7698,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         internal ConditionSessionFixture()
         {
             string root = RepositoryRoot();
-            definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+            definitions = TestPayload.Definitions;
             inputs = ReadInputs(root);
             identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
             ContentFake content = new(releases);

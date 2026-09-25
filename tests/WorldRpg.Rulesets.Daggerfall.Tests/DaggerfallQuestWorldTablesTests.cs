@@ -37,7 +37,6 @@ public sealed class DaggerfallQuestWorldTablesTests
     {
         DirectoryInfo? root = new(AppContext.BaseDirectory);
         while (root is not null && !File.Exists(Path.Combine(root.FullName, "AGENTS.md"))) root = root.Parent;
-        return DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root!.FullName,
-            "content/worldrpg/payloads/daggerfall.base.json")));
+        return TestPayload.Definitions;
     }
 }

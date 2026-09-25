@@ -284,7 +284,7 @@ public sealed class DaggerfallFormulaPolicyTests
         Assert.Empty(DaggerfallLootPolicy.GenerateDungeon(definitions, 7, 1, (_, minimum, _) => minimum).Extras);
     }
 
-    private static DaggerfallDefinitions LoadDefinitions() => DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+    private static DaggerfallDefinitions LoadDefinitions() => TestPayload.Definitions;
 
     private static string RepositoryRoot()
     {

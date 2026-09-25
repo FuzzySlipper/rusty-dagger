@@ -151,7 +151,7 @@ public sealed class DaggerfallCharacterPresentationTests
 
         internal Fixture()
         {
-            Definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+            Definitions = TestPayload.Definitions;
             PlayerDefinition = Definitions.RequireActor(new DaggerfallActorId("player"));
             var items = Definitions.Items.Values.Concat(Definitions.TemplateItems.Values).ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
             var slots = Definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
