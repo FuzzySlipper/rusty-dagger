@@ -203,11 +203,17 @@ public sealed class DaggerfallCalendarTests
     [Fact]
     public void Reads_the_season_and_the_daylight_the_hour_implies()
     {
-        // Seasons divide the twelve months three at a time, and daylight is the donor's dawn-to-dusk.
-        Assert.Equal(DaggerfallSeason.Spring, new DaggerfallCalendar(405, 1, 0, 0, 0, 0).Season);
-        Assert.Equal(DaggerfallSeason.Summer, new DaggerfallCalendar(405, 4, 0, 0, 0, 0).Season);
-        Assert.Equal(DaggerfallSeason.Autumn, new DaggerfallCalendar(405, 7, 0, 0, 0, 0).Season);
-        Assert.Equal(DaggerfallSeason.Winter, new DaggerfallCalendar(405, 10, 0, 0, 0, 0).Season);
+        // Seasons divide the twelve months three at a time from the donor's own table, where winter
+        // wraps the year's end rather than starting it, and daylight is the donor's dawn-to-dusk.
+        Assert.Equal(DaggerfallSeason.Winter, new DaggerfallCalendar(405, 11, 0, 0, 0, 0).Season);
+        Assert.Equal(DaggerfallSeason.Winter, new DaggerfallCalendar(405, 0, 0, 0, 0, 0).Season);
+        Assert.Equal(DaggerfallSeason.Winter, new DaggerfallCalendar(405, 1, 0, 0, 0, 0).Season);
+        Assert.Equal(DaggerfallSeason.Spring, new DaggerfallCalendar(405, 2, 0, 0, 0, 0).Season);
+        Assert.Equal(DaggerfallSeason.Spring, new DaggerfallCalendar(405, 4, 0, 0, 0, 0).Season);
+        Assert.Equal(DaggerfallSeason.Summer, new DaggerfallCalendar(405, 5, 0, 0, 0, 0).Season);
+        Assert.Equal(DaggerfallSeason.Summer, new DaggerfallCalendar(405, 7, 0, 0, 0, 0).Season);
+        Assert.Equal(DaggerfallSeason.Autumn, new DaggerfallCalendar(405, 8, 0, 0, 0, 0).Season);
+        Assert.Equal(DaggerfallSeason.Autumn, new DaggerfallCalendar(405, 10, 0, 0, 0, 0).Season);
 
         Assert.False(new DaggerfallCalendar(405, 5, 0, DaggerfallCalendar.DawnHour - 1, 0, 0).IsDay);
         Assert.True(new DaggerfallCalendar(405, 5, 0, DaggerfallCalendar.DawnHour, 0, 0).IsDay);

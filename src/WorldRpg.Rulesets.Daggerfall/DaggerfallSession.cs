@@ -314,7 +314,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 actorId => actorId == DaggerfallActorIdentity.PlayerEntityId
                     && State.Character.CustomCareer?.Advantages.Any(trait => trait.Id == "adrenaline-rush") == true
                     ? new DaggerfallAdrenalineRush(Enabled: true, Improved: _heldEnchantments.Talents.AdrenalineRush) : default,
-                () => State.PlayerControl.Position, () => State.Character, _playerSwings.TryGesture, ShotBlockedByCover);
+                () => State.PlayerControl.Position, () => State.Character, _playerSwings.TryGesture, ShotBlockedByCover,
+                () => _heldEnchantments.ArmorValueModifier);
             State.Kit = new(State.Actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, State.Inventory, State.Equipment);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
                 engine.Perception,
@@ -345,7 +346,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
             _uniqueItems = DaggerfallUniqueItemAllocator.Sharing(_actorIdentities);
             State.Npcs.Identities = _actorIdentities;
-            _heldEnchantments = new DaggerfallHeldEnchantments(State.Equipment, State.ItemInstances, definitions,
+            _heldEnchantments = new DaggerfallHeldEnchantments(State.Equipment, State.ItemInstances, definitions.Magic.MagicItems,
                 State.Actors.Player.Stats, State.Actors.Entities, State.Actors.Player.Actor.Entity, () => _time.Calendar,
                 () => State.PlayerControl.Position, NearbyCreatures);
             State.Encumbrance = new DaggerfallEncumbrancePolicy(State.Inventory, State.Actors.Player.Stats,
@@ -838,8 +839,10 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     }
 
     /// <summary>
-    /// The living creatures a worn enchantment's near-creature condition can see: their authored
-    /// mobile, which carries the donor's own enemy grouping, and where they stand now.
+    /// The living creatures a worn enchantment's near-creature condition can see: the group the
+    /// ruleset's own enemy-group policy gives them, and where they stand now. The donor flags a
+    /// civilian NPC as a humanoid outright, so a civilian definition answers humanoid here too
+    /// rather than falling through the enemy-group policy's monster and class arms.
     /// </summary>
     private IReadOnlyList<DaggerfallNearbyCreature> NearbyCreatures()
     {
@@ -848,7 +851,10 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         {
             if (actor.IsDefeated) continue;
             if (!_definitionsByActor.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition)) continue;
-            nearby.Add(new DaggerfallNearbyCreature(definition.MobileId, actor.Position));
+            DaggerfallEnemyGroup group = definition.Kind == DaggerfallActorKinds.Civilian
+                ? DaggerfallEnemyGroup.Humanoid
+                : DaggerfallFormulaPolicy.EnemyGroupFor(definition);
+            nearby.Add(new DaggerfallNearbyCreature(group, actor.Position));
         }
         return nearby;
     }
@@ -1290,8 +1296,10 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             && update.Facts.AdmittedStepCount > 0)
         {
             _appearance.Advance(update.Facts);
-            ApplyAttackImpacts();
+            // A held value is recomputed before anything this update can read it: impacts resolve, the
+            // flight advances and presentation publishes against what the player is wearing now.
             _heldEnchantments.Refresh();
+            ApplyAttackImpacts();
             UpdateRangedFlight(update.Facts);
             PublishPresentation();
         }

@@ -1,19 +1,19 @@
 namespace WorldRpg.Rulesets.Daggerfall.World;
 
-/// <summary>Which part of the year a date falls in, as the game's own seasons divide it.</summary>
+/// <summary>Which part of the year a date falls in, as the donor's season table divides it.</summary>
 public enum DaggerfallSeason
 {
-    /// <summary>Morning Star through First Seed.</summary>
+    /// <summary>Frost Fall through First Seed: months 11, 0 and 1.</summary>
+    Winter,
+
+    /// <summary>Rain's Hand through Mid Year: months 2, 3 and 4.</summary>
     Spring,
 
-    /// <summary>Rain's Hand through Last Seed.</summary>
+    /// <summary>Sun's Height through Last Seed: months 5, 6 and 7.</summary>
     Summer,
 
-    /// <summary>Hearth Fire through Frost Fall.</summary>
+    /// <summary>Hearth Fire through Frost Fall's eve: months 8, 9 and 10.</summary>
     Autumn,
-
-    /// <summary>Sun's Height's end through Evening Star.</summary>
-    Winter,
 }
 
 /// <summary>
@@ -82,13 +82,18 @@ public readonly record struct DaggerfallCalendar(int Year, int Month, int Day, i
     /// <summary>Whether it is day: dawn to dusk, as the world's own hours divide it.</summary>
     public bool IsDay => Hour >= DawnHour && Hour < DuskHour;
 
-    /// <summary>The season the date falls in, by its month.</summary>
+    /// <summary>
+    /// The season the date falls in, by the donor's own month table: winter wraps the year from Frost
+    /// Fall through First Seed, and the other three seasons take three months each. The donor notes
+    /// classic rolls seasons over part way through the final month and deliberately uses clean month
+    /// boundaries instead.
+    /// </summary>
     public DaggerfallSeason Season => Month switch
     {
-        >= 0 and <= 2 => DaggerfallSeason.Spring,
-        >= 3 and <= 5 => DaggerfallSeason.Summer,
-        >= 6 and <= 8 => DaggerfallSeason.Autumn,
-        _ => DaggerfallSeason.Winter,
+        11 or 0 or 1 => DaggerfallSeason.Winter,
+        2 or 3 or 4 => DaggerfallSeason.Spring,
+        5 or 6 or 7 => DaggerfallSeason.Summer,
+        _ => DaggerfallSeason.Autumn,
     };
 
     /// <summary>
