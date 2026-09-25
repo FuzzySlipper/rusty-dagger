@@ -20,7 +20,10 @@ public sealed class DaggerfallPoisonPolicyTests
         Assert.Equal(DaggerfallPoisonVariant.Aegrotat, DaggerfallPoisonPolicy.Variants[11]);
         Assert.Equal([DaggerfallPoisonVariant.Indulcet, DaggerfallPoisonVariant.Sursum, DaggerfallPoisonVariant.QuaestoVil, DaggerfallPoisonVariant.Aegrotat],
             DaggerfallPoisonPolicy.Variants.Where(DaggerfallPoisonPolicy.IsDrug));
-        Assert.Equal("Poison-NuxVomica", DaggerfallPoisonPolicy.EffectKey(DaggerfallPoisonVariant.NuxVomica));
+        // The donor's key is its enum identifier, so the two-word names keep their underscores.
+        Assert.Equal("Poison-Nux_Vomica", DaggerfallPoisonPolicy.EffectKey(DaggerfallPoisonVariant.NuxVomica));
+        Assert.Equal("Poison-Pyrrhic_Acid", DaggerfallPoisonPolicy.EffectKey(DaggerfallPoisonVariant.PyrrhicAcid));
+        Assert.Equal("Poison-Quaesto_Vil", DaggerfallPoisonPolicy.EffectKey(DaggerfallPoisonVariant.QuaestoVil));
         Assert.Equal("Poison-Aegrotat", DaggerfallPoisonPolicy.EffectKey(DaggerfallPoisonVariant.Aegrotat));
         Assert.Equal(DaggerfallPoisonVariant.Moonseed, DaggerfallPoisonPolicy.VariantFor(130));
         Assert.Null(DaggerfallPoisonPolicy.VariantFor(127));
@@ -30,14 +33,23 @@ public sealed class DaggerfallPoisonPolicyTests
     [Fact]
     public void A_target_that_cannot_be_poisoned_is_immune_before_any_throw()
     {
-        Assert.Equal(DaggerfallPoisonAdmission.Immune, DaggerfallPoisonPolicy.Admit(Exposure() with { CareerImmune = true }));
-        Assert.Equal(DaggerfallPoisonAdmission.Immune, DaggerfallPoisonPolicy.Admit(Exposure() with { RaceImmune = true }));
+        // The pre-throw decision answers Admitted for an attempt the throw still has to decide, so it is
+        // never mistaken for a completed admission.
+        Assert.Equal(DaggerfallPoisonAdmission.Admitted, DaggerfallPoisonPolicy.AdmitBeforeThrow(Exposure()));
+        Assert.Equal(DaggerfallPoisonAdmission.Resisted, DaggerfallPoisonPolicy.Admit(Exposure(), 1));
+    }
+
+    [Fact]
+    public void A_target_that_cannot_be_poisoned_is_immune_however_the_attempt_is_made()
+    {
+        Assert.Equal(DaggerfallPoisonAdmission.Immune, DaggerfallPoisonPolicy.AdmitBeforeThrow(Exposure() with { CareerImmune = true }));
+        Assert.Equal(DaggerfallPoisonAdmission.Immune, DaggerfallPoisonPolicy.AdmitBeforeThrow(Exposure() with { RaceImmune = true }));
         // The donor's level-1 rule keeps even a bypassed attempt from infecting a first-level target.
-        Assert.Equal(DaggerfallPoisonAdmission.Immune, DaggerfallPoisonPolicy.Admit(Exposure() with { TargetLevel = 1, BypassResistance = true }));
+        Assert.Equal(DaggerfallPoisonAdmission.Immune, DaggerfallPoisonPolicy.AdmitBeforeThrow(Exposure() with { TargetLevel = 1, BypassResistance = true }));
         Assert.Equal(DaggerfallPoisonAdmission.Immune,
-            DaggerfallPoisonPolicy.Admit(Exposure() with { Tolerance = DaggerfallDiseaseCareerTolerance.Immune }));
+            DaggerfallPoisonPolicy.AdmitBeforeThrow(Exposure() with { Tolerance = DaggerfallDiseaseCareerTolerance.Immune }));
         Assert.Equal(DaggerfallPoisonAdmission.Admitted,
-            DaggerfallPoisonPolicy.Admit(Exposure() with { TargetLevel = 2, BypassResistance = true }));
+            DaggerfallPoisonPolicy.AdmitBeforeThrow(Exposure() with { TargetLevel = 2, BypassResistance = true }));
     }
 
     [Fact]
@@ -75,7 +87,7 @@ public sealed class DaggerfallPoisonPolicyTests
 
         Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallPoisonPolicy.Admit(exposure, 0));
         Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallPoisonPolicy.Admit(exposure, 101));
-        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallPoisonPolicy.Admit(exposure with { TargetLevel = 0 }));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallPoisonPolicy.AdmitBeforeThrow(exposure with { TargetLevel = 0 }));
     }
 
     private static DaggerfallPoisonExposure Exposure() => new(TargetId: 2, TargetLevel: 5, CareerImmune: false, RaceImmune: false, Willpower: 50);

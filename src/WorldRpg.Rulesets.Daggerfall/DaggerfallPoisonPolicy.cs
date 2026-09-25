@@ -83,18 +83,28 @@ internal static class DaggerfallPoisonPolicy
         DaggerfallPoisonVariant.Indulcet or DaggerfallPoisonVariant.Sursum
         or DaggerfallPoisonVariant.QuaestoVil or DaggerfallPoisonVariant.Aegrotat;
 
-    /// <summary>The effect key the donor builds for a variant: <c>Poison-{name}</c>.</summary>
-    internal static string EffectKey(DaggerfallPoisonVariant variant) => $"Poison-{variant}";
+    /// <summary>
+    /// The effect key the donor builds for a variant: <c>Poison-</c> plus its own enum identifier, which
+    /// carries an underscore wherever the classic name is two words.
+    /// </summary>
+    internal static string EffectKey(DaggerfallPoisonVariant variant) => variant switch
+    {
+        DaggerfallPoisonVariant.NuxVomica => "Poison-Nux_Vomica",
+        DaggerfallPoisonVariant.PyrrhicAcid => "Poison-Pyrrhic_Acid",
+        DaggerfallPoisonVariant.QuaestoVil => "Poison-Quaesto_Vil",
+        _ => $"Poison-{variant}",
+    };
 
     /// <summary>The donor's own poison identity for a classic value, or null when nothing carries it.</summary>
     internal static DaggerfallPoisonVariant? VariantFor(int classicValue) =>
         Enum.IsDefined(typeof(DaggerfallPoisonVariant), classicValue) ? (DaggerfallPoisonVariant)classicValue : null;
 
     /// <summary>
-    /// Admits, resists or refuses one poisoning. Immunity is decided before the throw and before the
-    /// bypass, exactly as the donor orders it, and a first-level target stays immune either way.
+    /// The decision before any throw: immunity is settled first and a bypass skips the saving throw, so
+    /// this answers <see cref="DaggerfallPoisonAdmission.Admitted"/> for an attempt that still has to be
+    /// thrown. Use the overload that takes a roll for the complete decision.
     /// </summary>
-    internal static DaggerfallPoisonAdmission Admit(DaggerfallPoisonExposure exposure)
+    internal static DaggerfallPoisonAdmission AdmitBeforeThrow(DaggerfallPoisonExposure exposure)
     {
         ArgumentNullException.ThrowIfNull(exposure);
         if (exposure.TargetLevel < 1) throw new ArgumentOutOfRangeException(nameof(exposure), "A poison target needs a level.");
@@ -114,7 +124,7 @@ internal static class DaggerfallPoisonPolicy
     {
         ArgumentNullException.ThrowIfNull(exposure);
         if (roll is < 1 or > 100) throw new ArgumentOutOfRangeException(nameof(roll));
-        DaggerfallPoisonAdmission decided = Admit(exposure);
+        DaggerfallPoisonAdmission decided = AdmitBeforeThrow(exposure);
         if (decided != DaggerfallPoisonAdmission.Admitted || exposure.BypassResistance)
             return decided;
         int chance = SavingThrowChance(exposure.Willpower, exposure.Tolerance, exposure.BiographyModifier);

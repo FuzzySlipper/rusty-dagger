@@ -91,7 +91,8 @@ internal sealed class DaggerfallHeldEnchantments
     private readonly Func<IReadOnlyList<DaggerfallNearbyCreature>> _nearby;
     private readonly Func<bool> _playerInSunlight;
     private readonly List<AppliedContribution> _applied = [];
-    // Indexed by the donor's RegensHealth params: always, in sunlight, in darkness.
+    // Indexed by the donor's RegensHealth params: always, in sunlight, in darkness, and one slot for a
+    // param the donor never names, which counts for cleanup but never contributes a tick.
     private readonly int[] _regeneration = new int[4];
     private HeldSignature? _signature;
     // The donor counts magic rounds since startup or load and resets that count on either, so the
@@ -194,10 +195,11 @@ internal sealed class DaggerfallHeldEnchantments
     }
 
     /// <summary>
-    /// Applies what the worn items do on the rounds that just elapsed. The cadence is the round index
-    /// itself — one magic round is one game minute — so ordinary play, rest and travel all regenerate on
-    /// the donor's every-fourth-round beat without a counter to keep or restore, and a catch-up interval
-    /// regenerates for every fourth round it covered rather than once.
+    /// Applies what the worn items do on the rounds that just elapsed. One magic round is one game
+    /// minute, and the beat is the donor's: it counts rounds since the session started or a save was
+    /// restored, and reads the count before the round it is serving, so the first round after either is
+    /// itself a beat. A catch-up interval therefore regenerates for every fourth round it covered
+    /// rather than once.
     /// </summary>
     /// <param name="minutes">How many magic rounds that interval covered.</param>
     internal void AdvanceRounds(int minutes)
@@ -208,7 +210,9 @@ internal sealed class DaggerfallHeldEnchantments
         int rounds = Math.Min(minutes, checked((int)DaggerfallEffectLifecycle.MaximumElapsedCatchupRounds));
         int ticks = 0;
         for (int round = 1; round <= rounds; round++)
-            if ((_roundsSinceStart + round) % RoundsPerRegeneration == 0) ticks++;
+            // The donor increments its counter after raising the round, so the round being served reads
+            // the count that preceded it: the session's first round is a beat, not its fourth.
+            if ((_roundsSinceStart + round - 1) % RoundsPerRegeneration == 0) ticks++;
         _roundsSinceStart += rounds;
         if (ticks == 0 || _regenerationTotal == 0) return;
 
