@@ -137,6 +137,23 @@ internal static class DaggerfallMagicCostPolicy
         return required <= capacity ? new(capacity, required, true, null) : new(capacity, required, false, "The item lacks enchantment capacity.");
     }
 
+    /// <summary>
+    /// The same quotation for one item-maker setting, which the donor prices from its own cost rather
+    /// than from a magic template. Capacity and the eligibility rule are the item's, exactly as they are
+    /// for a published magic item.
+    /// </summary>
+    internal static DaggerfallItemEnchantmentQuote QuoteItemEnchantment(DaggerfallItemDefinition item,
+        DaggerfallItemInstanceMetadata metadata, DaggerfallEnchantmentSetting setting)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        int capacity = ItemEnchantmentPower(item, metadata);
+        if (!TryGetNonSpellEnchantmentCost(DaggerfallEnchantmentSettings.ToEffect(setting), out int cost))
+            return new(capacity, 0, false, $"{setting.Key} has no retained item-maker cost for {setting.Meaning}.");
+        if (cost < 0)
+            return new(capacity, 0, false, $"{setting.Key} would produce a negative construction payment.");
+        return cost <= capacity ? new(capacity, cost, true, null) : new(capacity, cost, false, "The item lacks enchantment capacity.");
+    }
+
     internal static int WeaponEnchantmentMultiplierQuarter(string material) => MaterialMultiplier(material, weapon: true) - 4;
     internal static int ArmorEnchantmentMultiplierQuarter(string material) => MaterialMultiplier(material, weapon: false) - 4;
 
