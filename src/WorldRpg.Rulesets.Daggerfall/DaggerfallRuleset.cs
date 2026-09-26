@@ -54,7 +54,8 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             _videosEnabled,
             new DaggerfallQuestRuntimeAdmission(admitted.QuestReceipts),
             admitted.Profiles,
-            admitted.DisabledQuestSelection);
+            admitted.DisabledQuestSelection,
+            admitted.Music);
         session.AdmitSiteProfiles(admitted.Profiles);
         session.Site.AdmitBuildingNames(context.Engine.Random, admitted.Definitions, admitted.Blocks);
         return session;
@@ -77,7 +78,8 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             admitted.Content,
             _videosEnabled,
             new DaggerfallQuestRuntimeAdmission(admitted.QuestReceipts),
-            admitted.DisabledQuestSelection);
+            admitted.DisabledQuestSelection,
+            music: admitted.Music);
         session.AdmitSiteProfiles(admitted.Profiles);
         session.Site.AdmitBuildingNames(context.Engine.Random, admitted.Definitions, admitted.Blocks);
         return session;
@@ -112,11 +114,18 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             _ = DaggerfallPublishedClassicMedia.Read(selected.Content, castleInputs.ClassicPresentation);
             _ = DaggerfallPublishedClassicMedia.Read(selected.Content, charingExteriorInputs.ClassicPresentation);
             _ = DaggerfallPublishedClassicMedia.Read(selected.Content, charingInteriorInputs.ClassicPresentation);
+            // Every admitted site names its cues against the same published manifest, so each one is
+            // joined here: a site whose music nothing published would otherwise fail on entry rather
+            // than at composition, where the publication it disagrees with is still identifiable.
+            DaggerfallMusicBundle? music = DaggerfallMusicBundle.Admit(selected.Content, inputs.Music);
+            _ = DaggerfallMusicBundle.Admit(selected.Content, castleInputs.Music);
+            _ = DaggerfallMusicBundle.Admit(selected.Content, charingExteriorInputs.Music);
+            _ = DaggerfallMusicBundle.Admit(selected.Content, charingInteriorInputs.Music);
             DaggerfallTuning tuning = DaggerfallTuning.Read(selected.Tuning.Payload.Span);
             DaggerfallSiteProfiles profiles = new([inputs, castleInputs, charingExteriorInputs, charingInteriorInputs]);
             foreach (DaggerfallWorldProfileKey key in profiles.Keys)
                 profiles.Require(key).InteriorBuilding?.ValidateAgainst(blocks);
-            return new DaggerfallAdmittedContent(definitions, blocks, inputs, profiles, [.. fightersGuildQuests, .. classicQuestReceipts], disabledQuestSelection, tuning, classicMedia, new DaggerfallSiteAudioBundles(selected.Content, profiles), selected.Content);
+            return new DaggerfallAdmittedContent(definitions, blocks, inputs, profiles, [.. fightersGuildQuests, .. classicQuestReceipts], disabledQuestSelection, tuning, classicMedia, new DaggerfallSiteAudioBundles(selected.Content, profiles), selected.Content, music);
         });
 
     private sealed record DaggerfallAdmittedContent(
@@ -129,5 +138,6 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
         DaggerfallTuning Tuning,
         DaggerfallPublishedClassicMedia ClassicMedia,
         DaggerfallSiteAudioBundles Audio,
-        Rusty.Engine.ProductContent Content);
+        Rusty.Engine.ProductContent Content,
+        DaggerfallMusicBundle? Music);
 }

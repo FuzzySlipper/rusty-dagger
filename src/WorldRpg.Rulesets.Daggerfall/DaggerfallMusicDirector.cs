@@ -29,6 +29,13 @@ public enum DaggerfallMusicContext
 /// whose track has no admitted clip stays silent rather than synthesizing music. The session
 /// owns the one director; unload and disposal retire the loop with it.
 /// </summary>
+/// <remarks>
+/// A cue is a retained Engine voice, not an emitted one-shot. An emitted signal is keyed by its
+/// signal id and can be neither stopped nor replaced, and its clip may not be disposed until the
+/// one-shot completes — which a looping cue never does. A voice is the Engine's own owner for a
+/// sound with a lifetime: it loops until this director disposes it, so a context change or a
+/// session teardown really ends the previous loop instead of leaving it playing under the next.
+/// </remarks>
 public sealed class DaggerfallMusicDirector : IDisposable
 {
     /// <summary>The donor's dungeon songs, in list order.</summary>
@@ -89,6 +96,7 @@ public sealed class DaggerfallMusicDirector : IDisposable
     private bool _disposed;
     private string? _playing;
     private string? _interrupted;
+    private AudioVoice? _voice;
 
     /// <summary>Creates a director over Engine audio with a track resolver.</summary>
     public DaggerfallMusicDirector(IAudioService? audio, Func<string, AudioClip?> resolve, Action<string>? retire = null)
@@ -122,13 +130,11 @@ public sealed class DaggerfallMusicDirector : IDisposable
 
         Retire();
         AudioClip? clip = _resolve(track);
-        if (_audio is null || clip is null)
+        if (Start(clip))
         {
-            return null;
+            _playing = track;
         }
 
-        _audio.Emit(new AudioEmitRequest(track, new AudioSourceDescriptor(clip, AudioBus.Ambient, 0.8f, 1.0f, true, 0.0f, 0.0f, 0F, AudioEmitterKind.Global2d, System.Numerics.Vector3.Zero, 0, System.Numerics.Vector3.Zero)));
-        _playing = track;
         return _playing;
     }
 
@@ -145,13 +151,11 @@ public sealed class DaggerfallMusicDirector : IDisposable
         _interrupted = _playing;
         Retire();
         AudioClip? clip = _resolve(track);
-        if (_audio is null || clip is null)
+        if (Start(clip))
         {
-            return null;
+            _playing = track;
         }
 
-        _audio.Emit(new AudioEmitRequest(track, new AudioSourceDescriptor(clip, AudioBus.Ambient, 0.8f, 1.0f, true, 0.0f, 0.0f, 0F, AudioEmitterKind.Global2d, System.Numerics.Vector3.Zero, 0, System.Numerics.Vector3.Zero)));
-        _playing = track;
         return _playing;
     }
 
@@ -164,13 +168,10 @@ public sealed class DaggerfallMusicDirector : IDisposable
         if (interrupted is null) return;
         Retire();
         AudioClip? clip = _resolve(interrupted);
-        if (_audio is null || clip is null)
+        if (Start(clip))
         {
-            return;
+            _playing = interrupted;
         }
-
-        _audio.Emit(new AudioEmitRequest(interrupted, new AudioSourceDescriptor(clip, AudioBus.Ambient, 0.8f, 1.0f, true, 0.0f, 0.0f, 0F, AudioEmitterKind.Global2d, System.Numerics.Vector3.Zero, 0, System.Numerics.Vector3.Zero)));
-        _playing = interrupted;
     }
 
     /// <summary>Stops the loop: pause, load and quit all retire the track.</summary>
@@ -188,11 +189,63 @@ public sealed class DaggerfallMusicDirector : IDisposable
         Retire();
     }
 
+    /// <summary>
+    /// Starts the one loop for a resolved clip, answering whether anything plays now.
+    /// </summary>
+    /// <remarks>
+    /// The voice is retained here and released in <see cref="Retire"/>. A clip the caller answers but
+    /// cannot play — no audio service at all — leaves the director silent rather than tracking a cue
+    /// the Engine was never asked to start.
+    /// </remarks>
+    private bool Start(AudioClip? clip)
+    {
+        if (_audio is null || clip is null) return false;
+        _voice = _audio.CreateVoice(new AudioSourceDescriptor(clip, AudioBus.Ambient, 0.8f, 1.0f, true, 0.0f, 0.0f, 0F, AudioEmitterKind.Global2d, System.Numerics.Vector3.Zero, 0, System.Numerics.Vector3.Zero));
+        return true;
+    }
+
     private void Retire()
     {
         if (_playing is null) return;
-        _retire?.Invoke(_playing);
+        string retired = _playing;
         _playing = null;
+        AudioVoice? voice = _voice;
+        _voice = null;
+        voice?.Dispose();
+        _retire?.Invoke(retired);
+    }
+
+    /// <summary>
+    /// The donor tracks a context answers, in the donor's own list order.
+    /// </summary>
+    /// <remarks>
+    /// A caller that has to choose among published cues needs the donor's list rather than a copy of it:
+    /// the session asks here, then names one of these tracks through <see cref="Update"/>. A context the
+    /// donor leaves to whatever plays — combat and the menu — answers the empty list.
+    /// </remarks>
+    public static IReadOnlyList<string> PlaylistFor(DaggerfallMusicContext context)
+    {
+        if (!Enum.IsDefined(context))
+        {
+            throw new ArgumentOutOfRangeException(nameof(context), context, "Music answers to no context the contract declares.");
+        }
+
+        return context switch
+        {
+            DaggerfallMusicContext.Dungeon => DungeonSongs,
+            DaggerfallMusicContext.Sunny => SunnySongs,
+            DaggerfallMusicContext.Night => NightSongs,
+            DaggerfallMusicContext.Tavern => TavernSongs,
+            DaggerfallMusicContext.Shop => ShopSongs,
+            DaggerfallMusicContext.MagesGuild => MagesGuildSongs,
+            DaggerfallMusicContext.Temple => TempleSongs,
+            DaggerfallMusicContext.Knight => KnightSongs,
+            DaggerfallMusicContext.Cloudy => CloudySongs,
+            DaggerfallMusicContext.Rain => RainSongs,
+            DaggerfallMusicContext.Snow => SnowSongs,
+            DaggerfallMusicContext.Combat or DaggerfallMusicContext.Menu => [],
+            _ => throw new ArgumentOutOfRangeException(nameof(context), context, "Music answers to no context the contract declares."),
+        };
     }
 
     // Combat and the menu name no donor song: battle never interrupts the song and the menu

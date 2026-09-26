@@ -1,5 +1,6 @@
 using Daggerfall.Import.Arena2;
 using System.Text;
+using System.Text.Json;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
@@ -226,9 +227,64 @@ public sealed class Arena2MediaBundlePublicationTests
         Assert.Contains(publication.Plan.Artifacts, artifact => artifact.RelativePath == Arena2MediaBundlePublication.ClassicMediaManifestRelativePath);
     }
 
-    private static Arena2MediaBundlePublication CreateBundle(bool reverseClassicActions)
+    [Fact]
+    public void TheClassicSidecarCarriesTheSitesMusicCuesInCanonicalOrderAndTheyRoundTripThroughTheJson()
     {
-        Arena2ClassicMediaPublication classic = CreateClassicMedia();
+        ClassicMusicRecord[] cues =
+        [
+            MusicCue("music.sunny.third", "song_gsunny2", "song_gsunny2.ogg", "sunny", 11),
+            MusicCue("music.dungeon", "song_dungeon", "song_dungeon.ogg", "dungeon", 7),
+            MusicCue("music.sunny", "song_gday___d", "song_gday___d.ogg", "sunny", 9),
+        ];
+
+        Arena2MediaBundlePublication publication = CreateBundle(reverseClassicActions: false, music: cues);
+
+        (_, ClassicMediaManifestSidecar classic) = ReadPersistedSidecars(publication);
+        Assert.Contains("\"music\":", SidecarJson(publication, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath), StringComparison.Ordinal);
+        Assert.Equal(["music.dungeon", "music.sunny", "music.sunny.third"], classic.Music.Select(record => record.MediaId));
+        Assert.All(cues, input =>
+        {
+            ClassicMusicRecord written = classic.Music.Single(record => record.MediaId == input.MediaId);
+            Assert.Equal(input.Track, written.Track);
+            Assert.Equal(input.Context, written.Context);
+            Assert.Equal(input.File, written.File);
+            Assert.Equal(input.MimeType, written.MimeType);
+            Assert.Equal(input.ByteLength, written.ByteLength);
+            Assert.Equal(input.ContentDigest, written.ContentDigest);
+        });
+    }
+
+    [Fact]
+    public void PersistedSidecarsRefuseMusicCuesOutOfCanonicalOrderRepeatedUnopenableOrNull()
+    {
+        Arena2MediaBundlePublication publication = CreateBundle(reverseClassicActions: false, music: MusicCues());
+        (DungeonMediaManifestSidecar dungeon, ClassicMediaManifestSidecar classic) = ReadPersistedSidecars(publication);
+        Arena2MediaBundlePublication.ValidatePersistedSidecars(dungeon, classic);
+
+        ClassicMusicRecord first = classic.Music[0];
+        ClassicMusicRecord second = classic.Music[1];
+        Assert.Throws<FormatException>(() => Arena2MediaBundlePublication.ValidatePersistedSidecars(dungeon, classic with { Music = [second, first] }));
+        // The repeat differs in track and artifact too, so only the repeated media ID can refuse it.
+        Assert.Throws<FormatException>(() => Arena2MediaBundlePublication.ValidatePersistedSidecars(dungeon, classic with { Music = [first, first with { Track = "song_other", File = "song-other.ogg" }] }));
+        Assert.Throws<FormatException>(() => Arena2MediaBundlePublication.ValidatePersistedSidecars(dungeon, classic with { Music = [first with { MimeType = "audio/mpeg" }] }));
+        Assert.Throws<FormatException>(() => Arena2MediaBundlePublication.ValidatePersistedSidecars(dungeon, classic with { Music = [null!] }));
+    }
+
+    [Fact]
+    public void TheClassicSidecarStillComposesWithAnEmptyMusicListWhenTheSiteAdmitsNoScore()
+    {
+        Arena2MediaBundlePublication publication = CreateBundle(reverseClassicActions: false);
+
+        (DungeonMediaManifestSidecar dungeon, ClassicMediaManifestSidecar classic) = ReadPersistedSidecars(publication);
+
+        Assert.Empty(classic.Music);
+        Assert.Contains("\"music\": []", SidecarJson(publication, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath), StringComparison.Ordinal);
+        Arena2MediaBundlePublication.ValidatePersistedSidecars(dungeon, classic);
+    }
+
+    private static Arena2MediaBundlePublication CreateBundle(bool reverseClassicActions, IReadOnlyList<ClassicMusicRecord>? music = null)
+    {
+        Arena2ClassicMediaPublication classic = CreateClassicMedia(music: music);
         if (reverseClassicActions)
         {
             classic = WithWeaponActions(classic, WeaponActions(classic).Reverse().ToArray());
@@ -365,7 +421,7 @@ public sealed class Arena2MediaBundlePublicationTests
         return new([artifact], [], manifest, [billboard], []);
     }
 
-    private static Arena2ClassicMediaPublication CreateClassicMedia(ContentDigest? sourceDigest = null, string? artifactPath = null)
+    private static Arena2ClassicMediaPublication CreateClassicMedia(ContentDigest? sourceDigest = null, string? artifactPath = null, IReadOnlyList<ClassicMusicRecord>? music = null)
     {
         ImportPublicationArtifact uiArtifact = new(artifactPath ?? "media/classic/minimal.bin", "classic"u8);
         const string mediaId = "classic.minimal";
@@ -440,8 +496,32 @@ public sealed class Arena2MediaBundlePublicationTests
             [],
             EmptyMapRegions(),
             [],
-            []);
+            [],
+            Music: music ?? []);
     }
+
+    private static IReadOnlyList<ClassicMusicRecord> MusicCues() =>
+    [
+        MusicCue("music.dungeon", "song_dungeon", "song_dungeon.ogg", "dungeon", 7),
+        MusicCue("music.sunny", "song_gday___d", "song_gday___d.ogg", "sunny", 9),
+    ];
+
+    private static ClassicMusicRecord MusicCue(string mediaId, string track, string file, string context, int byteLength) =>
+        new(mediaId, track, context, file, ClassicMusicRecord.OggMimeType, byteLength, ContentDigest.Compute(Encoding.UTF8.GetBytes(mediaId)).Value);
+
+    private static (DungeonMediaManifestSidecar Dungeon, ClassicMediaManifestSidecar Classic) ReadPersistedSidecars(Arena2MediaBundlePublication publication) =>
+        (ReadPersisted<DungeonMediaManifestSidecar>(publication, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath),
+         ReadPersisted<ClassicMediaManifestSidecar>(publication, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath));
+
+    private static T ReadPersisted<T>(Arena2MediaBundlePublication publication, string relativePath) =>
+        JsonSerializer.Deserialize<T>(SidecarBytes(publication, relativePath).Span, PublishedJson.SectionRead)
+        ?? throw new InvalidOperationException($"The publication did not write '{relativePath}'.");
+
+    private static string SidecarJson(Arena2MediaBundlePublication publication, string relativePath) =>
+        Encoding.UTF8.GetString(SidecarBytes(publication, relativePath).Span);
+
+    private static ReadOnlyMemory<byte> SidecarBytes(Arena2MediaBundlePublication publication, string relativePath) =>
+        publication.Plan.Artifacts.Single(artifact => artifact.RelativePath == relativePath).Bytes;
 
     private static IReadOnlyList<ClassicMapRegionManifest> EmptyMapRegions() =>
         Enumerable.Range(0, 62).Select(region => new ClassicMapRegionManifest(region, [])).ToArray();

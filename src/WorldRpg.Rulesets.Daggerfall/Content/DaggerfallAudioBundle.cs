@@ -62,6 +62,22 @@ internal sealed class DaggerfallAudioBundle
         return new DaggerfallAudioBundle(content, $"daggerfall.{profileName}-audio", $"{root}/media/audio/clips/", inputs.Audio);
     }
 
+    /// <summary>Constructs the one music bundle every site's cues are opened through.</summary>
+    /// <remarks>
+    /// The score is the same donor songs in every world, so it is staged once rather than copied into each
+    /// site's bundle. A site contributes the cue list it admits; the artifacts stay here.
+    /// </remarks>
+    internal static DaggerfallAudioBundle ForMusic(ProductContent content, IReadOnlyList<NormalizedMusicCue> cues)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        ArgumentNullException.ThrowIfNull(cues);
+        return new DaggerfallAudioBundle(
+            content,
+            DaggerfallMusicBundle.BundleId,
+            DaggerfallMusicBundle.ContentRoot,
+            cues.Select(cue => new NormalizedAudioClip(cue.MediaId, $"{DaggerfallMusicBundle.LogicalRoot}/{cue.File}", cue.Sha256)));
+    }
+
     /// <summary>Opens the exact bundle resource published for a named audio identity.</summary>
     internal AudioClip OpenClip(IAudioService audio, string mediaId)
     {

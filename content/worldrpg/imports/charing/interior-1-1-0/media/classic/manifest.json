@@ -51025,5 +51025,70 @@
         }
       ]
     }
+  ],
+  "music": [
+    {
+      "mediaId": "music.dungeon",
+      "track": "song_dungeon",
+      "context": "dungeon",
+      "file": "song_dungeon.ogg",
+      "mimeType": "audio/ogg",
+      "byteLength": 5985696,
+      "contentDigest": "aa967a6fb90cf8333ee8a99f56bcf30a5a9a10e787d17e42ce3ec67effef889d"
+    },
+    {
+      "mediaId": "music.sunny",
+      "track": "song_gday___d",
+      "context": "sunny",
+      "file": "song_gday___d.ogg",
+      "mimeType": "audio/ogg",
+      "byteLength": 3472545,
+      "contentDigest": "eab044b964d5b0630f9b4d7471d72ea1b55e1ab3ad66a14a1883b5e70ad3721a"
+    },
+    {
+      "mediaId": "music.sunny.fm",
+      "track": "song_fday___d",
+      "context": "sunny-fm",
+      "file": "song_fday___d.ogg",
+      "mimeType": "audio/ogg",
+      "byteLength": 1819234,
+      "contentDigest": "ab3fc3d73ef02ced83ec60687f96f2464eba71c70e04091ce0d05cffb08da869"
+    },
+    {
+      "mediaId": "music.sunny.fm.second",
+      "track": "song_02fm",
+      "context": "sunny-fm",
+      "file": "song_02fm.ogg",
+      "mimeType": "audio/ogg",
+      "byteLength": 3768712,
+      "contentDigest": "592810a7fd68ff8a72cf295c285226a9432d9b1a91963857639bc106427dc7a8"
+    },
+    {
+      "mediaId": "music.sunny.fourth",
+      "track": "song_sunnyday",
+      "context": "sunny",
+      "file": "song_sunnyday.ogg",
+      "mimeType": "audio/ogg",
+      "byteLength": 2248822,
+      "contentDigest": "ef7fd2dddb91e1e3959ca5f5262565c897258b564dcf482dc81413625f7a5f8e"
+    },
+    {
+      "mediaId": "music.sunny.second",
+      "track": "song_02",
+      "context": "sunny",
+      "file": "song_02.ogg",
+      "mimeType": "audio/ogg",
+      "byteLength": 3768712,
+      "contentDigest": "592810a7fd68ff8a72cf295c285226a9432d9b1a91963857639bc106427dc7a8"
+    },
+    {
+      "mediaId": "music.sunny.third",
+      "track": "song_gsunny2",
+      "context": "sunny",
+      "file": "song_gsunny2.ogg",
+      "mimeType": "audio/ogg",
+      "byteLength": 3904543,
+      "contentDigest": "7dabfa606e0327cb28dd32d1432967da0984f347ec66d906c184ae22af401691"
+    }
   ]
 }

@@ -2319,8 +2319,8 @@
     },
     {
       "relativePath": "media/classic/manifest.json",
-      "contentHash": "1115f7fb1934b60415ea58c90fa436ccc83058c1c698efd28bd068eba095c490",
-      "byteLen": 1281411,
+      "contentHash": "1eaca9991845c985531f783ef9e327bbcd119777402044b9e58630c54fece1e9",
+      "byteLen": 1283463,
       "dependsOnPaths": [
         "media/audio/clips/audio-melee-dagger-swing.wav",
         "media/audio/clips/audio-melee-hit-1.wav",

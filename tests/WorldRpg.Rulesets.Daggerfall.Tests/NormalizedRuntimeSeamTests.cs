@@ -5805,6 +5805,9 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         (string Root, string Bundle)[] audioBundles =
         [
+            // The score's clips are staged as their own bundle: the manifest that names them sits above
+            // this root so it is read eagerly while the cue bodies stay lazy.
+            ("worldrpg/media/music/clips", "daggerfall.music"),
             ("worldrpg/media/audio/clips", "daggerfall.classic-audio"),
             ("worldrpg/imports/privateers-hold/media/audio/clips", "daggerfall.privateers-hold-audio"),
             ("worldrpg/imports/castle-necromoghan/media/audio/clips", "daggerfall.castle-necromoghan-audio"),
@@ -8133,6 +8136,16 @@ public sealed partial class NormalizedRuntimeSeamTests
         internal IEngineContext Context { get; private set; } = null!;
         internal int UiOpenCalls { get; private set; }
         internal int ClearedSkyBackgrounds => ((CameraServiceFake)(object)camera).ClearedSkyBackgrounds;
+        /// <summary>The diagnostics the product published, in order, as 'source/code' with their message.</summary>
+        internal IReadOnlyList<string> PublishedDiagnostics => ((DiagnosticsServiceFake)(object)diagnostics).Published
+            .Select(entry => $"{entry.Source}/{entry.Code}: {entry.Message}")
+            .ToArray();
+        /// <summary>The retained audio voices started so far, in order.</summary>
+        internal IReadOnlyList<string> StartedAudioVoices => ((AudioServiceFake)(object)audio).StartedVoices;
+        /// <summary>How many of those voices the product released.</summary>
+        internal int ReleasedAudioVoices => ((AudioServiceFake)(object)audio).ReleasedVoices;
+        /// <summary>How many clips the product opened from content, which is how a cue really resolved.</summary>
+        internal int OpenedContentClips => ((AudioServiceFake)(object)audio).OpenedContentClips;
         internal IReadOnlyList<Color> BackgroundColors => ((CameraServiceFake)(object)camera).BackgroundColors;
 
         /// <summary>Read one named field of the last published projection, or null when none was.</summary>
@@ -8156,6 +8169,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         private IPerceptionService perception = null!;
         private ICameraViewService camera = null!;
         private IAudioService audio = null!;
+        private IDiagnosticsService diagnostics = null!;
         private IVideoService video = null!;
         private IRandomService random = null!;
         private IUiService ui = null!;
@@ -8173,6 +8187,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             fake.perception = perception ?? PerceptionFake.Create().Service;
             fake.camera = ServiceProxy<ICameraViewService, CameraServiceFake>.Create();
             fake.audio = ServiceProxy<IAudioService, AudioServiceFake>.Create();
+            fake.diagnostics = ServiceProxy<IDiagnosticsService, DiagnosticsServiceFake>.Create();
             fake.video = ServiceProxy<IVideoService, VideoServiceFake>.Create();
             fake.random = random ?? ServiceProxy<IRandomService, RandomServiceFake>.Create();
             fake.ui = UiServiceFake.Create(fake);
@@ -8191,6 +8206,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             "get_Perception" => perception,
             "get_CameraView" => camera,
             "get_Audio" => audio,
+            "get_Diagnostics" => diagnostics,
             "get_Video" => video,
             "get_Random" => random,
             "get_Ui" => ui,
@@ -8242,15 +8258,64 @@ public sealed partial class NormalizedRuntimeSeamTests
                 : throw new NotSupportedException(method?.Name);
         }
 
+        /// <summary>
+        /// Answers clips, emitted signals and retained voices, recording the voices a session starts.
+        /// </summary>
+        /// <remarks>
+        /// A looping cue is a retained voice, so a session that starts music is visible here as a
+        /// created voice and as a release when the loop ends. Emitted one-shots stay answered because
+        /// ordinary presentation audio uses them.
+        /// </remarks>
         private class AudioServiceFake : DispatchProxy
         {
+            internal List<string> StartedVoices { get; } = [];
+            internal int ReleasedVoices { get; private set; }
+            /// <summary>How many clips the product opened from content, which is how a cue really resolves.</summary>
+            internal int OpenedContentClips { get; private set; }
+
             protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
             {
-                nameof(IAudioService.OpenClip) => new AudioClip(new AudioClipHandle(1), static () => { }),
-                nameof(IAudioService.OpenClipFromContent) => new AudioClip(new AudioClipHandle(1), static () => { }),
+                nameof(IAudioService.OpenClip) => OpenClip(),
+                nameof(IAudioService.OpenClipFromContent) => OpenClipFromContent(),
                 nameof(IAudioService.Emit) => new AudioSignalHandle(1),
+                nameof(IAudioService.CreateVoice) => CreateVoice(),
                 _ => throw new NotSupportedException(method?.Name),
             };
+
+            private AudioClip OpenClip() => new(new AudioClipHandle(1), static () => { });
+
+            private AudioClip OpenClipFromContent()
+            {
+                OpenedContentClips++;
+                return new AudioClip(new AudioClipHandle(1), static () => { });
+            }
+
+            private AudioVoice CreateVoice()
+            {
+                StartedVoices.Add($"voice-{StartedVoices.Count + 1}");
+                return new AudioVoice(new AudioVoiceHandle(checked((ulong)StartedVoices.Count)), () => ReleasedVoices++);
+            }
+        }
+
+        /// <summary>
+        /// Records the diagnostics the product publishes, so a fact can read the change timeline it keeps.
+        /// </summary>
+        private class DiagnosticsServiceFake : DispatchProxy
+        {
+            internal List<(string Source, string Code, string Message)> Published { get; } = [];
+
+            protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
+            {
+                nameof(IDiagnosticsService.Publish) => Publish((DiagnosticsPublishRequest)arguments![0]!),
+                nameof(IDiagnosticsService.ReadRenderer) => ReadOnlyMemory<byte>.Empty,
+                _ => throw new NotSupportedException(method?.Name),
+            };
+
+            private object? Publish(DiagnosticsPublishRequest request)
+            {
+                Published.Add((request.Source, request.Code, request.Message));
+                return null;
+            }
         }
 
         /// <summary>Safe terminal-free video stub for non-media session fixtures.</summary>

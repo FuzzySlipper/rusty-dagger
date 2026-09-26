@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "generator": "daggerfall-import-tool music-media",
+  "artifacts": [
+    {
+      "path": "worldrpg/media/music/clips/song_02.ogg",
+      "byteLength": 3768712,
+      "sha256": "592810a7fd68ff8a72cf295c285226a9432d9b1a91963857639bc106427dc7a8",
+      "mediaId": "music.sunny.second"
+    },
+    {
+      "path": "worldrpg/media/music/clips/song_02fm.ogg",
+      "byteLength": 3768712,
+      "sha256": "592810a7fd68ff8a72cf295c285226a9432d9b1a91963857639bc106427dc7a8",
+      "mediaId": "music.sunny.fm.second"
+    },
+    {
+      "path": "worldrpg/media/music/clips/song_dungeon.ogg",
+      "byteLength": 5985696,
+      "sha256": "aa967a6fb90cf8333ee8a99f56bcf30a5a9a10e787d17e42ce3ec67effef889d",
+      "mediaId": "music.dungeon"
+    },
+    {
+      "path": "worldrpg/media/music/clips/song_fday___d.ogg",
+      "byteLength": 1819234,
+      "sha256": "ab3fc3d73ef02ced83ec60687f96f2464eba71c70e04091ce0d05cffb08da869",
+      "mediaId": "music.sunny.fm"
+    },
+    {
+      "path": "worldrpg/media/music/clips/song_gday___d.ogg",
+      "byteLength": 3472545,
+      "sha256": "eab044b964d5b0630f9b4d7471d72ea1b55e1ab3ad66a14a1883b5e70ad3721a",
+      "mediaId": "music.sunny"
+    },
+    {
+      "path": "worldrpg/media/music/clips/song_gsunny2.ogg",
+      "byteLength": 3904543,
+      "sha256": "7dabfa606e0327cb28dd32d1432967da0984f347ec66d906c184ae22af401691",
+      "mediaId": "music.sunny.third"
+    },
+    {
+      "path": "worldrpg/media/music/clips/song_sunnyday.ogg",
+      "byteLength": 2248822,
+      "sha256": "ef7fd2dddb91e1e3959ca5f5262565c897258b564dcf482dc81413625f7a5f8e",
+      "mediaId": "music.sunny.fourth"
+    },
+    {
+      "path": "worldrpg/media/music/manifest.json",
+      "byteLength": 2106,
+      "sha256": "cdc1b5e53fbe4a9ca67febd5a67b466856d9ad843343a67faf28e52266db135c"
+    }
+  ]
+}

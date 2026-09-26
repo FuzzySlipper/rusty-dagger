@@ -73,7 +73,12 @@ public sealed record Arena2ClassicMediaInputs(
     byte[] MapPalCol,
     // The texture leaves a world visual's own mesh selects. They arrive as a list because which leaves
     // are needed is a fact about the published visual set rather than a fixed part of the closure.
-    IReadOnlyList<ClassicMissileTextureLeaf> MissileTextureLeaves);
+    IReadOnlyList<ClassicMissileTextureLeaf> MissileTextureLeaves,
+    // The music cues the site admits, taken from the product-wide music publication that carries their
+    // bytes. A caller that has not published music passes none, and the site then composes without a
+    // score rather than with a substituted track.
+    IReadOnlyList<ClassicMusicRecord>? Music = null)
+{ }
 
 /// <summary>Quotas for bounded, deterministic classic-media regeneration.</summary>
 public sealed record Arena2ClassicMediaPublicationOptions(
@@ -880,7 +885,8 @@ public sealed record Arena2ClassicMediaPublication(
     IReadOnlyList<ClassicMapMediaManifest> MapMedia,
     IReadOnlyList<ClassicMapRegionManifest> MapRegions,
     IReadOnlyList<ClassicAuthoredUiAssetManifest> AuthoredUiAssets,
-    IReadOnlyList<ClassicWorldVisualManifest> WorldVisuals)
+    IReadOnlyList<ClassicWorldVisualManifest> WorldVisuals,
+    IReadOnlyList<ClassicMusicRecord> Music)
 {
     /// <summary>The logical source path the numeric sound archive is read under, in this publication and by any catalog of it.</summary>
     public const string DaggerSoundSourcePath = "arena2/DAGGER.SND";
@@ -1147,6 +1153,10 @@ public sealed record Arena2ClassicMediaPublication(
     {
         ArgumentNullException.ThrowIfNull(inputs);
         ArgumentNullException.ThrowIfNull(profile);
+        // The cue list is the site's statement of which published music it admits, so it is validated
+        // here rather than trusted: a cue naming another container or an unsafe artifact is refused while
+        // the publication is being assembled, where the caller can still see which manifest supplied it.
+        foreach (ClassicMusicRecord cue in inputs.Music ?? []) cue.Validate();
         Arena2ClassicMediaPublicationOptions effectiveOptions = options ?? new();
         effectiveOptions.Validate();
         if (effectiveOptions.MaximumAtlasDimension < WeaponReferenceWidth)
@@ -1239,7 +1249,8 @@ public sealed record Arena2ClassicMediaPublication(
             mapMedia,
             mapRegions,
             authoredUiAssets,
-            visuals);
+            visuals,
+            Music: inputs.Music ?? []);
     }
 
     private static IEnumerable<GeneratedMediaArtifact> BuildMapMedia(
