@@ -325,7 +325,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                     && State.Character.CustomCareer?.Advantages.Any(trait => trait.Id == "adrenaline-rush") == true
                     ? new DaggerfallAdrenalineRush(Enabled: true, Improved: _heldEnchantments.Talents.AdrenalineRush) : default,
                 () => State.PlayerControl.Position, () => State.Character, _playerSwings.TryGesture, ShotBlockedByCover,
-                () => _heldEnchantments.ArmorValueModifier);
+                () => _heldEnchantments.ArmorValueModifier, DeliverWeaponPoison);
             State.Kit = new(State.Actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, State.Inventory, State.Equipment);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
                 engine.Perception,

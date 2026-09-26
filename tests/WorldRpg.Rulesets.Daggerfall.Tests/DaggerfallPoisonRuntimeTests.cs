@@ -485,6 +485,34 @@ public sealed class DaggerfallPoisonRuntimeTests
     }
 
     [Fact]
+    public void A_strike_delivers_the_coating_and_spends_it()
+    {
+        // The delivering half, at the boundary the combat rules call on a strike that took health: the dose
+        // reaches the struck actor through the ordinary infliction, and the weapon is left uncoated because
+        // the swing used it up rather than because it worked.
+        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        DaggerfallSession session = fixture.Session;
+        Actor player = session.State.Actors.Player.Actor;
+        long struck = session.State.Actors.Player.DurableId;
+
+        const ulong Weapon = 9001;
+        session.State.ItemInstances.RegisterUnique(Weapon, new DaggerfallItemInstanceMetadata(
+            "dagger", "steel", 0, 10, 20, true, false, null, null, null, DaggerfallItemOwner.Player, PoisonVariant: 128));
+
+        // The struck actor here is first level, where the donor refuses poison even for a delivered dose, and
+        // the coating is spent all the same: it was used, not applied.
+        session.DeliverWeaponPoison(struck, Weapon);
+        Assert.Null(session.State.ItemInstances.RequireUnique(Weapon).PoisonVariant);
+        Assert.False(session.State.Poisons.IsAfflicted(player));
+
+        // An uncoated weapon delivers nothing at all, and one whose item is unknown is ignored rather than
+        // delivering to the wrong actor.
+        session.DeliverWeaponPoison(struck, Weapon);
+        session.DeliverWeaponPoison(struck, 9002);
+        Assert.False(session.State.Poisons.IsAfflicted(player));
+    }
+
+    [Fact]
     public void A_second_poison_is_measured_by_what_is_left_of_the_first()
     {
         // Nux Vomica's whole window is fourteen minutes and Moonseed's is four, so a whole-window comparison

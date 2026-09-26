@@ -62,6 +62,38 @@ internal sealed partial class DaggerfallSession
         return InflictPoison(PlayerPoisonExposure(bypassResistance: true), variant);
     }
 
+    /// <summary>
+    /// A landed strike delivers the coating its weapon carries and spends it. Resistance is in the way
+    /// exactly as the donor has it, and the swing spends the dose whatever the throw decides — the coating
+    /// leaves the weapon because it was used, not because it worked.
+    /// </summary>
+    internal void DeliverWeaponPoison(long targetActorId, ulong weaponItemId)
+    {
+        if (!State.ItemInstances.ContainsUnique(weaponItemId)) return;
+        DaggerfallItemInstanceMetadata weapon = State.ItemInstances.RequireUnique(weaponItemId);
+        if (weapon.PoisonVariant is not int variant) return;
+        // The player answers for itself: the durable-id lookup that finds a site actor needs an actor body,
+        // which the player does not carry, so asking only that would report the player as missing.
+        Actor? struck = State.Actors.Player.DurableId == targetActorId
+            ? State.Actors.Player.Actor
+            : State.Actors.TryGet(targetActorId, out WorldRpg.Kit.Actors.ActorState target) && target is not null
+                ? target.Actor
+                : null;
+        if (struck is null) return;
+
+        _ = InflictPoison(
+            new DaggerfallPoisonExposure(
+                targetActorId,
+                TargetLevel: struck.Get<ProgressionState>().Level,
+                CareerImmune: false,
+                RaceImmune: false,
+                Willpower: struck.Get<StatsComponent>().GetStat(StatId.Parse(DaggerfallMechanicsIds.Willpower.Value)).ValueInt,
+                Tolerance: DaggerfallCareerTolerances.Tolerance(State.Character.Career, DaggerfallCareerTolerances.Poison)),
+            variant,
+            weaponItemId);
+        State.ItemInstances.ReplaceUnique(weaponItemId, weapon with { PoisonVariant = null });
+    }
+
     /// <summary>Cures every poison the player carries, taking back what they still hold.</summary>
     internal bool CurePoison() => State.Poisons.Cure(State.Actors.Player.Actor);
 }

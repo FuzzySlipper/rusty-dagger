@@ -64,9 +64,11 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         CombatResolution? rules = null, Func<long, DaggerfallAdrenalineRush>? adrenalineRush = null,
         Func<WorldPoint?>? playerPosition = null, Func<DaggerfallCharacterState?>? character = null,
         Func<DaggerfallSwingDirection>? playerSwing = null, Func<WorldPoint, WorldPoint, bool>? coverBlocksShot = null,
-        Func<int>? armorValueModifier = null)
+        Func<int>? armorValueModifier = null,
+        Action<long, ulong>? deliverWeaponPoison = null)
     {
         _random = random;
+        _deliverWeaponPoison = deliverWeaponPoison;
         Rules = rules ?? new CombatResolution();
         Execution = new(actors, this, DeferRangedImpact);
         _actors = actors;
@@ -502,6 +504,8 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
             representative?.Roll ?? 0, representative?.Chance ?? 0);
     }
 
+    private readonly Action<long, ulong>? _deliverWeaponPoison;
+
     private void ApplyDamage(CombatParticipants participants, long attacker, long target, int damage, int body, bool enemy,
         ulong generation, ulong step, FactBuffer<IProductFact> facts)
     {
@@ -510,9 +514,21 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         facts.Append(new AttackHitFact(attacker, target, applied.CalculatedDamage, applied.ActualHealthLost, body, enemy, generation, step));
         facts.Append(new DamageAppliedFact(attacker, target, DaggerfallDamageCause.PhysicalAttack,
             applied.CalculatedDamage, applied.ActualHealthLost, body, generation, step));
+        // The donor delivers a poisoned weapon only on a strike that actually took health, and the strike
+        // spends the dose: the coating is read and cleared by the delivery, which also owns whether the
+        // target's resistance stops it.
         if (applied.ActualHealthLost > 0)
+        {
+            if (_deliverWeaponPoison is not null
+                && EquippedWeapon(attacker) is WorldRpg.Kit.Inventory.UniqueInventoryItem weapon
+                && weapon.EntityId is ulong carried)
+            {
+                _deliverWeaponPoison(target, carried);
+            }
+
             facts.Append(new ActorDamagedFact(target, attacker, DaggerfallDamageCause.PhysicalAttack,
                 applied.CalculatedDamage, applied.ActualHealthLost));
+        }
         if (applied.Defeated)
             facts.Append(new ActorDiedFact(target, attacker, DaggerfallDamageCause.PhysicalAttack,
                 applied.CalculatedDamage, applied.ActualHealthLost, generation, step));
