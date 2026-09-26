@@ -284,12 +284,18 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             CombatResolution combatRules = new();
             _combatResolution = combatRules;
             _vitality = new DaggerfallVitalityConsequences(combatRules);
-            State.Effects = new DaggerfallEffectLifecycle(State.Actors, effects ?? DaggerfallDiseasePolicy.CreateCatalog(
-                _random,
-                () => _time.Calendar.DayNumber,
-                () => State.Character.Career,
-                combatRules,
-                AppendEffectDamage));
+            // One catalog answers every effect family this ruleset compiles, so a saved effect names the
+            // definition that has to interpret it rather than the family that happened to start it.
+            State.Effects = new DaggerfallEffectLifecycle(State.Actors, effects ?? new DaggerfallEffectCatalog(
+            [
+                .. DaggerfallDiseasePolicy.Definitions(
+                    _random,
+                    () => _time.Calendar.DayNumber,
+                    () => State.Character.Career,
+                    combatRules,
+                    AppendEffectDamage),
+                .. DaggerfallPoisonEffects.Definitions(_random, _vitality),
+            ]));
             partiallyConstructed.Add(State.Effects);
             _rewards = new DaggerfallRewardReactions(
                 State.Progression,
@@ -355,17 +361,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 () => State.PlayerControl.Position, NearbyCreatures, InSunlight, _itemCondition, InHolyPlace,
                 amount => _vitality.ResolveHeldEnchantmentDamage(State.Actors.Player.Actor, amount));
             State.HeldEnchantments = _heldEnchantments;
-            _poisons = new DaggerfallPoisonRuntime(_vitality, PoisonRoll);
-            if (saved?.Poisons is { } savedPoisons)
-            {
-                _poisonDraws = savedPoisons.Records.Length == 0 ? 0 : checked((long)savedPoisons.Records.Max(record => record.Entity));
-                // Only the player can carry a poison today, because nothing afflicts anyone else yet: delivery
-                // through strikes and drug use is the step that gives the other actors carriers, and this
-                // resolver gains their lookup then. A record naming any other entity is refused by Restore
-                // rather than quietly dropped.
-                _poisons.Restore(savedPoisons, entity =>
-                    State.Actors.Player.Actor.Entity.Value == (ulong)entity ? State.Actors.Player.Actor : null);
-            }
+            // Poisons are active effects, so restoring them is the effect lifecycle's own restore: this
+            // owner reads, starts and cures them and keeps no state of its own to carry.
+            _poisons = new DaggerfallPoisonRuntime(State.Effects, PoisonRoll);
             State.Poisons = _poisons;
             State.Encumbrance = new DaggerfallEncumbrancePolicy(State.Inventory, State.Actors.Player.Stats,
                 () => _heldEnchantments.CarryMultiplier);
@@ -1769,13 +1767,11 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         {
             State.Effects.AdvanceOrdinaryRound();
             State.HeldEnchantments.AdvanceRounds(1);
-            _ = _poisons.AdvanceMinutes(1);
             return;
         }
 
         _ = State.Effects.AdvanceElapsedRounds(minutes);
         State.HeldEnchantments.AdvanceRounds(checked((int)Math.Min(minutes, int.MaxValue)));
-        _ = _poisons.AdvanceMinutes(checked((int)Math.Min(minutes, int.MaxValue)));
     }
 
     private static long MinuteIndex(DaggerfallCalendar calendar) =>

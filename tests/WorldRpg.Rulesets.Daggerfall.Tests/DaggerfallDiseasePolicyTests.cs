@@ -30,7 +30,7 @@ public sealed class DaggerfallDiseasePolicyTests
         using ActorsState actors = Actors(level: 2);
         long day = 100;
         IRandomService random = Random(100, 0, 18, 10);
-        DaggerfallEffectLifecycle effects = new(actors, DaggerfallDiseasePolicy.CreateCatalog(random, () => day, () => Career()));
+        DaggerfallEffectLifecycle effects = new(actors, new DaggerfallEffectCatalog(DaggerfallDiseasePolicy.Definitions(random, () => day, () => Career())));
 
         Assert.Equal(DaggerfallDiseaseAdmission.Started, DaggerfallDiseasePolicy.InflictDisease(
             effects, actors, random, () => day, Exposure("blood", DaggerfallClassicDisease.BloodRot)));
@@ -61,7 +61,7 @@ public sealed class DaggerfallDiseasePolicyTests
         CombatContributions ward = new();
         ward.Rules.Add(new ApplyingContribution(interaction => interaction.Damage -= 4));
         actors.Player.Actor.Add(ward);
-        DaggerfallEffectLifecycle effects = new(actors, DaggerfallDiseasePolicy.CreateCatalog(random, () => day, () => Career(), combat));
+        DaggerfallEffectLifecycle effects = new(actors, new DaggerfallEffectCatalog(DaggerfallDiseasePolicy.Definitions(random, () => day, () => Career(), combat)));
 
         Assert.Equal(DaggerfallDiseaseAdmission.Started, DaggerfallDiseasePolicy.InflictDisease(
             effects, actors, random, () => day, Exposure("combat-disease", DaggerfallClassicDisease.BloodRot)));
@@ -81,8 +81,8 @@ public sealed class DaggerfallDiseasePolicyTests
         long day = 100;
         IRandomService random = Random(100, 0, 18, 10);
         List<DaggerfallEffectDamage> applied = [];
-        DaggerfallEffectLifecycle effects = new(actors, DaggerfallDiseasePolicy.CreateCatalog(
-            random, () => day, () => Career(), new CombatResolution(), applied.Add));
+        DaggerfallEffectLifecycle effects = new(actors, new DaggerfallEffectCatalog(DaggerfallDiseasePolicy.Definitions(
+            random, () => day, () => Career(), new CombatResolution(), applied.Add)));
 
         Assert.Equal(DaggerfallDiseaseAdmission.Started, DaggerfallDiseasePolicy.InflictDisease(
             effects, actors, random, () => day, Exposure("effect-result", DaggerfallClassicDisease.BloodRot)));
@@ -104,7 +104,7 @@ public sealed class DaggerfallDiseasePolicyTests
         using ActorsState actors = Actors(level: 2);
         long day = 30;
         IRandomService random = Random(100, 0, 3, 100, 0, 3, 5, 5);
-        DaggerfallEffectLifecycle effects = new(actors, DaggerfallDiseasePolicy.CreateCatalog(random, () => day, () => Career()));
+        DaggerfallEffectLifecycle effects = new(actors, new DaggerfallEffectCatalog(DaggerfallDiseasePolicy.Definitions(random, () => day, () => Career())));
 
         Assert.Equal(DaggerfallDiseaseAdmission.Started, DaggerfallDiseasePolicy.InflictDisease(
             effects, actors, random, () => day, Exposure("caliron-one", DaggerfallClassicDisease.CalironsCurse)));
@@ -135,7 +135,7 @@ public sealed class DaggerfallDiseasePolicyTests
         using ActorsState actors = Actors(level: 2);
         long day = 10;
         IRandomService random = Random(100, 0, 3, 5, 5, 5);
-        DaggerfallEffectLifecycle effects = new(actors, DaggerfallDiseasePolicy.CreateCatalog(random, () => day, () => Career()));
+        DaggerfallEffectLifecycle effects = new(actors, new DaggerfallEffectCatalog(DaggerfallDiseasePolicy.Definitions(random, () => day, () => Career())));
         _ = DaggerfallDiseasePolicy.InflictDisease(effects, actors, random, () => day, Exposure("finite", DaggerfallClassicDisease.CalironsCurse));
 
         for (int symptom = 0; symptom < 3; symptom++)
@@ -155,7 +155,7 @@ public sealed class DaggerfallDiseasePolicyTests
         using ActorsState actors = Actors(level: 2);
         long day = 9;
         IRandomService random = Random(100, 0, 5, 5);
-        DaggerfallEffectLifecycle effects = new(actors, DaggerfallDiseasePolicy.CreateCatalog(random, () => day, () => Career()));
+        DaggerfallEffectLifecycle effects = new(actors, new DaggerfallEffectCatalog(DaggerfallDiseasePolicy.Definitions(random, () => day, () => Career())));
         _ = DaggerfallDiseasePolicy.InflictDisease(effects, actors, random, () => day, Exposure("cholera", DaggerfallClassicDisease.Cholera));
 
         day += 2;
@@ -191,7 +191,7 @@ public sealed class DaggerfallDiseasePolicyTests
         IRandomService random = Random(100, 0);
         using (ActorsState levelOne = Actors(level: 1))
         {
-            DaggerfallEffectLifecycle effects = new(levelOne, DaggerfallDiseasePolicy.CreateCatalog(random, () => day, () => Career()));
+            DaggerfallEffectLifecycle effects = new(levelOne, new DaggerfallEffectCatalog(DaggerfallDiseasePolicy.Definitions(random, () => day, () => Career())));
             Assert.Equal(DaggerfallDiseaseAdmission.LevelOneImmune, DaggerfallDiseasePolicy.InflictDisease(
                 effects, levelOne, random, () => day, Exposure("level-one", DaggerfallClassicDisease.BrainFever)));
             Assert.Empty(effects.Active);
@@ -200,7 +200,7 @@ public sealed class DaggerfallDiseasePolicyTests
         using (ActorsState immune = Actors(level: 2))
         {
             immune.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.ImmunityDisease.Value)).BaseValue = 1;
-            DaggerfallEffectLifecycle effects = new(immune, DaggerfallDiseasePolicy.CreateCatalog(random, () => day, () => Career()));
+            DaggerfallEffectLifecycle effects = new(immune, new DaggerfallEffectCatalog(DaggerfallDiseasePolicy.Definitions(random, () => day, () => Career())));
             Assert.Equal(DaggerfallDiseaseAdmission.Immune, DaggerfallDiseasePolicy.InflictDisease(
                 effects, immune, random, () => day, Exposure("immune", DaggerfallClassicDisease.BrainFever)));
             Assert.Empty(effects.Active);
@@ -208,7 +208,7 @@ public sealed class DaggerfallDiseasePolicyTests
 
         using (ActorsState resisted = Actors(level: 2))
         {
-            DaggerfallEffectLifecycle effects = new(resisted, DaggerfallDiseasePolicy.CreateCatalog(Random(1), () => day, () => Career()));
+            DaggerfallEffectLifecycle effects = new(resisted, new DaggerfallEffectCatalog(DaggerfallDiseasePolicy.Definitions(Random(1), () => day, () => Career())));
             Assert.Equal(DaggerfallDiseaseAdmission.Resisted, DaggerfallDiseasePolicy.InflictDisease(
                 effects, resisted, Random(1), () => day, Exposure("resisted", DaggerfallClassicDisease.BrainFever)));
             Assert.Empty(effects.Active);
@@ -216,7 +216,7 @@ public sealed class DaggerfallDiseasePolicyTests
 
         using (ActorsState nonPlayer = Actors(level: 2, secondTarget: true))
         {
-            DaggerfallEffectLifecycle effects = new(nonPlayer, DaggerfallDiseasePolicy.CreateCatalog(random, () => day, () => Career()));
+            DaggerfallEffectLifecycle effects = new(nonPlayer, new DaggerfallEffectCatalog(DaggerfallDiseasePolicy.Definitions(random, () => day, () => Career())));
             Assert.Equal(DaggerfallDiseaseAdmission.TargetIsNotPlayer, DaggerfallDiseasePolicy.InflictDisease(
                 effects, nonPlayer, random, () => day, Exposure("other", DaggerfallClassicDisease.BrainFever) with { TargetId = 2 }));
             Assert.Empty(effects.Active);
@@ -242,7 +242,7 @@ public sealed class DaggerfallDiseasePolicyTests
         using (ActorsState original = Actors(level: 2))
         {
             IRandomService random = Random(100, 0, 5);
-            DaggerfallEffectLifecycle effects = new(original, DaggerfallDiseasePolicy.CreateCatalog(random, () => day, () => Career()));
+            DaggerfallEffectLifecycle effects = new(original, new DaggerfallEffectCatalog(DaggerfallDiseasePolicy.Definitions(random, () => day, () => Career())));
             _ = DaggerfallDiseasePolicy.InflictDisease(effects, original, random, () => day, Exposure("brain", DaggerfallClassicDisease.BrainFever));
             day++;
             effects.AdvanceOrdinaryRound();
@@ -256,7 +256,7 @@ public sealed class DaggerfallDiseasePolicyTests
         DaggerfallRestoredStats rebuilt = DaggerfallStatsSaveBoundary.Restore(stats, restored.Player.Actor.Entity);
         restored.Player.Actor.Replace(rebuilt.Component);
         IRandomService resumedRandom = Random(5);
-        DaggerfallEffectLifecycle resumed = new(restored, DaggerfallDiseasePolicy.CreateCatalog(resumedRandom, () => day, () => Career()));
+        DaggerfallEffectLifecycle resumed = new(restored, new DaggerfallEffectCatalog(DaggerfallDiseasePolicy.Definitions(resumedRandom, () => day, () => Career())));
         resumed.Restore(active);
 
         Assert.Equal(45, Attribute(restored, DaggerfallMechanicsIds.Willpower));
@@ -291,7 +291,7 @@ public sealed class DaggerfallDiseasePolicyTests
         IRandomService random = symptomDays == 0
             ? Random(100, 0, dailyDamage)
             : Random(100, 0, symptomDays, dailyDamage);
-        DaggerfallEffectLifecycle effects = new(actors, DaggerfallDiseasePolicy.CreateCatalog(random, () => day, () => Career()));
+        DaggerfallEffectLifecycle effects = new(actors, new DaggerfallEffectCatalog(DaggerfallDiseasePolicy.Definitions(random, () => day, () => Career())));
 
         Assert.Equal(DaggerfallDiseaseAdmission.Started,
             DaggerfallDiseasePolicy.InflictDisease(effects, actors, random, () => day, Exposure($"cure-{diseaseName}", disease)));
@@ -325,7 +325,7 @@ public sealed class DaggerfallDiseasePolicyTests
         long day = 35;
         DaggerfallClassicDisease disease = Enum.Parse<DaggerfallClassicDisease>(diseaseName);
         IRandomService random = disease == DaggerfallClassicDisease.WizardFever ? Random(100, 0, 3) : Random(100, 0);
-        DaggerfallEffectLifecycle effects = new(actors, DaggerfallDiseasePolicy.CreateCatalog(random, () => day, () => Career()));
+        DaggerfallEffectLifecycle effects = new(actors, new DaggerfallEffectCatalog(DaggerfallDiseasePolicy.Definitions(random, () => day, () => Career())));
 
         Assert.Equal(DaggerfallDiseaseAdmission.Started,
             DaggerfallDiseasePolicy.InflictDisease(effects, actors, random, () => day,
@@ -357,7 +357,7 @@ public sealed class DaggerfallDiseasePolicyTests
             IRandomService random = symptomDays == 0
                 ? Random(100, 0, dailyDamage)
                 : Random(100, 0, symptomDays, dailyDamage);
-            DaggerfallEffectLifecycle effects = new(original, DaggerfallDiseasePolicy.CreateCatalog(random, () => day, () => Career()));
+            DaggerfallEffectLifecycle effects = new(original, new DaggerfallEffectCatalog(DaggerfallDiseasePolicy.Definitions(random, () => day, () => Career())));
             _ = DaggerfallDiseasePolicy.InflictDisease(effects, original, random, () => day, Exposure($"restore-{diseaseName}", disease));
             day++;
             effects.AdvanceOrdinaryRound();
@@ -369,7 +369,7 @@ public sealed class DaggerfallDiseasePolicyTests
         DaggerfallRestoredStats rebuilt = DaggerfallStatsSaveBoundary.Restore(stats, restored.Player.Actor.Entity);
         restored.Player.Actor.Replace(rebuilt.Component);
         IRandomService resumedRandom = Random(dailyDamage);
-        DaggerfallEffectLifecycle resumed = new(restored, DaggerfallDiseasePolicy.CreateCatalog(resumedRandom, () => day, () => Career()));
+        DaggerfallEffectLifecycle resumed = new(restored, new DaggerfallEffectCatalog(DaggerfallDiseasePolicy.Definitions(resumedRandom, () => day, () => Career())));
         resumed.Restore(active);
 
         DaggerfallActiveEffect restoredEffect = Assert.Single(resumed.Active);
@@ -388,7 +388,7 @@ public sealed class DaggerfallDiseasePolicyTests
         using ActorsState actors = Actors(level: 2);
         long day = 70;
         IRandomService random = Random(100, 0, 100, 0, 5, 5, 5, 5, 5, 5);
-        DaggerfallEffectLifecycle effects = new(actors, DaggerfallDiseasePolicy.CreateCatalog(random, () => day, () => Career()));
+        DaggerfallEffectLifecycle effects = new(actors, new DaggerfallEffectCatalog(DaggerfallDiseasePolicy.Definitions(random, () => day, () => Career())));
         _ = DaggerfallDiseasePolicy.InflictDisease(effects, actors, random, () => day, Exposure("dementia-catchup", DaggerfallClassicDisease.Dementia));
         _ = DaggerfallDiseasePolicy.InflictDisease(effects, actors, random, () => day, Exposure("leprosy-overlap", DaggerfallClassicDisease.Leprosy));
 
@@ -412,7 +412,7 @@ public sealed class DaggerfallDiseasePolicyTests
         using ActorsState actors = Actors(level: 2);
         long day = 80;
         IRandomService random = Random(100, 0, 3, 2, 2, 2);
-        DaggerfallEffectLifecycle effects = new(actors, DaggerfallDiseasePolicy.CreateCatalog(random, () => day, () => Career()));
+        DaggerfallEffectLifecycle effects = new(actors, new DaggerfallEffectCatalog(DaggerfallDiseasePolicy.Definitions(random, () => day, () => Career())));
         _ = DaggerfallDiseasePolicy.InflictDisease(effects, actors, random, () => day, Exposure("wizard-catchup", DaggerfallClassicDisease.WizardFever));
 
         day += 3;
@@ -429,12 +429,12 @@ public sealed class DaggerfallDiseasePolicyTests
         using ActorsState actors = Actors(level: 2);
         long day = 1;
         IRandomService random = Random(100, 0);
-        DaggerfallEffectLifecycle source = new(actors, DaggerfallDiseasePolicy.CreateCatalog(random, () => day, () => Career()));
+        DaggerfallEffectLifecycle source = new(actors, new DaggerfallEffectCatalog(DaggerfallDiseasePolicy.Definitions(random, () => day, () => Career())));
         _ = DaggerfallDiseasePolicy.InflictDisease(source, actors, random, () => day, Exposure("malformed", DaggerfallClassicDisease.BrainFever));
         DaggerfallActiveEffectSave saved = Assert.Single(source.Capture()) with { State = Json("{}") };
 
         using ActorsState restoredActors = Actors(level: 2);
-        DaggerfallEffectLifecycle restored = new(restoredActors, DaggerfallDiseasePolicy.CreateCatalog(Random(), () => day, () => Career()));
+        DaggerfallEffectLifecycle restored = new(restoredActors, new DaggerfallEffectCatalog(DaggerfallDiseasePolicy.Definitions(Random(), () => day, () => Career())));
         Assert.Throws<ArgumentException>(() => restored.Restore([saved]));
         Assert.Empty(restored.Active);
     }
@@ -472,7 +472,7 @@ public sealed class DaggerfallDiseasePolicyTests
         using ActorsState actors = Actors(level: 2);
         long day = 4;
         IRandomService random = symptoms == 0 ? Random(100, 0, damage) : Random(100, 0, symptoms, damage);
-        DaggerfallEffectLifecycle effects = new(actors, DaggerfallDiseasePolicy.CreateCatalog(random, () => day, () => Career()));
+        DaggerfallEffectLifecycle effects = new(actors, new DaggerfallEffectCatalog(DaggerfallDiseasePolicy.Definitions(random, () => day, () => Career())));
         _ = DaggerfallDiseasePolicy.InflictDisease(effects, actors, random, () => day, Exposure($"matrix-{disease}-{damage}", disease));
         day++;
         effects.AdvanceOrdinaryRound();
