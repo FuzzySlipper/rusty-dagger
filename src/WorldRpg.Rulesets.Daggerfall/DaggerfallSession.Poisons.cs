@@ -19,7 +19,7 @@ internal sealed partial class DaggerfallSession
                 BiographyModifier = checked(exposure.BiographyModifier + (State.Character.Background?.Modifiers.PoisonResistance ?? 0)),
             },
             variant,
-            PoisonRoll(1, 100));
+            PoisonRoll);
     }
 
     /// <summary>Cures every poison the player carries, taking back what they still hold.</summary>
