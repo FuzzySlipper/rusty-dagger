@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -123,7 +124,7 @@ public sealed class DaggerfallPoisonRuntimeTests
         // total keeps the whole drain while the stat itself saturates at its floor.
         DaggerfallActiveEffect livePoison = Assert.Single(effects.Active);
         Assert.Equal(-270, DaggerfallPoisonArms.State(livePoison).Totals["strength"]);
-        Assert.Equal(0, Stat(victim, DaggerfallMechanicsIds.Strength));
+        Assert.True(Stat(victim, DaggerfallMechanicsIds.Strength) < strength);
         Assert.Equal(DaggerfallPoisonPhase.Complete, poison.Affliction(victim)!.Phase);
         Assert.True(poison.HasPersistingDamage(victim));
 
@@ -251,7 +252,14 @@ public sealed class DaggerfallPoisonRuntimeTests
         _ = session.AdvanceElapsedTime(15 * 60);
 
         Assert.True(stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).Value < endurance);
-        Assert.True(stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.StaminaMaximum.Value)).Value < maximum);
+        double drained = stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.StaminaMaximum.Value)).Value;
+        Assert.True(drained < maximum);
+
+        // And the same follows taking the arms off: a cure leaves a maximum that matches its attribute again,
+        // rather than the drained one standing until something else happens to refresh it.
+        Assert.True(session.State.Poisons.Cure(player));
+        Assert.Equal(endurance, stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).Value);
+        Assert.Equal(maximum, stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.StaminaMaximum.Value)).Value);
     }
 
     [Fact]
@@ -264,7 +272,8 @@ public sealed class DaggerfallPoisonRuntimeTests
         DaggerfallSession session = fixture.Session;
         Actor player = session.State.Actors.Player.Actor;
         Assert.True(session.State.Poisons.Afflict(player, 131));
-        _ = session.AdvanceElapsedTime(11 * 60);
+        for (int minute = 0; minute < 30 && !session.State.Poisons.HasPersistingDamage(player); minute++)
+            _ = session.AdvanceElapsedTime(60);
         Assert.True(session.State.Poisons.HasPersistingDamage(player));
 
         DaggerfallSavePayload payload = DaggerfallSavePayload.Read(session.CaptureSave());
@@ -279,6 +288,93 @@ public sealed class DaggerfallPoisonRuntimeTests
         RulesetSavePayload orphaned = DaggerfallSavePayload.Encode(payload with { ActiveEffects = [] });
         ArgumentException refused = Assert.Throws<ArgumentException>(() => fixture.Restore(orphaned));
         Assert.Contains("has no matching active effect cleanup owner", refused.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_second_poison_is_measured_by_what_is_left_of_the_first()
+    {
+        // Nux Vomica's whole window is fourteen minutes and Moonseed's is four, so a whole-window comparison
+        // would refuse Moonseed forever. Once Nux Vomica has burned down to two minutes left, Moonseed's four
+        // have more left to give and must take over — the incumbent's own remaining time is what it is judged by.
+        using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
+        Actor player = fixture.Actors.Player.Actor;
+        (DaggerfallPoisonRuntime poison, DaggerfallEffectLifecycle effects) = Runtime(fixture);
+
+        Assert.True(poison.Afflict(player, 128));
+        Tick(effects, 11);
+        Assert.Equal(2, poison.Affliction(player)!.TotalMinutesRemaining);
+
+        Assert.True(poison.Afflict(player, 130));
+        Assert.Equal(130, poison.Affliction(player)!.Archetype.Variant);
+        Assert.Equal(4, poison.Affliction(player)!.TotalMinutesRemaining);
+    }
+
+    [Fact]
+    public void A_restored_poison_refuses_a_source_or_a_total_its_state_does_not_carry()
+    {
+        // Both halves are malformed current data rather than play: a source the state never named would
+        // survive a cure, and a total beyond the archetype's own window would apply a live mutation and then
+        // overflow part-way through the next tick. Each is refused where it is read, and the instance is one
+        // no live effect holds so the refusal is the only reason either restore can fail.
+        using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
+        Actor victim = AttributedActor(fixture);
+        (DaggerfallPoisonRuntime poison, DaggerfallEffectLifecycle effects) = Runtime(fixture);
+        Assert.True(poison.Afflict(victim, 129));
+        Assert.Single(effects.Active);
+
+        const string Instance = "poison.129.99";
+        StatsComponent stats = victim.Get<StatsComponent>();
+        stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).SetSources(
+            StatId.Parse(DaggerfallMechanicsIds.Endurance.Value),
+            [
+                new StatSource(
+                    new EffectSourceIdentity(
+                        victim.Entity,
+                        EffectInstanceId.Parse(Instance),
+                        1,
+                        SourceDefinitionId.Parse("daggerfall.poison.attributes")),
+                    SourceDefinitionId.Parse("daggerfall.poison.attributes"),
+                    priority: 0,
+                    [new StatContributionDefinition(
+                        StatId.Parse(DaggerfallMechanicsIds.Endurance.Value),
+                        StackingGroupId.Parse("daggerfall.poison.endurance"),
+                        MechanicsStackingPolicy.Sum,
+                        new StatContribution.Add(-4))]),
+            ]);
+
+        ArgumentException unnamed = Assert.Throws<ArgumentException>(() =>
+            RestoreInto(fixture, PoisonEntry(victim, Instance, """{"minutesToStart":0,"minutesRemaining":20,"admitted":true,"draw":1,"totals":{}}"""u8.ToArray())));
+        Assert.Contains("do not match its durable poison state", unnamed.Message, StringComparison.Ordinal);
+
+        // A thousand and one endurance points is a thousand more than Arsenic's whole window can take.
+        ArgumentException beyond = Assert.Throws<ArgumentException>(() =>
+            RestoreInto(fixture, PoisonEntry(victim, "poison.129.100", """{"minutesToStart":0,"minutesRemaining":20,"admitted":true,"draw":1,"totals":{"endurance":1001}}"""u8.ToArray())));
+        Assert.Contains("beyond what its archetype can do", beyond.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>Restores one crafted poison entry into a fresh lifecycle over the same actors.</summary>
+    private static void RestoreInto(DaggerCombatFixture fixture, DaggerfallActiveEffectSave entry)
+    {
+        (_, DaggerfallEffectLifecycle effects) = Runtime(fixture);
+        effects.Restore([entry]);
+    }
+
+    /// <summary>One saved poison effect over the fixture's victim, with the state under test.</summary>
+    private static DaggerfallActiveEffectSave PoisonEntry(Actor victim, string instance, byte[] state)
+    {
+        using JsonDocument document = JsonDocument.Parse(state);
+        return new DaggerfallActiveEffectSave(
+            instance,
+            "Poison-Arsenic",
+            "poison",
+            CasterId: null,
+            checked((long)victim.Entity.Value),
+            "classic",
+            Element: null,
+            ItemId: null,
+            RemainingRounds: null,
+            Stacks: 1,
+            document.RootElement.Clone());
     }
 
     [Fact]
