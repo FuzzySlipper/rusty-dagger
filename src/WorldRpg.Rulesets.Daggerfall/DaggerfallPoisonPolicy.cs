@@ -176,26 +176,36 @@ internal static class DaggerfallPoisonPolicy
     }
 
     /// <summary>
-    /// FORM-06's infliction, as the donor orders it: the saving throw decides on the roll the caller drew,
-    /// and an admitted attempt starts the archetype's own effect on the target. The roll is taken even when
-    /// the attempt turns out to be immune, because the donor draws before it settles the target's level.
+    /// FORM-06's infliction, as the donor orders it: immunity is settled first, a bypass skips the throw,
+    /// and only an attempt that still needs one draws it — the donor's own throw draws nothing for a target
+    /// it refused before reaching it. An admitted attempt then starts the archetype's own effect, so
+    /// admission and the effect it starts are one step.
     /// </summary>
-    /// <param name="poisons">The owner that starts the admitted poison, so admission and the effect it starts are one step.</param>
+    /// <param name="poisons">The owner that starts the admitted poison.</param>
     /// <param name="actors">The actors an admitted poison can be started on.</param>
     /// <param name="exposure">What the throw reads, with the caller's own modifiers already applied.</param>
     /// <param name="variant">The classic variant the delivery carries.</param>
-    /// <param name="roll">The caller's own 1-100 throw.</param>
+    /// <param name="roll">Draws the caller's inclusive 1-100 throw, and is called only when one is needed.</param>
     internal static DaggerfallPoisonAdmission InflictPoison(
         DaggerfallPoisonRuntime poisons,
         ActorsState actors,
         DaggerfallPoisonExposure exposure,
         int variant,
-        int roll)
+        Func<int, int, int> roll)
     {
         ArgumentNullException.ThrowIfNull(poisons);
         ArgumentNullException.ThrowIfNull(actors);
         ArgumentNullException.ThrowIfNull(exposure);
-        DaggerfallPoisonAdmission decided = Admit(exposure, roll);
+        ArgumentNullException.ThrowIfNull(roll);
+        DaggerfallPoisonAdmission decided = AdmitBeforeThrow(exposure);
+        if (decided == DaggerfallPoisonAdmission.Admitted && !exposure.BypassResistance)
+        {
+            int chance = SavingThrowChance(exposure.Willpower, exposure.Tolerance, exposure.BiographyModifier);
+            decided = DaggerfallDiseasePolicy.DiseaseSavingThrowAmount(chance, roll(1, 100)) == 0
+                ? DaggerfallPoisonAdmission.Resisted
+                : DaggerfallPoisonAdmission.Admitted;
+        }
+
         if (decided != DaggerfallPoisonAdmission.Admitted) return decided;
         // The player is not one of the actors carrying a body, so the durable-id lookup that answers for a
         // site actor would report the player missing; the player's own state answers for it instead.

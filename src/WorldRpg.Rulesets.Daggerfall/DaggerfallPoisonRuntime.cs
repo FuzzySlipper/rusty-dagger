@@ -2,6 +2,8 @@ using System.Text.Json;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using Rusty.Engine;
+using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.World;
 using WorldRpg.Kit.Effects;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
@@ -117,7 +119,9 @@ internal sealed class DaggerfallPoisonRuntime
             archetype.Key,
             SourceKey,
             CasterId: null,
-            checked((long)actor.Entity.Value),
+            // The lifecycle keys its effects by durable actor identity, not by the runtime entity value:
+            // they agree only for the player, who happens to be entity one.
+            checked((long)actor.Get<DurableEntityIdentity>().Identity.Value),
             Settings,
             Element: null,
             ItemId: null,

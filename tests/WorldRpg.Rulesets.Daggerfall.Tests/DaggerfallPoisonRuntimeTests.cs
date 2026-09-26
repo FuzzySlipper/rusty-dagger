@@ -308,7 +308,18 @@ public sealed class DaggerfallPoisonRuntimeTests
             Willpower: 50,
             BypassResistance: true);
 
-        Assert.Equal(DaggerfallPoisonAdmission.Admitted, DaggerfallPoisonPolicy.InflictPoison(poison, fixture.Actors, exposure, 130, 100));
+        // A bypassed attempt needs no throw, so the donor's order means it draws nothing either.
+        int drawn = 0;
+        int Roll(int minimum, int maximum)
+        {
+            _ = minimum;
+            _ = maximum;
+            drawn++;
+            return 100;
+        }
+
+        Assert.Equal(DaggerfallPoisonAdmission.Admitted, DaggerfallPoisonPolicy.InflictPoison(poison, fixture.Actors, exposure, 130, Roll));
+        Assert.Equal(0, drawn);
         Assert.Equal(130, poison.Affliction(player)!.Archetype.Variant);
 
         // The same attempt without the bypass is left to the throw: the donor's amount is non-zero for a
@@ -317,18 +328,21 @@ public sealed class DaggerfallPoisonRuntimeTests
         Actor other = second.Actors.Player.Actor;
         (DaggerfallPoisonRuntime none, _) = Runtime(second);
         DaggerfallPoisonExposure thrown = exposure with { BypassResistance = false };
-        Assert.Equal(DaggerfallPoisonAdmission.Resisted, DaggerfallPoisonPolicy.InflictPoison(none, second.Actors, thrown, 130, 1));
+        Assert.Equal(DaggerfallPoisonAdmission.Resisted, DaggerfallPoisonPolicy.InflictPoison(none, second.Actors, thrown, 130, (_, _) => 1));
         Assert.False(none.IsAfflicted(other));
-        Assert.Equal(DaggerfallPoisonAdmission.Admitted, DaggerfallPoisonPolicy.InflictPoison(none, second.Actors, thrown, 130, 100));
+        Assert.Equal(DaggerfallPoisonAdmission.Admitted, DaggerfallPoisonPolicy.InflictPoison(none, second.Actors, thrown, 130, (_, _) => 100));
         Assert.Equal(130, none.Affliction(other)!.Archetype.Variant);
 
-        // A first-level target is never poisoned, and the roll it was given is not what decides that.
+        // A first-level target is never poisoned, and it is refused before the throw rather than by it: the
+        // throw a target the donor settles earlier never happens, so this one draws nothing.
+        int lateDraws = 0;
         Assert.Equal(DaggerfallPoisonAdmission.Immune,
-            DaggerfallPoisonPolicy.InflictPoison(none, second.Actors, thrown with { TargetLevel = 1 }, 128, 100));
+            DaggerfallPoisonPolicy.InflictPoison(none, second.Actors, thrown with { TargetLevel = 1 }, 128, (_, _) => { lateDraws++; return 100; }));
+        Assert.Equal(0, lateDraws);
 
         // A variant no archetype answers cannot come back as a quietly successful poisoning.
         Assert.Throws<ArgumentException>(() =>
-            DaggerfallPoisonPolicy.InflictPoison(none, second.Actors, exposure, 127, 1));
+            DaggerfallPoisonPolicy.InflictPoison(none, second.Actors, exposure, 127, (_, _) => 1));
     }
 
     [Fact]
