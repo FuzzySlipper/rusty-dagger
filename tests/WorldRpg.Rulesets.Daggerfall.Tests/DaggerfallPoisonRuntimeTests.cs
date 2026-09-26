@@ -193,22 +193,25 @@ public sealed class DaggerfallPoisonRuntimeTests
         using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
         DaggerfallSession session = fixture.Session;
         Actor player = session.State.Actors.Player.Actor;
-        Assert.True(session.State.Poisons.Afflict(player, 130));
-        Assert.True(session.State.Poisons.IsAfflicted(player));
+        // Drothweed drains attributes rather than only health, so the save carries effect-backed stat
+        // sources: the strict check on restore meets the stats codec's own round trip.
+        Assert.True(session.State.Poisons.Afflict(player, 131));
+        for (int minute = 0; minute < 30 && !session.State.Poisons.HasPersistingDamage(player); minute++)
+            _ = session.AdvanceElapsedTime(60);
+        Assert.True(session.State.Poisons.HasPersistingDamage(player));
 
         RulesetSavePayload saved = session.CaptureSave();
         using DaggerfallSession restored = fixture.Restore(saved);
 
         Actor restoredPlayer = restored.State.Actors.Player.Actor;
         Assert.True(restored.State.Poisons.IsAfflicted(restoredPlayer));
-        Assert.Equal(130, restored.State.Poisons.Affliction(restoredPlayer)!.Archetype.Variant);
+        Assert.Equal(131, restored.State.Poisons.Affliction(restoredPlayer)!.Archetype.Variant);
+        Assert.True(restored.State.Poisons.HasPersistingDamage(restoredPlayer));
 
-        // And it is still running rather than merely present: Moonseed acts at once and lasts up to four
-        // minutes, so six elapsed minutes take health from where the reload left it.
-        double before = Track(restoredPlayer, DaggerfallMechanicsIds.Health);
+        // And it is still running rather than merely present: the drain deepens from where the reload left it.
+        double drained = Stat(restoredPlayer, DaggerfallMechanicsIds.Strength);
         _ = restored.AdvanceElapsedTime(361);
-        Assert.True(Track(restoredPlayer, DaggerfallMechanicsIds.Health) < before);
-        Assert.False(restored.State.Poisons.IsAfflicted(restoredPlayer));
+        Assert.True(Stat(restoredPlayer, DaggerfallMechanicsIds.Strength) < drained);
     }
 
     [Fact]
@@ -307,6 +310,37 @@ public sealed class DaggerfallPoisonRuntimeTests
         Assert.True(poison.Afflict(player, 130));
         Assert.Equal(130, poison.Affliction(player)!.Archetype.Variant);
         Assert.Equal(4, poison.Affliction(player)!.TotalMinutesRemaining);
+
+        // Strictly more is what wins: a challenger with exactly as much left as the incumbent is refused and
+        // leaves the incumbent's course untouched.
+        Tick(effects, 1);
+        Assert.Equal(3, poison.Affliction(player)!.TotalMinutesRemaining);
+        Assert.True(poison.Afflict(player, 130));
+        int challengerLeft = poison.Affliction(player)!.TotalMinutesRemaining;
+        Assert.Equal(4, challengerLeft);
+    }
+
+    [Fact]
+    public void A_drug_completing_moves_back_the_maxima_its_help_was_holding_up()
+    {
+        // Sursum helps strength and harms intelligence, so its completion has to refresh the maxima the
+        // withdrawn help was holding up while the harm that stays keeps its own maximum down.
+        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        DaggerfallSession session = fixture.Session;
+        Actor player = session.State.Actors.Player.Actor;
+        StatsComponent stats = player.Get<StatsComponent>();
+        double stamina = stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.StaminaMaximum.Value)).Value;
+        double magicka = stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.MagickaMaximum.Value)).Value;
+
+        Assert.True(session.State.Poisons.Afflict(player, 137));
+        // Its onset is at most four minutes and its course two, so seven minutes finish it whatever it rolled.
+        _ = session.AdvanceElapsedTime(7 * 60);
+        // The drug's course is over; what keeps it on the actor is the harm that stays, which is the point.
+        Assert.Equal(DaggerfallPoisonPhase.Complete, session.State.Poisons.Affliction(player)!.Phase);
+        Assert.True(session.State.Poisons.HasPersistingDamage(player));
+
+        Assert.Equal(stamina, stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.StaminaMaximum.Value)).Value);
+        Assert.True(stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.MagickaMaximum.Value)).Value < magicka);
     }
 
     [Fact]
