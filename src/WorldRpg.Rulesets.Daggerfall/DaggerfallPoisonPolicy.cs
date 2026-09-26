@@ -204,15 +204,26 @@ internal static class DaggerfallPoisonPolicy
         ArgumentNullException.ThrowIfNull(actors);
         ArgumentNullException.ThrowIfNull(exposure);
         ArgumentNullException.ThrowIfNull(roll);
-        DaggerfallPoisonAdmission decided = AdmitBeforeThrow(exposure);
-        if (decided == DaggerfallPoisonAdmission.Admitted && !exposure.BypassResistance)
+        if (exposure.TargetLevel < 1) throw new ArgumentOutOfRangeException(nameof(exposure), "A poison target needs a level.");
+
+        // The donor's own order, kept exactly because it decides what the admitted draw is spent on: a
+        // career or race immunity is refused before it throws at all, a tolerance that cannot be beaten is
+        // the same, a bypassed delivery skips the throw, and only then does the level matter — which is why
+        // a first-level target that would have been refused still drew the throw the donor made.
+        if (exposure.CareerImmune || exposure.RaceImmune) return DaggerfallPoisonAdmission.Immune;
+        int chance = SavingThrowChance(exposure.Willpower, exposure.Tolerance, exposure.BiographyModifier);
+        DaggerfallPoisonAdmission decided;
+        if (chance == 100) decided = DaggerfallPoisonAdmission.Immune;
+        else if (exposure.BypassResistance) decided = DaggerfallPoisonAdmission.Admitted;
+        else
         {
-            int chance = SavingThrowChance(exposure.Willpower, exposure.Tolerance, exposure.BiographyModifier);
             decided = DaggerfallDiseasePolicy.DiseaseSavingThrowAmount(chance, roll(1, 100)) == 0
                 ? DaggerfallPoisonAdmission.Resisted
                 : DaggerfallPoisonAdmission.Admitted;
         }
 
+        if (decided == DaggerfallPoisonAdmission.Admitted && exposure.TargetLevel == 1)
+            decided = DaggerfallPoisonAdmission.Immune;
         if (decided != DaggerfallPoisonAdmission.Admitted) return decided;
         // The player is not one of the actors carrying a body, so the durable-id lookup that answers for a
         // site actor would report the player missing; the player's own state answers for it instead.
