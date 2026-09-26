@@ -138,6 +138,28 @@ public sealed class DaggerfallMusicDirectorTests
         Assert.Equal(1, audio.ReleasedVoices);
     }
 
+    [Fact]
+    public void A_played_cue_states_a_descriptor_the_engine_accepts()
+    {
+        IAudioService service = AudioFake.Create(out AudioFake audio);
+        AudioClip dungeon = new(new AudioClipHandle(1), static () => { });
+        using DaggerfallMusicDirector music = new(service, _ => dungeon, audio.Retire);
+
+        Assert.Equal("song_dungeon", music.Update(DaggerfallMusicContext.Dungeon));
+
+        // The Engine validates every descriptor a voice is created with and refuses the call otherwise, so
+        // the ranges are pinned here: an attenuation of zero is a refused voice, not a silent one — it was
+        // the difference between a score that plays and an update that ends the runtime incarnation.
+        AudioSourceDescriptor descriptor = Assert.Single(audio.Descriptors);
+        Assert.InRange(descriptor.Volume, 0f, 1f);
+        Assert.InRange(descriptor.Pitch, 0.25f, 4f);
+        Assert.InRange(descriptor.SpatialBlend, 0f, 1f);
+        Assert.InRange(descriptor.Pan, -1f, 1f);
+        Assert.True(float.IsFinite(descriptor.Attenuation) && descriptor.Attenuation > 0f, $"attenuation {descriptor.Attenuation}");
+        Assert.Equal(AudioEmitterKind.Global2d, descriptor.EmitterKind);
+        Assert.True(descriptor.Looping);
+    }
+
     private class AudioFake : DispatchProxy
     {
         internal readonly List<string> Started = [];
@@ -156,12 +178,15 @@ public sealed class DaggerfallMusicDirectorTests
         protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
         {
             nameof(IAudioService.OpenClip) => new AudioClip(new AudioClipHandle(1), static () => { }),
-            nameof(IAudioService.CreateVoice) => CreateVoice(),
+            nameof(IAudioService.CreateVoice) => CreateVoice((AudioSourceDescriptor)arguments![0]!),
             _ => throw new NotSupportedException(method?.Name),
         };
 
-        private AudioVoice CreateVoice()
+        internal List<AudioSourceDescriptor> Descriptors { get; } = [];
+
+        private AudioVoice CreateVoice(AudioSourceDescriptor descriptor)
         {
+            Descriptors.Add(descriptor);
             Started.Add($"voice-{Started.Count + 1}");
             int handle = Started.Count;
             return new AudioVoice(new AudioVoiceHandle(checked((ulong)handle)), () => ReleasedVoices++);

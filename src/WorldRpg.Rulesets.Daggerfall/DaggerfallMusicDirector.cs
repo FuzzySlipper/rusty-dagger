@@ -200,7 +200,23 @@ public sealed class DaggerfallMusicDirector : IDisposable
     private bool Start(AudioClip? clip)
     {
         if (_audio is null || clip is null) return false;
-        _voice = _audio.CreateVoice(new AudioSourceDescriptor(clip, AudioBus.Ambient, 0.8f, 1.0f, true, 0.0f, 0.0f, 0F, AudioEmitterKind.Global2d, System.Numerics.Vector3.Zero, 0, System.Numerics.Vector3.Zero));
+        // A retained voice over a 2D emitter: the score is heard everywhere, so its distance attenuation
+        // is neutral rather than zero. The Engine refuses a descriptor whose attenuation is not finite and
+        // positive — the refusal arrives as a failed CreateVoice — and the other fields stay in the ranges
+        // it validates: volume 0..1, pitch 0.25..4, spatial blend 0..1, pan -1..1.
+        _voice = _audio.CreateVoice(new AudioSourceDescriptor(
+            clip,
+            AudioBus.Ambient,
+            0.8f,
+            1.0f,
+            true,
+            0.0f,
+            1.0f,
+            0.0f,
+            AudioEmitterKind.Global2d,
+            System.Numerics.Vector3.Zero,
+            0,
+            System.Numerics.Vector3.Zero));
         return true;
     }
 
