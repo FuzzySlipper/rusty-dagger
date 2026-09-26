@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Numerics;
 using Rusty.Engine;
 using WorldRpg.Kit.Controls;
@@ -99,6 +100,149 @@ public sealed class NormalizedPrivateersHoldContentTests
         Assert.Equal("weapon.dagger.steel", Assert.IsType<NormalizedClassicWeapon>(inputs.ClassicPresentation.Weapons["weapon.dagger.steel"]).ResourceId);
         Assert.Equal("weapon.dagger.steel", inputs.ClassicPresentation.CompatibleItemVisuals["iron-dagger"]);
         Assert.Equal(["blood0", "blood1", "blood2", "magicSparkle"], inputs.ClassicPresentation.Effects.Select(effect => effect.Name));
+    }
+
+    [Fact]
+    public void Exposes_the_published_arrow_world_visual_with_its_own_mesh_and_textures()
+    {
+        string root = RepositoryRoot();
+        PrivateersHoldInputs inputs = PrivateersHoldContent.Read(GeneratedContent(root),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), TestPayload.Definitions);
+
+        // The donor draws a flying arrow from ARCH3D mesh 99800; the site publishes that mesh, the
+        // textures its planes select, and the record both were decoded from. Loading at all is the
+        // evidence that the descriptor's digests are the import manifest's own.
+        DaggerfallMissileVisual visual = Assert.Single(inputs.ClassicPresentation.WorldVisuals);
+        Assert.Equal("visual.missile.arrow", visual.MediaId);
+        Assert.Equal("worldrpg/imports/privateers-hold/geometry/mesh-99800.json", visual.Path);
+        Assert.Equal([0u, 1u], visual.Textures.Select(texture => texture.MeshSlot));
+        Assert.All(visual.Textures, texture =>
+            Assert.StartsWith("worldrpg/imports/privateers-hold/media/world-visuals/", texture.TexturePath, StringComparison.Ordinal));
+        Assert.Equal(2, visual.Textures.Select(texture => texture.TextureSha256).Distinct().Count());
+        Assert.All(visual.Textures, texture => Assert.NotEqual(default, texture.TextureSha256));
+
+        // The published mesh selects two textures, and the artifact states the same two slots.
+        using JsonDocument artifact = JsonDocument.Parse(
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/privateers-hold/geometry/mesh-99800.json")));
+        Assert.Equal(2, artifact.RootElement.GetProperty("materialSlots").GetArrayLength());
+
+        // The visual's textures travel with the visual rather than through the site's static-mesh
+        // material table, whose slots address the combined world mesh and not this one.
+        Assert.DoesNotContain(inputs.Materials, material => material.MaterialResourceId is "material/texture-1-121" or "material/texture-0-72");
+    }
+
+    [Theory]
+    [InlineData("daggerfall.privateers-hold.json")]
+    [InlineData("daggerfall.charing-exterior.json")]
+    [InlineData("daggerfall.charing-interior-1-1-0.json")]
+    [InlineData("daggerfall.castle-necromoghan.json")]
+    public void Every_published_site_carries_the_published_arrow_world_visual(string payload)
+    {
+        string root = RepositoryRoot();
+        PrivateersHoldInputs inputs = PrivateersHoldContent.Read(GeneratedContent(root),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads", payload)), TestPayload.Definitions);
+
+        // The arrow is the ruleset's own projectile art rather than a site's placement, so every site
+        // the bundle admits publishes the same visual; a site that quietly lost it would draw nothing.
+        DaggerfallMissileVisual visual = Assert.Single(inputs.ClassicPresentation.WorldVisuals);
+        Assert.Equal("visual.missile.arrow", visual.MediaId);
+        Assert.Equal(2, visual.Textures.Count);
+    }
+
+    [Fact]
+    public void Rejects_a_world_visual_whose_mesh_digest_the_import_manifest_does_not_admit()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(
+            ContentWithMutatedClassicVisual(root, visual => visual["contentDigest"] = new string('0', 64)),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")),
+            definitions));
+
+        // A descriptor whose texture identity is not the one the site published cannot be drawn either:
+        // the missing media is named rather than silently left untextured.
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(
+            ContentWithMutatedClassicVisual(root, visual =>
+                ((JsonArray)visual["materials"]!)[0]!["contentDigest"] = new string('1', 64)),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")),
+            definitions));
+
+        // A stated texture no mesh slot draws with is a sidecar that no longer describes the published
+        // mesh; it is reported rather than dropped. The extra entry keeps valid bytes and its own
+        // material identity, so every slot still resolves and the surplus branch is the only failure.
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(
+            ContentWithMutatedClassicVisual(root, visual =>
+            {
+                JsonArray materials = (JsonArray)visual["materials"]!;
+                JsonObject surplus = (JsonObject)materials[0]!.DeepClone();
+                surplus["materialResourceId"] = "material/texture-1-121-surplus";
+                materials.Add(surplus);
+            }),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")),
+            definitions));
+
+        // The same for a texture the descriptor names but the import manifest does not admit: the site
+        // must not draw a missile with bytes nobody published.
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(
+            ContentWithMutatedClassicVisual(root, visual =>
+                ((JsonArray)visual["materials"]!)[0]!["relativePath"] = "media/world-visuals/texture-9-9.png"),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")),
+            definitions));
+    }
+
+    [Fact]
+    public void Rejects_a_classic_manifest_that_states_no_world_visuals_at_all()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        const string classicRelativePath = "worldrpg/imports/privateers-hold/media/classic/manifest.json";
+        string contentRoot = Path.Combine(root, "content");
+        ProductContentFile[] files = Directory.GetFiles(contentRoot, "*", SearchOption.AllDirectories)
+            .Select(path =>
+            {
+                string relative = Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/');
+                byte[] bytes = File.ReadAllBytes(path);
+                if (StringComparer.Ordinal.Equals(relative, classicRelativePath))
+                {
+                    JsonObject manifest = JsonNode.Parse(bytes)!.AsObject();
+                    manifest.Remove("worldVisuals");
+                    bytes = Encoding.UTF8.GetBytes(manifest.ToJsonString());
+                }
+
+                return new ProductContentFile(Encoding.UTF8.GetBytes(relative), bytes);
+            })
+            .ToArray();
+
+        // Every published sidecar states the section, so its absence means the sidecar predates the
+        // visual the site is supposed to carry. Reporting it beats loading a site that draws nothing.
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(
+            new ProductContent(files),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")),
+            definitions));
+    }
+
+    /// <summary>The committed site content with one mutation applied to its one world visual.</summary>
+    private static ProductContent ContentWithMutatedClassicVisual(string root, Action<JsonObject> mutate)
+    {
+        string contentRoot = Path.Combine(root, "content");
+        const string classicRelativePath = "worldrpg/imports/privateers-hold/media/classic/manifest.json";
+        ProductContentFile[] files = Directory.GetFiles(Path.Combine(contentRoot, "worldrpg/imports"), "*", SearchOption.AllDirectories)
+            .Select(path =>
+            {
+                string relative = Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/');
+                byte[] bytes = File.ReadAllBytes(path);
+                if (StringComparer.Ordinal.Equals(relative, classicRelativePath))
+                {
+                    JsonObject manifest = JsonNode.Parse(bytes)!.AsObject();
+                    mutate(((JsonArray)manifest["worldVisuals"]!)[0]!.AsObject());
+                    bytes = Encoding.UTF8.GetBytes(manifest.ToJsonString());
+                }
+
+                return new ProductContentFile(Encoding.UTF8.GetBytes(relative), bytes);
+            })
+            .ToArray();
+        return new ProductContent(files);
     }
 
     [Fact]

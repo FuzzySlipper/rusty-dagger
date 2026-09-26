@@ -31,13 +31,13 @@ internal enum DaggerfallDoorOperationResult
     LockpickFailed,
 }
 
-/// <summary>One material binding for an individually projected normalized door mesh.</summary>
-internal readonly record struct DaggerfallDoorMaterialBinding(uint MeshSlot, uint WorldMaterialSlot);
+/// <summary>One material binding for an individually projected normalized content mesh.</summary>
+internal readonly record struct DaggerfallMeshMaterialBinding(uint MeshSlot, uint WorldMaterialSlot);
 /// <summary>Normalized source action facts retained for the dungeon action-graph owner.</summary>
 internal readonly record struct DaggerfallDoorActionSource(byte Axis, ushort Duration, ushort Magnitude, int NextObjectOffset, byte Flags);
 
 /// <summary>Content-backed visual that follows the same Engine transform as its door collider.</summary>
-internal sealed record DaggerfallDoorVisual(string Path, ContentSha256 Sha256, IReadOnlyList<DaggerfallDoorMaterialBinding> Materials)
+internal sealed record DaggerfallDoorVisual(string Path, ContentSha256 Sha256, IReadOnlyList<DaggerfallMeshMaterialBinding> Materials)
 {
     internal DaggerfallDoorVisual Validate()
     {
