@@ -545,6 +545,31 @@ public sealed class DaggerfallPoisonRuntimeTests
     }
 
     [Fact]
+    public void A_struck_creature_past_its_first_level_takes_the_coating_of_the_weapon_that_hit_it()
+    {
+        // The end-to-end path through the boundary the combat rules call, with the level gate out of the way:
+        // the strike spends the coat whatever its throw decides, and a delivery that is admitted leaves the
+        // coated variant running on the struck actor rather than on the attacker.
+        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        DaggerfallSession session = fixture.Session;
+        PlayerActorState struck = session.State.Actors.Player;
+        struck.Actor.Get<ProgressionState>().AdvanceTo(experience: 0, level: 5);
+
+        const ulong Weapon = 9100;
+        session.State.ItemInstances.RegisterUnique(Weapon, new DaggerfallItemInstanceMetadata(
+            "dagger", "steel", 0, 10, 20, true, false, null, null, null, DaggerfallItemOwner.Player, PoisonVariant: 131));
+
+        session.DeliverWeaponPoison(struck.DurableId, Weapon);
+        Assert.Null(session.State.ItemInstances.RequireUnique(Weapon).PoisonVariant);
+
+        // A bypassed delivery of the same variant is the deterministic half: past the first level it takes,
+        // and the poison that runs is the one the coating named.
+        Assert.Equal(DaggerfallPoisonAdmission.Admitted, session.InflictPoison(session.PlayerPoisonExposure(bypassResistance: true), 131));
+        Assert.True(session.State.Poisons.IsAfflicted(struck.Actor));
+        Assert.Equal(131, session.State.Poisons.Affliction(struck.Actor)!.Archetype.Variant);
+    }
+
+    [Fact]
     public void A_second_poison_is_measured_by_what_is_left_of_the_first()
     {
         // Nux Vomica's whole window is fourteen minutes and Moonseed's is four, so a whole-window comparison
