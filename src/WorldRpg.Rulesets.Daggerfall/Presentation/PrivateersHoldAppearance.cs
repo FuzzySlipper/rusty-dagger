@@ -318,7 +318,21 @@ internal sealed class PrivateersHoldAppearance : IDisposable
             priorRetired.AddRange(nextRetired);
             nextRetired.Clear();
         }
-        foreach (IDisposable value in priorRetired) value.Dispose();
+        // A retirement that fails is named rather than replacing the update's own failure: the value's
+        // kind and its reason are what a caller needs to see, and one refused release must not hide the
+        // others in the same boundary.
+        List<Exception>? failures = null;
+        foreach (IDisposable value in priorRetired)
+        {
+            try { value.Dispose(); }
+            catch (Exception exception)
+            {
+                failures ??= [];
+                failures.Add(new InvalidOperationException($"retired {value.GetType().Name} was not released", exception));
+            }
+        }
+
+        if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 
     internal void CompleteAdmittedUpdate()

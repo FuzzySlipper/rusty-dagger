@@ -1359,6 +1359,21 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             // Engine discards staged output and requires a fresh process rather
             // than a same-instance retry. There is no fact/stamina replay here,
             // only native appearance cleanup.
+            // The Engine reports the escape as a tainted incarnation and names no cause, so the failure
+            // states its own reason here before it leaves: a callback that escapes is the one product
+            // failure an operator cannot otherwise see.
+            try
+            {
+                _engine.Diagnostics.Publish(new DiagnosticsPublishRequest(
+                    DiagnosticsSeverity.Error,
+                    DiagnosticsDisposition.Terminal,
+                    "daggerfall.presentation",
+                    "presentation.failed",
+                    failure.ToString(),
+                    string.Empty));
+            }
+            catch (Exception) { /* a failure to report a failure must not replace it */ }
+
             try { _appearance.Dispose(); }
             catch (Exception cleanupFailure) { throw new AggregateException(failure, cleanupFailure); }
             throw;
