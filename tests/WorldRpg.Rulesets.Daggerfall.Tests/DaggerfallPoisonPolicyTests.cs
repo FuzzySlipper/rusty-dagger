@@ -41,6 +41,28 @@ public sealed class DaggerfallPoisonPolicyTests
     }
 
     [Fact]
+    public void A_drug_item_delivers_the_poison_of_its_own_name()
+    {
+        // The four classic drugs, template 78-81 in the donor's own order, are the poison values 136-139.
+        Assert.Equal(136, DaggerfallPoisonPolicy.VariantForDrugTemplate(78));
+        Assert.Equal(137, DaggerfallPoisonPolicy.VariantForDrugTemplate(79));
+        Assert.Equal(138, DaggerfallPoisonPolicy.VariantForDrugTemplate(80));
+        Assert.Equal(139, DaggerfallPoisonPolicy.VariantForDrugTemplate(81));
+        // Every one of them is a variant the archetype table answers, which the donor's own offset is not.
+        foreach (int template in (int[])[78, 79, 80, 81])
+        {
+            int variant = DaggerfallPoisonPolicy.VariantForDrugTemplate(template)!.Value;
+            Assert.NotNull(DaggerfallPoisonPolicy.VariantFor(variant));
+            Assert.Null(DaggerfallPoisonPolicy.VariantFor(template + 66));
+        }
+
+        // Anything that is not a drug template delivers no poison rather than a neighbouring one.
+        Assert.Null(DaggerfallPoisonPolicy.VariantForDrugTemplate(77));
+        Assert.Null(DaggerfallPoisonPolicy.VariantForDrugTemplate(82));
+        Assert.Null(DaggerfallPoisonPolicy.VariantForDrugTemplate(0));
+    }
+
+    [Fact]
     public void A_target_that_cannot_be_poisoned_is_immune_however_the_attempt_is_made()
     {
         Assert.Equal(DaggerfallPoisonAdmission.Immune, DaggerfallPoisonPolicy.AdmitBeforeThrow(Exposure() with { CareerImmune = true }));

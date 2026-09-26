@@ -137,6 +137,15 @@ internal static class DaggerfallPoisonPolicy
             : $"Poison-{variant}";
     }
 
+    /// <summary>
+    /// The poison a drug item delivers. The classic drug templates are 78-81 and the poison values they
+    /// carry are 136-139 — the same four drugs in the same order, an offset of 58. The donor's own drug use
+    /// adds 66 instead, which names 144-147: those are not poison values at all, so its effect key becomes
+    /// <c>Poison-144</c> and no effect answers it. The offset here is by name against the archetype table,
+    /// which is what the classic files carry.
+    /// </summary>
+    internal static int? VariantForDrugTemplate(int template) => template is >= 78 and <= 81 ? template + 58 : null;
+
     /// <summary>The donor's own poison identity for a classic value, or null when nothing carries it.</summary>
     internal static DaggerfallPoisonVariant? VariantFor(int classicValue) =>
         Enum.IsDefined(typeof(DaggerfallPoisonVariant), classicValue) ? (DaggerfallPoisonVariant)classicValue : null;
