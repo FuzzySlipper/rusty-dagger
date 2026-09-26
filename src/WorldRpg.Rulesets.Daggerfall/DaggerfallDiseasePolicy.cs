@@ -120,8 +120,8 @@ internal static class DaggerfallDiseasePolicy
             [DaggerfallClassicDisease.YellowFever] = new("disease-yellow-fever", 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 5, 10, null, null),
         };
 
-    /// <summary>Builds the compiled policy for this session's one admitted calendar and RNG service.</summary>
-    internal static DaggerfallEffectCatalog CreateCatalog(
+    /// <summary>Builds the compiled disease policy for this session's one admitted calendar and RNG service.</summary>
+    internal static IEnumerable<DaggerfallEffectDefinition> Definitions(
         IRandomService random,
         Func<long> currentDay,
         Func<DaggerfallCareerDefinition> playerCareer,
@@ -132,7 +132,7 @@ internal static class DaggerfallDiseasePolicy
         ArgumentNullException.ThrowIfNull(currentDay);
         ArgumentNullException.ThrowIfNull(playerCareer);
         CombatResolution selectedCombat = combat ?? new CombatResolution();
-        return new DaggerfallEffectCatalog(Data.Values.Select(data => new DaggerfallEffectDefinition(
+        return Data.Values.Select(data => new DaggerfallEffectDefinition(
             data.Key,
             data.Key,
             DaggerfallEffectStacking.Stack,
@@ -144,7 +144,7 @@ internal static class DaggerfallDiseasePolicy
             {
                 VerifyRestoredAttributeContributions(effect, ReadState(effect.State));
                 return [Removal(effect, playerCareer)];
-            })));
+            }));
     }
 
     /// <summary>

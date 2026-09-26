@@ -31,8 +31,9 @@ internal sealed class DaggerCombatFixture : IDisposable
         Actors = new ActorsState();
         Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), Stats(playerHealth, playerStamina), "health");
         Actors.CreateActor(2, new EntityTypeId(sourceId), Stats(100d, 600d), new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health");
+        Random = DispatchProxy.Create<IRandomService, MinimumRandomProxy>();
         Rules = new DaggerCombatRules(
-            DispatchProxy.Create<IRandomService, MinimumRandomProxy>(), Actors, null!, _ => null,
+            Random, Actors, null!, _ => null,
             new DaggerfallItemInstances(), Definitions,
             new Dictionary<long, DaggerfallActorDefinition>
             {
@@ -45,6 +46,9 @@ internal sealed class DaggerCombatFixture : IDisposable
     internal DaggerfallDefinitions Definitions { get; }
 
     internal ActorsState Actors { get; }
+
+    /// <summary>The fixture's random service, which answers the minimum of every keyed window.</summary>
+    internal IRandomService Random { get; }
 
     internal DaggerCombatRules Rules { get; }
 

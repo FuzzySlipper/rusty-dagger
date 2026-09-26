@@ -60,9 +60,6 @@ internal sealed record DaggerfallSavePayload(
     public DaggerfallRegionalBankSave Bank { get; init; } = DaggerfallRegionalBankSave.Empty;
     [JsonRequired]
     public DaggerfallLoansSave Loans { get; init; } = DaggerfallLoansSave.Empty;
-
-    /// <summary>The poisons the session's actors carry, and the damage completed ones left behind.</summary>
-    public DaggerfallPoisonsSave Poisons { get; init; } = DaggerfallPoisonsSave.Empty;
     [JsonRequired]
     public DaggerfallPropertySave Property { get; init; } = DaggerfallPropertySave.Empty;
     [JsonRequired]
@@ -516,8 +513,6 @@ internal sealed record DaggerfallSavePayload(
         Bank.Validate();
         ArgumentNullException.ThrowIfNull(Loans);
         Loans.Validate();
-        ArgumentNullException.ThrowIfNull(Poisons);
-        Poisons.Validate();
         ArgumentNullException.ThrowIfNull(Property);
         Property.Validate();
         ArgumentNullException.ThrowIfNull(Crime);

@@ -1,3 +1,7 @@
+using Rusty.Engine;
+using WorldRpg.Kit.Effects;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
@@ -19,6 +23,35 @@ internal enum DaggerfallPoisonVariant
     Sursum = 137,
     QuaestoVil = 138,
     Aegrotat = 139,
+}
+
+/// <summary>
+/// The twelve compiled poison effects, one per archetype, over this session's draw and vitality owners.
+/// The archetype's own key is the effect key, so a save names the poison it carries through the catalog
+/// that has to interpret it, and a key no archetype answers is refused rather than silently inert.
+/// </summary>
+internal static class DaggerfallPoisonEffects
+{
+    internal static IEnumerable<DaggerfallEffectDefinition> Definitions(IRandomService random, DaggerfallVitalityConsequences vitality)
+    {
+        ArgumentNullException.ThrowIfNull(random);
+        ArgumentNullException.ThrowIfNull(vitality);
+        return DaggerfallPoisonArchetypes.All.Select(archetype => new DaggerfallEffectDefinition(
+            archetype.Key,
+            archetype.Key,
+            DaggerfallEffectStacking.Stack,
+            ushort.MaxValue,
+            1,
+            // The arms are stat sources the effect owns, so ending the poison is one cleanup action whether
+            // it ended by completing, by a superseding dose, or by a cure.
+            Apply: effect => [new DelegateActiveEffectContribution(() => DaggerfallPoisonArms.RemoveArms(effect))],
+            MagicRound: effect => DaggerfallPoisonArms.AdvanceMinute(effect, archetype, random, vitality),
+            Resume: effect =>
+            {
+                DaggerfallPoisonArms.Resume(effect, DaggerfallPoisonArms.State(effect));
+                return [new DelegateActiveEffectContribution(() => DaggerfallPoisonArms.RemoveArms(effect))];
+            }));
+    }
 }
 
 /// <summary>What an attempted poisoning came to.</summary>
