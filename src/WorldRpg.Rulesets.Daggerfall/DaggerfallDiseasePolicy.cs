@@ -243,18 +243,8 @@ internal static class DaggerfallDiseasePolicy
         return Math.Clamp(checked(100 - (5 * (chance - roll))), 0, 100);
     }
 
-    internal static DaggerfallDiseaseCareerTolerance CareerTolerance(DaggerfallCareerDefinition career)
-    {
-        ArgumentNullException.ThrowIfNull(career);
-        const int diseaseFlag = 64;
-        // DFCareer.GetTolerance resolves raw career bytes in this order. The current catalog
-        // retains those bytes, so this reads the selected character rather than inferring a trait.
-        if ((career.ResistanceFlags & diseaseFlag) != 0) return DaggerfallDiseaseCareerTolerance.Resistant;
-        if ((career.ImmunityFlags & diseaseFlag) != 0) return DaggerfallDiseaseCareerTolerance.Immune;
-        if ((career.LowToleranceFlags & diseaseFlag) != 0) return DaggerfallDiseaseCareerTolerance.LowTolerance;
-        if ((career.CriticalWeaknessFlags & diseaseFlag) != 0) return DaggerfallDiseaseCareerTolerance.CriticalWeakness;
-        return DaggerfallDiseaseCareerTolerance.Normal;
-    }
+    internal static DaggerfallDiseaseCareerTolerance CareerTolerance(DaggerfallCareerDefinition career) =>
+        DaggerfallCareerTolerances.Tolerance(career, DaggerfallCareerTolerances.Disease);
 
     private static int CareerToleranceModifier(DaggerfallDiseaseCareerTolerance tolerance) => tolerance switch
     {

@@ -380,6 +380,35 @@ public sealed class DaggerfallPoisonRuntimeTests
     }
 
     [Fact]
+    public void Career_poison_tolerance_reads_the_poison_flag_and_not_the_disease_one()
+    {
+        // The donor's own bits: poison is 4 and disease is 64, and its GetTolerance reads resistance before
+        // immunity and both before the weaker tolerances.
+        DaggerfallCareerDefinition career = new(
+            "poison-career", "Poison career", [], [], [], [], [], 75, 2000, 1f, [], [],
+            ResistanceFlags: 4, ImmunityFlags: 0, LowToleranceFlags: 0, CriticalWeaknessFlags: 0, 0, [],
+            [], new DaggerfallCatalogCitation("test", "test"));
+
+        Assert.Equal(DaggerfallDiseaseCareerTolerance.Resistant, DaggerfallPoisonPolicy.CareerTolerance(career));
+        Assert.Equal(DaggerfallDiseaseCareerTolerance.Immune,
+            DaggerfallPoisonPolicy.CareerTolerance(career with { ResistanceFlags = 0, ImmunityFlags = 4 }));
+        Assert.Equal(DaggerfallDiseaseCareerTolerance.LowTolerance,
+            DaggerfallPoisonPolicy.CareerTolerance(career with { ResistanceFlags = 0, LowToleranceFlags = 4 }));
+        Assert.Equal(DaggerfallDiseaseCareerTolerance.CriticalWeakness,
+            DaggerfallPoisonPolicy.CareerTolerance(career with { ResistanceFlags = 0, CriticalWeaknessFlags = 4 }));
+        Assert.Equal(DaggerfallDiseaseCareerTolerance.Normal,
+            DaggerfallPoisonPolicy.CareerTolerance(career with { ResistanceFlags = 0 }));
+
+        // Resistance wins over immunity in the donor's order, and a disease-only career is not poison-tolerant.
+        Assert.Equal(DaggerfallDiseaseCareerTolerance.Resistant,
+            DaggerfallPoisonPolicy.CareerTolerance(career with { ImmunityFlags = 4 }));
+        Assert.Equal(DaggerfallDiseaseCareerTolerance.Normal,
+            DaggerfallPoisonPolicy.CareerTolerance(career with { ResistanceFlags = 64, ImmunityFlags = 64 }));
+        Assert.Equal(DaggerfallDiseaseCareerTolerance.Immune,
+            DaggerfallDiseasePolicy.CareerTolerance(career with { ResistanceFlags = 0, ImmunityFlags = 64 }));
+    }
+
+    [Fact]
     public void A_second_poison_is_measured_by_what_is_left_of_the_first()
     {
         // Nux Vomica's whole window is fourteen minutes and Moonseed's is four, so a whole-window comparison
