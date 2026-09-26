@@ -1,3 +1,4 @@
+using System.Globalization;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
@@ -69,7 +70,10 @@ public sealed record Arena2ClassicMediaInputs(
     // art palette because every map image reads through one of the three.
     IReadOnlyList<MapMediaInput> MapMedia,
     byte[] FmapPalCol,
-    byte[] MapPalCol);
+    byte[] MapPalCol,
+    // The texture leaves a world visual's own mesh selects. They arrive as a list because which leaves
+    // are needed is a fact about the published visual set rather than a fixed part of the closure.
+    IReadOnlyList<ClassicMissileTextureLeaf> MissileTextureLeaves);
 
 /// <summary>Quotas for bounded, deterministic classic-media regeneration.</summary>
 public sealed record Arena2ClassicMediaPublicationOptions(
@@ -398,6 +402,293 @@ public sealed record ClassicAudioManifest(ClassicDaggerAudioClip Clip, string Me
     }
 }
 
+/// <summary>One classic texture leaf a world visual's mesh selects, supplied as its own bytes.</summary>
+/// <param name="Archive">The texture leaf number.</param>
+/// <param name="Bytes">The leaf's own bytes.</param>
+public sealed record ClassicMissileTextureLeaf(ushort Archive, byte[] Bytes);
+
+/// <summary>One texture a world visual's mesh selects, as the caller states it before publication.</summary>
+/// <param name="Archive">The texture archive the mesh's plane selects.</param>
+/// <param name="Record">The record within it.</param>
+/// <param name="MaterialResourceId">The material resource the mesh's own material slot names.</param>
+/// <param name="Disposition">Whether the corpus can serve the texture.</param>
+/// <param name="Note">Why it cannot, empty when it can.</param>
+public sealed record ClassicWorldVisualTextureRequest(
+    ushort Archive,
+    ushort Record,
+    string MaterialResourceId,
+    GeometryMaterialDisposition Disposition,
+    string Note)
+{
+    internal void Validate(string mediaId)
+    {
+        NormalizedImportDocument.RequireLogicalId(MaterialResourceId, nameof(MaterialResourceId));
+        if (!Enum.IsDefined(Disposition))
+        {
+            throw new ArgumentOutOfRangeException(nameof(Disposition));
+        }
+
+        if (Disposition != GeometryMaterialDisposition.Resolved && string.IsNullOrWhiteSpace(Note))
+        {
+            throw new ArgumentException($"World visual '{mediaId}' states texture {Archive}/{Record} cannot be served without saying why.", nameof(Note));
+        }
+    }
+}
+
+/// <summary>One published texture a world visual's mesh selects, and the artifact that carries it.</summary>
+/// <param name="Archive">The texture archive the mesh's plane selects.</param>
+/// <param name="Record">The record within it.</param>
+/// <param name="MaterialResourceId">The material resource the mesh's own material slot names.</param>
+/// <param name="RelativePath">Where the texture artifact is published relative to the content root.</param>
+/// <param name="ContentDigest">The texture artifact's content address.</param>
+/// <param name="ByteLength">How many bytes the artifact carries.</param>
+public sealed record ClassicWorldVisualTexture(
+    ushort Archive,
+    ushort Record,
+    string MaterialResourceId,
+    string RelativePath,
+    ContentDigest ContentDigest,
+    long ByteLength)
+{
+    internal void Validate(string mediaId)
+    {
+        NormalizedImportDocument.RequireLogicalId(MaterialResourceId, nameof(MaterialResourceId));
+        NormalizedImportDocument.RequireLogicalPath(RelativePath, nameof(RelativePath));
+        ContentDigest.Validate();
+        if (ByteLength <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(ByteLength), $"World visual '{mediaId}' states texture {Archive}/{Record} with no bytes.");
+        }
+    }
+}
+
+/// <summary>
+/// One world visual a published site shows from classic mesh geometry, as the caller states it: the mesh
+/// artifact, the textures its planes select, and the source record it was decoded from. The publication
+/// completes it with the texture artifacts it writes.
+/// </summary>
+/// <param name="MediaId">The logical identity the site composition names this visual by.</param>
+/// <param name="Use">What shows it, so a visual is never published without a stated consumer.</param>
+/// <param name="MeshId">The mesh number, spelled as the mesh archive spells it.</param>
+/// <param name="RelativePath">Where the mesh artifact is published relative to the content root.</param>
+/// <param name="ContentDigest">The mesh artifact's content address.</param>
+/// <param name="SourceArchive">The source archive the mesh record was read from.</param>
+/// <param name="SourceRecordId">The number the source archive indexes the record by.</param>
+/// <param name="SourceRecordOrdinal">The record's position in the archive directory.</param>
+/// <param name="SourceRecordDigest">The content address of the record's own bytes, so the visual names the bytes it was decoded from.</param>
+/// <param name="Materials">The textures the mesh's planes select, in first-use order.</param>
+public sealed record ClassicWorldVisualRequest(
+    string MediaId,
+    string Use,
+    string MeshId,
+    string RelativePath,
+    ContentDigest ContentDigest,
+    string SourceArchive,
+    uint SourceRecordId,
+    int SourceRecordOrdinal,
+    ContentDigest SourceRecordDigest,
+    IReadOnlyList<ClassicWorldVisualTextureRequest> Materials)
+{
+    /// <summary>Where the texture of one mesh material slot is published, relative to the content root.</summary>
+    public static string TextureRelativePath(ushort archive, ushort record) =>
+        $"media/world-visuals/texture-{archive.ToString(CultureInfo.InvariantCulture)}-{record.ToString(CultureInfo.InvariantCulture)}.png";
+
+    /// <summary>
+    /// Describes the geometry one missile visual needs, reading the mesh facts from the publication that
+    /// wrote them so the request and the artifact it names cannot disagree.
+    /// </summary>
+    /// <remarks>
+    /// The source record's own digest is computed here from the archive bytes rather than restated: a
+    /// descriptor that pinned a digest nobody derived would be provenance in name only. A mesh whose
+    /// texture the corpus does not serve is refused here rather than published as a visual that would
+    /// draw with no texture at all.
+    /// </remarks>
+    public static ClassicWorldVisualRequest FromGeometry(
+        ClassicMissileVisual visual,
+        GeometryPublication geometry,
+        Arch3dMeshInventory inventory,
+        ReadOnlyMemory<byte> archiveBytes)
+    {
+        ArgumentNullException.ThrowIfNull(visual);
+        ArgumentNullException.ThrowIfNull(geometry);
+        ArgumentNullException.ThrowIfNull(inventory);
+        string meshId = visual.MeshNumber.ToString(CultureInfo.InvariantCulture);
+        GeometryMeshArtifact mesh = geometry.Meshes.SingleOrDefault(candidate => StringComparer.Ordinal.Equals(candidate.MeshId, meshId))
+            ?? throw new InvalidOperationException($"Missile visual '{visual.MediaId}' needs mesh {meshId}, which this publication does not carry.");
+        Arch3dMeshRecord record = inventory.Records.SingleOrDefault(candidate => candidate.Ordinal == mesh.SourceOrdinal)
+            ?? throw new InvalidOperationException($"Missile visual '{visual.MediaId}' names mesh {meshId} at ordinal {mesh.SourceOrdinal}, which the mesh inventory does not carry.");
+        if (record.RecordId != visual.MeshNumber || record.DuplicateOf is not null)
+        {
+            throw new InvalidOperationException($"Missile visual '{visual.MediaId}' names mesh {meshId}, but ordinal {mesh.SourceOrdinal} carries {(record.DuplicateOf is null ? record.RecordId.ToString(CultureInfo.InvariantCulture) : $"a repeat of an earlier {record.RecordId.ToString(CultureInfo.InvariantCulture)}")}.");
+        }
+
+        IReadOnlyList<ClassicWorldVisualTextureRequest> textures = [.. mesh.Materials.Select(material =>
+        {
+            if (material.Disposition != GeometryMaterialDisposition.Resolved)
+            {
+                throw new InvalidOperationException($"Missile visual '{visual.MediaId}' draws with texture {material.Archive}/{material.Record}, which the corpus does not serve: {material.Note}");
+            }
+
+            return new ClassicWorldVisualTextureRequest(material.Archive, material.Record, material.MaterialResourceId, material.Disposition, material.Note);
+        })];
+
+        return new(
+            visual.MediaId,
+            visual.Use,
+            meshId,
+            mesh.RelativePath,
+            new ContentDigest(mesh.ContentDigest),
+            inventory.Source,
+            record.RecordId,
+            record.Ordinal,
+            ContentDigest.Compute(archiveBytes.Span.Slice((int)record.Offset, record.ByteLength)),
+            textures);
+    }
+
+    internal void Validate()
+    {
+        NormalizedImportDocument.RequireLogicalId(MediaId, nameof(MediaId));
+        NormalizedImportDocument.RequireLogicalPath(RelativePath, nameof(RelativePath));
+        NormalizedImportDocument.RequireLogicalPath(SourceArchive, nameof(SourceArchive));
+        if (string.IsNullOrWhiteSpace(Use))
+        {
+            throw new ArgumentException($"Classic world visual '{MediaId}' states no consumer.", nameof(Use));
+        }
+
+        if (!uint.TryParse(MeshId, NumberStyles.None, CultureInfo.InvariantCulture, out uint meshNumber)
+            || !StringComparer.Ordinal.Equals(MeshId, meshNumber.ToString(CultureInfo.InvariantCulture)))
+        {
+            throw new ArgumentException($"Classic world visual '{MediaId}' states mesh '{MeshId}', which is not a canonical mesh number.", nameof(MeshId));
+        }
+
+        if (SourceRecordId != meshNumber || SourceRecordOrdinal < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(SourceRecordId), $"Classic world visual '{MediaId}' must name the source record it was decoded from.");
+        }
+
+        ContentDigest.Validate();
+        SourceRecordDigest.Validate();
+        ArgumentNullException.ThrowIfNull(Materials);
+        if (Materials.Count == 0)
+        {
+            throw new InvalidOperationException($"Classic world visual '{MediaId}' selects no texture, so it states no material reference.");
+        }
+
+        NormalizedImportDocument.ValidateUnique(Materials, material => material.MaterialResourceId, $"classic world visual '{MediaId}' material");
+        foreach (ClassicWorldVisualTextureRequest material in Materials)
+        {
+            material.Validate(MediaId);
+        }
+    }
+}
+
+/// <summary>
+/// One world visual a published site shows from classic mesh geometry, with the mesh artifact, the
+/// textures it draws with, and the source record it was decoded from.
+/// </summary>
+/// <param name="MediaId">The logical identity the site composition names this visual by.</param>
+/// <param name="Use">What shows it, so a visual is never published without a stated consumer.</param>
+/// <param name="MeshId">The mesh number, spelled as the mesh archive spells it.</param>
+/// <param name="RelativePath">Where the mesh artifact is published relative to the content root.</param>
+/// <param name="ContentDigest">The mesh artifact's content address.</param>
+/// <param name="SourceArchive">The source archive the mesh record was read from.</param>
+/// <param name="SourceRecordId">The number the source archive indexes the record by.</param>
+/// <param name="SourceRecordOrdinal">The record's position in the archive directory.</param>
+/// <param name="SourceRecordDigest">The content address of the record's own bytes, so the visual names the bytes it was decoded from.</param>
+/// <param name="Materials">The published textures the mesh's planes select, in first-use order.</param>
+public sealed record ClassicWorldVisualManifest(
+    string MediaId,
+    string Use,
+    string MeshId,
+    string RelativePath,
+    ContentDigest ContentDigest,
+    string SourceArchive,
+    uint SourceRecordId,
+    int SourceRecordOrdinal,
+    ContentDigest SourceRecordDigest,
+    IReadOnlyList<ClassicWorldVisualTexture> Materials)
+{
+    /// <summary>
+    /// Completes a caller's request with the texture artifacts this publication wrote, refusing a
+    /// request whose texture is not the one that was generated for its slot.
+    /// </summary>
+    internal static ClassicWorldVisualManifest Complete(
+        ClassicWorldVisualRequest request,
+        IReadOnlyDictionary<(ushort Archive, ushort Record), ImportPublicationArtifact> textures)
+    {
+        request.Validate();
+        return new(
+            request.MediaId,
+            request.Use,
+            request.MeshId,
+            request.RelativePath,
+            request.ContentDigest,
+            request.SourceArchive,
+            request.SourceRecordId,
+            request.SourceRecordOrdinal,
+            request.SourceRecordDigest,
+            [.. request.Materials.Select(material =>
+            {
+                ImportPublicationArtifact artifact = textures.TryGetValue((material.Archive, material.Record), out ImportPublicationArtifact? generated)
+                    ? generated
+                    : throw new InvalidOperationException($"Classic world visual '{request.MediaId}' draws with texture {material.Archive}/{material.Record}, which this publication did not write.");
+                string path = ClassicWorldVisualRequest.TextureRelativePath(material.Archive, material.Record);
+                if (!StringComparer.Ordinal.Equals(artifact.RelativePath, path))
+                {
+                    throw new InvalidOperationException($"Classic world visual '{request.MediaId}' texture {material.Archive}/{material.Record} was written to '{artifact.RelativePath}' rather than '{path}'.");
+                }
+
+                return new ClassicWorldVisualTexture(
+                    material.Archive,
+                    material.Record,
+                    material.MaterialResourceId,
+                    path,
+                    artifact.ContentHash,
+                    artifact.Bytes.Length);
+            })]);
+    }
+
+    internal void Validate()
+    {
+        NormalizedImportDocument.RequireLogicalId(MediaId, nameof(MediaId));
+        NormalizedImportDocument.RequireLogicalPath(RelativePath, nameof(RelativePath));
+        NormalizedImportDocument.RequireLogicalPath(SourceArchive, nameof(SourceArchive));
+        if (string.IsNullOrWhiteSpace(Use))
+        {
+            throw new ArgumentException($"Classic world visual '{MediaId}' states no consumer.", nameof(Use));
+        }
+
+        if (!uint.TryParse(MeshId, NumberStyles.None, CultureInfo.InvariantCulture, out uint meshNumber)
+            || !StringComparer.Ordinal.Equals(MeshId, meshNumber.ToString(CultureInfo.InvariantCulture)))
+        {
+            throw new ArgumentException($"Classic world visual '{MediaId}' states mesh '{MeshId}', which is not a canonical mesh number.", nameof(MeshId));
+        }
+
+        if (SourceRecordId != meshNumber || SourceRecordOrdinal < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(SourceRecordId), $"Classic world visual '{MediaId}' must name the source record it was decoded from.");
+        }
+
+        ContentDigest.Validate();
+        SourceRecordDigest.Validate();
+        ArgumentNullException.ThrowIfNull(Materials);
+        if (Materials.Count == 0)
+        {
+            throw new InvalidOperationException($"Classic world visual '{MediaId}' selects no texture, so it states no material reference.");
+        }
+
+        NormalizedImportDocument.ValidateUnique(Materials, material => material.MaterialResourceId, $"classic world visual '{MediaId}' material");
+        foreach (ClassicWorldVisualTexture material in Materials)
+        {
+            material.Validate(MediaId);
+            if (!StringComparer.Ordinal.Equals(material.RelativePath, ClassicWorldVisualRequest.TextureRelativePath(material.Archive, material.Record)))
+            {
+                throw new InvalidOperationException($"Classic world visual '{MediaId}' names texture {material.Archive}/{material.Record} at '{material.RelativePath}', which is not where that texture is published.");
+            }
+        }
+    }
+}
+
 /// <summary>Classic IMG source facts for a regenerated UI PNG.</summary>
 public sealed record ClassicUiImageManifest(
     ClassicUiImage Image,
@@ -588,7 +879,8 @@ public sealed record Arena2ClassicMediaPublication(
     IReadOnlyList<ClassicFontManifest> Fonts,
     IReadOnlyList<ClassicMapMediaManifest> MapMedia,
     IReadOnlyList<ClassicMapRegionManifest> MapRegions,
-    IReadOnlyList<ClassicAuthoredUiAssetManifest> AuthoredUiAssets)
+    IReadOnlyList<ClassicAuthoredUiAssetManifest> AuthoredUiAssets,
+    IReadOnlyList<ClassicWorldVisualManifest> WorldVisuals)
 {
     /// <summary>The logical source path the numeric sound archive is read under, in this publication and by any catalog of it.</summary>
     public const string DaggerSoundSourcePath = "arena2/DAGGER.SND";
@@ -839,7 +1131,19 @@ public sealed record Arena2ClassicMediaPublication(
     public static Arena2ClassicMediaPublication Create(
         Arena2ClassicMediaInputs inputs,
         Arena2ClassicMediaProfile profile,
-        Arena2ClassicMediaPublicationOptions? options = null)
+        Arena2ClassicMediaPublicationOptions? options = null) =>
+        Create(inputs, profile, options, worldVisuals: null);
+
+    /// <summary>
+    /// Regenerates selected classic art and carries the world visuals the published site shows from
+    /// classic mesh geometry. The descriptors arrive from the publication that wrote their artifacts,
+    /// because a visual this pass cannot see the bytes of is a reference rather than a publication.
+    /// </summary>
+    public static Arena2ClassicMediaPublication Create(
+        Arena2ClassicMediaInputs inputs,
+        Arena2ClassicMediaProfile profile,
+        Arena2ClassicMediaPublicationOptions? options,
+        IReadOnlyList<ClassicWorldVisualRequest>? worldVisuals)
     {
         ArgumentNullException.ThrowIfNull(inputs);
         ArgumentNullException.ThrowIfNull(profile);
@@ -896,19 +1200,29 @@ public sealed record Arena2ClassicMediaPublication(
         mapRegions.AddRange(regionMaps);
         generated.AddRange(BuildAuthoredUi(resolved, effectiveOptions, out ClassicAuthoredUiAssetManifest[] authoredUiAssets));
 
-        if (generated.Sum(artifact => artifact.Bytes.LongLength) > effectiveOptions.MaximumTotalArtifactBytes)
-        {
-            throw new InvalidOperationException("Classic media closure exceeds the total encoded-byte quota.");
-        }
-
         NormalizedMediaManifest mediaManifest = MediaManifestNormalizer.Normalize(
             generated,
             BuildOverlays(resolved, profile.AuthoredOverlays),
             effectiveOptions.MaximumArtifactBytes);
-        ImportPublicationArtifact[] artifacts = generated
-            .OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal)
-            .Select(artifact => new ImportPublicationArtifact(artifact.RelativePath, artifact.Bytes, mediaId: artifact.Id))
-            .ToArray();
+        // A world visual's textures are the site's own artifacts rather than entries in the classic media
+        // group: the mesh they belong to is published per site, and the group's inventory closes over the
+        // classic media the whole product shares. The visual's descriptor carries their paths and digests
+        // itself, so nothing has to agree with a second list.
+        List<ImportPublicationArtifact> visualArtifacts = [];
+        IReadOnlyList<ClassicWorldVisualManifest> visuals = BuildWorldVisuals(worldVisuals, source, palette, effectiveOptions, visualArtifacts);
+        // The quota bounds the closure this publication writes, so it is asked after the world visuals
+        // have added their artifacts: a check that ran before them would not bound them at all.
+        if (generated.Sum(artifact => artifact.Bytes.LongLength) + visualArtifacts.Sum(artifact => (long)artifact.Bytes.Length) > effectiveOptions.MaximumTotalArtifactBytes)
+        {
+            throw new InvalidOperationException("Classic media closure exceeds the total encoded-byte quota.");
+        }
+
+        ImportPublicationArtifact[] artifacts = [
+            .. generated
+                .OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal)
+                .Select(artifact => new ImportPublicationArtifact(artifact.RelativePath, artifact.Bytes, mediaId: artifact.Id)),
+            .. visualArtifacts.OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal),
+        ];
         LogicalSourceRecord? authoredManifestSource = CreateAuthoredManifestSource(resolved.AuthoredUiManifest, effectiveOptions.MaximumSourceBytes);
         return new(
             artifacts,
@@ -924,7 +1238,8 @@ public sealed record Arena2ClassicMediaPublication(
             fonts,
             mapMedia,
             mapRegions,
-            authoredUiAssets);
+            authoredUiAssets,
+            visuals);
     }
 
     private static IEnumerable<GeneratedMediaArtifact> BuildMapMedia(
@@ -1089,6 +1404,74 @@ public sealed record Arena2ClassicMediaPublication(
 
         manifests = semantic.ToArray();
         return result;
+    }
+
+    /// <summary>
+    /// Regenerates the textures a published world visual's mesh draws with, from the classic leaves the
+    /// caller supplied, and completes each visual with the artifacts it wrote.
+    /// </summary>
+    /// <remarks>
+    /// A mesh the runtime shows on its own — a missile's flight, rather than a placed block — selects
+    /// textures the site's spatial closure may never mention, so the visual carries them as its own
+    /// artifacts: the site can then draw the mesh it published without a second lookup in a material
+    /// table the mesh is not part of. A leaf the caller did not supply is refused, because a texture
+    /// published under the descriptor's identity but decoded from nothing would be an invented plate.
+    /// <para>
+    /// A record the site's own spatial closure also selects is published twice, under this path and
+    /// under the dungeon pass's material path. The two passes own disjoint selections, so neither can
+    /// dedupe the other's output, and both decode frame zero opaquely through the same palette, which
+    /// makes the two artifacts byte-identical rather than divergent.
+    /// </para>
+    /// </remarks>
+    private static IReadOnlyList<ClassicWorldVisualManifest> BuildWorldVisuals(
+        IReadOnlyList<ClassicWorldVisualRequest>? worldVisuals,
+        SourceBytes source,
+        Arena2Palette palette,
+        Arena2ClassicMediaPublicationOptions options,
+        List<ImportPublicationArtifact> artifacts)
+    {
+        if (worldVisuals is null || worldVisuals.Count == 0)
+        {
+            return [];
+        }
+
+        Dictionary<(ushort Archive, ushort Record), ImportPublicationArtifact> textures = [];
+        foreach (ClassicWorldVisualRequest request in worldVisuals)
+        {
+            request.Validate();
+            foreach (ClassicWorldVisualTextureRequest texture in request.Materials)
+            {
+                if (textures.ContainsKey((texture.Archive, texture.Record)))
+                {
+                    continue;
+                }
+
+                ClassicMissileTextureLeaf? leaf = source.MissileTextureLeaves.SingleOrDefault(candidate => candidate.Archive == texture.Archive);
+                if (leaf is null)
+                {
+                    throw new InvalidOperationException($"World visual '{request.MediaId}' draws with texture {texture.Archive}/{texture.Record}, but leaf TEXTURE.{texture.Archive:000} was not supplied.");
+                }
+
+                TextureArchive archive = TextureArchive.Parse(leaf.Bytes, $"arena2/TEXTURE.{texture.Archive:000}");
+                IndexedTextureFrame frame = archive.DecodeFrame(texture.Record, 0);
+                byte[] rgba = frame.ToRgba(palette, PaletteAlphaMode.Opaque);
+                byte[] png = DeterministicPngEncoder.EncodeRgba8(frame.Width, frame.Height, rgba);
+                if (png.LongLength > options.MaximumArtifactBytes)
+                {
+                    throw new InvalidOperationException($"World visual texture {texture.Archive}/{texture.Record} exceeds the artifact-byte quota.");
+                }
+
+                ImportPublicationArtifact artifact = new(
+                    ClassicWorldVisualRequest.TextureRelativePath(texture.Archive, texture.Record),
+                    png);
+                textures.Add((texture.Archive, texture.Record), artifact);
+                artifacts.Add(artifact);
+            }
+        }
+
+        return [.. worldVisuals
+            .OrderBy(visual => visual.MediaId, StringComparer.Ordinal)
+            .Select(visual => ClassicWorldVisualManifest.Complete(visual, textures))];
     }
 
     private static IEnumerable<GeneratedMediaArtifact> BuildAudio(
@@ -1887,6 +2270,7 @@ public sealed record Arena2ClassicMediaPublication(
             MapMedia = inputs.MapMedia;
             FmapPalCol = inputs.FmapPalCol;
             MapPalCol = inputs.MapPalCol;
+            MissileTextureLeaves = inputs.MissileTextureLeaves;
             Weapon00Cif = inputs.Weapon00Cif;
             Weapon03Cif = inputs.Weapon03Cif;
             Weapon11Cif = inputs.Weapon11Cif;
@@ -1947,6 +2331,7 @@ public sealed record Arena2ClassicMediaPublication(
         public IReadOnlyList<MapMediaInput> MapMedia { get; }
         public byte[] FmapPalCol { get; }
         public byte[] MapPalCol { get; }
+        public IReadOnlyList<ClassicMissileTextureLeaf> MissileTextureLeaves { get; }
         public IReadOnlyList<LogicalSourceRecord> LogicalSources { get; }
 
         public static SourceBytes From(Arena2ClassicMediaInputs inputs, long maximumSourceBytes)
@@ -1970,6 +2355,7 @@ public sealed record Arena2ClassicMediaPublication(
                 ("FONT0000.FNT", inputs.Font0000Fnt), ("FONT0001.FNT", inputs.Font0001Fnt), ("FONT0002.FNT", inputs.Font0002Fnt), ("FONT0004.FNT", inputs.Font0004Fnt),
                 ("FMAP_PAL.COL", inputs.FmapPalCol), ("MAP.PAL", inputs.MapPalCol),
                 ..inputs.MapMedia.Select(file => (file.FileName, file.Bytes)),
+                ..inputs.MissileTextureLeaves.Select(leaf => ($"TEXTURE.{leaf.Archive:000}", leaf.Bytes)),
             ];
             List<LogicalSourceRecord> logicalSources = new(sources.Length);
             foreach ((string fileName, byte[] bytes) in sources)

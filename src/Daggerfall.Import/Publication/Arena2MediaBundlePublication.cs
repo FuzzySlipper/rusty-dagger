@@ -85,7 +85,8 @@ public sealed record ClassicMediaManifestSidecar(
     IReadOnlyList<ClassicFontManifest> Fonts,
     IReadOnlyList<ClassicMapMediaManifest> MapMedia,
     IReadOnlyList<ClassicMapRegionManifest> MapRegions,
-    IReadOnlyList<ClassicAuthoredUiAssetManifest> AuthoredUiAssets)
+    IReadOnlyList<ClassicAuthoredUiAssetManifest> AuthoredUiAssets,
+    IReadOnlyList<ClassicWorldVisualManifest> WorldVisuals)
 { }
 
 /// <summary>
@@ -151,6 +152,7 @@ public sealed record Arena2MediaBundlePublication(
 
         ValidateDungeonMedia(dungeonMedia);
         ValidateClassicMedia(classicMedia);
+        ValidateClassicWorldVisuals(classicMedia.WorldVisuals, geometry);
 
         ImportProvenance mergedProvenance = MergeProvenance(spatialDocument.Provenance, classicMedia.Sources);
         NormalizedImportDocument document = (spatialDocument with { Provenance = mergedProvenance }).Canonicalize();
@@ -505,6 +507,25 @@ public sealed record Arena2MediaBundlePublication(
                 throw new InvalidOperationException("Persisted classic authored UI metadata does not match its descriptor path.");
             }
         }
+
+        // A world visual names geometry the classic pass does not generate, so its descriptor is checked
+        // for what it states about itself here; the mesh artifact it names is checked against the
+        // published geometry at composition time, where that publication is in hand.
+        IReadOnlyList<ClassicWorldVisualManifest> worldVisuals = sidecar.WorldVisuals
+            ?? throw new InvalidOperationException("A persisted classic sidecar must state its world visuals, even when it carries none.");
+        if (worldVisuals.Select(visual => visual.MediaId).Distinct(StringComparer.Ordinal).Count() != worldVisuals.Count)
+        {
+            throw new InvalidOperationException("Persisted classic world visuals must carry unique media identities.");
+        }
+
+        foreach (ClassicWorldVisualManifest visual in worldVisuals)
+        {
+            visual.Validate();
+            if (media.ContainsKey(visual.MediaId))
+            {
+                throw new InvalidOperationException($"Persisted classic world visual '{visual.MediaId}' collides with a persisted media descriptor.");
+            }
+        }
     }
 
     private static NormalizedMediaDescriptor RequirePersistedDescriptor(IReadOnlyDictionary<string, NormalizedMediaDescriptor> media, string id, NormalizedMediaKind kind, string subject)
@@ -659,7 +680,8 @@ public sealed record Arena2MediaBundlePublication(
         publication.Fonts.OrderBy(font => font.MediaId, StringComparer.Ordinal).Select(font => font with { Glyphs = font.Glyphs.OrderBy(glyph => glyph.GlyphIndex).ToArray() }).ToArray(),
         publication.MapMedia.OrderBy(image => image.MediaId, StringComparer.Ordinal).ToArray(),
         publication.MapRegions.OrderBy(region => region.Region).ToArray(),
-        publication.AuthoredUiAssets.OrderBy(asset => asset.Id, StringComparer.Ordinal).ToArray());
+        publication.AuthoredUiAssets.OrderBy(asset => asset.Id, StringComparer.Ordinal).ToArray(),
+        publication.WorldVisuals.OrderBy(visual => visual.MediaId, StringComparer.Ordinal).ToArray());
 
     private static DungeonActorSpriteStateLayout CanonicalizeState(DungeonActorSpriteStateLayout state) => state with
     {
@@ -873,6 +895,24 @@ public sealed record Arena2MediaBundlePublication(
         }
 
         ArgumentNullException.ThrowIfNull(publication.AuthoredUiAssets);
+        // A world visual states its own texture artifacts, so they are closed over here: a descriptor that
+        // names bytes this publication did not write would draw something nobody published.
+        foreach (ClassicWorldVisualManifest visual in publication.WorldVisuals)
+        {
+            visual.Validate();
+            foreach (ClassicWorldVisualTexture texture in visual.Materials)
+            {
+                ImportPublicationArtifact? artifact = publication.Artifacts
+                    .FirstOrDefault(candidate => StringComparer.Ordinal.Equals(candidate.RelativePath, texture.RelativePath));
+                if (artifact is null
+                    || artifact.ContentHash != texture.ContentDigest
+                    || artifact.Bytes.Length != texture.ByteLength)
+                {
+                    throw new InvalidOperationException($"Classic world visual '{visual.MediaId}' names texture '{texture.RelativePath}', which this publication did not write at '{texture.ContentDigest.Value}'.");
+                }
+            }
+        }
+
         NormalizedImportDocument.ValidateUnique(publication.AuthoredUiAssets, asset => asset.Id, "authored UI media");
         NormalizedImportDocument.ValidateUnique(publication.AuthoredUiAssets, asset => asset.RelativePath, "authored UI path");
         foreach (ClassicAuthoredUiAssetManifest asset in publication.AuthoredUiAssets)
@@ -894,6 +934,47 @@ public sealed record Arena2MediaBundlePublication(
             && !publication.Sources.Contains(publication.AuthoredUiManifestSource))
         {
             throw new InvalidOperationException("Classic authored UI manifest provenance must be retained by the publication source set.");
+        }
+    }
+
+    /// <summary>
+    /// Validates every world visual against the geometry publication it claims, so a descriptor can only
+    /// name the mesh record and artifact this publication actually wrote. Nothing here reads the mesh
+    /// archive again: the geometry publication is the owner of what a mesh number resolves to.
+    /// </summary>
+    /// <remarks>
+    /// Public for the same reason <see cref="ValidatePersistedSidecars"/> is: an authoring or inspection
+    /// tool that holds both halves asks this owner rather than growing a partial view of the contract.
+    /// </remarks>
+    public static void ValidateClassicWorldVisuals(IReadOnlyList<ClassicWorldVisualManifest> visuals, GeometryPublication geometry)
+    {
+        ArgumentNullException.ThrowIfNull(visuals);
+        foreach (ClassicWorldVisualManifest visual in visuals)
+        {
+            ArgumentNullException.ThrowIfNull(visual);
+            visual.Validate();
+            if (!StringComparer.Ordinal.Equals(visual.SourceArchive, geometry.InventorySource))
+            {
+                throw new InvalidOperationException($"Classic world visual '{visual.MediaId}' names source archive '{visual.SourceArchive}', which is not the geometry publication's '{geometry.InventorySource}'.");
+            }
+
+            GeometryMeshArtifact mesh = geometry.Meshes.SingleOrDefault(candidate => StringComparer.Ordinal.Equals(candidate.MeshId, visual.MeshId))
+                ?? throw new InvalidOperationException($"Classic world visual '{visual.MediaId}' names mesh '{visual.MeshId}', which the geometry publication does not carry.");
+            if (!StringComparer.Ordinal.Equals(mesh.RelativePath, visual.RelativePath)
+                || !StringComparer.Ordinal.Equals(mesh.ContentDigest, visual.ContentDigest.Value)
+                || mesh.SourceRecordId != visual.SourceRecordId
+                || mesh.SourceOrdinal != visual.SourceRecordOrdinal)
+            {
+                throw new InvalidOperationException($"Classic world visual '{visual.MediaId}' describes mesh '{visual.MeshId}' as record {visual.SourceRecordId} at ordinal {visual.SourceRecordOrdinal} with '{visual.ContentDigest.Value}' at '{visual.RelativePath}', which is not what the geometry publication wrote.");
+            }
+
+            // The descriptor carries each texture's own artifact; the mesh's plane selections must still
+            // be the ones the geometry publication resolved, in the same first-use order.
+            if (!mesh.Materials.Select(material => (material.Archive, material.Record, material.MaterialResourceId))
+                .SequenceEqual(visual.Materials.Select(material => (material.Archive, material.Record, material.MaterialResourceId))))
+            {
+                throw new InvalidOperationException($"Classic world visual '{visual.MediaId}' states material references that differ from the ones mesh '{visual.MeshId}' was published with.");
+            }
         }
     }
 

@@ -442,7 +442,7 @@ public sealed class Arena2ClassicMediaPublicationTests
             Read(arena2, "BOOK00I0.IMG"), Read(arena2, "REST00I0.IMG"), Read(arena2, "SHOP00I0.IMG"), Read(arena2, "GILD00I0.IMG"), Read(arena2, "BANK00I0.IMG"),
             Read(arena2, "REST01I0.IMG"), Read(arena2, "REST02I0.IMG"), Read(arena2, "INVE08I0.IMG"), Read(arena2, "INVE10I0.IMG"), Read(arena2, "INVE11I0.IMG"),
             Read(arena2, "INVE12I0.IMG"), Read(arena2, "INVE14I0.IMG"), Read(arena2, "GILD01I0.IMG"),
-            Read(arena2, "TEXTURE.207"), Read(arena2, "TEXTURE.216"), Read(arena2, "TEXTURE.234"), Read(arena2, "TEXTURE.245"), Read(arena2, "FONT0003.FNT"), Read(arena2, "WEAPON00.CIF"), Read(arena2, "WEAPON03.CIF"), Read(arena2, "WEAPON11.CIF"), Read(arena2, "FONT0000.FNT"), Read(arena2, "FONT0001.FNT"), Read(arena2, "FONT0002.FNT"), Read(arena2, "FONT0004.FNT"), ReadCorpusMapMedia(arena2), Read(arena2, "FMAP_PAL.COL"), Read(arena2, "MAP.PAL")));
+            Read(arena2, "TEXTURE.207"), Read(arena2, "TEXTURE.216"), Read(arena2, "TEXTURE.234"), Read(arena2, "TEXTURE.245"), Read(arena2, "FONT0003.FNT"), Read(arena2, "WEAPON00.CIF"), Read(arena2, "WEAPON03.CIF"), Read(arena2, "WEAPON11.CIF"), Read(arena2, "FONT0000.FNT"), Read(arena2, "FONT0001.FNT"), Read(arena2, "FONT0002.FNT"), Read(arena2, "FONT0004.FNT"), ReadCorpusMapMedia(arena2), Read(arena2, "FMAP_PAL.COL"), Read(arena2, "MAP.PAL"), []));
 
         Assert.Equal(31, WeaponActions(publication, "weapon.dagger.steel").Sum(action => action.FrameCount));
         Assert.Equal(83 + 68, publication.Artifacts.Count);
@@ -598,7 +598,8 @@ public sealed class Arena2ClassicMediaPublicationTests
         // region maps to nothing, which is the explicit no-art state.
         [],
         CreatePalette(),
-        CreatePalette());
+        CreatePalette(),
+        []);
 
     private static byte[] Read(string directory, string fileName) => File.ReadAllBytes(Path.Combine(directory, fileName));
 

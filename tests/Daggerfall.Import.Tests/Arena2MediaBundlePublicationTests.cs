@@ -439,6 +439,7 @@ public sealed class Arena2MediaBundlePublicationTests
                 Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, 0)).ToArray())],
             [],
             EmptyMapRegions(),
+            [],
             []);
     }
 

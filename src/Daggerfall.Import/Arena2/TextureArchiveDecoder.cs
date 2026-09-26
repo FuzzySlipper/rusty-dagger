@@ -26,7 +26,26 @@ public sealed record IndexedTextureFrame(
     int FrameOrdinal,
     ushort Width,
     ushort Height,
-    ReadOnlyMemory<byte> Pixels);
+    ReadOnlyMemory<byte> Pixels)
+{
+    /// <summary>This frame's pixels as row-major RGBA bytes through a palette.</summary>
+    public byte[] ToRgba(Arena2Palette palette, PaletteAlphaMode alphaMode)
+    {
+        ArgumentNullException.ThrowIfNull(palette);
+        Rgba32[] colors = palette.ToRgba(Pixels.Span, alphaMode);
+        byte[] rgba = new byte[checked(colors.Length * 4)];
+        for (int index = 0; index < colors.Length; index++)
+        {
+            int offset = index * 4;
+            rgba[offset] = colors[index].Red;
+            rgba[offset + 1] = colors[index].Green;
+            rgba[offset + 2] = colors[index].Blue;
+            rgba[offset + 3] = colors[index].Alpha;
+        }
+
+        return rgba;
+    }
+}
 
 /// <summary>Read-only parsed TEXTURE.nnn archive backed by caller-supplied source bytes.</summary>
 public sealed class TextureArchive

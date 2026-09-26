@@ -230,6 +230,15 @@ internal static partial class Program
             {
                 result = RmbExteriorNormalizer.Normalize(new(new DungeonLogicalSourceSet(sources.DungeonSources), region, values["--location"],
                     interior ? RmbWorldProfileKind.Interior : RmbWorldProfileKind.Exterior) { Building = building });
+                DungeonLogicalSource archSource = sources.DungeonSources.Single(source => source.Label.EndsWith("ARCH3D.BSA", StringComparison.Ordinal));
+                (GeometryPublication geometry, IReadOnlyList<ClassicWorldVisualRequest> worldVisuals) = PublishGeometryAndSiteVisuals(
+                    archSource,
+                    result.ReferencedMeshIds,
+                    sources.TextureLeaves());
+                foreach (ushort archive in worldVisuals.SelectMany(visual => visual.Materials).Select(material => material.Archive).Distinct().Order())
+                {
+                    sources.AdmitWorldVisualTextureLeaf(archive);
+                }
                 Arena2DungeonMediaPublication dungeonMedia = Arena2DungeonMediaPublication.Create(
                     Arena2DungeonMediaRequest.Create(result.Document, new Arena2DungeonMediaSourceSet(sources.DungeonMediaSources)) with
                     {
@@ -241,13 +250,8 @@ internal static partial class Program
                 Arena2ClassicMediaPublication classicMedia = Arena2ClassicMediaPublication.Create(
                     sources.ClassicMediaInputs,
                     classicMediaProfile,
-                    new Arena2ClassicMediaPublicationOptions(MaximumSourceBytes: MaximumIndividualSourceBytes));
-                DungeonLogicalSource archSource = sources.DungeonSources.Single(source => source.Label.EndsWith("ARCH3D.BSA", StringComparison.Ordinal));
-                GeometryPublication geometry = GeometryPublicationBuilder.Create(new GeometryPublicationRequest(
-                    Arch3dInventoryReader.Read(archSource.Bytes.ToArray(), archSource.Label),
-                    archSource.Bytes,
-                    result.ReferencedMeshIds,
-                    sources.TextureLeaves()));
+                    new Arena2ClassicMediaPublicationOptions(MaximumSourceBytes: MaximumIndividualSourceBytes),
+                    worldVisuals);
                 plan = AttachSourceManifest(Arena2MediaBundlePublication.Create(result, dungeonMedia, classicMedia, geometry).Plan,
                     values["--arena2"], Path.GetFullPath(values["--inventory"]));
                 break;
@@ -2281,6 +2285,15 @@ internal static partial class Program
                     DungeonNormalizationQuotas.Default with { MaximumSourceBytes = MaximumTotalSourceBytes });
                 DungeonNormalizationResult result = DungeonNormalizer.Normalize(request);
 
+                DungeonLogicalSource archSource = sources.DungeonSources.Single(source => source.Label.EndsWith("ARCH3D.BSA", StringComparison.Ordinal));
+                (GeometryPublication geometry, IReadOnlyList<ClassicWorldVisualRequest> worldVisuals) = PublishGeometryAndSiteVisuals(
+                    archSource,
+                    result.ReferencedMeshIds,
+                    sources.TextureLeaves());
+                foreach (ushort archive in worldVisuals.SelectMany(visual => visual.Materials).Select(material => material.Archive).Distinct().Order())
+                {
+                    sources.AdmitWorldVisualTextureLeaf(archive);
+                }
                 Arena2DungeonMediaPublication dungeonMedia = Arena2DungeonMediaPublication.Create(
                     Arena2DungeonMediaRequest.Create(result.Document, new Arena2DungeonMediaSourceSet(sources.DungeonMediaSources)) with
                     {
@@ -2293,13 +2306,8 @@ internal static partial class Program
                 Arena2ClassicMediaPublication classicMedia = Arena2ClassicMediaPublication.Create(
                     sources.ClassicMediaInputs,
                     options.ClassicMediaProfile with { AuthoredOverlays = classicOverlays },
-                    new Arena2ClassicMediaPublicationOptions(MaximumSourceBytes: MaximumIndividualSourceBytes));
-                DungeonLogicalSource archSource = sources.DungeonSources.Single(source => source.Label.EndsWith("ARCH3D.BSA", StringComparison.Ordinal));
-                GeometryPublication geometry = GeometryPublicationBuilder.Create(new GeometryPublicationRequest(
-                    Arch3dInventoryReader.Read(archSource.Bytes.ToArray(), archSource.Label),
-                    archSource.Bytes,
-                    result.ReferencedMeshIds,
-                    sources.TextureLeaves()));
+                    new Arena2ClassicMediaPublicationOptions(MaximumSourceBytes: MaximumIndividualSourceBytes),
+                    worldVisuals);
                 return Arena2MediaBundlePublication.Create(result, dungeonMedia, classicMedia, geometry).Plan;
             }
             catch (MissingArena2SourceException missing)
@@ -2323,6 +2331,31 @@ internal static partial class Program
         sources.LoadDungeon(sourceName);
         if (!resolvedOnDemand.Add(sourceName))
             throw new InvalidOperationException($"Dungeon source '{sourceName}' is still required after loading it on demand.");
+    }
+
+    /// <summary>
+    /// Publishes a site's mesh geometry together with the classic world visuals that name it, in one pass.
+    /// </summary>
+    /// <remarks>
+    /// The missile mesh of a flying arrow is not placed by any block, so nothing in a pack references it;
+    /// the site's own world visuals do, which is why their mesh numbers join the referenced set rather
+    /// than being published behind the publication's back. Reading each descriptor's facts out of the
+    /// geometry publication it just produced is what keeps a visual from naming an artifact nobody wrote.
+    /// </remarks>
+    private static (GeometryPublication Geometry, IReadOnlyList<ClassicWorldVisualRequest> WorldVisuals) PublishGeometryAndSiteVisuals(
+        DungeonLogicalSource archSource,
+        IReadOnlyList<string> referencedMeshIds,
+        TextureLeafInventory textures)
+    {
+        Arch3dMeshInventory inventory = Arch3dInventoryReader.Read(archSource.Bytes.ToArray(), archSource.Label);
+        GeometryPublication geometry = GeometryPublicationBuilder.Create(new GeometryPublicationRequest(
+            inventory,
+            archSource.Bytes,
+            [.. referencedMeshIds, .. ClassicMissileVisuals.MeshIds],
+            textures));
+        IReadOnlyList<ClassicWorldVisualRequest> worldVisuals =
+            [.. ClassicMissileVisuals.Published.Select(visual => ClassicWorldVisualRequest.FromGeometry(visual, geometry, inventory, archSource.Bytes))];
+        return (geometry, worldVisuals);
     }
 
     private static void LoadRequiredDungeonSources(AdmittedArena2Sources sources)
@@ -2663,6 +2696,7 @@ internal static partial class Program
     {
         private readonly string arena2Directory;
         private readonly Dictionary<string, DungeonLogicalSource> loaded = new(StringComparer.Ordinal);
+        private readonly SortedDictionary<ushort, byte[]> worldVisualTextureLeaves = [];
         private readonly HashSet<string> dungeonSourceNames = new(StringComparer.Ordinal);
         private long totalBytes;
 
@@ -2709,6 +2743,23 @@ internal static partial class Program
             .OrderBy(name => name, StringComparer.Ordinal)
             .Select(name => new Arena2DungeonMediaSource(loaded[name].Label, loaded[name].Bytes.Span))
             .ToArray();
+
+        /// <summary>
+        /// Reads one classic texture leaf a published world visual's mesh selects. The visual's own set
+        /// decides which leaves are needed, so they are admitted here rather than added to the fixed
+        /// classic source names.
+        /// </summary>
+        public void AdmitWorldVisualTextureLeaf(ushort archive)
+        {
+            string fileName = $"TEXTURE.{archive:000}";
+            if (worldVisualTextureLeaves.ContainsKey(archive))
+            {
+                return;
+            }
+
+            DungeonLogicalSource source = ReadSource(arena2Directory, fileName);
+            worldVisualTextureLeaves.Add(archive, source.Bytes.ToArray());
+        }
 
         public Arena2ClassicMediaInputs ClassicMediaInputs => new(
             Require("WEAPON01.CIF").Bytes.ToArray(),
@@ -2763,7 +2814,8 @@ internal static partial class Program
             Require("FONT0004.FNT").Bytes.ToArray(),
             ReadMapMedia(),
             Require("FMAP_PAL.COL").Bytes.ToArray(),
-            Require("MAP.PAL").Bytes.ToArray());
+            Require("MAP.PAL").Bytes.ToArray(),
+            [.. worldVisualTextureLeaves.OrderBy(leaf => leaf.Key).Select(leaf => new ClassicMissileTextureLeaf(leaf.Key, leaf.Value))]);
 
         public void LoadDungeon(string fileName)
         {

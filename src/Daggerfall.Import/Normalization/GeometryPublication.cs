@@ -277,7 +277,11 @@ public sealed record GeometryPublication(
 /// <summary>The input one geometry publication is derived from.</summary>
 /// <param name="Inventory">The mesh inventory of the archive the geometry is read from.</param>
 /// <param name="MeshArchiveBytes">The archive's own bytes.</param>
-/// <param name="ReferencedMeshIds">The mesh numbers the normalized packs reference, spelled as they spell them.</param>
+/// <param name="ReferencedMeshIds">
+/// The mesh numbers to publish, spelled as the caller spells them: the ones the normalized packs
+/// reference, plus any a site's own world visuals name — a missile's mesh is placed by no block, so
+/// nothing in a pack references it.
+/// </param>
 /// <param name="Textures">The texture-leaf inventory the material references are resolved against.</param>
 public sealed record GeometryPublicationRequest(
     Arch3dMeshInventory Inventory,
@@ -285,7 +289,7 @@ public sealed record GeometryPublicationRequest(
     IReadOnlyList<string> ReferencedMeshIds,
     TextureLeafInventory Textures);
 
-/// <summary>Builds the geometry a normalized pack references from the archive and the inventory.</summary>
+/// <summary>Builds the geometry a normalized pack and a site's world visuals reference from the archive and the inventory.</summary>
 public static class GeometryPublicationBuilder
 {
     /// <summary>The relative path one mesh's artifact is published at.</summary>

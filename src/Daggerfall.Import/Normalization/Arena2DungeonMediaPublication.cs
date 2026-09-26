@@ -604,7 +604,7 @@ public sealed record Arena2DungeonMediaPublication(
         {
             TextureArchive archive = archives[selection.Archive];
             IndexedTextureFrame frame = archive.DecodeFrame(selection.Record, 0);
-            byte[] rgba = ToRgba(frame, palette, PaletteAlphaMode.Opaque);
+            byte[] rgba = frame.ToRgba(palette, PaletteAlphaMode.Opaque);
             byte[] png = DeterministicPngEncoder.EncodeRgba8(frame.Width, frame.Height, rgba);
             RequireArtifactSize(png, quotas, $"material '{selection.TextureResourceId}'");
             string id = $"material/texture-{selection.Archive}-{selection.Record}";
@@ -742,7 +742,7 @@ public sealed record Arena2DungeonMediaPublication(
                                 $"frame/mobile-{selection.Source.Id.Value}/{state}/{orientation}/{sourceFrame}",
                                 decoded.Width,
                                 decoded.Height,
-                                ToRgba(decoded, palette, PaletteAlphaMode.IndexZeroTransparent),
+                                decoded.ToRgba(palette, PaletteAlphaMode.IndexZeroTransparent),
                                 record.IsHorizontallyMirrored)));
                     }
                 }
@@ -823,7 +823,7 @@ public sealed record Arena2DungeonMediaPublication(
             $"frame/mobile-{source.Id.Value}/corpse/0/0",
             decoded.Width,
             decoded.Height,
-            ToRgba(decoded, palette, PaletteAlphaMode.IndexZeroTransparent));
+            decoded.ToRgba(palette, PaletteAlphaMode.IndexZeroTransparent));
         NormalizedSpriteAtlas atlas = SpriteAtlasNormalizer.Normalize(
             [frame],
             SpriteAtlasOptions.Grid(quotas.MaximumAtlasDimension, cropTransparentPixels: false, bottomAlign: true));
@@ -872,22 +872,6 @@ public sealed record Arena2DungeonMediaPublication(
 
     private static bool HasAllSourceRecords(TextureArchive archive, IReadOnlyList<Arena2MobileFrameRecord> records) =>
         records.All(record => record.Record < archive.RecordCount);
-
-    private static byte[] ToRgba(IndexedTextureFrame frame, Arena2Palette palette, PaletteAlphaMode alphaMode)
-    {
-        Rgba32[] colors = palette.ToRgba(frame.Pixels.Span, alphaMode);
-        byte[] rgba = new byte[checked(colors.Length * 4)];
-        for (int index = 0; index < colors.Length; index++)
-        {
-            int offset = index * 4;
-            rgba[offset] = colors[index].Red;
-            rgba[offset + 1] = colors[index].Green;
-            rgba[offset + 2] = colors[index].Blue;
-            rgba[offset + 3] = colors[index].Alpha;
-        }
-
-        return rgba;
-    }
 
     private static NormalizedVector2 ScaleWorldSize(Arena2RecordWorldSize source, NormalizedAtlasFrame frame) => new(
         source.WidthMeters * frame.Width / frame.SourceWidth,
