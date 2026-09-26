@@ -49,7 +49,8 @@ internal sealed record DaggerfallItemInstanceMetadata(
     string? Dye = null,
     int? BookId = null,
     int? PotionRecipeKey = null,
-    ulong? CreditValue = null)
+    ulong? CreditValue = null,
+    int? PoisonVariant = null)
 {
     internal DaggerfallItemInstanceMetadata Validate()
     {
@@ -61,6 +62,8 @@ internal sealed record DaggerfallItemInstanceMetadata(
             throw new ArgumentException("Quest item identity requires both quest and symbol.");
         if (Race is { Length: 0 } || Gender is { Length: 0 } || Dye is { Length: 0 })
             throw new ArgumentException("Item appearance metadata cannot contain empty values.");
+        if (PoisonVariant is int poison && DaggerfallPoisonPolicy.VariantFor(poison) is null)
+            throw new ArgumentException($"Item poison variant {poison} is not one of the twelve classic poisons.", nameof(PoisonVariant));
         if (BookId < 0)
             throw new ArgumentOutOfRangeException(nameof(BookId), "Book identity cannot be negative.");
         if (PotionRecipeKey <= 0)
@@ -99,12 +102,14 @@ internal sealed record DaggerfallItemInstanceMetadata(
             Identified: true, Stolen: false, QuestId: null, QuestItemSymbol: null, Enchantment: null, owner, CreditValue: creditValue).Validate();
 
     internal DaggerfallItemMetadataSave Capture() => new(Material, Variant, CurrentCondition, MaximumCondition,
-        Identified, Stolen, QuestId, QuestItemSymbol, Enchantment, new DaggerfallItemOwnerSave(Owner.Scope, Owner.Id), Race, Gender, Dye, BookId, PotionRecipeKey, CreditValue);
+        Identified, Stolen, QuestId, QuestItemSymbol, Enchantment, new DaggerfallItemOwnerSave(Owner.Scope, Owner.Id), Race, Gender, Dye, BookId, PotionRecipeKey, CreditValue,
+        PoisonVariant);
 
     internal static DaggerfallItemInstanceMetadata Restore(string itemId, DaggerfallItemMetadataSave saved) =>
         new DaggerfallItemInstanceMetadata(itemId, saved.Material, saved.Variant, saved.CurrentCondition, saved.MaximumCondition,
             saved.Identified, saved.Stolen, saved.QuestId, saved.QuestItemSymbol, saved.Enchantment,
-            new DaggerfallItemOwner(saved.Owner.Scope, saved.Owner.Id), saved.Race, saved.Gender, saved.Dye, saved.BookId, saved.PotionRecipeKey, saved.CreditValue).Validate();
+            new DaggerfallItemOwner(saved.Owner.Scope, saved.Owner.Id), saved.Race, saved.Gender, saved.Dye, saved.BookId, saved.PotionRecipeKey, saved.CreditValue,
+            saved.PoisonVariant).Validate();
 }
 
 /// <summary>
