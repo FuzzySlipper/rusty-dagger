@@ -5,6 +5,7 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 using Rusty.Engine;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.World;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Kit.Combat;
@@ -328,17 +329,28 @@ public sealed class DaggerfallPoisonRuntimeTests
         Actor other = second.Actors.Player.Actor;
         (DaggerfallPoisonRuntime none, _) = Runtime(second);
         DaggerfallPoisonExposure thrown = exposure with { BypassResistance = false };
-        Assert.Equal(DaggerfallPoisonAdmission.Resisted, DaggerfallPoisonPolicy.InflictPoison(none, second.Actors, thrown, 130, (_, _) => 1));
+        int thrownDraws = 0;
+        Assert.Equal(DaggerfallPoisonAdmission.Resisted,
+            DaggerfallPoisonPolicy.InflictPoison(none, second.Actors, thrown, 130, (_, _) => { thrownDraws++; return 1; }));
+        Assert.Equal(1, thrownDraws);
         Assert.False(none.IsAfflicted(other));
-        Assert.Equal(DaggerfallPoisonAdmission.Admitted, DaggerfallPoisonPolicy.InflictPoison(none, second.Actors, thrown, 130, (_, _) => 100));
+        int admittedDraws = 0;
+        Assert.Equal(DaggerfallPoisonAdmission.Admitted,
+            DaggerfallPoisonPolicy.InflictPoison(none, second.Actors, thrown, 130, (_, _) => { admittedDraws++; return 100; }));
+        Assert.Equal(1, admittedDraws);
         Assert.Equal(130, none.Affliction(other)!.Archetype.Variant);
 
-        // A first-level target is never poisoned, and it is refused before the throw rather than by it: the
-        // throw a target the donor settles earlier never happens, so this one draws nothing.
-        int lateDraws = 0;
+        // A first-level target is never poisoned, but the donor throws before it asks about the level, so
+        // this attempt draws exactly the throw the donor made and is refused after it. A bypassed one skips
+        // the throw and is refused without drawing.
+        int levelDraws = 0;
         Assert.Equal(DaggerfallPoisonAdmission.Immune,
-            DaggerfallPoisonPolicy.InflictPoison(none, second.Actors, thrown with { TargetLevel = 1 }, 128, (_, _) => { lateDraws++; return 100; }));
-        Assert.Equal(0, lateDraws);
+            DaggerfallPoisonPolicy.InflictPoison(none, second.Actors, thrown with { TargetLevel = 1 }, 128, (_, _) => { levelDraws++; return 100; }));
+        Assert.Equal(1, levelDraws);
+        int bypassedLevelDraws = 0;
+        Assert.Equal(DaggerfallPoisonAdmission.Immune,
+            DaggerfallPoisonPolicy.InflictPoison(none, second.Actors, exposure with { TargetLevel = 1 }, 128, (_, _) => { bypassedLevelDraws++; return 100; }));
+        Assert.Equal(0, bypassedLevelDraws);
 
         // A variant no archetype answers cannot come back as a quietly successful poisoning.
         Assert.Throws<ArgumentException>(() =>
@@ -517,7 +529,7 @@ public sealed class DaggerfallPoisonRuntimeTests
             "Poison-Arsenic",
             "poison",
             CasterId: null,
-            checked((long)victim.Entity.Value),
+            checked((long)victim.Get<DurableEntityIdentity>().Identity.Value),
             "classic",
             Element: null,
             ItemId: null,
