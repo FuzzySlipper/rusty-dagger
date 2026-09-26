@@ -437,6 +437,28 @@ public sealed class DaggerfallPoisonRuntimeTests
     }
 
     [Fact]
+    public void Taking_a_drug_asks_the_poison_owner_and_names_the_poison_of_its_template()
+    {
+        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        DaggerfallSession session = fixture.Session;
+
+        // The four drugs resolve to the variants of their own names, and a template that is not one of them
+        // names no poison rather than a neighbouring one.
+        Assert.Equal(DaggerfallPoisonAdmission.Immune, session.UseDrug(78));
+        Assert.Equal(DaggerfallPoisonAdmission.Immune, session.UseDrug(81));
+        Assert.Throws<ArgumentOutOfRangeException>(() => session.UseDrug(77));
+        Assert.Throws<ArgumentOutOfRangeException>(() => session.UseDrug(82));
+        Assert.False(session.State.Poisons.IsAfflicted(session.State.Actors.Player.Actor));
+
+        // The template index is what a classic record names, and the catalogue answers it with the item.
+        Assert.True(fixture.Definitions.TryItemForTemplate(78, out DaggerfallItemDefinition drug));
+        Assert.False(string.IsNullOrWhiteSpace(drug.Id.Value));
+        Assert.True(fixture.Definitions.TryItemForTemplate(131, out DaggerfallItemDefinition arrow));
+        Assert.False(fixture.Definitions.TryItemForTemplate(2000, out _));
+        _ = arrow;
+    }
+
+    [Fact]
     public void A_second_poison_is_measured_by_what_is_left_of_the_first()
     {
         // Nux Vomica's whole window is fourteen minutes and Moonseed's is four, so a whole-window comparison

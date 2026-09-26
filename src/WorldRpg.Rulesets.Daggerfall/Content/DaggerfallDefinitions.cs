@@ -277,6 +277,24 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     internal IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> TemplateItems { get; } =
         DaggerfallTemplateItemDefinitions.Create(itemTemplateCatalog, items, magic);
 
+    /// <summary>
+    /// The item a classic template index materializes as, asked of the published template catalogue. The
+    /// index is what a classic record names (a drug is 78-81, an arrow 131), so a caller holding one — an
+    /// item-use rule, a delivery — asks here rather than inventing an identity from a name.
+    /// </summary>
+    internal bool TryItemForTemplate(int index, out DaggerfallItemDefinition definition)
+    {
+        foreach (DaggerfallItemDefinition candidate in TemplateItems.Values)
+        {
+            if (candidate.Template?.Index != index) continue;
+            definition = candidate;
+            return true;
+        }
+
+        definition = null!;
+        return false;
+    }
+
     internal bool TryResolveItem(DaggerfallItemId id, out DaggerfallItemDefinition definition)
     {
         if (Items.TryGetValue(id, out DaggerfallItemDefinition? authored) && authored is not null)
