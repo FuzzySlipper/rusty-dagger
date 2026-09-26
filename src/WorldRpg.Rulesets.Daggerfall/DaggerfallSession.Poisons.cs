@@ -50,6 +50,18 @@ internal sealed partial class DaggerfallSession
             Tolerance: DaggerfallPoisonPolicy.CareerTolerance(State.Character.Career));
     }
 
+    /// <summary>
+    /// What taking a drug does: the template names the poison, and a self-delivered dose bypasses
+    /// resistance the way the donor's own drug use does. A template that is not one of the four drugs names
+    /// no poison at all rather than a neighbouring one.
+    /// </summary>
+    internal DaggerfallPoisonAdmission UseDrug(int template)
+    {
+        int variant = DaggerfallPoisonPolicy.VariantForDrugTemplate(template)
+            ?? throw new ArgumentOutOfRangeException(nameof(template), $"Item template {template} is not one of the four classic drugs.");
+        return InflictPoison(PlayerPoisonExposure(bypassResistance: true), variant);
+    }
+
     /// <summary>Cures every poison the player carries, taking back what they still hold.</summary>
     internal bool CurePoison() => State.Poisons.Cure(State.Actors.Player.Actor);
 }

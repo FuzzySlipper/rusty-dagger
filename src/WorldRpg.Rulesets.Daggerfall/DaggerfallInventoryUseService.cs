@@ -27,8 +27,11 @@ internal sealed class DaggerfallInventoryUseService(
     DaggerfallSiteContext sites,
     IRandomService random,
     DaggerfallItemConditionService? condition = null,
-    DaggerfallBookNotebook? notebook = null)
+    DaggerfallBookNotebook? notebook = null,
+    Func<int, bool>? useDrug = null)
 {
+    private const int FirstDrugTemplate = 78;
+    private const int LastDrugTemplate = 81;
     private const int MapTemplate = 287;
     private const int OilTemplate = 252;
     private const int LanternTemplate = 248;
@@ -93,6 +96,18 @@ internal sealed class DaggerfallInventoryUseService(
         }
         if (metadata.PotionRecipeKey is not null)
             return new(false, "Potion effects are not available yet.", DaggerfallInventoryUseReceiver.PotionConsumption);
+        if (Template(itemId) is int template and (>= FirstDrugTemplate and <= LastDrugTemplate))
+        {
+            // A drug is taken, not applied: the dose is consumed whatever it does to the taker, and what it
+            // does is the poison owner's decision, not this rule's.
+            if (useDrug is null) return new(false, "Drug effects are not available yet.");
+            if (DaggerfallPoisonPolicy.VariantForDrugTemplate(template) is not int variant)
+                return new(false, "This item cannot be used.");
+            bool took = useDrug(variant);
+            consume();
+            return new(true, took ? "The drug takes hold." : "The drug has no effect on you.");
+        }
+
         if (Template(itemId) != MapTemplate)
             return new(false, "This item cannot be used.");
         if (sites.Region is not int region)

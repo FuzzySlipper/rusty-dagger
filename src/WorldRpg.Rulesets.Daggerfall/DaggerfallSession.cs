@@ -421,7 +421,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             _inventoryUi.UseItemCondition(_itemCondition);
             _inventoryUi.UseGroundDrops(_groundContainers, () => State.PlayerControl.Position);
             _notebook = new DaggerfallBookNotebook(definitions, new DaggerfallTextResolver(definitions.Text));
-            _inventoryUi.UseItemActions(new DaggerfallInventoryUseService(State.Inventory, definitions, State.ItemInstances, _uniqueItems, _site, _random, _itemCondition, _notebook));
+            _inventoryUi.UseItemActions(new DaggerfallInventoryUseService(State.Inventory, definitions, State.ItemInstances, _uniqueItems, _site, _random, _itemCondition, _notebook,
+                useDrug: variant => UseDrug(variant) == DaggerfallPoisonAdmission.Admitted));
             _inventoryUi.BookOpened += _ => RequestPanel(DaggerfallPanel.Journal);
             _lootUi = new DaggerfallLootPresentation(_corpseLoot, _inventoryUi, _groundContainers);
             InitializeActivation(engine, tuning.LootInteraction);
