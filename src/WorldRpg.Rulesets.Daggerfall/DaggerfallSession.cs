@@ -1369,7 +1369,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                     DiagnosticsDisposition.Terminal,
                     "daggerfall.presentation",
                     "presentation.failed",
-                    failure.ToString(),
+                    WorldRpg.Kit.EngineFailureText.Describe(failure),
                     string.Empty));
             }
             catch (Exception) { /* a failure to report a failure must not replace it */ }
