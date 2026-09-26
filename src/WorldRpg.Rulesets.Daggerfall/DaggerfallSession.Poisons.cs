@@ -1,3 +1,9 @@
+using Rusty.Engine.Entities;
+using Rusty.Engine.Mechanics;
+using WorldRpg.Kit.Progression;
+using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Policies;
+
 namespace WorldRpg.Rulesets.Daggerfall;
 
 internal sealed partial class DaggerfallSession
@@ -21,6 +27,27 @@ internal sealed partial class DaggerfallSession
             variant,
             PoisonRoll,
             itemId);
+    }
+
+    /// <summary>
+    /// What a delivery aimed at the player reads. The career's own poison tolerance comes from the raw
+    /// career bytes; the level is the live one, because the donor refuses a first-level target; Willpower
+    /// is the player's own. Race immunity is false because the imported race catalogue carries no immunity
+    /// flags at all — the donor's own nine races set none for poison (only the High Elf sets any, and that
+    /// is paralysis) — so this must be revisited when race flags are imported rather than standing in for
+    /// a value that was never read.
+    /// </summary>
+    internal DaggerfallPoisonExposure PlayerPoisonExposure(bool bypassResistance)
+    {
+        Actor player = State.Actors.Player.Actor;
+        return new DaggerfallPoisonExposure(
+            State.Actors.Player.DurableId,
+            TargetLevel: player.Get<ProgressionState>().Level,
+            CareerImmune: false,
+            RaceImmune: false,
+            Willpower: player.Get<StatsComponent>().GetStat(StatId.Parse(DaggerfallMechanicsIds.Willpower.Value)).ValueInt,
+            BypassResistance: bypassResistance,
+            Tolerance: DaggerfallPoisonPolicy.CareerTolerance(State.Character.Career));
     }
 
     /// <summary>Cures every poison the player carries, taking back what they still hold.</summary>

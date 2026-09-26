@@ -5,6 +5,7 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 using Rusty.Engine;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.Progression;
 using WorldRpg.Kit.World;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
@@ -365,15 +366,25 @@ public sealed class DaggerfallPoisonRuntimeTests
         using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
         DaggerfallSession session = fixture.Session;
         Actor player = session.State.Actors.Player.Actor;
-        DaggerfallPoisonExposure dose = new(
-            session.State.Actors.Player.DurableId,
-            TargetLevel: 5,
-            CareerImmune: false,
-            RaceImmune: false,
-            Willpower: 50,
-            BypassResistance: true);
+        // What the session itself reads for a delivery aimed at the player: the live level and Willpower,
+        // the career's own poison tolerance from the raw bytes, and the bypass a drug dose uses.
+        DaggerfallPoisonExposure dose = session.PlayerPoisonExposure(bypassResistance: true);
+        Assert.Equal(session.State.Actors.Player.DurableId, dose.TargetId);
+        Assert.Equal(session.State.Actors.Player.Actor.Get<ProgressionState>().Level, dose.TargetLevel);
+        Assert.Equal(
+            DaggerfallPoisonPolicy.CareerTolerance(session.State.Character.Career),
+            dose.Tolerance);
+        Assert.True(dose.BypassResistance);
 
-        Assert.Equal(DaggerfallPoisonAdmission.Admitted, session.InflictPoison(dose, 136, itemId: 4242));
+        // A fresh player is first level, and the donor refuses a first-level target even when the delivery
+        // bypasses resistance, so the dose the session builds for a new character does nothing at all.
+        Assert.Equal(1, dose.TargetLevel);
+        Assert.Equal(DaggerfallPoisonAdmission.Immune, session.InflictPoison(dose, 136, itemId: 4242));
+        Assert.False(session.State.Poisons.IsAfflicted(player));
+
+        // Past that gate the same delivery takes and the poison says which dose it came from.
+        DaggerfallPoisonExposure levelled = dose with { TargetLevel = 5 };
+        Assert.Equal(DaggerfallPoisonAdmission.Admitted, session.InflictPoison(levelled, 136, itemId: 4242));
         Assert.True(session.State.Poisons.IsAfflicted(player));
         Assert.Equal(136, session.State.Poisons.Affliction(player)!.Archetype.Variant);
 
@@ -384,7 +395,7 @@ public sealed class DaggerfallPoisonRuntimeTests
 
         // The resistance the caller puts on the exposure is what the throw reads: the same roll that a plain
         // attempt resists is admitted once a background's own modifier is behind it, and vice versa.
-        DaggerfallPoisonExposure modified = dose with { BypassResistance = false, BiographyModifier = 30 };
+        DaggerfallPoisonExposure modified = levelled with { BypassResistance = false, BiographyModifier = 30 };
         int plain = DaggerfallPoisonPolicy.SavingThrowChance(50, DaggerfallDiseaseCareerTolerance.Normal);
         int strengthened = DaggerfallPoisonPolicy.SavingThrowChance(50, DaggerfallDiseaseCareerTolerance.Normal, modified.BiographyModifier);
         Assert.True(strengthened > plain);
