@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Buffers.Binary;
+using System.Globalization;
 using System.Numerics;
 using System.Text.Json;
 using Rusty.Engine;
@@ -550,7 +551,7 @@ internal static class PrivateersHoldContent
                 {
                     ReadOnlyMemory<byte> visualBytes = files.GetExactlyOne(visualArtifact.Path)
                         ?? throw new InvalidOperationException($"Normalized action-model visual '{visualArtifact.Path}' is not admitted.");
-                    IReadOnlyList<DaggerfallDoorMaterialBinding> materialBindings = ReadActionModelMaterials(
+                    IReadOnlyList<DaggerfallMeshMaterialBinding> materialBindings = ReadActionModelMaterials(
                         visualBytes, actionId, worldMaterialSlots, diagnostics);
                     DaggerfallDoorVisual visual = new DaggerfallDoorVisual(visualArtifact.Path, visualArtifact.Sha256, materialBindings).Validate();
                     result.Add(new DaggerfallDungeonActionModelDefinition(
@@ -581,7 +582,7 @@ internal static class PrivateersHoldContent
         }
     }
 
-    private static IReadOnlyList<DaggerfallDoorMaterialBinding> ReadActionModelMaterials(
+    private static IReadOnlyList<DaggerfallMeshMaterialBinding> ReadActionModelMaterials(
         ReadOnlyMemory<byte> bytes,
         string actionId,
         IReadOnlyDictionary<string, uint> worldMaterialSlots,
@@ -589,7 +590,7 @@ internal static class PrivateersHoldContent
     {
         using JsonDocument document = JsonDocument.Parse(bytes);
         JsonElement root = DaggerfallBaseContent.Object(document.RootElement, $"action model '{actionId}' visual artifact", diagnostics);
-        List<DaggerfallDoorMaterialBinding> bindings = [];
+        List<DaggerfallMeshMaterialBinding> bindings = [];
         HashSet<uint> localSlots = [];
         foreach (JsonElement value in DaggerfallBaseContent.Array(root, "materialSlots", diagnostics))
         {
@@ -606,7 +607,7 @@ internal static class PrivateersHoldContent
                 diagnostics.Add($"Action model '{actionId}' visual refers to missing material resource '{resourceId}'.");
                 continue;
             }
-            bindings.Add(new DaggerfallDoorMaterialBinding(checked((uint)local), worldSlot));
+            bindings.Add(new DaggerfallMeshMaterialBinding(checked((uint)local), worldSlot));
         }
         if (bindings.Count == 0) diagnostics.Add($"Action model '{actionId}' visual artifact has no admitted material slots.");
         return bindings.OrderBy(binding => binding.MeshSlot).ToArray();
@@ -772,9 +773,9 @@ internal static class PrivateersHoldContent
                         diagnostics.Add($"Normalized RDB door '{identity}' has no separately published visual artifact.");
                         continue;
                     }
-                    DaggerfallDoorMaterialBinding[] bindings = materialIds.OrderBy(material => material, StringComparer.Ordinal)
+                    DaggerfallMeshMaterialBinding[] bindings = materialIds.OrderBy(material => material, StringComparer.Ordinal)
                         .Select(material => worldMaterialSlots.TryGetValue(material, out uint worldSlot)
-                            ? new DaggerfallDoorMaterialBinding(worldSlot, worldSlot)
+                            ? new DaggerfallMeshMaterialBinding(worldSlot, worldSlot)
                             : throw new InvalidOperationException($"Normalized RDB door '{identity}' refers to missing material '{material}'."))
                         .ToArray();
                     result.Add(new DaggerfallRdbDoorDefinition(identity, position, rotation, minimum, maximum, kind, startingLock,
@@ -1584,10 +1585,13 @@ internal static class PrivateersHoldContent
                     resource => resource.Id,
                     resource => new NormalizedClassicMediaResource(resource.Id, resource.Kind, resource.RelativePath, resource.Hash, resource.ByteLength),
                     StringComparer.Ordinal));
+            IReadOnlyList<DaggerfallMissileVisual> worldVisuals = ReadClassicWorldVisuals(
+                root, publicationRoot, artifacts, files, diagnostics);
             return (Array.AsReadOnly(audio.ToArray()), new NormalizedClassicPresentation(weapons, effects)
             {
                 InventoryIcons = new ReadOnlyDictionary<string, string>(icons),
                 Resources = publishedResources,
+                WorldVisuals = worldVisuals,
             });
         }
         catch (JsonException exception)
@@ -1595,6 +1599,175 @@ internal static class PrivateersHoldContent
             diagnostics.Add($"Generated classic media manifest is not valid JSON: {exception.Message}");
             return ([], NormalizedClassicPresentation.Empty);
         }
+    }
+
+    /// <summary>
+    /// Reads the world visuals a site's classic publication carries from classic mesh geometry.
+    /// </summary>
+    /// <remarks>
+    /// A world visual is admitted from the artifacts it names, not from its own description of them: the
+    /// import manifest has to carry the mesh and every texture path at the declared digest, and the bodies
+    /// have to be present. A descriptor therefore cannot show a mesh or a texture the site did not publish.
+    /// </remarks>
+    private static IReadOnlyList<DaggerfallMissileVisual> ReadClassicWorldVisuals(
+        JsonElement root,
+        string publicationRoot,
+        IReadOnlyDictionary<string, ContentSha256> artifacts,
+        AdmittedFiles files,
+        DaggerfallContentDiagnostics diagnostics)
+    {
+        List<DaggerfallMissileVisual> visuals = [];
+        if (!root.TryGetProperty("worldVisuals", out JsonElement section))
+        {
+            // The publication always states the section, so its absence means this sidecar was not
+            // produced with the visual the site is supposed to carry rather than that it carries none.
+            diagnostics.Add("Classic media manifest states no world visuals, which every published sidecar states.");
+            return visuals;
+        }
+
+        if (section.ValueKind != JsonValueKind.Array)
+        {
+            diagnostics.Add("Classic world visuals must be an array.");
+            return visuals;
+        }
+
+        HashSet<string> mediaIds = new(StringComparer.Ordinal);
+        foreach (JsonElement value in section.EnumerateArray())
+        {
+            JsonElement visual = DaggerfallBaseContent.Object(value, "classic world visual", diagnostics);
+            DaggerfallBaseContent.RejectDuplicateProperties(visual, "classic world visual", diagnostics);
+            string mediaId = DaggerfallBaseContent.Text(visual, "mediaId", diagnostics);
+            string use = DaggerfallBaseContent.Text(visual, "use", diagnostics);
+            string meshId = DaggerfallBaseContent.Text(visual, "meshId", diagnostics);
+            string relativePath = DaggerfallBaseContent.Text(visual, "relativePath", diagnostics);
+            string path = $"{publicationRoot.TrimEnd('/')}/{relativePath}";
+            ContentSha256 digest = ContentHash(DaggerfallBaseContent.Text(visual, "contentDigest", diagnostics), diagnostics);
+            string sourceArchive = DaggerfallBaseContent.Text(visual, "sourceArchive", diagnostics);
+            long sourceRecordId = Long(visual, "sourceRecordId", diagnostics);
+            int sourceRecordOrdinal = DaggerfallBaseContent.Integer(visual, "sourceRecordOrdinal", diagnostics);
+            string sourceRecordDigest = DaggerfallBaseContent.Text(visual, "sourceRecordDigest", diagnostics);
+            if (!ValidLogicalId(mediaId) || !mediaIds.Add(mediaId))
+            {
+                diagnostics.Add($"Classic world visual '{mediaId}' has an invalid or repeated media identity.");
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(use)
+                || !uint.TryParse(meshId, NumberStyles.None, CultureInfo.InvariantCulture, out uint meshNumber)
+                || !StringComparer.Ordinal.Equals(meshId, meshNumber.ToString(CultureInfo.InvariantCulture))
+                || !ValidLogicalPath(relativePath)
+                || !ValidLogicalPath(sourceArchive)
+                || sourceRecordId != meshNumber || sourceRecordOrdinal < 0
+                || !IsSha256Hex(sourceRecordDigest))
+            {
+                diagnostics.Add($"Classic world visual '{mediaId}' does not describe its mesh, artifact, or source record.");
+                continue;
+            }
+
+            if (!artifacts.TryGetValue(path, out ContentSha256 artifact) || artifact != digest)
+            {
+                diagnostics.Add($"Classic world visual '{mediaId}' names '{relativePath}', which the import manifest does not admit at '{digest}'.");
+                continue;
+            }
+
+            if (files.GetExactlyOne(path) is not ReadOnlyMemory<byte> bytes)
+            {
+                diagnostics.Add($"Classic world visual '{mediaId}' has no published mesh body at '{relativePath}'.");
+                continue;
+            }
+
+            // The descriptor states the texture each of the mesh's own material slots draws with; the
+            // slots themselves are read from the artifact, so the binding describes what will be drawn.
+            Dictionary<string, DaggerfallMissileTextureBinding> textureByMaterial = new(StringComparer.Ordinal);
+            bool usable = true;
+            foreach (JsonElement material in DaggerfallBaseContent.Array(visual, "materials", diagnostics))
+            {
+                JsonElement texture = DaggerfallBaseContent.Object(material, "classic world visual material", diagnostics);
+                string materialResourceId = DaggerfallBaseContent.Text(texture, "materialResourceId", diagnostics);
+                string textureRelativePath = DaggerfallBaseContent.Text(texture, "relativePath", diagnostics);
+                string texturePath = $"{publicationRoot.TrimEnd('/')}/{textureRelativePath}";
+                ContentSha256 textureDigest = ContentHash(DaggerfallBaseContent.Text(texture, "contentDigest", diagnostics), diagnostics);
+                long byteLength = Long(texture, "byteLength", diagnostics);
+                if (!ValidLogicalPath(textureRelativePath)
+                    || !artifacts.TryGetValue(texturePath, out ContentSha256 admitted) || admitted != textureDigest
+                    || files.GetExactlyOne(texturePath) is not ReadOnlyMemory<byte> textureBytes || textureBytes.Length != byteLength)
+                {
+                    diagnostics.Add($"Classic world visual '{mediaId}' names texture '{textureRelativePath}', which the import manifest does not admit at '{textureDigest}'.");
+                    usable = false;
+                    continue;
+                }
+
+                if (!textureByMaterial.TryAdd(materialResourceId, new DaggerfallMissileTextureBinding(0, texturePath, textureDigest)))
+                {
+                    diagnostics.Add($"Classic world visual '{mediaId}' repeats material '{materialResourceId}'.");
+                    usable = false;
+                }
+            }
+
+            if (!usable)
+            {
+                continue;
+            }
+
+            try
+            {
+                IReadOnlyList<DaggerfallMissileTextureBinding> textures = ReadMissileTextures(bytes, mediaId, textureByMaterial, diagnostics);
+                visuals.Add(new DaggerfallMissileVisual(mediaId, use, path, artifact, textures).Validate());
+            }
+            catch (ArgumentException exception)
+            {
+                diagnostics.Add($"Classic world visual '{mediaId}' is invalid: {exception.Message}");
+            }
+        }
+
+        return Array.AsReadOnly(visuals.OrderBy(visual => visual.MediaId, StringComparer.Ordinal).ToArray());
+    }
+
+    /// <summary>Binds a missile mesh's own material slots to the textures its descriptor publishes.</summary>
+    private static IReadOnlyList<DaggerfallMissileTextureBinding> ReadMissileTextures(
+        ReadOnlyMemory<byte> bytes,
+        string mediaId,
+        IReadOnlyDictionary<string, DaggerfallMissileTextureBinding> textureByMaterial,
+        DaggerfallContentDiagnostics diagnostics)
+    {
+        using JsonDocument document = JsonDocument.Parse(bytes);
+        JsonElement root = DaggerfallBaseContent.Object(document.RootElement, $"missile visual '{mediaId}' artifact", diagnostics);
+        List<DaggerfallMissileTextureBinding> textures = [];
+        HashSet<uint> slots = [];
+        HashSet<string> drawn = new(StringComparer.Ordinal);
+        foreach (JsonElement value in DaggerfallBaseContent.Array(root, "materialSlots", diagnostics))
+        {
+            JsonElement slot = DaggerfallBaseContent.Object(value, $"missile visual '{mediaId}' material slot", diagnostics);
+            int local = DaggerfallBaseContent.Integer(slot, "slot", diagnostics);
+            string resourceId = DaggerfallBaseContent.Text(slot, "material", diagnostics);
+            if (local < 0 || !slots.Add(checked((uint)Math.Max(local, 0))))
+            {
+                diagnostics.Add($"Missile visual '{mediaId}' has a negative or repeated material slot.");
+                continue;
+            }
+            if (!textureByMaterial.TryGetValue(resourceId, out DaggerfallMissileTextureBinding texture))
+            {
+                diagnostics.Add($"Missile visual '{mediaId}' draws slot {local} with material '{resourceId}', which its descriptor does not carry.");
+                continue;
+            }
+
+            drawn.Add(resourceId);
+            textures.Add(texture with { MeshSlot = checked((uint)local) });
+        }
+
+        if (textures.Count == 0)
+        {
+            diagnostics.Add($"Missile visual '{mediaId}' artifact has no admitted textures.");
+        }
+
+        // Every stated texture has to be one a slot draws with: a surplus entry is a descriptor that no
+        // longer describes this mesh, and dropping it quietly would leave the mismatch unreported.
+        foreach (string unused in textureByMaterial.Keys.Where(resourceId => !drawn.Contains(resourceId)).Order(StringComparer.Ordinal))
+        {
+            diagnostics.Add($"Missile visual '{mediaId}' states texture material '{unused}', which none of its mesh's slots draws with.");
+        }
+
+        return [.. textures.OrderBy(texture => texture.MeshSlot)];
     }
 
     private static IReadOnlyDictionary<string, NormalizedClassicWeapon> ReadClassicWeapons(JsonElement root, IReadOnlyDictionary<string, ClassicMediaResource> resources, DaggerfallContentDiagnostics diagnostics)
@@ -1739,6 +1912,7 @@ internal static class PrivateersHoldContent
     // without making the runtime ruleset depend on the offline importer assembly.
     private static bool ValidLogicalId(string value) => !string.IsNullOrWhiteSpace(value) && !value.Any(char.IsWhiteSpace);
     private static bool ValidLogicalPath(string value) => !string.IsNullOrWhiteSpace(value) && !value.StartsWith("/", StringComparison.Ordinal) && !value.StartsWith('\\') && !value.Contains('\\') && !value.Split('/').Any(segment => segment is "." or ".." or "");
+    private static bool IsSha256Hex(string value) => value.Length == 64 && value.All(character => character is >= '0' and <= '9' or >= 'a' and <= 'f');
     private static bool KnownClassicMediaKind(string value) => value is "texture" or "billboard" or "enemySprite" or "weaponSprite" or "effectSprite" or "audio" or "userInterface" or "font";
 
     private static float? OptionalSingle(JsonElement objectValue, string property, DaggerfallContentDiagnostics diagnostics)
@@ -2025,6 +2199,11 @@ internal sealed record NormalizedClassicPresentation(IReadOnlyDictionary<string,
     internal IReadOnlyDictionary<string, string> CompatibleItemVisuals { get; init; } = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>());
     internal string? UnarmedVisual { get; init; }
     internal ClassicViewmodelStyle? Viewmodel { get; init; }
+    /// <summary>
+    /// The world visuals the site published from classic mesh geometry, admitted with the artifact each
+    /// one names. A missile the rules put in flight is shown through the visual it selects here.
+    /// </summary>
+    internal IReadOnlyList<DaggerfallMissileVisual> WorldVisuals { get; init; } = [];
     internal bool TryEffect(string name, out NormalizedClassicEffect? effect)
     {
         effect = Effects.FirstOrDefault(candidate => candidate.Name == name);
