@@ -459,6 +459,32 @@ public sealed class DaggerfallPoisonRuntimeTests
     }
 
     [Fact]
+    public void An_item_carries_the_poison_it_was_coated_with_across_a_save()
+    {
+        // A weapon's dose has to survive the save that carries the weapon, and a variant nothing answers is
+        // malformed current data rather than a coating that silently does nothing.
+        DaggerfallItemInstanceMetadata coated = new(
+            "dagger",
+            "steel",
+            Variant: 0,
+            CurrentCondition: 10,
+            MaximumCondition: 20,
+            Identified: true,
+            Stolen: false,
+            QuestId: null,
+            QuestItemSymbol: null,
+            Enchantment: null,
+            DaggerfallItemOwner.Player,
+            PoisonVariant: 130);
+
+        DaggerfallItemMetadataSave saved = coated.Capture();
+        Assert.Equal(130, saved.PoisonVariant);
+        Assert.Equal(130, DaggerfallItemInstanceMetadata.Restore("dagger", saved).PoisonVariant);
+        Assert.Null(DaggerfallItemInstanceMetadata.Restore("dagger", saved with { PoisonVariant = null }).PoisonVariant);
+        Assert.Throws<ArgumentException>(() => DaggerfallItemInstanceMetadata.Restore("dagger", saved with { PoisonVariant = 200 }));
+    }
+
+    [Fact]
     public void A_second_poison_is_measured_by_what_is_left_of_the_first()
     {
         // Nux Vomica's whole window is fourteen minutes and Moonseed's is four, so a whole-window comparison
