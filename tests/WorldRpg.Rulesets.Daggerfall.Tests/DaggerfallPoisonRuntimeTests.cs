@@ -26,9 +26,13 @@ public sealed class DaggerfallPoisonRuntimeTests
     /// </summary>
     private static (DaggerfallPoisonRuntime Poison, DaggerfallEffectLifecycle Effects) Runtime(DaggerCombatFixture fixture)
     {
+        DaggerfallCareerDefinition career = fixture.Definitions.Catalogs.RequireCareer("class00");
         DaggerfallEffectLifecycle effects = new(fixture.Actors, new DaggerfallEffectCatalog(
-            DaggerfallPoisonEffects.Definitions(fixture.Random, new DaggerfallVitalityConsequences(new CombatResolution()))));
-        return (new DaggerfallPoisonRuntime(effects, (_, maximum) => maximum), effects);
+            DaggerfallPoisonEffects.Definitions(
+                fixture.Random,
+                new DaggerfallVitalityConsequences(new CombatResolution()),
+                () => career)));
+        return (new DaggerfallPoisonRuntime(effects, (_, maximum) => maximum, () => career), effects);
     }
 
     /// <summary>Passes minutes the way the session does: one ordinary round per minute.</summary>
@@ -114,9 +118,12 @@ public sealed class DaggerfallPoisonRuntimeTests
         // Drothweed waits up to ten minutes and then drains three attributes a minute for up to thirty.
         Tick(effects, 40);
 
-        // Every tick of the window drains strength, so the stat is below where it started; what matters
-        // here is that it stays there when the poison completes.
-        Assert.True(Stat(victim, DaggerfallMechanicsIds.Strength) < strength);
+        // Every tick of the window drains strength by the arm's magnitude, and the whole window is spent:
+        // thirty ticks of nine, which is the minimum the fixture's random service answers. The poison's own
+        // total keeps the whole drain while the stat itself saturates at its floor.
+        DaggerfallActiveEffect livePoison = Assert.Single(effects.Active);
+        Assert.Equal(-270, DaggerfallPoisonArms.State(livePoison).Totals["strength"]);
+        Assert.Equal(0, Stat(victim, DaggerfallMechanicsIds.Strength));
         Assert.Equal(DaggerfallPoisonPhase.Complete, poison.Affliction(victim)!.Phase);
         Assert.True(poison.HasPersistingDamage(victim));
 
@@ -137,9 +144,12 @@ public sealed class DaggerfallPoisonRuntimeTests
         double stamina = Track(victim, DaggerfallMechanicsIds.Stamina);
 
         Assert.True(poison.Afflict(victim, 136));
-        // Indulcet waits up to twelve minutes and acts for up to six, two arms to the minute.
-        Tick(effects, 20);
+        // Indulcet waits up to twelve minutes and acts for up to six, two arms to the minute. The helping
+        // arm has to be seen helping before its withdrawal can mean anything.
+        Tick(effects, 13);
+        Assert.True(Stat(victim, DaggerfallMechanicsIds.Luck) > luck);
 
+        Tick(effects, 7);
         Assert.Equal(luck, Stat(victim, DaggerfallMechanicsIds.Luck));
         Assert.True(Track(victim, DaggerfallMechanicsIds.Stamina) < stamina);
         Assert.False(poison.IsAfflicted(victim));
@@ -201,6 +211,77 @@ public sealed class DaggerfallPoisonRuntimeTests
     }
 
     [Fact]
+    public void A_drug_takes_back_only_what_it_helped_with()
+    {
+        // Sursum is the archetype that separates the two halves on the same attribute kind: it helps
+        // strength and harms intelligence, so a completion that withdrew both would be visible here.
+        using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
+        Actor victim = AttributedActor(fixture);
+        (DaggerfallPoisonRuntime poison, DaggerfallEffectLifecycle effects) = Runtime(fixture);
+        double strength = Stat(victim, DaggerfallMechanicsIds.Strength);
+        double intelligence = Stat(victim, DaggerfallMechanicsIds.Intelligence);
+
+        Assert.True(poison.Afflict(victim, 137));
+        // Its onset is at most four minutes and its course two, so the fifth minute is its first arm.
+        Tick(effects, 4);
+        Assert.True(Stat(victim, DaggerfallMechanicsIds.Strength) > strength);
+        Assert.True(Stat(victim, DaggerfallMechanicsIds.Intelligence) < intelligence);
+
+        Tick(effects, 1);
+        Assert.Equal(strength, Stat(victim, DaggerfallMechanicsIds.Strength));
+        Assert.True(Stat(victim, DaggerfallMechanicsIds.Intelligence) < intelligence);
+        Assert.True(poison.HasPersistingDamage(victim));
+    }
+
+    [Fact]
+    public void A_poison_draining_an_attribute_moves_the_maximum_that_attribute_derives()
+    {
+        // Fatigue is derived from strength and endurance and magicka from intelligence, so a poison that
+        // drains one of those has to move the maximum with it; leaving it stale is the shape the disease
+        // path already avoids.
+        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        DaggerfallSession session = fixture.Session;
+        Actor player = session.State.Actors.Player.Actor;
+        StatsComponent stats = player.Get<StatsComponent>();
+        double endurance = stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).Value;
+        double maximum = stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.StaminaMaximum.Value)).Value;
+
+        Assert.True(session.State.Poisons.Afflict(player, 129));
+        // Arsenic waits ten minutes and then drains endurance a point a minute.
+        _ = session.AdvanceElapsedTime(15 * 60);
+
+        Assert.True(stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).Value < endurance);
+        Assert.True(stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.StaminaMaximum.Value)).Value < maximum);
+    }
+
+    [Fact]
+    public void A_save_names_the_effect_that_owns_a_poison_holding_attribute_damage()
+    {
+        // This is the case the parallel owner could not save: the arms are effect-backed stat sources, so
+        // the save's rule is that an active effect with the same instance owns them. The poison is fully
+        // established first, because only then are there sources for the rule to check.
+        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        DaggerfallSession session = fixture.Session;
+        Actor player = session.State.Actors.Player.Actor;
+        Assert.True(session.State.Poisons.Afflict(player, 131));
+        _ = session.AdvanceElapsedTime(11 * 60);
+        Assert.True(session.State.Poisons.HasPersistingDamage(player));
+
+        DaggerfallSavePayload payload = DaggerfallSavePayload.Read(session.CaptureSave());
+        DaggerfallActiveEffectSave effect = Assert.Single(payload.ActiveEffects, value => value.EffectKey == "Poison-Drothweed");
+        DaggerfallStatsSave stats = Assert.Single([payload.Player.Stats], value => value.Sources.Length != 0);
+        Assert.Contains(stats.Sources, source =>
+            source.Identity.Kind == DaggerfallStatSourceIdentityKind.Effect
+            && StringComparer.Ordinal.Equals(source.Identity.InstanceId, effect.Instance));
+
+        // And the rule is what makes it save: with the effect gone the same payload is refused rather than
+        // written with arms nothing can take off.
+        RulesetSavePayload orphaned = DaggerfallSavePayload.Encode(payload with { ActiveEffects = [] });
+        ArgumentException refused = Assert.Throws<ArgumentException>(() => fixture.Restore(orphaned));
+        Assert.Contains("has no matching active effect cleanup owner", refused.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void A_second_poison_only_takes_over_when_it_has_more_left_to_give()
     {
         using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
@@ -211,10 +292,16 @@ public sealed class DaggerfallPoisonRuntimeTests
         // course cannot displace it and does not shorten what is already there.
         Assert.True(poison.Afflict(player, 128));
         Assert.Equal(128, poison.Affliction(player)!.Archetype.Variant);
+        int nuxVomicaLeft = poison.Affliction(player)!.TotalMinutesRemaining;
         Assert.True(poison.Afflict(player, 129));
         Assert.Equal(129, poison.Affliction(player)!.Archetype.Variant);
+        int arsenicLeft = poison.Affliction(player)!.TotalMinutesRemaining;
+        Assert.True(arsenicLeft > nuxVomicaLeft);
+
+        // The shorter course is refused, and refusing it leaves what is running exactly where it stood.
         Assert.False(poison.Afflict(player, 128));
         Assert.Equal(129, poison.Affliction(player)!.Archetype.Variant);
+        Assert.Equal(arsenicLeft, poison.Affliction(player)!.TotalMinutesRemaining);
 
         // A variant no archetype names is answered rather than assumed.
         Assert.False(poison.Afflict(player, 127));
