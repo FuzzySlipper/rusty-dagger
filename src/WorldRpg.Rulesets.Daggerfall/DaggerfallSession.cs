@@ -185,7 +185,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             // bundle, so the resolver the director asks is this session's own: it keeps the Engine
             // resource alive for as long as the session plays that track and releases it on disposal.
             _musicBundle = music;
-            if (music is not null) _music = new DaggerfallMusicDirector(engine.Audio, ResolveMusicClip);
+            if (music is not null) _music = new DaggerfallMusicDirector(engine.Audio, ResolveMusicClip, ReportMusicRetired);
             _random = engine.Random;
             tuning = tuning.Validate();
             _definitions = definitions;

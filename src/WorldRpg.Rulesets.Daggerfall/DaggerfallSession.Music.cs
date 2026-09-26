@@ -49,63 +49,52 @@ internal sealed partial class DaggerfallSession
             // different one than the place before it, exactly as the donor's own lists rotate.
             int pick = (_musicRotation + offset) % playlist.Count;
             if (!_musicBundle.CanPlay(playlist[pick])) continue;
-            try
+            // A cue that cannot open throws out of the update and stays terminal for it. The loop it
+            // replaced was already reported by the director, so nothing ends here unreported.
+            _music.Update(context, pick);
+            if (!string.Equals(playing, _music.Playing, StringComparison.Ordinal) && _music.Playing is { } started)
             {
-                _music.Update(context, pick);
-            }
-            catch
-            {
-                // The director retires the previous loop before it resolves the next one, so a cue that
-                // cannot open has still ended the old one. The failure stays terminal for the update, but
-                // the change it already made is reported rather than left as an unreported silence.
-                ReportMusicChange(playing, context);
-                throw;
+                ReportMusicStarted(started, context);
             }
 
-            ReportMusicChange(playing, context);
             return;
         }
 
         // Nothing published answers this context. The director retires whatever played rather than
-        // holding a loop the new context does not own.
+        // holding a loop the new context does not own, and reports the retirement itself.
         _music.Stop();
-        ReportMusicChange(playing, context);
     }
 
+    /// <summary>Records that a cue started, and for which admitted context the session chose it.</summary>
+    private void ReportMusicStarted(string track, DaggerfallMusicContext context) =>
+        Report("cue.started", $"Music cue '{track}' started for context '{context}'.");
+
     /// <summary>
-    /// Records a cue change in the Engine's diagnostics: which donor track plays, and where it stopped.
+    /// Records that a cue ended, wherever it ended: a site change, a context with nothing published, a
+    /// failure to open the next cue, or session disposal.
     /// </summary>
     /// <remarks>
-    /// A score is the one part of the product with no visible projection — nothing on screen says which
-    /// track plays — so a change is published where the product publishes every other completed change.
-    /// Only a change is reported, never a heartbeat: an ordinary update must stay allocation- and
-    /// work-free, and a silent product run is still evidence that the loop never restarted.
+    /// The director owns the loop and therefore owns this report: it retires the voice before it asks
+    /// for the next clip, so a retirement the director decides is a retirement the product knows about
+    /// even when resolving the replacement throws. Only a change is reported, never a heartbeat: an
+    /// ordinary update must stay allocation- and work-free, and a silent run is still evidence that the
+    /// loop never restarted.
     /// </remarks>
-    private void ReportMusicChange(string? before, DaggerfallMusicContext context)
-    {
-        string? after = _music?.Playing;
-        if (string.Equals(before, after, StringComparison.Ordinal)) return;
-        if (after is not null)
-        {
-            _engine.Diagnostics.Publish(new DiagnosticsPublishRequest(
-                DiagnosticsSeverity.Info,
-                DiagnosticsDisposition.Accepted,
-                "daggerfall.music",
-                "cue.started",
-                $"Music cue '{after}' started for context '{context}'.",
-                string.Empty));
-        }
-        else if (before is not null)
-        {
-            _engine.Diagnostics.Publish(new DiagnosticsPublishRequest(
-                DiagnosticsSeverity.Info,
-                DiagnosticsDisposition.Accepted,
-                "daggerfall.music",
-                "cue.retired",
-                $"Music cue '{before}' retired.",
-                string.Empty));
-        }
-    }
+    private void ReportMusicRetired(string track) => Report("cue.retired", $"Music cue '{track}' retired.");
+
+    /// <summary>
+    /// Publishes one music change. A score is the one part of the product with no visible projection —
+    /// nothing on screen says which track plays — so a change is published where the product publishes
+    /// every other completed change.
+    /// </summary>
+    private void Report(string code, string message) =>
+        _engine.Diagnostics.Publish(new DiagnosticsPublishRequest(
+            DiagnosticsSeverity.Info,
+            DiagnosticsDisposition.Accepted,
+            "daggerfall.music",
+            code,
+            message,
+            string.Empty));
 
     /// <summary>The donor context the admitted world answers.</summary>
     private DaggerfallMusicContext MusicContext() => _activeProfileKey.Kind switch
@@ -118,20 +107,14 @@ internal sealed partial class DaggerfallSession
     private void ChangeMusicSite()
     {
         if (_music is null) return;
-        string? playing = _music.Playing;
         _musicRotation++;
+        // The director reports the retirement, so this only has to move the rotation on.
         _music.Stop();
-        ReportMusicChange(playing, MusicContext());
     }
 
     private void DisposeMusic(ref Exception? failure)
     {
-        try
-        {
-            string? playing = _music?.Playing;
-            _music?.Dispose();
-            ReportMusicChange(playing, MusicContext());
-        }
+        try { _music?.Dispose(); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         try { DisposeAll([.. _musicClips.Values]); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
