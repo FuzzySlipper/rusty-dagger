@@ -151812,8 +151812,8 @@
       "digest": "cca317a742d13a6aa1ba323ba45d12c2e716f089cbd86e1d2b1e7c3262d66bfb",
       "archiveKey": null,
       "archiveOrdinal": null,
-      "disposition": "unused",
-      "note": "Supplied and admitted, but no consumer claims it."
+      "disposition": "imported",
+      "note": "Claimed by the publication plan\u0027s source set."
     },
     {
       "id": "CNT-018.file.TEXTURE.002",
@@ -163166,9 +163166,9 @@
       "familyId": "CNT-018",
       "documentedDisposition": "current-partial",
       "discovered": 472,
-      "imported": 104,
+      "imported": 105,
       "requiredPending": 0,
-      "unused": 368,
+      "unused": 367,
       "duplicate": 0,
       "excluded": 0,
       "malformed": 0,

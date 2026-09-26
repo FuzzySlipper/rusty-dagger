@@ -479,6 +479,11 @@
       "byteLen": 2586
     },
     {
+      "sourcePath": "arena2/TEXTURE.001",
+      "contentHash": "cca317a742d13a6aa1ba323ba45d12c2e716f089cbd86e1d2b1e7c3262d66bfb",
+      "byteLen": 2586
+    },
+    {
       "sourcePath": "arena2/TEXTURE.009",
       "contentHash": "c010ab9102dfd2f3e27eb322bf4e325fb94d9d775b5d2986fed48341b23ffd58",
       "byteLen": 35594
@@ -1152,8 +1157,8 @@
   "artifacts": [
     {
       "relativePath": "geometry/index.json",
-      "contentHash": "7924da26fa41e8e761962b9e36be94e56ef0033967dee2e4a6a12b0c166a09cb",
-      "byteLen": 201456,
+      "contentHash": "c784eedb615a5eb09cfbf406adb95a6d0832760a345445ae144da44a32533f09",
+      "byteLen": 202206,
       "dependsOnPaths": [
         "geometry/mesh-108.json",
         "geometry/mesh-109.json",
@@ -1312,7 +1317,8 @@
         "geometry/mesh-751.json",
         "geometry/mesh-752.json",
         "geometry/mesh-753.json",
-        "geometry/mesh-754.json"
+        "geometry/mesh-754.json",
+        "geometry/mesh-99800.json"
       ]
     },
     {
@@ -2264,6 +2270,12 @@
       "dependsOnPaths": []
     },
     {
+      "relativePath": "geometry/mesh-99800.json",
+      "contentHash": "14f48a7f3043784eb60cbe0f90f59f759a793a288b5c1e5363731a1d14dc792b",
+      "byteLen": 7203,
+      "dependsOnPaths": []
+    },
+    {
       "relativePath": "media/audio/clips/audio-melee-dagger-swing.wav",
       "contentHash": "52bef8e0b2e58e8ea4d9b00a5071d5c44f9beda27d57b0832c2e2d60046984fd",
       "byteLen": 1331,
@@ -2307,8 +2319,8 @@
     },
     {
       "relativePath": "media/classic/manifest.json",
-      "contentHash": "111c688ba7799192bfb0a08f851ee52142a0f58c93586f125876f6b435e6a92b",
-      "byteLen": 1280231,
+      "contentHash": "1115f7fb1934b60415ea58c90fa436ccc83058c1c698efd28bd068eba095c490",
+      "byteLen": 1281411,
       "dependsOnPaths": [
         "media/audio/clips/audio-melee-dagger-swing.wav",
         "media/audio/clips/audio-melee-hit-1.wav",
@@ -2463,7 +2475,9 @@
         "media/ui/window-merchant-cost.png",
         "media/ui/window-rest-hours-past.png",
         "media/ui/window-rest-hours-remaining.png",
-        "media/ui/window-rest-panel.png"
+        "media/ui/window-rest-panel.png",
+        "media/world-visuals/texture-0-72.png",
+        "media/world-visuals/texture-1-121.png"
       ]
     },
     {
@@ -5246,9 +5260,21 @@
       "dependsOnPaths": []
     },
     {
+      "relativePath": "media/world-visuals/texture-0-72.png",
+      "contentHash": "ae27c0f684f657a632361ef54d1edf72812555d4996ffa0c0d53b4f7c0347fb4",
+      "byteLen": 104,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/world-visuals/texture-1-121.png",
+      "contentHash": "25b665609c72f79adc35d70f129e9b92a29481949068abf6611dd06dc6823906",
+      "byteLen": 104,
+      "dependsOnPaths": []
+    },
+    {
       "relativePath": "normalized.json",
-      "contentHash": "8c306d78eff242ee54b9f4449b2ef575cd405217f079b9e6dafb868c19c70832",
-      "byteLen": 53430101,
+      "contentHash": "0c75068dc54a88cd6b9dcb7ff7bb3db5697733d70e1fc37cc042c55dc0196599",
+      "byteLen": 53436537,
       "dependsOnPaths": [
         "geometry/index.json",
         "geometry/mesh-108.json",
@@ -5409,6 +5435,7 @@
         "geometry/mesh-752.json",
         "geometry/mesh-753.json",
         "geometry/mesh-754.json",
+        "geometry/mesh-99800.json",
         "media/classic/manifest.json",
         "media/dungeon/manifest.json",
         "resources/charing/exterior/catalog.json",
@@ -5424,8 +5451,8 @@
     },
     {
       "relativePath": "sources/manifest.json",
-      "contentHash": "2d2380c36a19ea58d5f9770eda0a553935e34f622f212f285a14d36a71dbba82",
-      "byteLen": 6847844,
+      "contentHash": "15aeccbfe3b7aef7ef0fa2eab4bcb895fb6065e3132a25b784a3b935839fb574",
+      "byteLen": 6847847,
       "dependsOnPaths": []
     },
     {

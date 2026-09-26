@@ -463,7 +463,7 @@ public sealed class SpriteAuthoringTests
             [], [], [], new(font.Id, "default", 1, 1, Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, checked((ushort)index))).ToArray()),
             [new(font.Id, "default", 1, 1, Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, checked((ushort)index))).ToArray())],
             [new("map.fmap0i17", MapArtKind.RegionMap, [17], "DaggerfallTravelMapWindow region map", "arena2/FMAP0I17.IMG", 320, 160, false)],
-            [.. EmptyMapRegions().Where(region => region.Region != 17), new(17, ["map.fmap0i17"])], []);
+            [.. EmptyMapRegions().Where(region => region.Region != 17), new(17, ["map.fmap0i17"])], [], []);
         CanonicalImportManifest manifest = new(
             1,
             "daggerfall-import",

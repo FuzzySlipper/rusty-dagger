@@ -3,11 +3,11 @@
   "inventorySource": "arena2/ARCH3D.BSA",
   "summary": {
     "records": 10251,
-    "published": 173,
+    "published": 174,
     "unresolvable": 0,
     "missing": 0,
     "duplicate": 14,
-    "unused": 10064
+    "unused": 10063
   },
   "meshes": [
     {
@@ -6542,6 +6542,33 @@
         }
       ],
       "contentDigest": "3619038c0c0af8ac4c904414af557673efb6fc9b2603bf97234cd27caf103410"
+    },
+    {
+      "schemaVersion": 1,
+      "meshId": "99800",
+      "sourceRecordId": 99800,
+      "sourceOrdinal": 772,
+      "artifactId": "geometry/mesh-99800",
+      "relativePath": "geometry/mesh-99800.json",
+      "vertices": 36,
+      "triangles": 14,
+      "materials": [
+        {
+          "archive": 1,
+          "record": 121,
+          "materialResourceId": "material/texture-1-121",
+          "disposition": "resolved",
+          "note": ""
+        },
+        {
+          "archive": 0,
+          "record": 72,
+          "materialResourceId": "material/texture-0-72",
+          "disposition": "resolved",
+          "note": ""
+        }
+      ],
+      "contentDigest": "14f48a7f3043784eb60cbe0f90f59f759a793a288b5c1e5363731a1d14dc792b"
     }
   ],
   "unresolvedMeshes": []

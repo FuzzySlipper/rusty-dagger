@@ -1082,8 +1082,8 @@
   "artifacts": [
     {
       "relativePath": "geometry/index.json",
-      "contentHash": "669b41f3f592cfcb94c162c6b219c55e6c679afc4bd45d31f85f16ca656ffc11",
-      "byteLen": 141173,
+      "contentHash": "c45832532a36e23575d4c8e8dded448a04821a4ed4379edc751631554bfa6e52",
+      "byteLen": 141923,
       "dependsOnPaths": [
         "geometry/mesh-41017.json",
         "geometry/mesh-41018.json",
@@ -1221,7 +1221,8 @@
         "geometry/mesh-72008.json",
         "geometry/mesh-72011.json",
         "geometry/mesh-72019.json",
-        "geometry/mesh-74009.json"
+        "geometry/mesh-74009.json",
+        "geometry/mesh-99800.json"
       ]
     },
     {
@@ -2047,6 +2048,12 @@
       "dependsOnPaths": []
     },
     {
+      "relativePath": "geometry/mesh-99800.json",
+      "contentHash": "14f48a7f3043784eb60cbe0f90f59f759a793a288b5c1e5363731a1d14dc792b",
+      "byteLen": 7203,
+      "dependsOnPaths": []
+    },
+    {
       "relativePath": "media/audio/clips/audio-melee-dagger-swing.wav",
       "contentHash": "52bef8e0b2e58e8ea4d9b00a5071d5c44f9beda27d57b0832c2e2d60046984fd",
       "byteLen": 1331,
@@ -2090,8 +2097,8 @@
     },
     {
       "relativePath": "media/classic/manifest.json",
-      "contentHash": "111c688ba7799192bfb0a08f851ee52142a0f58c93586f125876f6b435e6a92b",
-      "byteLen": 1280231,
+      "contentHash": "1115f7fb1934b60415ea58c90fa436ccc83058c1c698efd28bd068eba095c490",
+      "byteLen": 1281411,
       "dependsOnPaths": [
         "media/audio/clips/audio-melee-dagger-swing.wav",
         "media/audio/clips/audio-melee-hit-1.wav",
@@ -2246,7 +2253,9 @@
         "media/ui/window-merchant-cost.png",
         "media/ui/window-rest-hours-past.png",
         "media/ui/window-rest-hours-remaining.png",
-        "media/ui/window-rest-panel.png"
+        "media/ui/window-rest-panel.png",
+        "media/world-visuals/texture-0-72.png",
+        "media/world-visuals/texture-1-121.png"
       ]
     },
     {
@@ -4798,9 +4807,21 @@
       "dependsOnPaths": []
     },
     {
+      "relativePath": "media/world-visuals/texture-0-72.png",
+      "contentHash": "ae27c0f684f657a632361ef54d1edf72812555d4996ffa0c0d53b4f7c0347fb4",
+      "byteLen": 104,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/world-visuals/texture-1-121.png",
+      "contentHash": "25b665609c72f79adc35d70f129e9b92a29481949068abf6611dd06dc6823906",
+      "byteLen": 104,
+      "dependsOnPaths": []
+    },
+    {
       "relativePath": "normalized.json",
-      "contentHash": "eb5e32aaa692f1904ae8916e74a2f415937a001125c37dc0dbb40b3b13961387",
-      "byteLen": 8178518,
+      "contentHash": "b7c281ab2953348cd87a736c57fc140915b06da92d0e3ae4ad6a07d631cc7d25",
+      "byteLen": 8178548,
       "dependsOnPaths": [
         "geometry/index.json",
         "geometry/mesh-41017.json",
@@ -4940,6 +4961,7 @@
         "geometry/mesh-72011.json",
         "geometry/mesh-72019.json",
         "geometry/mesh-74009.json",
+        "geometry/mesh-99800.json",
         "media/classic/manifest.json",
         "media/dungeon/manifest.json",
         "resources/privateer-s-hold/catalog.json",

@@ -794560,6 +794560,7 @@
         "action": null
       }
     ],
+    "interiorBuilding": null,
     "actions": [
       {
         "id": "action/b0000001-rdb/0/-1/flat-0",

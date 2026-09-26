@@ -1040,7 +1040,7 @@ public sealed class SpriteWorkbenchProductTests
                 [], [], [], new(font.Id, "default", 1, 1, Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, checked((ushort)index))).ToArray()),
                 [new(font.Id, "default", 1, 1, Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, checked((ushort)index))).ToArray())],
                 [],
-                Enumerable.Range(0, 62).Select(region => new ClassicMapRegionManifest(region, [])).ToArray(), []);
+                Enumerable.Range(0, 62).Select(region => new ClassicMapRegionManifest(region, [])).ToArray(), [], []);
             byte[] dungeonBytes = Serialize(dungeon);
             byte[] classicBytes = Serialize(classic);
             ImportProvenance provenance = new(ImportProvenance.CurrentSchemaVersion, "daggerfall-import", 1, [new(LogicalSourceRecord.CurrentSchemaVersion, "arena2/test", ContentDigest.Compute("source"u8), 6, 1)]);

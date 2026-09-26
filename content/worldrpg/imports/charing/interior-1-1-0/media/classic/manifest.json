@@ -50994,5 +50994,36 @@
       "generator": "gpt-image-2",
       "prompt": "Create a standalone wide dark retro fantasy RPG title-bar panel with no text, letters, icons, logos, or item art. Aged charcoal slate center, muted antique-brass edge bands, rivets, and slight moss-green oxidation; readable cream DOM heading text overlays the center. Original hand-painted pixel-art-era UI chrome, not copied from any game."
     }
+  ],
+  "worldVisuals": [
+    {
+      "mediaId": "visual.missile.arrow",
+      "use": "the in-flight arrow Game/DaggerfallMissile.cs creates",
+      "meshId": "99800",
+      "relativePath": "geometry/mesh-99800.json",
+      "contentDigest": "14f48a7f3043784eb60cbe0f90f59f759a793a288b5c1e5363731a1d14dc792b",
+      "sourceArchive": "arena2/ARCH3D.BSA",
+      "sourceRecordId": 99800,
+      "sourceRecordOrdinal": 772,
+      "sourceRecordDigest": "26e251e8b5cb89821847de2e7943eee5570627f4132a5720e71b1412e868d8bf",
+      "materials": [
+        {
+          "archive": 1,
+          "record": 121,
+          "materialResourceId": "material/texture-1-121",
+          "relativePath": "media/world-visuals/texture-1-121.png",
+          "contentDigest": "25b665609c72f79adc35d70f129e9b92a29481949068abf6611dd06dc6823906",
+          "byteLength": 104
+        },
+        {
+          "archive": 0,
+          "record": 72,
+          "materialResourceId": "material/texture-0-72",
+          "relativePath": "media/world-visuals/texture-0-72.png",
+          "contentDigest": "ae27c0f684f657a632361ef54d1edf72812555d4996ffa0c0d53b4f7c0347fb4",
+          "byteLength": 104
+        }
+      ]
+    }
   ]
 }

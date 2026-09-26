@@ -1102,8 +1102,8 @@
   "artifacts": [
     {
       "relativePath": "geometry/index.json",
-      "contentHash": "49f23d8a7038bb6b0f9770f0b624c31952a6f79108c10016c4bc8afde80e531f",
-      "byteLen": 179693,
+      "contentHash": "a2fee75c12c84cf086a8bd3342bedcc5456b1d6ee06a994d21a2b9e300486361",
+      "byteLen": 180443,
       "dependsOnPaths": [
         "geometry/mesh-41006.json",
         "geometry/mesh-41019.json",
@@ -1277,7 +1277,8 @@
         "geometry/mesh-72015.json",
         "geometry/mesh-72016.json",
         "geometry/mesh-72019.json",
-        "geometry/mesh-72100.json"
+        "geometry/mesh-72100.json",
+        "geometry/mesh-99800.json"
       ]
     },
     {
@@ -2319,6 +2320,12 @@
       "dependsOnPaths": []
     },
     {
+      "relativePath": "geometry/mesh-99800.json",
+      "contentHash": "14f48a7f3043784eb60cbe0f90f59f759a793a288b5c1e5363731a1d14dc792b",
+      "byteLen": 7203,
+      "dependsOnPaths": []
+    },
+    {
       "relativePath": "media/audio/clips/audio-melee-dagger-swing.wav",
       "contentHash": "52bef8e0b2e58e8ea4d9b00a5071d5c44f9beda27d57b0832c2e2d60046984fd",
       "byteLen": 1331,
@@ -2362,8 +2369,8 @@
     },
     {
       "relativePath": "media/classic/manifest.json",
-      "contentHash": "111c688ba7799192bfb0a08f851ee52142a0f58c93586f125876f6b435e6a92b",
-      "byteLen": 1280231,
+      "contentHash": "1115f7fb1934b60415ea58c90fa436ccc83058c1c698efd28bd068eba095c490",
+      "byteLen": 1281411,
       "dependsOnPaths": [
         "media/audio/clips/audio-melee-dagger-swing.wav",
         "media/audio/clips/audio-melee-hit-1.wav",
@@ -2518,7 +2525,9 @@
         "media/ui/window-merchant-cost.png",
         "media/ui/window-rest-hours-past.png",
         "media/ui/window-rest-hours-remaining.png",
-        "media/ui/window-rest-panel.png"
+        "media/ui/window-rest-panel.png",
+        "media/world-visuals/texture-0-72.png",
+        "media/world-visuals/texture-1-121.png"
       ]
     },
     {
@@ -5133,9 +5142,21 @@
       "dependsOnPaths": []
     },
     {
+      "relativePath": "media/world-visuals/texture-0-72.png",
+      "contentHash": "ae27c0f684f657a632361ef54d1edf72812555d4996ffa0c0d53b4f7c0347fb4",
+      "byteLen": 104,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/world-visuals/texture-1-121.png",
+      "contentHash": "25b665609c72f79adc35d70f129e9b92a29481949068abf6611dd06dc6823906",
+      "byteLen": 104,
+      "dependsOnPaths": []
+    },
+    {
       "relativePath": "normalized.json",
-      "contentHash": "c2747c86787aa922116bb487b25180f1ee427580fe7c30032ce6562fe36b8fe6",
-      "byteLen": 15337423,
+      "contentHash": "7a262b588efd06574906cf04cc3bf0213db3d763d30979eddbc4e1a91b407912",
+      "byteLen": 15337453,
       "dependsOnPaths": [
         "geometry/index.json",
         "geometry/mesh-41006.json",
@@ -5311,6 +5332,7 @@
         "geometry/mesh-72016.json",
         "geometry/mesh-72019.json",
         "geometry/mesh-72100.json",
+        "geometry/mesh-99800.json",
         "media/classic/manifest.json",
         "media/dungeon/manifest.json",
         "resources/castle-necromoghan/catalog.json",
