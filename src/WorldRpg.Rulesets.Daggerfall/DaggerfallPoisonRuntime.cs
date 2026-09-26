@@ -100,10 +100,14 @@ internal sealed class DaggerfallPoisonRuntime
             DaggerfallPoisonArms.CompleteCourse(running, incumbent);
         }
 
+        // The ordinal continues past every poison already carrying one, so a dose applied after a reload
+        // cannot repeat an ordinal a restored poison is still drawing from. Two arms of one poison never
+        // share an ordinal either, because the counter is advanced per arm as the course ticks.
+        _draws = Math.Max(_draws, Active.Select(effect => DaggerfallPoisonArms.State(effect).Draw).DefaultIfEmpty(0).Max()) + 1;
         DaggerfallPoisonState state = new(
             applying,
             Admitted: false,
-            Draw: ++_draws,
+            Draw: _draws,
             new Dictionary<string, int>(StringComparer.Ordinal));
         DaggerfallEffectAdmissionOutcome started = _effects.Start(new DaggerfallEffectRequest(
             InstanceFor(archetype),
