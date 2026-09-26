@@ -1,4 +1,7 @@
 using Rusty.Engine;
+using Rusty.Engine.Entities;
+using Rusty.Engine.Mechanics;
+using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Effects;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
@@ -170,6 +173,46 @@ internal static class DaggerfallPoisonPolicy
         return DaggerfallDiseasePolicy.DiseaseSavingThrowAmount(chance, roll) == 0
             ? DaggerfallPoisonAdmission.Resisted
             : DaggerfallPoisonAdmission.Admitted;
+    }
+
+    /// <summary>
+    /// FORM-06's infliction, as the donor orders it: the saving throw decides on the roll the caller drew,
+    /// and an admitted attempt starts the archetype's own effect on the target. The roll is taken even when
+    /// the attempt turns out to be immune, because the donor draws before it settles the target's level.
+    /// </summary>
+    /// <param name="poisons">The owner that starts the admitted poison, so admission and the effect it starts are one step.</param>
+    /// <param name="actors">The actors an admitted poison can be started on.</param>
+    /// <param name="exposure">What the throw reads, with the caller's own modifiers already applied.</param>
+    /// <param name="variant">The classic variant the delivery carries.</param>
+    /// <param name="roll">The caller's own 1-100 throw.</param>
+    internal static DaggerfallPoisonAdmission InflictPoison(
+        DaggerfallPoisonRuntime poisons,
+        ActorsState actors,
+        DaggerfallPoisonExposure exposure,
+        int variant,
+        int roll)
+    {
+        ArgumentNullException.ThrowIfNull(poisons);
+        ArgumentNullException.ThrowIfNull(actors);
+        ArgumentNullException.ThrowIfNull(exposure);
+        DaggerfallPoisonAdmission decided = Admit(exposure, roll);
+        if (decided != DaggerfallPoisonAdmission.Admitted) return decided;
+        // The player is not one of the actors carrying a body, so the durable-id lookup that answers for a
+        // site actor would report the player missing; the player's own state answers for it instead.
+        Actor target = actors.Player.DurableId == exposure.TargetId
+            ? actors.Player.Actor
+            : actors.TryGet(exposure.TargetId, out ActorState? actor) && actor is not null
+                ? actor.Actor
+                : throw new ArgumentException($"An admitted poison names missing actor {exposure.TargetId}.", nameof(exposure));
+
+        if (!poisons.Afflict(target, variant))
+        {
+            // Admission and the effect it starts are one step: a variant no archetype answers cannot come
+            // back as a quietly successful poisoning.
+            throw new ArgumentException($"Admitted poison variant {variant} is not one of the twelve archetypes.", nameof(variant));
+        }
+
+        return DaggerfallPoisonAdmission.Admitted;
     }
 
     /// <summary>
