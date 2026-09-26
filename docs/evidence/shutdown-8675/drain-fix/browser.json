@@ -1,0 +1,74 @@
+{
+  "mission": "Dagger bounded entry to world and one brief W action on exact 6edeecef diagnostic-drain fix",
+  "configured_model_identity": "gpt-5.6-luna",
+  "runtime_model_metadata": "unavailable",
+  "service_url": "http://127.0.0.1:48315",
+  "host_url": "http://127.0.0.1:45691",
+  "profile": "dagger-8675",
+  "session_id": "69e2f841-a357-4c80-8b64-4036b5905726",
+  "slot_id": "slot-1",
+  "events_path": "/tmp/868x-playtest-state/browser/69e2f841-a357-4c80-8b64-4036b5905726/events.jsonl",
+  "startup": {
+    "first_attempt": "connection refused before a live session existed",
+    "retry": "succeeded within the supplied startup window",
+    "begin": "clicked the visible Begin button once",
+    "cinematic": "waited without additional key input until the music cue and world appeared"
+  },
+  "captures": {
+    "entry": {
+      "artifact_id": "69a3ae33-0f20-4764-9fd2-cf62e33c27ef",
+      "path": "/tmp/868x-playtest-state/browser/69e2f841-a357-4c80-8b64-4036b5905726/69a3ae33-0f20-4764-9fd2-cf62e33c27ef.png",
+      "visual": "Black entry screen with broken image icon and centered Rusty Dagger text; Begin near lower center and Menu · Esc at top right."
+    },
+    "world_before_w": {
+      "artifact_id": "c32a98fe-d1ba-45cc-a5a6-aeef6b1d0844",
+      "path": "/tmp/868x-playtest-state/browser/69e2f841-a357-4c80-8b64-4036b5905726/c32a98fe-d1ba-45cc-a5a6-aeef6b1d0844.png",
+      "visual": "First-person brown block-stone dungeon corridor and doorway/stone frame at the right, centered crosshair, white dagger at lower right, Exploring label, and HUD health 31/31, stamina 5568/5568, magicka 100/120."
+    },
+    "world_after_w": {
+      "artifact_id": "eeb0313a-490d-4765-a370-572741684817",
+      "path": "/tmp/868x-playtest-state/browser/69e2f841-a357-4c80-8b64-4036b5905726/eeb0313a-490d-4765-a370-572741684817.png",
+      "visual": "After one 350 ms W hold, the viewpoint changed to a closer brown stone wall/ledge; crosshair, dagger, Exploring label, and HUD remained visible."
+    },
+    "cinematic_last_observed": {
+      "artifact_id": "6b6b7e5b-2b54-4ea0-bafe-248d43cfdeaa",
+      "path": "/tmp/868x-playtest-state/browser/69e2f841-a357-4c80-8b64-4036b5905726/6b6b7e5b-2b54-4ea0-bafe-248d43cfdeaa.png",
+      "visual": "Torch-lit cinematic with two bald figures in a dark room."
+    }
+  },
+  "input": {
+    "action": "hold W",
+    "key_code": 87,
+    "duration_ms": 350,
+    "completed_steps": 1
+  },
+  "page_errors": [],
+  "warnings": [
+    "inventory frame art is not published by this session: inventory.skin.grid-slot-slate.v1, inventory.skin.panel-slate.v1, inventory.skin.titlebar-slate.v1",
+    "WebGL GPU stall due to ReadPixels performance warnings"
+  ],
+  "visual_limitations": [
+    "The entry logo visibly has a broken image icon.",
+    "Missing inventory frame art warning remains; this is not a clean overall product claim.",
+    "The playtest capture reported application renderer and engine presentation as unavailable because those capture options were not requested."
+  ],
+  "operational_outcome": "pass",
+  "acceptance_mapping": "Entry launched, ordinary Begin progressed through the cinematic to a rendered world, and one brief W input produced a changed viewpoint. This is bounded playtest evidence, not a clean overall product claim.",
+  "neutral_observation": "The product visibly progressed from the entry screen through a torch-lit cinematic to a first-person stone dungeon. The W hold changed the view from a doorway/wall composition to a closer wall/ledge composition while the dagger, crosshair, and HUD persisted.",
+  "cleanup": {
+    "status": "complete",
+    "parent_host_shutdown": "exit 0; one cue.retired; no clip in use",
+    "browser_kept_open_for_parent_shutdown": true,
+    "stop_receipt": {
+      "artifact_directory": "/tmp/868x-playtest-state/browser/69e2f841-a357-4c80-8b64-4036b5905726",
+      "browser_closed": true,
+      "released": true,
+      "slot_id": "slot-1"
+    },
+    "finish_index_attempt": {
+      "status": "not_indexed",
+      "reason": "The required playtest_finish MCP state store did not contain the Crew-services CLI session after CLI stop: session file not found.",
+      "cli_stop_succeeded": true
+    }
+  }
+}
