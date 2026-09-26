@@ -294,6 +294,78 @@ public sealed class DaggerfallPoisonRuntimeTests
     }
 
     [Fact]
+    public void Forms_six_infliction_starts_the_archetype_it_admits_and_leaves_nothing_when_it_resists()
+    {
+        // The throw is the caller's, so the two outcomes are decided here rather than by the fixture's RNG.
+        using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
+        Actor player = fixture.Actors.Player.Actor;
+        (DaggerfallPoisonRuntime poison, _) = Runtime(fixture);
+        DaggerfallPoisonExposure exposure = new(
+            fixture.Actors.Player.DurableId,
+            TargetLevel: 5,
+            CareerImmune: false,
+            RaceImmune: false,
+            Willpower: 50,
+            BypassResistance: true);
+
+        Assert.Equal(DaggerfallPoisonAdmission.Admitted, DaggerfallPoisonPolicy.InflictPoison(poison, fixture.Actors, exposure, 130, 100));
+        Assert.Equal(130, poison.Affliction(player)!.Archetype.Variant);
+
+        // The same attempt without the bypass is left to the throw: the donor's amount is non-zero for a
+        // roll that fails to resist, and zero for one that throws the poison off, which starts nothing.
+        using DaggerCombatFixture second = new("nymph", playerHealth: 200d);
+        Actor other = second.Actors.Player.Actor;
+        (DaggerfallPoisonRuntime none, _) = Runtime(second);
+        DaggerfallPoisonExposure thrown = exposure with { BypassResistance = false };
+        Assert.Equal(DaggerfallPoisonAdmission.Resisted, DaggerfallPoisonPolicy.InflictPoison(none, second.Actors, thrown, 130, 1));
+        Assert.False(none.IsAfflicted(other));
+        Assert.Equal(DaggerfallPoisonAdmission.Admitted, DaggerfallPoisonPolicy.InflictPoison(none, second.Actors, thrown, 130, 100));
+        Assert.Equal(130, none.Affliction(other)!.Archetype.Variant);
+
+        // A first-level target is never poisoned, and the roll it was given is not what decides that.
+        Assert.Equal(DaggerfallPoisonAdmission.Immune,
+            DaggerfallPoisonPolicy.InflictPoison(none, second.Actors, thrown with { TargetLevel = 1 }, 128, 100));
+
+        // A variant no archetype answers cannot come back as a quietly successful poisoning.
+        Assert.Throws<ArgumentException>(() =>
+            DaggerfallPoisonPolicy.InflictPoison(none, second.Actors, exposure, 127, 1));
+    }
+
+    [Fact]
+    public void The_sessions_infliction_starts_the_dose_and_cures_it()
+    {
+        // The drug's own exposure: self-targeted and bypassing resistance, which is what the donor's drug
+        // use does. The session is the one that supplies the draw and the background's poison resistance.
+        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        DaggerfallSession session = fixture.Session;
+        Actor player = session.State.Actors.Player.Actor;
+        DaggerfallPoisonExposure dose = new(
+            session.State.Actors.Player.DurableId,
+            TargetLevel: 5,
+            CareerImmune: false,
+            RaceImmune: false,
+            Willpower: 50,
+            BypassResistance: true);
+
+        Assert.Equal(DaggerfallPoisonAdmission.Admitted, session.InflictPoison(dose, 136));
+        Assert.True(session.State.Poisons.IsAfflicted(player));
+        Assert.Equal(136, session.State.Poisons.Affliction(player)!.Archetype.Variant);
+
+        // The resistance the caller puts on the exposure is what the throw reads: the same roll that a plain
+        // attempt resists is admitted once a background's own modifier is behind it, and vice versa.
+        DaggerfallPoisonExposure modified = dose with { BypassResistance = false, BiographyModifier = 30 };
+        int plain = DaggerfallPoisonPolicy.SavingThrowChance(50, DaggerfallDiseaseCareerTolerance.Normal);
+        int strengthened = DaggerfallPoisonPolicy.SavingThrowChance(50, DaggerfallDiseaseCareerTolerance.Normal, modified.BiographyModifier);
+        Assert.True(strengthened > plain);
+        int between = plain - 15;
+        Assert.Equal(DaggerfallPoisonAdmission.Admitted, DaggerfallPoisonPolicy.Admit(modified with { BiographyModifier = 0 }, between));
+        Assert.Equal(DaggerfallPoisonAdmission.Resisted, DaggerfallPoisonPolicy.Admit(modified, between));
+
+        Assert.True(session.CurePoison());
+        Assert.False(session.State.Poisons.IsAfflicted(player));
+    }
+
+    [Fact]
     public void A_second_poison_is_measured_by_what_is_left_of_the_first()
     {
         // Nux Vomica's whole window is fourteen minutes and Moonseed's is four, so a whole-window comparison
