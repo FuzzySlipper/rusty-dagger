@@ -294,7 +294,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                     () => State.Character.Career,
                     combatRules,
                     AppendEffectDamage),
-                .. DaggerfallPoisonEffects.Definitions(_random, _vitality),
+                .. DaggerfallPoisonEffects.Definitions(_random, _vitality, () => State.Character.Career),
             ]));
             partiallyConstructed.Add(State.Effects);
             _rewards = new DaggerfallRewardReactions(
@@ -363,7 +363,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             State.HeldEnchantments = _heldEnchantments;
             // Poisons are active effects, so restoring them is the effect lifecycle's own restore: this
             // owner reads, starts and cures them and keeps no state of its own to carry.
-            _poisons = new DaggerfallPoisonRuntime(State.Effects, PoisonRoll);
+            _poisons = new DaggerfallPoisonRuntime(State.Effects, PoisonRoll, () => State.Character.Career);
             State.Poisons = _poisons;
             State.Encumbrance = new DaggerfallEncumbrancePolicy(State.Inventory, State.Actors.Player.Stats,
                 () => _heldEnchantments.CarryMultiplier);
@@ -1750,7 +1750,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private int PoisonRoll(int minimum, int maximum) => checked((int)_random.DrawKeyed(new KeyedRngRequest(
         DaggerfallPoisonRandomKey.Seed,
         DaggerfallPoisonRandomKey.Scope,
-        DaggerfallPoisonRandomKey.For(DaggerfallActorIdentity.PlayerEntityId, ++_poisonDraws, DaggerfallPoisonRandomKey.MinuteScope),
+        DaggerfallPoisonRandomKey.For(DaggerfallActorIdentity.PlayerEntityId, "admission", ++_poisonDraws, DaggerfallPoisonRandomKey.MinuteScope),
         minimum,
         maximum)).Value);
 

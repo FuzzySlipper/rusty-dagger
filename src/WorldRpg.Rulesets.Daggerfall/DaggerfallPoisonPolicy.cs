@@ -1,5 +1,6 @@
 using Rusty.Engine;
 using WorldRpg.Kit.Effects;
+using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -32,10 +33,14 @@ internal enum DaggerfallPoisonVariant
 /// </summary>
 internal static class DaggerfallPoisonEffects
 {
-    internal static IEnumerable<DaggerfallEffectDefinition> Definitions(IRandomService random, DaggerfallVitalityConsequences vitality)
+    internal static IEnumerable<DaggerfallEffectDefinition> Definitions(
+        IRandomService random,
+        DaggerfallVitalityConsequences vitality,
+        Func<DaggerfallCareerDefinition> playerCareer)
     {
         ArgumentNullException.ThrowIfNull(random);
         ArgumentNullException.ThrowIfNull(vitality);
+        ArgumentNullException.ThrowIfNull(playerCareer);
         return DaggerfallPoisonArchetypes.All.Select(archetype => new DaggerfallEffectDefinition(
             archetype.Key,
             archetype.Key,
@@ -44,12 +49,12 @@ internal static class DaggerfallPoisonEffects
             1,
             // The arms are stat sources the effect owns, so ending the poison is one cleanup action whether
             // it ended by completing, by a superseding dose, or by a cure.
-            Apply: effect => [new DelegateActiveEffectContribution(() => DaggerfallPoisonArms.RemoveArms(effect))],
-            MagicRound: effect => DaggerfallPoisonArms.AdvanceMinute(effect, archetype, random, vitality),
+            Apply: effect => [new DelegateActiveEffectContribution(() => DaggerfallPoisonArms.RemoveArms(effect, playerCareer))],
+            MagicRound: effect => DaggerfallPoisonArms.AdvanceMinute(effect, archetype, random, vitality, playerCareer),
             Resume: effect =>
             {
                 DaggerfallPoisonArms.Resume(effect, DaggerfallPoisonArms.State(effect));
-                return [new DelegateActiveEffectContribution(() => DaggerfallPoisonArms.RemoveArms(effect))];
+                return [new DelegateActiveEffectContribution(() => DaggerfallPoisonArms.RemoveArms(effect, playerCareer))];
             }));
     }
 }

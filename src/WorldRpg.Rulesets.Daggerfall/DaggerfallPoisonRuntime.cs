@@ -20,8 +20,8 @@ internal static class DaggerfallPoisonRandomKey
     internal const string Scope = "dagger.poison.v1";
     internal const string MinuteScope = "dagger.poison.minute.v1";
 
-    internal static string For(long entityId, long ordinal, string arm) =>
-        $"entity:{entityId}:draw:{ordinal}:arm:{arm}";
+    internal static string For(long entityId, string instance, long ordinal, string arm) =>
+        $"entity:{entityId}:instance:{instance}:draw:{ordinal}:arm:{arm}";
 }
 
 /// <summary>
@@ -44,14 +44,17 @@ internal sealed class DaggerfallPoisonRuntime
 
     private readonly DaggerfallEffectLifecycle _effects;
     private readonly Func<int, int, int> _roll;
+    private readonly Func<DaggerfallCareerDefinition> _playerCareer;
     private long _draws;
 
     /// <param name="effects">The lifecycle that owns every poison's instance, contributions and save entry.</param>
     /// <param name="roll">Draws an inclusive lower and upper bound, the way an archetype window is written.</param>
-    internal DaggerfallPoisonRuntime(DaggerfallEffectLifecycle effects, Func<int, int, int> roll)
+    /// <param name="playerCareer">The career whose derived maxima follow an attribute change; read only for the player.</param>
+    internal DaggerfallPoisonRuntime(DaggerfallEffectLifecycle effects, Func<int, int, int> roll, Func<DaggerfallCareerDefinition> playerCareer)
     {
         _effects = effects ?? throw new ArgumentNullException(nameof(effects));
         _roll = roll ?? throw new ArgumentNullException(nameof(roll));
+        _playerCareer = playerCareer ?? throw new ArgumentNullException(nameof(playerCareer));
     }
 
     /// <summary>How many poisons are held, an actor's ongoing one and the residue of its completed ones together.</summary>
@@ -97,7 +100,7 @@ internal sealed class DaggerfallPoisonRuntime
             if (!incumbent.Affliction.SupersededBy(applying)) return false;
             // The older poison stops where it stands and whatever it helped with comes back off, but the
             // damage it already did stays on the actor: taking a second poison must not heal the first.
-            DaggerfallPoisonArms.CompleteCourse(running, incumbent);
+            DaggerfallPoisonArms.CompleteCourse(running, incumbent, _playerCareer);
         }
 
         // The ordinal continues past every poison already carrying one, so a dose applied after a reload
@@ -233,6 +236,20 @@ internal sealed record DaggerfallPoisonState(
             {
                 throw new ArgumentException("Poison attribute state is malformed.", nameof(state));
             }
+
+            // A running total is bounded by what this archetype can do to that attribute: its largest arm
+            // magnitude over the whole window. A larger one is state nothing here could have produced, and
+            // accepting it would apply a live mutation and then overflow part-way through the next tick.
+            DaggerfallPoisonEffect? arm = archetype.Effects.FirstOrDefault(candidate =>
+                candidate.Target == DaggerfallPoisonTarget.Attribute
+                && StringComparer.Ordinal.Equals(DaggerfallPoisonArms.AttributeId(candidate.Attribute!).Value, property.Name));
+            long bound = arm is null
+                ? 0
+                : Math.Max(Math.Abs((long)arm.Minimum), Math.Abs((long)arm.Maximum)) * archetype.MaximumDurationMinutes;
+            if (Math.Abs((long)total) > bound)
+            {
+                throw new ArgumentException($"Poison attribute state carries {property.Name} {total}, beyond what its archetype can do.", nameof(state));
+            }
         }
 
         DaggerfallPoisonAffliction affliction = minutesRemaining < 1 && minutesToStart < 1
@@ -274,7 +291,8 @@ internal static class DaggerfallPoisonArms
         DaggerfallActiveEffect effect,
         DaggerfallPoisonArchetype archetype,
         IRandomService random,
-        DaggerfallVitalityConsequences vitality)
+        DaggerfallVitalityConsequences vitality,
+        Func<DaggerfallCareerDefinition> playerCareer)
     {
         DaggerfallPoisonState state = DaggerfallPoisonState.Read(effect.State, archetype);
         if (!state.Admitted)
@@ -285,7 +303,7 @@ internal static class DaggerfallPoisonArms
 
         if (state.Affliction.Phase == DaggerfallPoisonPhase.Complete)
         {
-            CompleteCourse(effect, state);
+            CompleteCourse(effect, state, playerCareer);
             return;
         }
 
@@ -295,12 +313,12 @@ internal static class DaggerfallPoisonArms
         foreach (DaggerfallPoisonEffect arm in arms)
         {
             int amount = Draw(random, effect, ++draw, arm);
-            if (amount != 0) Apply(effect, arm, amount, totals, vitality);
+            if (amount != 0) Apply(effect, arm, amount, totals, vitality, playerCareer);
         }
 
         DaggerfallPoisonState advanced = new(state.Affliction, Admitted: true, draw, totals);
         Write(effect, advanced);
-        if (state.Affliction.Phase == DaggerfallPoisonPhase.Complete) CompleteCourse(effect, advanced);
+        if (state.Affliction.Phase == DaggerfallPoisonPhase.Complete) CompleteCourse(effect, advanced, playerCareer);
     }
 
     /// <summary>
@@ -308,7 +326,7 @@ internal static class DaggerfallPoisonArms
     /// the donor leaves it. Once nothing of the poison is left on the actor, the effect that owned it goes
     /// too, which is what releases a residue a cure has emptied.
     /// </summary>
-    internal static void CompleteCourse(DaggerfallActiveEffect effect, DaggerfallPoisonState state)
+    internal static void CompleteCourse(DaggerfallActiveEffect effect, DaggerfallPoisonState state, Func<DaggerfallCareerDefinition> playerCareer)
     {
         state.Affliction.Cure();
         Dictionary<string, int> remaining = new(state.Totals, StringComparer.Ordinal);
@@ -319,7 +337,7 @@ internal static class DaggerfallPoisonArms
             {
                 DaggerfallStatId attribute = AttributeId(arm.Attribute!);
                 if (!remaining.Remove(attribute.Value)) continue;
-                Withdraw(effect, attribute);
+                Withdraw(effect, attribute, playerCareer);
             }
         }
 
@@ -331,19 +349,27 @@ internal static class DaggerfallPoisonArms
         }
     }
 
-    /// <summary>Rebuilds one poison's stat sources from the state a save carried.</summary>
+    /// <summary>
+    /// Checks one poison's restored stat sources against the state a save carried. The stats save rebuilds
+    /// the sources; this refuses a pair that disagree rather than letting a stale contribution stand beside
+    /// a state that no longer mentions it.
+    /// </summary>
     internal static void Resume(DaggerfallActiveEffect effect, DaggerfallPoisonState state)
     {
         StatsComponent stats = effect.Target.Get<StatsComponent>();
         EffectSourceIdentity identity = IdentityFor(effect);
-        foreach ((string stat, int total) in state.Totals)
+        foreach (DaggerfallStatId attribute in Attributes.Values)
         {
-            int applied = stats.GetStat(StatId.Parse(stat)).Sources
-                .Where(source => source.Identity == identity)
-                .Sum(source => source.Contributions.Count == 1 && source.Contributions[0].Contribution is StatContribution.Add add
-                    ? checked((int)add.Amount)
-                    : 0);
-            if (applied != total)
+            if (!stats.TryGetStat(StatId.Parse(attribute.Value), out Stat? stat) || stat is null) continue;
+            int total = state.Totals.GetValueOrDefault(attribute.Value);
+            StatSource[] sources = [.. stat.Sources.Where(source => source.Identity == identity)];
+            if (total == 0 && sources.Length == 0) continue;
+            if (total == 0 || sources.Length != 1
+                || sources[0].Definition != SourceDefinitionId.Parse(AttributeSource)
+                || sources[0].Contributions.Count != 1
+                || sources[0].Contributions[0].Contribution is not StatContribution.Add add
+                || sources[0].Contributions[0].Stat != StatId.Parse(attribute.Value)
+                || checked((int)add.Amount) != total)
             {
                 throw new ArgumentException($"Restored poison '{effect.Context.Instance.Value}' has attribute contributions that do not match its durable poison state.");
             }
@@ -351,15 +377,23 @@ internal static class DaggerfallPoisonArms
     }
 
     /// <summary>Removes every arm source one poison instance owns, which is what a cure or its end does.</summary>
-    internal static void RemoveArms(DaggerfallActiveEffect effect)
+    internal static void RemoveArms(DaggerfallActiveEffect effect, Func<DaggerfallCareerDefinition> playerCareer)
     {
-        DaggerfallPoisonState state = State(effect);
         StatsComponent stats = effect.Target.Get<StatsComponent>();
         EffectSourceIdentity identity = IdentityFor(effect);
-        // Only the attributes this poison actually touched are visited: an actor that never carried one of
-        // the eight has no such stat, and asking for it would fail a cleanup that has nothing to do there.
-        foreach (string attribute in state.Totals.Keys)
-            _ = stats.GetStat(StatId.Parse(attribute)).RemoveSource(identity);
+        // Every attribute the actor actually carries is visited, so nothing the instance owns survives a
+        // cure even if the state never named it; an attribute the actor does not carry is skipped, because
+        // asking for it would fail a cleanup that has nothing to do there.
+        bool removed = false;
+        foreach (DaggerfallStatId attribute in Attributes.Values)
+        {
+            if (!stats.TryGetStat(StatId.Parse(attribute.Value), out Stat? stat) || stat is null) continue;
+            removed |= stat.RemoveSource(identity);
+        }
+
+        // The maxima follow an attribute change, so they are refreshed when one was actually taken off:
+        // asking for them on an actor that carries no attributes at all would be reading stats it has not got.
+        if (removed) RefreshPlayerDerivedMaxima(effect, stats, playerCareer);
     }
 
     /// <summary>
@@ -367,7 +401,7 @@ internal static class DaggerfallPoisonArms
     /// total back as the source's contribution. Accumulating rather than keeping a modifier per minute keeps
     /// the actor's modifier list as long as the poison, not as long as its course.
     /// </summary>
-    private static void Accumulate(DaggerfallActiveEffect effect, DaggerfallStatId attribute, int amount, Dictionary<string, int> totals)
+    private static void Accumulate(DaggerfallActiveEffect effect, DaggerfallStatId attribute, int amount, Dictionary<string, int> totals, Func<DaggerfallCareerDefinition> playerCareer)
     {
         int total = checked(totals.GetValueOrDefault(attribute.Value) + amount);
         totals[attribute.Value] = total;
@@ -385,16 +419,30 @@ internal static class DaggerfallPoisonArms
                 MechanicsStackingPolicy.Sum,
                 new StatContribution.Add(total))]));
         stat.SetSources(StatId.Parse(attribute.Value), sources);
+        RefreshPlayerDerivedMaxima(effect, stats, playerCareer);
+    }
+
+    /// <summary>
+    /// The player's derived maxima follow the attributes a poison moves, exactly as they follow a disease's
+    /// attribute loss: health, fatigue and magicka maxima are read from strength, endurance and intelligence,
+    /// so a poison that drains one of those and never refreshes would leave the player with a maximum that
+    /// no longer matches the attribute it comes from.
+    /// </summary>
+    private static void RefreshPlayerDerivedMaxima(DaggerfallActiveEffect effect, StatsComponent stats, Func<DaggerfallCareerDefinition> playerCareer)
+    {
+        if (effect.Context.Target.Value != checked((ulong)DaggerfallActorIdentity.PlayerEntityId)) return;
+        DaggerfallStatModifiers.RefreshPlayerDerivedMaxima(stats, playerCareer());
     }
 
     /// <summary>Takes one attribute arm back off the actor, which is also removing the source it owns.</summary>
-    private static void Withdraw(DaggerfallActiveEffect effect, DaggerfallStatId attribute)
+    private static void Withdraw(DaggerfallActiveEffect effect, DaggerfallStatId attribute, Func<DaggerfallCareerDefinition> playerCareer)
     {
         StatsComponent stats = effect.Target.Get<StatsComponent>();
         _ = stats.GetStat(StatId.Parse(attribute.Value)).RemoveSource(IdentityFor(effect));
+        RefreshPlayerDerivedMaxima(effect, stats, playerCareer);
     }
 
-    private static void Apply(DaggerfallActiveEffect effect, DaggerfallPoisonEffect arm, int amount, Dictionary<string, int> totals, DaggerfallVitalityConsequences vitality)
+    private static void Apply(DaggerfallActiveEffect effect, DaggerfallPoisonEffect arm, int amount, Dictionary<string, int> totals, DaggerfallVitalityConsequences vitality, Func<DaggerfallCareerDefinition> playerCareer)
     {
         // Two encodings meet here and the archetype table is explicit about both: a vital arm records how
         // much it moves and carries its direction in the positive flag, while an attribute arm records the
@@ -411,7 +459,7 @@ internal static class DaggerfallPoisonArms
                 Adjust(effect.Target, DaggerfallMechanicsIds.Magicka, arm.IsPositive ? amount : -amount);
                 return;
             case DaggerfallPoisonTarget.Attribute:
-                Accumulate(effect, AttributeId(arm.Attribute!), amount, totals);
+                Accumulate(effect, AttributeId(arm.Attribute!), amount, totals, playerCareer);
                 return;
             default:
                 return;
@@ -432,6 +480,7 @@ internal static class DaggerfallPoisonArms
     {
         string key = DaggerfallPoisonRandomKey.For(
             checked((long)effect.Target.Entity.Value),
+            effect.Context.Instance.Value,
             ordinal,
             arm.Target == DaggerfallPoisonTarget.Attribute
                 ? $"{arm.Attribute}:{(arm.IsPositive ? "help" : "harm")}"
