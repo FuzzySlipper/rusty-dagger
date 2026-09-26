@@ -118,6 +118,23 @@ internal sealed class DaggerfallCharacterState
         return _knownSpells.Add(key);
     }
 
+    /// <summary>
+    /// Resolves a spell the character has learned to the compiled definition casting works from. This is the
+    /// whole of the lookup: the catalogue is compiled into the product, so there is nothing to load, discover
+    /// or reflect over — only the character's own list to check and the published definition to answer with.
+    /// An unlearned key and a key nothing publishes are separate refusals, because they mean different things
+    /// to a caller: the first is a cast the character cannot make, the second is data that cannot exist.
+    /// </summary>
+    internal DaggerfallSpellDefinition RequireKnownSpell(string key)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        if (!_definitions.Magic.Spells.TryGetValue(key, out DaggerfallSpellDefinition? spell) || spell is null)
+            throw new ArgumentException($"No published spell carries the key '{key}'.", nameof(key));
+        if (!_knownSpells.Contains(key))
+            throw new InvalidOperationException($"This character has not learned the spell '{key}'.");
+        return spell;
+    }
+
     /// <summary>Forgets a spell the character knows, reporting whether it knew it.</summary>
     internal bool ForgetSpell(string key) => _knownSpells.Remove(key);
     /// <summary>The committed BIOG text retained with this character, distinct from an editable draft.</summary>

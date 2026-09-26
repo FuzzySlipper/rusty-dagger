@@ -581,10 +581,17 @@ public sealed class DaggerfallPoisonRuntimeTests
         string known = fixture.Definitions.Magic.Spells.Keys.First();
 
         Assert.Empty(character.KnownSpells);
+        Assert.Throws<InvalidOperationException>(() => character.RequireKnownSpell(known));
         Assert.True(character.LearnSpell(known));
         Assert.False(character.LearnSpell(known));
         Assert.Contains(known, character.KnownSpells);
+        Assert.Equal(known, character.RequireKnownSpell(known).Key);
         Assert.Throws<ArgumentException>(() => character.LearnSpell("spell.does-not-exist"));
+
+        // Resolution is the whole of CAP-CAST's lookup: an unlearned spell and a spell nothing publishes are
+        // refused separately, and a learned one answers with its compiled definition.
+        Assert.Throws<ArgumentException>(() => character.RequireKnownSpell("spell.does-not-exist"));
+        _ = character.RequireKnownSpell(known);
 
         DaggerfallCharacterSave saved = character.Capture();
         Assert.Contains(known, saved.KnownSpells!);
