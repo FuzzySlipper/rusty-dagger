@@ -570,6 +570,32 @@ public sealed class DaggerfallPoisonRuntimeTests
     }
 
     [Fact]
+    public void A_character_knows_the_spells_it_has_learned_and_a_save_carries_them()
+    {
+        // What CAP-CAST resolves through: the character's own known list, by catalogue key. A key nothing
+        // publishes is refused rather than stored as a spell that could never be cast, and the same spell
+        // learned twice is one spell.
+        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        DaggerfallSession session = fixture.Session;
+        DaggerfallCharacterState character = session.State.Character;
+        string known = fixture.Definitions.Magic.Spells.Keys.First();
+
+        Assert.Empty(character.KnownSpells);
+        Assert.True(character.LearnSpell(known));
+        Assert.False(character.LearnSpell(known));
+        Assert.Contains(known, character.KnownSpells);
+        Assert.Throws<ArgumentException>(() => character.LearnSpell("spell.does-not-exist"));
+
+        DaggerfallCharacterSave saved = character.Capture();
+        Assert.Contains(known, saved.KnownSpells!);
+        using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
+        Assert.Contains(known, restored.State.Character.KnownSpells);
+        Assert.True(restored.State.Character.ForgetSpell(known));
+        Assert.False(restored.State.Character.ForgetSpell(known));
+        Assert.Empty(restored.State.Character.KnownSpells);
+    }
+
+    [Fact]
     public void A_second_poison_is_measured_by_what_is_left_of_the_first()
     {
         // Nux Vomica's whole window is fourteen minutes and Moonseed's is four, so a whole-window comparison

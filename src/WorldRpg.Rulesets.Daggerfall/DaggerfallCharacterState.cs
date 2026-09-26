@@ -31,7 +31,8 @@ internal sealed record DaggerfallCharacterCreationChoices(
     DaggerfallCharacterReflexes Reflexes,
     string CareerId,
     DaggerfallCustomCareerChoices? CustomCareer = null,
-    DaggerfallCharacterBackgroundSave? Background = null)
+    DaggerfallCharacterBackgroundSave? Background = null,
+    string[]? KnownSpells = null)
 {
     internal static DaggerfallCharacterCreationChoices From(DaggerfallCharacterIdentity identity) =>
         new(identity.Name, identity.RaceId, identity.Gender, identity.FaceIndex, identity.Reflexes, identity.CareerId);
@@ -50,10 +51,19 @@ internal sealed class DaggerfallCharacterState
     private Action? _careerCommitted;
     private DaggerfallCustomCareerDefinition? _customCareer;
     private DaggerfallCharacterBackgroundSave? _background;
+    private readonly HashSet<string> _knownSpells = new(StringComparer.Ordinal);
     private int _backgroundRollSequence;
 
     internal DaggerfallCharacterState(DaggerfallDefinitions definitions, StatsComponent stats, DaggerfallActorDefinition player, DaggerfallCharacterSave? restored = null)
     {
+        ArgumentNullException.ThrowIfNull(definitions);
+        foreach (string known in restored?.KnownSpells ?? [])
+        {
+            if (!definitions.Magic.Spells.ContainsKey(known))
+                throw new ArgumentException($"Saved character knows '{known}', which no published spell answers.", nameof(restored));
+            _ = _knownSpells.Add(known);
+        }
+
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(stats);
         ArgumentNullException.ThrowIfNull(player);
@@ -87,6 +97,29 @@ internal sealed class DaggerfallCharacterState
     internal DaggerfallCareerDefinition Career => _customCareer?.Career ?? _definitions.Catalogs.RequireCareer(Identity.CareerId);
     internal DaggerfallCustomCareerDefinition? CustomCareer => _customCareer;
     internal DaggerfallCharacterBackgroundSave? Background => _background;
+
+    /// <summary>
+    /// The spells this character has learned, by the catalogue key they were learned under. Casting resolves
+    /// through this list rather than through a classic identity, because a classic identity is not unique —
+    /// several published spells share one — while a key names exactly one compiled definition.
+    /// </summary>
+    internal IReadOnlyCollection<string> KnownSpells => _knownSpells;
+
+    /// <summary>
+    /// Records that the character has learned a spell the catalogue publishes. Learning the same spell twice
+    /// is the same as learning it once; a key nothing publishes is refused rather than stored as a spell that
+    /// can never be cast.
+    /// </summary>
+    internal bool LearnSpell(string key)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        if (!_definitions.Magic.Spells.ContainsKey(key))
+            throw new ArgumentException($"No published spell carries the key '{key}'.", nameof(key));
+        return _knownSpells.Add(key);
+    }
+
+    /// <summary>Forgets a spell the character knows, reporting whether it knew it.</summary>
+    internal bool ForgetSpell(string key) => _knownSpells.Remove(key);
     /// <summary>The committed BIOG text retained with this character, distinct from an editable draft.</summary>
     internal IReadOnlyList<string> History => _background?.Biography ?? [];
     internal DaggerfallRaceDefinition Race => _definitions.Catalogs.RequireRace(Identity.RaceId);
@@ -197,7 +230,8 @@ internal sealed class DaggerfallCharacterState
     }
 
     internal DaggerfallCharacterSave Capture() => new(
-        Identity.Name, Identity.RaceId, Identity.Gender, Identity.FaceIndex, Identity.Reflexes, Identity.CareerId, _customCareer is null ? null : ToChoices(_customCareer), _background);
+        Identity.Name, Identity.RaceId, Identity.Gender, Identity.FaceIndex, Identity.Reflexes, Identity.CareerId, _customCareer is null ? null : ToChoices(_customCareer), _background,
+        [.. _knownSpells.Order(StringComparer.Ordinal)]);
 
     private void Validate(DaggerfallCharacterIdentity identity)
     {
@@ -254,7 +288,8 @@ internal sealed record DaggerfallCharacterSave(
     DaggerfallCharacterReflexes Reflexes,
     string CareerId,
     DaggerfallCustomCareerChoices? CustomCareer = null,
-    DaggerfallCharacterBackgroundSave? Background = null)
+    DaggerfallCharacterBackgroundSave? Background = null,
+    string[]? KnownSpells = null)
 {
     internal void Validate(DaggerfallDefinitions definitions)
     {
