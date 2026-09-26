@@ -392,7 +392,7 @@ public sealed class WorldRpgProduct : IEngineProduct
                 DiagnosticsDisposition.Terminal,
                 "daggerfall.product",
                 "callback.failed",
-                failure.ToString(),
+                EngineFailureText.Describe(failure),
                 string.Empty));
         }
         catch (Exception) { /* a failure to report a failure must not replace it */ }
