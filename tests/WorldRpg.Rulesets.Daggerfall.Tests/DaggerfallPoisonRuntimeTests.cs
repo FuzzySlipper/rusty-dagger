@@ -513,6 +513,38 @@ public sealed class DaggerfallPoisonRuntimeTests
     }
 
     [Fact]
+    public void All_twelve_archetypes_deliver_and_are_cured_again()
+    {
+        // The table the coverage asks for: every delivered variant starts its own archetype, and each is
+        // cured off again, so delivery and cure are exercised across the whole classic range rather than on
+        // one sampled poison.
+        using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
+        Actor victim = AttributedActor(fixture);
+        (DaggerfallPoisonRuntime poison, _) = Runtime(fixture);
+        DaggerfallPoisonExposure delivery = new(
+            checked((long)victim.Get<DurableEntityIdentity>().Identity.Value),
+            TargetLevel: 5,
+            CareerImmune: false,
+            RaceImmune: false,
+            Willpower: 50,
+            BypassResistance: true);
+
+        for (int variant = 128; variant <= 139; variant++)
+        {
+            Assert.Equal(DaggerfallPoisonAdmission.Admitted, DaggerfallPoisonPolicy.InflictPoison(poison, fixture.Actors, delivery, variant, (_, maximum) => maximum));
+            Assert.True(poison.IsAfflicted(victim), $"variant {variant} was admitted and must be running");
+            Assert.Equal(variant, poison.Affliction(victim)!.Archetype.Variant);
+            Assert.True(poison.Cure(victim), $"variant {variant} was running and must be curable");
+            Assert.False(poison.IsAfflicted(victim), $"variant {variant} must leave nothing behind after a cure");
+        }
+
+        // A variant outside the twelve is refused rather than delivered as a neighbour, and nothing is left.
+        Assert.Throws<ArgumentException>(() =>
+            DaggerfallPoisonPolicy.InflictPoison(poison, fixture.Actors, delivery, 140, (_, maximum) => maximum));
+        Assert.False(poison.IsAfflicted(victim));
+    }
+
+    [Fact]
     public void A_second_poison_is_measured_by_what_is_left_of_the_first()
     {
         // Nux Vomica's whole window is fourteen minutes and Moonseed's is four, so a whole-window comparison
