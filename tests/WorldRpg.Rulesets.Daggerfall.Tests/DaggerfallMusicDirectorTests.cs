@@ -117,6 +117,27 @@ public sealed class DaggerfallMusicDirectorTests
         Assert.Equal(3, audio.ReleasedVoices);
     }
 
+    [Fact]
+    public void A_cue_that_cannot_be_resolved_retires_the_loop_it_replaced_and_reports_it()
+    {
+        IAudioService service = AudioFake.Create(out AudioFake audio);
+        AudioClip dungeon = new(new AudioClipHandle(1), static () => { });
+        bool broken = false;
+        DaggerfallMusicDirector music = new(
+            service,
+            track => broken ? throw new InvalidOperationException("the Engine will not open this clip") : dungeon,
+            audio.Retire);
+        Assert.Equal("song_dungeon", music.Update(DaggerfallMusicContext.Dungeon));
+
+        // The next cue cannot open. The voice it replaced is still released and still reported, so the
+        // failure leaves no cue the product believes is playing.
+        broken = true;
+        Assert.Throws<InvalidOperationException>(() => music.Update(DaggerfallMusicContext.Tavern));
+        Assert.Null(music.Playing);
+        Assert.Equal(["song_dungeon"], audio.Retired);
+        Assert.Equal(1, audio.ReleasedVoices);
+    }
+
     private class AudioFake : DispatchProxy
     {
         internal readonly List<string> Started = [];

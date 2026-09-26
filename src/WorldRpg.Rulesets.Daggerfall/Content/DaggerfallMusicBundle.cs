@@ -153,6 +153,11 @@ internal sealed class DaggerfallMusicBundle
             Dictionary<string, ManifestCue> published = new(StringComparer.Ordinal);
             foreach (JsonElement cue in cues.EnumerateArray())
             {
+                if (cue.ValueKind != JsonValueKind.Object)
+                {
+                    throw new InvalidOperationException($"Published music manifest '{ManifestPath}' states a cue that is not a record.");
+                }
+
                 RejectUnknownMembers(cue);
                 ManifestCue record = ReadCue(cue);
                 if (!published.TryAdd(record.MediaId, record))
@@ -198,12 +203,12 @@ internal sealed class DaggerfallMusicBundle
         {
             if (property.Name is not ("mediaId" or "track" or "context" or "file" or "mimeType" or "byteLength" or "contentDigest"))
             {
-                throw new InvalidOperationException($"A published music cue states unknown member '{property.Name}'.");
+                throw new InvalidOperationException($"Published music manifest '{ManifestPath}' states unknown member '{property.Name}' on a cue.");
             }
 
             if (!seen.Add(property.Name))
             {
-                throw new InvalidOperationException($"A published music cue states '{property.Name}' twice.");
+                throw new InvalidOperationException($"Published music manifest '{ManifestPath}' states '{property.Name}' twice on a cue.");
             }
         }
     }
