@@ -176,6 +176,13 @@ internal static class DaggerfallPoisonPolicy
     }
 
     /// <summary>
+    /// The career's own poison tolerance, read from the raw bytes the donor resolves: the poison flag is its
+    /// own bit, so a career resistant to disease and weak to poison reads exactly that.
+    /// </summary>
+    internal static DaggerfallDiseaseCareerTolerance CareerTolerance(DaggerfallCareerDefinition career) =>
+        DaggerfallCareerTolerances.Tolerance(career, DaggerfallCareerTolerances.Poison);
+
+    /// <summary>
     /// FORM-06's infliction, as the donor orders it: immunity is settled first, a bypass skips the throw,
     /// and only an attempt that still needs one draws it — the donor's own throw draws nothing for a target
     /// it refused before reaching it. An admitted attempt then starts the archetype's own effect, so
