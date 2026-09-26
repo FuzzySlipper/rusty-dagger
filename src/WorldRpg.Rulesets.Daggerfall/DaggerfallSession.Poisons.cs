@@ -8,7 +8,7 @@ internal sealed partial class DaggerfallSession
     /// delivers; this session supplies the admitted draw, the canonical poison owner, and the background's
     /// own poison resistance, which is deliberately not the disease modifier beside it.
     /// </summary>
-    internal DaggerfallPoisonAdmission InflictPoison(DaggerfallPoisonExposure exposure, int variant)
+    internal DaggerfallPoisonAdmission InflictPoison(DaggerfallPoisonExposure exposure, int variant, ulong? itemId = null)
     {
         ArgumentNullException.ThrowIfNull(exposure);
         return DaggerfallPoisonPolicy.InflictPoison(
@@ -19,7 +19,8 @@ internal sealed partial class DaggerfallSession
                 BiographyModifier = checked(exposure.BiographyModifier + (State.Character.Background?.Modifiers.PoisonResistance ?? 0)),
             },
             variant,
-            PoisonRoll);
+            PoisonRoll,
+            itemId);
     }
 
     /// <summary>Cures every poison the player carries, taking back what they still hold.</summary>

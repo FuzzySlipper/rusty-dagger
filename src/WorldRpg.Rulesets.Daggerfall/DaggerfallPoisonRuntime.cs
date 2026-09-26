@@ -86,7 +86,7 @@ internal sealed class DaggerfallPoisonRuntime
     /// of the two rather than being poisoned twice: the donor's incumbent rule lets the longer affliction win,
     /// which is what stops a second scratch from shortening a poison already running.
     /// </summary>
-    internal bool Afflict(Actor actor, int variant)
+    internal bool Afflict(Actor actor, int variant, ulong? itemId = null)
     {
         ArgumentNullException.ThrowIfNull(actor);
         if (!DaggerfallPoisonArchetypes.TryResolve(variant, out DaggerfallPoisonArchetype archetype)) return false;
@@ -124,7 +124,7 @@ internal sealed class DaggerfallPoisonRuntime
             checked((long)actor.Get<DurableEntityIdentity>().Identity.Value),
             Settings,
             Element: null,
-            ItemId: null,
+            ItemId: itemId,
             Stacks: 1,
             // The poison's own state owns its course: the lifecycle must not expire an effect whose arms are
             // still holding damage, which is why the course is minutes in state rather than remaining rounds.

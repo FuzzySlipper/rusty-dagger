@@ -373,9 +373,14 @@ public sealed class DaggerfallPoisonRuntimeTests
             Willpower: 50,
             BypassResistance: true);
 
-        Assert.Equal(DaggerfallPoisonAdmission.Admitted, session.InflictPoison(dose, 136));
+        Assert.Equal(DaggerfallPoisonAdmission.Admitted, session.InflictPoison(dose, 136, itemId: 4242));
         Assert.True(session.State.Poisons.IsAfflicted(player));
         Assert.Equal(136, session.State.Poisons.Affliction(player)!.Archetype.Variant);
+
+        // The dose's own item identity travels with it, so the poison it started says what it came from.
+        DaggerfallSavePayload carried = DaggerfallSavePayload.Read(session.CaptureSave());
+        DaggerfallActiveEffectSave doseEffect = Assert.Single(carried.ActiveEffects, value => value.EffectKey == "Poison-Indulcet");
+        Assert.Equal(4242u, doseEffect.ItemId);
 
         // The resistance the caller puts on the exposure is what the throw reads: the same roll that a plain
         // attempt resists is admitted once a background's own modifier is behind it, and vice versa.

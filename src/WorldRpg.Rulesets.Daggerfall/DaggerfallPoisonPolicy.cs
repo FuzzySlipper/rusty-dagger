@@ -198,7 +198,8 @@ internal static class DaggerfallPoisonPolicy
         ActorsState actors,
         DaggerfallPoisonExposure exposure,
         int variant,
-        Func<int, int, int> roll)
+        Func<int, int, int> roll,
+        ulong? itemId = null)
     {
         ArgumentNullException.ThrowIfNull(poisons);
         ArgumentNullException.ThrowIfNull(actors);
@@ -233,7 +234,7 @@ internal static class DaggerfallPoisonPolicy
                 ? actor.Actor
                 : throw new ArgumentException($"An admitted poison names missing actor {exposure.TargetId}.", nameof(exposure));
 
-        if (!poisons.Afflict(target, variant))
+        if (!poisons.Afflict(target, variant, itemId))
         {
             // Admission and the effect it starts are one step: a variant no archetype answers cannot come
             // back as a quietly successful poisoning.
