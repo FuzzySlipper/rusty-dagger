@@ -142,11 +142,11 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         DaggerfallTuning tuning, DaggerfallEffectCatalog effects)
         : this(engine, definitions, inputs, tuning, null, null, effects) { }
 
-    internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
-        : this(engine, definitions, inputs, tuning, compositionIdentity, null, null) { }
+    internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, DaggerfallMusicBundle? music = null)
+        : this(engine, definitions, inputs, tuning, compositionIdentity, null, null, null, null, true, null, null, null, music) { }
 
-    internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, DaggerfallSiteAudioBundles audioBundles, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null)
-        : this(engine, definitions, inputs, tuning, compositionIdentity, null, null, audioBundles, cinematicContent, videosEnabled, questAdmission, null, disabledQuestSelection) { }
+    internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, DaggerfallSiteAudioBundles audioBundles, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null, DaggerfallMusicBundle? music = null)
+        : this(engine, definitions, inputs, tuning, compositionIdentity, null, null, audioBundles, cinematicContent, videosEnabled, questAdmission, null, disabledQuestSelection, music) { }
 
     internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
         DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, RulesetSavePayload saved, IRandomService random)
@@ -154,12 +154,12 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
         DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, RulesetSavePayload saved,
-        IRandomService random, DaggerfallSiteAudioBundles audioBundles, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallSiteProfiles? profiles = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null)
-        => Restore(engine, compositionIdentity, definitions, inputs, tuning, saved, random, null, audioBundles, cinematicContent, videosEnabled, questAdmission, profiles, disabledQuestSelection);
+        IRandomService random, DaggerfallSiteAudioBundles audioBundles, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallSiteProfiles? profiles = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null, DaggerfallMusicBundle? music = null)
+        => Restore(engine, compositionIdentity, definitions, inputs, tuning, saved, random, null, audioBundles, cinematicContent, videosEnabled, questAdmission, profiles, disabledQuestSelection, music);
 
     internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
         DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, RulesetSavePayload saved,
-        IRandomService random, DaggerfallEffectCatalog? effects, DaggerfallSiteAudioBundles? audioBundles = null, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallSiteProfiles? profiles = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null)
+        IRandomService random, DaggerfallEffectCatalog? effects, DaggerfallSiteAudioBundles? audioBundles = null, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallSiteProfiles? profiles = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null, DaggerfallMusicBundle? music = null)
     {
         DaggerfallSavePayload raw = DaggerfallSavePayload.Read(saved);
         PrivateersHoldInputs activeInputs = profiles is null
@@ -168,12 +168,12 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 ? profiles.Require(profile.Require())
                 : profiles.RequireUniqueSite(ToSiteId(raw.Site.Active) ?? throw new ArgumentException("A restored Daggerfall session must name an active site.", nameof(saved)));
         DaggerfallSavePayload payload = raw.ResolveRestore(definitions, activeInputs, profiles);
-        return new DaggerfallSession(engine, definitions, activeInputs, tuning, compositionIdentity, payload, effects, audioBundles, cinematicContent, videosEnabled, questAdmission, profiles, disabledQuestSelection);
+        return new DaggerfallSession(engine, definitions, activeInputs, tuning, compositionIdentity, payload, effects, audioBundles, cinematicContent, videosEnabled, questAdmission, profiles, disabledQuestSelection, music);
     }
 
     private DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs,
         DaggerfallTuning tuning, ResolvedCompositionIdentity? compositionIdentity, DaggerfallSavePayload? saved,
-        DaggerfallEffectCatalog? effects, DaggerfallSiteAudioBundles? audioBundles = null, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallSiteProfiles? profiles = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null)
+        DaggerfallEffectCatalog? effects, DaggerfallSiteAudioBundles? audioBundles = null, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallSiteProfiles? profiles = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null, DaggerfallMusicBundle? music = null)
     {
         List<IDisposable> partiallyConstructed = [];
         try
@@ -181,6 +181,11 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             _engine = engine;
             _tuning = tuning;
             _siteAudioBundles = audioBundles;
+            // The score's clips are named by the site's cue list and carried by the product-wide music
+            // bundle, so the resolver the director asks is this session's own: it keeps the Engine
+            // resource alive for as long as the session plays that track and releases it on disposal.
+            _musicBundle = music;
+            if (music is not null) _music = new DaggerfallMusicDirector(engine.Audio, ResolveMusicClip);
             _random = engine.Random;
             tuning = tuning.Validate();
             _definitions = definitions;
@@ -587,7 +592,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         }
         try
         {
-            if (!TryTransitionTo(destination, anchor, useReturnDestination: false, actorId)) return false;
+            if (!TryTransitionTo(destination, anchor, useReturnDestination: false, actorId, playerFacing: false)) return false;
         }
         catch (Exception failure)
         {
@@ -597,7 +602,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             try
             {
                 if (_activeProfileKey != sourceProfile)
-                    _ = TryTransitionTo(sourceProfile, null, useReturnDestination: true);
+                    _ = TryTransitionTo(sourceProfile, null, useReturnDestination: true, relocatedActorId: null, playerFacing: false);
                 if (_activeProfileKey == sourceProfile)
                     RestoreSourceContext();
             }
@@ -616,7 +621,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         }
         try
         {
-            if (!TryTransitionTo(sourceProfile, null, useReturnDestination: true)) return false;
+            if (!TryTransitionTo(sourceProfile, null, useReturnDestination: true, relocatedActorId: null, playerFacing: false)) return false;
             // Returning through the ordinary site lifecycle establishes the durable destination
             // delta. Restore the source context checkpoint so actor-only relocation does not alter
             // the player's prior return anchor or discovery state.
@@ -633,7 +638,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             {
                 try
                 {
-                    _ = TryTransitionTo(sourceProfile, null, useReturnDestination: true);
+                    _ = TryTransitionTo(sourceProfile, null, useReturnDestination: true, relocatedActorId: null, playerFacing: false);
                     RestoreSourceContext();
                 }
                 catch (Exception rollbackFailure)
@@ -658,7 +663,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// <summary>Attempts one real site transition; failed destination admission leaves the source projection live.</summary>
     internal bool TryTransitionTo(DaggerfallWorldProfileKey destination) => TryTransitionTo(destination, null, useReturnDestination: true);
 
-    private bool TryTransitionTo(DaggerfallWorldProfileKey destination, DaggerfallSiteAnchor? arrival, bool useReturnDestination, long? relocatedActorId = null)
+    private bool TryTransitionTo(DaggerfallWorldProfileKey destination, DaggerfallSiteAnchor? arrival, bool useReturnDestination, long? relocatedActorId = null, bool playerFacing = true)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         PrivateersHoldInputs target = (_siteProfiles ?? throw new InvalidOperationException("Site profiles have not been admitted.")).Require(destination);
@@ -745,6 +750,11 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             _siteDeltas[sourceProfile] = committedSourceDelta;
             _siteDeltas.Remove(destination);
             _activeProfileKey = destination;
+            // Entering a place retires the previous world's loop: the donor gives a dungeon a new song
+            // per location rather than carrying the last one through the door. A relocation that moves
+            // one actor between profiles is not the player entering anything, so it leaves the score
+            // alone rather than restarting it behind a teleport the player never sees.
+            if (playerFacing) ChangeMusicSite();
             _bankProvider = null;
             if (destination.Kind == DaggerfallWorldProfileKind.Exterior)
                 UpdateExteriorResidency();
@@ -1337,6 +1347,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             ApplyAttackImpacts();
             UpdateRangedFlight(update.Facts);
             PublishPresentation();
+            // The score follows the world this admitted update settled: a site change or a change of day
+            // is real once the step applied it, and the director is told once per admitted update.
+            AdvanceMusic();
         }
         _appearance.CompleteAdmittedUpdate();
         }
@@ -1679,6 +1692,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         SimulateStep(update, 0, 0);
         DeliverFacts();
         PublishPresentation();
+        AdvanceMusic();
     }
 
     /// <summary>
@@ -1931,6 +1945,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         catch (Exception exception) { failure = exception; }
         try { DisposeExteriorAppearance(); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
+        // The score's loop and the clips it opened belong to this session, so they are retired before
+        // the Engine context that produced them is asked for anything else.
+        DisposeMusic(ref failure);
         // Site lighting may have retained an interior background after its resources were
         // released; clear that product-owned camera state only after the final projection dispose.
         try { _engine.CameraView.ClearSkyBackground(default); }

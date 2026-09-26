@@ -133,6 +133,8 @@ internal static partial class Program
 
             if (args.Length != 0 && args[0] == "cinematic-media") return RunCinematicMediaCommand(args);
 
+            if (args.Length != 0 && args[0] == "music-media") return RunMusicMediaCommand(args);
+
             if (args.Length != 0 && args[0] == "videos")
             {
                 return RunVideosCommand(args);
@@ -198,7 +200,7 @@ internal static partial class Program
     /// <summary>Publishes one selected RMB exterior or building interior static-mesh/collision/navigation closure.</summary>
     private static int RunRmbSpatialCommand(IReadOnlyList<string> args)
     {
-        const string usage = "usage: daggerfall-import-tool rmb-spatial --arena2 SOURCE_DIR --out OUTPUT_DIR --inventory CSV --region REGION --location NAME --profile exterior|interior --ui-authored-assets FILE --ui-original DIR [--block-x X --block-y Y --building INDEX]";
+        const string usage = "usage: daggerfall-import-tool rmb-spatial --arena2 SOURCE_DIR --out OUTPUT_DIR --inventory CSV --region REGION --location NAME --profile exterior|interior --ui-authored-assets FILE --ui-original DIR [--block-x X --block-y Y --building INDEX] [--music-manifest MANIFEST.json]";
         Dictionary<string, string> values = [];
         for (int index = 1; index < args.Count; index += 2)
             if (index + 1 >= args.Count || !args[index].StartsWith("--", StringComparison.Ordinal) || !values.TryAdd(args[index], args[index + 1])) throw new ArgumentException(usage);
@@ -206,8 +208,8 @@ internal static partial class Program
         if (required.Any(key => !values.ContainsKey(key))) throw new ArgumentException(usage);
         bool interior = values["--profile"] == "interior";
         if (values["--profile"] is not ("exterior" or "interior") || values.Keys.Except(interior
-            ? new[] { "--arena2", "--out", "--inventory", "--region", "--location", "--profile", "--ui-authored-assets", "--ui-original", "--block-x", "--block-y", "--building" }
-            : required).Any()) throw new ArgumentException(usage);
+            ? new[] { "--arena2", "--out", "--inventory", "--region", "--location", "--profile", "--ui-authored-assets", "--ui-original", "--block-x", "--block-y", "--building", "--music-manifest" }
+            : [.. required, "--music-manifest"]).Any()) throw new ArgumentException(usage);
         if (!int.TryParse(values["--region"], NumberStyles.None, CultureInfo.InvariantCulture, out int region)) throw new ArgumentException(usage);
         RmbBuildingSelection? building = null;
         if (interior)
@@ -221,6 +223,7 @@ internal static partial class Program
         AdmittedArena2Sources sources = new(values["--arena2"]);
         LoadRequiredDungeonSources(sources);
         LoadClassicMediaSources(sources);
+        IReadOnlyList<ClassicMusicRecord> music = LoadMusicRecords(values.TryGetValue("--music-manifest", out string? musicManifest) ? musicManifest : null);
         RmbExteriorNormalizationResult result;
         HashSet<string> resolvedOnDemand = new(StringComparer.Ordinal);
         ImportPublicationPlan plan;
@@ -248,7 +251,7 @@ internal static partial class Program
                         TextureLeafConsumer = $"selected RMB media '{result.Layout.LocationName}'",
                     });
                 Arena2ClassicMediaPublication classicMedia = Arena2ClassicMediaPublication.Create(
-                    sources.ClassicMediaInputs,
+                    sources.ClassicMediaInputs with { Music = music },
                     classicMediaProfile,
                     new Arena2ClassicMediaPublicationOptions(MaximumSourceBytes: MaximumIndividualSourceBytes),
                     worldVisuals);
@@ -2269,6 +2272,9 @@ internal static partial class Program
         AdmittedArena2Sources sources = new(options.Arena2Directory);
         LoadRequiredDungeonSources(sources);
         LoadClassicMediaSources(sources);
+        // The site names the cues the product-wide music publication already carries bytes for. A caller
+        // that has not published music passes nothing, and the publication then names no cue.
+        IReadOnlyList<ClassicMusicRecord> music = LoadMusicRecords(options.MusicManifest);
         // Discovery rides typed missing-source data, never diagnostic wording. Each retry loads at
         // least one previously unrequested source; a repeated request means the requirement does
         // not resolve, so the loop always terminates instead of spinning.
@@ -2304,7 +2310,7 @@ internal static partial class Program
                         TextureLeafConsumer = $"selected dungeon media '{options.Location}'",
                     });
                 Arena2ClassicMediaPublication classicMedia = Arena2ClassicMediaPublication.Create(
-                    sources.ClassicMediaInputs,
+                    sources.ClassicMediaInputs with { Music = music },
                     options.ClassicMediaProfile with { AuthoredOverlays = classicOverlays },
                     new Arena2ClassicMediaPublicationOptions(MaximumSourceBytes: MaximumIndividualSourceBytes),
                     worldVisuals);
@@ -3026,7 +3032,8 @@ internal static partial class Program
         Arena2ClassicMediaProfile ClassicMediaProfile,
         string? SpriteAuthoringDirectory,
         string? SpriteOverlayPath,
-        string? InventoryFile)
+        string? InventoryFile,
+        string? MusicManifest)
     {
         public static ToolOptions Parse(IReadOnlyList<string> args)
         {
@@ -3069,6 +3076,11 @@ internal static partial class Program
                 accepted.Add("--inventory");
             }
 
+            if (values.ContainsKey("--music-manifest"))
+            {
+                accepted.Add("--music-manifest");
+            }
+
             EnsureExactKeys(values, accepted);
             if (!int.TryParse(values["--region"], NumberStyles.None, CultureInfo.InvariantCulture, out int region) || region is < 0 or > 999)
             {
@@ -3103,7 +3115,8 @@ internal static partial class Program
                 LoadClassicMediaProfile(values["--ui-authored-assets"], values["--ui-original"]),
                 spriteAuthoring,
                 spriteOverlay,
-                values.TryGetValue("--inventory", out string? inventory) ? Path.GetFullPath(inventory) : null);
+                values.TryGetValue("--inventory", out string? inventory) ? Path.GetFullPath(inventory) : null,
+                values.TryGetValue("--music-manifest", out string? music) ? Path.GetFullPath(music) : null);
         }
 
         private static void EnsureExactKeys(IReadOnlyDictionary<string, string> values, IReadOnlyList<string> keys)
@@ -3114,6 +3127,6 @@ internal static partial class Program
             }
         }
 
-        private static string Usage() => "usage: daggerfall-import-tool <plan|write|verify-real-data> --arena2 DIR --output DIR --region 0..999 --location NAME --texture-table classic|default --ui-authored-assets FILE --ui-original DIR [--sprite-authoring SOURCE_DIR --sprite-overlay sprites/RELATIVE.json] [--inventory INVENTORY.csv]";
+        private static string Usage() => "usage: daggerfall-import-tool <plan|write|verify-real-data> --arena2 DIR --output DIR --region 0..999 --location NAME --texture-table classic|default --ui-authored-assets FILE --ui-original DIR [--sprite-authoring SOURCE_DIR --sprite-overlay sprites/RELATIVE.json] [--inventory INVENTORY.csv] [--music-manifest MANIFEST.json]";
     }
 }

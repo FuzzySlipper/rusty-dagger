@@ -1,3 +1,5 @@
+using System.IO;
+
 namespace Daggerfall.Import.Audio;
 
 /// <summary>One imported music cue: the media id the runtime names, and the donor file it comes from.</summary>
@@ -5,7 +7,18 @@ namespace Daggerfall.Import.Audio;
 /// <param name="SourceFile">The donor song file the cue carries, as the source folder names it.</param>
 /// <param name="Context">The donor context the cue answers, named after that playlist.</param>
 /// <param name="SourceBytes">The source file's length in bytes, measured from the file.</param>
-public sealed record ClassicMusicCue(string MediaId, string SourceFile, string Context, int SourceBytes);
+public sealed record ClassicMusicCue(string MediaId, string SourceFile, string Context, int SourceBytes)
+{
+    /// <summary>
+    /// The donor song identity the cue carries: the source file's name without its container.
+    /// </summary>
+    /// <remarks>
+    /// The runtime names a track rather than a file — <c>song_dungeon</c>, not <c>song_dungeon.ogg</c> —
+    /// because the donor's own song manager names tracks, and the container is a property of how this
+    /// publication carries them. Deriving it here keeps one statement of which donor track a cue is.
+    /// </remarks>
+    public string Track => Path.GetFileNameWithoutExtension(SourceFile);
+}
 
 /// <summary>
 /// The music cues the offline import publishes, taken from the playlists the donor's own song manager
@@ -36,13 +49,13 @@ public static class ClassicMusicCatalogue
     /// </summary>
     public static IReadOnlyList<ClassicMusicCue> All { get; } =
     [
-        new("music.dungeon", "song_dungeon.ogg", "dungeon", 5_988_570),
-        new("music.sunny", "song_gday___d.ogg", "sunny", 3_469_700),
-        new("music.sunny.second", "song_02.ogg", "sunny", 3_763_819),
-        new("music.sunny.third", "song_gsunny2.ogg", "sunny", 3_897_026),
-        new("music.sunny.fourth", "song_sunnyday.ogg", "sunny", 2_240_086),
-        new("music.sunny.fm", "song_fday___d.ogg", "sunny-fm", 1_815_662),
-        new("music.sunny.fm.second", "song_02fm.ogg", "sunny-fm", 3_763_819),
+        new("music.dungeon", "song_dungeon.ogg", "dungeon", 5_985_696),
+        new("music.sunny", "song_gday___d.ogg", "sunny", 3_472_545),
+        new("music.sunny.second", "song_02.ogg", "sunny", 3_768_712),
+        new("music.sunny.third", "song_gsunny2.ogg", "sunny", 3_904_543),
+        new("music.sunny.fourth", "song_sunnyday.ogg", "sunny", 2_248_822),
+        new("music.sunny.fm", "song_fday___d.ogg", "sunny-fm", 1_819_234),
+        new("music.sunny.fm.second", "song_02fm.ogg", "sunny-fm", 3_768_712),
     ];
 
     /// <summary>What the cues cost the Engine's budget, in the bytes it admits.</summary>

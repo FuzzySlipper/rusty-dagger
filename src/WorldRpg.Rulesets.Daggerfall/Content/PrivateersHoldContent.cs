@@ -115,7 +115,7 @@ internal static class PrivateersHoldContent
         DaggerfallDungeonMapContent? dungeonMap = profileKind == DaggerfallWorldProfileKind.Dungeon
             ? ReadNormalizedDungeonMap(normalizedWorld, doors, portals, diagnostics)
             : null;
-        (IReadOnlyList<NormalizedAudioClip> audio, NormalizedClassicPresentation classicPresentation) = ReadClassicPresentation(
+        (IReadOnlyList<NormalizedAudioClip> audio, IReadOnlyList<NormalizedMusicCue> music, NormalizedClassicPresentation classicPresentation) = ReadClassicPresentation(
             files, files.GetExactlyOne(classicMediaPath), publicationRoot, artifacts, diagnostics);
         classicPresentation = ReadClassicSelection(root, classicPresentation, definitions, diagnostics);
         Dictionary<long, NormalizedActorSprite> actorSprites = [];
@@ -158,7 +158,8 @@ internal static class PrivateersHoldContent
             dungeonMap,
             dungeonActions,
             actionModels,
-            ReadInteriorBuilding(normalizedWorld, profileKind, diagnostics));
+            ReadInteriorBuilding(normalizedWorld, profileKind, diagnostics),
+            music);
     }
 
     private static DaggerfallInteriorBuilding? ReadInteriorBuilding(ReadOnlyMemory<byte>? bytes,
@@ -1490,9 +1491,9 @@ internal static class PrivateersHoldContent
 
     private sealed record MediaResource(string Path, ContentSha256 Hash, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames);
 
-    private static (IReadOnlyList<NormalizedAudioClip> Audio, NormalizedClassicPresentation Presentation) ReadClassicPresentation(AdmittedFiles files, ReadOnlyMemory<byte>? bytes, string publicationRoot, IReadOnlyDictionary<string, ContentSha256> artifacts, DaggerfallContentDiagnostics diagnostics)
+    private static (IReadOnlyList<NormalizedAudioClip> Audio, IReadOnlyList<NormalizedMusicCue> Music, NormalizedClassicPresentation Presentation) ReadClassicPresentation(AdmittedFiles files, ReadOnlyMemory<byte>? bytes, string publicationRoot, IReadOnlyDictionary<string, ContentSha256> artifacts, DaggerfallContentDiagnostics diagnostics)
     {
-        if (bytes is null) { diagnostics.Add("Generated classic media manifest is unavailable."); return ([], NormalizedClassicPresentation.Empty); }
+        if (bytes is null) { diagnostics.Add("Generated classic media manifest is unavailable."); return ([], [], NormalizedClassicPresentation.Empty); }
         try
         {
             using JsonDocument document = JsonDocument.Parse(bytes.Value);
@@ -1587,7 +1588,8 @@ internal static class PrivateersHoldContent
                     StringComparer.Ordinal));
             IReadOnlyList<DaggerfallMissileVisual> worldVisuals = ReadClassicWorldVisuals(
                 root, publicationRoot, artifacts, files, diagnostics);
-            return (Array.AsReadOnly(audio.ToArray()), new NormalizedClassicPresentation(weapons, effects)
+            IReadOnlyList<NormalizedMusicCue> music = ReadClassicMusic(root, diagnostics);
+            return (Array.AsReadOnly(audio.ToArray()), music, new NormalizedClassicPresentation(weapons, effects)
             {
                 InventoryIcons = new ReadOnlyDictionary<string, string>(icons),
                 Resources = publishedResources,
@@ -1597,8 +1599,63 @@ internal static class PrivateersHoldContent
         catch (JsonException exception)
         {
             diagnostics.Add($"Generated classic media manifest is not valid JSON: {exception.Message}");
-            return ([], NormalizedClassicPresentation.Empty);
+            return ([], [], NormalizedClassicPresentation.Empty);
         }
+    }
+
+    /// <summary>
+    /// Reads the music cues a site's classic sidecar admits.
+    /// </summary>
+    /// <remarks>
+    /// A cue names the donor track, the artifact inside the product-wide music bundle, and the digest the
+    /// publication measured. The site does not carry the bytes, so what is checked here is that the
+    /// statement is one the product can act on: an admitted container, one artifact per cue, and one cue
+    /// per track. Whether those bytes exist is answered when the product joins this list against the
+    /// published music manifest, which is where a cue naming an unpublished artifact is a real failure.
+    /// </remarks>
+    private static IReadOnlyList<NormalizedMusicCue> ReadClassicMusic(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    {
+        List<NormalizedMusicCue> music = [];
+        HashSet<string> tracks = new(StringComparer.Ordinal);
+        HashSet<string> mediaIds = new(StringComparer.Ordinal);
+        HashSet<string> files = new(StringComparer.Ordinal);
+        foreach (JsonElement value in DaggerfallBaseContent.Array(root, "music", diagnostics))
+        {
+            JsonElement cue = DaggerfallBaseContent.Object(value, "classic music cue", diagnostics);
+            DaggerfallBaseContent.RejectDuplicateProperties(cue, "classic music cue", diagnostics);
+            string mediaId = DaggerfallBaseContent.Text(cue, "mediaId", diagnostics);
+            string track = DaggerfallBaseContent.Text(cue, "track", diagnostics);
+            string context = DaggerfallBaseContent.Text(cue, "context", diagnostics);
+            string file = DaggerfallBaseContent.Text(cue, "file", diagnostics);
+            string mimeType = DaggerfallBaseContent.Text(cue, "mimeType", diagnostics);
+            long byteLength = Long(cue, "byteLength", diagnostics);
+            ContentSha256 hash = ContentHash(DaggerfallBaseContent.Text(cue, "contentDigest", diagnostics), diagnostics);
+            if (!ValidLogicalId(mediaId) || string.IsNullOrWhiteSpace(track) || track.Contains('/') || track.Contains("..", StringComparison.Ordinal)
+                || string.IsNullOrWhiteSpace(context) || !ValidLogicalPath(file) || file.Contains('/') || byteLength <= 0)
+            {
+                diagnostics.Add($"Classic music cue '{mediaId}' does not match the canonical importer contract.");
+                continue;
+            }
+
+            // The publication admits one container per cue, and the Engine opens the artifact the manifest
+            // names. A second container would need its own admission, so it is refused here rather than
+            // opened and left to fail as an unexplained silence in the middle of a dungeon.
+            if (!StringComparer.Ordinal.Equals(mimeType, DaggerfallMusicBundle.MimeType) || !file.EndsWith(DaggerfallMusicBundle.Extension, StringComparison.Ordinal))
+            {
+                diagnostics.Add($"Classic music cue '{mediaId}' names container '{mimeType}' and artifact '{file}', which the music publication does not admit.");
+                continue;
+            }
+
+            if (!mediaIds.Add(mediaId) || !tracks.Add(track) || !files.Add(file))
+            {
+                diagnostics.Add($"Classic music repeats cue '{mediaId}', track '{track}' or artifact '{file}'.");
+                continue;
+            }
+
+            music.Add(new NormalizedMusicCue(mediaId, track, context, file, mimeType, byteLength, hash));
+        }
+
+        return Array.AsReadOnly(music.OrderBy(cue => cue.Track, StringComparer.Ordinal).ToArray());
     }
 
     /// <summary>
@@ -2180,6 +2237,18 @@ internal sealed record NormalizedSpriteState(string Name, IReadOnlyList<uint> Fr
 }
 internal sealed record NormalizedAttackSequence(int Chance, IReadOnlyList<int> SourceFrames, string State = "primaryAttack");
 internal sealed record NormalizedAudioClip(string Id, string Path, ContentSha256 Sha256);
+
+/// <summary>
+/// One music cue a site's classic sidecar admits: the donor track it answers, the published artifact
+/// inside the product-wide music bundle, and the container both sides state.
+/// </summary>
+/// <remarks>
+/// The cue is metadata, not a body: the site names which published cues the product may open here, and
+/// the bytes stay in the one music publication every site shares. That is why a cue carries the donor
+/// song identity rather than a second copy of the artifact — the runtime resolves a track the donor's
+/// own song lists name, and the site is stating which of those tracks play in this world.
+/// </remarks>
+internal sealed record NormalizedMusicCue(string MediaId, string Track, string Context, string File, string MimeType, long ByteLength, ContentSha256 Sha256);
 internal sealed record NormalizedClassicWeaponAction(string Name, int SourceRecordOrdinal, int FrameStart, int FrameCount, string Alignment, float ScreenOffset, float FramesPerSecond, bool Loops, short SourceXOffset, short SourceYOffset)
 {
     internal IReadOnlyList<int>? Sequence { get; init; }
@@ -2227,7 +2296,7 @@ internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 T
     internal NormalizedAttackSequence? RangedAttackSequence { get; init; }
     internal NormalizedActorSprite? Corpse { get; init; }
 }
-internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyDictionary<int, NormalizedActorSprite>? mobileSprites = null, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null, IReadOnlyList<DaggerfallRdbDoorDefinition>? doors = null, DaggerfallWorldProfileKind profileKind = DaggerfallWorldProfileKind.Dungeon, string? logicalProfileId = null, IReadOnlyList<DaggerfallSitePortal>? portals = null, IReadOnlyList<DaggerfallSiteAnchor>? anchors = null, IReadOnlyList<DaggerfallSiteLight>? lights = null, NormalizedGroundContainerSprite? groundContainerSprite = null, DaggerfallDungeonMapContent? dungeonMap = null, IReadOnlyList<DaggerfallDungeonActionDefinition>? dungeonActions = null, IReadOnlyList<DaggerfallDungeonActionModelDefinition>? dungeonActionModels = null, DaggerfallInteriorBuilding? interiorBuilding = null)
+internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyDictionary<int, NormalizedActorSprite>? mobileSprites = null, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null, IReadOnlyList<DaggerfallRdbDoorDefinition>? doors = null, DaggerfallWorldProfileKind profileKind = DaggerfallWorldProfileKind.Dungeon, string? logicalProfileId = null, IReadOnlyList<DaggerfallSitePortal>? portals = null, IReadOnlyList<DaggerfallSiteAnchor>? anchors = null, IReadOnlyList<DaggerfallSiteLight>? lights = null, NormalizedGroundContainerSprite? groundContainerSprite = null, DaggerfallDungeonMapContent? dungeonMap = null, IReadOnlyList<DaggerfallDungeonActionDefinition>? dungeonActions = null, IReadOnlyList<DaggerfallDungeonActionModelDefinition>? dungeonActionModels = null, DaggerfallInteriorBuilding? interiorBuilding = null, IReadOnlyList<NormalizedMusicCue>? music = null)
 {
     internal ProjectFacts Project { get; } = project;
     internal SpatialContentArtifact SpatialArtifact { get; } = spatialArtifact;
@@ -2239,6 +2308,8 @@ internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentA
     /// <summary>Published mobile media, resolved independently of the authored site placements for dynamic encounter actors.</summary>
     internal IReadOnlyDictionary<int, NormalizedActorSprite> MobileSprites { get; } = new ReadOnlyDictionary<int, NormalizedActorSprite>((mobileSprites ?? new Dictionary<int, NormalizedActorSprite>()).ToDictionary());
     internal IReadOnlyList<NormalizedAudioClip> Audio { get; } = Array.AsReadOnly((audio ?? []).ToArray());
+    /// <summary>The music cues this site admits, keyed by the donor track the score resolves.</summary>
+    internal IReadOnlyList<NormalizedMusicCue> Music { get; } = Array.AsReadOnly((music ?? []).ToArray());
     internal NormalizedClassicPresentation ClassicPresentation { get; } = classicPresentation ?? NormalizedClassicPresentation.Empty;
     internal DaggerfallWorldProfileKind ProfileKind { get; } = profileKind;
     internal DaggerfallInteriorBuilding? InteriorBuilding { get; } = interiorBuilding?.Validate();

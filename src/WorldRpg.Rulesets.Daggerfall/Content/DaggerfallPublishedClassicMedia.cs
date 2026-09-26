@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Buffers.Binary;
 using System.Text.Json;
 using Rusty.Engine;
 
@@ -90,21 +89,6 @@ internal sealed class DaggerfallPublishedClassicMedia
             ? parsed
             : throw new InvalidOperationException($"Published classic media '{id}' has no usable '{property}'.");
 
-    private static ContentSha256 ParseSha256(string value, string id)
-    {
-        try
-        {
-            byte[] bytes = Convert.FromHexString(value);
-            if (bytes.Length != 32) throw new FormatException();
-            return new ContentSha256(
-                BinaryPrimitives.ReadUInt64BigEndian(bytes.AsSpan(0, 8)),
-                BinaryPrimitives.ReadUInt64BigEndian(bytes.AsSpan(8, 8)),
-                BinaryPrimitives.ReadUInt64BigEndian(bytes.AsSpan(16, 8)),
-                BinaryPrimitives.ReadUInt64BigEndian(bytes.AsSpan(24, 8)));
-        }
-        catch (FormatException)
-        {
-            throw new InvalidOperationException($"Published classic media '{id}' has an invalid SHA-256.");
-        }
-    }
+    private static ContentSha256 ParseSha256(string value, string id) =>
+        DaggerfallContentHash.Parse(value, $"Published classic media '{id}'");
 }

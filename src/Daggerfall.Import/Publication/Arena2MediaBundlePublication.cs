@@ -86,7 +86,8 @@ public sealed record ClassicMediaManifestSidecar(
     IReadOnlyList<ClassicMapMediaManifest> MapMedia,
     IReadOnlyList<ClassicMapRegionManifest> MapRegions,
     IReadOnlyList<ClassicAuthoredUiAssetManifest> AuthoredUiAssets,
-    IReadOnlyList<ClassicWorldVisualManifest> WorldVisuals)
+    IReadOnlyList<ClassicWorldVisualManifest> WorldVisuals,
+    IReadOnlyList<ClassicMusicRecord> Music)
 { }
 
 /// <summary>
@@ -427,6 +428,33 @@ public sealed record Arena2MediaBundlePublication(
             RequirePersistedDescriptor(media, audio.MediaId, NormalizedMediaKind.Audio, "classic audio");
         }
 
+        // A music cue is not a descriptor of this site's bundle: its bytes live in the product-wide music
+        // publication, so the sidecar states the identity, the donor track and the artifact's own digest
+        // and letting the reader join it against that manifest. What is checked here is that the list is
+        // internally sound and in canonical order, so the sidecar's own digest is a fact about the cue set.
+        ArgumentNullException.ThrowIfNull(sidecar.Music);
+        if (sidecar.Music.Any(cue => cue is null))
+        {
+            throw new InvalidOperationException("Persisted classic sidecar lists cannot contain null entries.");
+        }
+
+        foreach (ClassicMusicRecord cue in sidecar.Music) cue.Validate();
+        if (sidecar.Music.Select(cue => cue.MediaId).Distinct(StringComparer.Ordinal).Count() != sidecar.Music.Count)
+        {
+            throw new InvalidOperationException("Persisted classic music cues must have unique media IDs.");
+        }
+
+        if (!sidecar.Music.Select(cue => cue.MediaId).SequenceEqual(sidecar.Music.Select(cue => cue.MediaId).Order(StringComparer.Ordinal), StringComparer.Ordinal))
+        {
+            throw new InvalidOperationException("Persisted classic music cues must be in canonical media-ID order.");
+        }
+
+        if (sidecar.Music.Select(cue => cue.Track).Distinct(StringComparer.Ordinal).Count() != sidecar.Music.Count
+            || sidecar.Music.Select(cue => cue.File).Distinct(StringComparer.Ordinal).Count() != sidecar.Music.Count)
+        {
+            throw new InvalidOperationException("Persisted classic music cues must name one track and one artifact each.");
+        }
+
         foreach (ClassicUiImageManifest image in sidecar.UiImages)
         {
             image.Validate();
@@ -681,7 +709,11 @@ public sealed record Arena2MediaBundlePublication(
         publication.MapMedia.OrderBy(image => image.MediaId, StringComparer.Ordinal).ToArray(),
         publication.MapRegions.OrderBy(region => region.Region).ToArray(),
         publication.AuthoredUiAssets.OrderBy(asset => asset.Id, StringComparer.Ordinal).ToArray(),
-        publication.WorldVisuals.OrderBy(visual => visual.MediaId, StringComparer.Ordinal).ToArray());
+        publication.WorldVisuals.OrderBy(visual => visual.MediaId, StringComparer.Ordinal).ToArray(),
+        // The site names the cues it admits, and the product-wide music publication carries their bytes.
+        // Canonical order makes the sidecar's digest a fact about the cue set rather than the order the
+        // catalogue happened to declare it in.
+        publication.Music.OrderBy(cue => cue.MediaId, StringComparer.Ordinal).ToArray());
 
     private static DungeonActorSpriteStateLayout CanonicalizeState(DungeonActorSpriteStateLayout state) => state with
     {
