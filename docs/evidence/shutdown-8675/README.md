@@ -9,3 +9,9 @@ An earlier d7e candidate exited0 but duplicated lifecycle rows because both work
 Browser evidence retains the missing inventory frame art warning and WebGL ReadPixels performance warnings. No overall clean warning delta is claimed. The direct-CoreCLR exploratory limitations in Engine8686 are outside this ordinary supervised dev exercise.
 
 Final result: actual supervisor exit0 in1.73seconds, exactly one cue.started and one cue.retired, zero CSHARP_AUDIO_CLIP_IN_USE. See shutdown.json and diagnostics.ndjson; browser.json indexes original entry/world/movement captures and cleanup.
+
+## Diagnostic drain rereview
+
+Current pair6edeecefb13c8c7eac2ceb5ae290db9b40d58846 fixes Engine finding2377: the host joins its diagnostic consumer, drains any final worker events still queued, then flushes. The deterministic Engine regression reproduces the prior missing-event schedule. Files under drain-fix/ record the fresh packaged Dagger run; previous root-level proof remains labeled9c8.
+
+Fresh 6ed result: SIGINT actual exit0 in1.72seconds, one cue.started, one cue.retired, zero audio-clip-in-use errors. The report-only warning capture completed and retains inventory-art and ReadPixels warnings; no baseline comparison is available.
