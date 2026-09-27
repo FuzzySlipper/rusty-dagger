@@ -863,6 +863,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         // impact back to the shared state here, inside the generation that admitted it, so the
         // player is not left charged against an animation that no longer exists.
         RetireDepartingSwing(source);
+        _combat.ClearRangedFlight();
         CancelDungeonTextOnUnload();
         source.Dispose();
         return true;
@@ -2036,7 +2037,10 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             ReadTravelPresentation());
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
-        _appearance.Publish(State.Actors, _groundContainers.All);
+        _appearance.Publish(State.Actors, _groundContainers.All,
+            _latestUpdateGeneration is ulong generation && _latestSimulationStep is ulong simulationStep
+                ? _combat.ReadRangedFlights(generation, simulationStep) : [],
+            _tuning.Camera.EyeHeight);
     }
 
     private DaggerfallQuestMessageContext QuestTextContext(DaggerfallQuestRuntimeInstance instance)

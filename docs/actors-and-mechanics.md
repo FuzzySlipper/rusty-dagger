@@ -82,10 +82,10 @@ Kit attack execution releases a delayed impact to Dagger's flight policy.
 The session records release origin/aim and advances travel inside admitted
 updates; arrival checks the target's current position for a dodge. Flight is
 transient across saves and discarded when its generation or combatants expire.
-The current delivery still prerolls hit/damage, never collides with an intervening
-actor's body, and renders no arrow. Admitted static geometry on the release line
-does stop a shot, through the Engine's own spatial query. Den #8582 owns the
-authored projectile visual that the visible arrow waits on.
+The current delivery still prerolls hit/damage and never collides with an
+intervening actor's body. Admitted static geometry on the release line stops a
+shot through the Engine's spatial query. The published classic arrow mesh follows
+the transient flight through the ordinary appearance snapshot.
 
 ## Inventory and equipment
 
