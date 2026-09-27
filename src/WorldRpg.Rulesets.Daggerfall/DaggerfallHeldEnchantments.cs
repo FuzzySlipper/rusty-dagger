@@ -47,6 +47,7 @@ internal sealed class DaggerfallHeldEnchantments
     private const int ImprovesTalentsType = 13;
     private const int ItemDeterioratesType = 16;
     private const int UserTakesDamageType = 17;
+    private const int WeakensArmorType = 24;
 
     internal const int EnhancedSkillPoints = 15;
 
@@ -56,6 +57,7 @@ internal sealed class DaggerfallHeldEnchantments
     /// sources leave the same rating rather than doubling it.
     /// </summary>
     internal const int StrengthenedArmorValue = -5;
+    internal const int WeakenedArmorValue = 5;
     internal const int ExtraSpellPoints = 75;
     internal const double NearbyCreatureMeters = 18d;
 
@@ -150,7 +152,7 @@ internal sealed class DaggerfallHeldEnchantments
     /// <summary>What the worn items add to the player's carry allowance, ×1 when nothing does.</summary>
     internal double CarryMultiplier { get; private set; } = 1d;
 
-    /// <summary>The armor-value shift the worn items give, zero when none strengthens armor.</summary>
+    /// <summary>The armor-value shift the worn items give, zero when neither armor effect is worn.</summary>
     internal int ArmorValueModifier { get; private set; }
 
     /// <summary>How many worn sources regenerate health, one tick each.</summary>
@@ -178,11 +180,12 @@ internal sealed class DaggerfallHeldEnchantments
         _applied.Clear();
         Talents = default;
         double carry = 1d;
-        int armor = 0;
+        bool strengthensArmor = false;
+        bool weakensArmor = false;
         bool conditionPayloads = false;
         Array.Clear(_regeneration);
 
-        foreach (WorldRpg.Kit.Inventory.EquipmentAssignment assignment in read.Assignments)
+        foreach (WorldRpg.Kit.Inventory.EquipmentAssignment assignment in read.Assignments.DistinctBy(value => value.Item.EntityId))
         {
             if (!TryEnchantments(assignment, out IReadOnlyList<DaggerfallMagicEnchantmentDefinition> enchantments)) continue;
             foreach (DaggerfallMagicEnchantmentDefinition enchantment in enchantments)
@@ -199,7 +202,10 @@ internal sealed class DaggerfallHeldEnchantments
                         carry = Math.Max(carry, WeightMultiplier(enchantment.Param));
                         break;
                     case StrengthensArmorType:
-                        armor = StrengthenedArmorValue;
+                        strengthensArmor = true;
+                        break;
+                    case WeakensArmorType:
+                        weakensArmor = true;
                         break;
                     case RegeneratesHealthType:
                         _regeneration[RegenerationCondition(enchantment.Param)]++;
@@ -221,7 +227,9 @@ internal sealed class DaggerfallHeldEnchantments
         }
 
         CarryMultiplier = carry;
-        ArmorValueModifier = armor;
+        // Each effect is nonstacking on its own. A strengthening and a weakening source cancel.
+        ArmorValueModifier = (strengthensArmor ? StrengthenedArmorValue : 0)
+            + (weakensArmor ? WeakenedArmorValue : 0);
         _conditionPayloads = conditionPayloads;
     }
 
@@ -236,6 +244,8 @@ internal sealed class DaggerfallHeldEnchantments
     internal void AdvanceRounds(int minutes)
     {
         if (minutes <= 0) return;
+        // Equipment can change in a modal action immediately before rest advances the calendar.
+        Refresh();
         // The donor bounds its own catch-up well below a year of minutes; the effect lifecycle's cap is
         // that same bound, reused here so a held payload cannot out-heal the effects beside it.
         int rounds = Math.Min(minutes, checked((int)DaggerfallEffectLifecycle.MaximumElapsedCatchupRounds));
@@ -269,36 +279,59 @@ internal sealed class DaggerfallHeldEnchantments
     }
 
     /// <summary>
-    /// Applies the worn payloads that act on the beat: an item that deteriorates loses one condition unit
-    /// under its param's condition, an item that repairs objects restores one to each worn item, and an
-    /// item that takes its wearer's health costs one point under its param's condition. Each acts per
-    /// source, so two such items do twice in a beat, exactly as the donor's per-bundle round does.
+    /// Applies each magic-round beat in order. Deterioration affects its source, repair chooses one
+    /// eligible worn item per source and beat, and wearer damage goes through the vitality owner.
     /// </summary>
     private void ApplyWornPayloads(int ticks, bool sunlight)
     {
         bool holyPlaces = _playerInHolyPlace?.Invoke() ?? false;
-        foreach (WorldRpg.Kit.Inventory.EquipmentAssignment assignment in _equipment.Read().Assignments)
+        for (int tick = 0; tick < ticks; tick++)
         {
-            if (!TryEnchantments(assignment, out IReadOnlyList<DaggerfallMagicEnchantmentDefinition> enchantments)) continue;
-            DurableIdentityReference identity = _entities.IdentityOf(new EntityId(assignment.Item.EntityId));
-            if (!_instances.ContainsUnique(identity.Value)) continue;
-            DaggerfallItemInstanceMetadata metadata = _instances.RequireUnique(identity.Value);
-            bool carriesCondition = metadata.MaximumCondition > 0;
-            foreach (DaggerfallMagicEnchantmentDefinition enchantment in enchantments)
+            foreach (WorldRpg.Kit.Inventory.EquipmentAssignment assignment in
+                     _equipment.Read().Assignments.DistinctBy(value => value.Item.EntityId))
             {
-                switch (enchantment.Type)
+                if (!TryEnchantments(assignment, out IReadOnlyList<DaggerfallMagicEnchantmentDefinition> enchantments)) continue;
+                DurableIdentityReference identity = _entities.IdentityOf(new EntityId(assignment.Item.EntityId));
+                if (!_instances.ContainsUnique(identity.Value)) continue;
+                DaggerfallItemInstanceMetadata metadata = _instances.RequireUnique(identity.Value);
+                bool carriesCondition = metadata.MaximumCondition > 0;
+                bool sourceBroken = false;
+                foreach (DaggerfallMagicEnchantmentDefinition enchantment in enchantments)
                 {
-                    case ItemDeterioratesType when carriesCondition && ItemConditionHolds(enchantment.Param, sunlight, holyPlaces):
-                        _itemCondition?.Damage(assignment.Item, checked(ticks * HeldConditionUnitsPerTick));
-                        break;
-                    case RepairsObjectsType when carriesCondition:
-                        _itemCondition?.Restore(assignment.Item, checked(ticks * HeldConditionUnitsPerTick));
-                        break;
-                    case UserTakesDamageType when WearerConditionHolds(enchantment.Param, sunlight, holyPlaces):
-                        _damageWearer?.Invoke(checked(ticks * WearerDamagePerTick));
-                        break;
+                    switch (enchantment.Type)
+                    {
+                        case ItemDeterioratesType when carriesCondition && ItemConditionHolds(enchantment.Param, sunlight, holyPlaces):
+                            sourceBroken = _itemCondition?.Damage(assignment.Item, HeldConditionUnitsPerTick).Outcome
+                                == DaggerfallItemConditionOutcome.Broken;
+                            break;
+                        case RepairsObjectsType:
+                            RepairOneWornItem();
+                            break;
+                        case UserTakesDamageType when WearerConditionHolds(enchantment.Param, sunlight, holyPlaces):
+                            _damageWearer?.Invoke(WearerDamagePerTick);
+                            break;
+                    }
+                    if (sourceBroken) break;
                 }
             }
+        }
+    }
+
+    private void RepairOneWornItem()
+    {
+        if (_itemCondition is null) return;
+        // Classic observation restricts repair to equipped items. The donor's inventory loop also
+        // skips enchanted targets by default; the enchantment source need not be its repair target.
+        foreach (WorldRpg.Kit.Inventory.EquipmentAssignment target in
+                 _equipment.Read().Assignments.DistinctBy(value => value.Item.EntityId))
+        {
+            DurableIdentityReference identity = _entities.IdentityOf(new EntityId(target.Item.EntityId));
+            if (!_instances.ContainsUnique(identity.Value)) continue;
+            DaggerfallItemInstanceMetadata metadata = _instances.RequireUnique(identity.Value);
+            if (metadata.Enchantment is not null || metadata.MaximumCondition == 0
+                || metadata.CurrentCondition >= metadata.MaximumCondition) continue;
+            _itemCondition.Restore(target.Item, HeldConditionUnitsPerTick);
+            return;
         }
     }
 
