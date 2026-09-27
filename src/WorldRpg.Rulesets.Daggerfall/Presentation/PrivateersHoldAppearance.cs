@@ -35,6 +35,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private readonly Dictionary<string, RenderResourceInfo> classicTextures = new(StringComparer.Ordinal);
     private readonly Dictionary<long, ActorVisual> actors = [];
     private readonly Dictionary<long, GroundVisual> groundVisuals = [];
+    private readonly Dictionary<RangedShotIdentity, ulong> arrowVisualEntityIds = [];
     private readonly List<EffectVisual> effects = [];
     private ViewmodelVisual? viewmodel;
     private bool weaponDrawn = true;
@@ -96,6 +97,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private readonly List<IDisposable> priorRetired = [];
     private readonly List<IDisposable> nextRetired = [];
     private Appearance? world;
+    private Appearance? arrowAppearance;
     private readonly AuthoredWorldAppearance worldAppearance;
     private Action<List<AppearanceFact>>? appendSnapshotFacts;
     private Action? completeSnapshot;
@@ -130,6 +132,26 @@ internal sealed class PrivateersHoldAppearance : IDisposable
                 materialsBySlot.Add(material.Slot, created);
             }
             appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(world, inputs.Materials.Select((material, index) => new MeshMaterialBinding(material.Slot, materials[index])).ToArray()));
+            DaggerfallMissileVisual? arrow = classicPresentation.WorldVisuals.SingleOrDefault(visual =>
+                visual.MediaId == "visual.missile.arrow");
+            if (arrow is not null)
+            {
+                arrowAppearance = appearance.CreateStaticMeshFromContent(
+                    new StaticMeshContentAppearanceRequest(arrow.Path, worldAppearance.Tint));
+                List<MeshMaterialBinding> bindings = [];
+                foreach (DaggerfallMissileTextureBinding texture in arrow.Textures)
+                {
+                    RenderResourceInfo resource = appearance.OpenResource(new RenderResourceRequest(
+                        texture.TexturePath, TextureFilter.Nearest, TextureWrap.Repeat));
+                    ownedResources.Add(resource.Handle);
+                    Material material = appearance.CreateMaterial(new MaterialRequest(
+                        new Color(1F, 1F, 1F, 1F), resource.Handle, 1F,
+                        new Color(1F, 1F, 1F, 1F), Vector3.Zero, 0F, false));
+                    materials.Add(material);
+                    bindings.Add(new MeshMaterialBinding(texture.MeshSlot, material));
+                }
+                appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(arrowAppearance, bindings.ToArray()));
+            }
             if (inputs.Doors.Count != 0 && doors is null) throw new ArgumentException("Door visuals require the selected door runtime.", nameof(doors));
             foreach (DaggerfallRdbDoorDefinition door in inputs.Doors)
             {
@@ -225,7 +247,8 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         => Publish(actors, new Dictionary<long, DaggerfallGroundContainer>());
 
     /// <summary>Publishes the active ground-container projection through the same Engine snapshot as actors.</summary>
-    internal void Publish(ActorsState actors, IReadOnlyDictionary<long, DaggerfallGroundContainer> groundContainers)
+    internal void Publish(ActorsState actors, IReadOnlyDictionary<long, DaggerfallGroundContainer> groundContainers,
+        IReadOnlyList<DaggerfallRangedFlightView>? rangedFlights = null, float arrowHeight = 0f)
     {
         if (disposed) return;
         ReconcileGroundVisuals(groundContainers);
@@ -256,6 +279,27 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         }
         foreach (EffectVisual effect in effects)
             facts.Add(new AppearanceFact(effect.EntityId, false, 0, new Transform(effect.Position.ToVector(), Quaternion.Identity, Vector3.One), effect.Appearance, true, RenderLayer.Scene));
+        if (arrowAppearance is { } arrowVisual)
+        {
+            IReadOnlyList<DaggerfallRangedFlightView> flights = rangedFlights ?? [];
+            HashSet<RangedShotIdentity> active = [.. flights.Select(flight => flight.Identity)];
+            foreach (RangedShotIdentity retired in arrowVisualEntityIds.Keys.Where(id => !active.Contains(id)).ToArray())
+                arrowVisualEntityIds.Remove(retired);
+            foreach (DaggerfallRangedFlightView flight in flights)
+            {
+                if (!arrowVisualEntityIds.TryGetValue(flight.Identity, out ulong visualId))
+                    arrowVisualEntityIds.Add(flight.Identity, visualId = NextVisualEntityId());
+                Vector3 direction = flight.Direction.LengthSquared() > .000001f
+                    ? flight.Direction : Vector3.UnitZ;
+                Vector3 up = MathF.Abs(Vector3.Dot(direction, Vector3.UnitY)) > .99f
+                    ? Vector3.UnitX : Vector3.UnitY;
+                Quaternion rotation = Quaternion.CreateFromRotationMatrix(
+                    Matrix4x4.CreateWorld(Vector3.Zero, direction, up));
+                facts.Add(new AppearanceFact(visualId, false, 0,
+                    new Transform(flight.Position.ToVector() + Vector3.UnitY * arrowHeight,
+                        rotation, Vector3.One), arrowVisual, true, RenderLayer.Scene));
+            }
+        }
         if (viewmodel is { } weapon)
         {
             facts.Add(new AppearanceFact(weapon.EntityId, false, 0, weapon.Transform, weapon.Appearance, true, RenderLayer.Viewmodel));
@@ -522,6 +566,8 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         actors.Clear();
         groundVisuals.Clear();
         if (world is { } staticWorld) { world = null; Dispose(staticWorld, ref failures); }
+        if (arrowAppearance is { } arrowVisual) { arrowAppearance = null; Dispose(arrowVisual, ref failures); }
+        arrowVisualEntityIds.Clear();
         foreach (Appearance visual in doorVisuals.Values.Reverse()) Dispose(visual, ref failures);
         doorVisuals.Clear();
         doorVisualEntityIds.Clear();

@@ -191,8 +191,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     /// <summary>
     /// The authored release frame consumes the pending attack, while a fixed-ranged attack stays
     /// in this ruleset-owned transient queue until the session's admitted update advances it.
-    /// Daggerfall Unity uses a travelling missile; this approximation still renders no arrow, so only
-    /// the target's current position can dodge the release aim. Admitted static geometry between the
+    /// The target's current position can dodge the release aim. Admitted static geometry between the
     /// release and the aim is asked of the caller's own Engine query: a shot that meets cover lands
     /// nowhere.
     /// </summary>
@@ -254,6 +253,34 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         }
     }
 
+    /// <summary>The current shot-owned positions consumed by the ordinary world appearance snapshot.</summary>
+    internal IReadOnlyList<DaggerfallRangedFlightView> ReadRangedFlights(ulong generation, ulong simulationStep) =>
+        [.. _inFlightRangedShots
+            .Where(pair => pair.Key.Generation == generation && simulationStep < pair.Value.ArriveAtStep)
+            .OrderBy(pair => pair.Key.Generation)
+            .ThenBy(pair => pair.Key.AttackerId)
+            .ThenBy(pair => pair.Key.TargetId)
+            .ThenBy(pair => pair.Key.ReleaseStep)
+            .Select(pair =>
+            {
+                InFlightRangedShot shot = pair.Value;
+                float progress = simulationStep <= pair.Key.ReleaseStep ? 0f
+                    : (float)((double)(simulationStep - pair.Key.ReleaseStep)
+                        / (shot.ArriveAtStep - pair.Key.ReleaseStep));
+                Vector3 origin = shot.Origin.ToVector();
+                Vector3 aim = shot.Aim.ToVector();
+                Vector3 line = aim - origin;
+                return new DaggerfallRangedFlightView(pair.Key, WorldPoint.From(Vector3.Lerp(origin, aim, progress)),
+                    line.LengthSquared() > .000001f ? Vector3.Normalize(line) : Vector3.UnitZ);
+            })];
+
+    /// <summary>A site transition retires its transient releases and in-flight shots together.</summary>
+    internal void ClearRangedFlight()
+    {
+        _releasedRangedShots.Clear();
+        _inFlightRangedShots.Clear();
+    }
+
     /// <summary>A shot is any attack whose own action carries it to a target beyond a swing: the
     /// enemy's authored fixed-ranged action, or the player's ranged action while a bow is held.</summary>
     private bool IsRangedAction(long attackerId)
@@ -285,12 +312,10 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     }
 
     // DFU DaggerfallMissile moves at 25m/s. The accepted ruleset approximation uses a 0.45m
-    // target-position dodge radius and asks the caller's cover query about the release line; it still
-    // renders no arrow and does not collide with an intervening actor's body, which the erratum and
-    // the receiving task for the projectile visual record.
+    // target-position dodge radius and asks the caller's cover query about the release line; it does
+    // not collide with an intervening actor's body, which the erratum records.
     private const double ArrowSpeedMetersPerSecond = 25d;
     private const float ArrowDodgeRadiusMeters = .45f;
-    private readonly record struct RangedShotIdentity(ulong Generation, long AttackerId, long TargetId, ulong ReleaseStep);
     private readonly record struct InFlightRangedShot(DeferredAttackImpact Release, WorldPoint Origin, WorldPoint Aim, ulong ArriveAtStep);
 
     /// <summary>
@@ -868,3 +893,8 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     private readonly record struct Combatant(long Id, StatsComponent Stats, DaggerfallActorDefinition Definition);
     private readonly record struct DaggerfallEquippedWeapon(DaggerfallWeaponDefinition Weapon, string Material);
 }
+
+internal readonly record struct RangedShotIdentity(ulong Generation, long AttackerId, long TargetId, ulong ReleaseStep);
+
+/// <summary>A transient flight's current world pose, read from the canonical combat queue.</summary>
+internal readonly record struct DaggerfallRangedFlightView(RangedShotIdentity Identity, WorldPoint Position, Vector3 Direction);

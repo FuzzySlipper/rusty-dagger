@@ -3394,10 +3394,9 @@ internal static class DaggerfallBaseContent
             "loot-matrix-uses-fall-exe-errata",
             // Ranged shots draw one arrow, preroll their combat outcome, and travel through the
             // admitted session update, where admitted static geometry on the release line stops them.
-            // The flight still only tests whether the target moved away from its release aim and never
-            // collides with an intervening actor's body, and it renders no arrow: the visible missile
-            // waits on an authored arrow visual rather than a substitute shape.
-            "ranged-shots-preroll-their-outcome-and-render-no-arrow",
+            // The flight shows the published arrow mesh but still tests only whether the target
+            // moved away from its release aim; an intervening actor's body does not intercept it.
+            "ranged-shots-preroll-and-omit-intervening-actor-collision",
         ];
         if (!errata.Select(erratum => erratum.Id).Order().SequenceEqual(expectedErrata.Order())) diagnostics.Add("Donor errata must name mobile 39, the Chain2 omission, the bow two-hand policy, the loot errata and what the ranged delivery still approximates exactly.");
     }

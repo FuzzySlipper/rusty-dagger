@@ -4679,6 +4679,51 @@ public sealed partial class NormalizedRuntimeSeamTests
         Assert.Equal(line.Z, cast.Direction.Z, 2);
         Assert.Equal(shooter.X + line.X * .3f, cast.Origin.X, 2);
         Assert.Equal(shooter.Z + line.Z * .3f, cast.Origin.Z, 2);
+        DaggerfallMissileVisual arrow = Assert.Single(inputs.ClassicPresentation.WorldVisuals,
+            visual => visual.MediaId == "visual.missile.arrow");
+        Assert.DoesNotContain(appearance.Snapshots.Last(), fact =>
+            ReferenceEquals(fact.Appearance, appearance.StaticMeshByPath[arrow.Path]));
+    }
+
+    [Fact]
+    public void A_released_arrow_uses_its_authored_world_mesh_and_retires_with_its_flight()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallMissileVisual arrow = Assert.Single(inputs.ClassicPresentation.WorldVisuals,
+            visual => visual.MediaId == "visual.missile.arrow");
+        List<string> releases = [];
+        using DaggerfallSession session = CreateArcherSession(root, definitions, inputs, releases,
+            out AppearanceFake appearance, out PerceptionFake perception);
+        const long archer = 2004;
+        double separation = definitions.Actions.Values.Where(action => action.Interpretation == "fixed-melee")
+            .Max(action => action.Reach!.Value) + 1d;
+        perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 1d,
+            PerceptionPairKind.Visible, 1d));
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredRangedMarker(archer));
+
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+        Appearance mesh = appearance.StaticMeshByPath[arrow.Path];
+        AppearanceFact released = Assert.Single(appearance.Snapshots.Last(), fact =>
+            ReferenceEquals(fact.Appearance, mesh));
+        Assert.Equal(RenderLayer.Scene, released.Layer);
+        Assert.Equal(session.State.Actors.Get(archer).Position.Y + DaggerfallTuning.Defaults.Camera.EyeHeight,
+            released.Transform.Translation.Y, 2);
+
+        // The shot owns one stable visual identity while its released line advances; stopping later
+        // enemy decisions does not cancel a missile already in flight.
+        perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 0d,
+            PerceptionPairKind.FacingRejected, 0d));
+        appearance.AdvanceReceiptForAll = null;
+        session.Update(new ProductUpdate(OuterUpdate(2), []));
+        AppearanceFact moving = Assert.Single(appearance.Snapshots.Last(), fact =>
+            ReferenceEquals(fact.Appearance, mesh));
+        Assert.Equal(released.ObjectId, moving.ObjectId);
+        Assert.NotEqual(released.Transform.Translation, moving.Transform.Translation);
+
+        for (ulong step = 3; step <= 120; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
+        Assert.DoesNotContain(appearance.Snapshots.Last(), fact => ReferenceEquals(fact.Appearance, mesh));
     }
 
     [Fact]
@@ -4852,9 +4897,11 @@ public sealed partial class NormalizedRuntimeSeamTests
         Assert.True(combat.Attacks.TryBeginEnemyAttack(archer, DaggerfallActorIdentity.PlayerEntityId, generation, releaseStep, .125, facts));
         combat.Execution.ApplyImpacts([new AttackImpactNotice(archer, DaggerfallActorIdentity.PlayerEntityId, generation, releaseStep, Expired: false)], generation, facts);
         combat.AdvanceRangedFlight(generation, releaseStep, .125, positions, facts);
+        Assert.Single(combat.ReadRangedFlights(generation, releaseStep));
         // A fresh admitted generation drops the old transient record rather than comparing its
         // release step to the new timeline's present step and accidentally landing it.
         combat.AdvanceRangedFlight(generation + 1, releaseStep + 1, .125, positions, facts);
+        Assert.Empty(combat.ReadRangedFlights(generation + 1, releaseStep + 1));
         combat.AdvanceRangedFlight(generation, releaseStep + 100, .125, positions, facts);
         Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
 
@@ -4863,8 +4910,10 @@ public sealed partial class NormalizedRuntimeSeamTests
         Assert.True(combat.Attacks.TryBeginEnemyAttack(archer, DaggerfallActorIdentity.PlayerEntityId, nextGeneration, nextReleaseStep, .125, facts));
         combat.Execution.ApplyImpacts([new AttackImpactNotice(archer, DaggerfallActorIdentity.PlayerEntityId, nextGeneration, nextReleaseStep, Expired: false)], nextGeneration, facts);
         combat.AdvanceRangedFlight(nextGeneration, nextReleaseStep, .125, positions, facts);
+        Assert.Single(combat.ReadRangedFlights(nextGeneration, nextReleaseStep));
         session.State.Actors.Entities.Destroy(ActorsState.Identity(archer));
         combat.AdvanceRangedFlight(nextGeneration, nextReleaseStep + 100, .125, positions, facts);
+        Assert.Empty(combat.ReadRangedFlights(nextGeneration, nextReleaseStep + 100));
         Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
     }
 
@@ -4883,6 +4932,10 @@ public sealed partial class NormalizedRuntimeSeamTests
             perception.Receipt = Receipt(new PerceptionPair(2004, 1, 4d, 1d, PerceptionPairKind.Visible, 1d));
             appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredRangedMarker(2004));
             original.Update(new ProductUpdate(OuterUpdate(1), []));
+            DaggerfallMissileVisual arrow = Assert.Single(inputs.ClassicPresentation.WorldVisuals,
+                visual => visual.MediaId == "visual.missile.arrow");
+            Assert.Contains(appearance.Snapshots.Last(), fact =>
+                ReferenceEquals(fact.Appearance, appearance.StaticMeshByPath[arrow.Path]));
             healthAtRelease = original.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
             saved = original.CaptureSave();
         }
@@ -4891,11 +4944,17 @@ public sealed partial class NormalizedRuntimeSeamTests
         PopulateContent(resumedContent, inputs);
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         resumedSpatial.KeepPosition = true;
-        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
+        AppearanceFake resumedAppearance = new(releases);
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, resumedAppearance);
         using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, composition, definitions, inputs, DaggerfallTuning.Defaults, saved, RandomMinimum.Create());
+        DaggerfallMissileVisual restoredArrow = Assert.Single(inputs.ClassicPresentation.WorldVisuals,
+            visual => visual.MediaId == "visual.missile.arrow");
+        resumed.Update(new ProductUpdate(OuterUpdate(2), []));
+        Assert.DoesNotContain(resumedAppearance.Snapshots.Last(), fact =>
+            ReferenceEquals(fact.Appearance, resumedAppearance.StaticMeshByPath[restoredArrow.Path]));
         // The original release would arrive within this bound. A resumed session has no in-flight
         // record, so crossing that deadline cannot replay a shot from the discarded runtime queue.
-        for (ulong step = 2; step <= 240; step++) resumed.Update(new ProductUpdate(OuterUpdate(step), []));
+        for (ulong step = 3; step <= 240; step++) resumed.Update(new ProductUpdate(OuterUpdate(step), []));
 
         Assert.Equal(healthAtRelease, resumed.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
     }
@@ -8684,6 +8743,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         public void PublishAttachedSnapshot(AttachedAppearanceSnapshotRequest request) => throw new NotSupportedException();
         internal List<RenderResourceRequest> OpenResourceRequests { get; } = [];
         internal List<StaticMeshContentAppearanceRequest> StaticMeshContentRequests { get; } = [];
+        internal Dictionary<string, Appearance> StaticMeshByPath { get; } = new(StringComparer.Ordinal);
         internal List<MeshMaterialBinding> StaticMeshBindings { get; } = [];
         internal List<SpriteAtlasCreateRequest> AtlasRequests { get; } = [];
         internal List<SpriteFromAtlasRequest> SpriteRequests { get; } = [];
@@ -8754,7 +8814,13 @@ public sealed partial class NormalizedRuntimeSeamTests
         public MeshPartition PartitionMesh(MeshPartitionRequest request) => throw new NotSupportedException();
         public MeshPartitionReadout ReadMeshPartition(MeshPartition partition) => throw new NotSupportedException();
         public MeshResource TakeMeshPartitionPart(MeshPartitionPartRequest request) => throw new NotSupportedException();
-        public Appearance CreateStaticMeshFromContent(StaticMeshContentAppearanceRequest request) { StaticMeshContentRequests.Add(request); return CreateAppearance(); }
+        public Appearance CreateStaticMeshFromContent(StaticMeshContentAppearanceRequest request)
+        {
+            StaticMeshContentRequests.Add(request);
+            Appearance value = CreateAppearance();
+            StaticMeshByPath[request.Path] = value;
+            return value;
+        }
         public Appearance CreateStaticMeshFromContentReference(StaticMeshContentReferenceRequest request) => CreateAppearance();
         public Appearance ReplaceStaticMesh(Appearance appearance, StaticMeshAppearanceRequest request) => CreateAppearance();
         public Appearance ReplaceStaticMeshFromContent(Appearance appearance, StaticMeshContentAppearanceRequest request) => CreateAppearance();
