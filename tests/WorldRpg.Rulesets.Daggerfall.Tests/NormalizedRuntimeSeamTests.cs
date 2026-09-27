@@ -3783,6 +3783,39 @@ public sealed partial class NormalizedRuntimeSeamTests
         Assert.False(session.ActivationView.Applied);
     }
 
+    [Theory]
+    [InlineData("inventory")]
+    [InlineData("character")]
+    [InlineData("menu")]
+    public void Panel_input_in_ordinary_play_survives_the_door_contract(string intent)
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        PrivateersHoldInputs source = ReadInputs(root);
+        PrivateersHoldInputs castle = PrivateersHoldContent.Read(FullContent(root),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, source);
+        PopulateContent(content, castle);
+        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        spatial.KeepPosition = true;
+        PerceptionFake perception = PerceptionFake.Create();
+        perception.Responder = request => Receipt([.. request.Targets.Span.ToArray().Select(target =>
+            new PerceptionPair(1, target.Entity, 1d, 1d, PerceptionPairKind.Visible, 1d))]);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        using DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults);
+        session.AdmitSiteProfiles(new DaggerfallSiteProfiles([source, castle]));
+        Assert.True(session.TryTransitionTo(castle.ProfileKey));
+
+        // A panel request is ordinary play input: nothing in it may reach a door validator with an
+        // identity the caller never resolved.
+        session.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.DirectDigital,
+            x: 1f, phase: InputPhase.DirectUi, intent: intent)]));
+
+        Assert.Equal(intent, session.LatestPanelRequest?.Panel);
+    }
+
     [Fact]
     public void An_activation_ray_that_hits_no_door_leaves_the_update_alive_and_dispatches_no_door_action()
     {
