@@ -215,6 +215,7 @@ internal sealed class DaggerfallConcreteGuildDefinition
 internal static class DaggerfallConcreteGuildCatalog
 {
     internal const int FightersFactionId = 41;
+    internal const int FightersTrainerFactionId = 849;
     internal const int MagesFactionId = 40;
     internal const int ThievesFactionId = 42;
     internal const int DarkBrotherhoodFactionId = 108;
@@ -274,9 +275,9 @@ internal static class DaggerfallConcreteGuildCatalog
         yield return Standalone(
             "fighters-guild", "The Fighters Guild", DaggerfallConcreteGuildKind.Fighters, FightersFactionId, 11,
             ["archery", "axe", "blunt-weapon", "giantish", "long-blade", "orcish", "short-blade"],
-            849,
+            FightersTrainerFactionId,
             [
-                Service(DaggerfallConcreteGuildService.Training, 0, 849),
+                Service(DaggerfallConcreteGuildService.Training, 0, FightersTrainerFactionId),
                 Service(DaggerfallConcreteGuildService.Quests, null, 851, requiresMembership: false),
                 Service(DaggerfallConcreteGuildService.Repair, 0, 850),
                 Service(DaggerfallConcreteGuildService.Rest, 0),

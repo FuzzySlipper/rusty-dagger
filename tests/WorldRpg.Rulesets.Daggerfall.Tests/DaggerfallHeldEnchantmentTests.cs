@@ -258,7 +258,7 @@ public sealed class DaggerfallHeldEnchantmentTests
     }
 
     [Fact]
-    public void A_worn_armor_enchantment_shifts_the_armor_value_the_donor_names()
+    public void Worn_armor_effects_do_not_stack_with_themselves_and_opposites_cancel()
     {
         // Ebony Mail and Auriel's Shield publish StrengthensArmor, whose documented shift is five
         // points of armor value. The donor sets one modifier rather than adding per item.
@@ -273,8 +273,19 @@ public sealed class DaggerfallHeldEnchantmentTests
         fixture.Refresh();
         Assert.Equal(-5, fixture.ArmorValueModifier);
 
+        fixture.EnchantAndWear("template-120-daedric", 6003, type: 24, param: -1);
+        Assert.Equal(0, fixture.ArmorValueModifier);
+
         fixture.Unequip(6001);
         fixture.Unequip(6002);
+        fixture.Refresh();
+        Assert.Equal(5, fixture.ArmorValueModifier);
+
+        fixture.EnchantAndWear("template-120-daedric", 6004, type: 24, param: -1);
+        Assert.Equal(5, fixture.ArmorValueModifier);
+
+        fixture.Unequip(6003);
+        fixture.Unequip(6004);
         fixture.Refresh();
         Assert.Equal(0, fixture.ArmorValueModifier);
     }
@@ -566,22 +577,25 @@ public sealed class DaggerfallHeldEnchantmentTests
     }
 
     [Fact]
-    public void A_worn_repair_enchantment_restores_one_unit_each_beat_up_to_the_maximum()
+    public void A_worn_repair_source_restores_one_plain_worn_target_each_beat()
     {
         using Fixture fixture = new();
         fixture.EnchantAndWear("template-120-daedric", 9204, type: 8, param: -1);
-        // Give it a budget to climb: one unit per beat, and never past the maximum.
+        fixture.EquipEnchanted("iron-cuirass", 9207, enchantment: null, equip: true);
+        fixture.EquipEnchanted("tower-shield", 9208, enchantment: null, equip: true);
+        fixture.EquipEnchanted("iron-saber", 9209, enchantment: null, equip: false);
         fixture.SetConditionUnits(9204, maximum: 3, condition: 1);
-        int maximum = fixture.MaximumCondition(9204);
+        fixture.SetConditionUnits(9207, maximum: 3, condition: 1);
+        fixture.SetConditionUnits(9208, maximum: 3, condition: 1);
+        fixture.SetConditionUnits(9209, maximum: 3, condition: 1);
 
-        fixture.Advance(4);
-        Assert.Equal(2, fixture.Condition(9204));
-
-        fixture.Advance(4);
-        Assert.Equal(maximum, fixture.Condition(9204));
-
-        fixture.Advance(8);
-        Assert.Equal(maximum, fixture.Condition(9204));
+        // Four beats in one elapsed interval must finish the first target and move to the next.
+        // The enchanted source and an unworn item are ineligible under the chosen classic rule.
+        fixture.Advance(16);
+        Assert.Equal(1, fixture.Condition(9204));
+        Assert.Equal(3, fixture.Condition(9207));
+        Assert.Equal(3, fixture.Condition(9208));
+        Assert.Equal(1, fixture.Condition(9209));
     }
 
     [Fact]
@@ -607,9 +621,8 @@ public sealed class DaggerfallHeldEnchantmentTests
     [Fact]
     public void The_holy_place_condition_acts_only_when_its_caller_answers_yes()
     {
-        // The payload answers to the condition its caller reports. No site classification answers the
-        // product's holy-place question yet, so the session wires it false and this arm is inert in play;
-        // the fact proves which half is missing by answering yes here and watching it act.
+        // The payload answers to the condition its caller reports. The session supplies that answer
+        // from its admitted interior building; this fact isolates the payload's response.
         using Fixture fixture = new();
         fixture.EnchantAndWear("template-120-daedric", 9206, type: 17, param: 1);
         double health = fixture.Health();
@@ -681,7 +694,7 @@ public sealed class DaggerfallHeldEnchantmentTests
 
         internal IReadOnlyList<DaggerfallNearbyCreature> Nearby { set => _nearby = value; }
 
-        internal void EquipEnchanted(string itemId, ulong uniqueId, string enchantment, bool equip = false)
+        internal void EquipEnchanted(string itemId, ulong uniqueId, string? enchantment, bool equip = false)
         {
             DaggerfallItemDefinition definition = Definitions.RequireItem(new DaggerfallItemId(itemId));
             int condition = Definitions.AuthoredMaximumCondition(definition);
@@ -732,9 +745,10 @@ public sealed class DaggerfallHeldEnchantmentTests
                 new DurableIdentityReference(DurableIdentityKind.Item, uniqueId), new InventoryItemId(itemId));
             _conditions.Enchant(item, SettingKey(type, param));
             // Wear it where its own handedness allows, as the other fixtures do.
+            HashSet<string> taken = [.. _equipment.Read().Assignments.Select(assignment => assignment.Slot.Value)];
             _equipment.Equip(item, definition.Weapon?.Handedness == "both"
                 ? [new WorldRpg.Kit.Inventory.EquipmentSlotId("right-hand"), new WorldRpg.Kit.Inventory.EquipmentSlotId("left-hand")]
-                : [new WorldRpg.Kit.Inventory.EquipmentSlotId("right-hand")]);
+                : [new WorldRpg.Kit.Inventory.EquipmentSlotId(taken.Contains("right-hand") ? "left-hand" : "right-hand")]);
             Refresh();
         }
 
@@ -751,7 +765,7 @@ public sealed class DaggerfallHeldEnchantmentTests
 
         internal bool Sunlight { set => _sunlight = value; }
 
-        /// <summary>Whether the product can answer the holy-place condition; no classification does yet.</summary>
+        /// <summary>The holy-place answer supplied to this isolated held-effects fixture.</summary>
         internal bool InHolyPlace { get; set; }
 
         /// <summary>Applies wearer damage exactly as the session does, through the combat health boundary.</summary>

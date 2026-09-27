@@ -459,6 +459,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                     throw new ArgumentException("Saved encounter references a world profile not admitted by the current bundle.", nameof(saved));
                 _encounters.Restore(saved.Encounters, DynamicActorDefinitions(), TombstonedActorIds(saved));
                 _persistence.Restore(saved);
+                // Inventory/equipment materialize during persistence restore, after the initial held
+                // refresh. Rebind the now-worn sources before any elapsed time can advance them.
+                _heldEnchantments.Refresh();
                 _appearance.SyncRestoredDefeat(State.Actors);
                 RestoreDungeonText(saved.DungeonText);
                 _actionTriggers.RebaseRestoredPlayer(State.PlayerControl, playerEntity);
@@ -876,12 +879,16 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         inPrison: false);
 
     /// <summary>
-    /// Whether the player stands in a holy place, which the donor's worn condition payloads and its
-    /// career damage traits both read. No site classification answers it yet, so this is false and a
-    /// payload carrying that condition never acts; when one lands it is wired here and both readers
-    /// pick it up at once.
+    /// Whether the player stands in a holy place. The donor requires an interior whose admitted
+    /// building is a temple or belongs to the Fighters Guild trainers faction.
     /// </summary>
-    private bool InHolyPlace() => false;
+    private bool InHolyPlace() => IsHolyPlace(_activeProfileKey.Kind,
+        _activeProfileKey.Kind == DaggerfallWorldProfileKind.Interior
+            ? _siteProfiles?.Require(_activeProfileKey).InteriorBuilding : null);
+
+    internal static bool IsHolyPlace(DaggerfallWorldProfileKind kind, DaggerfallInteriorBuilding? building) =>
+        kind == DaggerfallWorldProfileKind.Interior
+        && building is { BuildingType: 14 } or { FactionId: DaggerfallConcreteGuildCatalog.FightersTrainerFactionId };
 
     /// <summary>
     /// The living creatures a worn enchantment's near-creature condition can see: the group the
@@ -1315,6 +1322,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     public RulesetSavePayload CaptureSave()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        // A modal equipment action can be saved before another playing step. Capture the worn set
+        // that actually owns the items, rather than a prior frame's held stat sources.
+        _heldEnchantments.Refresh();
         return _persistence.Capture(_latestUpdateGeneration, _latestSimulationStep, _dynamicActors, _encounters,
             _siteDeltas, _activeProfileKey, _returnProfileKey, State.DungeonDiscoveries, State.DungeonActions,
             _siteProjection.CaptureMotion(), CaptureExteriorResidency());
