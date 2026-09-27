@@ -3784,6 +3784,48 @@ public sealed partial class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void An_activation_ray_that_hits_no_door_leaves_the_update_alive_and_dispatches_no_door_action()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        PrivateersHoldInputs source = ReadInputs(root);
+        PrivateersHoldInputs castle = PrivateersHoldContent.Read(FullContent(root),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, source);
+        PopulateContent(content, castle);
+        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        spatial.KeepPosition = true;
+        PerceptionFake perception = PerceptionFake.Create();
+        perception.Responder = request => Receipt([.. request.Targets.Span.ToArray().Select(target =>
+            new PerceptionPair(1, target.Entity, 1d, 1d, PerceptionPairKind.Visible, 1d))]);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        using DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults);
+        session.AdmitSiteProfiles(new DaggerfallSiteProfiles([source, castle]));
+        Assert.True(session.TryTransitionTo(castle.ProfileKey));
+        // The ray finds an entity that is none of the loaded doors. Asking the door graph about it must
+        // not hand the graph a door that was never matched: a door view is a value type, so a miss is a
+        // default view whose identity carries no RDB source key, and that identity ends the update.
+        ulong notADoor = session.Doors.All.Select(value => value.Entity.Value).DefaultIfEmpty(1UL).Max() + 1UL;
+        spatial.FloorHit = request => request.Direction.Y < -.5f ? default : new SpatialHit
+        {
+            Present = true,
+            Kind = SpatialHitKind.Entity,
+            Entity = notADoor,
+            Point = Vector3.Zero,
+            Distance = 1f,
+        };
+
+        session.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.DirectDigital,
+            x: 1f, phase: InputPhase.DirectUi, intent: "interact")]));
+
+        Assert.False(session.ActivationView.Applied);
+        Assert.All(session.State.DungeonActions[castle.ProfileKey].State.Values,
+            state => Assert.Equal(0UL, state.ActivationCount));
+    }
+
+    [Fact]
     public void Contextual_action_door_opens_before_its_direct_link_without_reversing_in_the_same_input()
     {
         string root = RepositoryRoot();
