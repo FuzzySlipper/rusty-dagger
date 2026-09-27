@@ -3786,6 +3786,46 @@ public sealed partial class NormalizedRuntimeSeamTests
     [Theory]
     [InlineData("inventory")]
     [InlineData("character")]
+    [InlineData("attack")]
+    [InlineData("loot")]
+    [InlineData("activation-mode")]
+    [InlineData("save-slots")]
+    [InlineData("save-game")]
+    [InlineData("load-game")]
+    public void Dom_action_in_ordinary_play_survives_the_door_contract(string action)
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        PrivateersHoldInputs source = ReadInputs(root);
+        PrivateersHoldInputs castle = PrivateersHoldContent.Read(FullContent(root),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, source);
+        PopulateContent(content, castle);
+        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        spatial.KeepPosition = true;
+        PerceptionFake perception = PerceptionFake.Create();
+        perception.Responder = request => Receipt([.. request.Targets.Span.ToArray().Select(target =>
+            new PerceptionPair(1, target.Entity, 1d, 1d, PerceptionPairKind.Visible, 1d))]);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        using DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults);
+        session.AdmitSiteProfiles(new DaggerfallSiteProfiles([source, castle]));
+        Assert.True(session.TryTransitionTo(castle.ProfileKey));
+
+        // The UI's own controls arrive as typed actions rather than as named input intents, so they are
+        // a separate route into the same session state and must survive the same door contract.
+        session.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.DirectDigital) with
+        {
+            ValueKind = InputValueKind.ProductPayload,
+            PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+            PayloadData = Encoding.UTF8.GetBytes($"{{\"action\":\"{action}\"}}"),
+        }]));
+    }
+
+    [Theory]
+    [InlineData("inventory")]
+    [InlineData("character")]
     [InlineData("menu")]
     public void Panel_input_in_ordinary_play_survives_the_door_contract(string intent)
     {
