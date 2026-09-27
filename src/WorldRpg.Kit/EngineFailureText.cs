@@ -40,6 +40,14 @@ public static class EngineFailureText
             return;
         }
 
+        // The throw site is the part a report cannot reconstruct: a message says what went wrong, the
+        // stack says which decision produced it. An exception that was never thrown has none, so the
+        // single-line form stays what it was for a reconstructed failure.
+        if (failure.StackTrace is { Length: > 0 } stack)
+        {
+            foreach (string line in stack.Split('\n')) text.Append(indent).Append("  at ").AppendLine(line.Trim());
+        }
+
         if (failure.InnerException is { } nested) Append(text, nested, depth + 1);
     }
 }

@@ -231,7 +231,17 @@ internal sealed partial class DaggerfallSession
 
         if (hit.Kind == SpatialHitKind.Entity)
         {
-            DaggerfallDoorView? door = _doors.All.FirstOrDefault(value => value.Entity.Value == hit.Entity);
+            // A door view is a value type, so FirstOrDefault answers a default view rather than null when
+            // nothing matches and the `is { }` test below can never fail. Only a real match may be used: a
+            // default identity reaches the door graph as an invalid RDB key and ends the incarnation.
+            DaggerfallDoorView? door = null;
+            foreach (DaggerfallDoorView candidate in _doors.All)
+            {
+                if (candidate.Entity.Value != hit.Entity) continue;
+                door = candidate;
+                break;
+            }
+
             if (door is { } selectedDoor)
             {
                 return ReportDungeonActions(graph.TriggerForDoor(selectedDoor.Id, @event));
