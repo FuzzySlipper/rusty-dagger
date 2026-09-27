@@ -7725,6 +7725,10 @@ public sealed partial class NormalizedRuntimeSeamTests
 
     private sealed class ContentFake : IContentService
     {
+
+        public PortableAsset LoadPortableAsset(PortableAssetLoadRequest request) => throw new NotSupportedException();
+        public PortableAssetReadoutLeaseReceipt ReadPortableAsset(PortableAsset asset) => throw new NotSupportedException();
+        public ContentReference OpenPortableAssetMember(PortableAssetMemberRequest request) => throw new NotSupportedException();
         // The pinned pair grew a bundle surface. Nothing in this product opens a bundle yet - content is
         // admitted as one snapshot - so the fake refuses these rather than pretending a bundle exists:
         // a test double that answered with an empty bundle would hide a caller that started using one.
@@ -7809,6 +7813,10 @@ public sealed partial class NormalizedRuntimeSeamTests
     /// <summary>Build-declared bundles for full-product tests; bodies stay outside the eager snapshot.</summary>
     private sealed class BundleContentFake : IContentService
     {
+
+        public PortableAsset LoadPortableAsset(PortableAssetLoadRequest request) => throw new NotSupportedException();
+        public PortableAssetReadoutLeaseReceipt ReadPortableAsset(PortableAsset asset) => throw new NotSupportedException();
+        public ContentReference OpenPortableAssetMember(PortableAssetMemberRequest request) => throw new NotSupportedException();
         private readonly Dictionary<string, Dictionary<string, byte[]>> files = new(StringComparer.Ordinal);
         private readonly Dictionary<ulong, string> openedBundles = [];
         private ulong nextHandle = 1;
@@ -8512,6 +8520,9 @@ public sealed partial class NormalizedRuntimeSeamTests
 
     private sealed class AppearanceFake(List<string> releases) : IGraphicsService
     {
+
+        public TextureResourceInfo ReadTextureInfo(RenderResource resource) => throw new NotSupportedException();
+        public void PublishAttachedSnapshot(AttachedAppearanceSnapshotRequest request) => throw new NotSupportedException();
         internal List<RenderResourceRequest> OpenResourceRequests { get; } = [];
         internal List<StaticMeshContentAppearanceRequest> StaticMeshContentRequests { get; } = [];
         internal List<MeshMaterialBinding> StaticMeshBindings { get; } = [];

@@ -652,6 +652,9 @@ public sealed class SpriteWorkbenchProductTests
 
     private sealed class AppearanceFake : IGraphicsService
     {
+        public TextureResourceInfo ReadTextureInfo(RenderResource resource) => throw new NotSupportedException();
+        public void PublishAttachedSnapshot(AttachedAppearanceSnapshotRequest request) => throw new NotSupportedException();
+
         private readonly HarnessOptions options;
         private ulong nextHandle = 1;
         private readonly Dictionary<ulong, PlaybackState> playbacks = [];
