@@ -35,6 +35,9 @@
     <RustyEngineProductInputIntent Include="move.left" Value="digital" />
     <RustyEngineProductInputIntent Include="move.backward" Value="digital" />
     <RustyEngineProductInputIntent Include="move.right" Value="digital" />
+    <RustyEngineProductInputIntent Include="run" Value="digital" />
+    <RustyEngineProductInputIntent Include="crouch" Value="digital" />
+    <RustyEngineProductInputIntent Include="jump" Value="digital" />
     <RustyEngineProductInputIntent Include="dagger.ui" Value="payload:dagger.ui.action.v1" />
     <RustyEngineProductInputIntent Include="toggle-weapon" Value="digital" />
     <RustyEngineProductInputMapping Include="toggle-weapon.key-z" Intent="toggle-weapon" Trigger="key:key-z:pressed" />
