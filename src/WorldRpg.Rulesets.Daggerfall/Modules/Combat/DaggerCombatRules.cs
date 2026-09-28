@@ -291,12 +291,24 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
             && action.Interpretation == "fixed-ranged";
     }
 
-    /// <summary>The bow the player is holding, in either hand, if any.</summary>
+    /// <summary>Live timing from the same equipped weapon and action used at admission.</summary>
+    internal (double CooldownSeconds, double FrameSeconds, string Equipment) InspectPlayerTiming()
+    {
+        EquipmentRead equipment = _equipment.Read();
+        DaggerfallEquippedWeapon? selected = ReadWeapon(equipment, "right-hand") ?? ReadWeapon(equipment, "left-hand");
+        bool bow = selected is { Weapon.Skill: DaggerfallSkills.Archery };
+        int speed = _actors.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Speed.Value)).ValueInt;
+        string? actionId = bow ? RangedPlayerActionId() : _definitions[PlayerId].ActionId;
+        double cooldown = bow ? DaggerfallFormulaPolicy.BowCooldownSeconds(speed)
+            : actionId is not null && _actions.TryGetValue(actionId, out var action) ? action.CooldownSeconds ?? 0 : 0;
+        return (cooldown, DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(speed), selected?.Weapon.Skill ?? DaggerfallMechanicsIds.HandToHand.Value);
+    }
+
     private bool PlayerHoldsBow()
     {
         EquipmentRead equipment = _equipment.Read();
-        return ReadWeapon(equipment, "right-hand") is { Weapon.Skill: var right } && right == DaggerfallSkills.Archery
-            || ReadWeapon(equipment, "left-hand") is { Weapon.Skill: var left } && left == DaggerfallSkills.Archery;
+        return (ReadWeapon(equipment, "right-hand") ?? ReadWeapon(equipment, "left-hand"))
+            is { Weapon.Skill: DaggerfallSkills.Archery };
     }
 
     private bool IsLiveCombatant(long actorId)
@@ -351,31 +363,51 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         return true;
     }
 
+    private bool TryReadPlayerAttackPolicy(Combatant player, string? requested,
+        out DaggerfallEquippedWeapon? weapon, out DaggerfallActionDefinition action)
+    {
+        EquipmentRead equipment = _equipment.Read();
+        weapon = ReadWeapon(equipment, "right-hand") ?? ReadWeapon(equipment, "left-hand");
+        bool bow = weapon is { Weapon.Skill: DaggerfallSkills.Archery };
+        string? id = requested ?? (bow ? RangedPlayerActionId() : player.Definition.ActionId);
+        action = null!;
+        if (id is null || !_actions.TryGetValue(id, out var selected)
+            || selected.Interpretation is not ("player-equipped-melee" or "player-equipped-ranged")
+            || selected.StaminaCost is not int
+            || selected.Interpretation == "player-equipped-ranged" && !bow
+            || selected.Interpretation == "player-equipped-melee" && selected.CooldownSeconds is not double) return false;
+        action = selected;
+        return true;
+    }
+
+    // Reads policy/resources only. Actual admission still owns the atomic spends and their receipts.
+    internal AttackRejection? InspectPlayerAttackRefusal()
+    {
+        if (!TryResolve(PlayerId, out Combatant player)
+            || !TryReadPlayerAttackPolicy(player, null, out _, out var action)) return AttackRejection.NoAttackPolicy;
+        if (action.Interpretation == "player-equipped-ranged")
+        {
+            var quiver = _actorInventories(PlayerId);
+            if (quiver is null) return AttackRejection.NoAttackPolicy;
+            if (!quiver.Read().Stacks.Any(stack => stack.Definition.Value == ArrowItemId && stack.Quantity > 0))
+                return AttackRejection.EmptyQuiver;
+        }
+        return player.Stats.GetTrack(TrackId.Parse(StaminaTrack)).Current < action.StaminaCost!.Value
+            ? AttackRejection.InsufficientStamina : null;
+    }
+
     private bool TryAdmitPlayerAttack(AttackRequest request, Combatant player, out DaggerfallAttackDefinition attack, FactBuffer<IProductFact> facts)
     {
         ulong generation = request.Generation, simulationStep = request.SimulationStep;
-        DaggerfallActionId? action = request.Action is string requested ? new DaggerfallActionId(requested) : null;
-        EquipmentRead equipment = _equipment.Read();
-        DaggerfallEquippedWeapon? equippedWeapon = ReadWeapon(equipment, "right-hand") ?? ReadWeapon(equipment, "left-hand");
-        bool bowShot = equippedWeapon is { } heldWeapon && heldWeapon.Weapon.Skill == DaggerfallSkills.Archery;
-        string? selectedActionId = action?.Value ?? (bowShot ? RangedPlayerActionId() : player.Definition.ActionId);
-        if (selectedActionId is null || !_actions.TryGetValue(selectedActionId, out DaggerfallActionDefinition? playerAction)
-            || playerAction.Interpretation is not ("player-equipped-melee" or "player-equipped-ranged")
-            || playerAction.StaminaCost is not int staminaCost
-            || playerAction.Interpretation == "player-equipped-ranged" && !bowShot)
+        if (!TryReadPlayerAttackPolicy(player, request.Action, out DaggerfallEquippedWeapon? equippedWeapon,
+            out DaggerfallActionDefinition playerAction))
         {
             attack = default!;
             facts.Append(new AttackRejectedFact(AttackRejection.NoAttackPolicy));
             return false;
         }
+        int staminaCost = playerAction.StaminaCost!.Value;
         bool ranged = playerAction.Interpretation == "player-equipped-ranged";
-        // A bow's cadence is the donor's own formula over live speed; a swing's is the action's.
-        if (!ranged && playerAction.CooldownSeconds is not double)
-        {
-            attack = default!;
-            facts.Append(new AttackRejectedFact(AttackRejection.NoAttackPolicy));
-            return false;
-        }
         double playerCooldown = ranged
             ? DaggerfallFormulaPolicy.BowCooldownSeconds(ReadStat(player, DaggerfallMechanicsIds.Speed))
             : playerAction.CooldownSeconds!.Value;

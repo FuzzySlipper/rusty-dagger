@@ -92,6 +92,8 @@ internal sealed partial class DaggerfallSession
     private bool TryActivateContextual(LookReceipt look)
     {
         if (_activation is null) return false;
+        _lastPlaytestUseStep = _latestSimulationStep ?? 0;
+        _lastPlaytestUseRefusal = null;
         _preflightedDoorText.Clear();
         // Keep the door identity observed before activation: opening disables its collider, but
         // PlayerActivate invokes the ordinary door operation before its Direct action event.
@@ -113,6 +115,7 @@ internal sealed partial class DaggerfallSession
                 State.Actors.Player.Actor.Entity,
                 State.PlayerControl,
                 look);
+            _lastPlaytestUseRefusal = _activation.LastEvidence?.Use.Reason.ToString();
         }
         finally { _preflightedDoorText.Clear(); }
         if (actionDoor is { } door && !directDoorActionsDispatched

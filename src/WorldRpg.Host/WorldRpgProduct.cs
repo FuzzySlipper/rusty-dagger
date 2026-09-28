@@ -1,11 +1,12 @@
 using Rusty.Engine;
+using Rusty.Engine.Debugging;
 using Rusty.Engine.Persistence;
 using WorldRpg.Kit;
 
 namespace WorldRpg.Host;
 
 /// <summary>Reference host lifecycle and explicit built-in ruleset selection.</summary>
-public sealed class WorldRpgProduct : IEngineProduct
+public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
 {
     /// <summary>How many recent mode decisions are kept for diagnosis.</summary>
     public const int ModeHistoryLimit = 16;
@@ -85,6 +86,17 @@ public sealed class WorldRpgProduct : IEngineProduct
         // A resumed product is already past the entry screen: the world has been played, so starting it
         // again behind a screen that offers to begin would offer to begin a run that is already running.
         _resumed = true;
+    }
+
+    public void RegisterDebugCommands(IDebugCommandModuleRegistrar registrar)
+    {
+        if (_session is not IPlaytestGameSession playtest) return;
+        // New game and load replace the session. Every command resolves its current owner.
+        IPlaytestGameSession Current() => (IPlaytestGameSession)_session;
+        registrar.Register(new PlaytestDebugModule(() => Current().ReadPlaytestObservation(),
+            id => Current().InspectPlaytestAction(id), playtest.PlaytestActions,
+            (yaw, pitch) => Current().InspectPlaytestLook(yaw, pitch)));
+        registrar.Register(new PlaytestTargetsDebugModule(() => Current().ReadPlaytestTargets()));
     }
 
     /// <summary>The mode the product runs its session under.</summary>

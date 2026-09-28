@@ -1,5 +1,6 @@
 using System.Reflection;
 using Rusty.Engine;
+using Rusty.Engine.Debugging;
 using Rusty.Engine.Persistence;
 using WorldRpg.Host;
 using WorldRpg.Kit;
@@ -14,6 +15,31 @@ namespace WorldRpg.Host.Tests;
 /// </summary>
 public sealed class WorldRpgProductModeTests
 {
+    [Fact]
+    public void Registered_playtest_commands_follow_session_replacement()
+    {
+        ModeRecordingRuleset ruleset = new();
+        using WorldRpgProduct product = Product(ruleset);
+        DebugRegistrar registrar = new();
+        Assert.IsAssignableFrom<IDebugCommandModuleSource>(product).RegisterDebugCommands(registrar);
+        var module = Assert.Single(registrar.Modules.OfType<PlaytestDebugModule>());
+        Assert.Equal("1", module.Observe().Message);
+        StartInPlay(product);
+        product.Restart();
+        Assert.Equal("2", module.Observe().Message);
+        Assert.True(ruleset.Replaced!.Disposed);
+    }
+
+    private sealed class DebugRegistrar : IDebugCommandModuleRegistrar
+    {
+        internal List<IDebugCommandModule> Modules { get; } = [];
+        public DebugCommandRegistrationResult Register<TModule>(TModule module) where TModule : class, IDebugCommandModule
+        {
+            Modules.Add(module);
+            return new(DebugCommandRegistrationStatus.Registered, "registered");
+        }
+    }
+
     [Fact]
     public void A_modal_owns_input_until_it_is_closed_and_a_pause_cancels_it()
     {
@@ -467,8 +493,14 @@ public sealed class WorldRpgProductModeTests
         }
     }
 
-    private sealed class ModeRecordingSession(ModeRecordingRuleset owner) : IGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession
+    private sealed class ModeRecordingSession(ModeRecordingRuleset owner) : IGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, IPlaytestGameSession
     {
+        private readonly int _identity = owner.Created;
+        public IReadOnlyList<string> PlaytestActions => ["attack"];
+        public DebugCommandResult ReadPlaytestObservation() => DebugCommandResult.Success(_identity.ToString());
+        public PlaytestAction InspectPlaytestAction(string id) => new(id, "KeyQ", 100, false);
+        public DebugCommandResult InspectPlaytestLook(double yaw, double pitch) => ReadPlaytestObservation();
+        public DebugCommandResult ReadPlaytestTargets() => ReadPlaytestObservation();
         internal ProductMode? LastApplied { get; private set; }
 
         /// <summary>The mode the product had put this session in when its update ran.</summary>

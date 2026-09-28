@@ -132,6 +132,13 @@ internal sealed class DaggerfallActivationModule(InteractionTargetingService tar
     internal DaggerfallActivationMode Mode { get; private set; } = DaggerfallActivationMode.Grab;
     internal InteractionTargetingEvidence? LastEvidence => _targeting.LastEvidence;
 
+    internal IEnumerable<DaggerfallActivationTarget> InspectTargets() => _contributions.Targets();
+
+    internal WorldInteractionReadout? Inspect(EntityId player, PlayerControlState control, LookReceipt look) =>
+        control.Position is WorldPoint origin ? _targeting.Inspect(player, origin, look.Forward,
+            _reach.MaximumDistance, _reach.MinimumFacingCosine,
+            _contributions.Targets().Select(target => target.ToKitCandidate())) : null;
+
     internal bool ChangeMode(DaggerfallActivationMode mode)
     {
         if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode));

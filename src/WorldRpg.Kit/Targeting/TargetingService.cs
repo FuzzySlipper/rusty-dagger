@@ -28,6 +28,7 @@ public sealed class TargetingService(IPerceptionService perception, SpatialMovem
     private const uint VisibilityPageSize = 64;
     public TargetingEvidence? LastEvidence { get; private set; }
     public bool IsValidTarget(ActorState actor) => !actor.IsDefeated && policy.IsValidTarget(actor);
+    public Vector3 AimPoint(ActorState actor) => policy.AimPoint(actor);
     public EntityId? Current
     {
         get
@@ -42,6 +43,15 @@ public sealed class TargetingService(IPerceptionService perception, SpatialMovem
     public long? Select(WorldPoint? position, Vector3 forward, double? actionReach)
     {
         if (position is not WorldPoint origin) { Clear(); return null; }
+        TargetingEvidence evidence = Inspect(origin, forward, actionReach);
+        actors.Player.Targeting.Current = evidence.SelectedTargetId is long durable ? actors.Entities.Resolve(ActorsState.Identity(durable)) : null;
+        LastEvidence = evidence;
+        return evidence.SelectedTargetId;
+    }
+
+    /// <summary>Reads the same target admission facts without changing current target or last action evidence.</summary>
+    public TargetingEvidence Inspect(WorldPoint origin, Vector3 forward, double? actionReach)
+    {
         ulong observer = checked((ulong)actors.Player.DurableId);
         PerceptionTarget[] targets = actors.All.Where(IsValidTarget).OrderBy(a => a.DurableId)
             .Select(a => new PerceptionTarget(checked((ulong)a.DurableId), policy.AimPoint(a))).ToArray();
@@ -52,8 +62,6 @@ public sealed class TargetingService(IPerceptionService perception, SpatialMovem
         long? selected = receipt.Pairs.ToArray().Where(p => p.Observer == observer && p.Kind == PerceptionPairKind.Visible
             && p.Target <= long.MaxValue && actors.TryGet((long)p.Target, out ActorState actor) && IsValidTarget(actor))
             .OrderBy(p => p.Distance).ThenBy(p => p.Target).Select(p => (long?)p.Target).FirstOrDefault();
-        actors.Player.Targeting.Current = selected is long durable ? actors.Entities.Resolve(ActorsState.Identity(durable)) : null;
-        LastEvidence = new(request, receipt, selected);
-        return selected;
+        return new(request, receipt, selected);
     }
 }

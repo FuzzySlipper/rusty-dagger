@@ -39,6 +39,13 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private readonly List<EffectVisual> effects = [];
     private ViewmodelVisual? viewmodel;
     private bool weaponDrawn = true;
+    // The next swing may select any authored strike. Report a bounded observation window
+    // covering its longest animation at the current ruleset tick rate (or authored fallback).
+    internal double InspectPlayerStrikeSeconds(EquipmentRead equipment, double frameSeconds) =>
+        SelectPlayerWeapon(equipment)?.Actions.Where(pair => pair.Key.StartsWith("strike", StringComparison.Ordinal))
+            .Select(pair => (pair.Value.Sequence?.Count ?? pair.Value.FrameCount) *
+                (frameSeconds > 0 ? frameSeconds : 1d / pair.Value.FramesPerSecond)).DefaultIfEmpty(0).Max() ?? 0;
+
     internal bool CanStartPlayerAttack => weaponDrawn && viewmodel?.Strike != true;
     /// <summary>
     /// Reports an enemy hit swing whose authored damage frame has not been consumed yet.
@@ -450,16 +457,21 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     internal void UpdateRightHandEquipment(EquipmentRead equipment)
     {
         ArgumentNullException.ThrowIfNull(equipment);
+        NormalizedClassicWeapon? selected = SelectPlayerWeapon(equipment);
+        if (viewmodel?.Weapon.ResourceId == selected?.ResourceId) return;
+        RetireViewmodel();
+        if (selected is not null && classicPresentation.Viewmodel is not null) CreateViewmodel(selected);
+    }
+
+    private NormalizedClassicWeapon? SelectPlayerWeapon(EquipmentRead equipment)
+    {
         string? resource = null;
         foreach (string slot in new[] { "right-hand", "left-hand" })
             if (equipment.TryGet(new EquipmentSlotId(slot), out UniqueInventoryItem item)
                 && classicPresentation.CompatibleItemVisuals.TryGetValue(item.Definition.Value, out resource)) break;
         resource ??= classicPresentation.UnarmedVisual;
-        NormalizedClassicWeapon? selected = weaponDrawn && resource is not null
+        return weaponDrawn && resource is not null
             && classicPresentation.Weapons.TryGetValue(resource, out NormalizedClassicWeapon? weapon) ? weapon : null;
-        if (viewmodel?.Weapon.ResourceId == selected?.ResourceId) return;
-        RetireViewmodel();
-        if (selected is not null && classicPresentation.Viewmodel is not null) CreateViewmodel(selected);
     }
 
     /// <summary>Called exactly once from the outer Product.Update, never from a private catch-up step.</summary>

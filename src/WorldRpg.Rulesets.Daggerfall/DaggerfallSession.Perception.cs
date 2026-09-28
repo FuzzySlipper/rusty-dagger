@@ -15,6 +15,10 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// </summary>
 internal sealed partial class DaggerfallSession
 {
+    private bool IsHostileActor(long actorId, DaggerfallActorDefinition definition) =>
+        definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass
+        && !_enemyBehavior.IsPacified(actorId);
+
     /// <summary>
     /// Reads one enemy's perception context from the current session state.
     /// This method is used as the behavior module's admitted context provider,
@@ -36,7 +40,7 @@ internal sealed partial class DaggerfallSession
         double horizontalSpeed = Math.Sqrt((velocity.X * velocity.X) + (velocity.Z * velocity.Z));
         float walkSpeed = _locomotion.WalkSpeed(playerStats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Speed.Value)).ValueInt);
         bool movingLessThanHalfSpeed = horizontalSpeed < walkSpeed * .5d;
-        bool authoredHostile = definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass;
+
         bool targetPacified = _enemyBehavior.IsPacified(actorId);
         DaggerfallPerceptionEffectState perceptionEffects = State.Effects.PerceptionFor(DaggerfallActorIdentity.PlayerEntityId);
         DaggerfallMobileDefinition? mobile = definition.MobileId is int mobileId
@@ -72,7 +76,7 @@ internal sealed partial class DaggerfallSession
             TargetShade: perceptionEffects.Shade,
             EnemySeesThroughInvisibility: mobile?.SeesThroughInvisibility == true,
             TargetPacified: targetPacified,
-            EnemyHostile: authoredHostile && !targetPacified,
+            EnemyHostile: IsHostileActor(actorId, definition),
             TargetWeaponSheathed: !_appearance.IsWeaponDrawn,
             ComprehendLanguagesBonus: perceptionEffects.ComprehendLanguagesBonus,
             Noise: horizontalSpeed,

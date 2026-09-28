@@ -12,6 +12,18 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallSwingTrackerTests
 {
     [Fact]
+    public void Inspection_turn_is_excluded_from_the_next_admitted_gesture()
+    {
+        DaggerfallSwingTracker tracker = new(minimumGestureRadians: .35);
+        tracker.Observe(0, 0, 0);
+        tracker.Rebase(2, 1);
+        tracker.Observe(.1, 2, 1);
+        Assert.Equal(DaggerfallSwingDirection.None, tracker.TryGesture());
+        tracker.Observe(.1, 2.5f, 1);
+        Assert.Equal(DaggerfallSwingDirection.StrikeRight, tracker.TryGesture());
+    }
+
+    [Fact]
     public void A_short_twitch_stays_a_straight_attack_until_the_trail_carries_a_full_gesture()
     {
         DaggerfallSwingTracker tracker = new(minimumGestureRadians: 0.35);

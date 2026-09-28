@@ -73,6 +73,14 @@ internal sealed class DaggerfallSwingTracker(double minimumGestureRadians, doubl
         return gesture;
     }
 
+    /// <summary>Moves the sampling origin after an inspection turn without adding a weapon gesture.</summary>
+    internal void Rebase(float yawRadians, float pitchRadians)
+    {
+        _lastYaw = yawRadians;
+        _lastPitch = pitchRadians;
+        _hasLast = true;
+    }
+
     internal void Clear()
     {
         _turns.Clear();
