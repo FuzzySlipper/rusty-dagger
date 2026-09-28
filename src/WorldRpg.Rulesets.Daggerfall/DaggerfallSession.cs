@@ -284,7 +284,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             }
             _camera = new FirstPersonCameraSystem(engine.CameraView, State.PlayerControl, tuning.Camera);
             partiallyConstructed.Add(_camera);
-            TargetingService targeting = new(engine.Perception, _spatial, State.Actors, new DaggerTargetingPolicy(authored, tuning.MeleeTargeting));
+            TargetingService targeting = new(engine.Perception, _spatial, State.Actors,
+                new DaggerTargetingPolicy(authored, tuning.MeleeTargeting, () => _siteProjection.Inputs));
             _staminaRecovery = new DaggerfallStaminaRecoveryModule(tuning.StaminaRecovery);
             CombatResolution combatRules = new();
             _combatResolution = combatRules;

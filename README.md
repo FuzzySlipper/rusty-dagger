@@ -142,8 +142,9 @@ npm ci
 ```
 
 Use WASD to move and the mouse to look. **Z** draws or sheathes the equipped
-weapon; empty hands use unarmed art. **Left mouse** or **V** swings once per
-press while drawn, including empty space. Cooldown, stamina and the active swing
+weapon; empty hands use unarmed art. **Left mouse** swings once per press by
+default while drawn, including empty space. Controls can rebind the attack.
+Cooldown, stamina and the active swing
 limit repeated attacks; Engine playback returns the weapon to ready.
 
 Stamina recovers at five points per second after two seconds without an admitted

@@ -359,7 +359,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
         authored[2000] = authored[2000] with { MinimumMaterial = "daedric" };
-        TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting));
+        TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
         DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.InventoryFor,
             session.State.ItemInstances, definitions, authored, targeting);
 
@@ -4880,7 +4880,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             placement => placement.EntityId, placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
         TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors,
-            new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting));
+            new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
         DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment,
             session.State.InventoryFor, session.State.ItemInstances, definitions, authored, targeting);
         const long archer = 2004;
@@ -5043,6 +5043,32 @@ public sealed partial class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Grounded_rat_melee_aim_uses_its_visible_body_above_the_floor()
+    {
+        PrivateersHoldInputs inputs = ReadInputs(RepositoryRoot());
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
+            placement => placement.EntityId, placement => definitions.RequireActor(placement.ActorId));
+        DaggerTargetingPolicy policy = new(authored, DaggerfallTuning.Defaults.MeleeTargeting,
+            () => inputs);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases),
+            PerceptionFake.Create().Service);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+
+        ActorState rat = session.State.Actors.Get(2008);
+        Assert.True(authored[rat.DurableId].GroundOnSpawn);
+        Assert.Equal(rat.Position.ToVector().Y + inputs.ActorSprites[rat.DurableId].Size.Y * .5f,
+            policy.AimPoint(rat).Y, 4);
+        ActorState imp = session.State.Actors.Get(2009);
+        Assert.False(authored[imp.DurableId].GroundOnSpawn);
+        Assert.Equal(imp.Position.ToVector(), policy.AimPoint(imp));
+    }
+
+    [Fact]
     public void Daggerfall_target_selection_accepts_engine_inclusive_boundaries_and_rejects_other_engine_classifications()
     {
         string root = RepositoryRoot();
@@ -5061,7 +5087,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             placement => placement.EntityId,
             placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
-        TargetingService targeting = new(perception.Service, movement, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting));
+        TargetingService targeting = new(perception.Service, movement, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
         perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
         Assert.Equal(2000, targeting.Select(session.State.PlayerControl.Position, ForwardLook().Forward, 2.25d));
 
@@ -5096,7 +5122,7 @@ public sealed partial class NormalizedRuntimeSeamTests
                 placement => placement.EntityId,
                 placement => definitions.RequireActor(placement.ActorId));
             authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
-            TargetingService targeting = new(perception.Service, sessionMovement, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting));
+            TargetingService targeting = new(perception.Service, sessionMovement, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
             perception.Receipt = Receipt(
                 new PerceptionPair(1, 2007, 1d, .8d, PerceptionPairKind.Visible, 1d),
                 new PerceptionPair(1, 2000, 1d, .8d, PerceptionPairKind.Visible, 1d),
@@ -5121,7 +5147,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             movement,
             actors,
             new DaggerTargetingPolicy(new Dictionary<long, DaggerfallActorDefinition> { [2000] = definitions.RequireActor(new DaggerfallActorId("skeletal-warrior")) },
-            DaggerfallTuning.Defaults.MeleeTargeting));
+            DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
         perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1d, .8d, PerceptionPairKind.Visible, 1d));
         Assert.NotEqual(new EntityId(checked((ulong)runtimeActor.DurableId)), runtimeActor.Actor.Entity);
         long? selected = runtimeTargeting.Select(
@@ -6540,7 +6566,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             placement => placement.EntityId,
             placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
-        TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting));
+        TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
         DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.InventoryFor,
             session.State.ItemInstances, definitions, authored, targeting);
         FactBuffer<IProductFact> facts = new();
@@ -6587,7 +6613,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             placement => placement.EntityId,
             placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
-        TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting));
+        TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
         DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.InventoryFor,
             session.State.ItemInstances, definitions, authored, targeting);
         FactBuffer<IProductFact> facts = new();
@@ -6625,7 +6651,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             placement => placement.EntityId,
             placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
-        TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting));
+        TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
         DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.InventoryFor,
             session.State.ItemInstances, definitions, authored, targeting);
         FactBuffer<IProductFact> facts = new();
