@@ -1,0 +1,11 @@
+{
+  "available": false,
+  "durationMs": 1103,
+  "equipment": "long-blade",
+  "heldKeys": null,
+  "hold": false,
+  "id": "attack",
+  "key": "KeyQ",
+  "reason": "attack-recovering; advance then inspect",
+  "slot_id": "slot-1"
+}

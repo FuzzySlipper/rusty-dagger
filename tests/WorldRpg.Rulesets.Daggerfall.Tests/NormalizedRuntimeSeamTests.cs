@@ -2249,6 +2249,29 @@ public sealed partial class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void A_completed_player_swing_returns_to_idle_when_one_shot_stops_advancing()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        content.Add("weapon/dagger.png", Hash);
+        AppearanceFake appearance = new(releases);
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
+        presentation.React(new PlayerAttackStartedFact(1, 1));
+        Assert.False(presentation.CanStartPlayerAttack);
+
+        var completed = new SpritePlaybackReadout(1, 1, SpritePlaybackState.Completed, 0d, 0, 1, true);
+        appearance.AdvanceReceiptForAll = new SpritePlaybackAdvanceLeaseReceipt(default, completed, true);
+        presentation.Advance(OuterUpdate(1));
+        Assert.False(presentation.CanStartPlayerAttack); // Preserve the final frame for this update.
+        appearance.AdvanceReceiptForAll = new SpritePlaybackAdvanceLeaseReceipt(default, completed, false);
+        presentation.Advance(OuterUpdate(2));
+        Assert.True(presentation.CanStartPlayerAttack);
+        presentation.React(new PlayerAttackStartedFact(1, 3));
+        Assert.False(presentation.CanStartPlayerAttack); // A second ordinary attack can start.
+    }
+
+    [Fact]
     public void A_swing_completion_that_did_not_advance_does_not_end_the_players_swing()
     {
         List<string> releases = [];

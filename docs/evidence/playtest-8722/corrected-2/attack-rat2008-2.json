@@ -1,0 +1,16 @@
+{
+  "accepted": false,
+  "capture": "/home/agent/.local/state/crew-playtest-local/slots/slot-2/browser/1c727f8a-c210-4b3f-9499-c9959d0d15d6/action-affb6a65-2d9f-48c8-b0a8-bfcac7cd7bee.png",
+  "plan": {
+    "available": false,
+    "durationMs": 1103,
+    "equipment": "long-blade",
+    "heldKeys": null,
+    "hold": false,
+    "id": "attack",
+    "key": "Primary",
+    "reason": "attack-recovering; advance then inspect"
+  },
+  "reason": "attack-recovering; advance then inspect",
+  "slot_id": "slot-2"
+}

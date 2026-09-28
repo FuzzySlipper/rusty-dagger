@@ -30,7 +30,10 @@ Only stop browser sessions and hosts the tester owns.
 4. Check alive, hostile, attack eligibility, aim, reach and current refusal facts.
    Attack eligibility alone does not establish hostility. Attack timing is a
    bounded observation window, recalculated from live equipment, speed, authored
-   animation and cooldown. Inspect again if still recovering.
+   animation and cooldown. Inspect again if still recovering. The reasons
+   `attack-animation-active` and `attack-cooldown` identify separate guards;
+   `attackReadyAtStep` is a cooldown threshold, not a promise that animation has
+   finished.
 5. Use ordinary UI for controls, inventory and loot. Rebinding Attack to KeyQ in
    Settings must be visible in the next action query; never assume Primary stays
    bound. The harness supports ordinary pointer buttons as well as keyboard keys.

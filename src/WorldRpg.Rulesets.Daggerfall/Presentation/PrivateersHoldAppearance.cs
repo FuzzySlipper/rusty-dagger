@@ -543,14 +543,17 @@ internal sealed class PrivateersHoldAppearance : IDisposable
                 weapon.ImpactReported = true;
                 attackImpacts.Add(new AttackImpactNotice(pending.Attacker, pending.Target, pending.Generation, pending.SimulationStep, Expired: false));
             }
-            if (weapon.Strike && receipt.Readout.Completed && receipt.Advanced)
+            if (weapon.Strike && receipt.Readout.Completed)
             {
-                // A swing that truly ended without reaching its hit frame must not land later. A
-                // receipt that reports completion without advancing is not authoritative, so the
-                // swing stays live for the frame that can still deliver it.
-                RetireUnreportedImpact();
+                // Keep the first completed frame visible, then return to idle on the next
+                // admitted update. A completed one-shot no longer advances; the previous
+                // advancing completion is sufficient evidence to release the attack guard.
                 if (weapon.CompletedOuterUpdate) StartWeaponAction("idle");
-                else weapon.CompletedOuterUpdate = true;
+                else if (receipt.Advanced)
+                {
+                    RetireUnreportedImpact();
+                    weapon.CompletedOuterUpdate = true;
+                }
             }
             weapon.LastOuterUpdate = identity;
         }
