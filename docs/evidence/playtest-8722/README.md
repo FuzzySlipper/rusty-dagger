@@ -47,3 +47,15 @@ The actual runtime correction `58f6316d` has its own gate 3738.
 
 No clean warning delta is claimed: original browser receipts include existing
 inventory-art and GPU readback warnings, without a compatible baseline run.
+
+## Corrected runtime adoption
+
+Published and adopted pair `0.1.0-dev.58f6316dad11` through the ordinary immutable
+pair publisher and `scripts/update-engine-pin.sh`. CoreCLR release staging and
+all three focused playtest adapter tests pass against this pair.
+
+Gate 3738 was read from Den after completion: **passed**, with Rust, C# and docs
+checks successful for exact SHA `58f6316dad11e3071f220d5d34b2cf985a6f19d0`.
+The authoritative receipt is retained in `engine-gate-3738.json`.
+Two independent corrected-runtime trials use separate native worlds on local
+ports 4473 and 4474; their results will be added below.

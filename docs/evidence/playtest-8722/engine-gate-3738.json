@@ -1,0 +1,86 @@
+{
+  "id": 3738,
+  "project_id": "rusty-engine",
+  "task_id": 8718,
+  "repository": "FuzzySlipper/rusty-engine",
+  "commit_sha": "58f6316dad11e3071f220d5d34b2cf985a6f19d0",
+  "ref": "main",
+  "required_checks": [
+    "verify-rust",
+    "verify-csharp",
+    "verify-docs-and-routing"
+  ],
+  "status": "passed",
+  "requested_by": "codex",
+  "timeout_at": "2026-09-28T03:05:49.21872-07:00",
+  "poll_interval_seconds": 30,
+  "next_poll_at": "2026-09-28T01:10:12.575608-07:00",
+  "last_checked_at": "2026-09-28T01:10:12.575608-07:00",
+  "completed_at": "2026-09-28T01:10:12.575608-07:00",
+  "status_url": "http://127.0.0.1:8096/v1/projects/rusty-engine/tasks/8718/review/github-check-gates/58f6316dad11e3071f220d5d34b2cf985a6f19d0",
+  "summary": "All required GitHub checks passed.",
+  "check_runs": [
+    {
+      "name": "verify-csharp",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/FuzzySlipper/rusty-engine/actions/runs/36395244368/job/108839963861",
+      "details_url": "https://github.com/FuzzySlipper/rusty-engine/actions/runs/36395244368/job/108839963861",
+      "started_at": "2026-09-28T08:05:02Z",
+      "completed_at": "2026-09-28T08:10:02Z"
+    },
+    {
+      "name": "verify-docs-and-routing",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/FuzzySlipper/rusty-engine/actions/runs/36395244077/job/108839963547",
+      "details_url": "https://github.com/FuzzySlipper/rusty-engine/actions/runs/36395244077/job/108839963547",
+      "started_at": "2026-09-28T08:05:37Z",
+      "completed_at": "2026-09-28T08:05:41Z"
+    },
+    {
+      "name": "verify-rust",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/FuzzySlipper/rusty-engine/actions/runs/36395244085/job/108839963439",
+      "details_url": "https://github.com/FuzzySlipper/rusty-engine/actions/runs/36395244085/job/108839963439",
+      "started_at": "2026-09-28T08:05:18Z",
+      "completed_at": "2026-09-28T08:08:52Z"
+    }
+  ],
+  "observed_check_runs": [
+    {
+      "name": "verify-csharp",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/FuzzySlipper/rusty-engine/actions/runs/36395244368/job/108839963861",
+      "details_url": "https://github.com/FuzzySlipper/rusty-engine/actions/runs/36395244368/job/108839963861",
+      "started_at": "2026-09-28T08:05:02Z",
+      "completed_at": "2026-09-28T08:10:02Z"
+    },
+    {
+      "name": "verify-docs-and-routing",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/FuzzySlipper/rusty-engine/actions/runs/36395244077/job/108839963547",
+      "details_url": "https://github.com/FuzzySlipper/rusty-engine/actions/runs/36395244077/job/108839963547",
+      "started_at": "2026-09-28T08:05:37Z",
+      "completed_at": "2026-09-28T08:05:41Z"
+    },
+    {
+      "name": "verify-rust",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/FuzzySlipper/rusty-engine/actions/runs/36395244085/job/108839963439",
+      "details_url": "https://github.com/FuzzySlipper/rusty-engine/actions/runs/36395244085/job/108839963439",
+      "started_at": "2026-09-28T08:05:18Z",
+      "completed_at": "2026-09-28T08:08:52Z"
+    }
+  ],
+  "terminal_reason": "checks_passed",
+  "evidence_message_status": "posted",
+  "evidence_message_id": 35068,
+  "evidence_message_attempted_at": "2026-09-28T01:10:12.959999-07:00",
+  "created_at": "2026-09-28T01:05:49.21872-07:00",
+  "updated_at": "2026-09-28T01:10:12.959999-07:00"
+}
