@@ -1,5 +1,7 @@
 # Rusty Dagger
 
+For agent-driven gameplay checks, see [adaptive playtesting](docs/playtesting.md).
+
 Rusty Dagger is the reference repository and proving product for WorldRpg.
 
 WorldRpg is an opinionated construction kit and host for world-centric,

@@ -169,6 +169,22 @@ public sealed class PlayerInputSystem
         foreach (InputActionId action in actions) update.Request(action);
     }
 
+    /// <summary>Turns by requested angles through Engine look limits, without advancing gameplay.</summary>
+    public LookReceipt InspectLook(PlayerControlState player, double yawDegrees, double pitchDegrees)
+    {
+        // The request is already angular: sensitivity/inversion apply to devices, not these degrees.
+        LookConfig config = LookConfiguration() with
+        {
+            HorizontalRadiansPerUnit = 1f, VerticalRadiansPerUnit = 1f,
+            InvertHorizontal = false, InvertVertical = false, MaximumDeltaRadians = MathF.Tau,
+        };
+        LookReceipt receipt = Look.IntegrateClamped(new(new(player.YawRadians, player.PitchRadians),
+            new Vector2((float)(yawDegrees * Math.PI / 180), (float)(pitchDegrees * Math.PI / 180)), config));
+        player.YawRadians = receipt.After.YawRadians;
+        player.PitchRadians = receipt.After.PitchRadians;
+        return receipt;
+    }
+
     /// <summary>Resolves the current view basis from committed product look state without changing it.</summary>
     public LookReceipt ResolveCurrentLook(PlayerControlState player)
     {

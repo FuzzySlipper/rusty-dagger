@@ -35,7 +35,7 @@ using KitUniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Concrete Daggerfall composition of catalog policy, module state, and named Engine capabilities.</summary>
-internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, ISaveRequestingGameSession, IPlayerPreferencesSession, IPlayerDefeatOutcomeSession
+internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, ISaveRequestingGameSession, IPlayerPreferencesSession, IPlayerDefeatOutcomeSession
 {
 
     /// <summary>Admitted world seconds a panel request stands before the DOM is assumed not to need it.</summary>
@@ -2016,6 +2016,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     private void React(IProductFact fact)
     {
+        ObservePlaytestCombatFact(fact);
         _staminaRecovery.React(fact);
         if (fact is ActorDiedFact died)
         {

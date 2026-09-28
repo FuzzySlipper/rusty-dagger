@@ -108,6 +108,17 @@ public sealed class InteractionTargetingService(IPerceptionService perception, S
         return use;
     }
 
+    /// <summary>Fresh Engine rejection facts without focus acquisition, activation or last-action changes.</summary>
+    public WorldInteractionReadout Inspect(EntityId observer, WorldPoint origin, Vector3 forward,
+        double maximumDistance, double minimumFacingCosine, IEnumerable<InteractionTargetCandidate> candidates)
+    {
+        InteractionTargetCandidate[] declared = candidates.ToArray();
+        foreach (var candidate in declared) candidate.Validate();
+        InteractionScene scene = new(_perception, _spatial, _entities, observer, origin, forward,
+            (float)maximumDistance, (float)minimumFacingCosine, declared, null);
+        return new WorldInteraction(scene, targetedUseEnabled: false).Inspect();
+    }
+
     private bool IsCurrent(InteractionTargetCandidate candidate) =>
         _entities.TryResolve(candidate.Identity, out EntityId current) && current == candidate.Entity;
 
@@ -121,7 +132,7 @@ public sealed class InteractionTargetingService(IPerceptionService perception, S
         float maximumDistance,
         float minimumFacingCosine,
         InteractionTargetCandidate[] declared,
-        InteractionTargetingAction action) : IWorldInteractionScene
+        InteractionTargetingAction? action) : IWorldInteractionScene
     {
         private readonly IPerceptionService _perception = perception;
         private readonly SpatialMovementSystem _spatial = spatial;
@@ -129,7 +140,7 @@ public sealed class InteractionTargetingService(IPerceptionService perception, S
         private readonly EntityId _observer = observer;
         private readonly WorldPoint _origin = origin;
         private readonly InteractionTargetCandidate[] _declared = declared;
-        private readonly InteractionTargetingAction _action = action;
+        private readonly InteractionTargetingAction? _action = action;
         private readonly InteractionQuery _query = new(
             origin.ToVector(), forward,
             MathF.Acos(minimumFacingCosine), MathF.Acos(minimumFacingCosine),
@@ -156,7 +167,7 @@ public sealed class InteractionTargetingService(IPerceptionService perception, S
             {
                 return new(false, "The selected target is no longer loaded.");
             }
-            InteractionTargetingActionResult result = _action(candidate);
+            InteractionTargetingActionResult result = (_action ?? throw new InvalidOperationException("Inspection cannot activate a target."))(candidate);
             return new(result.Performed, result.Message);
         }
 
