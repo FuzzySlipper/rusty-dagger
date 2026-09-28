@@ -64,10 +64,11 @@ internal sealed partial class DaggerfallSession
                 _appearance.InspectPlayerStrikeSeconds(State.Equipment.Read(), targeted ? timing.FrameSeconds : 0)) * 1000), 1, 2000);
             equipment = timing.Equipment;
             if (available && !_appearance.IsWeaponDrawn) { available = false; reason = "weapon-sheathed; toggle-weapon"; }
-            else if (available && (!_appearance.CanStartPlayerAttack ||
-                !State.Kit.AttackExecution.IsReady(DaggerfallActorIdentity.PlayerEntityId,
-                    _latestUpdateGeneration ?? 1, _latestSimulationStep ?? 0)))
-            { available = false; reason = "attack-recovering; advance then inspect"; }
+            else if (available && !_appearance.CanStartPlayerAttack)
+            { available = false; reason = "attack-animation-active; advance then inspect"; }
+            else if (available && !State.Kit.AttackExecution.IsReady(DaggerfallActorIdentity.PlayerEntityId,
+                _latestUpdateGeneration ?? 1, _latestSimulationStep ?? 0))
+            { available = false; reason = "attack-cooldown; advance then inspect"; }
             else if (available && _combat.InspectPlayerAttackRefusal() is { } refusal)
             { available = false; reason = refusal.ToString(); }
         }

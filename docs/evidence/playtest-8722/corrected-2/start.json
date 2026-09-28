@@ -1,0 +1,51 @@
+{
+  "profile": {
+    "backend": "browser",
+    "environment": "service",
+    "id": "dagger-adaptive-final",
+    "description": "Dagger task 8722 final adapter independent trial; parent owns host.",
+    "url": "http://127.0.0.1:4474/",
+    "controls": {
+      "assist": "Discover live actions and bindings with playtest assist. Default WASD, Primary attack, F interact, Z weapon, I inventory; inspect current controls first."
+    },
+    "reset": "Browsers share the native player/world/time. Browser reconnect does not reset; ordinary menu New Game replaces session. Parent owns host reset."
+  },
+  "slot_id": "slot-2",
+  "id": "1c727f8a-c210-4b3f-9499-c9959d0d15d6",
+  "game": "dagger-adaptive-final",
+  "phase": "connected",
+  "created_at": "2026-09-28T08:16:41.832286821Z",
+  "launch": {
+    "browser_url": "http://127.0.0.1:4474/",
+    "canvases": [],
+    "capabilities": {
+      "absolute_pointer": true,
+      "browser_inspect": true,
+      "dom_actions": true,
+      "engine_queries": false,
+      "gamepad": true,
+      "keyboard": true,
+      "pointer_lock_readback": true,
+      "relative_mouse": true
+    },
+    "console": [],
+    "cursor": {
+      "x": 0,
+      "y": 0
+    },
+    "dom_assistance": [],
+    "events_path": "/home/agent/.local/state/crew-playtest-local/slots/slot-2/browser/1c727f8a-c210-4b3f-9499-c9959d0d15d6/events.jsonl",
+    "game_readiness": "unknown; inspect the original screenshot",
+    "page_errors": [],
+    "pointer_lock": false,
+    "renderer": "unknown",
+    "server_http_ready": true,
+    "title": "Rusty Dagger / WorldRpg",
+    "url": "http://127.0.0.1:4474/",
+    "viewport": {
+      "device_pixel_ratio": 1,
+      "height": 720,
+      "width": 1280
+    }
+  }
+}

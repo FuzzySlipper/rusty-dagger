@@ -57,5 +57,53 @@ all three focused playtest adapter tests pass against this pair.
 Gate 3738 was read from Den after completion: **passed**, with Rust, C# and docs
 checks successful for exact SHA `58f6316dad11e3071f220d5d34b2cf985a6f19d0`.
 The authoritative receipt is retained in `engine-gate-3738.json`.
-Two independent corrected-runtime trials use separate native worlds on local
-ports 4473 and 4474; their results will be added below.
+## Corrected runtime trials
+
+Both independent GPT-5.6 Luna testers used ordinary installed tools in separate
+native worlds on ports 4473 and 4474. Original interviews and selected receipts
+and screenshots are retained in `corrected-2` and `corrected-3`.
+
+- Trial 2 moved 2.05 units in its first 500ms forward action, approached rat 2008
+  from 9.90 to 1.46 units, and confirmed visibility and attack selection. Its first
+  attack produced a fresh `NoTargetInReach` refusal. Subsequent attacks remained
+  blocked by animation recovery. It died with zero kills; no door or loot result.
+  Wallclock was 12m44s, exceeding its 12-minute limit by 44s.
+- Trial 3 moved 2.88 units in its first 700ms action and approached the rat and imp.
+  It saved Attack=KeyQ through ordinary settings, confirmed visually and in live
+  controls. It stopped alive at 20/31 health, with no confirmed kill, door or loot.
+- **Correction to trial 3's interview:** its claimed new Q no-target result is
+  unsupported. Before/after observations retain combat sequence 2 and observed
+  step 13891. The HUD was historical. Binding persistence and physical input
+  transport are established; a fresh Q gameplay outcome was inconclusive.
+- **Correction to both diagnoses:** `attackReadyAtStep` is a cooldown threshold,
+  not a continuously changing readiness value. Passing it did not clear a separate
+  presentation guard. The live stall exposed a pre-existing Dagger one-shot
+  completion bug, rather than a failure of Engine time admission.
+
+## Attack recovery fix
+
+Engine returns an advancing completed receipt once, followed by completed
+receipts that no longer advance. Dagger previously required another advancing
+receipt before returning the weapon to idle, permanently blocking later attacks.
+The fix records the first advancing completion and returns to idle on the next
+completed receipt. It preserves the final animation frame for one outer update
+and uses the existing Engine playback contract. Preflight now distinguishes
+`attack-animation-active` from `attack-cooldown`.
+
+The exact two-receipt regression and 62 related weapon/playtest tests pass;
+CoreCLR release staging passes. All three persistent review lanes passed this
+narrow follow-up. The prior guard against an initial non-advancing completion
+remains tested.
+
+## Follow-up priorities
+
+1. Connect shared spatial probes/clearance to Dagger's full controller environment
+   before claiming traversable routes. Loaded target coordinates helped approach
+   enemies, but did not establish door access.
+2. Make cinematic continuation easier to discover and budget separately from
+   gameplay; enforce tester wallclock deadlines more strictly.
+3. Keep fresh combat receipts beside screenshots. Historical HUD text must not
+   be interpreted as a new action result; saved bindings alone do not prove hits.
+
+These trials establish useful adaptive exploration and expose gameplay defects.
+They do not establish a level clear, enemy defeat, door opening or looting.
