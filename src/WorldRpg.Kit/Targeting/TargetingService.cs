@@ -18,6 +18,7 @@ public sealed record TargetingEvidence(PerceptionQueryRequest Request, Perceptio
 public interface ITargetingPolicy
 {
     bool IsValidTarget(ActorState actor);
+    Vector3 AimPoint(ActorState actor);
     double MaximumDistance(double? actionReach);
     double MinimumFacingCosine { get; }
 }
@@ -43,7 +44,7 @@ public sealed class TargetingService(IPerceptionService perception, SpatialMovem
         if (position is not WorldPoint origin) { Clear(); return null; }
         ulong observer = checked((ulong)actors.Player.DurableId);
         PerceptionTarget[] targets = actors.All.Where(IsValidTarget).OrderBy(a => a.DurableId)
-            .Select(a => new PerceptionTarget(checked((ulong)a.DurableId), a.Position.ToVector())).ToArray();
+            .Select(a => new PerceptionTarget(checked((ulong)a.DurableId), policy.AimPoint(a))).ToArray();
         PerceptionQueryRequest request = new(spatial.Session,
             new[] { new PerceptionObserver(observer, origin.ToVector(), forward, policy.MaximumDistance(actionReach), policy.MinimumFacingCosine, 1d) },
             targets, ReadOnlyMemory<SpatialEntityCollider>.Empty, 0, 0, VisibilityPageSize);

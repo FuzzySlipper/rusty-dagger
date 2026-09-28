@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Text;
+using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall;
 using Xunit;
 
@@ -7,6 +9,18 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// <summary>Control settings validate complete changes before making them observable.</summary>
 public sealed class DaggerfallControlSettingsTests
 {
+    [Fact]
+    public void Physical_attack_mapping_uses_the_active_engine_gameplay_context()
+    {
+        DaggerfallControlSettings settings = new();
+        settings.Rebind("attack", ["KeyQ"]);
+
+        ProductInputMapping attack = Assert.Single(settings.PhysicalMappings(), mapping =>
+            mapping.Intent.Span.SequenceEqual("attack"u8));
+        Assert.Equal(KeyboardControl.KeyQ, attack.Keyboard);
+        Assert.Equal("gameplay.default", Encoding.UTF8.GetString(attack.Context.Value.Span));
+    }
+
     [Fact]
     public void Swap_round_trips_as_one_complete_binding_set()
     {

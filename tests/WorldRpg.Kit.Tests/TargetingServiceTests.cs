@@ -70,6 +70,7 @@ public sealed class TargetingServiceTests
     private sealed class Policy : ITargetingPolicy
     {
         public bool IsValidTarget(ActorState actor) => actor.DurableId is 2 or 3;
+        public Vector3 AimPoint(ActorState actor) => actor.Position.ToVector();
         public double MaximumDistance(double? actionReach) => actionReach ?? 10d;
         public double MinimumFacingCosine => .5d;
     }

@@ -154,7 +154,7 @@ public sealed class DaggerfallControlSettings
                 action.Category == "movement" ? InputEdge.Held : InputEdge.Pressed,
                 default, keyboard ? control : default,
                 keyboard ? default : Enum.Parse<PointerButton>(key), default, default, default,
-                new InputContext("gameplay"u8.ToArray()));
+                new InputContext("gameplay.default"u8.ToArray()));
         })).ToArray();
 
     private static Dictionary<string, List<string>> CreateDefaultBindings() =>
