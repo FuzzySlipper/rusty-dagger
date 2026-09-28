@@ -1,0 +1,1211 @@
+{
+  "activationMode": "Grab",
+  "attackTiming": "Bounded observation window from current equipment, live speed, longest eligible strike and cooldown; inspect again for recovery.",
+  "axes": {
+    "floorY": null,
+    "forward": {
+      "x": -2.3841858e-7,
+      "y": 0,
+      "z": -1
+    },
+    "positionMeaning": "character center",
+    "up": "Y",
+    "yaw": "positive right; zero faces -Z"
+  },
+  "controls": {
+    "attack": [
+      "KeyQ"
+    ],
+    "character": [
+      "KeyC"
+    ],
+    "crouch": [
+      "ControlLeft"
+    ],
+    "interact": [
+      "KeyF"
+    ],
+    "inventory": [
+      "KeyI"
+    ],
+    "jump": [
+      "Space"
+    ],
+    "map": [
+      "KeyM"
+    ],
+    "menu": [
+      "Escape"
+    ],
+    "move.backward": [
+      "KeyS"
+    ],
+    "move.forward": [
+      "KeyW"
+    ],
+    "move.left": [
+      "KeyA"
+    ],
+    "move.right": [
+      "KeyD"
+    ],
+    "rest": [
+      "KeyR"
+    ],
+    "run": [
+      "ShiftLeft"
+    ],
+    "spell": [
+      "KeyV"
+    ],
+    "toggle-weapon": [
+      "KeyZ"
+    ],
+    "transport": [
+      "KeyT"
+    ]
+  },
+  "generation": "1",
+  "hostState": "Native world, player and time are shared across browser clients. Reconnect does not reset; new game uses ordinary menu.",
+  "interactionMessage": "Interaction mode: grab.",
+  "lastCombatEvent": {
+    "kind": "AttackRejected:NoTargetInReach",
+    "observedGeneration": "1",
+    "observedStep": "15562",
+    "sequence": 2
+  },
+  "lastInteractionRefusal": null,
+  "lastOutcome": "No target in melee reach (1 observer(s) against 42 target(s), 42 compared: 42 out of range, 0 out of cone, 0 cast, 0 occluded)",
+  "lastUseStep": null,
+  "loot": null,
+  "mode": "Playing",
+  "observationProvenance": {
+    "frameCorrelation": "not measured",
+    "kind": "live product query",
+    "sampledAt": "2026-09-28T08:43:17.058Z"
+  },
+  "outcomeSemantics": "HUD text is historical. Compare lastCombatEvent.sequence and lastUseStep across action receipts; inspection never creates events.",
+  "player": {
+    "attackReadyAtStep": 15607,
+    "attackUnavailableReason": "attack-animation-active; advance then inspect",
+    "dead": false,
+    "equipment": "long-blade",
+    "health": 31,
+    "magicka": 100,
+    "movement": {
+      "canMove": true,
+      "grounded": true,
+      "stance": "Standing",
+      "velocity": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    "pitchDegrees": 0,
+    "position": {
+      "x": 28.375,
+      "y": 39.301,
+      "z": -12.400001
+    },
+    "stamina": 5553,
+    "viewpoint": {
+      "x": 28.375,
+      "y": 40.051,
+      "z": -12.400001
+    },
+    "weaponDrawn": true,
+    "yawDegrees": -0.000013660378340025502
+  },
+  "simulationStep": "15576",
+  "slot_id": "slot-1",
+  "targets": {
+    "actors": [
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 26,
+          "y": -1.110223e-16,
+          "z": -12.775001
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 38.95652,
+        "health": 14,
+        "hostile": true,
+        "id": "actor:2017",
+        "label": "rat",
+        "pitchDeltaDegrees": -86.46141627806695,
+        "position": {
+          "x": 26,
+          "y": 0.41875002,
+          "z": -12.775001
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": -86.52821501229506,
+        "visualYawDeltaDegrees": -81.02735972472527,
+        "yawDeltaDegrees": -81.02735972472527
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 35.875,
+          "y": 12.8,
+          "z": -10.175
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 27.23021,
+        "health": 15,
+        "hostile": true,
+        "id": "actor:2014",
+        "label": "rat",
+        "pitchDeltaDegrees": -73.30396362950555,
+        "position": {
+          "x": 35.875,
+          "y": 13.21875,
+          "z": -10.175
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": -73.74567879687183,
+        "visualYawDeltaDegrees": 106.52388377280157,
+        "yawDeltaDegrees": 106.52388377280157
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 32.675,
+          "y": 12.8,
+          "z": -3.775
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 27.805832,
+        "health": 11,
+        "hostile": true,
+        "id": "actor:2013",
+        "label": "rat",
+        "pitchDeltaDegrees": -69.72059706767267,
+        "position": {
+          "x": 32.675,
+          "y": 13.21875,
+          "z": -3.775
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": -70.2430068502075,
+        "visualYawDeltaDegrees": 153.5014349344496,
+        "yawDeltaDegrees": 153.5014349344496
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 37.825,
+          "y": 38.4,
+          "z": -15.3
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 9.89672,
+        "health": 14,
+        "hostile": true,
+        "id": "actor:2008",
+        "label": "rat",
+        "pitchDeltaDegrees": -2.7930090880416403,
+        "position": {
+          "x": 37.825,
+          "y": 38.818752,
+          "z": -15.3
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": -7.1057594156052515,
+        "visualYawDeltaDegrees": 72.93990302918819,
+        "yawDeltaDegrees": 72.93990302918819
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 33.850002,
+          "y": 38.4,
+          "z": -3.175
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 10.738195,
+        "health": 9,
+        "hostile": true,
+        "id": "actor:2010",
+        "label": "rat",
+        "pitchDeltaDegrees": -2.573987400740355,
+        "position": {
+          "x": 33.850002,
+          "y": 38.818752,
+          "z": -3.175
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": -6.55281562405996,
+        "visualYawDeltaDegrees": 149.31104545015225,
+        "yawDeltaDegrees": 149.31104545015225
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 20.425001,
+          "y": 25.6,
+          "z": -5.0750003
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 16.637815,
+        "health": 31,
+        "hostile": true,
+        "id": "actor:2003",
+        "label": "orc",
+        "pitchDeltaDegrees": -49.47872930932989,
+        "position": {
+          "x": 20.425001,
+          "y": 26.653517,
+          "z": -5.0750003
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": -51.100808689834274,
+        "visualYawDeltaDegrees": -132.6569540262514,
+        "yawDeltaDegrees": -132.6569540262514
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 19.225,
+          "y": 12.8,
+          "z": -5.675
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 27.79153,
+        "health": 11,
+        "hostile": true,
+        "id": "actor:2004",
+        "label": "archer",
+        "pitchDeltaDegrees": -65.88327673571618,
+        "position": {
+          "x": 19.225,
+          "y": 13.935254,
+          "z": -5.675
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": -66.49984642772274,
+        "visualYawDeltaDegrees": -126.314859058147,
+        "yawDeltaDegrees": -126.314859058147
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 41.725002,
+          "y": 39.575,
+          "z": -12.85
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 13.3603945,
+        "health": 16,
+        "hostile": true,
+        "id": "actor:2009",
+        "label": "imp",
+        "pitchDeltaDegrees": 1.175134701641882,
+        "position": {
+          "x": 41.725002,
+          "y": 39.575,
+          "z": -12.85
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": -2.040873242323025,
+        "visualYawDeltaDegrees": 88.06942736762463,
+        "yawDeltaDegrees": 88.06942736762463
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 31.675001,
+          "y": 39.425,
+          "z": -25.475
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 13.485585,
+        "health": 23,
+        "hostile": true,
+        "id": "actor:2006",
+        "label": "giant-bat",
+        "pitchDeltaDegrees": 0.5268446234447411,
+        "position": {
+          "x": 31.675001,
+          "y": 39.425,
+          "z": -25.475
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": -2.657868316049123,
+        "visualYawDeltaDegrees": 14.165074278119636,
+        "yawDeltaDegrees": 14.165074278119636
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 40.225002,
+          "y": 25.6,
+          "z": -19.075
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 18.41868,
+        "health": 57,
+        "hostile": true,
+        "id": "actor:2012",
+        "label": "skeletal-warrior",
+        "pitchDeltaDegrees": -42.40324698566396,
+        "position": {
+          "x": 40.225002,
+          "y": 26.880468,
+          "z": -19.075
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": -44.07949679757726,
+        "visualYawDeltaDegrees": 60.60784193727285,
+        "yawDeltaDegrees": 60.60784193727285
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 41.525,
+          "y": 13.825,
+          "z": -16.825
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 29.00913,
+        "health": 15,
+        "hostile": true,
+        "id": "actor:2011",
+        "label": "giant-bat",
+        "pitchDeltaDegrees": -61.42672884841968,
+        "position": {
+          "x": 41.525,
+          "y": 13.825,
+          "z": -16.825
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": -62.11945542256047,
+        "visualYawDeltaDegrees": 71.40183070315824,
+        "yawDeltaDegrees": 71.40183070315824
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 13.5,
+          "y": 44.8,
+          "z": -17.5
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 17.124159,
+        "health": 56,
+        "hostile": true,
+        "id": "actor:2000",
+        "label": "skeletal-warrior",
+        "pitchDeltaDegrees": 23.322167901349214,
+        "position": {
+          "x": 13.5,
+          "y": 46.080467,
+          "z": -17.5
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": 20.978423447987705,
+        "visualYawDeltaDegrees": -71.07534389576446,
+        "yawDeltaDegrees": -71.07534389576446
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 41.225002,
+          "y": 7.425,
+          "z": -21.6
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 35.57867,
+        "health": 13,
+        "hostile": true,
+        "id": "actor:2015",
+        "label": "imp",
+        "pitchDeltaDegrees": -63.628135884649346,
+        "position": {
+          "x": 41.225002,
+          "y": 7.425,
+          "z": -21.6
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": -64.15467443194676,
+        "visualYawDeltaDegrees": 54.39912417078292,
+        "yawDeltaDegrees": 54.39912417078292
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 11.075,
+          "y": 32,
+          "z": -6.875
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 19.214262,
+        "health": 18,
+        "hostile": true,
+        "id": "actor:2001",
+        "label": "thief",
+        "pitchDeltaDegrees": -19.060496740451903,
+        "position": {
+          "x": 11.075,
+          "y": 33.026268,
+          "z": -6.875
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": -21.14680804016761,
+        "visualYawDeltaDegrees": -107.71160747428773,
+        "yawDeltaDegrees": -107.71160747428773
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 47.75,
+          "y": 41.600002,
+          "z": -11.25
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 19.598452,
+        "health": 13,
+        "hostile": true,
+        "id": "actor:2007",
+        "label": "rat",
+        "pitchDeltaDegrees": 7.971001460675939,
+        "position": {
+          "x": 47.75,
+          "y": 42.018753,
+          "z": -11.25
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": 5.789042681952258,
+        "visualYawDeltaDegrees": 93.39681187105505,
+        "yawDeltaDegrees": 93.39681187105505
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 48.425,
+          "y": 7.875,
+          "z": -12.725
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 37.278698,
+        "health": 18,
+        "hostile": true,
+        "id": "actor:2016",
+        "label": "giant-bat",
+        "pitchDeltaDegrees": -57.458436952437694,
+        "position": {
+          "x": 48.425,
+          "y": 7.875,
+          "z": -12.725
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": -58.06813312256035,
+        "visualYawDeltaDegrees": 89.07136091727955,
+        "yawDeltaDegrees": 89.07136091727955
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 31.725,
+          "y": 44.8,
+          "z": -33.4
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 22.244137,
+        "health": 12,
+        "hostile": true,
+        "id": "actor:2021",
+        "label": "thief",
+        "pitchDeltaDegrees": 17.058490334999917,
+        "position": {
+          "x": 31.725,
+          "y": 45.826267,
+          "z": -33.4
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": 15.193861602031763,
+        "visualYawDeltaDegrees": 9.063686945626374,
+        "yawDeltaDegrees": 9.063686945626374
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 28.375,
+          "y": 14.625,
+          "z": -34.975002
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 33.444515,
+        "health": 21,
+        "hostile": true,
+        "id": "actor:2022",
+        "label": "giant-bat",
+        "pitchDeltaDegrees": -47.5459586869161,
+        "position": {
+          "x": 28.375,
+          "y": 14.625,
+          "z": -34.975002
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": -48.39906439674766,
+        "visualYawDeltaDegrees": 0.000013660378340025502,
+        "yawDeltaDegrees": 0.000013660378340025502
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 37.125,
+          "y": 6.4,
+          "z": -33.675
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 39.803074,
+        "health": 15,
+        "hostile": true,
+        "id": "actor:2024",
+        "label": "rat",
+        "pitchDeltaDegrees": -54.69368982709824,
+        "position": {
+          "x": 37.125,
+          "y": 6.81875,
+          "z": -33.675
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": -55.30817538612964,
+        "visualYawDeltaDegrees": 22.356442750789967,
+        "yawDeltaDegrees": 22.356442750789967
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 3.525,
+          "y": 8.225,
+          "z": -19.275
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 40.379524,
+        "health": 15,
+        "hostile": true,
+        "id": "actor:2005",
+        "label": "giant-bat",
+        "pitchDeltaDegrees": -50.31780050991218,
+        "position": {
+          "x": 3.525,
+          "y": 8.225,
+          "z": -19.275
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": -50.987715020992894,
+        "visualYawDeltaDegrees": -74.535353148797,
+        "yawDeltaDegrees": -74.535353148797
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 3.2250001,
+          "y": 33.825,
+          "z": -19.025
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 26.57818,
+        "health": 21,
+        "hostile": true,
+        "id": "actor:2002",
+        "label": "giant-bat",
+        "pitchDeltaDegrees": -11.890011406572963,
+        "position": {
+          "x": 3.2250001,
+          "y": 33.825,
+          "z": -19.025
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": -13.462591171698334,
+        "visualYawDeltaDegrees": -75.24240903363872,
+        "yawDeltaDegrees": -75.24240903363872
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 34.725002,
+          "y": 0,
+          "z": -38.475002
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 46.74594,
+        "health": 13,
+        "hostile": true,
+        "id": "actor:2023",
+        "label": "thief",
+        "pitchDeltaDegrees": -54.963040180656854,
+        "position": {
+          "x": 34.725002,
+          "y": 1.0262696,
+          "z": -38.475002
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": -55.483936265447895,
+        "visualYawDeltaDegrees": 13.6867434478374,
+        "yawDeltaDegrees": 13.6867434478374
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 11.2,
+          "y": 32,
+          "z": 8.224998
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 27.70806,
+        "health": 13,
+        "hostile": true,
+        "id": "actor:2032",
+        "label": "rat",
+        "pitchDeltaDegrees": -14.38192610016681,
+        "position": {
+          "x": 11.2,
+          "y": 32.41875,
+          "z": 8.224998
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": -15.873832531403082,
+        "visualYawDeltaDegrees": -140.214915882479,
+        "yawDeltaDegrees": -140.214915882479
+      },
+      {
+        "alive": true,
+        "attackEligible": true,
+        "bodyPosition": {
+          "x": 43.975002,
+          "y": 12.8,
+          "z": 16.175
+        },
+        "currentAttackVisibility": "unavailable",
+        "distance": 41.715397,
+        "health": 12,
+        "hostile": true,
+        "id": "actor:2033",
+        "label": "rat",
+        "pitchDeltaDegrees": -38.700004103847284,
+        "position": {
+          "x": 43.975002,
+          "y": 13.21875,
+          "z": 16.175
+        },
+        "selectedForAttack": false,
+        "visualPitchDeltaDegrees": -39.49495266328256,
+        "visualYawDeltaDegrees": 151.36848260548155,
+        "yawDeltaDegrees": 151.36848260548155
+      }
+    ],
+    "angleOrigin": "character center used by gameplay targeting; visual angles also supplied from camera viewpoint",
+    "interactions": [
+      {
+        "distance": 26.731417,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:17157463477509124229",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": -82.47171667844623,
+        "position": {
+          "x": 25.65,
+          "y": 12.8,
+          "z": -10.2
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": -82.67662900833487,
+        "visualYawDeltaDegrees": -128.915298265656,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": -128.915298265656
+      },
+      {
+        "distance": 16.412739,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:17158428848718504262",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": -56.59276282456435,
+        "position": {
+          "x": 25.6,
+          "y": 25.6,
+          "z": -3.8
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": -57.98106700437481,
+        "visualYawDeltaDegrees": -162.116426491446,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": -162.116426491446
+      },
+      {
+        "distance": 40.406425,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:9422575153983917634",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": -76.56702238729028,
+        "position": {
+          "x": 22.6,
+          "y": 0,
+          "z": -19.800001
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": -76.80969678228564,
+        "visualYawDeltaDegrees": -37.968652084098146,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": -37.968652084098146
+      },
+      {
+        "distance": 11.491719,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:9422578452518802267",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": 28.588688516708178,
+        "position": {
+          "x": 19.2,
+          "y": 44.8,
+          "z": -16.6
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": 25.20332491277125,
+        "visualYawDeltaDegrees": -65.40330501402927,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": -65.40330501402927
+      },
+      {
+        "distance": 14.541156,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:9422577353007174056",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": -30.138505939520993,
+        "position": {
+          "x": 19.2,
+          "y": 32,
+          "z": -3.8
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": -32.62811219443487,
+        "visualYawDeltaDegrees": -133.14718612035034,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": -133.14718612035034
+      },
+      {
+        "distance": 13.617999,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:17150708078066720420",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": -3.793587532887289,
+        "position": {
+          "x": 26.625,
+          "y": 38.4,
+          "z": -25.875
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": -6.9276301211609335,
+        "visualYawDeltaDegrees": -7.399581310244118,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": -7.399581310244118
+      },
+      {
+        "distance": 30.185984,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:17158426649695247840",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": -61.39294234531533,
+        "position": {
+          "x": 35.8,
+          "y": 12.8,
+          "z": 0
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": -62.05996674567292,
+        "visualYawDeltaDegrees": 149.08725088944837,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": 149.08725088944837
+      },
+      {
+        "distance": 37.012108,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:17158432147253388895",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": -62.73849999749671,
+        "position": {
+          "x": 44.8,
+          "y": 6.4,
+          "z": -16.6
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": -63.260884008007004,
+        "visualYawDeltaDegrees": 75.656392335688,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": 75.656392335688
+      },
+      {
+        "distance": 19.343674,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:9425409694960877917",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": -22.174953010585906,
+        "position": {
+          "x": 15.400001,
+          "y": 32,
+          "z": -0.05
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": -24.201618344392607,
+        "visualYawDeltaDegrees": -133.5862631263223,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": -133.5862631263223
+      },
+      {
+        "distance": 32.83068,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:9421610882286165812",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": -53.82347758764891,
+        "position": {
+          "x": 9,
+          "y": 12.8,
+          "z": -12.8
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": -54.582050778285364,
+        "visualYawDeltaDegrees": -88.81727487180652,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": -88.81727487180652
+      },
+      {
+        "distance": 24.151299,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:12901589679189393756",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": -17.59595092210164,
+        "position": {
+          "x": 51.2,
+          "y": 32,
+          "z": -15.400001
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": -19.27572327371426,
+        "visualYawDeltaDegrees": 82.51227319719061,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": 82.51227319719061
+      },
+      {
+        "distance": 35.794464,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:9423420678425822668",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": -47.762593023370954,
+        "position": {
+          "x": 6.4,
+          "y": 12.8,
+          "z": -2.6000001
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": -48.55720650383847,
+        "visualYawDeltaDegrees": -114.03500927472469,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": -114.03500927472469
+      },
+      {
+        "distance": 35.93986,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:17150694883927181888",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": -47.507915478448574,
+        "position": {
+          "x": 38.2,
+          "y": 12.8,
+          "z": -34.600002
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": -48.30327888775377,
+        "visualYawDeltaDegrees": 23.872641989856167,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": 23.872641989856167
+      },
+      {
+        "distance": 26.792072,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:9421613081309422234",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": -15.813439068046858,
+        "position": {
+          "x": 2.6000001,
+          "y": 32,
+          "z": -12.8
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": -17.344591548775405,
+        "visualYawDeltaDegrees": -89.11089028910393,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": -89.11089028910393
+      },
+      {
+        "distance": 26.399424,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:17150711376601605053",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": 12.022747909709178,
+        "position": {
+          "x": 29.4,
+          "y": 44.8,
+          "z": -38.2
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": 10.421635693420502,
+        "visualYawDeltaDegrees": 2.275102222929581,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": 2.275102222929581
+      },
+      {
+        "distance": 27.966682,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:3671130235182290541",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": -15.133003204728428,
+        "position": {
+          "x": 9,
+          "y": 32,
+          "z": 6.4000015
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": -16.605620092881562,
+        "visualYawDeltaDegrees": -134.13705497895143,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": -134.13705497895143
+      },
+      {
+        "distance": 38.39536,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:17162249651625780587",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": -43.64702029360669,
+        "position": {
+          "x": 6.4,
+          "y": 12.8,
+          "z": -29.4
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": -44.44604972103118,
+        "visualYawDeltaDegrees": -52.27422236719205,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": -52.27422236719205
+      },
+      {
+        "distance": 29.452423,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:9422574054472289423",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": -14.35276382883982,
+        "position": {
+          "x": 0,
+          "y": 32,
+          "z": -15.400001
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": -15.757102026909847,
+        "visualYawDeltaDegrees": -83.96470394300943,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": -83.96470394300943
+      },
+      {
+        "distance": 44.036873,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:16502696606498757202",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": -48.34184450656885,
+        "position": {
+          "x": 42.2,
+          "y": 6.4,
+          "z": -38.2
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": -48.982277739798555,
+        "visualYawDeltaDegrees": 28.184768119409483,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": 28.184768119409483
+      },
+      {
+        "distance": 30.806576,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:16502697706010385413",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": -13.70923891717033,
+        "position": {
+          "x": 25.6,
+          "y": 32,
+          "z": -42.2
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": -15.056368991822245,
+        "visualYawDeltaDegrees": -5.320072595737279,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": -5.320072595737279
+      },
+      {
+        "distance": 41.426125,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:3084667872651009695",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": -39.77072814377155,
+        "position": {
+          "x": 51.2,
+          "y": 12.8,
+          "z": -34.600002
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": -40.55883935641389,
+        "visualYawDeltaDegrees": 45.79529541974824,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": 45.79529541974824
+      },
+      {
+        "distance": 41.968723,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:12901591878212650178",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": -39.15691759792357,
+        "position": {
+          "x": 60.2,
+          "y": 12.8,
+          "z": -19.2
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": -39.94196242886521,
+        "visualYawDeltaDegrees": 77.93907204704156,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": 77.93907204704156
+      },
+      {
+        "distance": 39.174873,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:17162255149183921642",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": -30.871171630758855,
+        "position": {
+          "x": 12.8,
+          "y": 19.2,
+          "z": -42.2
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": -31.80344517116821,
+        "visualYawDeltaDegrees": -27.593850455706153,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": -27.593850455706153
+      },
+      {
+        "distance": 36.79898,
+        "focusReason": "OutsideQuery",
+        "id": "Resource:17162254049672293431",
+        "kind": "Door",
+        "label": "Door",
+        "pitchDeltaDegrees": -11.443538662644041,
+        "position": {
+          "x": 6.4,
+          "y": 32,
+          "z": -41
+        },
+        "reach": 2.25,
+        "use": "use action performs fresh focus/reach checks and then owner policy (locks, mode, etc.); focus readiness does not promise success",
+        "visibility": "Unknown",
+        "visualPitchDeltaDegrees": -12.583310060773266,
+        "visualYawDeltaDegrees": -37.5371017923816,
+        "withinAcquisition": false,
+        "yawDeltaDegrees": -37.5371017923816
+      }
+    ],
+    "route": "unavailable; targets are loaded positions, not traversable routes",
+    "visibilityCoverage": "Current gameplay perception checks retained geometry; call-local moving doors/supports are not included. Visible is not a walking route or full collision clearance."
+  }
+}

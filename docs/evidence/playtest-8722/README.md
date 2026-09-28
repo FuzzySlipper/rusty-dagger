@@ -107,3 +107,19 @@ remains tested.
 
 These trials establish useful adaptive exploration and expose gameplay defects.
 They do not establish a level clear, enemy defeat, door opening or looting.
+
+## Short recovery regression trial
+
+A final GPT-5.6 Luna trial on the recovery fix used the persisted KeyQ binding,
+ordinary keyboard input and bounded action-driven advancement while looking away
+from enemies. The first swing produced combat sequence 2 at observed step 15562
+(`NoTargetInReach`). After a bounded recovery window the animation refusal cleared.
+The second swing produced a **new** sequence 4 at observed step 15619 with the same
+expected no-target outcome. This verifies repeated saved-key attack delivery and
+recovery without relying on historical HUD text. No hit or kill is claimed.
+Selected original receipts and the final interview are retained in `recovery`.
+
+The short trial used about six minutes wallclock and 2m12s after Playing. All
+three tester browser sessions were stopped and released. The parent stopped its
+isolated native hosts and removed only the two temporary profiles via live
+reload. Existing Dagger/Doom hosts and unrelated repository edits were preserved.
