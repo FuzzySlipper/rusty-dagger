@@ -13,6 +13,7 @@
 .dagger-title { position: absolute; left: 24px; top: 22px; display: grid; gap: 4px; }
 .dagger-title span { color: #b9ae8c; font: 700 .7rem ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
 .dagger-title strong { font-size: 1.15rem; }
+.dagger-view { position: absolute; left: 24px; top: 70px; margin: 0; color: #b9ae8c; font: .75rem ui-monospace, monospace; }
 .dagger-reticle { left: 50%; position: absolute; top: 48%; transform: translate(-50%, -50%); color: #eadc9e; font: 2rem ui-monospace, monospace; }
 
 .dagger-vitals {
