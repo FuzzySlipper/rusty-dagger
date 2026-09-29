@@ -34,7 +34,7 @@
   <ItemGroup>
     <ProjectReference Include="../WorldRpg.Kit/WorldRpg.Kit.csproj" />
     <ProjectReference Include="../WorldRpg.Rulesets.Daggerfall/WorldRpg.Rulesets.Daggerfall.csproj" />
-    <PackageReference Include="Rusty.Engine" Version="$(RustyEnginePackageVersion)">
+    <PackageReference Include="Rusty.Engine" Version="[$(RustyEnginePackageVersion)]">
       <ExcludeAssets Condition="'$(RustyEngineUseSourceDevelopment)' == 'true'">compile;runtime</ExcludeAssets>
     </PackageReference>
     <RustyEngineProductInputIntent Include="move.forward" Value="digital" />
