@@ -45,7 +45,7 @@ public sealed class MechanicsInventoryContainerCoordinatorTests
         containers.Seed(source, [new InventoryContainerSeed(new InventoryItemId("sword"), UniqueItem: Item(40))]);
         EntityId item = Assert.Single(containers.Read(source).UniqueItems).Entity;
 
-        containers.Transfer(source, destination, new InventoryContainerSelection(new InventoryItemId("sword"), 1, UniqueEntityId: item.Value), store.Revision);
+        containers.Transfer(source, destination, new InventoryContainerSelection(new InventoryItemId("sword"), 1, UniqueEntityId: item.Value));
 
         Assert.Empty(entities.Store.Get<InventoryComponent>(source).UniqueItems);
         Assert.Equal(item, Assert.Single(entities.Store.Get<InventoryComponent>(destination).UniqueItems).Entity);

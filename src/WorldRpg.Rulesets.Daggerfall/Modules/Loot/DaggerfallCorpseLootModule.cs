@@ -316,13 +316,16 @@ internal sealed class DaggerfallCorpseLootModule
                 LastCommit = new CorpseLootCommitEvidence(pending.ActorId, false, "You cannot carry any more.");
                 return CorpseLootCommitResult.Rejected;
             }
+            // The player chose from an earlier view; refuse the selection if the store moved since.
+            if (pending.ExpectedWorldRevision is { } expected && _corpseLoot.Read(current)?.StoreRevision != expected)
+                throw new InvalidOperationException("Inventory changed. Choose the item again.");
             if (pending.Selection is { Stack: InventoryStackId source, DestinationStack: InventoryStackId destination })
                 _itemInstances.EnsureTransferCompatible(DaggerfallItemOwner.Corpse(pending.ActorId), DaggerfallItemOwner.Player, source, destination);
             // The transfer commits first. All code after it is deterministic local bookkeeping and
             // completed-change facts, which is why a rejection appends nothing.
             CorpseLootTransferResult transfer = pending.Selection is { } selection
-                ? _corpseLoot.Transfer(current, _playerOwner, selection, pending.ExpectedWorldRevision!.Value)
-                : _corpseLoot.TransferAll(current, _playerOwner, pending.ExpectedWorldRevision);
+                ? _corpseLoot.Transfer(current, _playerOwner, selection)
+                : _corpseLoot.TransferAll(current, _playerOwner);
             SyncTransferredMetadata(pending.ActorId, current, transfer.Transfer);
         }
         catch (Exception rejection) when (rejection is MechanicsException or InvalidOperationException)

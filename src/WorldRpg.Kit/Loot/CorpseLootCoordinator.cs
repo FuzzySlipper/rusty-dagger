@@ -85,24 +85,22 @@ public sealed class CorpseLootCoordinator
         return corpse.HasRegisteredInventory ? _containers.Read(corpse.Owner) : null;
     }
 
-    public CorpseLootTransferResult TransferAll(CorpseLootComponent corpse, EntityId recipient, ulong? expectedWorldRevision = null) =>
-        TransferCore(corpse, recipient, selection: null, expectedWorldRevision);
+    public CorpseLootTransferResult TransferAll(CorpseLootComponent corpse, EntityId recipient) =>
+        TransferCore(corpse, recipient, selection: null);
 
     public CorpseLootTransferResult Transfer(
         CorpseLootComponent corpse,
         EntityId recipient,
-        InventoryContainerSelection selection,
-        ulong expectedWorldRevision)
+        InventoryContainerSelection selection)
     {
         ArgumentNullException.ThrowIfNull(selection);
-        return TransferCore(corpse, recipient, selection, expectedWorldRevision);
+        return TransferCore(corpse, recipient, selection);
     }
 
     private CorpseLootTransferResult TransferCore(
         CorpseLootComponent corpse,
         EntityId recipient,
-        InventoryContainerSelection? selection,
-        ulong? expectedWorldRevision)
+        InventoryContainerSelection? selection)
     {
         ArgumentNullException.ThrowIfNull(corpse);
         if (!corpse.IsInteractable) throw new InvalidOperationException("This corpse is no longer interactable.");
@@ -113,8 +111,8 @@ public sealed class CorpseLootCoordinator
         }
 
         InventoryContainerTransferReceipt receipt = selection is null
-            ? _containers.TransferAll(corpse.Owner, recipient, expectedWorldRevision)
-            : _containers.Transfer(corpse.Owner, recipient, selection, expectedWorldRevision!.Value);
+            ? _containers.TransferAll(corpse.Owner, recipient)
+            : _containers.Transfer(corpse.Owner, recipient, selection);
         InventoryView remaining = _containers.Read(corpse.Owner);
         bool empty = remaining.Stacks.Count == 0 && remaining.UniqueItems.Count == 0;
         corpse.SetInteractable(!empty);

@@ -115,8 +115,7 @@ internal sealed class DaggerfallWagonStorage
         EnsureWagonCapacity(selection, definition);
         DaggerfallWagon wagon = EnsureCreated();
         InventoryContainerSelection transferSelection = PrepareTransferSelection(selection, DaggerfallItemOwner.Wagon(wagon.Id), wagon.Owner);
-        InventoryContainerTransferReceipt transfer = _containers.Transfer(_player, wagon.Owner, transferSelection,
-            _containers.Read(_player).StoreRevision);
+        InventoryContainerTransferReceipt transfer = _containers.Transfer(_player, wagon.Owner, transferSelection);
         SyncToWagon(transfer, wagon.Id);
         return transfer;
     }
@@ -134,8 +133,7 @@ internal sealed class DaggerfallWagonStorage
         _ = RequireSelectionDefinition(selection, wagonBefore);
         EnsureUniqueMetadata(selection, DaggerfallItemOwner.Wagon(wagon.Id));
         InventoryContainerSelection transferSelection = PrepareTransferSelection(selection, DaggerfallItemOwner.Player, _player);
-        InventoryContainerTransferReceipt transfer = _containers.Transfer(wagon.Owner, _player, transferSelection,
-            expectedWorldRevision);
+        InventoryContainerTransferReceipt transfer = _containers.Transfer(wagon.Owner, _player, transferSelection);
         SyncFromWagon(transfer, wagon.Id);
         return transfer;
     }

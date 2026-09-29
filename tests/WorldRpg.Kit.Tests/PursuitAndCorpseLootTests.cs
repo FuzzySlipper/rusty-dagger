@@ -40,7 +40,7 @@ public sealed class PursuitAndCorpseLootTests
             [new InventoryContainerSeed(new InventoryItemId("gold"), 2, Stack: InventoryStackId.Parse("corpse-gold"))]);
 
         CorpseLootTransferResult first = loot.Transfer(corpse, recipient,
-            new InventoryContainerSelection(new InventoryItemId("gold"), 1, InventoryStackId.Parse("corpse-gold"), InventoryStackId.Parse("player-gold")), inventory.Revision);
+            new InventoryContainerSelection(new InventoryItemId("gold"), 1, InventoryStackId.Parse("corpse-gold"), InventoryStackId.Parse("player-gold")));
 
         Assert.False(first.IsEmpty);
         Assert.True(corpse.IsInteractable);
