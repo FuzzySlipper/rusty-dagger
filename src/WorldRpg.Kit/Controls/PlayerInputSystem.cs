@@ -119,10 +119,13 @@ public sealed class PlayerInputSystem
             }
             else if (input.Kind == InputEventKind.PointerDelta)
             {
+                // A pointer sample can exceed the per-update bound (a fast flick, or the first
+                // delta after pointer lock), so it saturates like the stick instead of failing
+                // the update.
                 LookRequest request = new(new LookState(yawRadians, pitchRadians), new Vector2(input.X, input.Y), LookConfiguration());
                 LookDiagnostic diagnostic = Look.Diagnose(request);
-                if (diagnostic != LookDiagnostic.Accepted) throw new InvalidOperationException($"Look request rejected: {diagnostic}.");
-                LookReceipt receipt = Look.Integrate(request);
+                if (diagnostic is not (LookDiagnostic.Accepted or LookDiagnostic.DeltaLimitExceeded)) throw new InvalidOperationException($"Look request rejected: {diagnostic}.");
+                LookReceipt receipt = Look.IntegrateClamped(request);
                 yawRadians = receipt.After.YawRadians;
                 pitchRadians = receipt.After.PitchRadians;
             }

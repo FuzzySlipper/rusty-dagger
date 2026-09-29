@@ -141,8 +141,10 @@ public sealed class PlayerInputSystemTests
     }
 
     [Fact]
-    public void Out_of_limit_look_diagnosis_leaves_input_state_unchanged()
+    public void Out_of_limit_pointer_look_saturates_and_the_update_still_applies()
     {
+        // A fast flick, or the first delta after pointer lock, can exceed the per-update
+        // bound; it turns by the bound instead of failing the product callback.
         InputActionId action = new("test.activate");
         PlayerInputSystem input = new(TestTuning(), new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD), [new InputActionBinding(action, "activate"u8.ToArray())]);
         PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), .25f, -.25f);
@@ -151,15 +153,12 @@ public sealed class PlayerInputSystemTests
         update.Add(Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "activate"));
         update.Add(Input(InputEventKind.PointerDelta, x: 200f, y: .2f));
 
-        Assert.Throws<InvalidOperationException>(() => input.Apply(player, update));
+        input.Apply(player, update);
 
-        Assert.Equal(.25f, player.YawRadians);
-        Assert.Equal(-.25f, player.PitchRadians);
-        Assert.Equal(Vector2.Zero, update.PlanarIntent);
-        Assert.False(update.IsRequested(action));
-        ProductUpdateState afterRejection = new(1f);
-        input.Apply(player, afterRejection);
-        Assert.Equal(Vector2.Zero, afterRejection.PlanarIntent);
+        Assert.Equal(.25f + .35f, player.YawRadians, 5);
+        Assert.Equal(-.25f + .2f * .0035f, player.PitchRadians, 5);
+        Assert.NotEqual(Vector2.Zero, update.PlanarIntent);
+        Assert.True(update.IsRequested(action));
     }
 
     [Fact]
