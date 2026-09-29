@@ -1,7 +1,7 @@
 {
   "project": "rusty-dagger",
   "serve": {
-    "command": "exec rusty dev --project ./src/WorldRpg.Host/WorldRpg.Host.csproj --live-debug --bind-host {host} --port {port}",
+    "command": "PATH=\"$HOME/.local/bin:$PATH\" exec rusty dev --project ./src/WorldRpg.Host/WorldRpg.Host.csproj --live-debug --bind-host {host} --port {port}",
     "preferredPort": 4174,
     "healthUrl": "/",
     "readyText": "Rusty Product Host",

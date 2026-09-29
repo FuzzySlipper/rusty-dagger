@@ -1,7 +1,7 @@
 {
   "project": "rusty-dagger-worldrpg",
   "serve": {
-    "command": "rusty dev --project ./src/WorldRpg.Host/WorldRpg.Host.csproj --bind-host {host} --port {port}",
+    "command": "PATH=\"$HOME/.local/bin:$PATH\" rusty dev --project ./src/WorldRpg.Host/WorldRpg.Host.csproj --bind-host {host} --port {port}",
     "preferredPort": 0,
     "healthUrl": "/",
     "readyText": "Rusty Product",
