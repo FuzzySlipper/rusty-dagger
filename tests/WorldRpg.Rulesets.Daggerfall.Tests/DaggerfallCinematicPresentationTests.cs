@@ -19,7 +19,7 @@ public sealed class DaggerfallCinematicPresentationTests
         Assert.Equal(1, state.ReferencesReleased);
         Assert.Equal(1, state.BundlesReleased);
         Assert.Equal("ANIM0011.VID", presentation.ActiveSource);
-        state.Facts.Add(new(true, VideoRealizationFactKind.Completed, 1, new(1), VideoFailureCode.None));
+        state.Facts.Add(new(VideoRealizationFactKind.Completed, 1, new(1), VideoFailureCode.None));
         presentation.Poll();
         Assert.Null(presentation.ActiveSource);
         Assert.Equal(VideoRealizationFactKind.Completed, presentation.LastResult!.Kind);
@@ -35,7 +35,7 @@ public sealed class DaggerfallCinematicPresentationTests
         DaggerfallCinematicPresentation presentation = state.Presentation;
         presentation.Play("ANIM0011.VID");
         presentation.Play("ANIM0011.VID");
-        state.Facts.Add(new(true, VideoRealizationFactKind.Completed, 1, new(1), VideoFailureCode.None));
+        state.Facts.Add(new(VideoRealizationFactKind.Completed, 1, new(1), VideoFailureCode.None));
         presentation.Poll();
         Assert.NotNull(presentation.ActiveSource);
         presentation.Skip();
@@ -69,7 +69,7 @@ public sealed class DaggerfallCinematicPresentationTests
         Assert.Equal(EntryScreenStartupResult.Waiting, opening.Start());
         Assert.Equal(["anim0000.webm"], state.Paths);
 
-        state.Facts.Add(new(true, VideoRealizationFactKind.Completed, 1, new(1), VideoFailureCode.None));
+        state.Facts.Add(new(VideoRealizationFactKind.Completed, 1, new(1), VideoFailureCode.None));
         state.Presentation.Poll();
         opening.Poll();
         Assert.Equal(["anim0000.webm", "anim0011.webm"], state.Paths);
@@ -79,7 +79,7 @@ public sealed class DaggerfallCinematicPresentationTests
         opening.Poll();
         Assert.Equal(["anim0000.webm", "anim0011.webm", "dag2.webm"], state.Paths);
 
-        state.Facts.Add(new(true, VideoRealizationFactKind.Completed, 2, new(3), VideoFailureCode.None));
+        state.Facts.Add(new(VideoRealizationFactKind.Completed, 2, new(3), VideoFailureCode.None));
         state.Presentation.Poll();
         opening.Poll();
         Assert.True(opening.TakeReady());
@@ -109,7 +109,7 @@ public sealed class DaggerfallCinematicPresentationTests
     private sealed class Harness
     {
         internal readonly List<string> Paths = [];
-        internal readonly List<VideoRealizationFactAtReceipt> Facts = [];
+        internal readonly List<VideoRealizationFact> Facts = [];
         internal int ReferencesReleased, BundlesReleased, Stops, Skips;
         internal bool FailPlay;
         private ulong nextHandle;
@@ -120,8 +120,7 @@ public sealed class DaggerfallCinematicPresentationTests
             IVideoService video = Proxy.Create<IVideoService>((method, args) => method switch
             {
                 nameof(IVideoService.PlayFromContent) => FailPlay ? throw new InvalidOperationException("Rejected video") : new VideoPlaybackHandle(++nextHandle),
-                nameof(IVideoService.ReadRealization) => new VideoRealizationReadout((uint)Facts.Count, 0),
-                nameof(IVideoService.ReadRealizationFactAt) => Facts[(int)((VideoRealizationFactAtRequest)args![0]!).Index],
+                nameof(IVideoService.ReadRealization) => new VideoRealizationResult(Facts.ToArray(), 0),
                 nameof(IVideoService.Stop) => Stop(),
                 nameof(IVideoService.Skip) => Skip(),
                 _ => throw new NotSupportedException(method),

@@ -220,7 +220,7 @@ internal sealed class DaggerfallCorpseLootModule
             DaggerfallPerceptionQueryDefaults.AnyProjectionIdentity,
             DaggerfallPerceptionQueryDefaults.FirstPairCursor,
             DaggerfallPerceptionQueryDefaults.CompleteQueryPageSize);
-        PerceptionReadoutLeaseReceipt receipt = _perception.QueryVisibility(request);
+        PerceptionReadoutResult receipt = _perception.QueryVisibility(request);
         long? selected = receipt.Pairs.ToArray()
             .Where(pair => pair.Observer == (ulong)DaggerfallActorIdentity.PlayerEntityId
                 && pair.Kind == PerceptionPairKind.Visible
@@ -427,7 +427,7 @@ internal enum CorpseLootCommitResult { Committed, Rejected }
 internal sealed record CorpseLootCommitEvidence(long ActorId, bool Committed, string? Rejection);
 
 /// <summary>Copied Engine visibility receipt and the deterministic corpse choice for one explicit interaction.</summary>
-internal sealed record CorpseLootEvidence(PerceptionQueryRequest Request, PerceptionReadoutLeaseReceipt Receipt, long? SelectedActorId);
+internal sealed record CorpseLootEvidence(PerceptionQueryRequest Request, PerceptionReadoutResult Receipt, long? SelectedActorId);
 internal sealed record GeneratedLootSeed(InventoryContainerSeed Seed, DaggerfallItemInstanceMetadata? Metadata);
 
 /// <summary>

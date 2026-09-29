@@ -142,8 +142,8 @@ public sealed class ActorNavigationAndCameraTests
         Assert.Equal(new WorldPoint(1f, 3.5f, 3f), system.Viewpoint);
     }
 
-    private static NavigationStepReceipt Receipt(NavigationPathOutcome outcome, Vector3 waypoint) => new(
-        outcome, waypoint, default, 0, 0, 0, 0, 0, 0);
+    private static NavigationStepResult Receipt(NavigationPathOutcome outcome, Vector3 waypoint) => new(
+        ReadOnlyMemory<PlanarNavCell>.Empty, outcome, waypoint, default, 0, 0, 0, 0, 0);
 
     private static ActorsState CreateActors(ActorPose pose)
     {
@@ -157,7 +157,7 @@ public sealed class ActorNavigationAndCameraTests
     {
         internal ISpatialService Service { get; private set; } = null!;
         internal List<NavigationStepRequest> Requests { get; } = [];
-        internal NavigationStepReceipt Receipt { get; set; }
+        internal NavigationStepResult Receipt { get; set; }
 
         internal static SpatialDouble Create()
         {

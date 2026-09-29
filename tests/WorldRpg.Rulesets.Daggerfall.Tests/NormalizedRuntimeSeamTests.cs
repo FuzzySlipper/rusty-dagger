@@ -1185,7 +1185,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
         // Every placed actor is outside melee reach: the receipt says so, and the product has to say so
         // too rather than printing the same line it would print in a world where nothing is visible.
-        perception.Receipt = new PerceptionReadoutLeaseReceipt(ReadOnlyMemory<PerceptionPair>.Empty, ReadOnlyMemory<PerceptionAggregate>.Empty, 0, false, 0, 1, 42, 42, 42, 41, 1, 0, 0);
+        perception.Receipt = new PerceptionReadoutResult(ReadOnlyMemory<PerceptionPair>.Empty, ReadOnlyMemory<PerceptionAggregate>.Empty, 0, false, 0, 1, 42, 42, 42, 41, 1, 0, 0);
         session.Update(new ProductUpdate(OuterUpdate(1), [PadButton(ControllerButton.Button0, InputEdge.Pressed)]));
 
         Assert.Equal("No target in melee reach (42 observer(s) against 42 target(s), 42 compared: 41 out of range, 1 out of cone, 0 cast, 0 occluded)", session.Presentation.LastOutcome);
@@ -1649,7 +1649,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         Assert.Equal(0u, appearance.SetFrameRequests.Last().FrameId);
         presentation.React(new EnemyAttackStartedFact(11, 12, true, 1, 1));
         int playbackCount = appearance.PlaybackRequests.Count;
-        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceResult(
             ReadOnlyMemory<SpritePlaybackMarkerCrossing>.Empty,
             new SpritePlaybackReadout(2, 0, SpritePlaybackState.Playing, 0d, 0, 1, false),
             true));
@@ -1669,7 +1669,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         using ActorsState actors = ActorsWithNpc(11, HealthyMechanics(), new WorldPoint(0f, 0f, 0f));
 
         presentation.React(new EnemyAttackStartedFact(11, 12, true, 1, 1));
-        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceResult(
             ReadOnlyMemory<SpritePlaybackMarkerCrossing>.Empty,
             new SpritePlaybackReadout(2, 0, SpritePlaybackState.Playing, 0d, 3, 1, false),
             true));
@@ -1800,11 +1800,11 @@ public sealed partial class NormalizedRuntimeSeamTests
         ContentFake content = MediaContent(releases);
         AppearanceFake appearance = new(releases);
         AudioRecorder audio = AudioRecorder.Create();
-        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceResult(
             new[] { new SpritePlaybackMarkerCrossing(2, 3, 1, 0, 1) },
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 1, false),
             true));
-        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceResult(
             new[] { new SpritePlaybackMarkerCrossing(2, 3, 1, 0, 1) },
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 2, false),
             true));
@@ -1868,11 +1868,11 @@ public sealed partial class NormalizedRuntimeSeamTests
         using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs());
         presentation.React(new EnemyAttackStartedFact(11, 12, true, 7, 9));
         int beforeCompletion = appearance.PlaybackRequests.Count;
-        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceResult(
             ReadOnlyMemory<SpritePlaybackMarkerCrossing>.Empty,
             new SpritePlaybackReadout(2, 0, SpritePlaybackState.Completed, 0D, 0, 1, true),
             true));
-        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceResult(
             ReadOnlyMemory<SpritePlaybackMarkerCrossing>.Empty,
             new SpritePlaybackReadout(2, 0, SpritePlaybackState.Completed, 0D, 0, 2, true),
             false));
@@ -2066,7 +2066,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         AudioRecorder audio = AudioRecorder.Create();
         using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1]), audio.Service);
         presentation.React(new EnemyAttackStartedFact(11, 12, true, 2, 3));
-        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceResult(
             new[] { new SpritePlaybackMarkerCrossing(2, 3, 1, 0, 1) },
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Completed, 0D, 0, 1, true),
             false));
@@ -2088,7 +2088,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         AudioRecorder audio = AudioRecorder.Create();
         using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1]), audio.Service);
         presentation.React(new EnemyAttackStartedFact(11, 12, false, 2, 3));
-        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceResult(
             new[] { new SpritePlaybackMarkerCrossing(2, 3, 1, 0, 1) },
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 1, false),
             true));
@@ -2166,11 +2166,11 @@ public sealed partial class NormalizedRuntimeSeamTests
         Assert.Equal(1, EffectCount(presentation));
         Assert.Equal(targetPosition, Effect(presentation).Position);
         appearance.AdvanceReceipts.Enqueue(default);
-        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(default, new SpritePlaybackReadout(0, 0, SpritePlaybackState.Completed, 0D, 0, 1, true), true));
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceResult(default, new SpritePlaybackReadout(0, 0, SpritePlaybackState.Completed, 0D, 0, 1, true), true));
         presentation.Advance(OuterUpdate(1));
         Assert.Equal(1, EffectCount(presentation));
         appearance.AdvanceReceipts.Enqueue(default);
-        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(default, new SpritePlaybackReadout(0, 0, SpritePlaybackState.Completed, 0D, 0, 2, true), true));
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceResult(default, new SpritePlaybackReadout(0, 0, SpritePlaybackState.Completed, 0D, 0, 2, true), true));
         presentation.Advance(OuterUpdate(2));
         Assert.Equal(0, EffectCount(presentation));
     }
@@ -2198,10 +2198,10 @@ public sealed partial class NormalizedRuntimeSeamTests
         presentation.React(miss);
         Assert.Equal(3, appearance.PlaybackRequests.Count);
         appearance.AdvanceReceipts.Enqueue(default);
-        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(default, new SpritePlaybackReadout(0, 0, SpritePlaybackState.Completed, 0D, 0, 1, true), true));
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceResult(default, new SpritePlaybackReadout(0, 0, SpritePlaybackState.Completed, 0D, 0, 1, true), true));
         presentation.Advance(OuterUpdate(1));
         appearance.AdvanceReceipts.Enqueue(default);
-        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(default, new SpritePlaybackReadout(0, 0, SpritePlaybackState.Completed, 0D, 0, 2, true), true));
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceResult(default, new SpritePlaybackReadout(0, 0, SpritePlaybackState.Completed, 0D, 0, 2, true), true));
         presentation.Advance(OuterUpdate(2));
         Assert.Equal(4, appearance.PlaybackRequests.Count);
 
@@ -2260,10 +2260,10 @@ public sealed partial class NormalizedRuntimeSeamTests
         Assert.False(presentation.CanStartPlayerAttack);
 
         var completed = new SpritePlaybackReadout(1, 1, SpritePlaybackState.Completed, 0d, 0, 1, true);
-        appearance.AdvanceReceiptForAll = new SpritePlaybackAdvanceLeaseReceipt(default, completed, true);
+        appearance.AdvanceReceiptForAll = new SpritePlaybackAdvanceResult(default, completed, true);
         presentation.Advance(OuterUpdate(1));
         Assert.False(presentation.CanStartPlayerAttack); // Preserve the final frame for this update.
-        appearance.AdvanceReceiptForAll = new SpritePlaybackAdvanceLeaseReceipt(default, completed, false);
+        appearance.AdvanceReceiptForAll = new SpritePlaybackAdvanceResult(default, completed, false);
         presentation.Advance(OuterUpdate(2));
         Assert.True(presentation.CanStartPlayerAttack);
         presentation.React(new PlayerAttackStartedFact(1, 3));
@@ -2286,7 +2286,7 @@ public sealed partial class NormalizedRuntimeSeamTests
 
         // A receipt that reports completion without advancing is not authoritative, so the swing stays
         // live for the frame that can still deliver its impact.
-        appearance.AdvanceReceiptForAll = new SpritePlaybackAdvanceLeaseReceipt(
+        appearance.AdvanceReceiptForAll = new SpritePlaybackAdvanceResult(
             default, new SpritePlaybackReadout(1, 1, SpritePlaybackState.Completed, 0d, 0, 0, true), false);
         presentation.Advance(OuterUpdate(1));
         Assert.Empty(presentation.TakeAttackImpacts());
@@ -2314,7 +2314,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         presentation.CompleteAdmittedUpdate();
         Assert.Empty(presentation.TakeAttackImpacts());
 
-        appearance.AdvanceReceiptForAll = new SpritePlaybackAdvanceLeaseReceipt(
+        appearance.AdvanceReceiptForAll = new SpritePlaybackAdvanceResult(
             default, new SpritePlaybackReadout(1, 1, SpritePlaybackState.Completed, 0d, 0, 0, true), true);
         presentation.Advance(OuterUpdate(1));
 
@@ -5119,7 +5119,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             Assert.Null(targeting.Select(session.State.PlayerControl.Position, ForwardLook().Forward, 2.25d));
         }
 
-        perception.Receipt = new PerceptionReadoutLeaseReceipt(ReadOnlyMemory<PerceptionPair>.Empty, ReadOnlyMemory<PerceptionAggregate>.Empty, 0, false, 0, 1, 1, 1, 1, 1, 0, 0, 0);
+        perception.Receipt = new PerceptionReadoutResult(ReadOnlyMemory<PerceptionPair>.Empty, ReadOnlyMemory<PerceptionAggregate>.Empty, 0, false, 0, 1, 1, 1, 1, 1, 0, 0, 0);
         Assert.Null(targeting.Select(session.State.PlayerControl.Position, ForwardLook().Forward, 2.25d));
         Assert.Equal(1U, targeting.LastEvidence?.Receipt.DistanceRejects);
     }
@@ -6013,7 +6013,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         session.State.PlayerControl.PitchRadians = 0f;
     }
 
-    private static PerceptionReadoutLeaseReceipt PortalReceipt(PerceptionQueryRequest request, DaggerfallSitePortal portal) =>
+    private static PerceptionReadoutResult PortalReceipt(PerceptionQueryRequest request, DaggerfallSitePortal portal) =>
         Receipt([.. request.Targets.Span.ToArray().Select(target => new PerceptionPair(
             1,
             target.Entity,
@@ -6043,7 +6043,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PayloadData = Encoding.UTF8.GetBytes(payload),
     };
 
-    private static PerceptionReadoutLeaseReceipt Receipt(params PerceptionPair[] pairs) => new(pairs, ReadOnlyMemory<PerceptionAggregate>.Empty, checked((uint)pairs.Length), false, 0, 1, 1, checked((uint)pairs.Length), checked((ulong)pairs.Length), 0, 0, 0, 0);
+    private static PerceptionReadoutResult Receipt(params PerceptionPair[] pairs) => new(pairs, ReadOnlyMemory<PerceptionAggregate>.Empty, checked((uint)pairs.Length), false, 0, 1, 1, checked((uint)pairs.Length), checked((ulong)pairs.Length), 0, 0, 0, 0);
 
     private static PrivateersHoldInputs ReadInputs(string root)
     {
@@ -6524,7 +6524,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     }
 
     /// <summary>One advance receipt reading the given frame of a playing sprite.</summary>
-    private static SpritePlaybackAdvanceLeaseReceipt Reading(uint frameId, uint frameIndex) =>
+    private static SpritePlaybackAdvanceResult Reading(uint frameId, uint frameIndex) =>
         new(default, new SpritePlaybackReadout(frameId, frameIndex, SpritePlaybackState.Playing, 0d, 0, 0, false), true);
 
     private static PrivateersHoldAppearance.ActorVisual Visual(PrivateersHoldAppearance presentation)
@@ -6788,7 +6788,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         AudioRecorder audio = AudioRecorder.Create();
         // Authored sequences really do carry two or three -1 frames, so both cross in
         // one advance. One decided swing still owns exactly one strike beat.
-        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceResult(
             new[]
             {
                 new SpritePlaybackMarkerCrossing(2, 3, 1, 0, 1),
@@ -6869,7 +6869,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         session.Update(new ProductUpdate(OuterUpdate(1), []));
 
         // The animation ends without ever reaching its damage frame.
-        appearance.AdvanceReceiptForAll = new SpritePlaybackAdvanceLeaseReceipt(
+        appearance.AdvanceReceiptForAll = new SpritePlaybackAdvanceResult(
             Array.Empty<SpritePlaybackMarkerCrossing>(),
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Completed, 0D, 0, 3, true),
             true);
@@ -6906,11 +6906,11 @@ public sealed partial class NormalizedRuntimeSeamTests
         ContentFake content = MediaContent(releases);
         AppearanceFake appearance = new(releases);
         AudioRecorder audio = AudioRecorder.Create();
-        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceResult(
             Array.Empty<SpritePlaybackMarkerCrossing>(),
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Completed, 0D, 0, 1, true),
             false));
-        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceResult(
             new[] { new SpritePlaybackMarkerCrossing(2, 3, 1, 0, 1) },
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 2, false),
             true));
@@ -6937,7 +6937,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         // Engine's marker contract is deliberately semantics-free, so the strike beat is the crossing
         // whose identity is the authored damage frame. This sequence publishes markers 2 and 4; a
         // crossing of anything else names no beat, and it must neither sound nor land.
-        appearance.AdvanceReceiptForAll = new SpritePlaybackAdvanceLeaseReceipt(
+        appearance.AdvanceReceiptForAll = new SpritePlaybackAdvanceResult(
             new[] { new SpritePlaybackMarkerCrossing(3, 3, 1, 0, 1) },
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 1, false),
             true);
@@ -6957,7 +6957,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         ContentFake content = MediaContent(releases);
         AppearanceFake appearance = new(releases);
         AudioRecorder audio = AudioRecorder.Create();
-        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceResult(
             Array.Empty<SpritePlaybackMarkerCrossing>(),
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Completed, 0D, 0, 1, true),
             true));
@@ -7799,7 +7799,7 @@ public sealed partial class NormalizedRuntimeSeamTests
 
     /// <summary>One advanced sprite frame whose authored damage frame was crossed.</summary>
     /// <summary>A playback receipt that completes without crossing a marker, which is what clears a swing.</summary>
-    private static SpritePlaybackAdvanceLeaseReceipt CompletedMarker(uint frame) => new(
+    private static SpritePlaybackAdvanceResult CompletedMarker(uint frame) => new(
         Array.Empty<SpritePlaybackMarkerCrossing>(),
         new SpritePlaybackReadout(frame, 1, SpritePlaybackState.Completed, 0D, 0, frame, true),
         true);
@@ -7832,7 +7832,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     }
 
     /// <summary>A crossing of the named authored marker, identified the way the product identifies it.</summary>
-    private static SpritePlaybackAdvanceLeaseReceipt CrossedMarker(uint frame, ulong markerId = 2, ulong crossing = 1) => new(
+    private static SpritePlaybackAdvanceResult CrossedMarker(uint frame, ulong markerId = 2, ulong crossing = 1) => new(
         new[] { new SpritePlaybackMarkerCrossing(markerId, 3, 1, 0, crossing) },
         new SpritePlaybackReadout(frame, 1, SpritePlaybackState.Playing, 0D, 0, frame, false),
         true);
@@ -7993,7 +7993,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
 
         public PortableAsset LoadPortableAsset(PortableAssetLoadRequest request) => throw new NotSupportedException();
-        public PortableAssetReadoutLeaseReceipt ReadPortableAsset(PortableAsset asset) => throw new NotSupportedException();
+        public PortableAssetReadoutResult ReadPortableAsset(PortableAsset asset) => throw new NotSupportedException();
         public ContentReference OpenPortableAssetMember(PortableAssetMemberRequest request) => throw new NotSupportedException();
         // The pinned pair grew a bundle surface. Nothing in this product opens a bundle yet - content is
         // admitted as one snapshot - so the fake refuses these rather than pretending a bundle exists:
@@ -8081,7 +8081,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
 
         public PortableAsset LoadPortableAsset(PortableAssetLoadRequest request) => throw new NotSupportedException();
-        public PortableAssetReadoutLeaseReceipt ReadPortableAsset(PortableAsset asset) => throw new NotSupportedException();
+        public PortableAssetReadoutResult ReadPortableAsset(PortableAsset asset) => throw new NotSupportedException();
         public ContentReference OpenPortableAssetMember(PortableAssetMemberRequest request) => throw new NotSupportedException();
         private readonly Dictionary<string, Dictionary<string, byte[]>> files = new(StringComparer.Ordinal);
         private readonly Dictionary<ulong, string> openedBundles = [];
@@ -8190,9 +8190,9 @@ public sealed partial class NormalizedRuntimeSeamTests
             // These general session tests have no authored trigger contact. Action trigger
             // edge behavior is exercised by its dedicated Spatial fake.
             nameof(ISpatialService.RegisterTrigger) => null,
-            nameof(ISpatialService.SetTriggerActive) => default(SpatialTriggerLifecycleReceipt),
+            nameof(ISpatialService.SetTriggerActive) => default(SpatialTriggerLifecycleResult),
             nameof(ISpatialService.RestoreTriggers) => default(SpatialTriggerRestoreReceipt),
-            nameof(ISpatialService.ReconcileTriggers) => default(SpatialTriggerReceipt),
+            nameof(ISpatialService.ReconcileTriggers) => default(SpatialTriggerReconcileResult),
             // Navigation is not under test here: an honest no-path receipt leaves the
             // actor's pose intact instead of reporting a bogus waypoint.
             nameof(ISpatialService.EvaluateNavigationStep) => NoNavigationPath((NavigationStepRequest)arguments![0]!),
@@ -8201,8 +8201,8 @@ public sealed partial class NormalizedRuntimeSeamTests
             _ => throw new NotSupportedException(method?.Name),
         };
 
-        private static NavigationStepReceipt NoNavigationPath(NavigationStepRequest request) => new(
-            NavigationPathOutcome.NoPath, request.Target, default, 0, 0, 0, 0, 0, 0);
+        private static NavigationStepResult NoNavigationPath(NavigationStepRequest request) => new(
+            ReadOnlyMemory<PlanarNavCell>.Empty, NavigationPathOutcome.NoPath, request.Target, default, 0, 0, 0, 0, 0);
 
         private SpatialContentArtifactReplaceReceipt Replace(SpatialContentArtifactReplaceRequest request)
         {
@@ -8298,8 +8298,8 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         internal IPerceptionService Service { get; private set; } = null!;
         internal List<PerceptionQueryRequest> Requests { get; } = [];
-        internal PerceptionReadoutLeaseReceipt Receipt { get; set; }
-        internal Func<PerceptionQueryRequest, PerceptionReadoutLeaseReceipt>? Responder { get; set; }
+        internal PerceptionReadoutResult Receipt { get; set; }
+        internal Func<PerceptionQueryRequest, PerceptionReadoutResult>? Responder { get; set; }
 
         internal static PerceptionFake Create()
         {
@@ -8600,7 +8600,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
             {
                 nameof(IVideoService.PlayFromContent) => new VideoPlaybackHandle(++_nextHandle),
-                nameof(IVideoService.ReadRealization) => new VideoRealizationReadout(0, 0),
+                nameof(IVideoService.ReadRealization) => new VideoRealizationResult(ReadOnlyMemory<VideoRealizationFact>.Empty, 0),
                 nameof(IVideoService.Stop) or nameof(IVideoService.Skip) => null,
                 _ => throw new NotSupportedException(method?.Name),
             };
@@ -8803,7 +8803,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         internal List<AppearanceFact[]> Snapshots { get; } = [];
         internal List<SpriteFrameUpdateRequest> SetFrameRequests { get; } = [];
         internal List<SpritePlayback> CreatedPlaybacks { get; } = [];
-        internal Queue<SpritePlaybackAdvanceLeaseReceipt> AdvanceReceipts { get; } = [];
+        internal Queue<SpritePlaybackAdvanceResult> AdvanceReceipts { get; } = [];
         internal int CreatedAtlases { get; private set; }
         internal int DisposedAtlases { get; private set; }
         internal int CreatedAppearances { get; private set; }
@@ -8907,11 +8907,11 @@ public sealed partial class NormalizedRuntimeSeamTests
         }
         public SpritePlaybackReadout SelectSpritePlaybackFrame(SpritePlaybackFrameSelectionRequest request) => default;
         /// <summary>When set, every advanced playback reports this receipt, so a crossing reaches whichever actor is attacking.</summary>
-        internal SpritePlaybackAdvanceLeaseReceipt? AdvanceReceiptForAll { get; set; }
-        public SpritePlaybackAdvanceLeaseReceipt AdvanceSpritePlayback(SpritePlaybackAdvanceRequest request)
+        internal SpritePlaybackAdvanceResult? AdvanceReceiptForAll { get; set; }
+        public SpritePlaybackAdvanceResult AdvanceSpritePlayback(SpritePlaybackAdvanceRequest request)
         {
             AdvanceRequests.Add(request);
-            SpritePlaybackAdvanceLeaseReceipt receipt = AdvanceReceiptForAll ?? (AdvanceReceipts.Count == 0 ? default : AdvanceReceipts.Dequeue());
+            SpritePlaybackAdvanceResult receipt = AdvanceReceiptForAll ?? (AdvanceReceipts.Count == 0 ? default : AdvanceReceipts.Dequeue());
             foreach (SpritePlaybackMarkerCrossing crossing in receipt.Crossings.Span) LastCrossingSequence = Math.Max(LastCrossingSequence, crossing.CrossingSequence);
             return receipt;
         }

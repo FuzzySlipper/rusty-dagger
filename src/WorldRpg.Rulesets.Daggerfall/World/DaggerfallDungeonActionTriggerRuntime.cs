@@ -170,18 +170,16 @@ internal sealed class DaggerfallDungeonActionTriggerRuntime : IDisposable
             entities.Add(Project(trigger));
         entities.Add(_movement.ProjectCharacterCollider(player, playerEntity.Value));
 
-        SpatialTriggerReceipt receipt = _spatial.ReconcileTriggers(new SpatialTriggerReconcileRequest(
+        SpatialTriggerReconcileResult receipt = _spatial.ReconcileTriggers(new SpatialTriggerReconcileRequest(
             _movement.Session,
             tick,
             SpatialTriggerCause.Movement,
             entities.ToArray()));
 
         List<DaggerfallDungeonActionDispatch> dispatches = [];
-        for (uint index = 0; index < receipt.FactCount; index++)
+        foreach (SpatialTriggerFact fact in receipt.Facts.Span)
         {
-            SpatialTriggerFactAtReceipt fact = _spatial.ReadTriggerFactAt(
-                new SpatialTriggerFactAtRequest(_movement.Session, index));
-            if (!fact.Present || !fact.Enter || fact.Subject != playerEntity.Value)
+            if (!fact.Enter || fact.Subject != playerEntity.Value)
                 continue;
             if (!profile.ByEntity.TryGetValue(fact.Trigger, out TriggerRuntime? trigger)
                 || trigger.ContactEvent is not DaggerfallDungeonActionEvent @event)

@@ -139,7 +139,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
 
     private readonly Dictionary<long, DaggerfallEnemyPerceptionDecision> _lastDecisions = [];
 
-    private PerceptionReadoutLeaseReceipt Filter(long actorId, PerceptionReadoutLeaseReceipt receipt)
+    private PerceptionReadoutResult Filter(long actorId, PerceptionReadoutResult receipt)
     {
         if (!_actors.TryGet(actorId, out ActorState actor))
         {
@@ -204,4 +204,4 @@ internal sealed class DaggerfallEnemyBehaviorModule
 internal enum EnemyBehaviorState { Idle, Chase, Attack, Dead }
 
 /// <summary>Copied Engine receipts used to explain one enemy's most recent ruleset decision.</summary>
-internal sealed record EnemyBehaviorEvidence(long ActorId, EnemyBehaviorState State, PerceptionReadoutLeaseReceipt? Visibility, NavigationStepReceipt? Navigation);
+internal sealed record EnemyBehaviorEvidence(long ActorId, EnemyBehaviorState State, PerceptionReadoutResult? Visibility, NavigationStepResult? Navigation);

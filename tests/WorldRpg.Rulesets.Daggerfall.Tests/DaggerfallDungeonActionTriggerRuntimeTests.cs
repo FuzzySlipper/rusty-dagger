@@ -206,7 +206,6 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
         private readonly Dictionary<ulong, SpatialTriggerRegisterRequest> _definitions = [];
         private HashSet<ulong> _active = [];
         private HashSet<(ulong Trigger, ulong Subject)> _overlaps = [];
-        private SpatialTriggerFactAtReceipt[] _facts = [];
         private ulong _revision;
 
         internal ISpatialService Service { get; private set; } = null!;
@@ -230,7 +229,6 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
             nameof(ISpatialService.SetTriggerActive) => SetTriggerActive((SpatialTriggerSetActiveRequest)arguments![0]!),
             nameof(ISpatialService.RestoreTriggers) => Restore((SpatialTriggerRestoreRequest)arguments![0]!),
             nameof(ISpatialService.ReconcileTriggers) => Reconcile((SpatialTriggerReconcileRequest)arguments![0]!),
-            nameof(ISpatialService.ReadTriggerFactAt) => ReadFact((SpatialTriggerFactAtRequest)arguments![0]!),
             _ => throw new NotSupportedException(method?.Name),
         };
 
@@ -242,7 +240,7 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
             return null;
         }
 
-        private SpatialTriggerLifecycleReceipt SetTriggerActive(SpatialTriggerSetActiveRequest request)
+        private SpatialTriggerLifecycleResult SetTriggerActive(SpatialTriggerSetActiveRequest request)
         {
             if (!_definitions.ContainsKey(request.Trigger))
                 throw new InvalidOperationException("SetActive referenced an unknown trigger.");
@@ -254,12 +252,12 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
             if (request.Active) _active.Add(request.Trigger);
             else _active.Remove(request.Trigger);
             _revision = checked(_revision + 1);
-            return new SpatialTriggerLifecycleReceipt(
+            return new SpatialTriggerLifecycleResult(
+                ReadOnlyMemory<SpatialTriggerFact>.Empty,
                 request.Trigger,
                 request.Active,
                 before,
                 _revision,
-                0,
                 0);
         }
 
@@ -274,7 +272,6 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
             _active = active;
             _overlaps = overlaps;
             if (changed) _revision = checked(_revision + 1);
-            _facts = [];
             LastDiagnosticCount = diagnosticCount;
             return new SpatialTriggerRestoreReceipt(
                 before,
@@ -282,34 +279,29 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
                 checked((uint)_definitions.Count),
                 checked((uint)_active.Count),
                 checked((uint)_overlaps.Count),
-                0,
                 0);
         }
 
-        private SpatialTriggerReceipt Reconcile(SpatialTriggerReconcileRequest request)
+        private SpatialTriggerReconcileResult Reconcile(SpatialTriggerReconcileRequest request)
         {
             HashSet<(ulong Trigger, ulong Subject)> next = ComputeOverlaps(_active, request.Entities.Span, out uint diagnosticCount);
-            List<SpatialTriggerFactAtReceipt> facts = [];
+            List<SpatialTriggerFact> facts = [];
             foreach ((ulong trigger, ulong subject) in _overlaps.Except(next).OrderBy(pair => pair.Trigger).ThenBy(pair => pair.Subject))
-                facts.Add(new(false, false, trigger, subject, request.Tick, request.Cause));
+                facts.Add(new(false, trigger, subject, request.Tick, request.Cause));
             foreach ((ulong trigger, ulong subject) in next.Except(_overlaps).OrderBy(pair => pair.Trigger).ThenBy(pair => pair.Subject))
-                facts.Add(new(true, true, trigger, subject, request.Tick, request.Cause));
+                facts.Add(new(true, trigger, subject, request.Tick, request.Cause));
             if (facts.Count != 0) _revision = checked(_revision + 1);
             _overlaps = next;
-            _facts = facts.ToArray();
             LastDiagnosticCount = diagnosticCount;
-            return new SpatialTriggerReceipt(
+            return new SpatialTriggerReconcileResult(
+                facts.ToArray(),
                 request.Tick,
                 request.Cause,
                 _revision,
-                checked((uint)_facts.Length),
                 0,
                 checked((uint)_overlaps.Count),
                 0);
         }
-
-        private SpatialTriggerFactAtReceipt ReadFact(SpatialTriggerFactAtRequest request) =>
-            request.Index < (uint)_facts.Length ? _facts[request.Index] : default;
 
         private HashSet<(ulong Trigger, ulong Subject)> ComputeOverlaps(
             IEnumerable<ulong> active,

@@ -114,7 +114,7 @@ public sealed class InteractionTargetingServiceTests
             new SpatialContentArtifact("spatial/test", Hash, 1), new SpatialTuning(.5, 8, 8, 1));
     }
 
-    private static PerceptionReadoutLeaseReceipt Receipt(params PerceptionPair[] pairs) => new(
+    private static PerceptionReadoutResult Receipt(params PerceptionPair[] pairs) => new(
         pairs, ReadOnlyMemory<PerceptionAggregate>.Empty, checked((uint)pairs.Length), false, 0, 1, 1,
         checked((uint)pairs.Length), checked((ulong)pairs.Length), 0, 0, 0, 0);
 
@@ -122,7 +122,7 @@ public sealed class InteractionTargetingServiceTests
     {
         public IPerceptionService Service { get; private set; } = null!;
         public List<PerceptionQueryRequest> Requests { get; } = [];
-        public PerceptionReadoutLeaseReceipt Receipt { get; set; }
+        public PerceptionReadoutResult Receipt { get; set; }
         public static PerceptionDouble Create()
         {
             IPerceptionService service = DispatchProxy.Create<IPerceptionService, PerceptionDouble>();

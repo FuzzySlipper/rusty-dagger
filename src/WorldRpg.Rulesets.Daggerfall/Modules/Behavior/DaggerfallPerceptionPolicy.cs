@@ -302,19 +302,19 @@ internal static class DaggerfallPerceptionPolicy
 internal sealed class DaggerfallEnemyPerceptionService : IPerceptionService
 {
     private readonly IPerceptionService _inner;
-    private readonly Func<long, PerceptionReadoutLeaseReceipt, PerceptionReadoutLeaseReceipt> _filter;
+    private readonly Func<long, PerceptionReadoutResult, PerceptionReadoutResult> _filter;
 
     internal DaggerfallEnemyPerceptionService(
         IPerceptionService inner,
-        Func<long, PerceptionReadoutLeaseReceipt, PerceptionReadoutLeaseReceipt> filter)
+        Func<long, PerceptionReadoutResult, PerceptionReadoutResult> filter)
     {
         _inner = inner ?? throw new ArgumentNullException(nameof(inner));
         _filter = filter ?? throw new ArgumentNullException(nameof(filter));
     }
 
-    public PerceptionReadoutLeaseReceipt QueryVisibility(PerceptionQueryRequest request)
+    public PerceptionReadoutResult QueryVisibility(PerceptionQueryRequest request)
     {
-        PerceptionReadoutLeaseReceipt receipt = _inner.QueryVisibility(request);
+        PerceptionReadoutResult receipt = _inner.QueryVisibility(request);
         if (request.Observers.Length != 1 || request.Targets.Length != 1)
             return receipt;
         ulong observer = request.Observers.Span[0].Entity;
