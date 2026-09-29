@@ -2,6 +2,6 @@
   <PropertyGroup>
     <!-- The one Engine SDK/runtime pair pin. `rusty install` installs it;
          only `rusty update` changes it. -->
-    <RustyEnginePackageVersion>0.1.0-dev.db2bb445aeaa</RustyEnginePackageVersion>
+    <RustyEnginePackageVersion>0.1.0-dev.a44170f62529</RustyEnginePackageVersion>
   </PropertyGroup>
 </Project>
