@@ -17,6 +17,12 @@
     <RustyEngineProductUiRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui/generated'))</RustyEngineProductUiRoot>
     <RustyEngineProductContentRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineProductContentRoot>
     <RustyEngineProductUiEntry>main.js</RustyEngineProductUiEntry>
+    <!-- TypeScript builds only the product-owned DOM companion. The runtime
+         pack provides the browser shell, renderer, and transport. The SDK
+         reruns this only when a file under ../ui or a listed dependency
+         changes, so C#-only edits skip it and UI edits skip the C# build. -->
+    <RustyEngineProductUiSourceRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui'))</RustyEngineProductUiSourceRoot>
+    <RustyEngineProductUiBuildCommand>npm --prefix &quot;$(MSBuildThisFileDirectory)../..&quot; exec -- tsc --target ES2022 --module ES2022 --moduleResolution bundler --strict --noEmitOnError --outDir &quot;$(RustyEngineProductUiRoot)&quot; &quot;$(MSBuildThisFileDirectory)../ui/main.ts&quot; &amp;&amp; cp &quot;$(MSBuildThisFileDirectory)../ui/&quot;*.css &quot;$(RustyEngineProductUiRoot)/&quot;</RustyEngineProductUiBuildCommand>
     <RustyEngineProductUiProjectionStream>dagger.hud</RustyEngineProductUiProjectionStream>
     <RustyEngineProductUiProjectionContract>dagger.ui.snapshot.v1</RustyEngineProductUiProjectionContract>
     <RustyEngineProductLifecycleMode>realtime</RustyEngineProductLifecycleMode>
@@ -69,16 +75,7 @@
     <RustyEngineContentBundle Include="daggerfall.charing-interior-1-1-0-audio" Root="worldrpg/imports/charing/interior-1-1-0/media/audio/clips" />
   </ItemGroup>
 
-  <!-- TypeScript builds only the product-owned DOM companion. The runtime
-       pack provides the browser shell, renderer, and transport. -->
-  <Target Name="BuildWorldRpgProductUi" BeforeTargets="GenerateRustyEngineProductComposition">
-    <MakeDir Directories="$(RustyEngineProductUiRoot)" />
-    <Exec Command="npm --prefix &quot;$(MSBuildThisFileDirectory)../..&quot; exec -- tsc --target ES2022 --module ES2022 --moduleResolution bundler --strict --noEmitOnError --outDir &quot;$(RustyEngineProductUiRoot)&quot; &quot;$(MSBuildThisFileDirectory)../ui/main.ts&quot;" />
-    <ItemGroup>
-      <ProductUiStylesheet Include="$(MSBuildThisFileDirectory)../ui/*.css" />
-      <!-- Every UI artifact, including the authored inventory skins, is published content the product
-           reads by media identity and delivers in its projection, so nothing is staged here. -->
-    </ItemGroup>
-    <Copy SourceFiles="@(ProductUiStylesheet)" DestinationFolder="$(RustyEngineProductUiRoot)" />
-  </Target>
+  <ItemGroup>
+    <RustyEngineProductUiInput Include="$(MSBuildThisFileDirectory)../../package.json;$(MSBuildThisFileDirectory)../../package-lock.json" />
+  </ItemGroup>
 </Project>
