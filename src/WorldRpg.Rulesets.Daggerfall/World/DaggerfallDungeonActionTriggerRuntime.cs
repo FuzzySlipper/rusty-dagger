@@ -23,7 +23,6 @@ internal sealed class DaggerfallDungeonActionTriggerRuntime : IDisposable
     private readonly ISpatialService _spatial;
     private readonly SpatialMovementSystem _movement;
     private readonly Dictionary<DaggerfallWorldProfileKey, ProfileRuntime> _profiles = [];
-    private ulong _triggerRevision;
     private ulong _latestTick;
     private DaggerfallWorldProfileKey _activeProfile;
     private bool _initialized;
@@ -176,7 +175,6 @@ internal sealed class DaggerfallDungeonActionTriggerRuntime : IDisposable
             tick,
             SpatialTriggerCause.Movement,
             entities.ToArray()));
-        _triggerRevision = receipt.Revision;
 
         List<DaggerfallDungeonActionDispatch> dispatches = [];
         for (uint index = 0; index < receipt.FactCount; index++)
@@ -198,13 +196,11 @@ internal sealed class DaggerfallDungeonActionTriggerRuntime : IDisposable
     {
         foreach (TriggerRuntime trigger in profile.Triggers.Where(trigger => trigger.ContactEvent is not null))
         {
-            SpatialTriggerLifecycleReceipt receipt = _spatial.SetTriggerActive(new SpatialTriggerSetActiveRequest(
+            _spatial.SetTriggerActive(new SpatialTriggerSetActiveRequest(
                 _movement.Session,
                 trigger.Entity.Value,
-                _triggerRevision,
                 Active: false,
                 Tick: _latestTick));
-            _triggerRevision = receipt.RevisionAfter;
         }
     }
 
@@ -289,12 +285,10 @@ internal sealed class DaggerfallDungeonActionTriggerRuntime : IDisposable
             baseline = [.. baseline, player];
         }
 
-        SpatialTriggerRestoreReceipt receipt = _spatial.RestoreTriggers(new SpatialTriggerRestoreRequest(
+        _spatial.RestoreTriggers(new SpatialTriggerRestoreRequest(
             _movement.Session,
-            _triggerRevision,
             activeTriggers,
             baseline));
-        _triggerRevision = receipt.RevisionAfter;
     }
 
     private ProfileRuntime RequireActiveProfile() => _profiles.TryGetValue(_activeProfile, out ProfileRuntime? profile)

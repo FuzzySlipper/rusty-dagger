@@ -139,7 +139,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
 
         public RenderResourceInfo OpenResource(RenderResourceRequest request) => throw new NotSupportedException();
         public TextureResourceInfo ReadTextureInfo(RenderResource resource) => throw new NotSupportedException();
-        public void PublishAttachedSnapshot(AttachedAppearanceSnapshotRequest request) => throw new NotSupportedException();
+        public void PublishChanges(AppearanceChangesRequest request) => throw new NotSupportedException();
         public RenderResourceInfo OpenResourceFromContent(RenderResourceContentRequest request) => throw new NotSupportedException();
         public Appearance CreateStaticMeshFromContentReference(StaticMeshContentReferenceRequest request) => throw new NotSupportedException();
 
