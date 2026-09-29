@@ -68,11 +68,8 @@ internal sealed class DaggerfallGroundContainers
         try
         {
             _containers.RegisterOwner(owner);
-            // Registering the destination inventory advances the shared store revision. The caller's
-            // expected revision was already checked before allocation; use the post-registration
-            // revision for this internal Engine transfer.
-            InventoryContainerTransferReceipt transfer = _containers.Transfer(_player, owner, transferSelection,
-                _containers.Read(_player).StoreRevision);
+            // The caller's expected revision was checked before allocation.
+            InventoryContainerTransferReceipt transfer = _containers.Transfer(_player, owner, transferSelection);
             SyncFromPlayer(transfer, identity.Value);
             return _ground.AddAndReturn(checked((long)identity.Value), new DaggerfallGroundContainer(_activeProfile, checked((long)identity.Value), owner, position));
         }
@@ -104,9 +101,11 @@ internal sealed class DaggerfallGroundContainers
     {
         if (!TryGet(id, out DaggerfallGroundContainer? container))
             throw new InvalidOperationException("That dropped item pile is no longer available.");
+        if (_containers.Read(_player).StoreRevision != expectedWorldRevision)
+            throw new InvalidOperationException("Inventory changed. Choose the item again.");
         if (selection.Stack is InventoryStackId source && selection.DestinationStack is InventoryStackId destination)
             _instances.EnsureTransferCompatible(DaggerfallItemOwner.Ground(id), DaggerfallItemOwner.Player, source, destination);
-        InventoryContainerTransferReceipt transfer = _containers.Transfer(container.Owner, _player, selection, expectedWorldRevision);
+        InventoryContainerTransferReceipt transfer = _containers.Transfer(container.Owner, _player, selection);
         SyncToPlayer(transfer, id);
         InventoryView remaining = _containers.Read(container.Owner);
         if (remaining.Stacks.Count == 0 && remaining.UniqueItems.Count == 0)

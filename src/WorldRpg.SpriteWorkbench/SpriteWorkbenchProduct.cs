@@ -349,9 +349,9 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
         }
         catch (Exception creationError)
         {
-            // Failed Create calls can return a wrapper whose native side was never
-            // committed.  Preserve the original admission failure while making a
-            // best-effort cleanup of every prior fully-created object.
+            // A later create failed. Preserve that admission failure while making a
+            // best-effort cleanup of every object this call already created, so no
+            // half-built sprite set stays retained.
             List<Exception> cleanupFailures = [];
             foreach (SpritePlayback playback in playbacks.AsEnumerable().Reverse()) TryDispose(playback, cleanupFailures);
             if (appearance is not null) TryDispose(appearance, cleanupFailures);

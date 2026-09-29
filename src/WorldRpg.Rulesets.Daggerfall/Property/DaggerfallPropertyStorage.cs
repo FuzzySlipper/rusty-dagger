@@ -108,12 +108,14 @@ internal sealed class DaggerfallPropertyStorage
         ArgumentNullException.ThrowIfNull(selection);
         EntityId destination = Ensure(key);
         InventoryView player = _containers.Read(_player);
+        if (player.StoreRevision != expectedWorldRevision)
+            throw new InvalidOperationException("Inventory changed. Choose the item again.");
         ValidateSelection(selection, player);
         EnsureUniqueMetadata(selection, DaggerfallItemOwner.Player);
         long propertyId = RequirePropertyContainerId(destination);
         InventoryContainerSelection prepared = PrepareTransferSelection(selection, DaggerfallItemOwnerFor(key), destination,
             DaggerfallItemOwner.Player, propertyId);
-        InventoryContainerTransferReceipt transfer = _containers.Transfer(_player, destination, prepared, expectedWorldRevision);
+        InventoryContainerTransferReceipt transfer = _containers.Transfer(_player, destination, prepared);
         SyncToProperty(transfer, key);
         return transfer;
     }
@@ -124,12 +126,14 @@ internal sealed class DaggerfallPropertyStorage
         ArgumentNullException.ThrowIfNull(selection);
         EntityId source = Ensure(key);
         InventoryView property = _containers.Read(source);
+        if (property.StoreRevision != expectedWorldRevision)
+            throw new InvalidOperationException("Inventory changed. Choose the item again.");
         ValidateSelection(selection, property);
         EnsureUniqueMetadata(selection, DaggerfallItemOwnerFor(key));
         long propertyId = RequirePropertyContainerId(source);
         InventoryContainerSelection prepared = PrepareTransferSelection(selection, DaggerfallItemOwner.Player, _player,
             DaggerfallItemOwnerFor(key), propertyId);
-        InventoryContainerTransferReceipt transfer = _containers.Transfer(source, _player, prepared, expectedWorldRevision);
+        InventoryContainerTransferReceipt transfer = _containers.Transfer(source, _player, prepared);
         SyncFromProperty(transfer, key);
         return transfer;
     }
