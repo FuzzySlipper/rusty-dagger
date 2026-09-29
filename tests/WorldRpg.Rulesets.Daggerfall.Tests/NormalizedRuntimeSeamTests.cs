@@ -58,7 +58,8 @@ public sealed partial class NormalizedRuntimeSeamTests
 
         AppearanceFact[] snapshot = Assert.Single(graphics.Snapshots);
         Assert.Equal(snapshot.Length, snapshot.Select(fact => fact.ObjectId).Distinct().Count());
-        Assert.Equal(1 + inputs.Doors.Count + inputs.DungeonActionModels.Count, graphics.StaticMeshContentRequests.Count);
+        // The world mesh, each door, each dungeon action model, and the ranged-flight arrow.
+        Assert.Equal(1 + inputs.Doors.Count + inputs.DungeonActionModels.Count + 1, graphics.StaticMeshContentRequests.Count);
         foreach (DaggerfallRdbDoorDefinition door in inputs.Doors)
             Assert.Contains(snapshot, fact => fact.Transform.Translation == door.Position);
     }
