@@ -2054,7 +2054,6 @@ public sealed partial class NormalizedRuntimeSeamTests
         presentation.BeginAdmittedUpdate();
         Assert.Equal(1, appearance.DisposedPlaybacks);
         Assert.Equal(original.Handle, appearance.DisposedPlaybackHandles[0]);
-        appearance.CommitPendingPlaybackReleases();
         presentation.CompleteAdmittedUpdate();
     }
 
@@ -8789,7 +8788,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
 
         public TextureResourceInfo ReadTextureInfo(RenderResource resource) => throw new NotSupportedException();
-        public void PublishAttachedSnapshot(AttachedAppearanceSnapshotRequest request) => throw new NotSupportedException();
+        public void PublishChanges(AppearanceChangesRequest request) => throw new NotSupportedException();
         internal List<RenderResourceRequest> OpenResourceRequests { get; } = [];
         internal List<StaticMeshContentAppearanceRequest> StaticMeshContentRequests { get; } = [];
         internal Dictionary<string, Appearance> StaticMeshByPath { get; } = new(StringComparer.Ordinal);
@@ -8822,8 +8821,6 @@ public sealed partial class NormalizedRuntimeSeamTests
         internal int PublishCalls { get; private set; }
         internal ulong LastCrossingSequence { get; private set; }
         internal IReadOnlyCollection<Appearance> RetainedAppearances => retainedAppearances;
-        private readonly List<Action> pendingPlaybackCommits = [];
-        private readonly List<Action> pendingPlaybackRollbacks = [];
         private readonly HashSet<Appearance> retainedAppearances = new(ReferenceEqualityComparer.Instance);
         private ulong nextHandle = 1;
 
@@ -8898,10 +8895,6 @@ public sealed partial class NormalizedRuntimeSeamTests
                 DisposedPlaybacks++;
                 DisposedPlaybackHandles.Add(handle);
                 releases.Add("playback");
-            }, static () => false, (commit, rollback) =>
-            {
-                pendingPlaybackCommits.Add(commit);
-                pendingPlaybackRollbacks.Add(rollback);
             });
             CreatedPlaybacks.Add(playback);
             return playback;
@@ -8959,18 +8952,6 @@ public sealed partial class NormalizedRuntimeSeamTests
                 releases.Add("appearance");
             });
             return value;
-        }
-        internal void CommitPendingPlaybackReleases()
-        {
-            foreach (Action commit in pendingPlaybackCommits) commit();
-            pendingPlaybackCommits.Clear();
-            pendingPlaybackRollbacks.Clear();
-        }
-        internal void RollbackPendingPlaybackReleases()
-        {
-            foreach (Action rollback in pendingPlaybackRollbacks) rollback();
-            pendingPlaybackCommits.Clear();
-            pendingPlaybackRollbacks.Clear();
         }
         private Light NewLight(LightRequest request)
         {

@@ -244,7 +244,6 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
 
         private SpatialTriggerLifecycleReceipt SetTriggerActive(SpatialTriggerSetActiveRequest request)
         {
-            RequireRevision(request.ExpectedRevision);
             if (!_definitions.ContainsKey(request.Trigger))
                 throw new InvalidOperationException("SetActive referenced an unknown trigger.");
             bool wasActive = _active.Contains(request.Trigger);
@@ -266,7 +265,6 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
 
         private SpatialTriggerRestoreReceipt Restore(SpatialTriggerRestoreRequest request)
         {
-            RequireRevision(request.ExpectedRevision);
             HashSet<ulong> active = request.ActiveTriggers.ToArray().ToHashSet();
             if (active.Any(trigger => !_definitions.ContainsKey(trigger)))
                 throw new InvalidOperationException("Restore referenced an unknown trigger.");
@@ -344,11 +342,6 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
             left.Min.X < right.Max.X && left.Max.X > right.Min.X
             && left.Min.Y < right.Max.Y && left.Max.Y > right.Min.Y
             && left.Min.Z < right.Max.Z && left.Max.Z > right.Min.Z;
-
-        private void RequireRevision(ulong expected)
-        {
-            if (expected != _revision) throw new InvalidOperationException("Trigger revision is stale.");
-        }
 
         private static CharacterControllerConfig ControllerConfig() => default(CharacterControllerConfig) with
         {

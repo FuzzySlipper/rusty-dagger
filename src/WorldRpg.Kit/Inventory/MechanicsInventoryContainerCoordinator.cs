@@ -178,7 +178,7 @@ public sealed class MechanicsInventoryContainerCoordinator
         List<DurableIdentityReference> created = [];
         try
         {
-            using InventoryEdit candidate = _store.Prepare(worldRevisionBefore);
+            using InventoryEdit candidate = _store.Prepare();
             foreach (InventoryContainerSeed seed in values)
             {
                 ItemDefinition definition = RequireDefinition(seed.Item);
@@ -245,7 +245,7 @@ public sealed class MechanicsInventoryContainerCoordinator
             .OrderBy(item => item.Entity.Value)
             .ToArray();
         ulong worldRevisionBefore = _store.Revision;
-        InventoryEdit candidate = _store.Prepare(expectedWorldRevision ?? worldRevisionBefore);
+        InventoryEdit candidate = _store.Prepare();
         if (selection is not null)
         {
             ItemDefinition definition = RequireDefinition(selection.Item);
