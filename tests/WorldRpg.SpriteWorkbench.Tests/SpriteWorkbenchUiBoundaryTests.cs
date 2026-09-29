@@ -24,7 +24,7 @@ public sealed class SpriteWorkbenchUiBoundaryTests
         string source = File.ReadAllText(Path.GetFullPath("../../../../../src/WorldRpg.SpriteWorkbench/WorldRpg.SpriteWorkbench.csproj", AppContext.BaseDirectory));
 
         Assert.Contains("<RustyEngineProductUiRoot>", source, StringComparison.Ordinal);
-        Assert.Contains("BeforeTargets=\"GenerateRustyEngineProductComposition\"", source, StringComparison.Ordinal);
+        Assert.Contains("BeforeTargets=\"BuildRustyEngineProductUi\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("runtime-adapter", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("browser-bundle", source, StringComparison.OrdinalIgnoreCase);
     }
