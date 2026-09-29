@@ -43,7 +43,7 @@ public delegate InteractionTargetingActionResult InteractionTargetingAction(Inte
 /// <summary>Copied Engine visibility, focus, and use evidence for one contextual action.</summary>
 public sealed record InteractionTargetingEvidence(
     PerceptionQueryRequest Request,
-    PerceptionReadoutLeaseReceipt Receipt,
+    PerceptionReadoutResult Receipt,
     InteractionQuery Query,
     InteractionReadout Focus,
     InteractionUseReceipt Use,
@@ -147,7 +147,7 @@ public sealed class InteractionTargetingService(IPerceptionService perception, S
             maximumDistance, maximumDistance,
             AngularWeight: 1, DistanceWeight: 1);
         private PerceptionQueryRequest? _request;
-        private PerceptionReadoutLeaseReceipt? _receipt;
+        private PerceptionReadoutResult? _receipt;
         private Dictionary<ulong, InteractionVisibility>? _visibility;
         private Dictionary<ulong, InteractionTargetCandidate>? _current;
 

@@ -45,13 +45,13 @@ public sealed class ActorNavigationCoordinator
     /// Evaluates one Engine-owned navigation step. Only an explicit Reached
     /// outcome changes product pose; every other Engine fact leaves it intact.
     /// </summary>
-    public NavigationStepReceipt Evaluate(ActorState actor, ActorNavigationRequest request)
+    public NavigationStepResult Evaluate(ActorState actor, ActorNavigationRequest request)
     {
         ArgumentNullException.ThrowIfNull(actor);
         request.Validate();
 
         ActorPose before = actor.Pose;
-        NavigationStepReceipt receipt = _spatial.EvaluateNavigationStep(new NavigationStepRequest(
+        NavigationStepResult receipt = _spatial.EvaluateNavigationStep(new NavigationStepRequest(
             _session,
             before.Position.ToVector(),
             request.Target.ToVector(),

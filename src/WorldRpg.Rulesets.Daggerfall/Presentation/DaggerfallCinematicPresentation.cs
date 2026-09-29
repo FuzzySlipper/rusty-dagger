@@ -51,11 +51,10 @@ internal sealed class DaggerfallCinematicPresentation(IEngineContext engine, Pro
     internal void Poll()
     {
         if (_active is not { } active) return;
-        VideoRealizationReadout readout = engine.Video.ReadRealization();
-        for (uint index = 0; index < readout.RetainedFactCount; index++)
+        VideoRealizationResult readout = engine.Video.ReadRealization();
+        foreach (VideoRealizationFact fact in readout.Facts.Span)
         {
-            VideoRealizationFactAtReceipt fact = engine.Video.ReadRealizationFactAt(new VideoRealizationFactAtRequest(index));
-            if (!fact.Present || fact.FactId <= _lastFact) continue;
+            if (fact.FactId <= _lastFact) continue;
             _lastFact = fact.FactId;
             if (fact.Handle != active.Handle) continue;
             if (fact.Kind is not (VideoRealizationFactKind.Completed or VideoRealizationFactKind.Skipped or VideoRealizationFactKind.Failed)) continue;

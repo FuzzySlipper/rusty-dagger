@@ -98,7 +98,7 @@ internal sealed class DaggerfallOutcomePresentation(
     private string NothingInMeleeReach()
     {
         if (meleeEvidence?.Invoke() is not { } evidence) return "No target in melee reach";
-        PerceptionReadoutLeaseReceipt receipt = evidence.Receipt;
+        PerceptionReadoutResult receipt = evidence.Receipt;
         return $"No target in melee reach ({receipt.SelectedObservers} observer(s) against {receipt.SelectedTargets} target(s), {receipt.SelectionComparisons} compared: {receipt.DistanceRejects} out of range, {receipt.FacingRejects} out of cone, {receipt.VisibilityCasts} cast, {receipt.OcclusionRejects} occluded)";
     }
 

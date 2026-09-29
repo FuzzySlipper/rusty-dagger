@@ -483,7 +483,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         {
             if (visual.Playback is null) continue;
             if (visual.LastOuterUpdate == identity) continue;
-            SpritePlaybackAdvanceLeaseReceipt receipt = appearance.AdvanceSpritePlayback(new SpritePlaybackAdvanceRequest(visual.Playback));
+            SpritePlaybackAdvanceResult receipt = appearance.AdvanceSpritePlayback(new SpritePlaybackAdvanceRequest(visual.Playback));
             if (receipt.Advanced)
             {
                 visual.LastPlaybackFrameIndex = receipt.Readout.FrameIndex;
@@ -524,7 +524,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         foreach (EffectVisual effect in effects.ToArray())
         {
             if (effect.LastOuterUpdate == identity) continue;
-            SpritePlaybackAdvanceLeaseReceipt receipt = appearance.AdvanceSpritePlayback(new SpritePlaybackAdvanceRequest(effect.Playback));
+            SpritePlaybackAdvanceResult receipt = appearance.AdvanceSpritePlayback(new SpritePlaybackAdvanceRequest(effect.Playback));
             if (receipt.Readout.Completed)
             {
                 if (effect.CompletedOuterUpdate) { effects.Remove(effect); Retire(effect); }
@@ -534,7 +534,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         }
         if (viewmodel is { } weapon && weapon.Playback is { } weaponPlayback && weapon.LastOuterUpdate != identity)
         {
-            SpritePlaybackAdvanceLeaseReceipt receipt = appearance.AdvanceSpritePlayback(new SpritePlaybackAdvanceRequest(weaponPlayback));
+            SpritePlaybackAdvanceResult receipt = appearance.AdvanceSpritePlayback(new SpritePlaybackAdvanceRequest(weaponPlayback));
             // The classic swing's damage lands on its hit frame. One decided swing owns one beat, so
             // the first frame at or past it reports and later frames of the same swing do not.
             if (weapon.Strike && weapon.PendingImpact is { } pending && !weapon.ImpactReported

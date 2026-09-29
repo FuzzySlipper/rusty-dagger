@@ -182,7 +182,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         public SpritePlayback CreateSpritePlayback(SpritePlaybackCreateRequest request) => throw new NotSupportedException();
         public SpritePlaybackReadout ControlSpritePlayback(SpritePlaybackControlRequest request) => throw new NotSupportedException();
         public SpritePlaybackReadout SelectSpritePlaybackFrame(SpritePlaybackFrameSelectionRequest request) => throw new NotSupportedException();
-        public SpritePlaybackAdvanceLeaseReceipt AdvanceSpritePlayback(SpritePlaybackAdvanceRequest request) => throw new NotSupportedException();
+        public SpritePlaybackAdvanceResult AdvanceSpritePlayback(SpritePlaybackAdvanceRequest request) => throw new NotSupportedException();
         public SpritePlaybackSample SampleSpritePlayback(SpritePlaybackSampleRequest request) => throw new NotSupportedException();
         public SpritePlaybackReadout ReadSpritePlayback(SpritePlayback playback) => throw new NotSupportedException();
 

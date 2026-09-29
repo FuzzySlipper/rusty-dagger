@@ -56,8 +56,8 @@ public readonly record struct PursuitPerceptionOptions(ulong ProjectionIdentity,
 public sealed record PursuitEvidence(
     PursuitState Previous,
     PursuitState Current,
-    PerceptionReadoutLeaseReceipt? Visibility,
-    NavigationStepReceipt? Navigation);
+    PerceptionReadoutResult? Visibility,
+    NavigationStepResult? Navigation);
 
 /// <summary>
 /// Coordinates the reusable pursuit loop: Engine visibility, a state decision,
@@ -101,8 +101,8 @@ public sealed class PursuitCoordinator<TFact> where TFact : IWorldRpgFact
         perceptionOptions.Validate();
         if (!float.IsFinite(deltaSeconds) || deltaSeconds < 0f) throw new ArgumentOutOfRangeException(nameof(deltaSeconds));
 
-        PerceptionReadoutLeaseReceipt? visibility = null;
-        NavigationStepReceipt? navigation = null;
+        PerceptionReadoutResult? visibility = null;
+        NavigationStepResult? navigation = null;
         PursuitState desired;
         if (actor.IsDefeated)
         {
@@ -138,7 +138,7 @@ public sealed class PursuitCoordinator<TFact> where TFact : IWorldRpgFact
         return new PursuitEvidence(previous, desired, visibility, navigation);
     }
 
-    private PerceptionReadoutLeaseReceipt QueryVisibility(
+    private PerceptionReadoutResult QueryVisibility(
         ActorState actor,
         PursuitTarget target,
         PursuitTuning tuning,

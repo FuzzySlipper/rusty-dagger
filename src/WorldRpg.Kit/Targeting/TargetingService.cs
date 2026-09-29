@@ -12,7 +12,7 @@ public sealed class TargetingComponent
     public void Clear() => Current = null;
 }
 
-public sealed record TargetingEvidence(PerceptionQueryRequest Request, PerceptionReadoutLeaseReceipt Receipt, long? SelectedTargetId);
+public sealed record TargetingEvidence(PerceptionQueryRequest Request, PerceptionReadoutResult Receipt, long? SelectedTargetId);
 
 /// <summary>Ruleset eligibility over live actors; geometry remains Engine-owned.</summary>
 public interface ITargetingPolicy
@@ -58,7 +58,7 @@ public sealed class TargetingService(IPerceptionService perception, SpatialMovem
         PerceptionQueryRequest request = new(spatial.Session,
             new[] { new PerceptionObserver(observer, origin.ToVector(), forward, policy.MaximumDistance(actionReach), policy.MinimumFacingCosine, 1d) },
             targets, ReadOnlyMemory<SpatialEntityCollider>.Empty, 0, 0, VisibilityPageSize);
-        PerceptionReadoutLeaseReceipt receipt = perception.QueryVisibility(request);
+        PerceptionReadoutResult receipt = perception.QueryVisibility(request);
         long? selected = receipt.Pairs.ToArray().Where(p => p.Observer == observer && p.Kind == PerceptionPairKind.Visible
             && p.Target <= long.MaxValue && actors.TryGet((long)p.Target, out ActorState actor) && IsValidTarget(actor))
             .OrderBy(p => p.Distance).ThenBy(p => p.Target).Select(p => (long?)p.Target).FirstOrDefault();

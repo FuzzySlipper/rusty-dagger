@@ -110,7 +110,7 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
                 else if (state == SpritePlaybackState.Paused)
                     engine.Graphics.ControlSpritePlayback(new(playback, SpritePlaybackControl.Resume));
             }
-            SpritePlaybackAdvanceLeaseReceipt receipt = engine.Graphics.AdvanceSpritePlayback(new SpritePlaybackAdvanceRequest(playback));
+            SpritePlaybackAdvanceResult receipt = engine.Graphics.AdvanceSpritePlayback(new SpritePlaybackAdvanceRequest(playback));
             // A one-shot can complete during this admitted advance.  Completion is
             // already a coherent terminal Engine state, so do not issue an invalid
             // or misleading Pause after it.

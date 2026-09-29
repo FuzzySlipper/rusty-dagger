@@ -790,7 +790,7 @@ public sealed class SpriteWorkbenchProductTests
             return state.Readout();
         }
 
-        public SpritePlaybackAdvanceLeaseReceipt AdvanceSpritePlayback(SpritePlaybackAdvanceRequest request)
+        public SpritePlaybackAdvanceResult AdvanceSpritePlayback(SpritePlaybackAdvanceRequest request)
         {
             AdvanceRequests.Add(request);
             PlaybackState state = playbacks[request.Playback.Handle.Value];
