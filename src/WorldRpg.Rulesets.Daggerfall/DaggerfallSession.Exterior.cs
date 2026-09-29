@@ -212,6 +212,9 @@ internal sealed partial class DaggerfallSession
             State.PlayerControl.MoveTo(
                 DaggerfallExteriorSessionOrigin.Shift(position, localDelta).ToVector());
         }
+        // The support anchor, tether anchor and fall/peak heights are local-frame
+        // values too; left alone, the next step on a support snaps the player back.
+        State.PlayerControl.Motion = State.PlayerControl.Motion.Rebased(localDelta);
     }
 }
 
