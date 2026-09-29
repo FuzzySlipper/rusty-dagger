@@ -8,15 +8,18 @@
     <AnalysisLevel>latest</AnalysisLevel>
     <Deterministic>true</Deterministic>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-    <!-- The workbench remains an ordinary safe C# product. The SDK generates
-         CoreCLR and NativeAOT composition below obj for its explicit tooling
-         run; this project never carries a checked bootstrap. -->
+    <!-- The workbench remains an ordinary safe C# product; the SDK generates
+         its bind entry point, and this project never carries a checked
+         bootstrap. -->
     <RustyEngineProductEntryType>WorldRpg.SpriteWorkbench.SpriteWorkbenchProduct</RustyEngineProductEntryType>
     <RustyEngineProductId>worldrpg-sprite-workbench</RustyEngineProductId>
     <RustyEngineProductTitle>WorldRpg Sprite Workbench</RustyEngineProductTitle>
     <RustyEngineProductUiRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../sprite-ui/generated'))</RustyEngineProductUiRoot>
     <RustyEngineProductContentRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)workbench-content'))</RustyEngineProductContentRoot>
     <RustyEngineProductUiEntry>workbench.js</RustyEngineProductUiEntry>
+    <!-- The SDK reruns tsc only when ../sprite-ui or a listed input changes. -->
+    <RustyEngineProductUiSourceRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../sprite-ui'))</RustyEngineProductUiSourceRoot>
+    <RustyEngineProductUiBuildCommand>npm --prefix &quot;$(MSBuildThisFileDirectory)../..&quot; exec -- tsc --project &quot;$(MSBuildThisFileDirectory)../sprite-ui/tsconfig.json&quot; --noEmit false --outDir &quot;$(RustyEngineProductUiRoot)&quot;</RustyEngineProductUiBuildCommand>
     <RustyEngineProductUiProjectionStream>worldrpg.sprite-workbench</RustyEngineProductUiProjectionStream>
     <RustyEngineProductUiProjectionContract>worldrpg.sprite-workbench.snapshot.v1</RustyEngineProductUiProjectionContract>
     <RustyEngineProductLifecycleMode>realtime</RustyEngineProductLifecycleMode>
@@ -33,13 +36,19 @@
     <RustyEngineProductInputIntent Include="sprite-workbench" Value="payload:worldrpg.sprite-workbench.intent.v1" />
   </ItemGroup>
 
-  <Target Name="BuildSpriteWorkbenchProductUi" BeforeTargets="GenerateRustyEngineProductComposition">
+  <ItemGroup>
+    <RustyEngineProductUiInput Include="$(MSBuildThisFileDirectory)../../package.json;$(MSBuildThisFileDirectory)../../package-lock.json" />
+  </ItemGroup>
+
+  <!-- The workbench shows the staged publication's atlas pages and its
+       stylesheet from the UI root. Copying them is not a compile step, so it
+       runs before the SDK's UI build rather than inside its command. -->
+  <Target Name="StageSpriteWorkbenchUiAssets" BeforeTargets="BuildRustyEngineProductUi">
     <MakeDir Directories="$(RustyEngineProductUiRoot)" />
     <ItemGroup>
       <WorkbenchAtlas Include="$(RustyEngineProductContentRoot)/**/*.png" />
     </ItemGroup>
     <Copy SourceFiles="@(WorkbenchAtlas)" DestinationFiles="@(WorkbenchAtlas->'$(RustyEngineProductUiRoot)/atlas/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="../sprite-ui/workbench.css" DestinationFolder="$(RustyEngineProductUiRoot)" Condition="Exists('../sprite-ui/workbench.css')" />
-    <Exec Command="npm --prefix &quot;$(MSBuildThisFileDirectory)../..&quot; exec -- tsc --project &quot;$(MSBuildThisFileDirectory)../sprite-ui/tsconfig.json&quot; --noEmit false --outDir &quot;$(RustyEngineProductUiRoot)&quot;" />
+    <Copy SourceFiles="../sprite-ui/workbench.css" DestinationFolder="$(RustyEngineProductUiRoot)" Condition="Exists('../sprite-ui/workbench.css')" SkipUnchangedFiles="true" />
   </Target>
 </Project>
