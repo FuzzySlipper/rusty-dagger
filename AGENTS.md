@@ -235,9 +235,9 @@ Keep durable repository documents free of commit revisions and pinned versions: 
 stale pin in prose invites a later agent to roll the code back to match the
 document, and the document is not the owner of that identity. Exact revisions
 belong in logged Den records, or in machine-checked configuration such as
-`Directory.Build.props`, which a script actually verifies. Move the Engine pin
-with `scripts/update-engine-pin.sh`, which resolves the newest published pair and
-rewrites that file; never hand-edit a version into prose.
+`Directory.Build.props`, which the `rusty` CLI reads. Move the Engine pin with
+`rusty update`, which installs the newest published pair, rewrites that file, and
+lists the release notes; never hand-edit a version into prose.
 
 A hard failure must name the loss it prevents. Where the consequence is
 recoverable, warn and report the actual observed value instead. Keep hard stops

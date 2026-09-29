@@ -107,40 +107,33 @@ host merely to finish a task.
 
 ## Develop and verify the current product
 
-The checked product consumes the immutable `Rusty.Engine` package from the
-installed `.runtime/sdk-feed` and the matched `.runtime/runtime-pack`. That
-pair's identity belongs in `Directory.Build.props`, where the install and verify
-scripts check it; do not restate a version or revision here. Start a clean
-checkout with the pinned, noninteractive pair install. It validates the release
-checksum, payloads, ABI, package version, and Engine source revision before
-atomically replacing the whole ignored pair.
+The product consumes one immutable Engine SDK/runtime pair, pinned by
+`<RustyEnginePackageVersion>` in `Directory.Build.props`; do not restate a
+version here. The Engine's `rusty` command installs, updates and runs it. Get
+`rusty` once with the Engine bootstrap
+(`curl -fsSL https://raw.githubusercontent.com/FuzzySlipper/rusty-engine/main/scripts/install-rusty.sh | bash`),
+then start a clean checkout with:
 
 ```bash
-./scripts/install-engine-pair.sh
+rusty status
+rusty install
 ```
 
 To take the newest published Engine pair, which is the ordinary way to pick up
 newer Engine state:
 
 ```bash
-./scripts/update-engine-pin.sh
+rusty update
 ```
 
-It resolves the newest `csharp-sdk` release, rewrites both identities in
-`Directory.Build.props`, and installs the pair. `--check` reports what is
-available without changing anything.
+It installs the pair, rewrites the pin, and lists the release notes to read.
+`rusty update --check` reports what is available without changing anything.
 
-This follows the operational runbook
-`rusty-engine/downstream-csharp-sdk-runbook`. The repository neither builds
-the pair nor copies an Engine checkout into product sources.
-
-Ordinary edit-run development is CoreCLR through the packaged host:
+Ordinary edit-run development is CoreCLR through the pinned runtime:
 
 ```bash
 npm ci
-./.runtime/runtime-pack/bin/rusty dev \
-  --project ./src/WorldRpg.Host/WorldRpg.Host.csproj \
-  --runtime ./.runtime/runtime-pack
+rusty dev --project ./src/WorldRpg.Host/WorldRpg.Host.csproj
 ```
 
 Use WASD to move and the mouse to look. **Z** draws or sheathes the equipped
