@@ -206,7 +206,6 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
         private readonly Dictionary<ulong, SpatialTriggerRegisterRequest> _definitions = [];
         private HashSet<ulong> _active = [];
         private HashSet<(ulong Trigger, ulong Subject)> _overlaps = [];
-        private ulong _revision;
 
         internal ISpatialService Service { get; private set; } = null!;
         internal uint LastDiagnosticCount { get; private set; }
@@ -248,16 +247,12 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
             if (wasActive == request.Active)
                 throw new InvalidOperationException("SetActive repeated the current trigger state.");
 
-            ulong before = _revision;
             if (request.Active) _active.Add(request.Trigger);
             else _active.Remove(request.Trigger);
-            _revision = checked(_revision + 1);
             return new SpatialTriggerLifecycleResult(
                 ReadOnlyMemory<SpatialTriggerFact>.Empty,
                 request.Trigger,
                 request.Active,
-                before,
-                _revision,
                 0);
         }
 
@@ -267,15 +262,10 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
             if (active.Any(trigger => !_definitions.ContainsKey(trigger)))
                 throw new InvalidOperationException("Restore referenced an unknown trigger.");
             HashSet<(ulong Trigger, ulong Subject)> overlaps = ComputeOverlaps(active, request.Entities.Span, out uint diagnosticCount);
-            ulong before = _revision;
-            bool changed = !_active.SetEquals(active) || !_overlaps.SetEquals(overlaps);
             _active = active;
             _overlaps = overlaps;
-            if (changed) _revision = checked(_revision + 1);
             LastDiagnosticCount = diagnosticCount;
             return new SpatialTriggerRestoreReceipt(
-                before,
-                _revision,
                 checked((uint)_definitions.Count),
                 checked((uint)_active.Count),
                 checked((uint)_overlaps.Count),
@@ -290,14 +280,12 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
                 facts.Add(new(false, trigger, subject, request.Tick, request.Cause));
             foreach ((ulong trigger, ulong subject) in next.Except(_overlaps).OrderBy(pair => pair.Trigger).ThenBy(pair => pair.Subject))
                 facts.Add(new(true, trigger, subject, request.Tick, request.Cause));
-            if (facts.Count != 0) _revision = checked(_revision + 1);
             _overlaps = next;
             LastDiagnosticCount = diagnosticCount;
             return new SpatialTriggerReconcileResult(
                 facts.ToArray(),
                 request.Tick,
                 request.Cause,
-                _revision,
                 0,
                 checked((uint)_overlaps.Count),
                 0);
