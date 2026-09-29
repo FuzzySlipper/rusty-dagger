@@ -83,9 +83,8 @@ operator material and are not committed.
 
 `src/playtest.json`, the package-backed CoreCLR launcher, focused C# test
 projects, and the SDK-hosted sprite workbench remain the current proof and
-operator surfaces. `scripts/install-engine-pair.sh` atomically installs the
-pinned complete SDK/runtime pair beneath `.runtime`; the installed SDK
-feed/runtime pack and generated
+operator surfaces. The Engine `rusty` CLI installs the pinned complete
+SDK/runtime pair into its shared cache; that pair and generated
 `bin/**`/`obj/**` output are not handwritten authority; no Engine browser bundle,
 NativeProduct bridge, or Cargo host is retained in this repository.
 

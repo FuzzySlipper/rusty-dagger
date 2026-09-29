@@ -15,9 +15,8 @@ publication_root=$(cd "$1" && pwd)
 authoring_root=$(cd "$2" && pwd)
 overlay_path=$3
 port=$4
-runtime_pack="$repo_root/.runtime/runtime-pack"
-if [[ ! -f "$publication_root/import-manifest.json" || ! -d "$authoring_root" || ! "$overlay_path" =~ ^sprites/.+\.json$ || ! "$port" =~ ^[0-9]+$ || ! -x "$runtime_pack/bin/rusty" ]]; then
-  echo "publication must be a generated import root; authoring must exist; overlay is sprites/*.json; port is numeric; and the verified Engine runtime pack must be installed." >&2
+if [[ ! -f "$publication_root/import-manifest.json" || ! -d "$authoring_root" || ! "$overlay_path" =~ ^sprites/.+\.json$ || ! "$port" =~ ^[0-9]+$ ]]; then
+  echo "publication must be a generated import root; authoring must exist; overlay is sprites/*.json; and port is numeric." >&2
   exit 2
 fi
 
@@ -28,8 +27,7 @@ trap 'rm -rf -- "$stage_dir"' EXIT INT TERM
 cp -a "$publication_root/." "$stage_dir/"
 node -e 'const fs = require("node:fs"); fs.writeFileSync(process.argv[1], JSON.stringify({ publicationSeparationRoot: process.argv[2], authoringRoot: process.argv[3], overlayPath: process.argv[4] }) + "\n");' "$stage_dir/sprite-workbench.json" "$publication_root" "$authoring_root" "$overlay_path"
 
-exec "$runtime_pack/bin/rusty" dev \
+exec rusty dev \
   --project "$repo_root/src/WorldRpg.SpriteWorkbench/WorldRpg.SpriteWorkbench.csproj" \
-  --runtime "$runtime_pack" \
   --bind-host "${RUSTY_WORKBENCH_BIND_HOST:-0.0.0.0}" \
   --port "$port"

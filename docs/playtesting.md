@@ -7,8 +7,8 @@ and [integration guide](https://github.com/FuzzySlipper/crew-services/blob/main/
 
 ## Start and ownership
 
-Install the published Engine pair with `scripts/install-engine-pair.sh`, then run
-the packaged `rusty dev` command documented in the README.
+Install the pinned Engine pair with `rusty install`, then run the `rusty dev`
+command documented in the README.
 Register the host URL as a local Crew browser profile and use the installed
 `playtest` CLI. Run `playtest assist --help` for current syntax.
 
