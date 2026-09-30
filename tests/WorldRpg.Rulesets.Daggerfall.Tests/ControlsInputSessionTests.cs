@@ -209,7 +209,7 @@ public sealed class ControlsInputSessionTests
         Assert.Throws<JsonException>(() => DaggerfallTuning.Read(MutatedTuning(root, tuning => tuning["controllerInput"]!["actions"]!.AsArray()[0]!["action"] = "")));
     }
 
-    [Fact]
+    [StagedProductFact]
     public void The_pad_owns_its_controls_and_the_compiled_product_mapping_declares_none_of_them()
     {
         string root = TestData.RepositoryRoot;
@@ -220,11 +220,10 @@ public sealed class ControlsInputSessionTests
         // pad tuning reads, and nothing else would notice.
         //
         // The check reads the artifact the runtime reads rather than one spelling in one build file,
-        // so it sees any declaration site and any legal MSBuild form. It is build output, so its
-        // absence is a failure: a guard that passes when it cannot read what it guards is worse than
-        // no guard.
-        string manifest = Path.Combine(root, "src/WorldRpg.Host/obj/Rusty.Engine/Product/product.json");
-        Assert.True(File.Exists(manifest), $"The compiled product manifest '{manifest}' is missing; the host composition has to be built before this suite reads it.");
+        // so it sees any declaration site and any legal MSBuild form. It is build output, so without a
+        // staged Host the fact skips and names the build rather than passing without reading it; the
+        // gate stages the Host before this suite, so there the guard always reads the manifest.
+        string manifest = Path.Combine(root, StagedProductFactAttribute.ManifestPath);
         using JsonDocument product = JsonDocument.Parse(File.ReadAllBytes(manifest));
         string[] triggers = [.. product.RootElement.GetProperty("input").GetProperty("mappings").EnumerateArray()
             .Select(mapping => mapping.GetProperty("trigger").GetString() ?? string.Empty)];
