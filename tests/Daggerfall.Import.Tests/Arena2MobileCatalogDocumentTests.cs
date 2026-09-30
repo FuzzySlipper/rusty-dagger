@@ -23,7 +23,7 @@ public sealed class Arena2MobileCatalogDocumentTests
         Assert.Equal(3, publication.Published);
         Assert.Equal(1, publication.Unpublished);
         Assert.Equal(1, publication.HumanMobiles);
-        Assert.Equal("CNT-007", document["sources"]!.AsArray()[0]!["recordId"]!.GetValue<string>());
+        Assert.Equal("donor/EnemyBasics.cs", document["sources"]!.AsArray()[0]!["path"]!.GetValue<string>());
 
         JsonObject rat = document["mobiles"]!.AsArray().Single(mobile => mobile!["donorId"]!.GetValue<int>() == 0)!.AsObject();
         Assert.Equal("rat", rat["actor"]!.GetValue<string>());

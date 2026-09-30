@@ -165,7 +165,7 @@ public sealed class DaggerfallCatalogTests
     [CorpusFact]
     public void Refuses_to_publish_an_empty_catalog()
     {
-        IReadOnlySet<string> inventoryIds = ReadInventory().Select(row => row.Id).ToHashSet(StringComparer.Ordinal);
+        IReadOnlySet<string> inventoryIds = ReadInventory().Select(row => row.PathOrPattern).ToHashSet(StringComparer.Ordinal);
         DaggerfallCatalogs catalogs = BuildFromRepository();
 
         // A run against an empty or wrong directory must fail rather than publish
@@ -190,7 +190,7 @@ public sealed class DaggerfallCatalogTests
         };
 
         ArgumentOutOfRangeException error = Assert.Throws<ArgumentOutOfRangeException>(() =>
-            bad.Validate(ReadInventory().Select(row => row.Id).ToHashSet(StringComparer.Ordinal)));
+            bad.Validate(ReadInventory().Select(row => row.PathOrPattern).ToHashSet(StringComparer.Ordinal)));
 
         Assert.Contains("one byte", error.Message, StringComparison.Ordinal);
     }
@@ -318,9 +318,9 @@ public sealed class DaggerfallCatalogTests
         };
 
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
-            invented.Validate(ReadInventory().Select(row => row.Id).ToHashSet(StringComparer.Ordinal)));
+            invented.Validate(ReadInventory().Select(row => row.PathOrPattern).ToHashSet(StringComparer.Ordinal)));
 
-        Assert.Contains("CNT-999", error.Message, StringComparison.Ordinal);
+        Assert.Contains("arena2/nowhere", error.Message, StringComparison.Ordinal);
     }
 
     [CorpusFact]
@@ -332,7 +332,7 @@ public sealed class DaggerfallCatalogTests
         {
             Careers = [career with { PrimarySkills = ["not-a-skill", .. career.PrimarySkills.Skip(1)] }, .. catalogs.Careers.Skip(1)],
         };
-        IReadOnlySet<string> inventoryIds = ReadInventory().Select(row => row.Id).ToHashSet(StringComparer.Ordinal);
+        IReadOnlySet<string> inventoryIds = ReadInventory().Select(row => row.PathOrPattern).ToHashSet(StringComparer.Ordinal);
 
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => dangling.Validate(inventoryIds));
 
@@ -350,7 +350,7 @@ public sealed class DaggerfallCatalogTests
         };
 
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
-            sparse.Validate(ReadInventory().Select(row => row.Id).ToHashSet(StringComparer.Ordinal)));
+            sparse.Validate(ReadInventory().Select(row => row.PathOrPattern).ToHashSet(StringComparer.Ordinal)));
 
         Assert.Contains("contiguous", error.Message, StringComparison.Ordinal);
     }
