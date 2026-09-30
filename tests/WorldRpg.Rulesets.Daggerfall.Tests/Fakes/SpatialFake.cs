@@ -25,7 +25,25 @@ internal class SpatialFake : DispatchProxy
     internal bool RejectContentReplacement { get; set; }
     internal SpatialContentArtifactReplaceRequest? LastRequest { get; private set; }
     internal List<CharacterStepRequest> StepRequests { get; } = [];
+    /// <summary>Every residency delta the product applied, in order, including one the fake refused.</summary>
     internal List<CollisionResidencyRequest> CollisionResidencyRequests { get; } = [];
+    /// <summary>The collision assets resident in the most recently created spatial session.</summary>
+    internal IReadOnlyCollection<ulong> ResidentCollisionAssets => CurrentSession.Assets;
+    /// <summary>The collision instances resident in the most recently created session, each with the asset it uses.</summary>
+    internal IReadOnlyDictionary<ulong, ulong> ResidentCollisionInstances => CurrentSession.Instances;
+    /// <summary>Whether the product released its most recent spatial session, which drops every collider it retained.</summary>
+    internal bool SessionReleased => CurrentSession.Released;
+    /// <summary>
+    /// How many assets and instances the product still had resident when it released its most recent
+    /// session, which is what it left for the release to drop instead of removing itself.
+    /// </summary>
+    internal (int Assets, int Instances) CollidersLeftAtRelease => CurrentSession.LeftAtRelease
+        ?? throw new InvalidOperationException("The most recent spatial session has not been released.");
+    private readonly Dictionary<ulong, SessionColliders> sessions = [];
+    private ulong latestSession;
+    private SessionColliders CurrentSession => sessions.TryGetValue(latestSession, out SessionColliders? current)
+        ? current
+        : throw new InvalidOperationException("No spatial session was created.");
     // Representative fixture only: Engine owns the actual default and validity contract.
     internal CharacterControllerConfig RepresentativeValidConfig { get; } = default(CharacterControllerConfig) with
     {
@@ -84,19 +102,94 @@ internal class SpatialFake : DispatchProxy
         ReplaceCalls++;
         if (RejectContentReplacement) throw new InvalidOperationException("Rejected spatial content replacement.");
         LastRequest = request;
+        // A content artifact replaces the session's complete static collision set, so every collider a
+        // residency delta admitted is gone afterwards and has to be admitted again.
+        SessionColliders colliders = Live(request.Session);
+        colliders.Assets.Clear();
+        colliders.Instances.Clear();
         return new(request.Content.Handle.Value, hash, 1, 2, 3, 4, 5, 6, 7, 8);
     }
 
+    /// <summary>
+    /// Applies one residency delta the way Engine Spatial does: removals precede upserts and a missing
+    /// removal is harmless; each asset reads its own vertex and triangle slice, with triangle indices
+    /// local to that slice; an identity may appear once per delta; every retained instance must name a
+    /// resident asset. A delta that breaks any of these is refused whole and changes nothing.
+    /// </summary>
     private CollisionReplaceReceipt ApplyCollisionResidency(CollisionResidencyRequest request)
     {
         CollisionResidencyRequests.Add(request);
-        return new CollisionReplaceReceipt();
+        SessionColliders colliders = Live(request.Session);
+        HashSet<ulong> nextAssets = [.. colliders.Assets];
+        foreach (ulong removed in request.RemovedAssets.Span) nextAssets.Remove(removed);
+        HashSet<ulong> admitted = [];
+        foreach (StaticMeshAsset asset in request.Assets.Span)
+        {
+            if (!admitted.Add(asset.Id)) throw new InvalidOperationException($"Collision asset {asset.Id:X} appears twice in one delta.");
+            if ((ulong)asset.FirstVertex + asset.VertexCount > (ulong)request.Vertices.Length
+                || (ulong)asset.FirstTriangle + asset.TriangleCount > (ulong)request.Triangles.Length)
+                throw new InvalidOperationException($"Collision asset {asset.Id:X} names a slice outside the delta's arrays.");
+            foreach (Triangle triangle in request.Triangles.Span.Slice(checked((int)asset.FirstTriangle), checked((int)asset.TriangleCount)))
+            {
+                if (triangle.A >= asset.VertexCount || triangle.B >= asset.VertexCount || triangle.C >= asset.VertexCount)
+                    throw new InvalidOperationException($"Collision asset {asset.Id:X} has a triangle outside its own vertex slice.");
+            }
+            nextAssets.Add(asset.Id);
+        }
+        Dictionary<ulong, ulong> nextInstances = new(colliders.Instances);
+        foreach (ulong removed in request.RemovedInstances.Span) nextInstances.Remove(removed);
+        HashSet<ulong> upserted = [];
+        foreach (StaticMeshInstance instance in request.Instances.Span)
+        {
+            if (!upserted.Add(instance.Id)) throw new InvalidOperationException($"Collision instance {instance.Id:X} appears twice in one delta.");
+            nextInstances[instance.Id] = instance.Asset;
+        }
+        foreach ((ulong instance, ulong asset) in nextInstances)
+        {
+            if (!nextAssets.Contains(asset)) throw new InvalidOperationException($"Collision instance {instance:X} names asset {asset:X}, which is not resident.");
+        }
+        colliders.Assets.Clear();
+        colliders.Assets.UnionWith(nextAssets);
+        colliders.Instances.Clear();
+        foreach ((ulong instance, ulong asset) in nextInstances) colliders.Instances.Add(instance, asset);
+        ulong before = colliders.Revision++;
+        return new CollisionReplaceReceipt(before, colliders.Revision, (ulong)colliders.Assets.Count, (ulong)colliders.Instances.Count, 0);
+    }
+
+    private SessionColliders Live(SpatialSession session)
+    {
+        if (!sessions.TryGetValue(session.Handle.Value, out SessionColliders? colliders))
+            throw new InvalidOperationException($"Spatial session {session.Handle.Value} was never created.");
+        if (colliders.Released) throw new InvalidOperationException($"Spatial session {session.Handle.Value} was already released.");
+        return colliders;
     }
 
     private SpatialSession CreateSession()
     {
         CreateSessionCalls++;
-        return new SpatialSession(new SpatialSessionHandle(1), () => releases.Add("session"));
+        ulong handle = checked((ulong)CreateSessionCalls);
+        SessionColliders colliders = new();
+        sessions.Add(handle, colliders);
+        latestSession = handle;
+        return new SpatialSession(new SpatialSessionHandle(handle), () =>
+        {
+            releases.Add("session");
+            // Releasing a session releases every collider it retained.
+            colliders.Released = true;
+            colliders.LeftAtRelease = (colliders.Assets.Count, colliders.Instances.Count);
+            colliders.Assets.Clear();
+            colliders.Instances.Clear();
+        });
+    }
+
+    /// <summary>The static colliders one spatial session retains.</summary>
+    private sealed class SessionColliders
+    {
+        internal HashSet<ulong> Assets { get; } = [];
+        internal Dictionary<ulong, ulong> Instances { get; } = [];
+        internal ulong Revision { get; set; }
+        internal bool Released { get; set; }
+        internal (int Assets, int Instances)? LeftAtRelease { get; set; }
     }
 
     private object? ValidateConfig(CharacterControllerConfig config)
