@@ -1083,7 +1083,7 @@ public sealed class SpriteWorkbenchProductTests
                 Enumerable.Range(0, 62).Select(region => new ClassicMapRegionManifest(region, [])).ToArray(), [], [], []);
             byte[] dungeonBytes = Serialize(dungeon);
             byte[] classicBytes = Serialize(classic);
-            ImportProvenance provenance = new(ImportProvenance.CurrentSchemaVersion, "daggerfall-import", 1, [new(LogicalSourceRecord.CurrentSchemaVersion, "arena2/test", ContentDigest.Compute("source"u8), 6, 1)]);
+            ImportProvenance provenance = new(ImportProvenance.CurrentSchemaVersion, "daggerfall-import", "test-revision", [new(LogicalSourceRecord.CurrentSchemaVersion, "arena2/test", ContentDigest.Compute("source"u8), 6, 1)]);
             ImportPublicationArtifact[] artifacts =
             [
                 new(actor.RelativePath, actorBytes),
