@@ -4,17 +4,20 @@
 set -euo pipefail
 
 aot=false
+play=false
 for argument in "$@"; do
   case "$argument" in
     --aot) aot=true ;;
+    --play) play=true ;;
     -h|--help)
-      echo "usage: scripts/verify.sh [--aot]"
-      echo "  no arguments  pinned pair install, UI dependencies, restore, build, architecture tests, CoreCLR staging"
+      echo "usage: scripts/verify.sh [--aot] [--play]"
+      echo "  no arguments  pinned pair install, UI tests, restore, build, every test project, CoreCLR staging"
       echo "  --aot         also run the NativeAOT fidelity publish"
+      echo "  --play        also start the product on its runtime and press Begin until it reaches ordinary play"
       exit 0
       ;;
     *)
-      echo "Unknown argument: $argument (supported: --aot)" >&2
+      echo "Unknown argument: $argument (supported: --aot, --play)" >&2
       exit 2
       ;;
   esac
@@ -49,6 +52,7 @@ dotnet test tests/WorldRpg.Architecture.Tests/WorldRpg.Architecture.Tests.csproj
 # only compiles reports on a tree that no longer runs.
 dotnet test tests/Daggerfall.Import.Tests/Daggerfall.Import.Tests.csproj
 dotnet test tests/WorldRpg.Rulesets.Daggerfall.Tests/WorldRpg.Rulesets.Daggerfall.Tests.csproj
+dotnet test tests/WorldRpg.Rulesets.Canary.Tests/WorldRpg.Rulesets.Canary.Tests.csproj
 dotnet test tests/WorldRpg.Kit.Tests/WorldRpg.Kit.Tests.csproj
 dotnet test tests/WorldRpg.Host.Tests/WorldRpg.Host.Tests.csproj
 
@@ -57,6 +61,14 @@ dotnet test tests/WorldRpg.Host.Tests/WorldRpg.Host.Tests.csproj
 # in this repository, so its suite is part of the tree that must run.
 dotnet test tests/WorldRpg.SpriteWorkbench.Tests/WorldRpg.SpriteWorkbench.Tests.csproj
 dotnet msbuild src/WorldRpg.Host/WorldRpg.Host.csproj -t:StageRustyEngineCoreClrProduct -p:Configuration=Release
+
+# Every suite above proves its Engine-facing paths against fakes that do not enforce the Engine's
+# ownership rules; a render resource released under a live owner passed them all while the real
+# runtime refused it. The play stage runs the product itself. It takes about four minutes, most of
+# them the opening cinematics, so it is opt-in.
+if [[ "$play" == true ]]; then
+  node scripts/play-smoke.mjs
+fi
 
 if [[ "$aot" == true ]]; then
   dotnet msbuild src/WorldRpg.Host/WorldRpg.Host.csproj -t:VerifyRustyEngineAot -p:Configuration=Release
