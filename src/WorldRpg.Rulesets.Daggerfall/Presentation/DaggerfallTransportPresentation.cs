@@ -26,7 +26,8 @@ internal sealed record DaggerfallWagonPresentation(
     long CapacityClassicUnits,
     ulong? StoreRevision,
     string Message,
-    IReadOnlyList<DaggerfallWagonItemPresentation> Items);
+    IReadOnlyList<DaggerfallWagonItemPresentation> Items,
+    IReadOnlyList<string> RefusedDefinitions);
 
 /// <summary>Transport and wagon values consumed by semantic UI actions and HUD projection.</summary>
 internal sealed record DaggerfallTransportPresentation(
@@ -72,11 +73,12 @@ internal static class DaggerfallTransportProjection
         InventoryView? wagonContents = wagonAccessible ? wagon?.Read() : null;
         DaggerfallWagonPresentation wagonView = wagon is null
             ? new(false, false, null, 0, DaggerfallTransportTuning.Donor.WagonCapacityClassicUnits, null,
-                "Wagon storage is unavailable.", [])
+                "Wagon storage is unavailable.", [], [])
             : new(wagon.Exists, wagonAccessible, wagon.Id, wagon.CurrentWeightClassicUnits,
                 wagon.Tuning.WagonCapacityClassicUnits, wagonContents?.StoreRevision,
                 wagonAccessible ? "Wagon storage is available." : "The wagon is unavailable here.",
-                WagonItems(wagonContents));
+                WagonItems(wagonContents),
+                wagonAccessible ? wagon.RefusedDefinitions(player) : []);
         return new(policy.Mode, policy.OnShip, policy.CanRun, policy.TravelModifier(), policy.OceanMinutesPerMapPixel(),
             Array.AsReadOnly(options), wagonView);
     }

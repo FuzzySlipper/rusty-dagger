@@ -1340,9 +1340,10 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
 
     public ProductUpdateResult Update(ProductUpdate update)
     {
+        // An exception that escapes here faults the lifecycle; the Engine reports it with its full
+        // text and stack, and a resume continues this same session, so nothing is torn down on the way
+        // out. Session resources are released by Dispose.
         _appearance.BeginAdmittedUpdate();
-        try
-        {
         Update(update.Facts, update.Input);
         // Sprite playback consumes the Engine-bound outer update identity.  It
         // must not run for each private catch-up simulation step above, and it
@@ -1364,33 +1365,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             AdvanceMusic();
         }
         _appearance.CompleteAdmittedUpdate();
-        }
-        catch (Exception failure)
-        {
-            // A thrown product callback is terminal for this runtime incarnation:
-            // Engine discards staged output and requires a fresh process rather
-            // than a same-instance retry. There is no fact/stamina replay here,
-            // only native appearance cleanup.
-            // The Engine reports the escape as a tainted incarnation and names no cause, so the failure
-            // states its own reason here before it leaves: a callback that escapes is the one product
-            // failure an operator cannot otherwise see.
-            try
-            {
-                _engine.Diagnostics.Publish(new DiagnosticsPublishRequest(
-                    DiagnosticsSeverity.Error,
-                    DiagnosticsDisposition.Terminal,
-                    "daggerfall.presentation",
-                    "presentation.failed",
-                    WorldRpg.Kit.EngineFailureText.Describe(failure),
-                    string.Empty));
-            }
-            catch (Exception) { /* a failure to report a failure must not replace it */ }
-
-            try { _appearance.Dispose(); }
-            catch (Exception cleanupFailure) { throw new AggregateException(failure, cleanupFailure); }
-            throw;
-        }
-
         return ProductUpdateResult.None;
     }
 
@@ -1536,12 +1510,10 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
                         // A valid take applies at once: the transfer commits, its completed-change
                         // facts deliver at the boundary below even while the modal holds the world,
                         // and the published presentation already reflects the result.
+                        // A refused take (a stale revision, a closed container) states its reason too.
                         if (_lootUi.PrepareTake(action!, State.PlayerControl, _input.ResolveCurrentLook(State.PlayerControl)) is { } take)
-                        {
-                            CorpseLootCommitResult result = _corpseLoot.TryCommitLoot(take, _facts);
-                            _lootUi.Complete(result);
-                            Presentation.SetOutcome(_lootUi.Message);
-                        }
+                            _lootUi.Complete(_corpseLoot.TryCommitLoot(take, _facts));
+                        Presentation.SetOutcome(_lootUi.Message);
                     }
                     break;
                 default: Presentation.SetOutcome("Unrecognized player UI action."); break;
@@ -1559,7 +1531,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
 
         if (!playing)
         {
-            Presentation.SetOutcome(ModalMessage());
+            // The mode's own line was set when the mode was entered; an outcome an action set during
+            // this update stays on the line rather than being overwritten by it.
             // Reactions to modal-own actions (a loot take above) deliver here rather than waiting
             // for a playing step: the batch is stable and reentrant appends wait for the next one.
             DeliverFacts();

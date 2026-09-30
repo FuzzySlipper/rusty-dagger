@@ -107,7 +107,11 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("id", builder.String(action.Id)), ("category", builder.String(action.Category)),
                 ("keys", builder.Array(controlSettings.KeysFor(action.Id).Select(builder.String).ToArray())),
                 ("fixed", builder.Boolean(action.Id == "menu")))).ToArray()))))];
-        if (activation is not null) fields = [.. fields, ("activation", builder.Object(("mode", builder.String(activation.Mode)), ("message", builder.String(activation.Message)), ("applied", builder.Boolean(activation.Applied))))];
+        if (activation is not null) fields = [.. fields, ("activation", builder.Object(
+            ("mode", builder.String(activation.Mode)),
+            ("message", builder.String(activation.Message)),
+            ("applied", builder.Boolean(activation.Applied)),
+            ("dialogue", activation.Dialogue is null ? builder.Null() : Dialogue(builder, activation.Dialogue))))];
         if (quests is not null) fields = [.. fields, ("quests", Quests(builder, quests))];
         if (notebook is not null) fields = [.. fields, ("notebook", Notebook(builder, notebook))];
         if (transport is not null) fields = [.. fields, ("transport", Transport(builder, transport))];
@@ -197,7 +201,20 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("items", builder.Array(transport.Wagon.Items.Select(item => builder.Object(
                     ("key", builder.String(item.Key)),
                     ("definition", builder.String(item.Definition)),
-                    ("quantity", builder.String(item.Quantity)))).ToArray())))));
+                    ("quantity", builder.String(item.Quantity)))).ToArray())),
+                ("refusedDefinitions", builder.Array(transport.Wagon.RefusedDefinitions.Select(builder.String).ToArray())))));
+
+    private static uint Dialogue(UiValueBuilder builder, DaggerfallDialogueView dialogue) => builder.Object(
+        ("revision", builder.String(dialogue.Revision)),
+        ("targetLabel", builder.String(dialogue.TargetLabel)),
+        ("greeting", builder.String(dialogue.Greeting)),
+        ("tone", builder.String(dialogue.Tone)),
+        ("question", dialogue.Question is null ? builder.Null() : builder.String(dialogue.Question)),
+        ("reply", dialogue.Reply is null ? builder.Null() : builder.String(dialogue.Reply)),
+        ("topics", builder.Array(dialogue.Topics.Select(topic => builder.Object(
+            ("id", builder.String(topic.Id)),
+            ("label", builder.String(topic.Label)))).ToArray())),
+        ("diagnostics", builder.Array(dialogue.Diagnostics.Select(builder.String).ToArray())));
 
     private static uint Death(UiValueBuilder builder, DaggerfallDeathView death) => builder.Object(
         ("active", builder.Boolean(death.Active)),

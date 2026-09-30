@@ -317,6 +317,18 @@ internal sealed class DaggerfallWagonStorage
 
     private static bool HasCart(InventoryView inventory) => inventory.UniqueItems.Any(item => item.Definition.Value == DaggerfallTransportPolicy.CartItemId);
 
+    /// <summary>The item definitions the player carries that the wagon refuses to store.</summary>
+    internal IReadOnlyList<string> RefusedDefinitions(InventoryView player)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        return player.Stacks.Select(stack => stack.Definition.Value)
+            .Concat(player.UniqueItems.Select(item => item.Definition.Value))
+            .Distinct(StringComparer.Ordinal)
+            .Where(id => IsTransportation(_definitions.RequireItem(new DaggerfallItemId(id))))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+    }
+
     private static bool IsTransportation(DaggerfallItemDefinition definition) =>
         definition.Template?.Groups.Contains("Transportation", StringComparer.Ordinal) == true;
 

@@ -39,7 +39,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal));
         runtime.Tasks.Single(task => task.Symbol == "source").IsSet = true;
         DaggerfallQuestMessages messages = Messages(source);
-        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, messages);
+        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, messages, new LifecycleFake());
         DaggerfallQuestMessages restored = Messages(source);
         string json = JsonSerializer.Serialize(messages.Capture(), typeof(DaggerfallQuestMessagesSave), DaggerfallSaveJsonContext.Default);
         DaggerfallQuestMessagesSave persisted = (DaggerfallQuestMessagesSave)JsonSerializer.Deserialize(json, typeof(DaggerfallQuestMessagesSave), DaggerfallSaveJsonContext.Default)!;
@@ -62,9 +62,9 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         }, out _, out _));
         Assert.True(runtime.Tasks.Single(task => task.Symbol == pending.Options[^1].Target).IsSet);
         Assert.False(restored.TryChoose(runtime.InstanceId, 1010, pending.Id, pending.Options[^1].Id, (_, _) => throw new Exception("replay invoked"), out _, out _));
-        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, restored);
+        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, restored, new LifecycleFake());
         runtime.Tasks.Single(task => task.Symbol == "source").IsSet = true;
-        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, restored);
+        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, restored, new LifecycleFake());
         Assert.NotEqual(pending.Id, restored.Pending!.Id);
         Assert.False(restored.TryChoose(runtime.InstanceId, 1010, pending.Id, pending.Options[0].Id, (_, _) => throw new Exception("stale occurrence invoked"), out _, out _));
         Assert.Single(restored.Choices);
@@ -88,7 +88,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         DaggerfallQuestMessages messages = Messages(source);
         DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal));
 
-        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, messages);
+        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, messages, new LifecycleFake());
 
         Assert.Equal(new DaggerfallQuestJournalEntrySave("quest:1", 4, 1010), Assert.Single(messages.Journal));
         Assert.Equal(DaggerfallQuestMessageDelivery.Rumor, Assert.Single(messages.Deliveries, value => value.Delivery == DaggerfallQuestMessageDelivery.Rumor).Delivery);
@@ -123,14 +123,14 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         DaggerfallQuestTaskRuntimeState sourceTask = runtime.Tasks.Single(task => task.Symbol == "source");
 
         sourceTask.IsSet = true;
-        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, messages);
+        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, messages, new LifecycleFake());
         Assert.True(messages.TryChoose("quest:1", 1010, messages.Pending?.Id ?? "expired", 3,
             (prompt, choice) => DaggerfallQuestTaskRunner.PrepareChoice(runtime, program, variables, prompt, choice), out _, out _));
-        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, messages);
+        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, messages, new LifecycleFake());
         Assert.False(sourceTask.IsSet);
         Assert.All(sourceTask.OperationCompleted, Assert.False);
         sourceTask.IsSet = true;
-        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, messages);
+        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, messages, new LifecycleFake());
         Assert.True(messages.TryChoose("quest:1", 1010, messages.Pending?.Id ?? "expired", 4,
             (prompt, choice) => DaggerfallQuestTaskRunner.PrepareChoice(runtime, program, variables, prompt, choice), out _, out _));
 
@@ -152,7 +152,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         DaggerfallQuestMessages messages = Messages(source);
         DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal));
 
-        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, messages);
+        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start, messages, new LifecycleFake());
         DaggerfallQuestTaskRuntimeState sourceTask = runtime.Tasks.Single(task => task.Symbol.StartsWith("headless.", StringComparison.Ordinal));
         Assert.Throws<ArgumentException>(() => messages.TryChoose("quest:1", 1010, messages.Pending?.Id ?? "expired", 3,
             (prompt, choice) => DaggerfallQuestTaskRunner.PrepareChoice(runtime, program, variables, prompt, choice), out _, out _));
@@ -226,7 +226,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         DaggerfallQuestRuntimeInstance runtime = Runtime(source);
         DaggerfallQuestMessages messages = Messages(source);
 
-        DaggerfallQuestTaskRunner.Advance(runtime, Program(source), new(new Dictionary<string, int>(StringComparer.Ordinal)), DaggerfallCalendar.Start, messages);
+        DaggerfallQuestTaskRunner.Advance(runtime, Program(source), new(new Dictionary<string, int>(StringComparer.Ordinal)), DaggerfallCalendar.Start, messages, new LifecycleFake());
 
         Assert.Empty(messages.Journal);
         Assert.Equal(DaggerfallQuestLifecycle.Ended, runtime.Lifecycle);
@@ -265,12 +265,13 @@ public sealed class DaggerfallQuestTaskRuntimeTests
     [Fact]
     public void Ordered_tasks_evaluate_and_not_then_end_with_the_retained_message()
     {
-        DaggerfallQuestSourceDefinition source = Source(
-            Block("variable", 1, "variable _a_"),
-            Block("variable", 2, "variable _b_"),
-            Block("headless", 4, "start task _a_"),
-            Block("task", 5, "_gate_ task:", "when _a_ and not _b_", "start task _done_", "clear _gate_"),
-            Block("task", 9, "_done_ task:", "end quest saying 42"));
+        DaggerfallQuestSourceDefinition source = new("test", string.Empty, "test.txt", DaggerfallQuestDisposition.Compiled,
+            [new(42, 1, ["Done."])],
+            [Block("variable", 1, "variable _a_"),
+             Block("variable", 2, "variable _b_"),
+             Block("headless", 4, "start task _a_"),
+             Block("task", 5, "_gate_ task:", "when _a_ and not _b_", "start task _done_", "clear _gate_"),
+             Block("task", 9, "_done_ task:", "end quest saying 42")], []);
 
         DaggerfallQuestInstanceSave advanced = Advance(source);
 
@@ -306,8 +307,8 @@ public sealed class DaggerfallQuestTaskRuntimeTests
 
         DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal));
         DaggerfallQuestRuntimeInstance runtime = Runtime(source);
-        DaggerfallQuestTaskRunner.Advance(runtime, Program(source), variables, DaggerfallCalendar.Start);
-        DaggerfallQuestTaskRunner.Advance(runtime, Program(source), variables, DaggerfallCalendar.Start);
+        DaggerfallQuestTaskRunner.Advance(runtime, Program(source), variables, DaggerfallCalendar.Start, Messages(source), new LifecycleFake());
+        DaggerfallQuestTaskRunner.Advance(runtime, Program(source), variables, DaggerfallCalendar.Start, Messages(source), new LifecycleFake());
         DaggerfallQuestInstanceSave advanced = runtime.Capture();
 
         DaggerfallQuestTaskState sourceTask = advanced.Tasks.Single(task => task.Symbol == "source");
@@ -329,8 +330,8 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal) { ["KnownFlag"] = 0 });
         DaggerfallQuestRuntimeInstance runtime = Runtime(source);
 
-        DaggerfallQuestTaskRunner.Advance(runtime, Program(source), variables, DaggerfallCalendar.Start);
-        DaggerfallQuestTaskRunner.Advance(runtime, Program(source), variables, DaggerfallCalendar.Start);
+        DaggerfallQuestTaskRunner.Advance(runtime, Program(source), variables, DaggerfallCalendar.Start, Messages(source), new LifecycleFake());
+        DaggerfallQuestTaskRunner.Advance(runtime, Program(source), variables, DaggerfallCalendar.Start, Messages(source), new LifecycleFake());
         DaggerfallQuestInstanceSave advanced = runtime.Capture();
 
         Assert.True(variables.ReadGlobal("KnownFlag"));
@@ -383,7 +384,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
             Block("headless", 3, "pick one of _first_ _second_"));
         DaggerfallQuestRuntimeInstance runtime = Runtime(source);
         DaggerfallQuestTaskRunner.Advance(runtime, Program(source), new(new Dictionary<string, int>(StringComparer.Ordinal)),
-            DaggerfallCalendar.Start, lifecycle: new LifecycleFake(pick: "second"));
+            DaggerfallCalendar.Start, Messages(source), new LifecycleFake(pick: "second"));
 
         DaggerfallQuestInstanceSave captured = runtime.Capture();
         string json = JsonSerializer.Serialize(captured, typeof(DaggerfallQuestInstanceSave), DaggerfallSaveJsonContext.Default);
@@ -403,12 +404,12 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         LifecycleFake lifecycle = new(childBranch: null);
         DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal));
 
-        DaggerfallQuestTaskRunner.Advance(runtime, Program(source), variables, DaggerfallCalendar.Start, lifecycle: lifecycle);
+        DaggerfallQuestTaskRunner.Advance(runtime, Program(source), variables, DaggerfallCalendar.Start, Messages(source), lifecycle);
         Assert.Equal("child:1", runtime.Tasks.Single(task => task.Symbol == "headless.3").OperationState[0].ChildInstanceId);
         Assert.False(runtime.Tasks.Single(task => task.Symbol == "headless.3").OperationCompleted[0]);
 
         lifecycle.ChildBranch = "success";
-        DaggerfallQuestTaskRunner.Advance(runtime, Program(source), variables, DaggerfallCalendar.Start, lifecycle: lifecycle);
+        DaggerfallQuestTaskRunner.Advance(runtime, Program(source), variables, DaggerfallCalendar.Start, Messages(source), lifecycle);
         Assert.True(runtime.Tasks.Single(task => task.Symbol == "success").IsSet);
     }
 
@@ -421,7 +422,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         DaggerfallQuestRuntimeInstance runtime = Runtime(source);
 
         DaggerfallQuestTaskRunner.Advance(runtime, Program(source), new(new Dictionary<string, int>(StringComparer.Ordinal)),
-            DaggerfallCalendar.Start, lifecycle: Instances(Definitions()));
+            DaggerfallCalendar.Start, Messages(source), Instances(Definitions()));
 
         DaggerfallQuestTaskRuntimeState task = Assert.Single(runtime.Tasks, task => task.Symbol == "headless.3");
         Assert.True(task.OperationCompleted[0]);
@@ -695,7 +696,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
     {
         DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal));
         DaggerfallQuestRuntimeInstance runtime = Runtime(source);
-        DaggerfallQuestTaskRunner.Advance(runtime, Program(source), variables, DaggerfallCalendar.Start);
+        DaggerfallQuestTaskRunner.Advance(runtime, Program(source), variables, DaggerfallCalendar.Start, Messages(source), new LifecycleFake());
         return runtime.Capture();
     }
 
@@ -819,13 +820,13 @@ public sealed class DaggerfallQuestTaskRuntimeTests
     private static DaggerfallQuestSourceDefinition Source(params DaggerfallQuestBlockDefinition[] blocks) =>
         new("test", string.Empty, "test.txt", DaggerfallQuestDisposition.Compiled, [], blocks, []);
 
-    private static DaggerfallQuestMessages Messages(DaggerfallQuestSourceDefinition source, IReadOnlyDictionary<string, int>? staticMessages = null) => new(
+    internal static DaggerfallQuestMessages Messages(DaggerfallQuestSourceDefinition source, IReadOnlyDictionary<string, int>? staticMessages = null) => new(
         new DaggerfallTextResolver(new DaggerfallTextSet(new Dictionary<DaggerfallTextKey, DaggerfallTextValue>(), [], [])),
         new Dictionary<string, DaggerfallQuestSourceDefinition>(StringComparer.Ordinal) { [source.SourceFile] = source }, staticMessages);
 
     private static DaggerfallQuestBlockDefinition Block(string kind, int line, params string[] lines) => new(kind, line, lines, null);
 
-    private sealed class LifecycleFake(string? pick = null, string? childBranch = null) : IDaggerfallQuestTaskLifecycle
+    internal sealed class LifecycleFake(string? pick = null, string? childBranch = null) : IDaggerfallQuestTaskLifecycle
     {
         internal string? ChildBranch { get; set; } = childBranch;
         public bool IsLevelCompleted(int minimum) => false;

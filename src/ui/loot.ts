@@ -12,7 +12,7 @@ export type LootAction =
   | { readonly action: 'loot-close'; readonly container: string };
 
 /** Stable DOM rows render C# values; a click only claims the selected item and revision. */
-import { image, reportMissingArt } from './art.js';
+import { cssUrl, image, reportMissingArt } from './art.js';
 
 export function mountLoot(root: HTMLElement, claim: (action: LootAction) => void): {
   update(value: LootProjection | null): void; refresh(): void; dispose(): void;
@@ -47,7 +47,7 @@ export function mountLoot(root: HTMLElement, claim: (action: LootAction) => void
     // which identity is missing instead of showing an unaccounted fallback. The report fires only
     // when the missing set changes, so steady-state projections stay silent.
     const frame = image('inventory.skin.panel-slate.v1');
-    shell.style.setProperty('--loot-panel-art', frame === null ? 'none' : `url("${frame}")`);
+    shell.style.setProperty('--loot-panel-art', frame === null ? 'none' : cssUrl(frame));
     if (frame === null) {
       shell.setAttribute('data-art-missing', 'inventory.skin.panel-slate.v1');
     } else {

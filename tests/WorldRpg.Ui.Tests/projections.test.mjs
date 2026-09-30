@@ -47,6 +47,7 @@ function fixture() {
         ...value,
       } });
     },
+    receive(value) { receive({ contract: 'dagger.ui.snapshot.v1', value }); },
     dispose() { mounted.dispose(); dom.window.close(); },
   };
 }
@@ -155,7 +156,7 @@ test('transport projection exposes land selection and keeps ship boarding disabl
         { id: 'cart', mode: 'cart', available: false, selected: false, label: 'Cart', message: 'No cart.', travelModifier: 192 },
         { id: 'ship', mode: 'ship', available: true, selected: false, label: 'Ship', message: 'Board.', travelModifier: 256 },
       ],
-      wagon: { exists: false, accessible: false, id: null, usedClassicUnits: 0, capacityClassicUnits: 300000, storeRevision: null, message: 'Unavailable.', items: [] },
+      wagon: { exists: false, accessible: false, id: null, usedClassicUnits: 0, capacityClassicUnits: 300000, storeRevision: null, message: 'Unavailable.', items: [], refusedDefinitions: [] },
     } });
     f.root.querySelector('[data-action="transport"]').click();
     const horse = f.root.querySelector('[data-transport-mode="horse"]');
@@ -214,6 +215,7 @@ test('accessible wagon projection sends revision guarded put and take selections
         wagon: {
           exists: true, accessible: true, id: 7, usedClassicUnits: 12, capacityClassicUnits: 300000, storeRevision: '8', message: 'Available.',
           items: [{ key: 'stack:daggerfall.wagon.7.gold', definition: 'gold-piece', quantity: '2' }],
+          refusedDefinitions: [],
         },
       },
     });
@@ -582,5 +584,43 @@ test('multi-choice prompt uses supplied stable identities and refreshes occurren
     f.publish({ quests: { deliveries: [], journal: [], pending: { ...prompt, promptId: 'quest:2/source/0/2' } } });
     f.root.querySelector('.dagger-quest-prompt button').click();
     assert.equal(f.actions.at(-1).questPrompt, 'quest:2/source/0/2');
+  } finally { f.dispose(); }
+});
+
+test('the snapshot the C# projection publishes is a HUD the UI renders, dialogue included', async () => {
+  // Written by the ruleset suite from a real session (HudSnapshotContractTests); both sides read this file.
+  const snapshot = JSON.parse(await readFile(new URL('./fixtures/hud-snapshot.json', import.meta.url), 'utf8'));
+  const { isHud } = await import(pathToFileURL(join(output, 'main.js')));
+  assert.equal(isHud(snapshot), true, 'The published snapshot must satisfy the UI reader.');
+  const f = fixture();
+  try {
+    f.receive(snapshot);
+    const dialogueWindow = f.root.querySelector('.dagger-dialogue');
+    assert.equal(dialogueWindow.open, true);
+    assert.equal(f.root.querySelector('.dagger-dialogue-target').textContent, snapshot.activation.dialogue.targetLabel);
+    assert.equal(f.root.querySelectorAll('.dagger-dialogue-topics button').length, snapshot.activation.dialogue.topics.length);
+  } finally { f.dispose(); }
+});
+
+test('wagon put is refused for the definitions the ruleset names', () => {
+  const f = fixture();
+  try {
+    f.publish({
+      inventory: {
+        revision: '3:1:0', message: 'Inventory ready.', equipmentChange: null,
+        items: [{ key: 'unique:9', definition: 'cart-deed', label: 'Cart', quantity: '1', weight: 0, value: 1, details: '', icon: null, condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [] }],
+        slots: [],
+      },
+      transport: {
+        mode: 'cart', onShip: false, canRun: true, travelModifier: 192, oceanMinutesPerMapPixel: 255,
+        options: [{ id: 'cart', mode: 'cart', available: true, selected: true, label: 'Cart', message: 'Cart.', travelModifier: 192 }],
+        wagon: {
+          exists: true, accessible: true, id: 7, usedClassicUnits: 0, capacityClassicUnits: 300000, storeRevision: '8', message: 'Available.',
+          items: [], refusedDefinitions: ['cart-deed'],
+        },
+      },
+    });
+    f.root.querySelector('[data-action="transport"]').click();
+    assert.equal(f.root.querySelector('[data-action="wagon-put"]').disabled, true);
   } finally { f.dispose(); }
 });

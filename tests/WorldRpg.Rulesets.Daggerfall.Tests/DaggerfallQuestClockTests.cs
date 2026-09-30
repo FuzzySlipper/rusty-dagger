@@ -82,9 +82,9 @@ public sealed class DaggerfallQuestClockTests
         Assert.True(runtime.StartClock("alarm"));
         Assert.Equal(30, runtime.Capture().Clocks.Single().RemainingSeconds);
 
-        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start.Advance(9 * 3600, out _));
+        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start.Advance(9 * 3600, out _), DaggerfallQuestTaskRuntimeTests.Messages(source), new DaggerfallQuestTaskRuntimeTests.LifecycleFake());
         Assert.True(runtime.Capture().Tasks.Single().IsSet);
-        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start.Advance(20 * 3600, out _));
+        DaggerfallQuestTaskRunner.Advance(runtime, program, variables, DaggerfallCalendar.Start.Advance(20 * 3600, out _), DaggerfallQuestTaskRuntimeTests.Messages(source), new DaggerfallQuestTaskRuntimeTests.LifecycleFake());
         Assert.False(runtime.Capture().Tasks.Single().IsSet);
     }
 
@@ -117,12 +117,37 @@ public sealed class DaggerfallQuestClockTests
             [new("early", 60, 60, 0, 0, 0, true, false), new("late", 120, 120, 0, 0, 0, true, false)]);
         DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal));
 
-        DaggerfallQuestClockAdvancer.Advance(runtime, program, variables, DaggerfallCalendar.Start, DaggerfallCalendar.Start.Advance(120, out _));
+        DaggerfallQuestClockAdvancer.Advance(runtime, program, variables, DaggerfallCalendar.Start, DaggerfallCalendar.Start.Advance(120, out _),
+            DaggerfallQuestTaskRuntimeTests.Messages(source), new DaggerfallQuestTaskRuntimeTests.LifecycleFake());
 
         DaggerfallQuestInstanceSave advanced = runtime.Capture();
         Assert.Equal(DaggerfallQuestLifecycle.Ended, advanced.Lifecycle);
         Assert.True(advanced.Tasks.Single(task => task.Symbol == "result").IsSet);
         Assert.All(advanced.Clocks, clock => Assert.True(clock.Finished));
+    }
+
+    [Fact]
+    public void Deadline_task_that_logs_the_journal_runs_through_the_quest_owners_instead_of_failing()
+    {
+        // The ordinary instance owner advances clocks with its message and lifecycle owners; a deadline
+        // task that writes the journal or starts a task must run exactly as it does on the ordinary step.
+        DaggerfallQuestSourceDefinition source = new("test", string.Empty, "deadline.txt", DaggerfallQuestDisposition.Compiled,
+            [new(1010, 1, ["Time has run out."])],
+            [Clock(1, "clock _deadline_ 1"),
+             Block("task", 2, "_deadline_ task:", "log 1010 step 2", "start task _late_"),
+             Block("variable", 4, "variable _late_")], []);
+        DaggerfallQuestTaskProgram program = DaggerfallQuestTaskCompiler.Compile(source);
+        DaggerfallQuestRuntimeInstance runtime = Runtime(source, program, [new("deadline", 60, 60, 0, 0, 0, true, false)]);
+        DaggerfallQuestMessages messages = DaggerfallQuestTaskRuntimeTests.Messages(source);
+        DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal));
+
+        DaggerfallQuestClockAdvancer.Advance(runtime, program, variables, DaggerfallCalendar.Start, DaggerfallCalendar.Start.Advance(120, out _),
+            messages, new DaggerfallQuestTaskRuntimeTests.LifecycleFake());
+
+        Assert.Equal(DaggerfallQuestLifecycle.Active, runtime.Lifecycle);
+        DaggerfallQuestJournalEntrySave entry = Assert.Single(messages.Journal);
+        Assert.Equal((1010, 2), (entry.MessageId, entry.Step));
+        Assert.True(runtime.Capture().Tasks.Single(task => task.Symbol == "late").IsSet);
     }
 
     private static DaggerfallQuestRuntimeInstance Runtime(DaggerfallQuestSourceDefinition source, DaggerfallQuestTaskProgram program, DaggerfallQuestClockState[] clocks) =>

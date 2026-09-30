@@ -21,9 +21,8 @@ internal sealed class DaggerfallEnemyBehaviorModule
 {
     private readonly ActorsState _actors;
     private readonly PursuitCoordinator<IProductFact> _pursuit;
-    private readonly Func<long, DaggerfallEnemyPerceptionContext>? _contextProvider;
-    private readonly Action<DaggerfallSkillUse>? _recordSkillUse;
-    private readonly Action<long, DaggerfallEnemyPerceptionDecision>? _decisionSink;
+    private readonly Func<long, DaggerfallEnemyPerceptionContext> _contextProvider;
+    private readonly Action<DaggerfallSkillUse> _recordSkillUse;
     private readonly Dictionary<long, DaggerfallEnemyPerceptionMemory> _senses = [];
     /// <summary>
     /// Fixed pursuit configuration admitted once at composition. Detection, chase, and query
@@ -40,24 +39,17 @@ internal sealed class DaggerfallEnemyBehaviorModule
         ActorsState actors,
         IAttackCapabilities<IProductFact> combat,
         DaggerfallEnemyBehaviorTuning tuning,
-        Func<long, DaggerfallEnemyPerceptionContext>? contextProvider = null,
-        Action<DaggerfallSkillUse>? recordSkillUse = null,
-        Action<long, DaggerfallEnemyPerceptionDecision>? decisionSink = null)
+        Func<long, DaggerfallEnemyPerceptionContext> contextProvider,
+        Action<DaggerfallSkillUse> recordSkillUse)
     {
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
-        _contextProvider = contextProvider;
-        _recordSkillUse = recordSkillUse;
-        _decisionSink = decisionSink;
+        _contextProvider = contextProvider ?? throw new ArgumentNullException(nameof(contextProvider));
+        _recordSkillUse = recordSkillUse ?? throw new ArgumentNullException(nameof(recordSkillUse));
         DaggerfallEnemyBehaviorTuning admitted = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
-        // EnemySenses admits its own 102.4-unit / 180-degree query envelope.  Keep
-        // legacy callers on their authored profile bounds until they provide a
-        // real Daggerfall context; the live session opts into the donor envelope.
-        double detectionDistance = contextProvider is null
-            ? admitted.DetectionDistance
-            : Math.Max(admitted.DetectionDistance, DaggerfallPerceptionQueryDefaults.SightRadius);
-        double minimumFacingCosine = contextProvider is null
-            ? admitted.MinimumFacingCosine
-            : DaggerfallPerceptionQueryDefaults.MinimumFacingCosine;
+        // EnemySenses admits its own 102.4-unit / 180-degree query envelope; the Daggerfall
+        // perception policy then decides within it.
+        double detectionDistance = Math.Max(admitted.DetectionDistance, DaggerfallPerceptionQueryDefaults.SightRadius);
+        double minimumFacingCosine = DaggerfallPerceptionQueryDefaults.MinimumFacingCosine;
         _pursuitTuning = new PursuitTuning(detectionDistance, minimumFacingCosine, admitted.ChaseSpeedUnitsPerSecond, admitted.NavigationMaximumVisited).Validate();
         _perceptionOptions = new PursuitPerceptionOptions(DaggerfallPerceptionQueryDefaults.AnyProjectionIdentity, DaggerfallPerceptionQueryDefaults.FirstPairCursor, DaggerfallPerceptionQueryDefaults.CompleteQueryPageSize).Validate();
         _pursuit = new PursuitCoordinator<IProductFact>(new DaggerfallEnemyPerceptionService(perception, Filter), spatial, navigation, combat);
@@ -151,10 +143,6 @@ internal sealed class DaggerfallEnemyBehaviorModule
             _lastDecisions.Remove(actorId);
             return receipt;
         }
-        // A policy context is an admitted product input, not a fabricated default. Existing
-        // compositions that have not yet supplied movement, noise, effect and skill state keep
-        // the Engine's visibility result until the session wires the real context provider.
-        if (_contextProvider is null) return receipt;
         PerceptionPair? pair = receipt.Pairs.ToArray()
             .Where(value => value.Observer == checked((ulong)actorId) && value.Target == checked((ulong)DaggerfallActorIdentity.PlayerEntityId))
             .OrderBy(value => value.Distance)
@@ -163,8 +151,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
         if (!_senses.TryGetValue(actorId, out DaggerfallEnemyPerceptionMemory? memory))
             _senses.Add(actorId, memory = new DaggerfallEnemyPerceptionMemory());
 
-        DaggerfallEnemyPerceptionContext context = _contextProvider?.Invoke(actorId)
-            ?? DaggerfallEnemyPerceptionContext.Default(0);
+        DaggerfallEnemyPerceptionContext context = _contextProvider(actorId);
         if (memory.ForcedHostile)
             context = context with { EnemyHostile = true, TargetPacified = false };
         DaggerfallEnemyPerceptionSource source = new(
@@ -173,8 +160,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
             source, context, context.RollPercent);
         _lastDecisions[actorId] = decision;
         foreach (DaggerfallSkillUse use in decision.SkillUses)
-            _recordSkillUse?.Invoke(use);
-        _decisionSink?.Invoke(actorId, decision);
+            _recordSkillUse(use);
 
         if (pair is null || decision.PursuitVisible == (pair.Value.Kind == PerceptionPairKind.Visible))
             return receipt;

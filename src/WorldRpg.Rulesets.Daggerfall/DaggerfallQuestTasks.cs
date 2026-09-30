@@ -349,11 +349,13 @@ internal static class DaggerfallQuestTaskRunner
     // Donor QuestMachine.QuestMessages.QuestComplete. TrainPc presents this fixed reward message.
     private const int QuestCompleteMessageId = 1004;
 
-    internal static void Advance(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskProgram program, DaggerfallVariableStore variables, World.DaggerfallCalendar calendar, DaggerfallQuestMessages? messages = null, IDaggerfallQuestTaskLifecycle? lifecycle = null)
+    internal static void Advance(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskProgram program, DaggerfallVariableStore variables, World.DaggerfallCalendar calendar, DaggerfallQuestMessages messages, IDaggerfallQuestTaskLifecycle lifecycle)
     {
         ArgumentNullException.ThrowIfNull(instance);
         ArgumentNullException.ThrowIfNull(program);
         ArgumentNullException.ThrowIfNull(variables);
+        ArgumentNullException.ThrowIfNull(messages);
+        ArgumentNullException.ThrowIfNull(lifecycle);
         DaggerfallQuestTaskRuntimeState[] states = instance.Tasks;
         IReadOnlyDictionary<string, int> indexes = program.TaskIndexes;
 
@@ -390,7 +392,7 @@ internal static class DaggerfallQuestTaskRunner
                 }
                 if (operation.Kind is DaggerfallQuestTaskOperationKind.LevelCompleted or DaggerfallQuestTaskOperationKind.WhenAttributeLevel or DaggerfallQuestTaskOperationKind.WhenSkillLevel)
                 {
-                    IDaggerfallQuestTaskLifecycle owner = lifecycle ?? throw new InvalidOperationException($"Quest condition at line {operation.SourceLine} has no session runtime owner.");
+                    IDaggerfallQuestTaskLifecycle owner = lifecycle;
                     bool triggered = operation.Kind switch
                     {
                         DaggerfallQuestTaskOperationKind.LevelCompleted => owner.IsLevelCompleted(Requirement(operation, 0)),
@@ -442,46 +444,18 @@ internal static class DaggerfallQuestTaskRunner
                         MarkCompleted(state, operationIndex);
                         break;
                     case DaggerfallQuestTaskOperationKind.Journal:
-                        if (messages is null)
-                        {
-                            instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
-                            instance.Outcome = $"Quest journal action at line {operation.SourceLine} has no message owner.";
-                            instance.Succeeded = false;
-                            return;
-                        }
                         messages.Log(instance, operation.MessageId!.Value, operation.Step!.Value);
                         MarkCompleted(state, operationIndex);
                         break;
                     case DaggerfallQuestTaskOperationKind.RemoveJournal:
-                        if (messages is null)
-                        {
-                            instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
-                            instance.Outcome = $"Quest journal action at line {operation.SourceLine} has no message owner.";
-                            instance.Succeeded = false;
-                            return;
-                        }
                         messages.RemoveLog(instance, operation.Step!.Value);
                         MarkCompleted(state, operationIndex);
                         break;
                     case DaggerfallQuestTaskOperationKind.Rumor:
-                        if (messages is null)
-                        {
-                            instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
-                            instance.Outcome = $"Quest rumor action at line {operation.SourceLine} has no message owner.";
-                            instance.Succeeded = false;
-                            return;
-                        }
                         messages.Rumor(instance, operation.MessageId!.Value);
                         MarkCompleted(state, operationIndex);
                         break;
                     case DaggerfallQuestTaskOperationKind.Prompt:
-                        if (messages is null)
-                        {
-                            instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
-                            instance.Outcome = $"Quest prompt action at line {operation.SourceLine} has no message owner.";
-                            instance.Succeeded = false;
-                            return;
-                        }
                         if (!messages.TryResolveMessage(instance, operation.MessageId, operation.MessageAlias, out int promptMessage, out string? promptDiagnostic))
                         {
                             instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
@@ -492,48 +466,20 @@ internal static class DaggerfallQuestTaskRunner
                         messages.Prompt(instance, promptMessage, PromptChoices(operation), task.Symbol, operationIndex);
                         return;
                     case DaggerfallQuestTaskOperationKind.PickOneOf:
-                        if (lifecycle is null)
-                        {
-                            instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
-                            instance.Outcome = $"Quest pick-one-of action at line {operation.SourceLine} has no session lifecycle owner.";
-                            instance.Succeeded = false;
-                            return;
-                        }
                         string picked = lifecycle.Pick(instance, operation, operationIndex, state);
                         Start(picked, states, indexes, program.Tasks, variables, instance.InstanceId, operation);
                         MarkCompleted(state, operationIndex);
                         break;
                     case DaggerfallQuestTaskOperationKind.StartQuest:
-                        if (lifecycle is null)
-                        {
-                            instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
-                            instance.Outcome = $"Quest start action at line {operation.SourceLine} has no session lifecycle owner.";
-                            instance.Succeeded = false;
-                            return;
-                        }
                         lifecycle.Schedule(instance, operation);
                         MarkCompleted(state, operationIndex);
                         break;
                     case DaggerfallQuestTaskOperationKind.TrainPc:
-                        if (lifecycle is null)
-                        {
-                            instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
-                            instance.Outcome = $"Quest training action at line {operation.SourceLine} has no session runtime owner.";
-                            instance.Succeeded = false;
-                            return;
-                        }
                         lifecycle.Train(instance, operation);
-                        messages?.TryPopup(instance, QuestCompleteMessageId);
+                        messages.TryPopup(instance, QuestCompleteMessageId);
                         MarkCompleted(state, operationIndex);
                         break;
                     case DaggerfallQuestTaskOperationKind.RunQuest:
-                        if (lifecycle is null)
-                        {
-                            instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
-                            instance.Outcome = $"Quest child action at line {operation.SourceLine} has no session lifecycle owner.";
-                            instance.Succeeded = false;
-                            return;
-                        }
                         if (lifecycle.RunChild(instance, task, operation, operationIndex, state) is { } branch)
                         {
                             Start(branch, states, indexes, program.Tasks, variables, instance.InstanceId, operation);
@@ -546,7 +492,7 @@ internal static class DaggerfallQuestTaskRunner
                         instance.Outcome = "end quest";
                         instance.Succeeded ??= false;
                         instance.TerminalMessageId = operation.MessageId;
-                        if (operation.MessageId is { } messageId) messages?.Popup(instance, messageId);
+                        if (operation.MessageId is { } messageId) messages.Popup(instance, messageId);
                         return;
                     case DaggerfallQuestTaskOperationKind.Unsupported:
                         instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
