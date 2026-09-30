@@ -45,20 +45,23 @@ internal static partial class Program
     /// </remarks>
     private static int RunMusicMediaCommand(IReadOnlyList<string> args)
     {
-        const string Usage = "usage: daggerfall-import-tool music-media --out CONTENT_ROOT [--sound SOURCE_DIR] [--update]";
+        const string Usage = "usage: daggerfall-import-tool music-media --out CONTENT_ROOT [--sound SOURCE_DIR [--require-all]] [--update]";
         bool update = args.Contains("--update", StringComparer.Ordinal);
+        // A regeneration of the published tree needs every cue: a folder that lacks one would publish a
+        // smaller score and name fewer cues in every site, so the absence is refused by file name.
+        bool requireAll = args.Contains("--require-all", StringComparer.Ordinal);
         Dictionary<string, string> values = new(StringComparer.Ordinal);
         for (int index = 1; index < args.Count; index++)
         {
             string argument = args[index];
-            if (argument == "--update") continue;
+            if (argument is "--update" or "--require-all") continue;
             if (!argument.StartsWith("--", StringComparison.Ordinal) || index + 1 >= args.Count || !values.TryAdd(argument, args[++index]))
             {
                 throw new ArgumentException(Usage);
             }
         }
 
-        if (!values.ContainsKey("--out") || values.Keys.Any(key => key is not ("--out" or "--sound")))
+        if (!values.ContainsKey("--out") || values.Keys.Any(key => key is not ("--out" or "--sound")) || (requireAll && !values.ContainsKey("--sound")))
         {
             throw new ArgumentException(Usage);
         }
@@ -75,6 +78,7 @@ internal static partial class Program
         }
         else if (!Directory.Exists(sound))
         {
+            if (requireAll) throw new DirectoryNotFoundException($"The music folder '{sound}' does not exist, and --require-all publishes every cue or nothing.");
             Console.WriteLine($"music: '{sound}' does not exist, so no cue is published and the product plays no score.");
         }
         else
@@ -84,6 +88,7 @@ internal static partial class Program
                 string path = Path.Combine(sound, cue.SourceFile);
                 if (!File.Exists(path))
                 {
+                    if (requireAll) throw new FileNotFoundException($"'{cue.SourceFile}' is not in '{sound}', and --require-all publishes cue '{cue.MediaId}' or nothing.", path);
                     Console.WriteLine($"music: '{cue.SourceFile}' is not in '{sound}'; cue '{cue.MediaId}' is not published.");
                     continue;
                 }

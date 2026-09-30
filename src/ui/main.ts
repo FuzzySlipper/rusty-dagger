@@ -237,7 +237,6 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
         <button data-action="load-game">Load game</button>
         <button data-action="debug">Engine debug console</button>
         <button data-action="diagnostics">Composition diagnostics</button>
-        <button data-action="tools">Sprite animation tool</button>
         <button data-action="settings">Control settings</button>
         <p>The world continues while this menu is open.</p>
       </div>
@@ -274,7 +273,6 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       </section>
       <div class="dagger-debug-root" data-rusty-ui-interactive hidden></div>
       <button data-action="loot-exit" hidden>Exit loot</button>
-      <section class="dagger-tools" hidden><p>Sprite Workbench is a separate authoring application. Start it from the repository terminal:</p><pre>bash src/scripts/run-sprite-workbench.sh</pre><p>Edits save to authoring/sprites/privateers-hold.json.</p><a class="dagger-workbench-link" target="_blank" rel="noopener">Open Sprite Workbench ↗</a></section>
       <button data-action="back">Back to menu</button>
       </div>
     </dialog>
@@ -453,10 +451,6 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const home = shell.querySelector<HTMLElement>('.dagger-menu-home')!;
   const panel = shell.querySelector<HTMLElement>('.dagger-menu-panel')!;
   const diagnostics = shell.querySelector<HTMLElement>('.dagger-composition')!;
-  const tools = shell.querySelector<HTMLElement>('.dagger-tools')!;
-  const workbenchUrl = new URL(window.location.href);
-  workbenchUrl.port = '4175'; workbenchUrl.pathname = '/'; workbenchUrl.search = ''; workbenchUrl.hash = '';
-  shell.querySelector<HTMLAnchorElement>('.dagger-workbench-link')!.href = workbenchUrl.href;
   const menuToggle = shell.querySelector<HTMLButtonElement>('.dagger-menu-toggle')!;
   const debugRoot = shell.querySelector<HTMLElement>('.dagger-debug-root')!;
   let debugPanel: LiveDebugPanelMount | null = null;
@@ -473,7 +467,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       if (host.isConnected) host.textContent = `Debug console unavailable: ${error instanceof Error ? error.message : String(error)}`;
     });
   };
-  let activePanel: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings' | null = null;
+  let activePanel: 'diagnostics' | 'inventory' | 'character' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings' | null = null;
   const showHome = (): void => {
     controlsView.cancel();
     const previous = activePanel;
@@ -515,7 +509,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     else if (menu.open) closeMenu();
     else openMenu();
   };
-  const showPanel = (action: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings'): void => {
+  const showPanel = (action: 'diagnostics' | 'inventory' | 'character' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings'): void => {
     if (!menu.open) openMenu();
     if (activePanel === 'loot' && action !== 'loot') closeLoot();
     if (activePanel === 'debug') closeDebug();
@@ -523,7 +517,6 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     home.hidden = true;
     panel.hidden = false;
     diagnostics.hidden = action !== 'diagnostics';
-    tools.hidden = action !== 'tools';
     inventoryRoot.hidden = action !== 'inventory';
     characterRoot.hidden = action !== 'character';
     transportRoot.hidden = action !== 'transport';
@@ -545,7 +538,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     menuTitle.textContent = action === 'settings' ? 'Control settings' : action === 'diagnostics' ? 'Composition diagnostics'
       : action === 'inventory' ? 'Inventory & equipment' : action === 'character' ? 'Character' : action === 'transport' ? 'Travel & transport' : action === 'rest' ? 'Rest & loiter' : action === 'journal' ? 'Journal & notes'
       : action === 'loot' ? 'Loot' : action === 'debug' ? 'Engine debug console'
-      : action === 'save-slots' ? (saveSlotMode === 'save' ? 'Save game' : 'Load game') : 'Sprite animation tool';
+      : saveSlotMode === 'save' ? 'Save game' : 'Load game';
     if (action === 'character') {
       menuTitle.focus({ preventScroll: true });
       menu.scrollTop = 0;
@@ -589,7 +582,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     else if (action === 'loot') claim('loot');
     else if (action === 'save-game') showSaveSlots('save');
     else if (action === 'load-game') showSaveSlots('load');
-    else if (action === 'settings' || action === 'diagnostics' || action === 'tools' || action === 'inventory' || action === 'character' || action === 'transport' || action === 'rest' || action === 'journal' || action === 'debug') showPanel(action);
+    else if (action === 'settings' || action === 'diagnostics' || action === 'inventory' || action === 'character' || action === 'transport' || action === 'rest' || action === 'journal' || action === 'debug') showPanel(action);
   };
   const onMenuClick = (event: MouseEvent): void => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button');

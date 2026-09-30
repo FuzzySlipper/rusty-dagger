@@ -14,6 +14,9 @@ internal static partial class Program
 {
     private const long MaximumIndividualSourceBytes = 128L * 1024L * 1024L;
     private const long MaximumTotalSourceBytes = 512L * 1024L * 1024L;
+
+    /// <summary>The documented corpus directory every published Arena2 source label names.</summary>
+    private const string Arena2LogicalRoot = "local/arena2";
     private static readonly string[] RuntimeEncounterActorResources = Enumerable.Range(0, 39).Concat(Enumerable.Range(40, 3)).Concat(Enumerable.Range(128, 19))
         .Select(id => $"actor/mobile-{id}").ToArray();
     private static readonly string[] RuntimeGroundBillboardResources = ["sprite/texture-216-0"];
@@ -171,7 +174,7 @@ internal static partial class Program
             }
 
             ToolOptions options = ToolOptions.Parse(args);
-            ImportPublicationPlan plan = AttachSourceManifest(BuildPlan(options), options.Arena2Directory, options.InventoryFile);
+            ImportPublicationPlan plan = AttachSourceManifest(BuildPlan(options, args), options.Arena2Directory, options.InventoryFile);
             if (options.InventoryFile is null)
             {
                 SourceManifestPublication.RefuseProvenanceLoss(plan, options.OutputDirectory);
@@ -185,7 +188,7 @@ internal static partial class Program
                     PrintPlan(ImportPublicationWriter.Write(plan, options.OutputDirectory));
                     return 0;
                 case ToolCommand.VerifyRealData:
-                    VerifyDeterminism(plan, options);
+                    VerifyDeterminism(plan, options, args);
                     return 0;
                 default:
                     throw new InvalidOperationException("The import command is not known.");
@@ -256,7 +259,8 @@ internal static partial class Program
                     classicMediaProfile,
                     new Arena2ClassicMediaPublicationOptions(MaximumSourceBytes: MaximumIndividualSourceBytes),
                     worldVisuals);
-                plan = AttachSourceManifest(Arena2MediaBundlePublication.Create(result, dungeonMedia, classicMedia, geometry).Plan,
+                plan = AttachSourceManifest(Arena2MediaBundlePublication.Create(result, dungeonMedia, classicMedia, geometry).Plan
+                    .WithInvocation(new ImportInvocation(RecordedCommand(args), [])),
                     values["--arena2"], Path.GetFullPath(values["--inventory"]));
                 break;
             }
@@ -424,13 +428,17 @@ internal static partial class Program
     private static int RunMagicCatalogCommand(IReadOnlyList<string> args)
     {
         bool update = args.Contains("--update", StringComparer.Ordinal);
-        if (args.Count != (update ? 6 : 5) || args[1] != "--arena2" || args[3] != "--pack")
+        if (args.Count != (update ? 8 : 7) || args[1] != "--arena2" || args[3] != "--pack" || args[5] != "--donor-formulas")
         {
-            throw new ArgumentException("usage: daggerfall-import-tool magic-catalog --arena2 SOURCE_DIR --pack PACK.json [--update]");
+            throw new ArgumentException("usage: daggerfall-import-tool magic-catalog --arena2 SOURCE_DIR --pack PACK.json --donor-formulas FormulaHelper.cs [--update]");
         }
 
         string arena2 = args[2];
         string packFile = args[4];
+        // The spell-cost tables are not in any Arena2 file; the donor reversed them from the executable, and
+        // the ruleset refuses a catalog whose spell effects carry no cost row, so the donor file is required.
+        string formulas = args[6];
+        if (!File.Exists(formulas)) throw new FileNotFoundException($"The donor's spell-cost tables ({Arena2MagicEffectCostTable.DonorSourcePath}) are required to publish effect costs and are not at '{formulas}'.", formulas);
         foreach (string refused in Directory.EnumerateFiles(arena2, "*", SearchOption.TopDirectoryOnly))
         {
             if (string.Equals(Path.GetFileName(refused), "SPELL.RSC", StringComparison.OrdinalIgnoreCase))
@@ -444,7 +452,8 @@ internal static partial class Program
         if (!File.Exists(spellPath)) throw new FileNotFoundException($"SPELLS.STD is required to build the spell catalog and is not in '{arena2}'.", spellPath);
         if (!File.Exists(magicPath)) throw new FileNotFoundException($"MAGIC.DEF is required to build the magic-item catalog and is not in '{arena2}'.", magicPath);
         Arena2MagicCatalogPublication publication = Arena2MagicCatalogDocument.Build(
-            File.ReadAllBytes(spellPath), File.ReadAllBytes(magicPath), "local/arena2/SPELLS.STD", "local/arena2/MAGIC.DEF");
+            File.ReadAllBytes(spellPath), File.ReadAllBytes(magicPath), Arena2Label("SPELLS.STD"), Arena2Label("MAGIC.DEF"),
+            Arena2MagicEffectCostTable.Read(File.ReadAllText(formulas)));
         Console.WriteLine($"magic catalog: {publication.Spells} spells, {publication.MagicItems} magic items, {publication.Enchantments} enchantments, {publication.UnresolvedLinks} unresolved spell links, {publication.Dispositions} dispositions");
         if (!update)
         {
@@ -963,10 +972,8 @@ internal static partial class Program
         IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(values["--inventory"]));
         // The documented inventory decides the logical source identity, so the bytes are read under the
         // paths the repository documents rather than under whatever directory the caller happened to name.
-        string climateLabel = Path.Combine(arena2, "CLIMATE.PAK");
-        string politicLabel = Path.Combine(arena2, "POLITIC.PAK");
-        DaggerfallClimateGrid climate = DaggerfallWorldGridsBuilder.BuildClimate(File.ReadAllBytes(climateLabel), climateLabel, inventory);
-        DaggerfallPoliticGrid politic = DaggerfallWorldGridsBuilder.BuildPolitic(File.ReadAllBytes(politicLabel), politicLabel, inventory);
+        DaggerfallClimateGrid climate = DaggerfallWorldGridsBuilder.BuildClimate(File.ReadAllBytes(Path.Combine(arena2, "CLIMATE.PAK")), Arena2Label("CLIMATE.PAK"), inventory);
+        DaggerfallPoliticGrid politic = DaggerfallWorldGridsBuilder.BuildPolitic(File.ReadAllBytes(Path.Combine(arena2, "POLITIC.PAK")), Arena2Label("POLITIC.PAK"), inventory);
 
         Console.WriteLine($"climate: {climate.Rows.Count} rows, {climate.Values.Count} distinct values ({climate.Values.Count(value => value.Disposition == DaggerfallClimateDisposition.Named)} named)");
         Console.WriteLine($"politic: {politic.Rows.Count} rows, {politic.Values.Count} distinct values ({politic.Values.Count(value => value.Disposition == DaggerfallPoliticDisposition.Region)} regions, {politic.Values.Count(value => value.Disposition == DaggerfallPoliticDisposition.Ocean)} ocean, {politic.Values.Count(value => value.Disposition == DaggerfallPoliticDisposition.Unresolved)} unresolved)");
@@ -1070,13 +1077,13 @@ internal static partial class Program
         for (int classIndex = 0; classIndex <= 17; classIndex++)
         {
             string file = $"BIOG{classIndex:D2}T0.TXT";
-            string label = Path.Combine(arena2, file);
-            if (!File.Exists(label))
+            string path = Path.Combine(arena2, file);
+            if (!File.Exists(path))
             {
                 throw new ArgumentException($"the arena2 directory carries no {file}, so the biography questionnaires are incomplete");
             }
 
-            questionnaires.Add((File.ReadAllText(label), label, classIndex, 0));
+            questionnaires.Add((File.ReadAllText(path), Arena2Label(file), classIndex, 0));
         }
 
         string imageLabel = Path.Combine(arena2, "BIOG00I0.IMG");
@@ -1088,16 +1095,16 @@ internal static partial class Program
 
         (DaggerfallText text, DaggerfallNameTables names, DaggerfallRumorCatalog rumors, DaggerfallBiographies biographies, DaggerfallBooks publishedBooks) = DaggerfallTextBuilder.BuildAll(
             File.ReadAllBytes(source),
-            source,
+            Arena2Label(TextResourceReader.FileName),
             File.ReadAllBytes(Path.Combine(arena2, NameGenReader.FileName)),
-            Path.Combine(arena2, NameGenReader.FileName),
+            Arena2Label(NameGenReader.FileName),
             File.ReadAllBytes(Path.Combine(arena2, RumorReader.FileName)),
-            Path.Combine(arena2, RumorReader.FileName),
+            Arena2Label(RumorReader.FileName),
             File.ReadAllBytes(Path.Combine(arena2, BioDatReader.FileName)),
-            Path.Combine(arena2, BioDatReader.FileName),
+            Arena2Label(BioDatReader.FileName),
             questionnaires,
             imageBytes,
-            ReadBooks(Path.Combine(arena2, "books")),
+            ReadBooks(Path.Combine(arena2, "books"), Arena2Label("books")),
             SourceManifestBuilder.ReadInventory(File.ReadAllBytes(values["--inventory"])),
             values["--language"]);
 
@@ -1235,7 +1242,7 @@ internal static partial class Program
     /// repository documents. A stem that carries no identity is refused rather than published under
     /// a guessed one.
     /// </summary>
-    private static IReadOnlyList<(int BookId, string Label, byte[] Bytes)> ReadBooks(string directory)
+    private static IReadOnlyList<(int BookId, string Label, byte[] Bytes)> ReadBooks(string directory, string label)
     {
         List<(int BookId, string Label, byte[] Bytes)> books = [];
         foreach (string path in Directory.EnumerateFiles(directory, "BOK*.TXT").Order(StringComparer.Ordinal))
@@ -1246,11 +1253,17 @@ internal static partial class Program
                 throw new InvalidOperationException($"'{stem}' does not carry a book identity, so it cannot be enumerated as a book.");
             }
 
-            books.Add((bookId, Path.Combine(directory, Path.GetFileName(path)).Replace(Path.DirectorySeparatorChar, '/'), File.ReadAllBytes(path)));
+            books.Add((bookId, $"{label}/{Path.GetFileName(path)}", File.ReadAllBytes(path)));
         }
 
         return books;
     }
+
+    /// <summary>
+    /// The logical label of an Arena2 source: the documented corpus path, whatever directory the caller
+    /// supplied the bytes from, so a published section does not change with where the operator keeps the corpus.
+    /// </summary>
+    private static string Arena2Label(string relativePath) => $"{Arena2LogicalRoot}/{relativePath}";
 
     /// <summary>
     /// Reads the classic faction file into the base pack when asked, so a region, temple, guild or
@@ -1281,9 +1294,9 @@ internal static partial class Program
 
         string arena2 = values["--arena2"];
         IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(values["--inventory"]));
-        string label = Path.Combine(arena2, "FACTION.TXT");
-        byte[] bytes = File.ReadAllBytes(label);
-        DaggerfallFactions factions = DaggerfallFactionsBuilder.Build(File.ReadAllText(label), label, bytes, inventory);
+        string path = Path.Combine(arena2, "FACTION.TXT");
+        byte[] bytes = File.ReadAllBytes(path);
+        DaggerfallFactions factions = DaggerfallFactionsBuilder.Build(File.ReadAllText(path), Arena2Label("FACTION.TXT"), bytes, inventory);
 
         Console.WriteLine($"factions: {factions.Factions.Count} records, {factions.Regions.Count(region => region.Disposition == DaggerfallRegionFactionDisposition.Claimed)} claimed regions, {factions.DuplicateNames.Count} duplicated names");
         foreach (DaggerfallFactionNameAlias alias in factions.DuplicateNames)
@@ -1333,8 +1346,7 @@ internal static partial class Program
 
         string arena2 = values["--arena2"];
         IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(values["--inventory"]));
-        string label = Path.Combine(arena2, "WOODS.WLD");
-        DaggerfallTerrain terrain = DaggerfallTerrainBuilder.Build(File.ReadAllBytes(label), label, inventory);
+        DaggerfallTerrain terrain = DaggerfallTerrainBuilder.Build(File.ReadAllBytes(Path.Combine(arena2, "WOODS.WLD")), Arena2Label("WOODS.WLD"), inventory);
 
         Console.WriteLine($"terrain: {terrain.Heightmap.Count} heightmap rows, {terrain.CellCount} cells from {terrain.CellBase} stride {terrain.CellStride}, {terrain.Prefix.Count} prefix domains");
         if (!update)
@@ -1521,7 +1533,7 @@ internal static partial class Program
             files.Add((fileName, kind.Value, bytes.LongLength, Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes))));
         }
 
-        DaggerfallCinematicPack pack = DaggerfallCinematicPackBuilder.Build(files, "local/arena2", inventory);
+        DaggerfallCinematicPack pack = DaggerfallCinematicPackBuilder.Build(files, Arena2LogicalRoot, inventory);
         Console.WriteLine($"videos: {pack.Cinematics.Count} cinematics, {pack.Cinematics.Count(record => record.Binding == DaggerfallCinematicBinding.Bound)} bound");
         if (!update)
         {
@@ -1643,17 +1655,21 @@ internal static partial class Program
         }
 
         JsonNode pack = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
-        if (pack["blocks"] is not JsonObject blocks)
+        // The complete block document is the one the blocks command writes beside the pack. The pack's own
+        // blocks section has its placements stripped, and a stripped city block does not validate, so the
+        // use sites are read from the complete document rather than from the section.
+        string blocksPayload = BlockPlacementsPayloadPath(values["--pack"]);
+        if (!File.Exists(blocksPayload))
         {
-            throw new ArgumentException("the pack carries no blocks section, which is where mesh use sites come from: run the blocks command first");
+            throw new ArgumentException($"there is no block document at '{blocksPayload}', which is where mesh use sites come from: run the blocks command first");
         }
 
-        // The section is read through its own contract rather than by matching member names here. A pack
-        // whose block section this build cannot read has to refuse: walking members by name would fold a
-        // shape it does not recognize into a geometry section where every mesh is unused, which is the
-        // opposite of the closure set this inventory exists to publish.
-        DaggerfallBlocks publishedBlocks = blocks.Deserialize<DaggerfallBlocks>(PublishedJson.SectionRead)
-            ?? throw new ArgumentException("the pack's blocks section could not be read");
+        // The document is read through its own contract rather than by matching member names here. A
+        // document this build cannot read has to refuse: walking members by name would fold a shape it
+        // does not recognize into a geometry section where every mesh is unused, which is the opposite of
+        // the closure set this inventory exists to publish.
+        DaggerfallBlocks publishedBlocks = JsonSerializer.Deserialize<DaggerfallBlocks>(File.ReadAllBytes(blocksPayload), PublishedJson.SectionRead)
+            ?? throw new ArgumentException($"the block document '{blocksPayload}' could not be read");
         publishedBlocks.Validate();
 
         List<DaggerfallGeometryUseSite> useSites = [];
@@ -1667,10 +1683,9 @@ internal static partial class Program
 
         // The documented inventory decides the logical source identity, so the bytes are read under the
         // path the repository documents rather than under whatever directory the caller happened to name.
-        string source = Path.Combine(values["--arena2"], Arch3dInventoryReader.FileName);
         DaggerfallGeometry geometry = DaggerfallGeometryBuilder.Build(
-            File.ReadAllBytes(source),
-            source,
+            File.ReadAllBytes(Path.Combine(values["--arena2"], Arch3dInventoryReader.FileName)),
+            Arena2Label(Arch3dInventoryReader.FileName),
             SourceManifestBuilder.ReadInventory(File.ReadAllBytes(values["--inventory"])),
             useSites);
 
@@ -1728,10 +1743,9 @@ internal static partial class Program
 
         // The documented inventory decides the logical source identity, so the bytes are read under the
         // path the repository documents rather than under whatever directory the caller happened to name.
-        string source = Path.Combine(values["--arena2"], BlockRecordInventoryReader.FileName);
         DaggerfallBlocks blocks = DaggerfallBlocksBuilder.Build(
-            File.ReadAllBytes(source),
-            source,
+            File.ReadAllBytes(Path.Combine(values["--arena2"], BlockRecordInventoryReader.FileName)),
+            Arena2Label(BlockRecordInventoryReader.FileName),
             SourceManifestBuilder.ReadInventory(File.ReadAllBytes(values["--inventory"])));
 
         DaggerfallBlockSource publishedSource = blocks.Sources[0];
@@ -1762,11 +1776,15 @@ internal static partial class Program
         pack["blocks"] = JsonNode.Parse(JsonSerializer.Serialize(stripped, PublishedJson.Section));
         File.WriteAllText(values["--pack"], pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
         Console.WriteLine($"pack: blocks updated in {values["--pack"]}");
-        string payloadPath = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(values["--pack"]))!, "daggerfall.blocks.json");
+        string payloadPath = BlockPlacementsPayloadPath(values["--pack"]);
         File.WriteAllText(payloadPath, JsonSerializer.Serialize(blocks, PublishedJson.SectionCompact) + "\n");
         Console.WriteLine($"pack: block placements updated in {payloadPath}");
         return 0;
     }
+
+    /// <summary>The complete block document the blocks command writes beside the pack it updates.</summary>
+    private static string BlockPlacementsPayloadPath(string packFile) =>
+        Path.Combine(Path.GetDirectoryName(Path.GetFullPath(packFile))!, "daggerfall.blocks.json");
 
     private static DaggerfallBlocks StripPlacements(DaggerfallBlocks blocks)
     {
@@ -2043,7 +2061,7 @@ internal static partial class Program
         CanonicalImportManifest published = ImportPublicationManifestSerializer.Deserialize(
             File.ReadAllBytes(Path.Combine(publication, ImportPublicationManifestSerializer.ManifestRelativePath)));
         SourceManifest complete = SourceManifestBuilder.Scan(
-            new SourceManifestRequest("local/arena2", Path.GetFileName(inventoryFile), arena2,
+            new SourceManifestRequest(Arena2LogicalRoot, Path.GetFileName(inventoryFile), arena2,
                 ImportedNames(published.Sources.Select(source => source.SourcePath)), [], ExcludedNames(inventory)),
             inventoryBytes);
         byte[] bytes = SourceManifestSerializer.Serialize(complete);
@@ -2136,7 +2154,7 @@ internal static partial class Program
 
         byte[] inventoryBytes = File.ReadAllBytes(inventoryFile);
         SourceManifest complete = SourceManifestBuilder.Scan(
-            new SourceManifestRequest("local/arena2", Path.GetFileName(inventoryFile), arena2Directory,
+            new SourceManifestRequest(Arena2LogicalRoot, Path.GetFileName(inventoryFile), arena2Directory,
                 ImportedNames(plan.Manifest.Sources.Select(source => source.SourcePath)), [], ExcludedNames(SourceManifestBuilder.ReadInventory(inventoryBytes))),
             inventoryBytes);
         // A publication that carries a source manifest is its first consumer: every
@@ -2242,13 +2260,12 @@ internal static partial class Program
         File.WriteAllBytes(outputPath, SpriteInspectionDocumentSerializer.Serialize(document));
     }
 
-    private static SpriteAuthoredOverlayDocument ReadOverlay(string authoringDirectory, string relativePath)
-    {
-        string path = SpriteAuthoredOverlayStore.ResolveRelativePath(authoringDirectory, relativePath);
-        return ReadExternalOverlay(path);
-    }
+    private static SpriteAuthoredOverlayDocument ReadOverlay(string authoringDirectory, string relativePath) =>
+        SpriteAuthoredOverlayStore.Read(ReadOverlayBytes(SpriteAuthoredOverlayStore.ResolveRelativePath(authoringDirectory, relativePath)));
 
-    private static SpriteAuthoredOverlayDocument ReadExternalOverlay(string path)
+    private static SpriteAuthoredOverlayDocument ReadExternalOverlay(string path) => SpriteAuthoredOverlayStore.Read(ReadOverlayBytes(path));
+
+    private static byte[] ReadOverlayBytes(string path)
     {
         FileInfo file = new(Path.GetFullPath(path));
         if (!file.Exists || file.Length is <= 0 or > 1024 * 1024)
@@ -2262,8 +2279,16 @@ internal static partial class Program
             throw new IOException("The sprite overlay input changed while it was being read.");
         }
 
-        return SpriteAuthoredOverlayStore.Read(bytes);
+        return bytes;
     }
+
+    /// <summary>
+    /// The command line a publication manifest records: the tool's own arguments as the caller spelled them.
+    /// A plan or a determinism check describes the publication a write produces, so it is recorded under the
+    /// write verb and a plan of an unchanged tree compares equal to the tree.
+    /// </summary>
+    private static string[] RecordedCommand(IReadOnlyList<string> args) =>
+        ["daggerfall-import-tool", .. args.Select((argument, index) => index == 0 && argument is "plan" or "verify-real-data" ? "write" : argument)];
 
     private static readonly JsonSerializerOptions SpriteJsonOptions = new()
     {
@@ -2274,24 +2299,29 @@ internal static partial class Program
 
     private static void PrintJson<T>(T value) => Console.WriteLine(JsonSerializer.Serialize(value, SpriteJsonOptions));
 
-    private static ImportPublicationPlan BuildPlan(ToolOptions options)
+    private static ImportPublicationPlan BuildPlan(ToolOptions options, IReadOnlyList<string> args)
     {
+        string[] command = RecordedCommand(args);
         if (options.SpriteAuthoringDirectory is null)
         {
-            return BuildPlanCore(options, [], []);
+            return BuildPlanCore(options, [], []).WithInvocation(new ImportInvocation(command, []));
         }
 
         SpriteAuthoredOverlayStore.ValidateRootSeparation(options.OutputDirectory, options.SpriteAuthoringDirectory);
         ImportPublicationPlan currentInputs = BuildPlanCore(options, [], []);
         SpritePublicationSnapshot current = SpritePublicationReader.FromPlan(currentInputs);
-        SpriteAuthoredOverlayDocument overlay = ReadOverlay(options.SpriteAuthoringDirectory, options.SpriteOverlayPath!);
+        // The overlay's bytes are read once, so the document applied and the digest recorded are the same.
+        byte[] overlayBytes = ReadOverlayBytes(SpriteAuthoredOverlayStore.ResolveRelativePath(options.SpriteAuthoringDirectory, options.SpriteOverlayPath!));
+        SpriteAuthoredOverlayDocument overlay = SpriteAuthoredOverlayStore.Read(overlayBytes);
         IReadOnlyList<AuthoredMediaOverlay> values = SpriteAuthoredMediaOverlays.ToMediaOverlays(overlay, current.Catalog, current.AuthoringBasisDigest);
 
         HashSet<string> dungeonIds = current.Catalog.Entries
             .Where(entry => entry.Kind is SpriteInspectionKind.DungeonBillboard or SpriteInspectionKind.DungeonActor or SpriteInspectionKind.DungeonCorpse)
             .Select(entry => entry.Id)
             .ToHashSet(StringComparer.Ordinal);
-        return BuildPlanCore(options, values.Where(value => dungeonIds.Contains(value.Id)).ToArray(), values.Where(value => !dungeonIds.Contains(value.Id)).ToArray());
+        ImportPublicationSource overlaySource = new(options.SpriteOverlayPath!, ContentDigest.Compute(overlayBytes), overlayBytes.LongLength);
+        return BuildPlanCore(options, values.Where(value => dungeonIds.Contains(value.Id)).ToArray(), values.Where(value => !dungeonIds.Contains(value.Id)).ToArray())
+            .WithInvocation(new ImportInvocation(command, [overlaySource]));
     }
 
     private static ImportPublicationPlan BuildPlanCore(ToolOptions options, IReadOnlyList<AuthoredMediaOverlay> dungeonOverlays, IReadOnlyList<AuthoredMediaOverlay> classicOverlays)
@@ -2557,7 +2587,7 @@ internal static partial class Program
 
     private sealed record AuthoredUiAssetFile(string Id, string File, string SourceFile, string Generator, string Prompt);
 
-    private static void VerifyDeterminism(ImportPublicationPlan plan, ToolOptions options)
+    private static void VerifyDeterminism(ImportPublicationPlan plan, ToolOptions options, IReadOnlyList<string> arguments)
     {
         string parent = Path.GetTempPath();
         string root = Path.Combine(parent, $"daggerfall-import-verify-{Guid.NewGuid():N}");
@@ -2566,7 +2596,7 @@ internal static partial class Program
         try
         {
             ImportPublicationWriter.Write(plan, first);
-            ImportPublicationWriter.Write(AttachSourceManifest(BuildPlan(options), options.Arena2Directory, options.InventoryFile), second);
+            ImportPublicationWriter.Write(AttachSourceManifest(BuildPlan(options, arguments), options.Arena2Directory, options.InventoryFile), second);
             IReadOnlyDictionary<string, ContentDigest> firstHashes = HashClosure(first);
             IReadOnlyDictionary<string, ContentDigest> secondHashes = HashClosure(second);
             if (firstHashes.Count != secondHashes.Count || firstHashes.Any(entry => !secondHashes.TryGetValue(entry.Key, out ContentDigest hash) || hash != entry.Value))

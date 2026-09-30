@@ -362,7 +362,7 @@ public sealed class Arena2MediaBundlePublicationTests
             new ImportProvenance(
                 ImportProvenance.CurrentSchemaVersion,
                 "daggerfall-import/test",
-                1,
+                "test-revision",
                 [new LogicalSourceRecord(LogicalSourceRecord.CurrentSchemaVersion, "arena2/PAL.PAL", paletteDigest, 7, 1)]),
             spatial.ArtifactDescriptors,
             new NormalizedCoordinateConvention(

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -316,8 +317,11 @@ public sealed record LogicalSourceRecord(int SchemaVersion, string SourcePath, C
     }
 }
 
-/// <summary>Aggregate importer provenance without machine-local or time-varying fields.</summary>
-public sealed record ImportProvenance(int SchemaVersion, string ImporterId, int ImporterVersion, IReadOnlyList<LogicalSourceRecord> Sources)
+/// <summary>
+/// Aggregate importer provenance without machine-local or time-varying fields. The revision names the
+/// importer source that produced the document (see <see cref="ImporterBuild.Revision"/>).
+/// </summary>
+public sealed record ImportProvenance(int SchemaVersion, string ImporterId, string ImporterRevision, IReadOnlyList<LogicalSourceRecord> Sources)
 {
     public const int CurrentSchemaVersion = 1;
 
@@ -334,11 +338,7 @@ public sealed record ImportProvenance(int SchemaVersion, string ImporterId, int 
         }
 
         NormalizedImportDocument.RequireLogicalId(ImporterId, nameof(ImporterId));
-        if (ImporterVersion <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(ImporterVersion), ImporterVersion, "An importer version must be positive.");
-        }
-
+        NormalizedImportDocument.RequireLogicalId(ImporterRevision, nameof(ImporterRevision));
         ArgumentNullException.ThrowIfNull(Sources);
         if (Sources.Count == 0)
         {
@@ -1157,7 +1157,7 @@ public static class ExternalImportManifestAdapter
         return new(
             ImportProvenance.CurrentSchemaVersion,
             importerId,
-            manifest.ImporterVersion,
+            manifest.ImporterVersion.ToString(CultureInfo.InvariantCulture),
             [new(LogicalSourceRecord.CurrentSchemaVersion, manifest.SourcePath, manifest.SourceHash, manifest.SourceByteLen, manifest.SourceSchemaVersion)]);
     }
 

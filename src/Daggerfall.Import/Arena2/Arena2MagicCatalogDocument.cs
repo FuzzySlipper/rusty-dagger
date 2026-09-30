@@ -65,8 +65,12 @@ public static class Arena2MagicCatalogDocument
         [26] = "artifact-effect",
     };
 
-    /// <summary>Builds the document's JSON from the two source files' bytes.</summary>
-    public static Arena2MagicCatalogPublication Build(byte[] spellBytes, byte[] magicBytes, string spellLabel, string magicLabel)
+    /// <summary>
+    /// Builds the document's JSON from the two source files' bytes. With the donor's spell-cost tables, the
+    /// document also carries one cost row for every effect variant a published spell uses, which is what a
+    /// casting-cost consumer resolves each effect through.
+    /// </summary>
+    public static Arena2MagicCatalogPublication Build(byte[] spellBytes, byte[] magicBytes, string spellLabel, string magicLabel, Arena2MagicEffectCostTable? effectCosts = null)
     {
         Arena2SpellCatalog spells = Arena2MagicReader.ReadSpells(spellBytes, spellLabel);
         Arena2MagicItemCatalog items = Arena2MagicReader.ReadMagicItems(magicBytes, magicLabel);
@@ -206,6 +210,29 @@ public static class Arena2MagicCatalogDocument
             ["unresolvedLinks"] = unresolved,
             ["dispositions"] = dispositions,
         };
+        if (effectCosts is not null)
+        {
+            document["effectCosts"] = new JsonArray([.. spells.Spells
+                .SelectMany(spell => spell.Effects)
+                .Select(effect => (effect.Type, effect.SubType))
+                .Distinct()
+                .Order()
+                .Select(variant => effectCosts.Resolve(variant.Type, variant.SubType))
+                .Select(cost => (JsonNode)new JsonObject
+                {
+                    ["type"] = cost.Type,
+                    ["subType"] = cost.SubType,
+                    ["settingsType"] = cost.SettingsType,
+                    ["school"] = cost.School,
+                    ["coefficients"] = new JsonObject
+                    {
+                        ["first"] = cost.Coefficients[0],
+                        ["second"] = cost.Coefficients[1],
+                        ["third"] = cost.Coefficients[2],
+                        ["fourth"] = cost.Coefficients[3],
+                    },
+                })]);
+        }
 
         string json = document.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
         return new Arena2MagicCatalogPublication(json, spells.Spells.Count, items.Items.Count, enchantments, unresolved.Count, dispositions.Count);

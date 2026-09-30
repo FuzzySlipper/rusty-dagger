@@ -615,7 +615,7 @@ public sealed record Arena2MediaBundlePublication(
         return new(
             ImportProvenance.CurrentSchemaVersion,
             dungeon.ImporterId,
-            dungeon.ImporterVersion,
+            dungeon.ImporterRevision,
             sources.Values.OrderBy(source => source.SourcePath, StringComparer.Ordinal).ToArray());
     }
 

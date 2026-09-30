@@ -10,8 +10,13 @@ using Daggerfall.Import.Normalized;
 namespace Daggerfall.Import.Publication;
 
 /// <summary>Converted media only; source identities and narrative bindings remain in the cinematic catalog.</summary>
+/// <remarks>
+/// The encoder names the FFmpeg build that wrote the bytes. Conversion is deterministic for one build, but
+/// another build's VP9 or Opus encoder writes different bytes for the same source, so a regenerated artifact
+/// whose digest moved says why.
+/// </remarks>
 public sealed record CinematicMediaArtifact(string Path, string MimeType, long ByteLength, string Sha256,
-    int Width, int Height, long FrameCount, double DurationSeconds, bool HasAudio);
+    int Width, int Height, long FrameCount, double DurationSeconds, bool HasAudio, string Encoder);
 
 /// <summary>Offline VID decoding and FFmpeg Flic conversion into packaged WebM. No source decoder ships in the product.</summary>
 public static partial class CinematicMediaPublisher
@@ -100,15 +105,25 @@ public static partial class CinematicMediaPublisher
             if (vid is null && (frames != flcFrames || Math.Abs(duration - flcDuration) > 0.1))
                 throw new InvalidDataException($"Cinematic '{source.FileName}' conversion lost declared FLC frames or timing: {frames}/{flcFrames} frames, {duration}/{flcDuration} seconds.");
             byte[] artifact = File.ReadAllBytes(temporary);
+            string encoder = EncoderIdentity(Run(ffmpeg, ["-version"], source.FileName), source.FileName);
             File.Move(temporary, destination, overwrite: true);
             return new(logicalRoot.TrimEnd('/') + "/" + name, VideoMimeType, artifact.LongLength,
-                Convert.ToHexString(SHA256.HashData(artifact)).ToLowerInvariant(), width, height, frames, duration, audio);
+                Convert.ToHexString(SHA256.HashData(artifact)).ToLowerInvariant(), width, height, frames, duration, audio, encoder);
         }
         finally
         {
             if (File.Exists(temporary)) File.Delete(temporary);
             if (Directory.Exists(workDirectory)) Directory.Delete(workDirectory, recursive: true);
         }
+    }
+
+    /// <summary>The build FFmpeg names on the first line of its version banner, as <c>ffmpeg VERSION</c>.</summary>
+    private static string EncoderIdentity(string banner, string source)
+    {
+        string[] words = banner.Split('\n', 2)[0].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length < 3 || words[0] != "ffmpeg" || words[1] != "version")
+            throw new InvalidDataException($"Cinematic '{source}' was converted by an FFmpeg whose version banner could not be read.");
+        return $"ffmpeg {words[2]}";
     }
 
     private static string Run(string executable, IReadOnlyList<string> arguments, string source)

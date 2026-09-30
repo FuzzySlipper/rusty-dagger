@@ -12,4 +12,34 @@
   <ItemGroup>
     <ProjectReference Include="../WorldRpg.SpriteAuthoring/WorldRpg.SpriteAuthoring.csproj" />
   </ItemGroup>
+
+  <!-- Stamps ImporterBuild.Revision: the last commit that changed the importer's own source, with a
+       -dirty suffix for uncommitted changes there, or "unknown" outside a Git checkout. The generated
+       file is rewritten only when the value changes, so an unchanged revision does not recompile. -->
+  <Target Name="StampImporterRevision" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <_ImporterRepositoryRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../..'))</_ImporterRepositoryRoot>
+      <_ImporterSourcePaths>src/Daggerfall.Import src/Daggerfall.Import.Tool src/WorldRpg.SpriteAuthoring</_ImporterSourcePaths>
+      <_ImporterRevisionFile>$(IntermediateOutputPath)ImporterRevision.g.cs</_ImporterRevisionFile>
+    </PropertyGroup>
+    <Exec Command="git -C &quot;$(_ImporterRepositoryRoot)&quot; log -1 --format=%25H -- $(_ImporterSourcePaths)" ConsoleToMSBuild="true" EchoOff="true" IgnoreExitCode="true" StandardOutputImportance="low" StandardErrorImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_ImporterCommit" />
+      <Output TaskParameter="ExitCode" PropertyName="_ImporterCommitExit" />
+    </Exec>
+    <Exec Command="git -C &quot;$(_ImporterRepositoryRoot)&quot; status --porcelain -- $(_ImporterSourcePaths)" ConsoleToMSBuild="true" EchoOff="true" IgnoreExitCode="true" StandardOutputImportance="low" StandardErrorImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_ImporterChanges" />
+      <Output TaskParameter="ExitCode" PropertyName="_ImporterChangesExit" />
+    </Exec>
+    <PropertyGroup>
+      <_ImporterRevision>unknown</_ImporterRevision>
+      <_ImporterRevision Condition="'$(_ImporterCommitExit)' == '0' and '$(_ImporterCommit)' != ''">$(_ImporterCommit)</_ImporterRevision>
+      <_ImporterRevision Condition="'$(_ImporterRevision)' != 'unknown' and ('$(_ImporterChangesExit)' != '0' or '$(_ImporterChanges)' != '')">$(_ImporterRevision)-dirty</_ImporterRevision>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(_ImporterRevisionFile)" Overwrite="true" WriteOnlyWhenDifferent="true"
+                      Lines="// &lt;auto-generated/&gt;;namespace Daggerfall.Import%3B;public static partial class ImporterBuild { private const string StampedRevision = &quot;$(_ImporterRevision)&quot;%3B }" />
+    <ItemGroup>
+      <Compile Include="$(_ImporterRevisionFile)" />
+      <FileWrites Include="$(_ImporterRevisionFile)" />
+    </ItemGroup>
+  </Target>
 </Project>

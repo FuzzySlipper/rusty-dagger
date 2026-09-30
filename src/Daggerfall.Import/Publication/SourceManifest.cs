@@ -334,7 +334,7 @@ public static class SourceManifestPublication
         ImportProvenance provenance = new(
             ImportProvenance.CurrentSchemaVersion,
             plan.Manifest.ImporterId,
-            plan.Manifest.ImporterVersion,
+            plan.Manifest.ImporterRevision,
             plan.Manifest.Sources.Select(source => new LogicalSourceRecord(
                 LogicalSourceRecord.CurrentSchemaVersion,
                 source.SourcePath,
@@ -345,6 +345,6 @@ public static class SourceManifestPublication
         [
             .. plan.Artifacts.Where(artifact => artifact.RelativePath != ImportPublicationManifestSerializer.ManifestRelativePath),
             new ImportPublicationArtifact(SourceManifestSerializer.ManifestRelativePath, bytes),
-        ]);
+        ], plan.Manifest.Invocation);
     }
 }
