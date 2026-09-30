@@ -11,10 +11,11 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
-public sealed partial class NormalizedRuntimeSeamTests
+public sealed class DaggerfallRestSessionTests
 {
     [Fact]
     public void Exterior_rest_selects_location_and_wilderness_night_encounters_from_the_live_cell()
@@ -187,31 +188,6 @@ public sealed partial class NormalizedRuntimeSeamTests
         Assert.Equal(JsonSerializer.Serialize(townBefore.SkillUses), JsonSerializer.Serialize(townAfter.SkillUses));
         Assert.Equal(JsonSerializer.Serialize(townBefore.Actors), JsonSerializer.Serialize(townAfter.Actors));
     }
-
-    private static DaggerfallSiteProfile SameContentAt(DaggerfallSiteProfile source, DaggerfallSiteId site, DaggerfallWorldProfileKind kind, string logicalId) => new(
-        kind == DaggerfallWorldProfileKind.Exterior
-            ? new ProjectFacts(new WorldPoint(1f, 1f, 1f), source.Project.Actors)
-            : source.Project,
-        source.SpatialArtifact,
-        source.StaticMesh,
-        source.WorldAppearance,
-        source.InitialLook,
-        source.Materials,
-        source.ActorSprites,
-        source.MobileSprites,
-        source.Audio,
-        source.ClassicPresentation,
-        site,
-        kind == DaggerfallWorldProfileKind.Dungeon ? source.Doors : [],
-        kind,
-        logicalId,
-        source.Portals,
-        source.Anchors.Values.ToArray(),
-        source.Lights,
-        source.GroundContainerSprite,
-        kind == DaggerfallWorldProfileKind.Dungeon ? source.DungeonMap : null,
-        kind == DaggerfallWorldProfileKind.Dungeon ? source.DungeonActions : [],
-        kind == DaggerfallWorldProfileKind.Dungeon ? source.DungeonActionModels : []);
 
     private static long CalendarSeconds(DaggerfallCalendarSave save) =>
         new DaggerfallCalendar(save.Year, save.Month, save.Day, save.Hour, save.Minute, save.Second).ToAbsoluteSeconds();

@@ -6,10 +6,11 @@ using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 using Xunit;
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
-public sealed partial class NormalizedRuntimeSeamTests
+public sealed class HudSnapshotContractTests
 {
     /// <summary>The snapshot the UI suite renders, so both languages read one published document.</summary>
     internal const string HudSnapshotFixture = "tests/WorldRpg.Ui.Tests/fixtures/hud-snapshot.json";

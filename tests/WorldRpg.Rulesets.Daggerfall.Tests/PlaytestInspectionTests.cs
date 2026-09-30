@@ -5,10 +5,11 @@ using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Kit;
 using Xunit;
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
-public sealed partial class NormalizedRuntimeSeamTests
+public sealed class PlaytestInspectionTests
 {
     [Fact]
     public void Playtest_attack_reports_resource_refusal_without_spending_or_advancing()

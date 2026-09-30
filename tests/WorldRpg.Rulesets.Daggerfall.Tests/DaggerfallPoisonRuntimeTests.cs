@@ -93,7 +93,7 @@ public sealed class DaggerfallPoisonRuntimeTests
         // The owner is not a mechanism waiting for a caller: the session's effect lifecycle advances it.
         // Moonseed acts at once and lasts up to four minutes, so six elapsed minutes take health whatever
         // the draws inside its windows were.
-        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        using var fixture = new ConditionSessionFixture();
         DaggerfallSession session = fixture.Session;
         Actor player = session.State.Actors.Player.Actor;
         double before = Track(player, DaggerfallMechanicsIds.Health);
@@ -192,7 +192,7 @@ public sealed class DaggerfallPoisonRuntimeTests
         // The case the parallel owner could not satisfy: a poison's arms are stat sources, and the stats
         // save refuses an effect source with no active effect to clean it up. A poison is an active effect
         // now, so the same save that used to fail succeeds and carries the course with it.
-        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        using var fixture = new ConditionSessionFixture();
         DaggerfallSession session = fixture.Session;
         Actor player = session.State.Actors.Player.Actor;
         // Drothweed drains attributes rather than only health, so the save carries effect-backed stat
@@ -245,7 +245,7 @@ public sealed class DaggerfallPoisonRuntimeTests
         // Fatigue is derived from strength and endurance and magicka from intelligence, so a poison that
         // drains one of those has to move the maximum with it; leaving it stale is the shape the disease
         // path already avoids.
-        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        using var fixture = new ConditionSessionFixture();
         DaggerfallSession session = fixture.Session;
         Actor player = session.State.Actors.Player.Actor;
         StatsComponent stats = player.Get<StatsComponent>();
@@ -273,7 +273,7 @@ public sealed class DaggerfallPoisonRuntimeTests
         // This is the case the parallel owner could not save: the arms are effect-backed stat sources, so
         // the save's rule is that an active effect with the same instance owns them. The poison is fully
         // established first, because only then are there sources for the rule to check.
-        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        using var fixture = new ConditionSessionFixture();
         DaggerfallSession session = fixture.Session;
         Actor player = session.State.Actors.Player.Actor;
         Assert.True(session.State.Poisons.Afflict(player, 131));
@@ -363,7 +363,7 @@ public sealed class DaggerfallPoisonRuntimeTests
     {
         // The drug's own exposure: self-targeted and bypassing resistance, which is what the donor's drug
         // use does. The session is the one that supplies the draw and the background's poison resistance.
-        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        using var fixture = new ConditionSessionFixture();
         DaggerfallSession session = fixture.Session;
         Actor player = session.State.Actors.Player.Actor;
         // What the session itself reads for a delivery aimed at the player: the live level and Willpower,
@@ -439,7 +439,7 @@ public sealed class DaggerfallPoisonRuntimeTests
     [Fact]
     public void Taking_a_drug_asks_the_poison_owner_and_names_the_poison_of_its_template()
     {
-        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        using var fixture = new ConditionSessionFixture();
         DaggerfallSession session = fixture.Session;
 
         // The four drugs resolve to the variants of their own names, and a template that is not one of them
@@ -490,7 +490,7 @@ public sealed class DaggerfallPoisonRuntimeTests
         // The delivering half, at the boundary the combat rules call on a strike that took health: the dose
         // reaches the struck actor through the ordinary infliction, and the weapon is left uncoated because
         // the swing used it up rather than because it worked.
-        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        using var fixture = new ConditionSessionFixture();
         DaggerfallSession session = fixture.Session;
         Actor player = session.State.Actors.Player.Actor;
         long struck = session.State.Actors.Player.DurableId;
@@ -550,7 +550,7 @@ public sealed class DaggerfallPoisonRuntimeTests
         // The end-to-end path through the boundary the combat rules call, with the level gate out of the way:
         // the strike spends the coat whatever its throw decides, and a delivery that is admitted leaves the
         // coated variant running on the struck actor rather than on the attacker.
-        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        using var fixture = new ConditionSessionFixture();
         DaggerfallSession session = fixture.Session;
         PlayerActorState struck = session.State.Actors.Player;
         struck.Actor.Get<ProgressionState>().AdvanceTo(experience: 0, level: 5);
@@ -575,7 +575,7 @@ public sealed class DaggerfallPoisonRuntimeTests
         // What CAP-CAST resolves through: the character's own known list, by catalogue key. A key nothing
         // publishes is refused rather than stored as a spell that could never be cast, and the same spell
         // learned twice is one spell.
-        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        using var fixture = new ConditionSessionFixture();
         DaggerfallSession session = fixture.Session;
         DaggerfallCharacterState character = session.State.Character;
         string known = fixture.Definitions.Magic.Spells.Keys.First();
@@ -634,7 +634,7 @@ public sealed class DaggerfallPoisonRuntimeTests
     {
         // Sursum helps strength and harms intelligence, so its completion has to refresh the maxima the
         // withdrawn help was holding up while the harm that stays keeps its own maximum down.
-        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        using var fixture = new ConditionSessionFixture();
         DaggerfallSession session = fixture.Session;
         Actor player = session.State.Actors.Player.Actor;
         StatsComponent stats = player.Get<StatsComponent>();

@@ -7,10 +7,11 @@ using WorldRpg.Host;
 using WorldRpg.Kit;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using Xunit;
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
-public sealed partial class NormalizedRuntimeSeamTests
+public sealed class CommittedBundleCompositionTests
 {
     private const string SiteRole = "daggerfall.site";
 

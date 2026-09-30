@@ -4,6 +4,7 @@ using WorldRpg.Kit;
 using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using Xunit;
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
@@ -11,7 +12,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// The ordinary session's music: which published cue plays where the player stands, that an ordinary
 /// update does not restart it, and that a site change and a session teardown each end the loop once.
 /// </summary>
-public sealed partial class NormalizedRuntimeSeamTests
+public sealed class DaggerfallMusicSessionTests
 {
     [Fact]
     public void The_ordinary_session_plays_the_published_dungeon_cue_and_keeps_one_loop()
