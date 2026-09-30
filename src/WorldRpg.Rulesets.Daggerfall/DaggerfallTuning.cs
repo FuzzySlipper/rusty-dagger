@@ -41,7 +41,7 @@ internal sealed record DaggerfallTuning(
         DaggerfallLocomotionTuning.Classic,
         new FirstPersonCameraTuning(.75f, 65d, .1d, 100d),
         new DaggerfallMeleeTargetingTuning(2.25d, .5d, .35d),
-        new DaggerfallEnemyBehaviorTuning(12d, .5d, 3f, 32),
+        new DaggerfallEnemyBehaviorTuning(12d, 3f, 32),
         new DaggerfallLootInteractionTuning(2.25d, .5d),
         new DaggerfallTimeTuning(12d),
         new DaggerfallStaminaRecoveryTuning(5d, 2d),
@@ -133,7 +133,6 @@ internal sealed record DaggerfallTuning(
                 meleeTargeting.GetProperty("minimumSwingGestureRadians").GetDouble()),
             new DaggerfallEnemyBehaviorTuning(
                 enemyBehavior.GetProperty("detectionDistance").GetDouble(),
-                enemyBehavior.GetProperty("minimumFacingCosine").GetDouble(),
                 enemyBehavior.GetProperty("chaseSpeedUnitsPerSecond").GetSingle(),
                 checked((uint)enemyBehavior.GetProperty("navigationMaximumVisited").GetInt32()),
                 enemyBehavior.GetProperty("spawnGroundProbeLift").GetSingle(),
@@ -306,7 +305,6 @@ internal sealed record DaggerfallLootInteractionTuning(double MaximumDistance, d
 /// </remarks>
 internal sealed record DaggerfallEnemyBehaviorTuning(
     double DetectionDistance,
-    double MinimumFacingCosine,
     float ChaseSpeedUnitsPerSecond,
     uint NavigationMaximumVisited,
     float SpawnGroundProbeLift = .2f,
@@ -315,7 +313,6 @@ internal sealed record DaggerfallEnemyBehaviorTuning(
     internal DaggerfallEnemyBehaviorTuning Validate()
     {
         if (!double.IsFinite(DetectionDistance) || DetectionDistance <= 0d) throw new ArgumentOutOfRangeException(nameof(DetectionDistance));
-        if (!double.IsFinite(MinimumFacingCosine) || MinimumFacingCosine is < -1d or > 1d) throw new ArgumentOutOfRangeException(nameof(MinimumFacingCosine));
         if (!float.IsFinite(ChaseSpeedUnitsPerSecond) || ChaseSpeedUnitsPerSecond <= 0f) throw new ArgumentOutOfRangeException(nameof(ChaseSpeedUnitsPerSecond));
         if (!float.IsFinite(SpawnGroundProbeLift) || SpawnGroundProbeLift < 0f) throw new ArgumentOutOfRangeException(nameof(SpawnGroundProbeLift));
         if (!double.IsFinite(SpawnGroundProbeDistance) || SpawnGroundProbeDistance <= SpawnGroundProbeLift) throw new ArgumentOutOfRangeException(nameof(SpawnGroundProbeDistance));

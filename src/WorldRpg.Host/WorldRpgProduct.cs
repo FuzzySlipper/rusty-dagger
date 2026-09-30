@@ -203,11 +203,6 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     /// </remarks>
     public void Start()
     {
-        Guarded(StartCore);
-    }
-
-    private void StartCore()
-    {
         if (_shutdown || _started) return;
         _started = true;
         Apply(_resumed ? ProductMode.Playing : ProductMode.Title,
@@ -243,27 +238,16 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     /// <summary>Republishes the current session projection when the Engine attaches a new presentation client.</summary>
     public void Attach()
     {
-        Guarded(AttachCore);
-    }
-
-    private void AttachCore()
-    {
         if (_shutdown) return;
         RefreshSaveSlots();
         _session.PublishInitial();
     }
 
     /// <summary>Pauses ordinary play. A modal that owns input is cancelled by the pause.</summary>
-    public void Pause() => Guarded(() => Apply(ProductMode.Paused, "the host paused the product"));
-
-    private void Guarded(Action body)
-    {
-        try { body(); }
-        catch (Exception failure) { PublishCallbackFailure(failure); throw; }
-    }
+    public void Pause() => Apply(ProductMode.Paused, "the host paused the product");
 
     /// <summary>Resumes ordinary play from a pause.</summary>
-    public void Resume() => Guarded(() => Apply(ProductMode.Playing, "the host resumed the product"));
+    public void Resume() => Apply(ProductMode.Playing, "the host resumed the product");
 
     /// <summary>Gives input to a modal interaction.</summary>
     public ProductModeChange EnterModal() => Apply(ProductMode.Modal, "the product opened a modal interaction");
@@ -280,11 +264,6 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     /// with no input interpreter state to carry it.
     /// </summary>
     public void Restart()
-    {
-        Guarded(RestartCore);
-    }
-
-    private void RestartCore()
     {
         if (_shutdown)
         {
@@ -365,11 +344,6 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
 
     public void Shutdown()
     {
-        Guarded(ShutdownCore);
-    }
-
-    private void ShutdownCore()
-    {
         if (_shutdown) return;
         _session.Dispose();
         _saveSlots?.Dispose();
@@ -380,37 +354,6 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     public void Dispose() => Shutdown();
 
     public ProductUpdateResult Update(ProductUpdate update)
-    {
-        try
-        {
-            return UpdateCore(update);
-        }
-        catch (Exception failure)
-        {
-            // An exception leaving the product's entry point ends this runtime incarnation, and the
-            // Engine's own report of that names no cause. The reason is published here, where the
-            // product still owns the diagnostics channel, before the failure escapes.
-            PublishCallbackFailure(failure);
-            throw;
-        }
-    }
-
-    private void PublishCallbackFailure(Exception failure)
-    {
-        try
-        {
-            _context.Engine.Diagnostics.Publish(new DiagnosticsPublishRequest(
-                DiagnosticsSeverity.Error,
-                DiagnosticsDisposition.Terminal,
-                "daggerfall.product",
-                "callback.failed",
-                EngineFailureText.Describe(failure),
-                string.Empty));
-        }
-        catch (Exception) { /* a failure to report a failure must not replace it */ }
-    }
-
-    private ProductUpdateResult UpdateCore(ProductUpdate update)
     {
         // A pause admits no update at all, so neither input nor world time reaches the session.
         // A modal or a death still forwards the update, because the presentation that shows them

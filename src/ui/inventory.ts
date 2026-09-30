@@ -1,4 +1,4 @@
-import { image, reportMissingArt } from './art.js';
+import { cssUrl, image, reportMissingArt } from './art.js';
 
 export interface InventoryProjection {
   readonly revision: string;
@@ -668,7 +668,7 @@ function applyAuthoredArt(element: HTMLElement): void {
       return 'none';
     }
 
-    return `url("${source}")`;
+    return cssUrl(source);
   };
   element.style.setProperty('--inventory-panel-art', art('inventory.skin.panel-slate.v1'));
   element.style.setProperty('--inventory-title-art', art('inventory.skin.titlebar-slate.v1'));

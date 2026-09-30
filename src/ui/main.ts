@@ -130,6 +130,7 @@ interface WagonProjection {
   readonly storeRevision: string | number | null;
   readonly message: string;
   readonly items: readonly TransportItemProjection[];
+  readonly refusedDefinitions: readonly string[];
 }
 
 interface TransportProjection {
@@ -145,7 +146,6 @@ interface TransportProjection {
 type TransportAction =
   | { readonly action: 'transport-select'; readonly mode: Exclude<TransportMode, 'ship'> }
   | { readonly action: 'transport-toggle' }
-  | { readonly action: 'transport-board-ship' }
   | { readonly action: 'transport-leave-ship' }
   | { readonly action: 'wagon-put'; readonly revision: string; readonly item: string; readonly amount?: number }
   | { readonly action: 'wagon-take'; readonly revision: string; readonly item: string; readonly amount?: number };
@@ -163,6 +163,8 @@ interface CompositionIdentity {
   readonly tuning: string;
 }
 
+/** The payload contract every semantic player action travels under. */
+const UI_ACTION_CONTRACT = 'dagger.ui.action.v1';
 /** Snapshots between repeated requests for art this DOM has not received. */
 const ART_REQUEST_INTERVAL = 120;
 const MENU_CONTROLLER = Object.freeze({
@@ -288,7 +290,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
 
   const activationMode = shell.querySelector<HTMLSelectElement>('.dagger-activation-mode')!;
   activationMode.addEventListener('change', () => context.intents?.claim('dagger.ui', {
-    kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'activation-mode', mode: activationMode.value },
+    kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'activation-mode', mode: activationMode.value },
   }));
   const title = shell.querySelector<HTMLElement>('.dagger-title strong')!;
   const outcome = shell.querySelector<HTMLParagraphElement>('.dagger-outcome')!;
@@ -296,11 +298,11 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const view = shell.querySelector<HTMLParagraphElement>('.dagger-view')!;
   const status = shell.querySelector<HTMLElement>('.dagger-status')!;
   const focusClose = shell.querySelector<HTMLButtonElement>('.dagger-focus-close')!;
-  focusClose.addEventListener('click', () => { if (focusClose.dataset.container && focusClose.dataset.close) context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: focusClose.dataset.close, container: focusClose.dataset.container } }); });
+  focusClose.addEventListener('click', () => { if (focusClose.dataset.container && focusClose.dataset.close) context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: focusClose.dataset.close, container: focusClose.dataset.container } }); });
   const vitals = shell.querySelector<HTMLElement>('.dagger-vitals')!;
   const composition = shell.querySelector<HTMLDListElement>('.dagger-composition dl')!;
   const claim = (action: string): void => context.intents?.claim('dagger.ui', {
-    kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action },
+    kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action },
   });
   const deathRoot = shell.querySelector<HTMLElement>('.dagger-death')!;
   const deathScreen = shell.querySelector<HTMLImageElement>('.dagger-death-screen')!;
@@ -318,14 +320,14 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   dungeonTextForm.addEventListener('submit', event => {
     event.preventDefault();
     if (!currentDungeonText?.requiresAnswer) return;
-    context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: 'dagger.ui.action.v1', data: {
+    context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: {
       action: 'dungeon-text-answer', revision: currentDungeonText.revision,
       item: currentDungeonText.actionId, text: dungeonTextAnswer.value,
     } });
   });
   dungeonTextClose.addEventListener('click', () => {
     if (!currentDungeonText) return;
-    context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: 'dagger.ui.action.v1', data: {
+    context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: {
       action: 'dungeon-text-close', revision: currentDungeonText.revision, item: currentDungeonText.actionId,
     } });
   });
@@ -333,14 +335,14 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const entryScreen = shell.querySelector<HTMLImageElement>('.dagger-entry-screen')!;
   const inventoryRoot = shell.querySelector<HTMLElement>('.dagger-inventory-root')!;
   const inventoryView = mountInventory(inventoryRoot, (action) => context.intents?.claim('dagger.ui', {
-    kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
+    kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
   }));
   const transportRoot = shell.querySelector<HTMLElement>('.dagger-transport-root')!;
   const transportView = mountTransport(transportRoot, action => context.intents?.claim('dagger.ui', {
-    kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
+    kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
   }));
   const travelView = mountTravel(transportRoot, action => context.intents?.claim('dagger.ui', {
-    kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
+    kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
   }));
   const restRoot = shell.querySelector<HTMLElement>('.dagger-rest-root')!;
   const restStatus = shell.querySelector<HTMLElement>('.dagger-rest-status')!;
@@ -348,7 +350,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const submitRest = (mode: string): void => {
     if (mode === 'until-healed') {
       context.intents?.claim('dagger.ui', {
-        kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'rest', mode },
+        kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'rest', mode },
       });
       return;
     }
@@ -360,20 +362,20 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       return;
     }
     context.intents?.claim('dagger.ui', {
-      kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'rest', mode, hours },
+      kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'rest', mode, hours },
     });
   };
   const controlsRoot = shell.querySelector<HTMLElement>('.dagger-controls-root')!;
   const controlsView = mountControls(controlsRoot, action => context.intents?.claim('dagger.ui', {
-    kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
+    kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
   }));
   const characterRoot = shell.querySelector<HTMLElement>('.dagger-character-root')!;
   const characterView = mountCharacter(characterRoot, action => context.intents?.claim('dagger.ui', {
-    kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
+    kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
   }));
   const notebookRoot = shell.querySelector<HTMLElement>('.dagger-notebook-root')!;
   const notebookView = mountNotebook(notebookRoot, action => context.intents?.claim('dagger.ui', {
-    kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
+    kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
   }));
   const lootRoot = shell.querySelector<HTMLElement>('.dagger-loot-root')!;
   const saveSlotsRoot = shell.querySelector<HTMLElement>('.dagger-save-slots')!;
@@ -388,7 +390,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   let saveConfirm = false;
   let deleteConfirm = false;
   const claimDeath = (action: string, key?: string): void => context.intents?.claim('dagger.ui', {
-    kind: 'product-payload', contract: 'dagger.ui.action.v1', data: key ? { action, key } : { action },
+    kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: key ? { action, key } : { action },
   });
   deathNew.addEventListener('click', () => claimDeath('death-new-game'));
   deathLoad.addEventListener('click', () => {
@@ -399,13 +401,13 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     deathLoad.disabled = deathLoadSlot.value.length === 0;
   });
   const lootView = mountLoot(lootRoot, action => context.intents?.claim('dagger.ui', {
-    kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
+    kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
   }));
   let currentLoot: LootProjection | null = null;
   let lastLootContainer: string | null = null;
   const closeLoot = (): void => {
     if (currentLoot) context.intents?.claim('dagger.ui', {
-      kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'loot-close', container: currentLoot.container },
+      kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'loot-close', container: currentLoot.container },
     });
   };
   const menu = shell.querySelector<HTMLDialogElement>('dialog')!;
@@ -420,27 +422,27 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   let currentDialogue: DialogueProjection | null = null;
   dialogueTone.addEventListener('change', () => {
     if (!deadMode && currentDialogue) context.intents?.claim('dagger.ui', {
-      kind: 'product-payload', contract: 'dagger.ui.action.v1',
+      kind: 'product-payload', contract: UI_ACTION_CONTRACT,
       data: { action: 'dialogue-tone', revision: currentDialogue.revision, tone: dialogueTone.value },
     });
   });
   dialogueTopics.addEventListener('click', event => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-topic]');
     if (!deadMode && button?.dataset.topic && currentDialogue) context.intents?.claim('dagger.ui', {
-      kind: 'product-payload', contract: 'dagger.ui.action.v1',
+      kind: 'product-payload', contract: UI_ACTION_CONTRACT,
       data: { action: 'dialogue-topic', revision: currentDialogue.revision, topic: button.dataset.topic },
     });
   });
   shell.querySelector<HTMLButtonElement>('.dagger-dialogue-close')!.addEventListener('click', () => {
     if (!deadMode && currentDialogue) context.intents?.claim('dagger.ui', {
-      kind: 'product-payload', contract: 'dagger.ui.action.v1',
+      kind: 'product-payload', contract: UI_ACTION_CONTRACT,
       data: { action: 'dialogue-close', revision: currentDialogue.revision },
     });
   });
   dialogueWindow.addEventListener('cancel', event => {
     event.preventDefault();
     if (!deadMode && currentDialogue) context.intents?.claim('dagger.ui', {
-      kind: 'product-payload', contract: 'dagger.ui.action.v1',
+      kind: 'product-payload', contract: UI_ACTION_CONTRACT,
       data: { action: 'dialogue-close', revision: currentDialogue.revision },
     });
   });
@@ -596,17 +598,17 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
         return;
       }
       if (key && !saveConfirm) { saveConfirm = true; redrawSaveSlots(); return; }
-      context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'save-slot', key, label, confirm: saveConfirm } });
+      context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'save-slot', key, label, confirm: saveConfirm } });
       saveConfirm = false;
       return;
     }
     if (action === 'load-slot' && saveSlotsSelect.value) {
-      context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'load-slot', key: saveSlotsSelect.value } });
+      context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'load-slot', key: saveSlotsSelect.value } });
       return;
     }
     if (action === 'delete-slot' && saveSlotsSelect.value) {
       if (!deleteConfirm) { deleteConfirm = true; redrawSaveSlots(); return; }
-      context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'delete-slot', key: saveSlotsSelect.value, confirm: true } });
+      context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'delete-slot', key: saveSlotsSelect.value, confirm: true } });
       deleteConfirm = false;
       return;
     }
@@ -723,12 +725,12 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   };
   shell.querySelector<HTMLButtonElement>('.dagger-entry-begin')!.addEventListener('click', () => {
     context.intents?.claim('dagger.ui', {
-      kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: BEGIN_ACTION },
+      kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: BEGIN_ACTION },
     });
   });
   let lastPanelRevision: string | null = null;
   const requestArt = (revision: string): void => context.intents?.claim('dagger.ui', {
-    kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'art-request', revision },
+    kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'art-request', revision },
   });
   const redrawDeath = (death: DeathProjection | null): void => {
     deathRoot.hidden = !deadMode;
@@ -742,11 +744,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     deathRoot.dataset.cameraEffect = death?.cameraEffect ?? 'fall';
     deathRoot.dataset.fadeEffect = death?.fadeEffect ?? 'to-black';
     deathRoot.dataset.audioCue = death?.audioCue ?? 'player-death';
-    const choices = death?.choices ?? [
-      { action: 'death-new-game', id: 'new-game', label: 'New game', available: true },
-      { action: 'death-load-game', id: 'load-game', label: 'Load game', available: saveSlots.entries.length > 0 },
-      { action: 'death-quit', id: 'quit-to-title', label: 'Quit to title', available: true },
-    ];
+    // The ruleset owns which choices death offers; a snapshot without them offers none.
+    const choices = death?.choices ?? [];
     const findChoice = (action: string) => choices.find(choice => choice.action === action);
     const selected = death?.selected ?? null;
     const newChoice = findChoice('death-new-game');
@@ -755,14 +754,14 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     deathNew.textContent = newChoice?.label ?? 'New game';
     deathLoad.textContent = loadChoice?.label ?? 'Load game';
     deathQuit.textContent = quitChoice?.label ?? 'Quit to title';
-    deathNew.disabled = selected !== null || newChoice?.available === false;
-    deathQuit.disabled = selected !== null || quitChoice?.available === false;
+    deathNew.disabled = selected !== null || newChoice?.available !== true;
+    deathQuit.disabled = selected !== null || quitChoice?.available !== true;
 
     const selectedSlot = deathLoadSlot.value;
     deathLoadSlot.replaceChildren(new Option('Choose a saved game', ''));
     for (const entry of saveSlots.entries) deathLoadSlot.add(new Option(entry.label, entry.key));
     deathLoadSlot.value = saveSlots.entries.some(entry => entry.key === selectedSlot) ? selectedSlot : '';
-    const loadAvailable = loadChoice?.available ?? saveSlots.entries.length > 0;
+    const loadAvailable = loadChoice?.available === true;
     deathLoadSlot.disabled = selected !== null || !loadAvailable;
     deathLoad.disabled = selected !== null || !loadAvailable || deathLoadSlot.value.length === 0;
     if (death?.screen) {
@@ -862,7 +861,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       : value.mode === 'title' ? 'Title' : value.mode === 'modal' ? 'Interaction' : 'Exploring';
     outcome.textContent = value.lastOutcome;
     renderQuestMessages(quests, value.quests, (action) => context.intents?.claim('dagger.ui', {
-      kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
+      kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
     }));
     if (value.controls) controlsView.update(value.controls);
     if (value.activation) activationMode.value = value.activation.mode;
@@ -1058,8 +1057,8 @@ function mountTransport(root: HTMLElement, claim: (action: TransportAction) => v
     for (const item of currentInventory?.items ?? []) {
       const equipped = item.equippedSlots.length !== 0;
       const invalidQuantity = item.key.startsWith('stack:') && safeAmount(item.quantity) === undefined;
-      const transportation = item.definition === 'template-93' || item.definition === 'template-94';
-      packContents.append(renderItem(item, 'wagon-put', !currentRevision || equipped || invalidQuantity || transportation));
+      const refused = wagonView.refusedDefinitions.includes(item.definition);
+      packContents.append(renderItem(item, 'wagon-put', !currentRevision || equipped || invalidQuantity || refused));
     }
     if (wagonView.items.length === 0) {
       const empty = document.createElement('li');
@@ -1130,7 +1129,8 @@ function isWagonProjection(value: unknown): value is WagonProjection {
     && typeof candidate.capacityClassicUnits === 'number' && Number.isFinite(candidate.capacityClassicUnits)
     && (candidate.storeRevision === null || typeof candidate.storeRevision === 'string' || typeof candidate.storeRevision === 'number')
     && typeof candidate.message === 'string'
-    && Array.isArray(candidate.items) && candidate.items.every(isTransportItemProjection);
+    && Array.isArray(candidate.items) && candidate.items.every(isTransportItemProjection)
+    && Array.isArray(candidate.refusedDefinitions) && candidate.refusedDefinitions.every(value => typeof value === 'string');
 }
 
 function isTransportItemProjection(value: unknown): value is TransportItemProjection {

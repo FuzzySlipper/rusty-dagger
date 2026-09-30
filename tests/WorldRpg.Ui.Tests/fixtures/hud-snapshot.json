@@ -1,0 +1,1618 @@
+{
+  "resources": [
+    {
+      "id": "health",
+      "label": "Health",
+      "current": 31,
+      "maximum": 31
+    },
+    {
+      "id": "stamina",
+      "label": "Stamina",
+      "current": 5568,
+      "maximum": 5568
+    },
+    {
+      "id": "magicka",
+      "label": "Magicka",
+      "current": 100,
+      "maximum": 120
+    }
+  ],
+  "experience": 0,
+  "lastOutcome": "Ready",
+  "mode": "playing",
+  "view": {
+    "yawRadians": 3.1415927410125732,
+    "pitchRadians": 0,
+    "interaction": "aiming"
+  },
+  "slots": [],
+  "focus": null,
+  "panelRequest": null,
+  "saveSlots": {
+    "entries": [],
+    "diagnostic": null
+  },
+  "controls": {
+    "diagnostic": "",
+    "bindings": [
+      {
+        "id": "move.forward",
+        "category": "movement",
+        "keys": [
+          "KeyW"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "move.backward",
+        "category": "movement",
+        "keys": [
+          "KeyS"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "move.left",
+        "category": "movement",
+        "keys": [
+          "KeyA"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "move.right",
+        "category": "movement",
+        "keys": [
+          "KeyD"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "run",
+        "category": "movement",
+        "keys": [
+          "ShiftLeft"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "crouch",
+        "category": "movement",
+        "keys": [
+          "ControlLeft"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "jump",
+        "category": "movement",
+        "keys": [
+          "Space"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "attack",
+        "category": "combat",
+        "keys": [
+          "Primary"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "interact",
+        "category": "combat",
+        "keys": [
+          "KeyF"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "toggle-weapon",
+        "category": "combat",
+        "keys": [
+          "KeyZ"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "inventory",
+        "category": "interface",
+        "keys": [
+          "KeyI"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "character",
+        "category": "interface",
+        "keys": [
+          "KeyC"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "menu",
+        "category": "interface",
+        "keys": [
+          "Escape"
+        ],
+        "fixed": true
+      },
+      {
+        "id": "spell",
+        "category": "magic",
+        "keys": [
+          "KeyV"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "rest",
+        "category": "rest",
+        "keys": [
+          "KeyR"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "map",
+        "category": "maps",
+        "keys": [
+          "KeyM"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "transport",
+        "category": "transport",
+        "keys": [
+          "KeyT"
+        ],
+        "fixed": false
+      }
+    ]
+  },
+  "activation": {
+    "mode": "grab",
+    "message": "Interaction mode: grab.",
+    "applied": false,
+    "dialogue": {
+      "revision": "1",
+      "targetLabel": "guard",
+      "greeting": "How can I help you, stranger?",
+      "tone": "normal",
+      "question": null,
+      "reply": null,
+      "topics": [
+        {
+          "id": "directions",
+          "label": "Where is this place?"
+        },
+        {
+          "id": "news",
+          "label": "Any news?"
+        }
+      ],
+      "diagnostics": []
+    }
+  },
+  "quests": {
+    "deliveries": [],
+    "journal": [],
+    "pending": null
+  },
+  "notebook": {
+    "revision": "0",
+    "book": null,
+    "notes": []
+  },
+  "transport": {
+    "mode": "foot",
+    "onShip": false,
+    "canRun": true,
+    "travelModifier": 256,
+    "oceanMinutesPerMapPixel": 255,
+    "options": [
+      {
+        "id": "foot",
+        "mode": "foot",
+        "available": true,
+        "selected": true,
+        "label": "Foot",
+        "message": "Walk on foot.",
+        "travelModifier": 256
+      },
+      {
+        "id": "horse",
+        "mode": "horse",
+        "available": false,
+        "selected": false,
+        "label": "Horse",
+        "message": "Mounts are unavailable indoors.",
+        "travelModifier": 128
+      },
+      {
+        "id": "cart",
+        "mode": "cart",
+        "available": false,
+        "selected": false,
+        "label": "Cart",
+        "message": "Mounts are unavailable indoors.",
+        "travelModifier": 192
+      },
+      {
+        "id": "ship",
+        "mode": "ship",
+        "available": false,
+        "selected": false,
+        "label": "Ship",
+        "message": "You do not own a ship.",
+        "travelModifier": 256
+      }
+    ],
+    "wagon": {
+      "exists": false,
+      "accessible": false,
+      "id": null,
+      "usedClassicUnits": 0,
+      "capacityClassicUnits": 300000,
+      "storeRevision": null,
+      "message": "The wagon is unavailable here.",
+      "items": [],
+      "refusedDefinitions": []
+    }
+  },
+  "dungeonText": null,
+  "death": {
+    "active": false,
+    "screen": "screen.death",
+    "revision": "0",
+    "message": "You have died.",
+    "controlsSuppressed": false,
+    "cameraEffect": "none",
+    "fadeEffect": "none",
+    "audioCue": "none",
+    "choices": [
+      {
+        "action": "death-new-game",
+        "id": "new-game",
+        "label": "New game",
+        "available": false
+      },
+      {
+        "action": "death-load-game",
+        "id": "load-game",
+        "label": "Load game",
+        "available": false
+      },
+      {
+        "action": "death-quit",
+        "id": "quit-to-title",
+        "label": "Quit to title",
+        "available": false
+      }
+    ],
+    "selected": null
+  },
+  "rest": {
+    "hasResult": false,
+    "revision": "0",
+    "mode": null,
+    "requestedSeconds": 0,
+    "elapsedSeconds": 0,
+    "recoveryHours": 0,
+    "healthRecovered": 0,
+    "fatigueRecovered": 0,
+    "spellPointsRecovered": 0,
+    "interruption": "none",
+    "message": null
+  },
+  "travel": {
+    "destinations": [
+      {
+        "region": 0,
+        "index": 0,
+        "name": "Caarcun Manor",
+        "kind": "HomeWealthy"
+      },
+      {
+        "region": 0,
+        "index": 1,
+        "name": "The Flying Goat Hostel",
+        "kind": "Tavern"
+      },
+      {
+        "region": 0,
+        "index": 3,
+        "name": "Singing Star of Stendarr",
+        "kind": "ReligionTemple"
+      },
+      {
+        "region": 0,
+        "index": 4,
+        "name": "The Dead Griffin Inn",
+        "kind": "Tavern"
+      },
+      {
+        "region": 0,
+        "index": 5,
+        "name": "Sacred Rebirth of Stendarr",
+        "kind": "ReligionTemple"
+      },
+      {
+        "region": 0,
+        "index": 7,
+        "name": "Blessed Prophet of Stendarr",
+        "kind": "ReligionTemple"
+      },
+      {
+        "region": 0,
+        "index": 9,
+        "name": "The Old Nheth Place",
+        "kind": "HomePoor"
+      },
+      {
+        "region": 0,
+        "index": 10,
+        "name": "Atriga",
+        "kind": "TownVillage"
+      },
+      {
+        "region": 0,
+        "index": 12,
+        "name": "The Old Luctta Shack",
+        "kind": "HomePoor"
+      },
+      {
+        "region": 0,
+        "index": 13,
+        "name": "Bubyrydata",
+        "kind": "TownHamlet"
+      },
+      {
+        "region": 0,
+        "index": 14,
+        "name": "The Bat and Bird Hostel",
+        "kind": "Tavern"
+      },
+      {
+        "region": 0,
+        "index": 15,
+        "name": "Berbaaqnia",
+        "kind": "TownCity"
+      },
+      {
+        "region": 0,
+        "index": 19,
+        "name": "The Shust Farmstead",
+        "kind": "HomeFarms"
+      },
+      {
+        "region": 0,
+        "index": 20,
+        "name": "Holy Martyr of Stendarr",
+        "kind": "ReligionTemple"
+      },
+      {
+        "region": 0,
+        "index": 23,
+        "name": "Fearful Tree of Stendarr",
+        "kind": "ReligionTemple"
+      },
+      {
+        "region": 0,
+        "index": 27,
+        "name": "Mhurgin Manor",
+        "kind": "HomeWealthy"
+      },
+      {
+        "region": 0,
+        "index": 28,
+        "name": "Weeping Redeemer of Stendarr",
+        "kind": "ReligionTemple"
+      },
+      {
+        "region": 0,
+        "index": 33,
+        "name": "Kaloguja",
+        "kind": "TownCity"
+      },
+      {
+        "region": 0,
+        "index": 36,
+        "name": "The Rat and Castle Tavern",
+        "kind": "Tavern"
+      },
+      {
+        "region": 0,
+        "index": 37,
+        "name": "Rlictta Grange",
+        "kind": "HomeFarms"
+      },
+      {
+        "region": 0,
+        "index": 38,
+        "name": "Syro-Kom",
+        "kind": "TownVillage"
+      },
+      {
+        "region": 0,
+        "index": 39,
+        "name": "Bleeding Light of Stendarr",
+        "kind": "ReligionTemple"
+      },
+      {
+        "region": 0,
+        "index": 43,
+        "name": "Bleeding Seer of Stendarr",
+        "kind": "ReligionTemple"
+      },
+      {
+        "region": 0,
+        "index": 46,
+        "name": "Hettubu",
+        "kind": "TownVillage"
+      },
+      {
+        "region": 0,
+        "index": 49,
+        "name": "Fholl Palace",
+        "kind": "HomeWealthy"
+      },
+      {
+        "region": 0,
+        "index": 50,
+        "name": "The Devil\u0027s Mug Tavern",
+        "kind": "Tavern"
+      },
+      {
+        "region": 0,
+        "index": 52,
+        "name": "Mogandaton",
+        "kind": "TownCity"
+      },
+      {
+        "region": 0,
+        "index": 58,
+        "name": "Grejon Palace",
+        "kind": "HomeWealthy"
+      },
+      {
+        "region": 0,
+        "index": 61,
+        "name": "Dhalpem Hall",
+        "kind": "HomeWealthy"
+      },
+      {
+        "region": 0,
+        "index": 63,
+        "name": "Zenunnuga",
+        "kind": "TownVillage"
+      },
+      {
+        "region": 0,
+        "index": 64,
+        "name": "Rhogila",
+        "kind": "TownCity"
+      },
+      {
+        "region": 0,
+        "index": 65,
+        "name": "Garin Manor",
+        "kind": "HomeWealthy"
+      },
+      {
+        "region": 0,
+        "index": 68,
+        "name": "Old Mught-si\u0027s Shack",
+        "kind": "HomePoor"
+      },
+      {
+        "region": 0,
+        "index": 69,
+        "name": "Burning Idol of Stendarr",
+        "kind": "ReligionTemple"
+      },
+      {
+        "region": 0,
+        "index": 70,
+        "name": "Khurtin Court",
+        "kind": "HomeWealthy"
+      },
+      {
+        "region": 0,
+        "index": 71,
+        "name": "Osopaisa",
+        "kind": "TownVillage"
+      },
+      {
+        "region": 0,
+        "index": 74,
+        "name": "The Restless Badger Inn",
+        "kind": "Tavern"
+      },
+      {
+        "region": 0,
+        "index": 77,
+        "name": "Mesascuza",
+        "kind": "TownVillage"
+      },
+      {
+        "region": 0,
+        "index": 78,
+        "name": "Ceriburea",
+        "kind": "TownCity"
+      },
+      {
+        "region": 0,
+        "index": 79,
+        "name": "Baghissibu",
+        "kind": "TownVillage"
+      }
+    ],
+    "message": null,
+    "quote": null
+  },
+  "inventory": {
+    "revision": "93:1:5:0:",
+    "message": "Drag items between the grid and compatible equipment slots.",
+    "encumbrance": {
+      "currentClassicUnits": 7025,
+      "maximumClassicUnits": 25200,
+      "canMove": true
+    },
+    "currency": {
+      "gold": "25",
+      "lettersOfCredit": "0",
+      "accountGold": "0"
+    },
+    "bank": null,
+    "equipmentChange": null,
+    "items": [
+      {
+        "key": "stack:daggerfall.loadout.1.0",
+        "definition": "gold-piece",
+        "label": "Gold Piece",
+        "quantity": "25",
+        "weight": 0,
+        "value": 1,
+        "details": "Condition: 1/1 (100%); Stackable item",
+        "icon": "inventory.icon.gold-piece",
+        "condition": {
+          "current": 1,
+          "maximum": 1,
+          "percentage": 100,
+          "broken": false
+        },
+        "identified": true,
+        "gridSlot": 0,
+        "equippedSlots": [],
+        "compatibleSlots": []
+      },
+      {
+        "key": "unique:2",
+        "definition": "iron-longsword",
+        "label": "Iron Longsword",
+        "quantity": "1",
+        "weight": 18,
+        "value": 15,
+        "details": "Condition: 800/800 (100%); Damage 2\u201316; Iron; Long Blade",
+        "icon": "inventory.icon.iron-longsword",
+        "condition": {
+          "current": 800,
+          "maximum": 800,
+          "percentage": 100,
+          "broken": false
+        },
+        "identified": true,
+        "gridSlot": null,
+        "equippedSlots": [
+          "right-hand"
+        ],
+        "compatibleSlots": [
+          "right-hand",
+          "left-hand"
+        ]
+      },
+      {
+        "key": "unique:3",
+        "definition": "iron-dagger",
+        "label": "Iron Dagger",
+        "quantity": "1",
+        "weight": 2,
+        "value": 1,
+        "details": "Condition: 50/50 (100%); Damage 1\u20136; Iron; Short Blade",
+        "icon": "inventory.icon.iron-dagger",
+        "condition": {
+          "current": 50,
+          "maximum": 50,
+          "percentage": 100,
+          "broken": false
+        },
+        "identified": true,
+        "gridSlot": 1,
+        "equippedSlots": [],
+        "compatibleSlots": [
+          "right-hand",
+          "left-hand"
+        ]
+      },
+      {
+        "key": "unique:4",
+        "definition": "iron-cuirass",
+        "label": "Iron Cuirass",
+        "quantity": "1",
+        "weight": 50,
+        "value": 100,
+        "details": "Condition: 4096/4096 (100%); Armor: Iron",
+        "icon": "inventory.icon.iron-cuirass",
+        "condition": {
+          "current": 4096,
+          "maximum": 4096,
+          "percentage": 100,
+          "broken": false
+        },
+        "identified": true,
+        "gridSlot": null,
+        "equippedSlots": [
+          "chest-armor"
+        ],
+        "compatibleSlots": [
+          "chest-armor"
+        ]
+      }
+    ],
+    "slots": [
+      {
+        "id": "amulet0",
+        "label": "Amulet0",
+        "itemKey": null
+      },
+      {
+        "id": "amulet1",
+        "label": "Amulet1",
+        "itemKey": null
+      },
+      {
+        "id": "bracelet0",
+        "label": "Bracelet0",
+        "itemKey": null
+      },
+      {
+        "id": "bracelet1",
+        "label": "Bracelet1",
+        "itemKey": null
+      },
+      {
+        "id": "ring0",
+        "label": "Ring0",
+        "itemKey": null
+      },
+      {
+        "id": "ring1",
+        "label": "Ring1",
+        "itemKey": null
+      },
+      {
+        "id": "bracer0",
+        "label": "Bracer0",
+        "itemKey": null
+      },
+      {
+        "id": "bracer1",
+        "label": "Bracer1",
+        "itemKey": null
+      },
+      {
+        "id": "mark0",
+        "label": "Mark0",
+        "itemKey": null
+      },
+      {
+        "id": "mark1",
+        "label": "Mark1",
+        "itemKey": null
+      },
+      {
+        "id": "crystal0",
+        "label": "Crystal0",
+        "itemKey": null
+      },
+      {
+        "id": "crystal1",
+        "label": "Crystal1",
+        "itemKey": null
+      },
+      {
+        "id": "head",
+        "label": "Head",
+        "itemKey": null
+      },
+      {
+        "id": "right-arm",
+        "label": "Right Arm",
+        "itemKey": null
+      },
+      {
+        "id": "cloak1",
+        "label": "Cloak1",
+        "itemKey": null
+      },
+      {
+        "id": "left-arm",
+        "label": "Left Arm",
+        "itemKey": null
+      },
+      {
+        "id": "cloak2",
+        "label": "Cloak2",
+        "itemKey": null
+      },
+      {
+        "id": "chest-clothes",
+        "label": "Chest Clothes",
+        "itemKey": null
+      },
+      {
+        "id": "chest-armor",
+        "label": "Chest Armor",
+        "itemKey": "unique:4"
+      },
+      {
+        "id": "right-hand",
+        "label": "Right Hand",
+        "itemKey": "unique:2"
+      },
+      {
+        "id": "gloves",
+        "label": "Gloves",
+        "itemKey": null
+      },
+      {
+        "id": "left-hand",
+        "label": "Left Hand",
+        "itemKey": null
+      },
+      {
+        "id": "legs-armor",
+        "label": "Legs Armor",
+        "itemKey": null
+      },
+      {
+        "id": "legs-clothes",
+        "label": "Legs Clothes",
+        "itemKey": null
+      },
+      {
+        "id": "feet",
+        "label": "Feet",
+        "itemKey": null
+      }
+    ]
+  },
+  "loot": null,
+  "character": {
+    "name": "Nameless",
+    "attributes": [
+      {
+        "id": "strength",
+        "label": "Strength",
+        "value": 42,
+        "permanent": 42
+      },
+      {
+        "id": "intelligence",
+        "label": "Intelligence",
+        "value": 60,
+        "permanent": 60
+      },
+      {
+        "id": "willpower",
+        "label": "Willpower",
+        "value": 65,
+        "permanent": 65
+      },
+      {
+        "id": "agility",
+        "label": "Agility",
+        "value": 45,
+        "permanent": 45
+      },
+      {
+        "id": "endurance",
+        "label": "Endurance",
+        "value": 45,
+        "permanent": 45
+      },
+      {
+        "id": "personality",
+        "label": "Personality",
+        "value": 50,
+        "permanent": 50
+      },
+      {
+        "id": "speed",
+        "label": "Speed",
+        "value": 43,
+        "permanent": 43
+      },
+      {
+        "id": "luck",
+        "label": "Luck",
+        "value": 50,
+        "permanent": 50
+      },
+      {
+        "id": "reflexes",
+        "label": "Reflexes",
+        "value": 2,
+        "permanent": 2
+      }
+    ],
+    "skills": [
+      {
+        "id": "medical",
+        "label": "Medical",
+        "value": 30,
+        "permanent": 30
+      },
+      {
+        "id": "etiquette",
+        "label": "Etiquette",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "streetwise",
+        "label": "Streetwise",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "jumping",
+        "label": "Jumping",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "orcish",
+        "label": "Orcish",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "harpy",
+        "label": "Harpy",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "giantish",
+        "label": "Giantish",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "dragonish",
+        "label": "Dragonish",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "nymph",
+        "label": "Nymph",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "daedric",
+        "label": "Daedric",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "spriggan",
+        "label": "Spriggan",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "centaurian",
+        "label": "Centaurian",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "impish",
+        "label": "Impish",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "lockpicking",
+        "label": "Lockpicking",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "mercantile",
+        "label": "Mercantile",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "pickpocket",
+        "label": "Pickpocket",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "stealth",
+        "label": "Stealth",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "swimming",
+        "label": "Swimming",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "climbing",
+        "label": "Climbing",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "backstabbing",
+        "label": "Backstabbing",
+        "value": 30,
+        "permanent": 30
+      },
+      {
+        "id": "dodging",
+        "label": "Dodging",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "running",
+        "label": "Running",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "destruction",
+        "label": "Destruction",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "restoration",
+        "label": "Restoration",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "illusion",
+        "label": "Illusion",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "alteration",
+        "label": "Alteration",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "thaumaturgy",
+        "label": "Thaumaturgy",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "mysticism",
+        "label": "Mysticism",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "short-blade",
+        "label": "Short Blade",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "long-blade",
+        "label": "Long Blade",
+        "value": 60,
+        "permanent": 60
+      },
+      {
+        "id": "hand-to-hand",
+        "label": "Hand To Hand",
+        "value": 40,
+        "permanent": 40
+      },
+      {
+        "id": "axe",
+        "label": "Axe",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "blunt-weapon",
+        "label": "Blunt Weapon",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "archery",
+        "label": "Archery",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "critical-strike",
+        "label": "Critical Strike",
+        "value": 0,
+        "permanent": 0
+      }
+    ],
+    "resources": [
+      {
+        "id": "health",
+        "label": "Health",
+        "current": 31,
+        "maximum": 31
+      },
+      {
+        "id": "stamina",
+        "label": "Stamina",
+        "current": 5568,
+        "maximum": 5568
+      },
+      {
+        "id": "magicka",
+        "label": "Magicka",
+        "current": 100,
+        "maximum": 120
+      }
+    ],
+    "progression": {
+      "level": 1,
+      "experience": 0,
+      "skillProgress": 30,
+      "nextLevelSkillProgress": 32,
+      "pendingLevelUp": false
+    },
+    "equipment": [
+      {
+        "label": "Iron Cuirass",
+        "slots": [
+          "Chest Armor"
+        ],
+        "details": "Condition: 4096/4096 (100%); Armor: Iron",
+        "condition": {
+          "current": 4096,
+          "maximum": 4096,
+          "percentage": 100,
+          "broken": false
+        },
+        "identified": true
+      },
+      {
+        "label": "Iron Longsword",
+        "slots": [
+          "Right Hand"
+        ],
+        "details": "Condition: 800/800 (100%); Damage 2\u201316; Iron; Long Blade",
+        "condition": {
+          "current": 800,
+          "maximum": 800,
+          "percentage": 100,
+          "broken": false
+        },
+        "identified": true
+      }
+    ],
+    "resistances": [
+      {
+        "id": "resistance-fire",
+        "label": "Resistance Fire",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "resistance-frost",
+        "label": "Resistance Frost",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "resistance-disease-or-poison",
+        "label": "Resistance Disease Or Poison",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "resistance-shock",
+        "label": "Resistance Shock",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "resistance-magic",
+        "label": "Resistance Magic",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "immunity-paralysis",
+        "label": "Immunity Paralysis",
+        "value": 0,
+        "permanent": 0
+      },
+      {
+        "id": "immunity-disease",
+        "label": "Immunity Disease",
+        "value": 0,
+        "permanent": 0
+      }
+    ],
+    "affiliations": [],
+    "history": null,
+    "grantedSkills": [
+      {
+        "id": "mysticism",
+        "tier": "primary"
+      },
+      {
+        "id": "alteration",
+        "tier": "primary"
+      },
+      {
+        "id": "thaumaturgy",
+        "tier": "primary"
+      },
+      {
+        "id": "illusion",
+        "tier": "major"
+      },
+      {
+        "id": "destruction",
+        "tier": "major"
+      },
+      {
+        "id": "restoration",
+        "tier": "major"
+      },
+      {
+        "id": "medical",
+        "tier": "minor"
+      },
+      {
+        "id": "short-blade",
+        "tier": "minor"
+      },
+      {
+        "id": "blunt-weapon",
+        "tier": "minor"
+      },
+      {
+        "id": "dragonish",
+        "tier": "minor"
+      },
+      {
+        "id": "daedric",
+        "tier": "minor"
+      },
+      {
+        "id": "dodging",
+        "tier": "minor"
+      }
+    ],
+    "creationAvailable": false,
+    "creation": {
+      "editing": false,
+      "current": {
+        "name": "Nameless",
+        "race": "breton",
+        "gender": "male",
+        "faceIndex": 0,
+        "reflexes": 2,
+        "career": "class00"
+      },
+      "races": [
+        {
+          "id": "breton",
+          "label": "breton",
+          "available": true,
+          "restriction": null
+        },
+        {
+          "id": "redguard",
+          "label": "redguard",
+          "available": true,
+          "restriction": null
+        },
+        {
+          "id": "nord",
+          "label": "nord",
+          "available": true,
+          "restriction": null
+        },
+        {
+          "id": "dark-elf",
+          "label": "dark-elf",
+          "available": true,
+          "restriction": null
+        },
+        {
+          "id": "high-elf",
+          "label": "high-elf",
+          "available": true,
+          "restriction": null
+        },
+        {
+          "id": "wood-elf",
+          "label": "wood-elf",
+          "available": true,
+          "restriction": null
+        },
+        {
+          "id": "khajiit",
+          "label": "khajiit",
+          "available": true,
+          "restriction": null
+        },
+        {
+          "id": "argonian",
+          "label": "argonian",
+          "available": true,
+          "restriction": null
+        }
+      ],
+      "careers": [
+        {
+          "id": "class00",
+          "label": "Mage",
+          "available": true,
+          "restriction": null
+        },
+        {
+          "id": "class01",
+          "label": "Spellsword",
+          "available": true,
+          "restriction": "The corpus supplies no class portrait named for \u0027Spellsword\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+        },
+        {
+          "id": "class02",
+          "label": "Battlemage",
+          "available": true,
+          "restriction": "The corpus supplies no class portrait named for \u0027Battlemage\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+        },
+        {
+          "id": "class03",
+          "label": "Sorcerer",
+          "available": true,
+          "restriction": "The corpus supplies no class portrait named for \u0027Sorcerer\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+        },
+        {
+          "id": "class04",
+          "label": "Healer",
+          "available": true,
+          "restriction": "The corpus supplies no class portrait named for \u0027Healer\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+        },
+        {
+          "id": "class05",
+          "label": "Nightblade",
+          "available": true,
+          "restriction": "The corpus supplies no class portrait named for \u0027Nightblade\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+        },
+        {
+          "id": "class06",
+          "label": "Bard",
+          "available": true,
+          "restriction": "The corpus supplies no class portrait named for \u0027Bard\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+        },
+        {
+          "id": "class07",
+          "label": "Burglar",
+          "available": true,
+          "restriction": "The corpus supplies no class portrait named for \u0027Burglar\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+        },
+        {
+          "id": "class08",
+          "label": "Rogue",
+          "available": true,
+          "restriction": null
+        },
+        {
+          "id": "class09",
+          "label": "Acrobat",
+          "available": true,
+          "restriction": "The corpus supplies no class portrait named for \u0027Acrobat\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+        },
+        {
+          "id": "class10",
+          "label": "Thief",
+          "available": true,
+          "restriction": "The corpus supplies no class portrait named for \u0027Thief\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+        },
+        {
+          "id": "class11",
+          "label": "Assassin",
+          "available": true,
+          "restriction": "The corpus supplies no class portrait named for \u0027Assassin\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+        },
+        {
+          "id": "class12",
+          "label": "Monk",
+          "available": true,
+          "restriction": "The corpus supplies no class portrait named for \u0027Monk\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+        },
+        {
+          "id": "class13",
+          "label": "Archer",
+          "available": true,
+          "restriction": "The corpus supplies no class portrait named for \u0027Archer\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+        },
+        {
+          "id": "class14",
+          "label": "Ranger",
+          "available": true,
+          "restriction": "The corpus supplies no class portrait named for \u0027Ranger\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+        },
+        {
+          "id": "class15",
+          "label": "Barbarian",
+          "available": true,
+          "restriction": "The corpus supplies no class portrait named for \u0027Barbarian\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+        },
+        {
+          "id": "class16",
+          "label": "Warrior",
+          "available": true,
+          "restriction": null
+        },
+        {
+          "id": "class17",
+          "label": "Knight",
+          "available": true,
+          "restriction": "The corpus supplies no class portrait named for \u0027Knight\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+        },
+        {
+          "id": "class18",
+          "label": "Knight",
+          "available": true,
+          "restriction": "The corpus supplies no class portrait named for \u0027Knight\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+        },
+        {
+          "id": "custom",
+          "label": "Custom class",
+          "available": true,
+          "restriction": null
+        }
+      ],
+      "faces": [
+        {
+          "index": 0,
+          "mediaId": "character.head.male.00.0"
+        },
+        {
+          "index": 1,
+          "mediaId": "character.head.male.00.1"
+        },
+        {
+          "index": 2,
+          "mediaId": "character.head.male.00.2"
+        },
+        {
+          "index": 3,
+          "mediaId": "character.head.male.00.3"
+        },
+        {
+          "index": 4,
+          "mediaId": "character.head.male.00.4"
+        },
+        {
+          "index": 5,
+          "mediaId": "character.head.male.00.5"
+        },
+        {
+          "index": 6,
+          "mediaId": "character.head.male.00.6"
+        },
+        {
+          "index": 7,
+          "mediaId": "character.head.male.00.7"
+        },
+        {
+          "index": 8,
+          "mediaId": "character.head.male.00.8"
+        },
+        {
+          "index": 9,
+          "mediaId": "character.head.male.00.9"
+        }
+      ],
+      "reflexes": [
+        {
+          "value": 0,
+          "label": "Very high"
+        },
+        {
+          "value": 1,
+          "label": "High"
+        },
+        {
+          "value": 2,
+          "label": "Average"
+        },
+        {
+          "value": 3,
+          "label": "Low"
+        },
+        {
+          "value": 4,
+          "label": "Very low"
+        }
+      ],
+      "custom": null,
+      "background": null
+    },
+    "levelUp": null,
+    "identity": {
+      "race": "breton",
+      "donorRaceId": 1,
+      "portrait": "character.portrait.mage.0",
+      "gender": "male",
+      "faceIndex": 0,
+      "career": "class00",
+      "media": [
+        {
+          "layer": "background",
+          "mediaId": "character.scbg.scbg00i0.0"
+        },
+        {
+          "layer": "body.female.clothed",
+          "mediaId": "character.body-clothed.female.00.0"
+        },
+        {
+          "layer": "body.female.unclothed",
+          "mediaId": "character.body-unclothed.female.00.0"
+        },
+        {
+          "layer": "body.male.clothed",
+          "mediaId": "character.body-clothed.male.00.0"
+        },
+        {
+          "layer": "body.male.unclothed",
+          "mediaId": "character.body-unclothed.male.00.0"
+        },
+        {
+          "layer": "head.female.0",
+          "mediaId": "character.head.female.00.0"
+        },
+        {
+          "layer": "head.female.1",
+          "mediaId": "character.head.female.00.1"
+        },
+        {
+          "layer": "head.female.2",
+          "mediaId": "character.head.female.00.2"
+        },
+        {
+          "layer": "head.female.3",
+          "mediaId": "character.head.female.00.3"
+        },
+        {
+          "layer": "head.female.4",
+          "mediaId": "character.head.female.00.4"
+        },
+        {
+          "layer": "head.female.5",
+          "mediaId": "character.head.female.00.5"
+        },
+        {
+          "layer": "head.female.6",
+          "mediaId": "character.head.female.00.6"
+        },
+        {
+          "layer": "head.female.7",
+          "mediaId": "character.head.female.00.7"
+        },
+        {
+          "layer": "head.female.8",
+          "mediaId": "character.head.female.00.8"
+        },
+        {
+          "layer": "head.female.9",
+          "mediaId": "character.head.female.00.9"
+        },
+        {
+          "layer": "head.male.0",
+          "mediaId": "character.head.male.00.0"
+        },
+        {
+          "layer": "head.male.1",
+          "mediaId": "character.head.male.00.1"
+        },
+        {
+          "layer": "head.male.2",
+          "mediaId": "character.head.male.00.2"
+        },
+        {
+          "layer": "head.male.3",
+          "mediaId": "character.head.male.00.3"
+        },
+        {
+          "layer": "head.male.4",
+          "mediaId": "character.head.male.00.4"
+        },
+        {
+          "layer": "head.male.5",
+          "mediaId": "character.head.male.00.5"
+        },
+        {
+          "layer": "head.male.6",
+          "mediaId": "character.head.male.00.6"
+        },
+        {
+          "layer": "head.male.7",
+          "mediaId": "character.head.male.00.7"
+        },
+        {
+          "layer": "head.male.8",
+          "mediaId": "character.head.male.00.8"
+        },
+        {
+          "layer": "head.male.9",
+          "mediaId": "character.head.male.00.9"
+        }
+      ],
+      "selectedMedia": [
+        {
+          "layer": "background",
+          "mediaId": "character.scbg.scbg00i0.0"
+        },
+        {
+          "layer": "body.male.clothed",
+          "mediaId": "character.body-clothed.male.00.0"
+        },
+        {
+          "layer": "head.male.0",
+          "mediaId": "character.head.male.00.0"
+        }
+      ]
+    }
+  },
+  "composition": {
+    "bundle": "daggerfall.privateers-hold",
+    "ruleset": "daggerfall",
+    "contentPacks": [
+      "daggerfall.base",
+      "daggerfall.blocks",
+      "daggerfall.privateers-hold",
+      "daggerfall.castle-necromoghan",
+      "daggerfall.charing-exterior",
+      "daggerfall.charing-interior-1-1-0",
+      "daggerfall.quests.fighters",
+      "daggerfall.quests.mages",
+      "daggerfall.quests.temples",
+      "daggerfall.quests.social",
+      "daggerfall.quests.witches-commoners",
+      "daggerfall.quests.merchants-vampires",
+      "daggerfall.quests.disabled",
+      "daggerfall.quests.nobility"
+    ],
+    "tuning": "daggerfall.defaults"
+  },
+  "uiArtRevision": "session-art-revision"
+}

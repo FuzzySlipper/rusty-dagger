@@ -125,7 +125,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
                 || action.CooldownSeconds is not double cooldown || action.Reach is not > 0d)
             { facts.Append(new AttackRejectedFact(AttackRejection.NoAttackPolicy, request.AttackerId)); return false; }
             attack = action.Interpretation == "enemy-equipped-melee"
-                ? ResolveEquippedEnemyAttack(attacker, cooldown)
+                ? ResolveEquippedEnemyAttack(attacker, cooldown, action.Reach.Value)
                 : ResolveFixedAttack(attacker.Definition, action, cooldown);
             if (action.Interpretation == "fixed-ranged" && !TrySpendArrow(request.AttackerId, facts)) return false;
         }
@@ -725,17 +725,18 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     /// the classic hand-to-hand range scaled by the actor's own hand-to-hand skill when it wears none.
     /// A weapon-wielding enemy uses its equipped weapon even where its unarmed numbers would be
     /// higher — the donor's stronger-unarmed substitution is a documented deviation it does not keep.
+    /// The reach is the authored action's, the same value the behavior gate admitted the attack with.
     /// </summary>
-    private DaggerfallAttackDefinition ResolveEquippedEnemyAttack(Combatant attacker, double cooldown)
+    private DaggerfallAttackDefinition ResolveEquippedEnemyAttack(Combatant attacker, double cooldown, double reach)
     {
         DaggerfallEquippedWeapon? weapon = ReadWeapon(_actorEquipment(attacker.Id).Read(), "right-hand")
             ?? ReadWeapon(_actorEquipment(attacker.Id).Read(), "left-hand");
         return weapon is { } selected
-            ? new DaggerfallAttackDefinition(selected.Weapon.Skill, selected.Weapon.MinimumDamage, selected.Weapon.MaximumDamage, cooldown, selected.Material, Reach: 2d)
+            ? new DaggerfallAttackDefinition(selected.Weapon.Skill, selected.Weapon.MinimumDamage, selected.Weapon.MaximumDamage, cooldown, selected.Material, Reach: reach)
             : new DaggerfallAttackDefinition(DaggerfallMechanicsIds.HandToHand.Value,
                 DaggerfallFormulaPolicy.HandToHandMinimumDamage(ReadStat(attacker, DaggerfallMechanicsIds.HandToHand)),
                 DaggerfallFormulaPolicy.HandToHandMaximumDamage(ReadStat(attacker, DaggerfallMechanicsIds.HandToHand)),
-                cooldown, Reach: 2d);
+                cooldown, Reach: reach);
     }
 
     private static DaggerfallAttackDefinition ResolveFixedAttack(DaggerfallActorDefinition actor, DaggerfallActionDefinition action, double cooldown) => action.AttackRangeIndex is int index

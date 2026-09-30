@@ -1433,7 +1433,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         Assert.Equal(groundBefore, session.State.PlayerControl.Ground);
         Assert.NotEqual(yawBefore, session.State.PlayerControl.YawRadians);
         Assert.NotEqual(pitchBefore, session.State.PlayerControl.PitchRadians);
-        // The outer Engine callback treats this exception as terminal; there is no same-instance replay.
+        // The escape faults the Engine lifecycle; nothing here retries the refused step.
     }
 
     [Fact]
@@ -1947,7 +1947,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     }
 
     [Fact]
-    public void Presentation_failure_is_terminal_and_disposal_releases_staged_resources()
+    public void Presentation_failure_propagates_and_disposal_releases_staged_resources()
     {
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
@@ -2005,7 +2005,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     }
 
     [Fact]
-    public void Failed_outer_update_disposes_staged_appearance_and_reraises()
+    public void Failed_outer_update_reraises_and_a_resumed_update_continues_the_same_appearance()
     {
         static ProductInputEvent Ui(string json) => Input(InputEventKind.DirectDigital) with
         {
@@ -2029,16 +2029,22 @@ public sealed partial class NormalizedRuntimeSeamTests
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         int playbacksBefore = appearance.CreatedPlaybacks.Count;
 
-        // The next admitted update stages a weapon strike, then its publish throws.
-        // The callback is terminal; it is disposed rather than rolled back for retry.
+        // The next admitted update stages a weapon strike, then its publish throws. The Engine faults
+        // the lifecycle and a resume continues this same session, so the escape tears nothing down.
         appearance.FailPublishAt = appearance.PublishCalls + 1;
         InvalidOperationException failure = Assert.Throws<InvalidOperationException>(
             () => session.Update(new ProductUpdate(OuterUpdate(2), [Ui("{\"action\":\"attack\"}")])));
         Assert.Equal("Injected presentation publish failure.", failure.Message);
 
         Assert.True(appearance.CreatedPlaybacks.Count > playbacksBefore, "The failed update should have staged new appearance playback before its publish threw.");
-        foreach (SpritePlayback staged in appearance.CreatedPlaybacks.Skip(playbacksBefore))
-            Assert.Contains(staged.Handle, appearance.DisposedPlaybackHandles);
+        SpritePlayback[] staged = [.. appearance.CreatedPlaybacks.Skip(playbacksBefore)];
+        Assert.All(staged, playback => Assert.DoesNotContain(playback.Handle, appearance.DisposedPlaybackHandles));
+
+        // Resume: the next admitted update runs on the same appearance and publishes normally.
+        int publishesBefore = appearance.PublishCalls;
+        session.Update(new ProductUpdate(OuterUpdate(3), []));
+        Assert.True(appearance.PublishCalls > publishesBefore, "The resumed update should publish on the live appearance.");
+        Assert.All(staged, playback => Assert.DoesNotContain(playback.Handle, appearance.DisposedPlaybackHandles));
     }
 
     [Fact]
@@ -8700,6 +8706,7 @@ public sealed partial class NormalizedRuntimeSeamTests
                     StructuredValueKind.Null => null,
                     StructuredValueKind.String => Text(projection, node),
                     StructuredValueKind.Number => node.NumberValue,
+                    StructuredValueKind.Bool => node.BoolValue != 0,
                     StructuredValueKind.Array => Edges(projection, index).Select(edge => Decode(projection, edge)).ToArray(),
                     StructuredValueKind.Object => Edges(projection, index).ToDictionary(
                         edge => Key(projection, projection.Value.Nodes.Span[checked((int)edge)]),

@@ -497,7 +497,7 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
     {
         ArgumentNullException.ThrowIfNull(variables);
         foreach (DaggerfallQuestRuntimeInstance instance in _instances.Values)
-            DaggerfallQuestClockAdvancer.Advance(instance, Program(instance.SourceFile), variables, before, after);
+            DaggerfallQuestClockAdvancer.Advance(instance, Program(instance.SourceFile), variables, before, after, Messages, this);
     }
 
     internal DaggerfallQuestInstanceSave SetResource(string instanceId, DaggerfallQuestResourceState resource)

@@ -59,3 +59,9 @@ export function reportMissingArt(context: string, missing: readonly string[]): v
   lastReportedMissing = key;
   if (missing.length !== 0) console.warn(`${context} frame art is not published by this session: ${[...missing].sort().join(', ')}`);
 }
+
+/// A published image as a CSS `url()` value. The source is quoted and escaped, so a character that ends
+/// the string or the declaration cannot change what the property says.
+export function cssUrl(source: string): string {
+  return `url("${source.replace(/["\\\n\r\f]/g, character => `\\${character.charCodeAt(0).toString(16)} `)}")`;
+}

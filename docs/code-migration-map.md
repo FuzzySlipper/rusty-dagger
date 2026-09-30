@@ -81,9 +81,9 @@ preserved as content evidence; they do not restore the removed Rust or
 TypeScript runtime topology. Local copyrighted Arena2 inputs are optional
 operator material and are not committed.
 
-`src/playtest.json`, the package-backed CoreCLR launcher, focused C# test
-projects, and the SDK-hosted sprite workbench remain the current proof and
-operator surfaces. The Engine `rusty` CLI installs the pinned complete
+`.den-serve.json`, the package-backed CoreCLR launcher, focused C# test
+projects, the real-Engine play smoke (`scripts/verify.sh --play`) and the
+SDK-hosted sprite workbench remain the current proof and operator surfaces. The Engine `rusty` CLI installs the pinned complete
 SDK/runtime pair into its shared cache; that pair and generated
 `bin/**`/`obj/**` output are not handwritten authority; no Engine browser bundle,
 NativeProduct bridge, or Cargo host is retained in this repository.
