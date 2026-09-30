@@ -13,7 +13,6 @@ namespace Daggerfall.Import.Normalized;
 /// and runtime objects deliberately live elsewhere.
 /// </summary>
 public sealed record NormalizedImportDocument(
-    int SchemaVersion,
     ImportProvenance Provenance,
     IReadOnlyList<NormalizedArtifactDescriptor> Artifacts,
     NormalizedCoordinateConvention Coordinates,
@@ -23,8 +22,6 @@ public sealed record NormalizedImportDocument(
     NormalizedWorld World,
     IReadOnlyList<NormalizedResourceCatalogEntry> Resources)
 {
-    public const int CurrentSchemaVersion = 1;
-
     public NormalizedImportDocument Canonicalize() => this with
     {
         Provenance = Provenance.Canonicalize(),
@@ -40,7 +37,6 @@ public sealed record NormalizedImportDocument(
 
     public void Validate()
     {
-        RequireSchemaVersion(SchemaVersion, nameof(SchemaVersion));
         ArgumentNullException.ThrowIfNull(Provenance);
         ArgumentNullException.ThrowIfNull(Artifacts);
         ArgumentNullException.ThrowIfNull(Coordinates);
@@ -127,21 +123,12 @@ public sealed record NormalizedImportDocument(
         {
             NormalizedVector3[] localVertices = model.MeshIds.SelectMany(id => meshesById[id].Vertices).ToArray();
             NormalizedBounds actualBounds = new(
-                NormalizedBounds.CurrentSchemaVersion,
                 new(localVertices.Min(vertex => vertex.X), localVertices.Min(vertex => vertex.Y), localVertices.Min(vertex => vertex.Z)),
                 new(localVertices.Max(vertex => vertex.X), localVertices.Max(vertex => vertex.Y), localVertices.Max(vertex => vertex.Z)));
             if (actualBounds != model.LocalBounds)
                 throw new InvalidOperationException($"Action model '{model.ActionId}' local bounds do not match its source mesh vertices.");
             if (model.MeshIds.Any(id => !StringComparer.Ordinal.Equals(meshesById[id].ArtifactId, model.VisualArtifactId)))
                 throw new InvalidOperationException($"Action model '{model.ActionId}' source mesh facts must name its generated visual artifact.");
-        }
-    }
-
-    internal static void RequireSchemaVersion(int schemaVersion, string name)
-    {
-        if (schemaVersion != CurrentSchemaVersion)
-        {
-            throw new ArgumentOutOfRangeException(name, schemaVersion, $"Only normalized schema version {CurrentSchemaVersion} is supported.");
         }
     }
 
@@ -292,27 +279,15 @@ public sealed class ContentDigestJsonConverter : JsonConverter<ContentDigest>
 }
 
 /// <summary>One logical source record; paths are intentionally portable, never host paths.</summary>
-public sealed record LogicalSourceRecord(int SchemaVersion, string SourcePath, ContentDigest ContentDigest, long ByteLength, int SourceSchemaVersion)
+public sealed record LogicalSourceRecord(string SourcePath, ContentDigest ContentDigest, long ByteLength)
 {
-    public const int CurrentSchemaVersion = 1;
-
     public void Validate()
     {
-        if (SchemaVersion != CurrentSchemaVersion)
-        {
-            throw new ArgumentOutOfRangeException(nameof(SchemaVersion), SchemaVersion, $"Only logical source schema version {CurrentSchemaVersion} is supported.");
-        }
-
         NormalizedImportDocument.RequireLogicalPath(SourcePath, nameof(SourcePath));
         ContentDigest.Validate();
         if (ByteLength <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(ByteLength), ByteLength, "A logical source must retain its positive caller byte length.");
-        }
-
-        if (SourceSchemaVersion <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(SourceSchemaVersion), SourceSchemaVersion, "A source schema version must be positive.");
         }
     }
 }
@@ -321,10 +296,8 @@ public sealed record LogicalSourceRecord(int SchemaVersion, string SourcePath, C
 /// Aggregate importer provenance without machine-local or time-varying fields. The revision names the
 /// importer source that produced the document (see <see cref="ImporterBuild.Revision"/>).
 /// </summary>
-public sealed record ImportProvenance(int SchemaVersion, string ImporterId, string ImporterRevision, IReadOnlyList<LogicalSourceRecord> Sources)
+public sealed record ImportProvenance(string ImporterId, string ImporterRevision, IReadOnlyList<LogicalSourceRecord> Sources)
 {
-    public const int CurrentSchemaVersion = 1;
-
     public ImportProvenance Canonicalize() => this with
     {
         Sources = Sources.OrderBy(source => source.SourcePath, StringComparer.Ordinal).ToArray(),
@@ -332,11 +305,6 @@ public sealed record ImportProvenance(int SchemaVersion, string ImporterId, stri
 
     public void Validate()
     {
-        if (SchemaVersion != CurrentSchemaVersion)
-        {
-            throw new ArgumentOutOfRangeException(nameof(SchemaVersion), SchemaVersion, $"Only provenance schema version {CurrentSchemaVersion} is supported.");
-        }
-
         NormalizedImportDocument.RequireLogicalId(ImporterId, nameof(ImporterId));
         NormalizedImportDocument.RequireLogicalId(ImporterRevision, nameof(ImporterRevision));
         ArgumentNullException.ThrowIfNull(Sources);
@@ -355,15 +323,12 @@ public sealed record ImportProvenance(int SchemaVersion, string ImporterId, stri
 
 /// <summary>A produced file and its explicit closure inside the normalized pack.</summary>
 public sealed record NormalizedArtifactDescriptor(
-    int SchemaVersion,
     string Id,
     string RelativePath,
     ContentDigest ContentDigest,
     long ByteLength,
     IReadOnlyList<string> DependsOnArtifactIds)
 {
-    public const int CurrentSchemaVersion = 1;
-
     public NormalizedArtifactDescriptor Canonicalize() => this with
     {
         DependsOnArtifactIds = DependsOnArtifactIds.OrderBy(value => value, StringComparer.Ordinal).ToArray(),
@@ -371,11 +336,6 @@ public sealed record NormalizedArtifactDescriptor(
 
     public void Validate()
     {
-        if (SchemaVersion != CurrentSchemaVersion)
-        {
-            throw new ArgumentOutOfRangeException(nameof(SchemaVersion), SchemaVersion, $"Only artifact schema version {CurrentSchemaVersion} is supported.");
-        }
-
         NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
         NormalizedImportDocument.RequireLogicalPath(RelativePath, nameof(RelativePath));
         if (ByteLength < 0)
@@ -402,17 +362,10 @@ public enum NormalizedVerticalAxis
     NegativeY,
 }
 
-public sealed record NormalizedCoordinateConvention(int SchemaVersion, NormalizedHandedness Handedness, NormalizedVerticalAxis VerticalAxis, float UnitsPerMeter)
+public sealed record NormalizedCoordinateConvention(NormalizedHandedness Handedness, NormalizedVerticalAxis VerticalAxis, float UnitsPerMeter)
 {
-    public const int CurrentSchemaVersion = 1;
-
     public void Validate()
     {
-        if (SchemaVersion != CurrentSchemaVersion)
-        {
-            throw new ArgumentOutOfRangeException(nameof(SchemaVersion), SchemaVersion, $"Only coordinate schema version {CurrentSchemaVersion} is supported.");
-        }
-
         if (!Enum.IsDefined(Handedness) || !Enum.IsDefined(VerticalAxis))
         {
             throw new ArgumentOutOfRangeException("coordinate convention", "The normalized coordinate convention is not known.");
@@ -445,17 +398,10 @@ public readonly record struct NormalizedVector3(float X, float Y, float Z)
     }
 }
 
-public sealed record NormalizedBounds(int SchemaVersion, NormalizedVector3 Minimum, NormalizedVector3 Maximum)
+public sealed record NormalizedBounds(NormalizedVector3 Minimum, NormalizedVector3 Maximum)
 {
-    public const int CurrentSchemaVersion = 1;
-
     public void Validate()
     {
-        if (SchemaVersion != CurrentSchemaVersion)
-        {
-            throw new ArgumentOutOfRangeException(nameof(SchemaVersion), SchemaVersion, $"Only bounds schema version {CurrentSchemaVersion} is supported.");
-        }
-
         Minimum.Validate(nameof(Minimum));
         Maximum.Validate(nameof(Maximum));
         if (Minimum.X > Maximum.X || Minimum.Y > Maximum.Y || Minimum.Z > Maximum.Z)
@@ -480,7 +426,6 @@ public sealed record NormalizedMaterialGroup(string MaterialResourceId, int Star
 }
 
 public sealed record NormalizedMesh(
-    int SchemaVersion,
     string Id,
     string ArtifactId,
     IReadOnlyList<NormalizedVector3> Vertices,
@@ -489,8 +434,6 @@ public sealed record NormalizedMesh(
     IReadOnlyList<NormalizedTriangle> Triangles,
     IReadOnlyList<NormalizedMaterialGroup> MaterialGroups)
 {
-    public const int CurrentSchemaVersion = 1;
-
     public NormalizedMesh Canonicalize() => this with
     {
         MaterialGroups = MaterialGroups.OrderBy(group => group.StartTriangle)
@@ -499,11 +442,6 @@ public sealed record NormalizedMesh(
 
     public void Validate()
     {
-        if (SchemaVersion != CurrentSchemaVersion)
-        {
-            throw new ArgumentOutOfRangeException(nameof(SchemaVersion), SchemaVersion, $"Only mesh schema version {CurrentSchemaVersion} is supported.");
-        }
-
         NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
         NormalizedImportDocument.RequireLogicalId(ArtifactId, nameof(ArtifactId));
         ArgumentNullException.ThrowIfNull(Vertices);
@@ -576,17 +514,13 @@ public sealed record NormalizedMesh(
 /// geometry walker.  They never create a runtime navigation system.
 /// </summary>
 public sealed record NavigationDerivationConfig(
-    int SchemaVersion,
     float CellSize,
     float LevelQuantum,
     float MaximumSlopeDegrees,
     float RequiredHeadroom,
     float SupportProbeDrop)
 {
-    public const int CurrentSchemaVersion = 1;
-
     public static NavigationDerivationConfig ClassicDefault { get; } = new(
-        CurrentSchemaVersion,
         CellSize: 0.8F,
         LevelQuantum: 0.25F,
         MaximumSlopeDegrees: 45F,
@@ -595,11 +529,6 @@ public sealed record NavigationDerivationConfig(
 
     public void Validate()
     {
-        if (SchemaVersion != CurrentSchemaVersion)
-        {
-            throw new ArgumentOutOfRangeException(nameof(SchemaVersion), SchemaVersion, $"Only navigation derivation schema version {CurrentSchemaVersion} is supported.");
-        }
-
         NormalizedImportDocument.RequireFinite(CellSize, nameof(CellSize));
         NormalizedImportDocument.RequireFinite(LevelQuantum, nameof(LevelQuantum));
         NormalizedImportDocument.RequireFinite(MaximumSlopeDegrees, nameof(MaximumSlopeDegrees));
@@ -632,14 +561,11 @@ public sealed record NormalizedNavigationCell(int Column, int Row, int Level, fl
 /// importing an Arena2 layout must not silently shift authored block space.
 /// </summary>
 public sealed record NormalizedNavigationSurface(
-    int SchemaVersion,
     string Id,
     string ArtifactId,
     NavigationDerivationConfig Config,
     IReadOnlyList<NormalizedNavigationCell> Cells)
 {
-    public const int CurrentSchemaVersion = 1;
-
     public NormalizedNavigationSurface Canonicalize() => this with
     {
         Cells = Cells.OrderBy(cell => cell.Column).ThenBy(cell => cell.Row).ThenBy(cell => cell.Level).ToArray(),
@@ -647,11 +573,6 @@ public sealed record NormalizedNavigationSurface(
 
     public void Validate(IReadOnlySet<string> artifactIds)
     {
-        if (SchemaVersion != CurrentSchemaVersion)
-        {
-            throw new ArgumentOutOfRangeException(nameof(SchemaVersion), SchemaVersion, $"Only navigation schema version {CurrentSchemaVersion} is supported.");
-        }
-
         NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
         NormalizedImportDocument.RequireReference(ArtifactId, artifactIds, nameof(ArtifactId));
         ArgumentNullException.ThrowIfNull(Config);
@@ -860,7 +781,6 @@ public sealed record NormalizedInteriorBuilding(int BlockX, int BlockY, string S
 }
 
 public sealed record NormalizedWorld(
-    int SchemaVersion,
     string VisualMeshAssetId,
     IReadOnlyList<string> MeshIds,
     string? NavigationId,
@@ -872,8 +792,6 @@ public sealed record NormalizedWorld(
     IReadOnlyList<NormalizedTreasurePlacement> Treasures,
     IReadOnlyList<NormalizedDoorPlacement> Doors)
 {
-    public const int CurrentSchemaVersion = 1;
-
     /// <summary>Source-selected building instance; absent for worlds without a building selection.</summary>
     public NormalizedInteriorBuilding? InteriorBuilding { get; init; }
 
@@ -911,11 +829,6 @@ public sealed record NormalizedWorld(
 
     public void Validate(IReadOnlySet<string> meshIds, IReadOnlySet<string> resourceIds, IReadOnlySet<string> artifactIds)
     {
-        if (SchemaVersion != CurrentSchemaVersion)
-        {
-            throw new ArgumentOutOfRangeException(nameof(SchemaVersion), SchemaVersion, $"Only world schema version {CurrentSchemaVersion} is supported.");
-        }
-
         NormalizedImportDocument.RequireLogicalId(VisualMeshAssetId, nameof(VisualMeshAssetId));
         ArgumentNullException.ThrowIfNull(MeshIds);
         if (MeshIds.Count == 0)
@@ -1037,15 +950,12 @@ public sealed record NormalizedSpriteFrame(string Id, int FrameIndex, int X, int
 }
 
 public sealed record NormalizedResourceCatalogEntry(
-    int SchemaVersion,
     string Id,
     NormalizedResourceKind Kind,
     string ArtifactId,
     IReadOnlyList<string> Dependencies,
     IReadOnlyList<NormalizedSpriteFrame> SpriteFrames)
 {
-    public const int CurrentSchemaVersion = 1;
-
     public NormalizedResourceCatalogEntry Canonicalize() => this with
     {
         Dependencies = Dependencies.OrderBy(value => value, StringComparer.Ordinal).ToArray(),
@@ -1054,11 +964,6 @@ public sealed record NormalizedResourceCatalogEntry(
 
     public void Validate()
     {
-        if (SchemaVersion != CurrentSchemaVersion)
-        {
-            throw new ArgumentOutOfRangeException(nameof(SchemaVersion), SchemaVersion, $"Only resource schema version {CurrentSchemaVersion} is supported.");
-        }
-
         NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
         if (!Enum.IsDefined(Kind))
         {

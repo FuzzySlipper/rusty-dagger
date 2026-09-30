@@ -39,7 +39,6 @@ public sealed class GeneratedSpatialArtifact
     public IReadOnlyList<string> DependsOnArtifactIds { get; }
 
     public NormalizedArtifactDescriptor ToDescriptor() => new(
-        NormalizedArtifactDescriptor.CurrentSchemaVersion,
         Id,
         RelativePath,
         ContentDigest,
@@ -293,7 +292,7 @@ public static class OfflineNavigationDeriver
             .ToArray();
         if (collision.Length == 0)
         {
-            return new(NormalizedNavigationSurface.CurrentSchemaVersion, id, artifactId, config, []);
+            return new(id, artifactId, config, []);
         }
 
         float minimumUp = MathF.Cos(config.MaximumSlopeDegrees * (MathF.PI / 180F));
@@ -332,7 +331,7 @@ public static class OfflineNavigationDeriver
             .OrderBy(candidate => candidate.Key.Column).ThenBy(candidate => candidate.Key.Row).ThenBy(candidate => candidate.Key.Level)
             .Select(candidate => new NormalizedNavigationCell(candidate.Key.Column, candidate.Key.Row, candidate.Key.Level, candidate.Value, true))
             .ToArray();
-        return new(NormalizedNavigationSurface.CurrentSchemaVersion, id, artifactId, config, cells);
+        return new(id, artifactId, config, cells);
     }
 
     private static IEnumerable<CollisionTriangle> CollisionTriangles(NormalizedMesh mesh)
@@ -564,6 +563,9 @@ internal static class StaticMeshJson
 
 internal static class CollisionNavigationJson
 {
+    /// <summary>The format version the Engine's collision and navigation artifact states, and its navigation config.</summary>
+    private const int EngineArtifactVersion = 1;
+
     public static byte[] Serialize(string staticMeshArtifactId, NormalizedBounds bounds, IReadOnlyList<NormalizedMesh> meshes, NormalizedNavigationSurface navigation)
     {
         MeshAssembly collision = MeshAssembly.Create(meshes, collisionOnly: true);
@@ -571,7 +573,7 @@ internal static class CollisionNavigationJson
         using (Utf8JsonWriter writer = new(stream, new JsonWriterOptions { Indented = true }))
         {
             writer.WriteStartObject();
-            writer.WriteNumber("schemaVersion", 1);
+            writer.WriteNumber("schemaVersion", EngineArtifactVersion);
             writer.WriteString("staticMeshArtifactId", staticMeshArtifactId);
             writer.WritePropertyName("bounds");
             StaticMeshJson.WriteBounds(writer, bounds);
@@ -619,7 +621,7 @@ internal static class CollisionNavigationJson
         writer.WriteString("id", navigation.Id);
         writer.WritePropertyName("config");
         writer.WriteStartObject();
-        writer.WriteNumber("schemaVersion", navigation.Config.SchemaVersion);
+        writer.WriteNumber("schemaVersion", EngineArtifactVersion);
         writer.WriteNumber("cellSize", navigation.Config.CellSize);
         writer.WriteNumber("levelQuantum", navigation.Config.LevelQuantum);
         writer.WriteNumber("maximumSlopeDegrees", navigation.Config.MaximumSlopeDegrees);
@@ -665,14 +667,13 @@ internal static class ResourceCatalogJson
         }
 
         byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(
-            new ResourceCatalogDocument(ResourceCatalogDocument.CurrentSchemaVersion, canonical),
+            new ResourceCatalogDocument(canonical),
             Options);
         return [.. bytes, (byte)'\n'];
     }
 
-    private sealed record ResourceCatalogDocument(int SchemaVersion, IReadOnlyList<NormalizedResourceCatalogEntry> Resources)
+    private sealed record ResourceCatalogDocument(IReadOnlyList<NormalizedResourceCatalogEntry> Resources)
     {
-        public const int CurrentSchemaVersion = 1;
     }
 }
 

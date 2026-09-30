@@ -58,23 +58,14 @@ public sealed record DaggerfallSoundClip(
 /// <summary>
 /// The published catalog of every clip the numeric sound archive carries.
 /// </summary>
-/// <param name="SchemaVersion">Shape version of this section.</param>
 /// <param name="Clips">Every clip, in the archive's own directory order.</param>
 /// <param name="Sources">The source identity the catalog was read from.</param>
 public sealed record DaggerfallSoundCatalog(
-    int SchemaVersion,
     IReadOnlyList<DaggerfallSoundClip> Clips,
     IReadOnlyList<string> Sources)
 {
-    public const int CurrentSchemaVersion = 1;
-
     public void Validate()
     {
-        if (SchemaVersion != CurrentSchemaVersion)
-        {
-            throw new InvalidOperationException($"Sound catalog schema must be {CurrentSchemaVersion} but is {SchemaVersion}.");
-        }
-
         // The ordinals are the stable identity a consumer keeps across releases, so they must be the
         // archive's own order without gaps or repeats: a renumbered catalog would silently repoint
         // every reference a consumer stored.
@@ -208,7 +199,7 @@ public static class DaggerfallSoundCatalogBuilder
                     : $"The clip decodes and no published artifact carries it{(name.Length == 0 ? "; the donor names it nothing" : $"; the donor names it '{name}', which no consumer here uses yet")}."));
         }
 
-        DaggerfallSoundCatalog catalog = new(DaggerfallSoundCatalog.CurrentSchemaVersion, clips, [archive.Source]);
+        DaggerfallSoundCatalog catalog = new(clips, [archive.Source]);
         catalog.Validate();
         return catalog;
     }

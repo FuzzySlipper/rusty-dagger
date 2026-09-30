@@ -632,7 +632,6 @@ public static class DungeonNormalizer
                 .OrderBy(placement => placement.Id, StringComparer.Ordinal)
                 .ToArray();
             NormalizedWorld world = new(
-                NormalizedWorld.CurrentSchemaVersion,
                 visualMeshAssetId,
                 meshes.Select(mesh => mesh.Id).ToArray(),
                 navigation.Id,
@@ -676,11 +675,10 @@ public static class DungeonNormalizer
                 navigation,
                 resources);
             NormalizedImportDocument document = new NormalizedImportDocument(
-                NormalizedImportDocument.CurrentSchemaVersion,
-                new ImportProvenance(ImportProvenance.CurrentSchemaVersion, ImporterId, ImporterBuild.Revision,
-                    request.Sources.Sources.Select(source => new LogicalSourceRecord(LogicalSourceRecord.CurrentSchemaVersion, source.Label, ContentDigest.Compute(source.Bytes.Span), source.Bytes.Length, 1)).ToArray()),
+                new ImportProvenance(ImporterId, ImporterBuild.Revision,
+                    request.Sources.Sources.Select(source => new LogicalSourceRecord(source.Label, ContentDigest.Compute(source.Bytes.Span), source.Bytes.Length)).ToArray()),
                 spatialPublication.ArtifactDescriptors,
-                new NormalizedCoordinateConvention(NormalizedCoordinateConvention.CurrentSchemaVersion, NormalizedHandedness.Right, NormalizedVerticalAxis.PositiveY, 1F),
+                new NormalizedCoordinateConvention(NormalizedHandedness.Right, NormalizedVerticalAxis.PositiveY, 1F),
                 bounds,
                 meshes,
                 navigation,
@@ -805,28 +803,28 @@ public static class DungeonNormalizer
             List<NormalizedResourceCatalogEntry> resources = [];
             foreach (TextureInfo texture in textures.Values.OrderBy(value => value.Archive).ThenBy(value => value.Record))
             {
-                resources.Add(new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, texture.TextureId, NormalizedResourceKind.Texture,
+                resources.Add(new(texture.TextureId, NormalizedResourceKind.Texture,
                     resourceCatalogArtifactId, [], []));
-                resources.Add(new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, texture.MaterialId, NormalizedResourceKind.Material,
+                resources.Add(new(texture.MaterialId, NormalizedResourceKind.Material,
                     resourceCatalogArtifactId, [texture.TextureId], []));
-                resources.Add(new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, texture.SpriteId, NormalizedResourceKind.Sprite,
+                resources.Add(new(texture.SpriteId, NormalizedResourceKind.Sprite,
                     resourceCatalogArtifactId, [texture.TextureId],
                     [new($"frame/texture-{texture.Archive}-{texture.Record}", 0, 0, 0, texture.Width, texture.Height, new(0.5F, 0F))]));
             }
 
             foreach (string actorId in actors.Select(actor => actor.ActorResourceId).Distinct(StringComparer.Ordinal).OrderBy(id => id, StringComparer.Ordinal))
             {
-                resources.Add(new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, actorId, NormalizedResourceKind.ActorDefinition, resourceCatalogArtifactId, [], []));
+                resources.Add(new(actorId, NormalizedResourceKind.ActorDefinition, resourceCatalogArtifactId, [], []));
             }
 
             foreach (string treasureId in treasures.Select(treasure => treasure.TreasureResourceId).Distinct(StringComparer.Ordinal).OrderBy(id => id, StringComparer.Ordinal))
             {
-                resources.Add(new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, treasureId, NormalizedResourceKind.TreasureDefinition, resourceCatalogArtifactId, [], []));
+                resources.Add(new(treasureId, NormalizedResourceKind.TreasureDefinition, resourceCatalogArtifactId, [], []));
             }
 
             foreach (string doorId in doors.Select(door => door.DoorResourceId).Distinct(StringComparer.Ordinal).OrderBy(id => id, StringComparer.Ordinal))
             {
-                resources.Add(new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, doorId, NormalizedResourceKind.DoorDefinition, resourceCatalogArtifactId, [], []));
+                resources.Add(new(doorId, NormalizedResourceKind.DoorDefinition, resourceCatalogArtifactId, [], []));
             }
 
             if (resources.Count > request.Quotas.MaximumResources)

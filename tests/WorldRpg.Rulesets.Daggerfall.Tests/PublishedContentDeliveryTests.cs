@@ -468,7 +468,6 @@ public sealed class PublishedContentDeliveryTests
         // The catalog is the availability record for the whole archive, delivered by name like any
         // other artifact, so a consumer can see every clip and its disposition rather than assuming
         // the seven the product plays today.
-        Assert.Equal(1, catalog.GetProperty("schemaVersion").GetInt32());
         JsonElement[] clips = [.. catalog.GetProperty("clips").EnumerateArray()];
         Assert.Equal(459, clips.Length);
         JsonElement[] admitted = [.. clips.Where(clip => clip.GetProperty("disposition").GetString() == "admitted")];

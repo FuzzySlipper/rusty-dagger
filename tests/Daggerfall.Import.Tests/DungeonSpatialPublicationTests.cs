@@ -17,7 +17,6 @@ public sealed class DungeonSpatialPublicationTests
         NormalizedNavigationSurface navigation = OfflineNavigationDeriver.Derive(
             "navigation/example", "artifact/generated/spatial", [collision, doorVisual], config);
         NormalizedWorld world = new(
-            NormalizedWorld.CurrentSchemaVersion,
             "mesh/example",
             [collision.Id, doorVisual.Id],
             navigation.Id,
@@ -26,8 +25,8 @@ public sealed class DungeonSpatialPublicationTests
             [], [], [], [], []);
         NormalizedResourceCatalogEntry[] resources =
         [
-            new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, "material/stone", NormalizedResourceKind.Material, "artifact/generated/resources", [], []),
-            new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, "material/door", NormalizedResourceKind.Material, "artifact/generated/resources", [], []),
+            new("material/stone", NormalizedResourceKind.Material, "artifact/generated/resources", [], []),
+            new("material/door", NormalizedResourceKind.Material, "artifact/generated/resources", [], []),
         ];
         DungeonSpatialPublication publication = DungeonSpatialPublication.Create(
             "artifact/generated/static",
@@ -37,7 +36,7 @@ public sealed class DungeonSpatialPublicationTests
             "artifact/generated/resources",
             "resources/example/catalog.json",
             world.VisualMeshAssetId,
-            new(NormalizedBounds.CurrentSchemaVersion, new(0F, 0F, 0F), new(2F, 2F, 2F)),
+            new(new(0F, 0F, 0F), new(2F, 2F, 2F)),
             [collision, doorVisual],
             world,
             navigation,
@@ -101,12 +100,11 @@ public sealed class DungeonSpatialPublicationTests
     [Fact]
     public void RejectsMalformedSpatialBoundsAndNavigationLevelQuantization()
     {
-        NormalizedBounds invalidBounds = new(NormalizedBounds.CurrentSchemaVersion, new(2F, 0F, 0F), new(1F, 0F, 0F));
+        NormalizedBounds invalidBounds = new(new(2F, 0F, 0F), new(1F, 0F, 0F));
         Assert.Throws<ArgumentException>(invalidBounds.Validate);
 
         NavigationDerivationConfig config = NavigationDerivationConfig.ClassicDefault with { LevelQuantum = 1F };
         NormalizedNavigationSurface invalidLevel = new(
-            NormalizedNavigationSurface.CurrentSchemaVersion,
             "navigation/invalid",
             "artifact/spatial/invalid",
             config,
@@ -121,8 +119,8 @@ public sealed class DungeonSpatialPublicationTests
         NormalizedMesh extra = Floor("mesh/extra", "artifact/static", "material/extra", 0F, true);
         NormalizedNavigationSurface navigation = OfflineNavigationDeriver.Derive(
             "navigation/example", "artifact/spatial", [included], NavigationDerivationConfig.ClassicDefault with { CellSize = 1F });
-        NormalizedWorld world = new(NormalizedWorld.CurrentSchemaVersion, "mesh/example", [included.Id], navigation.Id, null, null, [], [], [], [], []);
-        NormalizedResourceCatalogEntry[] resources = [new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, "material/included", NormalizedResourceKind.Material, "artifact/resources", [], [])];
+        NormalizedWorld world = new("mesh/example", [included.Id], navigation.Id, null, null, [], [], [], [], []);
+        NormalizedResourceCatalogEntry[] resources = [new("material/included", NormalizedResourceKind.Material, "artifact/resources", [], [])];
 
         Assert.Throws<InvalidOperationException>(() => DungeonSpatialPublication.Create(
             "artifact/static",
@@ -132,7 +130,7 @@ public sealed class DungeonSpatialPublicationTests
             "artifact/resources",
             "resources/example/catalog.json",
             world.VisualMeshAssetId,
-            new(NormalizedBounds.CurrentSchemaVersion, new(0F, 0F, 0F), new(2F, 0F, 2F)),
+            new(new(0F, 0F, 0F), new(2F, 0F, 2F)),
             [included, extra],
             world,
             navigation,
@@ -140,7 +138,6 @@ public sealed class DungeonSpatialPublicationTests
     }
 
     private static NormalizedMesh Floor(string id, string artifactId, string material, float height, bool collision, float minimum = 0F, bool upward = true) => new(
-        NormalizedMesh.CurrentSchemaVersion,
         id,
         artifactId,
         [new(minimum, height, minimum), new(minimum + 2F, height, minimum), new(minimum + 2F, height, minimum + 2F), new(minimum, height, minimum + 2F)],

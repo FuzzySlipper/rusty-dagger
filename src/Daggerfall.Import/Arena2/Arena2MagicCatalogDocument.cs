@@ -201,7 +201,6 @@ public static class Arena2MagicCatalogDocument
 
         JsonObject document = new()
         {
-            ["schemaVersion"] = 1,
             ["sources"] = new JsonArray(
                 JsonSerializer.SerializeToNode(PublishedSource.Of(spellLabel, spellBytes), PublishedJson.Section),
                 JsonSerializer.SerializeToNode(PublishedSource.Of(magicLabel, magicBytes), PublishedJson.Section)),

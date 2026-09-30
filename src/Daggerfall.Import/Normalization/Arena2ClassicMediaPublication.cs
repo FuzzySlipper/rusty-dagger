@@ -1844,11 +1844,9 @@ public sealed record Arena2ClassicMediaPublication(
         foreach (ClassicAuthoredUiAsset asset in authoredUiAssets)
         {
             result.Add(new(
-                LogicalSourceRecord.CurrentSchemaVersion,
                 $"authored-ui/{asset.SourceLabel}",
                 ContentDigest.Compute(asset.PngBytes),
-                asset.PngBytes.LongLength,
-                1));
+                asset.PngBytes.LongLength));
         }
 
         NormalizedImportDocument.ValidateUnique(result, source => source.SourcePath, "classic media logical source");
@@ -1865,11 +1863,9 @@ public sealed record Arena2ClassicMediaPublication(
         if (input is null) return null;
         RequirePortableSourceBytes(input.SourceLabel, input.Bytes, maximumSourceBytes, nameof(input));
         return new(
-            LogicalSourceRecord.CurrentSchemaVersion,
             $"authored-ui/{input.SourceLabel}",
             ContentDigest.Compute(input.Bytes),
-            input.Bytes.LongLength,
-            1);
+            input.Bytes.LongLength);
     }
 
     private static ResolvedProfile ResolveProfile(Arena2ClassicMediaProfile profile)
@@ -2353,7 +2349,7 @@ public sealed record Arena2ClassicMediaPublication(
                     throw new ArgumentException($"Classic media source '{fileName}' must be present and within the source-byte quota.", nameof(inputs));
                 }
 
-                logicalSources.Add(new(LogicalSourceRecord.CurrentSchemaVersion, $"arena2/{fileName}", ContentDigest.Compute(bytes), bytes.LongLength, 1));
+                logicalSources.Add(new($"arena2/{fileName}", ContentDigest.Compute(bytes), bytes.LongLength));
             }
 
             return new(inputs, logicalSources.OrderBy(source => source.SourcePath, StringComparer.Ordinal).ToArray());

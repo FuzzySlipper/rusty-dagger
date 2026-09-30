@@ -361,17 +361,12 @@ public sealed record DaggerfallBlockSource(string RecordId, string Path, long By
 /// The published block inventory: every record the supplied archive declares, what its name says it is,
 /// and what its own header says it places.
 /// </summary>
-/// <param name="SchemaVersion">Shape version of this section.</param>
 /// <param name="Sources">Every archive the records were read from.</param>
 /// <param name="Records">Every record the archives carry, in directory order.</param>
 public sealed record DaggerfallBlocks(
-    int SchemaVersion,
     IReadOnlyList<DaggerfallBlockSource> Sources,
     IReadOnlyList<DaggerfallBlockRecord> Records)
 {
-    /// <summary>Shape version this publication writes.</summary>
-    public const int CurrentSchemaVersion = 2;
-
     /// <summary>The bytes of a city block header, up to and including the block's own name.</summary>
     public const int RmbHeaderBytes = RmbBlockSummaryReader.HeaderBytes;
 
@@ -381,11 +376,6 @@ public sealed record DaggerfallBlocks(
     /// <summary>Checks that every claim this publication makes about the corpus holds together.</summary>
     public void Validate()
     {
-        if (SchemaVersion != CurrentSchemaVersion)
-        {
-            throw new InvalidOperationException($"Block schema must be {CurrentSchemaVersion} but is {SchemaVersion}.");
-        }
-
         ArgumentNullException.ThrowIfNull(Sources);
         ArgumentNullException.ThrowIfNull(Records);
         if (Sources.Count == 0)
@@ -840,7 +830,6 @@ public static class DaggerfallBlocksBuilder
         }
 
         DaggerfallBlocks published = new(
-            DaggerfallBlocks.CurrentSchemaVersion,
             [new DaggerfallBlockSource(family.Id, label, bytes.LongLength, catalog.DeclaredRecords, catalog.Records.Count)],
             records);
         published.Validate();

@@ -131,7 +131,6 @@ public sealed record ImportInvocation(IReadOnlyList<string> Command, IReadOnlyLi
 /// host-independent.
 /// </summary>
 public sealed record CanonicalImportManifest(
-    int SchemaVersion,
     string ImporterId,
     string ImporterRevision,
     IReadOnlyList<string> Command,
@@ -139,8 +138,6 @@ public sealed record CanonicalImportManifest(
     IReadOnlyList<PublishedSource> AuthoredOverlays,
     IReadOnlyList<ImportPublicationManifestArtifact> Artifacts)
 {
-    public const int CurrentSchemaVersion = 1;
-
     public CanonicalImportManifest Canonicalize() => this with
     {
         Sources = Sources.OrderBy(source => source.Path, StringComparer.Ordinal).ToArray(),
@@ -154,11 +151,6 @@ public sealed record CanonicalImportManifest(
 
     public void Validate()
     {
-        if (SchemaVersion != CurrentSchemaVersion)
-        {
-            throw new ArgumentOutOfRangeException(nameof(SchemaVersion), SchemaVersion, $"Only publication manifest schema version {CurrentSchemaVersion} is supported.");
-        }
-
         NormalizedImportDocument.RequireLogicalId(ImporterId, nameof(ImporterId));
         NormalizedImportDocument.RequireLogicalId(ImporterRevision, nameof(ImporterRevision));
         ArgumentNullException.ThrowIfNull(Sources);
@@ -318,7 +310,6 @@ public sealed class ImportPublicationPlan
         ValidateUniquePaths(materialized);
         ImportPublicationArtifact[] orderedContent = materialized.OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal).ToArray();
         CanonicalImportManifest manifest = new(
-            CanonicalImportManifest.CurrentSchemaVersion,
             provenance.ImporterId,
             provenance.ImporterRevision,
             invocation.Command.ToArray(),
@@ -342,15 +333,12 @@ public sealed class ImportPublicationPlan
         ArgumentNullException.ThrowIfNull(invocation);
         return Create(
             new ImportProvenance(
-                ImportProvenance.CurrentSchemaVersion,
                 Manifest.ImporterId,
                 Manifest.ImporterRevision,
                 Manifest.Sources.Select(source => new LogicalSourceRecord(
-                    LogicalSourceRecord.CurrentSchemaVersion,
                     source.Path,
                     source.ContentDigest,
-                    source.ByteLength,
-                    NormalizedImportDocument.CurrentSchemaVersion)).ToArray()),
+                    source.ByteLength)).ToArray()),
             artifacts.Where(artifact => artifact.RelativePath != ImportPublicationManifestSerializer.ManifestRelativePath),
             invocation);
     }

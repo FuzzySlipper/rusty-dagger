@@ -218,7 +218,6 @@ public sealed record NormalizedMediaDescriptor(
     IReadOnlyList<NormalizedAtlasFrame>? GeneratedFrames = null)
 {
     public NormalizedArtifactDescriptor ToArtifactDescriptor() => new(
-        NormalizedArtifactDescriptor.CurrentSchemaVersion,
         $"artifact/{Id}",
         RelativePath,
         ContentDigest,
