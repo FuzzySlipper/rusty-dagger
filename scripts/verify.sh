@@ -5,19 +5,22 @@ set -euo pipefail
 
 aot=false
 play=false
+record=false
 for argument in "$@"; do
   case "$argument" in
     --aot) aot=true ;;
     --play) play=true ;;
+    --record) record=true ;;
     -h|--help)
-      echo "usage: scripts/verify.sh [--aot] [--play]"
+      echo "usage: scripts/verify.sh [--aot] [--play] [--record]"
       echo "  no arguments  pinned pair install, UI tests, restore, build, every test project, CoreCLR staging"
       echo "  --aot         also run the NativeAOT fidelity publish"
       echo "  --play        also start the product on its runtime and press Begin until it reaches ordinary play"
+      echo "  --record      on success, attach the run's summary to HEAD as a git note (refs/notes/verify) and push it"
       exit 0
       ;;
     *)
-      echo "Unknown argument: $argument (supported: --aot, --play)" >&2
+      echo "Unknown argument: $argument (supported: --aot, --play, --record)" >&2
       exit 2
       ;;
   esac
@@ -25,6 +28,35 @@ done
 
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo_root"
+
+# A green run is only worth keeping if it names what it ran on. The record is a git note on the
+# exact commit, so it cannot drift from the tree it describes; a run over uncommitted changes would
+# attach a result to code that is not in that commit, so recording refuses a dirty tree.
+if [[ "$record" == true ]]; then
+  if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
+    echo "--record needs a clean tree: the note would describe changes that are not in HEAD." >&2
+    exit 2
+  fi
+  run_log=$(mktemp)
+  trap 'rm -f "$run_log"' EXIT
+  gate_arguments=()
+  for argument in "$@"; do [[ "$argument" == --record ]] || gate_arguments+=("$argument"); done
+  set +e
+  "$0" "${gate_arguments[@]}" 2>&1 | tee "$run_log"
+  status=${PIPESTATUS[0]}
+  set -e
+  [[ "$status" -eq 0 ]] || exit "$status"
+  summary=$(
+    echo "scripts/verify.sh ${gate_arguments[*]}"
+    echo "corpus: local/arena2 $( [[ -d local/arena2 ]] && echo present || echo absent )"
+    grep -E '^# (pass|fail|skipped) |^(Passed|Failed)!|^play-smoke .* passed:|^Verified Engine pair' "$run_log" \
+      | sed -E 's/, Duration: [^-]*- / /'
+  )
+  git notes --ref=verify add -f -m "$summary" HEAD
+  git push -q origin refs/notes/verify
+  echo "Recorded the run on $(git rev-parse --short HEAD) in refs/notes/verify."
+  exit 0
+fi
 
 npm ci
 node --test tests/WorldRpg.Ui.Tests/*.test.mjs
@@ -76,3 +108,4 @@ if [[ "$aot" == true ]]; then
 else
   echo "Verified Engine pair ${pair_version}: CoreCLR. Use --aot for the NativeAOT fidelity publish."
 fi
+

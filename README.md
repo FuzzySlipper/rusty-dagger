@@ -231,12 +231,21 @@ and running, use the stable Den runbook
 `rusty-engine/downstream-csharp-sdk-runbook`; the older
 `rusty-engine/downstream-csharp-agent-brief` remains the ownership reference.
 
-Run `./scripts/verify.sh` after installation for pair verification, pinned UI
-dependency installation, focused package restore/build, architecture tests, and
-CoreCLR staging. NativeAOT is a separate fidelity target and is opt-in:
-`./scripts/verify.sh --aot`. Hosted CI is not
-declared until immutable Engine artifacts are published for clean runners; do
-not replace it with a cloned Engine checkout or downstream provider build.
+Run `./scripts/verify.sh` after installation. It installs the pinned pair and
+UI dependencies, runs the UI tests, builds the products and the import tool,
+runs every test project under `tests/` (an architecture law keeps that list
+complete), and stages the CoreCLR product. Options:
+
+- `--play` also starts the product on its runtime, presses Begin in a headless
+  Chromium and passes once the game reaches ordinary play with no error or
+  terminal diagnostic (about four minutes, most of it the opening cinematics);
+- `--aot` also runs the NativeAOT fidelity publish;
+- `--record` attaches the green run's summary to `HEAD` as a git note in
+  `refs/notes/verify` and pushes it; read it with
+  `git log --notes=verify` after `git fetch origin refs/notes/verify:refs/notes/verify`.
+
+There is no hosted CI: most suites read the operator's Arena2 corpus, which a
+clean runner does not have, so the recorded local run is the gate's record.
 
 To regenerate only the staged Product, use:
 
