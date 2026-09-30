@@ -41,7 +41,7 @@ internal sealed record DaggerfallMobileDefinition(
     /// <summary>Whether this mobile is one the product places as an actor.</summary>
     internal bool IsPublished => Disposition is "published" or "published-variant";
 
-    /// <summary>EnemyBasics caster capability retained for the later compiled spell behavior (task #7083).</summary>
+    /// <summary>The donor's EnemyBasics caster flag: whether this mobile casts spells when enemy spell behavior runs.</summary>
     internal bool RequiresEnemySpellBehavior => CastsMagic;
 
     /// <summary>The damage range the donor states, or null when the mobile carries none.</summary>

@@ -102,19 +102,16 @@ internal sealed class DaggerfallCorpseLootModule
     internal CorpseLootEvidence? LastEvidence { get; private set; }
     internal CorpseLootCommitEvidence? LastCommit { get; private set; }
 
-    /// <summary>Recreates durable corpse ownership and current Engine contents without re-running loot policy.</summary>
-    internal void Restore(IReadOnlyList<DaggerfallCorpseSave> saved)
-        => Restore(saved, savedIdentities: null);
-
     /// <summary>
-    /// Restores current corpse contents using the identity captured by the save owner.
-    /// The optional map keeps this module usable by older focused fixtures; the live
-    /// session supplies it so a container identity never changes across save/load.
+    /// Recreates durable corpse ownership and current Engine contents without re-running loot policy,
+    /// using the container identities the save owner captured so an identity never changes across
+    /// save/load.
     /// </summary>
     internal void Restore(IReadOnlyList<DaggerfallCorpseSave> saved,
-        IReadOnlyDictionary<long, DurableIdentityReference>? savedIdentities)
+        IReadOnlyDictionary<long, DurableIdentityReference> savedIdentities)
     {
         ArgumentNullException.ThrowIfNull(saved);
+        ArgumentNullException.ThrowIfNull(savedIdentities);
         foreach (DaggerfallCorpseSave value in saved.OrderBy(corpse => corpse.ActorId))
         {
             value.Validate();

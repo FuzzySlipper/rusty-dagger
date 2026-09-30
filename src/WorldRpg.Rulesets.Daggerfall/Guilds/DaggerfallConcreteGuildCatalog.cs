@@ -23,7 +23,7 @@ internal enum DaggerfallGuildMembershipKind
 
 /// <summary>
 /// The crime evidence projection consumed by guild admission. It deliberately contains no tally;
-/// #8054 owns incident accumulation and supplies these source-backed qualification facts.
+/// crime state accumulates the incidents and supplies these source-backed qualification facts.
 /// </summary>
 internal readonly record struct DaggerfallGuildCrimeInvitationEvidence(
     bool ThievingCrimeRequirementSatisfied,

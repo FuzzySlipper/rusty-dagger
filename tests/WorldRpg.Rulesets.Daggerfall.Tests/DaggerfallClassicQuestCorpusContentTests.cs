@@ -77,6 +77,6 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
         Assert.Equal(10, vampire.Count(receipt => receipt.Name.StartsWith("P", StringComparison.Ordinal)));
         Assert.Contains(vampire, receipt => !receipt.Runnable && receipt.Diagnostics.Any(diagnostic => diagnostic.Reason.Contains("runner operation", StringComparison.Ordinal)));
         DaggerfallFightersGuildQuestRuntimeReceipt vampireClan = Assert.Single(nobility, receipt => receipt.Name == "R0C11Y28");
-        Assert.Contains(vampireClan.Diagnostics, diagnostic => diagnostic.Line == 218 && diagnostic.Text.Contains("%vcn", StringComparison.Ordinal) && diagnostic.Reason.Contains("#8074", StringComparison.Ordinal));
+        Assert.Contains(vampireClan.Diagnostics, diagnostic => diagnostic.Line == 218 && diagnostic.Text.Contains("%vcn", StringComparison.Ordinal) && diagnostic.Reason.Contains("quest-NPC context", StringComparison.Ordinal));
     }
 }

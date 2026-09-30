@@ -139,8 +139,8 @@ internal static class DaggerfallConcreteGuildPolicy
     }
 
     /// <summary>
-    /// Evaluates only the invitation fact. Crime tallying, three-day letters, and quest state remain
-    /// in #8054; a caller maps that canonical state to the two booleans in the evidence projection.
+    /// Evaluates only the invitation fact. Crime tallying, three-day letters and quest state belong to
+    /// the crime state; a caller maps that canonical state to the two booleans in the evidence projection.
     /// </summary>
     internal static bool IsInvitationEligible(
         DaggerfallConcreteGuildDefinition definition,

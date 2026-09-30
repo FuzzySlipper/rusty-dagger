@@ -108,7 +108,7 @@ internal static class DaggerfallClassicQuestCorpusContent
             {
                 (int Line, string Text) macro = MessageLines(source).FirstOrDefault(value => value.Text.Contains("%vcn", StringComparison.OrdinalIgnoreCase));
                 if (macro.Text is null) throw new DaggerfallContentException([$"Classic quest receipt '{sourceFile}' lost its retained %vcn macro context."]);
-                diagnostics.Add(new(macro.Line, macro.Text, "The NPC vampire-clan macro requires quest-NPC context; #8074 owns that resolution."));
+                diagnostics.Add(new(macro.Line, macro.Text, "The NPC vampire-clan macro requires quest-NPC context, which quest binding resolves at run time."));
             }
             result.Add(new(availability, new(name, sourceFile, diagnostics.Count == 0, diagnostics)));
         }
