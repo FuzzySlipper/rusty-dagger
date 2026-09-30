@@ -1,4 +1,3 @@
-/// <reference path="./live-debug-panel.d.ts" />
 import { mountControls, type ControlsProjection, type ControlAction } from './controls.js';
 import { mountLiveDebugPanel, type LiveDebugPanelMount } from '@rusty-engine/live-debug';
 import { adopt, heldRevision, image, type ArtRequestAction, type UiArt } from './art.js';
@@ -9,28 +8,7 @@ import { mountNotebook, type NotebookProjection, type NotebookAction } from './n
 import { BEGIN_ACTION, TITLE_MODE, screenForMode } from './screens.js';
 import { mountTravel, isTravelProjection, type TravelProjection } from './travel.js';
 
-interface ProjectionEnvelope {
-  readonly contract: string;
-  readonly value: unknown;
-}
-
-interface ControllerUiObservation {
-  readonly context: 'interface';
-  readonly fact:
-    | { readonly kind: 'controller-button'; readonly button: string; readonly edge: 'pressed' | 'released' }
-    | { readonly kind: 'controller-axis'; readonly axis: string; readonly value: number }
-    | { readonly kind: 'controller-button-value'; readonly button: string; readonly value: number };
-}
-
-interface ProductUiContext {
-  readonly input?: { subscribe(observer: (input: ControllerUiObservation) => void): () => void };
-  readonly ui: {
-    setInteractionMode(mode: 'gameplay' | 'interface'): void;
-    focusGameplay(): void;
-  };
-  readonly projection?: { subscribe(listener: (projection: ProjectionEnvelope | null) => void): () => void };
-  readonly intents?: { claim(intent: string, value: { kind: 'product-payload'; contract: string; data: UiAction | ControlAction | CharacterAction | InventoryAction | LootAction | NotebookAction | ArtRequestAction | SaveSlotAction }): void };
-}
+import type { RustyApplicationUiContext } from '@rusty-engine/product-ui';
 
 interface UiAction { readonly action: string; readonly [field: string]: string | number | boolean | undefined; }
 
@@ -194,7 +172,7 @@ const MENU_CONTROLLER = Object.freeze({
 });
 const MENU_FOCUSABLE = 'button:not(:disabled),select:not(:disabled),input:not(:disabled),a[href],[tabindex="0"]';
 
-export function mountProductUi(root: HTMLElement, context: ProductUiContext): { dispose(): void } {
+export function mountProductUi(root: HTMLElement, context: RustyApplicationUiContext): { dispose(): void } {
   const stylesheet = document.createElement('link');
   stylesheet.rel = 'stylesheet';
   stylesheet.href = new URL('./styles.css', import.meta.url).href;
