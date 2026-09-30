@@ -137,10 +137,10 @@ public sealed class ActorLifecycleSessionTests
         Assert.True(session.State.Actors.Get(actorId).IsDefeated);
         Assert.True(session.Corpses.TryGetValue(actorId, out CorpseContainer? corpse));
         Assert.NotNull(corpse);
-        // The corpse is still a container the player can open, and it holds nothing generated.
-        Assert.True(corpse.IsRegistered);
-        Assert.Empty(session.State.Containers.Read(corpse.Owner).Stacks);
-        Assert.Empty(session.State.Containers.Read(corpse.Owner).UniqueItems);
+        // The corpse can still be searched once, and generation gave it nothing: no inventory is registered
+        // for it, which is how a corpse with no generated loot is held.
+        Assert.True(corpse.IsInteractable);
+        Assert.False(corpse.IsRegistered);
     }
 
     [Fact]
