@@ -251,8 +251,6 @@ public sealed class DaggerfallConcreteGuildRuntimeTests
 
     private static DaggerfallDefinitions LoadDefinitions()
     {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "content/worldrpg/payloads/daggerfall.base.json"))) directory = directory.Parent;
         return TestPayload.Definitions;
     }
 

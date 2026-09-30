@@ -10,7 +10,7 @@ namespace Daggerfall.Import.Tests;
 /// <summary>The name, biography and rumor families join the shared text section with metadata.</summary>
 public sealed class NamesBiographiesRumorsPublicationTests
 {
-    [Fact]
+    [CorpusFact]
     public void Builds_the_supplied_corpus_with_links_and_no_pending_family()
     {
         (DaggerfallText text, DaggerfallNameTables names, DaggerfallRumorCatalog rumors, DaggerfallBiographies biographies, DaggerfallBooks books) = BuildAll(CorpusBytes());
@@ -67,7 +67,7 @@ public sealed class NamesBiographiesRumorsPublicationTests
         });
     }
 
-    [Fact]
+    [CorpusFact]
     public void Biography_keys_address_every_prose_line_deterministically()
     {
         (_, _, _, DaggerfallBiographies biographies, _) = BuildAll(CorpusBytes());
@@ -100,7 +100,7 @@ public sealed class NamesBiographiesRumorsPublicationTests
         Assert.Contains("Name:00-0-00", keys);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Fixture_inputs_refuse_unknown_labels_and_broken_links()
     {
         CorpusFiles corpus = CorpusBytes();
@@ -148,22 +148,22 @@ public sealed class NamesBiographiesRumorsPublicationTests
         for (int cls = 0; cls <= 17; cls++)
         {
             string file = $"BIOG{cls:D2}T0.TXT";
-            questionnaires.Add((File.ReadAllText(Corpus(file)), $"local/arena2/{file}", cls, 0));
+            questionnaires.Add((File.ReadAllText(TestData.Corpus(file)), $"local/arena2/{file}", cls, 0));
         }
 
         return new CorpusFiles(
-            File.ReadAllBytes(Corpus("TEXT.RSC")),
-            File.ReadAllBytes(Corpus("NAMEGEN.DAT")),
-            File.ReadAllBytes(Corpus("RUMOR.DAT")),
-            File.ReadAllBytes(Corpus("BIO.DAT")),
+            File.ReadAllBytes(TestData.Corpus("TEXT.RSC")),
+            File.ReadAllBytes(TestData.Corpus("NAMEGEN.DAT")),
+            File.ReadAllBytes(TestData.Corpus("RUMOR.DAT")),
+            File.ReadAllBytes(TestData.Corpus("BIO.DAT")),
             questionnaires,
-            File.ReadAllBytes(Corpus("BIOG00I0.IMG")),
+            File.ReadAllBytes(TestData.Corpus("BIOG00I0.IMG")),
             ReadCorpusBooks());
     }
 
     private static IReadOnlyList<(int BookId, string Label, byte[] Bytes)> ReadCorpusBooks()
     {
-        string books = Path.Combine(Path.GetDirectoryName(Corpus("TEXT.RSC"))!, "books");
+        string books = Path.Combine(Path.GetDirectoryName(TestData.Corpus("TEXT.RSC"))!, "books");
         List<(int BookId, string Label, byte[] Bytes)> supplied = [];
         foreach (string path in Directory.EnumerateFiles(books, "BOK*.TXT").Order(StringComparer.Ordinal))
         {
@@ -180,7 +180,7 @@ public sealed class NamesBiographiesRumorsPublicationTests
         for (int cls = 0; cls <= 17; cls++)
         {
             BiogQuestionnaire questionnaire = BiogQuestionnaireReader.Read(
-                File.ReadAllText(Corpus($"BIOG{cls:D2}T0.TXT")), cls, 0, "corpus");
+                File.ReadAllText(TestData.Corpus($"BIOG{cls:D2}T0.TXT")), cls, 0, "corpus");
             count += questionnaire.Questions.Sum(question => question.Text.Count + question.Answers.Count);
         }
 
@@ -213,18 +213,5 @@ public sealed class NamesBiographiesRumorsPublicationTests
     }
 
     private static IReadOnlyList<SourceInventoryRow> Inventory() =>
-        SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv")));
-
-    private static string Corpus(string name) => Path.Combine(RepositoryRoot(), "local/arena2", name);
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md")))
-        {
-            directory = directory.Parent;
-        }
-
-        return directory?.FullName ?? throw new InvalidOperationException("repository root not found");
-    }
+        SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")));
 }

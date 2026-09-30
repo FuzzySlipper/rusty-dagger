@@ -26,7 +26,7 @@ public sealed class DaggerfallCatalogContentTests
         Assert.Equal(22, definitions.LootTables.Count);
         Assert.Equal(12, definitions.ArmorValuesByMaterial.Count);
         Assert.NotEmpty(definitions.RequireActor(new DaggerfallActorId("player")).Loadout);
-        string expectedFingerprint = File.ReadAllText(Path.Combine(RepositoryRoot(), "tests/WorldRpg.Rulesets.Daggerfall.Tests/Fixtures/daggerfall.base.semantic.sha256")).Trim();
+        string expectedFingerprint = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "tests/WorldRpg.Rulesets.Daggerfall.Tests/Fixtures/daggerfall.base.semantic.sha256")).Trim();
         // The fixture records the pack's semantic content, so it moves when the pack's meaning moves: the
         // archer gaining a ranged policy and the actions carrying their own reach are exactly that.
         Assert.Equal(expectedFingerprint, DaggerfallBaseContent.Fingerprint(definitions));
@@ -173,7 +173,7 @@ public sealed class DaggerfallCatalogContentTests
     [InlineData("\"status\": \"available\"", "\"status\": \"unclear\"")]
     public void RejectsABaselineRuleOrSubstituteThatDoesNotSayWhatItRestsOn(string before, string after)
     {
-        string payload = File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json"));
+        string payload = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json"));
         string tampered = payload.Replace(before, after, StringComparison.Ordinal);
         Assert.NotEqual(payload, tampered);
 
@@ -198,7 +198,7 @@ public sealed class DaggerfallCatalogContentTests
     [InlineData("\"cooldownSeconds\": 1.5,\n      \"attackRangeIndex\": 0,\n      \"reach\": 2.0", "\"cooldownSeconds\": 1.5,\n      \"attackRangeIndex\": 0", "must declare the positive reach")]
     public void RejectsAnActionThatReachesFurtherThanItsKindOfAttackResolves(string before, string after, string expected)
     {
-        string payload = File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json"));
+        string payload = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json"));
         string tampered = payload.Replace(before, after, StringComparison.Ordinal);
         Assert.NotEqual(payload, tampered);
 
@@ -218,7 +218,7 @@ public sealed class DaggerfallCatalogContentTests
     [InlineData("\"count\": 31,", "\"count\": 30,")]
     public void RejectsAnItemTemplateLedgerThatMisstatesItsOwnCoverage(string before, string after)
     {
-        string payload = File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json"));
+        string payload = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json"));
         string tampered = payload.Replace(before, after, StringComparison.Ordinal);
         Assert.NotEqual(payload, tampered);
 
@@ -235,7 +235,7 @@ public sealed class DaggerfallCatalogContentTests
         // A near miss must not pass as a state: 'Absent' is not the absent status, 'banana'
         // is not a disposition, and a string is not a boolean. Each would otherwise be read
         // as something it does not say.
-        string payload = File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json"));
+        string payload = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json"));
         string tampered = payload.Replace(before, after, StringComparison.Ordinal);
         Assert.NotEqual(payload, tampered);
 
@@ -247,7 +247,7 @@ public sealed class DaggerfallCatalogContentTests
     {
         // The vocabulary is closed rather than collapsed to one value: a supplied source is
         // what lets a target be malformed or decoded, and the ledger must be able to say so.
-        string payload = File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json"));
+        string payload = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json"));
         string tampered = payload
             .Replace("\"status\": \"absent\"", "\"status\": \"present\"", StringComparison.Ordinal)
             .Replace("\"disposition\": \"substitute\"", "\"disposition\": \"malformed\"", StringComparison.Ordinal);
@@ -262,7 +262,7 @@ public sealed class DaggerfallCatalogContentTests
     {
         // The ledger's provenance is validated the way every catalog citation is, so the
         // pack cannot carry a source reference one half knows and the other does not.
-        string payload = File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json"));
+        string payload = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json"));
         // The ledger's own target block, not the citation string: 'recordId: CNT-011'
         // appears in every catalog item reference too, so a bare replacement would be
         // caught by the catalog gate and this test would pass with the ledger gate gone.
@@ -279,7 +279,7 @@ public sealed class DaggerfallCatalogContentTests
     [Fact]
     public void RejectsAResolvedTargetWithNeitherTheByteSourceNorASubstitute()
     {
-        string payload = File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json"));
+        string payload = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json"));
         // Decoding needs the byte source or a marked substitute behind it. With the
         // substitute withdrawn and a target resolved, the ledger claims a fact with nothing
         // behind it — which is the one thing this task must never publish.
@@ -293,7 +293,7 @@ public sealed class DaggerfallCatalogContentTests
     [Fact]
     public void RejectsAUnicodeIdentifierThatIsShortInUtf16ButNotEngineCompatible()
     {
-        string payload = File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json"));
+        string payload = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json"));
 
         Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.Replace("\"id\": \"rat\"", "\"id\": \"rát\"", StringComparison.Ordinal))));
     }
@@ -304,7 +304,7 @@ public sealed class DaggerfallCatalogContentTests
     [InlineData("\"move\": 10", "\"move\": \"fast\"")]
     public void RejectsMalformedActorPresentationDefinitions(string before, string after)
     {
-        string payload = File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json"));
+        string payload = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json"));
 
         Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.Replace(before, after, StringComparison.Ordinal))));
     }
@@ -317,7 +317,7 @@ public sealed class DaggerfallCatalogContentTests
         try
         {
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("fr-FR");
-            string expectedFingerprint = File.ReadAllText(Path.Combine(RepositoryRoot(), "tests/WorldRpg.Rulesets.Daggerfall.Tests/Fixtures/daggerfall.base.semantic.sha256")).Trim();
+            string expectedFingerprint = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "tests/WorldRpg.Rulesets.Daggerfall.Tests/Fixtures/daggerfall.base.semantic.sha256")).Trim();
             Assert.Equal(expectedFingerprint, DaggerfallBaseContent.Fingerprint(definitions));
         }
         finally { CultureInfo.CurrentCulture = original; }
@@ -340,15 +340,8 @@ public sealed class DaggerfallCatalogContentTests
     [InlineData("\"entityId\": 1001", "\"entityId\": \"1001\"")]
     public void RejectsMalformedCatalogReferencesAndCanonicalLoadoutShapes(string before, string after)
     {
-        string payload = File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json"));
+        string payload = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json"));
         Assert.Contains(before, payload, StringComparison.Ordinal);
         Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.Replace(before, after, StringComparison.Ordinal))));
-    }
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md"))) return current.FullName;
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
     }
 }

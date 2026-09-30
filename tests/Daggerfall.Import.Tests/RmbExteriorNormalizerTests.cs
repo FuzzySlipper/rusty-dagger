@@ -7,7 +7,7 @@ namespace Daggerfall.Import.Tests;
 
 public sealed class RmbExteriorNormalizerTests
 {
-    [Fact]
+    [CorpusFact]
     public void Charing_exterior_and_selected_real_building_interior_publish_nonempty_static_collision_navigation_closures()
     {
         DungeonLogicalSourceSet sources = Sources();
@@ -63,17 +63,10 @@ public sealed class RmbExteriorNormalizerTests
 
     private static DungeonLogicalSourceSet Sources()
     {
-        string arena2 = Path.Combine(RepositoryRoot(), "local/arena2");
+        string arena2 = TestData.CorpusRoot;
         return new DungeonLogicalSourceSet(Directory.EnumerateFiles(arena2)
             .Where(path => Path.GetFileName(path) is "MAPS.BSA" or "BLOCKS.BSA" or "ARCH3D.BSA" or "CLIMATE.PAK"
                 || Path.GetFileName(path).StartsWith("TEXTURE.", StringComparison.Ordinal))
             .Select(path => new DungeonLogicalSource($"local/arena2/{Path.GetFileName(path)}", File.ReadAllBytes(path))));
-    }
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? current = new(AppContext.BaseDirectory);
-        while (current is not null && !Directory.Exists(Path.Combine(current.FullName, "local/arena2"))) current = current.Parent;
-        return current?.FullName ?? throw new DirectoryNotFoundException("Repository root with local Arena2 corpus was not found.");
     }
 }

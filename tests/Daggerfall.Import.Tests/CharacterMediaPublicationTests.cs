@@ -12,7 +12,7 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 public sealed class CharacterMediaPublicationTests
 {
-    [Fact]
+    [CorpusFact]
     public void PublishesEachCanvasOfAFamilyInItsOwnPalette()
     {
         (Dictionary<string, ReadOnlyMemory<byte>> sources, Dictionary<string, Arena2Palette> palettes) = Corpus();
@@ -56,7 +56,7 @@ public sealed class CharacterMediaPublicationTests
         Assert.Empty(CharacterMediaPublication.Publish("BODY", references, sources, palettes).Artifacts);
     }
 
-    [Fact]
+    [CorpusFact]
     public void RefusesAMissingFileAndACanvasThatDoesNotExist()
     {
         (Dictionary<string, ReadOnlyMemory<byte>> sources, Dictionary<string, Arena2Palette> palettes) = Corpus();
@@ -146,7 +146,7 @@ public sealed class CharacterMediaPublicationTests
         });
     }
 
-    [Fact]
+    [CorpusFact]
     public void PublishesAHeaderlessCanvasAndRefusesAPaletteTheCorpusDoesNotCarry()
     {
         (Dictionary<string, ReadOnlyMemory<byte>> sources, Dictionary<string, Arena2Palette> palettes) = Corpus();
@@ -179,7 +179,7 @@ public sealed class CharacterMediaPublicationTests
     /// the pixels rather than against the encoded bytes: a digest moves with whatever was written, so a pass
     /// that painted every canvas in the wrong palette would still hash to something consistent.
     /// </summary>
-    [Fact]
+    [CorpusFact]
     public void PublishesEachCanvasInThePaletteItsSourceFilePairsWith()
     {
         (Dictionary<string, ReadOnlyMemory<byte>> sources, Dictionary<string, Arena2Palette> palettes) = Corpus();
@@ -240,13 +240,13 @@ public sealed class CharacterMediaPublicationTests
     /// <summary>The indexed pixels of NITE00I0.IMG, which is a headerless 512x219 canvas.</summary>
     private static IndexedImg NiteskyCanvas()
     {
-        string arena2 = Path.Combine(RepositoryRoot(), "local", "arena2");
+        string arena2 = TestData.CorpusRoot;
         return ImgDecoder.DecodeHeaderless(File.ReadAllBytes(Path.Combine(arena2, "NITE00I0.IMG")), "NITE00I0.IMG");
     }
 
     private static ReadOnlyMemory<byte> BodyCanvas()
     {
-        string arena2 = Path.Combine(RepositoryRoot(), "local", "arena2");
+        string arena2 = TestData.CorpusRoot;
         return ImgDecoder.Decode(File.ReadAllBytes(Path.Combine(arena2, "BODY00I0.IMG")), "BODY00I0.IMG").Pixels;
     }
 
@@ -255,7 +255,7 @@ public sealed class CharacterMediaPublicationTests
     /// repository cannot read are named with their files, and the committed index is byte-for-byte what
     /// the pass regenerates - so an index that drifted from the corpus cannot stay committed.
     /// </summary>
-    [Fact]
+    [CorpusFact]
     public void PublishesEveryReadableCanvasAndRegeneratesTheCommittedIndex()
     {
         (Dictionary<string, ReadOnlyMemory<byte>> sourceBytes, Dictionary<string, Arena2Palette> palettes) = Corpus();
@@ -313,7 +313,7 @@ public sealed class CharacterMediaPublicationTests
             set,
             CharacterMediaReferences.FilesBoundByCharacterSheet(inventory),
             CharacterMediaReferences.CharacterSheetConsumer);
-        string committed = Path.Combine(RepositoryRoot(), "content/worldrpg/media/character/character-media-inventory.json");
+        string committed = Path.Combine(TestData.RepositoryRoot, "content/worldrpg/media/character/character-media-inventory.json");
         byte[] regenerated = CharacterMediaPublisher.WriteIndex(pass, boundSet, "worldrpg");
 
         // Every field of every entry, not a sampled handful: a hand-edited byte length, dimension, family,
@@ -340,7 +340,7 @@ public sealed class CharacterMediaPublicationTests
     /// rule binds one race's paper-doll layers and every career portrait, and a canvas bound by a consumer
     /// the pass could not publish is refused rather than published as a reference to nothing.
     /// </summary>
-    [Fact]
+    [CorpusFact]
     public void BindsOnlyWhatAConsumerResolvesAndRefusesABindingWithNoArtifact()
     {
         (Dictionary<string, ReadOnlyMemory<byte>> sources, Dictionary<string, Arena2Palette> palettes) = Corpus();
@@ -414,7 +414,7 @@ public sealed class CharacterMediaPublicationTests
     /// could not resolve; the enumeration derives unique identities, so this guards the primitive against a
     /// hand-built set rather than a case the derivation produces.
     /// </summary>
-    [Fact]
+    [CorpusFact]
     public void RefusesTwoReferencesThatClaimOneMediaIdentity()
     {
         (Dictionary<string, ReadOnlyMemory<byte>> sources, Dictionary<string, Arena2Palette> palettes) = Corpus();
@@ -434,7 +434,7 @@ public sealed class CharacterMediaPublicationTests
     /// Every readable source has a published artifact; an unreadable-family record would therefore be a false
     /// claim about the same pass.
     /// </summary>
-    [Fact]
+    [CorpusFact]
     public void StatesNoUnreadableFamilyWhenEverySourcePublishes()
     {
         (Dictionary<string, ReadOnlyMemory<byte>> sources, Dictionary<string, Arena2Palette> palettes) = Corpus();
@@ -454,18 +454,18 @@ public sealed class CharacterMediaPublicationTests
     /// publication account for a family the source does not carry, and a supplied file with no row is
     /// content this publication would emit without a record.
     /// </summary>
-    [Fact]
+    [CorpusFact]
     public void TheDocumentedInventoryAndTheSuppliedCorpusAgree()
     {
         IReadOnlyList<SourceInventoryRow> rows = SourceManifestBuilder.ReadInventory(
-            File.ReadAllBytes(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv")));
+            File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")));
         string[] documented = [.. rows
             .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, "CNT-021"))
             .Select(row => System.IO.Path.GetFileName(row.PathOrPattern))
             .Order(StringComparer.OrdinalIgnoreCase)];
         Assert.Equal(87, documented.Length);
 
-        string arena2 = Path.Combine(RepositoryRoot(), "local", "arena2");
+        string arena2 = TestData.CorpusRoot;
         string[] supplied = [.. Directory.EnumerateFiles(arena2)
             .Select(path => System.IO.Path.GetFileName(path))
             .Where(name => name is { Length: > 0 } && CharacterMediaInventory.IsDocumentedFamily(name))
@@ -479,7 +479,7 @@ public sealed class CharacterMediaPublicationTests
     /// A file no reader opens inside a family this run publishes from is a file-level gap, not a format
     /// nothing reads: an entry claiming otherwise would be false in the same run that reads its siblings.
     /// </summary>
-    [Fact]
+    [CorpusFact]
     public void StatesAFileLevelGapWithoutClaimingTheFamilyIsUnreadable()
     {
         (Dictionary<string, ReadOnlyMemory<byte>> sources, Dictionary<string, Arena2Palette> palettes) = Corpus();
@@ -508,7 +508,7 @@ public sealed class CharacterMediaPublicationTests
     /// A canvas a consumer is said to bind has to resolve to an artifact, or the pack would claim a live
     /// consumer draws art that was never emitted. The refusal names the canvas.
     /// </summary>
-    [Fact]
+    [CorpusFact]
     public void RefusesABoundCanvasTheCorpusCannotSupply()
     {
         (Dictionary<string, ReadOnlyMemory<byte>> sources, Dictionary<string, Arena2Palette> palettes) = Corpus();
@@ -544,7 +544,7 @@ public sealed class CharacterMediaPublicationTests
     /// </summary>
     private static (Dictionary<string, ReadOnlyMemory<byte>> Sources, Dictionary<string, Arena2Palette> Palettes) Corpus()
     {
-        string arena2 = Path.Combine(RepositoryRoot(), "local", "arena2");
+        string arena2 = TestData.CorpusRoot;
         Dictionary<string, ReadOnlyMemory<byte>> sources = new(StringComparer.Ordinal);
         foreach (string path in Directory.EnumerateFiles(arena2).OrderBy(path => path, StringComparer.Ordinal))
         {
@@ -562,12 +562,5 @@ public sealed class CharacterMediaPublicationTests
             ["NIGHTSKY.COL"] = PaletteDecoder.Decode(File.ReadAllBytes(Path.Combine(arena2, "NIGHTSKY.COL")), "arena2/NIGHTSKY.COL"),
         };
         return (sources, palettes);
-    }
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md"))) directory = directory.Parent;
-        return directory?.FullName ?? throw new InvalidOperationException("The repository root was not found above the test output.");
     }
 }

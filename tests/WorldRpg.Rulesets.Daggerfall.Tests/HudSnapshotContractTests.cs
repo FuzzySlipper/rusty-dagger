@@ -23,7 +23,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     [Fact]
     public void Published_hud_snapshot_matches_the_fixture_the_ui_suite_renders()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);

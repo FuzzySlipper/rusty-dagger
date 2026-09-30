@@ -100,13 +100,7 @@ public sealed class DaggerfallTextResolverTests
     }
 
     private static readonly DaggerfallTextKey Key = new(DaggerfallTextKind.Resource, "test");
-    private static string PackPath() => Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json");
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !Directory.Exists(Path.Combine(directory.FullName, "content", "worldrpg"))) directory = directory.Parent;
-        return directory?.FullName ?? throw new DirectoryNotFoundException("Could not locate the Rusty Dagger repository root.");
-    }
+    private static string PackPath() => Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json");
     private static DaggerfallTextResolver Resolver(string source) => new(TextSet(source, [new(DaggerfallTextCode.Text, source, null, null)]));
     private static DaggerfallTextSet TextSet(string source, IReadOnlyList<DaggerfallTextElement> tokens) => new(
         new Dictionary<DaggerfallTextKey, DaggerfallTextValue> { [Key] = new(Key, "test", "en", 0, 0, source.Length, 1, DaggerfallTextState.Read, string.Empty, [], tokens) }, [], []);

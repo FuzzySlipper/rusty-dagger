@@ -428,11 +428,10 @@ public sealed class Arena2ClassicMediaPublicationTests
         Assert.Throws<ArgumentException>(() => Arena2ClassicMediaPublication.Create(CreateInputs(), collidingProvenance));
     }
 
-    [Fact]
+    [CorpusFact("WEAPON00.CIF", "WEAPON01.CIF", "WEAPON02.CIF", "WEAPON03.CIF", "WEAPON04.CIF", "WEAPON05.CIF", "WEAPON06.CIF", "WEAPON07.CIF", "WEAPON08.CIF", "WEAPON09.CIF", "WEAPON10.CIF", "WEAPON11.CIF")]
     public void RegeneratesTheSelectedClosureFromOperatorSuppliedArena2WhenAvailable()
     {
-        string arena2 = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../local/arena2"));
-        if (!new[] { "WEAPON00.CIF", "WEAPON01.CIF", "WEAPON02.CIF", "WEAPON03.CIF", "WEAPON04.CIF", "WEAPON05.CIF", "WEAPON06.CIF", "WEAPON07.CIF", "WEAPON08.CIF", "WEAPON09.CIF", "WEAPON10.CIF", "WEAPON11.CIF" }.All(file => File.Exists(Path.Combine(arena2, file)))) return;
+        string arena2 = TestData.CorpusRoot;
 
         Arena2ClassicMediaPublication publication = Arena2ClassicMediaPublication.Create(new(
             Read(arena2, "WEAPON01.CIF"), Read(arena2, "WEAPON02.CIF"), Read(arena2, "WEAPON04.CIF"), Read(arena2, "WEAPON05.CIF"), Read(arena2, "WEAPON06.CIF"), Read(arena2, "WEAPON07.CIF"), Read(arena2, "WEAPON08.CIF"), Read(arena2, "WEAPON09.CIF"), Read(arena2, "WEAPON10.CIF"),

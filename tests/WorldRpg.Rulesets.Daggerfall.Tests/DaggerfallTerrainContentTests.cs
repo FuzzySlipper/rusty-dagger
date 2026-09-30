@@ -31,20 +31,6 @@ public sealed class DaggerfallTerrainContentTests
 
     private static DaggerfallDefinitions Definitions()
     {
-        string root = RepositoryRoot();
         return TestPayload.Definitions;
-    }
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("repository root not found");
     }
 }

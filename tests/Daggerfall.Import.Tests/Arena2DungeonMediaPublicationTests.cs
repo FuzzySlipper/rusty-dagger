@@ -114,17 +114,17 @@ public sealed class Arena2DungeonMediaPublicationTests
         Assert.Contains(archer.States, state => state.State == DungeonActorSpriteState.RangedAttack1);
     }
 
-    [Fact]
+    [CorpusFact("PAL.PAL", "TEXTURE.002", "TEXTURE.096", "TEXTURE.285")]
     public void RetainsTheDifferentSourceFrameCountsOfEachDirection()
     {
         Arena2DungeonMediaRequest request = CreateActorRequest(30, 285) with
         {
             Sources = new Arena2DungeonMediaSourceSet(
             [
-                new("arena2/PAL.PAL", File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/PAL.PAL"))),
-                new("arena2/TEXTURE.002", File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/TEXTURE.002"))),
-                new("arena2/TEXTURE.096", File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/TEXTURE.096"))),
-                new("arena2/TEXTURE.285", File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/TEXTURE.285"))),
+                new("arena2/PAL.PAL", File.ReadAllBytes(TestData.Corpus("PAL.PAL"))),
+                new("arena2/TEXTURE.002", File.ReadAllBytes(TestData.Corpus("TEXTURE.002"))),
+                new("arena2/TEXTURE.096", File.ReadAllBytes(TestData.Corpus("TEXTURE.096"))),
+                new("arena2/TEXTURE.285", File.ReadAllBytes(TestData.Corpus("TEXTURE.285"))),
             ]),
         };
 
@@ -394,13 +394,6 @@ public sealed class Arena2DungeonMediaPublicationTests
         new("arena2/TEXTURE.255", CreateTextureArchive(20)),
         new("arena2/TEXTURE.401", CreateTextureArchive(2)),
     ];
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md"))) directory = directory.Parent;
-        return directory?.FullName ?? throw new DirectoryNotFoundException("Could not locate the Rusty Dagger repository root.");
-    }
 
     private static NormalizedImportDocument CreateDungeon()
     {

@@ -6,7 +6,7 @@ namespace Daggerfall.Import.Tests;
 /// <summary>Whole-corpus closure proof for the published MAPS, BLOCKS, ARCH3D and texture sources.</summary>
 public sealed class DungeonCorpusClosureTests
 {
-    [Fact]
+    [CorpusFact]
     public void Reads_every_region_and_reachable_geometry_texture_link_in_the_local_corpus()
     {
         DungeonCorpusClosureReport report = DungeonCorpusClosureBuilder.Build(new(BuildSources()));
@@ -56,7 +56,7 @@ public sealed class DungeonCorpusClosureTests
 
     private static DungeonLogicalSourceSet BuildSources()
     {
-        string root = Path.Combine(RepositoryRoot(), "local/arena2");
+        string root = TestData.CorpusRoot;
         IEnumerable<string> paths = Directory.EnumerateFiles(root)
             .Where(path => Path.GetFileName(path) is "MAPS.BSA" or "BLOCKS.BSA" or "ARCH3D.BSA" or "CLIMATE.PAK"
                 || Path.GetFileName(path).StartsWith("TEXTURE.", StringComparison.OrdinalIgnoreCase));
@@ -65,12 +65,4 @@ public sealed class DungeonCorpusClosureTests
 
     private static DungeonCorpusClosureEntry Entry(DungeonCorpusClosureReport report, string sourceId) =>
         Assert.Single(report.Entries, entry => entry.SourceId == sourceId);
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md")))
-            directory = directory.Parent;
-        return directory?.FullName ?? throw new InvalidOperationException("repository root not found");
-    }
 }

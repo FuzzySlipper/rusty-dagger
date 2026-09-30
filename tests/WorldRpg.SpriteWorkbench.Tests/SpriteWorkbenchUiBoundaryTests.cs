@@ -7,7 +7,7 @@ public sealed class SpriteWorkbenchUiBoundaryTests
     [Fact]
     public void Browser_module_uses_the_product_host_contract_without_render_or_clock_authority()
     {
-        string source = File.ReadAllText(Path.GetFullPath("../../../../../src/sprite-ui/workbench.ts", AppContext.BaseDirectory));
+        string source = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "src/sprite-ui/workbench.ts"));
 
         Assert.Contains("export function mountProductUi", source, StringComparison.Ordinal);
         Assert.Contains("worldrpg.sprite-workbench.intent.v1", source, StringComparison.Ordinal);
@@ -21,7 +21,7 @@ public sealed class SpriteWorkbenchUiBoundaryTests
     [Fact]
     public void Product_ui_compilation_runs_before_sdk_composition_without_local_runtime_assets()
     {
-        string source = File.ReadAllText(Path.GetFullPath("../../../../../src/WorldRpg.SpriteWorkbench/WorldRpg.SpriteWorkbench.csproj", AppContext.BaseDirectory));
+        string source = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "src/WorldRpg.SpriteWorkbench/WorldRpg.SpriteWorkbench.csproj"));
 
         Assert.Contains("<RustyEngineProductUiRoot>", source, StringComparison.Ordinal);
         Assert.Contains("BeforeTargets=\"BuildRustyEngineProductUi\"", source, StringComparison.Ordinal);

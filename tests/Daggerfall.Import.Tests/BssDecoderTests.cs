@@ -6,15 +6,14 @@ namespace Daggerfall.Import.Tests;
 
 public sealed class BssDecoderTests
 {
-    [Theory]
+    [CorpusTheory("CMPA00I0.BSS", "CMPA01I0.BSS", "CMPA02I0.BSS")]
     [InlineData("CMPA00I0.BSS", 272, 157, 48, 40, 32)]
     [InlineData("CMPA01I0.BSS", 279, 163, 34, 28, 32)]
     [InlineData("CMPA02I0.BSS", 281, 165, 30, 25, 32)]
     public void Reads_donor_header_positions_dimensions_counts_and_complete_frames(
         string name, int x, int y, int width, int height, int count)
     {
-        if (!File.Exists(Corpus(name))) return;
-        byte[] bytes = File.ReadAllBytes(Corpus(name));
+        byte[] bytes = File.ReadAllBytes(TestData.Corpus(name));
 
         Assert.True(BssDecoder.TryRead(bytes, name, out BssContainer? container, out string reason), reason);
         Assert.Equal((x, y, width, height, count),
@@ -67,14 +66,5 @@ public sealed class BssDecoderTests
             BinaryPrimitives.WriteInt16LittleEndian(bytes.AsSpan(index * 2), header[index]);
         new byte[] { 1, 2, 3, 4 }.CopyTo(bytes, 10);
         return bytes;
-    }
-
-    private static string Corpus(string name) => Path.Combine(RepositoryRoot(), "local/arena2", name);
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md"))) return current.FullName;
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
     }
 }

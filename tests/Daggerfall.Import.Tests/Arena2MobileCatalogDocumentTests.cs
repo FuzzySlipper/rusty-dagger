@@ -62,12 +62,11 @@ public sealed class Arena2MobileCatalogDocumentTests
         Assert.Contains("Horse", unpublished["donorName"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
-    [Fact]
+    [DonorFact("Assets/Scripts/Utility/EnemyBasics.cs")]
     public void PublishesTheRealDonorTableWhenItIsAvailable()
     {
-        string donorPath = "/home/research/daggerfall-unity/Assets/Scripts/Utility/EnemyBasics.cs";
-        if (!File.Exists(donorPath)) return;
-        string payload = Path.Combine(RepositoryRoot(), "content", "worldrpg", "payloads", "daggerfall.base.json");
+        string donorPath = TestData.Donor("Assets/Scripts/Utility/EnemyBasics.cs");
+        string payload = Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "payloads", "daggerfall.base.json");
 
         Arena2MobileCatalogPublication publication = Arena2MobileCatalogDocument.Build(File.ReadAllText(donorPath), File.ReadAllText(payload), "donor/EnemyBasics.cs");
         // The measured reconciliation: 62 donor entries, one variant, one unpublished mobile.
@@ -88,12 +87,12 @@ public sealed class Arena2MobileCatalogDocumentTests
         });
     }
 
-    [Fact]
+    [CorpusFact("CLASS00.CFG")]
     public void PublishesEachMobilesEnemyTypeAttackFlagsFromItsEnemyConfiguration()
     {
         // ENEMY???.CFG shares the CLASS??CFG record shape, whose byte 10 names the classic
         // enemy-type attack-modifier flags; a mobile with no configuration carries no flags.
-        byte[] configuration = File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/CLASS00.CFG"));
+        byte[] configuration = File.ReadAllBytes(TestData.Corpus("CLASS00.CFG"));
         configuration[10] = 0x04; // the humanoid bonus bit
         MonsterArchiveInventory enemyConfigurations = MonsterArchiveInventory.Enumerate(
             EnemyArchive(("ENEMY000.CFG", configuration)), "MONSTER.BSA");
@@ -107,16 +106,15 @@ public sealed class Arena2MobileCatalogDocumentTests
             mobile => Assert.Equal(0, mobile!["attackModifierFlags"]!.GetValue<int>()));
     }
 
-    [Fact]
+    [CorpusAndDonorFact(["MONSTER.BSA"], ["Assets/Scripts/Utility/EnemyBasics.cs"])]
     public void TheRealEnemyConfigurationsCarryTheClassicBonusForTheVampireAndItsKin()
     {
-        string donorPath = "/home/research/daggerfall-unity/Assets/Scripts/Utility/EnemyBasics.cs";
-        string archivePath = Path.Combine(RepositoryRoot(), "local/arena2/MONSTER.BSA");
-        if (!File.Exists(donorPath) || !File.Exists(archivePath)) return;
+        string donorPath = TestData.Donor("Assets/Scripts/Utility/EnemyBasics.cs");
+        string archivePath = TestData.Corpus("MONSTER.BSA");
 
         Arena2MobileCatalogPublication publication = Arena2MobileCatalogDocument.Build(
             File.ReadAllText(donorPath),
-            File.ReadAllText(Path.Combine(RepositoryRoot(), "content", "worldrpg", "payloads", "daggerfall.base.json")),
+            File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "payloads", "daggerfall.base.json")),
             donorPath,
             enemyConfigurations: MonsterArchiveInventory.Enumerate(File.ReadAllBytes(archivePath), "MONSTER.BSA"));
         JsonArray mobiles = JsonNode.Parse(publication.Json)!["mobiles"]!.AsArray();
@@ -149,13 +147,6 @@ public sealed class Arena2MobileCatalogDocumentTests
         }
 
         return archive;
-    }
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md"))) directory = directory.Parent;
-        return directory?.FullName ?? throw new InvalidOperationException("The repository root was not found above the test output.");
     }
 
     private static string Donor() => """

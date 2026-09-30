@@ -332,7 +332,7 @@ public sealed class ItemTemplateLedgerTests
     {
         System.Text.Json.Nodes.JsonObject ledger = ReadPublishedLedger();
         System.Text.Json.Nodes.JsonObject pack = System.Text.Json.Nodes.JsonNode
-            .Parse(File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")))!
+            .Parse(File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json")))!
             .AsObject();
 
         Assert.Equal("CNT-011", ledger["target"]!["recordId"]!.GetValue<string>());
@@ -348,7 +348,7 @@ public sealed class ItemTemplateLedgerTests
     }
 
     private static System.Text.Json.Nodes.JsonObject ReadPublishedLedger() =>
-        System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")))!
+        System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json")))!
             .AsObject()["itemTemplateLedger"]!.AsObject();
 
     /// <summary>
@@ -440,17 +440,4 @@ public sealed class ItemTemplateLedgerTests
             }
         }
         """;
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
-    }
 }

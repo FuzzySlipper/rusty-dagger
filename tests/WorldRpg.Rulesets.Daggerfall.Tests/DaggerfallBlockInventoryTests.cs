@@ -190,18 +190,5 @@ public sealed class DaggerfallBlockInventoryTests
     private static IEnumerable<JsonElement> Records(string kind) =>
         Pack().RootElement.GetProperty("blocks").GetProperty("records").EnumerateArray().Where(record => record.GetProperty("kind").GetString() == kind).ToArray();
 
-    private static JsonDocument Pack() => JsonDocument.Parse(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
-    }
+    private static JsonDocument Pack() => JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json")));
 }

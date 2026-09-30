@@ -20,7 +20,7 @@ public sealed class BlockPlacementTests
     [Fact]
     public void Placements_repeat_counts_and_resolve_models()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         JsonDocument payload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.blocks.json")));
         JsonDocument pack = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
 
@@ -109,18 +109,5 @@ public sealed class BlockPlacementTests
                 Assert.Contains(int.Parse(model.GetProperty("modelId").GetString()!, System.Globalization.CultureInfo.InvariantCulture), models);
             }
         }
-    }
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("repository root not found");
     }
 }

@@ -13,7 +13,7 @@ public sealed class EmbeddedPaletteScreenTests
 {
     private const string DeathScreen = "DIE_00I0.IMG";
 
-    [Fact]
+    [CorpusFact(DeathScreen)]
     public void ReadsTheEmbeddedPaletteOnlyFromTheScreenShape()
     {
         byte[] screen = ReadArena2(DeathScreen);
@@ -44,7 +44,7 @@ public sealed class EmbeddedPaletteScreenTests
     /// Every one of the six supplied screens is published in its own palette, not just the first one that
     /// happened to have a consumer: a screen admitted later through a different path would show up here.
     /// </summary>
-    [Theory]
+    [CorpusTheory("DIE_00I0.IMG", "CHGN00I0.IMG", "PICK02I0.IMG", "PICK03I0.IMG", "PRIS00I0.IMG", "TITL00I0.IMG")]
     [InlineData("DIE_00I0.IMG", "screen-death")]
     [InlineData("CHGN00I0.IMG", "screen-character-generation")]
     [InlineData("PICK02I0.IMG", "screen-pick-02")]
@@ -53,7 +53,7 @@ public sealed class EmbeddedPaletteScreenTests
     [InlineData("TITL00I0.IMG", "screen-title")]
     public void PublishesTheScreenInItsOwnPaletteColours(string fileName, string artifact)
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         byte[] screen = ReadArena2(fileName);
         Assert.True(ImgDecoder.TryReadEmbeddedPalette(screen, fileName, out Arena2Palette? palette, out string reason), reason);
 
@@ -85,17 +85,5 @@ public sealed class EmbeddedPaletteScreenTests
         Assert.True(opaque > 320 * 200 / 2, $"only {opaque} of {320 * 200} published pixels carry colour");
     }
 
-    private static byte[] ReadArena2(string name)
-    {
-        string path = Path.Combine(RepositoryRoot(), "local", "arena2", name);
-        Assert.True(File.Exists(path), $"{name} is not staged at {path}; the classic corpus is required for this check.");
-        return File.ReadAllBytes(path);
-    }
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md"))) directory = directory.Parent;
-        return directory?.FullName ?? throw new InvalidOperationException("The repository root was not found above the test output.");
-    }
+    private static byte[] ReadArena2(string name) => File.ReadAllBytes(TestData.Corpus(name));
 }

@@ -10,7 +10,7 @@ public sealed class DaggerfallDisabledQuestSelectionTests
     [Fact]
     public void Disabled_entries_never_become_ordinary_offers_and_summon_identities_resolve_explicitly()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallDisabledQuestSelection selection = DaggerfallDisabledQuestSelection.Read(new ProductContent(Array.Empty<ProductContentFile>()),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.disabled.json")), definitions);
@@ -31,12 +31,5 @@ public sealed class DaggerfallDisabledQuestSelectionTests
         internal static IRandomService Create() => DispatchProxy.Create<IRandomService, RandomMinimum>();
         protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IRandomService.DrawKeyed)
             ? new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Minimum) : throw new NotSupportedException(method?.Name);
-    }
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md"))) return current.FullName;
-        throw new InvalidOperationException("repository root not found");
     }
 }

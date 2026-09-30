@@ -149,8 +149,6 @@ public sealed class DaggerfallServiceTransactionsTests
 
         internal Fixture()
         {
-            DirectoryInfo? directory = new(AppContext.BaseDirectory);
-            while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "content/worldrpg/payloads/daggerfall.base.json"))) directory = directory.Parent;
             Definitions = TestPayload.Definitions;
             Dictionary<InventoryItemId, ItemDefinition> items = Definitions.Items.Values.Concat(Definitions.TemplateItems.Values)
                 .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);

@@ -12,7 +12,7 @@ namespace Daggerfall.Import.Tests;
 /// <summary>The published catalog of the numeric sound archive and the artifacts its references name.</summary>
 public sealed class SoundCatalogTests
 {
-    [Fact]
+    [CorpusFact]
     public void Catalogues_every_numeric_clip_in_the_archives_own_order()
     {
         SoundArchive archive = RepositoryArchive();
@@ -92,7 +92,7 @@ public sealed class SoundCatalogTests
     /// The reference closure the task asks for: every admitted catalog entry names the artifact the
     /// publication emitted for it, and the delivered content is what this build produces.
     /// </summary>
-    [Fact]
+    [CorpusFact]
     public void Every_admitted_clip_is_carried_by_the_artifact_the_publication_emitted()
     {
         SoundArchive archive = RepositoryArchive();
@@ -132,13 +132,13 @@ public sealed class SoundCatalogTests
 
             // The delivered tree carries that same artifact under its content-relative name, which is
             // the name a consumer holds rather than a path relative to this publication.
-            Assert.Equal(artifact.Bytes.ToArray(), File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content", "worldrpg", resource.RelativePath)));
+            Assert.Equal(artifact.Bytes.ToArray(), File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", resource.RelativePath)));
         }
 
         // The published catalog is current and readable. Reading the committed artifact is checked
         // structurally before the bytes, so a drift names the clip that differs rather than only a
         // byte position; the byte comparison still pins formatting and the trailing newline.
-        byte[] committed = File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content", "worldrpg", DaggerfallSoundCatalogJson.RelativePath));
+        byte[] committed = File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", DaggerfallSoundCatalogJson.RelativePath));
         DaggerfallSoundCatalog reread = DaggerfallSoundCatalogJson.Read(committed);
         Assert.Equal(catalog.Clips, reread.Clips);
         Assert.Equal(catalog.Sources, reread.Sources);
@@ -150,7 +150,7 @@ public sealed class SoundCatalogTests
     /// accepted: the reader is the boundary a consumer crosses, and it may be handed a file this
     /// build did not write.
     /// </summary>
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_persisted_catalog_that_could_not_be_read_back()
     {
         DaggerfallSoundCatalog catalog = DaggerfallSoundCatalogBuilder.Build(RepositoryArchive(), Admissions());
@@ -181,7 +181,7 @@ public sealed class SoundCatalogTests
     /// reference to nothing: an ordinal the archive does not carry, one clip admitted twice, one media
     /// identity claimed by two clips, and the archive's sample-less record.
     /// </summary>
-    [Fact]
+    [CorpusFact]
     public void Refuses_an_admitted_closure_that_could_not_be_published()
     {
         SoundArchive archive = RepositoryArchive();
@@ -212,7 +212,7 @@ public sealed class SoundCatalogTests
         new(405, "audio.player.death"),
     ];
 
-    private static SoundArchive RepositoryArchive() => SoundArchive.Parse(File.ReadAllBytes(Corpus("DAGGER.SND")), Arena2ClassicMediaPublication.DaggerSoundSourcePath);
+    private static SoundArchive RepositoryArchive() => SoundArchive.Parse(File.ReadAllBytes(TestData.Corpus("DAGGER.SND")), Arena2ClassicMediaPublication.DaggerSoundSourcePath);
 
     private static Arena2ClassicMediaPublication PublishFromCorpus() => Arena2ClassicMediaPublication.Create(new(
         Read("WEAPON01.CIF"), Read("WEAPON02.CIF"), Read("WEAPON04.CIF"), Read("WEAPON05.CIF"), Read("WEAPON06.CIF"),
@@ -226,7 +226,7 @@ public sealed class SoundCatalogTests
         Read("INVE12I0.IMG"), Read("INVE14I0.IMG"), Read("GILD01I0.IMG"),
         Read("TEXTURE.207"), Read("TEXTURE.216"), Read("TEXTURE.234"), Read("TEXTURE.245"), Read("FONT0003.FNT"), Read("WEAPON00.CIF"), Read("WEAPON03.CIF"), Read("WEAPON11.CIF"), Read("FONT0000.FNT"), Read("FONT0001.FNT"), Read("FONT0002.FNT"), Read("FONT0004.FNT"), [], Read("FMAP_PAL.COL"), Read("MAP.PAL"), []));
 
-    private static byte[] Read(string name) => File.ReadAllBytes(Corpus(name));
+    private static byte[] Read(string name) => File.ReadAllBytes(TestData.Corpus(name));
 
     /// <summary>Writes a catalog the way a foreign producer might: without this repository's validation.</summary>
     private static byte[] Unvalidated(DaggerfallSoundCatalog catalog) =>
@@ -241,18 +241,5 @@ public sealed class SoundCatalogTests
         Assert.Equal(SoundArchive.SampleRate, BinaryPrimitives.ReadUInt32LittleEndian(wave.Slice(24, 4)));
         Assert.Equal(8, BinaryPrimitives.ReadUInt16LittleEndian(wave.Slice(34, 2)));
         Assert.Equal("data", Encoding.ASCII.GetString(wave.Slice(36, 4)));
-    }
-
-    private static string Corpus(string name) => Path.Combine(RepositoryRoot(), "local/arena2", name);
-
-    private static string RepositoryRoot()
-    {
-        string? directory = AppContext.BaseDirectory;
-        while (directory is not null && !File.Exists(Path.Combine(directory, "AGENTS.md")))
-        {
-            directory = Path.GetDirectoryName(directory);
-        }
-
-        return directory ?? throw new InvalidOperationException("The repository root was not found above the test output directory.");
     }
 }

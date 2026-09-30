@@ -81,11 +81,10 @@ public sealed class VidDecoderTests
         Assert.Contains("after its end block", extra.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Decodes_the_supplied_vid_corpus_to_each_declared_frame_and_exact_end_when_available()
     {
-        string directory = Path.Combine(RepositoryRoot(), "local", "arena2");
-        if (!Directory.Exists(directory)) return;
+        string directory = TestData.CorpusRoot;
 
         string[] names = [.. Directory.EnumerateFiles(directory, "*.VID").Select(path => Path.GetFileName(path)!).OrderBy(name => name, StringComparer.Ordinal)];
         Assert.Equal(17, names.Length);
@@ -184,12 +183,5 @@ public sealed class VidDecoderTests
     {
         bytes.Add((byte)value);
         bytes.Add((byte)(value >> 8));
-    }
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md"))) directory = directory.Parent;
-        return directory?.FullName ?? throw new InvalidOperationException("repository root not found");
     }
 }

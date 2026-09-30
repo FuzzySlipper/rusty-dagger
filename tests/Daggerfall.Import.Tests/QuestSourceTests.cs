@@ -10,7 +10,7 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 public sealed class QuestSourceTests
 {
-    [Fact]
+    [CorpusFact]
     public void Enumerates_every_supplied_quest_source_with_its_exact_path()
     {
         QuestSourceInventory inventory = ReadInventory();
@@ -25,7 +25,7 @@ public sealed class QuestSourceTests
         Assert.DoesNotContain(inventory.Files, file => StringComparer.Ordinal.Equals(file.Path, "N0B20Y25.QRC"));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Reports_the_four_binary_only_stems_and_the_one_resources_only_stem()
     {
         QuestSourceInventory inventory = ReadInventory();
@@ -38,7 +38,7 @@ public sealed class QuestSourceTests
         Assert.Equal(["M0B40Y04.QRC"], inventory.ResourcesOnly.Select(file => file.Path));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Pairs_by_case_insensitive_stem_without_rewriting_the_stored_path()
     {
         QuestSourceInventory inventory = ReadInventory();
@@ -54,7 +54,7 @@ public sealed class QuestSourceTests
         Assert.Equal(6, inventory.Files.Count(file => file.Path.EndsWith(".qrc", StringComparison.Ordinal)));
     }
 
-    [Fact]
+    [CorpusFact]
     public void The_documented_inventory_carries_exactly_the_supplied_quest_paths()
     {
         // The inventory is the authority for which source paths exist, so the corpus and
@@ -62,7 +62,7 @@ public sealed class QuestSourceTests
         // not carry, or a documented one that is not supplied, is drift either way.
         string[] supplied = [.. ReadInventory().Files.Select(file => file.Path)];
         HashSet<string> documented = [.. Daggerfall.Import.Publication.SourceManifestBuilder
-            .ReadInventory(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv")))
+            .ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")))
             .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, "CNT-017"))
             .Select(row => Path.GetFileName(row.PathOrPattern))];
 
@@ -120,16 +120,15 @@ public sealed class QuestSourceTests
         Assert.Contains("neither", error.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Decodes_every_supplied_binary_envelope_without_claiming_its_payload()
     {
-        string root = RepositoryRoot();
         QuestSourceInventory inventory = ReadInventory();
 
         int marked = 0;
         foreach (QuestSourceFile file in inventory.Binaries)
         {
-            QuestBinaryEnvelope envelope = QuestBinaryEnvelope.Decode(File.ReadAllBytes(Path.Combine(root, "local/arena2", file.Path)), file.Path);
+            QuestBinaryEnvelope envelope = QuestBinaryEnvelope.Decode(File.ReadAllBytes(TestData.Corpus(file.Path)), file.Path);
             Assert.Equal(QuestBinaryEnvelopeDisposition.WellFormed, envelope.Disposition);
             Assert.InRange(envelope.HeaderVariant, (byte)0, (byte)1);
             Assert.True(envelope.Length > QuestBinaryEnvelope.HeaderLength);
@@ -169,10 +168,9 @@ public sealed class QuestSourceTests
         Assert.Contains("trailing bytes 0x00000036", envelope.Note, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Reports_a_gap_between_the_directory_and_the_first_record()
     {
-        string root = RepositoryRoot();
         QuestSourceInventory inventory = ReadInventory();
 
         // Exactly one supplied file starts its first record one byte past its directory.
@@ -181,7 +179,7 @@ public sealed class QuestSourceTests
         List<string> gapped = [];
         foreach (QuestSourceFile file in inventory.Resources)
         {
-            QuestResourceEnvelope envelope = QuestResourceEnvelope.Decode(File.ReadAllBytes(Path.Combine(root, "local/arena2", file.Path)), file.Path);
+            QuestResourceEnvelope envelope = QuestResourceEnvelope.Decode(File.ReadAllBytes(TestData.Corpus(file.Path)), file.Path);
             if (envelope.Note.Contains("belong to no record", StringComparison.Ordinal))
             {
                 gapped.Add(file.Path);
@@ -191,10 +189,9 @@ public sealed class QuestSourceTests
         Assert.Equal(["B0C00Y06.QRC"], gapped);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Every_supplied_record_ends_at_the_separator_the_corpus_uses()
     {
-        string root = RepositoryRoot();
         QuestSourceInventory inventory = ReadInventory();
 
         // A corpus fact, asserted rather than assumed: every one of the 4588 supplied
@@ -203,7 +200,7 @@ public sealed class QuestSourceTests
         int records = 0;
         foreach (QuestSourceFile file in inventory.Resources)
         {
-            QuestResourceEnvelope envelope = QuestResourceEnvelope.Decode(File.ReadAllBytes(Path.Combine(root, "local/arena2", file.Path)), file.Path);
+            QuestResourceEnvelope envelope = QuestResourceEnvelope.Decode(File.ReadAllBytes(TestData.Corpus(file.Path)), file.Path);
             foreach (QuestResourceRecord record in envelope.Records)
             {
                 Assert.Equal(0xfe, record.Payload.Span[^1]);
@@ -285,15 +282,14 @@ public sealed class QuestSourceTests
         Assert.Contains("no terminal marker", envelope.Note, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Decodes_every_supplied_resource_envelope_into_raw_records()
     {
-        string root = RepositoryRoot();
         QuestSourceInventory inventory = ReadInventory();
         int records = 0;
         foreach (QuestSourceFile file in inventory.Resources)
         {
-            QuestResourceEnvelope envelope = QuestResourceEnvelope.Decode(File.ReadAllBytes(Path.Combine(root, "local/arena2", file.Path)), file.Path);
+            QuestResourceEnvelope envelope = QuestResourceEnvelope.Decode(File.ReadAllBytes(TestData.Corpus(file.Path)), file.Path);
             Assert.Equal(QuestResourceEnvelopeDisposition.Decoded, envelope.Disposition);
             records += envelope.Records.Count;
             Assert.All(envelope.Records, record =>
@@ -306,11 +302,10 @@ public sealed class QuestSourceTests
         Assert.Equal(4588, records);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Delivers_resource_text_as_bytes_without_interpreting_tokens()
     {
-        string root = RepositoryRoot();
-        QuestResourceEnvelope envelope = QuestResourceEnvelope.Decode(File.ReadAllBytes(Path.Combine(root, "local/arena2/S0000001.QRC")), "S0000001.QRC");
+        QuestResourceEnvelope envelope = QuestResourceEnvelope.Decode(File.ReadAllBytes(TestData.Corpus("S0000001.QRC")), "S0000001.QRC");
 
         QuestResourceRecord greeting = envelope.Records.Single(record => record.Id == 1000);
         string text = System.Text.Encoding.Latin1.GetString(greeting.Payload.Span);
@@ -422,30 +417,15 @@ public sealed class QuestSourceTests
 
     private static int CountVariant(QuestSourceInventory inventory, byte variant)
     {
-        string root = RepositoryRoot();
-        return inventory.Binaries.Count(file => QuestBinaryEnvelope.Decode(File.ReadAllBytes(Path.Combine(root, "local/arena2", file.Path)), file.Path).HeaderVariant == variant);
+        return inventory.Binaries.Count(file => QuestBinaryEnvelope.Decode(File.ReadAllBytes(TestData.Corpus(file.Path)), file.Path).HeaderVariant == variant);
     }
 
     private static QuestSourceInventory ReadInventory()
     {
-        string root = RepositoryRoot();
-        string[] paths = [.. Directory.GetFiles(Path.Combine(root, "local/arena2"))
+        string[] paths = [.. Directory.GetFiles(TestData.CorpusRoot)
             .Where(path => path.EndsWith(QuestSourceInventory.BinaryExtension, StringComparison.OrdinalIgnoreCase)
                 || path.EndsWith(QuestSourceInventory.ResourcesExtension, StringComparison.OrdinalIgnoreCase))
             .Select(Path.GetFileName)!];
         return QuestSourceInventory.Enumerate(paths, "local/arena2");
-    }
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
     }
 }

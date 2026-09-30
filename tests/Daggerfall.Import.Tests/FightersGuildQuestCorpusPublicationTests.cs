@@ -10,7 +10,7 @@ public sealed class FightersGuildQuestCorpusPublicationTests
     [Fact]
     public void Publishes_the_exact_twenty_records_with_per_source_provenance_and_a_stable_fingerprint()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         using JsonDocument basePayload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
         DaggerfallFightersGuildQuestCorpus first = FightersGuildQuestCorpusPublication.Create(
             Section<DaggerfallQuestCatalog>(basePayload, "questCatalog"),
@@ -40,11 +40,4 @@ public sealed class FightersGuildQuestCorpusPublicationTests
     private static T Section<T>(JsonDocument document, string name) =>
         JsonSerializer.Deserialize<T>(document.RootElement.GetProperty(name).GetRawText(), PublishedJson.SectionRead)
         ?? throw new InvalidOperationException($"Missing {name} section.");
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md"))) return current.FullName;
-        throw new InvalidOperationException("repository root not found");
-    }
 }

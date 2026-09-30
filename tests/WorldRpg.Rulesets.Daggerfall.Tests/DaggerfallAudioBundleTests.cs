@@ -108,7 +108,7 @@ public sealed class DaggerfallAudioBundleTests
     [Fact]
     public void Published_catalog_admissions_close_over_the_generated_audio_bundle_paths()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         using JsonDocument catalog = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/media/audio/classic-sound-catalog.json")));
         using JsonDocument inventory = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/media/classic-media-inventory.json")));
         using JsonDocument manifest = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/privateers-hold/media/classic/manifest.json")));
@@ -132,13 +132,6 @@ public sealed class DaggerfallAudioBundleTests
             Assert.StartsWith("media/audio/clips/", importedPaths[id], StringComparison.Ordinal);
         });
         Assert.True(File.Exists(Path.Combine(root, "content/worldrpg/media/audio/classic-sound-catalog.json")));
-    }
-
-    private static string RepositoryRoot()
-    {
-        string? directory = AppContext.BaseDirectory;
-        while (directory is not null && !File.Exists(Path.Combine(directory, "AGENTS.md"))) directory = Path.GetDirectoryName(directory);
-        return directory ?? throw new InvalidOperationException("The repository root was not found above the test output directory.");
     }
 
     private class BundleContentFake : DispatchProxy

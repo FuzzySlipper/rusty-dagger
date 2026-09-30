@@ -58,15 +58,13 @@ public sealed class DaggerfallCinematicPackTests
         Assert.Throws<ArgumentException>(() => contradiction.Validate());
     }
 
-    [Fact]
+    [CorpusFact]
     public void Records_the_supplied_corpus()
     {
         const string arena2 = "local/arena2";
-        string root = RepositoryRoot();
-        if (!Directory.Exists(Path.Combine(root, arena2))) return;
 
         List<(string, DaggerfallCinematicKind, long, string)> files = [];
-        foreach (string path in Directory.EnumerateFiles(Path.Combine(root, arena2)).Order(StringComparer.OrdinalIgnoreCase))
+        foreach (string path in Directory.EnumerateFiles(TestData.CorpusRoot).Order(StringComparer.OrdinalIgnoreCase))
         {
             string fileName = Path.GetFileName(path);
             DaggerfallCinematicKind? kind = fileName.EndsWith(".VID", StringComparison.OrdinalIgnoreCase)
@@ -77,7 +75,7 @@ public sealed class DaggerfallCinematicPackTests
             files.Add((fileName, kind.Value, bytes.LongLength, Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes))));
         }
 
-        DaggerfallCinematicPack pack = DaggerfallCinematicPackBuilder.Build(files, arena2, SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(root, "docs/coverage/content-source-manifest.csv"))));
+        DaggerfallCinematicPack pack = DaggerfallCinematicPackBuilder.Build(files, arena2, SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv"))));
         pack.Validate();
         Assert.Equal(33, pack.Cinematics.Count);
         Assert.Equal(19, pack.Cinematics.Count(record => record.Binding == DaggerfallCinematicBinding.Bound));
@@ -89,17 +87,4 @@ public sealed class DaggerfallCinematicPackTests
         new SourceInventoryRow("CNT-025", "family", "CNT-025", "videos", "local/arena2", string.Empty, string.Empty, string.Empty),
         new SourceInventoryRow("CNT-026", "family", "CNT-026", "flc-cinematics", "local/arena2", string.Empty, string.Empty, string.Empty),
     ];
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("repository root not found");
-    }
 }

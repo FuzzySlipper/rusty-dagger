@@ -13,7 +13,7 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 public sealed class BlockInventoryTests
 {
-    [Fact]
+    [CorpusFact]
     public void Enumerates_the_supplied_archive_with_every_record_classified()
     {
         DaggerfallBlocks blocks = Supplied();
@@ -43,7 +43,7 @@ public sealed class BlockInventoryTests
         Assert.Equal(32861687L, expected);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Keeps_every_donor_index_for_a_prefix_two_kinds_share()
     {
         // The donor's own prefix table carries TEMP twice, for the two temple kinds, so a name beginning
@@ -65,7 +65,7 @@ public sealed class BlockInventoryTests
             BlockRecordInventoryReader.RmbBlockPrefixes.Select((prefix, index) => (prefix, index)).Where(pair => pair.prefix == "TEMP").Select(pair => pair.index));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Classifies_names_by_the_donors_own_tables()
     {
         DaggerfallBlocks blocks = Supplied();
@@ -91,7 +91,7 @@ public sealed class BlockInventoryTests
         Assert.Contains(city, record => record.SourceKey == "BRUCE.RMB" && record.RmbName is null);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Summarizes_a_city_block_from_its_own_header()
     {
         DaggerfallBlocks blocks = Supplied();
@@ -147,13 +147,13 @@ public sealed class BlockInventoryTests
             record => Assert.Equal(record.SourceKey, record.Rmb!.Name));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Reads_a_buildings_slot_values_where_the_donor_reads_them()
     {
         // The building slot is twenty-six bytes and its faction sits at eighteen, after four words of an
         // uninterpreted kind. Reading it from the word before states faction zero for every building in the
         // corpus while looking like a complete answer: 460 slots name a faction, the largest of them 65535.
-        byte[] bytes = File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/BLOCKS.BSA"));
+        byte[] bytes = File.ReadAllBytes(TestData.Corpus("BLOCKS.BSA"));
         DaggerfallBlocks blocks = Supplied();
         DaggerfallBlockRecord mark = blocks.Records.Single(record => record.SourceKey == "MARKAA00.RMB");
         DaggerfallBlockBuilding slot = mark.Rmb!.Buildings[1];
@@ -174,7 +174,7 @@ public sealed class BlockInventoryTests
         Assert.Equal(65535, named.Max(building => building.FactionId));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Summarizes_a_dungeon_block_from_its_placement_list()
     {
         DaggerfallBlocks blocks = Supplied();
@@ -203,7 +203,7 @@ public sealed class BlockInventoryTests
         }
     }
 
-    [Fact]
+    [CorpusFact]
     public void Classifies_the_index_records_the_donor_reads_and_ignores()
     {
         // The donor's own block descriptor calls these five hundred and twelve bytes of unknown data that
@@ -238,7 +238,7 @@ public sealed class BlockInventoryTests
         Assert.Equal([64, 64, 10928], blocks.Records.Select(record => record.ByteLength));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_record_whose_kind_or_disposition_disagrees_with_its_name()
     {
         DaggerfallBlocks blocks = Supplied();
@@ -248,7 +248,7 @@ public sealed class BlockInventoryTests
         Assert.Contains("where its kind Rmb is Summarized", Assert.Throws<InvalidOperationException>(() => (blocks with { Records = Replaced(blocks, wall.Ordinal, wall with { Disposition = DaggerfallBlockDisposition.UnknownKind }) }).Validate()).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_an_ordinal_that_repeats_or_skips()
     {
         DaggerfallBlocks blocks = Supplied();
@@ -260,7 +260,7 @@ public sealed class BlockInventoryTests
         Assert.Equal(0, first.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_summary_a_malformed_record_could_not_have_and_a_readable_one_without()
     {
         DaggerfallBlocks blocks = Supplied();
@@ -273,7 +273,7 @@ public sealed class BlockInventoryTests
         Assert.Contains("is malformed and states no reason", Assert.Throws<InvalidOperationException>(() => (blocks with { Records = Replaced(blocks, wall.Ordinal, wall with { State = DaggerfallBlockState.Malformed, Reason = " ", Rmb = null }) }).Validate()).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_city_block_whose_own_arithmetic_does_not_add_up()
     {
         DaggerfallBlocks blocks = Supplied();
@@ -297,7 +297,7 @@ public sealed class BlockInventoryTests
         Assert.Contains("states building 1 places", Assert.Throws<InvalidOperationException>(() => (blocks with { Records = Replaced(blocks, mark.Ordinal, mark with { Rmb = mark.Rmb! with { Buildings = [.. mark.Rmb!.Buildings.Select((building, index) => index == 1 ? building with { PaddingBytes = 0 } : building)] } }) }).Validate()).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_name_classification_that_does_not_reassemble_its_name()
     {
         DaggerfallBlocks blocks = Supplied();
@@ -311,7 +311,7 @@ public sealed class BlockInventoryTests
         Assert.Contains("which the letter 'B' does not select", Assert.Throws<InvalidOperationException>(() => (blocks with { Records = Replaced(blocks, dungeon.Ordinal, dungeon with { RdbName = dungeon.RdbName! with { Type = DaggerfallBlockRdbType.Wet } }) }).Validate()).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_an_object_summary_that_claims_more_than_the_block_places()
     {
         DaggerfallBlocks blocks = Supplied();
@@ -348,7 +348,7 @@ public sealed class BlockInventoryTests
         Assert.Contains("is interleaved with another source rather than grouped", Assert.Throws<InvalidOperationException>(() => interleaved.Validate()).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_source_whose_declared_count_is_not_what_the_section_carries()
     {
         DaggerfallBlocks blocks = Supplied();
@@ -357,7 +357,7 @@ public sealed class BlockInventoryTests
         Assert.Contains("Block schema must be 2 but is 3", Assert.Throws<InvalidOperationException>(() => (blocks with { SchemaVersion = 3 }).Validate()).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_summary_on_a_record_the_donor_reads_as_unknown_bytes()
     {
         // A block index and a record with no extension carry no layout this product reads, so a summary
@@ -371,7 +371,7 @@ public sealed class BlockInventoryTests
         Assert.Contains("the donor reads as unknown bytes", Assert.Throws<InvalidOperationException>(() => (blocks with { Records = Replaced(blocks, unknown.Ordinal, unknown with { Objects = blocks.Records.First(record => record.Objects is not null).Objects }) }).Validate()).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_header_whose_counts_exceed_the_widths_the_source_stores_them_in()
     {
         // The declared count, the two object counts and the other-name count all lead the header as single
@@ -385,7 +385,7 @@ public sealed class BlockInventoryTests
         Assert.Contains("outside the widths the source stores them in", Assert.Throws<InvalidOperationException>(() => (blocks with { Records = Replaced(blocks, wall.Ordinal, wall with { Rmb = wall.Rmb! with { Buildings = [wall.Rmb!.Buildings[0] with { Exterior = wall.Rmb!.Buildings[0].Exterior with { Objects = 256 } }] } }) }).Validate()).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_building_whose_halves_do_not_account_for_the_bytes_it_reserves()
     {
         // The record-level sum alone cannot catch a lie that moves bytes between a block's own object count
@@ -411,7 +411,7 @@ public sealed class BlockInventoryTests
         Assert.Contains("states building 0 places", Assert.Throws<InvalidOperationException>(() => shifted.Validate()).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_header_name_that_is_not_the_key_it_is_stored_under()
     {
         // The name a block states for itself is the identity a lookup inside the file uses, and in the
@@ -422,7 +422,7 @@ public sealed class BlockInventoryTests
         Assert.Contains("states the name 'OTHER.RMB' for itself where its own key says 'WALLAA03.RMB'", Assert.Throws<InvalidOperationException>(() => (blocks with { Records = Replaced(blocks, wall.Ordinal, wall with { Rmb = wall.Rmb! with { Name = "OTHER.RMB" } }) }).Validate()).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_name_shape_the_donor_could_not_have_composed()
     {
         // The donor's composer writes a padded number or a temple letter and number, never a single digit,
@@ -501,7 +501,7 @@ public sealed class BlockInventoryTests
         Assert.Equal(1, readable.Records[0].Rmb!.Buildings[0].PaddingBytes);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_duplicate_archive_key()
     {
         DaggerfallBlocks blocks = Supplied();
@@ -606,12 +606,12 @@ public sealed class BlockInventoryTests
             null);
 
     private static DaggerfallBlocks Supplied() => DaggerfallBlocksBuilder.Build(
-        File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/BLOCKS.BSA")),
+        File.ReadAllBytes(TestData.Corpus("BLOCKS.BSA")),
         "local/arena2/BLOCKS.BSA",
         Inventory());
 
     private static IReadOnlyList<SourceInventoryRow> Inventory() => SourceManifestBuilder.ReadInventory(
-        File.ReadAllBytes(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv")));
+        File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")));
 
     private static IReadOnlyList<DaggerfallBlockRecord> Replaced(DaggerfallBlocks blocks, int ordinal, DaggerfallBlockRecord record) =>
         [.. blocks.Records.Select(value => value.Ordinal == ordinal ? record : value)];
@@ -645,18 +645,5 @@ public sealed class BlockInventoryTests
         }
 
         return bytes;
-    }
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
     }
 }

@@ -820,7 +820,7 @@ public sealed class DaggerfallHeldEnchantmentTests
         internal long MaximumCarryUnits() => _encumbrance.Read().MaximumClassicUnits;
 
         private static DaggerfallDefinitions Definitions { get; } = DaggerfallBaseContent.Read(
-            File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+            File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json")));
 
         /// <summary>Payloads authored by a fact that needs one no published item or setting carries.</summary>
         private readonly Dictionary<string, DaggerfallMagicItemDefinition> Authored = new(StringComparer.Ordinal);
@@ -830,13 +830,6 @@ public sealed class DaggerfallHeldEnchantmentTests
             Definitions.Magic.MagicItems.Values.ToDictionary(item => item.Key, StringComparer.Ordinal);
 
 
-
-        private static string RepositoryRoot()
-        {
-            DirectoryInfo? directory = new(AppContext.BaseDirectory);
-            while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md"))) directory = directory.Parent;
-            return directory?.FullName ?? throw new InvalidOperationException("Repository root was not found.");
-        }
 
         public void Dispose() => _actors.Dispose();
     }

@@ -7,10 +7,10 @@ namespace Daggerfall.Import.Tests;
 /// <summary>The region groups MAPS.BSA carries and whether each group's four tables agree.</summary>
 public sealed class MapsRegionGroupTests
 {
-    [Fact]
+    [CorpusFact]
     public void Every_region_group_carries_the_four_tables_with_one_map_entry_per_location()
     {
-        BsaArchive archive = BsaArchive.Parse(File.ReadAllBytes(Corpus("MAPS.BSA")), "arena2/MAPS.BSA");
+        BsaArchive archive = BsaArchive.Parse(File.ReadAllBytes(TestData.Corpus("MAPS.BSA")), "arena2/MAPS.BSA");
         IReadOnlyList<MapsRegionGroup> groups = MapsDecoder.DecodeRegionGroups(archive);
 
         // The corpus's own region count, discovered from the records rather than assumed.
@@ -81,10 +81,10 @@ public sealed class MapsRegionGroupTests
         Assert.Contains("discards the region", empty.Reason, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Reads_every_location_a_region_describes_with_its_map_and_position()
     {
-        BsaArchive archive = BsaArchive.Parse(File.ReadAllBytes(Corpus("MAPS.BSA")), "arena2/MAPS.BSA");
+        BsaArchive archive = BsaArchive.Parse(File.ReadAllBytes(TestData.Corpus("MAPS.BSA")), "arena2/MAPS.BSA");
         IReadOnlyList<MapsRegionGroup> groups = MapsDecoder.DecodeRegionGroups(archive);
 
         int total = 0;
@@ -117,10 +117,10 @@ public sealed class MapsRegionGroupTests
         Assert.Equal(15251, total);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Agrees_with_the_single_location_resolver_about_privateers_hold()
     {
-        BsaArchive archive = BsaArchive.Parse(File.ReadAllBytes(Corpus("MAPS.BSA")), "arena2/MAPS.BSA");
+        BsaArchive archive = BsaArchive.Parse(File.ReadAllBytes(TestData.Corpus("MAPS.BSA")), "arena2/MAPS.BSA");
 
         // Find the starting dungeon by name across every region rather than being told where it is,
         // and require exactly one: two locations claiming the name would make every later reference
@@ -156,10 +156,10 @@ public sealed class MapsRegionGroupTests
         Assert.Equal(hold.Index, layout.LocationIndex);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Reads_the_block_references_of_every_dungeon_a_region_describes()
     {
-        BsaArchive archive = BsaArchive.Parse(File.ReadAllBytes(Corpus("MAPS.BSA")), "arena2/MAPS.BSA");
+        BsaArchive archive = BsaArchive.Parse(File.ReadAllBytes(TestData.Corpus("MAPS.BSA")), "arena2/MAPS.BSA");
         List<MapsDungeonLocation> dungeons = [];
         foreach (MapsRegionGroup group in MapsDecoder.DecodeRegionGroups(archive))
         {
@@ -227,10 +227,10 @@ public sealed class MapsRegionGroupTests
             layout.Blocks);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Publishes_every_region_s_locations_and_dungeons_with_the_gaps_named()
     {
-        BsaArchive archive = BsaArchive.Parse(File.ReadAllBytes(Corpus("MAPS.BSA")), "arena2/MAPS.BSA");
+        BsaArchive archive = BsaArchive.Parse(File.ReadAllBytes(TestData.Corpus("MAPS.BSA")), "arena2/MAPS.BSA");
         DaggerfallLocations locations = DaggerfallLocationBuilder.Build(archive);
         locations.Validate();
 
@@ -391,18 +391,5 @@ public sealed class MapsRegionGroupTests
 
         _ = entryBytes;
         return [.. bytes];
-    }
-
-    private static string Corpus(string name) => Path.Combine(RepositoryRoot(), "local/arena2", name);
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md")))
-        {
-            directory = directory.Parent;
-        }
-
-        return directory?.FullName ?? throw new InvalidOperationException("repository root not found");
     }
 }

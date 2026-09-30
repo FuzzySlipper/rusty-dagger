@@ -10,7 +10,7 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 public sealed class CharacterMediaInventoryTests
 {
-    [Fact]
+    [CorpusFact]
     public void Reconciles_every_documented_family_count()
     {
         CharacterMediaInventory inventory = ReadInventory();
@@ -24,7 +24,7 @@ public sealed class CharacterMediaInventoryTests
         Assert.Contains(inventory.Family("FACE"), file => file.Path == "FACES.CIF");
     }
 
-    [Fact]
+    [CorpusFact]
     public void Reads_the_families_the_repository_has_decoders_for()
     {
         CharacterMediaInventory inventory = ReadInventory();
@@ -42,7 +42,7 @@ public sealed class CharacterMediaInventoryTests
         Assert.All(inventory.Files, file => Assert.False(string.IsNullOrWhiteSpace(file.UseCandidate)));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Enumerates_the_canvases_inside_a_file_rather_than_one_canvas_per_file()
     {
         CharacterMediaInventory inventory = ReadInventory();
@@ -62,7 +62,7 @@ public sealed class CharacterMediaInventoryTests
         });
     }
 
-    [Fact]
+    [CorpusFact]
     public void Retains_every_unbound_file_with_its_candidate_use()
     {
         CharacterMediaInventory inventory = ReadInventory();
@@ -76,7 +76,7 @@ public sealed class CharacterMediaInventoryTests
         Assert.NotEmpty(inventory.Unbound);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Reports_any_key_two_files_claim()
     {
         CharacterMediaInventory inventory = ReadInventory();
@@ -97,7 +97,7 @@ public sealed class CharacterMediaInventoryTests
         Assert.Equal(["BODY00I0.IMG", "body00i0.IMG"], clash.Files);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Names_the_reader_a_format_needs_rather_than_calling_the_source_bad()
     {
         CharacterMediaInventory inventory = ReadInventory();
@@ -109,13 +109,13 @@ public sealed class CharacterMediaInventoryTests
         Assert.All(inventory.Family("BSS"), sprite => Assert.DoesNotContain("does not have", sprite.Note, StringComparison.Ordinal));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Keeps_a_binding_whether_or_not_the_file_reads()
     {
         // Binding and decodability are separate facts: a consumer that binds a file still binds it
         // whatever a reader makes of it, and the record says both.
         CharacterMediaInventory inventory = CharacterMediaInventory.Enumerate(
-            [("MAGE.CEL", File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/MAGE.CEL")))],
+            [("MAGE.CEL", File.ReadAllBytes(TestData.Corpus("MAGE.CEL")))],
             new HashSet<string>(["MAGE.CEL"], StringComparer.Ordinal),
             "the fixture consumer",
             "fixture");
@@ -129,13 +129,13 @@ public sealed class CharacterMediaInventoryTests
         Assert.Equal("the fixture consumer", record.Consumer);
     }
 
-    [Fact]
+    [CorpusFact]
     public void The_documented_inventory_carries_the_families_it_claims()
     {
         // The family counts come from the manifest's CNT-021 row; this checks the corpus against
         // the documented vector in both directions rather than trusting either side, which is
         // what keeps this table from being a second, unchecked source.
-        string line = File.ReadLines(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv"))
+        string line = File.ReadLines(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv"))
             .Single(value => value.StartsWith("CNT-021,family,", StringComparison.Ordinal));
         int[] documented = [.. line.Split(',')[5].Split(';', StringSplitOptions.TrimEntries).Select(int.Parse)];
 
@@ -145,7 +145,7 @@ public sealed class CharacterMediaInventoryTests
         Assert.Equal(documented, measured);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Derives_each_canvas_palette_and_refuses_one_that_is_not_supplied()
     {
         CharacterMediaInventory inventory = ReadInventory();
@@ -240,7 +240,7 @@ public sealed class CharacterMediaInventoryTests
         Assert.Contains("does not supply", refused.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Publishes_each_race_layers_with_the_donor_race_value_mapped_to_its_media_index()
     {
         CharacterMediaInventory inventory = ReadInventory();
@@ -355,7 +355,7 @@ public sealed class CharacterMediaInventoryTests
     /// <summary>The documented source every race in this fixture comes from.</summary>
     private static DaggerfallCatalogSource Source() => new("CNT-021", "docs/coverage/content-source-manifest.csv");
 
-    [Fact]
+    [CorpusFact]
     public void Reports_the_same_records_whatever_order_the_sources_arrive_in()
     {
         // The consumer/disposition report is deterministic: the same files in any input
@@ -371,7 +371,7 @@ public sealed class CharacterMediaInventoryTests
         Assert.Equal(forward.Files.Select(file => file.Binding), reversed.Files.Select(file => file.Binding));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_path_supplied_twice_or_not_at_all()
     {
         // A path is the identity and the consumer binds against it, so a missing or repeated
@@ -394,7 +394,7 @@ public sealed class CharacterMediaInventoryTests
         Assert.Contains("none of the documented character media families", error.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Binds_only_the_files_a_consumer_names()
     {
         CharacterMediaInventory inventory = CharacterMediaInventory.Enumerate(
@@ -409,14 +409,13 @@ public sealed class CharacterMediaInventoryTests
         Assert.Equal("SCBG", record.Family);
     }
 
-    private static byte[] ValidImage() => File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/MAIN00I0.IMG"));
+    private static byte[] ValidImage() => File.ReadAllBytes(TestData.Corpus("MAIN00I0.IMG"));
 
     private static CharacterMediaInventory ReadInventory()
     {
-        string root = RepositoryRoot();
         string[] extensions = [".IMG", ".CIF", ".CEL", ".BSS"];
         List<(string Path, ReadOnlyMemory<byte> Bytes)> sources = [];
-        foreach (string path in Directory.GetFiles(Path.Combine(root, "local/arena2")))
+        foreach (string path in Directory.GetFiles(TestData.CorpusRoot))
         {
             string name = Path.GetFileName(path);
             string extension = Path.GetExtension(name).ToUpperInvariant();
@@ -436,18 +435,5 @@ public sealed class CharacterMediaInventoryTests
         }
 
         return CharacterMediaInventory.Enumerate(sources, new HashSet<string>(StringComparer.Ordinal), "no published consumer yet", "local/arena2");
-    }
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
     }
 }

@@ -7,14 +7,12 @@ namespace Daggerfall.Import.Tests;
 
 public sealed class CinematicMediaPublisherTests
 {
-    [Theory]
+    [CorpusTheory("AZURA.FLC", "VAERNIMA.FLC")]
     [InlineData("AZURA.FLC", 2.996)]
     [InlineData("VAERNIMA.FLC", 0.994)]
     public void Real_flc_publication_excludes_ring_frame_and_preserves_source_cadence(string name, double duration)
     {
-        DirectoryInfo? root = new(AppContext.BaseDirectory);
-        while (root is not null && !File.Exists(Path.Combine(root.FullName, "AGENTS.md"))) root = root.Parent;
-        string source = Path.Combine(root?.FullName ?? throw new InvalidOperationException("Repository root missing."), "local/arena2", name);
+        string source = TestData.Corpus(name);
         byte[] bytes = File.ReadAllBytes(source);
         DaggerfallCinematicRecord record = new(name, DaggerfallCinematicKind.Flc, bytes.Length,
             Convert.ToHexString(SHA256.HashData(bytes)), DaggerfallCinematicBinding.Bound, "Daedric summons", null, "");
@@ -33,12 +31,10 @@ public sealed class CinematicMediaPublisherTests
         finally { if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true); }
     }
 
-    [Fact]
+    [CorpusFact("ANIM0011.VID")]
     public void Real_vid_publication_preserves_frames_and_regenerates_identically()
     {
-        DirectoryInfo? root = new(AppContext.BaseDirectory);
-        while (root is not null && !File.Exists(Path.Combine(root.FullName, "AGENTS.md"))) root = root.Parent;
-        string source = Path.Combine(root?.FullName ?? throw new InvalidOperationException("Repository root missing."), "local/arena2/ANIM0011.VID");
+        string source = TestData.Corpus("ANIM0011.VID");
         byte[] bytes = File.ReadAllBytes(source);
         DaggerfallCinematicRecord record = new("ANIM0011.VID", DaggerfallCinematicKind.Vid, bytes.Length,
             Convert.ToHexString(SHA256.HashData(bytes)), DaggerfallCinematicBinding.Bound, "new-game opening", null, "");

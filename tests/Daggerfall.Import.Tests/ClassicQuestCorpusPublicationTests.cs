@@ -10,7 +10,7 @@ public sealed class ClassicQuestCorpusPublicationTests
     [Fact]
     public void Publishes_every_retained_category_with_exact_membership_and_stable_fingerprints()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         using JsonDocument payload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
         DaggerfallQuestCatalog catalog = Section<DaggerfallQuestCatalog>(payload, "questCatalog");
         DaggerfallQuestPack sources = Section<DaggerfallQuestPack>(payload, "questSources");
@@ -28,7 +28,7 @@ public sealed class ClassicQuestCorpusPublicationTests
     [Fact]
     public void Each_task_selection_preserves_its_source_backed_categories_and_disabled_disposition()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         using JsonDocument payload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
         DaggerfallQuestCatalog catalog = Section<DaggerfallQuestCatalog>(payload, "questCatalog");
         DaggerfallQuestPack sources = Section<DaggerfallQuestPack>(payload, "questSources");
@@ -62,10 +62,4 @@ public sealed class ClassicQuestCorpusPublicationTests
     }
 
     private static T Section<T>(JsonDocument document, string name) => JsonSerializer.Deserialize<T>(document.RootElement.GetProperty(name).GetRawText(), PublishedJson.SectionRead)!;
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md"))) return current.FullName;
-        throw new InvalidOperationException("repository root not found");
-    }
 }

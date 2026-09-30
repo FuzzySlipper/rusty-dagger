@@ -349,7 +349,6 @@ public sealed class DaggerfallPerceptionPolicyTests
     [Fact]
     public void Mobile_catalog_publishes_enemy_basics_true_sight_flags()
     {
-        string root = RepositoryRoot();
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         int[] trueSightMobiles = [1, 15, 18, 19, 23, 25, 26, 27, 28, 29, 30, 31, 32];
 
@@ -374,12 +373,5 @@ public sealed class DaggerfallPerceptionPolicyTests
         stats.AddStat(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value), maximum);
         stats.AddTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value), new Track(maximum, 100, 0));
         return stats;
-    }
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md"))) directory = directory.Parent;
-        return directory?.FullName ?? throw new InvalidOperationException("The repository root was not found above the test output.");
     }
 }

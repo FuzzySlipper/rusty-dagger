@@ -36,7 +36,7 @@ public sealed class MonsterArchiveTests
         Assert.All(humans.Where(source => source.Id.Value != 146), source => Assert.NotNull(source.RangedAttackFrames));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Enumerates_every_named_record_of_the_supplied_archive()
     {
         MonsterArchiveInventory inventory = ReadInventory();
@@ -53,7 +53,7 @@ public sealed class MonsterArchiveTests
         Assert.Equal(0, rat!.MobileId);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Decodes_every_supplied_enemy_configuration()
     {
         MonsterArchiveInventory inventory = ReadInventory();
@@ -71,7 +71,7 @@ public sealed class MonsterArchiveTests
         Assert.Equal("Rat", inventory.EnemyConfigurations.Single(record => record.Name == "ENEMY000.CFG").Configuration!.Name);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Reports_a_supplied_configuration_whose_skill_slot_is_past_the_class_space()
     {
         MonsterArchiveInventory inventory = ReadInventory();
@@ -86,7 +86,7 @@ public sealed class MonsterArchiveTests
         Assert.Contains("40", tiger.Note, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Retains_every_animation_script_without_claiming_its_format()
     {
         MonsterArchiveInventory inventory = ReadInventory();
@@ -101,7 +101,7 @@ public sealed class MonsterArchiveTests
         Assert.All(inventory.AnimationScripts, record => Assert.InRange(record.Length, 1, 4096));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Links_supported_mobiles_and_retains_every_other_record_as_unresolved()
     {
         MonsterArchiveInventory inventory = ReadInventory();
@@ -125,12 +125,12 @@ public sealed class MonsterArchiveTests
         Assert.Null(rat.Source.Links.LootTableKey);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Every_loot_link_a_supported_mobile_names_is_a_published_loot_table()
     {
         MonsterArchiveInventory inventory = ReadInventory();
         System.Text.Json.Nodes.JsonArray tables = System.Text.Json.Nodes.JsonNode
-            .Parse(File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")))!
+            .Parse(File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json")))!
             ["lootTables"]!.AsArray();
         string[] keys = [.. tables.Select(table => table!.AsObject()["key"]!.GetValue<string>())];
 
@@ -145,7 +145,7 @@ public sealed class MonsterArchiveTests
         Assert.All(linked, key => Assert.Contains(key, keys));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Every_media_reference_a_linked_record_makes_is_supplied()
     {
         MonsterArchiveInventory inventory = ReadInventory();
@@ -161,7 +161,7 @@ public sealed class MonsterArchiveTests
             Assert.NotNull(MobileSourceMetadata.All.Single(source => source.Id.Value == mobileId).Corpse));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Reports_a_media_reference_the_supplied_sources_do_not_carry()
     {
         MonsterArchiveInventory inventory = ReadInventory();
@@ -183,12 +183,12 @@ public sealed class MonsterArchiveTests
     /// <summary>The texture archives the documented inventory says are supplied.</summary>
     private static HashSet<int> SuppliedTextureArchives() =>
     [
-        .. SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv")))
+        .. SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")))
             .Where(row => row.RowType == "file" && row.Id.StartsWith("CNT-018.file.TEXTURE", StringComparison.Ordinal))
             .Select(row => int.Parse(Path.GetExtension(row.PathOrPattern).TrimStart('.'), CultureInfo.InvariantCulture)),
     ];
 
-    [Fact]
+    [CorpusFact]
     public void Retains_a_configuration_that_does_not_fit_the_record_shape()
     {
         // A malformed configuration is a fact about one record, not a reason to lose the
@@ -224,13 +224,13 @@ public sealed class MonsterArchiveTests
         Assert.Contains("neither", other.Note, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Locates_a_truncated_archive_at_the_directory_entry_that_does_not_fit()
     {
         // Truncating the real archive shifts the directory window, so payload bytes are
         // read as entries. The refusal must point at the entry that does not fit rather
         // than at an offset only the arithmetic could reach.
-        byte[] truncated = File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/MONSTER.BSA"))[..^10];
+        byte[] truncated = File.ReadAllBytes(TestData.Corpus("MONSTER.BSA"))[..^10];
 
         Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => MonsterArchiveInventory.Enumerate(truncated, "MONSTER.BSA"));
 
@@ -247,7 +247,7 @@ public sealed class MonsterArchiveTests
         Assert.Equal("MoveSoundCue", error.ParamName);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_an_archive_whose_directory_repeats_a_name()
     {
         // Two records under one archive key would make the enumeration's lookup ambiguous,
@@ -261,7 +261,7 @@ public sealed class MonsterArchiveTests
         Assert.Contains("ENEMY000.CFG", error.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_mobile_id_the_classic_identity_cannot_carry()
     {
         // The mobile identity is one byte, so an archive key claiming more is not that
@@ -277,7 +277,7 @@ public sealed class MonsterArchiveTests
     private static byte[] ValidConfig()
     {
         // A copy of a supplied configuration, so the fixture exercises the real shape.
-        byte[] supplied = File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/CLASS00.CFG"));
+        byte[] supplied = File.ReadAllBytes(TestData.Corpus("CLASS00.CFG"));
         return supplied;
     }
 
@@ -314,18 +314,5 @@ public sealed class MonsterArchiveTests
     }
 
     private static MonsterArchiveInventory ReadInventory() =>
-        MonsterArchiveInventory.Enumerate(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/MONSTER.BSA")), "MONSTER.BSA");
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
-    }
+        MonsterArchiveInventory.Enumerate(File.ReadAllBytes(TestData.Corpus("MONSTER.BSA")), "MONSTER.BSA");
 }

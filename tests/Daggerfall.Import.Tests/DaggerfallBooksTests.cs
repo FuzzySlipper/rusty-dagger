@@ -13,7 +13,7 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 public sealed class DaggerfallBooksTests
 {
-    [Fact]
+    [CorpusFact]
     public void Reads_header_pages_and_message_mapping()
     {
         IReadOnlyList<SourceInventoryRow> inventory = Inventory();
@@ -45,7 +45,7 @@ public sealed class DaggerfallBooksTests
         Assert.Subset(keys, book.PageKeys.ToHashSet());
     }
 
-    [Fact]
+    [CorpusFact]
     public void Records_missing_and_malformed_identities_explicitly()
     {
         IReadOnlyList<SourceInventoryRow> inventory = Inventory();
@@ -66,11 +66,10 @@ public sealed class DaggerfallBooksTests
         Assert.Throws<InvalidOperationException>(() => DaggerfallBooksBuilder.Build([(0, "local/arena2/books/BOK00000.TXT", File.ReadAllBytes(Book("BOK00000.TXT")))], [], "en"));
     }
 
-    [Fact]
+    [CorpusFact("books")]
     public void Reads_all_ninety_supplied_books_end_to_end()
     {
         string directory = BooksDirectory();
-        if (!Directory.Exists(directory)) return;
 
         List<(int BookId, string Label, byte[] Bytes)> supplied = [];
         foreach (string path in Directory.EnumerateFiles(directory, "BOK*.TXT").Order(StringComparer.Ordinal))
@@ -79,7 +78,7 @@ public sealed class DaggerfallBooksTests
         }
 
         Assert.Equal(90, supplied.Count);
-        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv")));
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")));
         (DaggerfallBooks books, _, IReadOnlyList<DaggerfallTextRecord> records) = DaggerfallBooksBuilder.Build(supplied, inventory, "en");
         books.Validate();
 
@@ -97,7 +96,7 @@ public sealed class DaggerfallBooksTests
 
     private static string Book(string fileName) => Path.Combine(BooksDirectory(), fileName);
 
-    private static string BooksDirectory() => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../local/arena2/books"));
+    private static string BooksDirectory() => TestData.Corpus("books");
 
     private static IReadOnlyList<SourceInventoryRow> Inventory() =>
     [
@@ -106,17 +105,4 @@ public sealed class DaggerfallBooksTests
         new SourceInventoryRow("CNT-015.file.books/BOK00001.TXT", "file", "CNT-015", "source-file", "local/arena2/books/BOK00001.TXT", "BOK00001", "unused", string.Empty),
         new SourceInventoryRow("CNT-015.file.books/BOK00059.TXT", "file", "CNT-015", "source-file", "local/arena2/books/BOK00059.TXT", "BOK00059", "unused", string.Empty),
     ];
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("repository root not found");
-    }
 }

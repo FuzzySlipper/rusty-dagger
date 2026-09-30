@@ -36,7 +36,7 @@ public sealed class DaggerfallCinematicsContentTests
     [Fact]
     public void Every_published_video_is_indexed_by_its_source_and_matches_its_artifact()
     {
-        string content = Path.Combine(RepositoryRoot(), "content");
+        string content = Path.Combine(TestData.RepositoryRoot, "content");
         DaggerfallCinematicDefinition[] published = Definitions().Cinematics.Cinematics.Values
             .Where(value => value.Artifact is not null).ToArray();
         Assert.Equal(17, published.Count(value => value.Kind == DaggerfallCinematicKind.Vid));
@@ -64,7 +64,7 @@ public sealed class DaggerfallCinematicsContentTests
     [Fact]
     public void A_published_artifact_cannot_silently_change_source_identity_or_format()
     {
-        string path = Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json");
+        string path = Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json");
         JsonObject root = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
         JsonObject source = root["cinematics"]!["cinematics"]!.AsArray().First(value => value!["artifact"] is not null)!.AsObject();
         source["artifact"]!["path"] = "worldrpg/media/cinematics/another.webm";
@@ -73,20 +73,6 @@ public sealed class DaggerfallCinematicsContentTests
 
     private static DaggerfallDefinitions Definitions()
     {
-        string root = RepositoryRoot();
         return TestPayload.Definitions;
-    }
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("repository root not found");
     }
 }

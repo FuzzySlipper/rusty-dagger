@@ -17,7 +17,7 @@ public sealed class DaggerfallMusicBundleTests
         // The Engine stages a bundle only when the Host declares it, and the product opens it by the id
         // this owner holds. Two spellings of the same id are a product that loads and a first cue that
         // fails, so the declaration is pinned against the constants here rather than discovered by running.
-        string project = File.ReadAllText(Path.Combine(RepositoryRoot(), "src/WorldRpg.Host/WorldRpg.Host.csproj"));
+        string project = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "src/WorldRpg.Host/WorldRpg.Host.csproj"));
         Assert.Contains(
             $"Include=\"{DaggerfallMusicBundle.BundleId}\" Root=\"{DaggerfallMusicBundle.LogicalRoot}\"",
             project,
@@ -26,13 +26,6 @@ public sealed class DaggerfallMusicBundleTests
         Assert.Equal(DaggerfallMusicBundle.LogicalRoot + "/", DaggerfallMusicBundle.ContentRoot, StringComparer.Ordinal);
         Assert.Equal("worldrpg/media/music/manifest.json", DaggerfallMusicBundle.ManifestPath);
         Assert.DoesNotContain(DaggerfallMusicBundle.LogicalRoot, DaggerfallMusicBundle.ManifestPath, StringComparison.Ordinal);
-    }
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new DirectoryInfo(AppContext.BaseDirectory); current is not null; current = current.Parent)
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md"))) return current.FullName;
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
     }
 
     [Fact]

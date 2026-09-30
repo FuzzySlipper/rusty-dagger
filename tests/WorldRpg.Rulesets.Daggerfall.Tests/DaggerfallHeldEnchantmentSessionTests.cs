@@ -29,7 +29,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     [Fact]
     public void Worn_deterioration_uses_the_session_time_and_survives_save_restore()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs source = ReadInputs(root);
         PrivateersHoldInputs inputs = SameContentAt(source, source.ProfileKey.Site,

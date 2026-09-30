@@ -21,14 +21,13 @@ public sealed class DaggerfallItemTemplatesTests
         Assert.Throws<InvalidOperationException>(() => DaggerfallItemTemplatesBuilder.Build([], [], "donor/Assets/Resources/ItemTemplates.txt", [1], Inventory()));
     }
 
-    [Fact]
+    [DonorFact("Assets/Resources/ItemTemplates.txt", "Assets/Resources/MagicItemTemplates.txt")]
     public void Builds_the_template_catalog_end_to_end()
     {
-        const string items = "/home/research/daggerfall-unity/Assets/Resources/ItemTemplates.txt";
-        const string magic = "/home/research/daggerfall-unity/Assets/Resources/MagicItemTemplates.txt";
-        if (!File.Exists(items) || !File.Exists(magic)) return;
+        string items = TestData.Donor("Assets/Resources/ItemTemplates.txt");
+        string magic = TestData.Donor("Assets/Resources/MagicItemTemplates.txt");
 
-        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv")));
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")));
         DaggerfallItemTemplates catalog = DaggerfallItemTemplatesBuilder.Build(
             ItemTemplateReader.ReadTemplates(File.ReadAllText(items), "donor/Assets/Resources/ItemTemplates.txt"),
             ItemTemplateReader.ReadMagic(File.ReadAllText(magic), "donor/Assets/Resources/MagicItemTemplates.txt"),
@@ -62,17 +61,4 @@ public sealed class DaggerfallItemTemplatesTests
     [
         new SourceInventoryRow("CNT-011", "family", "CNT-011", "items", "donor", string.Empty, "pending-import", string.Empty),
     ];
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("repository root not found");
-    }
 }

@@ -6,7 +6,7 @@ namespace Daggerfall.Import.Tests;
 /// <summary>The FLC container the three class portraits are stored in.</summary>
 public sealed class FlcDecoderTests
 {
-    [Fact]
+    [CorpusFact]
     public void Reads_each_class_portrait_to_the_shape_and_frames_its_own_header_declares()
     {
         // The three supplied class portraits are genuine FLC containers, and each one's header is the
@@ -19,7 +19,7 @@ public sealed class FlcDecoderTests
         ];
         foreach ((string name, int frames, int width, int height) in portraits)
         {
-            byte[] bytes = File.ReadAllBytes(Corpus(name));
+            byte[] bytes = File.ReadAllBytes(TestData.Corpus(name));
             Assert.True(FlcDecoder.TryRead(bytes, name, out FlcContainer? container, out string reason), $"{name}: {reason}");
             Assert.Equal(frames, container!.FrameCount);
             Assert.Equal((width, height), (container.Width, container.Height));
@@ -75,12 +75,12 @@ public sealed class FlcDecoderTests
         }
     }
 
-    [Fact]
+    [CorpusFact]
     public void Decodes_every_frame_of_each_portrait_into_palette_indices()
     {
         foreach (string name in new[] { "MAGE.CEL", "ROGUE.CEL", "WARRIOR.CEL" })
         {
-            byte[] bytes = File.ReadAllBytes(Corpus(name));
+            byte[] bytes = File.ReadAllBytes(TestData.Corpus(name));
             IReadOnlyList<FlcDecoder.FlcFrameImage> frames = FlcDecoder.DecodeFrames(bytes, name, out Arena2Palette? palette);
 
             Assert.True(FlcDecoder.TryRead(bytes, name, out FlcContainer? container, out _));
@@ -201,18 +201,18 @@ public sealed class FlcDecoderTests
 
     private const ushort DeltaFlcChunkType = FlcDecoder.DeltaFlcChunkType;
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_bytes_that_only_look_like_a_container()
     {
         // A story sprite is not an FLC, and the reader says so by name rather than half-reading it.
-        byte[] bss = File.ReadAllBytes(Corpus("CMPA00I0.BSS"));
+        byte[] bss = File.ReadAllBytes(TestData.Corpus("CMPA00I0.BSS"));
         Assert.False(FlcDecoder.TryRead(bss, "CMPA00I0.BSS", out FlcContainer? none, out string wrongMagic));
         Assert.Null(none);
         Assert.Contains("declares file id", wrongMagic, StringComparison.Ordinal);
 
         // A real container cut short is refused where the frames stop fitting, not silently truncated
         // to the frames that happen to fit.
-        byte[] mage = File.ReadAllBytes(Corpus("MAGE.CEL"));
+        byte[] mage = File.ReadAllBytes(TestData.Corpus("MAGE.CEL"));
         Assert.False(FlcDecoder.TryRead(mage[..60], "MAGE.CEL", out _, out string tooShort));
         Assert.Contains("128-byte header", tooShort, StringComparison.Ordinal);
         Assert.False(FlcDecoder.TryRead(mage[..(FlcDecoder.HeaderBytes + 20)], "MAGE.CEL", out _, out string clipped));
@@ -237,18 +237,5 @@ public sealed class FlcDecoderTests
         shifted[83] = 0;
         Assert.False(FlcDecoder.TryRead(shifted, "MAGE.CEL", out _, out string unbacked));
         Assert.Contains("no 2-byte prefix chunk", unbacked, StringComparison.Ordinal);
-    }
-
-    private static string Corpus(string name) => Path.Combine(RepositoryRoot(), "local/arena2", name);
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md")))
-        {
-            directory = directory.Parent;
-        }
-
-        return directory?.FullName ?? throw new InvalidOperationException("repository root not found");
     }
 }

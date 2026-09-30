@@ -218,9 +218,6 @@ public sealed class DaggerfallMagicAdmissionPolicyTests
 
     private static DaggerfallDefinitions Load()
     {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "content/worldrpg/payloads/daggerfall.base.json")))
-            directory = directory.Parent;
         return TestPayload.Definitions;
     }
 }

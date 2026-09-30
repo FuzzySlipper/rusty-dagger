@@ -6,10 +6,10 @@ namespace Daggerfall.Import.Tests;
 
 public sealed class DaggerfallLocationExteriorTests
 {
-    [Fact]
+    [CorpusFact]
     public void Index_keyed_exterior_layout_preserves_duplicate_names_in_the_same_region()
     {
-        BsaArchive maps = BsaArchive.Parse(File.ReadAllBytes(Corpus("MAPS.BSA")), "arena2/MAPS.BSA");
+        BsaArchive maps = BsaArchive.Parse(File.ReadAllBytes(TestData.Corpus("MAPS.BSA")), "arena2/MAPS.BSA");
         MapsLocationRecord[] duplicates = MapsDecoder.DecodeRegionLocations(maps, 17)
             .GroupBy(location => location.Name, StringComparer.Ordinal)
             .First(group => group.Count() > 1)
@@ -25,11 +25,11 @@ public sealed class DaggerfallLocationExteriorTests
         Assert.Equal(duplicates[1].Name, second.LocationName);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Publishes_complete_exterior_metadata_for_every_real_location()
     {
-        BsaArchive maps = BsaArchive.Parse(File.ReadAllBytes(Corpus("MAPS.BSA")), "arena2/MAPS.BSA");
-        BsaArchive blocks = BsaArchive.Parse(File.ReadAllBytes(Corpus("BLOCKS.BSA")), "arena2/BLOCKS.BSA");
+        BsaArchive maps = BsaArchive.Parse(File.ReadAllBytes(TestData.Corpus("MAPS.BSA")), "arena2/MAPS.BSA");
+        BsaArchive blocks = BsaArchive.Parse(File.ReadAllBytes(TestData.Corpus("BLOCKS.BSA")), "arena2/BLOCKS.BSA");
 
         DaggerfallLocations locations = DaggerfallLocationBuilder.Build(maps, blocks);
 
@@ -55,18 +55,5 @@ public sealed class DaggerfallLocationExteriorTests
         Assert.True(holdExterior.UsesCustomLocationPosition);
         Assert.Equal(new DaggerfallLocationTerrainRect(70, 89, 53, 72), holdExterior.FlattenRect);
         Assert.NotEmpty(holdExterior.Blocks);
-    }
-
-    private static string Corpus(string name) => Path.Combine(RepositoryRoot(), "local/arena2", name);
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-                return current.FullName;
-        }
-
-        throw new InvalidOperationException("repository root not found");
     }
 }

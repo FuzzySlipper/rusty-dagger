@@ -11,7 +11,7 @@ public sealed class DaggerfallFightersGuildQuestCorpusContentTests
     [Fact]
     public void Admits_all_twenty_receipts_and_reports_compiler_diagnostics_per_source()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> receipts = DaggerfallFightersGuildQuestCorpusContent.Read(
             new ProductContent(Array.Empty<ProductContentFile>()),
@@ -31,7 +31,7 @@ public sealed class DaggerfallFightersGuildQuestCorpusContentTests
     [Fact]
     public void Actual_instance_start_and_restore_refuse_a_non_runnable_selected_source()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> receipts = DaggerfallFightersGuildQuestCorpusContent.Read(
             new ProductContent(Array.Empty<ProductContentFile>()),
@@ -51,7 +51,7 @@ public sealed class DaggerfallFightersGuildQuestCorpusContentTests
     [Fact]
     public void Rejects_a_duplicate_or_metadata_substitution_against_the_admitted_catalog()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         JsonObject payload = JsonNode.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.fighters.json")))!.AsObject();
         JsonArray quests = payload["quests"]!.AsArray();
@@ -85,12 +85,5 @@ public sealed class DaggerfallFightersGuildQuestCorpusContentTests
         protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IRandomService.DrawKeyed)
             ? new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Minimum)
             : throw new NotSupportedException(method?.Name);
-    }
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md"))) return current.FullName;
-        throw new InvalidOperationException("repository root not found");
     }
 }

@@ -13,7 +13,7 @@ public sealed class GeometryInventoryTests
 {
     private static readonly Lazy<DaggerfallGeometry> Corpus = new(Supplied);
 
-    [Fact]
+    [CorpusFact]
     public void Enumerates_the_supplied_archive_in_the_only_stable_order_it_states()
     {
         DaggerfallGeometry geometry = Corpus.Value;
@@ -26,7 +26,7 @@ public sealed class GeometryInventoryTests
         // A record's identity is its directory ordinal: the archive is not sorted by number, so an
         // inventory that ordered records by number would be stating an order the file does not have.
         Assert.Equal(Enumerable.Range(0, 10251), geometry.Records.Select(record => record.Ordinal));
-        byte[] bytes = File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/ARCH3D.BSA"));
+        byte[] bytes = File.ReadAllBytes(TestData.Corpus("ARCH3D.BSA"));
         long expected = Arena2FormatConstants.BsaHeaderBytes;
         foreach (DaggerfallGeometryRecord record in geometry.Records)
         {
@@ -47,7 +47,7 @@ public sealed class GeometryInventoryTests
         }
     }
 
-    [Fact]
+    [CorpusFact]
     public void Publishes_every_identity_whether_or_not_a_block_names_it()
     {
         // The clause the task states: a mesh nothing references keeps its identity, because whether the
@@ -64,13 +64,13 @@ public sealed class GeometryInventoryTests
         // Nothing is dropped and nothing is invented: the numbers the inventory carries are the numbers
         // the archive's own directory states, as a multiset, so a reused number is carried as often as the
         // file states it rather than collapsed to one record.
-        byte[] bytes = File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/ARCH3D.BSA"));
+        byte[] bytes = File.ReadAllBytes(TestData.Corpus("ARCH3D.BSA"));
         uint[] published = [.. geometry.Records.Select(record => (uint)record.RecordId).Order()];
         uint[] stated = [.. Enumerable.Range(0, 10251).Select(ordinal => BitConverter.ToUInt32(bytes, 27061524 + (ordinal * Arena2FormatConstants.NumericBsaDirectoryEntryBytes))).Order()];
         Assert.Equal(stated, published);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Classifies_a_reused_number_by_the_lookup_the_donor_makes()
     {
         // A numeric directory may reuse a number, and the donor's lookup answers with the first record that
@@ -93,7 +93,7 @@ public sealed class GeometryInventoryTests
         Assert.All(six.Where(record => record.DuplicateOf is not null), record => Assert.Equal(six[0].Ordinal, record.DuplicateOf));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Retains_the_version_counts_and_textures_of_every_readable_record()
     {
         DaggerfallGeometry geometry = Corpus.Value;
@@ -113,7 +113,7 @@ public sealed class GeometryInventoryTests
         });
     }
 
-    [Fact]
+    [CorpusFact]
     public void Finds_the_records_whose_bytes_repeat_an_earlier_records()
     {
         // Two numbers carrying the same geometry is the corpus's own answer to duplication, and it is not
@@ -130,7 +130,7 @@ public sealed class GeometryInventoryTests
         });
     }
 
-    [Fact]
+    [CorpusFact]
     public void Links_a_blocks_mesh_number_to_the_record_that_answers_it()
     {
         // The dungeon source stores a mesh number as five characters of text, so mesh 9004 is named
@@ -231,7 +231,7 @@ public sealed class GeometryInventoryTests
         Assert.Equal(DaggerfallGeometryDisposition.Referenced, geometry.Records[0].Disposition);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_use_sites_on_a_record_a_lookup_cannot_reach()
     {
         // The blocks that name a number belong to the record a lookup reaches, so a later record carrying
@@ -270,7 +270,7 @@ public sealed class GeometryInventoryTests
         Assert.Equal("v2.7", inventory.Records[1].Facts!.Version);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_duplicate_column_that_does_not_match_where_a_number_first_appears()
     {
         DaggerfallGeometry geometry = Corpus.Value;
@@ -292,7 +292,7 @@ public sealed class GeometryInventoryTests
         Assert.Contains("not an earlier record of the same length", Assert.Throws<InvalidOperationException>(() => (geometry with { Records = Replaced(geometry, shorter.Ordinal, shorter with { PayloadDuplicateOf = 0 }) }).Validate()).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_disposition_that_disagrees_with_the_duplicate_column_and_use_sites()
     {
         DaggerfallGeometry geometry = Corpus.Value;
@@ -303,7 +303,7 @@ public sealed class GeometryInventoryTests
         Assert.Contains("make it", Assert.Throws<InvalidOperationException>(() => (geometry with { Records = Replaced(geometry, unused.Ordinal, unused with { UseSites = ["B0000001.RDB"] }) }).Validate()).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_state_that_disagrees_with_the_facts_it_publishes()
     {
         DaggerfallGeometry geometry = Corpus.Value;
@@ -324,7 +324,7 @@ public sealed class GeometryInventoryTests
         Assert.Contains("four-byte number cannot state", Assert.Throws<InvalidOperationException>(() => (geometry with { Records = Replaced(geometry, record.Ordinal, record with { RecordId = 4_294_967_296 }) }).Validate()).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_use_sites_that_repeat_or_run_out_of_order()
     {
         DaggerfallGeometry geometry = Corpus.Value;
@@ -334,7 +334,7 @@ public sealed class GeometryInventoryTests
         Assert.Contains("use site", Assert.Throws<InvalidOperationException>(() => (geometry with { Records = Replaced(geometry, referenced.Ordinal, referenced with { UseSites = [referenced.UseSites[0], referenced.UseSites[0]] }) }).Validate()).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_an_unresolved_number_the_archive_can_answer()
     {
         DaggerfallGeometry geometry = Corpus.Value;
@@ -344,7 +344,7 @@ public sealed class GeometryInventoryTests
         Assert.Contains("no reason or no use site", Assert.Throws<InvalidOperationException>(() => (geometry with { UnresolvedUseSites = [new DaggerfallGeometryUnresolvedRecord("999999", [], "the fixture says so")] }).Validate()).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_source_whose_declared_count_is_not_what_the_section_carries()
     {
         DaggerfallGeometry geometry = Corpus.Value;
@@ -353,7 +353,7 @@ public sealed class GeometryInventoryTests
         Assert.Contains("Geometry schema must be 1 but is 2", Assert.Throws<InvalidOperationException>(() => (geometry with { SchemaVersion = 2 }).Validate()).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_an_unresolved_number_spelled_the_way_the_blocks_spell_it()
     {
         // The rule is about numbers, and a block spells a number as the dungeon source stores it. A section
@@ -375,7 +375,7 @@ public sealed class GeometryInventoryTests
         // renamed model list reads as an empty one, and the geometry folded from it reports every mesh as
         // unused — the opposite of the closure set this inventory exists to publish.
         System.Text.Json.Nodes.JsonObject pack = System.Text.Json.Nodes.JsonNode.Parse(
-            File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")))!.AsObject();
+            File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json")))!.AsObject();
         System.Text.Json.Nodes.JsonArray records = pack["blocks"]!["records"]!.AsArray();
         System.Text.Json.Nodes.JsonObject objects = records
             .Select(record => record!["objects"] as System.Text.Json.Nodes.JsonObject)
@@ -403,7 +403,7 @@ public sealed class GeometryInventoryTests
 
     private static DaggerfallGeometry WithUseSites(IReadOnlyList<DaggerfallGeometryUseSite> useSites) =>
         DaggerfallGeometryBuilder.Build(
-            File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/ARCH3D.BSA")),
+            File.ReadAllBytes(TestData.Corpus("ARCH3D.BSA")),
             "local/arena2/ARCH3D.BSA",
             Inventory(),
             useSites);
@@ -416,7 +416,7 @@ public sealed class GeometryInventoryTests
     {
         List<DaggerfallGeometryUseSite> useSites = [];
         using System.Text.Json.JsonDocument pack = System.Text.Json.JsonDocument.Parse(
-            File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+            File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json")));
         foreach (System.Text.Json.JsonElement block in pack.RootElement.GetProperty("blocks").GetProperty("records").EnumerateArray())
         {
             if (!block.TryGetProperty("objects", out System.Text.Json.JsonElement objects) || objects.ValueKind != System.Text.Json.JsonValueKind.Object)
@@ -437,7 +437,7 @@ public sealed class GeometryInventoryTests
         [.. geometry.Records.Select(value => value.Ordinal == ordinal ? record : value)];
 
     private static IReadOnlyList<SourceInventoryRow> Inventory() => SourceManifestBuilder.ReadInventory(
-        File.ReadAllBytes(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv")));
+        File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")));
 
     /// <summary>A minimal v2.7 mesh record: a version, no planes, and a point list that starts after it.</summary>
     private static byte[] Mesh()
@@ -489,18 +489,5 @@ public sealed class GeometryInventoryTests
         }
 
         return bytes;
-    }
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
     }
 }

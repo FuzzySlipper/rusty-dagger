@@ -16,7 +16,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     [Fact]
     public void The_ordinary_session_plays_the_published_dungeon_cue_and_keeps_one_loop()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = FullContent(root);
         PrivateersHoldInputs inputs = ReadInputs(root);
@@ -60,7 +60,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     [Fact]
     public void A_site_change_ends_the_previous_worlds_loop_before_the_new_one_starts()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = FullContent(root);
         PrivateersHoldInputs inputs = ReadInputs(root);
@@ -106,7 +106,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     [Fact]
     public void A_session_whose_site_publishes_no_music_composes_and_plays_nothing()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = FullContent(root);
         PrivateersHoldInputs inputs = ReadInputs(root);
@@ -130,7 +130,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     [Fact]
     public void A_context_with_no_published_cue_ends_the_playing_loop_and_reports_it()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = FullContent(root);
         PrivateersHoldInputs outside = ReadProfile(root, content, definitions, "daggerfall.charing-interior-1-1-0.json");

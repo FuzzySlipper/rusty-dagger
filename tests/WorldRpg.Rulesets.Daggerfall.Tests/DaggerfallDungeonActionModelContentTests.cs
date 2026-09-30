@@ -87,7 +87,7 @@ public sealed class DaggerfallDungeonActionModelContentTests
     [Fact]
     public void Shipped_privateers_hold_keeps_action_meshes_model_local_and_out_of_static_geometry()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = GeneratedContent(root);
         PrivateersHoldInputs inputs = PrivateersHoldContent.Read(content,
@@ -121,12 +121,5 @@ public sealed class DaggerfallDungeonActionModelContentTests
                 File.ReadAllBytes(path)))
             .ToArray();
         return new ProductContent(files);
-    }
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md"))) return current.FullName;
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
     }
 }

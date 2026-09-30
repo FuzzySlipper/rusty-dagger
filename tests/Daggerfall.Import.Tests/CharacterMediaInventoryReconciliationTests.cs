@@ -13,10 +13,10 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 public sealed class CharacterMediaInventoryReconciliationTests
 {
-    [Fact]
+    [CorpusFact]
     public void ReconcilesTheRealCorpusWithNoUndocumentedFile()
     {
-        string[] supplied = [.. Directory.EnumerateFiles(Path.Combine(RepositoryRoot(), "local", "arena2"))
+        string[] supplied = [.. Directory.EnumerateFiles(TestData.CorpusRoot)
             .Select(Path.GetFileName)
             .Where(name => name is { Length: > 0 } && CharacterMediaInventory.IsDocumentedFamily(name))
             .Select(name => name!)];
@@ -27,10 +27,10 @@ public sealed class CharacterMediaInventoryReconciliationTests
         Assert.Equal(87, supplied.Length);
     }
 
-    [Fact]
+    [CorpusFact]
     public void RefusesACorpusThatIsMissingADocumentedFile()
     {
-        string[] supplied = [.. Directory.EnumerateFiles(Path.Combine(RepositoryRoot(), "local", "arena2"))
+        string[] supplied = [.. Directory.EnumerateFiles(TestData.CorpusRoot)
             .Select(Path.GetFileName)
             .Where(name => name is { Length: > 0 } && CharacterMediaInventory.IsDocumentedFamily(name))
             .Select(name => name!)
@@ -42,10 +42,10 @@ public sealed class CharacterMediaInventoryReconciliationTests
         Assert.Contains("are not in the supplied corpus", error.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void ReportsASuppliedFileTheInventoryDoesNotDocument()
     {
-        string[] supplied = [.. Directory.EnumerateFiles(Path.Combine(RepositoryRoot(), "local", "arena2"))
+        string[] supplied = [.. Directory.EnumerateFiles(TestData.CorpusRoot)
             .Select(Path.GetFileName)
             .Where(name => name is { Length: > 0 } && CharacterMediaInventory.IsDocumentedFamily(name))
             .Select(name => name!)
@@ -69,12 +69,5 @@ public sealed class CharacterMediaInventoryReconciliationTests
     }
 
     private static byte[] InventoryCsv() =>
-        File.ReadAllBytes(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv"));
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md"))) directory = directory.Parent;
-        return directory?.FullName ?? throw new InvalidOperationException("The repository root was not found above the test output.");
-    }
+        File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv"));
 }

@@ -12,7 +12,7 @@ public sealed class MapMediaLocationJoinTests
     [Fact]
     public void Region_maps_join_to_normalized_regions_and_bytes_on_disk()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         JsonDocument pack = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
         JsonDocument sidecar = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/privateers-hold/media/classic/manifest.json")));
 
@@ -47,18 +47,5 @@ public sealed class MapMediaLocationJoinTests
         Assert.Equal(
             images.EnumerateArray().Count(image => !image.GetProperty("regions").EnumerateArray().Any()),
             images.EnumerateArray().Count(image => image.GetProperty("kind").GetString() != "regionMap"));
-    }
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("repository root not found");
     }
 }

@@ -13,11 +13,10 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 public sealed class ClassicWorldVisualTests
 {
-    [Fact]
+    [CorpusFact("ARCH3D.BSA")]
     public void PublishesTheDonorArrowMeshWithItsOwnTexturesAndSourceRecordDigest()
     {
         (GeometryPublication geometry, ClassicWorldVisualRequest request, string arena2) = PublishArrowFromCorpus();
-        if (geometry is null) return;
         byte[] archiveBytes = File.ReadAllBytes(Path.Combine(arena2, "ARCH3D.BSA"));
         Arch3dMeshInventory inventory = Arch3dInventoryReader.Read(archiveBytes, "arena2/ARCH3D.BSA");
 
@@ -60,7 +59,7 @@ public sealed class ClassicWorldVisualTests
         });
     }
 
-    [Fact]
+    [CorpusFact("PAL.PAL")]
     public void PublishesTextureBytesThatAreTheRecordsOwnPaletteColours()
     {
         ClassicWorldVisualManifest visual = PublishedArrowDescriptor();
@@ -68,8 +67,8 @@ public sealed class ClassicWorldVisualTests
         // Both records are virtual solid-colour records (TEXTURE.000's record is a palette index,
         // TEXTURE.001's is index + 128), so the published PNG must be exactly the palette colour of its
         // record. This pins the decode: a wrong frame, the wrong palette or a transparent alpha fails.
-        string root = RepositoryRoot();
-        byte[] palette = File.ReadAllBytes(Path.Combine(root, "local/arena2/PAL.PAL"));
+        string root = TestData.RepositoryRoot;
+        byte[] palette = File.ReadAllBytes(TestData.Corpus("PAL.PAL"));
         foreach (ClassicWorldVisualTexture texture in visual.Materials)
         {
             byte[] png = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/privateers-hold", texture.RelativePath));
@@ -113,11 +112,10 @@ public sealed class ClassicWorldVisualTests
         Assert.Contains("does not carry", failure.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact("ARCH3D.BSA")]
     public void RefusesAPublishedDescriptorThatDisagreesWithTheMeshItNames()
     {
         (GeometryPublication geometry, _, _) = PublishArrowFromCorpus();
-        if (geometry is null) return;
         ClassicWorldVisualManifest visual = PublishedArrowDescriptor();
         Arena2MediaBundlePublication.ValidateClassicWorldVisuals([visual], geometry);
 
@@ -151,11 +149,10 @@ public sealed class ClassicWorldVisualTests
         Assert.Contains("not the geometry publication's", archive.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact("ARCH3D.BSA")]
     public void RefusesAPublishedDescriptorWhoseTextureIsNotWhereItSaysItIs()
     {
         (GeometryPublication geometry, _, _) = PublishArrowFromCorpus();
-        if (geometry is null) return;
         ClassicWorldVisualManifest visual = PublishedArrowDescriptor();
 
         InvalidOperationException misplaced = Assert.Throws<InvalidOperationException>(() => Arena2MediaBundlePublication.ValidateClassicWorldVisuals(
@@ -171,7 +168,7 @@ public sealed class ClassicWorldVisualTests
 
     private static ClassicWorldVisualManifest PublishedArrowDescriptor()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         using JsonDocument manifest = JsonDocument.Parse(File.ReadAllBytes(
             Path.Combine(root, "content/worldrpg/imports/privateers-hold/media/classic/manifest.json")));
         return Assert.Single(manifest.RootElement.GetProperty("worldVisuals").Deserialize<List<ClassicWorldVisualManifest>>(PublishedJson.SectionRead)!);
@@ -179,9 +176,8 @@ public sealed class ClassicWorldVisualTests
 
     private static (GeometryPublication Geometry, ClassicWorldVisualRequest Request, string Arena2) PublishArrowFromCorpus()
     {
-        string arena2 = Path.Combine(RepositoryRoot(), "local/arena2");
+        string arena2 = TestData.CorpusRoot;
         string archivePath = Path.Combine(arena2, "ARCH3D.BSA");
-        if (!File.Exists(archivePath)) return (null!, null!, arena2);
         byte[] archiveBytes = File.ReadAllBytes(archivePath);
         Arch3dMeshInventory inventory = Arch3dInventoryReader.Read(archiveBytes, "arena2/ARCH3D.BSA");
         Arch3dMeshRecord record = inventory.Records.Single(candidate =>
@@ -202,13 +198,6 @@ public sealed class ClassicWorldVisualTests
             ClassicMissileVisuals.MeshIds,
             textures));
         return (geometry, ClassicWorldVisualRequest.FromGeometry(ClassicMissileVisuals.Published[0], geometry, inventory, archiveBytes), arena2);
-    }
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md"))) return current.FullName;
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
     }
 
     /// <summary>Decodes the repository's own RGBA8 PNG emission without a second image library.</summary>

@@ -19,7 +19,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     [Fact]
     public void Exterior_rest_selects_location_and_wilderness_night_encounters_from_the_live_cell()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs source = ReadInputs(root);
         foreach (bool wilderness in new[] { false, true })
@@ -55,7 +55,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     [Fact]
     public void Selected_rest_encounter_interrupts_at_its_minute_and_restores_the_queued_choice()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs source = ReadInputs(root);
         PrivateersHoldInputs inputs = SameContentAt(source, source.ProfileKey.Site,
@@ -98,7 +98,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     [Fact]
     public void Rest_ui_action_advances_once_recovers_once_round_trips_and_refuses_town_camping()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = ReadInputs(root);
         List<string> releases = [];
