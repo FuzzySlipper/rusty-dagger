@@ -1085,13 +1085,7 @@ public sealed record NormalizedResourceCatalogEntry(
 /// <summary>Canonical JSON writer and reader.  Serialization always appends one final newline.</summary>
 public static class NormalizedImportSerializer
 {
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true,
-        NumberHandling = JsonNumberHandling.Strict,
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
-    };
+    private static readonly JsonSerializerOptions Options = PublishedJson.Section;
 
     public static byte[] Serialize(NormalizedImportDocument document)
         => Serialize(document, Options);

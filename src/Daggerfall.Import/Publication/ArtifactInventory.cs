@@ -43,7 +43,7 @@ public static class ArtifactInventory
         {
             ["generator"] = generator,
             ["unreadableFamilies"] = JsonSerializer.SerializeToNode(
-                (unreadable ?? []).OrderBy(family => family.Family, StringComparer.Ordinal).ToArray(), PublishedJson.Section),
+                (unreadable ?? []).ToArray(), PublishedJson.Section),
             ["artifacts"] = new JsonArray([.. artifacts.OrderBy(entry => entry["path"]!.GetValue<string>(), StringComparer.Ordinal)]),
         };
         return Encoding.UTF8.GetBytes(document.ToJsonString(PublishedJson.Section) + "\n");

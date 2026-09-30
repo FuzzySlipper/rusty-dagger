@@ -32,18 +32,7 @@ public sealed record IndexedTextureFrame(
     public byte[] ToRgba(Arena2Palette palette, PaletteAlphaMode alphaMode)
     {
         ArgumentNullException.ThrowIfNull(palette);
-        Rgba32[] colors = palette.ToRgba(Pixels.Span, alphaMode);
-        byte[] rgba = new byte[checked(colors.Length * 4)];
-        for (int index = 0; index < colors.Length; index++)
-        {
-            int offset = index * 4;
-            rgba[offset] = colors[index].Red;
-            rgba[offset + 1] = colors[index].Green;
-            rgba[offset + 2] = colors[index].Blue;
-            rgba[offset + 3] = colors[index].Alpha;
-        }
-
-        return rgba;
+        return palette.ToRgbaBytes(Pixels.Span, alphaMode);
     }
 }
 

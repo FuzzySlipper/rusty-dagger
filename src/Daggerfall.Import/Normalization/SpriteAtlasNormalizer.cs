@@ -65,18 +65,7 @@ public sealed record DecodedSpriteFrame(string Id, int Width, int Height, byte[]
             throw new ArgumentException("Indexed input must contain exactly one palette index per positive-dimension pixel.", nameof(indexedPixels));
         }
 
-        Rgba32[] pixels = palette.ToRgba(indexedPixels, alphaMode);
-        byte[] rgba = new byte[checked(pixels.Length * 4)];
-        for (int index = 0; index < pixels.Length; index++)
-        {
-            int offset = index * 4;
-            rgba[offset] = pixels[index].Red;
-            rgba[offset + 1] = pixels[index].Green;
-            rgba[offset + 2] = pixels[index].Blue;
-            rgba[offset + 3] = pixels[index].Alpha;
-        }
-
-        return new(id, width, height, rgba, mirrorHorizontally);
+        return new(id, width, height, palette.ToRgbaBytes(indexedPixels, alphaMode), mirrorHorizontally);
     }
 
     internal void Validate()

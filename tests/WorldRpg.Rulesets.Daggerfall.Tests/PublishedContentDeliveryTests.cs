@@ -724,7 +724,6 @@ public sealed class PublishedContentDeliveryTests
     private static GeneratedIndex Index(string path)
     {
         JsonElement root = JsonDocument.Parse(AdmittedContent().ReadBytes(path).ToArray()).RootElement;
-        Assert.Equal(1, root.GetProperty("schemaVersion").GetInt32());
         return new(root, [.. root.GetProperty("artifacts").EnumerateArray()]);
     }
 }

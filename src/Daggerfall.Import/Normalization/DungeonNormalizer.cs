@@ -228,7 +228,6 @@ public static class DungeonNormalizer
     private const string ImporterId = "daggerfall-import/dungeon-normalizer";
     // Classic Arena2 coordinate units use a fixed conversion to metres. This
     // is a source-format invariant, not a product or presentation setting.
-    private const float SourceUnitMetres = 0.025F;
     private const float LightRangeMultiplier = 3F;
 
     public static DungeonNormalizationResult Normalize(DungeonNormalizationRequest request)
@@ -311,7 +310,7 @@ public static class DungeonNormalizer
         private readonly SortedSet<string> referencedMeshIds = new(StringComparer.Ordinal);
         private readonly List<GeometryUnresolvedMeshReference> unresolvedMeshReferences = [];
         private readonly HashSet<string> unresolvedMeshIds = new(StringComparer.Ordinal);
-        private readonly Dictionary<GeometryGroupKey, GeometryBuilder> geometry = [];
+        private readonly Dictionary<GeometryGroupKey, NormalizedMeshBuilder> geometry = [];
         private readonly List<GeometryPlacementDraft> geometryPlacements = [];
         private readonly List<ActionModelDraft> actionModelDrafts = [];
         private readonly List<NormalizedVector3> worldBoundsVertices = [];
@@ -497,7 +496,7 @@ public static class DungeonNormalizer
                         true,
                         actionDoor ? doorId : null,
                         actionId);
-                    GeometryBuilder group = Geometry(geometryKey, texture.MaterialId);
+                    NormalizedMeshBuilder group = Geometry(geometryKey, texture.MaterialId);
                     List<NormalizedVector3> polygon = new(plane.Points.Count);
                     List<NormalizedVector3> worldPolygon = new(plane.Points.Count);
                     List<NormalizedVector2> uvs = new(plane.Points.Count);
@@ -519,7 +518,9 @@ public static class DungeonNormalizer
                     }
 
                     NormalizedVector3 normal = MeshGeometry.Normal(polygon);
-                    group.AddPolygon(polygon, uvs, normal, AddVertices, AddTriangles);
+                    AddVertices(polygon.Count);
+                    AddTriangles(polygon.Count - 2);
+                    group.Add(polygon, uvs, normal);
                     placementMeshKeys.Add(geometryKey);
                     placementVertices.AddRange(worldPolygon);
                     worldBoundsVertices.AddRange(worldPolygon);
@@ -568,7 +569,7 @@ public static class DungeonNormalizer
             List<NormalizedMesh> meshes = [];
             Dictionary<GeometryGroupKey, string> meshIdsByGeometry = [];
             Dictionary<string, List<string>> visualMeshIdsByDoor = new(StringComparer.Ordinal);
-            foreach ((GeometryGroupKey key, GeometryBuilder group) in geometry
+            foreach ((GeometryGroupKey key, NormalizedMeshBuilder group) in geometry
                 .OrderBy(pair => pair.Key.Archive).ThenBy(pair => pair.Key.Record)
                 .ThenByDescending(pair => pair.Key.ParticipatesInCollision)
                 .ThenBy(pair => pair.Key.DoorId, StringComparer.Ordinal)
@@ -707,7 +708,7 @@ public static class DungeonNormalizer
             }
         }
 
-        private static float ToMetres(int sourceUnits) => sourceUnits * SourceUnitMetres;
+        private static float ToMetres(int sourceUnits) => sourceUnits * Arena2SourceTransform.SourceUnitMetres;
 
         private void AddActions(RdbBlockSource block, string blockPlacementId, MapsDungeonBlock reference)
         {
@@ -841,11 +842,11 @@ public static class DungeonNormalizer
             return OfflineNavigationDeriver.Derive($"navigation/{Slug(layout.LocationName)}", artifactId, meshes, request.Navigation);
         }
 
-        private GeometryBuilder Geometry(GeometryGroupKey key, string materialId)
+        private NormalizedMeshBuilder Geometry(GeometryGroupKey key, string materialId)
         {
-            if (!geometry.TryGetValue(key, out GeometryBuilder? group))
+            if (!geometry.TryGetValue(key, out NormalizedMeshBuilder? group))
             {
-                group = new GeometryBuilder(materialId, key.ParticipatesInCollision);
+                group = new NormalizedMeshBuilder(materialId, key.ParticipatesInCollision);
                 geometry.Add(key, group);
             }
 
@@ -989,27 +990,6 @@ public static class DungeonNormalizer
 
     }
 
-    private sealed class GeometryBuilder(string materialId, bool participatesInCollision)
-    {
-        private readonly List<NormalizedVector3> vertices = [];
-        private readonly List<NormalizedVector3> normals = [];
-        private readonly List<NormalizedVector2> textureCoordinates = [];
-        private readonly List<NormalizedTriangle> triangles = [];
-
-        public IReadOnlyList<NormalizedVector3> Vertices => vertices;
-
-        public void AddPolygon(IReadOnlyList<NormalizedVector3> polygon, IReadOnlyList<NormalizedVector2> uvs, NormalizedVector3 normal, Action<int> addVertices, Action<int> addTriangles)
-        {
-            addVertices(polygon.Count);
-            addTriangles(polygon.Count - 2);
-            _ = MeshGeometry.AppendPolygon(vertices, normals, textureCoordinates, triangles, polygon, uvs, normal);
-        }
-
-        public NormalizedMesh ToMesh(string id, string artifactId) => new(
-            NormalizedMesh.CurrentSchemaVersion, id, artifactId, vertices, normals, textureCoordinates, triangles,
-            [new NormalizedMaterialGroup(materialId, 0, triangles.Count, participatesInCollision)]);
-    }
-
     private sealed record TextureInfo(ushort Archive, ushort Record, int Width, int Height, string TextureId, string MaterialId, string SpriteId);
 
     private sealed record DoorDraft(string Id, string DoorResourceId, NormalizedVector3 Position, NormalizedVector3 RotationDegrees, string Kind, int StartingLockValue, NormalizedDoorAction? Action);
@@ -1072,15 +1052,5 @@ public static class DungeonNormalizer
 
 
 
-    private static string Slug(string value)
-    {
-        StringBuilder result = new(value.Length);
-        foreach (char character in value)
-        {
-            result.Append(char.IsAsciiLetterOrDigit(character) ? char.ToLowerInvariant(character) : '-');
-        }
-
-        string slug = result.ToString().Trim('-');
-        return slug.Length == 0 ? "source" : slug;
-    }
+    private static string Slug(string value) => PublishedIds.Slug(value);
 }

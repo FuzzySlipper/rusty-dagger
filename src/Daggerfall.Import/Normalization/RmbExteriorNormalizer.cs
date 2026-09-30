@@ -110,7 +110,7 @@ public static class RmbExteriorNormalizer
 
     private sealed class Builder(RmbExteriorNormalizationRequest request, MapsExteriorLayout layout, BsaArchive blocks, BsaArchive arch, ushort groundTextureArchive)
     {
-        private readonly Dictionary<(ushort Archive, ushort Record), GeometryBuilder> geometry = [];
+        private readonly Dictionary<(ushort Archive, ushort Record), NormalizedMeshBuilder> geometry = [];
         private readonly Dictionary<(ushort Archive, ushort Record), TextureInfo> textures = [];
         private readonly SortedSet<string> referencedMeshes = new(StringComparer.Ordinal);
         private readonly HashSet<(int X, int Z)> outdoorNavigationCells = [];
@@ -154,7 +154,7 @@ public static class RmbExteriorNormalizer
                 // by its base ordinal, so retain the group ordinal and make the donor fallback explicit.
                 ushort textureRecord = tile.TextureRecord < 56 ? tile.TextureRecord : (ushort)2;
                 TextureInfo texture = Texture(groundTextureArchive, textureRecord);
-                GeometryBuilder group = Geometry(groundTextureArchive, textureRecord, texture.MaterialId);
+                NormalizedMeshBuilder group = Geometry(groundTextureArchive, textureRecord, texture.MaterialId);
                 const int side = 256;
                 int y = 15 - tile.Y; // MeshReader's ground plane reverses donor tile rows.
                 Arena2ImportPoint a = Add(origin, Arena2SourceTransform.ToRmbImportPoint(tile.X * side, 0, y * side));
@@ -165,7 +165,8 @@ public static class RmbExteriorNormalizer
                     ? [new(0F, 1F), new(0F, 0F), new(1F, 0F), new(1F, 1F)]
                     : [new(0F, 0F), new(1F, 0F), new(1F, 1F), new(0F, 1F)];
                 if (tile.Flipped) uv = uv.Reverse().ToArray();
-                group.Add([MeshGeometry.ToRightHanded(a), MeshGeometry.ToRightHanded(b), MeshGeometry.ToRightHanded(c), MeshGeometry.ToRightHanded(d)], uv);
+                NormalizedVector3[] quad = [MeshGeometry.ToRightHanded(a), MeshGeometry.ToRightHanded(b), MeshGeometry.ToRightHanded(c), MeshGeometry.ToRightHanded(d)];
+                group.Add(quad, uv, MeshGeometry.Normal(quad));
             }
         }
 
@@ -227,7 +228,7 @@ public static class RmbExteriorNormalizer
             foreach (Arch3dPlane plane in mesh.Planes.Where(plane => plane.Points.Count >= 3))
             {
                 TextureInfo texture = Texture(plane.TextureArchive, plane.TextureRecord);
-                GeometryBuilder group = Geometry(plane.TextureArchive, plane.TextureRecord, texture.MaterialId);
+                NormalizedMeshBuilder group = Geometry(plane.TextureArchive, plane.TextureRecord, texture.MaterialId);
                 List<NormalizedVector3> polygon = [];
                 List<NormalizedVector2> uvs = [];
                 foreach (Arch3dPoint point in plane.Points)
@@ -237,7 +238,7 @@ public static class RmbExteriorNormalizer
                     Arena2TextureUv uv = Arena2SourceTransform.ToTextureUv(point, texture.Width, texture.Height);
                     uvs.Add(new(uv.U, uv.V));
                 }
-                group.Add(polygon, uvs);
+                group.Add(polygon, uvs, MeshGeometry.Normal(polygon));
             }
         }
 
@@ -254,11 +255,11 @@ public static class RmbExteriorNormalizer
             return texture;
         }
 
-        private GeometryBuilder Geometry(ushort archive, ushort record, string material)
+        private NormalizedMeshBuilder Geometry(ushort archive, ushort record, string material)
         {
-            if (!geometry.TryGetValue((archive, record), out GeometryBuilder? group))
+            if (!geometry.TryGetValue((archive, record), out NormalizedMeshBuilder? group))
             {
-                group = new(material);
+                group = new(material, participatesInCollision: true);
                 geometry.Add((archive, record), group);
             }
             return group;
@@ -310,7 +311,7 @@ public static class RmbExteriorNormalizer
             // The exterior navigation profile intentionally admits the original ground plane only: roofs
             // and interior floors are collision geometry, not outdoor walkable ground.
             if (MathF.Abs(cell.SupportHeight) > 0.0001F) return false;
-            const float sourceAutomapCellMetres = 64F * 0.025F;
+            const float sourceAutomapCellMetres = 64F * Arena2SourceTransform.SourceUnitMetres;
             int x = checked((int)MathF.Floor(((cell.Column + 0.5F) * request.Navigation.CellSize) / sourceAutomapCellMetres));
             int z = checked((int)MathF.Floor((-((cell.Row + 0.5F) * request.Navigation.CellSize)) / sourceAutomapCellMetres));
             return outdoorNavigationCells.Contains((x, z));
@@ -319,21 +320,11 @@ public static class RmbExteriorNormalizer
         private static Arena2ImportPoint Add(Arena2ImportPoint left, Arena2ImportPoint right) => new(left.XMetres + right.XMetres, left.YMetres + right.YMetres, left.ZMetres + right.ZMetres);
     }
 
-    private sealed class GeometryBuilder(string material)
-    {
-        private readonly List<NormalizedVector3> vertices = [];
-        private readonly List<NormalizedVector3> normals = [];
-        private readonly List<NormalizedVector2> uvs = [];
-        private readonly List<NormalizedTriangle> triangles = [];
-        public void Add(IReadOnlyList<NormalizedVector3> polygon, IReadOnlyList<NormalizedVector2> coordinates) => MeshGeometry.AppendPolygon(vertices, normals, uvs, triangles, polygon, coordinates, MeshGeometry.Normal(polygon));
-        public NormalizedMesh ToMesh(string id, string artifact) => new(NormalizedMesh.CurrentSchemaVersion, id, artifact, vertices, normals, uvs, triangles, [new NormalizedMaterialGroup(material, 0, triangles.Count, true)]);
-    }
-
     private sealed record TextureInfo(int Width, int Height, string TextureId, string MaterialId);
     private readonly record struct Matrix3(float C, float S)
     {
         public static Matrix3 Yaw(float degrees) { float radians = degrees * MathF.PI / 180F; return new(MathF.Cos(radians), MathF.Sin(radians)); }
         public Arena2ImportPoint Transform(Arena2ImportPoint value) => new((C * value.XMetres) + (S * value.ZMetres), value.YMetres, (-S * value.XMetres) + (C * value.ZMetres));
     }
-    private static string Slug(string value) => new(value.Select(character => char.IsAsciiLetterOrDigit(character) ? char.ToLowerInvariant(character) : '-').ToArray());
+    private static string Slug(string value) => PublishedIds.Slug(value);
 }

@@ -14,7 +14,7 @@ public static class MobileSourceMetadata
     // DFU BlocksFile.ScaleDivisor and MeshReader.GlobalScale, respectively.
     // These are structural source-format conversion factors, not tuning values.
     private const float ScaleDivisor = 256F;
-    private const float WorldUnitScale = 0.025F;
+    private const float WorldUnitScale = Arena2SourceTransform.SourceUnitMetres;
     private const sbyte DamageBeatMarker = -1;
 
     private static readonly ImmutableArray<Arena2MobileFrameRecord> MoveRecords = CreateOrientationRecords(0, 1, 2, 3, 4, false);

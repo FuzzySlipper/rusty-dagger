@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Daggerfall.Import.Normalized;
+using Daggerfall.Import.Publication;
 
 namespace Daggerfall.Import.Normalization;
 
@@ -649,13 +650,7 @@ internal static class CollisionNavigationJson
 /// </summary>
 internal static class ResourceCatalogJson
 {
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true,
-        NumberHandling = JsonNumberHandling.Strict,
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
-    };
+    private static readonly JsonSerializerOptions Options = PublishedJson.Section;
 
     public static byte[] Serialize(IReadOnlyList<NormalizedResourceCatalogEntry> resources)
     {
