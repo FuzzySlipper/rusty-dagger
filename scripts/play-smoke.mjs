@@ -26,15 +26,31 @@ const children = [];
 let stopping = false;
 const profile = mkdtempSync(join(tmpdir(), 'dagger-play-smoke-'));
 
+// A synchronous pause, because every exit path (including a failure mid-run) stops through here.
+const pause = ms => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+
+function groupAlive(pid) {
+  try { process.kill(-pid, 0); return true; } catch { return false; }
+}
+
 function stopAll() {
+  // Each child leads its own process group, so the host's runtime worker and Chromium's renderers
+  // stop with it. The profile is removed only once every group is gone: Chromium keeps writing it
+  // until it has exited, and removing it earlier fails on a directory that refills.
   for (const child of children) {
-    // Each child leads its own process group, so the host's runtime worker and Chromium's renderers
-    // stop with it.
     try { process.kill(-child.pid, 'SIGTERM'); } catch { /* already gone */ }
   }
-  // Chromium keeps writing its profile for a moment after SIGTERM, so a removal racing it sees a
-  // directory refill; retrying lets the passed run exit 0 instead of failing on its own cleanup.
-  rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+  for (const [signal, waitMs] of [['SIGTERM', 10_000], ['SIGKILL', 5_000]]) {
+    const deadline = Date.now() + waitMs;
+    while (children.some(child => groupAlive(child.pid)) && Date.now() < deadline) pause(100);
+    if (!children.some(child => groupAlive(child.pid))) break;
+    if (signal === 'SIGTERM') {
+      for (const child of children) {
+        try { process.kill(-child.pid, 'SIGKILL'); } catch { /* already gone */ }
+      }
+    }
+  }
+  rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }
 
 function fail(message) {
