@@ -14,6 +14,12 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     /// <summary>Engine persistence scope for ordinary menu saves.</summary>
     private const string SaveStoreScope = "worldrpg.saves";
 
+    /// <summary>The label a quick save gives the new slot it creates.</summary>
+    private const string QuickSaveLabel = "Saved game";
+
+    /// <summary>The slot a quick load selects: the first slot the Host names.</summary>
+    private static readonly string QuickLoadKey = SaveSlotKey(1);
+
     /// <summary>Engine persistence scope for current ruleset-owned player preferences.</summary>
     private const string PlayerPreferencesScope = "worldrpg.preferences";
 
@@ -30,7 +36,6 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     private readonly ResolvedCompositionIdentity _compositionIdentity;
     private bool _started;
     private bool _shutdown;
-    private readonly bool _resumed;
     private ProductMode _mode = ProductMode.Playing;
 
     private ProductStateStore<string> PlayerPreferences => _playerPreferences ??= new ProductStateStore<string>(
@@ -71,23 +76,6 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         }
     }
 
-    /// <summary>
-    /// Adopts a session a resume already built and validated, keeping the composition that a
-    /// later session replacement rebuilds from.
-    /// </summary>
-    private WorldRpgProduct(ProductCreateContext context, IGameRuleset ruleset, ResolvedGameComposition composition, IGameSession session)
-    {
-        _context = context;
-        _composition = composition;
-        _ruleset = ruleset;
-        _compositionIdentity = composition.Identity;
-        _session = session;
-        ApplyPlayerPreferences(_session);
-        // A resumed product is already past the entry screen: the world has been played, so starting it
-        // again behind a screen that offers to begin would offer to begin a run that is already running.
-        _resumed = true;
-    }
-
     public void RegisterDebugCommands(IDebugCommandModuleRegistrar registrar)
     {
         if (_session is not IPlaytestGameSession playtest) return;
@@ -109,74 +97,6 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     /// </summary>
     public IReadOnlyList<ProductModeChange> ModeHistory => _modeHistory;
 
-    /// <summary>Captures this compiled ruleset state into an Engine-persisted envelope.</summary>
-    public PersistenceSaveReceipt Save(WorldRpgSaveStore store, string key, PersistenceRevisionGuard guard = PersistenceRevisionGuard.Any, ulong expectedRevision = 0)
-    {
-        ArgumentNullException.ThrowIfNull(store);
-        if (_shutdown) throw new ObjectDisposedException(nameof(WorldRpgProduct));
-        if (_session is not ISaveableGameSession saveable)
-            throw new InvalidOperationException("The selected compiled ruleset does not support save capture.");
-        return store.Save(key, new GameSaveEnvelope(saveable.CaptureSave()), guard, expectedRevision);
-    }
-
-    /// <summary>Loads and admits a save before any ruleset session is constructed or Engine state is mutated.</summary>
-    public static WorldRpgResumeResult TryResume(ProductCreateContext context, WorldRpgSaveStore store, string key, IGameRuleset? ruleset = null, GameBundleId? bundle = null)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(store);
-        ProductStateLoad<GameSaveEnvelope> loaded;
-        try
-        {
-            loaded = store.Load(key);
-        }
-        catch (WorldRpgSaveFormatException error)
-        {
-            return new(null, 0, [new("corrupt", error.Message)]);
-        }
-        catch (OverflowException)
-        {
-            return new(null, 0, [new("corrupt", "The persisted WorldRpg save payload length is invalid.")]);
-        }
-        if (!loaded.Present || loaded.State is null) return new(null, loaded.Revision, [new("missing", "No saved state exists for the requested key.")]);
-        GameBundleId requestedBundle = bundle ?? HostDefaults.DefaultBundle;
-        GameCompositionResolution resolution = GameCompositionResolver.Resolve(context.Content, requestedBundle);
-        if (!resolution.IsResolved)
-        {
-            return new(null, loaded.Revision, resolution.Diagnostics
-                .Select(value => new WorldRpgSaveDiagnostic("selection", value.Message)).ToArray());
-        }
-        ResolvedGameComposition composition = resolution.RequireComposition();
-        IGameRuleset selected;
-        try
-        {
-            selected = ruleset ?? BuiltInRulesets.Resolve(composition.Ruleset);
-        }
-        catch (ArgumentOutOfRangeException error) when (ruleset is null && error.ParamName == "id")
-        {
-            return new(null, loaded.Revision, [new("selection", $"No built-in compiled ruleset is available for '{composition.Ruleset.Value}'.")]);
-        }
-        if (selected.Id != composition.Ruleset)
-        {
-            return new(null, loaded.Revision, [new("selection", $"Selected ruleset '{selected.Id.Value}' does not match bundle ruleset '{composition.Ruleset.Value}'.")]);
-        }
-        if (loaded.State.Payload.Ruleset != composition.Ruleset)
-            return new(null, loaded.Revision, [new("payload-ruleset", "The saved payload ruleset does not match the selected bundle ruleset.")]);
-        if (selected is not ISaveableGameRuleset saveable)
-            return new(null, loaded.Revision, [new("unsupported", "The selected compiled ruleset does not support save resume.")]);
-        try
-        {
-            IGameSession session = saveable.CreateSession(new GameSessionContext(context.Engine, composition), loaded.State.Payload);
-            return new(
-                new WorldRpgProduct(context, selected, composition, session),
-                loaded.Revision,
-                []);
-        }
-        catch (Exception error) when (error is ArgumentException or InvalidOperationException)
-        {
-            return new(null, loaded.Revision, [new("payload", $"The validated save payload was rejected: {error.Message}")]);
-        }
-    }
-
     private static (ResolvedGameComposition Composition, IGameRuleset Selected) ResolveSelection(ProductCreateContext context, IGameRuleset? ruleset, GameBundleId bundle)
     {
         ResolvedGameComposition composition = GameCompositionResolver.Resolve(context.Content, bundle).RequireComposition();
@@ -194,8 +114,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     /// this tells it which mode it is starting in and exposes that as a projection. The mode change is the
     /// publication - telling the session and then asking it to publish again would expose two UI
     /// projections for one Start, which is one more than the Engine's own product exercise holds a product
-    /// to. A resumed product is already in ordinary play, so its mode change is the already-in-mode case
-    /// and publishes nothing, leaving the create-time projection as the one a client attaches to.
+    /// to.
     /// <para>
     /// The Engine calls this once through the generated product exports, so the entry screen is what a
     /// client sees before anything has happened in the world.
@@ -205,8 +124,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     {
         if (_shutdown || _started) return;
         _started = true;
-        Apply(_resumed ? ProductMode.Playing : ProductMode.Title,
-            _resumed ? "the resumed product started in the world it restored" : "the product started at its entry screen");
+        Apply(ProductMode.Title, "the product started at its entry screen");
     }
 
     /// <summary>
@@ -279,28 +197,9 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             return;
         }
 
-        IGameSession replacement = _ruleset.CreateSession(new GameSessionContext(_context.Engine, _composition));
-        IGameSession previous = _session;
-        try
-        {
-            ApplyPlayerPreferences(replacement);
-            replacement.PublishInitial();
-        }
-        catch
-        {
-            replacement.Dispose();
-            throw;
-        }
-
-        _session = replacement;
-        previous.Dispose();
+        ReplaceSession(_ruleset.CreateSession(new GameSessionContext(_context.Engine, _composition)),
+            ProductMode.Playing, "the product replaced its session");
         _started = true;
-        // The replacement is always the decision here, but the *mode* only moved if it was not
-        // already ordinary play: Changed answers the mode question, not the session one.
-        ProductMode from = _mode;
-        _mode = ProductMode.Playing;
-        if (_session is IModeAwareGameSession aware) aware.ApplyProductMode(ProductMode.Playing);
-        Record(new(from, ProductMode.Playing, from == ProductMode.Playing ? ProductModeChangeOutcome.AlreadyInMode : ProductModeChangeOutcome.Applied, "the product replaced its session"));
     }
 
     /// <summary>
@@ -321,8 +220,19 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             return;
         }
 
-        IGameSession replacement = _ruleset.CreateSession(new GameSessionContext(_context.Engine, _composition));
-        IGameSession previous = _session;
+        ReplaceSession(_ruleset.CreateSession(new GameSessionContext(_context.Engine, _composition)),
+            ProductMode.Title, "the product quit to the title");
+    }
+
+    /// <summary>
+    /// The one session replacement: the replacement receives the player's preferences and publishes,
+    /// then becomes the running session, the previous one is retired, and the product enters
+    /// <paramref name="mode"/>. A replacement that cannot publish is disposed and the running session
+    /// stays. The replacement is always the decision, but the mode only moved if it was not already
+    /// <paramref name="mode"/>: the recorded outcome answers the mode question, not the session one.
+    /// </summary>
+    private void ReplaceSession(IGameSession replacement, ProductMode mode, string reason)
+    {
         try
         {
             ApplyPlayerPreferences(replacement);
@@ -334,12 +244,13 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             throw;
         }
 
+        IGameSession previous = _session;
         _session = replacement;
         previous.Dispose();
         ProductMode from = _mode;
-        _mode = ProductMode.Title;
-        if (_session is IModeAwareGameSession aware) aware.ApplyProductMode(ProductMode.Title);
-        Record(new(from, ProductMode.Title, ProductModeChangeOutcome.Applied, "the product quit to the title"));
+        _mode = mode;
+        if (_session is IModeAwareGameSession aware) aware.ApplyProductMode(mode);
+        Record(new(from, mode, from == mode ? ProductModeChangeOutcome.AlreadyInMode : ProductModeChangeOutcome.Applied, reason));
     }
 
     public void Shutdown()
@@ -541,6 +452,12 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
                 case SaveSlotOperation.Save:
                     SaveNamedSlot(requesting, request);
                     return;
+                case SaveSlotOperation.QuickSave:
+                    SaveNamedSlot(requesting, new(SaveSlotOperation.Save, Label: QuickSaveLabel));
+                    return;
+                case SaveSlotOperation.QuickLoad:
+                    LoadNamedSlot(requesting, QuickLoadKey);
+                    return;
                 case SaveSlotOperation.Load:
                     if (string.IsNullOrWhiteSpace(request.Key))
                     {
@@ -666,9 +583,12 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     private static string NextSaveSlotKey(IReadOnlyList<WorldRpgSaveSlotEntry> entries)
     {
         ulong ordinal = 1;
-        while (entries.Any(entry => string.Equals(entry.Key, $"slot-{ordinal}", StringComparison.Ordinal))) ordinal++;
-        return $"slot-{ordinal}";
+        while (entries.Any(entry => string.Equals(entry.Key, SaveSlotKey(ordinal), StringComparison.Ordinal))) ordinal++;
+        return SaveSlotKey(ordinal);
     }
+
+    /// <summary>The Host's slot naming: a new slot takes the first free ordinal.</summary>
+    private static string SaveSlotKey(ulong ordinal) => $"slot-{ordinal}";
 
     private void LoadSavedGame(ISaveRequestingGameSession requesting, GameSaveEnvelope envelope)
     {
@@ -695,28 +615,17 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             return;
         }
 
+        IGameSession previous = _session;
         try
         {
-            ApplyPlayerPreferences(replacement);
-            replacement.PublishInitial();
+            ReplaceSession(replacement, ProductMode.Playing, "the product loaded a saved game");
+            _started = true;
         }
-        catch (Exception error)
+        catch (Exception error) when (!ReferenceEquals(_session, replacement))
         {
-            replacement.Dispose();
+            // The replacement could not publish; ReplaceSession disposed it and kept this session.
             requesting.ReportSaveOutcome($"Load failed: {error.Message}");
             return;
-        }
-
-        IGameSession previous = _session;
-        _session = replacement;
-        try
-        {
-            previous.Dispose();
-            _started = true;
-            ProductMode from = _mode;
-            _mode = ProductMode.Playing;
-            if (_session is IModeAwareGameSession aware) aware.ApplyProductMode(ProductMode.Playing);
-            Record(new(from, ProductMode.Playing, from == ProductMode.Playing ? ProductModeChangeOutcome.AlreadyInMode : ProductModeChangeOutcome.Applied, "the product loaded a saved game"));
         }
         catch (Exception error)
         {
@@ -846,21 +755,4 @@ public sealed record ProductModeChange(ProductMode From, ProductMode To, Product
 {
     /// <summary>Whether the product entered a different mode.</summary>
     public bool Changed => Outcome == ProductModeChangeOutcome.Applied;
-}
-
-/// <summary>
-/// One thing a resume has to report. Blocking entries are why no product was created;
-/// non-blocking entries describe state that was left out of a product that did resume.
-/// </summary>
-public sealed record WorldRpgSaveDiagnostic(string Code, string Message, bool IsBlocking = true);
-public sealed record WorldRpgResumeResult(WorldRpgProduct? Product, ulong Revision, IReadOnlyList<WorldRpgSaveDiagnostic> Diagnostics)
-{
-    /// <summary>A resume happened and nothing was left out of it.</summary>
-    public bool IsComplete => Product is not null && Diagnostics.Count == 0;
-
-    /// <summary>
-    /// A resume happened. Non-blocking entries may still describe state that was left
-    /// out, which is why <see cref="IsComplete"/> is the stricter question.
-    /// </summary>
-    public bool IsResumed => Product is not null && Diagnostics.All(value => !value.IsBlocking);
 }

@@ -9,7 +9,7 @@ namespace WorldRpg.Host.Tests;
 
 /// <summary>
 /// Save slots: metadata indexing, missing/incompatible/corrupt outcomes, overwrite guards and
-/// deletion, and one-value catalog recovery after persistence faults.
+/// deletion, and an old-or-new complete slot set after a fault at any payload or catalog write.
 /// </summary>
 public sealed class WorldRpgSaveSlotsTests
 {
@@ -59,8 +59,9 @@ public sealed class WorldRpgSaveSlotsTests
         Assert.NotNull(ok);
         Assert.Null(okDiagnostic);
 
+        // A catalog entry whose revision has no stored payload is corrupt, not a load of another revision.
         persistence.Put("worldrpg-test/slots", WorldRpgSaveSlots.IndexKey, System.Text.Encoding.UTF8.GetBytes(
-            """[{"Key":"slot-a","Label":"A","SavedAtUtc":"2026-09-22T00:00:00Z","Ruleset":"daggerfall","Payload":"","Revision":1}]"""));
+            """[{"Key":"slot-a","Label":"A","SavedAtUtc":"2026-09-22T00:00:00Z","Ruleset":"daggerfall","Revision":5}]"""));
         (GameSaveEnvelope? corrupt, WorldRpgSlotLoadDiagnostic? corruptDiagnostic) = slots.LoadSlot("slot-a", "daggerfall");
         Assert.Null(corrupt);
         Assert.Equal("corrupt", corruptDiagnostic!.Kind);
@@ -82,7 +83,29 @@ public sealed class WorldRpgSaveSlotsTests
 
 
     [Fact]
-    public void One_catalog_write_fault_recreates_a_complete_old_or_new_slot_set()
+    public void Listing_reads_only_the_catalog_and_payloads_live_under_their_slot_key()
+    {
+        InMemoryPersistenceService persistence = new();
+        using WorldRpgSaveSlots slots = new(Engine(persistence), "worldrpg-test");
+        WorldRpgSaveSlotEntry first = slots.SaveSlot("slot-a", "A", Envelope("daggerfall", [7]));
+        Assert.Equal([7], System.Text.Json.JsonSerializer.Deserialize<byte[]>(persistence.Get("worldrpg-test/slots", WorldRpgSaveSlots.PayloadKey("slot-a", first.Revision))));
+        Assert.DoesNotContain("\"Payload\"", System.Text.Encoding.UTF8.GetString(persistence.Get("worldrpg-test/slots", WorldRpgSaveSlots.IndexKey)), StringComparison.Ordinal);
+
+        // An overwrite replaces the previous revision's payload; a delete removes the current one.
+        WorldRpgSaveSlotEntry second = slots.SaveSlot("slot-a", "A again", Envelope("daggerfall", [8]));
+        Assert.False(persistence.Contains("worldrpg-test/slots", WorldRpgSaveSlots.PayloadKey("slot-a", first.Revision)));
+        Assert.True(slots.DeleteSlot("slot-a"));
+        Assert.False(persistence.Contains("worldrpg-test/slots", WorldRpgSaveSlots.PayloadKey("slot-a", second.Revision)));
+
+        // A listing never opens a payload, so a missing payload only surfaces when that slot loads.
+        slots.SaveSlot("slot-b", "B", Envelope("daggerfall", [9]));
+        persistence.Remove("worldrpg-test/slots", WorldRpgSaveSlots.PayloadKey("slot-b", 1));
+        Assert.Equal("B", Assert.Single(slots.List()).Label);
+        Assert.Equal("corrupt", slots.LoadSlot("slot-b", "daggerfall").Diagnostic!.Kind);
+    }
+
+    [Fact]
+    public void A_fault_at_any_slot_write_leaves_a_complete_old_or_new_slot_set()
     {
         InMemoryPersistenceService persistence = new();
         persistence.FailNextSaveBeforeCommit();
@@ -102,8 +125,19 @@ public sealed class WorldRpgSaveSlotsTests
         {
             slots.SaveSlot("slot-a", "Before", Envelope("daggerfall", [2]));
             slots.SaveSlot("slot-b", "Unrelated", Envelope("daggerfall", [3]));
+            // A payload write that commits and then faults leaves the catalog naming the old slot.
             persistence.FailNextSaveAfterCommit();
-            InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => slots.SaveSlot("slot-a", "After", Envelope("daggerfall", [4])));
+            InvalidOperationException payloadFailure = Assert.Throws<InvalidOperationException>(() => slots.SaveSlot("slot-a", "Lost", Envelope("daggerfall", [5])));
+            Assert.Contains("Reload the catalog", payloadFailure.Message, StringComparison.Ordinal);
+        }
+
+        using (WorldRpgSaveSlots afterPayloadFailure = new(Engine(persistence), "worldrpg-test"))
+        {
+            Assert.Equal("Before", afterPayloadFailure.List().Single(entry => entry.Key == "slot-a").Label);
+            Assert.Equal([2], afterPayloadFailure.LoadSlot("slot-a", "daggerfall").Envelope!.Payload.Bytes.ToArray());
+            // A catalog write that commits and then faults leaves the new slot complete.
+            persistence.FailNextSaveAfterCommit(WorldRpgSaveSlots.IndexKey);
+            InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => afterPayloadFailure.SaveSlot("slot-a", "After", Envelope("daggerfall", [4])));
             Assert.Contains("Reload the catalog", failure.Message, StringComparison.Ordinal);
         }
 
@@ -190,8 +224,19 @@ public sealed class WorldRpgSaveSlotsTests
         private ulong _nextHandle;
         private SaveFault _nextSaveFault;
 
+        private string? _faultKey;
+
         internal void FailNextSaveBeforeCommit() => _nextSaveFault = SaveFault.BeforeCommit;
-        internal void FailNextSaveAfterCommit() => _nextSaveFault = SaveFault.AfterCommit;
+
+        /// <summary>Faults the next save after it commits, or the next save of <paramref name="key"/> when one is named.</summary>
+        internal void FailNextSaveAfterCommit(string? key = null)
+        {
+            _nextSaveFault = SaveFault.AfterCommit;
+            _faultKey = key;
+        }
+
+        internal bool Contains(string scope, string key) => _values.ContainsKey((scope, key));
+        internal void Remove(string scope, string key) => _values.Remove((scope, key));
         internal void Put(string scope, string key, byte[] payload) => _values[(scope, key)] = new(1, payload.ToArray());
         internal byte[] Get(string scope, string key) => _values[(scope, key)].Payload.ToArray();
         public PersistenceStore OpenStore(PersistenceOpenRequest request)
@@ -202,8 +247,12 @@ public sealed class WorldRpgSaveSlotsTests
         }
         public PersistenceSaveReceipt Save(PersistenceSaveRequest request)
         {
-            SaveFault fault = _nextSaveFault;
-            _nextSaveFault = SaveFault.None;
+            SaveFault fault = _faultKey is null || _faultKey == request.Key ? _nextSaveFault : SaveFault.None;
+            if (fault != SaveFault.None)
+            {
+                _nextSaveFault = SaveFault.None;
+                _faultKey = null;
+            }
             if (fault == SaveFault.BeforeCommit) throw new InvalidOperationException("Injected persistence save fault before commit.");
 
             string scope = _scopes[request.Store.Handle.Value];

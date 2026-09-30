@@ -559,8 +559,8 @@ existing behavior; they do not claim that the spell runtime exists.
   and active-state work belongs in this existing product path.
 - **Save:**
   `src/WorldRpg.Rulesets.Daggerfall/DaggerfallState.cs`,
-  `DaggerfallSavePayload.cs` and `src/WorldRpg.Host/WorldRpgSaveStore.cs`
-  provide the current product payload/envelope. Active effect, poison/disease,
+  `DaggerfallSavePayload.cs` and `src/WorldRpg.Host/WorldRpgSaveSlots.cs`
+  provide the current product payload and its slot storage. Active effect, poison/disease,
   enchantment and transformation state should extend this ownership.
 - **Thin UI/projections:**
   `src/WorldRpg.Kit/Presentation/PresentationState.cs`, `UiValueBuilder.cs`,
