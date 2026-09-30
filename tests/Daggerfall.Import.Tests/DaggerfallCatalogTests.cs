@@ -359,7 +359,7 @@ public sealed class DaggerfallCatalogTests
         ReadInventory(), VocabularyAttributes(), VocabularySkills(), ReadCareers(), EnemyIds(), ItemIds());
 
     private static IReadOnlyList<SourceInventoryRow> ReadInventory() =>
-        SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")));
+        SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));
 
     private static List<(string FileName, byte[] Bytes)> ReadCareers() =>
         [.. Directory.EnumerateFiles(TestData.CorpusRoot, "CLASS*.CFG")

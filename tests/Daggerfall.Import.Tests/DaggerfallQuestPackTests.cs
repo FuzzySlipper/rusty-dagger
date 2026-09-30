@@ -129,7 +129,7 @@ public sealed class DaggerfallQuestPackTests
 
         DaggerfallQuestTable globals = DaggerfallQuestTableReader.Read(File.ReadAllBytes(TestData.Donor("Assets/StreamingAssets/Tables/Quests-GlobalVars.txt")), "Tables/Quests-GlobalVars.txt", globals: true);
         DaggerfallQuestTable messages = DaggerfallQuestTableReader.Read(File.ReadAllBytes(TestData.Donor("Assets/StreamingAssets/Tables/Quests-StaticMessages.txt")), "Tables/Quests-StaticMessages.txt");
-        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")));
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));
         List<QuestSourceDocument> documents = [];
         List<(string, string, int, string)> failures = [];
         long total = 0;

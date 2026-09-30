@@ -1,8 +1,8 @@
 # Agent review workflow
 
-Status: active convention, 2026-09-11. The Den project document
-`rusty-dagger/agent-review-workflow` owns the policy; the files here are the
-packets handed to reviewers. Where the two disagree, Den wins.
+The Den project document `rusty-dagger/agent-review-workflow` owns the policy,
+including reviewer model routing; the files here are the packets handed to
+reviewers. Where the two disagree, Den wins.
 
 Reviewers are persistent agents, not one-shot checks. An identified issue is
 re-checked by the same reviewer in the same session, so round two verifies the
@@ -13,8 +13,8 @@ source-backed findings; the root agent reconciles them and decides.
 
 ## Lane roster
 
-Three lanes run on **every** task (the third is a temporary counterbalance —
-see its lane file for the sunset rule):
+Three lanes run on **every** task (the third is a counterbalance whose
+retirement condition is stated in its lane file):
 
 | Lane | Packet |
 | --- | --- |
@@ -29,8 +29,8 @@ always on for the opposite failure: agents add checking the runtime does not
 need. Import-side validation gravity (bounds, provenance, digests) leaks into
 trusted single-player runtime paths as propose/validate/mutate steps, repeated
 hash admission, revision guards, snapshots, and rollback. The recent refactors
-removed that machinery; this lane holds the removal until runtime gravity is
-established (see `docs/gameplay-design.md` and rusty-engine Board post 147).
+removed that machinery (see `docs/gameplay-design.md` and rusty-engine Board
+post 147); this lane keeps it from returning.
 
 Optional lanes. In DSH, pick to a total of three to four reviewers, and pick lanes
 whose questions can disagree with each other. Codex/Prime mapping is below:
@@ -98,9 +98,11 @@ When Prime is selected, its standing team satisfies the review responsibilities:
 
 | Responsibility | Persistent Prime partner |
 | --- | --- |
-| Engine reuse | Upstream checker: `gpt-6-luna`, `max` |
-| Existing product reuse and unfinished task paths | Reuse checker: `gpt-6-luna`, `max` |
-| Runtime trust, correctness, and relevant optional review questions | Senior: `gpt-6-astra`, `medium` |
+| Engine reuse | Upstream checker |
+| Existing product reuse and unfinished task paths | Reuse checker |
+| Runtime trust, correctness, and relevant optional review questions | Senior |
+
+The Den policy document assigns each partner's model and effort.
 
 Do not add a second roster or a fourth reviewer solely because the DSH rule
 calls for one. Assign relevant lane questions to these partners; add another

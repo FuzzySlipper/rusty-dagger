@@ -27,7 +27,7 @@ public sealed class DaggerfallItemTemplatesTests
         string items = TestData.Donor("Assets/Resources/ItemTemplates.txt");
         string magic = TestData.Donor("Assets/Resources/MagicItemTemplates.txt");
 
-        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")));
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));
         DaggerfallItemTemplates catalog = DaggerfallItemTemplatesBuilder.Build(
             ItemTemplateReader.ReadTemplates(File.ReadAllText(items), "donor/Assets/Resources/ItemTemplates.txt"),
             ItemTemplateReader.ReadMagic(File.ReadAllText(magic), "donor/Assets/Resources/MagicItemTemplates.txt"),

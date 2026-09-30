@@ -73,8 +73,10 @@ Capture is read-only. Stat sources carrying effect provenance are rebuilt with
 fresh actor identities before tracks, through Engine's existing capture/rebuild
 helper. A compiled definition that applies contributions supplies a separate
 resume callback to bind cleanup to restored state without applying a second
-contribution or replaying the initial round. The default catalog is empty until
-concrete effect families are composed; unknown effect definitions fail clearly.
+contribution or replaying the initial round. The session composes one
+`DaggerfallEffectCatalog` from the disease (`DaggerfallDiseasePolicy.Definitions`)
+and poison (`DaggerfallPoisonEffects.Definitions`) families, so a saved effect
+names the definition that interprets it; unknown effect definitions fail clearly.
 
 ## Ranged delivery
 

@@ -62,7 +62,7 @@ public sealed class QuestSourceTests
         // not carry, or a documented one that is not supplied, is drift either way.
         string[] supplied = [.. ReadInventory().Files.Select(file => file.Path)];
         HashSet<string> documented = [.. Daggerfall.Import.Publication.SourceManifestBuilder
-            .ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")))
+            .ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")))
             .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, "CNT-017"))
             .Select(row => Path.GetFileName(row.PathOrPattern))];
 

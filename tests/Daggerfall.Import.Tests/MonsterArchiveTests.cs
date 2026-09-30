@@ -183,7 +183,7 @@ public sealed class MonsterArchiveTests
     /// <summary>The texture archives the documented inventory says are supplied.</summary>
     private static HashSet<int> SuppliedTextureArchives() =>
     [
-        .. SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")))
+        .. SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")))
             .Where(row => row.RowType == "file" && row.Id.StartsWith("CNT-018.file.TEXTURE", StringComparison.Ordinal))
             .Select(row => int.Parse(Path.GetExtension(row.PathOrPattern).TrimStart('.'), CultureInfo.InvariantCulture)),
     ];

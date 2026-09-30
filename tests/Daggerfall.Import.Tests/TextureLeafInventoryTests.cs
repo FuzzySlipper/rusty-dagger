@@ -154,7 +154,7 @@ public sealed class TextureLeafInventoryTests
         // document are checked against each other in both directions.
         TextureLeafInventory inventory = ReadInventory();
         HashSet<string> documented = [.. Daggerfall.Import.Publication.SourceManifestBuilder
-            .ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")))
+            .ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")))
             .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, "CNT-018"))
             .Select(row => Path.GetFileName(row.PathOrPattern))];
         string[] supplied = [.. inventory.Leaves.Where(leaf => leaf.Path.Length != 0).Select(leaf => leaf.Path)];

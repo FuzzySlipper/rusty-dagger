@@ -38,7 +38,7 @@ Generated from the supplied Arena2 corpus by `DungeonCorpusClosureBuilder`. Sour
 
 ## Source ID examples
 
-The complete deterministic manifest is [`dungeon-corpus-closure.tsv`](dungeon-corpus-closure.tsv); this page keeps bounded examples readable while the API and TSV retain every source ID.
+The complete deterministic manifest is [`data/dungeon-corpus-closure.tsv`](../../data/dungeon-corpus-closure.tsv); this page keeps bounded examples readable while the API and TSV retain every source ID.
 
 | Disposition | Kind | Source ID | Source | Reason |
 | --- | --- | --- | --- | --- |

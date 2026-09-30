@@ -1,9 +1,10 @@
 # Rusty Dagger / WorldRpg code and migration map
 
-**Status:** #7544 C#-only product cutover. The legacy Rust workspace, TypeScript
-gameplay evaluator, generated gameplay package, encounter demo data, Studio
-adapter, Angular shell, and their retired launch/proof paths have been removed.
-They are not supported fallback runtimes.
+This maps the current C# product graph and records the disposition of the
+removed legacy paths. The legacy Rust workspace, TypeScript gameplay evaluator,
+generated gameplay package, encounter demo data, Studio adapter, Angular shell,
+and their retired launch/proof paths have been removed. They are not supported
+fallback runtimes.
 
 ## Authority
 
@@ -29,9 +30,35 @@ browser, or local-Engine substitute.
 | `WorldRpg.Kit` | Typed composition and reusable world-RPG mechanisms: controls, actor lifetime, spatial stepping, bounded facts, progression, UI values, inventory/equipment, and the named Combat, Targeting, Ai, and Loot services. |
 | `WorldRpg.Host` | Ordinary product entry, lifecycle, explicit built-in ruleset/default selection, and session construction. The immutable SDK generates CoreCLR and NativeAOT composition beneath ignored `obj` output. |
 | `WorldRpg.Rulesets.Daggerfall` | Daggerfall identities, formulas, attack/reward policy, content interpretation, presentation meaning, save behavior, and session composition. |
-| `Daggerfall.Import` and `.Tool` | Offline Arena2/DFUnity decoding, normalized import/publication, provenance, and differential validation. It has no runtime entity, renderer, scheduler, or encounter authority. |
-| `src/ui` and `src/sprite-ui` | Thin DOM rendering of Engine-delivered projections and semantic actions. The sprite workbench uses Engine content, appearance, and playback rather than a UI renderer or timer. |
+| `Daggerfall.Import` | Offline Arena2/DFUnity decoding, normalized import/publication, provenance, and differential validation. It has no runtime entity, renderer, scheduler, or encounter authority. |
+| `Daggerfall.Import.Tool` | The command-line importer over `Daggerfall.Import`: publication (`plan`/`write`), source-manifest reconciliation, corpus inventories, media and quest publication, and the `sprite-inspection` document the workbench reads. |
+| `WorldRpg.SpriteAuthoring` | The neutral sprite-authoring contract shared by the importer and the workbench: the inspection document, authored overlay and their values. It references neither side. |
+| `WorldRpg.SpriteWorkbench` | A separate, developer-only SDK-hosted authoring product for sprite inspection, pivots and timing. It references Kit and `WorldRpg.SpriteAuthoring`, never the importer. |
+| `src/ui` and `src/sprite-ui` | Thin DOM rendering of Engine-delivered projections and semantic actions for the game and the sprite workbench. The workbench uses Engine content, appearance, and playback rather than a UI renderer or timer. |
 | `content/worldrpg/**` | Daggerfall packs, tuning, bundle selection, normalized Privateer's Hold publication, and source provenance. Source-format hashes may remain importer evidence; they are not runtime compatibility checks. |
+
+Test projects under `tests/`: `WorldRpg.Kit.Tests`, `WorldRpg.Host.Tests`,
+`WorldRpg.Rulesets.Daggerfall.Tests`, `WorldRpg.Rulesets.Canary.Tests` (a
+non-Daggerfall canary ruleset over Kit and Host), `Daggerfall.Import.Tests`,
+`WorldRpg.SpriteWorkbench.Tests`, `WorldRpg.Architecture.Tests` (repository
+laws), and the Node UI tests in `WorldRpg.Ui.Tests`; `tests/Shared` holds common
+test data helpers. Import-side data read by tools and tests lives in `data/`.
+
+### Ruleset layout
+
+`WorldRpg.Rulesets.Daggerfall` keeps session composition and most gameplay
+owners at its root: `DaggerfallRuleset`, `DaggerfallSession` (split into
+`DaggerfallSession.<Concern>.cs` partials), `DaggerfallState`,
+`DaggerActorFactory`, `DaggerSessionPersistence`, `DaggerfallSavePayload`, and
+per-concern owners such as quests, effects, poisons, diseases and items. Domain
+folders group the remaining owners: `Banking/`, `Crime/`, `Guilds/`,
+`Property/`, `Travel/`, `World/` (calendar, doors, dungeon actions, terrain and
+site context), `Policies/` (formula, equipment, loot, magic, economy and rest
+policy), `Content/` (admitted definitions and published content readers),
+`Presentation/` (appearance and UI projections) and `Facts/`. `Modules/` holds
+the combat, behavior, loot, interaction, encounter and transport owners,
+including `Modules/Combat/DaggerCombatRules.cs`. Folder placement is
+organization, not an ownership boundary: every folder is Daggerfall ruleset code.
 
 `WorldRpg.Kit` never names Daggerfall, Arena2, Privateer's Hold, or DFUnity.
 The Host may select a built-in Daggerfall bundle only at its explicit
@@ -68,7 +95,8 @@ distinct items, and charged cooldowns; development saves may break. It has no
 schema-version negotiation, migrations, compatibility fingerprints, or
 unknown-section preservation. Input, AI/perception, native continuation,
 presentation, and an in-flight attack are transient or rebuilt on restore.
-The Host has a persistence API; a save UI is not yet a product feature.
+The Host's `WorldRpgSaveSlots` owns named save slots; the game menu's Save game
+and Load game panels and the death screen's load choice use it.
 
 See [the source-backed combat baseline](combat-behavior-baseline.md) before
 changing timing or save treatment.
@@ -83,8 +111,9 @@ operator material and are not committed.
 
 `.den-serve.json`, the package-backed CoreCLR launcher, focused C# test
 projects, the real-Engine play smoke (`scripts/verify.sh --play`) and the
-SDK-hosted sprite workbench remain the current proof and operator surfaces. The Engine `rusty` CLI installs the pinned complete
-SDK/runtime pair into its shared cache; that pair and generated
+SDK-hosted sprite workbench remain the current proof and operator surfaces. The
+Engine `rusty` CLI installs the pinned complete SDK/runtime pair into its shared
+cache; that pair and generated
 `bin/**`/`obj/**` output are not handwritten authority; no Engine browser bundle,
 NativeProduct bridge, or Cargo host is retained in this repository.
 

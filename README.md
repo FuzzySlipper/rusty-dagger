@@ -76,10 +76,12 @@ real contributors.
 `DaggerSessionPersistence` captures current source-generated state through the
 Host persistence API. It carries charged cooldowns but rebuilds or drops held
 input, AI/perception work, native continuation, presentation, and an in-flight
-attack. There is no save UI yet. Development supports one current schema only:
-no versions, migration paths, compatibility fingerprints, or unknown-field
-preservation. See [actors and live mechanics](docs/actors-and-mechanics.md), the
-[code and ownership map](docs/code-migration-map.md), and the historical
+attack. The game menu's **Save game** and **Load game** panels manage named
+save slots, and the death screen offers loading a saved game. Development
+supports one current schema only: no versions, migration paths, compatibility
+fingerprints, or unknown-field preservation. See
+[actors and live mechanics](docs/actors-and-mechanics.md), the
+[code and ownership map](docs/code-migration-map.md), and the
 [combat behavior baseline](docs/combat-behavior-baseline.md).
 
 ## Ownership

@@ -129,7 +129,7 @@ public sealed class UiMediaInventoryTests
     {
         // The family counts come from the manifest's CNT-020 row; this checks the corpus
         // against them in both directions rather than trusting either side.
-        string line = File.ReadLines(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv"))
+        string line = File.ReadLines(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv"))
             .Single(value => value.StartsWith("CNT-020,family,", StringComparison.Ordinal));
         int[] documented = [.. line.Split(',')[5].Split(';', StringSplitOptions.TrimEntries).Select(int.Parse)];
 

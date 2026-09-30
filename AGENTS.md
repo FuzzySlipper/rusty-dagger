@@ -23,9 +23,10 @@ an evolving mainline product path, not a spike or a compatibility exercise.
 - current shared boundary brief: `[doc: rusty-engine/downstream-csharp-agent-brief]`
 - structure history: Board post #139 and completed campaigns #7322 / #7533
 - coverage direction and task planning: `docs/daggerfall-coverage-plan.md`
-- task-creation inventory, dispositions and dependencies: `docs/daggerfall-task-preparation.md`
-- created coverage backlog: Den campaign #7922; `docs/coverage/task-index.md` maps tasks and inventory IDs (Den owns live status)
-- point-in-time donor/coverage inventory: `docs/daggerfall-feature-map.md`
+- coverage scope contract and decision register (DEC-01–11): `docs/daggerfall-task-preparation.md`
+- stable inventory IDs and dispositions: `docs/coverage/` (feature ledger F001–F141 and specialist inventories)
+- coverage backlog: Den campaign #7922; Den owns tasks, their inventory-ID mapping, live status and dependencies
+- archived planning snapshots (task index, feature map, preparation packet, ledger): Den documents `[doc: rusty-dagger/daggerfall-task-index-2026-09]`, `[doc: rusty-dagger/daggerfall-feature-map-2026-09]`, `[doc: rusty-dagger/daggerfall-task-preparation-2026-09]`, `[doc: rusty-dagger/daggerfall-feature-ledger-2026-09]`
 
 Before substantial work, resolve the current Den task and project guidance, then
 read the downstream brief for C# organization or Engine-boundary work. The user
@@ -42,8 +43,11 @@ exception to a blanket Den-unavailable stop rule.
 contract and reusable world-RPG mechanisms, while `src/WorldRpg.Rulesets.Daggerfall/` owns Daggerfall policy and session composition,
 `src/WorldRpg.Host/` owns product lifecycle, built-in selection, and the one
 ordinary product entry. The immutable `Rusty.Engine` SDK generates CoreCLR and
-NativeAOT composition beneath ignored `obj` output. The ruleset's current
-`Modules/` placement is a migration fact rather than an architecture boundary.
+NativeAOT composition beneath ignored `obj` output. Inside the ruleset, session
+composition and most owners sit at the project root, domain folders (`World/`,
+`Policies/`, `Content/`, `Presentation/` and others) group related owners, and
+`Modules/` holds combat, behavior, loot, interaction, encounter and transport
+owners. Folder placement is organization, not an architecture boundary.
 
 The foundation and C# migration campaigns are complete. The current product uses
 composed actors, typed rules, and current-state persistence. Reconcile older
@@ -239,7 +243,9 @@ document, and the document is not the owner of that identity. Exact revisions
 belong in logged Den records, or in machine-checked configuration such as
 `Directory.Build.props`, which the `rusty` CLI reads. Move the Engine pin with
 `rusty update`, which installs the newest published pair, rewrites that file, and
-lists the release notes; never hand-edit a version into prose.
+lists the release notes; never hand-edit a version into prose. Durable documents
+describe current state; evidence, receipts and dated reports go to Den records,
+not the repository.
 
 A hard failure must name the loss it prevents. Where the consequence is
 recoverable, warn and report the actual observed value instead. Keep hard stops

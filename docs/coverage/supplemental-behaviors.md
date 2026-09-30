@@ -1,6 +1,8 @@
-# Behaviors implicit in the structural feature map
+# Supplemental behaviors
 
-These stable SUP IDs make cross-cutting behavior explicit for task creation.
+These stable SUP IDs make cross-cutting behavior explicit for task creation:
+behavior implicit in the archived feature survey
+(`[doc: rusty-dagger/daggerfall-feature-map-2026-09]`) rather than named by one row.
 They supplement [F001–F141](feature-ledger.md), not duplicate their implementation
 owners. They are planned coverage, not current implementation claims. A task can
 cover a SUP ID and its linked F IDs together; keep that mapping visible.
@@ -13,7 +15,7 @@ an exhaustive audit of every listed behavior.
 
 | ID | Included behavior to specify | Related F IDs / area | Owners and donor starting point |
 | --- | --- | --- | --- |
-| SUP-01 | Persistent dynamic IDs and ownership for spawned actors, quest people/items, corpses and containers; unloaded changes and removal survive save/load | F005, F049, F054, F112 / 2 | Kit lifetime coordination and Daggerfall save meaning; existing `DaggerfallSavePayload.ValidateForRestore` currently uses authored actor identities. |
+| SUP-01 | Persistent dynamic IDs and ownership for spawned actors, quest people/items, corpses and containers; unloaded changes and removal survive save/load | F005, F049, F054, F112 / 2 | Kit lifetime coordination (`EntityDirectory`) and Daggerfall save meaning through `DaggerSessionPersistence` and `DaggerfallSavePayload`. |
 | SUP-02 | Game-time advancement during ordinary play, rest, travel and prison; ordering of expiry, periodic damage, deadline and daily state changes | F031, F032, F078, F082, F136 / 2 | Daggerfall calendar/policy inside admitted updates; `Utility/DaggerfallDateTime.cs`, `Game/Questing/Clock.cs`, rest/travel/court consumers. |
 | SUP-03 | Persistent regional/global variables shared by quests, politics, NPC responses and world actions | F005, F079, F132 / 2, 9, 11 | Daggerfall state; `Game/Player/PersistentGlobalVars.cs`, `PersistentFactionData.cs`, `Game/Entities/PlayerEntity.cs`; no ambient global singleton. |
 | SUP-04 | Dungeon action flags, link chains, activation conditions, timing/reversal/cooldowns and save state | F058, F024 / 4 | Import normalized actions; Daggerfall action meaning; Engine motion/spatial presentation; `Internal/DaggerfallAction.cs` and `API/DFBlock.cs`. See enumeration below. |

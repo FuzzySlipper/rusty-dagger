@@ -53,7 +53,7 @@ public sealed class DaggerfallFactionsTests
     {
         string arena2 = TestData.CorpusRoot;
 
-        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")));
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));
         DaggerfallFactions factions = DaggerfallFactionsBuilder.Build(
             File.ReadAllText(Path.Combine(arena2, "FACTION.TXT")),
             "local/arena2/FACTION.TXT",

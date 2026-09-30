@@ -135,7 +135,7 @@ public sealed class CharacterMediaInventoryTests
         // The family counts come from the manifest's CNT-021 row; this checks the corpus against
         // the documented vector in both directions rather than trusting either side, which is
         // what keeps this table from being a second, unchecked source.
-        string line = File.ReadLines(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv"))
+        string line = File.ReadLines(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv"))
             .Single(value => value.StartsWith("CNT-021,family,", StringComparison.Ordinal));
         int[] documented = [.. line.Split(',')[5].Split(';', StringSplitOptions.TrimEntries).Select(int.Parse)];
 
@@ -353,7 +353,7 @@ public sealed class CharacterMediaInventoryTests
     }
 
     /// <summary>The documented source every race in this fixture comes from.</summary>
-    private static DaggerfallCatalogSource Source() => new("CNT-021", "docs/coverage/content-source-manifest.csv");
+    private static DaggerfallCatalogSource Source() => new("CNT-021", "data/content-source-manifest.csv");
 
     [CorpusFact]
     public void Reports_the_same_records_whatever_order_the_sources_arrive_in()
