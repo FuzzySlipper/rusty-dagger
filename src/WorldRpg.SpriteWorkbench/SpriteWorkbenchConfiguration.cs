@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Numerics;
 using Rusty.Engine;
+using WorldRpg.SpriteAuthoring;
 
 namespace WorldRpg.SpriteWorkbench;
 
@@ -14,14 +15,17 @@ namespace WorldRpg.SpriteWorkbench;
 public sealed record SpriteWorkbenchConfiguration(string PublicationSeparationRoot, string AuthoringRoot, string OverlayPath)
 {
     public const string ContentPath = "sprite-workbench.json";
+
+    /// <summary>The staged neutral inspection document the importer's sprite-inspection command writes.</summary>
+    public const string InspectionContentPath = "sprite-inspection.json";
     public SpriteWorkbenchPreviewPlacement PreviewPlacement { get; init; } = SpriteWorkbenchPreviewPlacement.Default;
 
     public SpriteWorkbenchConfiguration Validate()
     {
         if (string.IsNullOrWhiteSpace(PublicationSeparationRoot) || string.IsNullOrWhiteSpace(AuthoringRoot))
             throw new ArgumentException("Sprite workbench publication-separation and authoring roots are required.");
-        Daggerfall.Import.Publication.SpriteAuthoredOverlayStore.ValidateRootSeparation(PublicationSeparationRoot, AuthoringRoot);
-        Daggerfall.Import.Publication.SpriteAuthoredOverlayStore.ValidateOverlayRelativePath(OverlayPath);
+        SpriteAuthoredOverlayStore.ValidateRootSeparation(PublicationSeparationRoot, AuthoringRoot);
+        SpriteAuthoredOverlayStore.ValidateOverlayRelativePath(OverlayPath);
         PreviewPlacement.Validate();
         return this;
     }

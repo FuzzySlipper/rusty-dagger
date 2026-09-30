@@ -1,10 +1,9 @@
 using System.Buffers.Binary;
 using System.Numerics;
 using System.Text;
-using Daggerfall.Import.Normalized;
-using Daggerfall.Import.Publication;
 using Rusty.Engine;
 using WorldRpg.Kit.Presentation;
+using WorldRpg.SpriteAuthoring;
 
 namespace WorldRpg.SpriteWorkbench;
 
@@ -13,7 +12,7 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
 {
     private readonly IEngineContext engine;
     private readonly SpriteWorkbenchConfiguration configuration;
-    private readonly SpritePublicationSnapshot publication;
+    private readonly SpriteInspectionDocument publication;
     private readonly UiStream ui;
     private readonly Dictionary<string, Preview> previews = new(StringComparer.Ordinal);
     private Dictionary<string, SpriteAuthoredOverlay> savedOverlays = new(StringComparer.Ordinal);
@@ -215,8 +214,8 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
         Preview preview = RequireCurrent(intent);
         SpriteAuthoredOverlay baseline = CurrentOverlay(preview.Entry.Id);
         SpriteAuthoredOverlay candidate = new(preview.Entry.Id, intent.DisplayName,
-            intent.PivotX is null && intent.PivotY is null ? null : new NormalizedVector2(RequiredFinite(intent.PivotX), RequiredFinite(intent.PivotY)),
-            intent.DisplaySizeX is null && intent.DisplaySizeY is null ? null : new NormalizedVector2(RequiredFinite(intent.DisplaySizeX), RequiredFinite(intent.DisplaySizeY)),
+            intent.PivotX is null && intent.PivotY is null ? null : new SpriteVector2(RequiredFinite(intent.PivotX), RequiredFinite(intent.PivotY)),
+            intent.DisplaySizeX is null && intent.DisplaySizeY is null ? null : new SpriteVector2(RequiredFinite(intent.DisplaySizeX), RequiredFinite(intent.DisplaySizeY)),
             intent.FramesPerSecond, intent.Loop, intent.FrameSequence, baseline.FrameRects, baseline.StateTimings, baseline.ActionTimings);
         ApplyEdit(candidate);
     }
@@ -320,8 +319,8 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
         // operator can edit either vector component without a hidden null pair.
         entry = entry with { AuthoredValues = entry.AuthoredValues with
         {
-            Pivot = entry.AuthoredValues.Pivot ?? new NormalizedVector2(0, 0),
-            DisplaySize = entry.AuthoredValues.DisplaySize ?? new NormalizedVector2(1, 1),
+            Pivot = entry.AuthoredValues.Pivot ?? new SpriteVector2(0, 0),
+            DisplaySize = entry.AuthoredValues.DisplaySize ?? new SpriteVector2(1, 1),
         } };
         // The entry's closure comes from the admitted publication, and Engine content is immutable
         // after admission: opening the resource by its admitted path is the identity check. A
@@ -482,7 +481,7 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
             ("playback", playback is null ? builder.Null() : builder.Object(("state", builder.String(playback.Value.State.ToString())), ("frameIndex", builder.Number(playback.Value.FrameIndex)), ("frameId", builder.Number(playback.Value.FrameId)), ("cycle", builder.Number(playback.Value.Cycle)))));
     }
 
-    private static uint BuildOverlay(UiValueBuilder builder, string? displayName, NormalizedVector2? pivot, NormalizedVector2? displaySize, float? fps, bool? loop, IReadOnlyList<int>? sequence) => builder.Object(
+    private static uint BuildOverlay(UiValueBuilder builder, string? displayName, SpriteVector2? pivot, SpriteVector2? displaySize, float? fps, bool? loop, IReadOnlyList<int>? sequence) => builder.Object(
         ("displayName", displayName is null ? builder.Null() : builder.String(displayName)),
         ("pivotX", pivot is null ? builder.Null() : builder.Number(pivot.Value.X)), ("pivotY", pivot is null ? builder.Null() : builder.Number(pivot.Value.Y)),
         ("displaySizeX", displaySize is null ? builder.Null() : builder.Number(displaySize.Value.X)), ("displaySizeY", displaySize is null ? builder.Null() : builder.Number(displaySize.Value.Y)),
@@ -501,24 +500,25 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
     }
 
     /// <summary>
-    /// Captures the complete immutable publication from Engine product content
-    /// before construction.  No configuration path is permitted to redirect
-    /// publication parsing to a mutable external filesystem location.
+    /// Captures the workbench configuration, the publication's neutral inspection document, and its
+    /// atlas bytes from Engine product content before construction. No configuration path is
+    /// permitted to redirect inspection to a mutable external filesystem location.
     /// </summary>
     private static AdmittedWorkbenchContent ReadAdmittedContent(ProductContent content)
     {
         // Borrowed views over Engine-admitted immutable bytes: the admitted snapshot outlives this
-        // read, and nothing below retains the views past the decoded catalog.
+        // read, and nothing below retains the views past the decoded documents.
         Dictionary<string, ReadOnlyMemory<byte>> filesByPath = new(StringComparer.Ordinal);
-        ReadOnlyMemory<byte>? configurationBytes = null;
         foreach (ProductContentFile file in content.Files.Span)
         {
             string path;
             try
             {
                 path = StrictUtf8.GetString(file.Path.Span);
+                SpriteLogicalNames.RequirePath(path, nameof(file.Path));
             }
-            catch (DecoderFallbackException error)
+            // A decoder failure is itself an ArgumentException.
+            catch (ArgumentException error)
             {
                 throw new FormatException("Engine content contains an invalid sprite workbench path.", error);
             }
@@ -527,25 +527,25 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
             {
                 throw new FormatException($"Engine content contains duplicate sprite workbench path '{path}'.");
             }
+        }
 
-            if (StringComparer.Ordinal.Equals(path, SpriteWorkbenchConfiguration.ContentPath))
+        SpriteWorkbenchConfiguration configuration = SpriteWorkbenchConfiguration.Read(RequireContent(filesByPath, SpriteWorkbenchConfiguration.ContentPath).Span);
+        SpriteInspectionDocument inspection = SpriteInspectionDocumentSerializer.Read(RequireContent(filesByPath, SpriteWorkbenchConfiguration.InspectionContentPath).Span);
+        // Admitted content is immutable and trusted, so nothing rehashes it; a missing or
+        // differently sized atlas still means the document describes another publication.
+        foreach (SpriteInspectionEntry entry in inspection.Catalog.Entries)
+        {
+            if (!filesByPath.TryGetValue(entry.Closure.RelativePath, out ReadOnlyMemory<byte> atlas) || atlas.Length != entry.Closure.ByteLength)
             {
-                configurationBytes = filesByPath[path];
+                throw new FormatException($"Engine content does not contain sprite atlas '{entry.Closure.RelativePath}' at its inspected byte length.");
             }
         }
 
-        if (configurationBytes is not { } configuration)
-        {
-            throw new FormatException($"Engine content must contain '{SpriteWorkbenchConfiguration.ContentPath}'.");
-        }
-
-        SpriteWorkbenchConfiguration value = SpriteWorkbenchConfiguration.Read(configuration.Span);
-        SpritePublicationFile[] publicationFiles = filesByPath
-            .Where(pair => !StringComparer.Ordinal.Equals(pair.Key, SpriteWorkbenchConfiguration.ContentPath))
-            .Select(pair => new SpritePublicationFile(pair.Key, pair.Value))
-            .ToArray();
-        return new(value, SpritePublicationReader.ReadAdmitted(publicationFiles));
+        return new(configuration, inspection);
     }
+
+    private static ReadOnlyMemory<byte> RequireContent(IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files, string path) =>
+        files.TryGetValue(path, out ReadOnlyMemory<byte> bytes) ? bytes : throw new FormatException($"Engine content must contain '{path}'.");
 
     private Preview RequireCurrent(SpriteWorkbenchIntent intent)
     {
@@ -570,21 +570,16 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
         ? preview.Sequences.Single(sequence => sequence.Name == selectedSequence).Playback : null;
     private void ThrowIfShutdown() { if (shutdown) throw new ObjectDisposedException(nameof(SpriteWorkbenchProduct)); }
     private static float RequiredFinite(float? value) => value is { } scalar && float.IsFinite(scalar) ? scalar : throw new FormatException("A paired vector edit requires finite values.");
-    private static Vector2 ToVector(NormalizedVector2? value, Vector2 fallback = default) => value is { } vector ? new(vector.X, vector.Y) : fallback;
-    private static Vector2? ActorFrameDisplaySize(SpriteInspectionEntry entry, SpriteInspectionFrame frame)
-    {
-        if (entry.Kind != SpriteInspectionKind.DungeonActor
-            || entry.AuthoredValues.DisplaySize is not { } authoredSize
-            || entry.SourceWorldSize is not { } sourceWorldSize
-            || frame.SourceWorldSize is not { } frameSourceWorldSize)
-        {
-            return null;
-        }
+    private static Vector2 ToVector(SpriteVector2? value, Vector2 fallback = default) => value is { } vector ? new(vector.X, vector.Y) : fallback;
 
-        return new(
-            frameSourceWorldSize.X * authoredSize.X / sourceWorldSize.X,
-            frameSourceWorldSize.Y * authoredSize.Y / sourceWorldSize.Y);
-    }
+    /// <summary>Actor frames keep their own source extents, scaled by the shared presentation rule the game applies.</summary>
+    private static Vector2? ActorFrameDisplaySize(SpriteInspectionEntry entry, SpriteInspectionFrame frame) =>
+        entry.Kind == SpriteInspectionKind.DungeonActor
+            && entry.AuthoredValues.DisplaySize is { } authoredSize
+            && entry.SourceWorldSize is { } sourceWorldSize
+            && frame.SourceWorldSize is { } frameSourceWorldSize
+            ? SpriteFrameDisplaySize.Scale(ToVector(frameSourceWorldSize), ToVector(authoredSize), ToVector(sourceWorldSize))
+            : null;
     private void TryDisposePreviews(ICollection<Exception> failures)
     {
         foreach (Preview preview in previews.Values.Reverse()) preview.Dispose(failures);
@@ -671,7 +666,7 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
         internal SpritePlayback? Playback { get; set; }
     }
 
-    private sealed record AdmittedWorkbenchContent(SpriteWorkbenchConfiguration Configuration, SpritePublicationSnapshot Publication);
+    private sealed record AdmittedWorkbenchContent(SpriteWorkbenchConfiguration Configuration, SpriteInspectionDocument Publication);
 }
 
 public sealed record SpriteWorkbenchSnapshot(IReadOnlyList<SpriteInspectionEntry> Entries, string? SelectedId, string? SelectedSequence,

@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Publication;
 using Daggerfall.Import.Normalized;
+using WorldRpg.SpriteAuthoring;
 
 namespace Daggerfall.Import.Tool;
 
@@ -2195,6 +2196,10 @@ internal static partial class Program
             case SpriteToolCommand.Show:
                 PrintJson(publication.Catalog.Require(options.Id!));
                 return 0;
+            case SpriteToolCommand.Inspection:
+                WriteInspectionDocument(options.PublicationDirectory, options.OutputPath!, publication.ToInspectionDocument());
+                Console.WriteLine("sprite inspection document written");
+                return 0;
             case SpriteToolCommand.OverlayValidate:
             {
                 SpriteAuthoredOverlayStore.ValidateRootSeparation(options.PublicationDirectory, options.AuthoringDirectory!);
@@ -2207,12 +2212,34 @@ internal static partial class Program
             {
                 SpriteAuthoredOverlayDocument overlay = ReadExternalOverlay(options.InputPath!);
                 SpriteAuthoredOverlayStore.Write(options.PublicationDirectory, options.AuthoringDirectory!, options.OverlayPath!, overlay, publication.Catalog, publication.AuthoringBasisDigest);
-                Console.WriteLine("sprite overlay written; later regeneration may pass this typed document through SpriteAuthoredOverlayStore.ToMediaOverlays.");
+                Console.WriteLine("sprite overlay written; a later import write consumes it through --sprite-authoring and --sprite-overlay.");
                 return 0;
             }
             default:
                 throw new InvalidOperationException("The sprite command is not known.");
         }
+    }
+
+    /// <summary>
+    /// Writes the neutral inspection document an authoring tool reads instead of this publication's
+    /// sidecars. It is derived output, so it may never land inside the publication it describes: a
+    /// file there would disagree with the publication manifest.
+    /// </summary>
+    private static void WriteInspectionDocument(string publicationDirectory, string outputPath, SpriteInspectionDocument document)
+    {
+        string publication = Path.TrimEndingDirectorySeparator(publicationDirectory) + Path.DirectorySeparatorChar;
+        if (outputPath.StartsWith(publication, StringComparison.Ordinal))
+        {
+            throw new ArgumentException("--output must name a file outside the generated publication directory.");
+        }
+
+        string? directory = Path.GetDirectoryName(outputPath);
+        if (!string.IsNullOrEmpty(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        File.WriteAllBytes(outputPath, SpriteInspectionDocumentSerializer.Serialize(document));
     }
 
     private static SpriteAuthoredOverlayDocument ReadOverlay(string authoringDirectory, string relativePath)
@@ -2258,7 +2285,7 @@ internal static partial class Program
         ImportPublicationPlan currentInputs = BuildPlanCore(options, [], []);
         SpritePublicationSnapshot current = SpritePublicationReader.FromPlan(currentInputs);
         SpriteAuthoredOverlayDocument overlay = ReadOverlay(options.SpriteAuthoringDirectory, options.SpriteOverlayPath!);
-        IReadOnlyList<AuthoredMediaOverlay> values = SpriteAuthoredOverlayStore.ToMediaOverlays(overlay, current.Catalog, current.AuthoringBasisDigest);
+        IReadOnlyList<AuthoredMediaOverlay> values = SpriteAuthoredMediaOverlays.ToMediaOverlays(overlay, current.Catalog, current.AuthoringBasisDigest);
 
         HashSet<string> dungeonIds = current.Catalog.Entries
             .Where(entry => entry.Kind is SpriteInspectionKind.DungeonBillboard or SpriteInspectionKind.DungeonActor or SpriteInspectionKind.DungeonCorpse)
@@ -2607,6 +2634,7 @@ internal static partial class Program
     {
         List,
         Show,
+        Inspection,
         OverlayValidate,
         OverlayWrite,
         OverlayDiscard,
@@ -2619,6 +2647,7 @@ internal static partial class Program
         string? Id,
         string? OverlayPath,
         string? InputPath,
+        string? OutputPath,
         SpriteInspectionKind? Kind)
     {
         public static SpriteToolOptions Parse(IReadOnlyList<string> args)
@@ -2632,6 +2661,7 @@ internal static partial class Program
             {
                 "sprite-list" => SpriteToolCommand.List,
                 "sprite-show" => SpriteToolCommand.Show,
+                "sprite-inspection" => SpriteToolCommand.Inspection,
                 "sprite-overlay-validate" => SpriteToolCommand.OverlayValidate,
                 "sprite-overlay-write" => SpriteToolCommand.OverlayWrite,
                 "sprite-overlay-discard" => SpriteToolCommand.OverlayDiscard,
@@ -2656,6 +2686,7 @@ internal static partial class Program
             {
                 SpriteToolCommand.List => ["--publication"],
                 SpriteToolCommand.Show => ["--publication", "--id"],
+                SpriteToolCommand.Inspection => ["--publication", "--output"],
                 SpriteToolCommand.OverlayValidate => ["--publication", "--authoring", "--overlay"],
                 SpriteToolCommand.OverlayWrite => ["--publication", "--authoring", "--overlay", "--input"],
                 SpriteToolCommand.OverlayDiscard => ["--publication", "--authoring", "--overlay"],
@@ -2692,10 +2723,15 @@ internal static partial class Program
                 throw new ArgumentException("--authoring must name a non-empty source directory.");
             }
 
-            return new(command, Path.GetFullPath(publication), authoring is null ? null : Path.GetFullPath(authoring), values.GetValueOrDefault("--id"), values.GetValueOrDefault("--overlay"), values.GetValueOrDefault("--input"), kind);
+            if (values.TryGetValue("--output", out string? output) && string.IsNullOrWhiteSpace(output))
+            {
+                throw new ArgumentException("--output must name a file.");
+            }
+
+            return new(command, Path.GetFullPath(publication), authoring is null ? null : Path.GetFullPath(authoring), values.GetValueOrDefault("--id"), values.GetValueOrDefault("--overlay"), values.GetValueOrDefault("--input"), output is null ? null : Path.GetFullPath(output), kind);
         }
 
-        private static string Usage() => "usage: daggerfall-import-tool sprite-list --publication GENERATED_DIR [--kind KIND] | sprite-show --publication GENERATED_DIR --id ID | sprite-overlay-validate --publication GENERATED_DIR --authoring SOURCE_DIR --overlay sprites/RELATIVE.json | sprite-overlay-write --publication GENERATED_DIR --authoring SOURCE_DIR --overlay sprites/RELATIVE.json --input FILE | sprite-overlay-discard --publication GENERATED_DIR --authoring SOURCE_DIR --overlay sprites/RELATIVE.json";
+        private static string Usage() => "usage: daggerfall-import-tool sprite-list --publication GENERATED_DIR [--kind KIND] | sprite-show --publication GENERATED_DIR --id ID | sprite-inspection --publication GENERATED_DIR --output FILE | sprite-overlay-validate --publication GENERATED_DIR --authoring SOURCE_DIR --overlay sprites/RELATIVE.json | sprite-overlay-write --publication GENERATED_DIR --authoring SOURCE_DIR --overlay sprites/RELATIVE.json --input FILE | sprite-overlay-discard --publication GENERATED_DIR --authoring SOURCE_DIR --overlay sprites/RELATIVE.json";
     }
 
     private sealed class AdmittedArena2Sources

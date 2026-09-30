@@ -10,5 +10,6 @@
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../WorldRpg.SpriteAuthoring/WorldRpg.SpriteAuthoring.csproj" />
   </ItemGroup>
 </Project>

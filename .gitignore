@@ -8,6 +8,8 @@ __pycache__/
 src/ui/generated/
 src/sprite-ui/generated/
 src/WorldRpg.SpriteWorkbench/workbench-content/
+# Operator-local sprite-workbench overlays (run-sprite-workbench.sh default authoring root).
+/authoring/
 **/bin/
 **/obj/
 

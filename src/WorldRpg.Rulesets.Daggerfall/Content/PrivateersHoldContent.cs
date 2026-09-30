@@ -6,6 +6,7 @@ using System.Text.Json;
 using Rusty.Engine;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
@@ -1392,9 +1393,7 @@ internal static class PrivateersHoldContent
                 uint frameId = checked((uint)DaggerfallBaseContent.Integer(atlas, "frameIndex", diagnostics));
                 Vector2 frameSourceWorldSize = GeneratedVector2(DaggerfallBaseContent.Property(frame, "sourceWorldSize", diagnostics), "actor state frame sourceWorldSize", diagnostics);
                 if (!PositiveFinite(frameSourceWorldSize)) diagnostics.Add($"Generated actor mobile '{mobileId}' state '{name}' has a non-positive frame sourceWorldSize.");
-                Vector2 displaySize = PositiveFinite(worldSize) && PositiveFinite(sourceWorldSize) && PositiveFinite(frameSourceWorldSize)
-                    ? new Vector2(frameSourceWorldSize.X * worldSize.X / sourceWorldSize.X, frameSourceWorldSize.Y * worldSize.Y / sourceWorldSize.Y)
-                    : default;
+                Vector2 displaySize = SpriteFrameDisplaySize.Scale(frameSourceWorldSize, worldSize, sourceWorldSize) ?? default;
                 if (!PositiveFinite(displaySize)) diagnostics.Add($"Generated actor mobile '{mobileId}' state '{name}' has an invalid scaled frame display size.");
                 if (!displaySizes.TryAdd(frameId, displaySize)) diagnostics.Add($"Generated actor mobile '{mobileId}' has an ambiguous sourceWorldSize mapping for atlas frame '{frameId}'.");
                 (sectors.TryGetValue(orientation, out List<uint>? sector) ? sector : sectors[orientation] = []).Add(frameId);

@@ -1,5 +1,5 @@
-interface ProjectionEnvelope { readonly contract: string; readonly value: unknown; }
-interface ProductUiContext { readonly ui?: { setInteractionMode(mode: 'interface' | 'gameplay'): void }; readonly projection?: { subscribe(listener: (projection: ProjectionEnvelope | null) => void): () => void }; readonly intents?: { claim(intent: string, value: { kind: 'product-payload'; contract: string; data: Record<string, unknown> }): void }; }
+import type { RustyApplicationUiContext } from '@rusty-engine/product-ui';
+
 interface SpriteRow { readonly id: string; readonly label: string; readonly kind: string; readonly frameCount: number; readonly stateCount: number; readonly actionCount: number; }
 interface Sequence { readonly name: string; readonly orientation: number; readonly frameIds: readonly number[]; readonly fps: number; readonly loop: number; }
 interface SequenceFrameOption { readonly sequenceIndex: number; readonly frameId: number; }
@@ -12,8 +12,8 @@ const contract = 'worldrpg.sprite-workbench.snapshot.v1';
 const payloadContract = 'worldrpg.sprite-workbench.intent.v1';
 
 /** Engine-hosted product UI: static DOM review surfaces and semantic product payloads only. */
-export function mountProductUi(root: HTMLElement, context: ProductUiContext): { dispose(): void } {
-  context.ui?.setInteractionMode('interface');
+export function mountProductUi(root: HTMLElement, context: RustyApplicationUiContext): { dispose(): void } {
+  context.ui.setInteractionMode('interface');
   let projection: SpriteProjection | null = null;
   let filter = '';
   let listKey = '';

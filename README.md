@@ -165,19 +165,27 @@ Engine contributors may use `rusty dev --engine-source /absolute/rusty-engine`.
 That explicit opt-in supplies source references and a source runtime pack;
 normal downstream builds never discover an adjacent checkout.
 
-`WorldRpg.SpriteWorkbench` is a separate package-backed authoring product. The
-**Sprite animation tool** menu entry gives its launch command and opens port 4175:
+`WorldRpg.SpriteWorkbench` is a separate package-backed, developer-only authoring
+product. It reads the neutral inspection document the importer's `sprite-inspection`
+command writes (the launch script stages it) and never references the importer.
+The **Sprite animation tool** menu entry gives its launch command and opens port 4175:
 
 ```sh
 bash src/scripts/run-sprite-workbench.sh
 ```
 
-The default uses Privateer's Hold and saves to `authoring/sprites/privateers-hold.json`.
-To select another publication, writable authoring root, overlay, or port:
+The default uses Privateer's Hold and saves to `authoring/sprites/privateers-hold.json`;
+`authoring/` is operator-local output and ignored by Git. To select another
+publication, writable authoring root, overlay, or port, pass them in order or set
+`RUSTY_WORKBENCH_PUBLICATION`, `RUSTY_WORKBENCH_AUTHORING`, `RUSTY_WORKBENCH_OVERLAY`
+or `RUSTY_WORKBENCH_PORT`; an omitted argument falls back to its variable, then the default:
 
 ```sh
 bash src/scripts/run-sprite-workbench.sh content/worldrpg/imports/privateers-hold /absolute/authoring-directory sprites/privateers-hold.json 4175
+RUSTY_WORKBENCH_PORT=4176 RUSTY_WORKBENCH_OVERLAY=sprites/rats.json bash src/scripts/run-sprite-workbench.sh
 ```
+
+The game's menu link assumes the default port.
 
 The tool shows the Engine preview alongside atlas/frame inspection, a draggable
 pivot, directional review, frame rectangles, and resource/per-animation timing.
