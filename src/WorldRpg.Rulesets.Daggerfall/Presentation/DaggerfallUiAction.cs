@@ -11,7 +11,7 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
     string? QuestInstance = null, int? QuestMessage = null, int? QuestChoice = null, string? QuestPrompt = null,
     string? Note = null, string? Text = null, int? Page = null, int? Destination = null,
     string? Tone = null, string? Topic = null, int? Hours = null, int? Region = null,
-    bool Cautious = false, bool Inn = false, bool Ship = false)
+    bool Cautious = false, bool Inn = false, bool Ship = false, bool Open = false)
 {
     /// <summary>The typed action the wire name names; resolved once when the action is built.</summary>
     internal DaggerfallUiActionKind Kind { get; } = DaggerfallUiAction.KindOf(Action);
@@ -24,7 +24,7 @@ internal enum DaggerfallUiActionKind
     ControlsRebind, ControlsReset,
     CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel,
     CharacterLevelAllocate, CharacterLevelCommit,
-    ActivationMode, Attack, Loot, Inventory, Character,
+    ActivationMode, Attack, Loot, Inventory, Character, Menu,
     DialogueTone, DialogueTopic, DialogueClose,
     TransportSelect, TransportToggle, TransportLeaveShip,
     TravelSearch, TravelPreview,
@@ -148,25 +148,28 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.CharacterBackgroundReroll, "character-background-reroll", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.CharacterCommit, "character-commit", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.CharacterCancel, "character-cancel", DaggerfallUiPhases.Live),
-        new(DaggerfallUiActionKind.CharacterLevelAllocate, "character-level-allocate", DaggerfallUiPhases.Playing),
-        new(DaggerfallUiActionKind.CharacterLevelCommit, "character-level-commit", DaggerfallUiPhases.Playing),
+        new(DaggerfallUiActionKind.CharacterLevelAllocate, "character-level-allocate", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.CharacterLevelCommit, "character-level-commit", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.ActivationMode, "activation-mode", DaggerfallUiPhases.Playing),
         new(DaggerfallUiActionKind.Attack, "attack", DaggerfallUiPhases.Playing),
         new(DaggerfallUiActionKind.Loot, "loot", DaggerfallUiPhases.Playing),
         // The DOM owns its panels; these name a panel the DOM opened and the session does nothing with.
         new(DaggerfallUiActionKind.Inventory, "inventory", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.Character, "character", DaggerfallUiPhases.Live),
+        // The DOM reports whether its game menu (and so any of its panels) is open, because an open
+        // menu holds the world. A menu closed over death still reaches the session.
+        new(DaggerfallUiActionKind.Menu, "menu", DaggerfallUiPhases.Live | DaggerfallUiPhases.Dead),
         new(DaggerfallUiActionKind.DialogueTone, "dialogue-tone", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.DialogueTopic, "dialogue-topic", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.DialogueClose, "dialogue-close", DaggerfallUiPhases.Interaction),
-        new(DaggerfallUiActionKind.TransportSelect, "transport-select", DaggerfallUiPhases.Playing),
-        new(DaggerfallUiActionKind.TransportToggle, "transport-toggle", DaggerfallUiPhases.Playing),
-        new(DaggerfallUiActionKind.TransportLeaveShip, "transport-leave-ship", DaggerfallUiPhases.Playing),
+        new(DaggerfallUiActionKind.TransportSelect, "transport-select", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.TransportToggle, "transport-toggle", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.TransportLeaveShip, "transport-leave-ship", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TravelSearch, "travel-search", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TravelPreview, "travel-preview", DaggerfallUiPhases.Interaction),
-        new(DaggerfallUiActionKind.Rest, "rest", DaggerfallUiPhases.Playing),
-        new(DaggerfallUiActionKind.WagonPut, "wagon-put", DaggerfallUiPhases.Playing),
-        new(DaggerfallUiActionKind.WagonTake, "wagon-take", DaggerfallUiPhases.Playing),
+        new(DaggerfallUiActionKind.Rest, "rest", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.WagonPut, "wagon-put", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.WagonTake, "wagon-take", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.QuestChoice, "quest-choice", DaggerfallUiPhases.Interaction,
             "Quest choice rejected: this prompt is no longer pending or the choice is invalid."),
         new(DaggerfallUiActionKind.DungeonTextAnswer, "dungeon-text-answer", DaggerfallUiPhases.Interaction),
@@ -226,7 +229,7 @@ internal static class DaggerfallUiAction
             string? action = null, revision = null, item = null, targetEquipment = null, container = null, key = null, label = null, name = null, race = null, gender = null, career = null, mode = null, primarySkills = null, majorSkills = null, minorSkills = null, advantages = null, disadvantages = null, attribute = null, backgroundAnswers = null, attributeAllocations = null, skillAllocations = null, questInstance = null, questPrompt = null, note = null, text = null, tone = null, topic = null;
             int? targetGrid = null, faceIndex = null, reflexes = null, hitPointsPerLevel = null, questMessage = null, page = null, destination = null, hours = null, region = null;
             ulong? amount = null;
-            bool confirm = false, cautious = false, inn = false, ship = false;
+            bool confirm = false, cautious = false, inn = false, ship = false, open = false;
             int? questChoice = null;
             foreach (JsonProperty property in root.EnumerateObject())
             {
@@ -251,12 +254,13 @@ internal static class DaggerfallUiAction
                     amount = parsed;
                     continue;
                 }
-                if (property.Name is "confirm" or "cautious" or "inn" or "ship")
+                if (property.Name is "confirm" or "cautious" or "inn" or "ship" or "open")
                 {
                     if (property.Value.ValueKind is not JsonValueKind.True and not JsonValueKind.False) return null;
                     if (property.Name == "confirm") confirm = property.Value.GetBoolean();
                     else if (property.Name == "cautious") cautious = property.Value.GetBoolean();
                     else if (property.Name == "inn") inn = property.Value.GetBoolean();
+                    else if (property.Name == "open") open = property.Value.GetBoolean();
                     else ship = property.Value.GetBoolean();
                     continue;
                 }
@@ -379,6 +383,7 @@ internal static class DaggerfallUiAction
                     && !string.IsNullOrWhiteSpace(item) && !string.IsNullOrWhiteSpace(key)
                     ? new(action, Item: item, Key: key, Confirm: confirm) : null;
             if (action == "controls-reset") return fields.SetEquals(["action"]) ? new(action) : null;
+            if (action == "menu") return fields.SetEquals(["action", "open"]) ? new(action, Open: open) : null;
             if (action == "save-slots") return fields.SetEquals(["action"]) ? new(action) : null;
             if (action == "save-slot")
                 return fields.IsSubsetOf(["action", "key", "label", "confirm"])

@@ -487,6 +487,10 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     const returnAction = previous === 'save-slots' ? (saveSlotMode === 'save' ? 'save-game' : 'load-game') : previous ?? 'resume';
     home.querySelector<HTMLButtonElement>(`[data-action="${returnAction}"]`)?.focus();
   };
+  // An open menu holds the world, so the product is told whenever this one opens or closes.
+  const reportMenu = (open: boolean): void => context.intents?.claim('dagger.ui', {
+    kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'menu', open },
+  });
   const closeMenu = (): void => {
     controlsView.cancel();
     controllerDirection = 0;
@@ -494,6 +498,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     closeDebug();
     activePanel = null;
     menu.close();
+    reportMenu(false);
     context.ui.setInteractionMode(titleMode || deadMode ? 'interface' : 'gameplay');
     if (!titleMode && !deadMode) context.ui.focusGameplay();
   };
@@ -501,6 +506,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     controllerDirection = 0;
     context.ui.setInteractionMode('interface');
     menu.showModal();
+    reportMenu(true);
     showHome();
   };
   const dismiss = (): void => {
