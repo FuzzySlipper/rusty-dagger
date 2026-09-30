@@ -2,7 +2,7 @@
 
 `Daggerfall.Import.Tool cinematic-media` converts retained VID or FLC sources into
 VP9/Opus WebM artifacts. Source bytes must match the cinematic provenance already
-in the pack. The command publishes artifact path, hash, size, dimensions, frame
+in the imported payload (`--pack`). The command publishes artifact path, hash, size, dimensions, frame
 count, duration, audio presence and the FFmpeg build that encoded it beside the source record; narrative bindings
 remain source identities. Use `--kind vid` or `--kind flc`, with `--arena2`, `--pack`,
 `--out` and explicit `--update` to write output. FFmpeg and ffprobe are offline

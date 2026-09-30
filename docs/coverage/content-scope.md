@@ -263,49 +263,75 @@ The planning expansion is therefore finite and record-oriented:
 
 ## Generated and authored content
 
-Everything under `content/` that derives from the operator's Daggerfall inputs is produced by one
-command, `scripts/regenerate-content.sh`. It reads `local/arena2` (or `--arena2`/`DAGGER_ARENA2`),
-the Daggerfall Unity checkout (`--donor`/`DAGGER_DONOR_ROOT`), the song folder `local/Sound`
+Content converted from Bethesda's Daggerfall data is not committed and not redistributed. Git tracks
+only descriptors, hand-authored payloads, tuning and the importer's own inputs; everything derived
+from the operator's files is regenerated on each checkout by one command,
+`scripts/regenerate-content.sh`. It reads `local/arena2` (or `--arena2`/`DAGGER_ARENA2`), the
+Daggerfall Unity checkout (`--donor`/`DAGGER_DONOR_ROOT`), the song folder `local/Sound`
 (`--sound`) and FFmpeg, checks that each is present before writing anything, removes the generated
-files, and runs the import tool's commands in their dependency order: music and classic media,
-the derived base-payload sections, the quest corpus payloads, then the four site closures.
-Two runs at the same importer source and FFmpeg build write identical bytes.
+files, and runs the import tool's commands in their dependency order: music and classic media, the
+imported payload's sections with the block document and the import records, the quest corpus
+payloads, then the four site closures. Two runs at the same importer source and FFmpeg build write
+identical bytes. A clone that has not run it builds and runs the content-free suites, but staging
+the product (`rusty dev`, `rusty build`, `StageRustyEngineCoreClrProduct`) stops with a message
+naming the script, `scripts/verify.sh` skips the ruleset suite and staging with the reason printed,
+and the content-dependent tests report themselves skipped.
 
-Generated whole files, listed in `.gitignore` syntax in `scripts/generated-content-paths.txt`:
+Generated, listed in `.gitignore` syntax in `scripts/generated-content-paths.txt` (which `.gitignore`
+copies; an architecture law keeps the copy complete, and the script fails a run that leaves a
+generated file Git would pick up):
 
 - `content/worldrpg/imports/**` — the Privateer's Hold, Castle Necromoghan and Charing
   exterior/interior closures (`write`, `rmb-spatial`).
 - `content/worldrpg/media/**` — classic media, character media, music and cinematics
   (`classic-media`, `character-presentation`, `music-media`, `cinematic-media`).
-- `content/worldrpg/payloads/daggerfall.blocks.json` (`blocks`) and
-  `content/worldrpg/payloads/daggerfall.quests.*.json` (`fighters-quest-corpus`,
-  `classic-quest-corpora`).
+- `content/worldrpg/payloads/daggerfall.imported.json` — the `daggerfall.imported` pack's payload:
+  `catalogs`, `itemTemplateLedger`, `characterPresentation`, `locations`, `magic`, `mobiles`, `text`,
+  `names`, `rumors`, `biographies`, `books`, `climate`, `politic`, `factions`, `terrain`,
+  `itemTemplates`, `questTables`, `questCatalog`, `questSources`, `cinematics` and `buildingNames`.
+- `content/worldrpg/payloads/daggerfall.blocks.json` (`blocks`, the complete block document the
+  `daggerfall.blocks` pack carries) and `content/worldrpg/payloads/daggerfall.quests.*.json`
+  (`fighters-quest-corpus`, `classic-quest-corpora`).
+- `import-records/daggerfall.import-records.json` — importer records nothing at runtime reads, kept
+  outside the runtime content root: the mesh inventory (`geometry`) and the original quest-source
+  selections (`questOriginalSources`) the quest corpus payloads are built from.
 
-`content/worldrpg/payloads/daggerfall.base.json` is mixed. Its generated sections are `catalogs`,
-`itemTemplateLedger`, `characterPresentation`, `locations`, `magic`, `mobiles`, `text`, `names`,
-`rumors`, `biographies`, `books`, `blocks`, `geometry`, `climate`, `politic`, `factions`, `terrain`,
-`itemTemplates`, `questTables`, `questCatalog`, `questSources`, `questOriginalSources`, `cinematics`
-and `buildingNames`; the commands replace them in place. Its authored sections are `ruleset`,
-`vocabulary`, `armorValuesByMaterial`, `actors`, `items`, `equipmentSlots`, `actions`, `lootTables`,
-`hudResources`, `lootCategoryPools`, `donorErrata` and `encounters` (transcribed from the donor by
-hand; no command writes it). Several commands read authored sections (`catalogs` reads the
-vocabulary, actors and items), so the file cannot be ignored as a whole until the authored sections
-live in their own file. The `mobiles` section keeps two loot table keys that the donor's table does
-not give (Monk and City Watch); its `divergences` list names them with the donor's value until an
-owner decides which the product uses.
+The base definitions come from two packs. `daggerfall.base` is authored and tracked: its payload
+`content/worldrpg/payloads/daggerfall.base.json` carries `ruleset`, `vocabulary`,
+`armorValuesByMaterial`, `actors`, `items`, `equipmentSlots`, `actions`, `lootTables`,
+`hudResources`, `lootCategoryPools`, `donorErrata` and `encounters` (some transcribed from the donor
+by hand, each citing its source); no command writes it. `daggerfall.imported` is generated. The
+ruleset's base reader joins the two payloads section by section and refuses a section both carry.
+The commands that build from authored sections (`catalogs` reads the vocabulary, actors and items;
+`item-template-ledger` the items; `mobile-catalog` and `mobile-ledger` the actors) take the
+authored payload as `--authored` and write only the imported one (`--pack`).
+
+The `mobiles` section carries two product overrides of the donor's loot table keys: the Monk (140)
+keeps "O" where the donor gives "T", and the City Watch (146) keeps "T" where the donor gives none,
+because the ruleset refuses a class mobile without a key. The importer applies them where it
+generates the catalog and lists each in the section's `divergences` with the donor's value beside the
+product's.
 
 Authored and tracked: the pack, bundle and tuning descriptors (`content/worldrpg/content-packs/`,
 `content/worldrpg/bundles/`, `content/worldrpg/tuning/`), the tuning payloads
-(`content/worldrpg/tuning-payloads/`), the site payloads
+(`content/worldrpg/tuning-payloads/`), the authored base payload, the site payloads
 (`content/worldrpg/payloads/daggerfall.{privateers-hold,castle-necromoghan,charing-exterior,charing-interior-1-1-0}.json`)
 and the importer's tracked inputs: the source inventory, `data/ui-authored-assets.json` with
-`data/ui-original/`. No sprite overlay is tracked; `--sprite-authoring DIR` applies an operator's
-`sprites/SITE.json` overlays to the dungeon sites.
+`data/ui-original/` (original art). No sprite overlay is tracked; `--sprite-authoring DIR` applies an
+operator's `sprites/SITE.json` overlays to the dungeon sites. Third-party origins are in
+`THIRD_PARTY_NOTICES.md`.
+
+The Host stages the whole `content/` directory as the runtime content root. Two costs there are known
+and not yet removed: each site closure carries its `sources/manifest.json` provenance (about 6.6 MB
+each; it is an artifact the closure's `import-manifest.json` lists, so moving it out changes the
+publication plan and its readers), and each closure carries its own copy of the classic media
+(fonts, UI, maps, combat and effect art) beside the product-wide `content/worldrpg/media/` copy,
+because the ruleset reads a site's classic presentation from its closure.
 
 Each site closure's `import-manifest.json` records its provenance: `importerRevision` (the last
 commit that changed `src/Daggerfall.Import`, `src/Daggerfall.Import.Tool` or
 `src/WorldRpg.SpriteAuthoring`, suffixed `-dirty` for uncommitted changes there), `command` (the tool
 command line that writes it), `sources`, and `authoredOverlays` (each applied sprite overlay with
-its digest). `normalized.json` carries the same revision. Each cinematic artifact in the base
+its digest). `normalized.json` carries the same revision. Each cinematic artifact in the imported
 payload records the FFmpeg build that encoded it, because another build writes different VP9/Opus
 bytes for the same source.

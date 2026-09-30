@@ -2,8 +2,8 @@
 
 `Daggerfall.Import` reads the donor's global, static-message, place, sound,
 disease and spell tables offline. The ordinary `quests` command publishes
-`questTables`, the classic `questCatalog`, `questSources`, and the per-stem
-`questOriginalSources` selection/provenance section in the base payload. The latter
+`questTables`, the classic `questCatalog` and `questSources` into the imported payload, and the per-stem
+`questOriginalSources` selection/provenance section into the import records (see [content scope](coverage/content-scope.md)). The latter
 accounts for every supplied classic QBN/QRC stem. It records actual QBN resource and
 opcode message fields, QRC record IDs, offsets, decoded delimiters, and payload digests
 against the rewritten text identities. QBN data remains offline evidence; it is not an
@@ -25,7 +25,8 @@ dotnet run --project src/Daggerfall.Import.Tool -- quests \
   --arena2 local/arena2 \
   --quest-text /home/research/daggerfall-unity/Assets/StreamingAssets/Quests \
   --tables /home/research/daggerfall-unity/Assets/StreamingAssets/Tables \
-  --pack content/worldrpg/payloads/daggerfall.base.json \
+  --pack content/worldrpg/payloads/daggerfall.imported.json \
+  --records import-records/daggerfall.import-records.json \
   --inventory data/content-source-manifest.csv --update
 ```
 
