@@ -224,7 +224,8 @@ public sealed class DaggerfallSkillUseReactionTests
             new EntityId(DaggerfallActorIdentity.PlayerEntityId),
             () => definitions.Catalogs.RequireCareer("class00"),
             RandomMinimums(),
-            new Dictionary<long, DaggerfallActorDefinition> { [9000] = definitions.RequireActor(new DaggerfallActorId("thief")) });
+            new Dictionary<long, DaggerfallActorDefinition> { [9000] = definitions.RequireActor(new DaggerfallActorId("thief")) },
+            DaggerfallTuning.Defaults.Progression);
 
         rewards.React(new(9000, DaggerfallActorIdentity.PlayerEntityId, DaggerfallDamageCause.PhysicalAttack, 1, 1d, 1, 1), new());
 

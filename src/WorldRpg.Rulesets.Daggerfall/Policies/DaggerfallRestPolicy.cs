@@ -118,15 +118,14 @@ internal static class DaggerfallRestPolicy
         int maximumFatigue,
         int maximumMagicka,
         bool rapidHealing,
-        bool noRegeneration,
-        DaggerfallFormulaTuning? tuning = null)
+        bool noRegeneration)
     {
         if (endurance < 0 || medical < 0 || maximumHealth < 0 || maximumFatigue < 0 || maximumMagicka < 0)
             throw new ArgumentOutOfRangeException(nameof(endurance));
         return (
-            DaggerfallFormulaPolicy.CalculateHealthRecoveryRate(endurance, medical, maximumHealth, rapidHealing, tuning),
-            DaggerfallFormulaPolicy.CalculateFatigueRecoveryRate(maximumFatigue, tuning),
-            DaggerfallFormulaPolicy.CalculateSpellPointRecoveryRate(maximumMagicka, noRegeneration, tuning));
+            DaggerfallFormulaPolicy.CalculateHealthRecoveryRate(endurance, medical, maximumHealth, rapidHealing),
+            DaggerfallFormulaPolicy.CalculateFatigueRecoveryRate(maximumFatigue),
+            DaggerfallFormulaPolicy.CalculateSpellPointRecoveryRate(maximumMagicka, noRegeneration));
     }
 
     private static int Current(StatsComponent stats, DaggerfallTrackId id) =>

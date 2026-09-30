@@ -96,7 +96,7 @@ public sealed class DaggerfallLevelUpTests
         Assert.True(skills.PendingLevelUp);
         RecordingRandom random = new();
         DaggerfallRewardReactions rewards = new(progression, stats, new EntityId(DaggerfallActorIdentity.PlayerEntityId), () => career, random.Service,
-            new Dictionary<long, DaggerfallActorDefinition>());
+            new Dictionary<long, DaggerfallActorDefinition>(), DaggerfallTuning.Defaults.Progression);
         return (new DaggerfallLevelUpState(progression, skills, stats, definitions, () => career, random.Service, rewards), progression, stats, random);
     }
 

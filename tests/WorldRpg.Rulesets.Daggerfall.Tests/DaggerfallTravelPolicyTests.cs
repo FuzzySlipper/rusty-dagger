@@ -145,7 +145,7 @@ public sealed class DaggerfallTravelPolicyTests
         DaggerfallLocationSet locations = new(
             [(0, 0), (0, 1)], [known, hidden], Dungeons: 0, RegionGaps: 0, Regions: 1);
         DaggerfallSiteContext sites = new(locations, null, null, [known.Id]);
-        return new DaggerfallTravelPolicy(sites, grids);
+        return new DaggerfallTravelPolicy(sites, grids, DaggerfallTuning.Defaults.Transport);
     }
 
     private static DaggerfallSiteRecord Site(DaggerfallSiteId id, string name, int mapPixelX, int mapPixelY,

@@ -41,7 +41,7 @@ internal sealed class DaggerfallWagonStorage
 
     internal DaggerfallWagonStorage(MechanicsInventoryContainerCoordinator containers, DaggerfallItemInstances instances,
         DaggerfallDefinitions definitions, EntityId player, DurableIdentityAllocator identities,
-        DaggerfallTransportTuning? tuning = null)
+        DaggerfallTransportTuning tuning)
     {
         _containers = containers ?? throw new ArgumentNullException(nameof(containers));
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
@@ -49,7 +49,7 @@ internal sealed class DaggerfallWagonStorage
         if (player.Value == 0) throw new ArgumentOutOfRangeException(nameof(player));
         _player = player;
         _identities = identities ?? throw new ArgumentNullException(nameof(identities));
-        _tuning = (tuning ?? DaggerfallTransportTuning.Donor).Validate();
+        _tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
     }
 
     internal DaggerfallWagon? Current => _wagon;

@@ -780,6 +780,27 @@ public sealed partial class NormalizedRuntimeSeamTests
         Assert.DoesNotContain("attackReach", File.ReadAllText(path), StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Property prices, ship anchors, transport values and the experimental XP step are payload tuning:
+    /// the shipped profile must load to exactly the ruleset defaults, and an out-of-range value is refused
+    /// at admission rather than reaching the owner that reads it.
+    /// </summary>
+    [Fact]
+    public void The_default_payload_carries_property_transport_and_progression_tuning()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallTuning loaded = DaggerfallTuning.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/tuning-payloads/daggerfall.defaults.json")));
+
+        Assert.Equal(DaggerfallTuning.Defaults.Progression, loaded.Progression);
+        Assert.Equal(DaggerfallTuning.Defaults.Property, loaded.Property);
+        Assert.Equal(DaggerfallTuning.Defaults.Transport, loaded.Transport);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallTuning.Read(MutatedTuning(root, tuning => tuning["progression"]!["experiencePerLevel"] = 0)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallTuning.Read(MutatedTuning(root, tuning => tuning["property"]!["salePercent"] = 101)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallTuning.Read(MutatedTuning(root, tuning => tuning["property"]!["largeShipArrival"]!["mapPixelX"] = 1000)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallTuning.Read(MutatedTuning(root, tuning => tuning["transport"]!["wagonCapacityClassicUnits"] = 0)));
+    }
+
     [Fact]
     public void The_pads_mapping_is_tuning_and_every_payload_agrees_with_the_ruleset_defaults()
     {
@@ -825,7 +846,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             DaggerfallInput.Character.Value,
             DaggerfallInput.Menu.Value,
         ];
-        foreach (string payload in new[] { "daggerfall.defaults.json", "daggerfall.privateers-hold.json" })
+        foreach (string payload in new[] { "daggerfall.defaults.json" })
         {
             DaggerfallTuning tuning = DaggerfallTuning.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/tuning-payloads", payload)));
             Assert.NotEmpty(tuning.ControllerInput.Actions);

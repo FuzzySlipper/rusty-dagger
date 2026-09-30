@@ -242,9 +242,9 @@ internal sealed class DaggerfallPropertyState
     private readonly HashSet<DaggerfallShipType> _retainedShips = [];
     private DaggerfallShipType? _ship;
 
-    internal DaggerfallPropertyState(DaggerfallPropertySave? restored = null, DaggerfallPropertyTuning? tuning = null)
+    internal DaggerfallPropertyState(DaggerfallPropertyTuning tuning, DaggerfallPropertySave? restored = null)
     {
-        _tuning = (tuning ?? DaggerfallPropertyTuning.Donor).Validate();
+        _tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
         if (restored is not null) Restore(restored);
     }
 

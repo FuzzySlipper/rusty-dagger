@@ -10,6 +10,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class DaggerfallPropertyTests
 {
+    private static readonly DaggerfallPropertyTuning Tuning = DaggerfallTuning.Defaults.Property;
+
     [Fact]
     public void House_offers_keep_source_identity_and_donor_eligibility_and_price()
     {
@@ -22,7 +24,7 @@ public sealed class DaggerfallPropertyTests
             siteKind: DaggerfallSiteKind.DungeonLabyrinth, blockX: 0, blockY: 0);
 
         IReadOnlyList<DaggerfallHouseOffer> offers = DaggerfallPropertyPolicy.HousesForSale(
-            [houseFive, dungeonHouse, questHouse, houseOne, houseForSale]);
+            [houseFive, dungeonHouse, questHouse, houseOne, houseForSale], Tuning);
 
         Assert.Equal(2, offers.Count);
         DaggerfallHouseOffer first = Assert.Single(offers, offer => offer.Identity.Building.Index == 1);
@@ -35,9 +37,9 @@ public sealed class DaggerfallPropertyTests
     [Fact]
     public void Ship_offers_require_a_port_and_retain_donor_prices_and_arrival_anchors()
     {
-        Assert.Empty(DaggerfallPropertyPolicy.ShipsForSale(atPortTown: false, region: 17));
+        Assert.Empty(DaggerfallPropertyPolicy.ShipsForSale(atPortTown: false, region: 17, Tuning));
 
-        IReadOnlyList<DaggerfallShipOffer> offers = DaggerfallPropertyPolicy.ShipsForSale(atPortTown: true, region: 17);
+        IReadOnlyList<DaggerfallShipOffer> offers = DaggerfallPropertyPolicy.ShipsForSale(atPortTown: true, region: 17, Tuning);
 
         Assert.Equal(2, offers.Count);
         DaggerfallShipOffer small = Assert.Single(offers, offer => offer.Type == DaggerfallShipType.Small);
@@ -54,8 +56,8 @@ public sealed class DaggerfallPropertyTests
     public void Purchase_uses_the_bank_settlement_and_refusal_does_not_materialize_ownership()
     {
         DaggerfallHouseOffer offer = Assert.Single(DaggerfallPropertyPolicy.HousesForSale(
-            [Candidate(new DaggerfallSiteId(17, 4), "TOWN00.RMB", 1, 2f, blockX: 0, blockY: 0)]));
-        DaggerfallPropertyState state = new();
+            [Candidate(new DaggerfallSiteId(17, 4), "TOWN00.RMB", 1, 2f, blockX: 0, blockY: 0)], Tuning));
+        DaggerfallPropertyState state = new(Tuning);
         Settlement settlement = new(accept: false);
 
         DaggerfallPropertyTransactionResult refused = state.PurchaseHouse(offer, settlement);
@@ -78,13 +80,13 @@ public sealed class DaggerfallPropertyTests
     public void Property_save_restores_identity_and_sale_retains_the_bound_kit_container()
     {
         DaggerfallHouseOffer offer = Assert.Single(DaggerfallPropertyPolicy.HousesForSale(
-            [Candidate(new DaggerfallSiteId(17, 4), "TOWN00.RMB", 1, 2f, blockX: 0, blockY: 0)]));
-        DaggerfallPropertyState state = new();
+            [Candidate(new DaggerfallSiteId(17, 4), "TOWN00.RMB", 1, 2f, blockX: 0, blockY: 0)], Tuning));
+        DaggerfallPropertyState state = new(Tuning);
         Settlement settlement = new(accept: true);
         Assert.True(state.PurchaseHouse(offer, settlement).Applied);
 
         state.BindStorage(offer.StorageKey, 701);
-        DaggerfallPropertyState restored = new(state.Capture());
+        DaggerfallPropertyState restored = new(Tuning, state.Capture());
         Assert.True(restored.OwnsHouse(offer.Identity));
         Assert.True(restored.TryGetStorageContainer(offer.StorageKey, out long restoredContainer));
         Assert.Equal(701, restoredContainer);
@@ -106,8 +108,8 @@ public sealed class DaggerfallPropertyTests
     {
         DaggerfallSiteId town = new(17, 4);
         DaggerfallHouseOffer house = Assert.Single(DaggerfallPropertyPolicy.HousesForSale(
-            [Candidate(town, "TOWN00.RMB", 1, 2f, blockX: 0, blockY: 0)]));
-        DaggerfallPropertyState state = new();
+            [Candidate(town, "TOWN00.RMB", 1, 2f, blockX: 0, blockY: 0)], Tuning));
+        DaggerfallPropertyState state = new(Tuning);
         Settlement settlement = new(accept: true);
         Assert.True(state.PurchaseHouse(house, settlement).Applied);
 
@@ -118,7 +120,7 @@ public sealed class DaggerfallPropertyTests
             DaggerfallPropertyPolicy.HouseAccess(house.Identity,
                 new DaggerfallHouseEntryContext(new DaggerfallSiteId(17, 5), house.Identity.Building, 0, 0)).Denial);
 
-        DaggerfallShipOffer ship = Assert.Single(DaggerfallPropertyPolicy.ShipsForSale(true, 17),
+        DaggerfallShipOffer ship = Assert.Single(DaggerfallPropertyPolicy.ShipsForSale(true, 17, Tuning),
             offer => offer.Type == DaggerfallShipType.Small);
         Assert.True(state.PurchaseShip(ship, settlement).Applied);
         Assert.Equal(DaggerfallPropertyAccessDenial.ShipUnavailableAtSite,
@@ -148,8 +150,8 @@ public sealed class DaggerfallPropertyTests
         using StorageFixture fixture = new();
         DaggerfallSiteId site = new(17, 4);
         DaggerfallHouseOffer offer = Assert.Single(DaggerfallPropertyPolicy.HousesForSale(
-            [Candidate(site, "TOWN00.RMB", 1, 2f, blockX: 0, blockY: 0)]));
-        DaggerfallPropertyState state = new();
+            [Candidate(site, "TOWN00.RMB", 1, 2f, blockX: 0, blockY: 0)], Tuning));
+        DaggerfallPropertyState state = new(Tuning);
         Assert.True(state.PurchaseHouse(offer, new Settlement(accept: true)).Applied);
         DaggerfallPropertyStorage storage = fixture.CreateStorage(state);
         EntityId propertyOwner = storage.Ensure(offer.StorageKey);
@@ -179,7 +181,7 @@ public sealed class DaggerfallPropertyTests
         Assert.Equal(uniqueId, Assert.Single(storageSave.Inventory.UniqueItems).EntityId);
 
         using StorageFixture restoredFixture = new(fixture.Identities.CaptureState());
-        DaggerfallPropertyState restoredState = new(saved);
+        DaggerfallPropertyState restoredState = new(Tuning, saved);
         DaggerfallPropertyStorage restoredStorage = restoredFixture.CreateStorage(restoredState);
         restoredStorage.Restore(saved);
         InventoryView restored = restoredStorage.Read(offer.StorageKey);
@@ -197,8 +199,8 @@ public sealed class DaggerfallPropertyTests
         using StorageFixture fixture = new();
         DaggerfallSiteId site = new(17, 4);
         DaggerfallHouseOffer offer = Assert.Single(DaggerfallPropertyPolicy.HousesForSale(
-            [Candidate(site, "TOWN00.RMB", 1, 2f, blockX: 0, blockY: 0)]));
-        DaggerfallPropertyState state = new();
+            [Candidate(site, "TOWN00.RMB", 1, 2f, blockX: 0, blockY: 0)], Tuning));
+        DaggerfallPropertyState state = new(Tuning);
         Assert.True(state.PurchaseHouse(offer, new Settlement(accept: true)).Applied);
         DaggerfallPropertyStorage storage = fixture.CreateStorage(state);
         _ = storage.Ensure(offer.StorageKey);

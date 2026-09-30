@@ -134,7 +134,34 @@
     "attenuation": 1.0
   },
   "progression": {
-    "enableExperimentalKillExperience": false
+    "enableExperimentalKillExperience": false,
+    "experiencePerLevel": 500
+  },
+  "property": {
+    "housePricePerModelRadius": 1280,
+    "smallShipPrice": 100000,
+    "largeShipPrice": 200000,
+    "salePercent": 85,
+    "smallShipArrival": {
+      "mapPixelX": 2,
+      "mapPixelY": 2
+    },
+    "largeShipArrival": {
+      "mapPixelX": 5,
+      "mapPixelY": 5
+    }
+  },
+  "transport": {
+    "footTravelModifier": 256,
+    "horseTravelModifier": 128,
+    "cartTravelModifier": 192,
+    "footOceanMinutes": 255,
+    "shipOceanMinutes": 51,
+    "walkBaseClassicUnits": 150,
+    "horseBaseClassicUnits": 375,
+    "cartBaseClassicUnits": 250,
+    "wagonCapacityClassicUnits": 300000,
+    "wagonAccessRange": 5.0
   },
   "siteLighting": {
     "interiorDay": 0.6274509804,
