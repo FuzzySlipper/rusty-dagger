@@ -13,7 +13,7 @@ public sealed class BiogQuestionnaireReaderTests
         {
             string name = $"BIOG{cls:D2}T0.TXT";
             BiogQuestionnaire questionnaire = BiogQuestionnaireReader.Read(
-                File.ReadAllText(TestData.Corpus(name)), cls, 0, $"local/arena2/{name}");
+                File.ReadAllText(TestData.Corpus(name)), cls, 0, $"arena2/{name}");
 
             Assert.Equal(cls, questionnaire.ClassIndex);
             Assert.Equal(0, questionnaire.BiographyIndex);

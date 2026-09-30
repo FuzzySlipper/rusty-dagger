@@ -58,7 +58,6 @@ internal static class TextCommand
 
         string[] unrecognised = [.. text.Macros.Where(macro => macro.Disposition == TextMacroDisposition.Unrecognised).Select(macro => macro.Symbol)];
         if (unrecognised.Length != 0) Console.WriteLine($"  unrecognised symbols: {string.Join(", ", unrecognised)}");
-        Console.WriteLine($"  declared key families: {string.Join(", ", text.PendingKinds.Select(pending => $"{pending.Kind.ToString().ToLowerInvariant()} (task #{pending.OwnerTask})"))}");
         Console.WriteLine($"  names: {names.Banks.Count} banks, {names.Banks.Sum(bank => bank.Sets.Sum(set => set.Parts.Count))} fragments");
         Console.WriteLine($"  rumors: {rumors.Entries.Count} records, {rumors.Entries.Count(entry => entry.TypeDisposition == DaggerfallRumorTypeDisposition.Unknown)} unknown types");
         Console.WriteLine($"  biographies: {biographies.Biographies.Count} questionnaires, {biographies.DefaultLines} default lines");

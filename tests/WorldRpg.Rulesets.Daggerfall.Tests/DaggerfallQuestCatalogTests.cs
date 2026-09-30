@@ -9,7 +9,7 @@ public sealed class DaggerfallQuestCatalogTests
     public void Published_classic_catalog_accounts_for_all_rows_and_missing_sources()
     {
         var catalog = DaggerfallQuestWorldTablesTests.Content().QuestSources.Catalog;
-        Assert.Equal("Tables/QuestList-Classic.txt", catalog.SourcePath);
+        Assert.Equal("daggerfall-unity/Assets/StreamingAssets/Tables/QuestList-Classic.txt", catalog.SourcePath);
         Assert.Equal(187, catalog.Rows.Count(row => row.Active));
         Assert.Equal(23, catalog.Rows.Count(row => !row.Active));
         Assert.Equal(new[] { "M0B40Y04", "N0C00Y01", "A0C00Y04", "R0C40Y23", "80C00Y00" },

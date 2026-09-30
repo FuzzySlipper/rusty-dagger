@@ -26,7 +26,7 @@ public sealed class DaggerfallTextSetTests
 
         Assert.Equal(3862 + 840 + 990, text.Values.Count);
         Assert.Equal(DaggerfallTextResolution.Resolved, text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Resource, "0"), out DaggerfallTextValue? value));
-        Assert.Equal("local/arena2/TEXT.RSC", value!.Source);
+        Assert.Equal("arena2/TEXT.RSC", value!.Source);
         Assert.Equal("en", value.Language);
         Assert.Equal("STRENGTH", value.TextRuns.First());
         Assert.Equal(0, value.Index);
@@ -46,7 +46,7 @@ public sealed class DaggerfallTextSetTests
         DaggerfallTextValue stores = text.Require(new DaggerfallTextKey(DaggerfallTextKind.Internal, "StoresA"));
         Assert.Contains("%ef", stores.Macros);
         Assert.Contains("%rt", stores.Macros);
-        Assert.Equal("donor/daggerfall-unity/Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv", stores.Source);
+        Assert.Equal("daggerfall-unity/Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv", stores.Source);
     }
 
     [Fact]
@@ -115,20 +115,20 @@ public sealed class DaggerfallTextSetTests
 
         // A fragment resolves with the source that states it, not the family that names it.
         Assert.Equal(DaggerfallTextResolution.Resolved, text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Name, "00-0-00"), out DaggerfallTextValue? fragment));
-        Assert.Equal("local/arena2/NAMEGEN.DAT", fragment!.Source);
+        Assert.Equal("arena2/NAMEGEN.DAT", fragment!.Source);
         Assert.Equal("en", fragment.Language);
         Assert.Equal("Theod", fragment.TextRuns.Single());
 
         // A rumor text resolves through its position-and-region key.
         Assert.Equal(DaggerfallTextResolution.Resolved, text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Rumor, "00-00"), out DaggerfallTextValue? rumor));
-        Assert.Equal("local/arena2/RUMOR.DAT", rumor!.Source);
+        Assert.Equal("arena2/RUMOR.DAT", rumor!.Source);
 
         // Questionnaire prose resolves through the file that states it.
         Assert.Equal(DaggerfallTextResolution.Resolved, text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Biography, "00-0-q01-l0"), out DaggerfallTextValue? question));
-        Assert.Equal("local/arena2/BIOG00T0.TXT", question!.Source);
+        Assert.Equal("arena2/BIOG00T0.TXT", question!.Source);
         Assert.Contains("school of magic", question.TextRuns.Single(), StringComparison.OrdinalIgnoreCase);
         Assert.Equal(DaggerfallTextResolution.Resolved, text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Biography, "default-00"), out DaggerfallTextValue? backstory));
-        Assert.Equal("local/arena2/BIO.DAT", backstory!.Source);
+        Assert.Equal("arena2/BIO.DAT", backstory!.Source);
 
         // The zero-byte tail is a stated line with no bytes: malformed with its reason, not missing.
         Assert.Equal(DaggerfallTextResolution.Malformed, text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Biography, "default-33"), out DaggerfallTextValue? tail));
@@ -138,16 +138,6 @@ public sealed class DaggerfallTextSetTests
         Assert.Equal(DaggerfallTextResolution.Missing, text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Name, "99-9-99"), out _));
         Assert.Equal(DaggerfallTextResolution.Missing, text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Rumor, "99-99"), out _));
         Assert.Equal(DaggerfallTextResolution.Missing, text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Biography, "99-9-q99-l0"), out _));
-    }
-
-    [Fact]
-    public void The_declared_families_name_no_pending_supplier()
-    {
-        IReadOnlyList<DaggerfallTextPendingKind> pending = Definitions().Text.PendingKinds;
-
-        // The name, biography and rumor families arrived with task 7941; the books arrived with
-        // task 7951, so no family stays pending: every declared key resolves to a carried value.
-        Assert.Empty(pending);
     }
 
     [Fact]
@@ -371,10 +361,10 @@ public sealed class DaggerfallTextSetTests
             Payload(payload =>
             {
                 JsonObject second = Text(payload)["sources"]!.AsArray()[0]!.AsObject().DeepClone().AsObject();
-                second["path"] = "local/arena2/OTHER.RSC";
+                second["path"] = "arena2/OTHER.RSC";
                 second["records"] = 1;
                 Text(payload)["sources"]!.AsArray().Add(second);
-                Records(payload)[1]!.AsObject()["source"] = "local/arena2/OTHER.RSC";
+                Records(payload)[1]!.AsObject()["source"] = "arena2/OTHER.RSC";
             })));
 
         Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("is interleaved with another source rather than grouped", StringComparison.Ordinal));
@@ -409,15 +399,6 @@ public sealed class DaggerfallTextSetTests
             })));
 
         Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("is indexed against 3 values", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public void Rejects_a_family_that_is_both_pending_and_carried()
-    {
-        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
-            Payload(payload => Text(payload)["pendingKinds"]!.AsArray().Add(JsonNode.Parse("""{"kind":"resource","ownerTask":7942,"reason":"test"}""")))));
-
-        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("is published as pending and carried by a source", StringComparison.Ordinal));
     }
 
     [Fact]

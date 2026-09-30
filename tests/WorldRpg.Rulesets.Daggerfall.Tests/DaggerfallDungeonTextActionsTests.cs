@@ -142,7 +142,7 @@ public sealed class DaggerfallDungeonTextActionsTests
         new("action", 1, 2, (byte)flag, axis, 0, 0, next is null ? -1 : 2, next, SoundIndex: soundIndex);
 
     private static DaggerfallTextResolver Resolver(params DaggerfallTextValue[] values) =>
-        new(new(values.ToDictionary(value => value.Key), [], []));
+        new(new(values.ToDictionary(value => value.Key), []));
 
     private static DaggerfallTextValue Resource(string id, string text) => Value(new(DaggerfallTextKind.Resource, id), text);
 

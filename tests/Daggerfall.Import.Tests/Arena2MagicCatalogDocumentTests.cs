@@ -14,7 +14,7 @@ public sealed class Arena2MagicCatalogDocumentTests
     public void PublishesKeysIdentitiesAndItemToSpellLinks()
     {
         Arena2MagicCatalogPublication publication = Arena2MagicCatalogDocument.Build(
-            SpellTable(), MagicItemTable(), "local/arena2/SPELLS.STD", "local/arena2/MAGIC.DEF");
+            SpellTable(), MagicItemTable(), "arena2/SPELLS.STD", "arena2/MAGIC.DEF");
         JsonObject document = JsonNode.Parse(publication.Json)!.AsObject();
 
         Assert.Equal(1, document["schemaVersion"]!.GetValue<int>());
@@ -57,7 +57,7 @@ public sealed class Arena2MagicCatalogDocumentTests
         string magicPath = TestData.Corpus("MAGIC.DEF");
 
         Arena2MagicCatalogPublication publication = Arena2MagicCatalogDocument.Build(
-            File.ReadAllBytes(spellPath), File.ReadAllBytes(magicPath), "local/arena2/SPELLS.STD", "local/arena2/MAGIC.DEF");
+            File.ReadAllBytes(spellPath), File.ReadAllBytes(magicPath), "arena2/SPELLS.STD", "arena2/MAGIC.DEF");
         Assert.Equal(89, publication.Spells);
         Assert.Equal(59, publication.MagicItems);
         Assert.Equal(84, publication.Enchantments);
@@ -77,7 +77,7 @@ public sealed class Arena2MagicCatalogDocumentTests
     public void PublishesOneCostRowForEveryEffectVariantASpellUses()
     {
         Arena2MagicCatalogPublication publication = Arena2MagicCatalogDocument.Build(
-            SpellTable(), MagicItemTable(), "local/arena2/SPELLS.STD", "local/arena2/MAGIC.DEF", Arena2MagicEffectCostTable.Read(Formulas()));
+            SpellTable(), MagicItemTable(), "arena2/SPELLS.STD", "arena2/MAGIC.DEF", Arena2MagicEffectCostTable.Read(Formulas()));
         JsonArray costs = JsonNode.Parse(publication.Json)!["effectCosts"]!.AsArray();
 
         // Both spells carry one effect without a subtype, so each type resolves through its first slot.
@@ -93,7 +93,7 @@ public sealed class Arena2MagicCatalogDocumentTests
 
         // Without the donor's tables the catalog states no cost rather than inventing one.
         Assert.Null(JsonNode.Parse(Arena2MagicCatalogDocument.Build(
-            SpellTable(), MagicItemTable(), "local/arena2/SPELLS.STD", "local/arena2/MAGIC.DEF").Json)!["effectCosts"]);
+            SpellTable(), MagicItemTable(), "arena2/SPELLS.STD", "arena2/MAGIC.DEF").Json)!["effectCosts"]);
         Assert.Throws<InvalidOperationException>(() => Arena2MagicEffectCostTable.Read(Formulas()).Resolve(51, -1));
     }
 
@@ -102,7 +102,7 @@ public sealed class Arena2MagicCatalogDocumentTests
     {
         Arena2MagicCatalogPublication publication = Arena2MagicCatalogDocument.Build(
             File.ReadAllBytes(TestData.Corpus("SPELLS.STD")), File.ReadAllBytes(TestData.Corpus("MAGIC.DEF")),
-            "local/arena2/SPELLS.STD", "local/arena2/MAGIC.DEF",
+            "arena2/SPELLS.STD", "arena2/MAGIC.DEF",
             Arena2MagicEffectCostTable.Read(File.ReadAllText(TestData.Donor(Arena2MagicEffectCostTable.DonorSourcePath))));
         JsonObject document = JsonNode.Parse(publication.Json)!.AsObject();
         HashSet<(int, int)> rows = [.. document["effectCosts"]!.AsArray().Select(cost => (cost!["type"]!.GetValue<int>(), cost["subType"]!.GetValue<int>()))];

@@ -811,7 +811,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         new("test", string.Empty, "test.txt", DaggerfallQuestDisposition.Compiled, [], blocks, []);
 
     internal static DaggerfallQuestMessages Messages(DaggerfallQuestSourceDefinition source, IReadOnlyDictionary<string, int>? staticMessages = null) => new(
-        new DaggerfallTextResolver(new DaggerfallTextSet(new Dictionary<DaggerfallTextKey, DaggerfallTextValue>(), [], [])),
+        new DaggerfallTextResolver(new DaggerfallTextSet(new Dictionary<DaggerfallTextKey, DaggerfallTextValue>(), [])),
         new Dictionary<string, DaggerfallQuestSourceDefinition>(StringComparer.Ordinal) { [source.SourceFile] = source }, staticMessages);
 
     private static DaggerfallQuestBlockDefinition Block(string kind, int line, params string[] lines) => new(kind, line, lines, null);

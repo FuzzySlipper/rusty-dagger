@@ -36,7 +36,7 @@ internal static class CatalogsCommand
             Ids("items"));
         byte[] section = DaggerfallCatalogSerializer.Serialize(catalogs, inventory.Select(row => row.Id).ToHashSet(StringComparer.Ordinal));
 
-        Console.WriteLine($"catalogs: {catalogs.Races.Count} races, {catalogs.Careers.Count} careers, {catalogs.Attributes.Count} attributes, {catalogs.Skills.Count} skills, {catalogs.Resistances.Count} elements, {catalogs.Enemies.Count} enemy references, {catalogs.ItemTemplates.Count} item-template references, {catalogs.Pending.Count} pending namespaces");
+        Console.WriteLine($"catalogs: {catalogs.Races.Count} races, {catalogs.Careers.Count} careers, {catalogs.Attributes.Count} attributes, {catalogs.Skills.Count} skills, {catalogs.Resistances.Count} elements, {catalogs.Enemies.Count} enemy references, {catalogs.ItemTemplates.Count} item-template references");
         foreach (DaggerfallCareerRecord career in catalogs.Careers)
         {
             Console.WriteLine($"  {career.Id} '{career.Name}' hp/level {career.HitPointsPerLevel} primary {string.Join('/', career.PrimarySkills)} source {career.Source.RecordId}");

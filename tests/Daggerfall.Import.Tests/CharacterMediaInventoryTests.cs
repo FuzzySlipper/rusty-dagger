@@ -434,6 +434,6 @@ public sealed class CharacterMediaInventoryTests
             }
         }
 
-        return CharacterMediaInventory.Enumerate(sources, new HashSet<string>(StringComparer.Ordinal), "no published consumer yet", "local/arena2");
+        return CharacterMediaInventory.Enumerate(sources, new HashSet<string>(StringComparer.Ordinal), "no published consumer yet", "arena2");
     }
 }

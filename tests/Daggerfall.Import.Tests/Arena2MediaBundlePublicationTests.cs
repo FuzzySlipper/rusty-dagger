@@ -562,11 +562,11 @@ public sealed class Arena2MediaBundlePublicationTests
         mesh.CopyTo(bytes, Arena2FormatConstants.BsaHeaderBytes);
         BitConverter.GetBytes(9004u).CopyTo(bytes, Arena2FormatConstants.BsaHeaderBytes + mesh.Length);
         BitConverter.GetBytes(mesh.Length).CopyTo(bytes, Arena2FormatConstants.BsaHeaderBytes + mesh.Length + 4);
-        Arch3dMeshInventory inventory = Arch3dInventoryReader.Read(bytes, "local/arena2/ARCH3D.BSA");
+        Arch3dMeshInventory inventory = Arch3dInventoryReader.Read(bytes, "arena2/ARCH3D.BSA");
         return GeometryPublicationBuilder.Create(new GeometryPublicationRequest(
             inventory,
             bytes,
             ["9004"],
-            TextureLeafInventory.Enumerate([], "local/arena2")));
+            TextureLeafInventory.Enumerate([], "arena2")));
     }
 }

@@ -250,6 +250,6 @@ public sealed class ResidualSourceInventoryTests
             sources.Add((name, File.ReadAllBytes(Path.Combine(arena2, name))));
         }
 
-        return ResidualSourceInventory.Enumerate(sources, "local/arena2", documented);
+        return ResidualSourceInventory.Enumerate(sources, "arena2", documented);
     }
 }

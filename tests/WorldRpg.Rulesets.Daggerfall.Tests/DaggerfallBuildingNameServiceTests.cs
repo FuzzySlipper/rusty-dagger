@@ -106,7 +106,6 @@ public sealed class DaggerfallBuildingNameServiceTests
         (DaggerfallDefinitions definitions, DaggerfallBlocksSnapshot blocks) = Inputs.Value;
         DaggerfallTextSet withoutStores = new(
             definitions.Text.Values.Where(pair => pair.Key != new DaggerfallTextKey(DaggerfallTextKind.Internal, "StoresA")).ToDictionary(),
-            definitions.Text.PendingKinds,
             definitions.Text.Macros.Select(macro => macro.Symbol == "%ef" ? macro with { Records = macro.Records - 1 } : macro).ToArray());
         DaggerfallDefinitions altered = new(
             definitions.Catalogs, definitions.Vocabulary, definitions.Actors, definitions.Items, definitions.EquipmentSlots,

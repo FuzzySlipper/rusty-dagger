@@ -42,14 +42,14 @@ public sealed class InternalStringsReaderTests
     {
         DaggerfallText baseText = DaggerfallTextBuilder.Build(
             Resource((1, "Classic"u8.ToArray())),
-            "local/arena2/TEXT.RSC",
-            [new Daggerfall.Import.Publication.SourceInventoryRow("CNT-016", "family", "CNT-016", "text", "local/arena2/TEXT.RSC", "", "", "")],
+            "arena2/TEXT.RSC",
+            [new Daggerfall.Import.Publication.SourceInventoryRow("CNT-016", "family", "CNT-016", "text", "arena2/TEXT.RSC", "", "", "")],
             "en");
 
         DaggerfallText merged = DaggerfallInternalStringsBuilder.Merge(
             baseText,
             Encoding.UTF8.GetBytes("Key,Value\nStoresA,The %ef\n"),
-            "donor/daggerfall-unity/Internal_Strings.csv",
+            "daggerfall-unity/Internal_Strings.csv",
             "en");
 
         DaggerfallTextRecord internalRecord = Assert.Single(merged.Records, record => record.Key.Kind == DaggerfallTextKind.Internal);

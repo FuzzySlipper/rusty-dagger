@@ -25,7 +25,7 @@ public sealed class DaggerfallCinematicPackTests
             files.Add((hook.FileName, DaggerfallCinematicKind.Flc, 3000, hook.FileName));
         }
 
-        DaggerfallCinematicPack pack = DaggerfallCinematicPackBuilder.Build(files, "local/arena2", Inventory());
+        DaggerfallCinematicPack pack = DaggerfallCinematicPackBuilder.Build(files, "arena2", Inventory());
         pack.Validate();
         Assert.Equal(33, pack.Cinematics.Count);
         Assert.Equal(DaggerfallCinematicBinding.Bound, pack.Cinematics.Single(record => record.FileName == "ANIM0000.VID").Binding);
@@ -52,7 +52,7 @@ public sealed class DaggerfallCinematicPackTests
             files.Add((hook.FileName, DaggerfallCinematicKind.Flc, 3000, hook.FileName));
         }
 
-        InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() => DaggerfallCinematicPackBuilder.Build(files, "local/arena2", Inventory()));
+        InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() => DaggerfallCinematicPackBuilder.Build(files, "arena2", Inventory()));
         Assert.Contains("sixteen FLC", missing.Message, StringComparison.Ordinal);
         DaggerfallCinematicRecord contradiction = new("X.VID", DaggerfallCinematicKind.Vid, 1, "X", DaggerfallCinematicBinding.Unresolved, "caller", null, string.Empty);
         Assert.Throws<ArgumentException>(() => contradiction.Validate());
@@ -61,7 +61,7 @@ public sealed class DaggerfallCinematicPackTests
     [CorpusFact]
     public void Records_the_supplied_corpus()
     {
-        const string arena2 = "local/arena2";
+        const string arena2 = "arena2";
 
         List<(string, DaggerfallCinematicKind, long, string)> files = [];
         foreach (string path in Directory.EnumerateFiles(TestData.CorpusRoot).Order(StringComparer.OrdinalIgnoreCase))
@@ -84,7 +84,7 @@ public sealed class DaggerfallCinematicPackTests
 
     private static IReadOnlyList<SourceInventoryRow> Inventory() =>
     [
-        new SourceInventoryRow("CNT-025", "family", "CNT-025", "videos", "local/arena2", string.Empty, string.Empty, string.Empty),
-        new SourceInventoryRow("CNT-026", "family", "CNT-026", "flc-cinematics", "local/arena2", string.Empty, string.Empty, string.Empty),
+        new SourceInventoryRow("CNT-025", "family", "CNT-025", "videos", "arena2", string.Empty, string.Empty, string.Empty),
+        new SourceInventoryRow("CNT-026", "family", "CNT-026", "flc-cinematics", "arena2", string.Empty, string.Empty, string.Empty),
     ];
 }

@@ -237,24 +237,6 @@ public static class DaggerfallCareerEquipmentRestrictions
     }
 }
 
-/// <summary>A key a later task supplies the records for, with the task that owns it.</summary>
-public sealed record DaggerfallPendingCatalog(string Id, int OwnerTask, string Reason)
-{
-    public void Validate()
-    {
-        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
-        if (OwnerTask <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(OwnerTask), OwnerTask, $"Pending catalog '{Id}' must name the task that supplies it.");
-        }
-
-        if (string.IsNullOrWhiteSpace(Reason))
-        {
-            throw new ArgumentException($"Pending catalog '{Id}' must state why it is pending.", nameof(Reason));
-        }
-    }
-}
-
 /// <summary>
 /// The normalized reference catalogs a runtime consumer resolves keys through. This is
 /// the contract CAP-DATA is satisfied by: every key is indexed, carries inventory-backed
@@ -269,7 +251,6 @@ public sealed record DaggerfallCatalogs(
     IReadOnlyList<string> CareerNameCollisions,
     IReadOnlyList<DaggerfallReferenceKey> Enemies,
     IReadOnlyList<DaggerfallReferenceKey> ItemTemplates,
-    IReadOnlyList<DaggerfallPendingCatalog> Pending,
     IReadOnlyList<string> Sources)
 {
     /// <summary>
@@ -306,7 +287,6 @@ public sealed record DaggerfallCatalogs(
         ArgumentNullException.ThrowIfNull(Careers);
         ArgumentNullException.ThrowIfNull(Enemies);
         ArgumentNullException.ThrowIfNull(ItemTemplates);
-        ArgumentNullException.ThrowIfNull(Pending);
 
         if (Attributes.Count == 0 || Skills.Count == 0 || Resistances.Count == 0 || Races.Count == 0 || Careers.Count == 0)
         {
@@ -358,12 +338,6 @@ public sealed record DaggerfallCatalogs(
 
         ValidateReferenced(Enemies, "enemy", inventoryRecordIds);
         ValidateReferenced(ItemTemplates, "item template", inventoryRecordIds);
-        NormalizedImportDocument.ValidateUnique(Pending, value => value.Id, "pending catalog");
-        foreach (DaggerfallPendingCatalog pending in Pending)
-        {
-            pending.Validate();
-        }
-
         // The pack carries the set of inventory records it drew from, so a consumer can
         // check a citation without owning the inventory, and a citation outside the set
         // is a defect rather than a typo nobody can see.

@@ -13,7 +13,7 @@ namespace Daggerfall.Import.Tests;
 public sealed class GeometryPublicationTests
 {
     private static readonly Lazy<Arch3dMeshInventory> Archive = new(() =>
-        Arch3dInventoryReader.Read(File.ReadAllBytes(TestData.Corpus("ARCH3D.BSA")), "local/arena2/ARCH3D.BSA"));
+        Arch3dInventoryReader.Read(File.ReadAllBytes(TestData.Corpus("ARCH3D.BSA")), "arena2/ARCH3D.BSA"));
 
     [CorpusFact]
     public void Publishes_one_artifact_per_referenced_mesh_with_its_material_links()
@@ -56,7 +56,7 @@ public sealed class GeometryPublicationTests
         // this high. Neither becomes another texture: the reference stays what it is, with the reason.
         TextureLeafInventory textures = TextureLeafInventory.Enumerate(
             [(0, "TEXTURE.000", File.ReadAllBytes(TestData.Corpus("TEXTURE.000")))],
-            "local/arena2");
+            "arena2");
         GeometryPublication missing = Publish(["55000"], textures);
 
         GeometryMaterialLink[] unresolved = [.. missing.Meshes[0].Materials.Where(material => material.Disposition != GeometryMaterialDisposition.Resolved)];
@@ -84,7 +84,7 @@ public sealed class GeometryPublicationTests
         byte[] planeless = (byte[])payload.Clone();
         BitConverter.GetBytes(0).CopyTo(planeless, 8);
         byte[] archive = NumericArchive((9004, payload), (9005, new byte[32]), (9006, planeless));
-        Arch3dMeshInventory inventory = Arch3dInventoryReader.Read(archive, "local/arena2/ARCH3D.BSA");
+        Arch3dMeshInventory inventory = Arch3dInventoryReader.Read(archive, "arena2/ARCH3D.BSA");
         GeometryPublication publication = GeometryPublicationBuilder.Create(new GeometryPublicationRequest(
             inventory,
             archive,
@@ -117,7 +117,7 @@ public sealed class GeometryPublicationTests
 
         using JsonDocument document = JsonDocument.Parse(index.Bytes);
         JsonElement root = document.RootElement;
-        Assert.Equal("local/arena2/ARCH3D.BSA", root.GetProperty("inventorySource").GetString());
+        Assert.Equal("arena2/ARCH3D.BSA", root.GetProperty("inventorySource").GetString());
         Assert.Equal(10251, root.GetProperty("summary").GetProperty("records").GetInt32());
         Assert.Equal(1, root.GetProperty("summary").GetProperty("published").GetInt32());
         Assert.Single(root.GetProperty("meshes").EnumerateArray());
@@ -487,14 +487,14 @@ public sealed class GeometryPublicationTests
     /// <summary>Publishes the references against a mesh archive the test supplies.</summary>
     private static GeometryPublication Publish(IReadOnlyList<string> referenced, TextureLeafInventory textures, byte[] archive) =>
         GeometryPublicationBuilder.Create(new GeometryPublicationRequest(
-            Arch3dInventoryReader.Read(archive, "local/arena2/ARCH3D.BSA"), archive, referenced, textures));
+            Arch3dInventoryReader.Read(archive, "arena2/ARCH3D.BSA"), archive, referenced, textures));
 
     /// <summary>The corpus's texture leaves, which is what a material reference resolves against.</summary>
     private static TextureLeafInventory Textures(params (int Id, string Path, ReadOnlyMemory<byte> Bytes)[] supplied) => TextureLeafInventory.Enumerate(
         Directory.EnumerateFiles(TestData.CorpusRoot, "TEXTURE.*")
             .Select(path => (int.Parse(Path.GetFileName(path)["TEXTURE.".Length..]), Path.GetFileName(path), (ReadOnlyMemory<byte>)File.ReadAllBytes(path)))
             .Concat(supplied),
-        "local/arena2");
+        "arena2");
 
     /// <summary>
     /// Builds one texture leaf holding a single record of the supplied extent. A single-frame record reads

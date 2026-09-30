@@ -426,6 +426,6 @@ public sealed class QuestSourceTests
             .Where(path => path.EndsWith(QuestSourceInventory.BinaryExtension, StringComparison.OrdinalIgnoreCase)
                 || path.EndsWith(QuestSourceInventory.ResourcesExtension, StringComparison.OrdinalIgnoreCase))
             .Select(Path.GetFileName)!];
-        return QuestSourceInventory.Enumerate(paths, "local/arena2");
+        return QuestSourceInventory.Enumerate(paths, "arena2");
     }
 }

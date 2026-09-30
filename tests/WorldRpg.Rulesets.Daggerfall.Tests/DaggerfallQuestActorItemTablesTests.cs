@@ -10,12 +10,12 @@ public sealed class DaggerfallQuestActorItemTablesTests
     {
         DaggerfallQuestActorItemTables tables = DaggerfallQuestWorldTablesTests.Tables().ActorItemTables;
 
-        Assert.Equal("Tables/Quests-Items.txt", tables.Items.SourcePath);
+        Assert.Equal("daggerfall-unity/Assets/StreamingAssets/Tables/Quests-Items.txt", tables.Items.SourcePath);
         Assert.Equal(120, tables.Items.Rows.Count);
         Assert.Equal((5, 0), (tables.Items.Resolve("Masque_of_Clavicus_Vile").P1, tables.Items.Resolve("Masque_of_Clavicus_Vile").P2));
         Assert.Equal((5, 23), (tables.Items.Resolve("Shifters_Shirt").P1, tables.Items.Resolve("Shifters_Shirt").P2));
 
-        Assert.Equal("Tables/Quests-Factions.txt", tables.Factions.SourcePath);
+        Assert.Equal("daggerfall-unity/Assets/StreamingAssets/Tables/Quests-Factions.txt", tables.Factions.SourcePath);
         Assert.Equal(428, tables.Factions.Rows.Count(row => row.Active));
         Assert.Equal(10, tables.Factions.Rows.Count(row => !row.Active));
         DaggerfallQuestFactionTableRow commoner = tables.Factions.Rows.Single(row => row.Name == "Commoner");
@@ -24,7 +24,7 @@ public sealed class DaggerfallQuestActorItemTablesTests
         Assert.Null(commoner.P2);
         Assert.Contains(tables.Factions.Comments, comment => comment.Text.Contains("presently unknown", StringComparison.Ordinal));
 
-        Assert.Equal("Tables/Quests-Foes.txt", tables.Foes.SourcePath);
+        Assert.Equal("daggerfall-unity/Assets/StreamingAssets/Tables/Quests-Foes.txt", tables.Foes.SourcePath);
         Assert.Equal(62, tables.Foes.Rows.Count);
         Assert.Equal(131, tables.Foes.Resolve("Sorceror").Id);
         Assert.Equal(131, tables.Foes.Resolve("Sorcerer").Id);

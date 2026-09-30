@@ -71,7 +71,7 @@ public sealed class DaggerfallTextResolverTests
         DaggerfallTextSet malformed = new(new Dictionary<DaggerfallTextKey, DaggerfallTextValue>
         {
             [Key] = new(Key, "test", "en", 0, 0, 0, 0, DaggerfallTextState.Malformed, "source bytes are truncated", [], []),
-        }, [], []);
+        }, []);
         DaggerfallTextRenderResult malformedResult = new DaggerfallTextResolver(malformed).Resolve(Key, CompleteContext());
 
         Assert.Equal(DaggerfallTextDiagnosticKind.MissingText, Assert.Single(missingRecord.Diagnostics).Kind);
@@ -102,7 +102,7 @@ public sealed class DaggerfallTextResolverTests
     private static readonly DaggerfallTextKey Key = new(DaggerfallTextKind.Resource, "test");
     private static DaggerfallTextResolver Resolver(string source) => new(TextSet(source, [new(DaggerfallTextCode.Text, source, null, null)]));
     private static DaggerfallTextSet TextSet(string source, IReadOnlyList<DaggerfallTextElement> tokens) => new(
-        new Dictionary<DaggerfallTextKey, DaggerfallTextValue> { [Key] = new(Key, "test", "en", 0, 0, source.Length, 1, DaggerfallTextState.Read, string.Empty, [], tokens) }, [], []);
+        new Dictionary<DaggerfallTextKey, DaggerfallTextValue> { [Key] = new(Key, "test", "en", 0, 0, source.Length, 1, DaggerfallTextState.Read, string.Empty, [], tokens) }, []);
 
     private static DaggerfallTextContext Context(string player, string city, string date, string faction, string item) => new(
         new(Name: player, FirstName: player, LastName: player), new(Date: date), new(City: city), new(FactionName: faction), new(ItemName: item), new());

@@ -30,7 +30,7 @@ internal static class ItemTemplateLedgerCommand
             File.ReadAllText(Path.Combine(donor, "ItemEnums.cs")),
             File.ReadAllText(Path.Combine(donor, "ItemHelper.cs")),
             File.ReadAllText(Path.Combine(donor, "..", "..", "API", "ItemsFile.cs")),
-            "donor");
+            PublishedSourcePath.DonorRoot);
         // The published items are authored; the ledger records how many there are.
         int publishedItems = PayloadFiles.ReadAuthored(args["--authored"])["items"]?.AsArray().Count ?? 0;
         JsonObject ledger = ItemTemplateLedgerBuilder.Build(baseline, family.Id, family.PathOrPattern, targetStatus, publishedItems);

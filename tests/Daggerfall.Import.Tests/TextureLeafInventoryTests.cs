@@ -220,6 +220,6 @@ public sealed class TextureLeafInventoryTests
 
         // No explicit solid palette: the decoder infers the palette each archive uses, and
         // forcing one would override that inference and change what parses.
-        return TextureLeafInventory.Enumerate(sources, "local/arena2");
+        return TextureLeafInventory.Enumerate(sources, "arena2");
     }
 }

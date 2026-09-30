@@ -10,7 +10,7 @@ public sealed class RumorReaderTests
     public void Reads_the_supplied_rumors_with_tokens_and_metadata()
     {
         RumorCatalog catalog = RumorReader.Read(
-            File.ReadAllBytes(TestData.Corpus("RUMOR.DAT")), "local/arena2/RUMOR.DAT");
+            File.ReadAllBytes(TestData.Corpus("RUMOR.DAT")), "arena2/RUMOR.DAT");
 
         Assert.Equal(31, catalog.Records.Count);
         RumorRecord first = catalog.Records[0];

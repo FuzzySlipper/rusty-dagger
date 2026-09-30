@@ -95,33 +95,6 @@ public sealed record DaggerfallTextSource(
 }
 
 /// <summary>
-/// A source family this contract declares keys for but does not fill, and the task that supplies it.
-/// </summary>
-/// <param name="Kind">The declared source family.</param>
-/// <param name="OwnerTask">The task that supplies records for the family.</param>
-/// <param name="Reason">What the family addresses and where its records come from.</param>
-public sealed record DaggerfallTextPendingKind(DaggerfallTextKind Kind, int OwnerTask, string Reason)
-{
-    public void Validate()
-    {
-        if (!Enum.IsDefined(Kind))
-        {
-            throw new ArgumentOutOfRangeException(nameof(Kind), Kind, "A pending text family names a source family the contract does not declare.");
-        }
-
-        if (OwnerTask <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(OwnerTask), OwnerTask, $"Pending text family '{Kind}' must name the task that supplies it.");
-        }
-
-        if (string.IsNullOrWhiteSpace(Reason))
-        {
-            throw new ArgumentException($"Pending text family '{Kind}' must state what its records are and who supplies them.", nameof(Reason));
-        }
-    }
-}
-
-/// <summary>
 /// One element of a published token stream.
 /// </summary>
 /// <param name="Code">The element's kind: a run of characters, a named code, or a code with no name.</param>
@@ -318,23 +291,20 @@ public sealed record DaggerfallTextMacro(string Symbol, int Records, TextMacroDi
 }
 
 /// <summary>
-/// The published text of the supplied classic sources: what a lookup resolves, what the corpus spells
-/// its values with, and which families the contract declares but does not fill.
+/// The published text of the supplied classic sources: what a lookup resolves and what the corpus spells
+/// its values with.
 /// </summary>
 /// <param name="Sources">Every source the records were read from.</param>
-/// <param name="PendingKinds">Families this contract declares keys for and does not fill.</param>
 /// <param name="Records">Every text value the sources carry, in source order.</param>
 /// <param name="Macros">The distinct macro symbols the values carry, in symbol order.</param>
 public sealed record DaggerfallText(
     IReadOnlyList<DaggerfallTextSource> Sources,
-    IReadOnlyList<DaggerfallTextPendingKind> PendingKinds,
     IReadOnlyList<DaggerfallTextRecord> Records,
     IReadOnlyList<DaggerfallTextMacro> Macros)
 {
     public void Validate()
     {
         ArgumentNullException.ThrowIfNull(Sources);
-        ArgumentNullException.ThrowIfNull(PendingKinds);
         ArgumentNullException.ThrowIfNull(Records);
         ArgumentNullException.ThrowIfNull(Macros);
         if (Sources.Count == 0)
@@ -352,19 +322,6 @@ public sealed record DaggerfallText(
         foreach (DaggerfallTextSource source in Sources)
         {
             source.Validate();
-        }
-
-        // A family is either filled by a source or pending on the task that supplies it. Recording it
-        // as both would let a consumer read an empty key space as a supplied one, or a supplied one as
-        // still missing, and neither reading is a fact about the corpus.
-        NormalizedImportDocument.ValidateUnique(PendingKinds, pending => pending.Kind.ToString(), "pending text family");
-        foreach (DaggerfallTextPendingKind pending in PendingKinds)
-        {
-            pending.Validate();
-            if (Sources.Any(source => source.Kind == pending.Kind))
-            {
-                throw new InvalidOperationException($"Text family '{pending.Kind}' is published as pending and carried by a source, so a consumer cannot tell whether its keys resolve.");
-            }
         }
 
         Dictionary<string, DaggerfallTextSource> byPath = Sources.ToDictionary(source => source.Path, StringComparer.Ordinal);
@@ -475,12 +432,6 @@ public static class DaggerfallTextBuilder
     /// <summary>The inventory family the classic text resource is documented under.</summary>
     public const string TextFamily = "CNT-016";
 
-    /// <summary>The task that supplies the supplied books' own records.</summary>
-    public const int BookOwnerTask = 7951;
-
-    /// <summary>The task that supplies the name, biography and rumor tables' own records.</summary>
-    public const int NameBiographyRumorOwnerTask = 7941;
-
     public static DaggerfallText Build(byte[] bytes, string label, IReadOnlyList<SourceInventoryRow> inventory, string language)
     {
         ArgumentNullException.ThrowIfNull(bytes);
@@ -510,15 +461,6 @@ public static class DaggerfallTextBuilder
 
         DaggerfallText published = new(
             [new DaggerfallTextSource(DaggerfallTextKind.Resource, family.Id, label, language, bytes.LongLength, catalog.HeaderLength, catalog.Records.Count)],
-            [
-                // The families whose keys this contract declares and whose records their own tasks
-                // supply: a reference into one of them is a legal key the pack does not yet carry,
-                // which is a boundary rather than a missing value.
-                new DaggerfallTextPendingKind(DaggerfallTextKind.Book, BookOwnerTask, "Supplied book files carry their own metadata, pages and message mappings; this contract declares the key space they resolve through."),
-                new DaggerfallTextPendingKind(DaggerfallTextKind.Biography, NameBiographyRumorOwnerTask, "Biography text files carry the question and answer records a character consumes; this contract declares the key space they resolve through."),
-                new DaggerfallTextPendingKind(DaggerfallTextKind.Rumor, NameBiographyRumorOwnerTask, "Rumor records carry their own region, type and text; this contract declares the key space they resolve through."),
-                new DaggerfallTextPendingKind(DaggerfallTextKind.Name, NameBiographyRumorOwnerTask, "Name banks carry the generated name tables; this contract declares the key space they resolve through."),
-            ],
             [.. records.OrderBy(record => record.Source, StringComparer.Ordinal).ThenBy(record => record.Index)],
             [.. MacroIndex(records)]);
         published.Validate();
@@ -575,7 +517,6 @@ public static class DaggerfallTextBuilder
         List<DaggerfallTextRecord> records = [.. baseText.Records, .. nameRecords, .. rumorRecords, .. biographyRecords, .. bookRecords];
         DaggerfallText published = new(
             sources,
-            [],
             [.. records.OrderBy(record => record.Source, StringComparer.Ordinal).ThenBy(record => record.Index)],
             [.. MacroIndex(records)]);
         published.Validate();

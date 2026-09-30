@@ -34,7 +34,7 @@ public sealed class ImportPublicationTests : IDisposable
     {
         ImportPublicationPlan plan = CreatePlan(new ImportPublicationArtifact("value.bin", "value"u8));
         ImportPublicationSource overlay = new("sprites/site.json", ContentDigest.Compute("overlay"u8), 7);
-        ImportPublicationPlan invoked = plan.WithInvocation(new ImportInvocation(["daggerfall-import-tool", "write", "--arena2", "local/arena2"], [overlay]));
+        ImportPublicationPlan invoked = plan.WithInvocation(new ImportInvocation(["daggerfall-import-tool", "write", "--arena2", "arena2"], [overlay]));
 
         // Only the manifest changes: the recorded invocation is provenance, not another artifact.
         Assert.Equal(
@@ -45,7 +45,7 @@ public sealed class ImportPublicationTests : IDisposable
         // The command and overlays are stated once, as top-level fields.
         Assert.DoesNotContain("\"invocation\"", Encoding.UTF8.GetString(manifestBytes.Span), StringComparison.Ordinal);
         Assert.Equal("test-revision", reopened.ImporterRevision);
-        Assert.Equal(["daggerfall-import-tool", "write", "--arena2", "local/arena2"], reopened.Command);
+        Assert.Equal(["daggerfall-import-tool", "write", "--arena2", "arena2"], reopened.Command);
         Assert.Equal(overlay, Assert.Single(reopened.AuthoredOverlays));
         // An overlay is recorded beside the sources, never among them: the sprite authoring basis is
         // computed from the sources, and an overlay cannot be part of the basis it is written against.

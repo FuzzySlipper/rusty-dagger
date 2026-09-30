@@ -3479,7 +3479,7 @@
   "encounters": {
     "source": {
       "recordId": "CNT-8002.DFU.RandomEncounters",
-      "path": "donor:Assets/Scripts/Utility/RandomEncounters.cs"
+      "path": "daggerfall-unity/Assets/Scripts/Utility/RandomEncounters.cs"
     },
     "tables": [
       [

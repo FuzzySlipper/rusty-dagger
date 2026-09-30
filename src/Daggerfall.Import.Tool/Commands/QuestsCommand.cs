@@ -17,21 +17,24 @@ internal static class QuestsCommand
     public static ToolCommand Command { get; } = new("quests",
         [Options.Arena2, CommandOption.Required("--quest-text", "SOURCE_DIR"), CommandOption.Required("--tables", "TABLE_DIR"), Options.Pack, Options.Records, Options.Inventory, Options.Update], Run);
 
+    /// <summary>The donor directory the quest tables are published under.</summary>
+    private static readonly string Tables = PublishedSourcePath.Donor("Assets/StreamingAssets/Tables/");
+
     private static int Run(CommandArguments args)
     {
         string tablesDirectory = args["--tables"];
         byte[] Table(string name) => File.ReadAllBytes(Path.Combine(tablesDirectory, name));
         DaggerfallQuestTables tables = new(
-            DaggerfallQuestTableReader.Read(Table("Quests-GlobalVars.txt"), "Tables/Quests-GlobalVars.txt", globals: true),
-            DaggerfallQuestTableReader.Read(Table("Quests-StaticMessages.txt"), "Tables/Quests-StaticMessages.txt"),
-            DaggerfallQuestPlaceReader.Read(Table("Quests-Places.txt"), "Tables/Quests-Places.txt"),
-            DaggerfallQuestTableReader.Read(Table("Quests-Sounds.txt"), "Tables/Quests-Sounds.txt"),
-            DaggerfallQuestTableReader.Read(Table("Quests-Diseases.txt"), "Tables/Quests-Diseases.txt"),
-            DaggerfallQuestTableReader.Read(Table("Quests-Spells.txt"), "Tables/Quests-Spells.txt"),
+            DaggerfallQuestTableReader.Read(Table("Quests-GlobalVars.txt"), Tables + "Quests-GlobalVars.txt", globals: true),
+            DaggerfallQuestTableReader.Read(Table("Quests-StaticMessages.txt"), Tables + "Quests-StaticMessages.txt"),
+            DaggerfallQuestPlaceReader.Read(Table("Quests-Places.txt"), Tables + "Quests-Places.txt"),
+            DaggerfallQuestTableReader.Read(Table("Quests-Sounds.txt"), Tables + "Quests-Sounds.txt"),
+            DaggerfallQuestTableReader.Read(Table("Quests-Diseases.txt"), Tables + "Quests-Diseases.txt"),
+            DaggerfallQuestTableReader.Read(Table("Quests-Spells.txt"), Tables + "Quests-Spells.txt"),
             DaggerfallQuestActorItemTableReader.Read(
-                Table("Quests-Items.txt"), "Tables/Quests-Items.txt",
-                Table("Quests-Factions.txt"), "Tables/Quests-Factions.txt",
-                Table("Quests-Foes.txt"), "Tables/Quests-Foes.txt"));
+                Table("Quests-Items.txt"), Tables + "Quests-Items.txt",
+                Table("Quests-Factions.txt"), Tables + "Quests-Factions.txt",
+                Table("Quests-Foes.txt"), Tables + "Quests-Foes.txt"));
         List<QuestSourceDocument> documents = [];
         List<(string FileName, string QuestName, int Line, string Reason)> failures = [];
         long totalBytes = 0;
@@ -49,9 +52,9 @@ internal static class QuestsCommand
             }
         }
 
-        DaggerfallQuestPack pack = DaggerfallQuestPackBuilder.Build(documents, failures, "donor/StreamingAssets/Quests", new byte[totalBytes], Options.ReadInventory(args));
+        DaggerfallQuestPack pack = DaggerfallQuestPackBuilder.Build(documents, failures, PublishedSourcePath.Donor("Assets/StreamingAssets/Quests"), new byte[totalBytes], Options.ReadInventory(args));
         DaggerfallQuestCatalog catalog = DaggerfallQuestCatalogReader.Read(
-            Table("QuestList-Classic.txt"), "Tables/QuestList-Classic.txt",
+            Table("QuestList-Classic.txt"), Tables + "QuestList-Classic.txt",
             Directory.EnumerateFiles(args["--quest-text"], "*.txt"));
         DaggerfallQuestOriginalSourceSet originals = DaggerfallQuestOriginalSourceBuilder.Build(args["--arena2"], QuestSourcesCommand.Enumerate(args["--arena2"]), pack);
         Console.WriteLine($"classic catalog: {catalog.Rows.Count(row => row.Active)} active, {catalog.Rows.Count(row => !row.Active)} disabled, {catalog.Rows.Count(row => row.SourceDisposition == "missing")} missing sources");

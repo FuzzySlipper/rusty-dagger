@@ -27,7 +27,7 @@ internal static class VideosCommand
             files.Add((fileName, kind.Value, bytes.LongLength, Convert.ToHexString(SHA256.HashData(bytes))));
         }
 
-        DaggerfallCinematicPack pack = DaggerfallCinematicPackBuilder.Build(files, SourceManifestPublication.Arena2LogicalRoot, Options.ReadInventory(args));
+        DaggerfallCinematicPack pack = DaggerfallCinematicPackBuilder.Build(files, PublishedSourcePath.Arena2Root, Options.ReadInventory(args));
         Console.WriteLine($"videos: {pack.Cinematics.Count} cinematics, {pack.Cinematics.Count(record => record.Binding == DaggerfallCinematicBinding.Bound)} bound");
         if (!args.Switch("--update")) return Options.ReportOnly("these identities");
         PayloadFiles.WriteSection(args["--pack"], "cinematics", pack);

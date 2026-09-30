@@ -21,12 +21,11 @@ public sealed class NamesBiographiesRumorsPublicationTests
         Assert.Equal(1 + 1 + 1 + 1 + 18 + 90, text.Sources.Count);
         string[] paths = [.. text.Sources.Select(source => source.Path).OrderBy(path => path, StringComparer.Ordinal)];
         Assert.Equal(
-            ["local/arena2/BIO.DAT", "local/arena2/BIOG00T0.TXT", "local/arena2/BIOG01T0.TXT", "local/arena2/BIOG02T0.TXT", "local/arena2/BIOG03T0.TXT", "local/arena2/BIOG04T0.TXT", "local/arena2/BIOG05T0.TXT", "local/arena2/BIOG06T0.TXT", "local/arena2/BIOG07T0.TXT", "local/arena2/BIOG08T0.TXT", "local/arena2/BIOG09T0.TXT", "local/arena2/BIOG10T0.TXT", "local/arena2/BIOG11T0.TXT", "local/arena2/BIOG12T0.TXT", "local/arena2/BIOG13T0.TXT", "local/arena2/BIOG14T0.TXT", "local/arena2/BIOG15T0.TXT", "local/arena2/BIOG16T0.TXT", "local/arena2/BIOG17T0.TXT", "local/arena2/NAMEGEN.DAT", "local/arena2/RUMOR.DAT", "local/arena2/TEXT.RSC"],
-            paths.Where(path => !path.StartsWith("local/arena2/books/", StringComparison.Ordinal)));
-        string[] bookPaths = [.. paths.Where(path => path.StartsWith("local/arena2/books/", StringComparison.Ordinal))];
+            ["arena2/BIO.DAT", "arena2/BIOG00T0.TXT", "arena2/BIOG01T0.TXT", "arena2/BIOG02T0.TXT", "arena2/BIOG03T0.TXT", "arena2/BIOG04T0.TXT", "arena2/BIOG05T0.TXT", "arena2/BIOG06T0.TXT", "arena2/BIOG07T0.TXT", "arena2/BIOG08T0.TXT", "arena2/BIOG09T0.TXT", "arena2/BIOG10T0.TXT", "arena2/BIOG11T0.TXT", "arena2/BIOG12T0.TXT", "arena2/BIOG13T0.TXT", "arena2/BIOG14T0.TXT", "arena2/BIOG15T0.TXT", "arena2/BIOG16T0.TXT", "arena2/BIOG17T0.TXT", "arena2/NAMEGEN.DAT", "arena2/RUMOR.DAT", "arena2/TEXT.RSC"],
+            paths.Where(path => !path.StartsWith("arena2/books/", StringComparison.Ordinal)));
+        string[] bookPaths = [.. paths.Where(path => path.StartsWith("arena2/books/", StringComparison.Ordinal))];
         Assert.Equal(90, bookPaths.Length);
         Assert.Equal(bookPaths.OrderBy(path => path, StringComparer.Ordinal), bookPaths);
-        Assert.Empty(text.PendingKinds);
         Assert.Equal(112, books.Books.Count);
 
         // The new families carry no macro symbols of their own; the index still agrees both ways
@@ -61,7 +60,7 @@ public sealed class NamesBiographiesRumorsPublicationTests
         Assert.All(biographies.Biographies, biography =>
         {
             Assert.Equal("BIOG00I0", biography.Image.MediaId);
-            Assert.Equal("local/arena2/BIOG00I0.IMG", biography.Image.Source);
+            Assert.Equal("arena2/BIOG00I0.IMG", biography.Image.Source);
             Assert.False(biography.Image.Published);
             Assert.Contains("No media publication", biography.Image.Reason, StringComparison.Ordinal);
         });
@@ -105,21 +104,21 @@ public sealed class NamesBiographiesRumorsPublicationTests
     {
         CorpusFiles corpus = CorpusBytes();
         Assert.Throws<InvalidOperationException>(() => DaggerfallTextBuilder.BuildAll(
-            corpus.Text, "local/arena2/TEXT.RSC",
+            corpus.Text, "arena2/TEXT.RSC",
             corpus.Names, "elsewhere/NAMEGEN.DAT",
-            corpus.Rumors, "local/arena2/RUMOR.DAT",
-            corpus.Bio, "local/arena2/BIO.DAT",
+            corpus.Rumors, "arena2/RUMOR.DAT",
+            corpus.Bio, "arena2/BIO.DAT",
             corpus.Questionnaires, corpus.Image, corpus.Books, Inventory(), "en"));
 
         // A questionnaire whose backstory record the text resource does not carry records the
         // miss instead of refusing the file: the questionnaire exists either way.
         string twelve = string.Join("\n", Enumerable.Range(1, 12).Select(i => $"{i}.\tWhy {i}?\na.\tBecause\n#9999"));
         (DaggerfallText _, _, _, DaggerfallBiographies biographies, _) = DaggerfallTextBuilder.BuildAll(
-            Resource([(9000, "Backstory."u8.ToArray())]), "local/arena2/TEXT.RSC",
-            corpus.Names, "local/arena2/NAMEGEN.DAT",
-            corpus.Rumors, "local/arena2/RUMOR.DAT",
-            corpus.Bio, "local/arena2/BIO.DAT",
-            [(twelve, "local/arena2/BIOG00T0.TXT", 0, 0)],
+            Resource([(9000, "Backstory."u8.ToArray())]), "arena2/TEXT.RSC",
+            corpus.Names, "arena2/NAMEGEN.DAT",
+            corpus.Rumors, "arena2/RUMOR.DAT",
+            corpus.Bio, "arena2/BIO.DAT",
+            [(twelve, "arena2/BIOG00T0.TXT", 0, 0)],
             corpus.Image, corpus.Books, Inventory(), "en");
         DaggerfallBiography only = Assert.Single(biographies.Biographies);
         Assert.Equal(DaggerfallBiographyLinkDisposition.Unresolved, only.BackstoryDisposition);
@@ -130,10 +129,10 @@ public sealed class NamesBiographiesRumorsPublicationTests
 
     private static (DaggerfallText Text, DaggerfallNameTables Names, DaggerfallRumorCatalog Rumors, DaggerfallBiographies Biographies, DaggerfallBooks Books) BuildAll(CorpusFiles corpus) =>
         DaggerfallTextBuilder.BuildAll(
-            corpus.Text, "local/arena2/TEXT.RSC",
-            corpus.Names, "local/arena2/NAMEGEN.DAT",
-            corpus.Rumors, "local/arena2/RUMOR.DAT",
-            corpus.Bio, "local/arena2/BIO.DAT",
+            corpus.Text, "arena2/TEXT.RSC",
+            corpus.Names, "arena2/NAMEGEN.DAT",
+            corpus.Rumors, "arena2/RUMOR.DAT",
+            corpus.Bio, "arena2/BIO.DAT",
             corpus.Questionnaires, corpus.Image, corpus.Books, Inventory(), "en");
 
     private sealed record CorpusFiles(
@@ -148,7 +147,7 @@ public sealed class NamesBiographiesRumorsPublicationTests
         for (int cls = 0; cls <= 17; cls++)
         {
             string file = $"BIOG{cls:D2}T0.TXT";
-            questionnaires.Add((File.ReadAllText(TestData.Corpus(file)), $"local/arena2/{file}", cls, 0));
+            questionnaires.Add((File.ReadAllText(TestData.Corpus(file)), $"arena2/{file}", cls, 0));
         }
 
         return new CorpusFiles(
@@ -168,7 +167,7 @@ public sealed class NamesBiographiesRumorsPublicationTests
         foreach (string path in Directory.EnumerateFiles(books, "BOK*.TXT").Order(StringComparer.Ordinal))
         {
             int bookId = int.Parse(Path.GetFileNameWithoutExtension(path)[3..], CultureInfo.InvariantCulture);
-            supplied.Add((bookId, $"local/arena2/books/{Path.GetFileName(path)}", File.ReadAllBytes(path)));
+            supplied.Add((bookId, $"arena2/books/{Path.GetFileName(path)}", File.ReadAllBytes(path)));
         }
 
         return supplied;
