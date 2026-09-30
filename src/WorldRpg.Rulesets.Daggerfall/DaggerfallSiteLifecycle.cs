@@ -460,9 +460,13 @@ internal sealed class DaggerfallSiteLifecycle
     {
         DaggerfallExteriorCellId center = CurrentExteriorCell();
         DaggerfallExteriorCellResidency residency = EnsureExteriorResidency();
+        // The first window is admitted in the frame the center was just resolved in: the active site's
+        // map pixel. Anchoring it at the center instead would place every cell one tile away from the
+        // player whenever the landing pose lies outside the site's own cell, and the next step would
+        // then read the unmoved player as standing in yet another cell.
         DaggerfallExteriorWorldOrigin origin = residency.IsInitialized
             ? residency.Origin
-            : DaggerfallExteriorWorldOrigin.At(center);
+            : DaggerfallExteriorWorldOrigin.At(ActiveExteriorCell());
         DaggerfallExteriorCellResidencyUpdate update = residency.Update(center, origin);
         ReconcileExteriorTerrainAppearance(residency);
         return update;
