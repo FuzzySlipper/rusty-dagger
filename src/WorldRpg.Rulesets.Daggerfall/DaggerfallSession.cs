@@ -558,17 +558,13 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         {
             if (!State.Actors.TryGet(destination.ActorId, out _))
                 throw new InvalidOperationException($"Actor {destination.ActorId} is not live in the active profile.");
-            if (destination.Profile == _activeProfileKey)
-            {
-                ApplyActorRelocation(destination.ActorId, anchor);
-                return true;
-            }
-            // Authored placements are owned by their profile and have no portable definition in
-            // the inactive-site delta. Dynamic actors carry their definition and durable identity,
-            // so they are the only non-player actors that can cross a profile boundary safely.
-            if (!_dynamicActors.ContainsKey(destination.ActorId))
-                throw new InvalidOperationException($"Authored actor {destination.ActorId} cannot relocate across world profiles.");
-            return TryRelocateDynamicActorAcrossProfiles(destination.Profile, anchor, destination.ActorId);
+            // Moving an actor into a site the player is not in edits that site's delta; no caller
+            // needs it yet, and a temporary round trip through the player's own transition is not
+            // how it should be done, so it is refused rather than approximated.
+            if (destination.Profile != _activeProfileKey)
+                throw new InvalidOperationException($"Actor {destination.ActorId} cannot relocate to an inactive world profile.");
+            ApplyActorRelocation(destination.ActorId, anchor);
+            return true;
         }
         if (destination.Profile == _activeProfileKey)
         {
@@ -578,96 +574,10 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         return TryTransitionTo(destination.Profile, anchor, useReturnDestination: false);
     }
 
-    /// <summary>
-    /// Transfers a dynamic actor through the admitted destination lifecycle while retaining the
-    /// player's active site.  The temporary destination admission is immediately returned through
-    /// its recorded source pose, leaving the actor in the destination runtime delta.
-    /// </summary>
-    private bool TryRelocateDynamicActorAcrossProfiles(DaggerfallWorldProfileKey destination, DaggerfallSiteAnchor anchor, long actorId)
-    {
-        DaggerfallWorldProfileKey sourceProfile = _activeProfileKey;
-        DaggerfallSiteContextCheckpoint sourceSite = _site.CaptureCheckpoint();
-        DaggerfallWorldProfileKey? sourceReturnProfile = _returnProfileKey;
-        void RestoreSourceContext()
-        {
-            _site.RestoreCheckpoint(sourceSite);
-            _activeProfileKey = sourceProfile;
-            _returnProfileKey = sourceReturnProfile;
-        }
-        try
-        {
-            if (!TryTransitionTo(destination, anchor, useReturnDestination: false, actorId, playerFacing: false)) return false;
-        }
-        catch (Exception failure)
-        {
-            // TryTransitionTo commits the destination before releasing the old projection.  A
-            // release failure therefore leaves the destination active; complete the actor-only
-            // round trip before surfacing that release failure.
-            try
-            {
-                if (_activeProfileKey != sourceProfile)
-                    _ = TryTransitionTo(sourceProfile, null, useReturnDestination: true, relocatedActorId: null, playerFacing: false);
-                if (_activeProfileKey == sourceProfile)
-                    RestoreSourceContext();
-            }
-            catch (Exception rollbackFailure)
-            {
-                // A second transition may itself commit source before reporting a projection
-                // disposal failure. Preserve that committed source context before aggregating.
-                if (_activeProfileKey == sourceProfile)
-                {
-                    try { RestoreSourceContext(); }
-                    catch (Exception contextFailure) { throw new AggregateException(failure, rollbackFailure, contextFailure); }
-                }
-                throw new AggregateException(failure, rollbackFailure);
-            }
-            throw;
-        }
-        try
-        {
-            if (!TryTransitionTo(sourceProfile, null, useReturnDestination: true, relocatedActorId: null, playerFacing: false)) return false;
-            // Returning through the ordinary site lifecycle establishes the durable destination
-            // delta. Restore the source context checkpoint so actor-only relocation does not alter
-            // the player's prior return anchor or discovery state.
-            _site.RestoreCheckpoint(sourceSite);
-            _activeProfileKey = sourceProfile;
-            _returnProfileKey = sourceReturnProfile;
-            return true;
-        }
-        catch (Exception failure)
-        {
-            // A failure while returning leaves the temporary destination active. Make one bounded
-            // attempt to restore the source before surfacing the original failure.
-            if (_activeProfileKey != sourceProfile)
-            {
-                try
-                {
-                    _ = TryTransitionTo(sourceProfile, null, useReturnDestination: true, relocatedActorId: null, playerFacing: false);
-                    RestoreSourceContext();
-                }
-                catch (Exception rollbackFailure)
-                {
-                    if (_activeProfileKey == sourceProfile)
-                    {
-                        try { RestoreSourceContext(); }
-                        catch (Exception contextFailure) { throw new AggregateException(failure, rollbackFailure, contextFailure); }
-                    }
-                    throw new AggregateException(failure, rollbackFailure);
-                }
-            }
-            else
-            {
-                try { RestoreSourceContext(); }
-                catch (Exception rollbackFailure) { throw new AggregateException(failure, rollbackFailure); }
-            }
-            throw;
-        }
-    }
-
     /// <summary>Attempts one real site transition; failed destination admission leaves the source projection live.</summary>
     internal bool TryTransitionTo(DaggerfallWorldProfileKey destination) => TryTransitionTo(destination, null, useReturnDestination: true);
 
-    private bool TryTransitionTo(DaggerfallWorldProfileKey destination, DaggerfallSiteAnchor? arrival, bool useReturnDestination, long? relocatedActorId = null, bool playerFacing = true)
+    private bool TryTransitionTo(DaggerfallWorldProfileKey destination, DaggerfallSiteAnchor? arrival, bool useReturnDestination)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         PrivateersHoldInputs target = (_siteProfiles ?? throw new InvalidOperationException("Site profiles have not been admitted.")).Require(destination);
@@ -686,22 +596,13 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         DaggerfallSiteRuntimeDelta sourceDelta = _persistence.CaptureSiteDelta(source.Inputs, source.Doors,
             source.Motion, _dynamicActors);
         DaggerfallExteriorCellResidencySave? sourceExterior = CaptureExteriorResidency();
-        DaggerfallDynamicActorSave? relocatedDynamic = relocatedActorId is long requestedActor
-            ? sourceDelta.DynamicActors.SingleOrDefault(actor => actor.EntityId == requestedActor)
-                ?? throw new InvalidOperationException($"Dynamic actor {requestedActor} was not captured in the active site delta.")
-            : null;
-        DaggerfallSiteRuntimeDelta? relocatedDelta = relocatedDynamic is null
-            ? null
-            : DynamicActorDelta(sourceDelta, relocatedDynamic.EntityId);
         _siteDeltas.TryGetValue(destination, out DaggerfallSiteRuntimeDelta? destinationDelta);
-        DaggerfallSiteRuntimeDelta? destinationTeardownDelta = destinationDelta;
         DaggerfallSiteProjection? candidate = null;
         bool spatialReplaced = false;
         bool sourceActorsUnloaded = false;
         bool groundProfileSwitched = false;
         bool playerRelocated = false;
         bool exteriorCleared = false;
-        DaggerfallSiteRuntimeDelta committedSourceDelta = sourceDelta;
         try
         {
             candidate = DaggerfallSiteProjection.Create(_engine, State.Actors.Entities, _random, _tuning, _time.Calendar,
@@ -720,16 +621,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             _siteProjection = candidate;
             candidate = null;
             RestoreAuthoredSiteActors(target, destinationDelta);
-            if (relocatedDynamic is not null)
-            {
-                // Include the migrating identity in rollback teardown before materialization can
-                // fail on destination media or effect admission.
-                destinationTeardownDelta = AppendDynamicActor(destinationDelta, relocatedDynamic);
-                RestoreRelocatedDynamicActor(target, relocatedDynamic, relocatedDelta!);
-                committedSourceDelta = WithoutDynamicActor(sourceDelta, relocatedDynamic.EntityId);
-                ApplyActorRelocation(relocatedDynamic.EntityId, arrival
-                    ?? throw new InvalidOperationException("A cross-profile actor relocation requires a destination anchor."));
-            }
             _groundContainers.SwitchProfile(destination);
             groundProfileSwitched = true;
             // Activation depends only on the admitted candidate projection.  Prepare it before
@@ -751,14 +642,12 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
                 else
                     ApplyRelocation(target.Project.PlayerPosition ?? sourcePosition, State.PlayerControl.YawRadians, State.PlayerControl.PitchRadians);
             }
-            _siteDeltas[sourceProfile] = committedSourceDelta;
+            _siteDeltas[sourceProfile] = sourceDelta;
             _siteDeltas.Remove(destination);
             _activeProfileKey = destination;
             // Entering a place retires the previous world's loop: the donor gives a dungeon a new song
-            // per location rather than carrying the last one through the door. A relocation that moves
-            // one actor between profiles is not the player entering anything, so it leaves the score
-            // alone rather than restarting it behind a teleport the player never sees.
-            if (playerFacing) ChangeMusicSite();
+            // per location rather than carrying the last one through the door.
+            ChangeMusicSite();
             _bankProvider = null;
             if (destination.Kind == DaggerfallWorldProfileKind.Exterior)
                 UpdateExteriorResidency();
@@ -791,7 +680,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             }
             if (sourceActorsUnloaded)
             {
-                try { UnloadSiteActors(target, destinationTeardownDelta); }
+                try { UnloadSiteActors(target, destinationDelta); }
                 catch (Exception teardownFailure) { failures.Add(teardownFailure); }
                 try { RestoreAuthoredSiteActors(source.Inputs, sourceDelta); }
                 catch (Exception restoreFailure) { failures.Add(restoreFailure); }
@@ -844,8 +733,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             throw new AggregateException("Site transition failed and source restoration was incomplete.", failures);
         }
 
-        if (relocatedActorId is null
-            && State.DungeonDiscoveries.TryGetValue(sourceProfile, out DaggerfallDungeonDiscovery? sourceDiscovery)
+        if (State.DungeonDiscoveries.TryGetValue(sourceProfile, out DaggerfallDungeonDiscovery? sourceDiscovery)
             && source.Inputs.DungeonMap is { } sourceMap)
         {
             DaggerfallDungeonMapMarker? usedPortal = sourceMap.Markers
@@ -960,44 +848,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             : throw new InvalidOperationException($"Actor {actorId} is not live in the active profile.");
         actor.ApplyPose(new ActorPose(anchor.Position, anchor.YawRadians));
     }
-
-    private void RestoreRelocatedDynamicActor(PrivateersHoldInputs destination, DaggerfallDynamicActorSave saved, DaggerfallSiteRuntimeDelta delta)
-    {
-        _ = DaggerActorFactory.CreateDynamicActor(_random, _mechanics, _definitions, State.Actors, State.InventoryStore,
-            _definitionsByActor, saved);
-        _dynamicActors.Add(saved.EntityId, new DaggerfallActorId(saved.Definition));
-        if (_definitionsByActor[saved.EntityId].MobileId is int mobileId)
-        {
-            if (!destination.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
-                throw new InvalidOperationException($"Relocated actor '{saved.Definition}' has no admitted mobile {mobileId} presentation.");
-            _appearance.AddActor(saved.EntityId, sprite);
-        }
-        _persistence.RestoreSiteDelta(delta);
-        _appearance.SyncRestoredDefeat(State.Actors);
-    }
-
-    private static DaggerfallSiteRuntimeDelta DynamicActorDelta(DaggerfallSiteRuntimeDelta source, long actorId) =>
-        new(
-            [],
-            source.DynamicActors.Where(actor => actor.EntityId == actorId).ToArray(),
-            source.ActorInventories.Where(inventory => inventory.EntityId == actorId).ToArray(),
-            source.Corpses.Where(corpse => corpse.ActorId == actorId).ToArray(),
-            [],
-            source.Effects.Where(effect => effect.TargetId == actorId).ToArray());
-
-    private static DaggerfallSiteRuntimeDelta WithoutDynamicActor(DaggerfallSiteRuntimeDelta source, long actorId) =>
-        source with
-        {
-            DynamicActors = source.DynamicActors.Where(actor => actor.EntityId != actorId).ToArray(),
-            ActorInventories = source.ActorInventories.Where(inventory => inventory.EntityId != actorId).ToArray(),
-            Corpses = source.Corpses.Where(corpse => corpse.ActorId != actorId).ToArray(),
-            Effects = source.Effects.Where(effect => effect.TargetId != actorId).ToArray(),
-        };
-
-    private static DaggerfallSiteRuntimeDelta AppendDynamicActor(DaggerfallSiteRuntimeDelta? destination, DaggerfallDynamicActorSave actor) =>
-        destination is null
-            ? new([], [actor], [], [], [], [])
-            : destination with { DynamicActors = [.. destination.DynamicActors, actor] };
 
     /// <summary>
     /// Clears retained input and open interaction state before installing a landing pose. The Kit
@@ -1839,6 +1689,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
                 CombatRandomKey.Seed, "daggerfall.climbing.v1", $"generation:{generation}:step:{simulationStep}", 1, 100)).Value));
         DaggerfallLevitationStep levitation = _levitation.Resolve(new DaggerfallLevitationContext(
             State.Effects.GrantsLevitation(DaggerfallActorIdentity.PlayerEntityId),
+            // No movement owner reports water yet, so the player is never swimming here.
             Swimming: false,
             Climbing: climb.Climbing,
             CanMove: canMove,
@@ -2008,7 +1859,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             LatestPanelRequest, _saveSlots, _saveSlotDiagnostic, _controlSettings, _controlDiagnostic,
             ActivationView, State.Quests.ReadPresentation(QuestTextContext), _notebook.Read(),
             DaggerfallTransportProjection.Read(State.Transport, State.Inventory.Read(), TransportAccess(),
-                ownsShip: false, wagon: State.Wagon), _dungeonTextProjection, _deathPresentation.View, RestView,
+                ownsShip: State.Property.OwnsShip, wagon: State.Wagon), _dungeonTextProjection, _deathPresentation.View, RestView,
             ReadTravelPresentation());
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);

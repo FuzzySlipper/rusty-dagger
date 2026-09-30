@@ -31,6 +31,8 @@ internal sealed partial class DaggerfallSession
             IsIndoor: _activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior,
             IsDungeon: dungeon,
             DungeonExitDistance: exitDistance,
+            // The donor allows a ship only in a port town, a fact the normalized site exterior does
+            // not carry yet; until it does, no admitted site offers ship access.
             ShipAccessAllowed: false);
     }
 
