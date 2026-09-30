@@ -287,8 +287,8 @@ internal static class DaggerfallSiteContent
     }
 
     /// <summary>
-    /// Projects the importer-owned RDB light facts without reopening Arena2. The source record
-    /// has position and radius; older normalized records omitted a colour and retain donor-neutral white.
+    /// Projects the importer-owned RDB light facts without reopening Arena2: position, range, intensity and
+    /// the colour the importer states for every light.
     /// </summary>
     private static IReadOnlyList<DaggerfallSiteLight> ReadNormalizedLights(ReadOnlyMemory<byte>? bytes, DaggerfallContentDiagnostics diagnostics)
     {
@@ -311,10 +311,7 @@ internal static class DaggerfallSiteContent
                 Vector3 position = ObjectVector3(DaggerfallBaseContent.Property(light, "position", diagnostics), $"normalized light '{id}' position", diagnostics);
                 float range = DaggerfallBaseContent.Number(light, "range", diagnostics);
                 float intensity = DaggerfallBaseContent.Number(light, "intensity", diagnostics);
-                Vector3 color = !light.TryGetProperty("color", out JsonElement colorValue)
-                    || colorValue.ValueKind == JsonValueKind.Null
-                    ? Vector3.One
-                    : ObjectVector3(colorValue, $"normalized light '{id}' color", diagnostics);
+                Vector3 color = ObjectVector3(DaggerfallBaseContent.Property(light, "color", diagnostics), $"normalized light '{id}' color", diagnostics);
                 try
                 {
                     DaggerfallSiteLight projected = new DaggerfallSiteLight(id, new WorldPoint(position.X, position.Y, position.Z), range, intensity, color).Validate();
@@ -1968,12 +1965,16 @@ internal static class DaggerfallSiteContent
         return new(canonicalFrame.Width / largest, canonicalFrame.Height / largest);
     }
 
-    // Mirrors Daggerfall.Import NormalizedImportDocument's descriptor admission
-    // without making the runtime ruleset depend on the offline importer assembly.
+    // Daggerfall.Import's NormalizedImportDocument admits descriptors by the same rules. The runtime ruleset
+    // may not reference the offline importer, so NormalizedContractRoundTripTests holds the two together.
     private static bool ValidLogicalId(string value) => !string.IsNullOrWhiteSpace(value) && !value.Any(char.IsWhiteSpace);
     private static bool ValidLogicalPath(string value) => !string.IsNullOrWhiteSpace(value) && !value.StartsWith("/", StringComparison.Ordinal) && !value.StartsWith('\\') && !value.Contains('\\') && !value.Split('/').Any(segment => segment is "." or ".." or "");
     private static bool IsSha256Hex(string value) => value.Length == 64 && value.All(character => character is >= '0' and <= '9' or >= 'a' and <= 'f');
-    private static bool KnownClassicMediaKind(string value) => value is "texture" or "billboard" or "enemySprite" or "weaponSprite" or "effectSprite" or "audio" or "userInterface" or "font";
+    /// <summary>The media kinds a published descriptor may state (the importer's <c>NormalizedMediaKind</c>, camelCased).</summary>
+    internal static readonly IReadOnlySet<string> ClassicMediaKinds = new HashSet<string>(
+        ["texture", "billboard", "enemySprite", "weaponSprite", "effectSprite", "audio", "userInterface", "font"], StringComparer.Ordinal);
+
+    private static bool KnownClassicMediaKind(string value) => ClassicMediaKinds.Contains(value);
 
     private static float? OptionalSingle(JsonElement objectValue, string property, DaggerfallContentDiagnostics diagnostics)
     {

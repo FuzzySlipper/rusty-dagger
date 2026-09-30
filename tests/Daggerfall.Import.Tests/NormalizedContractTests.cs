@@ -154,7 +154,7 @@ public sealed class NormalizedContractTests
                 "navigation/example",
                 new("start", new(0F, 0F, 0F)),
                 new("enter", new(1F, 0F, 0F)),
-                [new("light/main", new(1F, 1F, 0F), 5F, 2F)],
+                [new("light/main", new(1F, 1F, 0F), 5F, 2F, new(1F, 1F, 1F))],
                 [new("billboard/sign", "sprite/sign", new(1F, 0F, 0F), new(1F, 1F))],
                 [new("actor/b", "actor/example", new(1F, 0F, 0F)), new("actor/a", "actor/example", new(0F, 0F, 0F))],
                 [new("treasure/chest", "treasure/example", new(1F, 0F, 0F))],

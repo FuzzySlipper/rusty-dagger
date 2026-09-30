@@ -358,7 +358,8 @@ public static class DungeonNormalizer
                 string id = $"light/{blockPlacementId}/{index}";
                 AddProvenance(id, "rdb-light", blocks.Source, index);
                 NormalizedVector3 position = MeshGeometry.ToRightHanded(Place(light.X, light.Y, light.Z, reference));
-                lights.Add(new(id, position, ToMetres(light.Radius) * LightRangeMultiplier, 1F));
+                // An RDB light record carries position and radius only; the donor lights it white.
+                lights.Add(new(id, position, ToMetres(light.Radius) * LightRangeMultiplier, 1F, new(1F, 1F, 1F)));
             }
 
             for (int index = 0; index < block.Flats.Count; index++)

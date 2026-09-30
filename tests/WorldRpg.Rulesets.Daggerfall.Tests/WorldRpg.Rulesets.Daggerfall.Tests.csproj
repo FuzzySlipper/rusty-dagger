@@ -15,5 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="../../src/WorldRpg.Host/WorldRpg.Host.csproj" />
     <ProjectReference Include="../../src/WorldRpg.Rulesets.Daggerfall/WorldRpg.Rulesets.Daggerfall.csproj" />
+    <!-- The contract round trip reads published sections through the importer's own records. -->
+    <ProjectReference Include="../../src/Daggerfall.Import/Daggerfall.Import.csproj" />
   </ItemGroup>
 </Project>
