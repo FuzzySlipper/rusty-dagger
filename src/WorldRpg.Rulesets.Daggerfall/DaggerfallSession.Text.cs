@@ -62,7 +62,7 @@ internal sealed partial class DaggerfallSession
             return;
         }
 
-        if (action.Action == "dungeon-text-close")
+        if (action.Kind == DaggerfallUiActionKind.DungeonTextClose)
         {
             if (_dungeonText.Pending is { } pending && pending.ActionId == actionId && pending.Revision == revision)
             {
@@ -79,7 +79,7 @@ internal sealed partial class DaggerfallSession
             return;
         }
 
-        if (action.Action != "dungeon-text-answer" || action.Text is not { } answer)
+        if (action.Kind != DaggerfallUiActionKind.DungeonTextAnswer || action.Text is not { } answer)
             throw new ArgumentException("Dungeon text input action is invalid.", nameof(action));
         DaggerfallDungeonTextActionResult submitted = _dungeonText.Submit(actionId, revision, answer);
         if (submitted.Outcome is DaggerfallDungeonTextOutcome.StaleSubmission or DaggerfallDungeonTextOutcome.NoPendingAnswer)

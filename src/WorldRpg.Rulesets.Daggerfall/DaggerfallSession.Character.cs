@@ -10,35 +10,35 @@ internal sealed partial class DaggerfallSession
     private void ChangeCharacter(DaggerfallPlayerUiAction action)
     {
         ArgumentNullException.ThrowIfNull(action);
-        if (action.Action != "character-cancel" && _mode != ProductMode.Title)
+        if (action.Kind != DaggerfallUiActionKind.CharacterCancel && _mode != ProductMode.Title)
         {
             Presentation.SetOutcome("Character creation is available from the title screen.");
             return;
         }
         try
         {
-            switch (action.Action)
+            switch (action.Kind)
             {
-                case "character-begin":
+                case DaggerfallUiActionKind.CharacterBegin:
                     State.Character.BeginChoices(_random);
                     Presentation.SetOutcome("Character choices opened.");
                     break;
-                case "character-cancel":
+                case DaggerfallUiActionKind.CharacterCancel:
                     State.Character.CancelChoices();
                     Presentation.SetOutcome("Character choices cancelled.");
                     break;
-                case "character-update":
+                case DaggerfallUiActionKind.CharacterUpdate:
                     RequireCharacterDraft();
                     State.Character.ReplacePending(Choices(action, State.Character.Pending!.Background));
                     Presentation.SetOutcome("Character choices updated.");
                     break;
-                case "character-background-reroll":
+                case DaggerfallUiActionKind.CharacterBackgroundReroll:
                     RequireCharacterDraft();
                     State.Character.ReplacePending(Choices(action, State.Character.Pending!.Background));
                     State.Character.RerollBackground(_random);
                     Presentation.SetOutcome("Character background rerolled.");
                     break;
-                case "character-commit":
+                case DaggerfallUiActionKind.CharacterCommit:
                     RequireCharacterDraft();
                     State.Character.ReplacePending(Choices(action, State.Character.Pending!.Background));
                     DaggerfallCharacterBackgroundSave? committedBackground = State.Character.CommitChoices();
@@ -68,13 +68,13 @@ internal sealed partial class DaggerfallSession
         ArgumentNullException.ThrowIfNull(action);
         try
         {
-            switch (action.Action)
+            switch (action.Kind)
             {
-                case "character-level-allocate":
+                case DaggerfallUiActionKind.CharacterLevelAllocate:
                     State.LevelUps.Allocate(action.Attribute ?? throw new ArgumentException("Level-up attribute is incomplete.", nameof(action)));
                     Presentation.SetOutcome("Level-up point allocated.");
                     break;
-                case "character-level-commit":
+                case DaggerfallUiActionKind.CharacterLevelCommit:
                     State.LevelUps.Commit();
                     Presentation.SetOutcome("Level-up committed.");
                     break;
@@ -113,7 +113,7 @@ internal sealed partial class DaggerfallSession
             DaggerfallCareerDefinition career = action.Career == DaggerfallCustomCareerPolicy.CareerId
                 ? DaggerfallCustomCareerPolicy.Compile(_definitions, custom!, State.Character.Career).Career
                 : _definitions.Catalogs.RequireCareer(action.Career);
-            background = action.Action == "character-background-reroll" ? currentBackground : DaggerfallCharacterBackgroundPolicy.Update(_definitions, career, identity, currentBackground,
+            background = action.Kind == DaggerfallUiActionKind.CharacterBackgroundReroll ? currentBackground : DaggerfallCharacterBackgroundPolicy.Update(_definitions, career, identity, currentBackground,
                 Answers(action.BackgroundAnswers), Allocations(action.AttributeAllocations, "attribute"), Allocations(action.SkillAllocations, "skill"));
         }
         return new DaggerfallCharacterCreationChoices(action.Name, action.Race, gender, face,

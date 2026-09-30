@@ -29,7 +29,7 @@ internal sealed partial class DaggerfallSession
             return;
         }
         DaggerfallLoanSettlementAdapter settlement = DaggerfallLoanSettlementAdapter.ForBank(State.Bank, State.Currency);
-        if (action.Action == "bank-loan-issue")
+        if (action.Kind == DaggerfallUiActionKind.BankLoanIssue)
         {
             DaggerfallLoanIssueDecision issue = State.Loans.Issue(region, State.Progression.Level,
                 (long)amount, _time.Calendar, settlement);
@@ -38,7 +38,7 @@ internal sealed partial class DaggerfallSession
                 : $"Loan refused: {issue.Result}.");
             return;
         }
-        bool fromAccount = action.Action == "bank-loan-repay-account";
+        bool fromAccount = action.Kind == DaggerfallUiActionKind.BankLoanRepayAccount;
         DaggerfallLoanRepaymentDecision repayment = State.Loans.Repay(region, amount, fromAccount,
             State.Bank, State.Currency, settlement);
         Presentation.SetOutcome(repayment.Applied

@@ -177,4 +177,18 @@ public sealed class DaggerfallUiActionTests
     [InlineData("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":2,\"item\":\"unexpected\"}", false)]
     public void Rest_actions_require_an_explicit_mode_and_duration_shape(string json, bool accepted) =>
         Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
+
+    [Fact]
+    public void Every_action_kind_declares_one_wire_name_and_its_admitted_phases()
+    {
+        Assert.Equal(Enum.GetValues<DaggerfallUiActionKind>().Order(), DaggerfallUiAction.Rules.Select(rule => rule.Kind).Order());
+        Assert.Equal(DaggerfallUiAction.Rules.Count, DaggerfallUiAction.Rules.Select(rule => rule.Wire).Distinct(StringComparer.Ordinal).Count());
+        foreach (DaggerfallUiActionRule rule in DaggerfallUiAction.Rules)
+        {
+            Assert.Equal(rule.Kind, DaggerfallUiAction.KindOf(rule.Wire));
+            Assert.NotEqual(DaggerfallUiPhases.None, rule.Phases);
+        }
+        Assert.Equal(DaggerfallUiActionKind.LootTake, DaggerfallUiAction.Parse(
+            Encoding.UTF8.GetBytes("{\"action\":\"loot-take\",\"revision\":\"1\",\"item\":\"stack:a\",\"container\":\"c\"}"))!.Kind);
+    }
 }

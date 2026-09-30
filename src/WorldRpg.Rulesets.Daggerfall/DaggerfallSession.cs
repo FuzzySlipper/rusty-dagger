@@ -700,131 +700,20 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         _openingCinematics.Poll();
         bool playing = _mode == ProductMode.Playing && Cinematics?.ActiveSource is null;
         bool modal = _mode == ProductMode.Modal;
-        // The slice that opens an interaction admits no attack. A key pressed in the same admitted
-        // update as the interaction key is a coincidence of timing rather than an instruction, and
-        // whichever order the Engine delivers them in, swinging on the frame a container opens is
-        // the "unintended attack" this task exists to prevent.
-        bool opensInteraction = playing && ContainsInteractionAction(input);
+        DaggerfallUiPhases phase = _mode == ProductMode.Dead ? DaggerfallUiPhases.Dead
+            : playing ? DaggerfallUiPhases.Playing
+            : modal ? DaggerfallUiPhases.Modal
+            : DaggerfallUiPhases.Held;
+        DaggerfallUiInput ui = TakeUiInput(input);
+        // The slice that opens an interaction admits no attack. Whichever order the Engine delivers
+        // the keys in, swinging on the frame a container opens is an unintended attack.
+        bool opensInteraction = playing && OpensInteraction(ui);
         bool restSubmitted = false;
-        foreach (ProductInputEvent inputEvent in input)
+        for (int index = 0; index < input.Length; index++)
         {
-            firstStep.Add(inputEvent);
-            if (inputEvent.ValueKind != InputValueKind.ProductPayload
-                || !inputEvent.PayloadContract.Span.SequenceEqual("dagger.ui.action.v1"u8)) continue;
-            DaggerfallPlayerUiAction? action = DaggerfallUiAction.Parse(inputEvent.PayloadData.Span);
-            // Death owns the session's input while the Host decides the resulting replacement.
-            // Consume every payload here so held or stale ordinary actions cannot mutate state
-            // while the death choices are visible.
-            if (_mode == ProductMode.Dead)
-            {
-                // Art requests are presentation maintenance, so a reloaded death screen can still
-                // recover its admitted image while gameplay and menu actions remain suppressed.
-                if (action?.Action == "art-request") _hud.RequestArt();
-                else HandleDeathAction(action);
-                continue;
-            }
-            switch (action?.Action)
-            {
-                // The entry screen's own action is the product's to answer, so the session knows the
-                // shape and does nothing with it; the product has already left the mode by the time an
-                // action in ordinary play could arrive.
-                case "begin": break;
-                case "cinematic-skip": _openingCinematics.Skip(); break;
-                case "controls-rebind":
-                case "controls-reset": ChangeControls(action!); break;
-                case "character-begin":
-                case "character-update":
-                case "character-background-reroll":
-                case "character-commit":
-                case "character-cancel": ChangeCharacter(action!); break;
-                case "character-level-allocate":
-                case "character-level-commit": if (playing) ChangeLevelUp(action!); break;
-                case "activation-mode": if (playing) ApplyActivationMode(action!); break;
-                case "dialogue-tone":
-                case "dialogue-topic":
-                case "dialogue-close": if (playing || modal) _ = ApplyDialogueAction(action!); break;
-                case "transport-select":
-                case "transport-toggle":
-                case "transport-leave-ship": if (playing) ChangeTransport(action!); break;
-                case "travel-search":
-                case "travel-preview": if (playing || modal) ChangeTravel(action!); break;
-                case "rest": if (playing && !restSubmitted) { ChangeRest(action!); restSubmitted = true; } break;
-                case "wagon-put":
-                case "wagon-take": if (playing) ChangeWagon(action!); break;
-                case "quest-choice":
-                    if ((playing || modal) && State.Quests.ChoosePrompt(State.Variables, action!.QuestInstance!, action.QuestMessage!.Value, action.QuestPrompt!, action.QuestChoice!.Value))
-                        Presentation.SetOutcome("Quest choice recorded.");
-                    else Presentation.SetOutcome("Quest choice rejected: this prompt is no longer pending or the choice is invalid.");
-                    break;
-                case "dungeon-text-answer":
-                case "dungeon-text-close": if (playing || modal) ApplyDungeonTextInput(action!); break;
-                case "attack": if (playing && !opensInteraction) firstStep.Request(DaggerfallInput.Attack); break;
-                // A reloaded DOM holds no art and asks for the revision it is missing; the projection
-                // answers on its next snapshot rather than a second delivery channel existing.
-                case "art-request": _hud.RequestArt(); break;
-                case "inventory": break;
-                case "inventory-move": if (playing || modal) _inventoryUi.Move(action!); break;
-                case "inventory-inspect": if (playing || modal) _inventoryUi.Inspect(action!); break;
-                case "inventory-use": if (playing || modal) _inventoryUi.Use(action!); break;
-                case "notebook-page": if (playing || modal) ApplyNotebookAction(action!); break;
-                case "notebook-add": if (playing || modal) ApplyNotebookAction(action!); break;
-                case "notebook-edit": if (playing || modal) ApplyNotebookAction(action!); break;
-                case "notebook-remove": if (playing || modal) ApplyNotebookAction(action!); break;
-                case "notebook-move": if (playing || modal) ApplyNotebookAction(action!); break;
-                case "inventory-drop": if (playing || modal) _inventoryUi.Drop(action!); break;
-                case "currency-deposit-gold": if (playing || modal) ChangeCurrency(action!); break;
-                case "currency-withdraw-gold": if (playing || modal) ChangeCurrency(action!); break;
-                case "currency-deposit-letters": if (playing || modal) ChangeCurrency(action!); break;
-                case "currency-withdraw-letter": if (playing || modal) ChangeCurrency(action!); break;
-                case "bank-transfer": if (playing || modal) ChangeCurrency(action!); break;
-                case "bank-loan-issue":
-                case "bank-loan-repay-account":
-                case "bank-loan-repay-carried": if (playing || modal) ChangeLoan(action!); break;
-                case "character": break;
-                case "loot": if (playing) firstStep.Request(DaggerfallInput.Interact); break;
-                case "loot-close": if (playing || modal) _lootUi.Close(action!.Container); break;
-                // Bare quick-save creates a named slot; quick-load selects slot-1. Both use
-                // the same catalog owner as the selectable DOM controls.
-                case "save-game": if (playing || modal) _saveSlotRequest = new(SaveSlotOperation.Save, Label: "Saved game"); break;
-                case "load-game": if (playing || modal) _saveSlotRequest = new(SaveSlotOperation.Load, "slot-1"); break;
-                case "save-slots": if (playing || modal) _saveSlotRequest = new(SaveSlotOperation.List); break;
-                case "save-slot": if (playing || modal) _saveSlotRequest = new(SaveSlotOperation.Save, action!.Key, action.Label, action.Confirm); break;
-                case "load-slot": if (playing || modal) _saveSlotRequest = new(SaveSlotOperation.Load, action!.Key); break;
-                case "delete-slot": if (playing || modal) _saveSlotRequest = new(SaveSlotOperation.Delete, action!.Key, Confirm: action.Confirm); break;
-                case "loot-take":
-                    if (playing || modal)
-                    {
-                        if (_lootUi.PrepareGroundTake(action!) is { } groundTake)
-                        {
-                            if (!State.Encumbrance.CanCarry(_definitions.RequireItem(new DaggerfallItemId(groundTake.Definition)), groundTake.Quantity))
-                            {
-                                _lootUi.CompleteGround(false, "You cannot carry any more.");
-                                Presentation.SetOutcome(_lootUi.Message);
-                                break;
-                            }
-                            try
-                            {
-                                _groundContainers.Take(groundTake.Id, groundTake.Selection, groundTake.ExpectedWorldRevision);
-                                _lootUi.CompleteGround(true);
-                            }
-                            catch (Exception rejection) when (rejection is InvalidOperationException or ArgumentException)
-                            {
-                                _lootUi.CompleteGround(false, rejection.Message);
-                            }
-                            Presentation.SetOutcome(_lootUi.Message);
-                            break;
-                        }
-                        // A valid take applies at once: the transfer commits, its completed-change
-                        // facts deliver at the boundary below even while the modal holds the world,
-                        // and the published presentation already reflects the result.
-                        // A refused take (a stale revision, a closed container) states its reason too.
-                        if (_lootUi.PrepareTake(action!, State.PlayerControl, _input.ResolveCurrentLook(State.PlayerControl)) is { } take)
-                            _lootUi.Complete(_corpseLoot.TryCommitLoot(take, _facts));
-                        Presentation.SetOutcome(_lootUi.Message);
-                    }
-                    break;
-                default: Presentation.SetOutcome("Unrecognized player UI action."); break;
-            }
+            firstStep.Add(input[index]);
+            if (ui.IsUiAction(index))
+                AdmitUiAction(ui.ActionAt(index), phase, firstStep, opensInteraction, ref restSubmitted);
         }
 
         if (restSubmitted)
@@ -886,19 +775,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
     /// they want shown here, and the projection carries it without knowing what it means.
     /// </summary>
     internal PresentationSlots Slots { get; } = new();
-
-    /// <summary>Whether this admitted slice consumes attack/use as a contextual interaction or mode change.</summary>
-    private static bool ContainsInteractionAction(ReadOnlySpan<ProductInputEvent> input)
-    {
-        foreach (ProductInputEvent inputEvent in input)
-        {
-            if (inputEvent.ValueKind != InputValueKind.ProductPayload
-                || !inputEvent.PayloadContract.Span.SequenceEqual("dagger.ui.action.v1"u8)) continue;
-            if (DaggerfallUiAction.Parse(inputEvent.PayloadData.Span)?.Action is "loot" or "activation-mode" or "dialogue-topic" or "rest") return true;
-        }
-
-        return false;
-    }
 
     /// <summary>The input system's held state, readable so the mode request and tests agree on it.</summary>
     internal ProductMode Mode => _mode;
@@ -1153,14 +1029,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         // Tasks consume the state committed by this admitted step. Clock actions mutate only the
         // quest clock state; elapsed duration is still consumed by the calendar owner above.
         State.Quests.Advance(State.Variables, _time.Calendar);
-    }
-
-    public bool RequestsBegin(ReadOnlySpan<ProductInputEvent> input)
-    {
-        foreach (ProductInputEvent value in input)
-            if (value.ValueKind == InputValueKind.ProductPayload && value.PayloadContract.Span.SequenceEqual("dagger.ui.action.v1"u8)
-                && DaggerfallUiAction.Parse(value.PayloadData.Span)?.Action == DaggerfallUiAction.BeginAction) return true;
-        return false;
     }
 
     public void Dispose()

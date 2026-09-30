@@ -108,22 +108,22 @@ internal sealed class DaggerfallBookNotebook(DaggerfallDefinitions definitions, 
         if (!MatchesRevision(action.Revision)) return new(false, "Notebook changed. Choose the page or note again.");
         try
         {
-            switch (action.Action)
+            switch (action.Kind)
             {
-                case "notebook-page":
+                case DaggerfallUiActionKind.NotebookPage:
                     if (action.Page is not int page) return new(false, "Choose a readable book page.");
                     SetPage(page);
                     return new(true, "Book page turned.");
-                case "notebook-add":
+                case DaggerfallUiActionKind.NotebookAdd:
                     Add(action.Text!);
                     return new(true, "Note added.");
-                case "notebook-edit":
+                case DaggerfallUiActionKind.NotebookEdit:
                     Edit(action.Note!, action.Text!);
                     return new(true, "Note updated.");
-                case "notebook-remove":
+                case DaggerfallUiActionKind.NotebookRemove:
                     Remove(action.Note!);
                     return new(true, "Note removed.");
-                case "notebook-move":
+                case DaggerfallUiActionKind.NotebookMove:
                     Move(action.Note!, action.Destination!.Value);
                     return new(true, "Note reordered.");
                 default:

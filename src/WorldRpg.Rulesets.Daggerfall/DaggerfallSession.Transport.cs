@@ -38,17 +38,17 @@ internal sealed partial class DaggerfallSession
 
     private void ChangeTransport(DaggerfallPlayerUiAction action)
     {
-        DaggerfallTransportActionResult result = action.Action switch
+        DaggerfallTransportActionResult result = action.Kind switch
         {
-            "transport-toggle" => State.Transport.ToggleMount(State.Inventory.Read(), TransportAccess()),
-            "transport-select" => State.Transport.SelectMount(action.Mode switch
+            DaggerfallUiActionKind.TransportToggle => State.Transport.ToggleMount(State.Inventory.Read(), TransportAccess()),
+            DaggerfallUiActionKind.TransportSelect => State.Transport.SelectMount(action.Mode switch
             {
                 "foot" => DaggerfallTransportMode.Foot,
                 "horse" => DaggerfallTransportMode.Horse,
                 "cart" => DaggerfallTransportMode.Cart,
                 _ => throw new InvalidOperationException("Parsed transport mode is not supported."),
             }, State.Inventory.Read(), TransportAccess()),
-            "transport-leave-ship" => State.Transport.LeaveShip(),
+            DaggerfallUiActionKind.TransportLeaveShip => State.Transport.LeaveShip(),
             _ => throw new InvalidOperationException("Parsed transport action is not supported."),
         };
         if (result.Applied)
@@ -67,7 +67,7 @@ internal sealed partial class DaggerfallSession
             Presentation.SetOutcome("Inventory changed. Choose the item again.");
             return;
         }
-        bool put = action.Action == "wagon-put";
+        bool put = action.Kind == DaggerfallUiActionKind.WagonPut;
         InventoryView? source = put ? State.Inventory.Read() : State.Wagon.Read();
         if (source is null || action.Item is null || !TryWagonSelection(source, action.Item, action.Amount, out InventoryContainerSelection? selection))
         {
