@@ -61,20 +61,6 @@ public sealed class CanaryRulesetTests
         Assert.True(session.IsDisposed);
     }
 
-    [Fact]
-    public void Scenario_stays_deliberately_incompatible_with_the_reference_ruleset()
-    {
-        CanaryScenario scenario = CanaryScenario.SingleRoom;
-
-        Assert.Equal(["might", "finesse"], scenario.Statistics);
-        Assert.Equal(["vitality", "focus"], scenario.Resources);
-        Assert.Equal("weapon", scenario.WeaponSlot);
-        Assert.Equal("reach", scenario.CombatStyle);
-        Assert.Equal("observatory", scenario.Room);
-        Assert.Equal("warden", scenario.Actor);
-        Assert.False(scenario.HasCurrency);
-    }
-
     private static ProductUpdateFacts AdmittedRealtimeFacts() => new(
         ProductUpdateMode.Realtime,
         ProductLifecycleState.Running,

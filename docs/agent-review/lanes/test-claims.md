@@ -28,6 +28,10 @@ implementation that the suite would not notice.
 - A retired-path test kept green by retaining production behavior nobody wants.
 - A test whose name states more than its assertions check.
 
+A probe test written into the tree to reproduce a finding is named
+`tests/<project>/ReviewProbe*.cs`; only that prefix is ignored by Git, and the
+probe is deleted after the run.
+
 ## Not a finding
 
 - Low coverage in general, or missing tests for code this change did not touch.

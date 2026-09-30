@@ -63,6 +63,25 @@ public sealed class ArchitectureLawTests
     }
 
     [Fact]
+    public void Verification_script_runs_every_test_project()
+    {
+        // A suite the gate never runs rots unseen: the canary sat outside the script while every other
+        // suite was run, so nothing reported whether it still held.
+        string script = File.ReadAllText(Path.Combine(RepositoryRoot, "scripts", "verify.sh"));
+        string[] tested = Regex.Matches(script, @"^\s*dotnet test\s+(\S+\.csproj)", RegexOptions.Multiline | RegexOptions.CultureInvariant)
+            .Select(match => match.Groups[1].Value.Replace('\\', '/'))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        string[] projects = Directory.GetFiles(Path.Combine(RepositoryRoot, "tests"), "*.csproj", SearchOption.AllDirectories)
+            .Where(file => !file.Split(Path.DirectorySeparatorChar).Any(part => part is "bin" or "obj"))
+            .Select(file => Path.GetRelativePath(RepositoryRoot, file).Replace('\\', '/'))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(projects, tested);
+    }
+
+    [Fact]
     public void Host_concrete_ruleset_references_stay_at_builtin_composition_seams()
     {
         string host = SourceDirectory("WorldRpg.Host");

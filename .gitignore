@@ -11,10 +11,10 @@ src/WorldRpg.SpriteWorkbench/workbench-content/
 **/bin/
 **/obj/
 
-# Throwaway probe files a review lane runs inside the tree and deletes afterwards.
-# A probe that fails still fails the suite; this only keeps it out of commits.
-tests/**/Temp*Tests.cs
-# Review-lane probes use whatever temporary name the lane picks; treat any of them as
-# disposable so one committed probe cannot happen again.
-tests/**/[Tt]mp*.cs
-tests/**/Temp*.cs
+TestResults/
+*.trx
+
+# Throwaway probe files a review lane runs inside the tree and deletes afterwards. A probe that
+# fails still fails the suite; this only keeps it out of commits. The prefix is exact so that an
+# ordinary test file (TemplateLedgerTests.cs, TemperatureTests.cs) is never ignored by accident.
+tests/**/ReviewProbe*.cs
