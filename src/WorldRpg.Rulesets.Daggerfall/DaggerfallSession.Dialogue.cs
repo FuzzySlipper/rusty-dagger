@@ -126,14 +126,14 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     internal DaggerfallActivationOutcome ApplyAction(DaggerfallPlayerUiAction action)
     {
         ArgumentNullException.ThrowIfNull(action);
-        if (action.Action == "dialogue-close")
+        if (action.Kind == DaggerfallUiActionKind.DialogueClose)
         {
             if (!MatchesRevision(action.Revision)) return Reject("That conversation has already ended.");
             Close();
             return Report(new(true, "You end the conversation."));
         }
 
-        if (action.Action is not ("dialogue-tone" or "dialogue-topic") || !MatchesRevision(action.Revision))
+        if (action.Kind is not (DaggerfallUiActionKind.DialogueTone or DaggerfallUiActionKind.DialogueTopic) || !MatchesRevision(action.Revision))
             return Reject("That conversation choice is no longer current.");
         if (!ValidateCurrent(out DaggerfallNpc? npc, out ActorState? actor, out DaggerfallSiteRecord? site))
         {
@@ -141,7 +141,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             return Reject("That person has moved or is no longer available.");
         }
 
-        if (action.Action == "dialogue-tone")
+        if (action.Kind == DaggerfallUiActionKind.DialogueTone)
         {
             if (!TryParseTone(action.Tone, out DaggerfallDialogueTone tone))
                 return Reject("That tone is not available.");
@@ -500,7 +500,7 @@ internal sealed partial class DaggerfallSession
 {
     private bool ApplyDialogueAction(DaggerfallPlayerUiAction action)
     {
-        if (action.Action is not ("dialogue-tone" or "dialogue-topic" or "dialogue-close") || _dialogue is null)
+        if (action.Kind is not (DaggerfallUiActionKind.DialogueTone or DaggerfallUiActionKind.DialogueTopic or DaggerfallUiActionKind.DialogueClose) || _dialogue is null)
             return false;
         _dialogue.ApplyAction(action);
         return true;

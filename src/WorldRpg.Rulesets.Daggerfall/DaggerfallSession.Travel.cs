@@ -16,7 +16,7 @@ internal sealed partial class DaggerfallSession
 
     private void ChangeTravel(DaggerfallPlayerUiAction action)
     {
-        if (action.Action == "travel-search")
+        if (action.Kind == DaggerfallUiActionKind.TravelSearch)
         {
             string term = action.Text?.Trim() ?? string.Empty;
             _travelSearchResults = [.. _travelPolicy.SupportedDestinations()

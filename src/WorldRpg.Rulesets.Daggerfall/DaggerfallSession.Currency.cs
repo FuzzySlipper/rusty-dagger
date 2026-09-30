@@ -33,13 +33,13 @@ internal sealed partial class DaggerfallSession
         long amount = action.Amount is ulong requested
             ? requested > long.MaxValue ? long.MaxValue : (long)requested
             : 0;
-        DaggerfallBankTransactionOutcome outcome = action.Action switch
+        DaggerfallBankTransactionOutcome outcome = action.Kind switch
         {
-            "currency-deposit-gold" => State.Bank.DepositGold(region, amount, State.Wagon, TransportAccess()),
-            "currency-withdraw-gold" => State.Bank.WithdrawGold(region, amount),
-            "currency-deposit-letters" => State.Bank.DepositLetters(region),
-            "currency-withdraw-letter" => State.Bank.WithdrawLetter(region, amount),
-            "bank-transfer" => State.Bank.Transfer(region, action.Destination ?? -1, amount),
+            DaggerfallUiActionKind.CurrencyDepositGold => State.Bank.DepositGold(region, amount, State.Wagon, TransportAccess()),
+            DaggerfallUiActionKind.CurrencyWithdrawGold => State.Bank.WithdrawGold(region, amount),
+            DaggerfallUiActionKind.CurrencyDepositLetters => State.Bank.DepositLetters(region),
+            DaggerfallUiActionKind.CurrencyWithdrawLetter => State.Bank.WithdrawLetter(region, amount),
+            DaggerfallUiActionKind.BankTransfer => State.Bank.Transfer(region, action.Destination ?? -1, amount),
             _ => throw new ArgumentException($"'{action.Action}' is not a currency or bank operation.", nameof(action)),
         };
         _inventoryUi.ReportBankTransaction(outcome);

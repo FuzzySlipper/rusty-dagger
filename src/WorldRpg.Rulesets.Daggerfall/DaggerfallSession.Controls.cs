@@ -54,9 +54,9 @@ internal sealed partial class DaggerfallSession
     {
         try
         {
-            DaggerfallControlSettings candidate = action.Action == "controls-reset"
+            DaggerfallControlSettings candidate = action.Kind == DaggerfallUiActionKind.ControlsReset
                 ? new() : DaggerfallControlSettings.Parse(_controlSettings.Serialize());
-            if (action.Action != "controls-reset") candidate.Rebind(action.Item!, [action.Key!], action.Confirm);
+            if (action.Kind != DaggerfallUiActionKind.ControlsReset) candidate.Rebind(action.Item!, [action.Key!], action.Confirm);
             ApplyControlSettings(candidate);
             _preferencesToSave = candidate.Serialize();
             _controlDiagnostic = "Bindings applied.";

@@ -67,7 +67,7 @@ internal sealed partial class DaggerfallSession
     /// <summary>Consumes one parsed mode action; it does not turn into a world activation.</summary>
     private bool ApplyActivationMode(DaggerfallPlayerUiAction action)
     {
-        if (action.Action != "activation-mode" || action.Mode is null || _activation is null) return false;
+        if (action.Kind != DaggerfallUiActionKind.ActivationMode || action.Mode is null || _activation is null) return false;
         DaggerfallActivationMode mode = action.Mode switch
         {
             "grab" => DaggerfallActivationMode.Grab,

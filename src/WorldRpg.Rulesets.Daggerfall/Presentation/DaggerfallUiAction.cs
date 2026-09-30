@@ -1,7 +1,9 @@
 using System.Text.Json;
+using Rusty.Engine;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
+/// <summary>One admitted Daggerfall player action: its typed kind plus the fields its wire shape carries.</summary>
 internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision = null, string? Item = null, int? TargetGrid = null, string? TargetEquipment = null, string? Container = null, string? Key = null, string? Label = null, bool Confirm = false,
     string? Name = null, string? Race = null, string? Gender = null, int? FaceIndex = null, int? Reflexes = null, string? Career = null, string? Mode = null,
     string? PrimarySkills = null, string? MajorSkills = null, string? MinorSkills = null, string? Advantages = null, string? Disadvantages = null, int? HitPointsPerLevel = null,
@@ -9,12 +11,209 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
     string? QuestInstance = null, int? QuestMessage = null, int? QuestChoice = null, string? QuestPrompt = null,
     string? Note = null, string? Text = null, int? Page = null, int? Destination = null,
     string? Tone = null, string? Topic = null, int? Hours = null, int? Region = null,
-    bool Cautious = false, bool Inn = false, bool Ship = false);
+    bool Cautious = false, bool Inn = false, bool Ship = false)
+{
+    /// <summary>The typed action the wire name names; resolved once when the action is built.</summary>
+    internal DaggerfallUiActionKind Kind { get; } = DaggerfallUiAction.KindOf(Action);
+}
+
+/// <summary>Every player action the <c>dagger.ui.action.v1</c> contract carries, by meaning.</summary>
+internal enum DaggerfallUiActionKind
+{
+    Begin, CinematicSkip, ArtRequest,
+    ControlsRebind, ControlsReset,
+    CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel,
+    CharacterLevelAllocate, CharacterLevelCommit,
+    ActivationMode, Attack, Loot, Inventory, Character,
+    DialogueTone, DialogueTopic, DialogueClose,
+    TransportSelect, TransportToggle, TransportLeaveShip,
+    TravelSearch, TravelPreview,
+    Rest,
+    WagonPut, WagonTake,
+    QuestChoice,
+    DungeonTextAnswer, DungeonTextClose,
+    InventoryMove, InventoryInspect, InventoryUse, InventoryDrop,
+    NotebookPage, NotebookAdd, NotebookEdit, NotebookRemove, NotebookMove,
+    CurrencyDepositGold, CurrencyWithdrawGold, CurrencyDepositLetters, CurrencyWithdrawLetter, BankTransfer,
+    BankLoanIssue, BankLoanRepayAccount, BankLoanRepayCarried,
+    LootClose, LootTake,
+    SaveGame, LoadGame, SaveSlots, SaveSlot, LoadSlot, DeleteSlot,
+    DeathNewGame, DeathLoadGame, DeathQuit,
+}
+
+/// <summary>Which of the session's input phases an action is admitted in.</summary>
+[Flags]
+internal enum DaggerfallUiPhases
+{
+    None = 0,
+    /// <summary>Ordinary play with no cinematic over it.</summary>
+    Playing = 1,
+    /// <summary>A modal interaction holds the world.</summary>
+    Modal = 2,
+    /// <summary>The entry screen, a pause, or a cinematic over play.</summary>
+    Held = 4,
+    /// <summary>The player is dead and the Host is choosing the replacement.</summary>
+    Dead = 8,
+    Interaction = Playing | Modal,
+    Live = Playing | Modal | Held,
+}
+
+/// <summary>
+/// One action's declared admission: the wire name, the phases it acts in, and what a live phase that
+/// does not admit it tells the player (null drops it silently, as a held world drops play input).
+/// </summary>
+internal sealed record DaggerfallUiActionRule(DaggerfallUiActionKind Kind, string Wire, DaggerfallUiPhases Phases, string? Refusal = null)
+{
+    internal bool Admits(DaggerfallUiPhases phase) => (Phases & phase) != 0;
+}
+
+/// <summary>
+/// One admitted update's Daggerfall UI payloads, each parsed once, aligned with the update's input
+/// events. Every reader in the update (the begin check, the interaction pre-scan and the dispatch)
+/// reads this one list.
+/// </summary>
+internal sealed class DaggerfallUiInput
+{
+    private readonly (ReadOnlyMemory<byte> Payload, bool IsUiAction, DaggerfallPlayerUiAction? Action)[] _events;
+
+    private DaggerfallUiInput((ReadOnlyMemory<byte>, bool, DaggerfallPlayerUiAction?)[] events) => _events = events;
+
+    internal static DaggerfallUiInput Parse(ReadOnlySpan<ProductInputEvent> input)
+    {
+        var events = new (ReadOnlyMemory<byte>, bool, DaggerfallPlayerUiAction?)[input.Length];
+        for (int index = 0; index < input.Length; index++)
+        {
+            ProductInputEvent value = input[index];
+            bool isUiAction = value.ValueKind == InputValueKind.ProductPayload
+                && value.PayloadContract.Span.SequenceEqual(DaggerfallUiAction.Contract);
+            events[index] = (value.PayloadData, isUiAction, isUiAction ? DaggerfallUiAction.Parse(value.PayloadData.Span) : null);
+        }
+        return new(events);
+    }
+
+    /// <summary>Whether this parse was made from exactly these events, so a second reader can reuse it.</summary>
+    internal bool Matches(ReadOnlySpan<ProductInputEvent> input)
+    {
+        if (input.Length != _events.Length) return false;
+        for (int index = 0; index < input.Length; index++)
+        {
+            ProductInputEvent value = input[index];
+            bool isUiAction = value.ValueKind == InputValueKind.ProductPayload
+                && value.PayloadContract.Span.SequenceEqual(DaggerfallUiAction.Contract);
+            if (isUiAction != _events[index].IsUiAction) return false;
+            if (isUiAction && !value.PayloadData.Span.SequenceEqual(_events[index].Payload.Span)) return false;
+        }
+        return true;
+    }
+
+    /// <summary>Whether the event at this index is a Daggerfall UI payload, recognized or not.</summary>
+    internal bool IsUiAction(int index) => _events[index].IsUiAction;
+
+    /// <summary>The recognized action at this index, or null for an unrecognized payload or another event.</summary>
+    internal DaggerfallPlayerUiAction? ActionAt(int index) => _events[index].Action;
+
+    internal bool Contains(DaggerfallUiActionKind kind) => _events.Any(entry => entry.Action?.Kind == kind);
+
+    internal bool ContainsAny(params DaggerfallUiActionKind[] kinds) => _events.Any(entry => entry.Action is { } action && kinds.Contains(action.Kind));
+}
 
 /// <summary>The small Daggerfall player-action wire contract, consumed during admitted updates.</summary>
 internal static class DaggerfallUiAction
 {
     internal const string BeginAction = "begin";
+
+    /// <summary>The product payload contract every Daggerfall UI action travels under.</summary>
+    internal static ReadOnlySpan<byte> Contract => "dagger.ui.action.v1"u8;
+
+    private const string Unrecognized = "Unrecognized player UI action.";
+
+    /// <summary>
+    /// Every action's admission. A death choice outside death is not an action the live session
+    /// recognizes; a quest choice outside play reports the same rejection a stale prompt does.
+    /// </summary>
+    internal static readonly IReadOnlyList<DaggerfallUiActionRule> Rules =
+    [
+        // The entry screen's own action is the product's to answer, so the session knows the shape
+        // and does nothing with it.
+        new(DaggerfallUiActionKind.Begin, BeginAction, DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.CinematicSkip, "cinematic-skip", DaggerfallUiPhases.Live),
+        // Art requests are presentation maintenance, so a reloaded death screen can still recover
+        // its admitted image while gameplay and menu actions remain suppressed.
+        new(DaggerfallUiActionKind.ArtRequest, "art-request", DaggerfallUiPhases.Live | DaggerfallUiPhases.Dead),
+        new(DaggerfallUiActionKind.ControlsRebind, "controls-rebind", DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.ControlsReset, "controls-reset", DaggerfallUiPhases.Live),
+        // Character creation checks the entry screen itself, so a refusal is reported rather than dropped.
+        new(DaggerfallUiActionKind.CharacterBegin, "character-begin", DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.CharacterUpdate, "character-update", DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.CharacterBackgroundReroll, "character-background-reroll", DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.CharacterCommit, "character-commit", DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.CharacterCancel, "character-cancel", DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.CharacterLevelAllocate, "character-level-allocate", DaggerfallUiPhases.Playing),
+        new(DaggerfallUiActionKind.CharacterLevelCommit, "character-level-commit", DaggerfallUiPhases.Playing),
+        new(DaggerfallUiActionKind.ActivationMode, "activation-mode", DaggerfallUiPhases.Playing),
+        new(DaggerfallUiActionKind.Attack, "attack", DaggerfallUiPhases.Playing),
+        new(DaggerfallUiActionKind.Loot, "loot", DaggerfallUiPhases.Playing),
+        // The DOM owns its panels; these name a panel the DOM opened and the session does nothing with.
+        new(DaggerfallUiActionKind.Inventory, "inventory", DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.Character, "character", DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.DialogueTone, "dialogue-tone", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.DialogueTopic, "dialogue-topic", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.DialogueClose, "dialogue-close", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.TransportSelect, "transport-select", DaggerfallUiPhases.Playing),
+        new(DaggerfallUiActionKind.TransportToggle, "transport-toggle", DaggerfallUiPhases.Playing),
+        new(DaggerfallUiActionKind.TransportLeaveShip, "transport-leave-ship", DaggerfallUiPhases.Playing),
+        new(DaggerfallUiActionKind.TravelSearch, "travel-search", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.TravelPreview, "travel-preview", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.Rest, "rest", DaggerfallUiPhases.Playing),
+        new(DaggerfallUiActionKind.WagonPut, "wagon-put", DaggerfallUiPhases.Playing),
+        new(DaggerfallUiActionKind.WagonTake, "wagon-take", DaggerfallUiPhases.Playing),
+        new(DaggerfallUiActionKind.QuestChoice, "quest-choice", DaggerfallUiPhases.Interaction,
+            "Quest choice rejected: this prompt is no longer pending or the choice is invalid."),
+        new(DaggerfallUiActionKind.DungeonTextAnswer, "dungeon-text-answer", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.DungeonTextClose, "dungeon-text-close", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.InventoryMove, "inventory-move", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.InventoryInspect, "inventory-inspect", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.InventoryUse, "inventory-use", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.InventoryDrop, "inventory-drop", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.NotebookPage, "notebook-page", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.NotebookAdd, "notebook-add", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.NotebookEdit, "notebook-edit", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.NotebookRemove, "notebook-remove", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.NotebookMove, "notebook-move", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.CurrencyDepositGold, "currency-deposit-gold", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.CurrencyWithdrawGold, "currency-withdraw-gold", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.CurrencyDepositLetters, "currency-deposit-letters", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.CurrencyWithdrawLetter, "currency-withdraw-letter", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.BankTransfer, "bank-transfer", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.BankLoanIssue, "bank-loan-issue", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.BankLoanRepayAccount, "bank-loan-repay-account", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.BankLoanRepayCarried, "bank-loan-repay-carried", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.LootClose, "loot-close", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.LootTake, "loot-take", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.SaveGame, "save-game", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.LoadGame, "load-game", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.SaveSlots, "save-slots", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.SaveSlot, "save-slot", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.LoadSlot, "load-slot", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.DeleteSlot, "delete-slot", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.DeathNewGame, DaggerfallDeathPresentation.NewGameAction, DaggerfallUiPhases.Dead, Unrecognized),
+        new(DaggerfallUiActionKind.DeathLoadGame, DaggerfallDeathPresentation.LoadGameAction, DaggerfallUiPhases.Dead, Unrecognized),
+        new(DaggerfallUiActionKind.DeathQuit, DaggerfallDeathPresentation.QuitAction, DaggerfallUiPhases.Dead, Unrecognized),
+    ];
+
+    private static readonly Dictionary<string, DaggerfallUiActionRule> ByWire = Rules.ToDictionary(rule => rule.Wire, StringComparer.Ordinal);
+    private static readonly Dictionary<DaggerfallUiActionKind, DaggerfallUiActionRule> ByKind = Rules.ToDictionary(rule => rule.Kind);
+
+    /// <summary>What a live phase tells the player about a payload no rule recognizes.</summary>
+    internal static string UnrecognizedRefusal => Unrecognized;
+
+    internal static DaggerfallUiActionKind KindOf(string wire) =>
+        ByWire.TryGetValue(wire ?? throw new ArgumentNullException(nameof(wire)), out DaggerfallUiActionRule? rule)
+            ? rule.Kind
+            : throw new ArgumentException($"'{wire}' is not a Daggerfall UI action.", nameof(wire));
+
+    internal static DaggerfallUiActionRule RuleFor(DaggerfallUiActionKind kind) => ByKind[kind];
+
     internal static DaggerfallPlayerUiAction? Parse(ReadOnlySpan<byte> payload)
     {
         if (payload.IsEmpty || payload.Length > 4096) return null;
