@@ -89,7 +89,9 @@ internal static class DaggerfallEncounterActors
             // The historical projected value was not a donor field. Daggerfall Unity awards career
             // progression through its skill-use path, so no synthetic flat XP is attached here.
             new DaggerfallRewardPolicy(0), 0, mobile.DonorId, career.HitPointsPerLevel, [], Team(mobile.Team), null,
-            mobile.LootTableKey ?? throw new InvalidOperationException($"Classic class mobile {mobile.DonorId} has no published EnemyBasics loot table key."),
+            // EnemyBasics leaves some class mobiles (the City Watch) without a key; the donor's loot table
+            // lookup then selects its all-zero "-" matrix, so the corpse carries no table loot.
+            mobile.LootTableKey,
             null, null, ClassEquippedMeleeAction, [], DaggerfallActorPresentationDefinition.None, GroundOnSpawn: true, Career: career.Id);
     }
 

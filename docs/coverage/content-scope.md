@@ -306,11 +306,9 @@ The commands that build from authored sections (`catalogs` reads the vocabulary,
 `item-template-ledger` the items; `mobile-catalog` and `mobile-ledger` the actors) take the
 authored payload as `--authored` and write only the imported one (`--pack`).
 
-The `mobiles` section carries two product overrides of the donor's loot table keys: the Monk (140)
-keeps "O" where the donor gives "T", and the City Watch (146) keeps "T" where the donor gives none,
-because the ruleset refuses a class mobile without a key. The importer applies them where it
-generates the catalog and lists each in the section's `divergences` with the donor's value beside the
-product's.
+The `mobiles` section carries the donor's loot table keys as `EnemyBasics` states them, including the
+City Watch (146), which has none: its corpse generates no table loot, as the donor's empty key selects
+the all-zero loot matrix.
 
 Authored and tracked: the pack, bundle and tuning descriptors (`content/worldrpg/content-packs/`,
 `content/worldrpg/bundles/`, `content/worldrpg/tuning/`), the tuning payloads

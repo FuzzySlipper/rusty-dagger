@@ -122,6 +122,28 @@ public sealed class ActorLifecycleSessionTests
     }
 
     [Fact]
+    public void Keyless_class_encounter_actor_leaves_a_corpse_with_no_table_loot()
+    {
+        using ConditionSessionFixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        long actorId = session.SpawnActor("encounter-city-watch-the-haltmeister", new ActorPose(new WorldPoint(10, 0, 10), 0f), level: 4);
+        DaggerfallActorDefinition definition = session.DefinitionsByActor[actorId];
+        // EnemyBasics gives the City Watch no loot table key; the donor then selects its all-zero "-" matrix.
+        Assert.Equal((146, "class18", (string?)null), (definition.MobileId, definition.Career, definition.LootTableKey));
+
+        session.State.Actors.Get(actorId).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
+        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, actorId, 1, 1, .125));
+        Assert.True(session.State.Actors.Get(actorId).IsDefeated);
+        Assert.True(session.Corpses.TryGetValue(actorId, out CorpseContainer? corpse));
+        Assert.NotNull(corpse);
+        // The corpse is still a container the player can open, and it holds nothing generated.
+        Assert.True(corpse.IsRegistered);
+        Assert.Empty(session.State.Containers.Read(corpse.Owner).Stacks);
+        Assert.Empty(session.State.Containers.Read(corpse.Owner).UniqueItems);
+    }
+
+    [Fact]
     public void Retiring_a_dynamic_caster_cancels_its_effect_on_another_actor_before_save()
     {
         DaggerfallEffectCatalog catalog = new(
