@@ -2627,7 +2627,6 @@ internal static partial class Program
         Plan,
         Write,
         VerifyRealData,
-        SourceManifest,
     }
 
     private enum SpriteToolCommand
