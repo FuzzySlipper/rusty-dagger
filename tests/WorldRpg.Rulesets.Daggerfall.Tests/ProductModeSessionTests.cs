@@ -79,6 +79,63 @@ public sealed class ProductModeSessionTests
     }
 
     [Fact]
+    public void The_ordinary_product_plays_its_opening_through_Engine_video_facts_then_begins_play_with_its_music_cue()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake engineContent = new(releases);
+        PopulateContent(engineContent, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        VideoRecorder video = VideoRecorder.Create();
+        EngineContextFake engine = EngineContextFake.Create(engineContent, spatial.Service, new AppearanceFake(releases), video: video.Service);
+        ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
+        // The one ordinary product entry: the Host's default bundle over the committed content, staged as
+        // the Host declares it (the cinematics included), and the built-in ruleset with its videos on.
+        ProductContent staged = StagedContent(root, out BundleContentFake bundles);
+        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, staged, input));
+
+        product.Start();
+        Assert.Equal(ProductMode.Title, product.Mode);
+        // The entry screen's own action starts the opening rather than play: the first cinematic is
+        // playing and the product waits at its entry screen for the Engine to report it finished.
+        product.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"begin\"}")]));
+        Assert.Equal(ProductMode.Title, product.Mode);
+        Assert.Single(video.Played);
+        Assert.Equal(0, spatial.StepCalls);
+
+        // Each completion the Engine reports advances to the next cinematic on the next admitted update,
+        // and the product stays at its entry screen until the last one completes.
+        ulong step = 1;
+        for (int played = 1; played < 3; played++)
+        {
+            video.Complete(video.Played[^1]);
+            product.Update(new ProductUpdate(OuterUpdate(++step), []));
+            Assert.Equal(played + 1, video.Played.Count);
+            Assert.Equal(ProductMode.Title, product.Mode);
+        }
+        Assert.Equal(
+            [("daggerfall.cinematics", "anim0000.webm"), ("daggerfall.cinematics", "anim0011.webm"), ("daggerfall.cinematics", "dag2.webm")],
+            bundles.OpenedReferences.Where(reference => reference.Bundle == "daggerfall.cinematics"));
+
+        video.Complete(video.Played[^1]);
+        product.Update(new ProductUpdate(OuterUpdate(++step), []));
+        Assert.Equal(ProductMode.Playing, product.Mode);
+        Assert.Equal(ProductModeChangeOutcome.Applied, product.ModeHistory[^1].Outcome);
+        Assert.Contains("opening sequence", product.ModeHistory[^1].Reason, StringComparison.Ordinal);
+        Assert.Equal(3, video.Played.Count);
+
+        // Ordinary play takes world steps and plays the site's published cue as one retained loop.
+        product.Update(new ProductUpdate(OuterUpdate(++step), []));
+        Assert.True(spatial.StepCalls > 0, "ordinary play admits world time");
+        Assert.Contains("daggerfall.music/cue.started: Music cue 'song_dungeon' started for context 'Dungeon'.", engine.PublishedDiagnostics);
+        Assert.Single(engine.StartedAudioVoices);
+        Assert.Equal(0, engine.ReleasedAudioVoices);
+        // The cue's body came out of the staged music bundle, which is how the Engine serves it.
+        Assert.Contains(bundles.OpenedReferences, reference => reference.Bundle == "daggerfall.music");
+    }
+
+    [Fact]
     public void Stamina_recovery_is_held_back_outside_ordinary_play_and_resumes_with_it()
     {
         using DaggerfallSession session = FreshSession();
