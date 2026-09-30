@@ -18,6 +18,11 @@ internal enum DaggerfallInteractionScreen
     LevelUp,
     /// <summary>A banking service opened at a live provider.</summary>
     Bank,
+    /// <summary>
+    /// The DOM's game menu and every panel it hosts: inventory, character sheet, notebook, travel,
+    /// rest, transport and wagon, save and load, and settings. The DOM reports whether it is open.
+    /// </summary>
+    Menu,
 }
 
 /// <summary>
@@ -26,12 +31,10 @@ internal enum DaggerfallInteractionScreen
 /// request a pad button makes.
 /// </summary>
 /// <remarks>
-/// Only <see cref="DaggerfallInteractionScreen.LootContainer"/> and
-/// <see cref="DaggerfallInteractionScreen.DungeonText"/> hold the world today: the session asks the
-/// product for Modal exactly while one is open. Dialogue, level-up, bank and the DOM's own panels
-/// (inventory, character sheet, notebook, travel, menu) run over ordinary play, so time advances while
-/// they are open; character creation runs under the product's entry screen. Changing which screens
-/// hold the world is a change to <see cref="HoldsWorld"/> alone.
+/// Every screen holds the world while it is open: the session asks the product for Modal exactly while
+/// one is, so time stands still and nothing acts on the player behind a menu. A screen that should let
+/// the world run is an explicit exception in <see cref="RunsOverTheWorld"/>; there are none. Character
+/// creation runs under the product's entry screen, which holds the world on its own.
 /// </remarks>
 internal sealed class DaggerfallOpenInteractions(
     Func<LootPresentation?> loot,
@@ -45,13 +48,26 @@ internal sealed class DaggerfallOpenInteractions(
     /// <summary>Admitted world seconds a panel request stands before the DOM is assumed not to need it.</summary>
     private const double PanelRequestLifetimeSeconds = 1d;
 
+    /// <summary>The screens that deliberately let the world run while they are open.</summary>
+    private static readonly IReadOnlySet<DaggerfallInteractionScreen> RunsOverTheWorld = new HashSet<DaggerfallInteractionScreen>();
+
     private string? _panelRequest;
     private ulong _panelRequestRevision;
     private double _panelRequestRemainingSeconds;
+    private bool _menuOpen;
 
-    /// <summary>Whether a screen holds the world still while it is open.</summary>
-    internal static bool HoldsWorld(DaggerfallInteractionScreen screen) =>
-        screen is DaggerfallInteractionScreen.LootContainer or DaggerfallInteractionScreen.DungeonText;
+    /// <summary>Whether a screen holds the world still while it is open: every screen, unless it is an exception.</summary>
+    internal static bool HoldsWorld(DaggerfallInteractionScreen screen) => !RunsOverTheWorld.Contains(screen);
+
+    /// <summary>
+    /// Records what the DOM reported about its game menu. The menu opening is also the DOM acting on
+    /// a pad's panel request, so a standing request is spent: it cannot age while the world is held.
+    /// </summary>
+    internal void SetMenuOpen(bool open)
+    {
+        _menuOpen = open;
+        if (open) _panelRequest = null;
+    }
 
     /// <summary>Whether one screen is open now.</summary>
     internal bool IsOpen(DaggerfallInteractionScreen screen) => screen switch
@@ -62,6 +78,7 @@ internal sealed class DaggerfallOpenInteractions(
         DaggerfallInteractionScreen.CharacterCreation => characterCreationOpen(),
         DaggerfallInteractionScreen.LevelUp => levelUpOpen(),
         DaggerfallInteractionScreen.Bank => bankOpen(),
+        DaggerfallInteractionScreen.Menu => _menuOpen,
         _ => throw new ArgumentOutOfRangeException(nameof(screen), screen, "Unknown interaction screen."),
     };
 
@@ -86,7 +103,9 @@ internal sealed class DaggerfallOpenInteractions(
     internal string ModeMessage(ProductMode mode) => mode switch
     {
         ProductMode.Modal => IsOpen(DaggerfallInteractionScreen.DungeonText) ? "Dungeon text open."
-            : IsOpen(DaggerfallInteractionScreen.LootContainer) ? lootMessage() : "Interaction open.",
+            : IsOpen(DaggerfallInteractionScreen.LootContainer) ? lootMessage()
+            : IsOpen(DaggerfallInteractionScreen.Menu) ? "Menu open."
+            : "Interaction open.",
         ProductMode.Dead => "You have died.",
         ProductMode.Paused => "Paused.",
         // The entry screen says its own thing; a status line would compete with the screen that is up.

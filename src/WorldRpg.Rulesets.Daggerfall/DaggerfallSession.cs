@@ -241,6 +241,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
 
     public void PublishInitial()
     {
+        // A client that attaches starts with its game menu closed. A menu left open by a page that
+        // went away must not hold the world for a client that cannot see it.
+        _interactions.SetMenuOpen(false);
         _hud.RequestArt();
         PublishPresentation();
     }

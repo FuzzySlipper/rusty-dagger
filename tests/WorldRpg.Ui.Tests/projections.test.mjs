@@ -636,3 +636,15 @@ test('wagon put is refused for the definitions the ruleset names', () => {
     assert.equal(f.root.querySelector('[data-action="wagon-put"]').disabled, true);
   } finally { f.dispose(); }
 });
+
+test('the game menu tells the product when it opens and closes, because an open menu holds the world', () => {
+  const f = fixture();
+  try {
+    f.publish({ mode: 'playing' });
+    const toggle = f.root.querySelector('.dagger-menu-toggle');
+    toggle.click();
+    assert.deepEqual(f.actions.at(-1), { action: 'menu', open: true });
+    toggle.click();
+    assert.deepEqual(f.actions.at(-1), { action: 'menu', open: false });
+  } finally { f.dispose(); }
+});

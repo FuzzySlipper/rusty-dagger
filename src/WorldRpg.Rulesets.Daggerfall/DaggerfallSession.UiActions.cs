@@ -75,6 +75,7 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.Inventory:
             case DaggerfallUiActionKind.Character:
                 break;
+            case DaggerfallUiActionKind.Menu: _interactions.SetMenuOpen(action.Open); break;
             case DaggerfallUiActionKind.CinematicSkip: _openingCinematics.Skip(); break;
             // A reloaded DOM holds no art and asks for the revision it is missing; the projection
             // answers on its next snapshot rather than a second delivery channel existing.
