@@ -259,7 +259,6 @@ public static class SourceManifestBuilder
         }
 
         return new SourceManifest(
-            SourceManifest.CurrentSchemaVersion,
             request.SourceRoot,
             request.InventoryPath,
             records,

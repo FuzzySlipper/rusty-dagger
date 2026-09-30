@@ -248,7 +248,6 @@ public static class Arena2MobileCatalogDocument
 
         JsonObject document = new()
         {
-            ["schemaVersion"] = 1,
             ["sources"] = new JsonArray(JsonSerializer.SerializeToNode(PublishedSource.Of(donorPath, Encoding.UTF8.GetBytes(donorEnemyBasics)), PublishedJson.Section)),
             ["mobiles"] = mobiles,
         };

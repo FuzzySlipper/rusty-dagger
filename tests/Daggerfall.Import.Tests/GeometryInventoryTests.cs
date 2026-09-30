@@ -350,7 +350,6 @@ public sealed class GeometryInventoryTests
         DaggerfallGeometry geometry = Corpus.Value;
 
         Assert.Contains("declares 10250 records and publishes 10251", Assert.Throws<InvalidOperationException>(() => (geometry with { Sources = [geometry.Sources[0] with { DeclaredLength = 10250 }] }).Validate()).Message, StringComparison.Ordinal);
-        Assert.Contains("Geometry schema must be 1 but is 2", Assert.Throws<InvalidOperationException>(() => (geometry with { SchemaVersion = 2 }).Validate()).Message, StringComparison.Ordinal);
     }
 
     [CorpusAndGeneratedContentFact]

@@ -332,7 +332,6 @@ public sealed class BlockInventoryTests
         BlockRecordInventory first = BlockRecordInventoryReader.Read(NamedArchive(("B0000000.RDI", new byte[512]), ("B0000001.RDI", new byte[512])), "first/BLOCKS.BSA");
         BlockRecordInventory second = BlockRecordInventoryReader.Read(NamedArchive(("B0000002.RDI", new byte[512])), "second/BLOCKS.BSA");
         DaggerfallBlocks blocks = new(
-            DaggerfallBlocks.CurrentSchemaVersion,
             [Source(first, "first/BLOCKS.BSA"), Source(second, "second/BLOCKS.BSA")],
             [.. first.Records.Select(record => Publish(record, "first/BLOCKS.BSA")), .. second.Records.Select(record => Publish(record, "second/BLOCKS.BSA"))]);
 
@@ -354,7 +353,6 @@ public sealed class BlockInventoryTests
         DaggerfallBlocks blocks = Supplied();
 
         Assert.Contains("declares 1294 records and publishes 1295, where the section carries 1295", Assert.Throws<InvalidOperationException>(() => (blocks with { Sources = [blocks.Sources[0] with { DeclaredLength = 1294 }] }).Validate()).Message, StringComparison.Ordinal);
-        Assert.Contains("Block schema must be 2 but is 3", Assert.Throws<InvalidOperationException>(() => (blocks with { SchemaVersion = 3 }).Validate()).Message, StringComparison.Ordinal);
     }
 
     [CorpusFact]

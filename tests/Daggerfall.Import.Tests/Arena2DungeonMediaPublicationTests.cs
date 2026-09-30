@@ -399,18 +399,16 @@ public sealed class Arena2DungeonMediaPublicationTests
     {
         const string artifactId = "artifact/fixture";
         NormalizedArtifactDescriptor artifact = new(
-            NormalizedArtifactDescriptor.CurrentSchemaVersion,
             artifactId,
             "fixture.json",
             new ContentDigest(new string('0', 64)),
             1,
             []);
-        NormalizedResourceCatalogEntry texture = new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, "texture/2-0", NormalizedResourceKind.Texture, artifactId, [], []);
-        NormalizedResourceCatalogEntry material = new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, "material/texture-2-0", NormalizedResourceKind.Material, artifactId, ["texture/2-0"], []);
-        NormalizedResourceCatalogEntry sprite = new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, "sprite/texture-2-1", NormalizedResourceKind.Sprite, artifactId, [], []);
-        NormalizedResourceCatalogEntry actor = new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, "actor/mobile-0", NormalizedResourceKind.ActorDefinition, artifactId, [], []);
+        NormalizedResourceCatalogEntry texture = new("texture/2-0", NormalizedResourceKind.Texture, artifactId, [], []);
+        NormalizedResourceCatalogEntry material = new("material/texture-2-0", NormalizedResourceKind.Material, artifactId, ["texture/2-0"], []);
+        NormalizedResourceCatalogEntry sprite = new("sprite/texture-2-1", NormalizedResourceKind.Sprite, artifactId, [], []);
+        NormalizedResourceCatalogEntry actor = new("actor/mobile-0", NormalizedResourceKind.ActorDefinition, artifactId, [], []);
         NormalizedMesh mesh = new(
-            NormalizedMesh.CurrentSchemaVersion,
             "mesh/fixture",
             artifactId,
             [new NormalizedVector3(0, 0, 0), new NormalizedVector3(1, 0, 0), new NormalizedVector3(0, 0, 1)],
@@ -419,7 +417,6 @@ public sealed class Arena2DungeonMediaPublicationTests
             [new NormalizedTriangle(0, 1, 2)],
             [new NormalizedMaterialGroup("material/texture-2-0", 0, 1, true)]);
         NormalizedWorld world = new(
-            NormalizedWorld.CurrentSchemaVersion,
             "mesh/fixture",
             ["mesh/fixture"],
             null,
@@ -431,15 +428,13 @@ public sealed class Arena2DungeonMediaPublicationTests
             [],
             []);
         return new NormalizedImportDocument(
-            NormalizedImportDocument.CurrentSchemaVersion,
             new ImportProvenance(
-                ImportProvenance.CurrentSchemaVersion,
                 "daggerfall-import/test",
                 "test-revision",
-                [new LogicalSourceRecord(LogicalSourceRecord.CurrentSchemaVersion, "arena2/MAPS.BSA", new ContentDigest(new string('0', 64)), 1, 1)]),
+                [new LogicalSourceRecord("arena2/MAPS.BSA", new ContentDigest(new string('0', 64)), 1)]),
             [artifact],
-            new NormalizedCoordinateConvention(NormalizedCoordinateConvention.CurrentSchemaVersion, NormalizedHandedness.Right, NormalizedVerticalAxis.PositiveY, 1F),
-            new NormalizedBounds(NormalizedBounds.CurrentSchemaVersion, new NormalizedVector3(0, 0, 0), new NormalizedVector3(1, 1, 1)),
+            new NormalizedCoordinateConvention(NormalizedHandedness.Right, NormalizedVerticalAxis.PositiveY, 1F),
+            new NormalizedBounds(new NormalizedVector3(0, 0, 0), new NormalizedVector3(1, 1, 1)),
             [mesh],
             null,
             world,

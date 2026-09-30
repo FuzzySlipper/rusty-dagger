@@ -57,7 +57,7 @@ public sealed class NormalizedContractTests
     {
         NormalizedImportDocument invalidBounds = CreateDocument() with
         {
-            Bounds = new(NormalizedBounds.CurrentSchemaVersion, new(2F, 0F, 0F), new(1F, 0F, 0F)),
+            Bounds = new(new(2F, 0F, 0F), new(1F, 0F, 0F)),
         };
         NormalizedImportDocument duplicateResource = CreateDocument() with
         {
@@ -83,8 +83,8 @@ public sealed class NormalizedContractTests
         {
             Artifacts =
             [
-                new(NormalizedArtifactDescriptor.CurrentSchemaVersion, "artifact/geometry", "geometry.json", new ContentDigest("1111111111111111111111111111111111111111111111111111111111111111"), 12, ["artifact/materials"]),
-                new(NormalizedArtifactDescriptor.CurrentSchemaVersion, "artifact/materials", "materials.json", new ContentDigest("2222222222222222222222222222222222222222222222222222222222222222"), 8, ["artifact/geometry"]),
+                new("artifact/geometry", "geometry.json", new ContentDigest("1111111111111111111111111111111111111111111111111111111111111111"), 12, ["artifact/materials"]),
+                new("artifact/materials", "materials.json", new ContentDigest("2222222222222222222222222222222222222222222222222222222222222222"), 8, ["artifact/geometry"]),
             ],
         };
 
@@ -107,7 +107,7 @@ public sealed class NormalizedContractTests
     public void LogicalSourceRequiresPositiveCallerByteLengthAndSerializesSourcePath()
     {
         ContentDigest digest = new("1111111111111111111111111111111111111111111111111111111111111111");
-        LogicalSourceRecord invalid = new(LogicalSourceRecord.CurrentSchemaVersion, "arena2/MAPS.BSA", digest, 0, 1);
+        LogicalSourceRecord invalid = new("arena2/MAPS.BSA", digest, 0);
 
         Assert.Throws<ArgumentOutOfRangeException>(invalid.Validate);
         string json = Encoding.UTF8.GetString(NormalizedImportSerializer.Serialize(CreateDocument()));
@@ -120,20 +120,17 @@ public sealed class NormalizedContractTests
         ContentDigest geometryDigest = new("1111111111111111111111111111111111111111111111111111111111111111");
         ContentDigest materialDigest = new("2222222222222222222222222222222222222222222222222222222222222222");
         return new(
-            NormalizedImportDocument.CurrentSchemaVersion,
             new(
-                ImportProvenance.CurrentSchemaVersion,
                 "importer/example",
                 "test-revision",
-                [new(LogicalSourceRecord.CurrentSchemaVersion, "content/example.mesh.json", geometryDigest, 12, 1)]),
+                [new("content/example.mesh.json", geometryDigest, 12)]),
             [
-                new(NormalizedArtifactDescriptor.CurrentSchemaVersion, "artifact/geometry", "geometry.json", geometryDigest, 12, ["artifact/materials"]),
-                new(NormalizedArtifactDescriptor.CurrentSchemaVersion, "artifact/materials", "materials.json", materialDigest, 8, []),
+                new("artifact/geometry", "geometry.json", geometryDigest, 12, ["artifact/materials"]),
+                new("artifact/materials", "materials.json", materialDigest, 8, []),
             ],
-            new(NormalizedCoordinateConvention.CurrentSchemaVersion, NormalizedHandedness.Right, NormalizedVerticalAxis.PositiveY, 1F),
-            new(NormalizedBounds.CurrentSchemaVersion, new(0F, 0F, 0F), new(2F, 1F, 1F)),
+            new(NormalizedHandedness.Right, NormalizedVerticalAxis.PositiveY, 1F),
+            new(new(0F, 0F, 0F), new(2F, 1F, 1F)),
             [new(
-                NormalizedMesh.CurrentSchemaVersion,
                 "mesh/example",
                 "artifact/geometry",
                 [new(0F, 0F, 0F), new(1F, 0F, 0F), new(1F, 1F, 0F), new(0F, 1F, 0F)],
@@ -142,13 +139,11 @@ public sealed class NormalizedContractTests
                 [new(0, 1, 2), new(2, 3, 0)],
                 [new("material/stone", 0, 2, true)])],
             new(
-                NormalizedNavigationSurface.CurrentSchemaVersion,
                 "navigation/example",
                 "artifact/geometry",
                 NavigationDerivationConfig.ClassicDefault with { CellSize = 1F, LevelQuantum = 1F },
                 [new(0, 0, 0, 0F, true), new(1, 0, 0, 0F, true)]),
             new(
-                NormalizedWorld.CurrentSchemaVersion,
                 "mesh/example",
                 ["mesh/example"],
                 "navigation/example",
@@ -160,11 +155,11 @@ public sealed class NormalizedContractTests
                 [new("treasure/chest", "treasure/example", new(1F, 0F, 0F))],
                 [new("door/main", "door/example", ["mesh/example"], new(2F, 0F, 0F), new(0F, 90F, 0F))]),
             [
-                new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, "material/stone", NormalizedResourceKind.Material, "artifact/materials", [], []),
-                new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, "sprite/sign", NormalizedResourceKind.Sprite, "artifact/materials", [], [new("frame/idle", 0, 0, 0, 16, 16, new(0.5F, 0F))]),
-                new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, "actor/example", NormalizedResourceKind.ActorDefinition, "artifact/materials", [], []),
-                new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, "treasure/example", NormalizedResourceKind.TreasureDefinition, "artifact/materials", [], []),
-                new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, "door/example", NormalizedResourceKind.DoorDefinition, "artifact/materials", [], []),
+                new("material/stone", NormalizedResourceKind.Material, "artifact/materials", [], []),
+                new("sprite/sign", NormalizedResourceKind.Sprite, "artifact/materials", [], [new("frame/idle", 0, 0, 0, 16, 16, new(0.5F, 0F))]),
+                new("actor/example", NormalizedResourceKind.ActorDefinition, "artifact/materials", [], []),
+                new("treasure/example", NormalizedResourceKind.TreasureDefinition, "artifact/materials", [], []),
+                new("door/example", NormalizedResourceKind.DoorDefinition, "artifact/materials", [], []),
             ]);
     }
 }

@@ -457,7 +457,6 @@ public sealed class SpriteAuthoringTests
             new([0, -1], []), "sprite/rat", new(0.5F, 0F), new(1F, 1F), new(1F, 1F),
             [new(DungeonActorSpriteState.Move, new(6F, true), new(6F, true), 0, 1, layouts)], null, actor.Id);
         DungeonMediaManifestSidecar dungeon = new(
-            1,
             new([actor, billboard]),
             [],
             [new("sprite/fixture", 1, 1, new(0.5F, 0.5F), new(1F, 1F), new(12F, true), new(5F, false), [new(0, 0, 0, 0, false, billboard.Frames[0], new(1F, 1F))], billboard.Id)],
@@ -471,7 +470,6 @@ public sealed class SpriteAuthoringTests
             [new("map.fmap0i17", MapArtKind.RegionMap, [17], "DaggerfallTravelMapWindow region map", "arena2/FMAP0I17.IMG", 320, 160, false)],
             [.. EmptyMapRegions().Where(region => region.Region != 17), new(17, ["map.fmap0i17"])], [], [], []);
         CanonicalImportManifest manifest = new(
-            1,
             "daggerfall-import",
             "test-revision",
             [],

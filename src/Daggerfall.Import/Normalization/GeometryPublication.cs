@@ -42,7 +42,6 @@ public sealed record GeometryMaterialLink(
     string Note);
 
 /// <summary>One published mesh artifact, keyed by the mesh number the source archive states.</summary>
-/// <param name="SchemaVersion">Shape version of this record.</param>
 /// <param name="MeshId">The mesh number, spelled as a decimal number.</param>
 /// <param name="SourceRecordId">The number the archive indexes the record by.</param>
 /// <param name="SourceOrdinal">The record's position in the archive directory.</param>
@@ -53,7 +52,6 @@ public sealed record GeometryMaterialLink(
 /// <param name="Materials">The textures its planes select, in first-use order.</param>
 /// <param name="ContentDigest">The artifact's content address.</param>
 public sealed record GeometryMeshArtifact(
-    int SchemaVersion,
     string MeshId,
     long SourceRecordId,
     int SourceOrdinal,
@@ -103,7 +101,6 @@ public sealed record GeometryPublicationSummary(int Records, int Published, int 
 /// </para>
 /// </remarks>
 public sealed record GeometryPublication(
-    int SchemaVersion,
     string InventorySource,
     IReadOnlyList<GeneratedSpatialArtifact> Artifacts,
     IReadOnlyList<GeometryMeshArtifact> Meshes,
@@ -111,9 +108,6 @@ public sealed record GeometryPublication(
     IReadOnlyList<GeometryMaterialLink> UnresolvedMaterials,
     GeometryPublicationSummary Summary)
 {
-    /// <summary>Shape version this publication writes.</summary>
-    public const int CurrentSchemaVersion = 1;
-
     /// <summary>The artifact that lists what was published and what could not be.</summary>
     public const string IndexRelativePath = "geometry/index.json";
 
@@ -132,11 +126,6 @@ public sealed record GeometryPublication(
     /// </remarks>
     public void Validate()
     {
-        if (SchemaVersion != CurrentSchemaVersion)
-        {
-            throw new InvalidOperationException($"Geometry publication schema must be {CurrentSchemaVersion} but is {SchemaVersion}.");
-        }
-
         NormalizedImportDocument.RequireLogicalPath(InventorySource, nameof(InventorySource));
         ArgumentNullException.ThrowIfNull(Meshes);
         ArgumentNullException.ThrowIfNull(UnresolvedMeshes);
@@ -237,8 +226,7 @@ public sealed record GeometryPublication(
         // name a mesh the section does not carry, or a summary the records do not support, are refused.
         GeometryIndex document = JsonSerializer.Deserialize<GeometryIndex>(index.Bytes.Span, PublishedJson.SectionRead)
             ?? throw new InvalidOperationException($"Published geometry index at '{IndexRelativePath}' could not be read.");
-        if (document.SchemaVersion != SchemaVersion
-            || !StringComparer.Ordinal.Equals(document.InventorySource, InventorySource)
+        if (!StringComparer.Ordinal.Equals(document.InventorySource, InventorySource)
             || document.Summary != Summary
             || !document.Meshes.Select(mesh => (mesh.MeshId, mesh.SourceRecordId, mesh.SourceOrdinal, mesh.ArtifactId, mesh.RelativePath, mesh.Vertices, mesh.Triangles, mesh.ContentDigest))
                 .SequenceEqual(Meshes.Select(mesh => (mesh.MeshId, mesh.SourceRecordId, mesh.SourceOrdinal, mesh.ArtifactId, mesh.RelativePath, mesh.Vertices, mesh.Triangles, mesh.ContentDigest)))
@@ -397,13 +385,12 @@ public static class GeometryPublicationBuilder
             }
 
             string meshId = number.ToString(CultureInfo.InvariantCulture);
-            NormalizedMesh normalized = new NormalizedMesh(NormalizedMesh.CurrentSchemaVersion, meshId, MeshArtifactId(number), vertices, normals, uvs, triangles, groups).Canonicalize();
+            NormalizedMesh normalized = new NormalizedMesh(meshId, MeshArtifactId(number), vertices, normals, uvs, triangles, groups).Canonicalize();
             normalized.Validate();
             byte[] bytes = StaticMeshJson.Serialize(meshId, MeshGeometry.Bounds(vertices), MeshAssembly.Create([normalized]));
             GeneratedSpatialArtifact artifact = new(MeshArtifactId(number), MeshRelativePath(number), bytes, []);
             artifacts.Add(artifact);
             meshes.Add(new GeometryMeshArtifact(
-                GeometryMeshArtifactSchema,
                 meshId,
                 number,
                 record.Ordinal,
@@ -427,7 +414,6 @@ public static class GeometryPublicationBuilder
             inventory.Records.Count - meshes.Count - unresolvable - duplicates);
 
         GeometryPublication publication = new(
-            GeometryPublication.CurrentSchemaVersion,
             inventory.Source,
             [.. artifacts, Index(inventory.Source, summary, meshes, unresolved)],
             meshes,
@@ -438,7 +424,6 @@ public static class GeometryPublicationBuilder
         return publication;
     }
 
-    private const int GeometryMeshArtifactSchema = 1;
 
     private static ReadOnlySpan<byte> Payload(ReadOnlyMemory<byte> bytes, Arch3dMeshRecord record) =>
         bytes.Span.Slice((int)record.Offset, record.ByteLength);
@@ -488,7 +473,7 @@ public static class GeometryPublicationBuilder
         IReadOnlyList<GeometryMeshArtifact> meshes,
         IReadOnlyList<GeometryUnresolvedMeshReference> unresolved)
     {
-        GeometryIndex index = new(GeometryPublication.CurrentSchemaVersion, inventorySource, summary, meshes, unresolved);
+        GeometryIndex index = new(inventorySource, summary, meshes, unresolved);
         byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(index, PublishedJson.Section);
         return new GeneratedSpatialArtifact(GeometryPublication.IndexArtifactId, GeometryPublication.IndexRelativePath, bytes, [.. meshes.Select(mesh => mesh.ArtifactId).OrderBy(id => id, StringComparer.Ordinal)]);
     }
@@ -496,13 +481,11 @@ public static class GeometryPublicationBuilder
 }
 
 /// <summary>What one geometry publication holds, written as the index artifact.</summary>
-/// <param name="SchemaVersion">Shape version of the index.</param>
 /// <param name="InventorySource">The logical path of the inventory this publication classified through.</param>
 /// <param name="Summary">How the published set relates to every record the archive declares.</param>
 /// <param name="Meshes">Every published mesh, in number order.</param>
 /// <param name="UnresolvedMeshes">Every referenced number the archive could not serve.</param>
 public sealed record GeometryIndex(
-    int SchemaVersion,
     string InventorySource,
     GeometryPublicationSummary Summary,
     IReadOnlyList<GeometryMeshArtifact> Meshes,

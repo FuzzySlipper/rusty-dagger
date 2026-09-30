@@ -1072,7 +1072,7 @@ public sealed class SpriteWorkbenchProductTests
             DungeonActorMediaManifest actorManifest = new(
                 "actor/rat", 1, "Rat", DungeonActorSpriteState.Move, new([0, -1], []), "sprite/rat", new(.5F, 0F), new(1F, 1F), new(1F, 1F),
                 [new(DungeonActorSpriteState.Move, new(6F, true), new(6F, true), 0, 3, layouts)], null, actor.Id);
-            DungeonMediaManifestSidecar dungeon = new(1, new([actor]), [], [], [actorManifest]);
+            DungeonMediaManifestSidecar dungeon = new(new([actor]), [], [], [actorManifest]);
             ClassicMediaManifestSidecar classic = new(
                 new([weapon, effect, font]),
                 [new ClassicWeaponMediaManifest(weapon.Id, Enum.GetValues<ClassicDaggerWeaponAction>().Select((action, index) => new ClassicWeaponActionManifest(action, index, index, 1, ClassicWeaponScreenAlignment.Right, 0F, new(10F, true), 0, 0)).ToArray())],
@@ -1083,7 +1083,7 @@ public sealed class SpriteWorkbenchProductTests
                 Enumerable.Range(0, 62).Select(region => new ClassicMapRegionManifest(region, [])).ToArray(), [], [], []);
             byte[] dungeonBytes = Serialize(dungeon);
             byte[] classicBytes = Serialize(classic);
-            ImportProvenance provenance = new(ImportProvenance.CurrentSchemaVersion, "daggerfall-import", "test-revision", [new(LogicalSourceRecord.CurrentSchemaVersion, "arena2/test", ContentDigest.Compute("source"u8), 6, 1)]);
+            ImportProvenance provenance = new("daggerfall-import", "test-revision", [new("arena2/test", ContentDigest.Compute("source"u8), 6)]);
             ImportPublicationArtifact[] artifacts =
             [
                 new(actor.RelativePath, actorBytes),

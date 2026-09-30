@@ -27,7 +27,7 @@ internal sealed class NormalizedMeshBuilder(string materialId, bool participates
         _ = MeshGeometry.AppendPolygon(vertices, normals, textureCoordinates, triangles, polygon, uvs, normal);
 
     public NormalizedMesh ToMesh(string id, string artifactId) => new(
-        NormalizedMesh.CurrentSchemaVersion, id, artifactId, vertices, normals, textureCoordinates, triangles,
+        id, artifactId, vertices, normals, textureCoordinates, triangles,
         [new NormalizedMaterialGroup(materialId, 0, triangles.Count, participatesInCollision)]);
 }
 
@@ -102,7 +102,6 @@ public static class MeshGeometry
         }
 
         return new(
-            NormalizedBounds.CurrentSchemaVersion,
             new(vertices.Min(vertex => vertex.X), vertices.Min(vertex => vertex.Y), vertices.Min(vertex => vertex.Z)),
             new(vertices.Max(vertex => vertex.X), vertices.Max(vertex => vertex.Y), vertices.Max(vertex => vertex.Z)));
     }

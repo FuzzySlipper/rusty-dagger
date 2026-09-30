@@ -47,7 +47,7 @@ public sealed class Arena2MediaBundlePublicationTests
         string classicJson = Encoding.UTF8.GetString(first.Plan.Artifacts.Single(artifact => artifact.RelativePath == Arena2MediaBundlePublication.ClassicMediaManifestRelativePath).Bytes.Span);
         Assert.EndsWith("\n", dungeonJson, StringComparison.Ordinal);
         Assert.EndsWith("\n", classicJson, StringComparison.Ordinal);
-        Assert.Contains("\"schemaVersion\": 1", dungeonJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("schemaVersion", dungeonJson, StringComparison.Ordinal);
         Assert.Contains("\"media\":", classicJson, StringComparison.Ordinal);
         Assert.Contains("\"weaponMedia\":", classicJson, StringComparison.Ordinal);
         Assert.DoesNotContain("encounter", dungeonJson, StringComparison.OrdinalIgnoreCase);
@@ -299,31 +299,26 @@ public sealed class Arena2MediaBundlePublicationTests
         const string collisionArtifactId = "artifact/collision";
         const string resourcesArtifactId = "artifact/resources";
         NormalizedBounds bounds = new(
-            NormalizedBounds.CurrentSchemaVersion,
             new NormalizedVector3(0F, 0F, 0F),
             new NormalizedVector3(1F, 1F, 1F));
         NormalizedNavigationSurface navigation = new(
-            NormalizedNavigationSurface.CurrentSchemaVersion,
             "navigation/test",
             collisionArtifactId,
             NavigationDerivationConfig.ClassicDefault,
             []);
         NormalizedResourceCatalogEntry texture = new(
-            NormalizedResourceCatalogEntry.CurrentSchemaVersion,
             "texture/minimal",
             NormalizedResourceKind.Texture,
             resourcesArtifactId,
             [],
             []);
         NormalizedResourceCatalogEntry material = new(
-            NormalizedResourceCatalogEntry.CurrentSchemaVersion,
             "material/minimal",
             NormalizedResourceKind.Material,
             resourcesArtifactId,
             [texture.Id],
             []);
         NormalizedMesh mesh = new(
-            NormalizedMesh.CurrentSchemaVersion,
             "mesh/test",
             staticArtifactId,
             [new NormalizedVector3(0F, 0F, 0F), new NormalizedVector3(1F, 0F, 0F), new NormalizedVector3(0F, 0F, 1F)],
@@ -332,7 +327,6 @@ public sealed class Arena2MediaBundlePublicationTests
             [new NormalizedTriangle(0, 1, 2)],
             [new NormalizedMaterialGroup(material.Id, 0, 1, true)]);
         NormalizedWorld world = new(
-            NormalizedWorld.CurrentSchemaVersion,
             "mesh/test",
             [mesh.Id],
             navigation.Id,
@@ -358,15 +352,12 @@ public sealed class Arena2MediaBundlePublicationTests
             [texture, material]);
         ContentDigest paletteDigest = ContentDigest.Compute("palette"u8);
         NormalizedImportDocument document = new NormalizedImportDocument(
-            NormalizedImportDocument.CurrentSchemaVersion,
             new ImportProvenance(
-                ImportProvenance.CurrentSchemaVersion,
                 "daggerfall-import/test",
                 "test-revision",
-                [new LogicalSourceRecord(LogicalSourceRecord.CurrentSchemaVersion, "arena2/PAL.PAL", paletteDigest, 7, 1)]),
+                [new LogicalSourceRecord("arena2/PAL.PAL", paletteDigest, 7)]),
             spatial.ArtifactDescriptors,
             new NormalizedCoordinateConvention(
-                NormalizedCoordinateConvention.CurrentSchemaVersion,
                 NormalizedHandedness.Right,
                 NormalizedVerticalAxis.PositiveY,
                 1F),
@@ -473,8 +464,8 @@ public sealed class Arena2MediaBundlePublicationTests
         return new(
             artifacts,
             manifest,
-            [new LogicalSourceRecord(LogicalSourceRecord.CurrentSchemaVersion, "arena2/PAL.PAL", sourceDigest ?? ContentDigest.Compute("palette"u8), 7, 1),
-             new LogicalSourceRecord(LogicalSourceRecord.CurrentSchemaVersion, "arena2/WEAPON02.CIF", ContentDigest.Compute("weapon"u8), 6, 1)],
+            [new LogicalSourceRecord("arena2/PAL.PAL", sourceDigest ?? ContentDigest.Compute("palette"u8), 7),
+             new LogicalSourceRecord("arena2/WEAPON02.CIF", ContentDigest.Compute("weapon"u8), 6)],
             null,
             [new ClassicWeaponMediaManifest(weaponMediaId, actions)],
             effects,

@@ -465,7 +465,6 @@ public sealed class DungeonNormalizerTests
     {
         NormalizedVector3[] values = vertices.ToArray();
         return new(
-            NormalizedBounds.CurrentSchemaVersion,
             new(values.Min(value => value.X), values.Min(value => value.Y), values.Min(value => value.Z)),
             new(values.Max(value => value.X), values.Max(value => value.Y), values.Max(value => value.Z)));
     }

@@ -169,19 +169,13 @@ public sealed class SourceManifestTests : IDisposable
         SourceManifestFamilyCount counted = SourceManifestFamilyCount.From("CNT-001", "current-structural", [good]);
 
         // The same source record cannot appear under two identities.
-        Assert.Throws<InvalidOperationException>(() => new SourceManifest(
-            1, "arena2", "inventory.csv", [good, sameIdentity], [SourceManifestFamilyCount.From("CNT-001", "current-structural", [good, sameIdentity])]).Validate());
+        Assert.Throws<InvalidOperationException>(() => new SourceManifest("arena2", "inventory.csv", [good, sameIdentity], [SourceManifestFamilyCount.From("CNT-001", "current-structural", [good, sameIdentity])]).Validate());
         // Family counts must reconcile with the records they count.
-        Assert.Throws<InvalidOperationException>(() => new SourceManifest(
-            1, "arena2", "inventory.csv", [good], [counted with { Discovered = 2 }]).Validate());
+        Assert.Throws<InvalidOperationException>(() => new SourceManifest("arena2", "inventory.csv", [good], [counted with { Discovered = 2 }]).Validate());
         // A record cannot belong to a family the manifest does not count.
-        Assert.Throws<InvalidOperationException>(() => new SourceManifest(
-            1, "arena2", "inventory.csv", [good], [SourceManifestFamilyCount.From("CNT-002", "current-structural", [])]).Validate());
-        // Traversal, absolute paths and an unsupported schema version are refused.
-        Assert.Throws<ArgumentException>(() => new SourceManifest(
-            1, "arena2", "../escape.csv", [good], [counted]).Validate());
-        Assert.Throws<ArgumentOutOfRangeException>(() => new SourceManifest(
-            2, "arena2", "inventory.csv", [good], [counted]).Validate());
+        Assert.Throws<InvalidOperationException>(() => new SourceManifest("arena2", "inventory.csv", [good], [SourceManifestFamilyCount.From("CNT-002", "current-structural", [])]).Validate());
+        // Traversal and absolute paths are refused.
+        Assert.Throws<ArgumentException>(() => new SourceManifest("arena2", "../escape.csv", [good], [counted]).Validate());
     }
 
     [Fact]

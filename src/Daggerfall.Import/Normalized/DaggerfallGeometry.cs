@@ -93,27 +93,17 @@ public sealed record DaggerfallGeometryUnresolvedRecord(string MeshId, IReadOnly
 /// The published mesh inventory: every record the supplied archive declares, what its own bytes say, and
 /// which of its numbers a published block names.
 /// </summary>
-/// <param name="SchemaVersion">Shape version of this section.</param>
 /// <param name="Sources">Every archive the records were read from.</param>
 /// <param name="Records">Every record the archives carry, in directory order.</param>
 /// <param name="UnresolvedUseSites">Every number a block names that no readable record answers.</param>
 public sealed record DaggerfallGeometry(
-    int SchemaVersion,
     IReadOnlyList<DaggerfallGeometrySource> Sources,
     IReadOnlyList<DaggerfallGeometryRecord> Records,
     IReadOnlyList<DaggerfallGeometryUnresolvedRecord> UnresolvedUseSites)
 {
-    /// <summary>Shape version this publication writes.</summary>
-    public const int CurrentSchemaVersion = 1;
-
     /// <summary>Checks that every claim this publication makes about the corpus holds together.</summary>
     public void Validate()
     {
-        if (SchemaVersion != CurrentSchemaVersion)
-        {
-            throw new InvalidOperationException($"Geometry schema must be {CurrentSchemaVersion} but is {SchemaVersion}.");
-        }
-
         ArgumentNullException.ThrowIfNull(Sources);
         ArgumentNullException.ThrowIfNull(Records);
         ArgumentNullException.ThrowIfNull(UnresolvedUseSites);
@@ -478,7 +468,6 @@ public static class DaggerfallGeometryBuilder
         unresolved.Sort((left, right) => ulong.Parse(left.MeshId, CultureInfo.InvariantCulture).CompareTo(ulong.Parse(right.MeshId, CultureInfo.InvariantCulture)));
 
         DaggerfallGeometry published = new(
-            DaggerfallGeometry.CurrentSchemaVersion,
             [new DaggerfallGeometrySource(family.Id, label, bytes.LongLength, catalog.DeclaredRecords, catalog.Records.Count)],
             records,
             unresolved);

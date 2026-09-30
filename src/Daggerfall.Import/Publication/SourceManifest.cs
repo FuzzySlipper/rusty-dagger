@@ -151,14 +151,11 @@ public sealed record SourceManifestFamilyCount(
 /// that reconcile them. This is provenance for normalizers, not a runtime reader.
 /// </summary>
 public sealed record SourceManifest(
-    int SchemaVersion,
     string SourceRoot,
     string InventoryPath,
     IReadOnlyList<SourceManifestRecord> Records,
     IReadOnlyList<SourceManifestFamilyCount> Families)
 {
-    public const int CurrentSchemaVersion = 1;
-
     public SourceManifest Canonicalize() => this with
     {
         Records = Records.OrderBy(record => record.FamilyId, StringComparer.Ordinal)
@@ -171,11 +168,6 @@ public sealed record SourceManifest(
 
     public void Validate()
     {
-        if (SchemaVersion != CurrentSchemaVersion)
-        {
-            throw new ArgumentOutOfRangeException(nameof(SchemaVersion), SchemaVersion, $"Only source manifest schema version {CurrentSchemaVersion} is supported.");
-        }
-
         NormalizedImportDocument.RequireLogicalPath(SourceRoot, nameof(SourceRoot));
         NormalizedImportDocument.RequireLogicalPath(InventoryPath, nameof(InventoryPath));
         ArgumentNullException.ThrowIfNull(Records);

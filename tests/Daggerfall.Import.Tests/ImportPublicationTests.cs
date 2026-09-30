@@ -24,7 +24,7 @@ public sealed class ImportPublicationTests : IDisposable
         PublishedSource source = Assert.Single(first.Manifest.Sources);
         Assert.Equal("arena2/MAPS.BSA", source.Path);
         Assert.Equal(4, source.ByteLength);
-        Assert.Contains("\"sourcePath\"", Encoding.UTF8.GetString(ImportPublicationManifestSerializer.Serialize(first.Manifest)), StringComparison.Ordinal);
+        Assert.Contains("\"contentDigest\"", Encoding.UTF8.GetString(ImportPublicationManifestSerializer.Serialize(first.Manifest)), StringComparison.Ordinal);
         Assert.Equal(4, first.Manifest.Artifacts.Single(artifact => artifact.RelativePath == "zeta.bin").ByteLen);
         Assert.Contains("import-manifest.json", first.Artifacts.Select(artifact => artifact.RelativePath));
     }
@@ -143,9 +143,8 @@ public sealed class ImportPublicationTests : IDisposable
 
     private static ImportPublicationPlan CreatePlan(params ImportPublicationArtifact[] artifacts) => ImportPublicationPlan.Create(
         new ImportProvenance(
-            ImportProvenance.CurrentSchemaVersion,
             "daggerfall-import/test",
             "test-revision",
-            [new LogicalSourceRecord(LogicalSourceRecord.CurrentSchemaVersion, "arena2/MAPS.BSA", new ContentDigest("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"), 4, 1)]),
+            [new LogicalSourceRecord("arena2/MAPS.BSA", new ContentDigest("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"), 4)]),
         artifacts);
 }
