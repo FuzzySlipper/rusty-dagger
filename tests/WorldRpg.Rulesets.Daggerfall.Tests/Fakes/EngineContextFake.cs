@@ -48,7 +48,8 @@ internal class EngineContextFake : DispatchProxy
     private IPersistenceService persistence = null!;
 
     internal static EngineContextFake Create(IContentService content, ISpatialService spatial, IGraphicsService appearance,
-        IPerceptionService? perception = null, IPersistenceService? persistence = null, IRandomService? random = null)
+        IPerceptionService? perception = null, IPersistenceService? persistence = null, IRandomService? random = null,
+        IVideoService? video = null)
     {
         IEngineContext context = DispatchProxy.Create<IEngineContext, EngineContextFake>();
         EngineContextFake fake = (EngineContextFake)(object)context;
@@ -60,7 +61,7 @@ internal class EngineContextFake : DispatchProxy
         fake.camera = ServiceProxy<ICameraViewService, CameraServiceFake>.Create();
         fake.audio = ServiceProxy<IAudioService, AudioServiceFake>.Create();
         fake.diagnostics = ServiceProxy<IDiagnosticsService, DiagnosticsServiceFake>.Create();
-        fake.video = ServiceProxy<IVideoService, VideoServiceFake>.Create();
+        fake.video = video ?? ServiceProxy<IVideoService, VideoServiceFake>.Create();
         fake.random = random ?? RandomMinimum.Create();
         fake.ui = UiServiceFake.Create(fake);
         fake.persistence = persistence ?? new InMemoryPersistenceService();

@@ -101,6 +101,9 @@ internal sealed class BundleContentFake : IContentService
     private readonly Dictionary<ulong, string> openedBundles = [];
     private ulong nextHandle = 1;
 
+    /// <summary>Every bundle file the product opened, in order, as its bundle and its path inside it.</summary>
+    internal List<(string Bundle, string Path)> OpenedReferences { get; } = [];
+
     internal void Add(string bundle, string path, byte[] bytes)
     {
         if (!files.TryGetValue(bundle, out Dictionary<string, byte[]>? values)) files.Add(bundle, values = new(StringComparer.Ordinal));
@@ -132,6 +135,7 @@ internal sealed class BundleContentFake : IContentService
     {
         if (!openedBundles.TryGetValue(request.Bundle.Handle.Value, out string? id)
             || !files[id].ContainsKey(request.Path)) throw new FileNotFoundException("Test bundle file is not declared.", request.Path);
+        OpenedReferences.Add((id, request.Path));
         return new(new ContentReferenceHandle(nextHandle++), static () => { });
     }
 

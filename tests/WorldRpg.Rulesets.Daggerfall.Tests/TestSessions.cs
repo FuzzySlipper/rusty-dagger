@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Xml.Linq;
 using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
@@ -114,21 +115,38 @@ internal static class TestSessions
             // Each site's clips are staged as the bundle its own payload declares.
             .. SiteAudioBundles(root),
         ];
+        return ContentWithBundles(root, audioBundles, out _);
+    }
+
+    /// <summary>
+    /// The content the SDK stages for the Host: every bundle the Host project declares is served lazily
+    /// as that bundle, the cinematics included, and every other file sits in the eager snapshot.
+    /// </summary>
+    internal static ProductContent StagedContent(string root, out BundleContentFake bundles)
+    {
+        (string Root, string Bundle)[] declared = [.. XDocument.Load(Path.Combine(root, "src/WorldRpg.Host/WorldRpg.Host.csproj"))
+            .Descendants("RustyEngineContentBundle")
+            .Select(item => (item.Attribute("Root")!.Value, item.Attribute("Include")!.Value))];
+        return ContentWithBundles(root, declared, out bundles);
+    }
+
+    private static ProductContent ContentWithBundles(string root, (string Root, string Bundle)[] declared, out BundleContentFake bundles)
+    {
         string contentRoot = Path.Combine(root, "content");
-        BundleContentFake bundles = new();
+        bundles = new();
         List<ProductContentFile> eager = [];
 
         foreach (string file in Directory.GetFiles(Path.Combine(contentRoot, "worldrpg"), "*", SearchOption.AllDirectories))
         {
             string relative = Path.GetRelativePath(contentRoot, file).Replace(Path.DirectorySeparatorChar, '/');
-            (string Root, string Bundle) audio = audioBundles.FirstOrDefault(value => relative.StartsWith(value.Root + "/", StringComparison.Ordinal));
-            if (string.IsNullOrEmpty(audio.Root))
+            (string Root, string Bundle) bundle = declared.FirstOrDefault(value => relative.StartsWith(value.Root + "/", StringComparison.Ordinal));
+            if (string.IsNullOrEmpty(bundle.Root))
             {
                 eager.Add(new ProductContentFile(Encoding.UTF8.GetBytes(relative), File.ReadAllBytes(file)));
                 continue;
             }
 
-            bundles.Add(audio.Bundle, relative[(audio.Root.Length + 1)..], File.ReadAllBytes(file));
+            bundles.Add(bundle.Bundle, relative[(bundle.Root.Length + 1)..], File.ReadAllBytes(file));
         }
 
         return new ProductContent(eager.ToArray(), bundles);
