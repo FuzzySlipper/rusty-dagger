@@ -73,6 +73,76 @@ public sealed class Arena2MagicCatalogDocumentTests
         Assert.Contains(document["spells"]!.AsArray(), spell => spell!["identityShared"]!.GetValue<bool>());
     }
 
+    [Fact]
+    public void PublishesOneCostRowForEveryEffectVariantASpellUses()
+    {
+        Arena2MagicCatalogPublication publication = Arena2MagicCatalogDocument.Build(
+            SpellTable(), MagicItemTable(), "local/arena2/SPELLS.STD", "local/arena2/MAGIC.DEF", Arena2MagicEffectCostTable.Read(Formulas()));
+        JsonArray costs = JsonNode.Parse(publication.Json)!["effectCosts"]!.AsArray();
+
+        // Both spells carry one effect without a subtype, so each type resolves through its first slot.
+        Assert.Equal([16, 31], costs.Select(cost => cost!["type"]!.GetValue<int>()));
+        JsonObject first = costs[0]!.AsObject();
+        Assert.Equal(-1, first["subType"]!.GetValue<int>());
+        Assert.Equal(3, first["settingsType"]!.GetValue<int>());
+        Assert.Equal("mysticism", first["school"]!.GetValue<string>());
+        Assert.Equal(5, first["coefficients"]!["first"]!.GetValue<int>());
+        Assert.Equal(25, first["coefficients"]!["second"]!.GetValue<int>());
+        Assert.Equal("illusion", costs[1]!["school"]!.GetValue<string>());
+        Assert.Equal(2, costs[1]!["coefficients"]!["first"]!.GetValue<int>());
+
+        // Without the donor's tables the catalog states no cost rather than inventing one.
+        Assert.Null(JsonNode.Parse(Arena2MagicCatalogDocument.Build(
+            SpellTable(), MagicItemTable(), "local/arena2/SPELLS.STD", "local/arena2/MAGIC.DEF").Json)!["effectCosts"]);
+        Assert.Throws<InvalidOperationException>(() => Arena2MagicEffectCostTable.Read(Formulas()).Resolve(51, -1));
+    }
+
+    [CorpusAndDonorFact(["SPELLS.STD", "MAGIC.DEF"], [Arena2MagicEffectCostTable.DonorSourcePath])]
+    public void TheRealSpellsResolveEveryEffectThroughTheDonorCostTables()
+    {
+        Arena2MagicCatalogPublication publication = Arena2MagicCatalogDocument.Build(
+            File.ReadAllBytes(TestData.Corpus("SPELLS.STD")), File.ReadAllBytes(TestData.Corpus("MAGIC.DEF")),
+            "local/arena2/SPELLS.STD", "local/arena2/MAGIC.DEF",
+            Arena2MagicEffectCostTable.Read(File.ReadAllText(TestData.Donor(Arena2MagicEffectCostTable.DonorSourcePath))));
+        JsonObject document = JsonNode.Parse(publication.Json)!.AsObject();
+        HashSet<(int, int)> rows = [.. document["effectCosts"]!.AsArray().Select(cost => (cost!["type"]!.GetValue<int>(), cost["subType"]!.GetValue<int>()))];
+        HashSet<(int, int)> used = [.. document["spells"]!.AsArray().SelectMany(spell => spell!["effects"]!.AsArray())
+            .Select(effect => (effect!["type"]!.GetValue<int>(), effect["subType"]!.GetValue<int>()))];
+
+        Assert.Equal(60, rows.Count);
+        Assert.True(used.SetEquals(rows));
+        // Paralysis: settings type 1, alteration, the donor's first coefficient row.
+        JsonObject paralysis = document["effectCosts"]!.AsArray()[0]!.AsObject();
+        Assert.Equal((0, -1, 1, "alteration"), (paralysis["type"]!.GetValue<int>(), paralysis["subType"]!.GetValue<int>(), paralysis["settingsType"]!.GetValue<int>(), paralysis["school"]!.GetValue<string>()));
+        Assert.Equal([7, 25, 7, 25], paralysis["coefficients"]!.AsObject().Select(pair => pair.Value!.GetValue<int>()));
+    }
+
+    /// <summary>
+    /// A donor-shaped excerpt of the four spell-cost tables covering the two effect types the spell table
+    /// uses: type 16 reads coefficient row 1 and type 31 row 2.
+    /// </summary>
+    private static string Formulas()
+    {
+        int[] indices = new int[51 * 12];
+        indices[16 * 12] = 1;
+        indices[31 * 12] = 2;
+        int[] settings = new int[51];
+        settings[16] = 3;
+        settings[31] = 1;
+        int[] schools = new int[51];
+        schools[16] = 3;
+        schools[31] = 5;
+        return $$"""
+            byte[] effectIndices = { {{string.Join(", ", indices.Select(value => $"0x{value:X2}"))}} };
+            ushort[] effectCoefficients = {
+                0x07, 0x19, 0x07, 0x19, // first row
+                0x05, 0x19, 0x07, 0x1E, // type 16
+                0x02, 0x0A, 0x00, 0x00 }; // type 31
+            byte[] effectMagicSchools = { {{string.Join(", ", schools)}} };
+            byte[] settingsTypes = { {{string.Join(", ", settings)}} };
+            """;
+    }
+
     /// <summary>Two spells sharing one identity byte, which is the corpus' own shape.</summary>
     private static byte[] SpellTable()
     {

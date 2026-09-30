@@ -226,7 +226,6 @@ public sealed record DungeonNormalizationResult(
 public static class DungeonNormalizer
 {
     private const string ImporterId = "daggerfall-import/dungeon-normalizer";
-    private const int ImporterVersion = 1;
     // Classic Arena2 coordinate units use a fixed conversion to metres. This
     // is a source-format invariant, not a product or presentation setting.
     private const float SourceUnitMetres = 0.025F;
@@ -676,7 +675,7 @@ public static class DungeonNormalizer
                 resources);
             NormalizedImportDocument document = new NormalizedImportDocument(
                 NormalizedImportDocument.CurrentSchemaVersion,
-                new ImportProvenance(ImportProvenance.CurrentSchemaVersion, ImporterId, ImporterVersion,
+                new ImportProvenance(ImportProvenance.CurrentSchemaVersion, ImporterId, ImporterBuild.Revision,
                     request.Sources.Sources.Select(source => new LogicalSourceRecord(LogicalSourceRecord.CurrentSchemaVersion, source.Label, ContentDigest.Compute(source.Bytes.Span), source.Bytes.Length, 1)).ToArray()),
                 spatialPublication.ArtifactDescriptors,
                 new NormalizedCoordinateConvention(NormalizedCoordinateConvention.CurrentSchemaVersion, NormalizedHandedness.Right, NormalizedVerticalAxis.PositiveY, 1F),

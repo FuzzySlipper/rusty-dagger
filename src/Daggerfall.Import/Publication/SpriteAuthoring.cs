@@ -9,7 +9,9 @@ namespace Daggerfall.Import.Publication;
 /// <summary>
 /// Stable identity for authored sprite values. It retains source and generated
 /// structural facts while deliberately excluding tunable presentation values
-/// and sidecar bytes that change when those values are reapplied.
+/// and sidecar bytes that change when those values are reapplied. The importer
+/// revision and invocation are provenance rather than structure, so a commit that
+/// leaves the generated structure alone keeps an overlay's basis valid.
 /// </summary>
 public static class SpriteAuthoringBasis
 {
@@ -21,7 +23,6 @@ public static class SpriteAuthoringBasis
         ArgumentNullException.ThrowIfNull(catalog);
         BasisDocument document = new(
             publication.ImporterId,
-            publication.ImporterVersion,
             publication.Sources.OrderBy(source => source.SourcePath, StringComparer.Ordinal).Select(source => new BasisSource(source.SourcePath, source.ContentHash, source.ByteLen)).ToArray(),
             catalog.Entries.OrderBy(entry => entry.Id, StringComparer.Ordinal).Select(entry => new BasisEntry(
                 entry.Id, entry.Kind, entry.Closure.RelativePath, entry.Closure.ContentDigest, entry.Closure.ByteLength,
@@ -37,7 +38,7 @@ public static class SpriteAuthoringBasis
         return SpriteContentDigest.Compute(JsonSerializer.SerializeToUtf8Bytes(document, Json));
     }
 
-    private sealed record BasisDocument(string ImporterId, int ImporterVersion, IReadOnlyList<BasisSource> Sources, IReadOnlyList<BasisEntry> Entries);
+    private sealed record BasisDocument(string ImporterId, IReadOnlyList<BasisSource> Sources, IReadOnlyList<BasisEntry> Entries);
     private sealed record BasisSource(string Path, ContentDigest Digest, long ByteLength);
     private sealed record BasisEntry(string Id, SpriteInspectionKind Kind, string Path, SpriteContentDigest Digest, long ByteLength, int AtlasWidth, int AtlasHeight, IReadOnlyList<BasisFrame> Frames, IReadOnlyList<BasisState> States, IReadOnlyList<BasisAction> Actions);
     private sealed record BasisFrame(string Id, int Index, int X, int Y, int Width, int Height, int SourceWidth, int SourceHeight, bool Mirrored, int? SourceRecord, int? SourceFrame, int? Orientation);

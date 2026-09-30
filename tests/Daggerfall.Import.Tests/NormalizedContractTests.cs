@@ -146,7 +146,7 @@ public sealed class NormalizedContractTests
             new(
                 ImportProvenance.CurrentSchemaVersion,
                 "importer/example",
-                1,
+                "test-revision",
                 [new(LogicalSourceRecord.CurrentSchemaVersion, "content/example.mesh.json", geometryDigest, 12, 1)]),
             [
                 new(NormalizedArtifactDescriptor.CurrentSchemaVersion, "artifact/geometry", "geometry.json", geometryDigest, 12, ["artifact/materials"]),

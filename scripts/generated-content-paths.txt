@@ -1,0 +1,8 @@
+# Files under content/ that scripts/regenerate-content.sh produces from local inputs, in
+# .gitignore syntax relative to the repository root. The script removes these before it runs.
+# content/worldrpg/payloads/daggerfall.base.json is partly generated and is not listed: its
+# derived sections are named in docs/coverage/content-scope.md and replaced in place.
+/content/worldrpg/imports/
+/content/worldrpg/media/
+/content/worldrpg/payloads/daggerfall.blocks.json
+/content/worldrpg/payloads/daggerfall.quests.*.json

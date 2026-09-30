@@ -50,6 +50,12 @@ public sealed class Arena2MobileCatalogDocumentTests
         Assert.Equal("dragonling-40", variant["actor"]!.GetValue<string>());
         Assert.Equal("Dragonling", variant["donorName"]!.GetValue<string>());
 
+        // The senses flag is the donor entry's own: stated where the entry says so, false where it is silent.
+        Assert.True(document["mobiles"]!.AsArray().Single(mobile => mobile!["donorId"]!.GetValue<int>() == 41)!["seesThroughInvisibility"]!.GetValue<bool>());
+        Assert.False(rat["seesThroughInvisibility"]!.GetValue<bool>());
+        Assert.False(rat["castsMagic"]!.GetValue<bool>());
+        Assert.Empty(document["divergences"]!.AsArray());
+
         // The human mobile is a career-space fact, not a missing actor.
         JsonObject human = document["mobiles"]!.AsArray().Single(mobile => mobile!["disposition"]!.GetValue<string>() == "human-mobile")!.AsObject();
         Assert.Null(human["actor"]);
@@ -85,6 +91,14 @@ public sealed class Arena2MobileCatalogDocumentTests
             Assert.NotNull(mobile!["damage"]);
             Assert.False(string.IsNullOrEmpty(mobile["behaviour"]!.GetValue<string>()));
         });
+        // The caster flag is the donor's own, and the two loot keys the catalog keeps against the donor are
+        // listed with the donor's value beside the published one.
+        Assert.True(mobiles.Single(mobile => mobile!["donorId"]!.GetValue<int>() == 128)!["castsMagic"]!.GetValue<bool>());
+        Assert.False(mobiles.Single(mobile => mobile!["donorId"]!.GetValue<int>() == 131)!["castsMagic"]!.GetValue<bool>());
+        JsonArray divergences = JsonNode.Parse(publication.Json)!["divergences"]!.AsArray();
+        Assert.Equal([(140, "T", "O"), (146, (string?)null, "T")], divergences.Select(divergence => (
+            divergence!["donorId"]!.GetValue<int>(), divergence["donorValue"]?.GetValue<string>(), divergence["publishedValue"]!.GetValue<string>())));
+        Assert.Equal("O", mobiles.Single(mobile => mobile!["donorId"]!.GetValue<int>() == 140)!["lootTableKey"]!.GetValue<string>());
     }
 
     [CorpusFact("CLASS00.CFG")]
@@ -194,6 +208,7 @@ public sealed class Arena2MobileCatalogDocumentTests
             {
                 ID = 41,
                 Behaviour = MobileBehaviour.General,
+                SeesThroughInvisibility = true,
                 MinDamage = 4,
                 MaxDamage = 12,
             },

@@ -107,7 +107,7 @@ public sealed class SourceManifestTests : IDisposable
         ImportProvenance provenance = new(
             ImportProvenance.CurrentSchemaVersion,
             "daggerfall-import/test",
-            1,
+            "test-revision",
             [new LogicalSourceRecord(LogicalSourceRecord.CurrentSchemaVersion, "arena2/A.CIF", ContentDigest.Compute("alpha"u8), 5, 1)]);
         ImportPublicationPlan First(string mediaPath, ReadOnlySpan<byte> bytes) => SourceManifestPublication.Compose(
             ImportPublicationPlan.Create(provenance, [new ImportPublicationArtifact(mediaPath, bytes)]), source);
@@ -142,7 +142,7 @@ public sealed class SourceManifestTests : IDisposable
             "CNT-001.file.A.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,uninspected,note");
         SourceManifest source = SourceManifestBuilder.Build(
             new SourceManifestRequest("local/arena2", "inventory.csv", root, ["A.CIF"], [], []), Encoding.UTF8.GetBytes(inventory));
-        ImportProvenance provenance = new(ImportProvenance.CurrentSchemaVersion, "daggerfall-import/test", 1,
+        ImportProvenance provenance = new(ImportProvenance.CurrentSchemaVersion, "daggerfall-import/test", "test-revision",
             [new LogicalSourceRecord(LogicalSourceRecord.CurrentSchemaVersion, "arena2/A.CIF", ContentDigest.Compute("alpha"u8), 5, 1)]);
         string output = Path.Combine(root, "publication");
         ImportPublicationWriter.Write(SourceManifestPublication.Compose(

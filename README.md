@@ -187,14 +187,12 @@ bash src/scripts/run-sprite-workbench.sh content/worldrpg/imports/privateers-hol
 RUSTY_WORKBENCH_PORT=4176 RUSTY_WORKBENCH_OVERLAY=sprites/rats.json bash src/scripts/run-sprite-workbench.sh
 ```
 
-The game's menu link assumes the default port.
-
 The tool shows the Engine preview alongside atlas/frame inspection, a draggable
 pivot, directional review, frame rectangles, and resource/per-animation timing.
 Apply updates the preview; Save persists the typed overlay; Discard restores the
 saved preview. Reopening applies saved edits. Import regeneration consumes them
-with `--sprite-authoring authoring --sprite-overlay sprites/privateers-hold.json`
-on the existing import `write` command; generated media stays separate from authored files.
+with `scripts/regenerate-content.sh --sprite-authoring authoring`, which passes each site's
+`sprites/SITE.json` to the import `write` command; generated media stays separate from authored files.
 
 The **Engine debug console** menu entry mounts the upstream console. Start the
 host with `--live-debug` (the repository development service already does).
@@ -231,8 +229,10 @@ content, typed tuning, `Daggerfall.Import`, and compiled Daggerfall ruleset
 policy; the former Rust workspace, TypeScript gameplay evaluator, and encounter
 demonstration topology are not present as fallback paths.
 
-Daggerfall/Arena2 source data remains operator-supplied. Preserve the checked
-in imported/authored assets, attribution, and provenance when adapting content.
+Daggerfall/Arena2 source data remains operator-supplied. `scripts/regenerate-content.sh`
+rebuilds every derived file under `content/` from `local/arena2`, the donor checkout and
+`local/Sound`; [content scope](docs/coverage/content-scope.md) lists what is generated and what is
+authored. Preserve the authored assets, attribution, and provenance when adapting content.
 
 ## Guidance and proof
 

@@ -295,7 +295,7 @@ public static class RmbExteriorNormalizer
             DungeonSpatialPublication spatial = DungeonSpatialPublication.Create(staticId, $"spatial/{slug}/{profile}/static-mesh.json", collisionId,
                 $"spatial/{slug}/{profile}/collision-navigation.json", resourcesId, $"resources/{slug}/{profile}/catalog.json", world.VisualMeshAssetId, bounds, meshes, world, navigation, resources);
             NormalizedImportDocument document = new NormalizedImportDocument(NormalizedImportDocument.CurrentSchemaVersion,
-                new ImportProvenance(ImportProvenance.CurrentSchemaVersion, ImporterId, 1, request.Sources.Sources.Select(source => new LogicalSourceRecord(LogicalSourceRecord.CurrentSchemaVersion, source.Label, ContentDigest.Compute(source.Bytes.Span), source.Bytes.Length, 1)).ToArray()),
+                new ImportProvenance(ImportProvenance.CurrentSchemaVersion, ImporterId, ImporterBuild.Revision, request.Sources.Sources.Select(source => new LogicalSourceRecord(LogicalSourceRecord.CurrentSchemaVersion, source.Label, ContentDigest.Compute(source.Bytes.Span), source.Bytes.Length, 1)).ToArray()),
                 spatial.ArtifactDescriptors, new NormalizedCoordinateConvention(NormalizedCoordinateConvention.CurrentSchemaVersion, NormalizedHandedness.Right, NormalizedVerticalAxis.PositiveY, 1F),
                 bounds, meshes, navigation, world, resources).Canonicalize();
             RmbExteriorNormalizationResult result = new(document, spatial, layout, request.Building, referencedMeshes.ToArray());

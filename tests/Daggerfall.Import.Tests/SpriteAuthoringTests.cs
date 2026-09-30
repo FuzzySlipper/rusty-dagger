@@ -473,8 +473,10 @@ public sealed class SpriteAuthoringTests
         CanonicalImportManifest manifest = new(
             1,
             "daggerfall-import",
-            1,
+            "test-revision",
+            [],
             [new("arena2/test", ContentDigest.Compute("source"u8), 6)],
+            [],
             [Artifact(actor.RelativePath, actorDigest, 3), Artifact(billboard.RelativePath, billboardDigest, 3), Artifact(weapon.RelativePath, weaponDigest, 3), Artifact(effect.RelativePath, effectDigest, 3), Artifact(font.RelativePath, fontDigest, 3), Artifact(map.RelativePath, mapDigest, 3)]);
         manifest.Validate();
         return new(manifest, dungeon, classic, actorDigest, billboardDigest, weaponDigest, effectDigest, fontDigest);

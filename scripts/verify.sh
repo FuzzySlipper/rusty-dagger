@@ -29,6 +29,13 @@ done
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo_root"
 
+# The corpus and donor suites skip, with a stated reason, when their data is absent, so a green run
+# means different things with and without them. Say up front which ones this run has.
+arena2_root=${DAGGER_ARENA2:-local/arena2}
+donor_root=${DAGGER_DONOR_ROOT:-/home/research/daggerfall-unity}
+corpora="Arena2 corpus $arena2_root: $([[ -d "$arena2_root" ]] && echo present || echo absent); donor checkout $donor_root: $([[ -d "$donor_root" ]] && echo present || echo absent)"
+echo "corpora: $corpora"
+
 # A green run is only worth keeping if it names what it ran on. The record is a git note on the
 # exact commit, so it cannot drift from the tree it describes; a run over uncommitted changes would
 # attach a result to code that is not in that commit, so recording refuses a dirty tree.
@@ -48,7 +55,7 @@ if [[ "$record" == true ]]; then
   [[ "$status" -eq 0 ]] || exit "$status"
   summary=$(
     echo "scripts/verify.sh ${gate_arguments[*]}"
-    echo "corpus: local/arena2 $( [[ -d local/arena2 ]] && echo present || echo absent )"
+    echo "corpora: $corpora"
     grep -E '^# (pass|fail|skipped) |^(Passed|Failed)!|^play-smoke .* passed:|^Verified Engine pair' "$run_log" \
       | sed -E 's/, Duration: [^-]*- / /'
   )

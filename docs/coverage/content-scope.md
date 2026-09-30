@@ -260,3 +260,52 @@ The planning expansion is therefore finite and record-oriented:
 - No raw media or copyrighted prose needs to be copied into the repository for this planning
   artifact. A later media task must name the accepted runtime format, conversion/provenance and
   publication boundary.
+
+## Generated and authored content
+
+Everything under `content/` that derives from the operator's Daggerfall inputs is produced by one
+command, `scripts/regenerate-content.sh`. It reads `local/arena2` (or `--arena2`/`DAGGER_ARENA2`),
+the Daggerfall Unity checkout (`--donor`/`DAGGER_DONOR_ROOT`), the song folder `local/Sound`
+(`--sound`) and FFmpeg, checks that each is present before writing anything, removes the generated
+files, and runs the import tool's commands in their dependency order: music and classic media,
+the derived base-payload sections, the quest corpus payloads, then the four site closures.
+Two runs at the same importer source and FFmpeg build write identical bytes.
+
+Generated whole files, listed in `.gitignore` syntax in `scripts/generated-content-paths.txt`:
+
+- `content/worldrpg/imports/**` — the Privateer's Hold, Castle Necromoghan and Charing
+  exterior/interior closures (`write`, `rmb-spatial`).
+- `content/worldrpg/media/**` — classic media, character media, music and cinematics
+  (`classic-media`, `character-presentation`, `music-media`, `cinematic-media`).
+- `content/worldrpg/payloads/daggerfall.blocks.json` (`blocks`) and
+  `content/worldrpg/payloads/daggerfall.quests.*.json` (`fighters-quest-corpus`,
+  `classic-quest-corpora`).
+
+`content/worldrpg/payloads/daggerfall.base.json` is mixed. Its generated sections are `catalogs`,
+`itemTemplateLedger`, `characterPresentation`, `locations`, `magic`, `mobiles`, `text`, `names`,
+`rumors`, `biographies`, `books`, `blocks`, `geometry`, `climate`, `politic`, `factions`, `terrain`,
+`itemTemplates`, `questTables`, `questCatalog`, `questSources`, `questOriginalSources`, `cinematics`
+and `buildingNames`; the commands replace them in place. Its authored sections are `ruleset`,
+`vocabulary`, `armorValuesByMaterial`, `actors`, `items`, `equipmentSlots`, `actions`, `lootTables`,
+`hudResources`, `lootCategoryPools`, `donorErrata` and `encounters` (transcribed from the donor by
+hand; no command writes it). Several commands read authored sections (`catalogs` reads the
+vocabulary, actors and items), so the file cannot be ignored as a whole until the authored sections
+live in their own file. The `mobiles` section keeps two loot table keys that the donor's table does
+not give (Monk and City Watch); its `divergences` list names them with the donor's value until an
+owner decides which the product uses.
+
+Authored and tracked: the pack, bundle and tuning descriptors (`content/worldrpg/content-packs/`,
+`content/worldrpg/bundles/`, `content/worldrpg/tuning/`), the tuning payloads
+(`content/worldrpg/tuning-payloads/`), the site payloads
+(`content/worldrpg/payloads/daggerfall.{privateers-hold,castle-necromoghan,charing-exterior,charing-interior-1-1-0}.json`)
+and the importer's tracked inputs: the source inventory, `data/ui-authored-assets.json` with
+`data/ui-original/`. No sprite overlay is tracked; `--sprite-authoring DIR` applies an operator's
+`sprites/SITE.json` overlays to the dungeon sites.
+
+Each site closure's `import-manifest.json` records its provenance: `importerRevision` (the last
+commit that changed `src/Daggerfall.Import`, `src/Daggerfall.Import.Tool` or
+`src/WorldRpg.SpriteAuthoring`, suffixed `-dirty` for uncommitted changes there), `command` (the tool
+command line that writes it), `sources`, and `authoredOverlays` (each applied sprite overlay with
+its digest). `normalized.json` carries the same revision. Each cinematic artifact in the base
+payload records the FFmpeg build that encoded it, because another build writes different VP9/Opus
+bytes for the same source.

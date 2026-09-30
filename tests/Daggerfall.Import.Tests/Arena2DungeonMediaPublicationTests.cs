@@ -435,7 +435,7 @@ public sealed class Arena2DungeonMediaPublicationTests
             new ImportProvenance(
                 ImportProvenance.CurrentSchemaVersion,
                 "daggerfall-import/test",
-                1,
+                "test-revision",
                 [new LogicalSourceRecord(LogicalSourceRecord.CurrentSchemaVersion, "arena2/MAPS.BSA", new ContentDigest(new string('0', 64)), 1, 1)]),
             [artifact],
             new NormalizedCoordinateConvention(NormalizedCoordinateConvention.CurrentSchemaVersion, NormalizedHandedness.Right, NormalizedVerticalAxis.PositiveY, 1F),

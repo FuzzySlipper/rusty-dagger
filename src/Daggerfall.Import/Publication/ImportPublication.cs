@@ -92,14 +92,44 @@ public sealed record ImportPublicationManifestArtifact(string RelativePath, Cont
 }
 
 /// <summary>
-/// Canonical, host-independent statement of an import result. It intentionally
-/// excludes timestamps, absolute paths, and publication-directory identity.
+/// How a publication was produced: the command line that writes it and the authored overlay documents it
+/// applied. The overlays are recorded beside the sources rather than among them, because the sprite
+/// authoring basis an overlay is written against is computed from the sources.
+/// </summary>
+public sealed record ImportInvocation(IReadOnlyList<string> Command, IReadOnlyList<ImportPublicationSource> AuthoredOverlays)
+{
+    public static ImportInvocation None { get; } = new([], []);
+
+    public void Validate()
+    {
+        ArgumentNullException.ThrowIfNull(Command);
+        ArgumentNullException.ThrowIfNull(AuthoredOverlays);
+        if (Command.Any(argument => argument is null || argument.Any(char.IsControl)))
+        {
+            throw new ArgumentException("A recorded command argument must be plain text.", nameof(Command));
+        }
+
+        foreach (ImportPublicationSource overlay in AuthoredOverlays)
+        {
+            ArgumentNullException.ThrowIfNull(overlay);
+            overlay.Validate();
+        }
+    }
+}
+
+/// <summary>
+/// Canonical statement of an import result: the importer revision and command line that produced it, the
+/// sources and authored overlays it read, and the artifacts it wrote. It excludes timestamps; the command is
+/// recorded as the caller spelled it, so a caller that passes repository-relative paths keeps the manifest
+/// host-independent.
 /// </summary>
 public sealed record CanonicalImportManifest(
     int SchemaVersion,
     string ImporterId,
-    int ImporterVersion,
+    string ImporterRevision,
+    IReadOnlyList<string> Command,
     IReadOnlyList<ImportPublicationSource> Sources,
+    IReadOnlyList<ImportPublicationSource> AuthoredOverlays,
     IReadOnlyList<ImportPublicationManifestArtifact> Artifacts)
 {
     public const int CurrentSchemaVersion = 1;
@@ -107,8 +137,13 @@ public sealed record CanonicalImportManifest(
     public CanonicalImportManifest Canonicalize() => this with
     {
         Sources = Sources.OrderBy(source => source.SourcePath, StringComparer.Ordinal).ToArray(),
+        AuthoredOverlays = AuthoredOverlays.OrderBy(source => source.SourcePath, StringComparer.Ordinal).ToArray(),
         Artifacts = Artifacts.OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal).Select(artifact => artifact.Canonicalize()).ToArray(),
     };
+
+    /// <summary>The invocation this manifest records, as a view of its own fields rather than another one.</summary>
+    [JsonIgnore]
+    public ImportInvocation Invocation => new(Command, AuthoredOverlays);
 
     public void Validate()
     {
@@ -118,14 +153,12 @@ public sealed record CanonicalImportManifest(
         }
 
         NormalizedImportDocument.RequireLogicalId(ImporterId, nameof(ImporterId));
-        if (ImporterVersion <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(ImporterVersion), ImporterVersion, "An importer version must be positive.");
-        }
-
+        NormalizedImportDocument.RequireLogicalId(ImporterRevision, nameof(ImporterRevision));
         ArgumentNullException.ThrowIfNull(Sources);
         ArgumentNullException.ThrowIfNull(Artifacts);
+        Invocation.Validate();
         ValidateUnique(Sources, source => source.SourcePath, "source path");
+        ValidateUnique(AuthoredOverlays, source => source.SourcePath, "authored overlay path");
         ValidateUnique(Artifacts, artifact => artifact.RelativePath, "artifact path");
         foreach (ImportPublicationSource source in Sources)
         {
@@ -262,11 +295,13 @@ public sealed class ImportPublicationPlan
 
     public IReadOnlyList<ImportPublicationArtifact> Artifacts => artifacts;
 
-    public static ImportPublicationPlan Create(ImportProvenance provenance, IEnumerable<ImportPublicationArtifact> artifacts)
+    public static ImportPublicationPlan Create(ImportProvenance provenance, IEnumerable<ImportPublicationArtifact> artifacts, ImportInvocation? invocation = null)
     {
         ArgumentNullException.ThrowIfNull(provenance);
         ArgumentNullException.ThrowIfNull(artifacts);
         provenance.Validate();
+        invocation ??= ImportInvocation.None;
+        invocation.Validate();
 
         ImportPublicationArtifact[] materialized = artifacts.ToArray();
         if (materialized.Length == 0)
@@ -284,8 +319,10 @@ public sealed class ImportPublicationPlan
         CanonicalImportManifest manifest = new(
             CanonicalImportManifest.CurrentSchemaVersion,
             provenance.ImporterId,
-            provenance.ImporterVersion,
+            provenance.ImporterRevision,
+            invocation.Command.ToArray(),
             provenance.Sources.Select(source => new ImportPublicationSource(source.SourcePath, source.ContentDigest, source.ByteLength)).ToArray(),
+            invocation.AuthoredOverlays.ToArray(),
             orderedContent.Select(artifact => new ImportPublicationManifestArtifact(artifact.RelativePath, artifact.ContentHash, artifact.Bytes.Length, artifact.DependsOnPaths)).ToArray());
         manifest.Validate();
         byte[] manifestBytes = ImportPublicationManifestSerializer.Serialize(manifest);
@@ -293,6 +330,28 @@ public sealed class ImportPublicationPlan
         ImportPublicationArtifact[] closure = [.. orderedContent, manifestArtifact];
         return new ImportPublicationPlan(manifest, Array.AsReadOnly(closure
             .OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal).ToArray()));
+    }
+
+    /// <summary>
+    /// The same closure with the invocation that produces it recorded in its manifest. The artifacts are
+    /// unchanged; only the manifest is rebuilt.
+    /// </summary>
+    public ImportPublicationPlan WithInvocation(ImportInvocation invocation)
+    {
+        ArgumentNullException.ThrowIfNull(invocation);
+        return Create(
+            new ImportProvenance(
+                ImportProvenance.CurrentSchemaVersion,
+                Manifest.ImporterId,
+                Manifest.ImporterRevision,
+                Manifest.Sources.Select(source => new LogicalSourceRecord(
+                    LogicalSourceRecord.CurrentSchemaVersion,
+                    source.SourcePath,
+                    source.ContentHash,
+                    source.ByteLen,
+                    NormalizedImportDocument.CurrentSchemaVersion)).ToArray()),
+            artifacts.Where(artifact => artifact.RelativePath != ImportPublicationManifestSerializer.ManifestRelativePath),
+            invocation);
     }
 
     /// <summary>Compares this exact closure with a target directory without mutating it.</summary>
