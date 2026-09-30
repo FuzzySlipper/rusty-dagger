@@ -300,9 +300,6 @@ public static class SourceManifestSerializer
 /// </summary>
 public static class SourceManifestPublication
 {
-    /// <summary>The corpus directory every published Arena2 source label names.</summary>
-    public const string Arena2LogicalRoot = "local/arena2";
-
     /// <summary>
     /// Scans the supplied corpus against the documented inventory, recording every source the publication
     /// read as imported. A publication is its record's first consumer: a source it read that the record
@@ -318,7 +315,7 @@ public static class SourceManifestPublication
         string[] read = [.. publishedSourcePaths];
         IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(inventoryBytes);
         SourceManifest manifest = SourceManifestBuilder.Scan(
-            new SourceManifestRequest(Arena2LogicalRoot, inventoryFileName, arena2Directory, ClaimNames(read), [], ClaimNames(inventory
+            new SourceManifestRequest(PublishedSourcePath.Arena2Root, inventoryFileName, arena2Directory, ClaimNames(read), [], ClaimNames(inventory
                 .Where(row => StringComparer.Ordinal.Equals(row.Disposition, "excluded"))
                 .Select(row => row.PathOrPattern))),
             inventoryBytes);
@@ -350,8 +347,8 @@ public static class SourceManifestPublication
         {
             names.Add(sourcePath);
             names.Add(Leaf(sourcePath));
-            int corpus = sourcePath.IndexOf("arena2/", StringComparison.Ordinal);
-            if (corpus >= 0) names.Add(sourcePath[(corpus + "arena2/".Length)..]);
+            if (sourcePath.StartsWith(PublishedSourcePath.Arena2Root + "/", StringComparison.Ordinal))
+                names.Add(sourcePath[(PublishedSourcePath.Arena2Root.Length + 1)..]);
         }
 
         return names;

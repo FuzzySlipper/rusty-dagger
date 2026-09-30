@@ -76,10 +76,10 @@ public sealed class MapArtInventoryTests
     public void Refuses_duplicates_and_reports_unreadable_shapes()
     {
         Assert.Throws<InvalidOperationException>(() => MapArtInventory.Enumerate(
-            [("TMAP00I0.IMG", "local/arena2/TMAP00I0.IMG", new byte[64000]), ("TMAP00I0.IMG", "local/arena2/TMAP00I0.IMG", new byte[64000])], "local/arena2"));
+            [("TMAP00I0.IMG", "arena2/TMAP00I0.IMG", new byte[64000]), ("TMAP00I0.IMG", "arena2/TMAP00I0.IMG", new byte[64000])], "arena2"));
 
         MapArtInventory inventory = MapArtInventory.Enumerate(
-            [("TRAVAI05.IMG", "local/arena2/TRAVAI05.IMG", new byte[452])], "local/arena2");
+            [("TRAVAI05.IMG", "arena2/TRAVAI05.IMG", new byte[452])], "arena2");
         Assert.True(inventory.TryGet("TRAVAI05.IMG", out MapArtRecord? arrow));
         Assert.NotEqual(MapArtDisposition.Decoded, arrow!.Disposition);
     }
@@ -89,10 +89,10 @@ public sealed class MapArtInventoryTests
         List<(string Name, string Path, byte[] Bytes)> files = [];
         foreach (string path in Directory.EnumerateFiles(arena2, "*.IMG").Concat(Directory.EnumerateFiles(arena2, "*.COL")).Concat(Directory.EnumerateFiles(arena2, "*.PAL")).Order(StringComparer.Ordinal))
         {
-            files.Add((Path.GetFileName(path), $"local/arena2/{Path.GetFileName(path)}", File.ReadAllBytes(path)));
+            files.Add((Path.GetFileName(path), $"arena2/{Path.GetFileName(path)}", File.ReadAllBytes(path)));
         }
 
-        return MapArtInventory.Enumerate(files, "local/arena2");
+        return MapArtInventory.Enumerate(files, "arena2");
     }
 
     private static (int Width, int Height) Shape(MapArtInventory inventory, string fileName)

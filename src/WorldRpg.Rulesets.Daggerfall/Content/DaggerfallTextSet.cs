@@ -80,12 +80,6 @@ internal sealed record DaggerfallTextValue(
     internal IEnumerable<string> TextRuns => Tokens.Where(token => token.Code == DaggerfallTextCode.Text).Select(token => token.Text!);
 }
 
-/// <summary>One source family the text contract declares keys for without carrying their records.</summary>
-/// <param name="Kind">The declared family.</param>
-/// <param name="OwnerTask">The task that supplies records for the family.</param>
-/// <param name="Reason">What the family addresses and where its records come from.</param>
-internal sealed record DaggerfallTextPendingKind(DaggerfallTextKind Kind, int OwnerTask, string Reason);
-
 /// <summary>How the donor's own macro table accounts for a symbol.</summary>
 internal enum DaggerfallTextMacroDisposition
 {
@@ -129,7 +123,6 @@ internal enum DaggerfallTextResolution
 /// </summary>
 internal sealed record DaggerfallTextSet(
     IReadOnlyDictionary<DaggerfallTextKey, DaggerfallTextValue> Values,
-    IReadOnlyList<DaggerfallTextPendingKind> PendingKinds,
     IReadOnlyList<DaggerfallTextMacro> Macros)
 {
     /// <summary>

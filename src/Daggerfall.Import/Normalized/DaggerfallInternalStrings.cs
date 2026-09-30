@@ -48,7 +48,6 @@ public static class DaggerfallInternalStringsBuilder
 
         DaggerfallText published = new(
             [.. existing.Sources, source],
-            existing.PendingKinds,
             [.. records.OrderBy(record => record.Source, StringComparer.Ordinal).ThenBy(record => record.Index)],
             [.. DaggerfallTextBuilder.MacroIndex(records)]);
         published.Validate();

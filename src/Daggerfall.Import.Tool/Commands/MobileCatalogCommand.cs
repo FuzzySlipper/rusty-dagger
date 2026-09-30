@@ -1,4 +1,5 @@
 using Daggerfall.Import.Arena2;
+using Daggerfall.Import.Publication;
 
 namespace Daggerfall.Import.Tool.Commands;
 
@@ -25,7 +26,7 @@ internal static class MobileCatalogCommand
             : MonsterArchiveInventory.Enumerate(File.ReadAllBytes(archive), Path.GetFileName(archive));
         // The published actors are authored, so the identities the catalog joins come from the authored payload.
         Arena2MobileCatalogPublication publication = Arena2MobileCatalogDocument.Build(
-            File.ReadAllText(donorFile), PayloadFiles.ReadAuthoredText(args["--authored"]), "research/daggerfall-unity/Assets/Scripts/Utility/EnemyBasics.cs", enemyConfigurations);
+            File.ReadAllText(donorFile), PayloadFiles.ReadAuthoredText(args["--authored"]), PublishedSourcePath.Donor("Assets/Scripts/Utility/EnemyBasics.cs"), enemyConfigurations);
         Console.WriteLine($"mobile catalog: {publication.Mobiles} donor mobiles, {publication.Published} published, {publication.HumanMobiles} human mobiles, {publication.Unpublished} unpublished");
         if (!args.Switch("--update")) return Options.ReportOnly("this catalog");
         PayloadFiles.WriteSections(args["--pack"], new Dictionary<string, string>(StringComparer.Ordinal) { ["mobiles"] = publication.Json });

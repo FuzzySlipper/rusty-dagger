@@ -56,8 +56,8 @@ public sealed class DaggerfallQuestSourcesContentTests
         Assert.Equal(new[] { 0 }.Concat(Enumerable.Range(1000, 11)).Append(1045), tables.StaticMessages.Rows.Select(row => row.Id).Distinct().Order());
         Assert.Equal(new[] { "RumorsPostfailure", "RumorsPostFailure" }, tables.StaticMessages.Rows.Where(row => row.Id == 1006).Select(row => row.Name));
         Assert.Equal(1006, tables.StaticMessages.Lookup["rumorspostfailure"]);
-        Assert.Equal("Tables/Quests-GlobalVars.txt", tables.Globals.SourcePath);
-        Assert.Equal("Tables/Quests-StaticMessages.txt", tables.StaticMessages.SourcePath);
+        Assert.Equal("daggerfall-unity/Assets/StreamingAssets/Tables/Quests-GlobalVars.txt", tables.Globals.SourcePath);
+        Assert.Equal("daggerfall-unity/Assets/StreamingAssets/Tables/Quests-StaticMessages.txt", tables.StaticMessages.SourcePath);
         Assert.All(tables.Globals.Rows.Concat(tables.StaticMessages.Rows), row => Assert.True(row.SourceLine > 0));
     }
 

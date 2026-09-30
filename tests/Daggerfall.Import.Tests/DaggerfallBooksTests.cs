@@ -18,7 +18,7 @@ public sealed class DaggerfallBooksTests
     {
         IReadOnlyList<SourceInventoryRow> inventory = Inventory();
         (DaggerfallBooks books, _, IReadOnlyList<DaggerfallTextRecord> records) = DaggerfallBooksBuilder.Build(
-            [(0, "local/arena2/books/BOK00000.TXT", File.ReadAllBytes(Book("BOK00000.TXT"))), (59, "local/arena2/books/BOK00059.TXT", File.ReadAllBytes(Book("BOK00059.TXT")))], inventory, "en");
+            [(0, "arena2/books/BOK00000.TXT", File.ReadAllBytes(Book("BOK00000.TXT"))), (59, "arena2/books/BOK00059.TXT", File.ReadAllBytes(Book("BOK00059.TXT")))], inventory, "en");
 
         Assert.Equal(112, books.Books.Count);
         DaggerfallBook first = books.Books.Single(entry => entry.BookId == 0);
@@ -50,7 +50,7 @@ public sealed class DaggerfallBooksTests
     {
         IReadOnlyList<SourceInventoryRow> inventory = Inventory();
         (DaggerfallBooks books, _, _) = DaggerfallBooksBuilder.Build(
-            [(0, "local/arena2/books/BOK00000.TXT", File.ReadAllBytes(Book("BOK00000.TXT"))), (1, "local/arena2/books/BOK00001.TXT", [1, 2, 3])], inventory, "en");
+            [(0, "arena2/books/BOK00000.TXT", File.ReadAllBytes(Book("BOK00000.TXT"))), (1, "arena2/books/BOK00001.TXT", [1, 2, 3])], inventory, "en");
 
         DaggerfallBook missing = books.Books.Single(entry => entry.BookId == 90);
         Assert.Equal(DaggerfallBookDisposition.NotSupplied, missing.Disposition);
@@ -60,10 +60,10 @@ public sealed class DaggerfallBooksTests
         Assert.Equal(DaggerfallBookDisposition.Malformed, malformed.Disposition);
         Assert.NotEmpty(malformed.Reason);
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallBooksBuilder.Build([(112, "local/arena2/books/BOK00112.TXT", [])], inventory, "en"));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallBooksBuilder.Build([(112, "arena2/books/BOK00112.TXT", [])], inventory, "en"));
         Assert.Throws<InvalidOperationException>(() => DaggerfallBooksBuilder.Build(
-            [(0, "local/arena2/books/BOK00000.TXT", File.ReadAllBytes(Book("BOK00000.TXT"))), (0, "local/arena2/books/BOK00000.TXT", File.ReadAllBytes(Book("BOK00000.TXT")))], inventory, "en"));
-        Assert.Throws<InvalidOperationException>(() => DaggerfallBooksBuilder.Build([(0, "local/arena2/books/BOK00000.TXT", File.ReadAllBytes(Book("BOK00000.TXT")))], [], "en"));
+            [(0, "arena2/books/BOK00000.TXT", File.ReadAllBytes(Book("BOK00000.TXT"))), (0, "arena2/books/BOK00000.TXT", File.ReadAllBytes(Book("BOK00000.TXT")))], inventory, "en"));
+        Assert.Throws<InvalidOperationException>(() => DaggerfallBooksBuilder.Build([(0, "arena2/books/BOK00000.TXT", File.ReadAllBytes(Book("BOK00000.TXT")))], [], "en"));
     }
 
     [CorpusFact("books")]
@@ -74,7 +74,7 @@ public sealed class DaggerfallBooksTests
         List<(int BookId, string Label, byte[] Bytes)> supplied = [];
         foreach (string path in Directory.EnumerateFiles(directory, "BOK*.TXT").Order(StringComparer.Ordinal))
         {
-            supplied.Add((int.Parse(Path.GetFileNameWithoutExtension(path)[3..], CultureInfo.InvariantCulture), $"local/arena2/books/{Path.GetFileName(path)}", File.ReadAllBytes(path)));
+            supplied.Add((int.Parse(Path.GetFileNameWithoutExtension(path)[3..], CultureInfo.InvariantCulture), $"arena2/books/{Path.GetFileName(path)}", File.ReadAllBytes(path)));
         }
 
         Assert.Equal(90, supplied.Count);
@@ -100,9 +100,9 @@ public sealed class DaggerfallBooksTests
 
     private static IReadOnlyList<SourceInventoryRow> Inventory() =>
     [
-        new SourceInventoryRow("CNT-015", "family", "CNT-015", "books", "local/arena2/books", string.Empty, "pending-import", string.Empty),
-        new SourceInventoryRow("CNT-015.file.books/BOK00000.TXT", "file", "CNT-015", "source-file", "local/arena2/books/BOK00000.TXT", "BOK00000", "unused", string.Empty),
-        new SourceInventoryRow("CNT-015.file.books/BOK00001.TXT", "file", "CNT-015", "source-file", "local/arena2/books/BOK00001.TXT", "BOK00001", "unused", string.Empty),
-        new SourceInventoryRow("CNT-015.file.books/BOK00059.TXT", "file", "CNT-015", "source-file", "local/arena2/books/BOK00059.TXT", "BOK00059", "unused", string.Empty),
+        new SourceInventoryRow("CNT-015", "family", "CNT-015", "books", "arena2/books", string.Empty, "pending-import", string.Empty),
+        new SourceInventoryRow("CNT-015.file.books/BOK00000.TXT", "file", "CNT-015", "source-file", "arena2/books/BOK00000.TXT", "BOK00000", "unused", string.Empty),
+        new SourceInventoryRow("CNT-015.file.books/BOK00001.TXT", "file", "CNT-015", "source-file", "arena2/books/BOK00001.TXT", "BOK00001", "unused", string.Empty),
+        new SourceInventoryRow("CNT-015.file.books/BOK00059.TXT", "file", "CNT-015", "source-file", "arena2/books/BOK00059.TXT", "BOK00059", "unused", string.Empty),
     ];
 }

@@ -130,7 +130,7 @@ tool mobile-catalog --donor "$donor/Assets/Scripts/Utility/EnemyBasics.cs" --aut
 tool text --arena2 "$arena2" --pack "$imported" --inventory "$inventory" --language en --update
 tool internal-strings \
   --source "$donor/Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv" \
-  --label "donor/daggerfall-unity/Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv" \
+  --label "daggerfall-unity/Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv" \
   --pack "$imported" --language en --update
 tool blocks --arena2 "$arena2" --document "$blocks" --buildings "$buildings" --inventory "$inventory" --update
 tool geometry --arena2 "$arena2" --blocks "$blocks" --records "$records" --inventory "$inventory" --update
@@ -146,7 +146,7 @@ tool videos --arena2 "$arena2" --pack "$imported" --inventory "$inventory" --upd
 tool cinematic-media --arena2 "$arena2" --pack "$imported" --out content --kind vid --update
 tool cinematic-media --arena2 "$arena2" --pack "$imported" --out content --kind flc --update
 tool building-name-inputs --maps-file "$donor/Assets/Scripts/API/MapsFile.cs" \
-  --label donor/daggerfall-unity/Assets/Scripts/API/MapsFile.cs --pack "$imported" --update
+  --label daggerfall-unity/Assets/Scripts/API/MapsFile.cs --pack "$imported" --update
 
 # 3. Quest corpus payloads, read from the quest sections and the original-source selections above.
 tool fighters-quest-corpus --pack "$imported" --records "$records" --out content/worldrpg/payloads/daggerfall.quests.fighters.json

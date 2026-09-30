@@ -133,7 +133,7 @@ internal static class DaggerfallBaseContent
         }
         JsonElement sourceValue = Object(Property(section, "source", diagnostics), "encounters.source", diagnostics);
         DaggerfallCatalogCitation source = new(Text(sourceValue, "recordId", diagnostics), Text(sourceValue, "path", diagnostics));
-        if (source is not { SourceRecordId: "CNT-8002.DFU.RandomEncounters", Path: "donor:Assets/Scripts/Utility/RandomEncounters.cs" })
+        if (source is not { SourceRecordId: "CNT-8002.DFU.RandomEncounters", Path: "daggerfall-unity/Assets/Scripts/Utility/RandomEncounters.cs" })
             diagnostics.Add("Random encounter tables must retain their RandomEncounters donor citation.");
         List<IReadOnlyList<int>> tables = [];
         if (!section.TryGetProperty("tables", out JsonElement sourceTables) || sourceTables.ValueKind != JsonValueKind.Array)
@@ -652,7 +652,6 @@ internal static class DaggerfallBaseContent
         foreach (string source in definitions.Catalogs.SourceRecords) Add("catalog-source-record", source);
         foreach (DaggerfallCatalogReference enemy in definitions.Catalogs.Enemies.OrderBy(enemy => enemy.Id, StringComparer.Ordinal)) Add("catalog-enemy", enemy.Id, enemy.Source.SourceRecordId, enemy.Source.Path);
         foreach (DaggerfallCatalogReference item in definitions.Catalogs.ItemTemplates.OrderBy(item => item.Id, StringComparer.Ordinal)) Add("catalog-item-template", item.Id, item.Source.SourceRecordId, item.Source.Path);
-        foreach (DaggerfallPendingCatalogDefinition pending in definitions.Catalogs.Pending.OrderBy(pending => pending.Id, StringComparer.Ordinal)) Add("catalog-pending", pending.Id, pending.OwnerTask, pending.Reason);
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value.ToString())));
     }
 
@@ -759,7 +758,7 @@ internal static class DaggerfallBaseContent
             // payload is refused rather than read as a product whose text is uniformly missing. The
             // diagnostic is what the caller sees, since reading aborts on it.
             diagnostics.Add("Base payload publishes no text section; every text lookup resolves to nothing until it is republished.");
-            return new DaggerfallTextSet(new Dictionary<DaggerfallTextKey, DaggerfallTextValue>(), [], []);
+            return new DaggerfallTextSet(new Dictionary<DaggerfallTextKey, DaggerfallTextValue>(), []);
         }
 
         // A source is the language and family its values inherit, so two sources claiming one path would
@@ -779,21 +778,6 @@ internal static class DaggerfallBaseContent
             if (!sources.TryAdd(path, (kind, language, records))) diagnostics.Add($"Published text source '{path}' is claimed twice, so a value naming it has no one language and family.");
         }
         if (sources.Count == 0) diagnostics.Add("Published text must name the sources its values were read from.");
-
-        // A family is either carried by a source or pending on the task that supplies it. Both would let
-        // a consumer read an empty family as a supplied one, or a supplied one as still missing.
-        List<DaggerfallTextPendingKind> pendingKinds = [];
-        HashSet<DaggerfallTextKind> declared = [];
-        foreach (JsonElement entry in Array(section, "pendingKinds", diagnostics))
-        {
-            DaggerfallTextKind kind = TextKind(entry, diagnostics);
-            int ownerTask = Integer(entry, "ownerTask", diagnostics);
-            string reason = Text(entry, "reason", diagnostics);
-            if (ownerTask <= 0) diagnostics.Add($"Pending text family '{kind}' names task {ownerTask}, which cannot own it.");
-            if (!declared.Add(kind)) diagnostics.Add($"Pending text family '{kind}' is declared twice, so nothing says whether its keys resolve.");
-            if (sources.Values.Any(source => source.Kind == kind)) diagnostics.Add($"Text family '{kind}' is published as pending and carried by a source, so a consumer cannot tell whether its keys resolve.");
-            pendingKinds.Add(new DaggerfallTextPendingKind(kind, ownerTask, reason));
-        }
 
         Dictionary<DaggerfallTextKey, DaggerfallTextValue> values = [];
         Dictionary<string, int> publishedPerSource = new(StringComparer.Ordinal);
@@ -948,7 +932,7 @@ internal static class DaggerfallBaseContent
             if (carried != macro.Records) diagnostics.Add($"Published macro '{macro.Symbol}' is indexed against {macro.Records} values where {carried} carry it.");
         }
 
-        return new DaggerfallTextSet(values, pendingKinds, macros);
+        return new DaggerfallTextSet(values, macros);
     }
 
     /// <summary>
@@ -3102,23 +3086,7 @@ internal static class DaggerfallBaseContent
             }
         }
 
-        List<DaggerfallPendingCatalogDefinition> pending = [];
-        foreach (JsonElement entry in Array(value, "pending", diagnostics))
-        {
-            DaggerfallPendingCatalogDefinition definition = new(
-                Text(entry, "id", diagnostics),
-                Integer(entry, "ownerTask", diagnostics),
-                Text(entry, "reason", diagnostics));
-            if (definition.OwnerTask <= 0)
-            {
-                diagnostics.Add($"Pending catalog '{definition.Id}' must name the task that supplies it.");
-            }
-
-            pending.Add(definition);
-        }
-
-        RequireDistinct(pending, entry => entry.Id, "pending catalog", diagnostics);
-        return new DaggerfallCatalogSet(attributes, skills, resistances, races, careers, collisions, enemies, itemTemplates, pending, sources);
+        return new DaggerfallCatalogSet(attributes, skills, resistances, races, careers, collisions, enemies, itemTemplates, sources);
     }
 
     private static bool ValidEquipmentRestriction(string value)

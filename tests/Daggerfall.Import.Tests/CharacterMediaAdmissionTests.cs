@@ -30,14 +30,14 @@ public sealed class CharacterMediaAdmissionTests
 
         // Every published source is a file the manifest carries: the manifest names the corpus, so a
         // published path it does not carry would be a reference to something no command admitted.
-        List<string> missing = [.. published.Where(path => !admitted.ContainsKey($"local/arena2/{path}"))];
+        List<string> missing = [.. published.Where(path => !admitted.ContainsKey($"arena2/{path}"))];
         Assert.Empty(missing);
 
         // And the converse, which is the stronger direction: every character-media file row the
         // manifest carries is published, so the section accounts for the whole family rather than a
         // convenient part of it.
         List<string> unpublished = [.. admitted.Keys
-            .Where(path => path.StartsWith("local/arena2/", StringComparison.Ordinal))
+            .Where(path => path.StartsWith("arena2/", StringComparison.Ordinal))
             .Select(path => System.IO.Path.GetFileName(path))
             .Where(name => IsCharacterMedia(name) && !published.Contains(name, StringComparer.OrdinalIgnoreCase))];
         Assert.Empty(unpublished);

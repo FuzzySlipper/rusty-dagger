@@ -45,7 +45,7 @@ public sealed class DaggerfallFactionsTests
         Assert.Throws<Arena2FormatException>(() => FactionReader.Read("#1\nbogus: 1\n", "faction"));
         Assert.Throws<Arena2FormatException>(() => FactionReader.Read("#1\nally: 1\nally: 2\nally: 3\nally: 4\n", "faction"));
         Assert.Throws<Arena2FormatException>(() => FactionReader.Read("#1\nface: *A\n", "faction"));
-        Assert.Throws<InvalidOperationException>(() => DaggerfallFactionsBuilder.Build("#1\nname: X\n", "local/arena2/FACTION.TXT", [1], []));
+        Assert.Throws<InvalidOperationException>(() => DaggerfallFactionsBuilder.Build("#1\nname: X\n", "arena2/FACTION.TXT", [1], []));
     }
 
     [CorpusFact("FACTION.TXT")]
@@ -56,7 +56,7 @@ public sealed class DaggerfallFactionsTests
         IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));
         DaggerfallFactions factions = DaggerfallFactionsBuilder.Build(
             File.ReadAllText(Path.Combine(arena2, "FACTION.TXT")),
-            "local/arena2/FACTION.TXT",
+            "arena2/FACTION.TXT",
             File.ReadAllBytes(Path.Combine(arena2, "FACTION.TXT")),
             inventory);
         factions.Validate();
@@ -85,6 +85,6 @@ public sealed class DaggerfallFactionsTests
 
     private static IReadOnlyList<SourceInventoryRow> Inventory() =>
     [
-        new SourceInventoryRow("CNT-013", "family", "CNT-013", "factions", "local/arena2/FACTION.TXT", string.Empty, "pending-import", string.Empty),
+        new SourceInventoryRow("CNT-013", "family", "CNT-013", "factions", "arena2/FACTION.TXT", string.Empty, "pending-import", string.Empty),
     ];
 }

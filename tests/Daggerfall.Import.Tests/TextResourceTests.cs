@@ -276,7 +276,7 @@ public sealed class TextResourceTests
 
         // The same shape survives publication: a value the source leaves empty is readable and carries
         // no words, which is the source's fact rather than a value that could not be read.
-        DaggerfallText text = DaggerfallTextBuilder.Build(bytes, "local/arena2/TEXT.RSC", Inventory(), "en");
+        DaggerfallText text = DaggerfallTextBuilder.Build(bytes, "arena2/TEXT.RSC", Inventory(), "en");
         DaggerfallTextRecord published = text.Records[1];
         Assert.Equal(Arena2TextState.Read, published.State);
         Assert.Empty(published.Tokens);
@@ -325,7 +325,7 @@ public sealed class TextResourceTests
         DaggerfallTextSource source = Assert.Single(text.Sources);
         Assert.Equal(DaggerfallTextKind.Resource, source.Kind);
         Assert.Equal("CNT-016", source.RecordId);
-        Assert.Equal("local/arena2/TEXT.RSC", source.Path);
+        Assert.Equal("arena2/TEXT.RSC", source.Path);
         Assert.Equal("en", source.Language);
         Assert.Equal(353393, source.ByteLength);
         Assert.Equal(8454, source.DeclaredLength);
@@ -359,13 +359,6 @@ public sealed class TextResourceTests
         Assert.Equal(TextMacroDisposition.Handled, text.Macros.Single(macro => macro.Symbol == "%str").Disposition);
         Assert.Equal(TextMacroDisposition.DonorUnresolved, text.Macros.Single(macro => macro.Symbol == "%hol").Disposition);
         Assert.Equal(TextMacroDisposition.Unrecognised, text.Macros.Single(macro => macro.Symbol == "%pc").Disposition);
-
-        // The families this contract declares and does not fill name the tasks that supply them, so a
-        // reference into a book or a biography is a legal key with a known owner rather than a gap.
-        Assert.Equal(
-            ["biography", "book", "name", "rumor"],
-            text.PendingKinds.Select(pending => pending.Kind.ToString().ToLowerInvariant()).Order());
-        Assert.All(text.PendingKinds, pending => Assert.True(pending.OwnerTask is 7951 or 7941));
     }
 
     [CorpusFact]
@@ -413,7 +406,7 @@ public sealed class TextResourceTests
                 bytes[OffsetField(0) + index] = declared[index];
             }
 
-            DaggerfallText text = DaggerfallTextBuilder.Build(bytes, "local/arena2/TEXT.RSC", Inventory(), "en");
+            DaggerfallText text = DaggerfallTextBuilder.Build(bytes, "arena2/TEXT.RSC", Inventory(), "en");
 
             Assert.Equal(expected, text.Records[0].Offset);
             Assert.Equal(Arena2TextState.Malformed, text.Records[0].State);
@@ -428,7 +421,7 @@ public sealed class TextResourceTests
         // source and the value it was given rather than a parameter name the caller never wrote.
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => DaggerfallTextBuilder.Build(
             Resource((1, "text"u8.ToArray())),
-            "local/arena2/TEXT.RSC",
+            "arena2/TEXT.RSC",
             Inventory(),
             "not a tag"));
 
@@ -446,7 +439,7 @@ public sealed class TextResourceTests
             Inventory(),
             "en"));
 
-        Assert.Contains("places CNT-016 at 'local/arena2/TEXT.RSC'", error.Message, StringComparison.Ordinal);
+        Assert.Contains("places CNT-016 at 'arena2/TEXT.RSC'", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -456,7 +449,7 @@ public sealed class TextResourceTests
 
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => DaggerfallTextBuilder.Build(
             Resource((1, "text"u8.ToArray())),
-            "local/arena2/TEXT.RSC",
+            "arena2/TEXT.RSC",
             SourceManifestBuilder.ReadInventory(csv),
             "en"));
 
@@ -562,20 +555,6 @@ public sealed class TextResourceTests
     }
 
     [CorpusFact]
-    public void Refuses_a_family_that_is_both_pending_and_carried()
-    {
-        DaggerfallText text = Supplied();
-        DaggerfallTextSource source = text.Sources[0];
-
-        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => (text with
-        {
-            PendingKinds = [.. text.PendingKinds, new DaggerfallTextPendingKind(source.Kind, 7941, "supplied here as well")],
-        }).Validate());
-
-        Assert.Contains("published as pending and carried by a source", error.Message, StringComparison.Ordinal);
-    }
-
-    [CorpusFact]
     public void Refuses_a_record_that_is_not_in_its_source_order()
     {
         DaggerfallText text = Supplied();
@@ -641,7 +620,7 @@ public sealed class TextResourceTests
 
     private static DaggerfallText Supplied() => DaggerfallTextBuilder.Build(
         File.ReadAllBytes(TestData.Corpus(TextResourceReader.FileName)),
-        "local/arena2/TEXT.RSC",
+        "arena2/TEXT.RSC",
         Inventory(),
         "en");
 

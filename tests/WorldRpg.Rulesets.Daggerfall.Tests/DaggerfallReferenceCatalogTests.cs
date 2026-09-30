@@ -36,8 +36,6 @@ public sealed class DaggerfallReferenceCatalogTests
         // An enemy reference resolves to the actor another part of the pack defines.
         Assert.All(definitions.Catalogs.Enemies, enemy => Assert.True(definitions.Actors.ContainsKey(new DaggerfallActorId(enemy.Id))));
         Assert.All(definitions.Catalogs.ItemTemplates, item => Assert.True(definitions.Items.ContainsKey(new DaggerfallItemId(item.Id))));
-        // The two namespaces this contract declares name the tasks that fill them.
-        Assert.Equal([7938, 7967], definitions.Catalogs.Pending.Select(pending => pending.OwnerTask).Order());
         // A name two careers share cannot be a key, and resolving by it says so.
         Assert.Equal(["Knight"], definitions.Catalogs.CareerNameCollisions);
         Assert.Throws<InvalidOperationException>(() => definitions.Catalogs.RequireCareerByName("Knight"));
@@ -106,7 +104,6 @@ public sealed class DaggerfallReferenceCatalogTests
     [InlineData("duplicate race id")]
     [InlineData("duplicate race donor value")]
     [InlineData("non-positive race donor value")]
-    [InlineData("non-positive pending owner")]
     [InlineData("career with no primary skill")]
     [InlineData("career naming nine attributes")]
     [InlineData("career naming one skill twice")]
@@ -134,9 +131,6 @@ public sealed class DaggerfallReferenceCatalogTests
                     break;
                 case "non-positive race donor value":
                     catalogs["races"]!.AsArray()[0]!["donorRaceId"] = 0;
-                    break;
-                case "non-positive pending owner":
-                    catalogs["pending"]!.AsArray()[0]!["ownerTask"] = 0;
                     break;
                 case "career with no primary skill":
                     careers[0]!["primarySkills"] = new JsonArray();

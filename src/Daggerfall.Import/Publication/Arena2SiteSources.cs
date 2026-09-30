@@ -263,7 +263,7 @@ public sealed class Arena2SiteSources
             throw new IOException($"Arena2 source '{fileName}' changed while it was being read.");
         }
 
-        return new DungeonLogicalSource($"arena2/{fileName}", bytes);
+        return new DungeonLogicalSource(PublishedSourcePath.Arena2(fileName), bytes);
     }
 
     private static bool IsAdmittedSourceName(string value) => DungeonSourceNames.Contains(value, StringComparer.Ordinal)

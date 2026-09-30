@@ -59,9 +59,6 @@ internal sealed record DaggerfallCareerDefinition(
 /// <summary>A key that names a record another catalog owns.</summary>
 internal sealed record DaggerfallCatalogReference(string Id, DaggerfallCatalogCitation Source);
 
-/// <summary>A namespace this contract declares and a named later task supplies.</summary>
-internal sealed record DaggerfallPendingCatalogDefinition(string Id, int OwnerTask, string Reason);
-
 /// <summary>
 /// The normalized reference catalogs a runtime consumer resolves keys through. Runtime
 /// code reads these records and never opens a source file: the keys, their indices and
@@ -76,7 +73,6 @@ internal sealed class DaggerfallCatalogSet(
     IReadOnlyList<string> careerNameCollisions,
     IReadOnlyList<DaggerfallCatalogReference> enemies,
     IReadOnlyList<DaggerfallCatalogReference> itemTemplates,
-    IReadOnlyList<DaggerfallPendingCatalogDefinition> pending,
     IReadOnlyList<string> sourceRecords)
 {
     /// <summary>The classic element keys, in the index order the catalog publishes.</summary>
@@ -98,8 +94,6 @@ internal sealed class DaggerfallCatalogSet(
     internal IReadOnlyList<DaggerfallCatalogReference> Enemies { get; } = Array.AsReadOnly(enemies.ToArray());
 
     internal IReadOnlyList<DaggerfallCatalogReference> ItemTemplates { get; } = Array.AsReadOnly(itemTemplates.ToArray());
-
-    internal IReadOnlyList<DaggerfallPendingCatalogDefinition> Pending { get; } = Array.AsReadOnly(pending.ToArray());
 
     /// <summary>
     /// The documented inventory records the pack says it drew from. A citation outside

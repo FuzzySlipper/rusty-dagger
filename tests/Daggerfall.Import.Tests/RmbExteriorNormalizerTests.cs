@@ -67,6 +67,6 @@ public sealed class RmbExteriorNormalizerTests
         return new DungeonLogicalSourceSet(Directory.EnumerateFiles(arena2)
             .Where(path => Path.GetFileName(path) is "MAPS.BSA" or "BLOCKS.BSA" or "ARCH3D.BSA" or "CLIMATE.PAK"
                 || Path.GetFileName(path).StartsWith("TEXTURE.", StringComparison.Ordinal))
-            .Select(path => new DungeonLogicalSource($"local/arena2/{Path.GetFileName(path)}", File.ReadAllBytes(path))));
+            .Select(path => new DungeonLogicalSource($"arena2/{Path.GetFileName(path)}", File.ReadAllBytes(path))));
     }
 }

@@ -19,10 +19,6 @@ public static class DaggerfallCatalogBuilder
     public const string EnemyFamily = "CNT-007";
     public const string ItemTemplateFamily = "CNT-011";
 
-    /// <summary>Tasks that supply the namespaces this contract declares but does not fill.</summary>
-    public const int FactionCatalogOwnerTask = 7967;
-    public const int RegionCatalogOwnerTask = 7938;
-
     public static DaggerfallCatalogs Build(
         IReadOnlyList<SourceInventoryRow> inventory,
         IReadOnlyList<string> vocabularyAttributes,
@@ -128,10 +124,6 @@ public static class DaggerfallCatalogBuilder
                 .Order(StringComparer.Ordinal)],
             [.. enemyIds.Select(id => new DaggerfallReferenceKey(id, family(EnemySourceId, EnemySourcePath)))],
             [.. itemTemplateIds.Select(id => new DaggerfallReferenceKey(id, family(ItemSourceId, ItemSourcePath)))],
-            [
-                new DaggerfallPendingCatalog("factions", FactionCatalogOwnerTask, "FACTION.TXT identities, relations and bindings are supplied by that task; this contract declares the namespace and validates references into it."),
-                new DaggerfallPendingCatalog("regionReferences", RegionCatalogOwnerTask, "MAPS.BSA region, location and map-table records are supplied by that task; this contract declares the namespace and validates references into it."),
-            ],
             []);
         // The published sources are exactly what the records cite; Validate refuses a set
         // that disagrees, so this cannot drift from the citations a consumer reads.

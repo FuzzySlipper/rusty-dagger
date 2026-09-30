@@ -153,7 +153,7 @@ public sealed class GeometryInventoryTests
         byte[] bytes = NamedArchive(("PLACE", new byte[8]));
         DaggerfallGeometry geometry = DaggerfallGeometryBuilder.Build(
             NumericArchive((9004, Mesh()), (9005, new byte[32]), (9006, Mesh())),
-            "local/arena2/ARCH3D.BSA",
+            "arena2/ARCH3D.BSA",
             Inventory(),
             [new DaggerfallGeometryUseSite("09004", "B0000000.RDB"), new DaggerfallGeometryUseSite("09005", "B0000001.RDB"), new DaggerfallGeometryUseSite("09999", "B0000002.RDB")]);
         Assert.Equal(3, geometry.Records.Count);
@@ -175,7 +175,7 @@ public sealed class GeometryInventoryTests
         // with that reason and keeps its number, rather than abandoning the inventory around it.
         DaggerfallGeometry geometry = DaggerfallGeometryBuilder.Build(
             NumericArchive((9004, []), (9005, Mesh())),
-            "local/arena2/ARCH3D.BSA",
+            "arena2/ARCH3D.BSA",
             Inventory(),
             []);
 
@@ -195,7 +195,7 @@ public sealed class GeometryInventoryTests
         // because *a* record with it is readable would reject the honest inventory of the file.
         DaggerfallGeometry geometry = DaggerfallGeometryBuilder.Build(
             NumericArchive((77, new byte[32]), (77, Mesh())),
-            "local/arena2/ARCH3D.BSA",
+            "arena2/ARCH3D.BSA",
             Inventory(),
             [new DaggerfallGeometryUseSite("00077", "B0000000.RDB")]);
 
@@ -221,7 +221,7 @@ public sealed class GeometryInventoryTests
         // one unresolved entry, not a reason to abandon the ten thousand records beside it.
         DaggerfallGeometry geometry = DaggerfallGeometryBuilder.Build(
             NumericArchive((9004, Mesh())),
-            "local/arena2/ARCH3D.BSA",
+            "arena2/ARCH3D.BSA",
             Inventory(),
             [new DaggerfallGeometryUseSite("4294967296", "B0000000.RDB"), new DaggerfallGeometryUseSite("9004", "B0000001.RDB")]);
 
@@ -247,7 +247,7 @@ public sealed class GeometryInventoryTests
     {
         // ARCH3D.BSA is the numeric variant. A named archive has no number to look a mesh up by, so
         // publishing one as a mesh inventory would file every record under an identity it does not have.
-        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => Arch3dInventoryReader.Read(NamedArchive(("MESH", Mesh())), "local/arena2/ARCH3D.BSA"));
+        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => Arch3dInventoryReader.Read(NamedArchive(("MESH", Mesh())), "arena2/ARCH3D.BSA"));
 
         Assert.Contains("a mesh archive is the numeric variant whose records carry numbers", error.Message, StringComparison.Ordinal);
     }
@@ -259,7 +259,7 @@ public sealed class GeometryInventoryTests
         // reason rather than dropped from the inventory.
         Arch3dMeshInventory inventory = Arch3dInventoryReader.Read(
             NumericArchive((1, new byte[32]), (2, Mesh()), (3, [.. "v9.9"u8, .. new byte[60]])),
-            "local/arena2/ARCH3D.BSA");
+            "arena2/ARCH3D.BSA");
 
         Assert.Equal(
             [Arch3dRecordState.Malformed, Arch3dRecordState.Read, Arch3dRecordState.Malformed],
@@ -394,8 +394,8 @@ public sealed class GeometryInventoryTests
         byte[] bytes = NumericArchive((9004, Mesh()));
 
         Assert.Contains("but the documented inventory places CNT-006 at", Assert.Throws<InvalidOperationException>(() => DaggerfallGeometryBuilder.Build(bytes, "elsewhere/ARCH3D.BSA", Inventory(), [])).Message, StringComparison.Ordinal);
-        Assert.Contains("does not carry family 'CNT-006'", Assert.Throws<InvalidOperationException>(() => DaggerfallGeometryBuilder.Build(bytes, "local/arena2/ARCH3D.BSA", [], [])).Message, StringComparison.Ordinal);
-        Assert.Equal("local/arena2/ARCH3D.BSA", DaggerfallGeometryBuilder.Build(bytes, "local/arena2/ARCH3D.BSA", Inventory(), []).Sources[0].Path);
+        Assert.Contains("does not carry family 'CNT-006'", Assert.Throws<InvalidOperationException>(() => DaggerfallGeometryBuilder.Build(bytes, "arena2/ARCH3D.BSA", [], [])).Message, StringComparison.Ordinal);
+        Assert.Equal("arena2/ARCH3D.BSA", DaggerfallGeometryBuilder.Build(bytes, "arena2/ARCH3D.BSA", Inventory(), []).Sources[0].Path);
     }
 
     /// <summary>Builds the corpus inventory once, with the use sites the published block section states.</summary>
@@ -404,7 +404,7 @@ public sealed class GeometryInventoryTests
     private static DaggerfallGeometry WithUseSites(IReadOnlyList<DaggerfallGeometryUseSite> useSites) =>
         DaggerfallGeometryBuilder.Build(
             File.ReadAllBytes(TestData.Corpus("ARCH3D.BSA")),
-            "local/arena2/ARCH3D.BSA",
+            "arena2/ARCH3D.BSA",
             Inventory(),
             useSites);
 

@@ -28,7 +28,7 @@ public sealed class DaggerfallQuestWorldTablesTests
         Assert.Equal(92, sounds.Lookup["storm_1"]);
         Assert.Equal(93, sounds.Lookup["storm_2"]);
         Assert.Equal(94, sounds.Lookup["storm_3"]);
-        Assert.Equal("Tables/Quests-Sounds.txt", sounds.SourcePath);
+        Assert.Equal("daggerfall-unity/Assets/StreamingAssets/Tables/Quests-Sounds.txt", sounds.SourcePath);
     }
 
     internal static DaggerfallQuestTables Tables() => Content().QuestSources.Tables;

@@ -137,7 +137,7 @@ public sealed class DaggerfallQuestOriginalSourceTests
         Directory.EnumerateFiles(TestData.CorpusRoot)
             .Where(path => path.EndsWith(QuestSourceInventory.BinaryExtension, StringComparison.OrdinalIgnoreCase)
                 || path.EndsWith(QuestSourceInventory.ResourcesExtension, StringComparison.OrdinalIgnoreCase))
-            .Select(Path.GetFileName)!, "local/arena2");
+            .Select(Path.GetFileName)!, "arena2");
 
     private static void WriteUInt16(byte[] bytes, int offset, ushort value)
     {

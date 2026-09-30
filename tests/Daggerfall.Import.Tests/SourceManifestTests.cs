@@ -30,14 +30,14 @@ public sealed class SourceManifestTests : IDisposable
         Write("EXTRA.CIF", "undocumented"u8);
         Directory.CreateDirectory(Path.Combine(root, "books"));
         string inventory = Inventory(
-            "CNT-001,family,CNT-001,cif,local/arena2/A.CIF,1,,A,scope,current-structural,note",
-            "CNT-002,family,CNT-002,cif,local/arena2/B.CIF,1,,B,scope,current-structural,note",
-            "CNT-001.file.A.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,uninspected,note",
-            "CNT-001.file.B.CIF,file,CNT-001,source-file,local/arena2/B.CIF,1,5,B,scope,uninspected,note",
-            "CNT-001.file.GONE.CIF,file,CNT-001,source-file,local/arena2/GONE.CIF,1,5,GONE,scope,uninspected,note");
+            "CNT-001,family,CNT-001,cif,arena2/A.CIF,1,,A,scope,current-structural,note",
+            "CNT-002,family,CNT-002,cif,arena2/B.CIF,1,,B,scope,current-structural,note",
+            "CNT-001.file.A.CIF,file,CNT-001,source-file,arena2/A.CIF,1,5,A,scope,uninspected,note",
+            "CNT-001.file.B.CIF,file,CNT-001,source-file,arena2/B.CIF,1,5,B,scope,uninspected,note",
+            "CNT-001.file.GONE.CIF,file,CNT-001,source-file,arena2/GONE.CIF,1,5,GONE,scope,uninspected,note");
 
         SourceManifest manifest = SourceManifestBuilder.Build(
-            new SourceManifestRequest("local/arena2", "data/content-source-manifest.csv", root, ["A.CIF"], ["B.CIF"], []),
+            new SourceManifestRequest("arena2", "data/content-source-manifest.csv", root, ["A.CIF"], ["B.CIF"], []),
             Encoding.UTF8.GetBytes(inventory));
 
         Assert.Equal(SourceRecordDisposition.Imported, Record(manifest, "CNT-001.file.A.CIF").Disposition);
@@ -57,13 +57,13 @@ public sealed class SourceManifestTests : IDisposable
     {
         Write("A.CIF", "alpha"u8);
         string inventory = Inventory(
-            "CNT-001,family,CNT-001,cif,local/arena2/A.CIF,1,,A,scope,current-structural,note",
-            "CNT-009,family,CNT-009,races,donor:Assets/Scripts/Game/Entities/RaceTemplate.cs,0,,Race,scope,current-structural,note",
-            "CNT-001.file.A.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,uninspected,note",
-            "CNT-001.file.GONE.CIF,file,CNT-001,source-file,local/arena2/GONE.CIF,1,5,GONE,scope,uninspected,note");
+            "CNT-001,family,CNT-001,cif,arena2/A.CIF,1,,A,scope,current-structural,note",
+            "CNT-009,family,CNT-009,races,daggerfall-unity/Assets/Scripts/Game/Entities/RaceTemplate.cs,0,,Race,scope,current-structural,note",
+            "CNT-001.file.A.CIF,file,CNT-001,source-file,arena2/A.CIF,1,5,A,scope,uninspected,note",
+            "CNT-001.file.GONE.CIF,file,CNT-001,source-file,arena2/GONE.CIF,1,5,GONE,scope,uninspected,note");
 
         SourceManifest manifest = SourceManifestBuilder.Build(
-            new SourceManifestRequest("local/arena2", "data/content-source-manifest.csv", root, ["A.CIF"], [], []),
+            new SourceManifestRequest("arena2", "data/content-source-manifest.csv", root, ["A.CIF"], [], []),
             Encoding.UTF8.GetBytes(inventory));
 
         // A documented family the local tree supplies nothing for is still counted, so
@@ -81,10 +81,10 @@ public sealed class SourceManifestTests : IDisposable
         Write("B.CIF", "bravo"u8);
         Write("A.CIF", "alpha"u8);
         string inventory = Inventory(
-            "CNT-001,family,CNT-001,cif,local/arena2/A.CIF,1,,A,scope,current-structural,note",
-            "CNT-001.file.B.CIF,file,CNT-001,source-file,local/arena2/B.CIF,1,5,B,scope,uninspected,note",
-            "CNT-001.file.A.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,uninspected,note");
-        SourceManifestRequest request = new("local/arena2", "data/content-source-manifest.csv", root, ["B.CIF"], [], []);
+            "CNT-001,family,CNT-001,cif,arena2/A.CIF,1,,A,scope,current-structural,note",
+            "CNT-001.file.B.CIF,file,CNT-001,source-file,arena2/B.CIF,1,5,B,scope,uninspected,note",
+            "CNT-001.file.A.CIF,file,CNT-001,source-file,arena2/A.CIF,1,5,A,scope,uninspected,note");
+        SourceManifestRequest request = new("arena2", "data/content-source-manifest.csv", root, ["B.CIF"], [], []);
 
         byte[] first = SourceManifestSerializer.Serialize(SourceManifestBuilder.Build(request, Encoding.UTF8.GetBytes(inventory)));
         byte[] second = SourceManifestSerializer.Serialize(SourceManifestBuilder.Build(request, Encoding.UTF8.GetBytes(inventory)));
@@ -100,9 +100,9 @@ public sealed class SourceManifestTests : IDisposable
         Write("A.CIF", "alpha"u8);
         Write("B.CIF", "bravo"u8);
         byte[] inventory = Encoding.UTF8.GetBytes(Inventory(
-            "CNT-001,family,CNT-001,cif,local/arena2/A.CIF,1,,A,scope,current-structural,note",
-            "CNT-001.file.A.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,uninspected,note",
-            "CNT-001.file.B.CIF,file,CNT-001,source-file,local/arena2/B.CIF,1,5,B,scope,excluded,note"));
+            "CNT-001,family,CNT-001,cif,arena2/A.CIF,1,,A,scope,current-structural,note",
+            "CNT-001.file.A.CIF,file,CNT-001,source-file,arena2/A.CIF,1,5,A,scope,uninspected,note",
+            "CNT-001.file.B.CIF,file,CNT-001,source-file,arena2/B.CIF,1,5,B,scope,excluded,note"));
 
         // The publication's own source list decides what is imported, whichever path spelling it read under.
         SourceManifest manifest = SourceManifestPublication.ForPublication(["arena2/A.CIF"], root, "inventory.csv", inventory);
@@ -121,15 +121,15 @@ public sealed class SourceManifestTests : IDisposable
     {
         Write("Mixed.CIF", "alpha"u8);
         string inventory = Inventory(
-            "CNT-001,family,CNT-001,cif,local/arena2/MIXED.CIF,1,,MIXED,scope,current-structural,note",
-            "CNT-001.file.MIXED.CIF,file,CNT-001,source-file,local/arena2/MIXED.CIF,1,5,MIXED,scope,uninspected,note");
+            "CNT-001,family,CNT-001,cif,arena2/MIXED.CIF,1,,MIXED,scope,current-structural,note",
+            "CNT-001.file.MIXED.CIF,file,CNT-001,source-file,arena2/MIXED.CIF,1,5,MIXED,scope,uninspected,note");
 
         SourceManifest manifest = SourceManifestBuilder.Build(
-            new SourceManifestRequest("local/arena2", "data/content-source-manifest.csv", root, [], [], []),
+            new SourceManifestRequest("arena2", "data/content-source-manifest.csv", root, [], [], []),
             Encoding.UTF8.GetBytes(inventory));
 
         SourceManifestRecord record = Record(manifest, "CNT-001.file.MIXED.CIF");
-        Assert.Equal("local/arena2/Mixed.CIF", record.SourcePath);
+        Assert.Equal("arena2/Mixed.CIF", record.SourcePath);
         Assert.Contains("supplied as 'Mixed.CIF'", record.Note, StringComparison.Ordinal);
     }
 
@@ -139,10 +139,10 @@ public sealed class SourceManifestTests : IDisposable
         byte[] archiveBytes = CreateNamedBsa(("FIRST.TXT", "one"u8.ToArray()), ("SECOND.TXT", "two"u8.ToArray()));
         Write("ARCHIVE.BSA", archiveBytes);
         string inventory = Inventory(
-            "CNT-005,family,CNT-005,blocks,local/arena2/ARCHIVE.BSA,1,,A,scope,current-structural,note",
-            "CNT-005.file.ARCHIVE.BSA,file,CNT-005,source-file,local/arena2/ARCHIVE.BSA,1,5,ARCHIVE,scope,uninspected,note");
+            "CNT-005,family,CNT-005,blocks,arena2/ARCHIVE.BSA,1,,A,scope,current-structural,note",
+            "CNT-005.file.ARCHIVE.BSA,file,CNT-005,source-file,arena2/ARCHIVE.BSA,1,5,ARCHIVE,scope,uninspected,note");
         SourceManifest manifest = SourceManifestBuilder.Build(
-            new SourceManifestRequest("local/arena2", "data/content-source-manifest.csv", root, ["ARCHIVE.BSA"], [], []),
+            new SourceManifestRequest("arena2", "data/content-source-manifest.csv", root, ["ARCHIVE.BSA"], [], []),
             Encoding.UTF8.GetBytes(inventory));
         SourceManifestRecord archive = Record(manifest, "CNT-005.file.ARCHIVE.BSA");
 
@@ -155,7 +155,7 @@ public sealed class SourceManifestTests : IDisposable
         Assert.All(decoded, record =>
         {
             Assert.Equal(SourceRecordDisposition.RequiredPending, record.Disposition);
-            Assert.Equal("local/arena2/ARCHIVE.BSA", record.SourcePath);
+            Assert.Equal("arena2/ARCHIVE.BSA", record.SourcePath);
             Assert.NotNull(record.Digest);
         });
         Assert.Equal(3L, decoded[0].ByteLength);
@@ -170,18 +170,18 @@ public sealed class SourceManifestTests : IDisposable
 
         // The same source record cannot appear under two identities.
         Assert.Throws<InvalidOperationException>(() => new SourceManifest(
-            1, "local/arena2", "inventory.csv", [good, sameIdentity], [SourceManifestFamilyCount.From("CNT-001", "current-structural", [good, sameIdentity])]).Validate());
+            1, "arena2", "inventory.csv", [good, sameIdentity], [SourceManifestFamilyCount.From("CNT-001", "current-structural", [good, sameIdentity])]).Validate());
         // Family counts must reconcile with the records they count.
         Assert.Throws<InvalidOperationException>(() => new SourceManifest(
-            1, "local/arena2", "inventory.csv", [good], [counted with { Discovered = 2 }]).Validate());
+            1, "arena2", "inventory.csv", [good], [counted with { Discovered = 2 }]).Validate());
         // A record cannot belong to a family the manifest does not count.
         Assert.Throws<InvalidOperationException>(() => new SourceManifest(
-            1, "local/arena2", "inventory.csv", [good], [SourceManifestFamilyCount.From("CNT-002", "current-structural", [])]).Validate());
+            1, "arena2", "inventory.csv", [good], [SourceManifestFamilyCount.From("CNT-002", "current-structural", [])]).Validate());
         // Traversal, absolute paths and an unsupported schema version are refused.
         Assert.Throws<ArgumentException>(() => new SourceManifest(
-            1, "local/arena2", "../escape.csv", [good], [counted]).Validate());
+            1, "arena2", "../escape.csv", [good], [counted]).Validate());
         Assert.Throws<ArgumentOutOfRangeException>(() => new SourceManifest(
-            2, "local/arena2", "inventory.csv", [good], [counted]).Validate());
+            2, "arena2", "inventory.csv", [good], [counted]).Validate());
     }
 
     [Fact]
@@ -192,11 +192,11 @@ public sealed class SourceManifestTests : IDisposable
         string json = """
         {
           "schemaVersion": 1,
-          "sourceRoot": "local/arena2",
+          "sourceRoot": "arena2",
           "inventoryPath": "inventory.csv",
           "records": [
-            { "id": "CNT-001.file.A.CIF", "familyId": "CNT-001", "familyPath": "local/arena2/A.CIF", "sourcePath": "local/arena2/A.CIF", "byteLength": 5, "digest": "d970ca90f9d4b4ad1e0b3e5b3c70e0dc0d1d0d2b1d0dcbc9d3a2c6a2a5f9a6a6", "disposition": "imported", "note": "note" },
-            { "id": "CNT-001.file.A.CIF", "familyId": "CNT-001", "familyPath": "local/arena2/A.CIF", "sourcePath": "local/arena2/A.CIF", "byteLength": 5, "digest": "d970ca90f9d4b4ad1e0b3e5b3c70e0dc0d1d0d2b1d0dcbc9d3a2c6a2a5f9a6a6", "disposition": "imported", "note": "note" }
+            { "id": "CNT-001.file.A.CIF", "familyId": "CNT-001", "familyPath": "arena2/A.CIF", "sourcePath": "arena2/A.CIF", "byteLength": 5, "digest": "d970ca90f9d4b4ad1e0b3e5b3c70e0dc0d1d0d2b1d0dcbc9d3a2c6a2a5f9a6a6", "disposition": "imported", "note": "note" },
+            { "id": "CNT-001.file.A.CIF", "familyId": "CNT-001", "familyPath": "arena2/A.CIF", "sourcePath": "arena2/A.CIF", "byteLength": 5, "digest": "d970ca90f9d4b4ad1e0b3e5b3c70e0dc0d1d0d2b1d0dcbc9d3a2c6a2a5f9a6a6", "disposition": "imported", "note": "note" }
           ],
           "families": [ { "familyId": "CNT-001", "discovered": 2, "imported": 2, "requiredPending": 0, "unused": 0, "duplicate": 0, "excluded": 0, "malformed": 0, "unresolved": 0, "sourceGap": 0 } ]
         }
@@ -209,7 +209,7 @@ public sealed class SourceManifestTests : IDisposable
     public void An_undispositioned_or_malformed_record_is_rejected()
     {
         SourceManifestRecord baseRecord = new(
-            "CNT-001.file.A.CIF", "CNT-001", "local/arena2/A.CIF", "local/arena2/A.CIF", 5,
+            "CNT-001.file.A.CIF", "CNT-001", "arena2/A.CIF", "arena2/A.CIF", 5,
             ContentDigest.Compute("alpha"u8), null, null, SourceRecordDisposition.Imported, "note");
 
         // An undispositioned record cannot hide behind the enum default.
@@ -242,9 +242,9 @@ public sealed class SourceManifestTests : IDisposable
         string inventoryFile = Path.Combine(root, "inventory.csv");
         // CRLF on purpose: the rewrite must keep the terminator the file already uses.
         File.WriteAllText(inventoryFile, (Inventory(
-            "CNT-001,family,CNT-001,cif,local/arena2/A.CIF,1,,A,scope,current-structural,keep me",
-            "CNT-001.file.A.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,uninspected,a note without commas",
-            "CNT-001.file.GONE.CIF,file,CNT-001,source-file,local/arena2/GONE.CIF,1,5,GONE,scope,uninspected,note") + "\n").Replace("\n", "\r\n"));
+            "CNT-001,family,CNT-001,cif,arena2/A.CIF,1,,A,scope,current-structural,keep me",
+            "CNT-001.file.A.CIF,file,CNT-001,source-file,arena2/A.CIF,1,5,A,scope,uninspected,a note without commas",
+            "CNT-001.file.GONE.CIF,file,CNT-001,source-file,arena2/GONE.CIF,1,5,GONE,scope,uninspected,note") + "\n").Replace("\n", "\r\n"));
         SourceManifestRecord supplied = Record("CNT-001.file.A.CIF");
         SourceManifestRecord gap = Record("CNT-001.file.GONE.CIF") with { Disposition = SourceRecordDisposition.SourceGap, Digest = null, ByteLength = 0 };
 
@@ -270,18 +270,18 @@ public sealed class SourceManifestTests : IDisposable
         Directory.CreateDirectory(Path.Combine(root, "books"));
         Write(Path.Combine("books", "BOK00000.TXT"), "a book"u8);
         string inventory = Inventory(
-            "CNT-015,family,CNT-015,books,local/arena2/books,90,,BOK,scope,current-structural,note",
-            "CNT-015.file.books/BOK00000.TXT,file,CNT-015,source-file,local/arena2/books/BOK00000.TXT,1,6,BOK,scope,uninspected,note");
+            "CNT-015,family,CNT-015,books,arena2/books,90,,BOK,scope,current-structural,note",
+            "CNT-015.file.books/BOK00000.TXT,file,CNT-015,source-file,arena2/books/BOK00000.TXT,1,6,BOK,scope,uninspected,note");
 
         SourceManifest manifest = SourceManifestBuilder.Scan(
-            new SourceManifestRequest("local/arena2", "inventory.csv", root, [], [], []),
+            new SourceManifestRequest("arena2", "inventory.csv", root, [], [], []),
             Encoding.UTF8.GetBytes(inventory));
 
         SourceManifestRecord record = Record(manifest, "CNT-015.file.books/BOK00000.TXT");
         // The documented path is relative to the source root, so a family that lives in
         // a subdirectory is supplied; reporting it as a gap would assert the opposite.
         Assert.Equal(SourceRecordDisposition.Unused, record.Disposition);
-        Assert.Equal("local/arena2/books/BOK00000.TXT", record.SourcePath);
+        Assert.Equal("arena2/books/BOK00000.TXT", record.SourcePath);
         Assert.NotNull(record.Digest);
         Assert.Equal(6L, record.ByteLength);
     }
@@ -291,11 +291,11 @@ public sealed class SourceManifestTests : IDisposable
     {
         Write("BROKEN.BSA", "not an archive at all"u8);
         string inventory = Inventory(
-            "CNT-005,family,CNT-005,blocks,local/arena2/BROKEN.BSA,1,,BROKEN,scope,current-structural,note",
-            "CNT-005.file.BROKEN.BSA,file,CNT-005,source-file,local/arena2/BROKEN.BSA,1,5,BROKEN,scope,uninspected,note");
+            "CNT-005,family,CNT-005,blocks,arena2/BROKEN.BSA,1,,BROKEN,scope,current-structural,note",
+            "CNT-005.file.BROKEN.BSA,file,CNT-005,source-file,arena2/BROKEN.BSA,1,5,BROKEN,scope,uninspected,note");
 
         SourceManifest manifest = SourceManifestBuilder.Scan(
-            new SourceManifestRequest("local/arena2", "inventory.csv", root, [], [], []),
+            new SourceManifestRequest("arena2", "inventory.csv", root, [], [], []),
             Encoding.UTF8.GetBytes(inventory));
 
         // An unreadable archive must not look like an archive with no records.
@@ -309,9 +309,9 @@ public sealed class SourceManifestTests : IDisposable
     {
         string inventoryFile = Path.Combine(root, "inventory.csv");
         File.WriteAllText(inventoryFile, Inventory(
-            "CNT-001,family,CNT-001,cif,local/arena2/A.CIF,1,,A,scope,current-structural,note",
-            "CNT-001.file.A.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,imported,note",
-            "CNT-001.file.B.CIF,file,CNT-001,source-file,local/arena2/B.CIF,1,5,B,scope,uninspected,note"));
+            "CNT-001,family,CNT-001,cif,arena2/A.CIF,1,,A,scope,current-structural,note",
+            "CNT-001.file.A.CIF,file,CNT-001,source-file,arena2/A.CIF,1,5,A,scope,imported,note",
+            "CNT-001.file.B.CIF,file,CNT-001,source-file,arena2/B.CIF,1,5,B,scope,uninspected,note"));
 
         // The scan resolved only A, so B's row must be reported as unresolved rather
         // than quietly counted as agreeing.
@@ -335,12 +335,12 @@ public sealed class SourceManifestTests : IDisposable
     {
         Write("A.CIF", "alpha"u8);
         string inventory = Inventory(
-            "CNT-001,family,CNT-001,cif,local/arena2/A.CIF,1,,A,scope,current-structural,note",
-            "CNT-001.file.A.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,uninspected,first row",
-            "CNT-001.file.A.ALT.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,uninspected,second row for the same file");
+            "CNT-001,family,CNT-001,cif,arena2/A.CIF,1,,A,scope,current-structural,note",
+            "CNT-001.file.A.CIF,file,CNT-001,source-file,arena2/A.CIF,1,5,A,scope,uninspected,first row",
+            "CNT-001.file.A.ALT.CIF,file,CNT-001,source-file,arena2/A.CIF,1,5,A,scope,uninspected,second row for the same file");
 
         SourceManifest manifest = SourceManifestBuilder.Scan(
-            new SourceManifestRequest("local/arena2", "inventory.csv", root, [], [], []),
+            new SourceManifestRequest("arena2", "inventory.csv", root, [], [], []),
             Encoding.UTF8.GetBytes(inventory));
 
         // The duplicate disposition has to be reachable where it is most likely: two
@@ -356,12 +356,12 @@ public sealed class SourceManifestTests : IDisposable
         Write("FILE1.CFG", "one"u8);
         Write("AXBXC.DAT", "two"u8);
         string inventory = Inventory(
-            "CNT-001,family,CNT-001,cfg,local/arena2/*.CFG,2,,FILE,scope,current-structural,note",
-            "CNT-001.pattern.FILE,file,CNT-001,source-file,local/arena2/FILE?.CFG,1,5,FILE,scope,uninspected,question mark",
-            "CNT-001.pattern.STAR,file,CNT-001,source-file,local/arena2/A*B*C.DAT,1,5,STAR,scope,uninspected,two stars");
+            "CNT-001,family,CNT-001,cfg,arena2/*.CFG,2,,FILE,scope,current-structural,note",
+            "CNT-001.pattern.FILE,file,CNT-001,source-file,arena2/FILE?.CFG,1,5,FILE,scope,uninspected,question mark",
+            "CNT-001.pattern.STAR,file,CNT-001,source-file,arena2/A*B*C.DAT,1,5,STAR,scope,uninspected,two stars");
 
         SourceManifest manifest = SourceManifestBuilder.Scan(
-            new SourceManifestRequest("local/arena2", "inventory.csv", root, [], [], []),
+            new SourceManifestRequest("arena2", "inventory.csv", root, [], [], []),
             Encoding.UTF8.GetBytes(inventory));
 
         Assert.Equal(SourceRecordDisposition.Unused, Record(manifest, "CNT-001.pattern.FILE.FILE1.CFG").Disposition);
@@ -378,12 +378,12 @@ public sealed class SourceManifestTests : IDisposable
         // permission bits, which the analyser rejects as platform-specific.
         using FileStream hold = new(locked, FileMode.Open, FileAccess.Read, FileShare.None);
         string inventory = Inventory(
-            "CNT-001,family,CNT-001,cif,local/arena2/GOOD.CIF,1,,GOOD,scope,current-structural,note",
-            "CNT-001.file.GOOD.CIF,file,CNT-001,source-file,local/arena2/GOOD.CIF,1,5,GOOD,scope,uninspected,note",
-            "CNT-001.file.LOCKED.CIF,file,CNT-001,source-file,local/arena2/LOCKED.CIF,1,6,LOCKED,scope,uninspected,note");
+            "CNT-001,family,CNT-001,cif,arena2/GOOD.CIF,1,,GOOD,scope,current-structural,note",
+            "CNT-001.file.GOOD.CIF,file,CNT-001,source-file,arena2/GOOD.CIF,1,5,GOOD,scope,uninspected,note",
+            "CNT-001.file.LOCKED.CIF,file,CNT-001,source-file,arena2/LOCKED.CIF,1,6,LOCKED,scope,uninspected,note");
 
         SourceManifest manifest = SourceManifestBuilder.Scan(
-            new SourceManifestRequest("local/arena2", "inventory.csv", root, [], [], []),
+            new SourceManifestRequest("arena2", "inventory.csv", root, [], [], []),
             Encoding.UTF8.GetBytes(inventory));
 
         // One unreadable file must not void every other record in the scan.
@@ -402,13 +402,13 @@ public sealed class SourceManifestTests : IDisposable
     {
         Write("A.CIF", "alpha"u8);
         string inventory = Inventory(
-            "CNT-001,family,CNT-001,cif,local/arena2/A.CIF,1,,A,scope,current-structural,note",
-            "CNT-009,family,CNT-009,cif,local/arena2/A.CIF,1,,A,scope,current-structural,note",
-            "CNT-001.file.A.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,uninspected,first family",
-            "CNT-009.file.A.CIF,file,CNT-009,source-file,local/arena2/A.CIF,1,5,A,scope,uninspected,second family");
+            "CNT-001,family,CNT-001,cif,arena2/A.CIF,1,,A,scope,current-structural,note",
+            "CNT-009,family,CNT-009,cif,arena2/A.CIF,1,,A,scope,current-structural,note",
+            "CNT-001.file.A.CIF,file,CNT-001,source-file,arena2/A.CIF,1,5,A,scope,uninspected,first family",
+            "CNT-009.file.A.CIF,file,CNT-009,source-file,arena2/A.CIF,1,5,A,scope,uninspected,second family");
 
         SourceManifest manifest = SourceManifestBuilder.Scan(
-            new SourceManifestRequest("local/arena2", "inventory.csv", root, [], [], []),
+            new SourceManifestRequest("arena2", "inventory.csv", root, [], [], []),
             Encoding.UTF8.GetBytes(inventory));
 
         // The duplicate is the same supplied file, whichever family its row sits in.
@@ -424,15 +424,15 @@ public sealed class SourceManifestTests : IDisposable
         Directory.CreateDirectory(Path.Combine(root, "books"));
         Write(Path.Combine("books", "X.TXT"), "nested"u8);
         string inventory = Inventory(
-            "CNT-001,family,CNT-001,text,local/arena2/X.TXT,1,,X,scope,current-structural,note",
-            "CNT-002,family,CNT-002,text,local/arena2/books/X.TXT,1,,X,scope,current-structural,note",
-            "CNT-001.file.X.TXT,file,CNT-001,source-file,local/arena2/X.TXT,1,9,X,scope,uninspected,top level",
-            "CNT-002.file.books/X.TXT,file,CNT-002,source-file,local/arena2/books/X.TXT,1,6,X,scope,uninspected,nested");
+            "CNT-001,family,CNT-001,text,arena2/X.TXT,1,,X,scope,current-structural,note",
+            "CNT-002,family,CNT-002,text,arena2/books/X.TXT,1,,X,scope,current-structural,note",
+            "CNT-001.file.X.TXT,file,CNT-001,source-file,arena2/X.TXT,1,9,X,scope,uninspected,top level",
+            "CNT-002.file.books/X.TXT,file,CNT-002,source-file,arena2/books/X.TXT,1,6,X,scope,uninspected,nested");
 
         // The leaf names two files, so only the path can identify the one a consumer
         // read — otherwise an imported file would be recorded as unused.
         SourceManifest manifest = SourceManifestBuilder.Scan(
-            new SourceManifestRequest("local/arena2", "inventory.csv", root, ["books/X.TXT"], [], []),
+            new SourceManifestRequest("arena2", "inventory.csv", root, ["books/X.TXT"], [], []),
             Encoding.UTF8.GetBytes(inventory));
 
         Assert.Equal(SourceRecordDisposition.Unused, Record(manifest, "CNT-001.file.X.TXT").Disposition);
@@ -446,15 +446,15 @@ public sealed class SourceManifestTests : IDisposable
         Directory.CreateDirectory(Path.Combine(root, "sub"));
         Write(Path.Combine("sub", "X.TXT"), "nested"u8);
         string inventory = Inventory(
-            "CNT-001,family,CNT-001,text,local/arena2/X.TXT,1,,X,scope,current-structural,note",
-            "CNT-002,family,CNT-002,text,local/arena2/sub/X.TXT,1,,X,scope,current-structural,note",
-            "CNT-001.file.X.TXT,file,CNT-001,source-file,local/arena2/X.TXT,1,9,X,scope,uninspected,top level",
-            "CNT-002.file.sub/X.TXT,file,CNT-002,source-file,local/arena2/sub/X.TXT,1,6,X,scope,uninspected,nested");
+            "CNT-001,family,CNT-001,text,arena2/X.TXT,1,,X,scope,current-structural,note",
+            "CNT-002,family,CNT-002,text,arena2/sub/X.TXT,1,,X,scope,current-structural,note",
+            "CNT-001.file.X.TXT,file,CNT-001,source-file,arena2/X.TXT,1,9,X,scope,uninspected,top level",
+            "CNT-002.file.sub/X.TXT,file,CNT-002,source-file,arena2/sub/X.TXT,1,6,X,scope,uninspected,nested");
 
         // The claim names a leaf two supplied paths carry, so it identifies neither and
         // is not credited to whichever file matches first.
         SourceManifest manifest = SourceManifestBuilder.Scan(
-            new SourceManifestRequest("local/arena2", "inventory.csv", root, ["X.TXT"], [], []),
+            new SourceManifestRequest("arena2", "inventory.csv", root, ["X.TXT"], [], []),
             Encoding.UTF8.GetBytes(inventory));
 
         Assert.Equal(SourceRecordDisposition.Unused, Record(manifest, "CNT-001.file.X.TXT").Disposition);
@@ -466,8 +466,8 @@ public sealed class SourceManifestTests : IDisposable
     {
         string inventoryFile = Path.Combine(root, "broken.csv");
         File.WriteAllText(inventoryFile, Inventory(
-            "CNT-001,family,CNT-001,cif,local/arena2/A.CIF,1,,A,scope,current-structural,note",
-            "CNT-001.file.A.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,uninspected,a note, with a comma"));
+            "CNT-001,family,CNT-001,cif,arena2/A.CIF,1,,A,scope,current-structural,note",
+            "CNT-001.file.A.CIF,file,CNT-001,source-file,arena2/A.CIF,1,5,A,scope,uninspected,a note, with a comma"));
 
         SourceInventoryReconciliation reconciliation = SourceInventoryReconciler.Reconcile(inventoryFile, [Record("CNT-001.file.A.CIF")], update: true);
 
@@ -482,9 +482,9 @@ public sealed class SourceManifestTests : IDisposable
     {
         string inventoryFile = Path.Combine(root, "blocked.csv");
         string contents = Inventory(
-            "CNT-001,family,CNT-001,cif,local/arena2/A.CIF,1,,A,scope,current-structural,note",
-            "CNT-001.file.A.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,wrong-value,note",
-            "CNT-001.file.NOPE.ZZZ,file,CNT-001,source-file,local/arena2/NOPE.ZZZ,1,5,NOPE,scope,uninspected,note");
+            "CNT-001,family,CNT-001,cif,arena2/A.CIF,1,,A,scope,current-structural,note",
+            "CNT-001.file.A.CIF,file,CNT-001,source-file,arena2/A.CIF,1,5,A,scope,wrong-value,note",
+            "CNT-001.file.NOPE.ZZZ,file,CNT-001,source-file,arena2/NOPE.ZZZ,1,5,NOPE,scope,uninspected,note");
         File.WriteAllText(inventoryFile, contents);
 
         // One row genuinely drifts and another cannot be resolved, so the update is
@@ -506,8 +506,8 @@ public sealed class SourceManifestTests : IDisposable
 
         // With nothing unresolved, the same request is carried out and says so.
         File.WriteAllText(inventoryFile, Inventory(
-            "CNT-001,family,CNT-001,cif,local/arena2/A.CIF,1,,A,scope,current-structural,note",
-            "CNT-001.file.A.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,wrong-value,note"));
+            "CNT-001,family,CNT-001,cif,arena2/A.CIF,1,,A,scope,current-structural,note",
+            "CNT-001.file.A.CIF,file,CNT-001,source-file,arena2/A.CIF,1,5,A,scope,wrong-value,note"));
         SourceInventoryReconciliation written = SourceInventoryReconciler.Reconcile(inventoryFile, [Record("CNT-001.file.A.CIF")], update: true);
 
         Assert.True(written.Updated);
@@ -516,7 +516,7 @@ public sealed class SourceManifestTests : IDisposable
     }
 
     private static SourceManifestRecord Record(string id) => new(
-        id, "CNT-001", "local/arena2/A.CIF", "local/arena2/A.CIF", 5,
+        id, "CNT-001", "arena2/A.CIF", "arena2/A.CIF", 5,
         ContentDigest.Compute("alpha"u8), null, null, SourceRecordDisposition.Imported, "note");
 
     private SourceManifestRecord Record(SourceManifest manifest, string id) =>

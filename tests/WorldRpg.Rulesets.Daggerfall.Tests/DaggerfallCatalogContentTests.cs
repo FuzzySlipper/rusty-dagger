@@ -169,7 +169,7 @@ public sealed class DaggerfallCatalogContentTests
 
     [Theory]
     [InlineData("\"id\": \"implicit-values\"", "\"id\": \"\"")]
-    [InlineData("\"evidence\": \"donor:ItemEnums.cs declares None = -1 in ItemGroups and ArtifactsSubTypes.\"", "\"evidence\": \"\"")]
+    [InlineData("\"evidence\": \"daggerfall-unity/Assets/Scripts/Game/Items/ItemEnums.cs declares None = -1 in ItemGroups and ArtifactsSubTypes.\"", "\"evidence\": \"\"")]
     [InlineData("\"status\": \"available\"", "\"status\": \"unclear\"")]
     public void RejectsABaselineRuleOrSubstituteThatDoesNotSayWhatItRestsOn(string before, string after)
     {

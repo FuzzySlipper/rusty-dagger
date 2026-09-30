@@ -14,8 +14,8 @@ public sealed class DaggerfallWorldGridsTests
     [Fact]
     public void Builds_tiled_rows_with_the_sentinel_column_kept()
     {
-        DaggerfallClimateGrid climate = DaggerfallWorldGridsBuilder.BuildClimate(CreateStripedPak(223, 224), "local/arena2/CLIMATE.PAK", Inventory());
-        DaggerfallPoliticGrid politic = DaggerfallWorldGridsBuilder.BuildPolitic(CreateStripedPak(64, 145), "local/arena2/POLITIC.PAK", Inventory());
+        DaggerfallClimateGrid climate = DaggerfallWorldGridsBuilder.BuildClimate(CreateStripedPak(223, 224), "arena2/CLIMATE.PAK", Inventory());
+        DaggerfallPoliticGrid politic = DaggerfallWorldGridsBuilder.BuildPolitic(CreateStripedPak(64, 145), "arena2/POLITIC.PAK", Inventory());
 
         Assert.Equal(500, climate.Rows.Count);
         Assert.Equal(500, politic.Rows.Count);
@@ -39,12 +39,12 @@ public sealed class DaggerfallWorldGridsTests
     [Fact]
     public void Records_unresolved_values_rather_than_dropping_them()
     {
-        DaggerfallClimateGrid climate = DaggerfallWorldGridsBuilder.BuildClimate(CreateStripedPak(223, 100), "local/arena2/CLIMATE.PAK", Inventory());
+        DaggerfallClimateGrid climate = DaggerfallWorldGridsBuilder.BuildClimate(CreateStripedPak(223, 100), "arena2/CLIMATE.PAK", Inventory());
         DaggerfallClimateValue unknown = climate.Values.Single(value => value.Value == 100);
         Assert.Equal(DaggerfallClimateDisposition.Unresolved, unknown.Disposition);
         Assert.Equal(string.Empty, unknown.Name);
 
-        DaggerfallPoliticGrid politic = DaggerfallWorldGridsBuilder.BuildPolitic(CreateStripedPak(64, 200), "local/arena2/POLITIC.PAK", Inventory());
+        DaggerfallPoliticGrid politic = DaggerfallWorldGridsBuilder.BuildPolitic(CreateStripedPak(64, 200), "arena2/POLITIC.PAK", Inventory());
         DaggerfallPoliticValue stray = politic.Values.Single(value => value.Value == 200);
         Assert.Equal(DaggerfallPoliticDisposition.Unresolved, stray.Disposition);
         Assert.Equal(-1, stray.Region);
@@ -53,8 +53,8 @@ public sealed class DaggerfallWorldGridsTests
     [Fact]
     public void Refuses_malformed_sources_and_missing_provenance()
     {
-        Assert.Throws<Arena2FormatException>(() => DaggerfallWorldGridsBuilder.BuildClimate([1, 2, 3], "local/arena2/CLIMATE.PAK", Inventory()));
-        Assert.Throws<InvalidOperationException>(() => DaggerfallWorldGridsBuilder.BuildClimate(CreateStripedPak(223, 224), "local/arena2/CLIMATE.PAK", []));
+        Assert.Throws<Arena2FormatException>(() => DaggerfallWorldGridsBuilder.BuildClimate([1, 2, 3], "arena2/CLIMATE.PAK", Inventory()));
+        Assert.Throws<InvalidOperationException>(() => DaggerfallWorldGridsBuilder.BuildClimate(CreateStripedPak(223, 224), "arena2/CLIMATE.PAK", []));
     }
 
     [CorpusFact("CLIMATE.PAK", "POLITIC.PAK")]
@@ -63,8 +63,8 @@ public sealed class DaggerfallWorldGridsTests
         string arena2 = TestData.CorpusRoot;
 
         IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));
-        DaggerfallClimateGrid climate = DaggerfallWorldGridsBuilder.BuildClimate(File.ReadAllBytes(Path.Combine(arena2, "CLIMATE.PAK")), "local/arena2/CLIMATE.PAK", inventory);
-        DaggerfallPoliticGrid politic = DaggerfallWorldGridsBuilder.BuildPolitic(File.ReadAllBytes(Path.Combine(arena2, "POLITIC.PAK")), "local/arena2/POLITIC.PAK", inventory);
+        DaggerfallClimateGrid climate = DaggerfallWorldGridsBuilder.BuildClimate(File.ReadAllBytes(Path.Combine(arena2, "CLIMATE.PAK")), "arena2/CLIMATE.PAK", inventory);
+        DaggerfallPoliticGrid politic = DaggerfallWorldGridsBuilder.BuildPolitic(File.ReadAllBytes(Path.Combine(arena2, "POLITIC.PAK")), "arena2/POLITIC.PAK", inventory);
         climate.Validate();
         politic.Validate();
 
@@ -130,7 +130,7 @@ public sealed class DaggerfallWorldGridsTests
 
     private static IReadOnlyList<SourceInventoryRow> Inventory() =>
     [
-        new SourceInventoryRow("CNT-002.file.CLIMATE.PAK", "file", "CNT-002", "source-file", "local/arena2/CLIMATE.PAK", "CLIMATE", "imported", string.Empty),
-        new SourceInventoryRow("CNT-003.file.POLITIC.PAK", "file", "CNT-003", "source-file", "local/arena2/POLITIC.PAK", "POLITIC", "imported", string.Empty),
+        new SourceInventoryRow("CNT-002.file.CLIMATE.PAK", "file", "CNT-002", "source-file", "arena2/CLIMATE.PAK", "CLIMATE", "imported", string.Empty),
+        new SourceInventoryRow("CNT-003.file.POLITIC.PAK", "file", "CNT-003", "source-file", "arena2/POLITIC.PAK", "POLITIC", "imported", string.Empty),
     ];
 }

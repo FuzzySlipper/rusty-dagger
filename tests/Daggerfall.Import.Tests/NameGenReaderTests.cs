@@ -10,7 +10,7 @@ public sealed class NameGenReaderTests
     public void Reads_the_supplied_banks_sets_and_fragments()
     {
         NameGenCatalog catalog = NameGenReader.Read(
-            File.ReadAllBytes(TestData.Corpus("NAMEGEN.DAT")), "local/arena2/NAMEGEN.DAT");
+            File.ReadAllBytes(TestData.Corpus("NAMEGEN.DAT")), "arena2/NAMEGEN.DAT");
 
         Assert.Equal(11, catalog.Banks.Count);
         // The donor's curated database carries these tables fragment for fragment; the bank order

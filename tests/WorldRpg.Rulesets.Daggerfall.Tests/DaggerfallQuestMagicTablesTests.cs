@@ -23,7 +23,7 @@ public sealed class DaggerfallQuestMagicTablesTests
         Assert.Equal(76, tables.Spells.Lookup["Pyrrhic_Acid"]);
         Assert.Equal(92, tables.Spells.Lookup["Lycanthropy"]);
         Assert.DoesNotContain(tables.Spells.Rows, row => row.Id is 21 or 43 or 48);
-        Assert.Equal("Tables/Quests-Diseases.txt", tables.Diseases.SourcePath);
-        Assert.Equal("Tables/Quests-Spells.txt", tables.Spells.SourcePath);
+        Assert.Equal("daggerfall-unity/Assets/StreamingAssets/Tables/Quests-Diseases.txt", tables.Diseases.SourcePath);
+        Assert.Equal("daggerfall-unity/Assets/StreamingAssets/Tables/Quests-Spells.txt", tables.Spells.SourcePath);
     }
 }

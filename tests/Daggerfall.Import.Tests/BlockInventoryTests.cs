@@ -226,7 +226,7 @@ public sealed class BlockInventoryTests
         // are exercised here, since the two read their bytes differently.
         DaggerfallBlocks blocks = DaggerfallBlocksBuilder.Build(
             NamedArchive(("SHORT.RMB", new byte[64]), ("SHORT.RDB", new byte[64]), ("NOISE.RDB", new byte[10928])),
-            "local/arena2/BLOCKS.BSA",
+            "arena2/BLOCKS.BSA",
             Inventory());
 
         Assert.Equal(
@@ -255,8 +255,8 @@ public sealed class BlockInventoryTests
         DaggerfallBlockRecord first = blocks.Records[0];
         DaggerfallBlockRecord second = blocks.Records[1];
 
-        Assert.Contains("carries ordinal 0 where the section is ordered by ordinal and the previous record of 'local/arena2/BLOCKS.BSA' was 0", Assert.Throws<InvalidOperationException>(() => (blocks with { Records = Replaced(blocks, 1, second with { Ordinal = 0 }) }).Validate()).Message, StringComparison.Ordinal);
-        Assert.Contains("carries ordinal 3 where the section is ordered by ordinal and the previous record of 'local/arena2/BLOCKS.BSA' was 0", Assert.Throws<InvalidOperationException>(() => (blocks with { Records = Replaced(blocks, 1, second with { Ordinal = 3 }) }).Validate()).Message, StringComparison.Ordinal);
+        Assert.Contains("carries ordinal 0 where the section is ordered by ordinal and the previous record of 'arena2/BLOCKS.BSA' was 0", Assert.Throws<InvalidOperationException>(() => (blocks with { Records = Replaced(blocks, 1, second with { Ordinal = 0 }) }).Validate()).Message, StringComparison.Ordinal);
+        Assert.Contains("carries ordinal 3 where the section is ordered by ordinal and the previous record of 'arena2/BLOCKS.BSA' was 0", Assert.Throws<InvalidOperationException>(() => (blocks with { Records = Replaced(blocks, 1, second with { Ordinal = 3 }) }).Validate()).Message, StringComparison.Ordinal);
         Assert.Equal(0, first.Ordinal);
     }
 
@@ -465,7 +465,7 @@ public sealed class BlockInventoryTests
         // abandoning the inventory of every other record.
         DaggerfallBlocks blocks = DaggerfallBlocksBuilder.Build(
             NamedArchive(("Z0000000.RDI", []), ("B0000000.RDI", new byte[512])),
-            "local/arena2/BLOCKS.BSA",
+            "arena2/BLOCKS.BSA",
             Inventory());
 
         Assert.Equal([DaggerfallBlockState.Read, DaggerfallBlockState.Read], blocks.Records.Select(record => record.State));
@@ -485,7 +485,7 @@ public sealed class BlockInventoryTests
                 ("OVER.RMB", Rmb(1, [34], exteriorObjects: 1)),
                 ("INSIDE.RMB", Rmb(1, [35], interiorObjects: 1)),
                 ("MISC.RMB", Rmb(1, [34], misc3d: 1))),
-            "local/arena2/BLOCKS.BSA",
+            "arena2/BLOCKS.BSA",
             Inventory());
 
         Assert.All(blocks.Records, record => Assert.Equal(DaggerfallBlockState.Malformed, record.State));
@@ -496,7 +496,7 @@ public sealed class BlockInventoryTests
         Assert.Contains("past the record's", blocks.Records[4].Reason, StringComparison.Ordinal);
 
         // A sub-record whose halves fill exactly what it reserves is readable, padding and all.
-        DaggerfallBlocks readable = DaggerfallBlocksBuilder.Build(NamedArchive(("FINE.RMB", Rmb(1, [35], name: "FINE.RMB"))), "local/arena2/BLOCKS.BSA", Inventory());
+        DaggerfallBlocks readable = DaggerfallBlocksBuilder.Build(NamedArchive(("FINE.RMB", Rmb(1, [35], name: "FINE.RMB"))), "arena2/BLOCKS.BSA", Inventory());
         Assert.Equal(DaggerfallBlockState.Read, readable.Records[0].State);
         Assert.Equal(1, readable.Records[0].Rmb!.Buildings[0].PaddingBytes);
     }
@@ -516,8 +516,8 @@ public sealed class BlockInventoryTests
         byte[] bytes = NamedArchive(("B0000000.RDI", new byte[512]));
 
         Assert.Contains("but the documented inventory places CNT-005 at", Assert.Throws<InvalidOperationException>(() => DaggerfallBlocksBuilder.Build(bytes, "elsewhere/BLOCKS.BSA", Inventory())).Message, StringComparison.Ordinal);
-        Assert.Contains("does not carry family 'CNT-005'", Assert.Throws<InvalidOperationException>(() => DaggerfallBlocksBuilder.Build(bytes, "local/arena2/BLOCKS.BSA", [])).Message, StringComparison.Ordinal);
-        Assert.Equal("local/arena2/BLOCKS.BSA", DaggerfallBlocksBuilder.Build(bytes, "local/arena2/BLOCKS.BSA", Inventory()).Sources[0].Path);
+        Assert.Contains("does not carry family 'CNT-005'", Assert.Throws<InvalidOperationException>(() => DaggerfallBlocksBuilder.Build(bytes, "arena2/BLOCKS.BSA", [])).Message, StringComparison.Ordinal);
+        Assert.Equal("arena2/BLOCKS.BSA", DaggerfallBlocksBuilder.Build(bytes, "arena2/BLOCKS.BSA", Inventory()).Sources[0].Path);
     }
 
     [Fact]
@@ -527,7 +527,7 @@ public sealed class BlockInventoryTests
         // rather than on a second directory walk: a record's offset is where the payloads before it end.
         byte[] bytes = NamedArchive(("B0000000.RDI", new byte[512]), ("FOO", [1, 2, 3]), ("B0000001.RDI", new byte[512]));
 
-        BlockRecordInventory inventory = BlockRecordInventoryReader.Read(bytes, "local/arena2/BLOCKS.BSA");
+        BlockRecordInventory inventory = BlockRecordInventoryReader.Read(bytes, "arena2/BLOCKS.BSA");
 
         Assert.Equal(3, inventory.DeclaredRecords);
         Assert.Equal([4L, 516L, 519L], inventory.Records.Select(record => record.Offset));
@@ -607,7 +607,7 @@ public sealed class BlockInventoryTests
 
     private static DaggerfallBlocks Supplied() => DaggerfallBlocksBuilder.Build(
         File.ReadAllBytes(TestData.Corpus("BLOCKS.BSA")),
-        "local/arena2/BLOCKS.BSA",
+        "arena2/BLOCKS.BSA",
         Inventory());
 
     private static IReadOnlyList<SourceInventoryRow> Inventory() => SourceManifestBuilder.ReadInventory(

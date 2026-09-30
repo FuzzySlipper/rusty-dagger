@@ -107,12 +107,12 @@ public sealed class ItemTemplateBaseline
         Dictionary<int, List<string>> referenceGroupsByIndex = [];
         List<ItemTemplateRule> rules =
         [
-            new("index-space", $"The target space is the {TargetCount} native template indices 0..{TargetCount - 1}.", $"donor:ItemsFile.cs declares totalItems = {declaredCount} and ItemHelper.cs declares LastDFTemplate = {TargetCount - 1}."),
-            new("declaration-comment", "A mapped enumeration whose declaration says its values are not template indices contributes reference ids, not template indices.", "donor:ItemEnums.cs marks MagicItemSubTypes 'Not mapped to a specific item template index' and ArtifactsSubTypes 'Mapped to artifact definitions in MAGIC.DEF'."),
-            new("implicit-values", "A member without an explicit value takes the previous member's value plus one, as the donor's runtime enumerations do.", "donor:ItemEnums.cs leaves Deeds, the magic sub-type and MiscItems.Unused unvalued, and the donor's GetEnumArray returns the runtime array."),
-            new("sentinel-exclusion", "A negative member names no template and takes no place in the index space.", "donor:ItemEnums.cs declares None = -1 in ItemGroups and ArtifactsSubTypes."),
-            new("alias-once", "A group naming one index through several members counts once.", "donor:ItemEnums.cs gives the four Books members the value 277."),
-            new("substitute-source", "The native file is absent, and the donor's exported table is the substitute the decode must rest on until an authorized byte source appears.", "donor:ItemHelper.cs loads Assets/Resources/ItemTemplates.txt, which it states was exported from FALL.EXE, and MagicItemTemplates.txt beside it."),
+            new("index-space", $"The target space is the {TargetCount} native template indices 0..{TargetCount - 1}.", $"daggerfall-unity/Assets/Scripts/API/ItemsFile.cs declares totalItems = {declaredCount} and daggerfall-unity/Assets/Scripts/Game/Items/ItemHelper.cs declares LastDFTemplate = {TargetCount - 1}."),
+            new("declaration-comment", "A mapped enumeration whose declaration says its values are not template indices contributes reference ids, not template indices.", "daggerfall-unity/Assets/Scripts/Game/Items/ItemEnums.cs marks MagicItemSubTypes 'Not mapped to a specific item template index' and ArtifactsSubTypes 'Mapped to artifact definitions in MAGIC.DEF'."),
+            new("implicit-values", "A member without an explicit value takes the previous member's value plus one, as the donor's runtime enumerations do.", "daggerfall-unity/Assets/Scripts/Game/Items/ItemEnums.cs leaves Deeds, the magic sub-type and MiscItems.Unused unvalued, and the donor's GetEnumArray returns the runtime array."),
+            new("sentinel-exclusion", "A negative member names no template and takes no place in the index space.", "daggerfall-unity/Assets/Scripts/Game/Items/ItemEnums.cs declares None = -1 in ItemGroups and ArtifactsSubTypes."),
+            new("alias-once", "A group naming one index through several members counts once.", "daggerfall-unity/Assets/Scripts/Game/Items/ItemEnums.cs gives the four Books members the value 277."),
+            new("substitute-source", "The native file is absent, and the donor's exported table is the substitute the decode must rest on until an authorized byte source appears.", "daggerfall-unity/Assets/Scripts/Game/Items/ItemHelper.cs loads Assets/Resources/ItemTemplates.txt, which it states was exported from FALL.EXE, and MagicItemTemplates.txt beside it."),
         ];
 
         foreach ((string group, string enumName) in mapping)

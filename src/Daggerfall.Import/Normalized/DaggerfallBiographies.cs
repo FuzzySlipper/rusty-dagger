@@ -227,7 +227,7 @@ public static class DaggerfallBiographiesBuilder
     public const string BackdropMediaId = "BIOG00I0";
 
     /// <summary>The logical path of the file that carries the backdrop.</summary>
-    public const string BackdropSource = "local/arena2/BIOG00I0.IMG";
+    public const string BackdropSource = "arena2/BIOG00I0.IMG";
 
     /// <summary>Builds the biographies and the text records their prose resolves through.</summary>
     /// <param name="defaultBytes">The default-biography file's bytes.</param>

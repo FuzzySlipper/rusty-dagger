@@ -18,7 +18,7 @@ internal static class Options
     /// The logical label of an Arena2 source: the documented corpus path, whatever directory the caller
     /// supplied the bytes from, so a published section does not change with where the operator keeps the corpus.
     /// </summary>
-    public static string Arena2Label(string relativePath) => $"{SourceManifestPublication.Arena2LogicalRoot}/{relativePath}";
+    public static string Arena2Label(string relativePath) => PublishedSourcePath.Arena2(relativePath);
 
     /// <summary>The documented inventory's rows.</summary>
     public static IReadOnlyList<SourceInventoryRow> ReadInventory(CommandArguments args) =>

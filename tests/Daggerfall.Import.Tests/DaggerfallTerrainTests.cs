@@ -45,7 +45,7 @@ public sealed class DaggerfallTerrainTests
 
         IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));
         byte[] bytes = File.ReadAllBytes(Path.Combine(arena2, "WOODS.WLD"));
-        DaggerfallTerrain terrain = DaggerfallTerrainBuilder.Build(bytes, "local/arena2/WOODS.WLD", inventory);
+        DaggerfallTerrain terrain = DaggerfallTerrainBuilder.Build(bytes, "arena2/WOODS.WLD", inventory);
         terrain.Validate();
 
         Assert.Equal(500, terrain.Heightmap.Count);
@@ -57,7 +57,7 @@ public sealed class DaggerfallTerrainTests
         // Samples round-trip byte-exact through the published span.
         byte[] samples = Convert.FromBase64String(terrain.Samples);
         Assert.Equal(12500000, samples.Length);
-        WoodsFile woods = WoodsReader.Read(bytes, "local/arena2/WOODS.WLD");
+        WoodsFile woods = WoodsReader.Read(bytes, "arena2/WOODS.WLD");
         Assert.Equal(woods.Cells[158 * 1000 + 109].Samples, samples.AsSpan((158 * 1000 + 109) * 25, 25).ToArray());
         // Heightmap rows tile the source bytes.
         byte[] heightmap = new byte[500000];

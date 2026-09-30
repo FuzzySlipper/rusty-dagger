@@ -27,9 +27,9 @@ internal static class ItemsCommand
             throw new ArgumentException("The item substitute tables must be the donor's ItemTemplates.txt and MagicItemTemplates.txt exports.");
         }
 
-        const string label = "donor/Assets/Resources/ItemTemplates.txt";
+        string label = PublishedSourcePath.Donor("Assets/Resources/ItemTemplates.txt");
         IReadOnlyList<SubstituteItemTemplate> substitutes = ItemTemplateReader.ReadTemplates(File.ReadAllText(templates), label);
-        IReadOnlyList<SubstituteMagicTemplate> magic = ItemTemplateReader.ReadMagic(File.ReadAllText(magicTemplates), "donor/Assets/Resources/MagicItemTemplates.txt");
+        IReadOnlyList<SubstituteMagicTemplate> magic = ItemTemplateReader.ReadMagic(File.ReadAllText(magicTemplates), PublishedSourcePath.Donor("Assets/Resources/MagicItemTemplates.txt"));
         DaggerfallItemTemplates catalog = DaggerfallItemTemplatesBuilder.Build(substitutes, magic, label, File.ReadAllBytes(templates), Options.ReadInventory(args));
         Console.WriteLine($"items: {catalog.Templates.Count} templates, {catalog.Magic.Count} magic templates");
         if (!args.Switch("--update")) return Options.ReportOnly("these templates");

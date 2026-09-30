@@ -314,7 +314,7 @@ public sealed class DaggerfallCatalogTests
         DaggerfallCatalogs catalogs = BuildFromRepository();
         DaggerfallCatalogs invented = catalogs with
         {
-            Races = [.. catalogs.Races.Select((race, index) => index == 0 ? race with { Source = new DaggerfallCatalogSource("CNT-999", "local/arena2/nowhere") } : race)],
+            Races = [.. catalogs.Races.Select((race, index) => index == 0 ? race with { Source = new DaggerfallCatalogSource("CNT-999", "arena2/nowhere") } : race)],
         };
 
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>

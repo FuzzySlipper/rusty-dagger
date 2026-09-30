@@ -478,7 +478,7 @@ public static class SourceManifestBuilder
     };
 
     private static string LeafName(string pathOrPattern) =>
-        pathOrPattern.StartsWith("local/arena2/", StringComparison.Ordinal) ? pathOrPattern["local/arena2/".Length..] : pathOrPattern;
+        pathOrPattern.StartsWith(PublishedSourcePath.Arena2Root + "/", StringComparison.Ordinal) ? pathOrPattern[(PublishedSourcePath.Arena2Root.Length + 1)..] : pathOrPattern;
 
     /// <summary>
     /// Glob match for documented patterns: `*` spans any run, `?` spans one character,
