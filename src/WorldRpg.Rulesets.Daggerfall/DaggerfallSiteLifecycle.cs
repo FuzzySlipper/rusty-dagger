@@ -112,16 +112,12 @@ internal sealed class DaggerfallSiteLifecycle
     internal DaggerfallSiteProfiles RequireProfiles() =>
         Profiles ?? throw new InvalidOperationException("Site profiles have not been admitted.");
 
-    /// <summary>Adds the saved inactive sites' deltas to a restoring session.</summary>
+    /// <summary>Adds the saved inactive sites' deltas to a restoring session; ResolveRestore admitted each profile once.</summary>
     internal void RestoreDeltas(IEnumerable<DaggerfallSiteDeltaSave> saved)
     {
         foreach (DaggerfallSiteDeltaSave delta in saved)
-        {
-            DaggerfallWorldProfileKey id = delta.Profile.Require();
-            if (!_deltas.TryAdd(id, new DaggerfallSiteRuntimeDelta(delta.Actors, delta.DynamicActors, delta.ActorInventories,
-                delta.Corpses, delta.Doors, delta.Effects, delta.Motion)))
-                throw new ArgumentException($"Saved site state repeats inactive site '{id}'.", nameof(saved));
-        }
+            _deltas.Add(delta.Profile.Require(), new DaggerfallSiteRuntimeDelta(delta.Actors, delta.DynamicActors, delta.ActorInventories,
+                delta.Corpses, delta.Doors, delta.Effects, delta.Motion));
     }
 
     /// <summary>Replaces one inactive site's delta after an owner edited its detached state.</summary>

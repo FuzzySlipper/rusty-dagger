@@ -120,47 +120,55 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
     internal DaggerfallCinematicPresentation? Cinematics { get; }
     private readonly DaggerfallOpeningCinematics _openingCinematics;
 
-    internal DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallTuning tuning)
-        : this(engine, definitions, inputs, tuning, null, null, null) { }
-
-    /// <summary>Explicit compiled effect composition seam for ruleset families and save reconstruction tests.</summary>
-    internal DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs,
-        DaggerfallTuning tuning, DaggerfallEffectCatalog effects)
-        : this(engine, definitions, inputs, tuning, null, null, effects) { }
-
-    internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallTuning tuning, DaggerfallMusicBundle? music = null)
-        : this(engine, definitions, inputs, tuning, compositionIdentity, null, null, null, null, true, null, null, null, music) { }
-
-    internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallTuning tuning, DaggerfallSiteAudioBundles audioBundles, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null, DaggerfallMusicBundle? music = null)
-        : this(engine, definitions, inputs, tuning, compositionIdentity, null, null, audioBundles, cinematicContent, videosEnabled, questAdmission, null, disabledQuestSelection, music) { }
-
-    internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
-        DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallTuning tuning, RulesetSavePayload saved, IRandomService random)
-        => Restore(engine, compositionIdentity, definitions, inputs, tuning, saved, random, (DaggerfallEffectCatalog?)null);
-
-    internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
-        DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallTuning tuning, RulesetSavePayload saved,
-        IRandomService random, DaggerfallSiteAudioBundles audioBundles, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallSiteProfiles? profiles = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null, DaggerfallMusicBundle? music = null)
-        => Restore(engine, compositionIdentity, definitions, inputs, tuning, saved, random, null, audioBundles, cinematicContent, videosEnabled, questAdmission, profiles, disabledQuestSelection, music);
-
-    internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
-        DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallTuning tuning, RulesetSavePayload saved,
-        IRandomService random, DaggerfallEffectCatalog? effects, DaggerfallSiteAudioBundles? audioBundles = null, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallSiteProfiles? profiles = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null, DaggerfallMusicBundle? music = null)
+    /// <summary>Starts a new game at the composition's start site: the one construction path for a new session.</summary>
+    internal static DaggerfallSession StartNew(IEngineContext engine, DaggerfallSessionComposition composition)
     {
+        ArgumentNullException.ThrowIfNull(composition);
+        return new DaggerfallSession(engine, composition, composition.StartSite, restore: null).AdmitComposition(engine, composition);
+    }
+
+    /// <summary>
+    /// Resumes a current save: the one construction path for a restored session. The save is resolved
+    /// against the admitted content before any session state or Engine resource exists.
+    /// </summary>
+    internal static DaggerfallSession Restore(IEngineContext engine, DaggerfallSessionComposition composition, RulesetSavePayload saved)
+    {
+        ArgumentNullException.ThrowIfNull(composition);
         DaggerfallSavePayload raw = DaggerfallSavePayload.Read(saved);
+        DaggerfallSiteProfiles? profiles = composition.Profiles;
         DaggerfallSiteProfile activeInputs = profiles is null
-            ? inputs
+            ? composition.StartSite
             : raw.Site.ActiveProfile is { } profile
                 ? profiles.Require(profile.Require())
                 : profiles.RequireUniqueSite(ToSiteId(raw.Site.Active) ?? throw new ArgumentException("A restored Daggerfall session must name an active site.", nameof(saved)));
-        DaggerfallSavePayload payload = raw.ResolveRestore(definitions, activeInputs, profiles);
-        return new DaggerfallSession(engine, definitions, activeInputs, tuning, compositionIdentity, payload, effects, audioBundles, cinematicContent, videosEnabled, questAdmission, profiles, disabledQuestSelection, music);
+        DaggerfallResolvedRestore restore = raw.ResolveRestore(composition.Definitions, activeInputs, profiles);
+        return new DaggerfallSession(engine, composition, activeInputs, restore).AdmitComposition(engine, composition);
     }
 
-    private DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs,
-        DaggerfallTuning tuning, ResolvedCompositionIdentity? compositionIdentity, DaggerfallSavePayload? saved,
-        DaggerfallEffectCatalog? effects, DaggerfallSiteAudioBundles? audioBundles = null, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallSiteProfiles? profiles = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null, DaggerfallMusicBundle? music = null)
+    /// <summary>Admits the composition's site catalog and building names onto a composed session.</summary>
+    private DaggerfallSession AdmitComposition(IEngineContext engine, DaggerfallSessionComposition composition)
     {
+        if (composition.Profiles is { } profiles) AdmitSiteProfiles(profiles);
+        if (composition.Blocks is { } blocks) Site.AdmitBuildingNames(engine.Random, composition.Definitions, blocks);
+        return this;
+    }
+
+    /// <summary>
+    /// Composes one session. A new game passes no restore; a resolved restore supplies the saved
+    /// sections owners are constructed from and then the relational sections
+    /// <see cref="DaggerSessionPersistence.Restore"/> applies in its one order.
+    /// </summary>
+    private DaggerfallSession(IEngineContext engine, DaggerfallSessionComposition composition, DaggerfallSiteProfile inputs,
+        DaggerfallResolvedRestore? restore)
+    {
+        DaggerfallSavePayload? saved = restore?.Payload;
+        DaggerfallDefinitions definitions = composition.Definitions;
+        DaggerfallTuning tuning = composition.Tuning;
+        DaggerfallSiteAudioBundles? audioBundles = composition.Audio;
+        DaggerfallMusicBundle? music = composition.Music;
+        // A restore resolves its saved profiles against the catalog while composing; a new game admits
+        // the catalog once composed (AdmitComposition), so its action graphs and triggers grow there.
+        DaggerfallSiteProfiles? profiles = restore is null ? null : composition.Profiles;
         List<IDisposable> partiallyConstructed = [];
         try
         {
@@ -176,11 +184,11 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             _definitions = definitions;
             _dungeonText = new DaggerfallDungeonTextActions(new DaggerfallTextResolver(definitions.Text));
             _encounters = new DaggerfallEncounterRuntime(definitions, _random);
-            Cinematics = cinematicContent is null ? null : new DaggerfallCinematicPresentation(engine, cinematicContent, definitions.Cinematics);
+            Cinematics = composition.CinematicContent is null ? null : new DaggerfallCinematicPresentation(engine, composition.CinematicContent, definitions.Cinematics);
             if (Cinematics is not null) partiallyConstructed.Add(Cinematics);
-            _openingCinematics = new DaggerfallOpeningCinematics(Cinematics, videosEnabled);
+            _openingCinematics = new DaggerfallOpeningCinematics(Cinematics, composition.VideosEnabled);
             _spatialService = engine.Spatial;
-            DaggerActorAssembly assembled = DaggerActorFactory.Create(_random, definitions, inputs, saved, questAdmission, disabledQuestSelection);
+            DaggerActorAssembly assembled = DaggerActorFactory.Create(_random, definitions, inputs, saved, composition.QuestAdmission, composition.DisabledQuestSelection);
             State = assembled.State;
             State.Social.SetBiographyReactionModifier(State.Character.Background?.Modifiers.Reaction ?? 0);
             ActorsState actors = State.Actors;
@@ -229,14 +237,11 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
                     snapshot,
                     ExecuteDungeonFamilyAction));
             }
+            // ResolveRestore admitted every saved discovery against a dungeon profile of the catalog.
             foreach (DaggerfallDungeonDiscoverySnapshot snapshot in saved?.DungeonDiscovery ?? [])
             {
-                DaggerfallSiteProfile admitted = snapshot.Profile == inputs.ProfileKey
-                    ? inputs
-                    : (profiles ?? throw new ArgumentException("Saved dungeon discovery requires admitted site profiles.", nameof(saved))).Require(snapshot.Profile);
-                DaggerfallDungeonMapContent map = admitted.DungeonMap
-                    ?? throw new ArgumentException($"Saved dungeon discovery names non-dungeon profile '{snapshot.Profile.LogicalId}'.", nameof(saved));
-                State.DungeonDiscoveries.Add(snapshot.Profile, new DaggerfallDungeonDiscovery(snapshot.Profile, map, snapshot));
+                DaggerfallSiteProfile admitted = snapshot.Profile == inputs.ProfileKey ? inputs : profiles!.Require(snapshot.Profile);
+                State.DungeonDiscoveries.Add(snapshot.Profile, new DaggerfallDungeonDiscovery(snapshot.Profile, admitted.DungeonMap!, snapshot));
             }
             if (inputs.DungeonMap is { } initialMap && !State.DungeonDiscoveries.ContainsKey(activeProfile))
                 State.DungeonDiscoveries.Add(activeProfile, new DaggerfallDungeonDiscovery(activeProfile, initialMap));
@@ -273,7 +278,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             _vitality = new DaggerfallVitalityConsequences(combatRules);
             // One catalog answers every effect family this ruleset compiles, so a saved effect names the
             // definition that has to interpret it rather than the family that happened to start it.
-            State.Effects = new DaggerfallEffectLifecycle(State.Actors, effects ?? new DaggerfallEffectCatalog(
+            State.Effects = new DaggerfallEffectLifecycle(State.Actors, composition.Effects ?? new DaggerfallEffectCatalog(
             [
                 .. DaggerfallDiseasePolicy.Definitions(
                     _random,
@@ -324,7 +329,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
                 contextProvider: BuildEnemyPerceptionContext,
                 recordSkillUse: use => State.SkillUses.Record(use));
             _authoredEntityIds = DaggerActorFactory.AdmittedAuthoredEntityIds(inputs, playerDefinition.Loadout);
-            if (saved is null)
+            if (restore is null)
             {
                 ulong[] actorReservations = [DaggerfallActorIdentity.PlayerEntityId, .. inputs.Project.Actors.Values.Select(placement => checked((ulong)placement.EntityId))];
                 _actorIdentities = DurableIdentityAllocator.Restore(new DurableIdentityState(
@@ -336,7 +341,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             }
             else
             {
-                _actorIdentities = DurableIdentityAllocator.Restore(saved.RestoredIdentities());
+                // The ledger ResolveRestore rebuilt to validate the save is the session's live allocator.
+                _actorIdentities = restore.Identities;
             }
 
             _uniqueItems = DaggerfallUniqueItemAllocator.Sharing(_actorIdentities);
@@ -352,7 +358,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             State.Poisons = _poisons;
             State.Encumbrance = new DaggerfallEncumbrancePolicy(State.Inventory, State.Actors.Player.Stats,
                 () => _heldEnchantments.CarryMultiplier);
-            _heldEnchantments.Refresh();
+            // A new game wears its loadout now; a restore refreshes once, after its equipment is restored.
+            if (restore is null) _heldEnchantments.Refresh();
             State.Currency = new DaggerfallCurrencyService(definitions, State.Inventory, State.ItemInstances, State.Encumbrance, _uniqueItems, saved?.Currency);
             State.Bank = new DaggerfallRegionalBankState(State.Currency, State.Inventory, State.ItemInstances, saved?.Bank);
             State.Loans = new DaggerfallLoanState(saved?.Loans);
@@ -433,26 +440,11 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             _hud = new DaggerfallHudProjection(
                 engine.Ui,
                 definitions.HudResources,
-                compositionIdentity,
+                composition.Identity,
                 DaggerfallUiArt.Read(engine.Content, inputs.ClassicPresentation.InventoryIcons.Values));
             partiallyConstructed.Add(_hud);
-            if (saved is not null)
-            {
-                _sites.RestoreDeltas(saved.SiteDeltas);
-                HashSet<string> admittedEncounterProfiles = profiles is null
-                    ? [inputs.ProfileKey.LogicalId]
-                    : [.. profiles.Keys.Select(profile => profile.LogicalId)];
-                if (saved.Encounters.Resolved.Any(encounter => !admittedEncounterProfiles.Contains(encounter.ProfileId)))
-                    throw new ArgumentException("Saved encounter references a world profile not admitted by the current bundle.", nameof(saved));
-                _encounters.Restore(saved.Encounters, DynamicActorDefinitions(), TombstonedActorIds(saved));
-                _persistence.Restore(saved);
-                // Inventory/equipment materialize during persistence restore, after the initial held
-                // refresh. Rebind the now-worn sources before any elapsed time can advance them.
-                _heldEnchantments.Refresh();
-                _appearance.SyncRestoredDefeat(State.Actors);
-                RestoreDungeonText(saved.DungeonText);
-                actionTriggers.RebaseRestoredPlayer(State.PlayerControl, playerEntity);
-            }
+            if (restore is not null)
+                _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments, RestoreDungeonText);
             _sites.AdmitInitialExterior(saved?.ExteriorResidency);
         }
         catch (Exception constructionFailure)
@@ -592,24 +584,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
 
     /// <summary>Spawned actors by durable identity to the definition each was registered from.</summary>
     internal IReadOnlyDictionary<long, DaggerfallActorId> DynamicActors => _roster.Dynamic;
-
-    private IReadOnlyDictionary<long, string> DynamicActorDefinitions()
-    {
-        Dictionary<long, string> values = _roster.Dynamic.ToDictionary(entry => entry.Key, entry => entry.Value.Value);
-        foreach (DaggerfallSiteRuntimeDelta delta in _sites.Deltas.Values)
-        foreach (DaggerfallDynamicActorSave actor in delta.DynamicActors)
-            if (!values.TryAdd(actor.EntityId, actor.Definition))
-                throw new InvalidOperationException($"Dynamic actor {actor.EntityId} is active in more than one site profile.");
-        return values;
-    }
-
-    private static IReadOnlySet<long> TombstonedActorIds(DaggerfallSavePayload saved)
-    {
-        DurableIdentityAllocator identities = DurableIdentityAllocator.Restore(saved.RestoredIdentities());
-        return identities.RemovedIdentities(DurableIdentityKind.Actor)
-            .Select(value => checked((long)value))
-            .ToHashSet();
-    }
 
     /// <summary>Registers one actor from a published definition beyond the authored placements.</summary>
     internal long SpawnActor(string definitionId, ActorPose pose, int? level = null)

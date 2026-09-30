@@ -38,25 +38,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
         ArgumentNullException.ThrowIfNull(saved);
         if (context.Composition.Ruleset != Identity)
             throw new InvalidOperationException($"Daggerfall cannot interpret ruleset '{context.Composition.Ruleset.Value}'.");
-        DaggerfallAdmittedContent admitted = Admit(context.Composition);
-        DaggerfallSession session = DaggerfallSession.Restore(
-            context.Engine,
-            context.CompositionIdentity,
-            admitted.Definitions,
-            admitted.Inputs,
-            admitted.Tuning,
-            saved,
-            context.Engine.Random,
-            admitted.Audio,
-            admitted.Content,
-            _videosEnabled,
-            new DaggerfallQuestRuntimeAdmission(admitted.QuestReceipts),
-            admitted.Profiles,
-            admitted.DisabledQuestSelection,
-            admitted.Music);
-        session.AdmitSiteProfiles(admitted.Profiles);
-        session.Site.AdmitBuildingNames(context.Engine.Random, admitted.Definitions, admitted.Blocks);
-        return session;
+        return DaggerfallSession.Restore(context.Engine, Compose(context, Admit(context.Composition)), saved);
     }
 
     /// <summary>A fresh session: no saved state exists, so nothing is resolved or reported.</summary>
@@ -65,23 +47,22 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
         ArgumentNullException.ThrowIfNull(context);
         if (context.Composition.Ruleset != Identity)
             throw new InvalidOperationException($"Daggerfall cannot interpret ruleset '{context.Composition.Ruleset.Value}'.");
-        DaggerfallAdmittedContent admitted = Admit(context.Composition);
-        DaggerfallSession session = new(
-            context.Engine,
-            context.CompositionIdentity,
-            admitted.Definitions,
-            admitted.Inputs,
-            admitted.Tuning,
-            admitted.Audio,
-            admitted.Content,
-            _videosEnabled,
-            new DaggerfallQuestRuntimeAdmission(admitted.QuestReceipts),
-            admitted.DisabledQuestSelection,
-            music: admitted.Music);
-        session.AdmitSiteProfiles(admitted.Profiles);
-        session.Site.AdmitBuildingNames(context.Engine.Random, admitted.Definitions, admitted.Blocks);
-        return session;
+        return DaggerfallSession.StartNew(context.Engine, Compose(context, Admit(context.Composition)));
     }
+
+    /// <summary>The one session composition both start kinds are built from.</summary>
+    private DaggerfallSessionComposition Compose(GameSessionContext context, DaggerfallAdmittedContent admitted) =>
+        new(admitted.Definitions, admitted.Inputs, admitted.Tuning, context.CompositionIdentity)
+        {
+            Profiles = admitted.Profiles,
+            Audio = admitted.Audio,
+            CinematicContent = admitted.Content,
+            VideosEnabled = _videosEnabled,
+            QuestAdmission = new DaggerfallQuestRuntimeAdmission(admitted.QuestReceipts),
+            DisabledQuestSelection = admitted.DisabledQuestSelection,
+            Music = admitted.Music,
+            Blocks = admitted.Blocks,
+        };
 
     private DaggerfallAdmittedContent Admit(ResolvedGameComposition composition) =>
         _admittedContent.GetValue(composition, static selected =>
