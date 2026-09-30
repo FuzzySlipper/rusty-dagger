@@ -262,6 +262,52 @@ public sealed class HostSaveSlotTests
         }
     }
 
+    [Fact]
+    public void Save_slots_and_player_preferences_live_in_separate_persistence_scopes()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        List<string> releases = [];
+        InMemoryPersistenceService persistence = new();
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), persistence: persistence);
+        ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
+        string preferenceKey = DaggerfallRuleset.Identity.Value;
+        using (WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), new CapturingDaggerfallRuleset(), new GameBundleId("daggerfall.privateers-hold")))
+        {
+            product.Start();
+            product.Begin();
+            // A control rebind is a player preference and a named save is a slot: the ordinary actions
+            // that write each of the two Host stores.
+            product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"controls-rebind","item":"move.forward","key":"KeyQ"}""")]));
+            product.Update(new ProductUpdate(OuterUpdate(2), [Ui("""{"action":"save-slot","label":"Scoped"}""")]));
+            product.Update(new ProductUpdate(OuterUpdate(3), []));
+            Assert.Contains("Saved 'Scoped' (revision 1).", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
+        }
+
+        // Each store opened its own scope, and every key sits only in the scope of the store that wrote it:
+        // the slot catalog and its payload in the save scope, the ruleset's preference value in the other.
+        string slotScope = Assert.Single(persistence.OpenedScopes.Distinct(), scope => persistence.Keys(scope).Contains(WorldRpgSaveSlots.IndexKey));
+        string preferenceScope = Assert.Single(persistence.OpenedScopes.Distinct(), scope => persistence.Keys(scope).Contains(preferenceKey));
+        Assert.NotEqual(slotScope, preferenceScope);
+        Assert.Equal([WorldRpgSaveSlots.IndexKey, WorldRpgSaveSlots.PayloadKey("slot-1", 1)], persistence.Keys(slotScope));
+        Assert.Equal([preferenceKey], persistence.Keys(preferenceScope));
+
+        // A fresh product over the same persistence reads each value back through its own scope: the
+        // rebind is live before any slot loads, and the slot list names the one save.
+        List<string> resumedReleases = [];
+        ContentFake resumedContent = new(resumedReleases);
+        PopulateContent(resumedContent, inputs);
+        EngineContextFake resumed = EngineContextFake.Create(resumedContent, SpatialFake.Create(inputs.SpatialArtifact.Sha256, resumedReleases).Service,
+            new AppearanceFake(resumedReleases), persistence: persistence);
+        using WorldRpgProduct reopened = new(new ProductCreateContext(resumed.Context, FullContent(root), input), new CapturingDaggerfallRuleset(), new GameBundleId("daggerfall.privateers-hold"));
+        Assert.Equal(KeyboardControl.KeyQ, Assert.Single(resumed.PhysicalInput.Mappings, mapping => Encoding.UTF8.GetString(mapping.Intent.Span) == "move.forward").Keyboard);
+        using WorldRpgSaveSlots slots = new(resumed.Context, "worldrpg.saves");
+        Assert.Equal("Scoped", Assert.Single(slots.List()).Label);
+    }
+
     private static IEnumerable<ulong> CapturedUniqueItemIds(DaggerfallSavePayload saved) =>
         saved.Inventory.UniqueItems.Select(item => item.EntityId)
             .Concat(saved.Corpses.SelectMany(corpse => corpse.UniqueItems).Select(item => item.EntityId))
