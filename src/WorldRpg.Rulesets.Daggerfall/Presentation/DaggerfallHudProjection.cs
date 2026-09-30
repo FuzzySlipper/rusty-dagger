@@ -13,6 +13,32 @@ using WorldRpg.Rulesets.Daggerfall.Travel;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
+/// <summary>Everything one HUD snapshot projects, gathered by the session from the owners that hold it.</summary>
+internal sealed record DaggerfallHudFrame(
+    PlayerActorState Player,
+    ProgressionState Progression,
+    PresentationState Presentation,
+    ProductMode Mode,
+    PlayerControlState Controls,
+    PresentationSlots Slots,
+    InventoryPresentation? Inventory = null,
+    LootPresentation? Loot = null,
+    CharacterSheetPresentation? Character = null,
+    DaggerfallPanelRequest? PanelRequest = null,
+    IReadOnlyList<SaveSlotSummary>? SaveSlots = null,
+    string? SaveSlotDiagnostic = null,
+    DaggerfallControlSettings? ControlSettings = null,
+    string? ControlDiagnostic = null,
+    DaggerfallActivationView? Activation = null,
+    DaggerfallQuestPresentation? Quests = null,
+    DaggerfallNotebookPresentation? Notebook = null,
+    DaggerfallTransportPresentation? Transport = null,
+    DaggerfallDungeonTextProjection? DungeonText = null,
+    DaggerfallDeathView? Death = null,
+    DaggerfallRestView? Rest = null,
+    DaggerfallTravelPresentation? Travel = null,
+    string? SiteName = null);
+
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
 internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<DaggerfallHudResourceDefinition> resources, ResolvedCompositionIdentity? compositionIdentity, DaggerfallUiArt? uiArt = null) : IDisposable
 {
@@ -27,31 +53,12 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
     /// <summary>Publishes the current UI art on the next snapshot because the DOM asked for it.</summary>
     internal void RequestArt() => _artPending = true;
 
-    internal void Publish(
-        PlayerActorState player,
-        ProgressionState progression,
-        PresentationState presentation,
-        ProductMode mode,
-        PlayerControlState controls,
-        PresentationSlots slots,
-        InventoryPresentation? inventory = null,
-        LootPresentation? loot = null,
-        CharacterSheetPresentation? character = null,
-        DaggerfallPanelRequest? panelRequest = null,
-        IReadOnlyList<SaveSlotSummary>? saveSlots = null,
-        string? saveSlotDiagnostic = null,
-        DaggerfallControlSettings? controlSettings = null,
-        string? controlDiagnostic = null,
-        DaggerfallActivationView? activation = null,
-        DaggerfallQuestPresentation? quests = null,
-        DaggerfallNotebookPresentation? notebook = null,
-        DaggerfallTransportPresentation? transport = null,
-        DaggerfallDungeonTextProjection? dungeonText = null,
-        DaggerfallDeathView? death = null,
-        DaggerfallRestView? rest = null,
-        DaggerfallTravelPresentation? travel = null,
-        string? siteName = null)
+    internal void Publish(DaggerfallHudFrame frame)
     {
+        ArgumentNullException.ThrowIfNull(frame);
+        var (player, progression, presentation, mode, controls, slots, inventory, loot, character, panelRequest,
+            saveSlots, saveSlotDiagnostic, controlSettings, controlDiagnostic, activation, quests, notebook, transport,
+            dungeonText, death, rest, travel, siteName) = frame;
         UiValueBuilder builder = new();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
         (string Key, uint Value)[] fields =

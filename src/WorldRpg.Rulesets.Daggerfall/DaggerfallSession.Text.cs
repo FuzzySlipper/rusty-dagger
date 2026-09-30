@@ -1,5 +1,6 @@
 using System.Globalization;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
+using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -118,5 +119,51 @@ internal sealed partial class DaggerfallSession
         _dungeonText.CancelPendingOnUnload();
         _dungeonTextProjection = null;
         _coveredDungeonText.Clear();
+    }
+
+    private DaggerfallQuestMessageContext QuestTextContext(DaggerfallQuestRuntimeInstance instance)
+    {
+        World.DaggerfallCalendar calendar = _time.Calendar;
+        DaggerfallCharacterIdentity player = State.Character.Identity;
+        Dictionary<string, DaggerfallQuestResourceTextContext> resources = [];
+        foreach (DaggerfallQuestResourceState resource in instance.Resources)
+        {
+            DaggerfallQuestResourceDefinition? declared = _definitions.QuestSources.Resources
+                .SingleOrDefault(value => value.SourceFile == instance.SourceFile
+                    && value.CanonicalId == DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "quest presentation resource"));
+            if (declared is null) continue;
+            string? place = resource.Binding.Places.Select(value => _site.TryFind(new DaggerfallSiteId(value.Region!.Value, value.Index!.Value), out var site) ? site.Name : null)
+                .FirstOrDefault(value => value is not null);
+            string? actorRole = resource.Binding.ActorIds.Select(id => State.Npcs.All.FirstOrDefault(npc => npc.DurableId == id)?.Role)
+                .FirstOrDefault(value => value is not null);
+            string? item = resource.Binding.UniqueItemIds.Select(id => State.ItemInstances.RequireUnique(id).ItemId)
+                .FirstOrDefault(value => value is not null);
+            string? named = declared.Person?.Named?.Replace('_', ' ');
+            string? faction = declared.Person?.Faction?.Replace('_', ' ');
+            string? group = declared.Person?.Group?.Replace('_', ' ');
+            string? name = place ?? named ?? item ?? actorRole ?? group;
+            resources[DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "quest presentation resource")] = new(
+                Name: name,
+                NameTwo: place,
+                NameThree: place,
+                NameFour: place,
+                Details: item ?? declared.SourceText,
+                Binding: actorRole ?? place,
+                Faction: faction);
+        }
+        return new(new(
+            new DaggerfallTextPlayerContext(Name: player.Name, Race: player.RaceId),
+            new DaggerfallTextCalendarContext(
+                Date: $"{calendar.Month + 1}/{calendar.Day + 1}/{calendar.Year}",
+                Time: $"{calendar.Hour:D2}:{calendar.Minute:D2}",
+                DayNumber: (calendar.Day + 1).ToString(System.Globalization.CultureInfo.InvariantCulture),
+                MonthNumber: (calendar.Month + 1).ToString(System.Globalization.CultureInfo.InvariantCulture),
+                Year: calendar.Year.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                Minute: calendar.Minute.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                Hour: calendar.Hour.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                Season: calendar.Season.ToString()),
+            new DaggerfallTextLocationContext(City: _site.ActiveSite?.Name,
+                Region: _site.Region?.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+            new(), new(), new()), resources);
     }
 }

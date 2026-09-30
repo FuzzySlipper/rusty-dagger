@@ -48,7 +48,10 @@ test data helpers. Import-side data read by tools and tests lives in `data/`.
 
 `WorldRpg.Rulesets.Daggerfall` keeps session composition and most gameplay
 owners at its root: `DaggerfallRuleset`, `DaggerfallSession` (split into
-`DaggerfallSession.<Concern>.cs` partials), `DaggerfallState`,
+`DaggerfallSession.<Concern>.cs` partials, and started only through
+`StartNew`/`Restore` over a `DaggerfallSessionComposition`), the session's seam
+owners `DaggerfallSiteLifecycle`, `DaggerfallActorRoster` and
+`DaggerfallOpenInteractions`, `DaggerfallState`,
 `DaggerActorFactory`, `DaggerSessionPersistence`, `DaggerfallSavePayload`, and
 per-concern owners such as quests, effects, poisons, diseases and items. Domain
 folders group the remaining owners: `Banking/`, `Crime/`, `Guilds/`,
