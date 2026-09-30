@@ -53,7 +53,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         AppearanceFake graphics = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, graphics, PerceptionFake.Create().Service);
 
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         session.PublishInitial();
 
         AppearanceFact[] snapshot = Assert.Single(graphics.Snapshots);
@@ -76,7 +76,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
         DaggerfallSavePayload saved;
-        using (DaggerfallSession original = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        using (DaggerfallSession original = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
             foreach (DaggerfallStatId skill in definitions.Vocabulary.Skills)
                 original.State.Actors.Player.Stats.GetStat(StatId.Parse(skill.Value)).BaseValue = 100;
@@ -96,7 +96,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(saved));
         Assert.Equal(saved.RegionalPrices!.Factors, restored.State.RegionalPrices.Factors);
         Assert.Equal(saved.RegionalPrices.LastAdvancedDay, restored.State.RegionalPrices.LastAdvancedDay);
         Assert.Equal(saved.Wagon!.Id, restored.State.Wagon.Current?.Id);
@@ -137,7 +137,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
 
         DaggerfallSavePayload saved;
-        using (DaggerfallSession original = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        using (DaggerfallSession original = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
             DaggerfallSavePayload baseline = DaggerfallSavePayload.Read(original.CaptureSave());
             ulong rewardItem = baseline.Inventory.UniqueItems.First().EntityId;
@@ -181,7 +181,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
+        using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(saved));
 
         JsonObject missingQuestSection = JsonNode.Parse(DaggerfallSavePayload.Encode(saved).Bytes.Span)!.AsObject();
         Assert.True(missingQuestSection.Remove("Quests"));
@@ -202,7 +202,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         {
             Quests = new([.. saved.Quests.Instances.Where(instance => instance.InstanceId != "00B00Y00:1"), firstWithMissingDefinition]),
         };
-        Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(missingDefinition), RandomMinimum.Create()));
+        Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(missingDefinition)));
 
         DaggerfallQuestInstanceSave firstWithDanglingActor = saved.Quests.Instances.Single(instance => instance.InstanceId == "00B00Y00:1") with
         {
@@ -214,7 +214,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         {
             Quests = new([.. saved.Quests.Instances.Where(instance => instance.InstanceId != "00B00Y00:1"), firstWithDanglingActor]),
         };
-        Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(dangling), RandomMinimum.Create()));
+        Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(dangling)));
 
         DaggerfallQuestInstanceSave firstWithDanglingStack = saved.Quests.Instances.Single(instance => instance.InstanceId == "00B00Y00:1") with
         {
@@ -226,7 +226,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         {
             Quests = new([.. saved.Quests.Instances.Where(instance => instance.InstanceId != "00B00Y00:1"), firstWithDanglingStack]),
         };
-        Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(missingStack), RandomMinimum.Create()));
+        Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(missingStack)));
     }
 
     [Fact]
@@ -243,7 +243,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1d, 1d, PerceptionPairKind.Visible, 1d));
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         double before = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
         double staminaBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current;
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
@@ -278,7 +278,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1d, 1d, PerceptionPairKind.Visible, 1d));
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         // This test exercises combat skill-use cadence; retain the authored weapon through both
         // accepted operations so its physical-wear removal cannot change the selected skill.
         DaggerfallItemInstanceMetadata sword = session.State.ItemInstances.RequireUnique(1001);
@@ -321,7 +321,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(saved));
 
         Assert.Equal(2, restored.State.Progression.SkillUses["long-blade"]);
         Assert.Equal(2, restored.State.Progression.SkillUses["critical-strike"]);
@@ -353,7 +353,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         using SpatialMovementSystem targetingSpatial = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
         Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
             placement => placement.EntityId,
@@ -439,7 +439,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         spatial.FloorHit = request => new SpatialHit { Present = true, Point = request.Origin - Vector3.UnitY, Normal = Vector3.UnitY };
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
 
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
 
         foreach (AuthoredActor source in inputs.Project.Actors.Values)
         {
@@ -465,7 +465,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         AppearanceFake appearance = new(releases);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         // The outer update owns final publication: simulation completes first, then one snapshot.
         session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d), []));
 
@@ -674,7 +674,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession restored = DaggerfallSession.Restore(engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, payload, RandomMinimum.Create());
+        using DaggerfallSession restored = DaggerfallSession.Restore(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), payload);
 
         restored.Update(new ProductUpdate(
             new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 2, 2, 60, 1, 0, 1d),
@@ -732,7 +732,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         // read as zero would admit an attack.
         perception.Receipt = Receipt([.. inputs.Project.Actors.Values.Select(placement =>
             new PerceptionPair(checked((ulong)placement.EntityId), (ulong)DaggerfallActorIdentity.PlayerEntityId, 0.5d, 1d, PerceptionPairKind.Visible, 1d))]);
-        using DaggerfallSession session = new(engine.Context, withoutPolicies, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(withoutPolicies, inputs, DaggerfallTuning.Defaults));
         double healthBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
 
@@ -868,7 +868,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         DaggerfallTuning tuning = DaggerfallTuning.Defaults;
 
-        using (DaggerfallSession session = new(engine.Context, definitions, inputs, tuning))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, tuning)))
         {
             // No keyboard and no synthetic pointer step: one stick pushed forward with the other
             // pushed right is the whole input slice.
@@ -896,7 +896,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
 
         InventoryStackId coins = InventoryStackId.Parse("test.encumbrance.movement");
         session.State.Inventory.Grant(new(new InventoryItemId("gold-piece"), coins, checked((ulong)(session.State.Encumbrance.Read().MaximumClassicUnits + 1))));
@@ -920,7 +920,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         Track health = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
         health.SetCurrent(3.75d, clamp: true);
         session.State.PlayerControl.Restore(new WorldPoint(0f, 2f, 0f),
@@ -948,7 +948,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             ? default(SpatialHit) with { Present = true, Normal = new Vector3(0f, 0f, 1f) }
             : default;
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: RandomMinimum.Create());
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
 
         session.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
         for (ulong step = 2; step <= 49; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
@@ -964,8 +964,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs,
-            DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(saved));
         Assert.True(DaggerfallSavePayload.Read(restored.CaptureSave()).Climbing.Attached);
         Assert.Equal(1, restored.State.Progression.SkillUses["climbing"]);
     }
@@ -985,7 +984,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             new DaggerfallEffectDefinition("levitation-test", "levitation-test", DaggerfallEffectStacking.Stack, 1, 1,
                 MovementProtection: new DaggerfallMovementProtection(false, GrantsLevitation: true)),
         ]);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults, effects);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults) { Effects = effects });
         using JsonDocument state = JsonDocument.Parse("{}");
         _ = session.State.Effects.Start(new DaggerfallEffectRequest("levitation-instance", "levitation-test", "test-source",
             null, DaggerfallActorIdentity.PlayerEntityId, "classic", null, null, 1, 5, state.RootElement));
@@ -1006,8 +1005,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs,
-            DaggerfallTuning.Defaults, session.CaptureSave(), RandomMinimum.Create(), effects);
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity) { Effects = effects }, session.CaptureSave());
         Assert.True(restored.State.Effects.GrantsLevitation(DaggerfallActorIdentity.PlayerEntityId));
         restored.Update(new ProductUpdate(OuterUpdate(3), []));
         Assert.Equal(0f, resumedSpatial.StepRequests[^1].Config.Vertical.Gravity);
@@ -1041,7 +1039,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             Distance = 1d,
         };
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         session.State.PlayerControl.Restore(new WorldPoint(point.X, point.Y + 1f, point.Z), default);
 
         session.Update(new ProductUpdate(OuterUpdate(12), []));
@@ -1066,8 +1064,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs,
-            DaggerfallTuning.Defaults, session.CaptureSave(), RandomMinimum.Create());
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), session.CaptureSave());
         DaggerfallDungeonDiscoverySnapshot restoredMap = Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).DungeonDiscovery);
         Assert.Equal(discovered.DiscoveredPlacementIds, restoredMap.DiscoveredPlacementIds);
         Assert.Contains(ambiguousCell, restoredMap.DiscoveredSurfaceCells);
@@ -1086,7 +1083,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
 
         List<string> requested = [];
-        using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
             // Collects a request only where the published revision moved, so the panel a button asks
             // for is read from the projection's own edge rather than from the call that made it.
@@ -1180,7 +1177,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
 
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         session.Update(new ProductUpdate(OuterUpdate(1), [PadButton(ControllerButton.Button8, InputEdge.Pressed)]));
         Assert.Equal("inventory", engine.PublishedNested("panelRequest", "panel"));
 
@@ -1204,7 +1201,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
 
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         // Every placed actor is outside melee reach: the receipt says so, and the product has to say so
         // too rather than printing the same line it would print in a world where nothing is visible.
         perception.Receipt = new PerceptionReadoutResult(ReadOnlyMemory<PerceptionPair>.Empty, ReadOnlyMemory<PerceptionAggregate>.Empty, 0, false, 0, 1, 42, 42, 42, 41, 1, 0, 0);
@@ -1327,7 +1324,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
 
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         // One admitted slice can carry both presses, and one panel can open: the later press in the
         // fixed order is the one the DOM is asked for, and the earlier one is not silently preferred.
         session.Update(new ProductUpdate(OuterUpdate(1),
@@ -1361,7 +1358,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             Input(InputEventKind.PointerDelta, x: .25f, y: -.5f),
         ];
 
-        using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
             session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 3, 1, 1, 1, 60, 3, 0, 1d / 60d), input);
         }
@@ -1387,7 +1384,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
 
-        using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
             session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 3, 1, 1, 1, 60, 3, 0, 1d / 60d), [Input(InputEventKind.DirectAxis, x: .5f, y: .75f, intent: "move")]);
         }
@@ -1409,7 +1406,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
 
-        using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
             session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 3, 1, 1, 1, 60, 3, 0, 1d / 60d), [Input(InputEventKind.DirectDigital, x: 1f, intent: "move")]);
         }
@@ -1430,7 +1427,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         WorldPoint? positionBefore = session.State.PlayerControl.Position;
         CharacterMotion motionBefore = session.State.PlayerControl.Motion;
         CharacterGround groundBefore = session.State.PlayerControl.Ground;
@@ -1712,7 +1709,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, appearance);
 
-        using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
             Assert.Equal(inputs.Lights.Count + 1, appearance.LightRequests.Count);
             Assert.All(appearance.LightRequests, request => Assert.InRange(request.LogicalId, 1UL, (1UL << 53) - 1UL));
@@ -2043,7 +2040,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PerceptionFake perception = PerceptionFake.Create();
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         // Baseline success on a fresh weapon: no swing staged yet.
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         int playbacksBefore = appearance.CreatedPlaybacks.Count;
@@ -2588,7 +2585,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         double healthBefore = session.State.Actors.Get(2000).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current;
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
@@ -2607,7 +2604,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
             placement => placement.EntityId,
             placement => definitions.RequireActor(placement.ActorId));
@@ -2669,8 +2666,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         EngineContextFake restoredEngine = EngineContextFake.Create(restoredContent, restoredSpatial.Service,
             new AppearanceFake(restoredReleases), PerceptionFake.Create().Service);
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, identity, definitions, inputs,
-            DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMaximum.Create());
+        using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(saved));
         Assert.Equal(2, restored.State.Progression.SkillUses["backstabbing"]);
     }
 
@@ -2685,7 +2681,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         var stamina = Rusty.Engine.Mechanics.TrackId.Parse("stamina");
         session.State.Actors.Player.Stats.GetTrack(stamina).SetCurrent(0);
 
@@ -2708,7 +2704,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         RulesetSavePayload payload;
         StatId maximumId = StatId.Parse("health-maximum");
         TrackId healthId = TrackId.Parse("health");
-        using (DaggerfallSession original = new(source.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        using (DaggerfallSession original = DaggerfallSession.StartNew(source.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
             PlayerActorState player = original.State.Actors.Player;
             Stat maximum = player.Stats.GetStat(maximumId);
@@ -2743,8 +2739,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession resumed = DaggerfallSession.Restore(
-            resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, payload, RandomMinimum.Create());
+        using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), payload);
 
         PlayerActorState restored = resumed.State.Actors.Player;
         Stat restoredMaximum = restored.Stats.GetStat(maximumId);
@@ -2779,7 +2774,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             new DaggerfallNpcSite(0, "Daggerfall", "social-test"),
             new DaggerfallNpcAppearance("Breton", "Male", 0, 0, 0, faction.Id), "talker", ["talk", "quest"],
             DaggerfallNpcPresence.Hidden, null, null, null);
-        using (DaggerfallSession original = new(source.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        using (DaggerfallSession original = DaggerfallSession.StartNew(source.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
             _ = original.State.Social.ChangeFactionReputation(faction.Id, 10, DaggerfallFactionReputationChange.Propagate);
             _ = original.State.Social.ChangePersonalReputation(faction.SocialGroup, 7);
@@ -2804,8 +2799,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake restoredSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake restoredEngine = EngineContextFake.Create(restoredContent, restoredSpatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession restored = DaggerfallSession.Restore(
-            restoredEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, payload, RandomMinimum.Create());
+        using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), payload);
 
         Assert.Equal(expected, restored.State.Social.ReactionForNpc(unloaded));
         Assert.Equal(expectedEligibility, restored.State.Social.GuildEligibility(faction.Id));
@@ -2870,8 +2864,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession restored = DaggerfallSession.Restore(
-            engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, payload, RandomMinimum.Create(), TimedEffectCatalog());
+        using DaggerfallSession restored = DaggerfallSession.Restore(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity) { Effects = TimedEffectCatalog() }, payload);
 
         DaggerfallActiveEffect resumed = Assert.Single(restored.State.Effects.Active);
         Assert.Equal((uint)3, resumed.Lifecycle.RemainingRounds);
@@ -2916,8 +2909,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         RulesetSavePayload payload;
         double baseMaximum;
         double expectedMaximum;
-        using (DaggerfallSession source = new(sourceEngine.Context, definitions, inputs, DaggerfallTuning.Defaults,
-            EffectCatalog(() => sourceRounds++, () => applyCalls++, () => resumeCalls++, () => removals++)))
+        using (DaggerfallSession source = DaggerfallSession.StartNew(sourceEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults) { Effects = EffectCatalog(() => sourceRounds++, () => applyCalls++, () => resumeCalls++, () => removals++) }))
         {
             PlayerActorState player = source.State.Actors.Player;
             Stat maximum = player.Stats.GetStat(StatId.Parse("health-maximum"));
@@ -2947,8 +2939,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         EngineContextFake restoredEngine = EngineContextFake.Create(restoredContent, restoredSpatial.Service, new AppearanceFake(releases));
         int restoredRounds = 0;
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using (DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, identity, definitions, inputs,
-            DaggerfallTuning.Defaults, payload, RandomMinimum.Create(), EffectCatalog(() => restoredRounds++, () => applyCalls++, () => resumeCalls++, () => removals++)))
+        using (DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity) { Effects = EffectCatalog(() => restoredRounds++, () => applyCalls++, () => resumeCalls++, () => removals++) }, payload))
         {
             PlayerActorState player = restored.State.Actors.Player;
             Stat maximum = player.Stats.GetStat(StatId.Parse("health-maximum"));
@@ -3046,8 +3037,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession session = DaggerfallSession.Restore(
-            engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
+        using DaggerfallSession session = DaggerfallSession.Restore(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(saved));
 
         Assert.Null(session.HolidayAnnouncement);
         session.Update(new ProductUpdate(OuterUpdate(1), []));
@@ -3087,8 +3077,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession session = DaggerfallSession.Restore(
-            engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
+        using DaggerfallSession session = DaggerfallSession.Restore(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(saved));
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         Assert.Null(session.HolidayAnnouncement);
 
@@ -3117,8 +3106,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession restored = DaggerfallSession.Restore(
-            engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
+        using DaggerfallSession restored = DaggerfallSession.Restore(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(saved));
         restored.Update(new ProductUpdate(OuterUpdate(1), []));
         Assert.Null(restored.HolidayAnnouncement);
 
@@ -3151,13 +3139,9 @@ public sealed partial class NormalizedRuntimeSeamTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
 
-        Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(
-            engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults,
-            DaggerfallSavePayload.Encode(missingDefinition), RandomMinimum.Create()));
+        Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(missingDefinition)));
         DaggerfallSavePayload missingActorInventory = saved with { ActorInventories = [] };
-        Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(
-            engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults,
-            DaggerfallSavePayload.Encode(missingActorInventory), RandomMinimum.Create()));
+        Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(missingActorInventory)));
         Assert.Equal(0, spatial.StepCalls);
     }
 
@@ -3244,7 +3228,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake sourceSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake source = EngineContextFake.Create(sourceContent, sourceSpatial.Service, new AppearanceFake(releases));
         RulesetSavePayload payload;
-        using (DaggerfallSession original = new(source.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        using (DaggerfallSession original = DaggerfallSession.StartNew(source.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
             original.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 77, 400, .125));
             payload = original.CaptureSave();
@@ -3257,8 +3241,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession resumed = DaggerfallSession.Restore(
-            resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, payload, RandomMinimum.Create());
+        using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), payload);
         double before = resumed.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
 
         resumed.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 2, 1, .125));
@@ -3380,7 +3363,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         EngineContextFake Engine() => EngineContextFake.Create(content,
             SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases), random: RandomMaximum.Create());
         EngineContextFake engine = Engine();
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         session.State.Progression.AdvanceTo(0, 2);
         var will = session.State.Actors.Player.Stats.GetStat(StatId.Parse("willpower"));
         double originalBase = will.BaseValue;
@@ -3392,8 +3375,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         var save = session.CaptureSave();
         EngineContextFake restoredEngine = Engine();
         var identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, identity, definitions, inputs,
-            DaggerfallTuning.Defaults, save, RandomMaximum.Create());
+        using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), save);
         var restoredWill = restored.State.Actors.Player.Stats.GetStat(StatId.Parse("willpower"));
         Assert.Equal(originalBase, restoredWill.BaseValue);
         Assert.Equal(will.Value, restoredWill.Value);
@@ -3681,7 +3663,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, payload, RandomMinimum.Create());
+        using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), payload);
 
         Assert.False(resumed.State.Actors.TryGet(first, out _));
         Assert.True(resumed.State.Actors.TryGet(second, out ActorState? restored));
@@ -3766,7 +3748,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
 
         WorldPoint playerPosition = session.State.PlayerControl.Position ?? throw new InvalidOperationException("The test session has no player position.");
         // A rat carries no minimum-metal gate, so the player's iron weapon can kill it; an imp
@@ -3810,7 +3792,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         ProductInputEvent mode = Input(InputEventKind.DirectDigital) with
         {
             ValueKind = InputValueKind.ProductPayload,
@@ -3853,7 +3835,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         perception.Responder = request => Receipt([.. request.Targets.Span.ToArray().Select(target =>
             new PerceptionPair(1, target.Entity, 1d, 1d, PerceptionPairKind.Visible, 1d))]);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, source, DaggerfallTuning.Defaults));
         session.AdmitSiteProfiles(new DaggerfallSiteProfiles([source, castle]));
         Assert.True(session.TryTransitionTo(castle.ProfileKey));
         // The ray finds something that is not a loaded door, which is what an ordinary click in the open
@@ -3901,7 +3883,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         perception.Responder = request => Receipt([.. request.Targets.Span.ToArray().Select(target =>
             new PerceptionPair(1, target.Entity, 1d, 1d, PerceptionPairKind.Visible, 1d))]);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, source, DaggerfallTuning.Defaults));
         session.AdmitSiteProfiles(new DaggerfallSiteProfiles([source, castle]));
         Assert.True(session.TryTransitionTo(castle.ProfileKey));
 
@@ -3936,7 +3918,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         perception.Responder = request => Receipt([.. request.Targets.Span.ToArray().Select(target =>
             new PerceptionPair(1, target.Entity, 1d, 1d, PerceptionPairKind.Visible, 1d))]);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, source, DaggerfallTuning.Defaults));
         session.AdmitSiteProfiles(new DaggerfallSiteProfiles([source, castle]));
         Assert.True(session.TryTransitionTo(castle.ProfileKey));
 
@@ -3966,7 +3948,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         perception.Responder = request => Receipt([.. request.Targets.Span.ToArray().Select(target =>
             new PerceptionPair(1, target.Entity, 1d, 1d, PerceptionPairKind.Visible, 1d))]);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, source, DaggerfallTuning.Defaults));
         session.AdmitSiteProfiles(new DaggerfallSiteProfiles([source, castle]));
         Assert.True(session.TryTransitionTo(castle.ProfileKey));
         // The ray finds an entity that is none of the loaded doors. Asking the door graph about it must
@@ -4008,7 +3990,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         perception.Responder = request => Receipt([.. request.Targets.Span.ToArray().Select(target =>
             new PerceptionPair(1, target.Entity, 1d, 1d, PerceptionPairKind.Visible, 1d))]);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, source, DaggerfallTuning.Defaults));
         session.AdmitSiteProfiles(new DaggerfallSiteProfiles([source, castle]));
         Assert.True(session.TryTransitionTo(castle.ProfileKey));
         // Castle supplies a real action door and OpenDoor parameters; the direct-trigger variant
@@ -4065,7 +4047,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         perception.Responder = request => Receipt([.. request.Targets.Span.ToArray().Select(target =>
             new PerceptionPair(1, target.Entity, 1d, 1d, PerceptionPairKind.Visible, 1d))]);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, source, DaggerfallTuning.Defaults));
         session.AdmitSiteProfiles(new DaggerfallSiteProfiles([source, castle]));
         Assert.True(session.TryTransitionTo(castle.ProfileKey));
 
@@ -4139,7 +4121,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             new PerceptionPair(1, target.Entity, 1d, 1d, PerceptionPairKind.Visible, 1d))]);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases),
             perception.Service, random: RandomMaximum.Create());
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
 
         DaggerfallDoorView door = session.Doors.All.First(value =>
             value.Motion == DaggerfallDoorMotion.Closed && !value.IsLocked && value.Kind == DaggerfallDoorKind.Normal);
@@ -4195,8 +4177,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases),
             random: RandomMaximum.Create());
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, identity, definitions, inputs,
-            DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMaximum.Create());
+        using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(saved));
         Assert.Equal(skill, restored.Doors.FailedLockpickingSkill(door.Id));
         Assert.Equal(1, restored.State.Progression.SkillUses[DaggerfallSkills.Lockpicking]);
     }
@@ -4212,7 +4193,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         DaggerfallDungeonActionDefinition prompt = new("test/prompt", 100, (uint)DaggerfallDungeonTriggerFlag.Direct,
             (byte)DaggerfallDungeonActionFlag.ShowTextWithInput, 0, 0, 0, 200, "test/link", SoundIndex: 4);
         DaggerfallDungeonActionDefinition link = new("test/link", 200, 0,
@@ -4278,7 +4259,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
 
         session.Update(new ProductUpdate(OuterUpdate(1), [
             Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "attack"),
@@ -4302,7 +4283,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
 
         WorldPoint playerPosition = session.State.PlayerControl.Position ?? throw new InvalidOperationException("The test session has no player position.");
         long spawned = session.SpawnActor("rat", new ActorPose(playerPosition with { Z = playerPosition.Z - 1f }, 0f));
@@ -4339,7 +4320,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         DaggerfallSavePayload saved;
         DaggerfallItemDefinition definition = definitions.RequireItem(new DaggerfallItemId("template-277"));
         InventoryStackId stack = InventoryStackId.Parse("session.retained-book");
-        using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
     session.State.Inventory.Grant(new(new InventoryItemId(definition.Id.Value), stack, 1));
     session.State.ItemInstances.RegisterStack(DaggerfallItemOwner.Player,
@@ -4362,8 +4343,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PopulateContent(resumedContent, inputs);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, spatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults,
-            DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(saved));
         restored.PublishInitial();
 
         Dictionary<string, object?> projection = Assert.IsType<Dictionary<string, object?>>(resumedEngine.Published());
@@ -4384,7 +4364,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         return DaggerfallSavePayload.Read(session.CaptureSave());
     }
 
@@ -4411,7 +4391,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
 
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         double healthBefore = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         session.Update(AttackUpdate());
@@ -4450,7 +4430,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1d, 1d, PerceptionPairKind.Visible, 1d));
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         session.AdmitSiteProfiles(new DaggerfallSiteProfiles([inputs, castle]));
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         ProductInputEvent pressed = Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack");
@@ -4489,7 +4469,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
@@ -4697,7 +4677,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PerceptionFake perception = PerceptionFake.Create();
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         const long archer = 2004;
         double separation = definitions.Actions.Values.Where(action => action.Interpretation == "fixed-melee").Max(action => action.Reach!.Value) + 1d;
         perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 1d, PerceptionPairKind.Visible, 1d));
@@ -4793,7 +4773,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PerceptionFake perception = PerceptionFake.Create();
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         const long archer = 2004;
         double separation = definitions.Actions.Values.Where(action => action.Interpretation == "fixed-melee").Max(action => action.Reach!.Value) + 1d;
         perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 1d, PerceptionPairKind.Visible, 1d));
@@ -4823,7 +4803,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
 
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         long archer = 2004;
         Assert.Equal("archer", inputs.Project.Actors[archer].ActorId.Value);
         double shotReach = definitions.Actions["archer-shot"].Reach!.Value;
@@ -4892,7 +4872,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PerceptionFake perception = PerceptionFake.Create();
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         const long archer = 2004;
         double separation = definitions.Actions.Values.Where(action => action.Interpretation == "fixed-melee").Max(action => action.Reach!.Value) + 1d;
         perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 1d, PerceptionPairKind.Visible, 1d));
@@ -4922,7 +4902,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         using SpatialMovementSystem targetingSpatial = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
         Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
             placement => placement.EntityId, placement => definitions.RequireActor(placement.ActorId));
@@ -4994,7 +4974,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         resumedSpatial.KeepPosition = true;
         AppearanceFake resumedAppearance = new(releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, resumedAppearance);
-        using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, composition, definitions, inputs, DaggerfallTuning.Defaults, saved, RandomMinimum.Create());
+        using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, composition), saved);
         DaggerfallMissileVisual restoredArrow = Assert.Single(inputs.ClassicPresentation.WorldVisuals,
             visual => visual.MediaId == "visual.missile.arrow");
         resumed.Update(new ProductUpdate(OuterUpdate(2), []));
@@ -5022,7 +5002,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
 
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         double healthBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
         // The swing is decided on the admitted step and lands when its authored damage
         // frame is reached, so the update that carries the crossing is the one that hurts.
@@ -5065,7 +5045,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PerceptionFake perception = PerceptionFake.Create();
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
 
         WorldPoint playerPosition = session.State.PlayerControl.Position ?? throw new InvalidOperationException("The test session has no player position.");
         long corpse = session.SpawnActor("rat", new ActorPose(playerPosition with { Z = playerPosition.Z - 1f }, 0f));
@@ -5105,7 +5085,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases),
             PerceptionFake.Create().Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
 
         ActorState rat = session.State.Actors.Get(2008);
         Assert.True(authored[rat.DurableId].GroundOnSpawn);
@@ -5129,7 +5109,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
 
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         using SpatialMovementSystem movement = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
         Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
             placement => placement.EntityId,
@@ -5163,7 +5143,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
 
-        using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
             using SpatialMovementSystem sessionMovement = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
             Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
@@ -5331,7 +5311,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         Track stamina = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina"));
         stamina.SetCurrent(1, clamp: true);
 
@@ -5384,7 +5364,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         RulesetSavePayload saved;
         DaggerfallCharacterBackgroundSave committed;
         ulong goldAfterCommit;
-        using (DaggerfallSession session = new(source.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(source.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
             session.ApplyProductMode(ProductMode.Title);
             ulong goldBefore = Gold(session);
@@ -5452,7 +5432,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), random: RandomMinimum.Create());
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, saved, RandomMinimum.Create());
+        using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), saved);
         Assert.Equal(committed.Biography, resumed.State.Character.Background!.Biography);
         Assert.Equal(committed.Modifiers, resumed.State.Character.Background!.Modifiers);
         Assert.Equal(goldAfterCommit, Gold(resumed));
@@ -5473,8 +5453,8 @@ public sealed partial class NormalizedRuntimeSeamTests
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         return effects is null
-            ? new DaggerfallSession(engine.Context, definitions, inputs, DaggerfallTuning.Defaults)
-            : new DaggerfallSession(engine.Context, definitions, inputs, DaggerfallTuning.Defaults, effects);
+            ? DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults))
+            : DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults) { Effects = effects });
     }
 
     [Fact]
@@ -5491,7 +5471,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PopulateContent(content, destination);
         SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-        using DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, source, DaggerfallTuning.Defaults));
         session.AdmitSiteProfiles(new DaggerfallSiteProfiles([source, destination]));
         WorldPoint sourcePosition = new(17f, 3f, -11f);
         session.State.PlayerControl.MoveTo(sourcePosition.ToVector());
@@ -5570,7 +5550,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(source.SpatialArtifact.Sha256, releases).Service, appearance);
         RulesetSavePayload save;
 
-        using (DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, source, DaggerfallTuning.Defaults)))
         {
             session.AdmitSiteProfiles(profiles);
             Assert.Equal(source.Lights.Count + 1, appearance.LightRequests.Count);
@@ -5589,8 +5569,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         AppearanceFake restoredAppearance = new(restoredReleases);
         EngineContextFake restoredEngine = EngineContextFake.Create(restoredContent, SpatialFake.Create(destination.SpatialArtifact.Sha256, restoredReleases).Service, restoredAppearance);
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using (DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, identity, definitions, source,
-            DaggerfallTuning.Defaults, save, RandomMinimum.Create(), effects: null, profiles: profiles))
+        using (DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, new(definitions, source, DaggerfallTuning.Defaults, identity) { Profiles = profiles }, save))
         {
             Assert.Equal(destination.Lights.Count + 1, restoredAppearance.LightRequests.Count);
             Assert.True(restored.TryTransitionTo(source.ProfileKey));
@@ -5622,7 +5601,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         DaggerfallSitePortal exteriorPortal = Assert.Single(exterior.Portals);
         DaggerfallSitePortal interiorPortal = Assert.Single(interior.Portals);
         long spawnedActor;
-        using (DaggerfallSession session = new(engine.Context, definitions, exterior, DaggerfallTuning.Defaults))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults)))
         {
             session.AdmitSiteProfiles(profiles);
             spawnedActor = session.SpawnActor("rat", new ActorPose(new WorldPoint(9f, 0f, 9f), 0f));
@@ -5652,8 +5631,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PerceptionFake resumedPerception = PerceptionFake.Create();
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(resumedReleases), resumedPerception.Service);
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, exterior,
-            DaggerfallTuning.Defaults, save, RandomMinimum.Create(), effects: null, profiles: profiles);
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, exterior, DaggerfallTuning.Defaults, identity) { Profiles = profiles }, save);
 
         Assert.Equal(interior.Site, restored.Site.Active);
         AimActivationAt(restored, interiorPortal.Position);
@@ -5688,7 +5666,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         long dynamicActor;
         RulesetSavePayload save;
 
-        using (DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults, catalog))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, source, DaggerfallTuning.Defaults) { Effects = catalog }))
         {
             session.AdmitSiteProfiles(profiles);
             dynamicActor = session.SpawnActor("rat", new ActorPose(new WorldPoint(9f, 0f, 9f), 0f));
@@ -5721,8 +5699,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake resumedSpatial = SpatialFake.Create(destination.SpatialArtifact.Sha256, resumedReleases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(resumedReleases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, source,
-            DaggerfallTuning.Defaults, save, RandomMinimum.Create(), effects: catalog, profiles: profiles);
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, source, DaggerfallTuning.Defaults, identity) { Effects = catalog, Profiles = profiles }, save);
 
         DaggerfallActiveEffect restoredRetained = Assert.Single(restored.State.Effects.Active);
         Assert.Equal(dynamicActor, checked((long)restoredRetained.Context.Caster!.Value.Value));
@@ -5772,7 +5749,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PopulateContent(content, destination);
         SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-        using DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, source, DaggerfallTuning.Defaults));
         session.AdmitSiteProfiles(new DaggerfallSiteProfiles([source, destination]));
         long sourceActor = source.Project.Actors.Keys.First();
         spatial.RejectContentReplacement = true;
@@ -5798,7 +5775,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PopulateContent(content, destination);
         SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-        using DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, source, DaggerfallTuning.Defaults));
         session.AdmitSiteProfiles(new DaggerfallSiteProfiles([source, destination]));
         long sourceActor = source.Project.Actors.Keys.First();
         WorldPoint sourcePosition = new(8f, 2f, -4f);
@@ -5840,7 +5817,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         RulesetSavePayload save;
         long relocatedActor;
 
-        using (DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, source, DaggerfallTuning.Defaults)))
         {
             session.AdmitSiteProfiles(profiles);
             long authoredActor = source.Project.Actors.Keys.First();
@@ -5893,8 +5870,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake resumedSpatial = SpatialFake.Create(destination.SpatialArtifact.Sha256, resumedReleases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(resumedReleases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, source,
-            DaggerfallTuning.Defaults, save, RandomMinimum.Create(), effects: null, profiles: profiles);
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, source, DaggerfallTuning.Defaults, identity) { Profiles = profiles }, save);
 
         Assert.Equal(destination.Site, restored.Site.Active);
         Assert.Equal(destination.Project.PlayerPosition, restored.State.PlayerControl.Position);
@@ -5924,7 +5900,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         RulesetSavePayload save;
-        using (DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, source, DaggerfallTuning.Defaults)))
         {
             session.AdmitSiteProfiles(profiles);
             session.State.PlayerControl.MoveTo(new Vector3(8f, 2f, -4f));
@@ -5941,8 +5917,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake resumedSpatial = SpatialFake.Create(destination.SpatialArtifact.Sha256, resumedReleases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(resumedReleases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, source,
-            DaggerfallTuning.Defaults, save, RandomMinimum.Create(), effects: null, profiles: profiles);
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, source, DaggerfallTuning.Defaults, identity) { Profiles = profiles }, save);
 
         Assert.Equal(destination.Site, restored.Site.Active);
         Assert.True(restored.TryTransitionTo(source.ProfileKey));
@@ -5966,7 +5941,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PerceptionFake perception = PerceptionFake.Create();
         appearance = new AppearanceFake(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
-        DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
@@ -6124,7 +6099,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PopulateContent(content, inputs);
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
 
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         session.PublishInitial();
         Dictionary<string, object?> hud = Assert.IsType<Dictionary<string, object?>>(engine.Published());
         Dictionary<string, object?> art = Assert.IsType<Dictionary<string, object?>>(hud["uiArt"]);
@@ -6314,7 +6289,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
 
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         session.PublishInitial();
         Dictionary<string, object?> first = Assert.IsType<Dictionary<string, object?>>(engine.Published());
         string revision = Assert.IsType<string>(first["uiArtRevision"]);
@@ -6371,7 +6346,7 @@ public sealed partial class NormalizedRuntimeSeamTests
 
         content.Add(DaggerfallUiArt.InventoryPath, Encoding.UTF8.GetBytes(inventory.ToJsonString()));
         InvalidOperationException failure = Assert.Throws<InvalidOperationException>(
-            () => new DaggerfallSession(engine.Context, definitions, inputs, DaggerfallTuning.Defaults));
+            () => DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)));
         Assert.Contains("screen.death", failure.Message, StringComparison.Ordinal);
         Assert.Contains(DaggerfallUiArt.InventoryPath, failure.Message, StringComparison.Ordinal);
     }
@@ -6574,7 +6549,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         using SpatialMovementSystem targetingSpatial = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
         Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
             placement => placement.EntityId,
@@ -6621,7 +6596,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         using SpatialMovementSystem targetingSpatial = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
         Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
             placement => placement.EntityId,
@@ -6659,7 +6634,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         using SpatialMovementSystem targetingSpatial = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
         Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
             placement => placement.EntityId,
@@ -6703,7 +6678,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         EngineContextFake source = EngineContextFake.Create(sourceContent, sourceSpatial.Service, new AppearanceFake(releases));
         long archer = Assert.Single(inputs.Project.Actors.Values, placement => placement.ActorId == new DaggerfallActorId("archer")).EntityId;
         RulesetSavePayload payload;
-        using (DaggerfallSession original = new(source.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        using (DaggerfallSession original = DaggerfallSession.StartNew(source.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
             // One drawn arrow leaves eleven; the save must carry exactly that, not a refill.
             WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator archerInventory = Assert.IsType<WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator>(original.State.InventoryFor(archer));
@@ -6720,7 +6695,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, payload, RandomMinimum.Create());
+        using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), payload);
 
         Assert.Equal(11UL, Assert.IsType<WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator>(resumed.State.InventoryFor(archer)).Read().Stacks.Single(stack => stack.Definition.Value == "arrow").Quantity);
     }
@@ -6762,7 +6737,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
         AppearanceFake resumedAppearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, resumedAppearance, perception.Service);
-        using DaggerfallSession resumed = DaggerfallSession.Restore(engine.Context, composition, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
+        using DaggerfallSession resumed = DaggerfallSession.Restore(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, composition), DaggerfallSavePayload.Encode(saved));
         long resumedHealth = PlayerHealth(resumed);
 
         resumedAppearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
@@ -6979,7 +6954,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         double healthBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
 
         // The update that decides the swing carries no damage: nothing has been struck
@@ -7012,7 +6987,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         double healthBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
 
         session.Update(new ProductUpdate(OuterUpdate(1), []));
@@ -7042,7 +7017,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
 
         // The product decides the mode, which is what the session applies.
         session.ApplyProductMode(ProductMode.Title);
@@ -7113,7 +7088,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
@@ -7328,7 +7303,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
@@ -7415,7 +7390,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
@@ -7462,7 +7437,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         RulesetSavePayload saved;
         ulong letterIdentity;
-        using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
             bankRegion = session.Site.Region;
             Assert.NotNull(bankRegion);
@@ -7520,7 +7495,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, saved, RandomMinimum.Create());
+        using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), saved);
 
         Assert.Equal(new DaggerfallCurrencyTotals(25, 100, 99), resumed.State.Currency.Read());
         Assert.Equal(99UL, resumed.State.Bank.BalanceForRegion(bankRegion!.Value));
@@ -7567,7 +7542,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, PerceptionFake.Create().Service);
-        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
 
         static ProductUpdateFacts ThreeSteps(ulong step) =>
             new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, step, step, 60, 3, 0, 1d / 60d);
@@ -7623,7 +7598,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             };
             session.Update(new ProductUpdate(OuterUpdate(step), [action]));
         }
-        using (DaggerfallSession original = new(source.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        using (DaggerfallSession original = DaggerfallSession.StartNew(source.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
             static void Kill(DaggerfallSession session, long target)
             {
@@ -7714,7 +7689,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using (DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, populatedPayload, RandomMinimum.Create()))
+        using (DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), populatedPayload))
         {
             InventoryView restoredThief = resumed.State.Containers.Read(resumed.Corpses[2000].Owner);
             Assert.Equal(
@@ -7743,7 +7718,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PopulateContent(lootedContent, inputs);
         SpatialFake lootedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake lootedEngine = EngineContextFake.Create(lootedContent, lootedSpatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
-        using DaggerfallSession lootedSession = DaggerfallSession.Restore(lootedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, lootedPayload, RandomMinimum.Create());
+        using DaggerfallSession lootedSession = DaggerfallSession.Restore(lootedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), lootedPayload);
 
         // The looted corpse restores registered and empty rather than unregistered or reseeded.
         Assert.True(lootedSession.Corpses[2000].IsRegistered);
@@ -7769,7 +7744,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, distance, 1d, PerceptionPairKind.Visible, distance));
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
-        return (new DaggerfallSession(engine.Context, definitions, inputs, DaggerfallTuning.Defaults), appearance, perception);
+        return (DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)), appearance, perception);
     }
 
     private static DaggerfallSession CreateArcherSession(string root, DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs,
@@ -7782,7 +7757,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         perception = PerceptionFake.Create();
         appearance = new AppearanceFake(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
-        return new DaggerfallSession(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        return DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
     }
 
     private static long PlayerHealth(DaggerfallSession session) => session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).ValueInt64;
@@ -7966,7 +7941,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             PopulateContent(content, inputs);
             SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
             EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-            Session = new DaggerfallSession(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+            Session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         }
 
         internal DaggerfallSession Restore(RulesetSavePayload saved)
@@ -7975,7 +7950,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             PopulateContent(content, inputs);
             SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
             EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-            return DaggerfallSession.Restore(engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, saved, RandomMinimum.Create());
+            return DaggerfallSession.Restore(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), saved);
         }
 
         public void Dispose() => Session.Dispose();

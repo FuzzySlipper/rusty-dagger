@@ -44,7 +44,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         RulesetSavePayload saved;
         ulong durableId;
         int afterFirstHour;
-        using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
             DurableIdentityReference identity = session.UniqueItemAllocator.AllocateReference();
             durableId = identity.Value;
@@ -83,8 +83,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             new AppearanceFake(releases), random: RandomMaximum.Create());
         ResolvedCompositionIdentity composition = GameCompositionResolver.Resolve(FullContent(root),
             new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, composition, definitions, inputs,
-            DaggerfallTuning.Defaults, saved, RandomMaximum.Create());
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, composition), saved);
         DaggerfallItemInstanceMetadata retained = restored.State.ItemInstances.RequireUnique(durableId);
         Assert.Equal(afterFirstHour, retained.CurrentCondition);
         Assert.Equal(DaggerfallEnchantmentSettings.All.Single(value => value.Type == 16 && value.Param == 0).Key,

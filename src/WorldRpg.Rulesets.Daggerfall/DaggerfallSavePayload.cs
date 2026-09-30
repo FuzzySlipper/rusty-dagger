@@ -15,6 +15,16 @@ using WorldRpg.Rulesets.Daggerfall.Guilds;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
+/// <summary>
+/// A current save resolved against the admitted content: every relationship the restore relies on has
+/// been checked, and the persisted identity ledger was rebuilt once and is handed to the session as its
+/// live allocator.
+/// </summary>
+/// <param name="Payload">The validated payload.</param>
+/// <param name="Identities">The persisted durable identity ledger, rebuilt once for validation and play.</param>
+/// <param name="TombstonedActors">Actor identities the ledger had already retired when the save was made.</param>
+internal sealed record DaggerfallResolvedRestore(DaggerfallSavePayload Payload, DurableIdentityAllocator Identities, IReadOnlySet<long> TombstonedActors);
+
 /// <summary>Daggerfall's complete current state. The Host stores its encoded bytes without interpreting them.</summary>
 internal sealed record DaggerfallSavePayload(
     DaggerfallPlayerSave Player,
@@ -136,7 +146,11 @@ internal sealed record DaggerfallSavePayload(
     /// Verifies every current-state relationship against the selected definitions before session construction.
     /// Missing or incompatible meaning is a rejected load, never a partially restored world.
     /// </summary>
-    internal DaggerfallSavePayload ResolveRestore(DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallSiteProfiles? profiles = null)
+    /// <summary>
+    /// Checks every current-state relationship against the admitted content before any session is
+    /// composed from the save, so a malformed or mismatched save fails here with its reason.
+    /// </summary>
+    internal DaggerfallResolvedRestore ResolveRestore(DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallSiteProfiles? profiles = null)
     {
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(inputs);
@@ -236,7 +250,17 @@ internal sealed record DaggerfallSavePayload(
             throw new ArgumentException("Current save must carry one state for every selected RDB door.");
         HashSet<long> inactiveAuthoredActorIds = [];
         HashSet<long> inactiveDynamicActorIds = [];
-        if (profiles is not null)
+        if (profiles is null)
+        {
+            HashSet<DaggerfallWorldProfileKey> detachedProfiles = [];
+            foreach (DaggerfallSiteDeltaSave delta in SiteDeltas)
+            {
+                DaggerfallWorldProfileKey key = delta.Profile.Require();
+                if (!detachedProfiles.Add(key))
+                    throw new ArgumentException($"Saved site state repeats inactive site '{key}'.");
+            }
+        }
+        else
         {
             HashSet<DaggerfallWorldProfileKey> detachedProfiles = [];
             foreach (DaggerfallSiteDeltaSave delta in SiteDeltas)
@@ -407,8 +431,13 @@ internal sealed record DaggerfallSavePayload(
             throw new ArgumentException("Saved active and inactive site actors must not share durable identities.");
         if (!actorInventories.SetEquals(allActors))
             throw new ArgumentException("Current save must carry one actor inventory section for every saved actor.");
-        RequireLiveUniqueItems(uniqueItems);
+        RequireLiveUniqueItems(savedLedger, uniqueItems);
         Encounters.Validate();
+        HashSet<string> admittedEncounterProfiles = profiles is null
+            ? [inputs.ProfileKey.LogicalId]
+            : [.. profiles.Keys.Select(profile => profile.LogicalId)];
+        if (Encounters.Resolved.Any(encounter => !admittedEncounterProfiles.Contains(encounter.ProfileId)))
+            throw new ArgumentException("Saved encounter references a world profile not admitted by the current bundle.");
         foreach (DaggerfallEncounterResolution encounter in Encounters.Resolved)
         {
             if (encounter.ActorDefinition is { } definition && !definitions.Actors.ContainsKey(new DaggerfallActorId(definition)))
@@ -451,7 +480,10 @@ internal sealed record DaggerfallSavePayload(
             .. SiteDeltas.SelectMany(delta => delta.DynamicActors).Select(actor => (actor.EntityId, actor.Stats)),
         ],
         allEffects);
-        return this;
+        IReadOnlySet<long> tombstonedActors = savedLedger.RemovedIdentities(DurableIdentityKind.Actor)
+            .Select(value => checked((long)value))
+            .ToHashSet();
+        return new DaggerfallResolvedRestore(this, savedLedger, tombstonedActors);
     }
 
     internal DurableIdentityState RestoredIdentities() => Identities.Validate().RequireKinds(PersistedKinds);
@@ -655,9 +687,8 @@ internal sealed record DaggerfallSavePayload(
     }
 
     /// <summary>Every materialized unique item must already be live in the persisted item ledger.</summary>
-    private void RequireLiveUniqueItems(IEnumerable<ulong> uniqueItems)
+    private static void RequireLiveUniqueItems(DurableIdentityAllocator identities, IEnumerable<ulong> uniqueItems)
     {
-        DurableIdentityAllocator identities = DurableIdentityAllocator.Restore(RestoredIdentities());
         foreach (ulong itemId in uniqueItems)
         {
             DurableIdentityClassification classification = identities.Classify(new DurableIdentityReference(DurableIdentityKind.Item, itemId));

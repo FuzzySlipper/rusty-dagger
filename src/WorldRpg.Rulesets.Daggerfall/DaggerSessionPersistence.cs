@@ -250,9 +250,59 @@ internal sealed class DaggerSessionPersistence
             ? actor
             : throw new InvalidOperationException($"Daggerfall cannot save dynamic actor {durableId} without a live entity.");
 
-    internal void Restore(DaggerfallSavePayload saved)
+    /// <summary>
+    /// Applies a resolved save's relational sections to a freshly composed session, mirroring
+    /// <see cref="Capture"/>. Composition has already built each owner from its own section: actor,
+    /// player and dynamic-actor stats, variables, NPCs, social standing, character and quest training
+    /// (<see cref="DaggerActorFactory"/>); then the calendar, site context, action graphs, dungeon
+    /// discovery, doors and motion, the identity ledger, currency, bank, loans, property, crime,
+    /// services, knightly claims and regional prices, and the roster's spawned actors. This applies the
+    /// rest, in this order:
+    /// <list type="number">
+    /// <item>inactive sites' deltas;</item>
+    /// <item>encounters, against every live and detached spawned actor and the retired identities;</item>
+    /// <item>actor and spawned-actor poses;</item>
+    /// <item>progression, skill uses, locomotion, climbing, level-up and quests;</item>
+    /// <item>player, actor and ground inventories, wagon, transport and notebook;</item>
+    /// <item>the player pose, corpses, attack cooldowns and active effects, then the camera;</item>
+    /// <item>held enchantments over the restored equipment, once;</item>
+    /// <item>defeated actors' appearance, the pending dungeon text and the action-trigger player rebase.</item>
+    /// </list>
+    /// The exterior window is admitted by the site lifecycle afterwards for both start kinds.
+    /// </summary>
+    internal void Restore(DaggerfallResolvedRestore restore, DaggerfallSiteLifecycle sites, DaggerfallActorRoster roster,
+        DaggerfallEncounterRuntime encounters, DaggerfallHeldEnchantments heldEnchantments,
+        Action<DaggerfallDungeonTextSnapshot> restoreDungeonText)
     {
-        // Current-state relationships were resolved before this fresh session was constructed.
+        ArgumentNullException.ThrowIfNull(restore);
+        ArgumentNullException.ThrowIfNull(sites);
+        ArgumentNullException.ThrowIfNull(roster);
+        ArgumentNullException.ThrowIfNull(encounters);
+        ArgumentNullException.ThrowIfNull(heldEnchantments);
+        ArgumentNullException.ThrowIfNull(restoreDungeonText);
+        DaggerfallSavePayload saved = restore.Payload;
+        sites.RestoreDeltas(saved.SiteDeltas);
+        encounters.Restore(saved.Encounters, DynamicActorDefinitions(roster, sites), restore.TombstonedActors);
+        RestoreSections(saved);
+        heldEnchantments.Refresh();
+        sites.Projection.Appearance.SyncRestoredDefeat(State.Actors);
+        restoreDungeonText(saved.DungeonText);
+        sites.ActionTriggers.RebaseRestoredPlayer(State.PlayerControl, State.Actors.Player.Actor.Entity);
+    }
+
+    /// <summary>Every spawned actor's definition, live in the active site or detached in an inactive one.</summary>
+    private static IReadOnlyDictionary<long, string> DynamicActorDefinitions(DaggerfallActorRoster roster, DaggerfallSiteLifecycle sites)
+    {
+        Dictionary<long, string> values = roster.Dynamic.ToDictionary(entry => entry.Key, entry => entry.Value.Value);
+        foreach (DaggerfallSiteRuntimeDelta delta in sites.Deltas.Values)
+        foreach (DaggerfallDynamicActorSave actor in delta.DynamicActors)
+            if (!values.TryAdd(actor.EntityId, actor.Definition))
+                throw new InvalidOperationException($"Dynamic actor {actor.EntityId} is active in more than one site profile.");
+        return values;
+    }
+
+    private void RestoreSections(DaggerfallSavePayload saved)
+    {
         DaggerfallActorSave[] actors = saved.Actors.OrderBy(actor => actor.EntityId).ToArray();
         foreach (DaggerfallActorSave actor in actors)
         {

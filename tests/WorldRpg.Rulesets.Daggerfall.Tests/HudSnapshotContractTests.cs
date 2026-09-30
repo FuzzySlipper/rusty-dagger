@@ -31,7 +31,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession session = new(engine.Context, identity, TestPayload.Definitions, inputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults, identity));
         session.ApplyProductMode(ProductMode.Playing);
 
         DaggerfallSiteRecord site = session.Site.ActiveSite ?? throw new InvalidOperationException("The fixture session has no admitted site.");

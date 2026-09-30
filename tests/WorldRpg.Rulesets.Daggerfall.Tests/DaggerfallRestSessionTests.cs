@@ -32,7 +32,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
             EngineContextFake engine = EngineContextFake.Create(content, spatial.Service,
                 new AppearanceFake(releases), random: RandomMaximum.Create());
-            using DaggerfallSession session = new(engine.Context, definitions, exterior, DaggerfallTuning.Defaults);
+            using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
             if (wilderness)
                 session.State.PlayerControl.MoveTo(new WorldPoint(DaggerfallExteriorCellResidency.CellSize + 1f, 1f, 1f).ToVector());
 
@@ -67,7 +67,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: RandomMinimum.Create());
         DaggerfallSavePayload saved;
         long elapsed;
-        using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
             DaggerfallCalendarSave before = DaggerfallSavePayload.Read(session.CaptureSave()).Calendar;
             session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
@@ -88,8 +88,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             new AppearanceFake(releases), random: RandomMaximum.Create());
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root),
             new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs,
-            DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMaximum.Create());
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(saved));
         DaggerfallSavePayload after = DaggerfallSavePayload.Read(restored.CaptureSave());
         Assert.Equal(saved.Calendar, after.Calendar);
         Assert.Equal(JsonSerializer.Serialize(saved.Encounters), JsonSerializer.Serialize(after.Encounters));
@@ -113,7 +112,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         double staminaBefore;
         double magickaBefore;
         DaggerfallCalendarSave calendarBefore;
-        using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
             DaggerfallCalendarSave initialCalendar = DaggerfallSavePayload.Read(session.CaptureSave()).Calendar;
             session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
@@ -161,8 +160,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), random: RandomMaximum.Create());
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using (DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs,
-            DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(restedSave), RandomMaximum.Create()))
+        using (DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(restedSave)))
         {
             DaggerfallSavePayload restoredSave = DaggerfallSavePayload.Read(restored.CaptureSave());
             Assert.Equal(restedSave.Calendar, restoredSave.Calendar);
@@ -176,7 +174,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         PopulateContent(townContent, townInputs);
         SpatialFake townSpatial = SpatialFake.Create(townInputs.SpatialArtifact.Sha256, releases);
         EngineContextFake townEngine = EngineContextFake.Create(townContent, townSpatial.Service, new AppearanceFake(releases), random: RandomMaximum.Create());
-        using DaggerfallSession townSession = new(townEngine.Context, definitions, townInputs, DaggerfallTuning.Defaults);
+        using DaggerfallSession townSession = DaggerfallSession.StartNew(townEngine.Context, new(definitions, townInputs, DaggerfallTuning.Defaults));
         Track townHealth = townSession.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
         townHealth.SetCurrent(townHealth.MaximumValue - 10d, clamp: true);
         DaggerfallSavePayload townBefore = DaggerfallSavePayload.Read(townSession.CaptureSave());
