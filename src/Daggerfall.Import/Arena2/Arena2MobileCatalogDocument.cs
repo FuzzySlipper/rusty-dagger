@@ -172,18 +172,6 @@ public static class Arena2MobileCatalogDocument
     public const string SourceRecordId = "CNT-007";
 
     /// <summary>
-    /// The product's loot table keys where they differ from the donor's table: the donor gives the Monk (140)
-    /// "T" and the City Watch (146) no key, and the product keeps "O" and "T". The ruleset resolves a class
-    /// mobile's loot through its key and refuses a class mobile without one. Each override is applied here,
-    /// where the catalog is generated, and listed in the document's <c>divergences</c> with the donor's
-    /// value beside the product's, so the difference is never silent.
-    /// </summary>
-    private static readonly Dictionary<int, string> RetainedLootTableKeys = new() { [140] = "O", [146] = "T" };
-
-    private const string RetainedLootTableKeyReason =
-        "product override kept against the donor's table; the ruleset refuses a class mobile without a loot table key";
-
-    /// <summary>
     /// Builds the document's JSON from the donor table and the published pack. The mobile table is the
     /// parameter authority; a supplied MONSTER.BSA inventory additionally supplies each mobile's career
     /// attack-modifier byte, which lives in its <c>ENEMY###.CFG</c> record and not in the table.
@@ -205,7 +193,6 @@ public static class Arena2MobileCatalogDocument
         }
 
         JsonArray mobiles = [];
-        JsonArray divergences = [];
         int published = 0;
         int unpublished = 0;
         int human = 0;
@@ -221,20 +208,6 @@ public static class Arena2MobileCatalogDocument
             if (disposition is "published" or "published-variant") published++;
             else if (disposition == "human-mobile") human++;
             else unpublished++;
-
-            string? lootTableKey = entry.LootTableKey;
-            if (RetainedLootTableKeys.TryGetValue(entry.Id, out string? retained) && !string.Equals(retained, lootTableKey, StringComparison.Ordinal))
-            {
-                divergences.Add(new JsonObject
-                {
-                    ["donorId"] = entry.Id,
-                    ["field"] = "lootTableKey",
-                    ["donorValue"] = lootTableKey,
-                    ["publishedValue"] = retained,
-                    ["reason"] = RetainedLootTableKeyReason,
-                });
-                lootTableKey = retained;
-            }
 
             mobiles.Add(new JsonObject
             {
@@ -259,7 +232,7 @@ public static class Arena2MobileCatalogDocument
                     ["bark"] = entry.BarkSound,
                     ["attack"] = entry.AttackSound,
                 },
-                ["lootTableKey"] = lootTableKey,
+                ["lootTableKey"] = entry.LootTableKey,
                 ["minMetalToHit"] = entry.MinMetalToHit,
                 ["damage"] = new JsonObject { ["minimum"] = entry.MinDamage, ["maximum"] = entry.MaxDamage },
                 ["health"] = new JsonObject { ["minimum"] = entry.MinHealth, ["maximum"] = entry.MaxHealth },
@@ -278,7 +251,6 @@ public static class Arena2MobileCatalogDocument
             ["schemaVersion"] = 1,
             ["sources"] = new JsonArray(new JsonObject { ["recordId"] = SourceRecordId, ["path"] = donorPath }),
             ["mobiles"] = mobiles,
-            ["divergences"] = divergences,
         };
 
         return new Arena2MobileCatalogPublication(

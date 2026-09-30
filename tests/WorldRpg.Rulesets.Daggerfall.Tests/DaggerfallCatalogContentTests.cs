@@ -99,7 +99,7 @@ public sealed class DaggerfallCatalogContentTests
         Assert.Equal((128, "class00", "U"), (mage.MobileId, mage.Career, mage.LootTableKey));
         Assert.Equal((144, "class16", "T"), (warrior.MobileId, warrior.Career, warrior.LootTableKey));
         Assert.Equal((136, "class08", "O"), (rogue.MobileId, rogue.Career, rogue.LootTableKey));
-        Assert.Equal((146, "class18", "T"), (guard.MobileId, guard.Career, guard.LootTableKey));
+        Assert.Equal((146, "class18", (string?)null), (guard.MobileId, guard.Career, guard.LootTableKey));
         Assert.All([mage, warrior, rogue, guard], actor => Assert.Equal("enemy-class-equipped-melee", actor.ActionId));
         Assert.True(definitions.Mobiles.Mobiles[128].RequiresEnemySpellBehavior);
         Assert.False(definitions.Mobiles.Mobiles[131].RequiresEnemySpellBehavior);
