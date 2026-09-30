@@ -1,7 +1,7 @@
 # Daggerfall authored-content scope
 
-Prepared 2026-09-10 as an input to [the Daggerfall coverage plan](../daggerfall-coverage-plan.md)
-and [the task-creation packet](../daggerfall-task-preparation.md). This document inventories
+An input to [the Daggerfall coverage plan](../daggerfall-coverage-plan.md) and
+[the coverage scope contract](../daggerfall-task-preparation.md). This document inventories
 the authored corpus and its current Rusty Dagger boundary. It is a planning inventory, not a
 binary dump, a runtime source reader, or a claim that every listed record already imports.
 
@@ -20,14 +20,13 @@ closure of `content/worldrpg/imports/privateers-hold/import-manifest.json`.
 source is outside that closure. Neither means that every record in the source is
 implemented, or that other publications cannot use it. Family rows retain their
 planning dispositions. After refreshing this bundle, run the import tool's
-`source-manifest` command with `--publication` pointing to the bundle and
-`--inventory data/content-source-manifest.csv --update-inventory`, then
-run `plan` with that inventory to check drift. The reconciler changes only file
+`source-manifest` command with `--publication` pointing to the bundle, `--output` naming the
+manifest file to write and `--inventory data/content-source-manifest.csv --update-inventory`,
+then run `plan` with that inventory to check drift. The reconciler changes only file
 dispositions; historical scope notes and source counts remain inventory evidence.
 
-The local source corpus was inspected read-only at `/home/dev/rusty-dagger/local/arena2` on
-2026-09-10. It contains 1,590 files at its root and 90 files under `books/`, occupying about
-517 MiB. Counts below are filesystem counts or archive-header counts unless explicitly marked
+The supplied source corpus (`local/arena2`, read only) contains 1,590 files at its root and 90
+files under `books/`, occupying about 517 MiB. Counts below are filesystem counts or archive-header counts unless explicitly marked
 as a donor count. The raw files remain local provenance; this document does not copy their
 copyrighted payloads into a pack.
 
@@ -122,7 +121,7 @@ silently omitted. This manifest contains metadata only, not game payloads.
 | CNT-012 | Spells and magic definitions: `SPELLS.STD` and `MAGIC.DEF` | `SPELLS.STD` exists locally (7,921 bytes); `MAGIC.DEF` exists locally (3,662 bytes). Donor `ItemsFile.cs` explicitly describes an enchantment parameter as a `SPELLS.STD` spell ID | No current importer for either file | `pending-import`: enumerate spell/effect records and links. The verified filename is `SPELLS.STD`; there is no local `SPELL.RSC`, so planning must not invent that path. Magic behavior/action leaves belong to `docs/coverage/magic-inventory.md`. |
 | CNT-013 | Faction/social source: `FACTION.TXT` | 74,224 bytes; full record count not asserted | No current normalized faction catalog | `pending-import`: enumerate faction identities, relations, temple/guild bindings and text references; connect political map cells and social services. |
 | CNT-014 | Names, biographies and rumors: `NAMEGEN.DAT`, `BIO.DAT`, `RUMOR.DAT`, `BIOG00I0.IMG`, `BIOG00T0.TXT`–`BIOG17T0.TXT` | `NAMEGEN.DAT` 8,378 bytes, `BIO.DAT` 1,727 bytes, `RUMOR.DAT` 3,506 bytes; 1 biography image and 18 biography text files | No complete importer/publication | `pending-import`: preserve lookup identities, macros and authored text references; connect names/biography/rumors to character, dialogue, faction and quest records. |
-| CNT-015 | Books: `books/BOK*.TXT` | 90 supplied files, sparse IDs from `BOK00000.TXT` through `BOK00111.TXT`; donor `BookFile` reads headers/pages/tokens | No current book catalog or reader projection | `pending-import`: enumerate every supplied book file, header/page metadata and message mapping; publish text through the Daggerfall text owner without shipping a raw dump. Missing classic books outside this directory remain unresolved. |
+| CNT-015 | Books: `books/BOK*.TXT` | 90 supplied files, sparse IDs from `BOK00000.TXT` through `BOK00111.TXT`; donor `BookFile` reads headers/pages/tokens | The imported `books` section publishes each supplied book's header, pages and tokens through the text owner, and `Presentation/DaggerfallBookNotebook.cs` is the reader projection | `pending-import`: enumerate every supplied book file, header/page metadata and message mapping; publish text through the Daggerfall text owner without shipping a raw dump. Missing classic books outside this directory remain unresolved. |
 | CNT-016 | Localized classic text: `TEXT.RSC` | 353,393 bytes; record count not asserted without the existing text reader | No current `TEXT.RSC` importer | `pending-import`: enumerate text record IDs/macros and consumers, including spell, career, item, book, dialogue, service and quest references. |
 | CNT-017 | Classic quest source files: `.QBN` and `.QRC` | 306 QBN files and 303 QRC files; 302 case-insensitive stems are paired, four are QBN-only and one is QRC-only | No current QBN/QRC import in Rusty Dagger | `pending-import`: preserve each source identity and explicit mismatch disposition. Action/resource/opcode inventory is owned by [quest-content-inventory.md](quest-content-inventory.md), not duplicated here. |
 | CNT-018 | Texture leaves: `TEXTURE.000`–`TEXTURE.511` | 472 leaves present; absent IDs are 021, 032, 034, 051, 052, 078, 187–189, 191–193, 196, 219–232, 243–244, 294, 367, 373, 421, 441, 471–472 and 496–499 | `TextureArchiveDecoder` and dungeon normalization admit a selected Privateer’s Hold closure plus selected classic media | `current-partial`: enumerate all 472 present leaves and referenced frames, retaining “not supplied” for the 40 absent IDs; do not synthesize missing archives. |
@@ -222,7 +221,7 @@ classes, widget layouts, distribution helpers and runtime media bootstrap are ex
 
 The current importer has focused Arena2 decoders for named/numeric BSA archives, maps, RDB
 blocks, ARCH3D meshes, PAK grids, texture leaves, weapon CIFs, fonts and DAGGER.SND. It uses
-fixed source lists in `src/Daggerfall.Import.Tool/Program.cs`; this is why the 68-source manifest
+fixed source lists in `src/Daggerfall.Import/Publication/Arena2SiteSources.cs`; this is why the 68-source manifest
 does not represent the whole local corpus. Current output is a normalized Privateer’s Hold
 closure and selected classic media, not a complete Daggerfall content pack.
 
@@ -282,19 +281,25 @@ copies; an architecture law keeps the copy complete, and the script fails a run 
 generated file Git would pick up):
 
 - `content/worldrpg/imports/**` — the Privateer's Hold, Castle Necromoghan and Charing
-  exterior/interior closures (`write`, `rmb-spatial`).
+  exterior/interior closures (`write`, `rmb-spatial`). Each carries actor media for every mobile the
+  imported `mobiles` catalog lets the runtime spawn, not only the ones its placements name.
 - `content/worldrpg/media/**` — classic media, character media, music and cinematics
   (`classic-media`, `character-presentation`, `music-media`, `cinematic-media`).
 - `content/worldrpg/payloads/daggerfall.imported.json` — the `daggerfall.imported` pack's payload:
   `catalogs`, `itemTemplateLedger`, `characterPresentation`, `locations`, `magic`, `mobiles`, `text`,
   `names`, `rumors`, `biographies`, `books`, `climate`, `politic`, `factions`, `terrain`,
   `itemTemplates`, `questTables`, `questCatalog`, `questSources`, `cinematics` and `buildingNames`.
-- `content/worldrpg/payloads/daggerfall.blocks.json` (`blocks`, the complete block document the
-  `daggerfall.blocks` pack carries) and `content/worldrpg/payloads/daggerfall.quests.*.json`
-  (`fighters-quest-corpus`, `classic-quest-corpora`).
-- `import-records/daggerfall.import-records.json` — importer records nothing at runtime reads, kept
-  outside the runtime content root: the mesh inventory (`geometry`) and the original quest-source
-  selections (`questOriginalSources`) the quest corpus payloads are built from.
+- `content/worldrpg/payloads/daggerfall.blocks.json` (`blocks --buildings`: the type, faction and
+  name seed of every RMB building slot, which is all the `daggerfall.blocks` pack's runtime reader
+  needs) and `content/worldrpg/payloads/daggerfall.quests.*.json` (`fighters-quest-corpus`,
+  `classic-quest-corpora`).
+- `import-records/` — importer records nothing at runtime reads, kept outside the runtime content
+  root: `daggerfall.import-records.json` (the mesh inventory `geometry` and the original quest-source
+  selections `questOriginalSources` the quest corpus payloads are built from),
+  `daggerfall.blocks.json` (`blocks --document`: the complete block document, which `geometry` reads
+  for mesh use sites) and `sites/SITE.sources.json` (each site closure's source manifest: the supplied
+  corpus scanned against the documented inventory, written by `write` and `rmb-spatial` through
+  `--source-manifest`).
 
 The base definitions come from two packs. `daggerfall.base` is authored and tracked: its payload
 `content/worldrpg/payloads/daggerfall.base.json` carries `ruleset`, `vocabulary`,
@@ -319,17 +324,30 @@ and the importer's tracked inputs: the source inventory, `data/ui-authored-asset
 operator's `sprites/SITE.json` overlays to the dungeon sites. Third-party origins are in
 `THIRD_PARTY_NOTICES.md`.
 
-The Host stages the whole `content/` directory as the runtime content root. Two costs there are known
-and not yet removed: each site closure carries its `sources/manifest.json` provenance (about 6.6 MB
-each; it is an artifact the closure's `import-manifest.json` lists, so moving it out changes the
-publication plan and its readers), and each closure carries its own copy of the classic media
-(fonts, UI, maps, combat and effect art) beside the product-wide `content/worldrpg/media/` copy,
-because the ruleset reads a site's classic presentation from its closure.
+The Host stages the whole `content/` directory as the runtime content root. One duplication there is
+known and kept: each site closure carries its own classic media (fonts, UI, maps, combat, effect and
+world-visual art and its classic sidecar, about 3.7 MB) beside the product-wide
+`content/worldrpg/media/` group. A closure is self-contained and hash-verified by its own
+`import-manifest.json`; its classic sidecar is built with that site's authored sprite overlays and
+with the missile world visuals checked against that site's geometry publication; and the sprite
+workbench inspects and authors a site's classic sprites from its closure. Publishing the classic
+media once would make closures reference artifacts outside themselves and move overlays from
+per-site to product-wide, which is a change to the closure contract rather than a deduplication.
+
+Every published source path is written in one vocabulary (`PublishedSourcePath`): an Arena2 file is
+`arena2/NAME` and a Daggerfall Unity file `daggerfall-unity/PATH`, as the documented inventory spells
+its rows. A section states the files it read as `PublishedSource` values (path, digest, byte length),
+and catalogs cite the documented path a record came from; the packs carry no inventory row ids.
+The importer's records and the ruleset's readers are separate code, because the runtime ruleset may
+not reference the offline importer; `NormalizedContractRoundTripTests` in the ruleset suite reads
+every imported section and site closure document strictly through the importer's record, rewrites it
+with the importer's writer, and has the ruleset read the result.
 
 Each site closure's `import-manifest.json` records its provenance: `importerRevision` (the last
 commit that changed `src/Daggerfall.Import`, `src/Daggerfall.Import.Tool` or
 `src/WorldRpg.SpriteAuthoring`, suffixed `-dirty` for uncommitted changes there), `command` (the tool
-command line that writes it), `sources`, and `authoredOverlays` (each applied sprite overlay with
+command line that writes it, which names the import record its source manifest went to), `sources`,
+and `authoredOverlays` (each applied sprite overlay with
 its digest). `normalized.json` carries the same revision. Each cinematic artifact in the imported
 payload records the FFmpeg build that encoded it, because another build writes different VP9/Opus
 bytes for the same source.
