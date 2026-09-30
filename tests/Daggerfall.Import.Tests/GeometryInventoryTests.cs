@@ -375,7 +375,7 @@ public sealed class GeometryInventoryTests
         // renamed model list reads as an empty one, and the geometry folded from it reports every mesh as
         // unused — the opposite of the closure set this inventory exists to publish.
         System.Text.Json.Nodes.JsonObject document = System.Text.Json.Nodes.JsonNode.Parse(
-            File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")))!.AsObject();
+            File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "import-records/daggerfall.blocks.json")))!.AsObject();
         System.Text.Json.Nodes.JsonArray records = document["records"]!.AsArray();
         System.Text.Json.Nodes.JsonObject objects = records
             .Select(record => record!["objects"] as System.Text.Json.Nodes.JsonObject)
@@ -416,7 +416,7 @@ public sealed class GeometryInventoryTests
     {
         List<DaggerfallGeometryUseSite> useSites = [];
         using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(
-            File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
+            File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "import-records/daggerfall.blocks.json")));
         foreach (System.Text.Json.JsonElement block in document.RootElement.GetProperty("records").EnumerateArray())
         {
             if (!block.TryGetProperty("objects", out System.Text.Json.JsonElement objects) || objects.ValueKind != System.Text.Json.JsonValueKind.Object)

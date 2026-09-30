@@ -8,8 +8,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// name says it is, and whether the block names the location section publishes are all carried.
 /// </summary>
 /// <remarks>
-/// The document is read at runtime only through the daggerfall.blocks pack; the tasks that publish dungeon, exterior and geometry
-/// assemblies are its consumers — so what is checked here is the artifact itself, from its own published
+/// The complete document is an importer record beside the content (the daggerfall.blocks pack carries only its
+/// building fields); the tasks that publish dungeon, exterior and geometry assemblies are its consumers — so what is checked here is the artifact itself, from its own published
 /// numbers, rather than through a reader invented for a consumer that does not exist.
 /// </remarks>
 public sealed class DaggerfallBlockInventoryTests
@@ -190,12 +190,12 @@ public sealed class DaggerfallBlockInventoryTests
     private static IEnumerable<JsonElement> Records(string kind) =>
         Pack().RootElement.GetProperty("blocks").GetProperty("records").EnumerateArray().Where(record => record.GetProperty("kind").GetString() == kind).ToArray();
 
-    /// <summary>The block document the daggerfall.blocks pack carries, beside the imported locations it joins.</summary>
+    /// <summary>The block document from the import records, beside the imported locations it joins.</summary>
     private static JsonDocument Pack()
     {
         string payloads = Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "payloads");
         using JsonDocument imported = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(payloads, "daggerfall.imported.json")));
-        string blocks = File.ReadAllText(Path.Combine(payloads, "daggerfall.blocks.json"));
+        string blocks = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "import-records", "daggerfall.blocks.json"));
         return JsonDocument.Parse($"{{\"blocks\":{blocks},\"locations\":{imported.RootElement.GetProperty("locations").GetRawText()}}}");
     }
 }

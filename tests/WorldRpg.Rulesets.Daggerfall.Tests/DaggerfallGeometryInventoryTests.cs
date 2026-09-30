@@ -112,7 +112,7 @@ public sealed class DaggerfallGeometryInventoryTests
     private static JsonDocument Pack()
     {
         using JsonDocument records = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "import-records", "daggerfall.import-records.json")));
-        string blocks = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "payloads", "daggerfall.blocks.json"));
+        string blocks = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "import-records", "daggerfall.blocks.json"));
         return JsonDocument.Parse($"{{\"geometry\":{records.RootElement.GetProperty("geometry").GetRawText()},\"blocks\":{blocks}}}");
     }
 }

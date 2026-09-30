@@ -276,6 +276,32 @@ public sealed record DaggerfallBlockRmbHeader(
     IReadOnlyList<DaggerfallBlockBuilding> Buildings,
     int TrailingBytes);
 
+/// <summary>The fields of one RMB building slot the runtime reads: its type, faction and name seed.</summary>
+/// <param name="Block">The source key of the readable city block that carries the slot.</param>
+/// <param name="Index">The slot's ordinal in that block.</param>
+/// <param name="BuildingType">The building type byte the slot carries.</param>
+/// <param name="FactionId">The faction the slot names, or zero when it names none.</param>
+/// <param name="NameSeed">The seed the building's generated name derives from.</param>
+public sealed record DaggerfallBlockBuildingFields(string Block, int Index, int BuildingType, int FactionId, int NameSeed);
+
+/// <summary>
+/// The runtime's view of the block document: every building slot of every readable city block, and no
+/// placement. The <c>daggerfall.blocks</c> pack carries this; the complete document stays an importer
+/// record, because nothing at runtime reads the rest of it.
+/// </summary>
+/// <param name="Buildings">One entry per building slot, in block and slot order.</param>
+public sealed record DaggerfallBlockBuildingSet(IReadOnlyList<DaggerfallBlockBuildingFields> Buildings)
+{
+    public static DaggerfallBlockBuildingSet From(DaggerfallBlocks blocks)
+    {
+        ArgumentNullException.ThrowIfNull(blocks);
+        return new([.. blocks.Records
+            .Where(record => record.Kind == DaggerfallBlockKind.Rmb && record.State == DaggerfallBlockState.Read && record.Rmb is not null)
+            .SelectMany(record => record.Rmb!.Buildings.Select(building =>
+                new DaggerfallBlockBuildingFields(record.SourceKey, building.Index, building.BuildingType, building.FactionId, building.NameSeed)))]);
+    }
+}
+
 /// <summary>One record of the block archive, classified and summarized.</summary>
 /// <param name="Ordinal">The record's position in the archive directory, which is its stable identity.</param>
 /// <param name="SourceKey">The exact name the archive stores it under.</param>
