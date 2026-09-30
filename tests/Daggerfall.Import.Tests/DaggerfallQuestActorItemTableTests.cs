@@ -8,12 +8,10 @@ namespace Daggerfall.Import.Tests;
 
 public sealed class DaggerfallQuestActorItemTableTests
 {
-    [Fact]
+    [DonorFact("Assets/StreamingAssets/Tables/Quests-Items.txt")]
     public void Preserves_artifact_endpoints_and_item_parameter_aliases()
     {
         string source = Donor("Quests-Items.txt");
-        // The full donor corpus is optional in portable developer and CI checkouts.
-        if (!File.Exists(source)) return;
         byte[] bytes = File.ReadAllBytes(source);
         DaggerfallQuestItemTable items = DaggerfallQuestActorItemTableReader.ReadItems(bytes, "Tables/Quests-Items.txt");
 
@@ -30,12 +28,10 @@ public sealed class DaggerfallQuestActorItemTableTests
         Assert.True(items.Rows.Zip(items.Rows.Skip(1)).All(pair => pair.First.SourceLine < pair.Second.SourceLine));
     }
 
-    [Fact]
+    [DonorFact("Assets/StreamingAssets/Tables/Quests-Factions.txt")]
     public void Preserves_disabled_faction_uncertainty_as_rows_and_source_comments()
     {
         string source = Donor("Quests-Factions.txt");
-        // The full donor corpus is optional in portable developer and CI checkouts.
-        if (!File.Exists(source)) return;
         DaggerfallQuestFactionTable factions = DaggerfallQuestActorItemTableReader.ReadFactions(
             File.ReadAllBytes(source), "Tables/Quests-Factions.txt");
 
@@ -48,12 +44,10 @@ public sealed class DaggerfallQuestActorItemTableTests
         Assert.Contains(factions.Comments, comment => comment.SourceLine == 38 && comment.Text.Contains("presently unknown", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [DonorFact("Assets/StreamingAssets/Tables/Quests-Foes.txt")]
     public void Preserves_foe_aliases_and_knight_source_disposition()
     {
         string source = Donor("Quests-Foes.txt");
-        // The full donor corpus is optional in portable developer and CI checkouts.
-        if (!File.Exists(source)) return;
         DaggerfallQuestFoeTable foes = DaggerfallQuestActorItemTableReader.ReadFoes(
             File.ReadAllBytes(source), "Tables/Quests-Foes.txt");
 
@@ -104,5 +98,5 @@ public sealed class DaggerfallQuestActorItemTableTests
         Assert.Contains("Only a disabled", error.Message, StringComparison.Ordinal);
     }
 
-    private static string Donor(string file) => Path.Combine("/home/research/daggerfall-unity/Assets/StreamingAssets/Tables", file);
+    private static string Donor(string file) => Path.Combine(TestData.Donor("Assets/StreamingAssets/Tables"), file);
 }

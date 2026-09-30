@@ -317,7 +317,7 @@ public sealed class TextResourceTests
         Assert.Equal("shared text", records[1].Tokens[0].Text);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Publishes_the_supplied_corpus_with_every_record_accounted_for()
     {
         DaggerfallText text = Supplied();
@@ -368,7 +368,7 @@ public sealed class TextResourceTests
         Assert.All(text.PendingKinds, pending => Assert.True(pending.OwnerTask is 7951 or 7941));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_variant_count_that_disagrees_with_the_separators()
     {
         // The separators a value publishes are what divide it into variants a consumer selects between,
@@ -378,7 +378,7 @@ public sealed class TextResourceTests
         Assert.Contains("variants where its separators divide it into", Assert.Throws<InvalidOperationException>(() => (record with { Subrecords = 99 }).Validate()).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_symbol_list_that_does_not_match_the_text_it_describes()
     {
         // The list is derived from the text, so it is checked against the text rather than trusted: a
@@ -463,7 +463,7 @@ public sealed class TextResourceTests
         Assert.Contains("does not carry family 'CNT-016'", error.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_section_that_publishes_one_key_twice()
     {
         DaggerfallText text = Supplied();
@@ -474,7 +474,7 @@ public sealed class TextResourceTests
         Assert.Contains("twice, so one of them is unreachable", error.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_record_whose_source_the_section_does_not_carry()
     {
         DaggerfallText text = Supplied();
@@ -484,7 +484,7 @@ public sealed class TextResourceTests
         Assert.Contains("which the section does not carry", error.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_malformed_record_that_still_carries_tokens_or_states_no_reason()
     {
         DaggerfallText text = Supplied();
@@ -497,7 +497,7 @@ public sealed class TextResourceTests
         Assert.Contains("states a reason it is not", Assert.Throws<InvalidOperationException>(() => (record with { Reason = "because" }).Validate()).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_source_byte_the_source_cannot_state()
     {
         // The directory's offset is unsigned, so no source can name a negative byte: a published record
@@ -507,7 +507,7 @@ public sealed class TextResourceTests
         Assert.Contains("cannot begin at a negative source byte", Assert.Throws<ArgumentOutOfRangeException>(() => (record with { Offset = -1 }).Validate()).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_token_whose_members_disagree_with_its_kind()
     {
         DaggerfallText text = Supplied();
@@ -524,7 +524,7 @@ public sealed class TextResourceTests
         Assert.Contains("a name covers", Assert.Throws<InvalidOperationException>(() => (record with { Tokens = [new DaggerfallTextToken(Arena2TextCode.Unknown, Value: 0xfc)] }).Validate()).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_macro_index_that_disagrees_with_the_records()
     {
         DaggerfallText text = Supplied();
@@ -537,7 +537,7 @@ public sealed class TextResourceTests
         Assert.Contains("carried by no published value", Assert.Throws<InvalidOperationException>(() => (text with { Macros = [.. text.Macros, new DaggerfallTextMacro("%zzz", 1, TextMacroDisposition.Unrecognised)] }).Validate()).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_macro_index_entry_nothing_carries_or_carries_twice()
     {
         // An entry for a symbol no value carries would report a symbol the corpus lacks, and a symbol
@@ -550,7 +550,7 @@ public sealed class TextResourceTests
         Assert.Throws<InvalidOperationException>(() => (text with { Macros = [.. text.Macros, first] }).Validate());
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_macro_whose_disposition_is_not_how_the_donor_table_accounts_for_it()
     {
         DaggerfallText text = Supplied();
@@ -561,7 +561,7 @@ public sealed class TextResourceTests
         Assert.Contains("not how the donor's macro table accounts for it", error.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_family_that_is_both_pending_and_carried()
     {
         DaggerfallText text = Supplied();
@@ -575,7 +575,7 @@ public sealed class TextResourceTests
         Assert.Contains("published as pending and carried by a source", error.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_record_that_is_not_in_its_source_order()
     {
         DaggerfallText text = Supplied();
@@ -640,15 +640,13 @@ public sealed class TextResourceTests
     }
 
     private static DaggerfallText Supplied() => DaggerfallTextBuilder.Build(
-        File.ReadAllBytes(Corpus(TextResourceReader.FileName)),
+        File.ReadAllBytes(TestData.Corpus(TextResourceReader.FileName)),
         "local/arena2/TEXT.RSC",
         Inventory(),
         "en");
 
     private static IReadOnlyList<SourceInventoryRow> Inventory() =>
-        SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv")));
-
-    private static string Corpus(string name) => Path.Combine(RepositoryRoot(), "local/arena2", name);
+        SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")));
 
     /// <summary>
     /// A text resource carrying the supplied records, laid out the way the file does: a declared
@@ -695,16 +693,5 @@ public sealed class TextResourceTests
     {
         Write16(bytes, offset, value);
         Write16(bytes, offset + 2, value >> 16);
-    }
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md")))
-        {
-            directory = directory.Parent;
-        }
-
-        return directory?.FullName ?? throw new InvalidOperationException("repository root not found");
     }
 }

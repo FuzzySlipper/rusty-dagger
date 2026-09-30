@@ -121,12 +121,5 @@ public sealed class DaggerfallMobileCatalogTests
     private static byte[] Payload() => System.Text.Encoding.UTF8.GetBytes(PayloadJson());
 
     private static string PayloadJson() => File.ReadAllText(Path.Combine(
-        RepositoryRoot(), "content", "worldrpg", "payloads", "daggerfall.base.json"));
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md"))) directory = directory.Parent;
-        return directory?.FullName ?? throw new InvalidOperationException("The repository root was not found above the test output.");
-    }
+        TestData.RepositoryRoot, "content", "worldrpg", "payloads", "daggerfall.base.json"));
 }

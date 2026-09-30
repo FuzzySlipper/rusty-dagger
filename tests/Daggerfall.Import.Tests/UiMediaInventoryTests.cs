@@ -11,7 +11,7 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 public sealed class UiMediaInventoryTests
 {
-    [Fact]
+    [CorpusFact]
     public void Enumerates_every_documented_family_file_with_its_canvases()
     {
         UiMediaInventory inventory = ReadInventory();
@@ -41,7 +41,7 @@ public sealed class UiMediaInventoryTests
         Assert.Equal((320, 200), (talk.Canvases[0].Width, talk.Canvases[0].Height));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Keeps_every_family_even_when_no_consumer_binds_it()
     {
         UiMediaInventory inventory = ReadInventory();
@@ -53,7 +53,7 @@ public sealed class UiMediaInventoryTests
         Assert.All(inventory.RequiredPending, file => Assert.Equal(string.Empty, file.Consumer));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Admits_exactly_the_files_the_published_ui_manifest_binds()
     {
         UiMediaInventory inventory = ReadInventory();
@@ -67,7 +67,7 @@ public sealed class UiMediaInventoryTests
         Assert.Equal(57, inventory.RequiredPending.Count());
     }
 
-    [Fact]
+    [CorpusFact]
     public void Names_the_documented_inventory_for_a_pending_binding()
     {
         UiMediaInventory inventory = ReadInventory();
@@ -80,7 +80,7 @@ public sealed class UiMediaInventoryTests
         Assert.Contains("GILD", guild.Path, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Binds_a_file_whatever_case_the_consumer_names_it_in()
     {
         // The family is matched case-insensitively, so a consumer naming MAIN00I0.IMG binds
@@ -106,7 +106,7 @@ public sealed class UiMediaInventoryTests
         Assert.Contains("none of the documented UI media families", error.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Retains_a_supplied_file_the_decoder_does_not_read()
     {
         UiMediaInventory inventory = UiMediaInventory.Enumerate(
@@ -124,12 +124,12 @@ public sealed class UiMediaInventoryTests
         Assert.Single(inventory.Unread);
     }
 
-    [Fact]
+    [CorpusFact]
     public void The_documented_inventory_carries_the_families_it_claims()
     {
         // The family counts come from the manifest's CNT-020 row; this checks the corpus
         // against them in both directions rather than trusting either side.
-        string line = File.ReadLines(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv"))
+        string line = File.ReadLines(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv"))
             .Single(value => value.StartsWith("CNT-020,family,", StringComparison.Ordinal));
         int[] documented = [.. line.Split(',')[5].Split(';', StringSplitOptions.TrimEntries).Select(int.Parse)];
 
@@ -145,15 +145,14 @@ public sealed class UiMediaInventoryTests
         Assert.Equal(2, inventory.Family("INFO").Count());
     }
 
-    private static byte[] ValidImage() => File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/MAIN00I0.IMG"));
+    private static byte[] ValidImage() => File.ReadAllBytes(TestData.Corpus("MAIN00I0.IMG"));
 
     private static UiMediaInventory ReadInventory()
     {
-        string root = RepositoryRoot();
         List<(string Path, ReadOnlyMemory<byte> Bytes)> sources = [];
         foreach ((string prefix, int _) in UiMediaInventory.DocumentedFamilies)
         {
-            foreach (string path in Directory.GetFiles(Path.Combine(root, "local/arena2"), $"{prefix}*"))
+            foreach (string path in Directory.GetFiles(TestData.CorpusRoot, $"{prefix}*"))
             {
                 sources.Add((Path.GetFileName(path), File.ReadAllBytes(path)));
             }
@@ -167,17 +166,4 @@ public sealed class UiMediaInventoryTests
     [
         "INFO00I0.IMG", "INVE00I0.IMG", "MAIN00I0.IMG", "MAIN03I0.IMG", "MAIN04I0.IMG", "MAIN05I0.IMG",
     ];
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
-    }
 }

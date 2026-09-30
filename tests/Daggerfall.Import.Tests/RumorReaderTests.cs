@@ -6,11 +6,11 @@ namespace Daggerfall.Import.Tests;
 /// <summary>RUMOR.DAT layout: fixed-shape records closed by length-delimited classic text.</summary>
 public sealed class RumorReaderTests
 {
-    [Fact]
+    [CorpusFact]
     public void Reads_the_supplied_rumors_with_tokens_and_metadata()
     {
         RumorCatalog catalog = RumorReader.Read(
-            File.ReadAllBytes(Corpus("RUMOR.DAT")), "local/arena2/RUMOR.DAT");
+            File.ReadAllBytes(TestData.Corpus("RUMOR.DAT")), "local/arena2/RUMOR.DAT");
 
         Assert.Equal(31, catalog.Records.Count);
         RumorRecord first = catalog.Records[0];
@@ -43,28 +43,15 @@ public sealed class RumorReaderTests
         Assert.Equal(3506, catalog.Records[^1].TextOffset + catalog.Records[^1].TextLength);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_truncated_record_and_reports_foreign_bytes()
     {
-        byte[] corpus = File.ReadAllBytes(Corpus("RUMOR.DAT"));
+        byte[] corpus = File.ReadAllBytes(TestData.Corpus("RUMOR.DAT"));
         Assert.Throws<Arena2FormatException>(() => RumorReader.Read(corpus.AsSpan(0, 100), "fixture/RUMOR.DAT"));
 
         // A text length past the file's end is a length the file cannot honor.
         byte[] overrun = (byte[])corpus.Clone();
         BitConverter.GetBytes((uint)9999).CopyTo(overrun, 26);
         Assert.Throws<Arena2FormatException>(() => RumorReader.Read(overrun, "fixture/RUMOR.DAT"));
-    }
-
-    private static string Corpus(string name) => Path.Combine(RepositoryRoot(), "local/arena2", name);
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md")))
-        {
-            directory = directory.Parent;
-        }
-
-        return directory?.FullName ?? throw new InvalidOperationException("repository root not found");
     }
 }

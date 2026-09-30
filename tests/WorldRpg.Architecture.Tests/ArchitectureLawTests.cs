@@ -6,7 +6,7 @@ namespace WorldRpg.Architecture.Tests;
 
 public sealed class ArchitectureLawTests
 {
-    private static readonly string RepositoryRoot = FindRepositoryRoot();
+    private static readonly string RepositoryRoot = TestData.RepositoryRoot;
 
     [Fact]
     public void Kit_does_not_encode_reference_ruleset_vocabulary_or_references()
@@ -305,14 +305,4 @@ public sealed class ArchitectureLawTests
 
     private static IEnumerable<string> SourceFiles(string path) => Directory.GetFiles(path, "*.cs", SearchOption.AllDirectories)
         .Where(file => !file.Split(Path.DirectorySeparatorChar).Any(part => part is "bin" or "obj"));
-
-    private static string FindRepositoryRoot()
-    {
-        for (DirectoryInfo? directory = new(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "AGENTS.md"))) return directory.FullName;
-        }
-
-        throw new DirectoryNotFoundException("Could not locate the repository root from the test output directory.");
-    }
 }

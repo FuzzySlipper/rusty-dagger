@@ -38,13 +38,12 @@ public sealed class DaggerfallTerrainTests
         Assert.Throws<Arena2FormatException>(() => WoodsReader.Read(bytes: narrow, source: "wilderness"));
     }
 
-    [Fact]
+    [CorpusFact("WOODS.WLD")]
     public void Builds_the_terrain_contract_end_to_end()
     {
-        string arena2 = Arena2Directory();
-        if (!File.Exists(Path.Combine(arena2, "WOODS.WLD"))) return;
+        string arena2 = TestData.CorpusRoot;
 
-        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv")));
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")));
         byte[] bytes = File.ReadAllBytes(Path.Combine(arena2, "WOODS.WLD"));
         DaggerfallTerrain terrain = DaggerfallTerrainBuilder.Build(bytes, "local/arena2/WOODS.WLD", inventory);
         terrain.Validate();
@@ -104,20 +103,5 @@ public sealed class DaggerfallTerrainTests
         }
 
         return [.. bytes];
-    }
-
-    private static string Arena2Directory() => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../local/arena2"));
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("repository root not found");
     }
 }

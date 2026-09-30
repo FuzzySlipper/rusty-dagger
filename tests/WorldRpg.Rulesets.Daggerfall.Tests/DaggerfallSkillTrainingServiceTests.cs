@@ -198,8 +198,6 @@ public sealed class DaggerfallSkillTrainingServiceTests
 
     private static DaggerfallDefinitions LoadDefinitions()
     {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "content/worldrpg/payloads/daggerfall.base.json"))) directory = directory.Parent;
         return TestPayload.Definitions;
     }
 
@@ -244,8 +242,6 @@ public sealed class DaggerfallSkillTrainingServiceTests
             Career = career;
             Calendar = start == default ? new(405, 5, 0, 10, 0, 0) : start;
             if (level > 1) Progression.AdvanceTo(0, level);
-            DirectoryInfo? directory = new(AppContext.BaseDirectory);
-            while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "content/worldrpg/payloads/daggerfall.base.json"))) directory = directory.Parent;
             Definitions = TestPayload.Definitions;
             DaggerfallActorDefinition player = Definitions.RequireActor(new DaggerfallActorId("player"));
             DaggerfallCareerDefinition defaultCareer = Definitions.Catalogs.RequireCareer("class00");

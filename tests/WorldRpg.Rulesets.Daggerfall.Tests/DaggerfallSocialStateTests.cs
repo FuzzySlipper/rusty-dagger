@@ -159,18 +159,6 @@ public sealed class DaggerfallSocialStateTests
 
     private static DaggerfallDefinitions Definitions()
     {
-        string root = FindRepositoryRoot();
         return TestPayload.Definitions;
-    }
-
-    private static string FindRepositoryRoot()
-    {
-        DirectoryInfo? current = new(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "content/worldrpg/payloads/daggerfall.base.json"))) return current.FullName;
-            current = current.Parent;
-        }
-        throw new DirectoryNotFoundException("Could not locate the Rusty Dagger repository root.");
     }
 }

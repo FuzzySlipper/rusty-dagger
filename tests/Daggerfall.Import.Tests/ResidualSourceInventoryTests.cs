@@ -11,7 +11,7 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 public sealed class ResidualSourceInventoryTests
 {
-    [Fact]
+    [CorpusFact]
     public void Classifies_every_documented_residual_path_exactly_once()
     {
         string[] documented = DocumentedResidualPaths();
@@ -29,7 +29,7 @@ public sealed class ResidualSourceInventoryTests
         Assert.All(inventory.Files, file => Assert.Equal(file.Documented, ResidualSourceInventory.DocumentedFamilies.Contains(file.Family, StringComparer.Ordinal)));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Reconciles_the_supplied_families_with_the_documented_list()
     {
         ResidualSourceInventory inventory = ReadInventory();
@@ -63,7 +63,7 @@ public sealed class ResidualSourceInventoryTests
         Assert.Single(inventory.Family("TDE"));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Reads_the_families_this_repository_has_readers_for_and_names_the_rest()
     {
         ResidualSourceInventory inventory = ReadInventory();
@@ -117,7 +117,7 @@ public sealed class ResidualSourceInventoryTests
         Assert.Contains(inventory.Family("COL"), file => file.Path == "DANKBMAP.COL" && file.Reader == "PaletteDecoder");
     }
 
-    [Fact]
+    [CorpusFact]
     public void Names_what_a_supplied_palette_is_rather_than_what_its_name_suggests()
     {
         ResidualSourceInventory inventory = ReadInventory();
@@ -145,7 +145,7 @@ public sealed class ResidualSourceInventoryTests
         Assert.Contains("belong to no canvas", bank.Note, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void The_closure_report_decides_every_path_from_its_classification()
     {
         ResidualSourceInventory inventory = ReadInventory();
@@ -199,13 +199,13 @@ public sealed class ResidualSourceInventoryTests
         Assert.Empty(inventory.UndocumentedFamilies);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Reports_a_documented_disposition_it_does_not_know_rather_than_guessing()
     {
         // The manifest's vocabulary is the product's; a token this classification cannot read
         // leaves the reader-based verdict standing and says so, rather than being ignored.
         ResidualSourceInventory inventory = ResidualSourceInventory.Enumerate(
-            [("BUTN00I0.IMG", File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/BUTN00I0.IMG")))],
+            [("BUTN00I0.IMG", File.ReadAllBytes(TestData.Corpus("BUTN00I0.IMG")))],
             "fixture",
             new Dictionary<string, string>(StringComparer.Ordinal) { ["BUTN00I0.IMG"] = "not-a-disposition" });
 
@@ -280,13 +280,13 @@ public sealed class ResidualSourceInventoryTests
 
     private static IReadOnlyList<SourceInventoryRow> DocumentedResidualRows() =>
     [
-        .. SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv")))
+        .. SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")))
             .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, "CNT-027")),
     ];
 
     private static ResidualSourceInventory ReadInventory()
     {
-        string arena2 = Path.Combine(RepositoryRoot(), "local/arena2");
+        string arena2 = TestData.CorpusRoot;
         List<(string Path, ReadOnlyMemory<byte> Bytes)> sources = [];
         Dictionary<string, string> documented = [];
         foreach (SourceInventoryRow row in DocumentedResidualRows())
@@ -297,18 +297,5 @@ public sealed class ResidualSourceInventoryTests
         }
 
         return ResidualSourceInventory.Enumerate(sources, "local/arena2", documented);
-    }
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
     }
 }

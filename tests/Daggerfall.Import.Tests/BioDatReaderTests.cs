@@ -6,11 +6,11 @@ namespace Daggerfall.Import.Tests;
 /// <summary>BIO.DAT layout: NUL-separated prose lines, trailing empties kept.</summary>
 public sealed class BioDatReaderTests
 {
-    [Fact]
+    [CorpusFact("BIO.DAT")]
     public void Reads_the_supplied_default_biography_lines()
     {
         BioDatCatalog catalog = BioDatReader.Read(
-            File.ReadAllBytes(Corpus("BIO.DAT")), "local/arena2/BIO.DAT");
+            File.ReadAllBytes(TestData.Corpus("BIO.DAT")), "local/arena2/BIO.DAT");
 
         Assert.Equal(34, catalog.Lines.Count);
         Assert.Equal(Enumerable.Range(0, 34), catalog.Lines.Select(line => line.Index));
@@ -42,18 +42,5 @@ public sealed class BioDatReaderTests
         Assert.Contains("non-ASCII", sour.Lines[0].Reason, StringComparison.Ordinal);
         Assert.Equal(string.Empty, sour.Lines[1].Text);
         Assert.Equal(string.Empty, sour.Lines[1].Reason);
-    }
-
-    private static string Corpus(string name) => Path.Combine(RepositoryRoot(), "local/arena2", name);
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md")))
-        {
-            directory = directory.Parent;
-        }
-
-        return directory?.FullName ?? throw new InvalidOperationException("repository root not found");
     }
 }

@@ -79,13 +79,11 @@ public sealed class DaggerfallQuestPackTests
         Assert.Contains("unsupported top-level", error.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [DonorFact("Assets/StreamingAssets/Tables", "Assets/StreamingAssets/Quests/50C00Y00.txt")]
     public void Deterministically_compiles_a_representative_classic_script()
     {
-        const string tables = "/home/research/daggerfall-unity/Assets/StreamingAssets/Tables";
-        const string source = "/home/research/daggerfall-unity/Assets/StreamingAssets/Quests/50C00Y00.txt";
-        // The full donor corpus is optional in portable developer and CI checkouts.
-        if (!File.Exists(source) || !Directory.Exists(tables)) return;
+        string tables = TestData.Donor("Assets/StreamingAssets/Tables");
+        string source = TestData.Donor("Assets/StreamingAssets/Quests/50C00Y00.txt");
 
         DaggerfallQuestTable globals = DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(tables, "Quests-GlobalVars.txt")), "Tables/Quests-GlobalVars.txt", globals: true);
         DaggerfallQuestTable messages = DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(tables, "Quests-StaticMessages.txt")), "Tables/Quests-StaticMessages.txt");
@@ -124,15 +122,14 @@ public sealed class DaggerfallQuestPackTests
         Assert.Equal(["Z", "A"], pack.Quests.Select(quest => quest.Name));
     }
 
-    [Fact]
+    [DonorFact("Assets/StreamingAssets/Quests", "Assets/StreamingAssets/Tables")]
     public void Parses_the_donor_corpus()
     {
-        const string quests = "/home/research/daggerfall-unity/Assets/StreamingAssets/Quests";
-        if (!Directory.Exists(quests)) return;
+        string quests = TestData.Donor("Assets/StreamingAssets/Quests");
 
-        DaggerfallQuestTable globals = DaggerfallQuestTableReader.Read(File.ReadAllBytes("/home/research/daggerfall-unity/Assets/StreamingAssets/Tables/Quests-GlobalVars.txt"), "Tables/Quests-GlobalVars.txt", globals: true);
-        DaggerfallQuestTable messages = DaggerfallQuestTableReader.Read(File.ReadAllBytes("/home/research/daggerfall-unity/Assets/StreamingAssets/Tables/Quests-StaticMessages.txt"), "Tables/Quests-StaticMessages.txt");
-        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv")));
+        DaggerfallQuestTable globals = DaggerfallQuestTableReader.Read(File.ReadAllBytes(TestData.Donor("Assets/StreamingAssets/Tables/Quests-GlobalVars.txt")), "Tables/Quests-GlobalVars.txt", globals: true);
+        DaggerfallQuestTable messages = DaggerfallQuestTableReader.Read(File.ReadAllBytes(TestData.Donor("Assets/StreamingAssets/Tables/Quests-StaticMessages.txt")), "Tables/Quests-StaticMessages.txt");
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")));
         List<QuestSourceDocument> documents = [];
         List<(string, string, int, string)> failures = [];
         long total = 0;
@@ -180,18 +177,5 @@ public sealed class DaggerfallQuestPackTests
     {
         QuestSourceDocument document = QuestSourceReader.Read(text, file, messages, globals);
         return DaggerfallQuestPackBuilder.Build([document], [], "donor/StreamingAssets/Quests", [1], Inventory());
-    }
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("repository root not found");
     }
 }

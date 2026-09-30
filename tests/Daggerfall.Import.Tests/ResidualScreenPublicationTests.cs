@@ -13,16 +13,16 @@ public sealed class ResidualScreenPublicationTests
 {
     private static readonly string[] Screens = ["CHGN00I0.IMG", "DIE_00I0.IMG", "PICK02I0.IMG", "PICK03I0.IMG", "PRIS00I0.IMG", "TITL00I0.IMG"];
 
-    [Fact]
+    [CorpusFact]
     public void Screens_publish_with_their_embedded_palette_scaled_by_four()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         JsonDocument manifest = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/privateers-hold/media/classic/manifest.json")));
         Dictionary<string, JsonElement> ui = manifest.RootElement.GetProperty("uiImages").EnumerateArray().ToDictionary(image => image.GetProperty("sourceFile").GetString()!);
 
         foreach (string screen in Screens)
         {
-            byte[] bytes = File.ReadAllBytes(Path.Combine(root, "local/arena2", screen));
+            byte[] bytes = File.ReadAllBytes(TestData.Corpus(screen));
             Assert.Equal(ImgDecoder.EmbeddedPaletteScreenBytes, bytes.Length);
             Assert.True(ImgDecoder.TryReadEmbeddedPalette(bytes, screen, out Arena2Palette? palette, out string reason), reason);
             Assert.NotNull(palette);
@@ -40,11 +40,10 @@ public sealed class ResidualScreenPublicationTests
         }
     }
 
-    [Fact]
+    [CorpusFact]
     public void Repeating_a_screen_conversion_reproduces_its_bytes()
     {
-        string root = RepositoryRoot();
-        byte[] bytes = File.ReadAllBytes(Path.Combine(root, "local/arena2/TITL00I0.IMG"));
+        byte[] bytes = File.ReadAllBytes(TestData.Corpus("TITL00I0.IMG"));
         Assert.True(ImgDecoder.TryReadEmbeddedPalette(bytes, "TITL00I0.IMG", out Arena2Palette? palette, out _));
         Assert.NotNull(palette);
 
@@ -69,18 +68,5 @@ public sealed class ResidualScreenPublicationTests
         }
 
         return Convert.ToHexString(SHA256.HashData(pixels));
-    }
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("repository root not found");
     }
 }

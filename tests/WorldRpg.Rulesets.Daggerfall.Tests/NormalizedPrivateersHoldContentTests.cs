@@ -15,7 +15,7 @@ public sealed class NormalizedPrivateersHoldContentTests
     [Fact]
     public void Admits_selected_interior_building_from_the_checked_normalized_publication()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = PrivateersHoldContent.Read(GeneratedContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.charing-interior-1-1-0.json")), definitions);
@@ -25,7 +25,7 @@ public sealed class NormalizedPrivateersHoldContentTests
     [Fact]
     public void Every_extracted_fixed_enemy_is_present_with_its_original_mobile_and_position()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = PrivateersHoldContent.Read(GeneratedContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
@@ -50,7 +50,7 @@ public sealed class NormalizedPrivateersHoldContentTests
     [Fact]
     public void Every_supported_weapon_and_unarmed_has_complete_normalized_presentation()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = PrivateersHoldContent.Read(GeneratedContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
@@ -81,7 +81,7 @@ public sealed class NormalizedPrivateersHoldContentTests
     [Fact]
     public void ReadsTheGeneratedClosureWithoutSourceShapedSpatialOrSpriteFields()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         byte[] payload = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
 
@@ -105,7 +105,7 @@ public sealed class NormalizedPrivateersHoldContentTests
     [Fact]
     public void Exposes_the_published_arrow_world_visual_with_its_own_mesh_and_textures()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         PrivateersHoldInputs inputs = PrivateersHoldContent.Read(GeneratedContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), TestPayload.Definitions);
 
@@ -138,7 +138,7 @@ public sealed class NormalizedPrivateersHoldContentTests
     [InlineData("daggerfall.castle-necromoghan.json")]
     public void Every_published_site_carries_the_published_arrow_world_visual(string payload)
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         PrivateersHoldInputs inputs = PrivateersHoldContent.Read(GeneratedContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads", payload)), TestPayload.Definitions);
 
@@ -152,7 +152,7 @@ public sealed class NormalizedPrivateersHoldContentTests
     [Fact]
     public void Rejects_a_world_visual_whose_mesh_digest_the_import_manifest_does_not_admit()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
 
         Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(
@@ -194,7 +194,7 @@ public sealed class NormalizedPrivateersHoldContentTests
     [Fact]
     public void Rejects_a_classic_manifest_that_states_no_world_visuals_at_all()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         const string classicRelativePath = "worldrpg/imports/privateers-hold/media/classic/manifest.json";
         string contentRoot = Path.Combine(root, "content");
@@ -248,7 +248,7 @@ public sealed class NormalizedPrivateersHoldContentTests
     [Fact]
     public void Reads_the_donor_treasure_billboard_for_ground_container_projection()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = PrivateersHoldContent.Read(GeneratedContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
@@ -267,7 +267,7 @@ public sealed class NormalizedPrivateersHoldContentTests
     [Fact]
     public void Admits_a_shared_attack_script_when_a_real_direction_has_fewer_source_frames()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = PrivateersHoldContent.Read(GeneratedContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
@@ -283,7 +283,7 @@ public sealed class NormalizedPrivateersHoldContentTests
     [Fact]
     public void Admits_castle_necromoghan_as_a_distinct_normalized_destination_profile()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
 
         PrivateersHoldInputs destination = PrivateersHoldContent.Read(GeneratedContent(root),
@@ -323,7 +323,7 @@ public sealed class NormalizedPrivateersHoldContentTests
     [Fact]
     public void Projects_selected_privateers_hold_RDB_doors_with_real_source_id_pose_and_action_visual_bounds()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
 
         PrivateersHoldInputs inputs = PrivateersHoldContent.Read(GeneratedContent(root),
@@ -343,7 +343,7 @@ public sealed class NormalizedPrivateersHoldContentTests
     [Fact]
     public void Preserves_each_actor_crop_at_its_scaled_world_geometry()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         PrivateersHoldInputs inputs = PrivateersHoldContent.Read(GeneratedContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
@@ -367,7 +367,7 @@ public sealed class NormalizedPrivateersHoldContentTests
     [Fact]
     public void AdmitsANamedSpatialArtifactWithoutRehashingTheImportDigest()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         byte[] payload = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
         ProductContent content = GeneratedContent(root);
@@ -385,7 +385,7 @@ public sealed class NormalizedPrivateersHoldContentTests
     [Fact]
     public void RejectsAnUnknownPlacementActorAsContentDiagnostics()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         string payload = File.ReadAllText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
 
@@ -398,7 +398,7 @@ public sealed class NormalizedPrivateersHoldContentTests
     [Fact]
     public void RejectsDuplicateScenarioProperties()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         string payload = File.ReadAllText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
 
@@ -411,7 +411,7 @@ public sealed class NormalizedPrivateersHoldContentTests
     [Fact]
     public void RejectsClassicPresentationThatSelectsANonWeaponSpriteOrMalformedEffectTiming()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         string payload = File.ReadAllText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"))
             .Replace("\"weapon.dagger.steel\"", "\"effect.blood.0\"", StringComparison.Ordinal);
@@ -422,7 +422,7 @@ public sealed class NormalizedPrivateersHoldContentTests
     [Fact]
     public void RejectsDuplicateWeaponMappingsAndMissingUnarmedMedia()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         string payload = File.ReadAllText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
         Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(
@@ -441,11 +441,4 @@ public sealed class NormalizedPrivateersHoldContentTests
     }
 
     private static Vector2 Vector(JsonElement value) => new(value.GetProperty("x").GetSingle(), value.GetProperty("y").GetSingle());
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new DirectoryInfo(AppContext.BaseDirectory); current is not null; current = current.Parent)
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md"))) return current.FullName;
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
-    }
 }

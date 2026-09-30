@@ -50,13 +50,11 @@ public sealed class Arena2MagicCatalogDocumentTests
         Assert.Equal(1, publication.UnresolvedLinks);
     }
 
-    [Fact]
+    [CorpusFact("SPELLS.STD", "MAGIC.DEF")]
     public void ReportsTheRealCorpusCountsAndLeavesUnresolvedLinksLegible()
     {
-        string arena2 = Path.Combine(RepositoryRoot(), "local", "arena2");
-        string spellPath = Path.Combine(arena2, "SPELLS.STD");
-        string magicPath = Path.Combine(arena2, "MAGIC.DEF");
-        Assert.True(File.Exists(spellPath) && File.Exists(magicPath), "the classic corpus is required for this check");
+        string spellPath = TestData.Corpus("SPELLS.STD");
+        string magicPath = TestData.Corpus("MAGIC.DEF");
 
         Arena2MagicCatalogPublication publication = Arena2MagicCatalogDocument.Build(
             File.ReadAllBytes(spellPath), File.ReadAllBytes(magicPath), "local/arena2/SPELLS.STD", "local/arena2/MAGIC.DEF");
@@ -73,13 +71,6 @@ public sealed class Arena2MagicCatalogDocumentTests
             Assert.Contains("no published spell", link!["reason"]!.GetValue<string>(), StringComparison.Ordinal));
         // The repeated identity in the corpus is visible where a consumer would otherwise collide.
         Assert.Contains(document["spells"]!.AsArray(), spell => spell!["identityShared"]!.GetValue<bool>());
-    }
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md"))) directory = directory.Parent;
-        return directory?.FullName ?? throw new InvalidOperationException("The repository root was not found above the test output.");
     }
 
     /// <summary>Two spells sharing one identity byte, which is the corpus' own shape.</summary>

@@ -9,14 +9,13 @@ namespace Daggerfall.Import.Tests;
 /// <summary>Original QBN/QRC identities stay distinct from rewritten quest text selections.</summary>
 public sealed class DaggerfallQuestOriginalSourceTests
 {
-    [Fact]
+    [CorpusFact]
     public void Decodes_fixed_binary_message_records_for_every_supplied_qbn()
     {
-        string root = RepositoryRoot();
-        QuestSourceInventory inventory = ReadInventory(root);
+        QuestSourceInventory inventory = ReadInventory();
         foreach (QuestSourceFile source in inventory.Binaries)
         {
-            QuestBinaryRecords decoded = QuestBinaryRecords.Decode(File.ReadAllBytes(Path.Combine(root, "local/arena2", source.Path)), source.Path);
+            QuestBinaryRecords decoded = QuestBinaryRecords.Decode(File.ReadAllBytes(TestData.Corpus(source.Path)), source.Path);
             Assert.Equal(QuestBinaryRecordDisposition.Decoded, decoded.Disposition);
             Assert.NotNull(decoded.Header);
             // The header's optional resource filename is data, not the file identity: some
@@ -41,7 +40,7 @@ public sealed class DaggerfallQuestOriginalSourceTests
         Assert.Equal("place", decoded.ResourceReferences[0].RecordKind);
     }
 
-    [Fact]
+    [CorpusAndDonorFact([], ["Assets/StreamingAssets/Quests", "Assets/StreamingAssets/Tables"])]
     public void Publishes_all_original_stems_with_real_selections_and_one_sided_availability()
     {
         DaggerfallQuestOriginalSourceSet sources = BuildSources();
@@ -61,7 +60,7 @@ public sealed class DaggerfallQuestOriginalSourceTests
         Assert.Contains("not enabled", resourceOnly.Availability, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [CorpusAndDonorFact([], ["Assets/StreamingAssets/Quests", "Assets/StreamingAssets/Tables"])]
     public void Retains_actual_repeated_qrc_records_and_reports_rewrite_identity_differences()
     {
         DaggerfallQuestOriginalSource peryite = Assert.Single(BuildSources().Quests, source => source.Stem == "50C00Y00");
@@ -81,7 +80,7 @@ public sealed class DaggerfallQuestOriginalSourceTests
         Assert.Contains(peryite.RewrittenResourceMessageReferences, reference => string.Equals(reference, "anyinfo:1011", StringComparison.OrdinalIgnoreCase));
     }
 
-    [Fact]
+    [CorpusAndDonorFact([], ["Assets/StreamingAssets/Quests", "Assets/StreamingAssets/Tables"])]
     public void Retains_exact_text_matches_as_well_as_explicit_mismatches()
     {
         IReadOnlyList<DaggerfallQuestMessageComparison> comparisons = [.. BuildSources().Quests.SelectMany(source => source.MessageComparisons)];
@@ -93,7 +92,7 @@ public sealed class DaggerfallQuestOriginalSourceTests
     [Fact]
     public void Base_payload_publishes_the_complete_original_source_selection()
     {
-        using JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+        using JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json")));
         JsonElement quests = document.RootElement.GetProperty("questOriginalSources").GetProperty("quests");
 
         Assert.Equal(307, quests.GetArrayLength());
@@ -107,9 +106,9 @@ public sealed class DaggerfallQuestOriginalSourceTests
 
     private static DaggerfallQuestOriginalSourceSet BuildSources()
     {
-        string root = RepositoryRoot();
-        string questText = "/home/research/daggerfall-unity/Assets/StreamingAssets/Quests";
-        string tables = "/home/research/daggerfall-unity/Assets/StreamingAssets/Tables";
+        string root = TestData.RepositoryRoot;
+        string questText = TestData.Donor("Assets/StreamingAssets/Quests");
+        string tables = TestData.Donor("Assets/StreamingAssets/Tables");
         IReadOnlyList<SourceInventoryRow> manifest = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(root, "docs/coverage/content-source-manifest.csv")));
         IReadOnlyDictionary<string, int> messages = DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(tables, "Quests-StaticMessages.txt")), "Tables/Quests-StaticMessages.txt").Lookup;
         IReadOnlyDictionary<string, int> globals = DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(tables, "Quests-GlobalVars.txt")), "Tables/Quests-GlobalVars.txt", globals: true).Lookup;
@@ -131,24 +130,14 @@ public sealed class DaggerfallQuestOriginalSourceTests
         }
 
         DaggerfallQuestPack rewritten = DaggerfallQuestPackBuilder.Build(documents, failures, "donor/StreamingAssets/Quests", new byte[bytes], manifest);
-        return DaggerfallQuestOriginalSourceBuilder.Build(Path.Combine(root, "local/arena2"), ReadInventory(root), rewritten);
+        return DaggerfallQuestOriginalSourceBuilder.Build(TestData.CorpusRoot, ReadInventory(), rewritten);
     }
 
-    private static QuestSourceInventory ReadInventory(string root) => QuestSourceInventory.Enumerate(
-        Directory.EnumerateFiles(Path.Combine(root, "local/arena2"))
+    private static QuestSourceInventory ReadInventory() => QuestSourceInventory.Enumerate(
+        Directory.EnumerateFiles(TestData.CorpusRoot)
             .Where(path => path.EndsWith(QuestSourceInventory.BinaryExtension, StringComparison.OrdinalIgnoreCase)
                 || path.EndsWith(QuestSourceInventory.ResourcesExtension, StringComparison.OrdinalIgnoreCase))
             .Select(Path.GetFileName)!, "local/arena2");
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md"))) return current.FullName;
-        }
-
-        throw new InvalidOperationException("repository root not found");
-    }
 
     private static void WriteUInt16(byte[] bytes, int offset, ushort value)
     {

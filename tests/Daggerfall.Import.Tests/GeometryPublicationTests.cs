@@ -13,9 +13,9 @@ namespace Daggerfall.Import.Tests;
 public sealed class GeometryPublicationTests
 {
     private static readonly Lazy<Arch3dMeshInventory> Archive = new(() =>
-        Arch3dInventoryReader.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/ARCH3D.BSA")), "local/arena2/ARCH3D.BSA"));
+        Arch3dInventoryReader.Read(File.ReadAllBytes(TestData.Corpus("ARCH3D.BSA")), "local/arena2/ARCH3D.BSA"));
 
-    [Fact]
+    [CorpusFact]
     public void Publishes_one_artifact_per_referenced_mesh_with_its_material_links()
     {
         // Mesh 55000 is a door model the shipped plan references; it is read from the real archive so the
@@ -49,13 +49,13 @@ public sealed class GeometryPublicationTests
         Assert.Equal(10251 - 1 - 14, publication.Summary.Unused);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Preserves_a_material_reference_the_corpus_cannot_serve()
     {
         // Texture archive 34 is one of the leaves the corpus does not supply, and no leaf carries a record
         // this high. Neither becomes another texture: the reference stays what it is, with the reason.
         TextureLeafInventory textures = TextureLeafInventory.Enumerate(
-            [(0, "TEXTURE.000", File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/TEXTURE.000")))],
+            [(0, "TEXTURE.000", File.ReadAllBytes(TestData.Corpus("TEXTURE.000")))],
             "local/arena2");
         GeometryPublication missing = Publish(["55000"], textures);
 
@@ -71,14 +71,14 @@ public sealed class GeometryPublicationTests
         Assert.True(missing.Meshes[0].Triangles > 0);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Reports_a_referenced_mesh_the_archive_cannot_serve()
     {
         // A number no record carries, a number whose record cannot be decoded, and a number the archive
         // carries but the mesh declares no drawable plane for: each is a reference, not a substitute.
         // The published case carries a real mesh record; the other two are the corpus's own bytes with the
         // record made unreadable, and with its plane count zeroed so nothing is drawable.
-        byte[] real = File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/ARCH3D.BSA"));
+        byte[] real = File.ReadAllBytes(TestData.Corpus("ARCH3D.BSA"));
         Arch3dMeshRecord source = Archive.Value.Records.First(value => value.RecordId == 55000);
         byte[] payload = real.AsSpan((int)source.Offset, source.ByteLength).ToArray();
         byte[] planeless = (byte[])payload.Clone();
@@ -109,7 +109,7 @@ public sealed class GeometryPublicationTests
         Assert.Equal(1, publication.Summary.Published);
     }
 
-    [Fact]
+    [CorpusFact]
     public void The_index_states_what_was_published_and_what_could_not_be()
     {
         GeometryPublication publication = Publish(["55000", "999999"], Textures());
@@ -128,7 +128,7 @@ public sealed class GeometryPublicationTests
         Assert.Equal(publication.Meshes.Select(mesh => $"{mesh.RelativePath}"), index.DependsOnArtifactIds.Select(id => publication.Artifacts.Single(artifact => artifact.Id == id).RelativePath));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Publishes_the_same_bytes_and_addresses_every_time()
     {
         // Repeated imports have to agree, because a pack that changes its addresses without changing its
@@ -144,7 +144,7 @@ public sealed class GeometryPublicationTests
             second.Artifacts.Select(artifact => (artifact.RelativePath, artifact.ContentDigest.Value)));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Every_triangle_indexes_vertices_the_artifact_carries()
     {
         // Bounds are a property of the mesh contract, and the publication has to hold its own output to
@@ -165,7 +165,7 @@ public sealed class GeometryPublicationTests
         }
     }
 
-    [Fact]
+    [CorpusFact]
     public void Reports_a_texture_record_that_declares_nothing_to_bind()
     {
         // The leaf parsed, which is not the same as its record being bindable: eight records in the corpus
@@ -186,7 +186,7 @@ public sealed class GeometryPublicationTests
         // decoded leaf is checked against its own source bytes: a record the owner calls readable has a
         // frame that decodes, and one it cannot read says why.
         ReadOnlyMemory<byte> ReadTextureBytes(TextureLeafRecord leaf) =>
-            File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2", leaf.Path));
+            File.ReadAllBytes(TestData.Corpus(leaf.Path));
         TextureLeafRecord[] decoded = [.. textures.Decoded];
         int checkedRecords = CrossCheckTextureReadability(decoded, ReadTextureBytes);
         int expectedCheckedRecords = decoded.Sum(leaf => leaf.RecordFacts.Count);
@@ -213,7 +213,7 @@ public sealed class GeometryPublicationTests
         Assert.False(textures.TryGetRecord(34, 0, out _));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Reports_a_material_whose_texture_record_cannot_be_read()
     {
         // The leaf proves a record's first frame decodes before a material is called bindable, and the corpus
@@ -250,7 +250,7 @@ public sealed class GeometryPublicationTests
         Assert.Empty(readable.UnresolvedMaterials);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Reports_a_material_whose_texture_record_declares_no_extent()
     {
         // The guard's sub-branches are told apart by what the record itself states, so the record that
@@ -277,7 +277,7 @@ public sealed class GeometryPublicationTests
         Assert.Equal(extentless, Assert.Single(publication.UnresolvedMaterials));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Publishes_a_number_once_however_its_spelling_arrives()
     {
         // One number, one spelling in the publication: a pack that spells a missing number two ways cannot
@@ -292,7 +292,7 @@ public sealed class GeometryPublicationTests
             second.Artifacts.Select(artifact => (artifact.RelativePath, artifact.ContentDigest.Value)));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_an_index_that_does_not_describe_the_records()
     {
         // The index is what a consumer reads, so it is parsed and compared rather than trusted.
@@ -342,7 +342,7 @@ public sealed class GeometryPublicationTests
         Assert.Equal(2F, MeshGeometry.Bounds(vertices).Maximum.X);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_summary_the_records_do_not_support_even_when_the_index_agrees()
     {
         // The index comparison fires first for an index that disagrees with the section, so the rules that
@@ -373,10 +373,10 @@ public sealed class GeometryPublicationTests
         Assert.Contains("index does not describe the records", Assert.Throws<InvalidOperationException>(() => (publication with { Artifacts = [.. publication.Artifacts.Where(artifact => artifact.RelativePath != GeometryPublication.IndexRelativePath), foreign] }).Validate()).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_reference_that_is_not_a_mesh_number()
     {
-        byte[] archive = File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/ARCH3D.BSA"));
+        byte[] archive = File.ReadAllBytes(TestData.Corpus("ARCH3D.BSA"));
         GeometryPublicationBuilder.Create(new GeometryPublicationRequest(Archive.Value, archive, ["55000"], Textures()))
             .Validate();
 
@@ -384,7 +384,7 @@ public sealed class GeometryPublicationTests
             new GeometryPublicationRequest(Archive.Value, archive, ["mesh/9004"], Textures()))).Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_publication_whose_claims_do_not_hold_together()
     {
         GeometryPublication publication = Publish(["55000"], Textures());
@@ -407,7 +407,7 @@ public sealed class GeometryPublicationTests
     /// </summary>
     private static string[] ReferencedByTheShippedPlan()
     {
-        using JsonDocument pack = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+        using JsonDocument pack = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json")));
         string[] blocks = ["B0000003.RDB", "B0000006.RDB", "B0000009.RDB", "B0000012.RDB", "S0000999.RDB"];
         return [.. pack.RootElement.GetProperty("blocks").GetProperty("records").EnumerateArray()
             .Where(record => blocks.Contains(record.GetProperty("sourceKey").GetString(), StringComparer.Ordinal))
@@ -417,7 +417,7 @@ public sealed class GeometryPublicationTests
             .OrderBy(model => model, StringComparer.Ordinal)];
     }
 
-    [Fact]
+    [CorpusFact]
     public void Publishes_the_geometry_the_shipped_plan_references()
     {
         // The corpus-level check: the meshes the published dungeon's own blocks name are all servable, and
@@ -447,7 +447,7 @@ public sealed class GeometryPublicationTests
     }
 
     private static GeometryPublication Publish(IReadOnlyList<string> referenced, TextureLeafInventory textures) =>
-        GeometryPublicationBuilder.Create(new GeometryPublicationRequest(Archive.Value, File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/ARCH3D.BSA")), referenced, textures));
+        GeometryPublicationBuilder.Create(new GeometryPublicationRequest(Archive.Value, File.ReadAllBytes(TestData.Corpus("ARCH3D.BSA")), referenced, textures));
 
     /// <summary>Checks each supplied leaf's recorded frame readability against bytes from its named source.</summary>
     private static int CrossCheckTextureReadability(
@@ -491,7 +491,7 @@ public sealed class GeometryPublicationTests
 
     /// <summary>The corpus's texture leaves, which is what a material reference resolves against.</summary>
     private static TextureLeafInventory Textures(params (int Id, string Path, ReadOnlyMemory<byte> Bytes)[] supplied) => TextureLeafInventory.Enumerate(
-        Directory.EnumerateFiles(Path.Combine(RepositoryRoot(), "local/arena2"), "TEXTURE.*")
+        Directory.EnumerateFiles(TestData.CorpusRoot, "TEXTURE.*")
             .Select(path => (int.Parse(Path.GetFileName(path)["TEXTURE.".Length..]), Path.GetFileName(path), (ReadOnlyMemory<byte>)File.ReadAllBytes(path)))
             .Concat(supplied),
         "local/arena2");
@@ -590,18 +590,5 @@ public sealed class GeometryPublicationTests
         }
 
         return bytes;
-    }
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
     }
 }

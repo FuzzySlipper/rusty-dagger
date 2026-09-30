@@ -57,13 +57,12 @@ public sealed class DaggerfallWorldGridsTests
         Assert.Throws<InvalidOperationException>(() => DaggerfallWorldGridsBuilder.BuildClimate(CreateStripedPak(223, 224), "local/arena2/CLIMATE.PAK", []));
     }
 
-    [Fact]
+    [CorpusFact("CLIMATE.PAK", "POLITIC.PAK")]
     public void Reads_both_supplied_grids_end_to_end()
     {
-        string arena2 = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../local/arena2"));
-        if (!File.Exists(Path.Combine(arena2, "CLIMATE.PAK")) || !File.Exists(Path.Combine(arena2, "POLITIC.PAK"))) return;
+        string arena2 = TestData.CorpusRoot;
 
-        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv")));
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")));
         DaggerfallClimateGrid climate = DaggerfallWorldGridsBuilder.BuildClimate(File.ReadAllBytes(Path.Combine(arena2, "CLIMATE.PAK")), "local/arena2/CLIMATE.PAK", inventory);
         DaggerfallPoliticGrid politic = DaggerfallWorldGridsBuilder.BuildPolitic(File.ReadAllBytes(Path.Combine(arena2, "POLITIC.PAK")), "local/arena2/POLITIC.PAK", inventory);
         climate.Validate();
@@ -134,17 +133,4 @@ public sealed class DaggerfallWorldGridsTests
         new SourceInventoryRow("CNT-002.file.CLIMATE.PAK", "file", "CNT-002", "source-file", "local/arena2/CLIMATE.PAK", "CLIMATE", "imported", string.Empty),
         new SourceInventoryRow("CNT-003.file.POLITIC.PAK", "file", "CNT-003", "source-file", "local/arena2/POLITIC.PAK", "POLITIC", "imported", string.Empty),
     ];
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("repository root not found");
-    }
 }

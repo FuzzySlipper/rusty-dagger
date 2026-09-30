@@ -81,7 +81,7 @@ public sealed class DaggerfallReferenceCatalogTests
 
     private static ProductContent Content(Action<JsonObject>? change)
     {
-        string contentRoot = Path.Combine(RepositoryRoot(), "content");
+        string contentRoot = Path.Combine(TestData.RepositoryRoot, "content");
         ProductContentFile[] files = [.. Directory.GetFiles(Path.Combine(contentRoot, "worldrpg"), "*", SearchOption.AllDirectories)
             .Select(path =>
             {
@@ -260,18 +260,5 @@ public sealed class DaggerfallReferenceCatalogTests
 
     private static DaggerfallDefinitions ReadPack() => TestPayload.Definitions;
 
-    private static string PackPath() => Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json");
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
-    }
+    private static string PackPath() => Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json");
 }

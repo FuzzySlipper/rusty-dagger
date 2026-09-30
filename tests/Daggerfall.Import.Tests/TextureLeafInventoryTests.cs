@@ -11,7 +11,7 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 public sealed class TextureLeafInventoryTests
 {
-    [Fact]
+    [CorpusFact]
     public void Enumerates_every_documented_leaf_with_its_disposition()
     {
         TextureLeafInventory inventory = ReadInventory();
@@ -24,7 +24,7 @@ public sealed class TextureLeafInventoryTests
         Assert.Equal(469, inventory.Decoded.Count());
     }
 
-    [Fact]
+    [CorpusFact]
     public void Retains_every_absent_leaf_id_as_a_source_fact()
     {
         TextureLeafInventory inventory = ReadInventory();
@@ -37,7 +37,7 @@ public sealed class TextureLeafInventoryTests
         Assert.All(inventory.NotSupplied, leaf => Assert.Equal(string.Empty, leaf.Path));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Retains_a_supplied_leaf_that_does_not_parse_with_the_decoders_reason()
     {
         TextureLeafInventory inventory = ReadInventory();
@@ -53,7 +53,7 @@ public sealed class TextureLeafInventoryTests
         Assert.Contains(inventory.Malformed, leaf => leaf.Id == 436 && leaf.Note.Contains("no addressable frames", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Counts_the_records_and_frames_the_arable_leaves_carry()
     {
         TextureLeafInventory inventory = ReadInventory();
@@ -66,12 +66,11 @@ public sealed class TextureLeafInventoryTests
         Assert.Equal(TextureLeafDisposition.Decoded, leaf.Disposition);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Validates_frame_bounds_and_palette_indices()
     {
-        string root = RepositoryRoot();
-        TextureArchive archive = TextureArchive.Parse(File.ReadAllBytes(Path.Combine(root, "local/arena2/TEXTURE.002")), "TEXTURE.002");
-        Arena2Palette palette = PaletteDecoder.Decode(File.ReadAllBytes(Path.Combine(root, "local/arena2/PAL.PAL")), "PAL.PAL");
+        TextureArchive archive = TextureArchive.Parse(File.ReadAllBytes(TestData.Corpus("TEXTURE.002")), "TEXTURE.002");
+        Arena2Palette palette = PaletteDecoder.Decode(File.ReadAllBytes(TestData.Corpus("PAL.PAL")), "PAL.PAL");
 
         for (int record = 0; record < archive.RecordCount; record++)
         {
@@ -97,12 +96,11 @@ public sealed class TextureLeafInventoryTests
         Assert.Throws<ArgumentOutOfRangeException>(() => archive.DecodeFrame(0, archive.GetRecordInfo(0).FrameCount));
     }
 
-    [Fact]
+    [CorpusFact]
     public void The_palette_contents_reach_the_encoded_image()
     {
-        string root = RepositoryRoot();
-        TextureArchive archive = TextureArchive.Parse(File.ReadAllBytes(Path.Combine(root, "local/arena2/TEXTURE.002")), "TEXTURE.002");
-        Arena2Palette palette = PaletteDecoder.Decode(File.ReadAllBytes(Path.Combine(root, "local/arena2/PAL.PAL")), "PAL.PAL");
+        TextureArchive archive = TextureArchive.Parse(File.ReadAllBytes(TestData.Corpus("TEXTURE.002")), "TEXTURE.002");
+        Arena2Palette palette = PaletteDecoder.Decode(File.ReadAllBytes(TestData.Corpus("PAL.PAL")), "PAL.PAL");
         IndexedTextureFrame frame = archive.DecodeFrame(0, 0);
 
         // A 256-colour palette makes an index-range check vacuous, so the palette's own
@@ -130,16 +128,15 @@ public sealed class TextureLeafInventoryTests
 
         // And a frame's indices are its own: the same bytes under a different leaf label
         // used to select a different palette, so the id decides the palette now.
-        TextureArchive sameBytes = TextureArchive.Parse(File.ReadAllBytes(Path.Combine(root, "local/arena2/TEXTURE.002")), "TEXTURE.007");
+        TextureArchive sameBytes = TextureArchive.Parse(File.ReadAllBytes(TestData.Corpus("TEXTURE.002")), "TEXTURE.007");
         Assert.Equal(frame.Pixels.ToArray(), sameBytes.DecodeFrame(0, 0).Pixels.ToArray());
     }
 
-    [Fact]
+    [CorpusFact]
     public void Encodes_a_frame_to_identical_png_bytes_every_time()
     {
-        string root = RepositoryRoot();
-        TextureArchive archive = TextureArchive.Parse(File.ReadAllBytes(Path.Combine(root, "local/arena2/TEXTURE.002")), "TEXTURE.002");
-        Arena2Palette palette = PaletteDecoder.Decode(File.ReadAllBytes(Path.Combine(root, "local/arena2/PAL.PAL")), "PAL.PAL");
+        TextureArchive archive = TextureArchive.Parse(File.ReadAllBytes(TestData.Corpus("TEXTURE.002")), "TEXTURE.002");
+        Arena2Palette palette = PaletteDecoder.Decode(File.ReadAllBytes(TestData.Corpus("PAL.PAL")), "PAL.PAL");
         IndexedTextureFrame frame = archive.DecodeFrame(0, 0);
 
         byte[] first = Encode(frame, palette);
@@ -150,14 +147,14 @@ public sealed class TextureLeafInventoryTests
         Assert.Equal([0x89, 0x50, 0x4e, 0x47], first[..4]);
     }
 
-    [Fact]
+    [CorpusFact]
     public void The_documented_inventory_carries_exactly_the_supplied_texture_leaves()
     {
         // The inventory is the authority for which leaves exist, so the corpus and the
         // document are checked against each other in both directions.
         TextureLeafInventory inventory = ReadInventory();
         HashSet<string> documented = [.. Daggerfall.Import.Publication.SourceManifestBuilder
-            .ReadInventory(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv")))
+            .ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")))
             .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, "CNT-018"))
             .Select(row => Path.GetFileName(row.PathOrPattern))];
         string[] supplied = [.. inventory.Leaves.Where(leaf => leaf.Path.Length != 0).Select(leaf => leaf.Path)];
@@ -180,7 +177,7 @@ public sealed class TextureLeafInventoryTests
         Assert.Throws<ArgumentException>(() => TextureLeafInventory.Enumerate([(2, "  ", new byte[64])], "fixture"));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_reference_to_a_leaf_the_corpus_does_not_carry()
     {
         TextureLeafInventory inventory = ReadInventory();
@@ -214,9 +211,8 @@ public sealed class TextureLeafInventoryTests
 
     private static TextureLeafInventory ReadInventory()
     {
-        string root = RepositoryRoot();
         List<(int Id, string Path, ReadOnlyMemory<byte> Bytes)> sources = [];
-        foreach (string path in Directory.GetFiles(Path.Combine(root, "local/arena2"), "TEXTURE.*"))
+        foreach (string path in Directory.GetFiles(TestData.CorpusRoot, "TEXTURE.*"))
         {
             string name = Path.GetFileName(path);
             sources.Add((int.Parse(name["TEXTURE.".Length..], System.Globalization.CultureInfo.InvariantCulture), name, File.ReadAllBytes(path)));
@@ -225,18 +221,5 @@ public sealed class TextureLeafInventoryTests
         // No explicit solid palette: the decoder infers the palette each archive uses, and
         // forcing one would override that inference and change what parses.
         return TextureLeafInventory.Enumerate(sources, "local/arena2");
-    }
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
     }
 }

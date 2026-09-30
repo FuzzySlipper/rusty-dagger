@@ -224,8 +224,6 @@ public sealed class DaggerfallTransportTests
 
         internal Fixture(DurableIdentityState? restoredIdentities = null)
         {
-            DirectoryInfo? directory = new(AppContext.BaseDirectory);
-            while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "content/worldrpg/payloads/daggerfall.base.json"))) directory = directory.Parent;
             Definitions = TestPayload.Definitions;
             _items = Definitions.Items.Values.Concat(Definitions.TemplateItems.Values)
                 .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);

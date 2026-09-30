@@ -6,14 +6,14 @@ namespace Daggerfall.Import.Tests;
 /// <summary>Biography questionnaires: twelve numbered questions, lettered answers, classified effects.</summary>
 public sealed class BiogQuestionnaireReaderTests
 {
-    [Fact]
+    [CorpusFact]
     public void Reads_all_supplied_questionnaires_end_to_end()
     {
         for (int cls = 0; cls <= 17; cls++)
         {
             string name = $"BIOG{cls:D2}T0.TXT";
             BiogQuestionnaire questionnaire = BiogQuestionnaireReader.Read(
-                File.ReadAllText(Corpus(name)), cls, 0, $"local/arena2/{name}");
+                File.ReadAllText(TestData.Corpus(name)), cls, 0, $"local/arena2/{name}");
 
             Assert.Equal(cls, questionnaire.ClassIndex);
             Assert.Equal(0, questionnaire.BiographyIndex);
@@ -31,7 +31,7 @@ public sealed class BiogQuestionnaireReaderTests
         }
     }
 
-    [Fact]
+    [CorpusFact]
     public void Classifies_every_supplied_effect_and_names_the_warnings()
     {
         List<string> warnings = [];
@@ -41,7 +41,7 @@ public sealed class BiogQuestionnaireReaderTests
         for (int cls = 0; cls <= 17; cls++)
         {
             BiogQuestionnaire questionnaire = BiogQuestionnaireReader.Read(
-                File.ReadAllText(Corpus($"BIOG{cls:D2}T0.TXT")), cls, 0, "corpus");
+                File.ReadAllText(TestData.Corpus($"BIOG{cls:D2}T0.TXT")), cls, 0, "corpus");
             warnings.AddRange(questionnaire.Warnings);
             foreach (BiogEffect effect in questionnaire.Questions.SelectMany(question => question.Answers).SelectMany(answer => answer.Effects))
             {
@@ -64,10 +64,10 @@ public sealed class BiogQuestionnaireReaderTests
             warning));
     }
 
-    [Fact]
+    [CorpusFact("BIOG00T0.TXT")]
     public void Refuses_truncation_and_parses_an_explicit_backstory_id()
     {
-        string corpus = File.ReadAllText(Corpus("BIOG00T0.TXT"));
+        string corpus = File.ReadAllText(TestData.Corpus("BIOG00T0.TXT"));
         string cut = string.Join("\n", corpus.Split('\n').Take(10));
         Assert.Throws<Arena2FormatException>(() => BiogQuestionnaireReader.Read(cut, 0, 0, "fixture/BIOG00T0.TXT"));
         Assert.Throws<Arena2FormatException>(() => BiogQuestionnaireReader.Read(string.Empty, 0, 0, "fixture/BIOG00T0.TXT"));
@@ -104,18 +104,5 @@ public sealed class BiogQuestionnaireReaderTests
         Assert.Equal(12, questionnaire.Questions.Count);
         Assert.Equal(10, questionnaire.Questions[9].Number);
         Assert.Empty(questionnaire.Questions[8].Answers[0].Effects);
-    }
-
-    private static string Corpus(string name) => Path.Combine(RepositoryRoot(), "local/arena2", name);
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md")))
-        {
-            directory = directory.Parent;
-        }
-
-        return directory?.FullName ?? throw new InvalidOperationException("repository root not found");
     }
 }

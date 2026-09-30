@@ -8,7 +8,7 @@ namespace Daggerfall.Import.Tests;
 
 public sealed class CinematicVidConversionTests
 {
-    [Fact]
+    [CorpusFact("DAG2.VID")]
     public void Dag2_png_timeline_is_accepted_by_ffmpeg()
     {
         string directory = Path.Combine(Path.GetTempPath(), "dagger-vid-" + Guid.NewGuid().ToString("N"));
@@ -16,8 +16,7 @@ public sealed class CinematicVidConversionTests
         {
             MethodInfo decode = typeof(CinematicMediaPublisher).GetMethod("DecodeVidForConversion", BindingFlags.NonPublic | BindingFlags.Static)
                 ?? throw new InvalidOperationException("VID conversion decoder was not found.");
-            string source = Path.Combine(RepositoryRoot(), "local", "arena2", "DAG2.VID");
-            Assert.True(File.Exists(source), "The supplied VID corpus is required for this conversion test.");
+            string source = TestData.Corpus("DAG2.VID");
             _ = (VidDecodeSummary?)decode.Invoke(null, [File.ReadAllBytes(source), "DAG2.VID", directory]);
 
             ProcessStartInfo start = new("ffmpeg") { UseShellExecute = false, RedirectStandardError = true };
@@ -34,12 +33,5 @@ public sealed class CinematicVidConversionTests
         {
             if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
         }
-    }
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md"))) directory = directory.Parent;
-        return directory?.FullName ?? throw new InvalidOperationException("repository root not found");
     }
 }

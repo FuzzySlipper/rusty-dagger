@@ -35,8 +35,6 @@ public sealed class DaggerfallQuestWorldTablesTests
 
     internal static DaggerfallDefinitions Content()
     {
-        DirectoryInfo? root = new(AppContext.BaseDirectory);
-        while (root is not null && !File.Exists(Path.Combine(root.FullName, "AGENTS.md"))) root = root.Parent;
         return TestPayload.Definitions;
     }
 }

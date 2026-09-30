@@ -6,11 +6,11 @@ namespace Daggerfall.Import.Tests;
 /// <summary>NAMEGEN.DAT layout: eleven banks of up to six fragment sets under an offset/count header.</summary>
 public sealed class NameGenReaderTests
 {
-    [Fact]
+    [CorpusFact]
     public void Reads_the_supplied_banks_sets_and_fragments()
     {
         NameGenCatalog catalog = NameGenReader.Read(
-            File.ReadAllBytes(Corpus("NAMEGEN.DAT")), "local/arena2/NAMEGEN.DAT");
+            File.ReadAllBytes(TestData.Corpus("NAMEGEN.DAT")), "local/arena2/NAMEGEN.DAT");
 
         Assert.Equal(11, catalog.Banks.Count);
         // The donor's curated database carries these tables fragment for fragment; the bank order
@@ -27,10 +27,10 @@ public sealed class NameGenReaderTests
         Assert.Equal(["Lord", "Count", "Baron", "Viscount", "Marquis", "Duke"], catalog.Banks[10].Sets[3]?.Parts);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_short_header_a_gapped_table_and_non_ascii()
     {
-        byte[] corpus = File.ReadAllBytes(Corpus("NAMEGEN.DAT"));
+        byte[] corpus = File.ReadAllBytes(TestData.Corpus("NAMEGEN.DAT"));
         Assert.Throws<Arena2FormatException>(() => NameGenReader.Read(corpus.AsSpan(0, 100), "fixture/NAMEGEN.DAT"));
 
         // A set that starts past the previous set's end leaves untabled bytes no consumer addresses.
@@ -45,18 +45,5 @@ public sealed class NameGenReaderTests
         byte[] sour = (byte[])corpus.Clone();
         sour[528] = 0xC3;
         Assert.Throws<Arena2FormatException>(() => NameGenReader.Read(sour, "fixture/NAMEGEN.DAT"));
-    }
-
-    private static string Corpus(string name) => Path.Combine(RepositoryRoot(), "local/arena2", name);
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md")))
-        {
-            directory = directory.Parent;
-        }
-
-        return directory?.FullName ?? throw new InvalidOperationException("repository root not found");
     }
 }

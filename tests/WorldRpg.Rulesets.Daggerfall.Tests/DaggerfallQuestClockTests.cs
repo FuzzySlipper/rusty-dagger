@@ -60,7 +60,6 @@ public sealed class DaggerfallQuestClockTests
     [Fact]
     public void Published_compiled_quest_clock_lines_have_no_unclaimed_option_text()
     {
-        string root = RepositoryRoot();
         DaggerfallDefinitions definitions = TestPayload.Definitions;
 
         foreach (DaggerfallQuestSourceDefinition source in definitions.QuestSources.Quests.Values.Where(source => source.Disposition == DaggerfallQuestDisposition.Compiled))
@@ -162,15 +161,4 @@ public sealed class DaggerfallQuestClockTests
 
     private static DaggerfallQuestBlockDefinition Clock(int line, string value) => Block("clock", line, value);
     private static DaggerfallQuestBlockDefinition Block(string kind, int line, params string[] lines) => new(kind, line, lines, null);
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? current = new(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "content/worldrpg/payloads/daggerfall.base.json"))) return current.FullName;
-            current = current.Parent;
-        }
-        throw new DirectoryNotFoundException("The repository content root was not found.");
-    }
 }

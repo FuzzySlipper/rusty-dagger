@@ -115,18 +115,5 @@ public sealed class DaggerfallNamesRumorsBiographiesTests
 
     private static JsonObject Biographies(JsonObject payload) => payload["biographies"]!.AsObject();
 
-    private static string PackPath() => Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json");
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("repository root not found");
-    }
+    private static string PackPath() => Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json");
 }

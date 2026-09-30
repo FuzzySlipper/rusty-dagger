@@ -12,7 +12,7 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 public sealed class DaggerfallCatalogTests
 {
-    [Fact]
+    [CorpusFact]
     public void Decodes_a_supplied_career_record()
     {
         ClassCfgRecord career = ClassCfgDecoder.Decode(ReadClass("CLASS00.CFG"), "CLASS00.CFG");
@@ -28,10 +28,10 @@ public sealed class DaggerfallCatalogTests
         Assert.Equal(65, career.Attributes[2]);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Decodes_every_supplied_career_record()
     {
-        string[] files = [.. Directory.EnumerateFiles(Path.Combine(RepositoryRoot(), "local/arena2"), "CLASS*.CFG").Order(StringComparer.Ordinal)];
+        string[] files = [.. Directory.EnumerateFiles(TestData.CorpusRoot, "CLASS*.CFG").Order(StringComparer.Ordinal)];
 
         Assert.Equal(19, files.Length);
         foreach (string file in files)
@@ -52,7 +52,7 @@ public sealed class DaggerfallCatalogTests
         Assert.Contains("74", error.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void The_decoder_reports_a_skill_slot_outside_the_classic_space()
     {
         // The carrier is well formed and the index space is what the value exceeds, so the
@@ -72,7 +72,7 @@ public sealed class DaggerfallCatalogTests
         Assert.Contains("40", error.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Rejects_a_career_record_without_a_printable_name()
     {
         byte[] bytes = ReadClass("CLASS00.CFG");
@@ -83,7 +83,7 @@ public sealed class DaggerfallCatalogTests
         Assert.Equal(28, error.Offset);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Builds_the_documented_catalogs_from_the_supplied_corpus()
     {
         DaggerfallCatalogs catalogs = BuildFromRepository();
@@ -116,7 +116,7 @@ public sealed class DaggerfallCatalogTests
             catalogs.Careers.Single(career => career.Id == "class00").ForbiddenEquipment);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_career_whose_whole_skill_group_names_no_skill()
     {
         // The terminal value is legal in a slot, but a carrier whose primary group is all
@@ -134,7 +134,7 @@ public sealed class DaggerfallCatalogTests
         Assert.Contains("primary", error.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Everything_the_builder_publishes_is_something_the_runtime_reads()
     {
         // Build-to-read totality: the offline validation is the same contract the runtime
@@ -151,7 +151,7 @@ public sealed class DaggerfallCatalogTests
         });
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_career_file_whose_name_is_only_a_suffix_of_a_documented_one()
     {
         // A suffix match would have cited SS00.CFG as the CLASS00 carrier, publishing
@@ -162,7 +162,7 @@ public sealed class DaggerfallCatalogTests
         Assert.Contains("SS00.CFG", error.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_to_publish_an_empty_catalog()
     {
         IReadOnlySet<string> inventoryIds = ReadInventory().Select(row => row.Id).ToHashSet(StringComparer.Ordinal);
@@ -179,7 +179,7 @@ public sealed class DaggerfallCatalogTests
         Assert.Contains("empty catalog", builderError.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Reports_a_flag_byte_out_of_range_as_a_byte_not_as_an_element_mismatch()
     {
         DaggerfallCatalogs catalogs = BuildFromRepository();
@@ -195,7 +195,7 @@ public sealed class DaggerfallCatalogTests
         Assert.Contains("one byte", error.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void The_published_pack_lists_exactly_the_source_records_it_cites()
     {
         System.Text.Json.Nodes.JsonArray sources = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(PackPath()))!
@@ -207,7 +207,7 @@ public sealed class DaggerfallCatalogTests
             sources.Select(value => value!.GetValue<string>()).Order(StringComparer.Ordinal));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_career_carrier_the_documented_inventory_does_not_carry()
     {
         IReadOnlyList<SourceInventoryRow> inventory = [.. ReadInventory().Where(row => row.Id != "CNT-010.file.CLASS18.CFG")];
@@ -218,7 +218,7 @@ public sealed class DaggerfallCatalogTests
         Assert.Contains("CLASS18.CFG", error.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Publishes_resistance_and_immunity_elements_from_the_classic_effect_flags()
     {
         DaggerfallCatalogs catalogs = BuildFromRepository();
@@ -251,7 +251,7 @@ public sealed class DaggerfallCatalogTests
         }
     }
 
-    [Fact]
+    [CorpusFact]
     public void Publishes_the_classic_spell_point_multiplier_from_each_career_bitfield()
     {
         DaggerfallCatalogs catalogs = BuildFromRepository();
@@ -288,7 +288,7 @@ public sealed class DaggerfallCatalogTests
             .Single(value => value["id"]!.GetValue<string>() == "class12")["resistanceFlags"]!.GetValue<int>());
     }
 
-    [Fact]
+    [CorpusFact]
     public void The_published_catalogs_cover_every_pack_key_they_reference()
     {
         DaggerfallCatalogs catalogs = BuildFromRepository();
@@ -308,7 +308,7 @@ public sealed class DaggerfallCatalogTests
         Assert.Equal(publishedItems, catalogs.ItemTemplates.Select(item => item.Id));
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_catalog_citing_a_source_the_inventory_does_not_carry()
     {
         DaggerfallCatalogs catalogs = BuildFromRepository();
@@ -323,7 +323,7 @@ public sealed class DaggerfallCatalogTests
         Assert.Contains("CNT-999", error.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_a_career_naming_a_skill_the_catalog_does_not_carry()
     {
         DaggerfallCatalogs catalogs = BuildFromRepository();
@@ -339,7 +339,7 @@ public sealed class DaggerfallCatalogTests
         Assert.Contains("not-a-skill", error.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Refuses_catalog_keys_whose_indices_are_not_contiguous()
     {
         DaggerfallCatalogs catalogs = BuildFromRepository();
@@ -359,14 +359,14 @@ public sealed class DaggerfallCatalogTests
         ReadInventory(), VocabularyAttributes(), VocabularySkills(), ReadCareers(), EnemyIds(), ItemIds());
 
     private static IReadOnlyList<SourceInventoryRow> ReadInventory() =>
-        SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv")));
+        SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")));
 
     private static List<(string FileName, byte[] Bytes)> ReadCareers() =>
-        [.. Directory.EnumerateFiles(Path.Combine(RepositoryRoot(), "local/arena2"), "CLASS*.CFG")
+        [.. Directory.EnumerateFiles(TestData.CorpusRoot, "CLASS*.CFG")
             .Order(StringComparer.Ordinal)
             .Select(path => (Path.GetFileName(path), File.ReadAllBytes(path)))];
 
-    private static byte[] ReadClass(string name) => File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2", name));
+    private static byte[] ReadClass(string name) => File.ReadAllBytes(TestData.Corpus(name));
 
     private static List<string> VocabularyAttributes() =>
         [.. System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(PackPath()))!["vocabulary"]!["attributes"]!.AsArray().Select(value => value!.GetValue<string>())];
@@ -382,18 +382,5 @@ public sealed class DaggerfallCatalogTests
     private static List<string> ItemIds() =>
         [.. System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(PackPath()))!["items"]!.AsArray().Select(value => value!.AsObject()["id"]!.GetValue<string>())];
 
-    private static string PackPath() => Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json");
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
-    }
+    private static string PackPath() => Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json");
 }

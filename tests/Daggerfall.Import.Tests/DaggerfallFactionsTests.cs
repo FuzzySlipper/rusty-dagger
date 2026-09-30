@@ -48,13 +48,12 @@ public sealed class DaggerfallFactionsTests
         Assert.Throws<InvalidOperationException>(() => DaggerfallFactionsBuilder.Build("#1\nname: X\n", "local/arena2/FACTION.TXT", [1], []));
     }
 
-    [Fact]
+    [CorpusFact("FACTION.TXT")]
     public void Reads_all_supplied_factions_end_to_end()
     {
-        string arena2 = Arena2Directory();
-        if (!File.Exists(Path.Combine(arena2, "FACTION.TXT"))) return;
+        string arena2 = TestData.CorpusRoot;
 
-        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv")));
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")));
         DaggerfallFactions factions = DaggerfallFactionsBuilder.Build(
             File.ReadAllText(Path.Combine(arena2, "FACTION.TXT")),
             "local/arena2/FACTION.TXT",
@@ -88,19 +87,4 @@ public sealed class DaggerfallFactionsTests
     [
         new SourceInventoryRow("CNT-013", "family", "CNT-013", "factions", "local/arena2/FACTION.TXT", string.Empty, "pending-import", string.Empty),
     ];
-
-    private static string Arena2Directory() => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../local/arena2"));
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("repository root not found");
-    }
 }

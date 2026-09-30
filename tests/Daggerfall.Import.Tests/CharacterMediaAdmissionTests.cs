@@ -72,18 +72,7 @@ public sealed class CharacterMediaAdmissionTests
         || name.EndsWith(".CIF", StringComparison.OrdinalIgnoreCase)
         || name.EndsWith(".IMG", StringComparison.OrdinalIgnoreCase);
 
-    private static string ManifestPath() => Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv");
+    private static string ManifestPath() => Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv");
 
-    private static string PackPath() => Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json");
-
-    private static string RepositoryRoot()
-    {
-        string? directory = AppContext.BaseDirectory;
-        while (directory is not null && !File.Exists(Path.Combine(directory, "AGENTS.md")))
-        {
-            directory = Path.GetDirectoryName(directory);
-        }
-
-        return directory ?? throw new InvalidOperationException("The repository root was not found above the test output directory.");
-    }
+    private static string PackPath() => Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json");
 }

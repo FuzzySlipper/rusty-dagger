@@ -10,11 +10,10 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 public sealed class MapArtInventoryTests
 {
-    [Fact]
+    [CorpusFact]
     public void Enumerates_the_documented_set_with_donor_bindings()
     {
-        string arena2 = Arena2Directory();
-        if (!Directory.Exists(arena2)) return;
+        string arena2 = TestData.CorpusRoot;
 
         MapArtInventory inventory = Enumerate(arena2);
 
@@ -102,6 +101,4 @@ public sealed class MapArtInventoryTests
         Assert.Equal(MapArtDisposition.Decoded, record!.Disposition);
         return (record.Width, record.Height);
     }
-
-    private static string Arena2Directory() => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../local/arena2"));
 }

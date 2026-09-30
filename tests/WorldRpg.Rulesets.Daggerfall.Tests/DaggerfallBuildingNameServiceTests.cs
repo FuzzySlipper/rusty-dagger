@@ -140,7 +140,7 @@ public sealed class DaggerfallBuildingNameServiceTests
 
     private static (DaggerfallDefinitions Definitions, DaggerfallBlocksSnapshot Blocks) ReadInputs()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         return (
             TestPayload.Definitions,
             DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.blocks.json"))));
@@ -168,12 +168,5 @@ public sealed class DaggerfallBuildingNameServiceTests
             uint value = ((state >> 16) & 0x7fffu) % request.UpperExclusive;
             return new Lcg15Receipt(state, value);
         }
-    }
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md"))) directory = directory.Parent;
-        return directory?.FullName ?? throw new InvalidOperationException("repository root not found");
     }
 }

@@ -13,7 +13,7 @@ public sealed class Arena2MagicReaderTests
 
     private const string MagicItemFile = "MAGIC.DEF";
 
-    [Fact]
+    [CorpusFact(SpellFile)]
     public void DecodesTheClassicSpellTableWithItsOwnRecordIdentities()
     {
         byte[] bytes = ReadArena2(SpellFile);
@@ -47,7 +47,7 @@ public sealed class Arena2MagicReaderTests
         Assert.Equal(4, levitate.Element);
     }
 
-    [Fact]
+    [CorpusFact(MagicItemFile)]
     public void DecodesTheClassicMagicItemTableAgainstItsOwnRecordCount()
     {
         byte[] bytes = ReadArena2(MagicItemFile);
@@ -63,7 +63,7 @@ public sealed class Arena2MagicReaderTests
         Assert.Equal(catalog.Items.Count, catalog.Items.Select(item => item.Index).Distinct().Count());
     }
 
-    [Fact]
+    [CorpusFact(SpellFile, MagicItemFile)]
     public void RefusesARecordTableThatDisagreesWithItsOwnLength()
     {
         byte[] spells = ReadArena2(SpellFile);
@@ -98,17 +98,5 @@ public sealed class Arena2MagicReaderTests
         Assert.Contains("empty", disposition.Reason, StringComparison.Ordinal);
     }
 
-    private static byte[] ReadArena2(string name)
-    {
-        string path = Path.Combine(RepositoryRoot(), "local", "arena2", name);
-        Assert.True(File.Exists(path), $"{name} is not staged at {path}; the classic corpus is required for this check.");
-        return File.ReadAllBytes(path);
-    }
-
-    private static string RepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md"))) directory = directory.Parent;
-        return directory?.FullName ?? throw new InvalidOperationException("The repository root was not found above the test output.");
-    }
+    private static byte[] ReadArena2(string name) => File.ReadAllBytes(TestData.Corpus(name));
 }

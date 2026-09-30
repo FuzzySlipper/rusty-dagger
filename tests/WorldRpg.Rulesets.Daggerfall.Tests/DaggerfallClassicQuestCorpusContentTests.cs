@@ -11,7 +11,7 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
     [Fact]
     public void Admits_each_published_category_and_derives_readiness_from_the_current_compiler()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         IReadOnlyDictionary<string, int> expected = new Dictionary<string, int>
         {
@@ -33,7 +33,7 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
     [Fact]
     public void Rejects_category_and_catalog_metadata_corruption_before_runtime_admission()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         JsonObject payload = JsonNode.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.temples.json")))!.AsObject();
         payload["categories"]![0]!["catalogGroup"] = "MagesGuild";
@@ -47,7 +47,7 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
     [Fact]
     public void Rejects_a_deleted_category_and_its_receipts_against_the_ruleset_contract()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         JsonObject payload = JsonNode.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.temples.json")))!.AsObject();
         JsonArray categories = payload["categories"]!.AsArray();
@@ -66,7 +66,7 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
     [Fact]
     public void Retains_vampire_and_nobility_special_cases_as_diagnostics_instead_of_excluding_sources()
     {
-        string root = RepositoryRoot();
+        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> vampire = DaggerfallClassicQuestCorpusContent.Read(
             new ProductContent(Array.Empty<ProductContentFile>()),
@@ -79,12 +79,5 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
         Assert.Contains(vampire, receipt => !receipt.Runnable && receipt.Diagnostics.Any(diagnostic => diagnostic.Reason.Contains("runner operation", StringComparison.Ordinal)));
         DaggerfallFightersGuildQuestRuntimeReceipt vampireClan = Assert.Single(nobility, receipt => receipt.Name == "R0C11Y28");
         Assert.Contains(vampireClan.Diagnostics, diagnostic => diagnostic.Line == 218 && diagnostic.Text.Contains("%vcn", StringComparison.Ordinal) && diagnostic.Reason.Contains("#8074", StringComparison.Ordinal));
-    }
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md"))) return current.FullName;
-        throw new InvalidOperationException("repository root not found");
     }
 }

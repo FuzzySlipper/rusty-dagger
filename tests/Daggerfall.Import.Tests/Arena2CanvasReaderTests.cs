@@ -10,19 +10,19 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 public sealed class Arena2CanvasReaderTests
 {
-    [Fact]
+    [CorpusFact("BANK01I1.IMG")]
     public void Reads_the_headerless_shape_the_file_length_establishes()
     {
         // 720 bytes is the documented 9x80 shape. Before the length table carried it, these
         // bytes had no reader at all, so the file was reported as unread rather than supplied.
-        Arena2CanvasSet canvases = Arena2CanvasReader.Read(File.ReadAllBytes(Corpus("BANK01I1.IMG")), "BANK01I1.IMG");
+        Arena2CanvasSet canvases = Arena2CanvasReader.Read(File.ReadAllBytes(TestData.Corpus("BANK01I1.IMG")), "BANK01I1.IMG");
 
         Assert.Equal(Arena2CanvasKind.HeaderlessCanvas, canvases.Kind);
         Arena2Canvas canvas = Assert.Single(canvases.Canvases);
         Assert.Equal(9, canvas.Width);
         Assert.Equal(80, canvas.Height);
         // The file is exactly its shape, which is why the whole file is the canvas.
-        Assert.Equal(new FileInfo(Corpus("BANK01I1.IMG")).Length, canvas.Width * canvas.Height);
+        Assert.Equal(new FileInfo(TestData.Corpus("BANK01I1.IMG")).Length, canvas.Width * canvas.Height);
     }
 
     [Fact]
@@ -96,20 +96,20 @@ public sealed class Arena2CanvasReaderTests
         Assert.Contains("IMG record path also refused it", canvases.Reason, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact("MAIN00I0.IMG")]
     public void Reads_one_img_record_with_the_offsets_its_header_declares()
     {
-        Arena2CanvasSet canvases = Arena2CanvasReader.Read(File.ReadAllBytes(Corpus("MAIN00I0.IMG")), "MAIN00I0.IMG");
+        Arena2CanvasSet canvases = Arena2CanvasReader.Read(File.ReadAllBytes(TestData.Corpus("MAIN00I0.IMG")), "MAIN00I0.IMG");
 
         Assert.Equal(Arena2CanvasKind.ImgRecord, canvases.Kind);
         Arena2Canvas canvas = Assert.Single(canvases.Canvases);
         Assert.Equal((0, 154, 320, 46), (canvas.XOffset, canvas.YOffset, canvas.Width, canvas.Height));
     }
 
-    [Fact]
+    [CorpusFact("INVE16I0.CIF")]
     public void Reads_a_cif_as_the_record_sequence_the_classic_reader_sees()
     {
-        Arena2CanvasSet canvases = Arena2CanvasReader.Read(File.ReadAllBytes(Corpus("INVE16I0.CIF")), "INVE16I0.CIF");
+        Arena2CanvasSet canvases = Arena2CanvasReader.Read(File.ReadAllBytes(TestData.Corpus("INVE16I0.CIF")), "INVE16I0.CIF");
 
         Assert.Equal(Arena2CanvasKind.ImgRecordSequence, canvases.Kind);
         Assert.Equal(11, canvases.Count);
@@ -118,27 +118,27 @@ public sealed class Arena2CanvasReaderTests
         Assert.True(canvases.Canvases.Select(canvas => (canvas.Width, canvas.Height)).Distinct().Count() > 1);
     }
 
-    [Fact]
+    [CorpusFact("FACE00I0.CIF", "FACES.CIF")]
     public void Reads_the_face_cifs_as_record_sequences_and_the_face_grid_as_its_cells()
     {
-        Arena2CanvasSet face = Arena2CanvasReader.Read(File.ReadAllBytes(Corpus("FACE00I0.CIF")), "FACE00I0.CIF");
+        Arena2CanvasSet face = Arena2CanvasReader.Read(File.ReadAllBytes(TestData.Corpus("FACE00I0.CIF")), "FACE00I0.CIF");
         Assert.Equal(Arena2CanvasKind.ImgRecordSequence, face.Kind);
         Assert.Equal(10, face.Count);
 
         // FACES.CIF is the one name the classic reader treats as a fixed 64x64 grid.
-        Arena2CanvasSet grid = Arena2CanvasReader.Read(File.ReadAllBytes(Corpus("FACES.CIF")), "FACES.CIF");
+        Arena2CanvasSet grid = Arena2CanvasReader.Read(File.ReadAllBytes(TestData.Corpus("FACES.CIF")), "FACES.CIF");
         Assert.Equal(Arena2CanvasKind.RciGrid, grid.Kind);
         Assert.Equal(61, grid.Count);
         Assert.All(grid.Canvases, canvas => Assert.Equal((64, 64), (canvas.Width, canvas.Height)));
     }
 
-    [Fact]
+    [CorpusFact("FIRE00C6.CIF")]
     public void Reads_a_run_length_encoded_cif_record_sequence()
     {
         // Five residual sprite CIFs encode every record with compression 2, which the classic CIF
         // reader decodes through BaseImageFile.ReadRleData. The declared payload frames the next
         // record, so the walk has to use that rather than the encoded stream's own length.
-        IReadOnlyList<IndexedImg> records = ImgDecoder.DecodeRecordSequence(File.ReadAllBytes(Corpus("FIRE00C6.CIF")), "FIRE00C6.CIF");
+        IReadOnlyList<IndexedImg> records = ImgDecoder.DecodeRecordSequence(File.ReadAllBytes(TestData.Corpus("FIRE00C6.CIF")), "FIRE00C6.CIF");
 
         Assert.Equal(6, records.Count);
         Assert.All(records, record => Assert.Equal(ImgDecoder.RleCompressed, record.Compression));
@@ -166,7 +166,7 @@ public sealed class Arena2CanvasReaderTests
             StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact("CHGN00I0.IMG", "DIE_00I0.IMG", "PICK02I0.IMG", "PICK03I0.IMG", "PRIS00I0.IMG", "TITL00I0.IMG", "ART_PAL.COL")]
     public void Reads_the_palette_a_64768_byte_screen_carries_after_its_canvas()
     {
         // Six supplied screens are a 320x200 canvas plus 768 palette bytes, and the classic reader
@@ -174,7 +174,7 @@ public sealed class Arena2CanvasReaderTests
         string[] screens = ["CHGN00I0.IMG", "DIE_00I0.IMG", "PICK02I0.IMG", "PICK03I0.IMG", "PRIS00I0.IMG", "TITL00I0.IMG"];
         foreach (string screen in screens)
         {
-            byte[] bytes = File.ReadAllBytes(Corpus(screen));
+            byte[] bytes = File.ReadAllBytes(TestData.Corpus(screen));
             Assert.Equal(ImgDecoder.EmbeddedPaletteScreenBytes, bytes.Length);
             Assert.True(ImgDecoder.TryReadEmbeddedPalette(bytes, screen, out Arena2Palette? palette, out string reason), $"{screen}: {reason}");
 
@@ -197,29 +197,29 @@ public sealed class Arena2CanvasReaderTests
 
         // Scaling saturates rather than wrapping, so a factor that would exceed a byte clamps: the
         // first channel the art palette carries above the six-bit range proves it.
-        Arena2Palette art = PaletteDecoder.Decode(File.ReadAllBytes(Corpus("ART_PAL.COL")), "ART_PAL.COL");
+        Arena2Palette art = PaletteDecoder.Decode(File.ReadAllBytes(TestData.Corpus("ART_PAL.COL")), "ART_PAL.COL");
         int bright = art.Colors.Span.IndexOf(art.Colors.Span.ToArray().First(color => color.Red > 63));
         Assert.True(bright >= 0, "the art palette should carry a channel above the six-bit range");
         Assert.Equal(255, PaletteDecoder.ScaleChannels(art, 300).Colors.Span[bright].Red);
     }
 
-    [Fact]
+    [CorpusFact("TALK00I0.IMG", "FRAM00I0.IMG")]
     public void Reads_an_img_record_whose_compression_field_is_not_implemented()
     {
         // The classic IMG reader reads a record's shape and never consults its compression field,
         // so a declared value this repository does not implement is still a readable image. Two
         // supplied files declare 2048 and are exactly twelve bytes plus their shape.
-        IndexedImg talk = ImgDecoder.Decode(File.ReadAllBytes(Corpus("TALK00I0.IMG")), "TALK00I0.IMG");
+        IndexedImg talk = ImgDecoder.Decode(File.ReadAllBytes(TestData.Corpus("TALK00I0.IMG")), "TALK00I0.IMG");
         Assert.Equal((320, 200), (talk.Width, talk.Height));
         Assert.Equal(2048, talk.Compression);
         Assert.Equal(64000, talk.Pixels.Length);
 
-        IndexedImg frame = ImgDecoder.Decode(File.ReadAllBytes(Corpus("FRAM00I0.IMG")), "FRAM00I0.IMG");
+        IndexedImg frame = ImgDecoder.Decode(File.ReadAllBytes(TestData.Corpus("FRAM00I0.IMG")), "FRAM00I0.IMG");
         Assert.Equal((96, 96), (frame.Width, frame.Height));
         Assert.Equal(9216, frame.Pixels.Length);
     }
 
-    [Fact]
+    [CorpusFact("TFAC00I0.RCI")]
     public void Reads_the_whole_cells_of_a_grid_and_reports_the_remainder()
     {
         // The classic reader derives the cell count by whole-number division, so bytes after the
@@ -237,16 +237,16 @@ public sealed class Arena2CanvasReaderTests
 
         // The corpus's own face bank is 503 cells plus seven bytes, which is the case that keeps
         // this a disclosure rather than a refusal.
-        Arena2CanvasSet bank = Arena2CanvasReader.Read(File.ReadAllBytes(Corpus("TFAC00I0.RCI")), "TFAC00I0.RCI");
+        Arena2CanvasSet bank = Arena2CanvasReader.Read(File.ReadAllBytes(TestData.Corpus("TFAC00I0.RCI")), "TFAC00I0.RCI");
         Assert.Equal(Arena2CanvasKind.RciGrid, bank.Kind);
         Assert.Equal(503, bank.Count);
         Assert.Contains("7 byte(s)", bank.Reason, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact("SCRL00I0.GFX")]
     public void Reads_a_gfx_as_the_frames_its_header_declares_and_its_row_table_addresses()
     {
-        byte[] bytes = File.ReadAllBytes(Corpus("SCRL00I0.GFX"));
+        byte[] bytes = File.ReadAllBytes(TestData.Corpus("SCRL00I0.GFX"));
         GfxArchive gfx = GfxArchive.Parse(bytes, "SCRL00I0.GFX");
 
         Assert.Equal(8, gfx.FrameCount);
@@ -259,10 +259,10 @@ public sealed class Arena2CanvasReaderTests
         Assert.Contains(gfx.Frames.SelectMany(frame => frame.Rows), row => !row.IsRleEncoded);
     }
 
-    [Fact]
+    [CorpusFact("SCRL00I0.GFX")]
     public void Refuses_a_gfx_whose_row_table_or_rows_run_past_the_file()
     {
-        byte[] bytes = File.ReadAllBytes(Corpus("SCRL00I0.GFX"));
+        byte[] bytes = File.ReadAllBytes(TestData.Corpus("SCRL00I0.GFX"));
 
         // A row table that does not fit: the header declares 8 frames of 80 rows.
         Arena2FormatException table = Assert.Throws<Arena2FormatException>(
@@ -275,12 +275,12 @@ public sealed class Arena2CanvasReaderTests
         Assert.Contains("outside the", rows.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CorpusFact("MAGE.CEL", "CMPA00I0.BSS")]
     public void Names_the_reader_a_format_needs_rather_than_calling_it_unreadable()
     {
         // A CEL now reads: the classic reader reaches it through its FLC animation reader, and this
         // repository has one, so the portraits are canvases like any other family.
-        Arena2CanvasSet cel = Arena2CanvasReader.Read(File.ReadAllBytes(Corpus("MAGE.CEL")), "MAGE.CEL");
+        Arena2CanvasSet cel = Arena2CanvasReader.Read(File.ReadAllBytes(TestData.Corpus("MAGE.CEL")), "MAGE.CEL");
         Assert.Equal(Arena2CanvasKind.FlcAnimation, cel.Kind);
         Assert.True(cel.Read);
         Assert.Equal(15, cel.Count);
@@ -288,27 +288,12 @@ public sealed class Arena2CanvasReaderTests
 
         // A story sprite reads too: its own container shape, thirty-two frames of forty-eight by
         // forty pixels, which its header's arithmetic accounts for to the byte.
-        Arena2CanvasSet bss = Arena2CanvasReader.Read(File.ReadAllBytes(Corpus("CMPA00I0.BSS")), "CMPA00I0.BSS");
+        Arena2CanvasSet bss = Arena2CanvasReader.Read(File.ReadAllBytes(TestData.Corpus("CMPA00I0.BSS")), "CMPA00I0.BSS");
         Assert.Equal(Arena2CanvasKind.BssFrames, bss.Kind);
         Assert.Equal(32, bss.Count);
         Assert.Equal("Read as a BSS container of 32 frames of 48 by 40 pixels.", bss.Description);
 
         Arena2CanvasSet weapon = Arena2CanvasReader.Read(new byte[64], "WEAPON01.CIF");
         Assert.Contains("weapon CIF reader owns", weapon.Reason, StringComparison.Ordinal);
-    }
-
-    private static string Corpus(string name) => Path.Combine(RepositoryRoot(), "local/arena2", name);
-
-    private static string RepositoryRoot()
-    {
-        for (DirectoryInfo? current = new(AppContext.BaseDirectory); current is not null; current = current.Parent)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
     }
 }
