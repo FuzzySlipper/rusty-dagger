@@ -56,7 +56,7 @@ public sealed class DaggerfallRewardReactionTests
             CreatePlayerMechanics(player),
             owner,
             () => definitions.Catalogs.RequireCareer("class01"),
-            RandomMinimums(),
+            RandomMinimum.Create(),
             actors,
             DaggerfallTuning.Defaults.Progression with { EnableExperimentalKillExperience = true });
         ActorDiedFact death = new(9000, DaggerfallActorIdentity.PlayerEntityId, DaggerfallDamageCause.PhysicalAttack, 5, 5d, 2, 3);
@@ -85,7 +85,7 @@ public sealed class DaggerfallRewardReactionTests
             CreatePlayerMechanics(player),
             owner,
             () => definitions.Catalogs.RequireCareer("class01"),
-            RandomMinimums(),
+            RandomMinimum.Create(),
             new Dictionary<long, DaggerfallActorDefinition> { [9000] = thief },
             DaggerfallTuning.Defaults.Progression with { EnableExperimentalKillExperience = true });
 
@@ -260,12 +260,6 @@ public sealed class DaggerfallRewardReactionTests
         Assert.Empty(delivered);
     }
 
-    private static IRandomService RandomMinimums()
-    {
-        IRandomService service = DispatchProxy.Create<IRandomService, RandomMinimumProxy>();
-        return service;
-    }
-
     private static (IRandomService Service, RecordingRandomProxy Recorder) RecordingRandom(params int[] values)
     {
         IRandomService service = DispatchProxy.Create<IRandomService, RecordingRandomProxy>();
@@ -311,7 +305,7 @@ public sealed class DaggerfallRewardReactionTests
         return stats;
     }
 
-    private class RecordingRandomProxy : RandomMinimumProxy
+    private class RecordingRandomProxy : DispatchProxy
     {
         private int _next;
         public List<int> Values { get; } = [];
@@ -324,13 +318,6 @@ public sealed class DaggerfallRewardReactionTests
             Requests.Add(request);
             return new KeyedRngReceipt(Values[_next++]);
         }
-    }
-
-    private class RandomMinimumProxy : DispatchProxy
-    {
-        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IRandomService.DrawKeyed)
-            ? new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Minimum)
-            : throw new NotSupportedException(method?.Name);
     }
 
     private static DaggerfallDefinitions LoadDefinitions() => TestPayload.Definitions;

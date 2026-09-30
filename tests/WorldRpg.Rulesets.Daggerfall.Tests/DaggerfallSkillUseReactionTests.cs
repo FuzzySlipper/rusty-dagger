@@ -1,5 +1,3 @@
-using System.Reflection;
-using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Actors;
@@ -223,7 +221,7 @@ public sealed class DaggerfallSkillUseReactionTests
             new DaggerfallMechanicsState().CreateStats(player, DaggerfallPlayerVitals.Initial(player.Stats, definitions.Catalogs.RequireCareer("class00"))),
             new EntityId(DaggerfallActorIdentity.PlayerEntityId),
             () => definitions.Catalogs.RequireCareer("class00"),
-            RandomMinimums(),
+            RandomMinimum.Create(),
             new Dictionary<long, DaggerfallActorDefinition> { [9000] = definitions.RequireActor(new DaggerfallActorId("thief")) },
             DaggerfallTuning.Defaults.Progression);
 
@@ -241,15 +239,6 @@ public sealed class DaggerfallSkillUseReactionTests
         StatsComponent stats = new DaggerfallMechanicsState().CreateStats(player, DaggerfallPlayerVitals.Initial(player.Stats, definitions.Catalogs.RequireCareer("class00")));
         configure?.Invoke(stats);
         return (new DaggerfallSkillUseReactions(progression, stats, definitions, player), progression, stats);
-    }
-
-    private static IRandomService RandomMinimums() => DispatchProxy.Create<IRandomService, RandomMinimumProxy>();
-
-    private class RandomMinimumProxy : DispatchProxy
-    {
-        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IRandomService.DrawKeyed)
-            ? new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Minimum)
-            : throw new NotSupportedException(method?.Name);
     }
 
     private static DaggerfallDefinitions LoadDefinitions() => TestPayload.Definitions;

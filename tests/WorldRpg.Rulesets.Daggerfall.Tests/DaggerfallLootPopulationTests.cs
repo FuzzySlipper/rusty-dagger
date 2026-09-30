@@ -1,6 +1,5 @@
 using System.Reflection;
 using Rusty.Engine;
-using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 using WorldRpg.Rulesets.Daggerfall.Policies;
@@ -43,7 +42,7 @@ public sealed class DaggerfallLootPopulationTests
     public void Population_requires_the_shared_source_identity_to_match_its_inventory_owner()
     {
         DaggerfallDefinitions definitions = LoadDefinitions();
-        DaggerfallLootPopulation population = new(definitions, RandomMinimum(), new DaggerfallUniqueItemAllocator(1));
+        DaggerfallLootPopulation population = new(definitions, RandomMinimum.Create(), new DaggerfallUniqueItemAllocator(1));
         DaggerfallLootPopulationRequest malformed = Request("C") with { Owner = DaggerfallItemOwner.Encounter(4000) };
 
         Assert.Throws<ArgumentException>(() => population.Generate(malformed));
@@ -53,7 +52,7 @@ public sealed class DaggerfallLootPopulationTests
     [Fact]
     public void Dungeon_population_materializes_map_potion_and_recipe_instance_identity()
     {
-        DaggerfallLootPopulation population = new(LoadDefinitions(), RandomMinimum(), new DaggerfallUniqueItemAllocator(1));
+        DaggerfallLootPopulation population = new(LoadDefinitions(), RandomMinimum.Create(), new DaggerfallUniqueItemAllocator(1));
 
         DaggerfallLootPopulationResult generated = population.Generate(Request("L") with { DungeonType = 12 });
 
@@ -68,15 +67,6 @@ public sealed class DaggerfallLootPopulationTests
     private static DaggerfallLootPopulationRequest Request(string table) => new(
         new DaggerfallLootPopulationId("world-treasure", 4000), DaggerfallItemOwner.WorldTreasure(4000), table,
         1, 1, 1, "breton", "male", "MensClothing");
-
-    private static IRandomService RandomMinimum() => DispatchProxy.Create<IRandomService, RandomMinimumProxy>();
-
-    private class RandomMinimumProxy : DispatchProxy
-    {
-        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IRandomService.DrawKeyed)
-            ? new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Minimum)
-            : throw new NotSupportedException(method?.Name);
-    }
 
     private class CountingRandom : DispatchProxy
     {

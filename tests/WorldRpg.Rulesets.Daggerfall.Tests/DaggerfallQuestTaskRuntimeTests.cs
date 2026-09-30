@@ -1,10 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Reflection;
-using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Progression;
-using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -847,13 +844,5 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         }
 
         public void Schedule(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) { }
-    }
-
-    private class RandomMinimum : DispatchProxy
-    {
-        internal static IRandomService Create() => DispatchProxy.Create<IRandomService, RandomMinimum>();
-        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IRandomService.DrawKeyed)
-            ? new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Minimum)
-            : throw new NotSupportedException(method?.Name);
     }
 }

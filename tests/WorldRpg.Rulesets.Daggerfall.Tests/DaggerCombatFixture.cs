@@ -1,4 +1,3 @@
-using System.Reflection;
 using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
@@ -31,7 +30,7 @@ internal sealed class DaggerCombatFixture : IDisposable
         Actors = new ActorsState();
         Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), Stats(playerHealth, playerStamina), "health");
         Actors.CreateActor(2, new EntityTypeId(sourceId), Stats(100d, 600d), new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health");
-        Random = DispatchProxy.Create<IRandomService, MinimumRandomProxy>();
+        Random = RandomMinimum.Create();
         Rules = new DaggerCombatRules(
             Random, Actors, null!, _ => null,
             new DaggerfallItemInstances(), Definitions,
@@ -80,11 +79,4 @@ internal sealed class DaggerCombatFixture : IDisposable
     public void Dispose() => Actors.Dispose();
 
     private double Track(string id) => Actors.Player.Stats.GetTrack(TrackId.Parse(id)).Current;
-
-    private class MinimumRandomProxy : DispatchProxy
-    {
-        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IRandomService.DrawKeyed)
-            ? new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Minimum)
-            : throw new NotSupportedException(method?.Name);
-    }
 }

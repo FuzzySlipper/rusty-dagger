@@ -12,7 +12,7 @@ public sealed class DaggerfallDungeonMeshCharacterStepTests
     public void Spatial_movement_forwards_dungeon_mesh_identity_and_velocity_to_engine_character_step()
     {
         SpatialDouble spatial = SpatialDouble.Create();
-        ContentDouble content = ContentDouble.Create();
+        ReferenceResolvingContentFake content = ReferenceResolvingContentFake.Create();
         using SpatialMovementSystem movement = new(
             spatial.Service,
             content.Service,
@@ -34,23 +34,6 @@ public sealed class DaggerfallDungeonMeshCharacterStepTests
         Assert.Equal(mesh.Entity, forwarded.Entity);
         Assert.Equal(mesh.LinearVelocity, forwarded.LinearVelocity);
         Assert.Equal(mesh.AngularVelocity, forwarded.AngularVelocity);
-    }
-
-    private class ContentDouble : DispatchProxy
-    {
-        internal IContentService Service { get; private set; } = null!;
-
-        internal static ContentDouble Create()
-        {
-            IContentService service = DispatchProxy.Create<IContentService, ContentDouble>();
-            ((ContentDouble)(object)service).Service = service;
-            return (ContentDouble)(object)service;
-        }
-
-        protected override object? Invoke(MethodInfo? method, object?[]? arguments) =>
-            method?.Name == nameof(IContentService.ResolveReference)
-                ? new ContentReference(new ContentReferenceHandle(1), static () => { })
-                : throw new NotSupportedException(method?.Name);
     }
 
     private class SpatialDouble : DispatchProxy

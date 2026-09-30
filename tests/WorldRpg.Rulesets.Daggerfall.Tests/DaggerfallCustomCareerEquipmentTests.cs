@@ -1,5 +1,3 @@
-using System.Reflection;
-using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Inventory;
@@ -17,7 +15,7 @@ public sealed class DaggerfallCustomCareerEquipmentTests
     public void Custom_forbidden_shield_rejects_a_factory_materialized_template_item()
     {
         DaggerfallDefinitions definitions = LoadDefinitions();
-        DaggerfallItemFactory factory = new(definitions, RandomMinimum());
+        DaggerfallItemFactory factory = new(definitions, RandomMinimum.Create());
         DaggerfallCreatedItem shield = factory.Create(new DaggerfallItemCreateRequest("Armor", "steel-buckler", DaggerfallItemOwner.Player,
             TemplateIndex: 109, Material: "steel", Race: "breton", Gender: "male"));
         using EntityDirectory entities = new();
@@ -48,14 +46,5 @@ public sealed class DaggerfallCustomCareerEquipmentTests
 
     private static DaggerfallDefinitions LoadDefinitions() =>
         TestPayload.Definitions;
-
-    private static IRandomService RandomMinimum() => DispatchProxy.Create<IRandomService, RandomMinimumProxy>();
-
-    private class RandomMinimumProxy : DispatchProxy
-    {
-        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IRandomService.DrawKeyed)
-            ? new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Minimum)
-            : throw new NotSupportedException(method?.Name);
-    }
 
 }

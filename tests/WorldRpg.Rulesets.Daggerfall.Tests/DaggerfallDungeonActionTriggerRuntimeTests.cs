@@ -16,7 +16,7 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
     public void Engine_contact_edges_dispatch_once_and_profile_restore_rebases_entry()
     {
         TriggerSpatialDouble spatial = TriggerSpatialDouble.Create();
-        ContentDouble content = ContentDouble.Create();
+        ReferenceResolvingContentFake content = ReferenceResolvingContentFake.Create();
         using SpatialMovementSystem movement = new(
             spatial.Service,
             content.Service,
@@ -74,7 +74,7 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
     public void Restored_player_inside_contact_does_not_replay_until_leave_and_reenter()
     {
         TriggerSpatialDouble spatial = TriggerSpatialDouble.Create();
-        ContentDouble content = ContentDouble.Create();
+        ReferenceResolvingContentFake content = ReferenceResolvingContentFake.Create();
         using SpatialMovementSystem movement = new(
             spatial.Service,
             content.Service,
@@ -115,7 +115,7 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
     public void Late_profile_admission_deactivates_omitted_rows_until_activation()
     {
         TriggerSpatialDouble spatial = TriggerSpatialDouble.Create();
-        ContentDouble content = ContentDouble.Create();
+        ReferenceResolvingContentFake content = ReferenceResolvingContentFake.Create();
         using SpatialMovementSystem movement = new(
             spatial.Service,
             content.Service,
@@ -183,23 +183,6 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
         dungeonActions: [action]);
 
     private static DaggerfallVariableStore Variables() => new(new Dictionary<string, int>(StringComparer.Ordinal));
-
-    private class ContentDouble : DispatchProxy
-    {
-        internal IContentService Service { get; private set; } = null!;
-
-        internal static ContentDouble Create()
-        {
-            IContentService service = DispatchProxy.Create<IContentService, ContentDouble>();
-            ContentDouble proxy = (ContentDouble)(object)service;
-            proxy.Service = service;
-            return proxy;
-        }
-
-        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IContentService.ResolveReference)
-            ? new ContentReference(new ContentReferenceHandle(1), static () => { })
-            : throw new NotSupportedException(method?.Name);
-    }
 
     private class TriggerSpatialDouble : DispatchProxy
     {

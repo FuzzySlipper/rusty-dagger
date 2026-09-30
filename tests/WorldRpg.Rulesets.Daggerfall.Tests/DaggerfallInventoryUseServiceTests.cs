@@ -1,5 +1,3 @@
-using System.Reflection;
-using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Inventory;
@@ -35,7 +33,7 @@ public sealed class DaggerfallInventoryUseServiceTests
             DaggerfallItemInstanceMetadata.Default(definition, DaggerfallItemOwner.Player) with { BookId = 59 });
         DaggerfallBookNotebook notebook = new(definitions, new DaggerfallTextResolver(definitions.Text));
         DaggerfallSiteContext sites = new(definitions.Locations, definitions.Locations.Records[0].Id, null, []);
-        DaggerfallInventoryUseService use = new(inventory, definitions, instances, new DaggerfallUniqueItemAllocator(1_000), sites, MinimumRandom.Create(), notebook: notebook);
+        DaggerfallInventoryUseService use = new(inventory, definitions, instances, new DaggerfallUniqueItemAllocator(1_000), sites, RandomMinimum.Create(), notebook: notebook);
         ulong revision = inventory.Read().StoreRevision;
 
         DaggerfallInventoryUseResult result = use.Use($"stack:{stack.Value}", revision);
@@ -80,7 +78,7 @@ public sealed class DaggerfallInventoryUseServiceTests
         _ = equipment.Materialize(identity, new InventoryItemId(map.Id.Value));
         DaggerfallItemInstances instances = new();
         instances.RegisterDefaultUnique(identity.Value, map, DaggerfallItemOwner.Player);
-        DaggerfallInventoryUseService use = new(inventory, definitions, instances, unique, sites, MinimumRandom.Create());
+        DaggerfallInventoryUseService use = new(inventory, definitions, instances, unique, sites, RandomMinimum.Create());
 
         DaggerfallInventoryUseResult result = use.Use($"unique:{inventory.Read().UniqueItems.Single().Entity.Value}", inventory.Read().StoreRevision);
 
@@ -96,13 +94,5 @@ public sealed class DaggerfallInventoryUseServiceTests
     private static DaggerfallDefinitions ReadDefinitions()
     {
         return TestPayload.Definitions;
-    }
-
-    private class MinimumRandom : DispatchProxy
-    {
-        internal static IRandomService Create() => DispatchProxy.Create<IRandomService, MinimumRandom>();
-        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IRandomService.DrawKeyed)
-            ? new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Minimum)
-            : throw new NotSupportedException(method?.Name);
     }
 }

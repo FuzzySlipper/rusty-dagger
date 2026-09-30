@@ -1,4 +1,3 @@
-using System.Reflection;
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using Xunit;
@@ -24,12 +23,5 @@ public sealed class DaggerfallDisabledQuestSelectionTests
         Assert.Contains("requires an explicit Daedric summoning identity", Assert.Throws<ArgumentException>(() => instances.Start(summoned)).Message, StringComparison.Ordinal);
         Assert.Contains("no admitted runnable program", Assert.Throws<ArgumentException>(() => instances.StartSummoned("80C0XY00", summoned)).Message, StringComparison.Ordinal);
         Assert.Throws<ArgumentException>(() => instances.StartSummoned("80C0XY00", summoned with { SourceFile = "10C00Y00.txt" }));
-    }
-
-    private class RandomMinimum : DispatchProxy
-    {
-        internal static IRandomService Create() => DispatchProxy.Create<IRandomService, RandomMinimum>();
-        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IRandomService.DrawKeyed)
-            ? new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Minimum) : throw new NotSupportedException(method?.Name);
     }
 }

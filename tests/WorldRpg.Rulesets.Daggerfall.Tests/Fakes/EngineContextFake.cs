@@ -61,7 +61,7 @@ internal class EngineContextFake : DispatchProxy
         fake.audio = ServiceProxy<IAudioService, AudioServiceFake>.Create();
         fake.diagnostics = ServiceProxy<IDiagnosticsService, DiagnosticsServiceFake>.Create();
         fake.video = ServiceProxy<IVideoService, VideoServiceFake>.Create();
-        fake.random = random ?? ServiceProxy<IRandomService, RandomServiceFake>.Create();
+        fake.random = random ?? RandomMinimum.Create();
         fake.ui = UiServiceFake.Create(fake);
         fake.persistence = persistence ?? new InMemoryPersistenceService();
         return fake;
@@ -121,13 +121,6 @@ internal class EngineContextFake : DispatchProxy
             BackgroundColors.Add(((SetBackgroundColorRequest)arguments![0]!).Color);
             return null;
         }
-    }
-
-    private class RandomServiceFake : DispatchProxy
-    {
-        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IRandomService.DrawKeyed)
-            ? new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Minimum)
-            : throw new NotSupportedException(method?.Name);
     }
 
     /// <summary>

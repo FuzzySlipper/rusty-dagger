@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Reflection;
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
@@ -11,7 +10,7 @@ public sealed class DaggerfallExteriorCellResidencyTests
     [Fact]
     public void Selects_a_clipped_seven_by_seven_window_with_stable_mesh_identity()
     {
-        SpatialDouble spatial = SpatialDouble.Create();
+        CollisionResidencySpatialFake spatial = CollisionResidencySpatialFake.Create();
         using SpatialSession session = new(new SpatialSessionHandle(41), static () => { });
         DaggerfallExteriorCellResidency residency = Create(spatial.Service, session);
 
@@ -37,7 +36,7 @@ public sealed class DaggerfallExteriorCellResidencyTests
             new Triangle(0, 2, 1),
             request.Triangles.Span[(int)secondAsset.FirstTriangle]);
 
-        SpatialDouble edgeSpatial = SpatialDouble.Create();
+        CollisionResidencySpatialFake edgeSpatial = CollisionResidencySpatialFake.Create();
         using SpatialSession edgeSession = new(new SpatialSessionHandle(42), static () => { });
         DaggerfallExteriorCellResidency edge = Create(edgeSpatial.Service, edgeSession);
 
@@ -50,7 +49,7 @@ public sealed class DaggerfallExteriorCellResidencyTests
     [Fact]
     public void Adjacent_traversal_removes_and_adds_only_the_crossed_column()
     {
-        SpatialDouble spatial = SpatialDouble.Create();
+        CollisionResidencySpatialFake spatial = CollisionResidencySpatialFake.Create();
         using SpatialSession session = new(new SpatialSessionHandle(43), static () => { });
         DaggerfallExteriorCellResidency residency = Create(spatial.Service, session);
         DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(new(10, 10));
@@ -77,7 +76,7 @@ public sealed class DaggerfallExteriorCellResidencyTests
     [Fact]
     public void Origin_change_reprojects_instances_without_rebuilding_geometry()
     {
-        SpatialDouble spatial = SpatialDouble.Create();
+        CollisionResidencySpatialFake spatial = CollisionResidencySpatialFake.Create();
         using SpatialSession session = new(new SpatialSessionHandle(44), static () => { });
         DaggerfallExteriorCellResidency residency = Create(spatial.Service, session);
 
@@ -102,7 +101,7 @@ public sealed class DaggerfallExteriorCellResidencyTests
     [Fact]
     public void Origin_change_during_traversal_does_not_reupsert_removed_cells()
     {
-        SpatialDouble spatial = SpatialDouble.Create();
+        CollisionResidencySpatialFake spatial = CollisionResidencySpatialFake.Create();
         using SpatialSession session = new(new SpatialSessionHandle(47), static () => { });
         DaggerfallExteriorCellResidency residency = Create(spatial.Service, session);
         residency.Update(new(10, 10), DaggerfallExteriorWorldOrigin.At(new(10, 10)));
@@ -119,7 +118,7 @@ public sealed class DaggerfallExteriorCellResidencyTests
     [Fact]
     public void Adopted_engine_rebase_updates_product_origin_without_native_upsert()
     {
-        SpatialDouble spatial = SpatialDouble.Create();
+        CollisionResidencySpatialFake spatial = CollisionResidencySpatialFake.Create();
         using SpatialSession session = new(new SpatialSessionHandle(49), static () => { });
         DaggerfallExteriorCellResidency residency = Create(spatial.Service, session);
         DaggerfallExteriorCellId center = new(10, 10);
@@ -139,7 +138,7 @@ public sealed class DaggerfallExteriorCellResidencyTests
     [Fact]
     public void Teleport_away_and_restore_reuses_durable_cell_ids()
     {
-        SpatialDouble spatial = SpatialDouble.Create();
+        CollisionResidencySpatialFake spatial = CollisionResidencySpatialFake.Create();
         using SpatialSession session = new(new SpatialSessionHandle(45), static () => { });
         DaggerfallExteriorCellResidency residency = Create(spatial.Service, session);
         residency.Update(new(20, 20));
@@ -160,7 +159,7 @@ public sealed class DaggerfallExteriorCellResidencyTests
     [Fact]
     public void Refresh_upserts_the_same_asset_and_instance_identity()
     {
-        SpatialDouble spatial = SpatialDouble.Create();
+        CollisionResidencySpatialFake spatial = CollisionResidencySpatialFake.Create();
         using SpatialSession session = new(new SpatialSessionHandle(46), static () => { });
         DaggerfallExteriorCellResidency residency = Create(spatial.Service, session);
         DaggerfallExteriorCellId cell = new(20, 20);
@@ -179,7 +178,7 @@ public sealed class DaggerfallExteriorCellResidencyTests
     [Fact]
     public void Clear_removes_all_owned_colliders_and_restore_rehydrates_after_content_transition()
     {
-        SpatialDouble spatial = SpatialDouble.Create();
+        CollisionResidencySpatialFake spatial = CollisionResidencySpatialFake.Create();
         using SpatialSession session = new(new SpatialSessionHandle(48), static () => { });
         DaggerfallExteriorCellResidency residency = Create(spatial.Service, session);
         residency.Update(new(20, 20));
@@ -218,30 +217,4 @@ public sealed class DaggerfallExteriorCellResidencyTests
                 [new Vector3(0F, 0F, 0F), new Vector3(1F, 0F, 0F), new Vector3(0F, 0F, 1F)],
                 [new Triangle(0, 2, 1)],
                 [0F, 0F, 0F]));
-
-    private class SpatialDouble : DispatchProxy
-    {
-        internal ISpatialService Service { get; private set; } = null!;
-        internal List<CollisionResidencyRequest> Requests { get; } = [];
-
-        internal static SpatialDouble Create()
-        {
-            ISpatialService service = DispatchProxy.Create<ISpatialService, SpatialDouble>();
-            SpatialDouble proxy = (SpatialDouble)(object)service;
-            proxy.Service = service;
-            return proxy;
-        }
-
-        protected override object? Invoke(MethodInfo? method, object?[]? arguments)
-        {
-            if (method?.Name == nameof(ISpatialService.ApplyCollisionResidency))
-            {
-                Requests.Add((CollisionResidencyRequest)arguments![0]!);
-                return new CollisionReplaceReceipt();
-            }
-            if (method?.ReturnType == typeof(void)) return null;
-            if (method?.ReturnType.IsValueType == true) return Activator.CreateInstance(method.ReturnType);
-            throw new NotSupportedException(method?.Name);
-        }
-    }
 }

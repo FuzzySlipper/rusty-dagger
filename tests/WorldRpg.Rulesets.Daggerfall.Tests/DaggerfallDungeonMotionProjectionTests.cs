@@ -4,7 +4,6 @@ using Rusty.Engine;
 using Rusty.Engine.Entities;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.World;
-using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
@@ -31,7 +30,7 @@ public sealed class DaggerfallDungeonMotionProjectionTests
     [Fact]
     public void Non_motion_action_models_keep_their_model_entity_render_and_collision_admission()
     {
-        SpatialDouble spatial = SpatialDouble.Create();
+        CollisionResidencySpatialFake spatial = CollisionResidencySpatialFake.Create();
         using EntityDirectory entities = new();
         DaggerfallDoorRuntime doors = new(entities, RandomDouble.Create(), [], "fixture/dungeon");
         DaggerfallDungeonActionDefinition action = new(
@@ -80,7 +79,7 @@ public sealed class DaggerfallDungeonMotionProjectionTests
     [Fact]
     public void Action_model_motion_updates_its_real_entity_and_engine_triangle_residency()
     {
-        SpatialDouble spatial = SpatialDouble.Create();
+        CollisionResidencySpatialFake spatial = CollisionResidencySpatialFake.Create();
         using EntityDirectory entities = new();
         DaggerfallDoorRuntime doors = new(entities, RandomDouble.Create(), [], "fixture/dungeon");
         Transform start = new(new Vector3(2, 0, 3), Quaternion.Identity, Vector3.One);
@@ -147,7 +146,7 @@ public sealed class DaggerfallDungeonMotionProjectionTests
     [Fact]
     public void Rotating_action_model_publishes_angular_velocity_for_engine_support_carry()
     {
-        SpatialDouble spatial = SpatialDouble.Create();
+        CollisionResidencySpatialFake spatial = CollisionResidencySpatialFake.Create();
         using EntityDirectory entities = new();
         DaggerfallDoorRuntime doors = new(entities, RandomDouble.Create(), [], "fixture/dungeon");
         DaggerfallDungeonActionDefinition action = new(
@@ -193,32 +192,6 @@ public sealed class DaggerfallDungeonMotionProjectionTests
         Assert.Equal(instanceId, mesh.Instance);
         Assert.Equal(Vector3.Zero, mesh.LinearVelocity);
         Assert.Equal(Vector3.UnitX * (32f / 5.68888888888889f * (MathF.PI / 180f)), mesh.AngularVelocity);
-    }
-
-    private class SpatialDouble : DispatchProxy
-    {
-        internal ISpatialService Service { get; private set; } = null!;
-        internal List<CollisionResidencyRequest> Requests { get; } = [];
-
-        internal static SpatialDouble Create()
-        {
-            ISpatialService service = DispatchProxy.Create<ISpatialService, SpatialDouble>();
-            SpatialDouble proxy = (SpatialDouble)(object)service;
-            proxy.Service = service;
-            return proxy;
-        }
-
-        protected override object? Invoke(MethodInfo? method, object?[]? arguments)
-        {
-            if (method?.Name == nameof(ISpatialService.ApplyCollisionResidency))
-            {
-                Requests.Add((CollisionResidencyRequest)arguments![0]!);
-                return new CollisionReplaceReceipt();
-            }
-            if (method?.ReturnType == typeof(void)) return null;
-            if (method?.ReturnType.IsValueType == true) return Activator.CreateInstance(method.ReturnType);
-            throw new NotSupportedException(method?.Name);
-        }
     }
 
     private class RandomDouble : DispatchProxy

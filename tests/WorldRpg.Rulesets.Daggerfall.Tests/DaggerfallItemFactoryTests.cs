@@ -16,7 +16,7 @@ public sealed class DaggerfallItemFactoryTests
     public void Every_retained_group_template_creates_a_resolvable_engine_backed_item()
     {
         DaggerfallDefinitions definitions = LoadDefinitions();
-        DaggerfallItemFactory factory = new(definitions, RandomMinimum());
+        DaggerfallItemFactory factory = new(definitions, RandomMinimum.Create());
         DaggerfallItemTemplateDefinition[] retained = definitions.ItemTemplateCatalog.Templates.Values
             .Where(template => template.Groups.Count != 0).OrderBy(template => template.Index).ToArray();
 
@@ -43,7 +43,7 @@ public sealed class DaggerfallItemFactoryTests
     public void Materialized_definitions_and_instance_condition_follow_ItemBuilder_material_rules()
     {
         DaggerfallDefinitions definitions = LoadDefinitions();
-        DaggerfallItemFactory factory = new(definitions, RandomMinimum());
+        DaggerfallItemFactory factory = new(definitions, RandomMinimum.Create());
 
         DaggerfallCreatedItem steelDagger = factory.Create(new DaggerfallItemCreateRequest("Weapons", "steel-dagger", DaggerfallItemOwner.Player,
             TemplateIndex: 113, Material: "steel"));
@@ -72,7 +72,7 @@ public sealed class DaggerfallItemFactoryTests
     public void Magic_templates_materialize_a_unique_magic_base_with_donor_uses_value_and_artifact_material()
     {
         DaggerfallDefinitions definitions = LoadDefinitions();
-        DaggerfallItemFactory factory = new(definitions, RandomMinimum());
+        DaggerfallItemFactory factory = new(definitions, RandomMinimum.Create());
 
         DaggerfallCreatedItem regular = factory.Create(new DaggerfallItemCreateRequest("Magic", "regular-magic", DaggerfallItemOwner.Player,
             Race: "breton", Gender: "male", MagicItemKey: "magic-item.0010"));
@@ -91,7 +91,7 @@ public sealed class DaggerfallItemFactoryTests
     public void Creation_preserves_donor_appearance_book_and_arrow_rules_through_metadata_capture()
     {
         DaggerfallDefinitions definitions = LoadDefinitions();
-        DaggerfallItemFactory factory = new(definitions, RandomMinimum());
+        DaggerfallItemFactory factory = new(definitions, RandomMinimum.Create());
 
         DaggerfallCreatedItem clothing = factory.Create(new DaggerfallItemCreateRequest("MensClothing", "clothing", DaggerfallItemOwner.Player,
             TemplateIndex: 141, Race: "breton"));
@@ -127,7 +127,7 @@ public sealed class DaggerfallItemFactoryTests
     public void Book_identity_resolves_its_normalized_runtime_value_and_reports_missing_metadata_definition()
     {
         DaggerfallDefinitions definitions = LoadDefinitions();
-        DaggerfallItemFactory factory = new(definitions, RandomMinimum());
+        DaggerfallItemFactory factory = new(definitions, RandomMinimum.Create());
         DaggerfallItemValuation valuation = new(definitions);
         DaggerfallCreatedItem first = factory.Create(new DaggerfallItemCreateRequest("Books", "book-zero", DaggerfallItemOwner.Player,
             TemplateIndex: 277, BookId: 0));
@@ -149,7 +149,7 @@ public sealed class DaggerfallItemFactoryTests
     public void Materialize_commits_to_engine_then_registers_metadata_for_stack_and_unique_instances()
     {
         DaggerfallDefinitions definitions = LoadDefinitions();
-        DaggerfallItemFactory factory = new(definitions, RandomMinimum());
+        DaggerfallItemFactory factory = new(definitions, RandomMinimum.Create());
         EntityDirectory entities = new();
         EntityId owner = entities.Create(new DurableIdentityReference(DurableIdentityKind.Container, 700), new EntityTypeId("inventory-owner"));
         InventoryStore store = new();
@@ -222,7 +222,7 @@ public sealed class DaggerfallItemFactoryTests
     [Fact]
     public void Malformed_category_template_appearance_and_quantity_are_rejected_before_materialization()
     {
-        DaggerfallItemFactory factory = new(LoadDefinitions(), RandomMinimum());
+        DaggerfallItemFactory factory = new(LoadDefinitions(), RandomMinimum.Create());
 
         Assert.Throws<ArgumentException>(() => factory.Create(new DaggerfallItemCreateRequest("missing", "bad", DaggerfallItemOwner.Player)));
         Assert.Throws<ArgumentException>(() => factory.Create(new DaggerfallItemCreateRequest("Armor", "bad", DaggerfallItemOwner.Player, TemplateIndex: 113, Race: "breton", Gender: "male")));
@@ -243,15 +243,6 @@ public sealed class DaggerfallItemFactoryTests
         Gender: template.Groups.Contains("Armor", StringComparer.Ordinal) ? "male" : null,
         PotionRecipeKey: template.Index is 83 or 278 ? 221871 : null,
         CreditValue: template.Index == 275 ? 100 : null);
-
-    private static IRandomService RandomMinimum() => DispatchProxy.Create<IRandomService, RandomMinimumProxy>();
-
-    private class RandomMinimumProxy : DispatchProxy
-    {
-        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IRandomService.DrawKeyed)
-            ? new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Minimum)
-            : throw new NotSupportedException(method?.Name);
-    }
 
     private static DaggerfallDefinitions LoadDefinitions() =>
         TestPayload.Definitions;
