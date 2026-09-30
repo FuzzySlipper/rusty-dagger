@@ -22,10 +22,10 @@ public sealed class DaggerfallFormulaPolicyTests
         Assert.Equal(7, DaggerfallFormulaPolicy.HandToHandMaximumDamage(30));
         Assert.Equal(2, DaggerfallFormulaPolicy.ClassicPlayerLevel(4, 0));
         Assert.Equal(2, DaggerfallFormulaPolicy.CalculatePlayerLevel(0, 4));
-        Assert.Equal(0, DaggerfallFormulaPolicy.ExperimentalXpLevel(0, DaggerfallFormulaPolicy.Experimental));
-        Assert.Equal(0, DaggerfallFormulaPolicy.ExperimentalXpLevel(499, DaggerfallFormulaPolicy.Experimental));
-        Assert.Equal(1, DaggerfallFormulaPolicy.ExperimentalXpLevel(500, DaggerfallFormulaPolicy.Experimental));
-        Assert.Equal(2, DaggerfallFormulaPolicy.ExperimentalXpLevel(1_000, DaggerfallFormulaPolicy.Experimental));
+        Assert.Equal(0, DaggerfallFormulaPolicy.ExperimentalXpLevel(0, DaggerfallTuning.Defaults.Progression.ExperiencePerLevel));
+        Assert.Equal(0, DaggerfallFormulaPolicy.ExperimentalXpLevel(499, DaggerfallTuning.Defaults.Progression.ExperiencePerLevel));
+        Assert.Equal(1, DaggerfallFormulaPolicy.ExperimentalXpLevel(500, DaggerfallTuning.Defaults.Progression.ExperiencePerLevel));
+        Assert.Equal(2, DaggerfallFormulaPolicy.ExperimentalXpLevel(1_000, DaggerfallTuning.Defaults.Progression.ExperiencePerLevel));
         Assert.Equal(33, DaggerfallFormulaPolicy.SkillUsesForAdvancement(30, 2, 130, 1));
         Assert.Equal(26, DaggerfallFormulaPolicy.CalculateSkillUsesForAdvancement(30, 2, 1.0390625f, 1));
         Assert.Equal(12, DaggerfallFormulaPolicy.SkillAdvancementMultiplier("medical"));
@@ -187,11 +187,9 @@ public sealed class DaggerfallFormulaPolicyTests
     }
 
     [Fact]
-    public void FormulaTuningUsesSelectedDivisorsAndAdmitsTheDonorSkillLevelBounds()
+    public void SkillAdvancementAdmitsTheDonorSkillLevelBoundsAndExperimentalXpNeedsAPositiveStep()
     {
-        DaggerfallFormulaTuning tuning = new(DamageModifierDivisor: 10);
-
-        Assert.Equal(-1, DaggerfallFormulaPolicy.DamageModifier(40, tuning));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallFormulaPolicy.ExperimentalXpLevel(500, 0));
         Assert.True(DaggerfallFormulaPolicy.SkillUsesForAdvancement(30, 2, 130, 64) > 0);
         Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallFormulaPolicy.SkillUsesForAdvancement(30, 2, 130, 65));
     }

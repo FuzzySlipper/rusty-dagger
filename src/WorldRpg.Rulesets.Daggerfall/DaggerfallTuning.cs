@@ -1,6 +1,8 @@
 using WorldRpg.Kit.Controls;
 using Rusty.Engine;
 using System.Text.Json;
+using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
+using WorldRpg.Rulesets.Daggerfall.Property;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -18,7 +20,9 @@ internal sealed record DaggerfallTuning(
     DaggerfallPresentationAudioTuning PresentationAudio,
     DaggerfallProgressionTuning Progression,
     DaggerfallSiteLightingTuning SiteLighting,
-    DaggerfallClimbingTuning Climbing)
+    DaggerfallClimbingTuning Climbing,
+    DaggerfallPropertyTuning Property,
+    DaggerfallTransportTuning Transport)
 {
     internal static DaggerfallTuning Defaults { get; } = new(
         // Screen-space mouse Y increases downward; Engine camera pitch increases upward.
@@ -46,9 +50,29 @@ internal sealed record DaggerfallTuning(
         new DaggerfallTimeTuning(12d),
         new DaggerfallStaminaRecoveryTuning(5d, 2d),
         new DaggerfallPresentationAudioTuning(1F, 1F, 0F, 1F),
-        new DaggerfallProgressionTuning(EnableExperimentalKillExperience: false),
+        new DaggerfallProgressionTuning(EnableExperimentalKillExperience: false, ExperiencePerLevel: 500),
         DaggerfallSiteLightingTuning.Classic,
-        DaggerfallClimbingTuning.Classic);
+        DaggerfallClimbingTuning.Classic,
+        // DaggerfallBankManager's house and ship prices, sale percentage and ship scene anchors.
+        new DaggerfallPropertyTuning(
+            HousePricePerModelRadius: 1280,
+            SmallShipPrice: 100_000,
+            LargeShipPrice: 200_000,
+            SalePercent: 85,
+            SmallShipArrival: new(2, 2),
+            LargeShipArrival: new(5, 5)),
+        // TransportManager and travel-time donor values, in their original integer units.
+        new DaggerfallTransportTuning(
+            FootTravelModifier: 256,
+            HorseTravelModifier: 128,
+            CartTravelModifier: 192,
+            FootOceanMinutes: 255,
+            ShipOceanMinutes: 51,
+            WalkBaseClassicUnits: 150,
+            HorseBaseClassicUnits: 375,
+            CartBaseClassicUnits: 250,
+            WagonCapacityClassicUnits: 300_000,
+            WagonAccessRange: 5f));
 
     internal DaggerfallTuning Validate() => this with
     {
@@ -66,6 +90,8 @@ internal sealed record DaggerfallTuning(
         Progression = Progression.Validate(),
         SiteLighting = SiteLighting.Validate(),
         Climbing = Climbing.Validate(),
+        Property = Property.Validate(),
+        Transport = Transport.Validate(),
     };
 
     internal static DaggerfallTuning Read(ReadOnlySpan<byte> payload)
@@ -91,6 +117,8 @@ internal sealed record DaggerfallTuning(
         JsonElement progression = root.GetProperty("progression");
         JsonElement siteLighting = root.GetProperty("siteLighting");
         JsonElement climbing = root.GetProperty("climbing");
+        JsonElement property = root.GetProperty("property");
+        JsonElement transport = root.GetProperty("transport");
         return new DaggerfallTuning(
             new PlayerControlTuning(
                 controls.GetProperty("lookSensitivity").GetSingle(),
@@ -149,7 +177,9 @@ internal sealed record DaggerfallTuning(
                 presentationAudio.GetProperty("pitch").GetSingle(),
                 presentationAudio.GetProperty("spatialBlend").GetSingle(),
                 presentationAudio.GetProperty("attenuation").GetSingle()),
-            new DaggerfallProgressionTuning(progression.GetProperty("enableExperimentalKillExperience").GetBoolean()),
+            new DaggerfallProgressionTuning(
+                progression.GetProperty("enableExperimentalKillExperience").GetBoolean(),
+                progression.GetProperty("experiencePerLevel").GetInt32()),
             new DaggerfallSiteLightingTuning(
                 siteLighting.GetProperty("interiorDay").GetSingle(),
                 siteLighting.GetProperty("interiorNight").GetSingle(),
@@ -165,9 +195,31 @@ internal sealed record DaggerfallTuning(
                 climbing.GetProperty("continueBaseChance").GetInt32(),
                 climbing.GetProperty("regainBaseChance").GetInt32(),
                 climbing.GetProperty("speedDivisor").GetSingle(),
-                climbing.GetProperty("enhancedSpeedMultiplier").GetSingle()))
+                climbing.GetProperty("enhancedSpeedMultiplier").GetSingle()),
+            new DaggerfallPropertyTuning(
+                property.GetProperty("housePricePerModelRadius").GetInt32(),
+                property.GetProperty("smallShipPrice").GetUInt64(),
+                property.GetProperty("largeShipPrice").GetUInt64(),
+                property.GetProperty("salePercent").GetInt32(),
+                ReadShipArrival(property.GetProperty("smallShipArrival")),
+                ReadShipArrival(property.GetProperty("largeShipArrival"))),
+            new DaggerfallTransportTuning(
+                transport.GetProperty("footTravelModifier").GetInt32(),
+                transport.GetProperty("horseTravelModifier").GetInt32(),
+                transport.GetProperty("cartTravelModifier").GetInt32(),
+                transport.GetProperty("footOceanMinutes").GetInt32(),
+                transport.GetProperty("shipOceanMinutes").GetInt32(),
+                transport.GetProperty("walkBaseClassicUnits").GetInt32(),
+                transport.GetProperty("horseBaseClassicUnits").GetInt32(),
+                transport.GetProperty("cartBaseClassicUnits").GetInt32(),
+                transport.GetProperty("wagonCapacityClassicUnits").GetInt32(),
+                transport.GetProperty("wagonAccessRange").GetSingle()))
             .Validate();
     }
+
+    private static DaggerfallShipArrivalAnchor ReadShipArrival(JsonElement anchor) => new(
+        anchor.GetProperty("mapPixelX").GetInt32(),
+        anchor.GetProperty("mapPixelY").GetInt32());
 
     private static CharacterControllerTuning ReadCharacterController(JsonElement controller) => new(
         StandingHeight: controller.GetProperty("standingHeight").GetSingle(),
@@ -249,10 +301,17 @@ internal sealed record DaggerfallTuning(
     };
 }
 
-/// <summary>Explicit opt-in for the retained non-classic kill-XP experiment.</summary>
-internal sealed record DaggerfallProgressionTuning(bool EnableExperimentalKillExperience)
+/// <summary>
+/// Explicit opt-in for the retained non-classic kill-XP experiment, and the experience each of its
+/// levels costs. Classic progression is the donor's skill-sum formula and reads neither value.
+/// </summary>
+internal sealed record DaggerfallProgressionTuning(bool EnableExperimentalKillExperience, int ExperiencePerLevel)
 {
-    internal DaggerfallProgressionTuning Validate() => this;
+    internal DaggerfallProgressionTuning Validate()
+    {
+        if (ExperiencePerLevel <= 0) throw new ArgumentOutOfRangeException(nameof(ExperiencePerLevel));
+        return this;
+    }
 }
 
 /// <summary>

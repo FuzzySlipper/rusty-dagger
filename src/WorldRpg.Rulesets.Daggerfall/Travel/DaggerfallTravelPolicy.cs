@@ -92,11 +92,11 @@ internal sealed class DaggerfallTravelPolicy
     private readonly DaggerfallTransportTuning _transport;
 
     internal DaggerfallTravelPolicy(DaggerfallSiteContext sites, DaggerfallWorldGridsSet grids,
-        DaggerfallTransportTuning? transport = null)
+        DaggerfallTransportTuning transport)
     {
         _sites = sites ?? throw new ArgumentNullException(nameof(sites));
         _grids = grids ?? throw new ArgumentNullException(nameof(grids));
-        _transport = (transport ?? DaggerfallTransportTuning.Donor).Validate();
+        _transport = (transport ?? throw new ArgumentNullException(nameof(transport))).Validate();
     }
 
     /// <summary>Returns all discovered, exterior-backed destinations in stable site identity order.</summary>

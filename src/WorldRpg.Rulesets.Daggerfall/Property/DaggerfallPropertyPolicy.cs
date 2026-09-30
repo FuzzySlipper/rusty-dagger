@@ -54,36 +54,18 @@ internal readonly record struct DaggerfallShipArrivalAnchor(int MapPixelX, int M
     }
 }
 
-/// <summary>Adjustable property prices and source-backed ship arrival data.</summary>
-internal sealed record DaggerfallPropertyTuning
+/// <summary>
+/// Adjustable property prices and source-backed ship arrival data: the <c>property</c> section of the
+/// ruleset tuning payload, whose default profile carries DaggerfallBankManager's values.
+/// </summary>
+internal sealed record DaggerfallPropertyTuning(
+    int HousePricePerModelRadius,
+    ulong SmallShipPrice,
+    ulong LargeShipPrice,
+    int SalePercent,
+    DaggerfallShipArrivalAnchor SmallShipArrival,
+    DaggerfallShipArrivalAnchor LargeShipArrival)
 {
-    internal DaggerfallPropertyTuning()
-        : this(1280, 100_000, 200_000, 85, new(2, 2), new(5, 5))
-    {
-    }
-
-    internal DaggerfallPropertyTuning(int housePricePerModelRadius, ulong smallShipPrice,
-        ulong largeShipPrice, int salePercent, DaggerfallShipArrivalAnchor smallShipArrival,
-        DaggerfallShipArrivalAnchor largeShipArrival)
-    {
-        HousePricePerModelRadius = housePricePerModelRadius;
-        SmallShipPrice = smallShipPrice;
-        LargeShipPrice = largeShipPrice;
-        SalePercent = salePercent;
-        SmallShipArrival = smallShipArrival;
-        LargeShipArrival = largeShipArrival;
-    }
-
-    internal int HousePricePerModelRadius { get; }
-    internal ulong SmallShipPrice { get; }
-    internal ulong LargeShipPrice { get; }
-    internal int SalePercent { get; }
-    internal DaggerfallShipArrivalAnchor SmallShipArrival { get; }
-    internal DaggerfallShipArrivalAnchor LargeShipArrival { get; }
-
-    /// <summary>The price and scene values retained from DaggerfallBankManager.</summary>
-    internal static DaggerfallPropertyTuning Donor { get; } = new();
-
     internal DaggerfallPropertyTuning Validate()
     {
         if (HousePricePerModelRadius <= 0 || SmallShipPrice == 0 || LargeShipPrice == 0
@@ -131,9 +113,9 @@ internal sealed record DaggerfallHouseOffer(DaggerfallHouseCandidate Candidate, 
     internal DaggerfallHouseIdentity Identity => Candidate.Identity;
     internal DaggerfallPropertyStorageKey StorageKey => DaggerfallPropertyStorageKey.ForHouse(Identity);
 
-    internal DaggerfallHouseOffer Validate(DaggerfallPropertyTuning? tuning = null)
+    internal DaggerfallHouseOffer Validate(DaggerfallPropertyTuning tuning)
     {
-        DaggerfallPropertyTuning values = (tuning ?? DaggerfallPropertyTuning.Donor).Validate();
+        DaggerfallPropertyTuning values = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
         Candidate.Validate();
         if (!DaggerfallPropertyPolicy.IsEligibleHouse(Candidate))
             throw new ArgumentException("The supplied building is not an eligible Daggerfall house candidate.", nameof(Candidate));
@@ -155,9 +137,9 @@ internal sealed record DaggerfallShipOffer(
 {
     internal DaggerfallPropertyStorageKey StorageKey => DaggerfallPropertyStorageKey.ForShip(Type);
 
-    internal DaggerfallShipOffer Validate(DaggerfallPropertyTuning? tuning = null)
+    internal DaggerfallShipOffer Validate(DaggerfallPropertyTuning tuning)
     {
-        DaggerfallPropertyTuning values = (tuning ?? DaggerfallPropertyTuning.Donor).Validate();
+        DaggerfallPropertyTuning values = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
         if (!Enum.IsDefined(Type) || PurchaseRegion is < 0 or >= 62)
             throw new ArgumentOutOfRangeException(nameof(Type), "A ship offer must name a classic ship type and bank region.");
         if (!AtPortTown)
@@ -267,10 +249,10 @@ internal static class DaggerfallPropertyPolicy
     }
 
     internal static IReadOnlyList<DaggerfallHouseOffer> HousesForSale(IEnumerable<DaggerfallHouseCandidate> candidates,
-        DaggerfallPropertyTuning? tuning = null)
+        DaggerfallPropertyTuning tuning)
     {
         ArgumentNullException.ThrowIfNull(candidates);
-        DaggerfallPropertyTuning values = (tuning ?? DaggerfallPropertyTuning.Donor).Validate();
+        DaggerfallPropertyTuning values = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
         DaggerfallHouseOffer[] offers = candidates
             .Select(candidate => candidate.Validate())
             .Where(IsEligibleHouse)
@@ -290,9 +272,9 @@ internal static class DaggerfallPropertyPolicy
     }
 
     internal static IReadOnlyList<DaggerfallShipOffer> ShipsForSale(bool atPortTown, int region,
-        DaggerfallPropertyTuning? tuning = null)
+        DaggerfallPropertyTuning tuning)
     {
-        DaggerfallPropertyTuning values = (tuning ?? DaggerfallPropertyTuning.Donor).Validate();
+        DaggerfallPropertyTuning values = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
         if (!atPortTown) return [];
         if (region is < 0 or >= 62) throw new ArgumentOutOfRangeException(nameof(region));
         DaggerfallShipOffer[] offers = Enum.GetValues<DaggerfallShipType>()
@@ -305,10 +287,10 @@ internal static class DaggerfallPropertyPolicy
         return Array.AsReadOnly(offers);
     }
 
-    internal static ulong HousePrice(DaggerfallHouseCandidate candidate, DaggerfallPropertyTuning? tuning = null)
+    internal static ulong HousePrice(DaggerfallHouseCandidate candidate, DaggerfallPropertyTuning tuning)
     {
         ArgumentNullException.ThrowIfNull(candidate);
-        DaggerfallPropertyTuning values = (tuning ?? DaggerfallPropertyTuning.Donor).Validate();
+        DaggerfallPropertyTuning values = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
         candidate.Validate();
         if (!IsEligibleHouse(candidate))
             throw new ArgumentException("The supplied building is not an eligible house candidate.", nameof(candidate));
@@ -318,9 +300,9 @@ internal static class DaggerfallPropertyPolicy
         return checked((ulong)price);
     }
 
-    internal static ulong ShipPrice(DaggerfallShipType type, DaggerfallPropertyTuning? tuning = null)
+    internal static ulong ShipPrice(DaggerfallShipType type, DaggerfallPropertyTuning tuning)
     {
-        DaggerfallPropertyTuning values = (tuning ?? DaggerfallPropertyTuning.Donor).Validate();
+        DaggerfallPropertyTuning values = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
         return type switch
         {
             DaggerfallShipType.Small => values.SmallShipPrice,
@@ -329,15 +311,15 @@ internal static class DaggerfallPropertyPolicy
         };
     }
 
-    internal static ulong SalePrice(ulong purchasePrice, DaggerfallPropertyTuning? tuning = null)
+    internal static ulong SalePrice(ulong purchasePrice, DaggerfallPropertyTuning tuning)
     {
-        DaggerfallPropertyTuning values = (tuning ?? DaggerfallPropertyTuning.Donor).Validate();
+        DaggerfallPropertyTuning values = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
         return checked(purchasePrice * (ulong)values.SalePercent / 100UL);
     }
 
-    internal static DaggerfallShipArrivalAnchor ShipArrival(DaggerfallShipType type, DaggerfallPropertyTuning? tuning = null)
+    internal static DaggerfallShipArrivalAnchor ShipArrival(DaggerfallShipType type, DaggerfallPropertyTuning tuning)
     {
-        DaggerfallPropertyTuning values = (tuning ?? DaggerfallPropertyTuning.Donor).Validate();
+        DaggerfallPropertyTuning values = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
         return type switch
         {
             DaggerfallShipType.Small => values.SmallShipArrival,

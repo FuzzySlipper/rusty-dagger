@@ -24,7 +24,6 @@ internal sealed class DaggerfallRestRecoveryModule
         bool noRegeneration,
         Func<long, DaggerfallRestTimeAdvance> advanceTime,
         Action? recordMedicalRest = null,
-        DaggerfallFormulaTuning? tuning = null,
         Action? advanceSkills = null,
         Func<(int Endurance, int Medical, bool RapidHealing, bool NoRegeneration)>? currentRecoveryInputs = null)
     {
@@ -93,7 +92,7 @@ internal sealed class DaggerfallRestRecoveryModule
                     Maximum(player, DaggerfallMechanicsIds.HealthMaximum),
                     Maximum(player, DaggerfallMechanicsIds.StaminaMaximum),
                     Maximum(player, DaggerfallMechanicsIds.MagickaMaximum),
-                    inputs.RapidHealing, inputs.NoRegeneration, tuning);
+                    inputs.RapidHealing, inputs.NoRegeneration);
                 Recover(player, healthRate, fatigueRate, spellRate);
                 recordMedicalRest();
             }

@@ -226,7 +226,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
                     ToSiteReturnPose(restoredSite.ReturnPose),
                     restoredSite.Discovered.Select(id => id.Require()))
                 : new World.DaggerfallSiteContext(definitions.Locations, inputs.Site, null, []);
-            _travelPolicy = new DaggerfallTravelPolicy(_site, definitions.Grids);
+            _travelPolicy = new DaggerfallTravelPolicy(_site, definitions.Grids, tuning.Transport);
             _siteProfiles = profiles;
             _activeProfileKey = saved?.Site.ActiveProfile?.Require() ?? inputs.ProfileKey;
             _returnProfileKey = saved?.Site.ReturnProfile?.Require();
@@ -310,7 +310,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
                 () => State.Character.Career,
                 _random,
                 authored,
-                tuning.Progression.EnableExperimentalKillExperience);
+                tuning.Progression);
             State.SkillUses = new DaggerfallSkillUseReactions(State.Progression, State.Actors.Player.Stats, definitions, () => State.Character.Career);
             State.GuildMembership = new DaggerfallGuildMembershipPolicy(State.Social,
                 State.SkillUses.PermanentSkillValue, DaggerfallConcreteGuildCatalog.AllMembershipPolicies);
@@ -377,7 +377,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             State.Currency = new DaggerfallCurrencyService(definitions, State.Inventory, State.ItemInstances, State.Encumbrance, _uniqueItems, saved?.Currency);
             State.Bank = new DaggerfallRegionalBankState(State.Currency, State.Inventory, State.ItemInstances, saved?.Bank);
             State.Loans = new DaggerfallLoanState(saved?.Loans);
-            State.Property = new DaggerfallPropertyState(saved?.Property);
+            State.Property = new DaggerfallPropertyState(tuning.Property, saved?.Property);
             InitializePropertyStorage(saved?.Property);
             State.Crime = new DaggerfallCrimeState(saved?.Crime);
             State.Services = new DaggerfallServiceTransactions(State.Npcs, State.Social, State.Inventory, State.ItemInstances,
@@ -397,9 +397,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
             State.TradeQuotes = new DaggerfallTradeQuoteService(definitions, new DaggerfallItemValuation(definitions),
                 State.RegionalPrices);
-            State.Transport = new DaggerfallTransportPolicy();
+            State.Transport = new DaggerfallTransportPolicy(tuning.Transport);
             State.Wagon = new DaggerfallWagonStorage(State.Containers, State.ItemInstances, definitions,
-                playerEntity, _actorIdentities);
+                playerEntity, _actorIdentities, tuning.Transport);
             _corpseLoot = new DaggerfallCorpseLootModule(
                 engine.Perception,
                 _spatial,

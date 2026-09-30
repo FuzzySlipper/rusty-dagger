@@ -19,14 +19,14 @@ internal sealed class DaggerfallRewardReactions(
     Func<DaggerfallCareerDefinition> playerCareer,
     IRandomService random,
     IReadOnlyDictionary<long, DaggerfallActorDefinition> actors,
-    bool experimentalKillExperience = false)
+    DaggerfallProgressionTuning progressionTuning)
 {
     private readonly HashSet<long> _awarded = [];
     private readonly HashSet<long> _experienceAwarded = [];
 
     internal void React(ActorDiedFact fact, FactBuffer<IProductFact> facts)
     {
-        if (!experimentalKillExperience || fact.KillerId != DaggerfallActorIdentity.PlayerEntityId) return;
+        if (!progressionTuning.EnableExperimentalKillExperience || fact.KillerId != DaggerfallActorIdentity.PlayerEntityId) return;
         if (_awarded.Contains(fact.ActorId) || !actors.TryGetValue(fact.ActorId, out DaggerfallActorDefinition? actor)) return;
 
         ProgressionAwardPlan? progressionPlan = PlanExperimentalProgression(fact.ActorId, actor);
@@ -82,7 +82,7 @@ internal sealed class DaggerfallRewardReactions(
         if (defeated.Rewards.ExperienceReward <= 0 || _experienceAwarded.Contains(defeatedActorId)) return null;
 
         int nextExperience = checked(progression.Experience + defeated.Rewards.ExperienceReward);
-        int curveLevel = checked(1 + DaggerfallFormulaPolicy.ExperimentalXpLevel(nextExperience, DaggerfallFormulaPolicy.Experimental));
+        int curveLevel = checked(1 + DaggerfallFormulaPolicy.ExperimentalXpLevel(nextExperience, progressionTuning.ExperiencePerLevel));
         int nextLevel = Math.Max(progression.Level, curveLevel);
         return PlanLevel(nextExperience, nextLevel);
     }
@@ -194,7 +194,7 @@ internal static class DaggerfallLevelUpHealthSource
         ArgumentNullException.ThrowIfNull(career);
         if (level < 2) throw new ArgumentOutOfRangeException(nameof(level));
         int hitPointsPerLevel = career.HitPointsPerLevel;
-        (int minimum, int maximum) = DaggerfallFormulaPolicy.HitPointsPerLevelRollBounds(hitPointsPerLevel, DaggerfallFormulaPolicy.Experimental);
+        (int minimum, int maximum) = DaggerfallFormulaPolicy.HitPointsPerLevelRollBounds(hitPointsPerLevel);
         int roll = checked((int)random.DrawKeyed(new KeyedRngRequest(
             CombatRandomKey.Seed,
             CombatRandomKey.PlayerScope,
@@ -203,7 +203,7 @@ internal static class DaggerfallLevelUpHealthSource
             maximum)).Value);
         if (roll < minimum || roll > maximum)
             throw new MechanicsException($"Daggerfall level-up roll for level {level} was outside [{minimum}, {maximum}].");
-        return DaggerfallFormulaPolicy.HitPointsPerLevelUp(roll, permanentEndurance, DaggerfallFormulaPolicy.Experimental);
+        return DaggerfallFormulaPolicy.HitPointsPerLevelUp(roll, permanentEndurance);
     }
 
     internal static bool IsForLevel(StatSource source, Rusty.Engine.Entities.EntityId player, int level) =>

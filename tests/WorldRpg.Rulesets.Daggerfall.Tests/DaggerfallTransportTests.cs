@@ -19,7 +19,7 @@ public sealed class DaggerfallTransportTests
         using Fixture fixture = new();
         fixture.AddCart(20);
         fixture.AddHorse(21);
-        DaggerfallTransportPolicy policy = new();
+        DaggerfallTransportPolicy policy = new(DaggerfallTuning.Defaults.Transport);
 
         DaggerfallTransportActionResult mounted = policy.ToggleMount(fixture.ReadPlayer(), new());
 
@@ -39,7 +39,7 @@ public sealed class DaggerfallTransportTests
     public void Mounts_are_rejected_indoors_and_missing_owned_items_are_reported()
     {
         using Fixture fixture = new();
-        DaggerfallTransportPolicy policy = new();
+        DaggerfallTransportPolicy policy = new(DaggerfallTuning.Defaults.Transport);
 
         DaggerfallTransportActionResult missing = policy.ToggleMount(fixture.ReadPlayer(), new());
         Assert.Equal(DaggerfallTransportRejection.MissingHorse, missing.Rejection);
@@ -59,7 +59,7 @@ public sealed class DaggerfallTransportTests
     public void Ship_boarding_retains_return_pose_in_current_state_and_leaving_returns_it()
     {
         DaggerfallTransportPose pose = new(new WorldPoint(12, 3, -8), 1.2f, -0.3f);
-        DaggerfallTransportPolicy policy = new();
+        DaggerfallTransportPolicy policy = new(DaggerfallTuning.Defaults.Transport);
 
         DaggerfallTransportActionResult boarded = policy.BoardShip(true, new(), pose);
 
@@ -69,7 +69,7 @@ public sealed class DaggerfallTransportTests
         Assert.Equal(51, policy.OceanMinutesPerMapPixel());
         DaggerfallTransportSave saved = policy.Capture();
 
-        DaggerfallTransportPolicy restored = new();
+        DaggerfallTransportPolicy restored = new(DaggerfallTuning.Defaults.Transport);
         restored.Restore(saved);
         DaggerfallTransportActionResult left = restored.LeaveShip();
 
@@ -85,7 +85,7 @@ public sealed class DaggerfallTransportTests
     {
         using Fixture fixture = new();
         fixture.AddHorse(23);
-        DaggerfallTransportPolicy policy = new();
+        DaggerfallTransportPolicy policy = new(DaggerfallTuning.Defaults.Transport);
 
         Assert.Equal(256, policy.TravelModifier());
         Assert.Equal(255, policy.OceanMinutesPerMapPixel());
@@ -201,7 +201,7 @@ public sealed class DaggerfallTransportTests
         fixture.AddCart(43);
         DaggerfallWagonStorage wagon = fixture.CreateWagonStorage();
 
-        DaggerfallTransportPresentation projection = DaggerfallTransportProjection.Read(new(), fixture.ReadPlayer(), new(), false, wagon);
+        DaggerfallTransportPresentation projection = DaggerfallTransportProjection.Read(new(DaggerfallTuning.Defaults.Transport), fixture.ReadPlayer(), new(), false, wagon);
 
         Assert.Equal(DaggerfallTransportMode.Foot, projection.Mode);
         Assert.Equal("horse", projection.Options.Single(option => option.Mode == DaggerfallTransportMode.Horse).Id);
@@ -257,7 +257,7 @@ public sealed class DaggerfallTransportTests
 
         internal void DestroyStack(InventoryStackId stack) => Store.Consume(Player, stack, Store.Read(Player).Stacks.Single(value => value.Id == stack).Quantity);
 
-        internal DaggerfallWagonStorage CreateWagonStorage() => new(Containers, Instances, Definitions, Player, Identities);
+        internal DaggerfallWagonStorage CreateWagonStorage() => new(Containers, Instances, Definitions, Player, Identities, DaggerfallTuning.Defaults.Transport);
 
         private void AddUniqueItem(ulong id, string definition)
         {

@@ -146,8 +146,7 @@ internal sealed class DaggerfallSkillUseReactions
     /// <summary>Reads level progress from the same skill-sum owner that decides level eligibility.</summary>
     internal DaggerfallLevelProgress ReadLevelProgress()
     {
-        DaggerfallFormulaTuning tuning = DaggerfallFormulaPolicy.Classic;
-        int next = checked(_startingLevelUpSkillSum + checked((_progression.Level + 1) * tuning.LevelFormulaDivisor) - tuning.LevelFormulaOffset);
+        int next = DaggerfallFormulaPolicy.ClassicLevelSkillSumThreshold(_startingLevelUpSkillSum, checked(_progression.Level + 1));
         return new DaggerfallLevelProgress(CurrentLevelUpSkillSum, next, PendingLevelUp);
     }
 

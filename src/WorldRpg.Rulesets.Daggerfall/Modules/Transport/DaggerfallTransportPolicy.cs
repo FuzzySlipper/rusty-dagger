@@ -123,18 +123,21 @@ internal sealed record DaggerfallTransportSave(
     internal static DaggerfallTransportSave Foot { get; } = new(DaggerfallTransportMode.Foot, false);
 }
 
-/// <summary>Donor-derived movement and travel constants in their original integer units.</summary>
+/// <summary>
+/// Donor-derived movement and travel values in their original integer units: the <c>transport</c>
+/// section of the ruleset tuning payload.
+/// </summary>
 internal sealed record DaggerfallTransportTuning(
-    int FootTravelModifier = 256,
-    int HorseTravelModifier = 128,
-    int CartTravelModifier = 192,
-    int FootOceanMinutes = 255,
-    int ShipOceanMinutes = 51,
-    int WalkBaseClassicUnits = 150,
-    int HorseBaseClassicUnits = 375,
-    int CartBaseClassicUnits = 250,
-    int WagonCapacityClassicUnits = 300_000,
-    float WagonAccessRange = 5f)
+    int FootTravelModifier,
+    int HorseTravelModifier,
+    int CartTravelModifier,
+    int FootOceanMinutes,
+    int ShipOceanMinutes,
+    int WalkBaseClassicUnits,
+    int HorseBaseClassicUnits,
+    int CartBaseClassicUnits,
+    int WagonCapacityClassicUnits,
+    float WagonAccessRange)
 {
     internal DaggerfallTransportTuning Validate()
     {
@@ -145,8 +148,6 @@ internal sealed record DaggerfallTransportTuning(
             throw new ArgumentOutOfRangeException(nameof(WagonCapacityClassicUnits), "Transport tuning must contain positive travel and capacity values.");
         return this;
     }
-
-    internal static DaggerfallTransportTuning Donor { get; } = new();
 }
 
 /// <summary>One semantic transport request result, including a relocation when a ship is left.</summary>
@@ -176,9 +177,9 @@ internal sealed class DaggerfallTransportPolicy
     private bool _onShip;
     private DaggerfallTransportPose? _shipReturnPose;
 
-    internal DaggerfallTransportPolicy(DaggerfallTransportTuning? tuning = null)
+    internal DaggerfallTransportPolicy(DaggerfallTransportTuning tuning)
     {
-        _tuning = (tuning ?? DaggerfallTransportTuning.Donor).Validate();
+        _tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
     }
 
     internal DaggerfallTransportMode Mode => _mode;

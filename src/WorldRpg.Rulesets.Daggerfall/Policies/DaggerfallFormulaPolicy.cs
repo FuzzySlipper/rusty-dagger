@@ -7,54 +7,49 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 /// <summary>
 /// Named, compiled Daggerfall formulas.  The donor catalogs are evidence for
 /// these policies; they are not an evaluator or a runtime rules language.
-/// Values which are part of a selected profile live in the tuning record so a
-/// caller can identify and replace them without hunting through call sites.
+/// The numbers inside each formula are the donor <c>FormulaHelper</c>'s own
+/// algorithmic constants and stay beside the formula that owns them; only
+/// genuinely adjustable values are ruleset tuning.
 /// </summary>
 internal static class DaggerfallFormulaPolicy
 {
-    internal static DaggerfallFormulaTuning Classic { get; } = new();
-    // The current live profile is intentionally named separately from the
-    // classic skill-sum profile even while it shares the 500-XP tuning value.
-    internal static DaggerfallFormulaTuning Experimental { get; } = Classic with { ExperiencePerLevel = 500 };
+    // FormulaHelper's attribute modifiers centre on 50 and move one point per ten attribute points.
+    private const int AttributeBaseline = 50;
+    private const int AttributeDivisor = 10;
+    // Classic fatigue is stored at 64 units per displayed attribute point.
+    private const int FatigueUnitsPerAttributePoint = 64;
+    // Fixed-point scale for multipliers carried in thousandths.
+    private const int MilliScale = 1000;
+    // Fatigue and spell-point recovery both divide the maximum by eight and floor at one.
+    private const int RecoveryDivisor = 8;
+    private const int MinimumRecoveryRate = 1;
+    // Classic level formula: level = (current - starting + 28) / 15 over the level-up skill sums.
+    private const int LevelFormulaOffset = 28;
+    private const int LevelFormulaDivisor = 15;
 
-    internal static int DamageModifier(int strength, DaggerfallFormulaTuning? tuning = null)
-    {
-        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
-        return FloorDivide(strength - selected.AttributeBaseline, selected.DamageModifierDivisor);
-    }
+    internal static int DamageModifier(int strength) =>
+        FloorDivide(strength - AttributeBaseline, 5);
 
-    internal static int ToHitModifier(int agility, DaggerfallFormulaTuning? tuning = null)
-    {
-        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
-        return FloorDivide(agility, selected.ToHitAttributeDivisor) - selected.ToHitBaseline;
-    }
+    internal static int ToHitModifier(int agility) =>
+        FloorDivide(agility, AttributeDivisor) - 5;
 
-    internal static int HitPointsModifier(int endurance, DaggerfallFormulaTuning? tuning = null) =>
-        FloorDivide(endurance - tuning.GetValueOrDefault(Classic).AttributeBaseline, tuning.GetValueOrDefault(Classic).AttributeDivisor);
+    internal static int HitPointsModifier(int endurance) =>
+        FloorDivide(endurance - AttributeBaseline, AttributeDivisor);
 
-    internal static int HealingRateModifier(int endurance, DaggerfallFormulaTuning? tuning = null) =>
-        HitPointsModifier(endurance, tuning);
+    internal static int HealingRateModifier(int endurance) =>
+        HitPointsModifier(endurance);
 
-    internal static int MagicResist(int willpower, DaggerfallFormulaTuning? tuning = null) =>
-        FloorDivide(willpower, tuning.GetValueOrDefault(Classic).AttributeDivisor);
+    internal static int MagicResist(int willpower) =>
+        FloorDivide(willpower, AttributeDivisor);
 
-    internal static int MaxEncumbrance(int strength, DaggerfallFormulaTuning? tuning = null)
-    {
-        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
-        return FloorDivide(checked(strength * selected.EncumbranceNumerator), selected.EncumbranceDenominator);
-    }
+    internal static int MaxEncumbrance(int strength) =>
+        FloorDivide(checked(strength * 3), 2);
 
-    internal static int MaxBreath(int endurance, DaggerfallFormulaTuning? tuning = null)
-    {
-        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
-        return FloorDivide(endurance, selected.BreathDivisor);
-    }
+    internal static int MaxBreath(int endurance) =>
+        FloorDivide(endurance, 2);
 
-    internal static int MaxFatigue(int strength, int endurance, DaggerfallFormulaTuning? tuning = null)
-    {
-        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
-        return checked((strength + endurance) * selected.FatigueUnitsPerAttributePoint);
-    }
+    internal static int MaxFatigue(int strength, int endurance) =>
+        checked((strength + endurance) * FatigueUnitsPerAttributePoint);
 
     /// <summary>Donor PlayerHealth fall policy: five health points for every metre after the five-metre grace distance.</summary>
     internal static int FallDamage(float distance)
@@ -149,17 +144,14 @@ internal static class DaggerfallFormulaPolicy
     }
 
     /// <summary>Donor FormulaHelper fatigue consequence: two fatigue points per accepted health point, in Daggerfall units.</summary>
-    internal static int FatigueDamage(int healthDamage, DaggerfallFormulaTuning? tuning = null)
+    internal static int FatigueDamage(int healthDamage)
     {
         if (healthDamage < 0) throw new ArgumentOutOfRangeException(nameof(healthDamage));
-        return checked(healthDamage * 2 * tuning.GetValueOrDefault(Classic).FatigueUnitsPerAttributePoint);
+        return checked(healthDamage * 2 * FatigueUnitsPerAttributePoint);
     }
 
-    internal static int SpellPoints(int intelligence, int multiplierMilli, DaggerfallFormulaTuning? tuning = null)
-    {
-        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
-        return FloorDivide(checked(intelligence * multiplierMilli), selected.MilliScale);
-    }
+    internal static int SpellPoints(int intelligence, int multiplierMilli) =>
+        FloorDivide(checked(intelligence * multiplierMilli), MilliScale);
 
     /// <summary>The classic character-sheet ceiling used by creation and level allocation.</summary>
     internal static int MaxStatValue() => 100;
@@ -175,67 +167,57 @@ internal static class DaggerfallFormulaPolicy
     /// Donor <c>FormulaHelper.RollMaxHealth</c>: level one is the base 25 plus career health,
     /// then every subsequent level consumes one caller-owned Engine random health roll.
     /// </summary>
-    internal static int RollMaxHealth(int level, int hitPointsPerLevel, int endurance, Func<int, int, int> rollInclusive, DaggerfallFormulaTuning? tuning = null)
+    internal static int RollMaxHealth(int level, int hitPointsPerLevel, int endurance, Func<int, int, int> rollInclusive)
     {
         if (level < 1) throw new ArgumentOutOfRangeException(nameof(level));
         ArgumentNullException.ThrowIfNull(rollInclusive);
         int health = checked(25 + hitPointsPerLevel);
         for (int current = 1; current < level; current++)
         {
-            (int minimum, int maximum) = HitPointsPerLevelRollBounds(hitPointsPerLevel, tuning);
+            (int minimum, int maximum) = HitPointsPerLevelRollBounds(hitPointsPerLevel);
             int roll = rollInclusive(minimum, maximum);
             if (roll < minimum || roll > maximum) throw new ArgumentOutOfRangeException(nameof(rollInclusive));
-            health = checked(health + HitPointsPerLevelUp(roll, endurance, tuning));
+            health = checked(health + HitPointsPerLevelUp(roll, endurance));
         }
         return health;
     }
 
-    internal static int HandToHandMinimumDamage(int skill, DaggerfallFormulaTuning? tuning = null)
-    {
-        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
-        return checked(FloorDivide(skill, selected.HandToHandMinimumDivisor) + 1);
-    }
+    internal static int HandToHandMinimumDamage(int skill) =>
+        checked(FloorDivide(skill, 10) + 1);
 
-    internal static int HandToHandMaximumDamage(int skill, DaggerfallFormulaTuning? tuning = null)
-    {
-        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
-        return checked(FloorDivide(skill, selected.HandToHandMaximumDivisor) + 1);
-    }
+    internal static int HandToHandMaximumDamage(int skill) =>
+        checked(FloorDivide(skill, 5) + 1);
 
-    internal static int HealthRecoveryRate(int endurance, int medical, int maximumHealth, bool rapidHealing, DaggerfallFormulaTuning? tuning = null)
+    internal static int HealthRecoveryRate(int endurance, int medical, int maximumHealth, bool rapidHealing)
     {
-        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
-        int careerBonus = rapidHealing ? selected.RapidHealingBonus : 0;
+        // Donor: the healing-rate modifier plus (medical + 60, +40 for rapid healing) thousandths of maximum health.
+        int careerBonus = rapidHealing ? 40 : 0;
         int recovery = checked(
-            HealingRateModifier(endurance, selected)
-            + FloorDivide(checked((medical + selected.HealthRecoveryBase + careerBonus) * maximumHealth), selected.HealthRecoveryScale));
-        return Math.Max(selected.MinimumRecoveryRate, recovery);
+            HealingRateModifier(endurance)
+            + FloorDivide(checked((medical + 60 + careerBonus) * maximumHealth), 1000));
+        return Math.Max(MinimumRecoveryRate, recovery);
     }
 
     /// <summary>FORM-01.CalculateHealthRecoveryRate, with the donor's integer floor and minimum of one.</summary>
-    internal static int CalculateHealthRecoveryRate(int endurance, int medical, int maximumHealth, bool rapidHealing, DaggerfallFormulaTuning? tuning = null) =>
-        HealthRecoveryRate(endurance, medical, maximumHealth, rapidHealing, tuning);
+    internal static int CalculateHealthRecoveryRate(int endurance, int medical, int maximumHealth, bool rapidHealing) =>
+        HealthRecoveryRate(endurance, medical, maximumHealth, rapidHealing);
 
-    internal static int FatigueRecoveryRate(int maximumFatigue, DaggerfallFormulaTuning? tuning = null)
-    {
-        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
-        return Math.Max(selected.MinimumRecoveryRate, FloorDivide(maximumFatigue, selected.RecoveryDivisor));
-    }
+    internal static int FatigueRecoveryRate(int maximumFatigue) =>
+        Math.Max(MinimumRecoveryRate, FloorDivide(maximumFatigue, RecoveryDivisor));
 
     /// <summary>FORM-01.CalculateFatigueRecoveryRate, retaining the donor's maximum-fatigue divisor.</summary>
-    internal static int CalculateFatigueRecoveryRate(int maximumFatigue, DaggerfallFormulaTuning? tuning = null) =>
-        FatigueRecoveryRate(maximumFatigue, tuning);
+    internal static int CalculateFatigueRecoveryRate(int maximumFatigue) =>
+        FatigueRecoveryRate(maximumFatigue);
 
-    internal static int SpellPointRecoveryRate(int maximumMagicka, bool noRegeneration, DaggerfallFormulaTuning? tuning = null)
+    internal static int SpellPointRecoveryRate(int maximumMagicka, bool noRegeneration)
     {
-        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
         if (noRegeneration) return 0;
-        return Math.Max(selected.MinimumRecoveryRate, FloorDivide(maximumMagicka, selected.RecoveryDivisor));
+        return Math.Max(MinimumRecoveryRate, FloorDivide(maximumMagicka, RecoveryDivisor));
     }
 
     /// <summary>FORM-01.CalculateSpellPointRecoveryRate, including the no-regeneration career branch.</summary>
-    internal static int CalculateSpellPointRecoveryRate(int maximumMagicka, bool noRegeneration, DaggerfallFormulaTuning? tuning = null) =>
-        SpellPointRecoveryRate(maximumMagicka, noRegeneration, tuning);
+    internal static int CalculateSpellPointRecoveryRate(int maximumMagicka, bool noRegeneration) =>
+        SpellPointRecoveryRate(maximumMagicka, noRegeneration);
 
     /// <summary>
     /// Donor <c>FormulaHelper.CalculateInteriorLockpickingChance</c> for an
@@ -400,51 +382,54 @@ internal static class DaggerfallFormulaPolicy
         is DaggerfallSkills.ShortBlade or DaggerfallSkills.LongBlade or DaggerfallSkills.Axe;
 
     /// <summary>Classic skill-sum progression, kept separate from the live XP experiment.</summary>
-    internal static int ClassicPlayerLevel(int currentLevelUpSkills, int startingLevelUpSkills, DaggerfallFormulaTuning? tuning = null)
-    {
-        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
-        return FloorDivide(checked(currentLevelUpSkills - startingLevelUpSkills + selected.LevelFormulaOffset), selected.LevelFormulaDivisor);
-    }
+    internal static int ClassicPlayerLevel(int currentLevelUpSkills, int startingLevelUpSkills) =>
+        FloorDivide(checked(currentLevelUpSkills - startingLevelUpSkills + LevelFormulaOffset), LevelFormulaDivisor);
 
     /// <summary>The donor's level check, ordered as its starting and current skill-set sums.</summary>
-    internal static int CalculatePlayerLevel(int startingLevelUpSkillsSum, int currentLevelUpSkillsSum, DaggerfallFormulaTuning? tuning = null) =>
-        ClassicPlayerLevel(currentLevelUpSkillsSum, startingLevelUpSkillsSum, tuning);
+    internal static int CalculatePlayerLevel(int startingLevelUpSkillsSum, int currentLevelUpSkillsSum) =>
+        ClassicPlayerLevel(currentLevelUpSkillsSum, startingLevelUpSkillsSum);
 
-    /// <summary>The selected live profile's 500-XP threshold count.</summary>
-    internal static int ExperimentalXpLevel(int experience, DaggerfallFormulaTuning? tuning = null)
+    /// <summary>The level-up skill sum at which <see cref="ClassicPlayerLevel"/> first reaches <paramref name="level"/>.</summary>
+    internal static int ClassicLevelSkillSumThreshold(int startingLevelUpSkills, int level) =>
+        checked(startingLevelUpSkills + checked(level * LevelFormulaDivisor) - LevelFormulaOffset);
+
+    /// <summary>
+    /// Threshold count for the retained non-classic kill-XP experiment. The experience per level is
+    /// ruleset tuning (<see cref="DaggerfallProgressionTuning.ExperiencePerLevel"/>), not a donor constant.
+    /// </summary>
+    internal static int ExperimentalXpLevel(int experience, int experiencePerLevel)
     {
-        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
-        return Math.Max(0, FloorDivide(experience, selected.ExperiencePerLevel));
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(experiencePerLevel);
+        return Math.Max(0, FloorDivide(experience, experiencePerLevel));
     }
 
-    internal static int HitPointsPerLevelUp(int roll, int endurance, DaggerfallFormulaTuning? tuning = null)
+    /// <summary>Donor level-up health: the roll plus the endurance healing modifier, never below one.</summary>
+    internal static int HitPointsPerLevelUp(int roll, int endurance) =>
+        Math.Max(1, checked(roll + HealingRateModifier(endurance)));
+
+    /// <summary>Donor level-up health roll: from half the career's hit points per level (at least one) to the full value.</summary>
+    internal static (int Minimum, int Maximum) HitPointsPerLevelRollBounds(int hitPointsPerLevel)
     {
-        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
-        return Math.Max(selected.MinimumRecoveryRate, checked(roll + HealingRateModifier(endurance, selected)));
+        if (hitPointsPerLevel < 1) throw new ArgumentOutOfRangeException(nameof(hitPointsPerLevel));
+        return (Math.Max(1, FloorDivide(hitPointsPerLevel, 2)), hitPointsPerLevel);
     }
 
-    internal static (int Minimum, int Maximum) HitPointsPerLevelRollBounds(int hitPointsPerLevel, DaggerfallFormulaTuning? tuning = null)
-    {
-        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
-        if (hitPointsPerLevel < selected.MinimumHitPointsPerLevel) throw new ArgumentOutOfRangeException(nameof(hitPointsPerLevel));
-        return (Math.Max(selected.MinimumHitPointsPerLevel, FloorDivide(hitPointsPerLevel, selected.HitPointsRollDivisor)), hitPointsPerLevel);
-    }
+    /// <summary>Donor reflexes scale on skill-use gain: 1.0 at reflexes 2, less 0.125 per step, in thousandths.</summary>
+    internal static int ReflexesSkillUseScaleMilli(int reflexes) =>
+        checked(MilliScale - ((reflexes - 2) * 125));
 
-    internal static int ReflexesSkillUseScaleMilli(int reflexes, DaggerfallFormulaTuning? tuning = null)
+    /// <summary>
+    /// Donor <c>CalculateSkillUsesForAdvancement</c> in exact integer form:
+    /// <c>floor(skill * multiplier * career * 1.04^level * 2 / 5) + 1</c>, with the career multiplier in
+    /// hundredths and the level power in thousandths, admitting the donor's 0..64 level range.
+    /// </summary>
+    internal static int SkillUsesForAdvancement(int skillValue, int skillMultiplier, int careerMultiplierCenti, int level)
     {
-        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
-        return checked(selected.MilliScale - ((reflexes - selected.ReflexesBaseline) * selected.ReflexesPenaltyMilli));
-    }
-
-    internal static int SkillUsesForAdvancement(int skillValue, int skillMultiplier, int careerMultiplierCenti, int level, DaggerfallFormulaTuning? tuning = null)
-    {
-        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
-        selected.Validate();
-        if (skillValue < 0 || skillMultiplier < 0 || careerMultiplierCenti < 0 || level < 0 || level > selected.MaximumSkillLevel) throw new ArgumentOutOfRangeException();
-        long powerMilli = selected.MilliScale;
-        for (int current = 0; current < level; current++) powerMilli = checked(powerMilli * selected.SkillLevelPowerMilli / selected.MilliScale);
-        long numerator = checked((long)skillValue * skillMultiplier * careerMultiplierCenti * powerMilli * selected.SkillUsesNumerator);
-        return checked((int)(FloorDivide(numerator, selected.SkillUsesDenominator) + 1));
+        if (skillValue < 0 || skillMultiplier < 0 || careerMultiplierCenti < 0 || level < 0 || level > 64) throw new ArgumentOutOfRangeException();
+        long powerMilli = MilliScale;
+        for (int current = 0; current < level; current++) powerMilli = checked(powerMilli * 1040 / MilliScale);
+        long numerator = checked((long)skillValue * skillMultiplier * careerMultiplierCenti * powerMilli * 2);
+        return checked((int)(FloorDivide(numerator, 500_000) + 1));
     }
 
     /// <summary>The donor's career-float overload, retained for authored career multipliers.</summary>
@@ -460,8 +445,8 @@ internal static class DaggerfallFormulaPolicy
     }
 
     /// <summary>Compatibility overload for exact-centi callers using the existing tuned profile.</summary>
-    internal static int CalculateSkillUsesForAdvancement(int skillValue, int skillAdvancementMultiplier, int careerAdvancementMultiplierCenti, int level, DaggerfallFormulaTuning? tuning = null) =>
-        SkillUsesForAdvancement(skillValue, skillAdvancementMultiplier, careerAdvancementMultiplierCenti, level, tuning);
+    internal static int CalculateSkillUsesForAdvancement(int skillValue, int skillAdvancementMultiplier, int careerAdvancementMultiplierCenti, int level) =>
+        SkillUsesForAdvancement(skillValue, skillAdvancementMultiplier, careerAdvancementMultiplierCenti, level);
 
     internal static int SkillAdvancementMultiplier(string skill)
     {
@@ -518,51 +503,34 @@ internal static class DaggerfallFormulaPolicy
     }
 
     /// <summary>Donor <c>CalculateStatsToHit</c>, preserving C# integer truncation toward zero for negative differentials.</summary>
-    internal static int CalculateStatsToHit(int attackerLuck, int targetLuck, int attackerAgility, int targetAgility, DaggerfallFormulaTuning? tuning = null)
-    {
-        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
-        return checked(TruncateDivide(attackerLuck - targetLuck, selected.HitChanceAttributeDivisor)
-            + TruncateDivide(attackerAgility - targetAgility, selected.HitChanceAttributeDivisor));
-    }
+    internal static int CalculateStatsToHit(int attackerLuck, int targetLuck, int attackerAgility, int targetAgility) =>
+        checked(TruncateDivide(attackerLuck - targetLuck, 10) + TruncateDivide(attackerAgility - targetAgility, 10));
 
     /// <summary>Donor <c>CalculateSkillsToHit</c>: target dodging always applies; a separately keyed critical-strike success supplies its bonus.</summary>
-    internal static int CalculateSkillsToHit(int targetDodging, int attackerCriticalStrike, bool criticalStrikeSucceeded, DaggerfallFormulaTuning? tuning = null)
-    {
-        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
-        return checked(-FloorDivide(targetDodging, selected.HitChanceDodgingDivisor)
-            + (criticalStrikeSucceeded ? FloorDivide(attackerCriticalStrike, selected.HitChanceAttributeDivisor) : 0));
-    }
+    internal static int CalculateSkillsToHit(int targetDodging, int attackerCriticalStrike, bool criticalStrikeSucceeded) =>
+        checked(-FloorDivide(targetDodging, 4) + (criticalStrikeSucceeded ? FloorDivide(attackerCriticalStrike, 10) : 0));
 
     /// <summary>Donor <c>CalculateAdjustmentsToHit</c>: biography avoidance, the monster bonus, then the classic -50 baseline.</summary>
-    internal static int CalculateAdjustmentsToHit(bool targetIsMonster, int targetBiographyAvoidHit, DaggerfallFormulaTuning? tuning = null)
-    {
-        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
-        return checked((targetIsMonster ? 40 : 0) - targetBiographyAvoidHit + selected.HitChanceBase);
-    }
+    internal static int CalculateAdjustmentsToHit(bool targetIsMonster, int targetBiographyAvoidHit) =>
+        checked((targetIsMonster ? 40 : 0) - targetBiographyAvoidHit - 50);
 
-    /// <summary>One complete donor hit pipeline before its caller compares the independently drawn 1..100 roll.</summary>
-    internal static int CalculateSuccessfulHitChance(int chanceToHitModifier, int struckArmor, int adrenalineRush, int stats, int skills, int adjustments,
-        DaggerfallFormulaTuning? tuning = null)
-    {
-        DaggerfallFormulaTuning selected = tuning.GetValueOrDefault(Classic);
-        return Math.Clamp(checked(chanceToHitModifier + CalculateArmorToHit(struckArmor) + adrenalineRush + stats + skills + adjustments),
-            selected.MinimumHitChance, selected.MaximumHitChance);
-    }
+    /// <summary>One complete donor hit pipeline before its caller compares the independently drawn 1..100 roll; the donor clamps to [3, 97].</summary>
+    internal static int CalculateSuccessfulHitChance(int chanceToHitModifier, int struckArmor, int adrenalineRush, int stats, int skills, int adjustments) =>
+        Math.Clamp(checked(chanceToHitModifier + CalculateArmorToHit(struckArmor) + adrenalineRush + stats + skills + adjustments), 3, 97);
 
     /// <summary>Boolean donor-shaped overload retained for callers that already own their actual Engine random roll.</summary>
-    internal static bool CalculateSuccessfulHit(int chanceToHitModifier, int struckArmor, int adrenalineRush, int stats, int skills, int adjustments, int roll,
-        DaggerfallFormulaTuning? tuning = null)
+    internal static bool CalculateSuccessfulHit(int chanceToHitModifier, int struckArmor, int adrenalineRush, int stats, int skills, int adjustments, int roll)
     {
         if (roll is < 1 or > 100) throw new ArgumentOutOfRangeException(nameof(roll));
-        return roll <= CalculateSuccessfulHitChance(chanceToHitModifier, struckArmor, adrenalineRush, stats, skills, adjustments, tuning);
+        return roll <= CalculateSuccessfulHitChance(chanceToHitModifier, struckArmor, adrenalineRush, stats, skills, adjustments);
     }
 
     /// <summary>Compatibility read for existing callers that do not own weapon, adrenaline, or critical-strike inputs.</summary>
-    internal static int CalculateHitChance(int skill, int struckArmor, int attackerLuck, int targetLuck, int attackerAgility, int targetAgility, int targetDodging, int targetBiographyAvoidHit = 0, DaggerfallFormulaTuning? tuning = null) =>
+    internal static int CalculateHitChance(int skill, int struckArmor, int attackerLuck, int targetLuck, int attackerAgility, int targetAgility, int targetDodging, int targetBiographyAvoidHit = 0) =>
         CalculateSuccessfulHitChance(skill, struckArmor, 0,
-            CalculateStatsToHit(attackerLuck, targetLuck, attackerAgility, targetAgility, tuning),
-            CalculateSkillsToHit(targetDodging, 0, false, tuning),
-            CalculateAdjustmentsToHit(false, targetBiographyAvoidHit, tuning), tuning);
+            CalculateStatsToHit(attackerLuck, targetLuck, attackerAgility, targetAgility),
+            CalculateSkillsToHit(targetDodging, 0, false),
+            CalculateAdjustmentsToHit(false, targetBiographyAvoidHit));
 
     /// <summary>Classic material gate: a weapon must meet the target's minimum material.</summary>
     internal static bool CanHitMaterial(string? weaponMaterial, string? targetMinimumMaterial, IReadOnlyDictionary<string, int> weaponMaterialRanks)
@@ -875,59 +843,4 @@ internal enum DaggerfallStruckEquipment
     Weapon,
     Shield,
     Armour,
-}
-
-/// <summary>Named profile values used by <see cref="DaggerfallFormulaPolicy"/>.</summary>
-internal sealed record DaggerfallFormulaTuning(
-    int AttributeBaseline = 50,
-    int AttributeDivisor = 10,
-    int DamageModifierDivisor = 5,
-    int ToHitAttributeDivisor = 10,
-    int ToHitBaseline = 5,
-    int EncumbranceNumerator = 3,
-    int EncumbranceDenominator = 2,
-    int BreathDivisor = 2,
-    int FatigueUnitsPerAttributePoint = 64,
-    int MilliScale = 1000,
-    int HandToHandMinimumDivisor = 10,
-    int HandToHandMaximumDivisor = 5,
-    int RapidHealingBonus = 40,
-    int HealthRecoveryBase = 60,
-    int HealthRecoveryScale = 1000,
-    int MinimumRecoveryRate = 1,
-    int RecoveryDivisor = 8,
-    int LevelFormulaOffset = 28,
-    int LevelFormulaDivisor = 15,
-    int ExperiencePerLevel = 500,
-    int MinimumHitPointsPerLevel = 1,
-    int HitPointsRollDivisor = 2,
-    int ReflexesBaseline = 2,
-    int ReflexesPenaltyMilli = 125,
-    int SkillLevelPowerMilli = 1040,
-    int SkillUsesNumerator = 2,
-    int SkillUsesDenominator = 500000,
-    int MaximumSkillLevel = 64,
-    int HitChanceBase = -50,
-    int HitChanceAttributeDivisor = 10,
-    int HitChanceDodgingDivisor = 4,
-    int MinimumHitChance = 3,
-    int MaximumHitChance = 97)
-{
-    internal DaggerfallFormulaTuning Validate()
-    {
-        if (AttributeDivisor <= 0 || DamageModifierDivisor <= 0 || ToHitAttributeDivisor <= 0
-            || EncumbranceDenominator <= 0 || BreathDivisor <= 0 || MilliScale <= 0
-            || HandToHandMinimumDivisor <= 0 || HandToHandMaximumDivisor <= 0
-            || HealthRecoveryScale <= 0 || RecoveryDivisor <= 0 || LevelFormulaDivisor <= 0
-            || ExperiencePerLevel <= 0 || HitPointsRollDivisor <= 0 || SkillUsesDenominator <= 0
-            || MaximumSkillLevel < 0 || HitChanceAttributeDivisor <= 0 || HitChanceDodgingDivisor <= 0
-            || MinimumHitChance > MaximumHitChance)
-            throw new ArgumentException("Daggerfall formula tuning contains an invalid divisor, bound, or level range.", nameof(DaggerfallFormulaTuning));
-        return this;
-    }
-}
-
-file static class NullableTuningExtensions
-{
-    internal static DaggerfallFormulaTuning GetValueOrDefault(this DaggerfallFormulaTuning? tuning, DaggerfallFormulaTuning fallback) => (tuning ?? fallback).Validate();
 }

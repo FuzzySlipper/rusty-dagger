@@ -58,7 +58,7 @@ public sealed class DaggerfallRewardReactionTests
             () => definitions.Catalogs.RequireCareer("class01"),
             RandomMinimums(),
             actors,
-            experimentalKillExperience: true);
+            DaggerfallTuning.Defaults.Progression with { EnableExperimentalKillExperience = true });
         ActorDiedFact death = new(9000, DaggerfallActorIdentity.PlayerEntityId, DaggerfallDamageCause.PhysicalAttack, 5, 5d, 2, 3);
         FactBuffer<IProductFact> facts = new();
 
@@ -87,7 +87,7 @@ public sealed class DaggerfallRewardReactionTests
             () => definitions.Catalogs.RequireCareer("class01"),
             RandomMinimums(),
             new Dictionary<long, DaggerfallActorDefinition> { [9000] = thief },
-            experimentalKillExperience: true);
+            DaggerfallTuning.Defaults.Progression with { EnableExperimentalKillExperience = true });
 
         reactions.React(new ActorDiedFact(9000, 777, DaggerfallDamageCause.PhysicalAttack, 5, 5d, 2, 3), new FactBuffer<IProductFact>());
 
@@ -207,7 +207,7 @@ public sealed class DaggerfallRewardReactionTests
             () => definitions.Catalogs.RequireCareer("class01"),
             random,
             new Dictionary<long, DaggerfallActorDefinition> { [9000] = thief },
-            experimentalKillExperience: true);
+            DaggerfallTuning.Defaults.Progression with { EnableExperimentalKillExperience = true });
         ActorDiedFact death = new(9000, DaggerfallActorIdentity.PlayerEntityId, DaggerfallDamageCause.PhysicalAttack, 5, 5d, 2, 3);
         FactBuffer<IProductFact> facts = new();
 
@@ -246,7 +246,7 @@ public sealed class DaggerfallRewardReactionTests
             () => definitions.Catalogs.RequireCareer("class01"),
             random,
             new Dictionary<long, DaggerfallActorDefinition> { [9000] = thief },
-            experimentalKillExperience: true);
+            DaggerfallTuning.Defaults.Progression with { EnableExperimentalKillExperience = true });
         FactBuffer<IProductFact> facts = new();
 
         Assert.Throws<OverflowException>(() => reactions.React(new ActorDiedFact(9000, DaggerfallActorIdentity.PlayerEntityId, DaggerfallDamageCause.PhysicalAttack, 5, 5d, 2, 3), facts));
@@ -289,7 +289,7 @@ public sealed class DaggerfallRewardReactionTests
             () => definitions.Catalogs.RequireCareer("class01"),
             random,
             actors,
-            experimentalKillExperience: true);
+            DaggerfallTuning.Defaults.Progression with { EnableExperimentalKillExperience = true });
     }
 
     private static StatsComponent CreatePlayerMechanics(DaggerfallActorDefinition player, int healthCurrent = 100)

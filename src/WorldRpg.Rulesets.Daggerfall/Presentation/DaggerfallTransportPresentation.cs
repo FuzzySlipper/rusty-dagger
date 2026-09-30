@@ -72,7 +72,7 @@ internal static class DaggerfallTransportProjection
         bool wagonAccessible = wagon is not null && wagon.CanAccess(player, context);
         InventoryView? wagonContents = wagonAccessible ? wagon?.Read() : null;
         DaggerfallWagonPresentation wagonView = wagon is null
-            ? new(false, false, null, 0, DaggerfallTransportTuning.Donor.WagonCapacityClassicUnits, null,
+            ? new(false, false, null, 0, policy.Tuning.WagonCapacityClassicUnits, null,
                 "Wagon storage is unavailable.", [], [])
             : new(wagon.Exists, wagonAccessible, wagon.Id, wagon.CurrentWeightClassicUnits,
                 wagon.Tuning.WagonCapacityClassicUnits, wagonContents?.StoreRevision,
