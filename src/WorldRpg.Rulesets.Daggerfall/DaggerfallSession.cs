@@ -38,9 +38,6 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, ISaveRequestingGameSession, IPlayerPreferencesSession, IPlayerDefeatOutcomeSession,
     IDaggerfallSiteTransitionHost
 {
-
-    /// <summary>Admitted world seconds a panel request stands before the DOM is assumed not to need it.</summary>
-    private const double PanelRequestLifetimeSeconds = 1d;
     private readonly IRandomService _random;
     private readonly IEngineContext _engine;
     private readonly DaggerfallTuning _tuning;
@@ -116,9 +113,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
 
     private ulong? _latestUpdateGeneration;
     private ulong? _latestSimulationStep;
-    private string? _panelRequest;
-    private ulong _panelRequestRevision;
-    private double _panelRequestRemainingSeconds;
+    /// <summary>What is open over the world, which of it holds the world, and the pad's panel request.</summary>
+    private readonly DaggerfallOpenInteractions _interactions;
     private bool _disposed;
 
     internal DaggerfallCinematicPresentation? Cinematics { get; }
@@ -414,6 +410,14 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
                 useDrug: variant => UseDrug(variant) == DaggerfallPoisonAdmission.Admitted));
             _inventoryUi.BookOpened += _ => RequestPanel(DaggerfallPanel.Journal);
             _lootUi = new DaggerfallLootPresentation(_corpseLoot, _inventoryUi, _groundContainers);
+            _interactions = new DaggerfallOpenInteractions(
+                () => _lootUi.Read(),
+                () => _lootUi.Message,
+                dungeonTextOpen: () => _dungeonTextProjection is not null,
+                dialogueOpen: () => _activationPresentation.View.Dialogue is not null,
+                characterCreationOpen: () => State.Character.Pending is not null,
+                levelUpOpen: () => State.LevelUps.Pending is not null,
+                bankOpen: () => ActiveBankRegion() is not null);
             _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, _dungeonText, CapturePropertyStorage);
             _roster = new DaggerfallActorRoster(State, definitions, _random, assembled.Mechanics, _actorIdentities, _uniqueItems,
                 _authoredEntityIds, authored, saved?.DynamicActors ?? [], _grounding, () => _sites.Projection, _lootUi, _corpseLoot);
@@ -745,7 +749,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         State.HeldEnchantments.Refresh();
 
         // A standing panel request ages on the same admitted world time as everything else.
-        AgePanelRequest(deltaSeconds * facts.AdmittedStepCount);
+        _interactions.AgePanelRequest(deltaSeconds * facts.AdmittedStepCount);
 
         // Ordering within this one admitted update is clock, calendar consumers (magic rounds among
         // them), simulation, then locomotion minutes. A normal game minute is one magic round; a
@@ -780,25 +784,10 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
     internal ProductMode Mode => _mode;
 
     /// <summary>
-    /// The mode this session asks the product for. Death outranks everything and only a session
-    /// replacement leaves it; a modal exists exactly while a loot container is open, so the
-    /// request follows that container rather than the key that opened it.
+    /// The mode this session asks the product for, derived from the one open-interaction owner. The
+    /// Kit actor state owns whether the player is defeated.
     /// </summary>
-    public ProductMode? PendingModeRequest
-    {
-        get
-        {
-            // The Kit actor state already owns the question of whether the player is defeated.
-            if (State.Actors.Player.IsDefeated) return ProductMode.Dead;
-            if (_mode == ProductMode.Dead) return null;
-            // The menu pair is what this asks about: a mode the product holds on its own, such as the
-            // entry screen, has no loot container to follow, so this asks for nothing rather than
-            // dragging the world into ordinary play behind the product's back.
-            if (_mode is not (ProductMode.Playing or ProductMode.Modal)) return null;
-            bool open = _lootUi.Read() is not null || _dungeonTextProjection is not null;
-            return open == (_mode == ProductMode.Modal) ? null : open ? ProductMode.Modal : ProductMode.Playing;
-        }
-    }
+    public ProductMode? PendingModeRequest => _interactions.ModeRequest(_mode, State.Actors.Player.IsDefeated);
 
     /// <summary>
     /// Whether the pending request closes the owned loot interaction. Ordinary play is only ever
@@ -849,21 +838,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         _input.Neutralize();
         _locomotion.Neutralize();
         ApplyDeathPresentationMode(mode);
-        Presentation.SetOutcome(ModalMessage());
+        Presentation.SetOutcome(_interactions.ModeMessage(_mode));
         PublishPresentation();
     }
-
-    /// <summary>What the outcome line says while a mode other than ordinary play holds the world.</summary>
-    private string ModalMessage() => _mode switch
-    {
-        ProductMode.Modal => _dungeonTextProjection is not null ? "Dungeon text open."
-            : _lootUi.Read() is not null ? _lootUi.Message : "Interaction open.",
-        ProductMode.Dead => "You have died.",
-        ProductMode.Paused => "Paused.",
-        // The entry screen says its own thing; a status line would compete with the screen that is up.
-        ProductMode.Title => string.Empty,
-        _ => string.Empty,
-    };
 
     internal void Update(ProductUpdateState update)
     {
@@ -1160,41 +1137,13 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             new(), new(), new()), resources);
     }
 
-    /// <summary>
-    /// The panel the player asked for through a device the DOM has no channel of its own for.
-    /// </summary>
-    /// <remarks>
-    /// The keyboard reaches the panels because the DOM hears the keys itself; a pad reaches the
-    /// product. The panels stay where they are — the DOM owns whether one is open — so a button that
-    /// opens one travels as that panel's own menu action and the product invents no second notion of
-    /// a panel. The revision is what lets the DOM apply each request once while the request stays
-    /// published, the same way a published loot revision is recognised rather than replayed.
-    /// </remarks>
-    internal DaggerfallPanelRequest? LatestPanelRequest => _panelRequest is null ? null : new DaggerfallPanelRequest(_panelRequest, _panelRequestRevision);
+    /// <summary>The panel the player asked for through a device the DOM has no channel of its own for.</summary>
+    internal DaggerfallPanelRequest? LatestPanelRequest => _interactions.LatestPanelRequest;
 
-    private void RequestPanel(string panel)
-    {
-        _panelRequest = panel;
-        _panelRequestRevision = checked(_panelRequestRevision + 1);
-        _panelRequestRemainingSeconds = PanelRequestLifetimeSeconds;
-    }
+    /// <summary>What is open over the world and which of it holds the world.</summary>
+    internal DaggerfallOpenInteractions Interactions => _interactions;
 
-    /// <summary>
-    /// Ages a standing panel request on the same admitted world time everything else ages on.
-    /// </summary>
-    /// <remarks>
-    /// Opening a panel is an event, not state: the product does not own whether one is open, so a
-    /// request that outlived the DOM that performed it would re-open a panel nobody asked for on the
-    /// next page load — and a player holding only a pad has no way back out of it. The window is
-    /// generous because the DOM acts on the next snapshot, and it is admitted world time because
-    /// there is one clock here.
-    /// </remarks>
-    private void AgePanelRequest(double deltaSeconds)
-    {
-        if (_panelRequest is null) return;
-        _panelRequestRemainingSeconds -= deltaSeconds;
-        if (_panelRequestRemainingSeconds <= 0d) _panelRequest = null;
-    }
+    private void RequestPanel(string panel) => _interactions.RequestPanel(panel);
 
     private void ApplyAttackImpacts()
     {
