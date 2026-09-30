@@ -7,6 +7,8 @@ namespace WorldRpg.Kit;
 public readonly record struct RulesetId(string Value);
 public readonly record struct GameBundleId(string Value);
 public readonly record struct ContentPackId(string Value);
+/// <summary>A ruleset-interpreted content-pack role; opaque to the Kit.</summary>
+public readonly record struct ContentPackRoleId(string Value);
 public readonly record struct TuningProfileId(string Value);
 
 public sealed record GameBundle(GameBundleId Id, RulesetId Ruleset, IReadOnlyList<ContentPackReference> ContentPacks, TuningProfileReference Tuning);
@@ -18,11 +20,17 @@ public sealed class ContentPack
     private readonly ReadOnlyMemory<byte> _payload;
     internal ContentPack(GameCompositionResolver.ContentPackDescriptor value, ReadOnlyMemory<byte> payload)
     {
-        Id = value.Id; Ruleset = value.Ruleset;
+        Id = value.Id; Ruleset = value.Ruleset; Role = value.Role;
         Dependencies = Freeze(value.Dependencies); PayloadPath = value.PayloadPath; _payload = payload;
     }
     public ContentPackId Id { get; }
     public RulesetId Ruleset { get; }
+    /// <summary>
+    /// What the pack is to its ruleset. The Kit only checks that it is a well-formed identifier; the
+    /// ruleset alone interprets it and chooses the reader, so a bundle can select any number of packs
+    /// without the ruleset naming any of them.
+    /// </summary>
+    public ContentPackRoleId Role { get; }
     public IReadOnlyList<ContentPackReference> Dependencies { get; }
     public string PayloadPath { get; }
     /// <summary>The immutable payload admitted with this composition.</summary>
@@ -191,7 +199,7 @@ public static class GameCompositionResolver
     {
         List<ContentPackReference> dependencies = References(Array(root, "dependencies"));
         if (dependencies.GroupBy(reference => reference.Id).Any(group => group.Count() > 1)) throw new InvalidOperationException("Content pack declares a dependency more than once.");
-        return new(new(Id(root, "id")), new(Id(root, "ruleset")), dependencies.ToArray(), FilePath(root, "payload"));
+        return new(new(Id(root, "id")), new(Id(root, "ruleset")), new(Id(root, "role")), dependencies.ToArray(), FilePath(root, "payload"));
     }
 
     private static TuningDescriptor Tuning(JsonElement root) => new(new(Id(root, "id")), new(Id(root, "ruleset")), FilePath(root, "payload"));
@@ -242,7 +250,7 @@ public static class GameCompositionResolver
     private static void Error(List<CompositionDiagnostic> diagnostics, string message) { if (diagnostics.Count < DiagnosticLimit) diagnostics.Add(new("error", message)); else if (diagnostics.Count == DiagnosticLimit) diagnostics.Add(new("error", "Composition diagnostics were truncated.")); }
 
     private enum VisitState { Visiting, Done }
-    internal sealed record ContentPackDescriptor(ContentPackId Id, RulesetId Ruleset, IReadOnlyList<ContentPackReference> Dependencies, string PayloadPath);
+    internal sealed record ContentPackDescriptor(ContentPackId Id, RulesetId Ruleset, ContentPackRoleId Role, IReadOnlyList<ContentPackReference> Dependencies, string PayloadPath);
     internal sealed record TuningDescriptor(TuningProfileId Id, RulesetId Ruleset, string PayloadPath);
     private sealed record GameBundleDescriptor(GameBundleId Id, RulesetId Ruleset, IReadOnlyList<ContentPackReference> ContentPacks, TuningProfileReference Tuning);
 }

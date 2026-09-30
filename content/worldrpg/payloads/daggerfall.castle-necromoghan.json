@@ -98,6 +98,7 @@
   "placements": [],
   "world": {
     "publicationRoot": "worldrpg/imports/castle-necromoghan",
+    "audioBundle": "daggerfall.castle-necromoghan-audio",
     "appearance": {
       "tint": [
         0.72,

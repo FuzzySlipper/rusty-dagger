@@ -178,7 +178,7 @@ internal sealed class DaggerSessionPersistence
     }
 
     /// <summary>Captures one unloading site's actor-owned state without retaining runtime entities.</summary>
-    internal DaggerfallSiteRuntimeDelta CaptureSiteDelta(PrivateersHoldInputs inputs, DaggerfallDoorRuntime doors, DaggerfallDungeonMotionProjection motion,
+    internal DaggerfallSiteRuntimeDelta CaptureSiteDelta(DaggerfallSiteProfile inputs, DaggerfallDoorRuntime doors, DaggerfallDungeonMotionProjection motion,
         IReadOnlyDictionary<long, DaggerfallActorId> dynamicActors)
     {
         ArgumentNullException.ThrowIfNull(inputs);

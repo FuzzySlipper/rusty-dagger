@@ -2,6 +2,7 @@
   "kind": "worldrpg.content-pack",
   "id": "daggerfall.base",
   "ruleset": "daggerfall",
+  "role": "daggerfall.base",
   "dependencies": [],
   "payload": "worldrpg/payloads/daggerfall.base.json"
 }

@@ -62,7 +62,7 @@ public sealed class DaggerfallDungeonActionModelContentTests
         NormalizedMaterial[] materials = [new(7, "worldrpg/materials/stone.png", hash, "material/stone")];
         DaggerfallContentDiagnostics diagnostics = new();
 
-        DaggerfallDungeonActionModelDefinition model = Assert.Single(PrivateersHoldContent.ReadNormalizedActionModels(
+        DaggerfallDungeonActionModelDefinition model = Assert.Single(DaggerfallSiteContent.ReadNormalizedActionModels(
             normalized,
             publicationRoot,
             artifacts,
@@ -90,7 +90,7 @@ public sealed class DaggerfallDungeonActionModelContentTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = GeneratedContent(root);
-        PrivateersHoldInputs inputs = PrivateersHoldContent.Read(content,
+        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(content,
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
         using JsonDocument normalized = JsonDocument.Parse(File.ReadAllBytes(
             Path.Combine(root, "content/worldrpg/imports/privateers-hold/normalized.json")));

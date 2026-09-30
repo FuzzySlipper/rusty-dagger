@@ -8,7 +8,7 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 internal sealed class DaggerTargetingPolicy(IReadOnlyDictionary<long, DaggerfallActorDefinition> definitions,
-    DaggerfallMeleeTargetingTuning tuning, Func<PrivateersHoldInputs> currentInputs) : ITargetingPolicy
+    DaggerfallMeleeTargetingTuning tuning, Func<DaggerfallSiteProfile> currentInputs) : ITargetingPolicy
 {
     public bool IsValidTarget(ActorState actor) => actor.DurableId != DaggerfallActorIdentity.PlayerEntityId
         && actor.DurableId > 0 && definitions.ContainsKey(actor.DurableId);
@@ -22,7 +22,7 @@ internal sealed class DaggerTargetingPolicy(IReadOnlyDictionary<long, Daggerfall
         // Grounded actor poses name the sprite base at the floor contact. A visibility ray to that
         // contact can hit the floor itself, so use the visible body's midpoint while retaining the
         // Engine's normal cover query.
-        PrivateersHoldInputs inputs = currentInputs();
+        DaggerfallSiteProfile inputs = currentInputs();
         NormalizedActorSprite sprite = inputs.ActorSprites.TryGetValue(actor.DurableId, out NormalizedActorSprite? placed)
             ? placed
             : definition.MobileId is int mobileId && inputs.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? mobile)

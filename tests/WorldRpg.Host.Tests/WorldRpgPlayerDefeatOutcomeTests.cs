@@ -98,7 +98,7 @@ public sealed class WorldRpgPlayerDefeatOutcomeTests
     private static ProductContentFile[] ContentFiles() =>
     [
         File("worldrpg/bundles/test.bundle.json", "{\"kind\":\"worldrpg.game-bundle\",\"id\":\"test.bundle\",\"ruleset\":\"test\",\"contentPacks\":[{\"id\":\"test.pack\"}],\"tuning\":{\"id\":\"test.tuning\"}}"),
-        File("worldrpg/content-packs/test.pack.json", "{\"kind\":\"worldrpg.content-pack\",\"id\":\"test.pack\",\"ruleset\":\"test\",\"dependencies\":[],\"payload\":\"payload/pack.json\"}"),
+        File("worldrpg/content-packs/test.pack.json", "{\"kind\":\"worldrpg.content-pack\",\"id\":\"test.pack\",\"ruleset\":\"test\",\"role\":\"test.content\",\"dependencies\":[],\"payload\":\"payload/pack.json\"}"),
         File("worldrpg/tuning/test.tuning.json", "{\"kind\":\"worldrpg.tuning-profile\",\"id\":\"test.tuning\",\"ruleset\":\"test\",\"payload\":\"payload/tuning.json\"}"),
         File("payload/pack.json", "{}"),
         File("payload/tuning.json", "{}"),

@@ -69,6 +69,9 @@
          cue bodies are opened on the first cue, exactly as the effect clips above are. -->
     <RustyEngineContentBundle Include="daggerfall.music" Root="worldrpg/media/music/clips" />
     <RustyEngineContentBundle Include="daggerfall.cinematics" Root="worldrpg/media/cinematics" />
+    <!-- One bundle per site: its id is the site payload's world.audioBundle and its root is the audio
+         clips under that payload's publicationRoot. The SDK stages exactly the items declared here, one
+         per bundle, so a new site adds its one line; a ruleset test checks each payload against it. -->
     <RustyEngineContentBundle Include="daggerfall.privateers-hold-audio" Root="worldrpg/imports/privateers-hold/media/audio/clips" />
     <RustyEngineContentBundle Include="daggerfall.castle-necromoghan-audio" Root="worldrpg/imports/castle-necromoghan/media/audio/clips" />
     <RustyEngineContentBundle Include="daggerfall.charing-exterior-audio" Root="worldrpg/imports/charing/exterior/media/audio/clips" />

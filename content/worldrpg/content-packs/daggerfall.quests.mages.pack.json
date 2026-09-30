@@ -2,6 +2,7 @@
   "kind": "worldrpg.content-pack",
   "id": "daggerfall.quests.mages",
   "ruleset": "daggerfall",
+  "role": "daggerfall.quest-corpus",
   "dependencies": [
     {
       "id": "daggerfall.base"

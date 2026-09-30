@@ -5,8 +5,8 @@
   "contentPacks": [
     { "id": "daggerfall.base" },
     { "id": "daggerfall.blocks" },
-    { "id": "daggerfall.privateers-hold" },
     { "id": "daggerfall.castle-necromoghan" },
+    { "id": "daggerfall.privateers-hold" },
     { "id": "daggerfall.charing-exterior" },
     { "id": "daggerfall.charing-interior-1-1-0" }
   ],

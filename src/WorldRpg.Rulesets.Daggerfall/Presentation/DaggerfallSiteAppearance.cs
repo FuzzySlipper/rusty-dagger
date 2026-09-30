@@ -16,8 +16,8 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
-/// <summary>Publishes the normalized Privateer's Hold visual closure through Engine-owned resources and sprite atlases.</summary>
-internal sealed class PrivateersHoldAppearance : IDisposable
+/// <summary>Publishes one admitted site profile's normalized visual closure through Engine-owned resources and sprite atlases.</summary>
+internal sealed class DaggerfallSiteAppearance : IDisposable
 {
     private readonly IGraphicsService appearance;
     private readonly IContentService content;
@@ -110,7 +110,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private Action? completeSnapshot;
     private bool disposed;
 
-    internal PrivateersHoldAppearance(IContentService content, IGraphicsService appearance, PrivateersHoldInputs inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallDoorRuntime? doors = null, DaggerfallDungeonMotionProjection? dungeonMotion = null)
+    internal DaggerfallSiteAppearance(IContentService content, IGraphicsService appearance, DaggerfallSiteProfile inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallDoorRuntime? doors = null, DaggerfallDungeonMotionProjection? dungeonMotion = null)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(appearance);
@@ -123,7 +123,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         this.audioBundle = audioBundle;
         this.random = random;
         this.audioTuning = (audioTuning ?? DaggerfallTuning.Defaults.PresentationAudio).Validate();
-        hitCues = inputs.Audio.Count == 0 ? [] : PrivateersHoldContent.OrderedHitCues(inputs.Audio);
+        hitCues = inputs.Audio.Count == 0 ? [] : DaggerfallSiteContent.OrderedHitCues(inputs.Audio);
         classicPresentation = inputs.ClassicPresentation;
         classicEffects = inputs.ClassicPresentation.Effects.ToDictionary(effect => effect.Name, StringComparer.Ordinal);
         worldAppearance = inputs.WorldAppearance;
@@ -230,7 +230,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     /// <summary>Admits media for one dynamic actor after its canonical mechanics actor has been created.</summary>
     internal void AddActor(long durableId, NormalizedActorSprite sprite)
     {
-        if (disposed) throw new ObjectDisposedException(nameof(PrivateersHoldAppearance));
+        if (disposed) throw new ObjectDisposedException(nameof(DaggerfallSiteAppearance));
         ArgumentNullException.ThrowIfNull(sprite);
         if (durableId <= 0) throw new ArgumentOutOfRangeException(nameof(durableId));
         if (actors.ContainsKey(durableId)) throw new InvalidOperationException($"Actor {durableId} already has an appearance.");
@@ -1022,11 +1022,11 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         internal AppearanceOuterUpdate? LastOuterUpdate { get; set; }
         internal void Dispose(ref List<Exception>? failures)
         {
-            if (Playback is { } playback) PrivateersHoldAppearance.Dispose(playback, ref failures);
+            if (Playback is { } playback) DaggerfallSiteAppearance.Dispose(playback, ref failures);
             Playback = null;
-            if (Live is { } live) PrivateersHoldAppearance.Dispose(live, ref failures);
+            if (Live is { } live) DaggerfallSiteAppearance.Dispose(live, ref failures);
             Live = null;
-            if (Corpse is { } corpse) PrivateersHoldAppearance.Dispose(corpse, ref failures);
+            if (Corpse is { } corpse) DaggerfallSiteAppearance.Dispose(corpse, ref failures);
         }
     }
 
@@ -1035,7 +1035,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         internal long EntityId { get; } = entityId;
         internal Appearance Appearance { get; } = appearance;
         public void Dispose() => Appearance.Dispose();
-        internal void Dispose(ref List<Exception>? failures) => PrivateersHoldAppearance.Dispose(Appearance, ref failures);
+        internal void Dispose(ref List<Exception>? failures) => DaggerfallSiteAppearance.Dispose(Appearance, ref failures);
     }
 
     internal sealed class EffectVisual(ulong entityId, WorldPoint position, SpriteAtlas atlas, Appearance appearance, SpritePlayback playback) : IDisposable
@@ -1049,9 +1049,9 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         internal AppearanceOuterUpdate? LastOuterUpdate { get; set; }
         internal void Dispose(ref List<Exception>? failures)
         {
-            PrivateersHoldAppearance.Dispose(Playback, ref failures);
-            PrivateersHoldAppearance.Dispose(Appearance, ref failures);
-            PrivateersHoldAppearance.Dispose(Atlas, ref failures);
+            DaggerfallSiteAppearance.Dispose(Playback, ref failures);
+            DaggerfallSiteAppearance.Dispose(Appearance, ref failures);
+            DaggerfallSiteAppearance.Dispose(Atlas, ref failures);
         }
         public void Dispose()
         {
@@ -1079,9 +1079,9 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         internal AppearanceOuterUpdate? LastOuterUpdate { get; set; }
         internal void Dispose(ref List<Exception>? failures)
         {
-            if (Playback is { } playback) PrivateersHoldAppearance.Dispose(playback, ref failures);
-            PrivateersHoldAppearance.Dispose(Appearance, ref failures);
-            PrivateersHoldAppearance.Dispose(Atlas, ref failures);
+            if (Playback is { } playback) DaggerfallSiteAppearance.Dispose(playback, ref failures);
+            DaggerfallSiteAppearance.Dispose(Appearance, ref failures);
+            DaggerfallSiteAppearance.Dispose(Atlas, ref failures);
         }
         public void Dispose()
         {

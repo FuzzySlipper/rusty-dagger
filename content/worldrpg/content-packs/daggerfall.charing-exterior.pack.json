@@ -2,6 +2,7 @@
   "kind": "worldrpg.content-pack",
   "id": "daggerfall.charing-exterior",
   "ruleset": "daggerfall",
+  "role": "daggerfall.site",
   "dependencies": [
     { "id": "daggerfall.base" }
   ],

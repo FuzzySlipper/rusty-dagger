@@ -12,8 +12,8 @@ public sealed class DaggerfallDisabledQuestSelectionTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallDisabledQuestSelection selection = DaggerfallDisabledQuestSelection.Read(new ProductContent(Array.Empty<ProductContentFile>()),
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.disabled.json")), definitions);
+        DaggerfallDisabledQuestSelection selection = DaggerfallDisabledQuestSelection.From(DaggerfallClassicQuestCorpusContent.Read(new ProductContent(Array.Empty<ProductContentFile>()),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.disabled.json")), definitions));
         Assert.True(selection.TryResolveSummon("80C0XY00", out DaggerfallSummonQuestResolution? resolved));
         Assert.Equal("80C0XY00.txt", resolved!.SourceFile);
         Assert.False(selection.IsOrdinaryOffer("80C0XY00"));

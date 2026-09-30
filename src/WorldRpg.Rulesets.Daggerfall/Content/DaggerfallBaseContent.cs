@@ -44,19 +44,19 @@ internal static class DaggerfallBaseContent
             DaggerfallMagicCatalogSet magic = ReadMagicCatalog(root, diagnostics);
             DaggerfallLocationSet locations = ReadLocations(root, diagnostics);
             DaggerfallTextSet text = ReadText(root, diagnostics);
-            DaggerfallBuildingNameInputs buildingNames = ReadBuildingNameInputs(root, diagnostics);
+            DaggerfallBuildingNameInputs buildingNames = ReadBuildingNameInputs(root, locations.Regions, diagnostics);
             DaggerfallNameTablesSet names = ReadNameTables(root, text, diagnostics);
             DaggerfallRumorCatalogSet rumors = ReadRumorCatalog(root, text, diagnostics);
             DaggerfallBiographiesSet biographies = ReadBiographies(root, text, diagnostics);
             DaggerfallWorldGridsSet grids = ReadWorldGrids(root, diagnostics);
             DaggerfallBooksSet books = ReadBooks(root, text, diagnostics);
-            DaggerfallFactionsSet factions = ReadFactions(root, diagnostics);
+            DaggerfallFactionsSet factions = ReadFactions(root, locations.Regions, diagnostics);
             DaggerfallTerrainSet terrain = ReadTerrain(root, diagnostics);
             DaggerfallItemTemplateSet itemTemplatesCatalog = ReadItemTemplates(root, diagnostics);
             DaggerfallQuestSourceSet questSources = ReadQuestSources(root, diagnostics);
             DaggerfallCinematicSet cinematics = ReadCinematics(root, diagnostics);
-            ValidateReferences(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, mobiles, hud, diagnostics);
-            ValidateCatalog(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, lootCategoryPools, donorErrata, diagnostics);
+            ValidateReferences(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, catalogs, mobiles, hud, diagnostics);
+            ValidateCatalog(actors, armorValues, actions, lootTables, lootCategoryPools, diagnostics);
             foreach (string problem in DaggerfallEnchantmentSettings.Validate(DaggerfallEnchantmentSettings.All))
                 diagnostics.Add(problem);
             diagnostics.ThrowIfAny();
@@ -908,7 +908,7 @@ internal static class DaggerfallBaseContent
     /// Reads the exact classic region-to-name-bank mapping. It cannot be inferred from a faction's
     /// race: the donor's MapsFile table is a separate FALL.EXE-derived input used by name generation.
     /// </summary>
-    private static DaggerfallBuildingNameInputs ReadBuildingNameInputs(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    private static DaggerfallBuildingNameInputs ReadBuildingNameInputs(JsonElement root, int regionCount, DaggerfallContentDiagnostics diagnostics)
     {
         if (!root.TryGetProperty("buildingNames", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
         {
@@ -920,9 +920,10 @@ internal static class DaggerfallBaseContent
         string path = Text(source, "path", diagnostics);
         long byteLength = Long(source, "byteLength", diagnostics);
         int regions = Integer(source, "regions", diagnostics);
-        if (string.IsNullOrWhiteSpace(path) || byteLength <= 0 || regions != 62)
+        // The bank is chosen by region index, so the table covers exactly the regions the locations publish.
+        if (string.IsNullOrWhiteSpace(path) || byteLength <= 0 || regions != regionCount)
         {
-            diagnostics.Add("Building-name source must name a non-empty donor path, retain bytes, and publish all 62 classic regions.");
+            diagnostics.Add($"Building-name source must name a non-empty donor path, retain bytes, and cover the {regionCount} published regions.");
         }
 
         List<int> banks = [.. Array(section, "regionNameBanks", diagnostics).Select(entry =>
@@ -931,7 +932,7 @@ internal static class DaggerfallBaseContent
             diagnostics.Add("Building-name region bank must be Breton (0) or Redguard (1).");
             return -1;
         })];
-        if (banks.Count != 62) diagnostics.Add($"Building-name inputs publish {banks.Count} regions for the 62 classic regions.");
+        if (banks.Count != regionCount) diagnostics.Add($"Building-name inputs publish {banks.Count} regions for the {regionCount} published regions.");
         return new DaggerfallBuildingNameInputs(banks);
     }
 
@@ -1723,7 +1724,7 @@ internal static class DaggerfallBaseContent
     /// carries: a social consumer holding a reference the catalog cannot answer would read policy
     /// from a miss.
     /// </summary>
-    private static DaggerfallFactionsSet ReadFactions(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    private static DaggerfallFactionsSet ReadFactions(JsonElement root, int regionCount, DaggerfallContentDiagnostics diagnostics)
     {
         if (!root.TryGetProperty("factions", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
         {
@@ -1857,9 +1858,10 @@ internal static class DaggerfallBaseContent
             }
         }
 
-        if (regions.Count != 62)
+        // Region claims are read by region index, so the catalog states one for each published region.
+        if (regions.Count != regionCount)
         {
-            diagnostics.Add($"The published faction catalog claims {regions.Count} regions for 62 classic regions.");
+            diagnostics.Add($"The published faction catalog claims {regions.Count} regions for the {regionCount} published regions.");
         }
 
         return new DaggerfallFactionsSet(
@@ -2756,15 +2758,18 @@ internal static class DaggerfallBaseContent
         }
     }
 
-    private static void ValidateReferences(DaggerfallVocabulary vocabulary, IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> actors, IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> items, IReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition> equipmentSlots, IReadOnlyDictionary<string, int> armorValues, IReadOnlyDictionary<string, DaggerfallActionDefinition> actions, IReadOnlyDictionary<string, DaggerfallLootTableDefinition> lootTables, DaggerfallMobileCatalogSet mobiles, IReadOnlyList<DaggerfallHudResourceDefinition> hud, DaggerfallContentDiagnostics diagnostics)
+    private static void ValidateReferences(DaggerfallVocabulary vocabulary, IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> actors, IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> items, IReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition> equipmentSlots, IReadOnlyDictionary<string, int> armorValues, IReadOnlyDictionary<string, DaggerfallActionDefinition> actions, IReadOnlyDictionary<string, DaggerfallLootTableDefinition> lootTables, DaggerfallCatalogSet catalogs, DaggerfallMobileCatalogSet mobiles, IReadOnlyList<DaggerfallHudResourceDefinition> hud, DaggerfallContentDiagnostics diagnostics)
     {
+        // Classic class mobiles are numbered from the first class mobile by career record, so the class range
+        // is as long as the published career list; every other mobile is a monster below it.
+        int classMobileEnd = DaggerfallEncounterActors.FirstClassMobile + catalogs.Careers.Count;
         foreach (DaggerfallActorDefinition actor in actors.Values)
         {
 
             if (actor.Kind is not ("player" or "monster" or "enemy-class")) diagnostics.Add($"Actor '{actor.Id.Value}' has unsupported kind '{actor.Kind}'.");
             if (actor.Kind == "player" && (actor.Id.Value != "player" || actor.MobileId is not null)) diagnostics.Add("Only actor 'player' may have kind player and it cannot have a mobile id.");
-            if (actor.Kind == "enemy-class" && (actor.MobileId is < 128 or > 146 || actor.HitPointsPerLevel is null || actor.Career is null)) diagnostics.Add($"Enemy class '{actor.Id.Value}' must name one classic class mobile, career, and health progression.");
-            if (actor.Kind == "monster" && (actor.MobileId is null || actor.MobileId is 39 or < 0 or > 42)) diagnostics.Add($"Monster '{actor.Id.Value}' has an unsupported mobile id.");
+            if (actor.Kind == "enemy-class" && (actor.MobileId is not int classMobile || classMobile < DaggerfallEncounterActors.FirstClassMobile || classMobile >= classMobileEnd || actor.HitPointsPerLevel is null || actor.Career is null)) diagnostics.Add($"Enemy class '{actor.Id.Value}' must name one classic class mobile, career, and health progression.");
+            if (actor.Kind == "monster" && (actor.MobileId is null || actor.MobileId is < 0 || actor.MobileId >= DaggerfallEncounterActors.FirstClassMobile)) diagnostics.Add($"Monster '{actor.Id.Value}' has an unsupported mobile id.");
             if (actor.Level is < 1 or > 100 || actor.Weight is < 0 or > 100_000 || actor.Armor is < -MaximumAuthoredArmor or > MaximumAuthoredArmor || actor.Rewards.ExperienceReward is < 0 or > 1_000_000) diagnostics.Add($"Actor '{actor.Id.Value}' has an out-of-range level, weight, armor, or xp reward.");
             if (actor.Team is { } team && !ValidId(team)) diagnostics.Add($"Actor '{actor.Id.Value}' has an invalid team.");
             if (actor.MinimumMaterial is { } material && !DaggerfallFormulaPolicy.ClassicWeaponMaterialRanks.ContainsKey(material)) diagnostics.Add($"Actor '{actor.Id.Value}' refers to unknown minimum weapon material '{material}'.");
@@ -2793,9 +2798,6 @@ internal static class DaggerfallBaseContent
             if (actor.MobileId is int mobile && !monsterMobileIds.Add(mobile)) diagnostics.Add($"Mobile '{mobile}' is assigned by more than one monster.");
         foreach (DaggerfallHudResourceDefinition resource in hud)
             if (!ValidId(resource.Id) || string.IsNullOrWhiteSpace(resource.Label) || !vocabulary.Tracks.Contains(resource.Track) || resource.Track != DaggerfallMechanicsIds.Health && resource.Track != DaggerfallMechanicsIds.Stamina && resource.Track != DaggerfallMechanicsIds.Magicka) diagnostics.Add($"HUD resource '{resource.Id}' refers to an unsupported track or is malformed.");
-        foreach (string required in new[] { "player", "rat", "skeletal-warrior" })
-            if (!actors.ContainsKey(new DaggerfallActorId(required))) diagnostics.Add($"Base payload is missing required actor '{required}'.");
-        if (!items.ContainsKey(new DaggerfallItemId("iron-longsword"))) diagnostics.Add("Base payload is missing required item 'iron-longsword'.");
         foreach (DaggerfallItemDefinition item in items.Values)
         {
             if (item.Weapon is not null && (!DaggerfallFormulaPolicy.ClassicWeaponMaterialRanks.ContainsKey(item.Weapon.Material) || !vocabulary.Skills.Any(skill => skill.Value == item.Weapon.Skill))) diagnostics.Add($"Weapon '{item.Id.Value}' refers to an unknown classic weapon material or skill.");
@@ -3331,74 +3333,32 @@ internal static class DaggerfallBaseContent
 
     private static Dictionary<string, DaggerfallLootTableDefinition> ReadLootTables(JsonElement root, DaggerfallContentDiagnostics diagnostics)
     {
-        string[] categories = ["plant1", "plant2", "creature1", "creature2", "creature3", "misc1", "misc2", "armor", "weapons", "magic", "clothing", "books", "religious"];
+        string[] categories = LootCategories;
         Dictionary<string, DaggerfallLootTableDefinition> result = new(StringComparer.Ordinal);
         foreach (JsonElement entry in Array(root, "lootTables", diagnostics)) { JsonElement table = Object(entry, "loot table", diagnostics); string key = Text(table, "key", diagnostics); JsonElement gold = Object(Property(table, "gold", diagnostics), "loot gold", diagnostics); int minimum = Integer(gold, "minimum", diagnostics), maximum = Integer(gold, "maximum", diagnostics); Dictionary<string, int> values = ReadIntegerMap(table, "categories", diagnostics); if (key.Length != 1 || (key != "-" && (key[0] < 'A' || key[0] > 'U')) || minimum < 0 || maximum < minimum || maximum > MaximumAuthoredLootGold || values.Keys.Any(id => !categories.Contains(id)) || values.Values.Any(value => value is < 0 or > 100) || !result.TryAdd(key, new(key, minimum, maximum, new ReadOnlyDictionary<string, int>(values)))) diagnostics.Add($"Loot table '{key}' is invalid or duplicated."); }
         return result;
     }
 
-    private static void ValidateCatalog(DaggerfallVocabulary vocabulary, IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> actors, IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> items, IReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition> slots, IReadOnlyDictionary<string, int> armorValues, IReadOnlyDictionary<string, DaggerfallActionDefinition> actions, IReadOnlyDictionary<string, DaggerfallLootTableDefinition> loot, IReadOnlyList<DaggerfallDeferredLootCategoryPool> pools, IReadOnlyList<DaggerfallDonorErratum> errata, DaggerfallContentDiagnostics diagnostics)
+    /// <summary>The donor's loot categories: the keys a loot table's category chances and the deferred pools may name.</summary>
+    private static readonly string[] LootCategories = ["plant1", "plant2", "creature1", "creature2", "creature3", "misc1", "misc2", "armor", "weapons", "magic", "clothing", "books", "religious"];
+
+    /// <summary>
+    /// The catalog's structural invariants. How many actors, items, slots, actions or loot tables a pack
+    /// carries, and which ids it authors, are content; what is checked here is only what the compiled
+    /// ruleset reaches for by identity, so a pack that lacks it would fail at the first use instead.
+    /// </summary>
+    private static void ValidateCatalog(IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> actors, IReadOnlyDictionary<string, int> armorValues, IReadOnlyDictionary<string, DaggerfallActionDefinition> actions, IReadOnlyDictionary<string, DaggerfallLootTableDefinition> loot, IReadOnlyList<DaggerfallDeferredLootCategoryPool> pools, DaggerfallContentDiagnostics diagnostics)
     {
-        int[] expectedMobiles = [.. Enumerable.Range(0, 39), .. Enumerable.Range(40, 3)];
-        int[] actualMobiles = actors.Values.Where(actor => actor.Kind == "monster").Select(actor => actor.MobileId ?? -1).Order().ToArray();
-        int[] expectedClasses = Enumerable.Range(128, 19).ToArray();
-        int[] actualClasses = actors.Values.Where(actor => actor.Kind == DaggerfallActorKinds.EnemyClass).Select(actor => actor.MobileId ?? -1).Order().ToArray();
-        if (actors.Count != 62 || actors.Values.Count(actor => actor.Kind == "monster") != 42 || !actualMobiles.SequenceEqual(expectedMobiles) || !actualClasses.SequenceEqual(expectedClasses) || !actors.TryGetValue(new("thief"), out DaggerfallActorDefinition? thief) || thief.MobileId != 138 || !actors.TryGetValue(new("archer"), out DaggerfallActorDefinition? archer) || archer.MobileId != 141) diagnostics.Add("Daggerfall actor roster must contain every monster mobile, every class mobile 128 through 146, and player.");
-        if (items.Count != 31 || slots.Count != 25 || actions.Count != 8 || loot.Count != 22 || armorValues.Count != 12) diagnostics.Add("Daggerfall catalog cardinality does not match the adopted donor snapshot.");
         if (armorValues.Values.Any(value => value > MaximumAuthoredArmor)) diagnostics.Add("Armor values by material exceed the Daggerfall policy bound.");
-        if (!actors.TryGetValue(new("player"), out DaggerfallActorDefinition? player) || player.Loadout.Count == 0) diagnostics.Add("Daggerfall player loadout is required.");
-        if (!loot.ContainsKey("-") || Enumerable.Range('A', 21).Select(value => ((char)value).ToString()).Any(key => !loot.ContainsKey(key))) diagnostics.Add("Daggerfall loot keys must be '-' and A through U.");
-        Dictionary<string, (string Interpretation, string Skill, string[] Tags)> expectedActions = new(StringComparer.Ordinal)
-        {
-            ["melee-attack"] = ("player-equipped-melee", "equipped", ["attack", "melee"]),
-            ["power-attack"] = ("player-equipped-melee", "equipped", ["attack", "melee"]),
-            ["monster-strike"] = ("fixed-melee", "hand-to-hand", ["attack", "melee"]),
-            ["skeleton-strike"] = ("fixed-melee", "long-blade", ["attack", "melee"]),
-            ["thief-strike"] = ("fixed-melee", "short-blade", ["attack", "melee"]),
-            // The archer's shot is the one adopted ranged action. The donor's mobile record declares the
-            // ranged attack group and carries no melee damage range, so the action supplies both the reach
-            // and the damage. The damage is the iron long bow's range exactly and the skill is the one the
-            // corpus's bows use; neither is a value the mobile record states, which is why they are
-            // authored here rather than read from it.
-            ["archer-shot"] = ("fixed-ranged", "archery", ["attack", "ranged"]),
-            ["enemy-class-equipped-melee"] = ("enemy-equipped-melee", "equipped", ["attack", "melee"]),
-            // The player's bow is the mirror of the archer's shot: the same skill and the same authored
-            // reach, driven by the equipped weapon instead of a mobile's fixed action. Its cadence is the
-            // donor's formula, so it deliberately authors no cooldown.
-            ["bow-shot"] = ("player-equipped-ranged", "archery", ["attack", "ranged"]),
-        };
-        if (actions.Count != expectedActions.Count || actions.Any(pair => !expectedActions.TryGetValue(pair.Key, out (string Interpretation, string Skill, string[] Tags) expected) || pair.Value.Interpretation != expected.Interpretation || pair.Value.Skill != expected.Skill || !pair.Value.Tags.SequenceEqual(expected.Tags))) diagnostics.Add("Actions must be the exact eight adopted ids, interpretations, skills, and tags.");
-        if (!actions.TryGetValue("melee-attack", out DaggerfallActionDefinition? melee) || melee.StaminaCost != 5 || melee.MinimumDamage is not null || melee.MaximumDamage is not null || melee.AttackRangeIndex is not null
-            || !actions.TryGetValue("power-attack", out DaggerfallActionDefinition? power) || power.StaminaCost != 25 || power.DamageBonus != 4 || power.MinimumDamage is not null || power.MaximumDamage is not null || power.AttackRangeIndex is not null
-            || !actions.TryGetValue("monster-strike", out DaggerfallActionDefinition? monsterAction) || monsterAction.AttackRangeIndex != 0 || monsterAction.MinimumDamage is not null || monsterAction.MaximumDamage is not null
-            || !actions.TryGetValue("skeleton-strike", out DaggerfallActionDefinition? skeletonAction) || skeletonAction.AttackRangeIndex != 0 || skeletonAction.MinimumDamage is not null || skeletonAction.MaximumDamage is not null
-            || !actions.TryGetValue("thief-strike", out DaggerfallActionDefinition? thiefAction) || thiefAction.AttackRangeIndex is not null || thiefAction.MinimumDamage != 2 || thiefAction.MaximumDamage != 8) diagnostics.Add("Action damage and stamina ownership does not match the adopted actor/action catalog.");
-        // Every adopted actor that swings has a policy, and every adopted actor that fights at all is
-        // named here with the action it swings. This is a table of the adopted associations rather than of
-        // the exceptions: an actor added to the catalog without a policy fails the placed-attacker check
-        // in the suites, and an actor whose policy is quietly swapped fails here.
-        string[] monsterStrikers = ["giant-bat", "imp", "orc", "rat"];
-        Dictionary<string, string> swinging =
-            new(StringComparer.Ordinal) { ["player"] = "melee-attack", ["rat"] = "monster-strike", ["skeletal-warrior"] = "skeleton-strike", ["thief"] = "thief-strike", ["archer"] = "archer-shot" };
-        foreach (string id in monsterStrikers) swinging[id] = "monster-strike";
-        if (swinging.Any(pair => !actors.TryGetValue(new(pair.Key), out DaggerfallActorDefinition? owner) || owner.ActionId != pair.Value))
-            diagnostics.Add("The adopted actor/action associations must remain explicit: the player, the four monster-strike creatures, the skeleton, the thief and the archer.");
-        if (actions.Values.Any(action => action.Id != "power-attack" && action.DamageBonus != 0)) diagnostics.Add("Only the authored power-attack may carry an action damage bonus.");
-        string[] categories = ["plant1", "plant2", "creature1", "creature2", "creature3", "misc1", "misc2", "armor", "weapons", "magic", "clothing", "books", "religious"];
-        if (pools.Count != categories.Length || !pools.Select(pool => pool.Id).Order().SequenceEqual(categories.Order()) || pools.Any(pool => pool.Status != "deferred" || string.IsNullOrWhiteSpace(pool.Reason))) diagnostics.Add("Deferred loot category pools must be the exact adopted category set with a reason.");
-        string[] expectedErrata =
-        [
-            "mobile-39-horse-is-explicitly-absent",
-            "chain2-material-alias-is-not-authored",
-            "bows-retain-donor-both-hands-policy",
-            "loot-matrix-uses-fall-exe-errata",
-            // Ranged shots draw one arrow, preroll their combat outcome, and travel through the
-            // admitted session update, where admitted static geometry on the release line stops them.
-            // The flight shows the published arrow mesh but still tests only whether the target
-            // moved away from its release aim; an intervening actor's body does not intercept it.
-            "ranged-shots-preroll-and-omit-intervening-actor-collision",
-        ];
-        if (!errata.Select(erratum => erratum.Id).Order().SequenceEqual(expectedErrata.Order())) diagnostics.Add("Donor errata must name mobile 39, the Chain2 omission, the bow two-hand policy, the loot errata and what the ranged delivery still approximates exactly.");
+        // The session composes the player from this actor, so a pack without it has no one to play.
+        if (!actors.ContainsKey(new(DaggerfallActorKinds.Player))) diagnostics.Add("Base payload is missing the 'player' actor the session composes the player from.");
+        // Every classic class encounter the ruleset materializes fights through this action.
+        if (!actions.TryGetValue(DaggerfallEncounterActors.ClassEquippedMeleeAction, out DaggerfallActionDefinition? classMelee) || classMelee.Interpretation != "enemy-equipped-melee")
+            diagnostics.Add($"Base payload must author '{DaggerfallEncounterActors.ClassEquippedMeleeAction}' as enemy-equipped melee; classic class encounters fight through it.");
+        // Dungeon treasure resolves through the ruleset's dungeon-type map, which names these tables.
+        foreach (string key in DaggerfallLootPolicy.DungeonTableKeysInUse.Where(key => !loot.ContainsKey(key)))
+            diagnostics.Add($"Base payload is missing loot table '{key}', which dungeon treasure selects.");
+        if (pools.Any(pool => !LootCategories.Contains(pool.Id) || string.IsNullOrWhiteSpace(pool.Reason))) diagnostics.Add("Deferred loot category pools must each name a known loot category with a reason.");
     }
 
     internal static JsonElement Property(JsonElement value, string property, DaggerfallContentDiagnostics diagnostics)

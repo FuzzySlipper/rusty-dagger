@@ -136,7 +136,7 @@ internal sealed record DaggerfallSavePayload(
     /// Verifies every current-state relationship against the selected definitions before session construction.
     /// Missing or incompatible meaning is a rejected load, never a partially restored world.
     /// </summary>
-    internal DaggerfallSavePayload ResolveRestore(DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallSiteProfiles? profiles = null)
+    internal DaggerfallSavePayload ResolveRestore(DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallSiteProfiles? profiles = null)
     {
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(inputs);
@@ -172,7 +172,7 @@ internal sealed record DaggerfallSavePayload(
             ArgumentNullException.ThrowIfNull(snapshot);
             if (!discoveryProfiles.Add(snapshot.Profile))
                 throw new ArgumentException($"Saved dungeon discovery repeats profile '{snapshot.Profile.LogicalId}'.");
-            PrivateersHoldInputs selected = snapshot.Profile == inputs.ProfileKey
+            DaggerfallSiteProfile selected = snapshot.Profile == inputs.ProfileKey
                 ? inputs
                 : (profiles ?? throw new ArgumentException("Saved dungeon discovery requires admitted site profiles.")).Require(snapshot.Profile);
             DaggerfallDungeonMapContent map = selected.DungeonMap
@@ -187,7 +187,7 @@ internal sealed record DaggerfallSavePayload(
             if (!actionProfiles.Add(snapshot.ProfileId))
                 throw new ArgumentException($"Saved dungeon action state repeats profile '{snapshot.ProfileId}'.");
 
-            PrivateersHoldInputs selected;
+            DaggerfallSiteProfile selected;
             if (StringComparer.Ordinal.Equals(inputs.ProfileKey.LogicalId, snapshot.ProfileId))
             {
                 selected = inputs;
@@ -245,7 +245,7 @@ internal sealed record DaggerfallSavePayload(
                 DaggerfallSiteId site = key.Site;
                 if (key == inputs.ProfileKey || !detachedProfiles.Add(key))
                     throw new ArgumentException("Saved inactive site state must name each non-active profile once.");
-                PrivateersHoldInputs profile = profiles.Require(key);
+                DaggerfallSiteProfile profile = profiles.Require(key);
                 HashSet<long> selectedActors = [.. profile.Project.Actors.Keys];
                 HashSet<long> savedActors = [.. delta.Actors.Select(actor => actor.EntityId)];
                 if (!savedActors.SetEquals(selectedActors))
@@ -628,7 +628,7 @@ internal sealed record DaggerfallSavePayload(
         _ = DaggerfallStatsSaveBoundary.Restore(stats, default);
     }
 
-    private static void ValidateDungeonMotion(PrivateersHoldInputs profile, DaggerfallDungeonMotionSnapshot snapshot)
+    private static void ValidateDungeonMotion(DaggerfallSiteProfile profile, DaggerfallDungeonMotionSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(snapshot);

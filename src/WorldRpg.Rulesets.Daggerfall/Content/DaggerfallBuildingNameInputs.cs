@@ -10,7 +10,7 @@ internal sealed class DaggerfallBuildingNameInputs(IReadOnlyList<int> regionName
 
     internal bool TryGetNameBank(int region, out int bank)
     {
-        if (region is >= 0 and < 62 && RegionNameBanks.Count == 62)
+        if (region >= 0 && region < RegionNameBanks.Count)
         {
             bank = RegionNameBanks[region];
             return bank is 0 or 1;

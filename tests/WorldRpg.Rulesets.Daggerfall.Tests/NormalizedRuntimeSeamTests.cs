@@ -45,7 +45,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -69,7 +69,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -129,7 +129,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -234,7 +234,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -268,7 +268,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Admitted_player_hits_record_skill_uses_once_per_operation_and_preserve_them_through_save()
     {
         string root = TestData.RepositoryRoot;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -345,7 +345,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Player_swing_admission_starts_once_for_empty_space_and_explicit_material_rejection()
     {
         string root = TestData.RepositoryRoot;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -430,7 +430,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Grounded_spawns_use_engine_floor_hits_while_flying_markers_keep_their_height()
     {
         string root = TestData.RepositoryRoot;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -457,7 +457,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Every_authored_enemy_has_a_live_appearance_at_its_world_position()
     {
         string root = TestData.RepositoryRoot;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -667,7 +667,7 @@ public sealed partial class NormalizedRuntimeSeamTests
 
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -711,7 +711,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         Dictionary<DaggerfallActorId, DaggerfallActorDefinition> unreached =
             definitions.Actors.ToDictionary(pair => pair.Key, pair => pair.Value with { ActionId = null });
         DaggerfallDefinitions withoutPolicies = new(
@@ -785,10 +785,10 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         ControllerInputTuning loaded = DaggerfallTuning.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/tuning-payloads/daggerfall.defaults.json"))).ControllerInput;
-        ControllerInputTuning scenario = DaggerfallTuning.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/tuning-payloads/daggerfall.privateers-hold.json"))).ControllerInput;
 
         AssertSamePad(DaggerfallTuning.Defaults.ControllerInput, loaded);
-        AssertSamePad(loaded, scenario);
+        foreach (string payload in Directory.GetFiles(Path.Combine(root, "content/worldrpg/tuning-payloads"), "*.json"))
+            AssertSamePad(loaded, DaggerfallTuning.Read(File.ReadAllBytes(payload)).ControllerInput);
 
         // The values the payloads name, so a payload edit that silently changed the layout fails here
         // rather than in a playtest: the shell delivers left stick 0/1, right stick 2/3, positive down.
@@ -839,7 +839,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -869,7 +869,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -893,7 +893,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -918,7 +918,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -954,7 +954,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -1003,7 +1003,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         DaggerfallDungeonMapGeometry target = inputs.DungeonMap!.GeometryPlacements.Single(geometry => geometry.PlacementId == "model/b0000003-rdb/1/0/11");
         Vector3 point = target.SamplePoints[2]; // Unique within the admitted 0.5 m collision tolerance.
         List<string> releases = [];
@@ -1057,7 +1057,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -1152,7 +1152,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -1175,7 +1175,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -1267,7 +1267,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<DaggerfallActorId> swinging = [];
         foreach (AuthoredActor placement in inputs.Project.Actors.Values)
         {
@@ -1299,7 +1299,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -1324,7 +1324,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         // The authored start pose is π. With yaw wrapping enabled, the
         // admitted positive pointer delta crosses into [-π, π), rather than
         // leaving the product with an unbounded yaw accumulator.
@@ -1359,7 +1359,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -1381,7 +1381,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -1403,7 +1403,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -1465,7 +1465,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         DaggerfallWorldProfileKey profile = new DaggerfallWorldProfileKey(new DaggerfallSiteId(1, 2), DaggerfallWorldProfileKind.Dungeon, "hold").Validate();
         DaggerfallGroundContainer pile = new(profile, 100, new EntityId(2), new WorldPoint(4F, 1F, 8F));
         using ActorsState actors = EmptyActors();
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(groundContainerSprite: sprite));
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(groundContainerSprite: sprite));
 
         presentation.Publish(actors, new Dictionary<long, DaggerfallGroundContainer> { [pile.Id] = pile });
         AppearanceFact fact = Assert.Single(appearance.Snapshots.Last(), value => value.ObjectId == (ulong)pile.Id);
@@ -1499,7 +1499,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         content.Add("texture/wall.png", Hash);
         content.Add("sprite/rat.png", Hash);
         AppearanceFake appearance = new(releases);
-        PrivateersHoldInputs inputs = new(
+        DaggerfallSiteProfile inputs = new(
             new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
             new SpatialContentArtifact("spatial/hold.json", Hash, 1),
             new ContentArtifact("mesh/hold.json", Hash),
@@ -1511,7 +1511,7 @@ public sealed partial class NormalizedRuntimeSeamTests
                 [11] = new("sprite/rat.png", Hash, 32, 32, [new NormalizedAtlasFrame(0, 0, 0, 16, 16)], 0, new Vector2(.5F, 0F), Vector2.One),
             });
 
-        using (PrivateersHoldAppearance presentation = new(content, appearance, inputs))
+        using (DaggerfallSiteAppearance presentation = new(content, appearance, inputs))
         {
             Assert.Equal([3u], appearance.StaticMeshBindings.Select(binding => binding.MaterialSlot));
             Assert.Single(appearance.AtlasRequests);
@@ -1531,7 +1531,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     [Fact]
     public void Normalized_actor_states_preserve_all_directional_sectors_and_select_an_explicit_sector()
     {
-        PrivateersHoldInputs inputs = ReadInputs(TestData.RepositoryRoot);
+        DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
         NormalizedSpriteState state = inputs.ActorSprites.Values
             .SelectMany(sprite => sprite.States.Values)
             .First(value => value.Orientations.Count == 8);
@@ -1562,16 +1562,16 @@ public sealed partial class NormalizedRuntimeSeamTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         string scenario = File.ReadAllText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
 
-        PrivateersHoldInputs ratInputs = PrivateersHoldContent.Read(ImportContent(root), Encoding.UTF8.GetBytes(scenario), definitions);
+        DaggerfallSiteProfile ratInputs = DaggerfallSiteContent.Read(ImportContent(root), Encoding.UTF8.GetBytes(scenario), definitions);
         NormalizedActorSprite rat = SpriteFor(ratInputs, "rat");
         Assert.Equal("ratIdle", rat.PreferredRestState);
 
-        PrivateersHoldInputs impInputs = PrivateersHoldContent.Read(ImportContent(root), Encoding.UTF8.GetBytes(scenario.Replace("\"actor\": \"rat\"", "\"actor\": \"imp\"", StringComparison.Ordinal)), definitions);
+        DaggerfallSiteProfile impInputs = DaggerfallSiteContent.Read(ImportContent(root), Encoding.UTF8.GetBytes(scenario.Replace("\"actor\": \"rat\"", "\"actor\": \"imp\"", StringComparison.Ordinal)), definitions);
         Assert.Equal("move", SpriteFor(impInputs, "imp").PreferredRestState);
         Assert.Equal(10F, SpriteFor(impInputs, "imp").States["move"].EffectiveFramesPerSecond);
         Assert.DoesNotContain("idle", SpriteFor(impInputs, "imp").States.Keys);
 
-        PrivateersHoldInputs batInputs = PrivateersHoldContent.Read(ImportContent(root), Encoding.UTF8.GetBytes(scenario.Replace("\"actor\": \"rat\"", "\"actor\": \"giant-bat\"", StringComparison.Ordinal)), definitions);
+        DaggerfallSiteProfile batInputs = DaggerfallSiteContent.Read(ImportContent(root), Encoding.UTF8.GetBytes(scenario.Replace("\"actor\": \"rat\"", "\"actor\": \"giant-bat\"", StringComparison.Ordinal)), definitions);
         Assert.Equal("move", SpriteFor(batInputs, "giant-bat").PreferredRestState);
         Assert.Equal(10F, SpriteFor(batInputs, "giant-bat").States["move"].EffectiveFramesPerSecond);
         Assert.DoesNotContain("idle", SpriteFor(batInputs, "giant-bat").States.Keys);
@@ -1590,43 +1590,43 @@ public sealed partial class NormalizedRuntimeSeamTests
 
         ProductContent withImportedPreference = MutateDungeonMedia(root, media => media["actors"]!.AsArray()
             .Single(value => value!["mobileId"]!.GetValue<int>() == 15)!["preferredRestState"] = "idle");
-        PrivateersHoldInputs inputs = PrivateersHoldContent.Read(withImportedPreference, scenario, definitions);
+        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(withImportedPreference, scenario, definitions);
         Assert.Equal("idle", SpriteFor(inputs, "skeletal-warrior").PreferredRestState);
 
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(
             MutateDungeonMedia(root, media => media["actors"]!.AsArray().Single(value => value!["mobileId"]!.GetValue<int>() == 15)!["preferredRestState"] = "missingState"),
             scenario,
             definitions));
 
         DaggerfallDefinitions unknownAuthoredState = DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(File.ReadAllText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")).Replace("\"preferredRestState\": \"ratIdle\"", "\"preferredRestState\": \"missingState\"", StringComparison.Ordinal)));
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(ImportContent(root), scenario, unknownAuthoredState));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(ImportContent(root), scenario, unknownAuthoredState));
     }
 
     [Fact]
     public void Directional_sprite_sectors_follow_actor_heading_with_classic_octant_boundaries()
     {
-        Assert.Equal(0, PrivateersHoldAppearance.RelativeSector(0f, 0f, -1f));
-        Assert.Equal(4, PrivateersHoldAppearance.RelativeSector(0f, 0f, 1f));
-        Assert.Equal(6, PrivateersHoldAppearance.RelativeSector(0f, 1f, 0f));
-        Assert.Equal(2, PrivateersHoldAppearance.RelativeSector(0f, -1f, 0f));
-        Assert.Equal(0, PrivateersHoldAppearance.RelativeSector(MathF.PI / 2f, 1f, 0f));
-        Assert.Equal(0, PrivateersHoldAppearance.RelativeSector(0f, 0f, 0f));
+        Assert.Equal(0, DaggerfallSiteAppearance.RelativeSector(0f, 0f, -1f));
+        Assert.Equal(4, DaggerfallSiteAppearance.RelativeSector(0f, 0f, 1f));
+        Assert.Equal(6, DaggerfallSiteAppearance.RelativeSector(0f, 1f, 0f));
+        Assert.Equal(2, DaggerfallSiteAppearance.RelativeSector(0f, -1f, 0f));
+        Assert.Equal(0, DaggerfallSiteAppearance.RelativeSector(MathF.PI / 2f, 1f, 0f));
+        Assert.Equal(0, DaggerfallSiteAppearance.RelativeSector(0f, 0f, 0f));
 
         float twentyTwo = 22f * MathF.PI / 180f;
         float twentyThree = 23f * MathF.PI / 180f;
         float halfSector = MathF.PI / 8f;
-        Assert.Equal(0, PrivateersHoldAppearance.RelativeSector(0f, MathF.Sin(twentyTwo), -MathF.Cos(twentyTwo)));
-        Assert.Equal(7, PrivateersHoldAppearance.RelativeSector(0f, MathF.Sin(halfSector), -MathF.Cos(halfSector)));
-        Assert.Equal(1, PrivateersHoldAppearance.RelativeSector(0f, -MathF.Sin(halfSector), -MathF.Cos(halfSector)));
-        Assert.Equal(7, PrivateersHoldAppearance.RelativeSector(0f, MathF.Sin(twentyThree), -MathF.Cos(twentyThree)));
-        Assert.Equal(1, PrivateersHoldAppearance.RelativeSector(0f, -MathF.Sin(twentyThree), -MathF.Cos(twentyThree)));
+        Assert.Equal(0, DaggerfallSiteAppearance.RelativeSector(0f, MathF.Sin(twentyTwo), -MathF.Cos(twentyTwo)));
+        Assert.Equal(7, DaggerfallSiteAppearance.RelativeSector(0f, MathF.Sin(halfSector), -MathF.Cos(halfSector)));
+        Assert.Equal(1, DaggerfallSiteAppearance.RelativeSector(0f, -MathF.Sin(halfSector), -MathF.Cos(halfSector)));
+        Assert.Equal(7, DaggerfallSiteAppearance.RelativeSector(0f, MathF.Sin(twentyThree), -MathF.Cos(twentyThree)));
+        Assert.Equal(1, DaggerfallSiteAppearance.RelativeSector(0f, -MathF.Sin(twentyThree), -MathF.Cos(twentyThree)));
     }
 
     [Fact]
     public void Enemy_idle_transition_returns_to_the_authored_preferred_rest_state()
     {
         List<string> releases = [];
-        using PrivateersHoldAppearance presentation = new(MediaContent(releases), new AppearanceFake(releases), MediaInputs(preferredRestState: "ratIdle"));
+        using DaggerfallSiteAppearance presentation = new(MediaContent(releases), new AppearanceFake(releases), MediaInputs(preferredRestState: "ratIdle"));
 
         presentation.React(new EnemyBehaviorTransitionFact(11, EnemyBehaviorState.Idle, EnemyBehaviorState.Chase, 1, 1));
         Assert.Equal("move", Visual(presentation).State);
@@ -1641,7 +1641,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
         AppearanceFake appearance = new(releases);
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(directional: true));
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(directional: true));
         using ActorsState actors = ActorsWithNpc(11, HealthyMechanics(), new WorldPoint(0f, 0f, 0f));
 
         presentation.UpdateDirections(actors, new WorldPoint(0f, 0f, -1f));
@@ -1664,7 +1664,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         List<string> releases = [];
         AppearanceFake appearance = new(releases);
-        using PrivateersHoldAppearance presentation = new(MediaContent(releases), appearance, MediaInputs(primaryFrames: [1], directional: true, shortAttackDirection: true));
+        using DaggerfallSiteAppearance presentation = new(MediaContent(releases), appearance, MediaInputs(primaryFrames: [1], directional: true, shortAttackDirection: true));
         using ActorsState actors = ActorsWithNpc(11, HealthyMechanics(), new WorldPoint(0f, 0f, 0f));
 
         presentation.React(new EnemyAttackStartedFact(11, 12, true, 1, 1));
@@ -1684,7 +1684,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -1709,7 +1709,7 @@ public sealed partial class NormalizedRuntimeSeamTests
 
         Assert.Equal(inputs.Lights.Count + 1, appearance.DisposedLights);
 
-        PrivateersHoldInputs exterior = new(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
+        DaggerfallSiteProfile exterior = new(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
             new SpatialContentArtifact("spatial/exterior.json", Hash, 1), new ContentArtifact("mesh/exterior.json", Hash),
             new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene), new PlayerInitialLook(0, 0), [], new Dictionary<long, NormalizedActorSprite>(),
             site: new DaggerfallSiteId(17, 4), profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: "worldrpg/test/exterior");
@@ -1730,9 +1730,9 @@ public sealed partial class NormalizedRuntimeSeamTests
         ContentFake content = MediaContent(releases);
         AppearanceFake appearance = new(releases);
         KeyedRandomFake random = KeyedRandomFake.Create(40);
-        PrivateersHoldInputs favoredAlternate = MediaInputs(primaryChance: 60);
+        DaggerfallSiteProfile favoredAlternate = MediaInputs(primaryChance: 60);
 
-        using (PrivateersHoldAppearance first = new(content, appearance, favoredAlternate, random: random.Service))
+        using (DaggerfallSiteAppearance first = new(content, appearance, favoredAlternate, random: random.Service))
         {
             first.React(new EnemyAttackStartedFact(11, 12, true, 7, 9));
             SpritePlaybackCreateRequest selected = appearance.PlaybackRequests.Last();
@@ -1744,7 +1744,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         }
 
         AppearanceFake secondAppearance = new(releases);
-        using (PrivateersHoldAppearance second = new(content, secondAppearance, MediaInputs(primaryChance: 20), random: KeyedRandomFake.Create(40).Service))
+        using (DaggerfallSiteAppearance second = new(content, secondAppearance, MediaInputs(primaryChance: 20), random: KeyedRandomFake.Create(40).Service))
         {
             second.React(new EnemyAttackStartedFact(11, 12, true, 7, 9));
             Assert.Equal([2u], secondAppearance.PlaybackRequests.Last().Frames.Span.ToArray().Select(frame => frame.FrameId));
@@ -1761,7 +1761,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         ContentFake content = MediaContent(releases);
         AppearanceFake appearance = new(releases);
         KeyedRandomFake random = KeyedRandomFake.Create(40);
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(rangedFrames: [3, 2, 0, 0, 0, -1, 1, 1, 2, 3]), random: random.Service);
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(rangedFrames: [3, 2, 0, 0, 0, -1, 1, 1, 2, 3]), random: random.Service);
 
         presentation.React(new EnemyAttackStartedFact(11, 12, true, 7, 9));
 
@@ -1782,7 +1782,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
         AppearanceFake appearance = new(releases);
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1], includeAlternate: false));
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1], includeAlternate: false));
 
         presentation.React(new EnemyAttackStartedFact(11, 12, true, 7, 9));
 
@@ -1808,7 +1808,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 2, false),
             true));
 
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1]), audio.Service);
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1]), audio.Service);
         presentation.React(new EnemyAttackStartedFact(11, 12, true, 3, 4));
         int playbacksBefore = appearance.PlaybackRequests.Count;
         int audioBefore = audio.Emits.Count;
@@ -1825,7 +1825,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         Assert.Equal(11, impact.AttackerId);
         Assert.Equal(12, impact.TargetId);
         Assert.Empty(presentation.TakeAttackImpacts());
-        FieldInfo actorsField = typeof(PrivateersHoldAppearance).GetField("actors", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        FieldInfo actorsField = typeof(DaggerfallSiteAppearance).GetField("actors", BindingFlags.Instance | BindingFlags.NonPublic)!;
         System.Collections.IDictionary visuals = (System.Collections.IDictionary)actorsField.GetValue(presentation)!;
         object visual = visuals[11L]!;
         FieldInfo crossingField = visual.GetType().GetField("<LastMarkerCrossing>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!;
@@ -1841,7 +1841,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         AppearanceFake appearance = new(releases);
         AudioRecorder audio = AudioRecorder.Create();
         DaggerfallPresentationAudioTuning tuning = new(.25F, 1.5F, .75F, 12F);
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(), audio.Service, tuning);
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(), audio.Service, tuning);
         EnemyAttackStartedFact hit = new(11, 12, true, 7, 9);
 
         presentation.React(hit);
@@ -1864,7 +1864,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
         AppearanceFake appearance = new(releases);
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs());
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs());
         presentation.React(new EnemyAttackStartedFact(11, 12, true, 7, 9));
         int beforeCompletion = appearance.PlaybackRequests.Count;
         appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceResult(
@@ -1895,12 +1895,12 @@ public sealed partial class NormalizedRuntimeSeamTests
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
         AppearanceFake constructionFailure = new(releases) { FailSpritePlaybackCreateAt = 1 };
-        Assert.Throws<InvalidOperationException>(() => new PrivateersHoldAppearance(content, constructionFailure, MediaInputs()));
+        Assert.Throws<InvalidOperationException>(() => new DaggerfallSiteAppearance(content, constructionFailure, MediaInputs()));
         Assert.Equal(constructionFailure.CreatedAtlases, constructionFailure.DisposedAtlases);
         Assert.Equal(constructionFailure.CreatedAppearances, constructionFailure.DisposedAppearances);
 
         AppearanceFake replacementFailure = new(releases);
-        using PrivateersHoldAppearance presentation = new(content, replacementFailure, MediaInputs());
+        using DaggerfallSiteAppearance presentation = new(content, replacementFailure, MediaInputs());
         SpritePlaybackHandle original = Assert.Single(replacementFailure.CreatedPlaybacks).Handle;
         replacementFailure.FailSpritePlaybackControlAt = replacementFailure.ControlRequests.Count + 1;
         Assert.Throws<InvalidOperationException>(() => presentation.React(new EnemyAttackStartedFact(11, 12, true, 7, 9)));
@@ -1916,8 +1916,8 @@ public sealed partial class NormalizedRuntimeSeamTests
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
         AppearanceFake appearance = new(releases);
-        PrivateersHoldInputs inputs = MediaInputs(primaryFrames: [0, -1]);
-        using PrivateersHoldAppearance presentation = new(content, appearance, inputs);
+        DaggerfallSiteProfile inputs = MediaInputs(primaryFrames: [0, -1]);
+        using DaggerfallSiteAppearance presentation = new(content, appearance, inputs);
         int before = appearance.PlaybackRequests.Count;
 
         Assert.Throws<InvalidOperationException>(() => presentation.React(new EnemyAttackStartedFact(11, 12, true, 7, 9)));
@@ -1936,7 +1936,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             new NormalizedAtlasFrame(2, 10, 0, 10, 5, new Vector2(3.75F, 1.875F)),
             new NormalizedAtlasFrame(3, 20, 0, 12, 16, new Vector2(4.5F, 6F)),
         ];
-        using PrivateersHoldAppearance presentation = new(MediaContent(releases), appearance, MediaInputs(actorFrames: crops));
+        using DaggerfallSiteAppearance presentation = new(MediaContent(releases), appearance, MediaInputs(actorFrames: crops));
 
         SpriteAtlasFrame[] frames = appearance.AtlasRequests.Single().Frames.Span.ToArray();
         Assert.All(frames, frame => Assert.True(frame.HasSize));
@@ -1951,7 +1951,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         ContentFake content = MediaContent(releases);
         AppearanceFake appearance = new(releases);
         AudioRecorder audio = AudioRecorder.Create();
-        PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(), audio.Service);
+        DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(), audio.Service);
         EnemyAttackStartedFact hit = new(11, 12, true, 17, 23);
 
         presentation.BeginAdmittedUpdate();
@@ -1980,7 +1980,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             CompatibleItemVisuals = weapon.CompatibleItemVisuals,
             Viewmodel = weapon.Viewmodel,
         };
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(classic: classic));
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: classic));
         int constructionResourceRequests = appearance.OpenResourceRequests.Count;
         appearance.RejectLateResourceOpen = true;
         presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
@@ -2014,7 +2014,7 @@ public sealed partial class NormalizedRuntimeSeamTests
 
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -2051,7 +2051,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
         AppearanceFake appearance = new(releases);
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs());
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs());
         SpritePlayback original = Visual(presentation).Playback!;
         presentation.React(new EnemyAttackStartedFact(11, 12, true, 1, 2));
 
@@ -2069,7 +2069,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         ContentFake content = MediaContent(releases);
         AppearanceFake appearance = new(releases);
         AudioRecorder audio = AudioRecorder.Create();
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1]), audio.Service);
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1]), audio.Service);
         presentation.React(new EnemyAttackStartedFact(11, 12, true, 2, 3));
         appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceResult(
             new[] { new SpritePlaybackMarkerCrossing(2, 3, 1, 0, 1) },
@@ -2078,7 +2078,7 @@ public sealed partial class NormalizedRuntimeSeamTests
 
         presentation.Advance(OuterUpdate(1));
 
-        PrivateersHoldAppearance.ActorVisual visual = Visual(presentation);
+        DaggerfallSiteAppearance.ActorVisual visual = Visual(presentation);
         Assert.Equal((ulong)0, visual.LastMarkerCrossing);
         Assert.False(visual.CompletedOuterUpdate);
         Assert.Empty(audio.Emits);
@@ -2091,7 +2091,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         ContentFake content = MediaContent(releases);
         AppearanceFake appearance = new(releases);
         AudioRecorder audio = AudioRecorder.Create();
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1]), audio.Service);
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1]), audio.Service);
         presentation.React(new EnemyAttackStartedFact(11, 12, false, 2, 3));
         appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceResult(
             new[] { new SpritePlaybackMarkerCrossing(2, 3, 1, 0, 1) },
@@ -2111,8 +2111,8 @@ public sealed partial class NormalizedRuntimeSeamTests
         EnemyAttackStartedFact hit = new(11, 12, true, 8, 13);
         AudioRecorder firstAudio = AudioRecorder.Create();
         AppearanceFake firstAppearance = new(releases);
-        PrivateersHoldInputs hitInputs = MediaInputs(includeAlternate: false);
-        using (PrivateersHoldAppearance first = new(content, firstAppearance, hitInputs, firstAudio.Service, random: KeyedRandomFake.Create(5).Service))
+        DaggerfallSiteProfile hitInputs = MediaInputs(includeAlternate: false);
+        using (DaggerfallSiteAppearance first = new(content, firstAppearance, hitInputs, firstAudio.Service, random: KeyedRandomFake.Create(5).Service))
         {
             first.React(hit);
             AudioEmitRequest emitted = Assert.Single(firstAudio.Emits);
@@ -2123,7 +2123,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         Assert.Equal(hitInputs.Audio.Count, firstAudio.ReleasedClips);
 
         AudioRecorder secondAudio = AudioRecorder.Create();
-        using (PrivateersHoldAppearance second = new(content, new AppearanceFake(releases), MediaInputs(includeAlternate: false), secondAudio.Service, random: KeyedRandomFake.Create(5).Service))
+        using (DaggerfallSiteAppearance second = new(content, new AppearanceFake(releases), MediaInputs(includeAlternate: false), secondAudio.Service, random: KeyedRandomFake.Create(5).Service))
         {
             second.React(hit);
         }
@@ -2145,7 +2145,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             new NormalizedAudioClip("hit2", "audio/hit2.wav", Hash),
         ];
 
-        using PrivateersHoldAppearance presentation = new(content, new AppearanceFake(releases), MediaInputs(includeAlternate: false, audio: authoredAudio), audio.Service, random: KeyedRandomFake.Create(2).Service);
+        using DaggerfallSiteAppearance presentation = new(content, new AppearanceFake(releases), MediaInputs(includeAlternate: false, audio: authoredAudio), audio.Service, random: KeyedRandomFake.Create(2).Service);
         presentation.React(new EnemyAttackStartedFact(11, 12, true, 8, 13));
 
         Assert.Equal((ulong)3, Assert.Single(audio.Emits).Descriptor.Clip.Handle.Value);
@@ -2157,7 +2157,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
         AppearanceFake appearance = new(releases);
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicEffects()));
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicEffects()));
         WorldPoint targetPosition = new(7F, 2F, -3F);
         using ActorsState actors = ActorsAt(new WorldPoint(1F, 1F, 1F));
         presentation.Publish(actors);
@@ -2187,7 +2187,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         ContentFake content = MediaContent(releases);
         content.Add("weapon/dagger.png", Hash);
         AppearanceFake appearance = new(releases);
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
 
         presentation.UpdateRightHandEquipment(RightHand("iron-longsword"));
         Assert.Single(appearance.PlaybackRequests);
@@ -2222,7 +2222,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         ContentFake content = MediaContent(releases);
         content.Add("weapon/dagger.png", Hash);
         AppearanceFake appearance = new(releases);
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
         presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
 
         presentation.BeginAdmittedUpdate();
@@ -2259,7 +2259,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         ContentFake content = MediaContent(releases);
         content.Add("weapon/dagger.png", Hash);
         AppearanceFake appearance = new(releases);
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
         presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
         presentation.React(new PlayerAttackStartedFact(1, 1));
         Assert.False(presentation.CanStartPlayerAttack);
@@ -2282,7 +2282,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         ContentFake content = MediaContent(releases);
         content.Add("weapon/dagger.png", Hash);
         AppearanceFake appearance = new(releases);
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
         presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
         presentation.BeginAdmittedUpdate();
         presentation.React(new PlayerAttackStartedFact(2, 3, TargetId: 12, FrameSeconds: .25d));
@@ -2311,7 +2311,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         ContentFake content = MediaContent(releases);
         content.Add("weapon/dagger.png", Hash);
         AppearanceFake appearance = new(releases);
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
         presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
 
         presentation.BeginAdmittedUpdate();
@@ -2338,7 +2338,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             ContentFake content = MediaContent(releases);
             AppearanceFake appearance = new(releases);
             NormalizedClassicPresentation classic = ClassicEffects(expectedSizes);
-            using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(classic: classic), random: KeyedRandomFake.Create(ordinal).Service);
+            using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: classic), random: KeyedRandomFake.Create(ordinal).Service);
             using ActorsState actors = ActorsAt(new WorldPoint(2F, 0F, 3F));
 
             presentation.React(new AttackHitFact(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 1d, ordinal, false, 2, 3), actors);
@@ -2373,7 +2373,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             UnarmedVisual = "weapon.unarmed",
         };
         AppearanceFake appearance = new(releases);
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(classic: classic));
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: classic));
         presentation.UpdateRightHandEquipment(RightHand("iron-longsword"));
         Assert.Equal("weapon.longblade", Viewmodel(presentation).Weapon.ResourceId);
         presentation.React(new PlayerAttackStartedFact(1, 1));
@@ -2398,7 +2398,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         ContentFake content = MediaContent(releases);
         content.Add("weapon/dagger.png", Hash);
         AppearanceFake appearance = new(releases);
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
         presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
         using ActorsState actors = EmptyActors();
 
@@ -2421,9 +2421,9 @@ public sealed partial class NormalizedRuntimeSeamTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         byte[] payload = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
 
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateDungeonMedia(root, media => FirstActorState(media, "idle")["frames"]!.AsArray()[0]!["orientation"] = 8), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateDungeonMedia(root, media => FirstActorState(media, "idle")["playback"]!["loops"] = "true"), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateDungeonMedia(root, media =>
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(MutateDungeonMedia(root, media => FirstActorState(media, "idle")["frames"]!.AsArray()[0]!["orientation"] = 8), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(MutateDungeonMedia(root, media => FirstActorState(media, "idle")["playback"]!["loops"] = "true"), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(MutateDungeonMedia(root, media =>
         {
             JsonArray frames = FirstActorState(media, "primaryAttack")["frames"]!.AsArray();
             JsonNode frame = frames.Last(value => value!["orientation"]!.GetValue<int>() == 7)!;
@@ -2468,12 +2468,12 @@ public sealed partial class NormalizedRuntimeSeamTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         byte[] payload = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
 
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media =>
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(MutateClassicMedia(root, media =>
         {
             JsonArray audio = media["audio"]!.AsArray();
             audio.Single(value => value!["clip"]!.GetValue<string>() == "hit2")!.AsObject()["clip"] = "hit3";
         }), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media =>
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(MutateClassicMedia(root, media =>
         {
             JsonArray audio = media["audio"]!.AsArray();
             audio.Remove(audio.Single(value => value!["clip"]!.GetValue<string>() == "hit2"));
@@ -2487,23 +2487,23 @@ public sealed partial class NormalizedRuntimeSeamTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         byte[] payload = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
 
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => media["weaponMedia"]!.AsArray()[0]!["actions"]!.AsArray()[0]!["frameStart"] = -1), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => media["weaponMedia"]!.AsArray()[0]!["actions"]!.AsArray()[1]!["frameStart"] = -1), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => media["weaponMedia"]!.AsArray()[0]!["actions"]!.AsArray()[0]!["frameCount"] = int.MaxValue), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => WeaponResource(media)["frames"]!.AsArray()[0]!["frameIndex"] = 4), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media =>
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(MutateClassicMedia(root, media => media["weaponMedia"]!.AsArray()[0]!["actions"]!.AsArray()[0]!["frameStart"] = -1), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(MutateClassicMedia(root, media => media["weaponMedia"]!.AsArray()[0]!["actions"]!.AsArray()[1]!["frameStart"] = -1), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(MutateClassicMedia(root, media => media["weaponMedia"]!.AsArray()[0]!["actions"]!.AsArray()[0]!["frameCount"] = int.MaxValue), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(MutateClassicMedia(root, media => WeaponResource(media)["frames"]!.AsArray()[0]!["frameIndex"] = 4), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(MutateClassicMedia(root, media =>
         {
             JsonObject frame = WeaponResource(media)["frames"]!.AsArray()[0]!.AsObject();
             frame["x"] = 1;
             frame["width"] = int.MaxValue;
         }), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => media["effects"]!.AsArray()[0]!["sourceRecordOrdinal"] = 3), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => media["effects"]!.AsArray()[0]!["timing"]!["framesPerSecond"] = 12), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => EffectResource(media, "effect.blood.0")["frames"]!.AsArray()[0]!["frameIndex"] = 1), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => WeaponResource(media)["byteLength"] = 1), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => WeaponResource(media)["mimeType"] = ""), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => WeaponResource(media)["sourceWidth"] = -1), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => WeaponResource(media)["relativePath"] = "../weapon.png"), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(MutateClassicMedia(root, media => media["effects"]!.AsArray()[0]!["sourceRecordOrdinal"] = 3), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(MutateClassicMedia(root, media => media["effects"]!.AsArray()[0]!["timing"]!["framesPerSecond"] = 12), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(MutateClassicMedia(root, media => EffectResource(media, "effect.blood.0")["frames"]!.AsArray()[0]!["frameIndex"] = 1), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(MutateClassicMedia(root, media => WeaponResource(media)["byteLength"] = 1), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(MutateClassicMedia(root, media => WeaponResource(media)["mimeType"] = ""), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(MutateClassicMedia(root, media => WeaponResource(media)["sourceWidth"] = -1), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(MutateClassicMedia(root, media => WeaponResource(media)["relativePath"] = "../weapon.png"), payload, definitions));
     }
 
     [Fact]
@@ -2513,7 +2513,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         List<string> releases = [];
         ContentFake content = new(releases);
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
@@ -2561,7 +2561,7 @@ public sealed partial class NormalizedRuntimeSeamTests
 
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -2579,7 +2579,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -2658,7 +2658,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -2678,7 +2678,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake sourceContent = new(releases);
         PopulateContent(sourceContent, inputs);
@@ -2744,7 +2744,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         DaggerfallFactionDefinition faction = definitions.Factions.Factions[15];
         List<string> releases = [];
         ContentFake sourceContent = new(releases);
@@ -2842,7 +2842,7 @@ public sealed partial class NormalizedRuntimeSeamTests
 
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -2882,7 +2882,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake sourceContent = new(releases);
         PopulateContent(sourceContent, inputs);
@@ -3010,7 +3010,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         // Day 103 of the year is the eighteenth holiday, kept in region 17 alone; Charing is its city.
         DaggerfallSavePayload baseline = CapturedSave(root);
         DaggerfallSavePayload saved = baseline with
@@ -3051,7 +3051,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         // An hour before midnight on the eve of region 17's eighteenth holiday, at its city.
         DaggerfallSavePayload baseline = CapturedSave(root);
         DaggerfallSavePayload saved = baseline with
@@ -3082,7 +3082,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         DaggerfallSavePayload baseline = CapturedSave(root);
         DaggerfallSavePayload saved = baseline with
         {
@@ -3115,7 +3115,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         DaggerfallSavePayload saved = CapturedSave(root);
         Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Read(new RulesetSavePayload(DaggerfallRuleset.Identity, "{"u8)));
 
@@ -3145,7 +3145,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         DaggerfallSavePayload valid = CapturedSave(root);
         DaggerfallItemDefinition nonBook = definitions.TemplateItems.Values
             .First(definition => definition.IsFungible && definition.Template?.Groups.Contains("Books", StringComparer.Ordinal) != true);
@@ -3190,7 +3190,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         DaggerfallSavePayload valid = CapturedSave(root);
         DaggerfallWorldProfileKey unknown = inputs.ProfileKey with { LogicalId = "unadmitted-profile" };
         DaggerfallSavePayload forged = valid with
@@ -3216,7 +3216,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake sourceContent = new(releases);
         PopulateContent(sourceContent, inputs);
@@ -3251,7 +3251,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
         InMemoryPersistenceService persistence = new();
         List<string> releases = [];
@@ -3352,7 +3352,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -3394,7 +3394,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             PayloadData = Encoding.UTF8.GetBytes(json),
         };
         string root = TestData.RepositoryRoot;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -3433,7 +3433,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Enabled_production_opening_refuses_to_begin_when_its_admitted_cinematic_bundle_is_missing()
     {
         string root = TestData.RepositoryRoot;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake engineContent = new(releases);
         // This ordinary Engine fixture deliberately excludes the cinematic bundle. Unlike the explicit
@@ -3468,7 +3468,7 @@ public sealed partial class NormalizedRuntimeSeamTests
 
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         InMemoryPersistenceService persistence = new();
         ContentFake content = new(releases);
@@ -3551,7 +3551,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void Host_resume_refuses_unique_items_that_are_unissued_or_tombstoned_in_the_saved_ledger()
     {
         string root = TestData.RepositoryRoot;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         DaggerfallSavePayload valid = CapturedSave(root);
         DaggerfallUniqueSave tombstoned = Assert.IsType<DaggerfallUniqueSave>(valid.Inventory.UniqueItems.FirstOrDefault());
         DurableIdentityAllocator ledger = DurableIdentityAllocator.Restore(valid.RestoredIdentities());
@@ -3610,7 +3610,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         long authoredPlacement = inputs.Project.Actors.Keys.Order().First();
         RulesetSavePayload payload;
         long first;
@@ -3737,7 +3737,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         // and the mode machine follows back to play through the ordinary Read-null path.
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -3782,7 +3782,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -3819,8 +3819,8 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs source = ReadInputs(root);
-        PrivateersHoldInputs castle = PrivateersHoldContent.Read(FullContent(root),
+        DaggerfallSiteProfile source = ReadInputs(root);
+        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(FullContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -3867,8 +3867,8 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs source = ReadInputs(root);
-        PrivateersHoldInputs castle = PrivateersHoldContent.Read(FullContent(root),
+        DaggerfallSiteProfile source = ReadInputs(root);
+        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(FullContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -3902,8 +3902,8 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs source = ReadInputs(root);
-        PrivateersHoldInputs castle = PrivateersHoldContent.Read(FullContent(root),
+        DaggerfallSiteProfile source = ReadInputs(root);
+        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(FullContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -3932,8 +3932,8 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs source = ReadInputs(root);
-        PrivateersHoldInputs castle = PrivateersHoldContent.Read(FullContent(root),
+        DaggerfallSiteProfile source = ReadInputs(root);
+        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(FullContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -3974,8 +3974,8 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs source = ReadInputs(root);
-        PrivateersHoldInputs castle = PrivateersHoldContent.Read(FullContent(root),
+        DaggerfallSiteProfile source = ReadInputs(root);
+        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(FullContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -4031,8 +4031,8 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs source = ReadInputs(root);
-        PrivateersHoldInputs castle = PrivateersHoldContent.Read(FullContent(root),
+        DaggerfallSiteProfile source = ReadInputs(root);
+        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(FullContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -4107,7 +4107,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -4185,7 +4185,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -4251,7 +4251,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -4273,7 +4273,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -4309,7 +4309,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -4357,7 +4357,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     private static DaggerfallSavePayload CapturedSave(string root)
     {
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -4380,7 +4380,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -4416,8 +4416,8 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
-        PrivateersHoldInputs castle = PrivateersHoldContent.Read(FullContent(root),
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(FullContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -4460,7 +4460,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -4508,7 +4508,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -4611,7 +4611,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -4662,7 +4662,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -4717,7 +4717,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         DaggerfallMissileVisual arrow = Assert.Single(inputs.ClassicPresentation.WorldVisuals,
             visual => visual.MediaId == "visual.missile.arrow");
         List<string> releases = [];
@@ -4760,7 +4760,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         // which is what keeps the StaticMesh answer the only blocking one.
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -4792,7 +4792,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -4862,7 +4862,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -4894,7 +4894,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -4949,7 +4949,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         ResolvedCompositionIdentity composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
         List<string> releases = [];
         RulesetSavePayload saved;
@@ -4991,7 +4991,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -5035,7 +5035,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -5072,7 +5072,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     [Fact]
     public void Grounded_rat_melee_aim_uses_its_visible_body_above_the_floor()
     {
-        PrivateersHoldInputs inputs = ReadInputs(TestData.RepositoryRoot);
+        DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
             placement => placement.EntityId, placement => definitions.RequireActor(placement.ActorId));
@@ -5100,7 +5100,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -5134,7 +5134,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -5301,7 +5301,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -5354,7 +5354,7 @@ public sealed partial class NormalizedRuntimeSeamTests
 
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake sourceContent = new(releases);
         PopulateContent(sourceContent, inputs);
@@ -5444,7 +5444,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -5461,8 +5461,8 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs source = ReadInputs(root);
-        PrivateersHoldInputs destination = PrivateersHoldContent.Read(FullContent(root),
+        DaggerfallSiteProfile source = ReadInputs(root);
+        DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(FullContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -5537,9 +5537,9 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs source = ReadInputs(root);
+        DaggerfallSiteProfile source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
-        PrivateersHoldInputs destination = ReadProfile(root, admitted, definitions, "daggerfall.castle-necromoghan.json");
+        DaggerfallSiteProfile destination = ReadProfile(root, admitted, definitions, "daggerfall.castle-necromoghan.json");
         DaggerfallSiteProfiles profiles = new([source, destination]);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -5585,8 +5585,8 @@ public sealed partial class NormalizedRuntimeSeamTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        PrivateersHoldInputs exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
-        PrivateersHoldInputs interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
+        DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
         Assert.Equal(exterior.Site, interior.Site);
         Assert.NotEqual(exterior.ProfileKey, interior.ProfileKey);
         DaggerfallSiteProfiles profiles = new([exterior, interior]);
@@ -5652,9 +5652,9 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs source = ReadInputs(root);
+        DaggerfallSiteProfile source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
-        PrivateersHoldInputs destination = PrivateersHoldContent.Read(admitted,
+        DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(admitted,
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
         DaggerfallSiteProfiles profiles = new([source, destination]);
         DaggerfallEffectCatalog catalog = EffectCatalog();
@@ -5742,8 +5742,8 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs source = ReadInputs(root);
-        PrivateersHoldInputs destination = PrivateersHoldContent.Read(FullContent(root),
+        DaggerfallSiteProfile source = ReadInputs(root);
+        DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(FullContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -5767,9 +5767,9 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs source = ReadInputs(root);
+        DaggerfallSiteProfile source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
-        PrivateersHoldInputs destination = PrivateersHoldContent.Read(admitted,
+        DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(admitted,
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -5805,9 +5805,9 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs source = ReadInputs(root);
+        DaggerfallSiteProfile source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
-        PrivateersHoldInputs destination = PrivateersHoldContent.Read(admitted,
+        DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(admitted,
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
         DaggerfallSiteProfiles profiles = new([source, destination]);
         List<string> releases = [];
@@ -5891,9 +5891,9 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs source = ReadInputs(root);
+        DaggerfallSiteProfile source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
-        PrivateersHoldInputs destination = PrivateersHoldContent.Read(admitted,
+        DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(admitted,
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
         DaggerfallSiteProfiles profiles = new([source, destination]);
         List<string> releases = [];
@@ -5936,7 +5936,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -6014,14 +6014,14 @@ public sealed partial class NormalizedRuntimeSeamTests
 
     private static PerceptionReadoutResult Receipt(params PerceptionPair[] pairs) => new(pairs, ReadOnlyMemory<PerceptionAggregate>.Empty, checked((uint)pairs.Length), false, 0, 1, 1, checked((uint)pairs.Length), checked((ulong)pairs.Length), 0, 0, 0, 0);
 
-    private static PrivateersHoldInputs ReadInputs(string root)
+    private static DaggerfallSiteProfile ReadInputs(string root)
     {
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        return PrivateersHoldContent.Read(ImportContent(root), File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
+        return DaggerfallSiteContent.Read(ImportContent(root), File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
     }
 
-    private static PrivateersHoldInputs ReadProfile(string root, ProductContent content, DaggerfallDefinitions definitions, string payload) =>
-        PrivateersHoldContent.Read(content, File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads", payload)), definitions);
+    private static DaggerfallSiteProfile ReadProfile(string root, ProductContent content, DaggerfallDefinitions definitions, string payload) =>
+        DaggerfallSiteContent.Read(content, File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads", payload)), definitions);
 
     private static void RegisterCorpseStack(DaggerfallSession session, DaggerfallDefinitions definitions, long actorId, string stackId)
     {
@@ -6032,7 +6032,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             definitions.Items[new DaggerfallItemId(stack.Definition.Value)]);
     }
 
-    private static NormalizedActorSprite SpriteFor(PrivateersHoldInputs inputs, string actorId) => inputs.ActorSprites.First(pair => inputs.Project.Actors[pair.Key].ActorId.Value == actorId).Value;
+    private static NormalizedActorSprite SpriteFor(DaggerfallSiteProfile inputs, string actorId) => inputs.ActorSprites.First(pair => inputs.Project.Actors[pair.Key].ActorId.Value == actorId).Value;
 
     private static ProductContent ImportContent(string root) => ContentAt(root, "worldrpg/imports/privateers-hold");
 
@@ -6044,10 +6044,8 @@ public sealed partial class NormalizedRuntimeSeamTests
             // this root so it is read eagerly while the cue bodies stay lazy.
             ("worldrpg/media/music/clips", "daggerfall.music"),
             ("worldrpg/media/audio/clips", "daggerfall.classic-audio"),
-            ("worldrpg/imports/privateers-hold/media/audio/clips", "daggerfall.privateers-hold-audio"),
-            ("worldrpg/imports/castle-necromoghan/media/audio/clips", "daggerfall.castle-necromoghan-audio"),
-            ("worldrpg/imports/charing/exterior/media/audio/clips", "daggerfall.charing-exterior-audio"),
-            ("worldrpg/imports/charing/interior-1-1-0/media/audio/clips", "daggerfall.charing-interior-1-1-0-audio"),
+            // Each site's clips are staged as the bundle its own payload declares.
+            .. SiteAudioBundles(root),
         ];
         string contentRoot = Path.Combine(root, "content");
         BundleContentFake bundles = new();
@@ -6067,6 +6065,17 @@ public sealed partial class NormalizedRuntimeSeamTests
         }
 
         return new ProductContent(eager.ToArray(), bundles);
+    }
+
+    /// <summary>The audio bundle every committed site payload declares, rooted at its publication's clips.</summary>
+    internal static IEnumerable<(string Root, string Bundle)> SiteAudioBundles(string root)
+    {
+        foreach (string payload in Directory.GetFiles(Path.Combine(root, "content/worldrpg/payloads"), "*.json").Order(StringComparer.Ordinal))
+        {
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(payload));
+            if (!document.RootElement.TryGetProperty("world", out JsonElement world) || !world.TryGetProperty("audioBundle", out JsonElement bundle)) continue;
+            yield return ($"{world.GetProperty("publicationRoot").GetString()}/media/audio/clips", bundle.GetString()!);
+        }
     }
 
     private static ProductContent ContentAt(string root, string relativeDirectory)
@@ -6090,7 +6099,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         List<string> releases = [];
         ContentFake content = new(releases);
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         PopulateContent(content, inputs);
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
 
@@ -6169,7 +6178,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         List<string> releases = [];
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         string[] icons = [.. inputs.ClassicPresentation.InventoryIcons.Values];
 
         ContentFake original = new(releases);
@@ -6279,7 +6288,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         string root = TestData.RepositoryRoot;
         List<string> releases = [];
         ContentFake content = new(releases);
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         PopulateContent(content, inputs);
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
@@ -6325,7 +6334,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         string root = TestData.RepositoryRoot;
         List<string> releases = [];
         ContentFake content = new(releases);
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         PopulateContent(content, inputs);
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
@@ -6346,7 +6355,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         Assert.Contains(DaggerfallUiArt.InventoryPath, failure.Message, StringComparison.Ordinal);
     }
 
-    private static void PopulateContent(ContentFake content, PrivateersHoldInputs inputs)
+    private static void PopulateContent(ContentFake content, DaggerfallSiteProfile inputs)
     {
         content.Add(inputs.SpatialArtifact.Path, inputs.SpatialArtifact.Sha256);
         content.Add(inputs.StaticMesh.Path, inputs.StaticMesh.Sha256);
@@ -6407,7 +6416,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         return content;
     }
 
-    private static PrivateersHoldInputs MediaInputs(int primaryChance = 50, IReadOnlyList<int>? primaryFrames = null, bool includeAlternate = true, bool directional = false, IReadOnlyList<NormalizedAudioClip>? audio = null, string? preferredRestState = null, NormalizedClassicPresentation? classic = null, IReadOnlyList<NormalizedAtlasFrame>? actorFrames = null, IReadOnlyList<int>? rangedFrames = null, bool shortAttackDirection = false, NormalizedGroundContainerSprite? groundContainerSprite = null)
+    private static DaggerfallSiteProfile MediaInputs(int primaryChance = 50, IReadOnlyList<int>? primaryFrames = null, bool includeAlternate = true, bool directional = false, IReadOnlyList<NormalizedAudioClip>? audio = null, string? preferredRestState = null, NormalizedClassicPresentation? classic = null, IReadOnlyList<NormalizedAtlasFrame>? actorFrames = null, IReadOnlyList<int>? rangedFrames = null, bool shortAttackDirection = false, NormalizedGroundContainerSprite? groundContainerSprite = null)
     {
         NormalizedSpriteState idle = new("idle", [0], 10F, true)
         {
@@ -6443,7 +6452,7 @@ public sealed partial class NormalizedRuntimeSeamTests
                 : [new NormalizedAttackSequence(100, primaryFrames ?? [0])],
             RangedAttackSequence = rangedFrames is null ? null : new NormalizedAttackSequence(100, rangedFrames, "rangedAttack1"),
         };
-        return new PrivateersHoldInputs(
+        return new DaggerfallSiteProfile(
             new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
             new SpatialContentArtifact("spatial/hold.json", Hash, 1),
             new ContentArtifact("mesh/hold.json", Hash),
@@ -6489,10 +6498,10 @@ public sealed partial class NormalizedRuntimeSeamTests
     private static SpritePlaybackAdvanceResult Reading(uint frameId, uint frameIndex) =>
         new(default, new SpritePlaybackReadout(frameId, frameIndex, SpritePlaybackState.Playing, 0d, 0, 0, false), true);
 
-    private static PrivateersHoldAppearance.ActorVisual Visual(PrivateersHoldAppearance presentation)
+    private static DaggerfallSiteAppearance.ActorVisual Visual(DaggerfallSiteAppearance presentation)
     {
-        FieldInfo field = typeof(PrivateersHoldAppearance).GetField("actors", BindingFlags.Instance | BindingFlags.NonPublic)!;
-        return ((Dictionary<long, PrivateersHoldAppearance.ActorVisual>)field.GetValue(presentation)!)[11];
+        FieldInfo field = typeof(DaggerfallSiteAppearance).GetField("actors", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        return ((Dictionary<long, DaggerfallSiteAppearance.ActorVisual>)field.GetValue(presentation)!)[11];
     }
 
     private static ActorsState EmptyActors()
@@ -6528,15 +6537,15 @@ public sealed partial class NormalizedRuntimeSeamTests
         StatsComponent stats = new DaggerfallMechanicsState().CreateStats(player, DaggerfallPlayerVitals.Initial(player.Stats, career));
         return new DaggerfallCharacterState(definitions, stats, player);
     }
-    private static int EffectCount(PrivateersHoldAppearance presentation) => ((List<PrivateersHoldAppearance.EffectVisual>)typeof(PrivateersHoldAppearance).GetField("effects", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(presentation)!).Count;
-    private static PrivateersHoldAppearance.EffectVisual Effect(PrivateersHoldAppearance presentation) => Assert.Single((List<PrivateersHoldAppearance.EffectVisual>)typeof(PrivateersHoldAppearance).GetField("effects", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(presentation)!);
-    private static PrivateersHoldAppearance.ViewmodelVisual Viewmodel(PrivateersHoldAppearance presentation) => Assert.IsType<PrivateersHoldAppearance.ViewmodelVisual>(typeof(PrivateersHoldAppearance).GetField("viewmodel", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(presentation));
+    private static int EffectCount(DaggerfallSiteAppearance presentation) => ((List<DaggerfallSiteAppearance.EffectVisual>)typeof(DaggerfallSiteAppearance).GetField("effects", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(presentation)!).Count;
+    private static DaggerfallSiteAppearance.EffectVisual Effect(DaggerfallSiteAppearance presentation) => Assert.Single((List<DaggerfallSiteAppearance.EffectVisual>)typeof(DaggerfallSiteAppearance).GetField("effects", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(presentation)!);
+    private static DaggerfallSiteAppearance.ViewmodelVisual Viewmodel(DaggerfallSiteAppearance presentation) => Assert.IsType<DaggerfallSiteAppearance.ViewmodelVisual>(typeof(DaggerfallSiteAppearance).GetField("viewmodel", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(presentation));
 
     [Fact]
     public void An_impact_whose_target_was_defeated_after_the_decision_produces_no_hit_or_miss_fact()
     {
         string root = TestData.RepositoryRoot;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -6583,7 +6592,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void A_ranged_shot_draws_one_arrow_from_the_shooter_s_authored_quiver()
     {
         string root = TestData.RepositoryRoot;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -6621,7 +6630,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     public void An_archer_with_no_arrows_refuses_the_shot_and_reports_it_instead_of_missing()
     {
         string root = TestData.RepositoryRoot;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -6665,7 +6674,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake sourceContent = new(releases);
         PopulateContent(sourceContent, inputs);
@@ -6712,7 +6721,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         ResolvedCompositionIdentity composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
         List<string> releases = [];
         DaggerfallSavePayload saved;
@@ -6758,7 +6767,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             },
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 2, false),
             true));
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1, -1, 0]), audio.Service);
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1, -1, 0]), audio.Service);
 
         presentation.React(new EnemyAttackStartedFact(11, 12, true, 3, 4));
         presentation.Advance(OuterUpdate(1));
@@ -6777,7 +6786,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         AudioRecorder audio = AudioRecorder.Create();
         // Media without a -1 frame has no strike beat to wait for, so the decision
         // resolves where it is made rather than hanging unresolved.
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(), audio.Service);
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(), audio.Service);
 
         presentation.React(new EnemyAttackStartedFact(11, 12, true, 3, 4));
 
@@ -6876,7 +6885,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             new[] { new SpritePlaybackMarkerCrossing(2, 3, 1, 0, 1) },
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 2, false),
             true));
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1]), audio.Service);
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1]), audio.Service);
         presentation.React(new EnemyAttackStartedFact(11, 12, true, 3, 4));
 
         // Completion without an advance is not authoritative, so nothing expires yet.
@@ -6903,7 +6912,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             new[] { new SpritePlaybackMarkerCrossing(3, 3, 1, 0, 1) },
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 1, false),
             true);
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1, -1, 0]), audio.Service);
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1, -1, 0]), audio.Service);
         presentation.React(new EnemyAttackStartedFact(11, 12, true, 3, 4));
 
         presentation.Advance(OuterUpdate(1));
@@ -6923,7 +6932,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             Array.Empty<SpritePlaybackMarkerCrossing>(),
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Completed, 0D, 0, 1, true),
             true));
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1]), audio.Service);
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1]), audio.Service);
 
         presentation.React(new EnemyAttackStartedFact(11, 12, true, 3, 4));
         presentation.Advance(OuterUpdate(1));
@@ -6940,7 +6949,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -6973,7 +6982,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -7006,7 +7015,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -7075,7 +7084,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -7223,7 +7232,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         string root = TestData.RepositoryRoot;
         List<string> releases = [];
         ContentFake content = new(releases);
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         spatial.KeepPosition = true;
@@ -7290,7 +7299,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         // update, with the panel still open and the world still held.
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -7377,7 +7386,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -7423,7 +7432,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         int? bankRegion = null;
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -7508,7 +7517,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         // while construction threw; this pins the unified strict behavior.
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
 
         HashSet<ulong> admitted = DaggerActorFactory.AdmittedAuthoredEntityIds(inputs, player.Loadout);
@@ -7530,7 +7539,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         // times, but graphics/UI publication happens exactly once, after animation impacts.
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -7573,7 +7582,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         // agreement into the next allocation.
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake sourceContent = new(releases);
         PopulateContent(sourceContent, inputs);
@@ -7731,7 +7740,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
@@ -7742,7 +7751,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         return (new DaggerfallSession(engine.Context, definitions, inputs, DaggerfallTuning.Defaults), appearance, perception);
     }
 
-    private static DaggerfallSession CreateArcherSession(string root, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs,
+    private static DaggerfallSession CreateArcherSession(string root, DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs,
         List<string> releases, out AppearanceFake appearance, out PerceptionFake perception)
     {
         ContentFake content = new(releases);
@@ -7920,7 +7929,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     internal sealed class ConditionSessionFixture : IDisposable
     {
         private readonly DaggerfallDefinitions definitions;
-        private readonly PrivateersHoldInputs inputs;
+        private readonly DaggerfallSiteProfile inputs;
         private readonly ResolvedCompositionIdentity identity;
         private readonly List<string> releases = [];
         internal DaggerfallSession Session { get; }

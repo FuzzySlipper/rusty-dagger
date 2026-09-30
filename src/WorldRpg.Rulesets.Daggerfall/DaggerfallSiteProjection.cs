@@ -17,7 +17,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
 {
     private bool _disposed;
 
-    private DaggerfallSiteProjection(PrivateersHoldInputs inputs, DaggerfallDoorRuntime doors, DaggerfallDungeonMotionProjection motion, PrivateersHoldAppearance appearance, DaggerfallSiteLighting lighting, DaggerfallSitePortalRuntime portals)
+    private DaggerfallSiteProjection(DaggerfallSiteProfile inputs, DaggerfallDoorRuntime doors, DaggerfallDungeonMotionProjection motion, DaggerfallSiteAppearance appearance, DaggerfallSiteLighting lighting, DaggerfallSitePortalRuntime portals)
     {
         Inputs = inputs;
         Doors = doors;
@@ -27,10 +27,10 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         Portals = portals;
     }
 
-    internal PrivateersHoldInputs Inputs { get; }
+    internal DaggerfallSiteProfile Inputs { get; }
     internal DaggerfallDoorRuntime Doors { get; }
     internal DaggerfallDungeonMotionProjection Motion { get; }
-    internal PrivateersHoldAppearance Appearance { get; }
+    internal DaggerfallSiteAppearance Appearance { get; }
     internal DaggerfallSiteLighting Lighting { get; }
     internal DaggerfallSitePortalRuntime Portals { get; }
 
@@ -40,7 +40,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         IRandomService random,
         DaggerfallTuning tuning,
         DaggerfallCalendar calendar,
-        PrivateersHoldInputs inputs,
+        DaggerfallSiteProfile inputs,
         DaggerfallAudioBundle? audioBundle,
         SpatialMovementSystem spatialMovement,
         IEnumerable<DaggerfallDoorSave>? restoredDoors = null,
@@ -55,7 +55,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         ArgumentNullException.ThrowIfNull(spatialMovement);
         DaggerfallDoorRuntime doors = new(actors, random, inputs.Doors, inputs.ProfileKey.LogicalId, restoredDoors);
         DaggerfallDungeonMotionProjection? motion = null;
-        PrivateersHoldAppearance? appearance = null;
+        DaggerfallSiteAppearance? appearance = null;
         DaggerfallSiteLighting? lighting = null;
         DaggerfallSitePortalRuntime? portals = null;
         try

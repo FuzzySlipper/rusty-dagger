@@ -26,8 +26,8 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
 
         DaggerfallDungeonActionDefinition firstAction = Action("profile-one-action");
         DaggerfallDungeonActionDefinition secondAction = Action("profile-two-action");
-        PrivateersHoldInputs firstInputs = Inputs("profile-one", firstAction);
-        PrivateersHoldInputs secondInputs = Inputs("profile-two", secondAction);
+        DaggerfallSiteProfile firstInputs = Inputs("profile-one", firstAction);
+        DaggerfallSiteProfile secondInputs = Inputs("profile-two", secondAction);
         DaggerfallWorldProfileKey firstKey = firstInputs.ProfileKey;
         DaggerfallWorldProfileKey secondKey = secondInputs.ProfileKey;
 
@@ -82,7 +82,7 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
             new SpatialTuning(.5d, 8, 8, 1));
         using EntityDirectory entities = new();
         DaggerfallDungeonActionDefinition action = Action("restored-contact-action");
-        PrivateersHoldInputs inputs = Inputs("restored-profile", action);
+        DaggerfallSiteProfile inputs = Inputs("restored-profile", action);
         DaggerfallWorldProfileKey key = inputs.ProfileKey;
         EntityId playerEntity = entities.Create(
             new DurableIdentityReference(DurableIdentityKind.Resource, 0xCAFE),
@@ -125,8 +125,8 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
 
         DaggerfallDungeonActionDefinition firstAction = Action("late-first-action");
         DaggerfallDungeonActionDefinition secondAction = Action("late-second-action");
-        PrivateersHoldInputs firstInputs = Inputs("late-first-profile", firstAction);
-        PrivateersHoldInputs secondInputs = Inputs("late-second-profile", secondAction);
+        DaggerfallSiteProfile firstInputs = Inputs("late-first-profile", firstAction);
+        DaggerfallSiteProfile secondInputs = Inputs("late-second-profile", secondAction);
         DaggerfallWorldProfileKey firstKey = firstInputs.ProfileKey;
         DaggerfallWorldProfileKey secondKey = secondInputs.ProfileKey;
 
@@ -170,7 +170,7 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
         IsFlat: true,
         SourcePosition: Vector3.Zero);
 
-    private static PrivateersHoldInputs Inputs(string logicalProfileId, DaggerfallDungeonActionDefinition action) => new(
+    private static DaggerfallSiteProfile Inputs(string logicalProfileId, DaggerfallDungeonActionDefinition action) => new(
         new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
         new SpatialContentArtifact("spatial/action-triggers", new ContentSha256(1, 2, 3, 4), 1),
         new ContentArtifact("mesh/action-triggers", new ContentSha256(1, 2, 3, 4)),

@@ -2,6 +2,7 @@
   "kind": "worldrpg.content-pack",
   "id": "daggerfall.quests.fighters",
   "ruleset": "daggerfall",
+  "role": "daggerfall.fighters-guild-quest-corpus",
   "dependencies": [
     { "id": "daggerfall.base" }
   ],

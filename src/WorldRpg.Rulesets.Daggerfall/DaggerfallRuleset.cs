@@ -9,19 +9,17 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
     private readonly ConditionalWeakTable<ResolvedGameComposition, DaggerfallAdmittedContent> _admittedContent = [];
     private readonly bool _videosEnabled;
     public static readonly RulesetId Identity = new("daggerfall");
-    internal static readonly ContentPackId BasePack = new("daggerfall.base");
-    internal static readonly ContentPackId BlocksPack = new("daggerfall.blocks");
-    internal static readonly ContentPackId PrivateersHoldPack = new("daggerfall.privateers-hold");
-    internal static readonly ContentPackId FightersGuildQuestPack = new("daggerfall.quests.fighters");
-    internal static readonly IReadOnlyList<ContentPackId> ClassicQuestCorpusPacks =
-    [
-        new("daggerfall.quests.mages"), new("daggerfall.quests.temples"), new("daggerfall.quests.social"),
-        new("daggerfall.quests.witches-commoners"), new("daggerfall.quests.merchants-vampires"),
-        new("daggerfall.quests.disabled"), new("daggerfall.quests.nobility"),
-    ];
-    internal static readonly ContentPackId CastleNecromoghanPack = new("daggerfall.castle-necromoghan");
-    internal static readonly ContentPackId CharingExteriorPack = new("daggerfall.charing-exterior");
-    internal static readonly ContentPackId CharingInteriorPack = new("daggerfall.charing-interior-1-1-0");
+
+    /// <summary>The one pack carrying the shared catalogs, world records and quest sources.</summary>
+    internal static readonly ContentPackRoleId BaseRole = new("daggerfall.base");
+    /// <summary>The one pack carrying the classic block records sites and interiors are built from.</summary>
+    internal static readonly ContentPackRoleId BlocksRole = new("daggerfall.blocks");
+    /// <summary>A normalized world profile: an exterior, interior or dungeon closure at one site.</summary>
+    internal static readonly ContentPackRoleId SiteRole = new("daggerfall.site");
+    /// <summary>A categorized classic quest corpus; its categories state which entries are offered.</summary>
+    internal static readonly ContentPackRoleId QuestCorpusRole = new("daggerfall.quest-corpus");
+    /// <summary>The Fighters Guild receipt: the whole active guild group in catalog order, without categories.</summary>
+    internal static readonly ContentPackRoleId FightersGuildQuestCorpusRole = new("daggerfall.fighters-guild-quest-corpus");
 
     /// <summary>Creates the ordinary product ruleset with its admitted cinematic playback enabled.</summary>
     public DaggerfallRuleset() : this(videosEnabled: true) { }
@@ -90,48 +88,63 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
         {
             if (selected.Ruleset != Identity)
                 throw new InvalidOperationException($"Daggerfall cannot interpret ruleset '{selected.Ruleset.Value}'.");
-            DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(selected.RequireContentPack(BasePack).Payload);
-            DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(selected.RequireContentPack(BlocksPack).Payload);
-            ContentPack pack = selected.RequireContentPack(PrivateersHoldPack);
-            PrivateersHoldInputs inputs = PrivateersHoldContent.Read(selected.Content, pack.Payload, definitions);
-            ContentPack fighters = selected.RequireContentPack(FightersGuildQuestPack);
-            IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> fightersGuildQuests = DaggerfallFightersGuildQuestCorpusContent.Read(selected.Content, fighters.Payload, definitions);
-            ContentPack disabled = selected.RequireContentPack(new ContentPackId("daggerfall.quests.disabled"));
-            DaggerfallDisabledQuestSelection disabledQuestSelection = DaggerfallDisabledQuestSelection.Read(selected.Content, disabled.Payload, definitions);
+            // Every selected pack is read by the reader its declared role names. A role this ruleset does
+            // not interpret is refused: admitting the pack without reading it would drop its content
+            // while the bundle still claimed to carry it.
+            ILookup<ContentPackRoleId, ContentPack> roles = selected.ContentPacks.ToLookup(pack => pack.Role);
+            foreach (ContentPack pack in selected.ContentPacks)
+            {
+                if (pack.Role != BaseRole && pack.Role != BlocksRole && pack.Role != SiteRole
+                    && pack.Role != QuestCorpusRole && pack.Role != FightersGuildQuestCorpusRole)
+                    throw new InvalidOperationException($"Content pack '{pack.Id.Value}' declares role '{pack.Role.Value}', which the Daggerfall ruleset does not interpret.");
+            }
+            DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(RequireSingle(selected, roles, BaseRole).Payload);
+            DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(RequireSingle(selected, roles, BlocksRole).Payload);
+            // The composition keeps bundle order with each pack's dependencies ahead of it, so the first
+            // site pack is the first site the bundle selects: that site is where a new game starts.
+            DaggerfallSiteProfile[] sites = [.. roles[SiteRole].Select(pack => DaggerfallSiteContent.Read(selected.Content, pack.Payload, definitions))];
+            if (sites.Length == 0)
+                throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' selects no '{SiteRole.Value}' content pack, so a new game has nowhere to start.");
+            DaggerfallSiteProfile inputs = sites[0];
+            IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> fightersGuildQuests =
+                [.. roles[FightersGuildQuestCorpusRole].SelectMany(pack => DaggerfallFightersGuildQuestCorpusContent.Read(selected.Content, pack.Payload, definitions))];
+            DaggerfallClassicQuestCorpusReceipt[] classicCorpus =
+                [.. roles[QuestCorpusRole].SelectMany(pack => DaggerfallClassicQuestCorpusContent.Read(selected.Content, pack.Payload, definitions))];
+            DaggerfallDisabledQuestSelection disabledQuestSelection = DaggerfallDisabledQuestSelection.From(classicCorpus);
             IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> classicQuestReceipts =
             [
-                .. ClassicQuestCorpusPacks.Where(id => id.Value != "daggerfall.quests.disabled")
-                    .SelectMany(id => DaggerfallClassicQuestCorpusContent.Read(selected.Content, selected.RequireContentPack(id).Payload, definitions, DaggerfallClassicQuestCorpusExpectations.Require(id.Value["daggerfall.quests.".Length..]))),
+                .. classicCorpus.Where(receipt => receipt.IsOrdinaryOffer).Select(receipt => receipt.Runtime),
                 .. disabledQuestSelection.Receipts,
             ];
-            ContentPack castle = selected.RequireContentPack(CastleNecromoghanPack);
-            PrivateersHoldInputs castleInputs = PrivateersHoldContent.Read(selected.Content, castle.Payload, definitions);
-            ContentPack charingExterior = selected.RequireContentPack(CharingExteriorPack);
-            PrivateersHoldInputs charingExteriorInputs = PrivateersHoldContent.Read(selected.Content, charingExterior.Payload, definitions);
-            ContentPack charingInterior = selected.RequireContentPack(CharingInteriorPack);
-            PrivateersHoldInputs charingInteriorInputs = PrivateersHoldContent.Read(selected.Content, charingInterior.Payload, definitions);
             DaggerfallPublishedClassicMedia classicMedia = DaggerfallPublishedClassicMedia.Read(selected.Content, inputs.ClassicPresentation);
-            _ = DaggerfallPublishedClassicMedia.Read(selected.Content, castleInputs.ClassicPresentation);
-            _ = DaggerfallPublishedClassicMedia.Read(selected.Content, charingExteriorInputs.ClassicPresentation);
-            _ = DaggerfallPublishedClassicMedia.Read(selected.Content, charingInteriorInputs.ClassicPresentation);
+            foreach (DaggerfallSiteProfile site in sites.Skip(1))
+                _ = DaggerfallPublishedClassicMedia.Read(selected.Content, site.ClassicPresentation);
             // Every admitted site names its cues against the same published manifest, so each one is
             // joined here: a site whose music nothing published would otherwise fail on entry rather
             // than at composition, where the publication it disagrees with is still identifiable.
             DaggerfallMusicBundle? music = DaggerfallMusicBundle.Admit(selected.Content, inputs.Music);
-            _ = DaggerfallMusicBundle.Admit(selected.Content, castleInputs.Music);
-            _ = DaggerfallMusicBundle.Admit(selected.Content, charingExteriorInputs.Music);
-            _ = DaggerfallMusicBundle.Admit(selected.Content, charingInteriorInputs.Music);
+            foreach (DaggerfallSiteProfile site in sites.Skip(1))
+                _ = DaggerfallMusicBundle.Admit(selected.Content, site.Music);
             DaggerfallTuning tuning = DaggerfallTuning.Read(selected.Tuning.Payload.Span);
-            DaggerfallSiteProfiles profiles = new([inputs, castleInputs, charingExteriorInputs, charingInteriorInputs]);
+            DaggerfallSiteProfiles profiles = new(sites);
             foreach (DaggerfallWorldProfileKey key in profiles.Keys)
                 profiles.Require(key).InteriorBuilding?.ValidateAgainst(blocks);
             return new DaggerfallAdmittedContent(definitions, blocks, inputs, profiles, [.. fightersGuildQuests, .. classicQuestReceipts], disabledQuestSelection, tuning, classicMedia, new DaggerfallSiteAudioBundles(selected.Content, profiles), selected.Content, music);
         });
 
+    /// <summary>The one pack a bundle must select for a role every session reads exactly once.</summary>
+    private static ContentPack RequireSingle(ResolvedGameComposition selected, ILookup<ContentPackRoleId, ContentPack> roles, ContentPackRoleId role)
+    {
+        ContentPack[] packs = [.. roles[role]];
+        return packs.Length == 1
+            ? packs[0]
+            : throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' selects {packs.Length} '{role.Value}' content packs; a session reads exactly one.");
+    }
+
     private sealed record DaggerfallAdmittedContent(
         DaggerfallDefinitions Definitions,
         DaggerfallBlocksSnapshot Blocks,
-        PrivateersHoldInputs Inputs,
+        DaggerfallSiteProfile Inputs,
         DaggerfallSiteProfiles Profiles,
         IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> QuestReceipts,
         DaggerfallDisabledQuestSelection DisabledQuestSelection,

@@ -11,10 +11,10 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
-/// <summary>Reads authored Privateer's Hold scenario facts; no project entity names participate in runtime selection.</summary>
-internal static class PrivateersHoldContent
+/// <summary>Reads one authored site pack's scenario facts and normalized world closure; no project entity names participate in runtime selection.</summary>
+internal static class DaggerfallSiteContent
 {
-    internal static PrivateersHoldInputs Read(ProductContent content, ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions)
+    internal static DaggerfallSiteProfile Read(ProductContent content, ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions)
     {
         DaggerfallContentDiagnostics diagnostics = new();
         try
@@ -22,7 +22,7 @@ internal static class PrivateersHoldContent
             using JsonDocument document = JsonDocument.Parse(payload);
             JsonElement root = DaggerfallBaseContent.Object(document.RootElement, "root", diagnostics);
             DaggerfallBaseContent.RejectDuplicateProperties(root, "root", diagnostics);
-            if (DaggerfallBaseContent.Text(root, "ruleset", diagnostics) != DaggerfallRuleset.Identity.Value) diagnostics.Add("Privateer's Hold payload must identify ruleset 'daggerfall'.");
+            if (DaggerfallBaseContent.Text(root, "ruleset", diagnostics) != DaggerfallRuleset.Identity.Value) diagnostics.Add("Site payload must identify ruleset 'daggerfall'.");
             AdmittedFiles files = AdmittedFiles.From(content);
             ScenarioStart start = ReadStart(DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "startingState", diagnostics), "startingState", diagnostics), diagnostics);
             // A starting site the published locations do not carry would leave the session standing at a
@@ -33,9 +33,9 @@ internal static class PrivateersHoldContent
             // fails, so no reader ever sees them disagree.
             if (start.Site is { } startSite && !definitions.Locations.Keys.Contains((startSite.Region, startSite.Index)))
             {
-                diagnostics.Add($"Privateer's Hold startingState.site names location {startSite}, which the published locations do not carry.");
+                diagnostics.Add($"Site startingState.site names location {startSite}, which the published locations do not carry.");
             }
-            PrivateersHoldInputs inputs = ReadNormalizedClosure(
+            DaggerfallSiteProfile inputs = ReadNormalizedClosure(
                 files,
                 root,
                 start,
@@ -46,20 +46,23 @@ internal static class PrivateersHoldContent
         }
         catch (JsonException exception)
         {
-            diagnostics.Add($"Privateer's Hold payload is not valid JSON: {exception.Message}");
+            diagnostics.Add($"Site payload is not valid JSON: {exception.Message}");
             throw diagnostics.Exception();
         }
         catch (Exception exception) when (exception is InvalidOperationException or FormatException or OverflowException && exception is not DaggerfallContentException)
         {
-            diagnostics.Add($"Privateer's Hold payload is malformed: {exception.Message}");
+            diagnostics.Add($"Site payload is malformed: {exception.Message}");
             throw diagnostics.Exception();
         }
     }
 
-    private static PrivateersHoldInputs ReadNormalizedClosure(AdmittedFiles files, JsonElement root, ScenarioStart start, DaggerfallDefinitions definitions, DaggerfallContentDiagnostics diagnostics)
+    private static DaggerfallSiteProfile ReadNormalizedClosure(AdmittedFiles files, JsonElement root, ScenarioStart start, DaggerfallDefinitions definitions, DaggerfallContentDiagnostics diagnostics)
     {
         JsonElement world = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "world", diagnostics), "world", diagnostics);
         string publicationRoot = DaggerfallBaseContent.Text(world, "publicationRoot", diagnostics);
+        // The Engine bundle that carries this site's audio bodies under its publication root. The site
+        // names it rather than the ruleset deriving a name from the root, so a new site declares its own.
+        string audioBundle = DaggerfallBaseContent.Text(world, "audioBundle", diagnostics);
         DaggerfallWorldProfileKind profileKind = DaggerfallBaseContent.Text(world, "profileKind", diagnostics) switch
         {
             "exterior" => DaggerfallWorldProfileKind.Exterior,
@@ -69,7 +72,7 @@ internal static class PrivateersHoldContent
         };
         if (!DaggerfallBaseContent.ValidId(publicationRoot.Replace('/', '-')) || publicationRoot.Contains("..", StringComparison.Ordinal))
         {
-            diagnostics.Add("Privateer's Hold publicationRoot must be a stable relative logical path.");
+            diagnostics.Add("Site publicationRoot must be a stable relative logical path.");
         }
 
         string Prefix(string relativePath) => $"{publicationRoot.TrimEnd('/')}/{relativePath}";
@@ -137,7 +140,7 @@ internal static class PrivateersHoldContent
             actorSprites.Add(actor.EntityId, ResolveActorPresentation(actor, definition, sprite, diagnostics));
         }
 
-        return new PrivateersHoldInputs(
+        return new DaggerfallSiteProfile(
             new ProjectFacts(start.Position, new ReadOnlyDictionary<long, AuthoredActor>(actors)),
             new SpatialContentArtifact(spatialPath, spatialHash, gridId),
             new ContentArtifact(meshPath, meshHash),
@@ -160,7 +163,8 @@ internal static class PrivateersHoldContent
             dungeonActions,
             actionModels,
             ReadInteriorBuilding(normalizedWorld, profileKind, diagnostics),
-            music);
+            music,
+            audioBundle);
     }
 
     private static DaggerfallInteriorBuilding? ReadInteriorBuilding(ReadOnlyMemory<byte>? bytes,
@@ -2295,7 +2299,7 @@ internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 T
     internal NormalizedAttackSequence? RangedAttackSequence { get; init; }
     internal NormalizedActorSprite? Corpse { get; init; }
 }
-internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyDictionary<int, NormalizedActorSprite>? mobileSprites = null, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null, IReadOnlyList<DaggerfallRdbDoorDefinition>? doors = null, DaggerfallWorldProfileKind profileKind = DaggerfallWorldProfileKind.Dungeon, string? logicalProfileId = null, IReadOnlyList<DaggerfallSitePortal>? portals = null, IReadOnlyList<DaggerfallSiteAnchor>? anchors = null, IReadOnlyList<DaggerfallSiteLight>? lights = null, NormalizedGroundContainerSprite? groundContainerSprite = null, DaggerfallDungeonMapContent? dungeonMap = null, IReadOnlyList<DaggerfallDungeonActionDefinition>? dungeonActions = null, IReadOnlyList<DaggerfallDungeonActionModelDefinition>? dungeonActionModels = null, DaggerfallInteriorBuilding? interiorBuilding = null, IReadOnlyList<NormalizedMusicCue>? music = null)
+internal sealed class DaggerfallSiteProfile(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyDictionary<int, NormalizedActorSprite>? mobileSprites = null, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null, IReadOnlyList<DaggerfallRdbDoorDefinition>? doors = null, DaggerfallWorldProfileKind profileKind = DaggerfallWorldProfileKind.Dungeon, string? logicalProfileId = null, IReadOnlyList<DaggerfallSitePortal>? portals = null, IReadOnlyList<DaggerfallSiteAnchor>? anchors = null, IReadOnlyList<DaggerfallSiteLight>? lights = null, NormalizedGroundContainerSprite? groundContainerSprite = null, DaggerfallDungeonMapContent? dungeonMap = null, IReadOnlyList<DaggerfallDungeonActionDefinition>? dungeonActions = null, IReadOnlyList<DaggerfallDungeonActionModelDefinition>? dungeonActionModels = null, DaggerfallInteriorBuilding? interiorBuilding = null, IReadOnlyList<NormalizedMusicCue>? music = null, string? audioBundle = null)
 {
     internal ProjectFacts Project { get; } = project;
     internal SpatialContentArtifact SpatialArtifact { get; } = spatialArtifact;
@@ -2310,6 +2314,8 @@ internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentA
     /// <summary>The music cues this site admits, keyed by the donor track the score resolves.</summary>
     internal IReadOnlyList<NormalizedMusicCue> Music { get; } = Array.AsReadOnly((music ?? []).ToArray());
     internal NormalizedClassicPresentation ClassicPresentation { get; } = classicPresentation ?? NormalizedClassicPresentation.Empty;
+    /// <summary>The Engine content bundle the site declares for its audio bodies.</summary>
+    internal string? AudioBundle { get; } = audioBundle;
     internal DaggerfallWorldProfileKind ProfileKind { get; } = profileKind;
     internal DaggerfallInteriorBuilding? InteriorBuilding { get; } = interiorBuilding?.Validate();
     internal DaggerfallWorldProfileKey ProfileKey => Site is { } selected

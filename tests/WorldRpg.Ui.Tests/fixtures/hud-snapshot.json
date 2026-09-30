@@ -22,6 +22,9 @@
   "experience": 0,
   "lastOutcome": "Ready",
   "mode": "playing",
+  "site": {
+    "name": "Privateer\u0027s Hold"
+  },
   "view": {
     "yawRadians": 3.1415927410125732,
     "pitchRadians": 0,
