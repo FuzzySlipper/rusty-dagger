@@ -32,7 +32,9 @@ function stopAll() {
     // stop with it.
     try { process.kill(-child.pid, 'SIGTERM'); } catch { /* already gone */ }
   }
-  rmSync(profile, { recursive: true, force: true });
+  // Chromium keeps writing its profile for a moment after SIGTERM, so a removal racing it sees a
+  // directory refill; retrying lets the passed run exit 0 instead of failing on its own cleanup.
+  rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 }
 
 function fail(message) {
