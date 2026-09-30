@@ -299,52 +299,69 @@ public static class SourceManifestSerializer
 }
 
 /// <summary>
-/// Adds a source-manifest record to the exact directory a publication writer owns.
-/// The generated import manifest is rebuilt around it, so an atomic replacement
-/// retains current provenance while still retiring artifacts no longer in the plan.
+/// Builds the source manifest that records what one publication read out of the supplied corpus. It is an
+/// importer record beside the publication rather than an artifact inside it, because nothing at runtime
+/// reads it: which sources count as imported comes from the publication's own source list, so the record
+/// states what a consumer actually read rather than a second guess at it.
 /// </summary>
 public static class SourceManifestPublication
 {
-    /// <summary>
-    /// Prevents an ordinary import invocation without its inventory from replacing a published
-    /// source-manifest closure. The writer remains an exact-owner writer: callers must compose a
-    /// current manifest with <see cref="Compose"/> rather than carrying stale output forward.
-    /// </summary>
-    public static void RefuseProvenanceLoss(ImportPublicationPlan plan, string outputDirectory)
-    {
-        ArgumentNullException.ThrowIfNull(plan);
-        ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory);
-        if (plan.Artifacts.Any(artifact => artifact.RelativePath == SourceManifestSerializer.ManifestRelativePath)) return;
-        string existing = Path.Combine(outputDirectory, SourceManifestSerializer.ManifestRelativePath.Replace('/', Path.DirectorySeparatorChar));
-        if (File.Exists(existing))
-            throw new InvalidOperationException($"Refusing to replace '{outputDirectory}' without its source provenance. Supply --inventory so sources/manifest.json is regenerated from the admitted source tree.");
-    }
+    /// <summary>The corpus directory every published Arena2 source label names.</summary>
+    public const string Arena2LogicalRoot = "local/arena2";
 
-    public static ImportPublicationPlan Compose(ImportPublicationPlan plan, SourceManifest manifest)
+    /// <summary>
+    /// Scans the supplied corpus against the documented inventory, recording every source the publication
+    /// read as imported. A publication is its record's first consumer: a source it read that the record
+    /// does not call imported would make the record contradict the publication, so that is refused.
+    /// </summary>
+    public static SourceManifest ForPublication(
+        IEnumerable<string> publishedSourcePaths,
+        string arena2Directory,
+        string inventoryFileName,
+        ReadOnlySpan<byte> inventoryBytes)
     {
-        ArgumentNullException.ThrowIfNull(plan);
-        ArgumentNullException.ThrowIfNull(manifest);
-        manifest.Validate();
-        if (plan.Manifest.Sources.Count == 0)
+        ArgumentNullException.ThrowIfNull(publishedSourcePaths);
+        string[] read = [.. publishedSourcePaths];
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(inventoryBytes);
+        SourceManifest manifest = SourceManifestBuilder.Scan(
+            new SourceManifestRequest(Arena2LogicalRoot, inventoryFileName, arena2Directory, ClaimNames(read), [], ClaimNames(inventory
+                .Where(row => StringComparer.Ordinal.Equals(row.Disposition, "excluded"))
+                .Select(row => row.PathOrPattern))),
+            inventoryBytes);
+        HashSet<string> recorded = manifest.Records
+            .Where(record => record.Disposition == SourceRecordDisposition.Imported)
+            .Select(record => Leaf(record.SourcePath))
+            .ToHashSet(StringComparer.Ordinal);
+        HashSet<string> known = manifest.Records.Select(record => Leaf(record.SourcePath)).ToHashSet(StringComparer.Ordinal);
+        foreach (string source in read.Select(Leaf))
         {
-            throw new InvalidOperationException("A publication with no sources cannot carry a source manifest.");
+            if (known.Contains(source) && !recorded.Contains(source))
+            {
+                throw new InvalidOperationException($"The publication read '{source}', but its source manifest does not record it as imported.");
+            }
         }
 
-        byte[] bytes = SourceManifestSerializer.Serialize(manifest);
-        ImportProvenance provenance = new(
-            ImportProvenance.CurrentSchemaVersion,
-            plan.Manifest.ImporterId,
-            plan.Manifest.ImporterRevision,
-            plan.Manifest.Sources.Select(source => new LogicalSourceRecord(
-                LogicalSourceRecord.CurrentSchemaVersion,
-                source.SourcePath,
-                source.ContentHash,
-                source.ByteLen,
-                NormalizedImportDocument.CurrentSchemaVersion)).ToArray());
-        return ImportPublicationPlan.Create(provenance,
-        [
-            .. plan.Artifacts.Where(artifact => artifact.RelativePath != ImportPublicationManifestSerializer.ManifestRelativePath),
-            new ImportPublicationArtifact(SourceManifestSerializer.ManifestRelativePath, bytes),
-        ], plan.Manifest.Invocation);
+        return manifest;
     }
+
+    /// <summary>
+    /// The names a consumer's source set can claim by. A published source path keeps the directory it was
+    /// read from, so both the path relative to the corpus root and the leaf are offered; the manifest
+    /// decides which of them identifies one supplied file, rather than the caller discarding the path here.
+    /// </summary>
+    private static HashSet<string> ClaimNames(IEnumerable<string> sourcePaths)
+    {
+        HashSet<string> names = new(StringComparer.Ordinal);
+        foreach (string sourcePath in sourcePaths)
+        {
+            names.Add(sourcePath);
+            names.Add(Leaf(sourcePath));
+            int corpus = sourcePath.IndexOf("arena2/", StringComparison.Ordinal);
+            if (corpus >= 0) names.Add(sourcePath[(corpus + "arena2/".Length)..]);
+        }
+
+        return names;
+    }
+
+    private static string Leaf(string sourcePath) => sourcePath.Split('/')[^1];
 }

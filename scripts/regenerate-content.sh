@@ -149,24 +149,28 @@ tool building-name-inputs --maps-file "$donor/Assets/Scripts/API/MapsFile.cs" \
 tool fighters-quest-corpus --pack "$imported" --records "$records" --out content/worldrpg/payloads/daggerfall.quests.fighters.json
 tool classic-quest-corpora --pack "$imported" --records "$records" --out content/worldrpg/payloads
 
-# 4. Site closures. Each carries the source manifest and names the published music cues.
+# 4. Site closures. Each names the published music cues and publishes media for every actor the imported
+#    mobile catalog lets the runtime spawn; its source manifest (the corpus scanned against the inventory)
+#    goes to the import records.
 site_overlay() {
   local overlay="sprites/$1.json"
   if [[ -n "$sprite_authoring" && -f "$sprite_authoring/$overlay" ]]; then
     printf '%s\n' --sprite-authoring "$sprite_authoring" --sprite-overlay "$overlay"
   fi
 }
-site_common=(--arena2 "$arena2" --ui-authored-assets "$ui_assets" --ui-original "$ui_original" --inventory "$inventory" --music-manifest "$music_manifest")
+site_common=(--arena2 "$arena2" --ui-authored-assets "$ui_assets" --ui-original "$ui_original" --inventory "$inventory"
+  --pack "$imported" --music-manifest "$music_manifest")
+site_records=import-records/sites
 mapfile -t overlay_args < <(site_overlay privateers-hold)
-tool write "${site_common[@]}" --output content/worldrpg/imports/privateers-hold \
-  --region 17 --location "Privateer's Hold" --texture-table classic "${overlay_args[@]}"
+tool write "${site_common[@]}" --out content/worldrpg/imports/privateers-hold \
+  --source-manifest "$site_records/privateers-hold.sources.json" --region 17 --location "Privateer's Hold" --texture-table classic "${overlay_args[@]}"
 mapfile -t overlay_args < <(site_overlay castle-necromoghan)
-tool write "${site_common[@]}" --output content/worldrpg/imports/castle-necromoghan \
-  --region 17 --location "Castle Necromoghan" --texture-table default "${overlay_args[@]}"
+tool write "${site_common[@]}" --out content/worldrpg/imports/castle-necromoghan \
+  --source-manifest "$site_records/castle-necromoghan.sources.json" --region 17 --location "Castle Necromoghan" --texture-table default "${overlay_args[@]}"
 tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/charing/exterior \
-  --region 17 --location Charing --profile exterior
+  --source-manifest "$site_records/charing-exterior.sources.json" --region 17 --location Charing --profile exterior
 tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/charing/interior-1-1-0 \
-  --region 17 --location Charing --profile interior --block-x 1 --block-y 1 --building 0
+  --source-manifest "$site_records/charing-interior-1-1-0.sources.json" --region 17 --location Charing --profile interior --block-x 1 --block-y 1 --building 0
 
 # Nothing generated may be committed: the Arena2-derived data is not redistributed. In a Git
 # checkout, a file this run wrote that Git would pick up (untracked and not ignored) is named and the
