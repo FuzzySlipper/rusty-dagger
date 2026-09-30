@@ -17,7 +17,7 @@ public sealed class BlockPlacementTests
         Assert.Throws<Arena2FormatException>(() => RmbPlacementReader.Read(tiny, 0, new RmbBlockSummary("X", 0, 0, 1, 0, [], 0), "source"));
     }
 
-    [Fact]
+    [GeneratedContentFact]
     public void Placements_repeat_counts_and_resolve_models()
     {
         string root = TestData.RepositoryRoot;

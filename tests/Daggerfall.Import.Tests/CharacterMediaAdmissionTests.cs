@@ -16,7 +16,7 @@ namespace Daggerfall.Import.Tests;
 /// </remarks>
 public sealed class CharacterMediaAdmissionTests
 {
-    [Fact]
+    [GeneratedContentFact]
     public void Every_published_character_source_is_admitted_by_the_manifest()
     {
         Dictionary<string, long?> admitted = AdmittedSourceFiles();

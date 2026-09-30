@@ -302,7 +302,7 @@ public sealed class ItemTemplateLedgerTests
         Assert.Contains("does not establish", error.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [GeneratedContentFact]
     public void The_published_ledger_covers_every_target_with_provenance_and_disposition()
     {
         System.Text.Json.Nodes.JsonObject ledger = ReadPublishedLedger();
@@ -327,7 +327,7 @@ public sealed class ItemTemplateLedgerTests
         Assert.Equal(0, summary["nativeTemplatesDecoded"]!.GetValue<int>());
     }
 
-    [Fact]
+    [GeneratedContentFact]
     public void The_published_ledger_records_the_absent_source_and_the_published_items()
     {
         System.Text.Json.Nodes.JsonObject ledger = ReadPublishedLedger();

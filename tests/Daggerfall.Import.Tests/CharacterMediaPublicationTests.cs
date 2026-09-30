@@ -255,7 +255,7 @@ public sealed class CharacterMediaPublicationTests
     /// repository cannot read are named with their files, and the committed index is byte-for-byte what
     /// the pass regenerates - so an index that drifted from the corpus cannot stay committed.
     /// </summary>
-    [CorpusFact]
+    [CorpusAndGeneratedContentFact]
     public void PublishesEveryReadableCanvasAndRegeneratesTheCommittedIndex()
     {
         (Dictionary<string, ReadOnlyMemory<byte>> sourceBytes, Dictionary<string, Arena2Palette> palettes) = Corpus();

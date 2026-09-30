@@ -92,7 +92,7 @@ public sealed class SoundCatalogTests
     /// The reference closure the task asks for: every admitted catalog entry names the artifact the
     /// publication emitted for it, and the delivered content is what this build produces.
     /// </summary>
-    [CorpusFact]
+    [CorpusAndGeneratedContentFact]
     public void Every_admitted_clip_is_carried_by_the_artifact_the_publication_emitted()
     {
         SoundArchive archive = RepositoryArchive();

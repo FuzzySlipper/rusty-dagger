@@ -102,6 +102,21 @@ public sealed class ArchitectureLawTests
     }
 
     [Fact]
+    public void Git_ignores_every_path_the_content_regeneration_writes()
+    {
+        // Arena2-derived content is never committed. Git cannot include another ignore file, so
+        // .gitignore carries a copy of the regeneration script's list; a path added to the list and not
+        // to the copy would be picked up by the next `git add`.
+        string[] Entries(string file) => [.. File.ReadLines(Path.Combine(RepositoryRoot, file))
+            .Select(line => line.Trim())
+            .Where(line => line.Length != 0 && !line.StartsWith('#'))];
+
+        string[] generated = Entries("scripts/generated-content-paths.txt");
+        Assert.NotEmpty(generated);
+        Assert.Empty(generated.Except(Entries(".gitignore"), StringComparer.Ordinal));
+    }
+
+    [Fact]
     public void Host_concrete_ruleset_references_stay_at_builtin_composition_seams()
     {
         string host = SourceDirectory("WorldRpg.Host");

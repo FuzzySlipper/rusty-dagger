@@ -7,7 +7,7 @@ namespace Daggerfall.Import.Tests;
 
 public sealed class ClassicQuestCorpusPublicationTests
 {
-    [Fact]
+    [GeneratedContentFact]
     public void Publishes_every_retained_category_with_exact_membership_and_stable_fingerprints()
     {
         string root = TestData.RepositoryRoot;
@@ -26,7 +26,7 @@ public sealed class ClassicQuestCorpusPublicationTests
         }
     }
 
-    [Fact]
+    [GeneratedContentFact]
     public void Each_task_selection_preserves_its_source_backed_categories_and_disabled_disposition()
     {
         string root = TestData.RepositoryRoot;

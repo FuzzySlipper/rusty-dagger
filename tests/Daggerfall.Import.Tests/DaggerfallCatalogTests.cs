@@ -195,7 +195,7 @@ public sealed class DaggerfallCatalogTests
         Assert.Contains("one byte", error.Message, StringComparison.Ordinal);
     }
 
-    [CorpusFact]
+    [CorpusAndGeneratedContentFact]
     public void The_published_pack_lists_exactly_the_source_records_it_cites()
     {
         System.Text.Json.Nodes.JsonArray sources = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(ImportedPath()))!
@@ -269,7 +269,7 @@ public sealed class DaggerfallCatalogTests
         return [.. keys.Where((_, index) => (flags & masks[index]) != 0)];
     }
 
-    [Fact]
+    [GeneratedContentFact]
     public void The_published_career_carries_its_data_and_no_computed_views()
     {
         // The published record is the carrier the runtime reads, so it must not carry
@@ -288,7 +288,7 @@ public sealed class DaggerfallCatalogTests
             .Single(value => value["id"]!.GetValue<string>() == "class12")["resistanceFlags"]!.GetValue<int>());
     }
 
-    [CorpusFact]
+    [CorpusAndGeneratedContentFact]
     public void The_published_catalogs_cover_every_pack_key_they_reference()
     {
         DaggerfallCatalogs catalogs = BuildFromRepository();
