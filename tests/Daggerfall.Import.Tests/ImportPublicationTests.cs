@@ -21,9 +21,9 @@ public sealed class ImportPublicationTests : IDisposable
 
         Assert.Equal(first.Artifacts.Select(artifact => artifact.RelativePath), second.Artifacts.Select(artifact => artifact.RelativePath));
         Assert.Equal(first.Artifacts.Select(artifact => artifact.Bytes.ToArray()), second.Artifacts.Select(artifact => artifact.Bytes.ToArray()));
-        ImportPublicationSource source = Assert.Single(first.Manifest.Sources);
-        Assert.Equal("arena2/MAPS.BSA", source.SourcePath);
-        Assert.Equal(4, source.ByteLen);
+        PublishedSource source = Assert.Single(first.Manifest.Sources);
+        Assert.Equal("arena2/MAPS.BSA", source.Path);
+        Assert.Equal(4, source.ByteLength);
         Assert.Contains("\"sourcePath\"", Encoding.UTF8.GetString(ImportPublicationManifestSerializer.Serialize(first.Manifest)), StringComparison.Ordinal);
         Assert.Equal(4, first.Manifest.Artifacts.Single(artifact => artifact.RelativePath == "zeta.bin").ByteLen);
         Assert.Contains("import-manifest.json", first.Artifacts.Select(artifact => artifact.RelativePath));
@@ -33,7 +33,7 @@ public sealed class ImportPublicationTests : IDisposable
     public void ManifestRecordsTheImporterRevisionCommandAndAuthoredOverlays()
     {
         ImportPublicationPlan plan = CreatePlan(new ImportPublicationArtifact("value.bin", "value"u8));
-        ImportPublicationSource overlay = new("sprites/site.json", ContentDigest.Compute("overlay"u8), 7);
+        PublishedSource overlay = new("sprites/site.json", ContentDigest.Compute("overlay"u8), 7);
         ImportPublicationPlan invoked = plan.WithInvocation(new ImportInvocation(["daggerfall-import-tool", "write", "--arena2", "arena2"], [overlay]));
 
         // Only the manifest changes: the recorded invocation is provenance, not another artifact.
@@ -49,7 +49,7 @@ public sealed class ImportPublicationTests : IDisposable
         Assert.Equal(overlay, Assert.Single(reopened.AuthoredOverlays));
         // An overlay is recorded beside the sources, never among them: the sprite authoring basis is
         // computed from the sources, and an overlay cannot be part of the basis it is written against.
-        Assert.DoesNotContain(reopened.Sources, source => source.SourcePath == overlay.SourcePath);
+        Assert.DoesNotContain(reopened.Sources, source => source.Path == overlay.Path);
         Assert.Empty(plan.Manifest.Command);
         Assert.Throws<ArgumentException>(() => plan.WithInvocation(new ImportInvocation(["write\n"], [])));
     }

@@ -165,7 +165,7 @@ public static class DaggerfallBooksBuilder
             }
 
             sources.Add(new DaggerfallTextSource(
-                DaggerfallTextKind.Book, RequireFile(inventory, suppliedBook.Label), suppliedBook.Label, language, suppliedBook.Bytes.LongLength, 0, book.Header.PageCount));
+                DaggerfallTextKind.Book, RequireFile(inventory, suppliedBook.Label), language, suppliedBook.Bytes.LongLength, 0, book.Header.PageCount));
             List<string> pageKeys = [];
             for (int page = 0; page < book.Header.PageCount; page++)
             {
@@ -200,7 +200,7 @@ public static class DaggerfallBooksBuilder
         }
 
         DaggerfallBooks catalog = new(
-            new DaggerfallTextSource(DaggerfallTextKind.Book, family.Id, family.PathOrPattern, language, supplied.Values.Sum(entry => (long)entry.Bytes.Length), 0, published.Count(book => book.Disposition == DaggerfallBookDisposition.Read)),
+            new DaggerfallTextSource(DaggerfallTextKind.Book, family.PathOrPattern, language, supplied.Values.Sum(entry => (long)entry.Bytes.Length), 0, published.Count(book => book.Disposition == DaggerfallBookDisposition.Read)),
             published);
         catalog.Validate();
         return (catalog, sources, records);
@@ -223,7 +223,7 @@ public static class DaggerfallBooksBuilder
     private static string RequireFile(IReadOnlyList<SourceInventoryRow> inventory, string label)
     {
         ArgumentNullException.ThrowIfNull(inventory);
-        return inventory.FirstOrDefault(row => row.FamilyId == BooksFamily && StringComparer.Ordinal.Equals(row.PathOrPattern, label))?.Id
+        return inventory.FirstOrDefault(row => row.FamilyId == BooksFamily && StringComparer.Ordinal.Equals(row.PathOrPattern, label))?.PathOrPattern
             ?? throw new InvalidOperationException($"The documented inventory does not carry '{label}', so the books cite no provenance.");
     }
 

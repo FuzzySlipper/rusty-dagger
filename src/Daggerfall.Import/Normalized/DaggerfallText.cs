@@ -51,7 +51,6 @@ public sealed record DaggerfallTextKey(DaggerfallTextKind Kind, string Id)
 /// its directory declared.
 /// </summary>
 /// <param name="Kind">The source family whose keys this source's records belong to.</param>
-/// <param name="RecordId">The documented inventory record this source is read under.</param>
 /// <param name="Path">The logical source path, which is also the identity its records name.</param>
 /// <param name="Language">The language tag the source's text is written in.</param>
 /// <param name="ByteLength">The source's byte length.</param>
@@ -59,7 +58,6 @@ public sealed record DaggerfallTextKey(DaggerfallTextKind Kind, string Id)
 /// <param name="Records">How many records the source declares.</param>
 public sealed record DaggerfallTextSource(
     DaggerfallTextKind Kind,
-    string RecordId,
     string Path,
     string Language,
     long ByteLength,
@@ -73,7 +71,6 @@ public sealed record DaggerfallTextSource(
             throw new ArgumentOutOfRangeException(nameof(Kind), Kind, "A published text source names a source family the contract does not declare.");
         }
 
-        NormalizedImportDocument.RequireLogicalId(RecordId, nameof(RecordId));
         NormalizedImportDocument.RequireLogicalPath(Path, nameof(Path));
 
         // The language is the caller's assertion about bytes that declare none, so a failure names the
@@ -460,7 +457,7 @@ public static class DaggerfallTextBuilder
         }
 
         DaggerfallText published = new(
-            [new DaggerfallTextSource(DaggerfallTextKind.Resource, family.Id, label, language, bytes.LongLength, catalog.HeaderLength, catalog.Records.Count)],
+            [new DaggerfallTextSource(DaggerfallTextKind.Resource, label, language, bytes.LongLength, catalog.HeaderLength, catalog.Records.Count)],
             [.. records.OrderBy(record => record.Source, StringComparer.Ordinal).ThenBy(record => record.Index)],
             [.. MacroIndex(records)]);
         published.Validate();

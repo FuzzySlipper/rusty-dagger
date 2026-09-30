@@ -151,7 +151,7 @@ public static class DaggerfallNameTablesBuilder
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(label);
         ArgumentException.ThrowIfNullOrWhiteSpace(language);
-        string recordId = RequireFile(inventory, label);
+        string path = RequireFile(inventory, label);
         NameGenCatalog catalog = NameGenReader.Read(bytes, label);
         List<DaggerfallNameBank> banks = [];
         List<DaggerfallTextRecord> records = [];
@@ -184,7 +184,7 @@ public static class DaggerfallNameTablesBuilder
         }
 
         DaggerfallNameTables tables = new(
-            new DaggerfallTextSource(DaggerfallTextKind.Name, recordId, label, language, bytes.Length, 0, records.Count),
+            new DaggerfallTextSource(DaggerfallTextKind.Name, path, language, bytes.Length, 0, records.Count),
             banks);
         tables.Validate();
         foreach (DaggerfallTextRecord record in records)
@@ -198,7 +198,7 @@ public static class DaggerfallNameTablesBuilder
     private static string RequireFile(IReadOnlyList<SourceInventoryRow> inventory, string label)
     {
         ArgumentNullException.ThrowIfNull(inventory);
-        return inventory.FirstOrDefault(row => row.FamilyId == FamilyId && StringComparer.Ordinal.Equals(row.PathOrPattern, label))?.Id
+        return inventory.FirstOrDefault(row => row.FamilyId == FamilyId && StringComparer.Ordinal.Equals(row.PathOrPattern, label))?.PathOrPattern
             ?? throw new InvalidOperationException($"The documented inventory does not carry '{label}', so the name tables cite no provenance.");
     }
 }

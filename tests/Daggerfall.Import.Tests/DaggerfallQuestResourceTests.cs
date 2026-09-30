@@ -17,7 +17,7 @@ public sealed class DaggerfallQuestResourceTests
             "Person _questor_ named Morgiah faction Court factionType Noble group Mage female remote atHome face 3",
             "Place _sites_ randompermanent CastleA,CastleB",
         ];
-        DaggerfallQuestPack pack = new(new DaggerfallTextSource(DaggerfallTextKind.Resource, "CNT-017-QBN", "fixture/resources", "en", 1, 0, 1),
+        DaggerfallQuestPack pack = new(new DaggerfallTextSource(DaggerfallTextKind.Resource, "fixture/resources", "en", 1, 0, 1),
             [new DaggerfallQuestRecord("fixture", "", "resources.txt", DaggerfallQuestDisposition.Compiled, [],
                 [new DaggerfallQuestBlock(QuestBlockKind.Person, 10, lines, null)], [])]);
         var resources = DaggerfallQuestResourceBuilder.Build(pack).Declarations.ToDictionary(value => value.Symbol.CanonicalId);
@@ -41,7 +41,7 @@ public sealed class DaggerfallQuestResourceTests
     public void PreservesSymbolSpellingAndFailsAnExplicitDanglingReference()
     {
         DaggerfallQuestPack pack = new(
-            new DaggerfallTextSource(DaggerfallTextKind.Resource, "CNT-017-QBN", "fixture/quests", "en", 1, 0, 1),
+            new DaggerfallTextSource(DaggerfallTextKind.Resource, "fixture/quests", "en", 1, 0, 1),
             [new DaggerfallQuestRecord("fixture", "", "fixture.txt", DaggerfallQuestDisposition.Compiled, [],
                 [new DaggerfallQuestBlock(QuestBlockKind.Item, 7, ["Item _Letter_ letter", "place item _Letter_ at _missing_"], null)], [])]);
 
@@ -62,7 +62,7 @@ public sealed class DaggerfallQuestResourceTests
     public void RetainsEachPlaceSelectionKind()
     {
         DaggerfallQuestPack pack = new(
-            new DaggerfallTextSource(DaggerfallTextKind.Resource, "CNT-017-QBN", "fixture/places", "en", 1, 0, 1),
+            new DaggerfallTextSource(DaggerfallTextKind.Resource, "fixture/places", "en", 1, 0, 1),
             [new DaggerfallQuestRecord("fixture", "", "places.txt", DaggerfallQuestDisposition.Compiled, [],
                 [new DaggerfallQuestBlock(QuestBlockKind.Place, 1, ["Place _a_ local tavern", "Place _b_ remote dungeon", "Place _c_ permanent DaggerfallCastle", "Place _d_ randompermanent A,B"], null)], [])]);
 

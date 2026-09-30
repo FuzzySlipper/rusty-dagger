@@ -337,7 +337,7 @@ public sealed class ItemTemplateLedgerTests
 
         Assert.Equal("CNT-011", ledger["target"]!["recordId"]!.GetValue<string>());
         Assert.Equal("absent", ledger["target"]!["status"]!.GetValue<string>());
-        Assert.Equal("DEC-11", ledger["baseline"]!["rule"]!.GetValue<string>());
+        Assert.Equal("provisional-donor-code-baseline", ledger["baseline"]!["rule"]!.GetValue<string>());
 
         // The published items' values were migrated, not decoded, and the ledger says so
         // beside a count that matches the payload it describes.

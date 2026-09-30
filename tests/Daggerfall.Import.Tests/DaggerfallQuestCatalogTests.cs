@@ -20,6 +20,6 @@ public sealed class DaggerfallQuestCatalogTests
         Assert.False(catalog.Rows[1].Active);
         Assert.Null(catalog.Rows[2].Membership);
         Assert.Equal(new[] { "present", "missing", "missing", "present" }, catalog.Rows.Select(row => row.SourceDisposition));
-        Assert.Equal(ContentDigest.Compute(bytes), catalog.Source.ContentHash);
+        Assert.Equal(ContentDigest.Compute(bytes), catalog.Source.ContentDigest);
     }
 }

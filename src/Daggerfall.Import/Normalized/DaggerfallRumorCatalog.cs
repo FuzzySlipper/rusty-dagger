@@ -137,7 +137,7 @@ public static class DaggerfallRumorCatalogBuilder
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(label);
         ArgumentException.ThrowIfNullOrWhiteSpace(language);
-        string recordId = RequireFile(inventory, label);
+        string path = RequireFile(inventory, label);
         RumorCatalog catalog = RumorReader.Read(bytes, label);
         List<DaggerfallRumorEntry> entries = [];
         List<DaggerfallTextRecord> records = [];
@@ -166,7 +166,7 @@ public static class DaggerfallRumorCatalogBuilder
         }
 
         DaggerfallRumorCatalog published = new(
-            new DaggerfallTextSource(DaggerfallTextKind.Rumor, recordId, label, language, bytes.Length, 0, records.Count),
+            new DaggerfallTextSource(DaggerfallTextKind.Rumor, path, language, bytes.Length, 0, records.Count),
             entries);
         published.Validate();
         foreach (DaggerfallTextRecord record in records)
@@ -180,7 +180,7 @@ public static class DaggerfallRumorCatalogBuilder
     private static string RequireFile(IReadOnlyList<SourceInventoryRow> inventory, string label)
     {
         ArgumentNullException.ThrowIfNull(inventory);
-        return inventory.FirstOrDefault(row => row.FamilyId == FamilyId && StringComparer.Ordinal.Equals(row.PathOrPattern, label))?.Id
+        return inventory.FirstOrDefault(row => row.FamilyId == FamilyId && StringComparer.Ordinal.Equals(row.PathOrPattern, label))?.PathOrPattern
             ?? throw new InvalidOperationException($"The documented inventory does not carry '{label}', so the rumor catalog cites no provenance.");
     }
 }

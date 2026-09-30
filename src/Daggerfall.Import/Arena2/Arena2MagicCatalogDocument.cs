@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Daggerfall.Import.Publication;
 
 namespace Daggerfall.Import.Arena2;
 
@@ -22,7 +23,6 @@ public sealed record Arena2MagicCatalogPublication(string Json, int Spells, int 
 public static class Arena2MagicCatalogDocument
 {
     /// <summary>The documented inventory record that owns the magical sources.</summary>
-    public const string SourceRecordId = "CNT-012";
 
     /// <summary>
     /// The enchantment types whose parameter is a spell identity. The donor's own enumeration names what
@@ -203,8 +203,8 @@ public static class Arena2MagicCatalogDocument
         {
             ["schemaVersion"] = 1,
             ["sources"] = new JsonArray(
-                new JsonObject { ["recordId"] = SourceRecordId, ["path"] = spellLabel },
-                new JsonObject { ["recordId"] = SourceRecordId, ["path"] = magicLabel }),
+                JsonSerializer.SerializeToNode(PublishedSource.Of(spellLabel, spellBytes), PublishedJson.Section),
+                JsonSerializer.SerializeToNode(PublishedSource.Of(magicLabel, magicBytes), PublishedJson.Section)),
             ["spells"] = publishedSpells,
             ["magicItems"] = publishedItems,
             ["unresolvedLinks"] = unresolved,

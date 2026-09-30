@@ -3,24 +3,18 @@ using Daggerfall.Import.Publication;
 namespace Daggerfall.Import.Normalized;
 
 /// <summary>
-/// Where a catalog record comes from: a record id the documented inventory carries, and
-/// the path that inventory documents for it. A citation the inventory does not contain
-/// is refused rather than published, so a catalog can never invent provenance.
+/// Where a catalog record comes from: a source path the documented inventory carries. A citation the
+/// inventory does not document is refused rather than published, so a catalog can never invent provenance.
 /// </summary>
-public sealed record DaggerfallCatalogSource(string RecordId, string Path)
+public sealed record DaggerfallCatalogSource(string Path)
 {
-    public void Validate(IReadOnlySet<string> inventoryRecordIds)
+    public void Validate(IReadOnlySet<string> documentedPaths)
     {
-        ArgumentNullException.ThrowIfNull(inventoryRecordIds);
-        NormalizedImportDocument.RequireLogicalId(RecordId, nameof(RecordId));
-        if (Path is null)
+        ArgumentNullException.ThrowIfNull(documentedPaths);
+        ArgumentException.ThrowIfNullOrWhiteSpace(Path);
+        if (!documentedPaths.Contains(Path))
         {
-            throw new ArgumentNullException(nameof(Path), $"Catalog source '{RecordId}' must state the documented path it came from.");
-        }
-
-        if (!inventoryRecordIds.Contains(RecordId))
-        {
-            throw new InvalidOperationException($"Catalog source '{RecordId}' is not a record the documented inventory carries.");
+            throw new InvalidOperationException($"Catalog source '{Path}' is not a path the documented inventory carries.");
         }
     }
 }
@@ -28,7 +22,7 @@ public sealed record DaggerfallCatalogSource(string RecordId, string Path)
 /// <summary>One indexed key of a classic index space: an attribute, skill or resistance.</summary>
 public sealed record DaggerfallIndexedKey(string Id, int Index, DaggerfallCatalogSource Source)
 {
-    public void Validate(IReadOnlySet<string> inventoryRecordIds)
+    public void Validate(IReadOnlySet<string> documentedPaths)
     {
         NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
         if (Index < 0)
@@ -36,7 +30,7 @@ public sealed record DaggerfallIndexedKey(string Id, int Index, DaggerfallCatalo
             throw new ArgumentOutOfRangeException(nameof(Index), Index, $"Catalog key '{Id}' has a negative index.");
         }
 
-        Source.Validate(inventoryRecordIds);
+        Source.Validate(documentedPaths);
     }
 }
 
@@ -47,17 +41,17 @@ public sealed record DaggerfallIndexedKey(string Id, int Index, DaggerfallCatalo
 /// </summary>
 public sealed record DaggerfallReferenceKey(string Id, DaggerfallCatalogSource Source)
 {
-    public void Validate(IReadOnlySet<string> inventoryRecordIds)
+    public void Validate(IReadOnlySet<string> documentedPaths)
     {
         NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
-        Source.Validate(inventoryRecordIds);
+        Source.Validate(documentedPaths);
     }
 }
 
 /// <summary>A playable race identity with the donor's own race value.</summary>
 public sealed record DaggerfallRaceKey(string Id, int DonorRaceId, DaggerfallCatalogSource Source)
 {
-    public void Validate(IReadOnlySet<string> inventoryRecordIds)
+    public void Validate(IReadOnlySet<string> documentedPaths)
     {
         NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
         if (DonorRaceId <= 0)
@@ -65,7 +59,7 @@ public sealed record DaggerfallRaceKey(string Id, int DonorRaceId, DaggerfallCat
             throw new ArgumentOutOfRangeException(nameof(DonorRaceId), DonorRaceId, $"Race '{Id}' must carry the donor's positive race value.");
         }
 
-        Source.Validate(inventoryRecordIds);
+        Source.Validate(documentedPaths);
     }
 }
 
@@ -115,7 +109,7 @@ public sealed record DaggerfallCareerRecord(
         ("criticalWeaknessFlags", CriticalWeaknessFlags),
     ];
 
-    public void Validate(IReadOnlySet<string> inventoryRecordIds, IReadOnlySet<string> skillKeys, IReadOnlySet<string> attributeKeys, IReadOnlySet<string> elementKeys)
+    public void Validate(IReadOnlySet<string> documentedPaths, IReadOnlySet<string> skillKeys, IReadOnlySet<string> attributeKeys, IReadOnlySet<string> elementKeys)
     {
         NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
         if (string.IsNullOrWhiteSpace(Name))
@@ -176,7 +170,7 @@ public sealed record DaggerfallCareerRecord(
         {
             throw new InvalidOperationException($"Career '{Id}' must carry {DaggerfallCatalogs.ClassicAttributeCount} non-negative attribute values.");
         }
-        Source.Validate(inventoryRecordIds);
+        Source.Validate(documentedPaths);
     }
 
     /// <summary>
@@ -277,9 +271,9 @@ public sealed record DaggerfallCatalogs(
     /// <summary>The largest value one classic effect-flag byte can carry.</summary>
     public const int MaximumFlagByte = 255;
 
-    public void Validate(IReadOnlySet<string> inventoryRecordIds)
+    public void Validate(IReadOnlySet<string> documentedPaths)
     {
-        ArgumentNullException.ThrowIfNull(inventoryRecordIds);
+        ArgumentNullException.ThrowIfNull(documentedPaths);
         ArgumentNullException.ThrowIfNull(Attributes);
         ArgumentNullException.ThrowIfNull(Skills);
         ArgumentNullException.ThrowIfNull(Resistances);
@@ -293,9 +287,9 @@ public sealed record DaggerfallCatalogs(
             throw new InvalidOperationException("The catalogs must carry the classic attribute, skill and element key spaces, the races and the careers; an empty catalog resolves nothing.");
         }
 
-        ValidateIndexed(Attributes, "attribute", inventoryRecordIds);
-        ValidateIndexed(Skills, "skill", inventoryRecordIds);
-        ValidateIndexed(Resistances, "resistance", inventoryRecordIds);
+        ValidateIndexed(Attributes, "attribute", documentedPaths);
+        ValidateIndexed(Skills, "skill", documentedPaths);
+        ValidateIndexed(Resistances, "resistance", documentedPaths);
         if (Resistances.Count != ElementCount)
         {
             throw new InvalidOperationException($"The resistance catalog carries {Resistances.Count} keys where the classic carrier has {ElementCount}.");
@@ -309,7 +303,7 @@ public sealed record DaggerfallCatalogs(
         NormalizedImportDocument.ValidateUnique(Races, race => race.DonorRaceId.ToString(), "race donor value");
         foreach (DaggerfallRaceKey race in Races)
         {
-            race.Validate(inventoryRecordIds);
+            race.Validate(documentedPaths);
         }
 
         NormalizedImportDocument.ValidateUnique(Careers, career => career.Id, "career");
@@ -329,20 +323,20 @@ public sealed record DaggerfallCatalogs(
 
         foreach (DaggerfallCareerRecord career in Careers)
         {
-            career.Validate(inventoryRecordIds, skills.Keys.ToHashSet(StringComparer.Ordinal), attributes.Keys.ToHashSet(StringComparer.Ordinal), elements.Keys.ToHashSet(StringComparer.Ordinal));
+            career.Validate(documentedPaths, skills.Keys.ToHashSet(StringComparer.Ordinal), attributes.Keys.ToHashSet(StringComparer.Ordinal), elements.Keys.ToHashSet(StringComparer.Ordinal));
             if (career.Attributes.Count != ClassicAttributeCount)
             {
                 throw new InvalidOperationException($"Career '{career.Id}' carries {career.Attributes.Count} attribute values where the classic record carries {ClassicAttributeCount}.");
             }
         }
 
-        ValidateReferenced(Enemies, "enemy", inventoryRecordIds);
-        ValidateReferenced(ItemTemplates, "item template", inventoryRecordIds);
+        ValidateReferenced(Enemies, "enemy", documentedPaths);
+        ValidateReferenced(ItemTemplates, "item template", documentedPaths);
         // The pack carries the set of inventory records it drew from, so a consumer can
         // check a citation without owning the inventory, and a citation outside the set
         // is a defect rather than a typo nobody can see.
         ArgumentNullException.ThrowIfNull(Sources);
-        NormalizedImportDocument.ValidateUnique(Sources, value => value, "catalog source record");
+        NormalizedImportDocument.ValidateUnique(Sources, value => value, "catalog source");
         string[] cited = [.. CitedSources().Order(StringComparer.Ordinal)];
         if (!Sources.Order(StringComparer.Ordinal).SequenceEqual(cited, StringComparer.Ordinal))
         {
@@ -351,40 +345,40 @@ public sealed record DaggerfallCatalogs(
 
         foreach (string source in Sources)
         {
-            if (!inventoryRecordIds.Contains(source))
+            if (!documentedPaths.Contains(source))
             {
-                throw new InvalidOperationException($"Catalog source '{source}' is not a record the documented inventory carries.");
+                throw new InvalidOperationException($"Catalog source '{source}' is not a path the documented inventory carries.");
             }
         }
     }
 
-    /// <summary>Every inventory record id the catalog records cite.</summary>
+    /// <summary>Every documented source path the catalog records cite.</summary>
     public IEnumerable<string> CitedSources() =>
         Attributes.Concat<DaggerfallIndexedKey>(Skills)
             .Concat(Resistances)
-            .Select(key => key.Source.RecordId)
-            .Concat(Races.Select(race => race.Source.RecordId))
-            .Concat(Careers.Select(career => career.Source.RecordId))
-            .Concat(Enemies.Select(enemy => enemy.Source.RecordId))
-            .Concat(ItemTemplates.Select(item => item.Source.RecordId))
+            .Select(key => key.Source.Path)
+            .Concat(Races.Select(race => race.Source.Path))
+            .Concat(Careers.Select(career => career.Source.Path))
+            .Concat(Enemies.Select(enemy => enemy.Source.Path))
+            .Concat(ItemTemplates.Select(item => item.Source.Path))
             .Distinct(StringComparer.Ordinal);
 
-    private static void ValidateReferenced(IReadOnlyList<DaggerfallReferenceKey> keys, string kind, IReadOnlySet<string> inventoryRecordIds)
+    private static void ValidateReferenced(IReadOnlyList<DaggerfallReferenceKey> keys, string kind, IReadOnlySet<string> documentedPaths)
     {
         NormalizedImportDocument.ValidateUnique(keys, key => key.Id, kind);
         foreach (DaggerfallReferenceKey key in keys)
         {
-            key.Validate(inventoryRecordIds);
+            key.Validate(documentedPaths);
         }
     }
 
-    private static void ValidateIndexed(IReadOnlyList<DaggerfallIndexedKey> keys, string kind, IReadOnlySet<string> inventoryRecordIds)
+    private static void ValidateIndexed(IReadOnlyList<DaggerfallIndexedKey> keys, string kind, IReadOnlySet<string> documentedPaths)
     {
         NormalizedImportDocument.ValidateUnique(keys, key => key.Id, kind);
         NormalizedImportDocument.ValidateUnique(keys, key => key.Index.ToString(), $"{kind} index");
         foreach (DaggerfallIndexedKey key in keys)
         {
-            key.Validate(inventoryRecordIds);
+            key.Validate(documentedPaths);
         }
 
         int[] indices = keys.Select(key => key.Index).Order().ToArray();
@@ -406,10 +400,10 @@ public static class DaggerfallCatalogSerializer
 {
     private static readonly System.Text.Json.JsonSerializerOptions Options = Publication.PublishedJson.Section;
 
-    public static byte[] Serialize(DaggerfallCatalogs catalogs, IReadOnlySet<string> inventoryRecordIds)
+    public static byte[] Serialize(DaggerfallCatalogs catalogs, IReadOnlySet<string> documentedPaths)
     {
         ArgumentNullException.ThrowIfNull(catalogs);
-        catalogs.Validate(inventoryRecordIds);
+        catalogs.Validate(documentedPaths);
         return System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(catalogs, Options);
     }
 }

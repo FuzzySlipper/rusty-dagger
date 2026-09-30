@@ -14,19 +14,19 @@ public sealed record DaggerfallQuestFoeTableRow(int Id, string Name, bool Active
 
 /// <summary>Quest item rows and every non-row source comment from <c>Quests-Items.txt</c>.</summary>
 public sealed record DaggerfallQuestItemTable(
-    ImportPublicationSource Source,
+    PublishedSource Source,
     IReadOnlyList<DaggerfallQuestItemTableRow> Rows,
     IReadOnlyList<DaggerfallQuestTableComment> Comments);
 
 /// <summary>Quest faction/person rows and every non-row source comment from <c>Quests-Factions.txt</c>.</summary>
 public sealed record DaggerfallQuestFactionTable(
-    ImportPublicationSource Source,
+    PublishedSource Source,
     IReadOnlyList<DaggerfallQuestFactionTableRow> Rows,
     IReadOnlyList<DaggerfallQuestTableComment> Comments);
 
 /// <summary>Quest foe rows and every non-row source comment from <c>Quests-Foes.txt</c>.</summary>
 public sealed record DaggerfallQuestFoeTable(
-    ImportPublicationSource Source,
+    PublishedSource Source,
     IReadOnlyList<DaggerfallQuestFoeTableRow> Rows,
     IReadOnlyList<DaggerfallQuestTableComment> Comments);
 

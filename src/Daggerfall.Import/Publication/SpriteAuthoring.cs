@@ -23,7 +23,7 @@ public static class SpriteAuthoringBasis
         ArgumentNullException.ThrowIfNull(catalog);
         BasisDocument document = new(
             publication.ImporterId,
-            publication.Sources.OrderBy(source => source.SourcePath, StringComparer.Ordinal).Select(source => new BasisSource(source.SourcePath, source.ContentHash, source.ByteLen)).ToArray(),
+            publication.Sources.OrderBy(source => source.Path, StringComparer.Ordinal).Select(source => new BasisSource(source.Path, source.ContentDigest, source.ByteLength)).ToArray(),
             catalog.Entries.OrderBy(entry => entry.Id, StringComparer.Ordinal).Select(entry => new BasisEntry(
                 entry.Id, entry.Kind, entry.Closure.RelativePath, entry.Closure.ContentDigest, entry.Closure.ByteLength,
                 entry.Atlas.Width, entry.Atlas.Height,
@@ -92,7 +92,7 @@ public static class SpriteInspectionCatalogBuilder
         ICollection<SpriteInspectionEntry> entries,
         DungeonMediaManifestSidecar sidecar,
         IReadOnlyDictionary<string, ImportPublicationManifestArtifact> closure,
-        IReadOnlyList<ImportPublicationSource> sources)
+        IReadOnlyList<PublishedSource> sources)
     {
         foreach (DungeonBillboardMediaManifest billboard in sidecar.Billboards.OrderBy(value => value.MediaId, StringComparer.Ordinal))
         {
@@ -114,7 +114,7 @@ public static class SpriteInspectionCatalogBuilder
         ICollection<SpriteInspectionEntry> entries,
         DungeonMediaManifestSidecar sidecar,
         IReadOnlyDictionary<string, ImportPublicationManifestArtifact> closure,
-        IReadOnlyList<ImportPublicationSource> sources)
+        IReadOnlyList<PublishedSource> sources)
     {
         foreach (DungeonActorMediaManifest actor in sidecar.Actors.OrderBy(value => value.MediaId, StringComparer.Ordinal))
         {
@@ -155,7 +155,7 @@ public static class SpriteInspectionCatalogBuilder
         ICollection<SpriteInspectionEntry> entries,
         ClassicMediaManifestSidecar sidecar,
         IReadOnlyDictionary<string, ImportPublicationManifestArtifact> closure,
-        IReadOnlyList<ImportPublicationSource> sources)
+        IReadOnlyList<PublishedSource> sources)
     {
         if (sidecar.WeaponMedia.Count == 0)
         {
@@ -184,7 +184,7 @@ public static class SpriteInspectionCatalogBuilder
         ICollection<SpriteInspectionEntry> entries,
         ClassicMediaManifestSidecar sidecar,
         IReadOnlyDictionary<string, ImportPublicationManifestArtifact> closure,
-        IReadOnlyList<ImportPublicationSource> sources)
+        IReadOnlyList<PublishedSource> sources)
     {
         foreach (IGrouping<string, ClassicEffectManifest> group in sidecar.Effects.GroupBy(effect => effect.MediaId, StringComparer.Ordinal).OrderBy(group => group.Key, StringComparer.Ordinal))
         {
@@ -203,7 +203,7 @@ public static class SpriteInspectionCatalogBuilder
         }
     }
 
-    private static SpriteInspectionClosure ToClosure(NormalizedMediaDescriptor descriptor, IReadOnlyDictionary<string, ImportPublicationManifestArtifact> closure, IReadOnlyList<ImportPublicationSource> sources)
+    private static SpriteInspectionClosure ToClosure(NormalizedMediaDescriptor descriptor, IReadOnlyDictionary<string, ImportPublicationManifestArtifact> closure, IReadOnlyList<PublishedSource> sources)
     {
         if (!closure.TryGetValue(descriptor.RelativePath, out ImportPublicationManifestArtifact? artifact)
             || artifact.ContentHash != descriptor.ContentDigest || artifact.ByteLen != descriptor.ByteLength)
@@ -212,7 +212,7 @@ public static class SpriteInspectionCatalogBuilder
         }
 
         return new(descriptor.RelativePath, Digest(descriptor.ContentDigest), descriptor.ByteLength, artifact.DependsOnPaths.ToArray(),
-            sources.OrderBy(source => source.SourcePath, StringComparer.Ordinal).Select(source => new SpriteInspectionSource(source.SourcePath, Digest(source.ContentHash), source.ByteLen)).ToArray());
+            sources.OrderBy(source => source.Path, StringComparer.Ordinal).Select(source => new SpriteInspectionSource(source.Path, Digest(source.ContentDigest), source.ByteLength)).ToArray());
     }
 
     private static void ValidateMediaClosure(NormalizedMediaManifest media, IReadOnlyDictionary<string, ImportPublicationManifestArtifact> closure, string family)

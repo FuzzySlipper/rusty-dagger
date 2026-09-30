@@ -58,7 +58,7 @@ public static class ClassicQuestCorpusPublication
 
 public sealed record DaggerfallClassicQuestCorpusSpecification(string Id, IReadOnlyList<DaggerfallClassicQuestCategory> Categories);
 public sealed record DaggerfallClassicQuestCategory(string Id, string CatalogGroup, bool Active, string Availability, IReadOnlyList<string> Names);
-public sealed record DaggerfallClassicQuestCorpus(string Id, ImportPublicationSource CatalogSource, IReadOnlyList<DaggerfallClassicQuestCategory> Categories, IReadOnlyList<DaggerfallClassicQuestReceipt> Quests, ContentDigest Fingerprint)
+public sealed record DaggerfallClassicQuestCorpus(string Id, PublishedSource CatalogSource, IReadOnlyList<DaggerfallClassicQuestCategory> Categories, IReadOnlyList<DaggerfallClassicQuestReceipt> Quests, ContentDigest Fingerprint)
 {
     public void Validate()
     {

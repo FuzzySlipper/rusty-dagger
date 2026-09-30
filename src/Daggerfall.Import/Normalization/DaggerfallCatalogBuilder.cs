@@ -33,8 +33,8 @@ public static class DaggerfallCatalogBuilder
         ArgumentNullException.ThrowIfNull(careers);
         ArgumentNullException.ThrowIfNull(enemyIds);
         ArgumentNullException.ThrowIfNull(itemTemplateIds);
-        IReadOnlySet<string> inventoryIds = inventory.Select(row => row.Id).ToHashSet(StringComparer.Ordinal);
-        DaggerfallCatalogSource family(string id, string path) => new(id, path);
+        IReadOnlySet<string> documentedPaths = inventory.Select(row => row.PathOrPattern).ToHashSet(StringComparer.Ordinal);
+        DaggerfallCatalogSource family(string path) => new(path);
 
         SourceInventoryRow careerFamily = RequireFamily(inventory, CareerFamily);
         SourceInventoryRow raceFamily = RequireFamily(inventory, RaceFamily);
@@ -50,7 +50,7 @@ public static class DaggerfallCatalogBuilder
             throw new InvalidOperationException($"The attribute vocabulary carries {vocabularyAttributes.Count} keys where a career record names {DaggerfallCatalogs.ClassicAttributeCount}.");
         }
 
-        DaggerfallCatalogSource careerCitation = family(CareerFamily, careerFamily.PathOrPattern);
+        DaggerfallCatalogSource careerCitation = family(careerFamily.PathOrPattern);
         List<DaggerfallIndexedKey> attributes = [];
         for (int index = 0; index < DaggerfallCatalogs.ClassicAttributeCount; index++)
         {
@@ -74,7 +74,7 @@ public static class DaggerfallCatalogBuilder
         for (int index = 0; index < raceNames.Length; index++)
         {
             // The donor's race values are contiguous from one in its own enumeration order.
-            races.Add(new DaggerfallRaceKey(Key(raceNames[index]), index + 1, family(RaceFamily, raceFamily.PathOrPattern)));
+            races.Add(new DaggerfallRaceKey(Key(raceNames[index]), index + 1, family(raceFamily.PathOrPattern)));
         }
 
         List<DaggerfallCareerRecord> careerRecords = [];
@@ -108,7 +108,7 @@ public static class DaggerfallCatalogBuilder
                 decoded.AttackModifierFlags,
                 [.. ExpertProficiencySkills(decoded.WeaponArmorShields, skills)],
                 DaggerfallCareerEquipmentRestrictions.FromClassicFlags(decoded.ForbiddenMaterials, decoded.WeaponArmorShields),
-                new DaggerfallCatalogSource(carrier.Id, carrier.PathOrPattern)));
+                new DaggerfallCatalogSource(carrier.PathOrPattern)));
         }
 
         DaggerfallCatalogs catalogs = new(
@@ -122,13 +122,13 @@ public static class DaggerfallCatalogBuilder
                 .Where(group => group.Count() > 1)
                 .Select(group => group.Key)
                 .Order(StringComparer.Ordinal)],
-            [.. enemyIds.Select(id => new DaggerfallReferenceKey(id, family(EnemySourceId, EnemySourcePath)))],
-            [.. itemTemplateIds.Select(id => new DaggerfallReferenceKey(id, family(ItemSourceId, ItemSourcePath)))],
+            [.. enemyIds.Select(id => new DaggerfallReferenceKey(id, family(EnemySourcePath)))],
+            [.. itemTemplateIds.Select(id => new DaggerfallReferenceKey(id, family(ItemSourcePath)))],
             []);
         // The published sources are exactly what the records cite; Validate refuses a set
         // that disagrees, so this cannot drift from the citations a consumer reads.
         catalogs = catalogs with { Sources = [.. catalogs.CitedSources().Order(StringComparer.Ordinal)] };
-        catalogs.Validate(inventoryIds);
+        catalogs.Validate(documentedPaths);
         return catalogs;
     }
 

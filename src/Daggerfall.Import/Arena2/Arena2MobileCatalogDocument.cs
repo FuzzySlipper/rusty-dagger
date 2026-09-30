@@ -1,4 +1,7 @@
 using System.Globalization;
+using System.Text;
+using System.Text.Json;
+using Daggerfall.Import.Publication;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
@@ -168,9 +171,6 @@ public sealed record Arena2MobileCatalogPublication(string Json, int Mobiles, in
 /// </remarks>
 public static class Arena2MobileCatalogDocument
 {
-    /// <summary>The documented inventory record that owns the monster archive.</summary>
-    public const string SourceRecordId = "CNT-007";
-
     /// <summary>
     /// Builds the document's JSON from the donor table and the published pack. The mobile table is the
     /// parameter authority; a supplied MONSTER.BSA inventory additionally supplies each mobile's career
@@ -249,7 +249,7 @@ public static class Arena2MobileCatalogDocument
         JsonObject document = new()
         {
             ["schemaVersion"] = 1,
-            ["sources"] = new JsonArray(new JsonObject { ["recordId"] = SourceRecordId, ["path"] = donorPath }),
+            ["sources"] = new JsonArray(JsonSerializer.SerializeToNode(PublishedSource.Of(donorPath, Encoding.UTF8.GetBytes(donorEnemyBasics)), PublishedJson.Section)),
             ["mobiles"] = mobiles,
         };
 

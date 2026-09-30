@@ -9,14 +9,14 @@ public sealed record DaggerfallQuestCatalogRow(string Name, string Group, string
     int MinimumRequirement, string RequirementKind, bool Adult, bool OneTime, bool Active,
     string SourceDisposition, string Notes, int SourceLine);
 
-public sealed record DaggerfallQuestCatalog(ImportPublicationSource Source, IReadOnlyList<DaggerfallQuestCatalogRow> Rows);
+public sealed record DaggerfallQuestCatalog(PublishedSource Source, IReadOnlyList<DaggerfallQuestCatalogRow> Rows);
 
 /// <summary>Reads only the explicitly selected classic list; no runtime pack discovery or selection policy.</summary>
 public static class DaggerfallQuestCatalogReader
 {
     public static DaggerfallQuestCatalog Read(byte[] bytes, string sourcePath, IEnumerable<string> sourceFiles)
     {
-        ImportPublicationSource source = new(sourcePath, ContentDigest.Compute(bytes), bytes.LongLength);
+        PublishedSource source = new(sourcePath, ContentDigest.Compute(bytes), bytes.LongLength);
         source.Validate();
         HashSet<string> supplied = sourceFiles.Select(Path.GetFileNameWithoutExtension).OfType<string>().ToHashSet(StringComparer.OrdinalIgnoreCase);
         HashSet<string> names = new(StringComparer.OrdinalIgnoreCase);

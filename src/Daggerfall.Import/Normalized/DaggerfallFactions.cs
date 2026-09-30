@@ -21,29 +21,6 @@ public enum DaggerfallRegionFactionDisposition
     Unclaimed,
 }
 
-/// <summary>The source a normalized faction catalog was read from.</summary>
-/// <param name="RecordId">The documented inventory record the catalog is read under.</param>
-/// <param name="Path">The logical source path.</param>
-/// <param name="ByteLength">The source file's byte length.</param>
-/// <param name="Records">How many factions the catalog publishes.</param>
-public sealed record DaggerfallFactionSource(string RecordId, string Path, long ByteLength, int Records)
-{
-    public void Validate()
-    {
-        NormalizedImportDocument.RequireLogicalId(RecordId, nameof(RecordId));
-        NormalizedImportDocument.RequireLogicalPath(Path, nameof(Path));
-        if (ByteLength <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(ByteLength), ByteLength, $"Faction source '{Path}' states no bytes.");
-        }
-
-        if (Records <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(Records), Records, $"Faction source '{Path}' publishes no factions.");
-        }
-    }
-}
-
 /// <summary>One published faction: its filed identity, relations and bindings.</summary>
 /// <param name="Id">The faction's identity.</param>
 /// <param name="FiledId">The identity the file states, before duplicate resolution.</param>
@@ -160,7 +137,7 @@ public sealed record DaggerfallRegionFactions(int Region, IReadOnlyList<int> Fac
 /// <param name="Regions">The region claims in region order.</param>
 /// <param name="DuplicateNames">The names the file states more than once, each with the identities that share it in file order.</param>
 public sealed record DaggerfallFactions(
-    DaggerfallFactionSource Source,
+    PublishedSource Source,
     IReadOnlyList<DaggerfallFaction> Factions,
     IReadOnlyList<DaggerfallRegionFactions> Regions,
     IReadOnlyList<DaggerfallFactionNameAlias> DuplicateNames)
@@ -363,7 +340,7 @@ public static class DaggerfallFactionsBuilder
         }
 
         DaggerfallFactions catalog = new(
-            new DaggerfallFactionSource(family.Id, family.PathOrPattern, bytes.LongLength, factions.Count),
+            PublishedSource.Of(family.PathOrPattern, bytes),
             factions,
             regions,
             [.. aliases.OrderBy(alias => alias.Name, StringComparer.Ordinal)]);

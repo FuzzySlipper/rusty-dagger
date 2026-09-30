@@ -415,7 +415,7 @@ public sealed class DaggerfallPoisonRuntimeTests
         DaggerfallCareerDefinition career = new(
             "poison-career", "Poison career", [], [], [], [], [], 75, 2000, 1f, [], [],
             ResistanceFlags: 4, ImmunityFlags: 0, LowToleranceFlags: 0, CriticalWeaknessFlags: 0, 0, [],
-            [], new DaggerfallCatalogCitation("test", "test"));
+            [], new DaggerfallCatalogCitation("test"));
 
         Assert.Equal(DaggerfallDiseaseCareerTolerance.Resistant, DaggerfallPoisonPolicy.CareerTolerance(career));
         Assert.Equal(DaggerfallDiseaseCareerTolerance.Immune,

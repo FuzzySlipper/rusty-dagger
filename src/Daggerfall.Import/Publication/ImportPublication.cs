@@ -51,16 +51,23 @@ public sealed class ImportPublicationArtifact
     public ContentDigest ContentHash => ContentDigest.Compute(bytes);
 }
 
-/// <summary>Portable source fact retained by a publication manifest.</summary>
-public sealed record ImportPublicationSource(string SourcePath, ContentDigest ContentHash, long ByteLen)
+/// <summary>
+/// One source file a publication or a published section was read from: its logical path in the
+/// <see cref="PublishedSourcePath"/> vocabulary, the digest of the bytes read and their length. Every
+/// section, closure manifest and applied overlay states its sources in this one shape.
+/// </summary>
+public sealed record PublishedSource(string Path, ContentDigest ContentDigest, long ByteLength)
 {
+    /// <summary>The source fact for bytes read under a logical path.</summary>
+    public static PublishedSource Of(string path, ReadOnlySpan<byte> bytes) => new(path, ContentDigest.Compute(bytes), bytes.Length);
+
     public void Validate()
     {
-        NormalizedImportDocument.RequireLogicalPath(SourcePath, nameof(SourcePath));
-        ContentHash.Validate();
-        if (ByteLen <= 0)
+        NormalizedImportDocument.RequireLogicalPath(Path, nameof(Path));
+        ContentDigest.Validate();
+        if (ByteLength <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(ByteLen), ByteLen, "A source byte length must be positive.");
+            throw new ArgumentOutOfRangeException(nameof(ByteLength), ByteLength, $"Source '{Path}' states no bytes.");
         }
     }
 }
@@ -96,7 +103,7 @@ public sealed record ImportPublicationManifestArtifact(string RelativePath, Cont
 /// applied. The overlays are recorded beside the sources rather than among them, because the sprite
 /// authoring basis an overlay is written against is computed from the sources.
 /// </summary>
-public sealed record ImportInvocation(IReadOnlyList<string> Command, IReadOnlyList<ImportPublicationSource> AuthoredOverlays)
+public sealed record ImportInvocation(IReadOnlyList<string> Command, IReadOnlyList<PublishedSource> AuthoredOverlays)
 {
     public static ImportInvocation None { get; } = new([], []);
 
@@ -109,7 +116,7 @@ public sealed record ImportInvocation(IReadOnlyList<string> Command, IReadOnlyLi
             throw new ArgumentException("A recorded command argument must be plain text.", nameof(Command));
         }
 
-        foreach (ImportPublicationSource overlay in AuthoredOverlays)
+        foreach (PublishedSource overlay in AuthoredOverlays)
         {
             ArgumentNullException.ThrowIfNull(overlay);
             overlay.Validate();
@@ -128,16 +135,16 @@ public sealed record CanonicalImportManifest(
     string ImporterId,
     string ImporterRevision,
     IReadOnlyList<string> Command,
-    IReadOnlyList<ImportPublicationSource> Sources,
-    IReadOnlyList<ImportPublicationSource> AuthoredOverlays,
+    IReadOnlyList<PublishedSource> Sources,
+    IReadOnlyList<PublishedSource> AuthoredOverlays,
     IReadOnlyList<ImportPublicationManifestArtifact> Artifacts)
 {
     public const int CurrentSchemaVersion = 1;
 
     public CanonicalImportManifest Canonicalize() => this with
     {
-        Sources = Sources.OrderBy(source => source.SourcePath, StringComparer.Ordinal).ToArray(),
-        AuthoredOverlays = AuthoredOverlays.OrderBy(source => source.SourcePath, StringComparer.Ordinal).ToArray(),
+        Sources = Sources.OrderBy(source => source.Path, StringComparer.Ordinal).ToArray(),
+        AuthoredOverlays = AuthoredOverlays.OrderBy(source => source.Path, StringComparer.Ordinal).ToArray(),
         Artifacts = Artifacts.OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal).Select(artifact => artifact.Canonicalize()).ToArray(),
     };
 
@@ -157,10 +164,10 @@ public sealed record CanonicalImportManifest(
         ArgumentNullException.ThrowIfNull(Sources);
         ArgumentNullException.ThrowIfNull(Artifacts);
         Invocation.Validate();
-        ValidateUnique(Sources, source => source.SourcePath, "source path");
-        ValidateUnique(AuthoredOverlays, source => source.SourcePath, "authored overlay path");
+        ValidateUnique(Sources, source => source.Path, "source path");
+        ValidateUnique(AuthoredOverlays, source => source.Path, "authored overlay path");
         ValidateUnique(Artifacts, artifact => artifact.RelativePath, "artifact path");
-        foreach (ImportPublicationSource source in Sources)
+        foreach (PublishedSource source in Sources)
         {
             source.Validate();
         }
@@ -315,7 +322,7 @@ public sealed class ImportPublicationPlan
             provenance.ImporterId,
             provenance.ImporterRevision,
             invocation.Command.ToArray(),
-            provenance.Sources.Select(source => new ImportPublicationSource(source.SourcePath, source.ContentDigest, source.ByteLength)).ToArray(),
+            provenance.Sources.Select(source => new PublishedSource(source.SourcePath, source.ContentDigest, source.ByteLength)).ToArray(),
             invocation.AuthoredOverlays.ToArray(),
             orderedContent.Select(artifact => new ImportPublicationManifestArtifact(artifact.RelativePath, artifact.ContentHash, artifact.Bytes.Length, artifact.DependsOnPaths)).ToArray());
         manifest.Validate();
@@ -340,9 +347,9 @@ public sealed class ImportPublicationPlan
                 Manifest.ImporterRevision,
                 Manifest.Sources.Select(source => new LogicalSourceRecord(
                     LogicalSourceRecord.CurrentSchemaVersion,
-                    source.SourcePath,
-                    source.ContentHash,
-                    source.ByteLen,
+                    source.Path,
+                    source.ContentDigest,
+                    source.ByteLength,
                     NormalizedImportDocument.CurrentSchemaVersion)).ToArray()),
             artifacts.Where(artifact => artifact.RelativePath != ImportPublicationManifestSerializer.ManifestRelativePath),
             invocation);

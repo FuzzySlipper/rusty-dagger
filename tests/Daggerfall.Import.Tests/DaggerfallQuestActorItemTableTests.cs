@@ -22,9 +22,9 @@ public sealed class DaggerfallQuestActorItemTableTests
             items.Rows.Single(row => row.Name == "Shifters_Shirt").P2));
         Assert.Equal(24, items.Rows.Count(row => row.P1 == 5));
         Assert.Equal(new[] { "portrait", "Lysandus_death" }, items.Rows.Where(row => row.P1 == 13 && row.P2 == 0).Select(row => row.Name));
-        Assert.Equal("Tables/Quests-Items.txt", items.Source.SourcePath);
-        Assert.Equal(bytes.Length, items.Source.ByteLen);
-        Assert.Equal(ContentDigest.Compute(bytes), items.Source.ContentHash);
+        Assert.Equal("Tables/Quests-Items.txt", items.Source.Path);
+        Assert.Equal(bytes.Length, items.Source.ByteLength);
+        Assert.Equal(ContentDigest.Compute(bytes), items.Source.ContentDigest);
         Assert.True(items.Rows.Zip(items.Rows.Skip(1)).All(pair => pair.First.SourceLine < pair.Second.SourceLine));
     }
 

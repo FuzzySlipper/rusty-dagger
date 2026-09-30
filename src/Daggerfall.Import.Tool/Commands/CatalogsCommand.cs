@@ -34,12 +34,12 @@ internal static class CatalogsCommand
             // The player is an actor identity but not an enemy a catalog references.
             [.. Ids("actors").Where(id => id != "player")],
             Ids("items"));
-        byte[] section = DaggerfallCatalogSerializer.Serialize(catalogs, inventory.Select(row => row.Id).ToHashSet(StringComparer.Ordinal));
+        byte[] section = DaggerfallCatalogSerializer.Serialize(catalogs, inventory.Select(row => row.PathOrPattern).ToHashSet(StringComparer.Ordinal));
 
         Console.WriteLine($"catalogs: {catalogs.Races.Count} races, {catalogs.Careers.Count} careers, {catalogs.Attributes.Count} attributes, {catalogs.Skills.Count} skills, {catalogs.Resistances.Count} elements, {catalogs.Enemies.Count} enemy references, {catalogs.ItemTemplates.Count} item-template references");
         foreach (DaggerfallCareerRecord career in catalogs.Careers)
         {
-            Console.WriteLine($"  {career.Id} '{career.Name}' hp/level {career.HitPointsPerLevel} primary {string.Join('/', career.PrimarySkills)} source {career.Source.RecordId}");
+            Console.WriteLine($"  {career.Id} '{career.Name}' hp/level {career.HitPointsPerLevel} primary {string.Join('/', career.PrimarySkills)} source {career.Source.Path}");
         }
 
         if (!args.Switch("--update")) return Options.ReportOnly("these catalogs");

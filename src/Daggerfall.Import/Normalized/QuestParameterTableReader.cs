@@ -13,7 +13,7 @@ internal sealed record QuestParameterTableRow(string Name, IReadOnlyList<string>
 
 /// <summary>A parameter table's source evidence, ordered rows and retained comments.</summary>
 internal sealed record QuestParameterTable(
-    ImportPublicationSource Source,
+    PublishedSource Source,
     IReadOnlyList<QuestParameterTableRow> Rows,
     IReadOnlyList<DaggerfallQuestTableComment> Comments);
 
@@ -26,7 +26,7 @@ internal static class QuestParameterTableReader
     internal static QuestParameterTable Read(byte[] bytes, string sourcePath, IReadOnlyList<string> expectedSchema)
     {
         ArgumentNullException.ThrowIfNull(bytes);
-        ImportPublicationSource source = new(sourcePath, ContentDigest.Compute(bytes), bytes.LongLength);
+        PublishedSource source = new(sourcePath, ContentDigest.Compute(bytes), bytes.LongLength);
         source.Validate();
         string[] lines = new UTF8Encoding(false, true).GetString(bytes).TrimStart('\uFEFF').Split('\n');
         List<QuestParameterTableRow> rows = [];

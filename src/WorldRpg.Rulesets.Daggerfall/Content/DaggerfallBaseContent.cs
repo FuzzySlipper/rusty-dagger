@@ -129,11 +129,11 @@ internal static class DaggerfallBaseContent
         if (!root.TryGetProperty("encounters", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
         {
             diagnostics.Add("Base payload must publish the complete random encounter tables.");
-            return new DaggerfallEncounterSet(new("", ""), []);
+            return new DaggerfallEncounterSet(new(""), []);
         }
         JsonElement sourceValue = Object(Property(section, "source", diagnostics), "encounters.source", diagnostics);
-        DaggerfallCatalogCitation source = new(Text(sourceValue, "recordId", diagnostics), Text(sourceValue, "path", diagnostics));
-        if (source is not { SourceRecordId: "CNT-8002.DFU.RandomEncounters", Path: "daggerfall-unity/Assets/Scripts/Utility/RandomEncounters.cs" })
+        DaggerfallCatalogCitation source = new(Text(sourceValue, "path", diagnostics));
+        if (source.Path != "daggerfall-unity/Assets/Scripts/Utility/RandomEncounters.cs")
             diagnostics.Add("Random encounter tables must retain their RandomEncounters donor citation.");
         List<IReadOnlyList<int>> tables = [];
         if (!section.TryGetProperty("tables", out JsonElement sourceTables) || sourceTables.ValueKind != JsonValueKind.Array)
@@ -631,7 +631,7 @@ internal static class DaggerfallBaseContent
         foreach (DaggerfallHudResourceDefinition hud in definitions.HudResources.OrderBy(resource => resource.Id)) Add("hud", hud.Id, hud.Label, hud.Track.Value);
         foreach (DaggerfallDeferredLootCategoryPool pool in definitions.LootCategoryPools.OrderBy(pool => pool.Id)) Add("pool", pool.Id, pool.Status, pool.Reason);
         foreach (DaggerfallDonorErratum erratum in definitions.DonorErrata.OrderBy(erratum => erratum.Id)) Add("errata", erratum.Id);
-        Add("encounters-source", definitions.Encounters.Source.SourceRecordId, definitions.Encounters.Source.Path);
+        Add("encounters-source", definitions.Encounters.Source.Path, definitions.Encounters.Source.Path);
         foreach ((IReadOnlyList<int> table, int index) in definitions.Encounters.Tables.Select((table, index) => (table, index)))
             Add("encounter-table", index, string.Join(',', table));
         foreach (DaggerfallMobileDefinition mobile in definitions.Mobiles.Mobiles.Values.OrderBy(mobile => mobile.DonorId))
@@ -639,19 +639,19 @@ internal static class DaggerfallBaseContent
         // The published catalogs are content a consumer resolves keys through, so the
         // fingerprint covers them: a key, an index, a decoded career field or a
         // provenance citation that changes is a semantic change to the pack.
-        foreach (DaggerfallCatalogKey key in definitions.Catalogs.Attributes) Add("catalog-attribute", key.Id, key.Index, key.Source.SourceRecordId, key.Source.Path);
-        foreach (DaggerfallCatalogKey key in definitions.Catalogs.Skills) Add("catalog-skill", key.Id, key.Index, key.Source.SourceRecordId, key.Source.Path);
-        foreach (DaggerfallCatalogKey key in definitions.Catalogs.Resistances) Add("catalog-resistance", key.Id, key.Index, key.Source.SourceRecordId, key.Source.Path);
-        foreach (DaggerfallRaceDefinition race in definitions.Catalogs.Races.OrderBy(race => race.Id, StringComparer.Ordinal)) Add("catalog-race", race.Id, race.DonorRaceId, race.Source.SourceRecordId, race.Source.Path);
+        foreach (DaggerfallCatalogKey key in definitions.Catalogs.Attributes) Add("catalog-attribute", key.Id, key.Index, key.Source.Path);
+        foreach (DaggerfallCatalogKey key in definitions.Catalogs.Skills) Add("catalog-skill", key.Id, key.Index, key.Source.Path);
+        foreach (DaggerfallCatalogKey key in definitions.Catalogs.Resistances) Add("catalog-resistance", key.Id, key.Index, key.Source.Path);
+        foreach (DaggerfallRaceDefinition race in definitions.Catalogs.Races.OrderBy(race => race.Id, StringComparer.Ordinal)) Add("catalog-race", race.Id, race.DonorRaceId, race.Source.Path);
         foreach (DaggerfallCareerDefinition career in definitions.Catalogs.Careers.OrderBy(career => career.Id, StringComparer.Ordinal))
         {
-            Add("catalog-career", career.Id, career.Name, string.Join(',', career.PrimarySkills), string.Join(',', career.MajorSkills), string.Join(',', career.MinorSkills), string.Join(',', career.Attributes), string.Join(',', career.AttributeValues), career.HitPointsPerLevel, career.SpellPointMultiplierMilli, FingerprintField(career.AdvancementMultiplier), string.Join(',', career.ResistanceElements), string.Join(',', career.ImmunityElements), string.Join(',', career.FlagBytes.Select(flag => $"{flag.Name}={flag.Value}")), string.Join(',', career.ForbiddenEquipment), career.Source.SourceRecordId, career.Source.Path);
+            Add("catalog-career", career.Id, career.Name, string.Join(',', career.PrimarySkills), string.Join(',', career.MajorSkills), string.Join(',', career.MinorSkills), string.Join(',', career.Attributes), string.Join(',', career.AttributeValues), career.HitPointsPerLevel, career.SpellPointMultiplierMilli, FingerprintField(career.AdvancementMultiplier), string.Join(',', career.ResistanceElements), string.Join(',', career.ImmunityElements), string.Join(',', career.FlagBytes.Select(flag => $"{flag.Name}={flag.Value}")), string.Join(',', career.ForbiddenEquipment), career.Source.Path);
         }
 
         foreach (string collision in definitions.Catalogs.CareerNameCollisions) Add("catalog-career-name-collision", collision);
-        foreach (string source in definitions.Catalogs.SourceRecords) Add("catalog-source-record", source);
-        foreach (DaggerfallCatalogReference enemy in definitions.Catalogs.Enemies.OrderBy(enemy => enemy.Id, StringComparer.Ordinal)) Add("catalog-enemy", enemy.Id, enemy.Source.SourceRecordId, enemy.Source.Path);
-        foreach (DaggerfallCatalogReference item in definitions.Catalogs.ItemTemplates.OrderBy(item => item.Id, StringComparer.Ordinal)) Add("catalog-item-template", item.Id, item.Source.SourceRecordId, item.Source.Path);
+        foreach (string source in definitions.Catalogs.SourcePaths) Add("catalog-source", source);
+        foreach (DaggerfallCatalogReference enemy in definitions.Catalogs.Enemies.OrderBy(enemy => enemy.Id, StringComparer.Ordinal)) Add("catalog-enemy", enemy.Id, enemy.Source.Path);
+        foreach (DaggerfallCatalogReference item in definitions.Catalogs.ItemTemplates.OrderBy(item => item.Id, StringComparer.Ordinal)) Add("catalog-item-template", item.Id, item.Source.Path);
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value.ToString())));
     }
 
@@ -767,7 +767,6 @@ internal static class DaggerfallBaseContent
         foreach (JsonElement source in Array(section, "sources", diagnostics))
         {
             DaggerfallTextKind kind = TextKind(source, diagnostics);
-            _ = Text(source, "recordId", diagnostics);
             string path = Text(source, "path", diagnostics);
             string language = Text(source, "language", diagnostics);
             long byteLength = Long(source, "byteLength", diagnostics);
@@ -950,7 +949,7 @@ internal static class DaggerfallBaseContent
         JsonElement source = Object(Property(section, "source", diagnostics), "buildingNames.source", diagnostics);
         string path = Text(source, "path", diagnostics);
         long byteLength = Long(source, "byteLength", diagnostics);
-        int regions = Integer(source, "regions", diagnostics);
+        int regions = Array(section, "regionNameBanks", diagnostics).Count();
         // The bank is chosen by region index, so the table covers exactly the regions the locations publish.
         if (string.IsNullOrWhiteSpace(path) || byteLength <= 0 || regions != regionCount)
         {
@@ -1164,7 +1163,7 @@ internal static class DaggerfallBaseContent
         List<string> sources = [];
         foreach (JsonElement source in Array(section, "sources", diagnostics))
         {
-            sources.Add(Text(source, "recordId", diagnostics));
+            sources.Add(Text(source, "path", diagnostics));
         }
 
         if (mobiles.Count == 0)
@@ -2099,7 +2098,7 @@ internal static class DaggerfallBaseContent
     private static DaggerfallQuestCatalog ReadQuestCatalog(JsonElement root, DaggerfallContentDiagnostics diagnostics)
     {
         JsonElement catalog = Object(Property(root, "questCatalog", diagnostics), "questCatalog", diagnostics);
-        string path = Text(Object(Property(catalog, "source", diagnostics), "source", diagnostics), "sourcePath", diagnostics);
+        string path = Text(Object(Property(catalog, "source", diagnostics), "source", diagnostics), "path", diagnostics);
         List<DaggerfallQuestCatalogRow> rows = [];
         HashSet<string> names = new(StringComparer.OrdinalIgnoreCase);
         foreach (JsonElement row in Array(catalog, "rows", diagnostics))
@@ -2140,7 +2139,7 @@ internal static class DaggerfallBaseContent
                     Integer(row, "id", diagnostics), Text(row, "name", diagnostics), Property(row, "active", diagnostics).GetBoolean(),
                     Integer(row, "sourceLine", diagnostics))).ToArray(), Comments(foes)));
 
-            string Path(JsonElement table) => Text(Object(Property(table, "source", diagnostics), "source", diagnostics), "sourcePath", diagnostics);
+            string Path(JsonElement table) => Text(Object(Property(table, "source", diagnostics), "source", diagnostics), "path", diagnostics);
             DaggerfallQuestTableComment[] Comments(JsonElement table) => Array(table, "comments", diagnostics)
                 .Select(comment => new DaggerfallQuestTableComment(Text(comment, "text", diagnostics), Integer(comment, "sourceLine", diagnostics))).ToArray();
         }
@@ -2148,7 +2147,7 @@ internal static class DaggerfallBaseContent
         DaggerfallQuestPlaces ReadPlaces()
         {
             JsonElement table = Object(Property(tables, "places", diagnostics), "places", diagnostics);
-            string path = Text(Object(Property(table, "source", diagnostics), "source", diagnostics), "sourcePath", diagnostics);
+            string path = Text(Object(Property(table, "source", diagnostics), "source", diagnostics), "path", diagnostics);
             List<DaggerfallQuestPlace> rows = [];
             HashSet<string> names = new(StringComparer.OrdinalIgnoreCase);
             foreach (JsonElement row in Array(table, "rows", diagnostics))
@@ -2170,7 +2169,7 @@ internal static class DaggerfallBaseContent
         DaggerfallQuestTable ReadTable(string key, bool globals)
         {
             JsonElement table = Object(Property(tables, key, diagnostics), key, diagnostics);
-            string path = Text(Object(Property(table, "source", diagnostics), "source", diagnostics), "sourcePath", diagnostics);
+            string path = Text(Object(Property(table, "source", diagnostics), "source", diagnostics), "path", diagnostics);
             List<DaggerfallQuestTableRow> rows = [];
             Dictionary<string, int> aliases = new(StringComparer.OrdinalIgnoreCase);
             foreach (JsonElement row in Array(table, "rows", diagnostics))
@@ -2439,7 +2438,7 @@ internal static class DaggerfallBaseContent
         List<string> sources = [];
         foreach (JsonElement source in Array(section, "sources", diagnostics))
         {
-            sources.Add(Text(source, "recordId", diagnostics));
+            sources.Add(Text(source, "path", diagnostics));
         }
 
         Dictionary<(int Type, int SubType), DaggerfallMagicEffectCostDefinition> costs = [];
@@ -2476,7 +2475,7 @@ internal static class DaggerfallBaseContent
         if (!root.TryGetProperty("itemTemplateLedger", out JsonElement value) || value.ValueKind != JsonValueKind.Object)
         {
             diagnostics.Add("Base payload must carry an itemTemplateLedger section: every native item template target needs a provenance and a disposition before any catalog publication claims one.");
-            return new DaggerfallItemTemplateLedger(string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, 0, string.Empty, false, 0, 0, 0, 0, []);
+            return new DaggerfallItemTemplateLedger(string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, 0, string.Empty, false, 0, 0, 0, 0, []);
         }
 
         JsonElement ledger = Object(value, "itemTemplateLedger", diagnostics);
@@ -2486,7 +2485,7 @@ internal static class DaggerfallBaseContent
         JsonElement summary = Object(Property(ledger, "summary", diagnostics), "itemTemplateLedger.summary", diagnostics);
         JsonElement substitute = Object(Property(ledger, "substitute", diagnostics), "itemTemplateLedger.substitute", diagnostics);
         string status = Text(target, "status", diagnostics);
-        string recordId = Text(target, "recordId", diagnostics);
+        string targetPath = Text(target, "path", diagnostics);
 
         // The status is a closed vocabulary rather than a free string: a near miss like
         // 'Absent' would otherwise slip past every check that compares it ordinally.
@@ -2499,9 +2498,9 @@ internal static class DaggerfallBaseContent
 
         // The ledger's target cites the documented inventory exactly as a catalog citation
         // does, so a manifest change cannot leave one half of the pack stale.
-        if (recordId.Length != 0 && !catalogs.SourceRecords.Contains(recordId, StringComparer.Ordinal))
+        if (targetPath.Length != 0 && !catalogs.SourcePaths.Contains(targetPath, StringComparer.Ordinal))
         {
-            diagnostics.Add($"The item template ledger cites '{recordId}', which the payload's catalog sources do not carry.");
+            diagnostics.Add($"The item template ledger cites '{targetPath}', which the payload's catalog sources do not carry.");
         }
 
         string substituteStatus = Text(substitute, "status", diagnostics);
@@ -2619,8 +2618,7 @@ internal static class DaggerfallBaseContent
         }
 
         return new DaggerfallItemTemplateLedger(
-            Text(target, "recordId", diagnostics),
-            Text(target, "path", diagnostics),
+            targetPath,
             status,
             Text(target, "reason", diagnostics),
             Text(baseline, "rule", diagnostics),
@@ -3192,27 +3190,26 @@ internal static class DaggerfallBaseContent
     }
 
     /// <summary>
-    /// A citation: the documented record id and the path it was read from. The import
-    /// tool refuses an id the inventory does not carry, so the runtime checks the shape
-    /// and that both halves are present rather than pretending to own the inventory.
+    /// A citation: the documented source path a record was read from. The import tool refuses a path the
+    /// inventory does not document, so the runtime checks that the citation is one of the sources the
+    /// catalogs say they drew from rather than pretending to own the inventory.
     /// </summary>
     private static DaggerfallCatalogCitation ReadCitation(JsonElement value, IReadOnlyList<string> sources, DaggerfallContentDiagnostics diagnostics)
     {
         JsonElement source = Object(Property(value, "source", diagnostics), "source", diagnostics);
-        string recordId = Text(source, "recordId", diagnostics);
         string path = Text(source, "path", diagnostics);
-        if (!recordId.StartsWith("CNT-", StringComparison.Ordinal) || string.IsNullOrWhiteSpace(path))
+        if (string.IsNullOrWhiteSpace(path))
         {
-            diagnostics.Add($"Catalog source '{recordId}' must name a documented inventory record and the path it came from.");
+            diagnostics.Add("A catalog citation must name the source path it came from.");
         }
-        else if (!sources.Contains(recordId, StringComparer.Ordinal))
+        else if (!sources.Contains(path, StringComparer.Ordinal))
         {
-            // The pack states the inventory records it drew from, so a citation outside
-            // that set is a defect a consumer can see without owning the inventory.
-            diagnostics.Add($"Catalog source '{recordId}' is not one of the {sources.Count} records the pack says it drew from.");
+            // The pack states the sources it drew from, so a citation outside that set is a defect a
+            // consumer can see without owning the inventory.
+            diagnostics.Add($"Catalog source '{path}' is not one of the {sources.Count} sources the pack says it drew from.");
         }
 
-        return new DaggerfallCatalogCitation(recordId, path);
+        return new DaggerfallCatalogCitation(path);
     }
 
     private static void RequireDistinct<T>(IReadOnlyList<T> values, Func<T, string> key, string kind, DaggerfallContentDiagnostics diagnostics)

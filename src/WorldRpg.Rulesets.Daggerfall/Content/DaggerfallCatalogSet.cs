@@ -5,7 +5,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// carries, and the path that inventory documents. The import tool refuses a citation
 /// the inventory does not contain, so a published catalog cannot invent provenance.
 /// </summary>
-internal sealed record DaggerfallCatalogCitation(string SourceRecordId, string Path);
+internal sealed record DaggerfallCatalogCitation(string Path);
 
 /// <summary>One indexed key of a classic index space: an attribute, skill or resistance.</summary>
 internal sealed record DaggerfallCatalogKey(string Id, int Index, DaggerfallCatalogCitation Source);
@@ -73,7 +73,7 @@ internal sealed class DaggerfallCatalogSet(
     IReadOnlyList<string> careerNameCollisions,
     IReadOnlyList<DaggerfallCatalogReference> enemies,
     IReadOnlyList<DaggerfallCatalogReference> itemTemplates,
-    IReadOnlyList<string> sourceRecords)
+    IReadOnlyList<string> sourcePaths)
 {
     /// <summary>The classic element keys, in the index order the catalog publishes.</summary>
     internal static readonly string[] ElementKeys = ["fire", "frost", "disease-or-poison", "shock", "magic"];
@@ -96,10 +96,10 @@ internal sealed class DaggerfallCatalogSet(
     internal IReadOnlyList<DaggerfallCatalogReference> ItemTemplates { get; } = Array.AsReadOnly(itemTemplates.ToArray());
 
     /// <summary>
-    /// The documented inventory records the pack says it drew from. A citation outside
-    /// this set is refused, so a consumer can check provenance without the inventory.
+    /// The documented source paths the pack says it drew from. A citation outside this set is
+    /// refused, so a consumer can check provenance without the inventory.
     /// </summary>
-    internal IReadOnlyList<string> SourceRecords { get; } = Array.AsReadOnly(sourceRecords.ToArray());
+    internal IReadOnlyList<string> SourcePaths { get; } = Array.AsReadOnly(sourcePaths.ToArray());
 
     private Dictionary<string, DaggerfallCareerDefinition> CareersById { get; } =
         careers.ToDictionary(career => career.Id, StringComparer.Ordinal);

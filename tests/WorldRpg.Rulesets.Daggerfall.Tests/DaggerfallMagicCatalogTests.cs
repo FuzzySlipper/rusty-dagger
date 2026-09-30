@@ -16,7 +16,7 @@ public sealed class DaggerfallMagicCatalogTests
     {
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(Payload());
 
-        Assert.Contains("CNT-012", definitions.Magic.SourceRecords);
+        Assert.Contains("arena2/SPELLS.STD", definitions.Magic.SourcePaths);
         DaggerfallSpellDefinition spell = Assert.Contains("spell.001", definitions.Magic.Spells);
         Assert.Equal("Fenrik's Door Jam", spell.Name);
         Assert.Equal(1, spell.Identity);

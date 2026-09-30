@@ -19,7 +19,6 @@ internal sealed record DaggerfallItemTemplateTarget(
 /// reader tell a migrated item value from a decoded native template fact.
 /// </summary>
 internal sealed record DaggerfallItemTemplateLedger(
-    string SourceRecordId,
     string SourcePath,
     string SourceStatus,
     string SourceReason,
