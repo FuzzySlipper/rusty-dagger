@@ -49,7 +49,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         DaggerfallDungeonTextProjection? dungeonText = null,
         DaggerfallDeathView? death = null,
         DaggerfallRestView? rest = null,
-        DaggerfallTravelPresentation? travel = null)
+        DaggerfallTravelPresentation? travel = null,
+        string? siteName = null)
     {
         UiValueBuilder builder = new();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
@@ -61,6 +62,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             // The mode is the product's, and the session is the one place that is told it, so the
             // projection that the thin UI renders carries it rather than the UI keeping one.
             ("mode", builder.String(Mode(mode))),
+            // The HUD names where the player is from the site the session projects, not from a label
+            // the DOM carries, so every site a bundle starts at or moves to names itself.
+            ("site", siteName is null ? builder.Null() : builder.Object(("name", builder.String(siteName)))),
             // Compass and crosshair read the same authoritative look the camera does.
             ("view", builder.Object(
                 ("yawRadians", builder.Number(controls.YawRadians)),

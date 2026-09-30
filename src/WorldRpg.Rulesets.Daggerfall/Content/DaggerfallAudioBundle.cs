@@ -3,7 +3,7 @@ using Rusty.Engine;
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
 /// <summary>
-/// Resolves the Privateer's Hold audio identities through the Engine-owned bundle
+/// Resolves one publication's audio identities through the Engine-owned bundle
 /// that carries their imported WAV bodies.
 /// </summary>
 /// <remarks>
@@ -14,17 +14,11 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// </remarks>
 internal sealed class DaggerfallAudioBundle
 {
-    internal const string BundleId = "daggerfall.privateers-hold-audio";
-    private const string ContentRoot = "worldrpg/imports/privateers-hold/media/audio/clips/";
-
     private readonly ProductContent _content;
     private readonly string _bundleId;
     private readonly IReadOnlyDictionary<string, string> _paths;
 
-    internal DaggerfallAudioBundle(ProductContent content, IEnumerable<NormalizedAudioClip> clips)
-        : this(content, BundleId, ContentRoot, clips) { }
-
-    private DaggerfallAudioBundle(ProductContent content, string bundleId, string contentRoot, IEnumerable<NormalizedAudioClip> clips)
+    internal DaggerfallAudioBundle(ProductContent content, string bundleId, string contentRoot, IEnumerable<NormalizedAudioClip> clips)
     {
         _content = content ?? throw new ArgumentNullException(nameof(content));
         ArgumentException.ThrowIfNullOrWhiteSpace(bundleId);
@@ -49,17 +43,17 @@ internal sealed class DaggerfallAudioBundle
         _paths = paths;
     }
 
-    /// <summary>Constructs the exact audio bundle for one profile publication root.</summary>
-    internal static DaggerfallAudioBundle ForProfile(ProductContent content, PrivateersHoldInputs inputs)
+    /// <summary>
+    /// Constructs the audio bundle a site declares, rooted at the audio clips under its publication root.
+    /// </summary>
+    internal static DaggerfallAudioBundle ForProfile(ProductContent content, DaggerfallSiteProfile profile)
     {
         ArgumentNullException.ThrowIfNull(content);
-        ArgumentNullException.ThrowIfNull(inputs);
-        string root = inputs.ProfileKey.LogicalId;
-        const string importPrefix = "worldrpg/imports/";
-        if (!root.StartsWith(importPrefix, StringComparison.Ordinal))
-            throw new InvalidOperationException($"World profile '{root}' has no publishable audio bundle root.");
-        string profileName = root[importPrefix.Length..].Replace('/', '-');
-        return new DaggerfallAudioBundle(content, $"daggerfall.{profileName}-audio", $"{root}/media/audio/clips/", inputs.Audio);
+        ArgumentNullException.ThrowIfNull(profile);
+        string root = profile.ProfileKey.LogicalId;
+        string bundleId = profile.AudioBundle
+            ?? throw new InvalidOperationException($"World profile '{root}' declares no audio bundle, so its audio cues could not be opened.");
+        return new DaggerfallAudioBundle(content, bundleId, $"{root}/media/audio/clips/", profile.Audio);
     }
 
     /// <summary>Constructs the one music bundle every site's cues are opened through.</summary>

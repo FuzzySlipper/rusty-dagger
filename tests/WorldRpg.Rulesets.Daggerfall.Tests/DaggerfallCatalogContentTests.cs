@@ -332,7 +332,7 @@ public sealed class DaggerfallCatalogContentTests
     [InlineData("\"item\": \"iron-longsword\"", "\"item\": \"not-an-item\"")]
     [InlineData("\"action\": \"melee-attack\"", "\"action\": \"not-an-action\"")]
     [InlineData("\"lootTableKey\": \"D\"", "\"lootTableKey\": \"Z\"")]
-    [InlineData("\"mobileId\": 0", "\"mobileId\": 39")]
+    [InlineData("\"mobileId\": 0", "\"mobileId\": 128")]
     [InlineData("\"equipSlot\": \"right-hand\"", "\"equipSlot\": \"not-a-slot\"")]
     [InlineData("\"quantity\": 25", "\"quantity\": 0")]
     [InlineData("\"quantity\": 25", "\"quantity\": \"25\"")]

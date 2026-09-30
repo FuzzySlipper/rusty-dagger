@@ -13,6 +13,10 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// <summary>Checks the audio bodies are an Engine bundle while catalog metadata remains eager.</summary>
 public sealed class DaggerfallAudioBundleTests
 {
+    // The bundle a site payload declares for the clips under its publication root.
+    private const string SiteBundle = "daggerfall.privateers-hold-audio";
+    private const string SiteRoot = "worldrpg/imports/privateers-hold/media/audio/clips/";
+
     [Fact]
     public void Opens_the_exact_named_audio_resource_without_admitting_its_body_to_the_snapshot()
     {
@@ -23,18 +27,18 @@ public sealed class DaggerfallAudioBundleTests
         ProductContent content = new(
             new ProductContentFile[] { new(Encoding.UTF8.GetBytes("worldrpg/media/audio/classic-sound-catalog.json"), "catalog"u8.ToArray()) },
             contentService.Service);
-        DaggerfallAudioBundle audio = new(content, [new NormalizedAudioClip(mediaId, contentPath, default)]);
+        DaggerfallAudioBundle audio = new(content, SiteBundle, SiteRoot, [new NormalizedAudioClip(mediaId, contentPath, default)]);
         AudioFake engineAudio = AudioFake.Create();
 
         // Metadata discovery does not make the WAV one of ProductContent's eager files. The pair hands the
         // listing back as a memory now rather than a sequence, so it is materialized to be searched.
-        Assert.Contains(content.ListBundles().ToArray(), bundle => bundle.Id == DaggerfallAudioBundle.BundleId);
+        Assert.Contains(content.ListBundles().ToArray(), bundle => bundle.Id == SiteBundle);
         Assert.False(content.TryReadFile(contentPath, out _));
         Assert.Empty(contentService.OpenBundleRequests);
 
         using AudioClip clip = audio.OpenClip(engineAudio.Service, mediaId);
 
-        Assert.Equal([DaggerfallAudioBundle.BundleId], contentService.OpenBundleRequests);
+        Assert.Equal([SiteBundle], contentService.OpenBundleRequests);
         Assert.Equal([bundlePath], contentService.OpenReferenceRequests);
         Assert.Equal(1, engineAudio.OpenedFromContent);
         Assert.Equal(0, contentService.ReadBodyRequests);
@@ -45,7 +49,7 @@ public sealed class DaggerfallAudioBundleTests
     {
         BundleContentFake contentService = BundleContentFake.Create("audio-melee-dagger-swing.wav");
         ProductContent content = new(Array.Empty<ProductContentFile>(), contentService.Service);
-        DaggerfallAudioBundle audio = new(content, [new NormalizedAudioClip("audio.melee.dagger.swing", "worldrpg/imports/privateers-hold/media/audio/clips/audio-melee-dagger-swing.wav", default)]);
+        DaggerfallAudioBundle audio = new(content, SiteBundle, SiteRoot, [new NormalizedAudioClip("audio.melee.dagger.swing", "worldrpg/imports/privateers-hold/media/audio/clips/audio-melee-dagger-swing.wav", default)]);
 
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => audio.OpenClip(AudioFake.Create().Service, "audio.no-such-clip"));
 
@@ -61,14 +65,14 @@ public sealed class DaggerfallAudioBundleTests
         const string bundlePath = "audio-melee-dagger-swing.wav";
         BundleContentFake contentService = BundleContentFake.Create(bundlePath);
         ProductContent content = new(Array.Empty<ProductContentFile>(), contentService.Service);
-        DaggerfallAudioBundle audioBundle = new(content,
+        DaggerfallAudioBundle audioBundle = new(content, SiteBundle, SiteRoot,
         [
             new NormalizedAudioClip(mediaId, contentPath, default),
             new NormalizedAudioClip("hit1", "worldrpg/imports/privateers-hold/media/audio/clips/audio-melee-hit-1.wav", default),
         ]);
         AudioFake audio = AudioFake.Create();
         IGraphicsService graphics = GraphicsFake.Create();
-        PrivateersHoldInputs inputs = new(
+        DaggerfallSiteProfile inputs = new(
             new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
             new SpatialContentArtifact("spatial/hold.json", default, 1),
             new ContentArtifact("mesh/hold.json", default),
@@ -82,7 +86,7 @@ public sealed class DaggerfallAudioBundleTests
                 new NormalizedAudioClip("hit1", "worldrpg/imports/privateers-hold/media/audio/clips/audio-melee-hit-1.wav", default),
             ]);
 
-        PrivateersHoldAppearance appearance = new(contentService.Service, graphics, inputs, audio.Service, audioBundle: audioBundle);
+        DaggerfallSiteAppearance appearance = new(contentService.Service, graphics, inputs, audio.Service, audioBundle: audioBundle);
         try
         {
             Assert.Empty(contentService.OpenBundleRequests);
@@ -92,7 +96,7 @@ public sealed class DaggerfallAudioBundleTests
             appearance.React(new PlayerAttackStartedFact(7, 11));
             appearance.React(new PlayerAttackStartedFact(7, 12));
 
-            Assert.Equal([DaggerfallAudioBundle.BundleId], contentService.OpenBundleRequests);
+            Assert.Equal([SiteBundle], contentService.OpenBundleRequests);
             Assert.Equal([bundlePath], contentService.OpenReferenceRequests);
             Assert.Equal(1, audio.OpenedFromContent);
             Assert.Equal(2, audio.Emitted);
@@ -153,7 +157,7 @@ public sealed class DaggerfallAudioBundleTests
 
         protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
         {
-            nameof(IContentService.ListBundles) => (ReadOnlyMemory<ContentBundleInfo>)new[] { new ContentBundleInfo(DaggerfallAudioBundle.BundleId, 1, 1) },
+            nameof(IContentService.ListBundles) => (ReadOnlyMemory<ContentBundleInfo>)new[] { new ContentBundleInfo(SiteBundle, 1, 1) },
             nameof(IContentService.OpenBundle) => Open((ContentBundleOpenRequest)arguments![0]!),
             nameof(IContentService.ReadBundleFiles) => (ReadOnlyMemory<ContentReferenceInfo>)new[] { new ContentReferenceInfo(bundlePath, default, 1) },
             nameof(IContentService.OpenBundleReference) => OpenReference((ContentBundleReferenceRequest)arguments![0]!),
@@ -164,7 +168,7 @@ public sealed class DaggerfallAudioBundleTests
         private ContentBundle Open(ContentBundleOpenRequest request)
         {
             OpenBundleRequests.Add(request.Id);
-            if (request.Id != DaggerfallAudioBundle.BundleId) throw new FileNotFoundException("Unexpected bundle.", request.Id);
+            if (request.Id != SiteBundle) throw new FileNotFoundException("Unexpected bundle.", request.Id);
             return new ContentBundle(new ContentBundleHandle(1), static () => { });
         }
 

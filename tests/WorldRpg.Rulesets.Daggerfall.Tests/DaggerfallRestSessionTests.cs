@@ -21,11 +21,11 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs source = ReadInputs(root);
+        DaggerfallSiteProfile source = ReadInputs(root);
         foreach (bool wilderness in new[] { false, true })
         {
             List<string> releases = [];
-            PrivateersHoldInputs exterior = SameContentAt(source, source.ProfileKey.Site,
+            DaggerfallSiteProfile exterior = SameContentAt(source, source.ProfileKey.Site,
                 DaggerfallWorldProfileKind.Exterior, wilderness ? "rest-wilderness" : "rest-location");
             ContentFake content = new(releases);
             PopulateContent(content, exterior);
@@ -57,8 +57,8 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs source = ReadInputs(root);
-        PrivateersHoldInputs inputs = SameContentAt(source, source.ProfileKey.Site,
+        DaggerfallSiteProfile source = ReadInputs(root);
+        DaggerfallSiteProfile inputs = SameContentAt(source, source.ProfileKey.Site,
             DaggerfallWorldProfileKind.Exterior, "rest-selected-encounter");
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -100,7 +100,7 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -171,7 +171,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         }
 
         DaggerfallSiteRecord town = definitions.Locations.Records.First(record => record.Kind == DaggerfallSiteKind.TownCity);
-        PrivateersHoldInputs townInputs = SameContentAt(inputs, town.Id, DaggerfallWorldProfileKind.Exterior, "town-exterior");
+        DaggerfallSiteProfile townInputs = SameContentAt(inputs, town.Id, DaggerfallWorldProfileKind.Exterior, "town-exterior");
         ContentFake townContent = new(releases);
         PopulateContent(townContent, townInputs);
         SpatialFake townSpatial = SpatialFake.Create(townInputs.SpatialArtifact.Sha256, releases);
@@ -190,7 +190,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         Assert.Equal(JsonSerializer.Serialize(townBefore.Actors), JsonSerializer.Serialize(townAfter.Actors));
     }
 
-    private static PrivateersHoldInputs SameContentAt(PrivateersHoldInputs source, DaggerfallSiteId site, DaggerfallWorldProfileKind kind, string logicalId) => new(
+    private static DaggerfallSiteProfile SameContentAt(DaggerfallSiteProfile source, DaggerfallSiteId site, DaggerfallWorldProfileKind kind, string logicalId) => new(
         kind == DaggerfallWorldProfileKind.Exterior
             ? new ProjectFacts(new WorldPoint(1f, 1f, 1f), source.Project.Actors)
             : source.Project,

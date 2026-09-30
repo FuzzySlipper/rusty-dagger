@@ -492,6 +492,18 @@ test('the visible mode follows the product across play, modal, pause, and death'
   } finally { f.dispose(); }
 });
 
+test('the HUD title names the site the session projects rather than a fixed label', () => {
+  const f = fixture();
+  try {
+    f.publish({ mode: 'playing', site: { name: 'Castle Necromoghan' } });
+    assert.equal(f.root.querySelector('.dagger-title .dagger-site').textContent, 'Castle Necromoghan');
+    f.publish({ mode: 'playing', site: { name: 'Charing' } });
+    assert.equal(f.root.querySelector('.dagger-title .dagger-site').textContent, 'Charing');
+    f.publish({ mode: 'playing', site: null });
+    assert.equal(f.root.querySelector('.dagger-title .dagger-site').textContent, '');
+  } finally { f.dispose(); }
+});
+
 test('save slots list, name new saves, and demand explicit overwrite and deletion confirmation', () => {
   const f = fixture();
   try {

@@ -1,9 +1,10 @@
-using System.Text.Json;
-using Rusty.Engine;
-
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
-/// <summary>Explicit donor summoning selection for disabled Daedric sources; these entries never enter ordinary offers.</summary>
+/// <summary>
+/// The admitted classic entries that never enter ordinary offers, with the explicit donor summoning
+/// selection for the Daedric sources among them. Every admitted corpus contributes the entries its
+/// categories state as not offered or summon-only; a bundle that admits none has no such entries.
+/// </summary>
 internal sealed class DaggerfallDisabledQuestSelection
 {
     private readonly IReadOnlyDictionary<string, DaggerfallSummonQuestResolution> _summons;
@@ -19,26 +20,28 @@ internal sealed class DaggerfallDisabledQuestSelection
         Receipts = receipts;
     }
 
+    /// <summary>The runtime receipts of every entry withheld from ordinary offers, ordered by name.</summary>
     internal IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> Receipts { get; }
 
-    internal static DaggerfallDisabledQuestSelection Read(ProductContent content, ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions)
+    /// <summary>A selection with no withheld entries, for a bundle that admits no corpus stating any.</summary>
+    internal static DaggerfallDisabledQuestSelection None { get; } = From([]);
+
+    internal static DaggerfallDisabledQuestSelection From(IEnumerable<DaggerfallClassicQuestCorpusReceipt> corpus)
     {
-        IReadOnlyDictionary<string, DaggerfallFightersGuildQuestRuntimeReceipt> runtime = DaggerfallClassicQuestCorpusContent.Read(content, payload, definitions, DaggerfallClassicQuestCorpusExpectations.Require("disabled"))
-            .ToDictionary(receipt => receipt.Name, StringComparer.Ordinal);
-        using JsonDocument document = JsonDocument.Parse(payload);
-        Dictionary<string, DaggerfallSummonQuestResolution> summons = [];
-        foreach (JsonElement receipt in document.RootElement.GetProperty("quests").EnumerateArray())
+        ArgumentNullException.ThrowIfNull(corpus);
+        DaggerfallClassicQuestCorpusReceipt[] withheld = [.. corpus.Where(receipt => !receipt.IsOrdinaryOffer)];
+        Dictionary<string, DaggerfallSummonQuestResolution> summons = new(StringComparer.Ordinal);
+        foreach (DaggerfallClassicQuestCorpusReceipt receipt in withheld.Where(receipt => receipt.Availability == DaggerfallClassicQuestCorpusContent.SummonOnly))
         {
-            if (!string.Equals(receipt.GetProperty("availability").GetString(), "summonOnly", StringComparison.Ordinal)) continue;
-            string name = receipt.GetProperty("name").GetString()!;
-            DaggerfallFightersGuildQuestRuntimeReceipt status = runtime[name];
-            summons.Add(name, new(name, status.SourceFile, status.Runnable, status.Diagnostics));
+            DaggerfallFightersGuildQuestRuntimeReceipt status = receipt.Runtime;
+            // Two corpora summoning the same identity would leave one of them unreachable.
+            if (!summons.TryAdd(status.Name, new(status.Name, status.SourceFile, status.Runnable, status.Diagnostics)))
+                throw new DaggerfallContentException([$"Admitted classic corpora summon '{status.Name}' more than once."]);
         }
-        if (summons.Count != 16) throw new DaggerfallContentException(["Disabled classic corpus must retain sixteen explicit summon-only Daedric identities."]);
         return new(
-            new Dictionary<string, DaggerfallSummonQuestResolution>(summons, StringComparer.Ordinal),
-            new HashSet<string>(runtime.Values.Select(value => value.SourceFile), StringComparer.Ordinal),
-            runtime.Values.OrderBy(value => value.Name, StringComparer.Ordinal).ToArray());
+            summons,
+            new HashSet<string>(withheld.Select(receipt => receipt.Runtime.SourceFile), StringComparer.Ordinal),
+            withheld.Select(receipt => receipt.Runtime).OrderBy(receipt => receipt.Name, StringComparer.Ordinal).ToArray());
     }
 
     internal bool TryResolveSummon(string questName, out DaggerfallSummonQuestResolution? resolution)

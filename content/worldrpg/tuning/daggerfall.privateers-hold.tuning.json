@@ -1,6 +1,0 @@
-{
-  "kind": "worldrpg.tuning-profile",
-  "id": "daggerfall.privateers-hold",
-  "ruleset": "daggerfall",
-  "payload": "worldrpg/tuning-payloads/daggerfall.privateers-hold.json"
-}

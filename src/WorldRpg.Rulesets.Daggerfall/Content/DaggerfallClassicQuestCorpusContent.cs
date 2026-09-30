@@ -3,38 +3,64 @@ using Rusty.Engine;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
-/// <summary>One runtime reader for retained classic corpus packs. It verifies each receipt against the admitted catalog and uses the current compilers for readiness.</summary>
+/// <summary>
+/// One runtime reader for retained classic corpus packs. The corpus states its own categories; the reader
+/// verifies each against the admitted catalog, verifies each receipt against its catalog row, and uses the
+/// current compilers for readiness. No corpus is known by name, so a bundle may select any of them.
+/// </summary>
 internal static class DaggerfallClassicQuestCorpusContent
 {
-    internal static IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> Read(ProductContent content, ReadOnlyMemory<byte> payload,
-        DaggerfallDefinitions definitions, DaggerfallClassicQuestCorpusExpectation expectation)
+    /// <summary>A category offered through the ordinary guild and populace offer paths.</summary>
+    internal const string Ordinary = "ordinary";
+    /// <summary>A catalog entry the donor never offers.</summary>
+    internal const string NotOffered = "notOffered";
+    /// <summary>A catalog entry reachable only through an explicit Daedric summoning identity.</summary>
+    internal const string SummonOnly = "summonOnly";
+
+    internal static IReadOnlyList<DaggerfallClassicQuestCorpusReceipt> Read(ProductContent content, ReadOnlyMemory<byte> payload,
+        DaggerfallDefinitions definitions)
     {
-        ArgumentNullException.ThrowIfNull(content); ArgumentNullException.ThrowIfNull(definitions); ArgumentNullException.ThrowIfNull(expectation);
+        ArgumentNullException.ThrowIfNull(content); ArgumentNullException.ThrowIfNull(definitions);
         using JsonDocument document = JsonDocument.Parse(payload);
-        if (!string.Equals(document.RootElement.GetProperty("id").GetString(), expectation.Id, StringComparison.Ordinal))
-            throw new DaggerfallContentException([$"Classic quest corpus does not identify itself as '{expectation.Id}'."]);
-        List<DaggerfallFightersGuildQuestRuntimeReceipt> result = [];
-        Dictionary<string, JsonElement> categories = document.RootElement.GetProperty("categories").EnumerateArray()
-            .ToDictionary(category => category.GetProperty("id").GetString()!, StringComparer.Ordinal);
-        if (categories.Count != expectation.Categories.Count) throw new DaggerfallContentException([$"Classic quest corpus '{expectation.Id}' does not retain its exact category count."]);
-        foreach (DaggerfallClassicQuestCategoryExpectation expected in expectation.Categories)
+        string corpusId = document.RootElement.GetProperty("id").GetString() is { Length: > 0 } id && !string.IsNullOrWhiteSpace(id)
+            ? id : throw new DaggerfallContentException(["Classic quest corpus does not identify itself."]);
+        Dictionary<string, (DaggerfallQuestCatalogRow Row, int Index)> catalog = new(StringComparer.Ordinal);
+        foreach ((DaggerfallQuestCatalogRow row, int index) in definitions.QuestSources.Catalog.Rows.Select((row, index) => (row, index)))
+            catalog.TryAdd(row.Name, (row, index));
+        List<DaggerfallClassicQuestCorpusReceipt> result = [];
+        Dictionary<string, JsonElement> categories = new(StringComparer.Ordinal);
+        foreach (JsonElement category in document.RootElement.GetProperty("categories").EnumerateArray())
         {
-            string[] catalogNames = CategoryNames(definitions, expected);
-            if (!categories.TryGetValue(expected.Id, out JsonElement category)
-                || !string.Equals(category.GetProperty("catalogGroup").GetString(), expected.CatalogGroup, StringComparison.Ordinal)
-                || category.GetProperty("active").GetBoolean() != expected.Active
-                || !string.Equals(category.GetProperty("availability").GetString(), expected.Availability, StringComparison.Ordinal)
-                || !category.GetProperty("names").EnumerateArray().Select(value => value.GetString()).SequenceEqual(catalogNames, StringComparer.Ordinal))
-                throw new DaggerfallContentException([$"Classic quest corpus '{expectation.Id}' does not retain category '{expected.Id}' exactly."]);
+            string categoryId = category.GetProperty("id").GetString()!;
+            string group = category.GetProperty("catalogGroup").GetString()!;
+            bool active = category.GetProperty("active").GetBoolean();
+            // The availability is what the offer paths act on, so one the ruleset cannot interpret would be
+            // offered or withheld by accident rather than by the corpus's statement.
+            if (category.GetProperty("availability").GetString() is not (Ordinary or NotOffered or SummonOnly))
+                throw new DaggerfallContentException([$"Classic quest corpus '{corpusId}' category '{categoryId}' names an availability the ruleset does not interpret."]);
+            if (!categories.TryAdd(categoryId, category))
+                throw new DaggerfallContentException([$"Classic quest corpus '{corpusId}' repeats category '{categoryId}'."]);
+            // Every name is a present catalog row of the category's own group and activity, in catalog order.
+            int previous = -1;
+            foreach (JsonElement value in category.GetProperty("names").EnumerateArray())
+            {
+                if (value.GetString() is not { } name || !catalog.TryGetValue(name, out (DaggerfallQuestCatalogRow Row, int Index) entry)
+                    || entry.Row.Group != group || entry.Row.Active != active || entry.Row.SourceDisposition != "present" || entry.Index <= previous)
+                    throw new DaggerfallContentException([$"Classic quest corpus '{corpusId}' does not retain category '{categoryId}' exactly."]);
+                previous = entry.Index;
+            }
         }
-        foreach (IGrouping<(string Group, bool Active), DaggerfallClassicQuestCategoryExpectation> expected in expectation.Categories.GroupBy(category => (category.CatalogGroup, category.Active)))
+        // Categories that claim one catalog selection partition it: together they name each of its present
+        // entries exactly once, so no entry of a claimed group is silently left out of the corpus.
+        foreach (IGrouping<(string Group, bool Active), JsonElement> claimed in categories.Values
+            .GroupBy(category => (category.GetProperty("catalogGroup").GetString()!, category.GetProperty("active").GetBoolean())))
         {
             string[] catalogNames = [.. definitions.QuestSources.Catalog.Rows
-                .Where(row => row.Group == expected.Key.Group && row.Active == expected.Key.Active && row.SourceDisposition == "present")
-                .Select(row => row.Name)];
-            string[] partitionedNames = [.. expected.SelectMany(category => CategoryNames(definitions, category))];
+                .Where(row => row.Group == claimed.Key.Group && row.Active == claimed.Key.Active && row.SourceDisposition == "present")
+                .Select(row => row.Name).Order(StringComparer.Ordinal)];
+            string[] partitionedNames = [.. claimed.SelectMany(category => category.GetProperty("names").EnumerateArray().Select(value => value.GetString()!)).Order(StringComparer.Ordinal)];
             if (!catalogNames.SequenceEqual(partitionedNames, StringComparer.Ordinal))
-                throw new DaggerfallContentException([$"Classic quest corpus '{expectation.Id}' does not agree with the admitted {expected.Key.Group} catalog selection."]);
+                throw new DaggerfallContentException([$"Classic quest corpus '{corpusId}' does not agree with the admitted {claimed.Key.Group} catalog selection."]);
         }
         HashSet<string> names = new(StringComparer.Ordinal), files = new(StringComparer.Ordinal);
         Dictionary<string, List<string>> categoryNames = categories.Keys.ToDictionary(id => id, _ => new List<string>(), StringComparer.Ordinal);
@@ -46,7 +72,8 @@ internal static class DaggerfallClassicQuestCorpusContent
             if (!categories.TryGetValue(categoryId, out JsonElement category)) throw new DaggerfallContentException([$"Classic quest receipt '{sourceFile}' names an unpublished category '{categoryId}'."]);
             if (!names.Add(name) || !files.Add(sourceFile)) throw new DaggerfallContentException(["Classic quest corpus repeats a source identity."]);
             categoryNames[categoryId].Add(name);
-            DaggerfallQuestCatalogRow row = definitions.QuestSources.Catalog.Rows.Single(row => row.Name == name);
+            DaggerfallQuestCatalogRow row = catalog.TryGetValue(name, out (DaggerfallQuestCatalogRow Row, int Index) catalogEntry)
+                ? catalogEntry.Row : throw new DaggerfallContentException([$"Classic quest receipt '{sourceFile}' names no admitted catalog row."]);
             if (!string.Equals(sourceFile, name + ".txt", StringComparison.Ordinal)
                 || !string.Equals(receipt.GetProperty("catalogGroup").GetString(), row.Group, StringComparison.Ordinal)
                 || !string.Equals(receipt.GetProperty("membership").GetString(), row.Membership, StringComparison.Ordinal)
@@ -76,14 +103,14 @@ internal static class DaggerfallClassicQuestCorpusContent
             List<DaggerfallQuestDiagnosticDefinition> diagnostics = [.. source.Diagnostics, .. DaggerfallQuestTaskCompiler.Assess(source)];
             try { _ = DaggerfallQuestClockCompiler.Compile(source); }
             catch (ArgumentException exception) { diagnostics.Add(new(1, sourceFile, exception.Message)); }
-            if (availability == "notOffered") diagnostics.Add(new(1, sourceFile, "Disabled classic quest entries are not ordinary offers."));
+            if (availability == NotOffered) diagnostics.Add(new(1, sourceFile, "Disabled classic quest entries are not ordinary offers."));
             if (name == "R0C11Y28")
             {
                 (int Line, string Text) macro = MessageLines(source).FirstOrDefault(value => value.Text.Contains("%vcn", StringComparison.OrdinalIgnoreCase));
                 if (macro.Text is null) throw new DaggerfallContentException([$"Classic quest receipt '{sourceFile}' lost its retained %vcn macro context."]);
                 diagnostics.Add(new(macro.Line, macro.Text, "The NPC vampire-clan macro requires quest-NPC context; #8074 owns that resolution."));
             }
-            result.Add(new(name, sourceFile, diagnostics.Count == 0, diagnostics));
+            result.Add(new(availability, new(name, sourceFile, diagnostics.Count == 0, diagnostics)));
         }
         foreach ((string categoryId, JsonElement category) in categories)
         {
@@ -94,12 +121,12 @@ internal static class DaggerfallClassicQuestCorpusContent
         return result;
     }
 
-    private static string[] CategoryNames(DaggerfallDefinitions definitions, DaggerfallClassicQuestCategoryExpectation category) =>
-        [.. definitions.QuestSources.Catalog.Rows
-            .Where(row => row.Group == category.CatalogGroup && row.Active == category.Active && row.SourceDisposition == "present")
-            .Where(row => category.NamePrefix is null || row.Name.StartsWith(category.NamePrefix, StringComparison.Ordinal) != category.ExcludePrefix)
-            .Select(row => row.Name)];
-
     private static IEnumerable<(int Line, string Text)> ActionLines(DaggerfallQuestSourceDefinition source) => source.Blocks.Where(block => block.Kind is "headless" or "task" or "variable" or "global").SelectMany(block => block.Lines.Skip(block.Kind == "headless" ? 0 : 1).Select((text, index) => (block.FirstLine + index + (block.Kind == "headless" ? 0 : 1), text)));
     private static IEnumerable<(int Line, string Text)> MessageLines(DaggerfallQuestSourceDefinition source) => source.Messages.SelectMany(message => message.Lines.Select((text, index) => (message.FirstLine + index + 1, text)));
+}
+
+/// <summary>One admitted classic corpus receipt with the availability its category states.</summary>
+internal sealed record DaggerfallClassicQuestCorpusReceipt(string Availability, DaggerfallFightersGuildQuestRuntimeReceipt Runtime)
+{
+    internal bool IsOrdinaryOffer => Availability == DaggerfallClassicQuestCorpusContent.Ordinary;
 }

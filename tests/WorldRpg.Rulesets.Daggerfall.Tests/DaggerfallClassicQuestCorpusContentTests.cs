@@ -21,9 +21,9 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
 
         foreach ((string id, int count) in expected)
         {
-            IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> receipts = DaggerfallClassicQuestCorpusContent.Read(
+            IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> receipts = [.. DaggerfallClassicQuestCorpusContent.Read(
                 new ProductContent(Array.Empty<ProductContentFile>()),
-                File.ReadAllBytes(Path.Combine(root, $"content/worldrpg/payloads/daggerfall.quests.{id}.json")), definitions, DaggerfallClassicQuestCorpusExpectations.Require(id));
+                File.ReadAllBytes(Path.Combine(root, $"content/worldrpg/payloads/daggerfall.quests.{id}.json")), definitions).Select(receipt => receipt.Runtime)];
             Assert.Equal(count, receipts.Count);
             Assert.All(receipts.Where(receipt => receipt.Runnable), receipt => Assert.Empty(receipt.Diagnostics));
             Assert.All(receipts.Where(receipt => !receipt.Runnable), receipt => Assert.NotEmpty(receipt.Diagnostics));
@@ -39,13 +39,13 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
         payload["categories"]![0]!["catalogGroup"] = "MagesGuild";
 
         DaggerfallContentException failure = Assert.Throws<DaggerfallContentException>(() => DaggerfallClassicQuestCorpusContent.Read(
-            new ProductContent(Array.Empty<ProductContentFile>()), Encoding.UTF8.GetBytes(payload.ToJsonString()), definitions, DaggerfallClassicQuestCorpusExpectations.Require("temples")));
+            new ProductContent(Array.Empty<ProductContentFile>()), Encoding.UTF8.GetBytes(payload.ToJsonString()), definitions));
 
         Assert.Contains("does not retain category 'general' exactly", failure.Message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Rejects_a_deleted_category_and_its_receipts_against_the_ruleset_contract()
+    public void Rejects_a_deleted_category_that_leaves_part_of_its_claimed_catalog_selection_unpublished()
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
@@ -57,10 +57,9 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
             if (quests[index]!["category"]!.GetValue<string>() == "specific") quests.RemoveAt(index);
 
         DaggerfallContentException failure = Assert.Throws<DaggerfallContentException>(() => DaggerfallClassicQuestCorpusContent.Read(
-            new ProductContent(Array.Empty<ProductContentFile>()), Encoding.UTF8.GetBytes(payload.ToJsonString()), definitions,
-            DaggerfallClassicQuestCorpusExpectations.Require("temples")));
+            new ProductContent(Array.Empty<ProductContentFile>()), Encoding.UTF8.GetBytes(payload.ToJsonString()), definitions));
 
-        Assert.Contains("exact category count", failure.Message, StringComparison.Ordinal);
+        Assert.Contains("does not agree with the admitted HolyOrder catalog selection", failure.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -68,12 +67,12 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> vampire = DaggerfallClassicQuestCorpusContent.Read(
+        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> vampire = [.. DaggerfallClassicQuestCorpusContent.Read(
             new ProductContent(Array.Empty<ProductContentFile>()),
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.merchants-vampires.json")), definitions, DaggerfallClassicQuestCorpusExpectations.Require("merchants-vampires"));
-        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> nobility = DaggerfallClassicQuestCorpusContent.Read(
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.merchants-vampires.json")), definitions).Select(receipt => receipt.Runtime)];
+        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> nobility = [.. DaggerfallClassicQuestCorpusContent.Read(
             new ProductContent(Array.Empty<ProductContentFile>()),
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.nobility.json")), definitions, DaggerfallClassicQuestCorpusExpectations.Require("nobility"));
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.nobility.json")), definitions).Select(receipt => receipt.Runtime)];
 
         Assert.Equal(10, vampire.Count(receipt => receipt.Name.StartsWith("P", StringComparison.Ordinal)));
         Assert.Contains(vampire, receipt => !receipt.Runnable && receipt.Diagnostics.Any(diagnostic => diagnostic.Reason.Contains("runner operation", StringComparison.Ordinal)));

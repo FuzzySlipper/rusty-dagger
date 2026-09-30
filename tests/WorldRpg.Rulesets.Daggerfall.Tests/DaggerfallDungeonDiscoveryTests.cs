@@ -14,7 +14,7 @@ public sealed class DaggerfallDungeonDiscoveryTests
     [Fact]
     public void Dungeon_map_content_uses_per_placement_bounds_entrance_and_door_identities()
     {
-        (string root, PrivateersHoldInputs inputs) = ReadPrivateersHold();
+        (string root, DaggerfallSiteProfile inputs) = ReadPrivateersHold();
         DaggerfallDungeonMapContent map = Assert.IsType<DaggerfallDungeonMapContent>(inputs.DungeonMap);
         using JsonDocument normalized = JsonDocument.Parse(File.ReadAllBytes(
             Path.Combine(root, "content/worldrpg/imports/privateers-hold/normalized.json")));
@@ -75,7 +75,7 @@ public sealed class DaggerfallDungeonDiscoveryTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs inputs = PrivateersHoldContent.Read(
+        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(
             GeneratedContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")),
             definitions);
@@ -93,7 +93,7 @@ public sealed class DaggerfallDungeonDiscoveryTests
     [Fact]
     public void Discovery_captures_partial_profile_scoped_progress_and_starts_each_entry_unvisited()
     {
-        (_, PrivateersHoldInputs inputs) = ReadPrivateersHold();
+        (_, DaggerfallSiteProfile inputs) = ReadPrivateersHold();
         DaggerfallDungeonMapContent map = Assert.IsType<DaggerfallDungeonMapContent>(inputs.DungeonMap);
         DaggerfallWorldProfileKey profile = inputs.ProfileKey;
         DaggerfallDungeonDiscovery discovery = new(profile, map);
@@ -148,7 +148,7 @@ public sealed class DaggerfallDungeonDiscoveryTests
     [Fact]
     public void Discovery_rejects_cross_profile_and_unknown_source_restore_ids()
     {
-        (_, PrivateersHoldInputs inputs) = ReadPrivateersHold();
+        (_, DaggerfallSiteProfile inputs) = ReadPrivateersHold();
         DaggerfallDungeonMapContent map = Assert.IsType<DaggerfallDungeonMapContent>(inputs.DungeonMap);
         DaggerfallWorldProfileKey profile = inputs.ProfileKey;
         DaggerfallDungeonDiscovery discovery = new(profile, map);
@@ -179,7 +179,7 @@ public sealed class DaggerfallDungeonDiscoveryTests
             ["destinationProfile"] = "worldrpg/imports/stone-chamber",
         });
 
-        PrivateersHoldInputs inputs = PrivateersHoldContent.Read(
+        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(
             GeneratedContent(root),
             Encoding.UTF8.GetBytes(payload.ToJsonString()),
             definitions);
@@ -195,12 +195,12 @@ public sealed class DaggerfallDungeonDiscoveryTests
         Assert.True(discovery.IsMarkerDiscovered(portal.Id));
     }
 
-    private static (string Root, PrivateersHoldInputs Inputs) ReadPrivateersHold()
+    private static (string Root, DaggerfallSiteProfile Inputs) ReadPrivateersHold()
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = GeneratedContent(root);
-        PrivateersHoldInputs inputs = PrivateersHoldContent.Read(content,
+        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(content,
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
         return (root, inputs);
     }

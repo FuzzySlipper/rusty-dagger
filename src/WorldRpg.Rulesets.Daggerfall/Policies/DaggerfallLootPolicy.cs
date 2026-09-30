@@ -129,6 +129,9 @@ internal static class DaggerfallLootPolicy
         ? DungeonTableKeys[dungeonType]
         : throw new ArgumentOutOfRangeException(nameof(dungeonType), "Daggerfall publishes nineteen dungeon loot table types (0 through 18).");
 
+    /// <summary>The loot tables the dungeon-type map selects, which an admitted base pack must therefore carry.</summary>
+    internal static IEnumerable<string> DungeonTableKeysInUse => DungeonTableKeys.Distinct(StringComparer.Ordinal);
+
     internal static bool IsClassicPotionRecipeKey(int key) => PotionRecipeKeys.Contains(key);
 
     internal static string GoldRollId(string tableKey) => $"loot.{tableKey}.gold";

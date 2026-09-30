@@ -16,6 +16,8 @@ interface DaggerHud {
   readonly resources: readonly { readonly id: string; readonly label: string; readonly current: number; readonly maximum: number }[];
   readonly lastOutcome: string;
   readonly mode?: string;
+  /** The site the session projects the player at; null before any site owns them. */
+  readonly site?: { readonly name: string } | null;
   readonly composition: CompositionIdentity;
   readonly inventory?: InventoryProjection;
   readonly character?: CharacterProjection;
@@ -192,7 +194,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const shell = document.createElement('section');
   shell.className = 'dagger-hud';
   shell.innerHTML = `
-    <div class="dagger-title"><span>Privateer's Hold</span><strong>Exploring</strong></div>
+    <div class="dagger-title"><span class="dagger-site"></span><strong>Exploring</strong></div>
     <div class="dagger-reticle" aria-hidden="true">+</div>
     <section class="dagger-vitals" aria-live="polite">
     </section>
@@ -293,6 +295,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'activation-mode', mode: activationMode.value },
   }));
   const title = shell.querySelector<HTMLElement>('.dagger-title strong')!;
+  const siteName = shell.querySelector<HTMLElement>('.dagger-title .dagger-site')!;
   const outcome = shell.querySelector<HTMLParagraphElement>('.dagger-outcome')!;
   const quests = shell.querySelector<HTMLElement>('.dagger-quests')!;
   const view = shell.querySelector<HTMLParagraphElement>('.dagger-view')!;
@@ -859,6 +862,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
 
     title.textContent = value.mode === 'paused' ? 'Paused' : value.mode === 'dead' ? 'Defeated'
       : value.mode === 'title' ? 'Title' : value.mode === 'modal' ? 'Interaction' : 'Exploring';
+    siteName.textContent = value.site?.name ?? '';
     outcome.textContent = value.lastOutcome;
     renderQuestMessages(quests, value.quests, (action) => context.intents?.claim('dagger.ui', {
       kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,

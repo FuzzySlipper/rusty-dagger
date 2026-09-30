@@ -102,7 +102,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
     private readonly Dictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> _siteDeltas = [];
     private DaggerfallWorldProfileKey _activeProfileKey;
     private DaggerfallWorldProfileKey? _returnProfileKey;
-    private PrivateersHoldAppearance _appearance => _siteProjection.Appearance;
+    private DaggerfallSiteAppearance _appearance => _siteProjection.Appearance;
     private DaggerfallDoorRuntime _doors => _siteProjection.Doors;
 
     private readonly World.DaggerfallWorldTime _time;
@@ -134,35 +134,35 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
     internal DaggerfallCinematicPresentation? Cinematics { get; }
     private readonly DaggerfallOpeningCinematics _openingCinematics;
 
-    internal DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
+    internal DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallTuning tuning)
         : this(engine, definitions, inputs, tuning, null, null, null) { }
 
     /// <summary>Explicit compiled effect composition seam for ruleset families and save reconstruction tests.</summary>
-    internal DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs,
+    internal DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs,
         DaggerfallTuning tuning, DaggerfallEffectCatalog effects)
         : this(engine, definitions, inputs, tuning, null, null, effects) { }
 
-    internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, DaggerfallMusicBundle? music = null)
+    internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallTuning tuning, DaggerfallMusicBundle? music = null)
         : this(engine, definitions, inputs, tuning, compositionIdentity, null, null, null, null, true, null, null, null, music) { }
 
-    internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, DaggerfallSiteAudioBundles audioBundles, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null, DaggerfallMusicBundle? music = null)
+    internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallTuning tuning, DaggerfallSiteAudioBundles audioBundles, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null, DaggerfallMusicBundle? music = null)
         : this(engine, definitions, inputs, tuning, compositionIdentity, null, null, audioBundles, cinematicContent, videosEnabled, questAdmission, null, disabledQuestSelection, music) { }
 
     internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
-        DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, RulesetSavePayload saved, IRandomService random)
+        DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallTuning tuning, RulesetSavePayload saved, IRandomService random)
         => Restore(engine, compositionIdentity, definitions, inputs, tuning, saved, random, (DaggerfallEffectCatalog?)null);
 
     internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
-        DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, RulesetSavePayload saved,
+        DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallTuning tuning, RulesetSavePayload saved,
         IRandomService random, DaggerfallSiteAudioBundles audioBundles, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallSiteProfiles? profiles = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null, DaggerfallMusicBundle? music = null)
         => Restore(engine, compositionIdentity, definitions, inputs, tuning, saved, random, null, audioBundles, cinematicContent, videosEnabled, questAdmission, profiles, disabledQuestSelection, music);
 
     internal static DaggerfallSession Restore(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity,
-        DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, RulesetSavePayload saved,
+        DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallTuning tuning, RulesetSavePayload saved,
         IRandomService random, DaggerfallEffectCatalog? effects, DaggerfallSiteAudioBundles? audioBundles = null, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallSiteProfiles? profiles = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null, DaggerfallMusicBundle? music = null)
     {
         DaggerfallSavePayload raw = DaggerfallSavePayload.Read(saved);
-        PrivateersHoldInputs activeInputs = profiles is null
+        DaggerfallSiteProfile activeInputs = profiles is null
             ? inputs
             : raw.Site.ActiveProfile is { } profile
                 ? profiles.Require(profile.Require())
@@ -171,7 +171,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         return new DaggerfallSession(engine, definitions, activeInputs, tuning, compositionIdentity, payload, effects, audioBundles, cinematicContent, videosEnabled, questAdmission, profiles, disabledQuestSelection, music);
     }
 
-    private DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs,
+    private DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs,
         DaggerfallTuning tuning, ResolvedCompositionIdentity? compositionIdentity, DaggerfallSavePayload? saved,
         DaggerfallEffectCatalog? effects, DaggerfallSiteAudioBundles? audioBundles = null, ProductContent? cinematicContent = null, bool videosEnabled = true, DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallSiteProfiles? profiles = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null, DaggerfallMusicBundle? music = null)
     {
@@ -237,7 +237,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             _spatial = new SpatialMovementSystem(engine.Spatial, engine.Content, inputs.SpatialArtifact, tuning.Spatial);
             _dungeonVisibility = new DaggerfallDungeonVisibility(_spatial, tuning.Spatial.CollisionVoxelSize);
             partiallyConstructed.Add(_spatial);
-            foreach ((DaggerfallWorldProfileKey key, PrivateersHoldInputs admitted) in ActionProfiles(inputs, profiles))
+            foreach ((DaggerfallWorldProfileKey key, DaggerfallSiteProfile admitted) in ActionProfiles(inputs, profiles))
             {
                 DaggerfallDungeonActionGraphSnapshot? snapshot = saved?.DungeonActions
                     .SingleOrDefault(value => StringComparer.Ordinal.Equals(value.ProfileId, key.LogicalId));
@@ -250,7 +250,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             }
             foreach (DaggerfallDungeonDiscoverySnapshot snapshot in saved?.DungeonDiscovery ?? [])
             {
-                PrivateersHoldInputs admitted = snapshot.Profile == inputs.ProfileKey
+                DaggerfallSiteProfile admitted = snapshot.Profile == inputs.ProfileKey
                     ? inputs
                     : (profiles ?? throw new ArgumentException("Saved dungeon discovery requires admitted site profiles.", nameof(saved))).Require(snapshot.Profile);
                 DaggerfallDungeonMapContent map = admitted.DungeonMap
@@ -492,14 +492,14 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
     /// <summary>The selected site's one authoritative RDB door owner for activation, spells, and dungeon actions.</summary>
     internal DaggerfallDoorRuntime Doors => _doors;
 
-    private static IReadOnlyList<(DaggerfallWorldProfileKey Key, PrivateersHoldInputs Inputs)> ActionProfiles(
-        PrivateersHoldInputs active,
+    private static IReadOnlyList<(DaggerfallWorldProfileKey Key, DaggerfallSiteProfile Inputs)> ActionProfiles(
+        DaggerfallSiteProfile active,
         DaggerfallSiteProfiles? profiles)
     {
         ArgumentNullException.ThrowIfNull(active);
         if (profiles is null) return [(active.ProfileKey, active)];
 
-        Dictionary<DaggerfallWorldProfileKey, PrivateersHoldInputs> admitted = [];
+        Dictionary<DaggerfallWorldProfileKey, DaggerfallSiteProfile> admitted = [];
         foreach (DaggerfallWorldProfileKey key in profiles.Keys)
             admitted.Add(key, profiles.Require(key));
         admitted.TryAdd(active.ProfileKey, active);
@@ -512,7 +512,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             .ToArray();
     }
 
-    private void EnsureDungeonActionGraph(DaggerfallWorldProfileKey key, PrivateersHoldInputs inputs)
+    private void EnsureDungeonActionGraph(DaggerfallWorldProfileKey key, DaggerfallSiteProfile inputs)
     {
         key.Validate();
         ArgumentNullException.ThrowIfNull(inputs);
@@ -541,7 +541,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             EnsureDungeonActionGraph(key, profiles.Require(key));
     }
 
-    private DaggerfallAudioBundle? AudioFor(PrivateersHoldInputs inputs) => _siteAudioBundles?.Require(inputs.ProfileKey);
+    private DaggerfallAudioBundle? AudioFor(DaggerfallSiteProfile inputs) => _siteAudioBundles?.Require(inputs.ProfileKey);
 
     /// <summary>
     /// Relocates the existing player to an admitted named anchor. The destination is resolved
@@ -552,7 +552,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         destination = (destination ?? throw new ArgumentNullException(nameof(destination))).Validate();
-        PrivateersHoldInputs target = (_siteProfiles ?? throw new InvalidOperationException("Site profiles have not been admitted.")).Require(destination.Profile);
+        DaggerfallSiteProfile target = (_siteProfiles ?? throw new InvalidOperationException("Site profiles have not been admitted.")).Require(destination.Profile);
         DaggerfallSiteAnchor anchor = target.RequireAnchor(destination.AnchorId);
         if (destination.ActorId != DaggerfallActorIdentity.PlayerEntityId)
         {
@@ -580,7 +580,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
     private bool TryTransitionTo(DaggerfallWorldProfileKey destination, DaggerfallSiteAnchor? arrival, bool useReturnDestination)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        PrivateersHoldInputs target = (_siteProfiles ?? throw new InvalidOperationException("Site profiles have not been admitted.")).Require(destination);
+        DaggerfallSiteProfile target = (_siteProfiles ?? throw new InvalidOperationException("Site profiles have not been admitted.")).Require(destination);
         WorldPoint sourcePosition = State.PlayerControl.Position ?? throw new InvalidOperationException("A site transition requires a player position.");
         DaggerfallSiteReturnDestination? returnDestination = useReturnDestination && _returnProfileKey == destination
             ? _site.RequireReturnDestination()
@@ -893,7 +893,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             .ToHashSet();
     }
 
-    private void UnloadSiteActors(PrivateersHoldInputs source, DaggerfallSiteRuntimeDelta? delta)
+    private void UnloadSiteActors(DaggerfallSiteProfile source, DaggerfallSiteRuntimeDelta? delta)
     {
         long[] ids = [.. source.Project.Actors.Keys.Concat(delta?.DynamicActors.Select(actor => actor.EntityId) ?? []).Order()];
         // The delta was captured while these actors and their target-bound contributions were live.
@@ -932,7 +932,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         }
     }
 
-    private void RestoreAuthoredSiteActors(PrivateersHoldInputs destination, DaggerfallSiteRuntimeDelta? delta)
+    private void RestoreAuthoredSiteActors(DaggerfallSiteProfile destination, DaggerfallSiteRuntimeDelta? delta)
     {
         Dictionary<long, DaggerfallActorSave> saved = delta?.Actors.ToDictionary(value => value.EntityId) ?? [];
         foreach (AuthoredActor placement in destination.Project.Actors.Values.OrderBy(value => value.EntityId))
@@ -1860,7 +1860,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             ActivationView, State.Quests.ReadPresentation(QuestTextContext), _notebook.Read(),
             DaggerfallTransportProjection.Read(State.Transport, State.Inventory.Read(), TransportAccess(),
                 ownsShip: State.Property.OwnsShip, wagon: State.Wagon), _dungeonTextProjection, _deathPresentation.View, RestView,
-            ReadTravelPresentation());
+            ReadTravelPresentation(), Site.ActiveSite?.Name);
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors, _groundContainers.All,

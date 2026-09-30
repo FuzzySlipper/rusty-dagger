@@ -31,8 +31,8 @@ public sealed partial class NormalizedRuntimeSeamTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs source = ReadInputs(root);
-        PrivateersHoldInputs inputs = SameContentAt(source, source.ProfileKey.Site,
+        DaggerfallSiteProfile source = ReadInputs(root);
+        DaggerfallSiteProfile inputs = SameContentAt(source, source.ProfileKey.Site,
             DaggerfallWorldProfileKind.Exterior, "held-enchantment-rest");
         List<string> releases = [];
         ContentFake content = new(releases);

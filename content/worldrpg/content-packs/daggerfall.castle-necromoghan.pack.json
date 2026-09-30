@@ -2,6 +2,7 @@
   "kind": "worldrpg.content-pack",
   "id": "daggerfall.castle-necromoghan",
   "ruleset": "daggerfall",
+  "role": "daggerfall.site",
   "dependencies": [
     { "id": "daggerfall.base" }
   ],

@@ -111,7 +111,7 @@ public sealed class WorldRpgSaveStoreTests
         using WorldRpgSaveStore store = new(engine, "worldrpg-test");
         ProductContent content = Content(
             ("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"test","contentPacks":[{"id":"test.pack"}],"tuning":{"id":"test.tuning"}}"""),
-            ("worldrpg/content-packs/test.pack.json", """{"kind":"worldrpg.content-pack","id":"test.pack","ruleset":"test","dependencies":[],"payload":"payload/pack.json"}"""),
+            ("worldrpg/content-packs/test.pack.json", """{"kind":"worldrpg.content-pack","id":"test.pack","ruleset":"test","role":"test.content","dependencies":[],"payload":"payload/pack.json"}"""),
             ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"test","payload":"payload/tuning.json"}"""),
             ("payload/pack.json", "{}"),
             ("payload/tuning.json", "{}"));

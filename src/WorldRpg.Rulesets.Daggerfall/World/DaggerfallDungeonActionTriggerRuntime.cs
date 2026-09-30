@@ -32,7 +32,7 @@ internal sealed class DaggerfallDungeonActionTriggerRuntime : IDisposable
         EntityDirectory entities,
         ISpatialService spatial,
         SpatialMovementSystem movement,
-        IEnumerable<(DaggerfallWorldProfileKey Key, PrivateersHoldInputs Inputs)> profiles,
+        IEnumerable<(DaggerfallWorldProfileKey Key, DaggerfallSiteProfile Inputs)> profiles,
         DaggerfallWorldProfileKey activeProfile,
         SpatialEntityCollider? restoredPlayerCollider = null)
     {
@@ -46,7 +46,7 @@ internal sealed class DaggerfallDungeonActionTriggerRuntime : IDisposable
 
         try
         {
-            foreach ((DaggerfallWorldProfileKey key, PrivateersHoldInputs inputs) in profiles)
+            foreach ((DaggerfallWorldProfileKey key, DaggerfallSiteProfile inputs) in profiles)
                 AdmitProfile(key, inputs);
             if (!_profiles.ContainsKey(activeProfile))
                 throw new InvalidOperationException($"Dungeon action trigger profile '{activeProfile.LogicalId}' is not admitted.");
@@ -71,7 +71,7 @@ internal sealed class DaggerfallDungeonActionTriggerRuntime : IDisposable
     }
 
     /// <summary>Admits one additional profile before it can become active.</summary>
-    internal void AdmitProfile(DaggerfallWorldProfileKey key, PrivateersHoldInputs inputs)
+    internal void AdmitProfile(DaggerfallWorldProfileKey key, DaggerfallSiteProfile inputs)
     {
         ThrowIfDisposed();
         key.Validate();
@@ -209,7 +209,7 @@ internal sealed class DaggerfallDungeonActionTriggerRuntime : IDisposable
         DisposeProfiles();
     }
 
-    private ProfileRuntime BuildProfile(DaggerfallWorldProfileKey key, PrivateersHoldInputs inputs)
+    private ProfileRuntime BuildProfile(DaggerfallWorldProfileKey key, DaggerfallSiteProfile inputs)
     {
         if (inputs.DungeonActions.Count > 4096)
             throw new InvalidOperationException($"Dungeon profile '{key.LogicalId}' admits {inputs.DungeonActions.Count} actions; Engine trigger definitions are bounded to 4096.");

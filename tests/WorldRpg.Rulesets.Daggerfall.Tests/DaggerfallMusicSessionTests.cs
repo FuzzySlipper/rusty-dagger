@@ -19,7 +19,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = FullContent(root);
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         // The site's own classic sidecar names the cues it admits; the bytes live in the product-wide
         // music bundle. A site that named none would compose with no score, which the last fact covers.
         Assert.NotEmpty(inputs.Music);
@@ -63,8 +63,8 @@ public sealed partial class NormalizedRuntimeSeamTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = FullContent(root);
-        PrivateersHoldInputs inputs = ReadInputs(root);
-        PrivateersHoldInputs castle = ReadProfile(root, content, definitions, "daggerfall.castle-necromoghan.json");
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        DaggerfallSiteProfile castle = ReadProfile(root, content, definitions, "daggerfall.castle-necromoghan.json");
         DaggerfallMusicBundle bundle = DaggerfallMusicBundle.Admit(content, inputs.Music)
             ?? throw new InvalidOperationException("The regenerated Privateer's Hold sidecar carries no admitted music cue.");
         List<string> releases = [];
@@ -109,7 +109,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = FullContent(root);
-        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
         // A publication without music is a supported state, not a failure: the join answers nothing and
         // the ordinary session runs with no score rather than a substituted track.
         Assert.Null(DaggerfallMusicBundle.Admit(content, []));
@@ -133,7 +133,7 @@ public sealed partial class NormalizedRuntimeSeamTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = FullContent(root);
-        PrivateersHoldInputs outside = ReadProfile(root, content, definitions, "daggerfall.charing-interior-1-1-0.json");
+        DaggerfallSiteProfile outside = ReadProfile(root, content, definitions, "daggerfall.charing-interior-1-1-0.json");
         DaggerfallMusicBundle bundle = DaggerfallMusicBundle.Admit(content, outside.Music)
             ?? throw new InvalidOperationException("The regenerated Charing sidecar carries no admitted music cue.");
         List<string> releases = [];

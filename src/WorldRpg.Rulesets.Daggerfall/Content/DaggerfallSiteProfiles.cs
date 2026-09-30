@@ -90,13 +90,13 @@ internal sealed record DaggerfallRelocationDestination(
 /// <summary>Admitted, normalized world closures selectable by their real Daggerfall site identity.</summary>
 internal sealed class DaggerfallSiteProfiles
 {
-    private readonly IReadOnlyDictionary<DaggerfallWorldProfileKey, PrivateersHoldInputs> _profiles;
+    private readonly IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallSiteProfile> _profiles;
 
-    internal DaggerfallSiteProfiles(IEnumerable<PrivateersHoldInputs> profiles)
+    internal DaggerfallSiteProfiles(IEnumerable<DaggerfallSiteProfile> profiles)
     {
         ArgumentNullException.ThrowIfNull(profiles);
-        Dictionary<DaggerfallWorldProfileKey, PrivateersHoldInputs> admitted = [];
-        foreach (PrivateersHoldInputs profile in profiles)
+        Dictionary<DaggerfallWorldProfileKey, DaggerfallSiteProfile> admitted = [];
+        foreach (DaggerfallSiteProfile profile in profiles)
         {
             ArgumentNullException.ThrowIfNull(profile);
             if (profile.Site is not DaggerfallSiteId)
@@ -107,27 +107,27 @@ internal sealed class DaggerfallSiteProfiles
             if (!admitted.TryAdd(key, profile))
                 throw new ArgumentException($"The selected content repeats world profile '{key.LogicalId}'.", nameof(profiles));
         }
-        _profiles = new ReadOnlyDictionary<DaggerfallWorldProfileKey, PrivateersHoldInputs>(admitted);
+        _profiles = new ReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallSiteProfile>(admitted);
     }
 
     internal IReadOnlyCollection<DaggerfallWorldProfileKey> Keys => _profiles.Keys.ToArray();
-    internal bool TryGet(DaggerfallWorldProfileKey key, out PrivateersHoldInputs profile) => _profiles.TryGetValue(key, out profile!);
-    internal PrivateersHoldInputs Require(DaggerfallWorldProfileKey key) => TryGet(key, out PrivateersHoldInputs profile)
+    internal bool TryGet(DaggerfallWorldProfileKey key, out DaggerfallSiteProfile profile) => _profiles.TryGetValue(key, out profile!);
+    internal DaggerfallSiteProfile Require(DaggerfallWorldProfileKey key) => TryGet(key, out DaggerfallSiteProfile profile)
         ? profile
         : throw new InvalidOperationException($"No normalized world profile is admitted for '{key.LogicalId}'.");
 
-    internal PrivateersHoldInputs RequireLogicalProfile(string logicalId)
+    internal DaggerfallSiteProfile RequireLogicalProfile(string logicalId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(logicalId);
-        PrivateersHoldInputs[] matches = _profiles.Where(entry => StringComparer.Ordinal.Equals(entry.Key.LogicalId, logicalId))
+        DaggerfallSiteProfile[] matches = _profiles.Where(entry => StringComparer.Ordinal.Equals(entry.Key.LogicalId, logicalId))
             .Select(entry => entry.Value).ToArray();
         return matches.Length == 1 ? matches[0]
             : throw new InvalidOperationException($"No unique admitted world profile has logical id '{logicalId}'.");
     }
 
-    internal PrivateersHoldInputs RequireUniqueSite(DaggerfallSiteId site)
+    internal DaggerfallSiteProfile RequireUniqueSite(DaggerfallSiteId site)
     {
-        PrivateersHoldInputs[] matches = _profiles.Where(entry => entry.Key.Site == site).Select(entry => entry.Value).ToArray();
+        DaggerfallSiteProfile[] matches = _profiles.Where(entry => entry.Key.Site == site).Select(entry => entry.Value).ToArray();
         return matches.Length == 1 ? matches[0]
             : throw new InvalidOperationException($"Saved site '{site}' does not identify one world profile.");
     }

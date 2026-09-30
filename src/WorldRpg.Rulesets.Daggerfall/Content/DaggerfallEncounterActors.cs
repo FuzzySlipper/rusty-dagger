@@ -10,8 +10,11 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// </summary>
 internal static class DaggerfallEncounterActors
 {
+    /// <summary>The donor numbers each career's class mobile from here, in career record order.</summary>
     internal const int FirstClassMobile = 128;
-    internal const int LastClassMobile = 146;
+
+    /// <summary>The action every materialized class encounter fights through with its generated equipment.</summary>
+    internal const string ClassEquippedMeleeAction = "enemy-class-equipped-melee";
 
     internal static void AddMissing(
         IDictionary<DaggerfallActorId, DaggerfallActorDefinition> actors,
@@ -23,15 +26,13 @@ internal static class DaggerfallEncounterActors
         ArgumentNullException.ThrowIfNull(catalogs);
         ArgumentNullException.ThrowIfNull(mobiles);
         ArgumentNullException.ThrowIfNull(vocabulary);
-        if (catalogs.Careers.Count != 19)
-            throw new InvalidOperationException("Classic class-mobile construction requires the nineteen normalized career records.");
-
-        for (int mobileId = FirstClassMobile; mobileId <= LastClassMobile; mobileId++)
+        for (int index = 0; index < catalogs.Careers.Count; index++)
         {
+            int mobileId = FirstClassMobile + index;
             DaggerfallMobileDefinition mobile = mobiles.Mobiles.TryGetValue(mobileId, out DaggerfallMobileDefinition? value)
                 ? value : throw new InvalidOperationException($"Classic class mobile {mobileId} is absent from the normalized mobile catalog.");
             if (mobile.Actor is not null) continue;
-            DaggerfallCareerDefinition career = catalogs.Careers[mobileId - FirstClassMobile];
+            DaggerfallCareerDefinition career = catalogs.Careers[index];
             DaggerfallActorId id = ActorFor(mobile);
             if (!actors.TryAdd(id, Create(id, mobile, career, vocabulary)))
                 throw new InvalidOperationException($"Classic class encounter actor '{id.Value}' is already defined.");
@@ -52,7 +53,7 @@ internal static class DaggerfallEncounterActors
         if (actor.Kind != DaggerfallActorKinds.EnemyClass) return actor;
         return actor with
         {
-            ActionId = actor.ActionId == "thief-strike" ? "enemy-class-equipped-melee" : actor.ActionId,
+            ActionId = actor.ActionId == "thief-strike" ? ClassEquippedMeleeAction : actor.ActionId,
             Rewards = new DaggerfallRewardPolicy(0),
         };
     }
@@ -89,7 +90,7 @@ internal static class DaggerfallEncounterActors
             // progression through its skill-use path, so no synthetic flat XP is attached here.
             new DaggerfallRewardPolicy(0), 0, mobile.DonorId, career.HitPointsPerLevel, [], Team(mobile.Team), null,
             mobile.LootTableKey ?? throw new InvalidOperationException($"Classic class mobile {mobile.DonorId} has no published EnemyBasics loot table key."),
-            null, null, "enemy-class-equipped-melee", [], DaggerfallActorPresentationDefinition.None, GroundOnSpawn: true, Career: career.Id);
+            null, null, ClassEquippedMeleeAction, [], DaggerfallActorPresentationDefinition.None, GroundOnSpawn: true, Career: career.Id);
     }
 
     private static string Team(string source) => source switch

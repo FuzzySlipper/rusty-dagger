@@ -98,6 +98,7 @@
   "placements": [],
   "world": {
     "publicationRoot": "worldrpg/imports/charing/exterior",
+    "audioBundle": "daggerfall.charing-exterior-audio",
     "appearance": {
       "tint": [
         0.72,

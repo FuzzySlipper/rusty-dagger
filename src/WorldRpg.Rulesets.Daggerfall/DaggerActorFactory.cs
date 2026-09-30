@@ -32,7 +32,7 @@ internal static class DaggerActorFactory
 {
     private const ulong PlayerMechanicsEntityId = (ulong)DaggerfallActorIdentity.PlayerEntityId;
     internal static CapacityMetricId ClassicWeightMetric { get; } = CapacityMetricId.Parse("daggerfall.classic-weight");
-    internal static DaggerActorAssembly Create(IRandomService random, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallSavePayload? saved,
+    internal static DaggerActorAssembly Create(IRandomService random, DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallSavePayload? saved,
         DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null)
     {
         ActorsState actors = new();
@@ -101,7 +101,7 @@ internal static class DaggerActorFactory
             foreach (AuthoredActor source in inputs.Project.Actors.Values)
             {
                 if (!definitions.Actors.TryGetValue(source.ActorId, out DaggerfallActorDefinition? definition))
-                    throw new InvalidOperationException($"Privateer's Hold placement '{source.EntityId}' refers to missing actor '{source.ActorId.Value}'.");
+                    throw new InvalidOperationException($"Site placement '{source.EntityId}' refers to missing actor '{source.ActorId.Value}'.");
                 ActorState actor = actors.CreateActor(source.EntityId, new EntityTypeId(definition.Id.Value),
                     mechanics.CreateStats(definition, InitialVitals(random, definition, source.EntityId)),
                     new ActorPose(source.Position, 0f), definition.Combat.Health.Value);
@@ -392,7 +392,7 @@ internal static class DaggerActorFactory
         return new DaggerfallVitalValues(health, 0, 0);
     }
 
-    private static void ValidateInitialEntityIds(PrivateersHoldInputs inputs, IReadOnlyList<DaggerfallLoadoutEntry> loadout) =>
+    private static void ValidateInitialEntityIds(DaggerfallSiteProfile inputs, IReadOnlyList<DaggerfallLoadoutEntry> loadout) =>
         _ = AdmittedAuthoredEntityIds(inputs, loadout);
 
     /// <summary>
@@ -405,7 +405,7 @@ internal static class DaggerActorFactory
     /// why cross-kind sharing is rejected here rather than allowed. Actor construction and the
     /// allocator both take this set; neither rebuilds it.
     /// </summary>
-    internal static HashSet<ulong> AdmittedAuthoredEntityIds(PrivateersHoldInputs inputs, IReadOnlyList<DaggerfallLoadoutEntry> loadout)
+    internal static HashSet<ulong> AdmittedAuthoredEntityIds(DaggerfallSiteProfile inputs, IReadOnlyList<DaggerfallLoadoutEntry> loadout)
     {
         HashSet<ulong> ids = [PlayerMechanicsEntityId];
         foreach (AuthoredActor actor in inputs.Project.Actors.Values)

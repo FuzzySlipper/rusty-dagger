@@ -440,11 +440,11 @@ public sealed class PublishedContentDeliveryTests
         ProductContent content = AdmittedContent();
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
             content.ReadBytes("worldrpg/payloads/daggerfall.base.json"));
-        PrivateersHoldInputs inputs = PrivateersHoldContent.Read(
+        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(
             content,
             content.ReadBytes("worldrpg/payloads/daggerfall.privateers-hold.json"),
             definitions);
-        PrivateersHoldInputs castle = PrivateersHoldContent.Read(
+        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(
             content,
             content.ReadBytes("worldrpg/payloads/daggerfall.castle-necromoghan.json"),
             definitions);

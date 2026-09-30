@@ -11,8 +11,8 @@ public sealed class GameCompositionTests
     {
         ProductContent content = Content(
             ("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"test","contentPacks":[{"id":"test.base"},{"id":"test.world"}],"tuning":{"id":"test.tuning"}}"""),
-            ("worldrpg/content-packs/test.base.pack.json", """{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"test","dependencies":[],"payload":"payload/base.json"}"""),
-            ("worldrpg/content-packs/test.world.pack.json", """{"kind":"worldrpg.content-pack","id":"test.world","ruleset":"test","dependencies":[{"id":"test.base"}],"payload":"payload/world.json"}"""),
+            ("worldrpg/content-packs/test.base.pack.json", """{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"test","role":"test.content","dependencies":[],"payload":"payload/base.json"}"""),
+            ("worldrpg/content-packs/test.world.pack.json", """{"kind":"worldrpg.content-pack","id":"test.world","ruleset":"test","role":"test.content","dependencies":[{"id":"test.base"}],"payload":"payload/world.json"}"""),
             ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"test","payload":"payload/tuning.json"}"""),
             ("payload/base.json", "base"),
             ("payload/world.json", "world"),
@@ -21,6 +21,7 @@ public sealed class GameCompositionTests
         ResolvedGameComposition composition = GameCompositionResolver.Resolve(content, new GameBundleId("test.bundle")).RequireComposition();
 
         Assert.Equal(["test.base", "test.world"], composition.ContentPacks.Select(pack => pack.Id.Value));
+        Assert.All(composition.ContentPacks, pack => Assert.Equal(new ContentPackRoleId("test.content"), pack.Role));
         Assert.Equal("test", composition.Ruleset.Value);
         Assert.Equal("test.tuning", composition.Tuning.Id.Value);
         Assert.Equal("test.bundle", composition.Identity.Bundle.Value);
@@ -39,8 +40,8 @@ public sealed class GameCompositionTests
         string dependency = variant == "missing" ? "{\"id\":\"test.missing\"}" : "{\"id\":\"test.world\"}";
         ProductContent content = Content(
             ("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"test","contentPacks":[{"id":"test.base"}],"tuning":{"id":"test.tuning"}}"""),
-            ("worldrpg/content-packs/test.base.pack.json", $$"""{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"test","dependencies":[{{dependency}}],"payload":"payload/base.json"}"""),
-            ("worldrpg/content-packs/test.world.pack.json", """{"kind":"worldrpg.content-pack","id":"test.world","ruleset":"test","dependencies":[{"id":"test.base"}],"payload":"payload/world.json"}"""),
+            ("worldrpg/content-packs/test.base.pack.json", $$"""{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"test","role":"test.content","dependencies":[{{dependency}}],"payload":"payload/base.json"}"""),
+            ("worldrpg/content-packs/test.world.pack.json", """{"kind":"worldrpg.content-pack","id":"test.world","ruleset":"test","role":"test.content","dependencies":[{"id":"test.base"}],"payload":"payload/world.json"}"""),
             ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"test","payload":"payload/tuning.json"}"""),
             ("payload/base.json", "base"),
             ("payload/world.json", "world"),
@@ -58,7 +59,7 @@ public sealed class GameCompositionTests
         ProductContent content = Content(
             ("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"test","contentPacks":[{"id":"test.base"}],"tuning":{"id":"test.tuning"}}"""),
             ("worldrpg/bundles/test-copy.bundle.json", """{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"test","contentPacks":[{"id":"test.base"}],"tuning":{"id":"test.tuning"}}"""),
-            ("worldrpg/content-packs/test.base.pack.json", """{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"other","dependencies":[],"payload":"payload/base.json"}"""),
+            ("worldrpg/content-packs/test.base.pack.json", """{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"other","role":"test.content","dependencies":[],"payload":"payload/base.json"}"""),
             ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"other","payload":"payload/tuning.json"}"""),
             ("payload/base.json", "base"),
             ("payload/tuning.json", "tuning"));
@@ -73,15 +74,19 @@ public sealed class GameCompositionTests
     [Theory]
     [InlineData("bundle", "ruleset")]
     [InlineData("pack", "ruleset")]
+    [InlineData("pack-role", "role")]
     [InlineData("tuning", "payload")]
     public void Resolver_reports_required_current_descriptor_fields(string descriptor, string missingProperty)
     {
         string bundle = descriptor == "bundle"
             ? """{"kind":"worldrpg.game-bundle","id":"test.bundle","contentPacks":[{"id":"test.base"}],"tuning":{"id":"test.tuning"}}"""
             : """{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"test","contentPacks":[{"id":"test.base"}],"tuning":{"id":"test.tuning"}}""";
-        string pack = descriptor == "pack"
-            ? """{"kind":"worldrpg.content-pack","id":"test.base","dependencies":[],"payload":"payload/base.json"}"""
-            : """{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"test","dependencies":[],"payload":"payload/base.json"}""";
+        string pack = descriptor switch
+        {
+            "pack" => """{"kind":"worldrpg.content-pack","id":"test.base","role":"test.content","dependencies":[],"payload":"payload/base.json"}""",
+            "pack-role" => """{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"test","dependencies":[],"payload":"payload/base.json"}""",
+            _ => """{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"test","role":"test.content","dependencies":[],"payload":"payload/base.json"}""",
+        };
         string tuning = descriptor == "tuning"
             ? """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"test"}"""
             : """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"test","payload":"payload/tuning.json"}""";
@@ -102,7 +107,7 @@ public sealed class GameCompositionTests
     {
         ResolvedGameComposition composition = GameCompositionResolver.Resolve(Content(
             ("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"test","contentPacks":[{"id":"test.base"}],"tuning":{"id":"test.tuning"}}"""),
-            ("worldrpg/content-packs/test.base.pack.json", """{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"test","dependencies":[],"payload":"payload/base.json"}"""),
+            ("worldrpg/content-packs/test.base.pack.json", """{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"test","role":"test.content","dependencies":[],"payload":"payload/base.json"}"""),
             ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"test","payload":"payload/tuning.json"}"""),
             ("payload/base.json", "base"), ("payload/tuning.json", "tuning")), new GameBundleId("test.bundle")).RequireComposition();
 

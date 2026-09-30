@@ -14,7 +14,6 @@ internal static class DaggerfallFightersGuildQuestCorpusContent
         JsonElement quests = document.RootElement.GetProperty("quests");
         DaggerfallQuestCatalogRow[] catalog = [.. definitions.QuestSources.Catalog.Rows
             .Where(row => row.Active && string.Equals(row.Group, "FightersGuild", StringComparison.Ordinal))];
-        if (catalog.Length != 20) throw new DaggerfallContentException(["The admitted quest catalog does not retain exactly twenty active Fighters Guild entries."]);
         List<DaggerfallFightersGuildQuestRuntimeReceipt> receipts = [];
         HashSet<string> names = new(StringComparer.Ordinal);
         HashSet<string> sourceFiles = new(StringComparer.Ordinal);
@@ -53,7 +52,7 @@ internal static class DaggerfallFightersGuildQuestCorpusContent
             catch (ArgumentException exception) { diagnostics.Add(new DaggerfallQuestDiagnosticDefinition(1, sourceFile, exception.Message)); }
             receipts.Add(new(name, sourceFile, diagnostics.Count == 0, diagnostics));
         }
-        if (receipts.Count != catalog.Length) throw new DaggerfallContentException([$"Fighters Guild receipt contains {receipts.Count} records rather than the retained twenty."]);
+        if (receipts.Count != catalog.Length) throw new DaggerfallContentException([$"Fighters Guild receipt contains {receipts.Count} records rather than the {catalog.Length} active entries the admitted catalog selects."]);
         return receipts;
     }
 

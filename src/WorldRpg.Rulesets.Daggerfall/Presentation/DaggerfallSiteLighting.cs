@@ -21,7 +21,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     private float _ambientLevel;
     private bool _disposed;
 
-    internal DaggerfallSiteLighting(IGraphicsService graphics, ICameraViewService camera, PrivateersHoldInputs inputs,
+    internal DaggerfallSiteLighting(IGraphicsService graphics, ICameraViewService camera, DaggerfallSiteProfile inputs,
         DaggerfallSiteLightingTuning tuning, DaggerfallCalendar calendar)
     {
         ArgumentNullException.ThrowIfNull(graphics);
