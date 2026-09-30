@@ -17,7 +17,7 @@ public sealed class DaggerfallDialogueTests
     [Fact]
     public void Registered_talk_target_resolves_directions_and_social_skill_use_persists()
     {
-        using NormalizedRuntimeSeamTests.ConditionSessionFixture fixture = new();
+        using ConditionSessionFixture fixture = new();
         DaggerfallSession session = fixture.Session;
         TalkTarget talk = new(session, fixture.Definitions);
         DaggerfallActivationOutcome opened = talk.Service.ActivateNpc(new(DaggerfallActivationMode.Talk, talk.Target));
@@ -54,7 +54,7 @@ public sealed class DaggerfallDialogueTests
     [InlineData("removed")]
     public void Choice_is_rejected_when_its_registered_target_is_no_longer_live_here(string change)
     {
-        using NormalizedRuntimeSeamTests.ConditionSessionFixture fixture = new();
+        using ConditionSessionFixture fixture = new();
         TalkTarget talk = new(fixture.Session, fixture.Definitions);
         Assert.True(talk.Service.ActivateNpc(new(DaggerfallActivationMode.Talk, talk.Target)).Applied);
         string revision = Assert.IsType<DaggerfallDialogueView>(talk.View).Revision;
@@ -72,7 +72,7 @@ public sealed class DaggerfallDialogueTests
     [Fact]
     public void Closed_dialogue_rejects_a_choice_from_its_previous_revision()
     {
-        using NormalizedRuntimeSeamTests.ConditionSessionFixture fixture = new();
+        using ConditionSessionFixture fixture = new();
         TalkTarget talk = new(fixture.Session, fixture.Definitions);
         Assert.True(talk.Service.ActivateNpc(new(DaggerfallActivationMode.Talk, talk.Target)).Applied);
         string revision = Assert.IsType<DaggerfallDialogueView>(talk.View).Revision;

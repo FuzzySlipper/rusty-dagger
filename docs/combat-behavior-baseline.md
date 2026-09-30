@@ -35,7 +35,9 @@ Kit attack types are under `src/WorldRpg.Kit/Combat/`.
 
 ## Existing evidence
 
-`tests/WorldRpg.Rulesets.Daggerfall.Tests/NormalizedRuntimeSeamTests.cs` covers:
+The session suites in `tests/WorldRpg.Rulesets.Daggerfall.Tests/` (`PlayerAttackSessionTests`,
+`PlayerViewmodelTests`, `EnemyCombatSessionTests`, `ControlsInputSessionTests` and
+`SessionPersistenceTests`) cover:
 
 - Empty-space swing: five stamina spent and a six-step cooldown with a
   0.125-second fixed step (`Player_swing_admission_starts_once_for_empty_space_and_explicit_material_rejection`).

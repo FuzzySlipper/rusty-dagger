@@ -7,10 +7,11 @@ using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
-public sealed partial class NormalizedRuntimeSeamTests
+public sealed class DaggerfallHeldEnchantmentSessionTests
 {
     [Fact]
     public void Holy_place_uses_the_admitted_interior_building_not_the_location_kind()

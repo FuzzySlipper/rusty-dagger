@@ -21,7 +21,7 @@ public sealed class DaggerfallItemConditionServiceTests
     [Fact]
     public void Broken_equipped_item_survives_actual_session_reload_then_repairs_and_reequips_with_its_durable_identity()
     {
-        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        using var fixture = new ConditionSessionFixture();
         DaggerfallSession source = fixture.Session;
         source.State.Character.BeginChoices();
         source.State.Character.ReplacePending(source.State.Character.ReadCreation().Current with
@@ -73,7 +73,7 @@ public sealed class DaggerfallItemConditionServiceTests
     {
         // The save path used to require a published magic item, so an item the item maker had enchanted
         // could not be stored at all. A setting is now stored as it stands and comes back on the item.
-        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        using var fixture = new ConditionSessionFixture();
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(fixture.Session.CaptureSave());
         DaggerfallUniqueSave target = saved.Inventory.UniqueItems.First();
         string settingKey = DaggerfallEnchantmentSettings.All.Single(candidate => candidate.Type == 7 && candidate.Param == 0).Key;
@@ -95,7 +95,7 @@ public sealed class DaggerfallItemConditionServiceTests
     [Fact]
     public void Restore_rejects_unknown_or_incompatible_enchantment_metadata_before_materializing_items()
     {
-        using var fixture = new NormalizedRuntimeSeamTests.ConditionSessionFixture();
+        using var fixture = new ConditionSessionFixture();
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(fixture.Session.CaptureSave());
         DaggerfallUniqueSave unknownTarget = saved.Inventory.UniqueItems.First();
         DaggerfallSavePayload unknown = saved with
