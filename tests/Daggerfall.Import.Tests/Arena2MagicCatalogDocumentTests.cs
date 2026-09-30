@@ -17,7 +17,7 @@ public sealed class Arena2MagicCatalogDocumentTests
             SpellTable(), MagicItemTable(), "arena2/SPELLS.STD", "arena2/MAGIC.DEF");
         JsonObject document = JsonNode.Parse(publication.Json)!.AsObject();
 
-        Assert.Equal(1, document["schemaVersion"]!.GetValue<int>());
+        Assert.Equal(["arena2/SPELLS.STD", "arena2/MAGIC.DEF"], document["sources"]!.AsArray().Select(source => source!["path"]!.GetValue<string>()));
         Assert.Equal(2, publication.Spells);
         Assert.Equal(1, publication.MagicItems);
         Assert.Equal(2, publication.Enchantments);
@@ -34,7 +34,7 @@ public sealed class Arena2MagicCatalogDocumentTests
 
         JsonArray sources = document["sources"]!.AsArray();
         Assert.Equal(2, sources.Count);
-        Assert.All(sources, source => Assert.Equal("CNT-012", source!["recordId"]!.GetValue<string>()));
+        Assert.All(sources, source => Assert.True(source!["byteLength"]!.GetValue<long>() > 0));
 
         // One enchantment names a published spell; the other names an identity no spell carries, so the
         // link is reported rather than assumed.

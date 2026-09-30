@@ -146,7 +146,7 @@ public sealed class DaggerfallReferenceCatalogTests
                     careers[0]!["forbiddenEquipment"]!.AsArray()[0] = "forbidden-material:moonstone";
                     break;
                 case "citation outside the published sources":
-                    careers[0]!["source"]!["recordId"] = "CNT-999";
+                    careers[0]!["source"]!["path"] = "arena2/INVENTED.CFG";
                     break;
             }
         });
@@ -208,7 +208,7 @@ public sealed class DaggerfallReferenceCatalogTests
     public void Rejects_a_citation_that_is_not_a_documented_record()
     {
         DaggerfallContentException error = Mutate(pack =>
-            pack["catalogs"]!["races"]!.AsArray()[0]!["source"]!["recordId"] = "invented-source");
+            pack["catalogs"]!["races"]!.AsArray()[0]!["source"]!["path"] = "invented-source");
 
         Assert.Contains("invented-source", error.Message, StringComparison.Ordinal);
     }

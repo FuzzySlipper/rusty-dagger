@@ -9,7 +9,7 @@ CNT-007,family,CNT-007,monster-media,arena2/MONSTER.BSA,103,,named archive recor
 CNT-008,family,CNT-008,actors,daggerfall-unity/Assets/Scripts/Utility/EnemyBasics.cs,63,,donor static MobileEnemy IDs,45 base actor definitions,current-partial,donor static definitions; archive-linked data remains
 CNT-009,family,CNT-009,races,daggerfall-unity/Assets/Scripts/Game/Entities/RaceTemplate.cs,8,,Breton;Redguard;Nord;DarkElf;HighElf;WoodElf;Khajiit;Argonian,no complete catalog,pending-import,donor identity count
 CNT-010,family,CNT-010,careers,arena2/CLASS*.CFG;CLASSES.DAT,19 CFG + 1 DAT,,CLASS00-CLASS18;CLASSES.DAT,not admitted,pending-import,each CLASS CFG is 74 bytes; CLASSES.DAT is 216 bytes
-CNT-011,family,CNT-011,item-templates,daggerfall-unity/Assets/Scripts/API/ItemsFile.cs (FALL.EXE),288,,native template indices 000-287,31 base item definitions,source-gap,FALL.EXE absent from supplied local source
+CNT-011,family,CNT-011,item-templates,daggerfall-unity/Assets/Scripts/API/ItemsFile.cs,288,,native template indices 000-287,31 base item definitions,source-gap,FALL.EXE absent from supplied local source
 CNT-012,family,CNT-012,spells-effects,arena2/SPELLS.STD;MAGIC.DEF,2 source files,,SPELLS.STD;MAGIC.DEF,not admitted,pending-import,verified spell filename is SPELLS.STD; no SPELL.RSC
 CNT-013,family,CNT-013,factions,arena2/FACTION.TXT,uninspected,,source records,not admitted,pending-import,full count pending existing decoder
 CNT-014,family,CNT-014,names-bio-rumors,arena2/NAMEGEN.DAT;BIO.DAT;RUMOR.DAT;BIOG*,1+1+1+19 files,,BIOG00I0.IMG;BIOG00T0-T17T0,not admitted,pending-import,metadata counts; text payload not copied

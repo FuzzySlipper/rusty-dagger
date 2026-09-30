@@ -335,7 +335,7 @@ public sealed class ItemTemplateLedgerTests
             .Parse(File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json")))!
             .AsObject();
 
-        Assert.Equal("CNT-011", ledger["target"]!["recordId"]!.GetValue<string>());
+        Assert.Equal("daggerfall-unity/Assets/Scripts/API/ItemsFile.cs", ledger["target"]!["path"]!.GetValue<string>());
         Assert.Equal("absent", ledger["target"]!["status"]!.GetValue<string>());
         Assert.Equal("provisional-donor-code-baseline", ledger["baseline"]!["rule"]!.GetValue<string>());
 

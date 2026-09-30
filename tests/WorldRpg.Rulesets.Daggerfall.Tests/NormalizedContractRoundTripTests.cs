@@ -113,6 +113,17 @@ public sealed class NormalizedContractRoundTripTests
         RoundTrip<CanonicalImportManifest>(Path.Combine(closure, ImportPublicationManifestSerializer.ManifestRelativePath));
     }
 
+    [Fact]
+    public void The_block_building_fields_read_back_through_the_importer_s_record_and_the_ruleset()
+    {
+        string payload = PayloadPath("daggerfall.blocks.json");
+        RoundTrip<DaggerfallBlockBuildingSet>(payload);
+        DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(payload));
+        Assert.Equal(
+            JsonNode.Parse(File.ReadAllBytes(payload))!["buildings"]!.AsArray().Count,
+            blocks.RmbBuildings.Count);
+    }
+
     /// <summary>
     /// Reads a published document strictly through the importer's record and checks the importer's writer
     /// states every value it holds: a field renamed on either side fails the read or the comparison.
