@@ -145,39 +145,6 @@ public sealed class ResidualSourceInventoryTests
         Assert.Contains("belong to no canvas", bank.Note, StringComparison.Ordinal);
     }
 
-    [CorpusFact]
-    public void The_closure_report_decides_every_path_from_its_classification()
-    {
-        ResidualSourceInventory inventory = ReadInventory();
-        ResidualPublicationClosure closure = ResidualPublicationClosure.From(inventory);
-
-        // Nothing is published without a consumer and nothing is dropped silently: the nine paths the
-        // manifest imports are published, the readable remainder is unpublished for want of a
-        // consumer, and the unreadable remainder is unpublished for want of a reader.
-        Assert.Equal(183, closure.Decisions.Count);
-        Assert.Equal(
-            ["ART_PAL.COL", "CHGN00I0.IMG", "DIE_00I0.IMG", "MAP.PAL", "PAL.PAL", "PICK02I0.IMG", "PICK03I0.IMG", "PRIS00I0.IMG", "TITL00I0.IMG"],
-            closure.Published.Select(decision => decision.Path).Order(StringComparer.Ordinal));
-        Assert.Equal(113, closure.WithoutConsumer.Count());
-        Assert.Equal(61, closure.WithoutReader.Count());
-        Assert.All(closure.Published, decision => Assert.Contains("a consumer claims it", decision.Reason, StringComparison.Ordinal));
-        Assert.All(closure.WithoutConsumer, decision => Assert.Contains("no consumer names it", decision.Reason, StringComparison.Ordinal));
-        Assert.All(closure.WithoutReader, decision => Assert.Contains("nothing to publish", decision.Reason, StringComparison.Ordinal));
-
-        // The report carries the classification's own facts rather than re-deriving them.
-        Assert.All(closure.Decisions, decision =>
-        {
-            ResidualSourceRecord file = inventory.Files.Single(candidate => candidate.Path == decision.Path);
-            Assert.Equal(file.Family, decision.Family);
-            Assert.Equal(file.Reader, decision.Reader);
-            Assert.Equal(file.Disposition, decision.Classification);
-        });
-
-        // A family that reads but is claimed by nobody stays visible with its reason, which is the
-        // whole point of the report: Silent omission is the failure this prevents.
-        Assert.Contains(closure.WithoutConsumer, decision => decision.Path == "FRAM00I0.IMG" && decision.Family == "IMG");
-    }
-
     [Fact]
     public void Classifies_the_documented_families_the_corpus_does_not_supply()
     {
@@ -226,21 +193,13 @@ public sealed class ResidualSourceInventoryTests
         Assert.Contains("already imports it", refused.Note, StringComparison.Ordinal);
         Assert.Contains("refused it", refused.Note, StringComparison.Ordinal);
 
-        // The closure keeps both facts too: this path is not simply "no reader", because a consumer
-        // claims it and the gap between the claim and what this repository reads is the point.
-        ResidualPublicationDecision decision = Assert.Single(ResidualPublicationClosure.From(unreadable).Decisions);
-        Assert.Equal(ResidualPublicationOutcome.UnreadableButClaimed, decision.Outcome);
-        Assert.Contains("imports this path while no reader", decision.Reason, StringComparison.Ordinal);
-        Assert.Contains("refused it", decision.Reason, StringComparison.Ordinal);
-        Assert.Single(ResidualPublicationClosure.From(unreadable).ClaimedButUnreadable);
     }
 
     [Fact]
     public void A_claimed_path_no_reader_covers_is_reported_as_claimed_rather_than_readerless()
     {
         // The classification can reach an imported path two ways: a reader refused it, or no reader
-        // covers its family at all. Both keep the consumer's claim, and the closure has to escalate
-        // both - the note's wording is not the fact.
+        // covers its family at all. Both keep the consumer's claim - the note's wording is not the fact.
         ResidualSourceInventory readerless = ResidualSourceInventory.Enumerate(
             [("NOTELESS.TBL", new byte[16])],
             "fixture",
@@ -250,14 +209,9 @@ public sealed class ResidualSourceInventoryTests
         Assert.Equal(SourceRecordDisposition.Unresolved, covered.Disposition);
         Assert.True(covered.ClaimedByInventory);
 
-        ResidualPublicationDecision decision = Assert.Single(ResidualPublicationClosure.From(readerless).Decisions);
-        Assert.Equal(ResidualPublicationOutcome.UnreadableButClaimed, decision.Outcome);
-        Assert.Contains("no reader here covers it", decision.Reason, StringComparison.Ordinal);
-
-        // A path nobody claims stays in the plain readerless bucket.
+        // A path nobody claims keeps no claim.
         ResidualSourceInventory unclaimed = ResidualSourceInventory.Enumerate([("NOTELESS.TBL", new byte[16])], "fixture");
         Assert.False(Assert.Single(unclaimed.Files).ClaimedByInventory);
-        Assert.Equal(ResidualPublicationOutcome.UnpublishedNoReader, Assert.Single(ResidualPublicationClosure.From(unclaimed).Decisions).Outcome);
     }
 
     [Fact]

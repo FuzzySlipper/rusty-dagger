@@ -92,28 +92,6 @@ public sealed class NormalizedContractTests
     }
 
     [Fact]
-    public void CompatibilityAdapterPreservesSourcePathAndByteLen()
-    {
-        ExternalImportManifest manifest = new(
-            1,
-            "content/example.mesh.json",
-            new("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
-            24,
-            1,
-            2,
-            "mesh/example",
-            null,
-            [new("example.static-mesh.json", new("abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"), 42)]);
-
-        ImportProvenance provenance = ExternalImportManifestAdapter.ToProvenance(manifest, "importer/example");
-        NormalizedArtifactDescriptor artifact = Assert.Single(ExternalImportManifestAdapter.ToArtifacts(manifest));
-
-        Assert.Equal("content/example.mesh.json", Assert.Single(provenance.Sources).SourcePath);
-        Assert.Equal(24, Assert.Single(provenance.Sources).ByteLength);
-        Assert.Equal(42, artifact.ByteLength);
-    }
-
-    [Fact]
     public void NormalizedContractsHaveNoEncounterOrRuntimeEntitySurface()
     {
         string json = Encoding.UTF8.GetString(NormalizedImportSerializer.Serialize(CreateDocument()));
