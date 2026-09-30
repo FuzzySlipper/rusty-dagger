@@ -17,7 +17,7 @@ public sealed class DaggerfallTextSetTests
     /// The parsed payload, kept so each mutation pays for one clone rather than one parse of eight
     /// megabytes of normalized corpus.
     /// </summary>
-    private static readonly Lazy<JsonObject> PayloadTemplate = new(() => JsonNode.Parse(File.ReadAllBytes(PackPath()))!.AsObject());
+    private static readonly Lazy<JsonObject> PayloadTemplate = new(() => JsonNode.Parse(TestPayload.CombinedBytes)!.AsObject());
 
     [Fact]
     public void Loads_the_published_text_and_resolves_a_key_by_its_own_identity()
@@ -479,7 +479,7 @@ public sealed class DaggerfallTextSetTests
     }
 
     private static DaggerfallDefinitions Definitions(Action<JsonObject>? mutate = null) =>
-        DaggerfallBaseContent.Read(mutate is null ? File.ReadAllBytes(PackPath()) : Payload(mutate));
+        DaggerfallBaseContent.Read(mutate is null ? TestPayload.CombinedBytes : Payload(mutate));
 
     private static byte[] Payload(Action<JsonObject> mutate)
     {
@@ -508,5 +508,4 @@ public sealed class DaggerfallTextSetTests
         record["tokens"] = new JsonArray();
     }
 
-    private static string PackPath() => Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json");
 }

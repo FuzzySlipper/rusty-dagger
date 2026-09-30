@@ -348,7 +348,7 @@ public sealed class ItemTemplateLedgerTests
     }
 
     private static System.Text.Json.Nodes.JsonObject ReadPublishedLedger() =>
-        System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json")))!
+        System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.imported.json")))!
             .AsObject()["itemTemplateLedger"]!.AsObject();
 
     /// <summary>

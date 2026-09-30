@@ -8,8 +8,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// its own bytes say, and whether the numbers the block section names are all answered.
 /// </summary>
 /// <remarks>
-/// The section has no runtime reader yet — this is the inventory the tasks that publish geometry consume —
-/// so what is checked here is the artifact itself, against the block section it joins to.
+/// Nothing at runtime reads the inventory, so the import tool keeps it in its import records outside the runtime
+/// content root; what is checked here is the artifact itself, against the block document it joins to.
 /// </remarks>
 public sealed class DaggerfallGeometryInventoryTests
 {
@@ -108,5 +108,11 @@ public sealed class DaggerfallGeometryInventoryTests
         }
     }
 
-    private static JsonDocument Pack() => JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json")));
+    /// <summary>The mesh inventory from the import records, beside the block document whose use sites it joins.</summary>
+    private static JsonDocument Pack()
+    {
+        using JsonDocument records = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "import-records", "daggerfall.import-records.json")));
+        string blocks = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "payloads", "daggerfall.blocks.json"));
+        return JsonDocument.Parse($"{{\"geometry\":{records.RootElement.GetProperty("geometry").GetRawText()},\"blocks\":{blocks}}}");
+    }
 }

@@ -3,6 +3,7 @@
   "id": "daggerfall.castle-necromoghan",
   "ruleset": "daggerfall",
   "contentPacks": [
+    { "id": "daggerfall.imported" },
     { "id": "daggerfall.base" },
     { "id": "daggerfall.blocks" },
     { "id": "daggerfall.castle-necromoghan" },

@@ -776,7 +776,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
 
     private static DaggerfallDefinitions DefinitionsWithLifecycleFixtures(bool hasRewardMessage = true)
     {
-        JsonObject root = JsonNode.Parse(File.ReadAllText(BasePayloadPath()))!.AsObject();
+        JsonObject root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
         JsonArray quests = root["questSources"]!["quests"]!.AsArray();
         quests.Add(JsonNode.Parse("""
             {"name":"startparent","displayName":"Start parent","sourceFile":"startparent.txt","disposition":"compiled","messages":[],"blocks":[{"kind":"headless","firstLine":11,"lines":["start quest independentchild","end quest"],"global":null}],"diagnostics":[]}
@@ -805,13 +805,6 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         if (!hasRewardMessage)
             quests.Single(quest => quest!["sourceFile"]!.GetValue<string>() == "trainquest.txt")!["messages"] = new JsonArray();
         return DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(root.ToJsonString()));
-    }
-
-    private static string BasePayloadPath()
-    {
-        DirectoryInfo? root = new(Environment.CurrentDirectory);
-        while (root is not null && !File.Exists(Path.Combine(root.FullName, "content/worldrpg/payloads/daggerfall.base.json"))) root = root.Parent;
-        return Path.Combine(root!.FullName, "content/worldrpg/payloads/daggerfall.base.json");
     }
 
     private static DaggerfallQuestSourceDefinition Source(params DaggerfallQuestBlockDefinition[] blocks) =>

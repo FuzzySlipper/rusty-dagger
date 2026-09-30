@@ -87,6 +87,5 @@ public sealed class DaggerfallMagicCatalogTests
 
     private static byte[] Payload() => System.Text.Encoding.UTF8.GetBytes(PayloadJson());
 
-    private static string PayloadJson() => File.ReadAllText(Path.Combine(
-        TestData.RepositoryRoot, "content", "worldrpg", "payloads", "daggerfall.base.json"));
+    private static string PayloadJson() => TestPayload.CombinedText;
 }

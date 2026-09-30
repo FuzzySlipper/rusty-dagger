@@ -22,7 +22,7 @@ public sealed class BlockPlacementTests
     {
         string root = TestData.RepositoryRoot;
         JsonDocument payload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.blocks.json")));
-        JsonDocument pack = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        JsonDocument pack = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "import-records/daggerfall.import-records.json")));
 
         HashSet<int> models = [.. pack.RootElement.GetProperty("geometry").GetProperty("records").EnumerateArray().Select(record => record.GetProperty("recordId").GetInt32())];
         int rdbModels = 0, rdbFlats = 0, rdbLights = 0, rdbDoors = 0;

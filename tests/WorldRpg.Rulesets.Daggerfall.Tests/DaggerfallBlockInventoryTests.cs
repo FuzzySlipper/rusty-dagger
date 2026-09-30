@@ -8,7 +8,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// name says it is, and whether the block names the location section publishes are all carried.
 /// </summary>
 /// <remarks>
-/// The section has no runtime reader yet — the tasks that publish dungeon, exterior and geometry
+/// The document is read at runtime only through the daggerfall.blocks pack; the tasks that publish dungeon, exterior and geometry
 /// assemblies are its consumers — so what is checked here is the artifact itself, from its own published
 /// numbers, rather than through a reader invented for a consumer that does not exist.
 /// </remarks>
@@ -190,5 +190,12 @@ public sealed class DaggerfallBlockInventoryTests
     private static IEnumerable<JsonElement> Records(string kind) =>
         Pack().RootElement.GetProperty("blocks").GetProperty("records").EnumerateArray().Where(record => record.GetProperty("kind").GetString() == kind).ToArray();
 
-    private static JsonDocument Pack() => JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json")));
+    /// <summary>The block document the daggerfall.blocks pack carries, beside the imported locations it joins.</summary>
+    private static JsonDocument Pack()
+    {
+        string payloads = Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "payloads");
+        using JsonDocument imported = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(payloads, "daggerfall.imported.json")));
+        string blocks = File.ReadAllText(Path.Combine(payloads, "daggerfall.blocks.json"));
+        return JsonDocument.Parse($"{{\"blocks\":{blocks},\"locations\":{imported.RootElement.GetProperty("locations").GetRawText()}}}");
+    }
 }

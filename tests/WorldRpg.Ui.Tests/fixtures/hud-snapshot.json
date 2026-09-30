@@ -1600,6 +1600,7 @@
     "bundle": "daggerfall.privateers-hold",
     "ruleset": "daggerfall",
     "contentPacks": [
+      "daggerfall.imported",
       "daggerfall.base",
       "daggerfall.blocks",
       "daggerfall.privateers-hold",

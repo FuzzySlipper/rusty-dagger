@@ -28,7 +28,7 @@ public sealed class NormalizedMediaValidationTests
             scenario,
             definitions));
 
-        DaggerfallDefinitions unknownAuthoredState = DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(File.ReadAllText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")).Replace("\"preferredRestState\": \"ratIdle\"", "\"preferredRestState\": \"missingState\"", StringComparison.Ordinal)));
+        DaggerfallDefinitions unknownAuthoredState = DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(TestPayload.CombinedText.Replace("\"preferredRestState\": \"ratIdle\"", "\"preferredRestState\": \"missingState\"", StringComparison.Ordinal)));
         Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(ImportContent(root), scenario, unknownAuthoredState));
     }
 

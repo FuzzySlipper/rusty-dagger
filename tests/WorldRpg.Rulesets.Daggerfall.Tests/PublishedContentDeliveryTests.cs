@@ -199,7 +199,7 @@ public sealed class PublishedContentDeliveryTests
     public void The_character_presentation_references_enumerate_their_canvases_and_state_what_is_pending()
     {
         ProductContent content = AdmittedContent();
-        JsonElement presentation = JsonDocument.Parse(content.ReadBytes("worldrpg/payloads/daggerfall.base.json").ToArray())
+        JsonElement presentation = JsonDocument.Parse(content.ReadBytes("worldrpg/payloads/daggerfall.imported.json").ToArray())
             .RootElement.GetProperty("characterPresentation");
 
         // #7933's enumeration: the 17 FACE files supply 221 canvases - 16 files of ten records each plus
@@ -312,10 +312,10 @@ public sealed class PublishedContentDeliveryTests
     public void The_admitted_character_references_are_the_ones_the_character_sheet_resolves()
     {
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
-            File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json")));
+            TestPayload.CombinedBytes);
         DaggerfallCharacterPresentationSet set = definitions.CharacterPresentation;
         JsonElement presentation = JsonDocument.Parse(
-            File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json")))
+            TestPayload.CombinedBytes)
             .RootElement.GetProperty("characterPresentation");
 
         // The consumer is run for every race the catalogs publish, because that is its domain: the player
@@ -439,7 +439,7 @@ public sealed class PublishedContentDeliveryTests
         // asks for it.
         ProductContent content = AdmittedContent();
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
-            content.ReadBytes("worldrpg/payloads/daggerfall.base.json"));
+            content.ReadBytes("worldrpg/payloads/daggerfall.base.json"), content.ReadBytes("worldrpg/payloads/daggerfall.imported.json"));
         DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(
             content,
             content.ReadBytes("worldrpg/payloads/daggerfall.privateers-hold.json"),

@@ -11,15 +11,16 @@ public sealed class FightersGuildQuestCorpusPublicationTests
     public void Publishes_the_exact_twenty_records_with_per_source_provenance_and_a_stable_fingerprint()
     {
         string root = TestData.RepositoryRoot;
-        using JsonDocument basePayload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        using JsonDocument basePayload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.imported.json")));
+        using JsonDocument records = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "import-records/daggerfall.import-records.json")));
         DaggerfallFightersGuildQuestCorpus first = FightersGuildQuestCorpusPublication.Create(
             Section<DaggerfallQuestCatalog>(basePayload, "questCatalog"),
             Section<DaggerfallQuestPack>(basePayload, "questSources"),
-            Section<DaggerfallQuestOriginalSourceSet>(basePayload, "questOriginalSources"));
+            Section<DaggerfallQuestOriginalSourceSet>(records, "questOriginalSources"));
         DaggerfallFightersGuildQuestCorpus second = FightersGuildQuestCorpusPublication.Create(
             Section<DaggerfallQuestCatalog>(basePayload, "questCatalog"),
             Section<DaggerfallQuestPack>(basePayload, "questSources"),
-            Section<DaggerfallQuestOriginalSourceSet>(basePayload, "questOriginalSources"));
+            Section<DaggerfallQuestOriginalSourceSet>(records, "questOriginalSources"));
 
         Assert.Equal(FightersGuildQuestCorpusPublication.RequiredQuestNames, first.Quests.Select(quest => quest.Name));
         Assert.All(first.Quests, quest =>

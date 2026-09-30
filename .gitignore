@@ -18,3 +18,14 @@ TestResults/
 # fails still fails the suite; this only keeps it out of commits. The prefix is exact so that an
 # ordinary test file (TemplateLedgerTests.cs, TemperatureTests.cs) is never ignored by accident.
 tests/**/ReviewProbe*.cs
+
+# Content derived from the operator's Arena2 files, the donor checkout and local/Sound is never
+# committed; scripts/regenerate-content.sh writes it. The source list is
+# scripts/generated-content-paths.txt; these lines copy it, and the script refuses a run that
+# leaves a generated file unignored.
+/content/worldrpg/imports/
+/content/worldrpg/media/
+/content/worldrpg/payloads/daggerfall.imported.json
+/content/worldrpg/payloads/daggerfall.blocks.json
+/content/worldrpg/payloads/daggerfall.quests.*.json
+/import-records/

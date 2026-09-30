@@ -74,5 +74,5 @@ public sealed class CharacterMediaAdmissionTests
 
     private static string ManifestPath() => Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv");
 
-    private static string PackPath() => Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json");
+    private static string PackPath() => Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.imported.json");
 }
