@@ -5803,44 +5803,6 @@ public sealed partial class NormalizedRuntimeSeamTests
     }
 
     [Fact]
-    public void Actor_only_relocation_recovers_source_after_committed_transition_release_failure()
-    {
-        string root = RepositoryRoot();
-        DaggerfallDefinitions definitions = TestPayload.Definitions;
-        PrivateersHoldInputs source = ReadInputs(root);
-        ProductContent admitted = FullContent(root);
-        PrivateersHoldInputs destination = PrivateersHoldContent.Read(admitted,
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
-        DaggerfallSiteProfiles profiles = new([source, destination]);
-        List<string> releases = [];
-        ContentFake content = new(releases);
-        PopulateContent(content, source);
-        PopulateContent(content, destination);
-        AppearanceFake appearance = new(releases);
-        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
-        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance);
-
-        using DaggerfallSession session = new(engine.Context, definitions, source, DaggerfallTuning.Defaults);
-        session.AdmitSiteProfiles(profiles);
-        Assert.True(session.TryTransitionTo(destination.ProfileKey));
-        long actorId = session.SpawnActor("rat", new ActorPose(new WorldPoint(3f, 0f, 3f), 0f));
-        session.PublishInitial();
-        WorldPoint playerPosition = session.State.PlayerControl.Position!.Value;
-        appearance.FailNextProjectionDispose = true;
-
-        _ = Assert.Throws<AggregateException>(() => session.TryRelocate(new DaggerfallRelocationDestination(source.ProfileKey, "start", actorId)));
-
-        Assert.Equal(destination.Site, session.Site.Active);
-        Assert.Equal(source.ProfileKey, DaggerfallSavePayload.Read(session.CaptureSave()).Site.ReturnProfile!.Require());
-        Assert.Equal(playerPosition, session.State.PlayerControl.Position);
-        Assert.False(session.State.Actors.TryGet(actorId, out _));
-
-        Assert.True(session.TryRelocate(new DaggerfallRelocationDestination(source.ProfileKey, "start")));
-        Assert.Equal(source.Site, session.Site.Active);
-        Assert.Equal(source.Project.PlayerPosition, session.State.Actors.Get(actorId).Position);
-    }
-
-    [Fact]
     public void Named_relocation_resets_control_state_preserves_player_and_round_trips_through_save()
     {
         string root = RepositoryRoot();
@@ -5881,24 +5843,25 @@ public sealed partial class NormalizedRuntimeSeamTests
             Assert.Equal(Vector2.Zero, spatial.StepRequests.Last().Command.PlanarIntent);
             WorldPoint sourceReturnPosition = session.State.PlayerControl.Position!.Value;
 
-            Assert.True(session.TryRelocate(new DaggerfallRelocationDestination(destination.ProfileKey, "start", relocatedActor)));
+            // An actor cannot be sent into a site the player is not in; the refusal changes nothing.
+            Assert.Throws<InvalidOperationException>(() => session.TryRelocate(new DaggerfallRelocationDestination(destination.ProfileKey, "start", relocatedActor)));
             Assert.Equal(source.Site, session.Site.Active);
             Assert.Equal(sourceReturnPosition, session.State.PlayerControl.Position);
-            Assert.False(session.State.Actors.TryGet(relocatedActor, out _));
+            Assert.Equal(source.Project.PlayerPosition, session.State.Actors.Get(relocatedActor).Position);
             Assert.True(session.TryRelocate(new DaggerfallRelocationDestination(destination.ProfileKey, "start")));
             Assert.Equal(destination.Site, session.Site.Active);
-            Assert.Equal(destination.Project.PlayerPosition, session.State.Actors.Get(relocatedActor).Position);
+            Assert.False(session.State.Actors.TryGet(relocatedActor, out _));
             Assert.Equal(destination.Project.PlayerPosition, session.State.PlayerControl.Position);
             Assert.Equal(destination.InitialLook.YawRadians, session.State.PlayerControl.YawRadians);
             Assert.Equal(destination.InitialLook.PitchRadians, session.State.PlayerControl.PitchRadians);
             Assert.Equal(player, session.State.Actors.Player.Actor.Entity);
-            Assert.Equal(4, spatial.ReplaceCalls);
+            Assert.Equal(2, spatial.ReplaceCalls);
 
             WorldPoint? positionBeforeInvalid = session.State.PlayerControl.Position;
             Assert.Throws<InvalidOperationException>(() => session.TryRelocate(new DaggerfallRelocationDestination(destination.ProfileKey, "missing")));
             Assert.Equal(positionBeforeInvalid, session.State.PlayerControl.Position);
             Assert.Equal(player, session.State.Actors.Player.Actor.Entity);
-            Assert.Equal(4, spatial.ReplaceCalls);
+            Assert.Equal(2, spatial.ReplaceCalls);
             DaggerfallSiteReturnPoseSave savedReturnPose = DaggerfallSavePayload.Read(session.CaptureSave()).Site.ReturnPose!;
             Assert.Equal(sourceReturnPosition, new WorldPoint(savedReturnPose.X, savedReturnPose.Y, savedReturnPose.Z));
             save = session.CaptureSave();
@@ -5915,10 +5878,11 @@ public sealed partial class NormalizedRuntimeSeamTests
             DaggerfallTuning.Defaults, save, RandomMinimum.Create(), effects: null, profiles: profiles);
 
         Assert.Equal(destination.Site, restored.Site.Active);
-        Assert.Equal(destination.Project.PlayerPosition, restored.State.Actors.Get(relocatedActor).Position);
         Assert.Equal(destination.Project.PlayerPosition, restored.State.PlayerControl.Position);
         Assert.True(restored.TryTransitionTo(source.ProfileKey));
         Assert.Equal(source.Site, restored.Site.Active);
+        // The spawned actor stayed in the source site's delta through the save and comes back with it.
+        Assert.Equal(source.Project.PlayerPosition, restored.State.Actors.Get(relocatedActor).Position);
         DaggerfallSiteReturnPoseSave restoredReturnPose = DaggerfallSavePayload.Read(save).Site.ReturnPose!;
         Assert.Equal(new WorldPoint(restoredReturnPose.X, restoredReturnPose.Y, restoredReturnPose.Z), restored.State.PlayerControl.Position);
         Assert.Equal(2, resumedSpatial.ReplaceCalls);
