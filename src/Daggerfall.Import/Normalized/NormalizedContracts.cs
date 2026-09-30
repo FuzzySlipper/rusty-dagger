@@ -679,13 +679,13 @@ public sealed record NormalizedMarker(string Id, NormalizedVector3 Position)
     }
 }
 
-public sealed record NormalizedLightPlacement(string Id, NormalizedVector3 Position, float Range, float Intensity, NormalizedVector3? Color = null)
+public sealed record NormalizedLightPlacement(string Id, NormalizedVector3 Position, float Range, float Intensity, NormalizedVector3 Color)
 {
     public void Validate()
     {
         NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
         Position.Validate(nameof(Position));
-        Color?.Validate(nameof(Color));
+        Color.Validate(nameof(Color));
         NormalizedImportDocument.RequireFinite(Range, nameof(Range));
         NormalizedImportDocument.RequireFinite(Intensity, nameof(Intensity));
         if (Range < 0F || Intensity < 0F)
