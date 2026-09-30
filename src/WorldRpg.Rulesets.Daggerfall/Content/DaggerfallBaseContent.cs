@@ -8,12 +8,59 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
-/// <summary>Reads the normalized, immutable daggerfall.base payload.</summary>
+/// <summary>
+/// Reads the base definitions from two payloads: the authored daggerfall.base payload (ruleset identity,
+/// vocabulary, actors, items, loot, encounters) and the daggerfall.imported payload the import tool
+/// generates from the operator's Arena2 files (catalogs, world records, text, quest sources).
+/// </summary>
 internal static class DaggerfallBaseContent
 {
     private const int MaximumAuthoredDamage = 100_000;
     private const int MaximumAuthoredArmor = 1_000;
     private const int MaximumAuthoredLootGold = 1_000_000;
+
+    /// <summary>Reads the authored and imported base payloads as one set of sections.</summary>
+    internal static DaggerfallDefinitions Read(ReadOnlyMemory<byte> authored, ReadOnlyMemory<byte> imported) =>
+        Read(Combine(authored, imported));
+
+    /// <summary>
+    /// Joins the authored and imported payloads' root sections into one root, keeping each section's
+    /// bytes. Every section has one owner: a section both payloads carry is refused rather than resolved
+    /// by precedence, because either copy winning would silently discard the other.
+    /// </summary>
+    internal static byte[] Combine(ReadOnlyMemory<byte> authored, ReadOnlyMemory<byte> imported)
+    {
+        DaggerfallContentDiagnostics diagnostics = new();
+        try
+        {
+            using JsonDocument authoredDocument = JsonDocument.Parse(authored);
+            using JsonDocument importedDocument = JsonDocument.Parse(imported);
+            JsonElement authoredRoot = Object(authoredDocument.RootElement, "authored base payload", diagnostics);
+            JsonElement importedRoot = Object(importedDocument.RootElement, "imported base payload", diagnostics);
+            diagnostics.ThrowIfAny();
+            HashSet<string> authoredSections = [.. authoredRoot.EnumerateObject().Select(property => property.Name)];
+            foreach (JsonProperty section in importedRoot.EnumerateObject().Where(section => authoredSections.Contains(section.Name)))
+                diagnostics.Add($"Section '{section.Name}' is in both the authored and the imported base payload; each section has one owner.");
+            diagnostics.ThrowIfAny();
+            System.Buffers.ArrayBufferWriter<byte> buffer = new(authored.Length + imported.Length + 16);
+            using (Utf8JsonWriter writer = new(buffer, new JsonWriterOptions { Indented = true }))
+            {
+                writer.WriteStartObject();
+                foreach (JsonProperty section in authoredRoot.EnumerateObject().Concat(importedRoot.EnumerateObject()))
+                {
+                    writer.WritePropertyName(section.Name);
+                    writer.WriteRawValue(section.Value.GetRawText(), skipInputValidation: true);
+                }
+                writer.WriteEndObject();
+            }
+            return buffer.WrittenSpan.ToArray();
+        }
+        catch (JsonException exception)
+        {
+            diagnostics.Add($"Base payload is not valid JSON: {exception.Message}");
+            throw diagnostics.Exception();
+        }
+    }
 
     internal static DaggerfallDefinitions Read(ReadOnlyMemory<byte> payload)
     {

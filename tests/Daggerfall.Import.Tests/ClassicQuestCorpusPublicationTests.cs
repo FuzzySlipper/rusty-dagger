@@ -11,10 +11,11 @@ public sealed class ClassicQuestCorpusPublicationTests
     public void Publishes_every_retained_category_with_exact_membership_and_stable_fingerprints()
     {
         string root = TestData.RepositoryRoot;
-        using JsonDocument payload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        using JsonDocument payload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.imported.json")));
+        using JsonDocument records = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "import-records/daggerfall.import-records.json")));
         DaggerfallQuestCatalog catalog = Section<DaggerfallQuestCatalog>(payload, "questCatalog");
         DaggerfallQuestPack sources = Section<DaggerfallQuestPack>(payload, "questSources");
-        DaggerfallQuestOriginalSourceSet originals = Section<DaggerfallQuestOriginalSourceSet>(payload, "questOriginalSources");
+        DaggerfallQuestOriginalSourceSet originals = Section<DaggerfallQuestOriginalSourceSet>(records, "questOriginalSources");
         Assert.Equal(new Dictionary<string, int> { ["mages"] = 18, ["temples"] = 24, ["social"] = 45, ["witches-commoners"] = 30, ["merchants-vampires"] = 22, ["disabled"] = 18, ["nobility"] = 28 }, ClassicQuestCorpusPublication.Specifications.ToDictionary(specification => specification.Id, specification => ClassicQuestCorpusPublication.Create(specification.Id, catalog, sources, originals).Quests.Count));
         foreach (DaggerfallClassicQuestCorpusSpecification specification in ClassicQuestCorpusPublication.Specifications)
         {
@@ -29,10 +30,11 @@ public sealed class ClassicQuestCorpusPublicationTests
     public void Each_task_selection_preserves_its_source_backed_categories_and_disabled_disposition()
     {
         string root = TestData.RepositoryRoot;
-        using JsonDocument payload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        using JsonDocument payload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.imported.json")));
+        using JsonDocument records = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "import-records/daggerfall.import-records.json")));
         DaggerfallQuestCatalog catalog = Section<DaggerfallQuestCatalog>(payload, "questCatalog");
         DaggerfallQuestPack sources = Section<DaggerfallQuestPack>(payload, "questSources");
-        DaggerfallQuestOriginalSourceSet originals = Section<DaggerfallQuestOriginalSourceSet>(payload, "questOriginalSources");
+        DaggerfallQuestOriginalSourceSet originals = Section<DaggerfallQuestOriginalSourceSet>(records, "questOriginalSources");
 
         foreach (DaggerfallClassicQuestCorpusSpecification specification in ClassicQuestCorpusPublication.Specifications)
         {

@@ -64,8 +64,7 @@ public sealed class DaggerfallCinematicsContentTests
     [Fact]
     public void A_published_artifact_cannot_silently_change_source_identity_or_format()
     {
-        string path = Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json");
-        JsonObject root = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        JsonObject root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
         JsonObject source = root["cinematics"]!["cinematics"]!.AsArray().First(value => value!["artifact"] is not null)!.AsObject();
         source["artifact"]!["path"] = "worldrpg/media/cinematics/another.webm";
         Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(root.ToJsonString())));

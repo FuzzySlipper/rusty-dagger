@@ -10,8 +10,13 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
     private readonly bool _videosEnabled;
     public static readonly RulesetId Identity = new("daggerfall");
 
-    /// <summary>The one pack carrying the shared catalogs, world records and quest sources.</summary>
+    /// <summary>The one authored pack carrying the ruleset identity, vocabulary, actors, items, loot and encounters.</summary>
     internal static readonly ContentPackRoleId BaseRole = new("daggerfall.base");
+    /// <summary>
+    /// The one pack the import tool generates from the operator's Arena2 files: the shared catalogs, world
+    /// records, text and quest sources. The base reader joins it to the authored pack, section by section.
+    /// </summary>
+    internal static readonly ContentPackRoleId ImportedRole = new("daggerfall.imported");
     /// <summary>The one pack carrying the classic block records sites and interiors are built from.</summary>
     internal static readonly ContentPackRoleId BlocksRole = new("daggerfall.blocks");
     /// <summary>A normalized world profile: an exterior, interior or dungeon closure at one site.</summary>
@@ -75,11 +80,12 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             ILookup<ContentPackRoleId, ContentPack> roles = selected.ContentPacks.ToLookup(pack => pack.Role);
             foreach (ContentPack pack in selected.ContentPacks)
             {
-                if (pack.Role != BaseRole && pack.Role != BlocksRole && pack.Role != SiteRole
+                if (pack.Role != BaseRole && pack.Role != ImportedRole && pack.Role != BlocksRole && pack.Role != SiteRole
                     && pack.Role != QuestCorpusRole && pack.Role != FightersGuildQuestCorpusRole)
                     throw new InvalidOperationException($"Content pack '{pack.Id.Value}' declares role '{pack.Role.Value}', which the Daggerfall ruleset does not interpret.");
             }
-            DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(RequireSingle(selected, roles, BaseRole).Payload);
+            DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
+                RequireSingle(selected, roles, BaseRole).Payload, RequireSingle(selected, roles, ImportedRole).Payload);
             DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(RequireSingle(selected, roles, BlocksRole).Payload);
             // The composition keeps bundle order with each pack's dependencies ahead of it, so the first
             // site pack is the first site the bundle selects: that site is where a new game starts.

@@ -820,7 +820,7 @@ public sealed class DaggerfallHeldEnchantmentTests
         internal long MaximumCarryUnits() => _encumbrance.Read().MaximumClassicUnits;
 
         private static DaggerfallDefinitions Definitions { get; } = DaggerfallBaseContent.Read(
-            File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json")));
+            TestPayload.CombinedBytes);
 
         /// <summary>Payloads authored by a fact that needs one no published item or setting carries.</summary>
         private readonly Dictionary<string, DaggerfallMagicItemDefinition> Authored = new(StringComparer.Ordinal);

@@ -173,7 +173,7 @@ public sealed class DaggerfallCatalogContentTests
     [InlineData("\"status\": \"available\"", "\"status\": \"unclear\"")]
     public void RejectsABaselineRuleOrSubstituteThatDoesNotSayWhatItRestsOn(string before, string after)
     {
-        string payload = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json"));
+        string payload = TestPayload.CombinedText;
         string tampered = payload.Replace(before, after, StringComparison.Ordinal);
         Assert.NotEqual(payload, tampered);
 
@@ -198,7 +198,7 @@ public sealed class DaggerfallCatalogContentTests
     [InlineData("\"cooldownSeconds\": 1.5,\n      \"attackRangeIndex\": 0,\n      \"reach\": 2.0", "\"cooldownSeconds\": 1.5,\n      \"attackRangeIndex\": 0", "must declare the positive reach")]
     public void RejectsAnActionThatReachesFurtherThanItsKindOfAttackResolves(string before, string after, string expected)
     {
-        string payload = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json"));
+        string payload = TestPayload.CombinedText;
         string tampered = payload.Replace(before, after, StringComparison.Ordinal);
         Assert.NotEqual(payload, tampered);
 
@@ -218,7 +218,7 @@ public sealed class DaggerfallCatalogContentTests
     [InlineData("\"count\": 31,", "\"count\": 30,")]
     public void RejectsAnItemTemplateLedgerThatMisstatesItsOwnCoverage(string before, string after)
     {
-        string payload = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json"));
+        string payload = TestPayload.CombinedText;
         string tampered = payload.Replace(before, after, StringComparison.Ordinal);
         Assert.NotEqual(payload, tampered);
 
@@ -235,7 +235,7 @@ public sealed class DaggerfallCatalogContentTests
         // A near miss must not pass as a state: 'Absent' is not the absent status, 'banana'
         // is not a disposition, and a string is not a boolean. Each would otherwise be read
         // as something it does not say.
-        string payload = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json"));
+        string payload = TestPayload.CombinedText;
         string tampered = payload.Replace(before, after, StringComparison.Ordinal);
         Assert.NotEqual(payload, tampered);
 
@@ -247,7 +247,7 @@ public sealed class DaggerfallCatalogContentTests
     {
         // The vocabulary is closed rather than collapsed to one value: a supplied source is
         // what lets a target be malformed or decoded, and the ledger must be able to say so.
-        string payload = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json"));
+        string payload = TestPayload.CombinedText;
         string tampered = payload
             .Replace("\"status\": \"absent\"", "\"status\": \"present\"", StringComparison.Ordinal)
             .Replace("\"disposition\": \"substitute\"", "\"disposition\": \"malformed\"", StringComparison.Ordinal);
@@ -262,7 +262,7 @@ public sealed class DaggerfallCatalogContentTests
     {
         // The ledger's provenance is validated the way every catalog citation is, so the
         // pack cannot carry a source reference one half knows and the other does not.
-        string payload = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json"));
+        string payload = TestPayload.CombinedText;
         // The ledger's own target block, not the citation string: 'recordId: CNT-011'
         // appears in every catalog item reference too, so a bare replacement would be
         // caught by the catalog gate and this test would pass with the ledger gate gone.
@@ -279,7 +279,7 @@ public sealed class DaggerfallCatalogContentTests
     [Fact]
     public void RejectsAResolvedTargetWithNeitherTheByteSourceNorASubstitute()
     {
-        string payload = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json"));
+        string payload = TestPayload.CombinedText;
         // Decoding needs the byte source or a marked substitute behind it. With the
         // substitute withdrawn and a target resolved, the ledger claims a fact with nothing
         // behind it — which is the one thing this task must never publish.
@@ -293,7 +293,7 @@ public sealed class DaggerfallCatalogContentTests
     [Fact]
     public void RejectsAUnicodeIdentifierThatIsShortInUtf16ButNotEngineCompatible()
     {
-        string payload = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json"));
+        string payload = TestPayload.CombinedText;
 
         Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.Replace("\"id\": \"rat\"", "\"id\": \"rát\"", StringComparison.Ordinal))));
     }
@@ -304,7 +304,7 @@ public sealed class DaggerfallCatalogContentTests
     [InlineData("\"move\": 10", "\"move\": \"fast\"")]
     public void RejectsMalformedActorPresentationDefinitions(string before, string after)
     {
-        string payload = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json"));
+        string payload = TestPayload.CombinedText;
 
         Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.Replace(before, after, StringComparison.Ordinal))));
     }
@@ -340,7 +340,7 @@ public sealed class DaggerfallCatalogContentTests
     [InlineData("\"entityId\": 1001", "\"entityId\": \"1001\"")]
     public void RejectsMalformedCatalogReferencesAndCanonicalLoadoutShapes(string before, string after)
     {
-        string payload = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json"));
+        string payload = TestPayload.CombinedText;
         Assert.Contains(before, payload, StringComparison.Ordinal);
         Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.Replace(before, after, StringComparison.Ordinal))));
     }

@@ -4,6 +4,9 @@
   "ruleset": "daggerfall",
   "contentPacks": [
     {
+      "id": "daggerfall.imported"
+    },
+    {
       "id": "daggerfall.base"
     },
     {

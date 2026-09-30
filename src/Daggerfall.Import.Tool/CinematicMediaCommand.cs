@@ -10,7 +10,7 @@ internal static partial class Program
 {
     private static int RunCinematicMediaCommand(IReadOnlyList<string> args)
     {
-        const string usage = "usage: daggerfall-import-tool cinematic-media --arena2 SOURCE_DIR --pack PACK.json --out CONTENT_ROOT [--kind vid|flc] [--update]";
+        const string usage = "usage: daggerfall-import-tool cinematic-media --arena2 SOURCE_DIR --pack IMPORTED.json --out CONTENT_ROOT [--kind vid|flc] [--update]";
         Dictionary<string, string> values = new(StringComparer.Ordinal);
         bool update = args.Contains("--update", StringComparer.Ordinal);
         for (int index = 1; index < args.Count; index++)
@@ -23,7 +23,7 @@ internal static partial class Program
             values.Keys.Any(key => key is not ("--arena2" or "--pack" or "--out" or "--kind"))) throw new ArgumentException(usage);
         string kind = values.GetValueOrDefault("--kind", "vid");
         if (kind is not ("vid" or "flc")) throw new ArgumentException(usage);
-        JsonObject root = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
+        JsonObject root = PayloadFiles.ReadGenerated(values["--pack"]);
         JsonObject section = root["cinematics"]!.AsObject();
         JsonSerializerOptions options = new() { PropertyNameCaseInsensitive = true, Converters = { new JsonStringEnumConverter() } };
         DaggerfallCinematicPack pack = section.Deserialize<DaggerfallCinematicPack>(options) ?? throw new InvalidDataException("The pack has no cinematic provenance.");
@@ -46,7 +46,7 @@ internal static partial class Program
         {
             // Replace this section only after every selected source was converted successfully.
             root["cinematics"] = JsonNode.Parse(JsonSerializer.Serialize(pack with { Cinematics = records }, PublishedJson.Section));
-            File.WriteAllText(values["--pack"], root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+            PayloadFiles.Write(values["--pack"], root);
         }
         return 0;
     }

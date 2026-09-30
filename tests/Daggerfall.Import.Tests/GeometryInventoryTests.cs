@@ -374,15 +374,15 @@ public sealed class GeometryInventoryTests
         // A section read with its unknown members ignored answers a different question than it states: a
         // renamed model list reads as an empty one, and the geometry folded from it reports every mesh as
         // unused — the opposite of the closure set this inventory exists to publish.
-        System.Text.Json.Nodes.JsonObject pack = System.Text.Json.Nodes.JsonNode.Parse(
-            File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json")))!.AsObject();
-        System.Text.Json.Nodes.JsonArray records = pack["blocks"]!["records"]!.AsArray();
+        System.Text.Json.Nodes.JsonObject document = System.Text.Json.Nodes.JsonNode.Parse(
+            File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")))!.AsObject();
+        System.Text.Json.Nodes.JsonArray records = document["records"]!.AsArray();
         System.Text.Json.Nodes.JsonObject objects = records
             .Select(record => record!["objects"] as System.Text.Json.Nodes.JsonObject)
             .First(value => value is not null && value.ContainsKey("modelIds"))!;
         objects["modelIdsX"] = objects["modelIds"]!.DeepClone();
         objects.Remove("modelIds");
-        string json = pack["blocks"]!.ToJsonString();
+        string json = document.ToJsonString();
 
         Assert.Throws<System.Text.Json.JsonException>(() => System.Text.Json.JsonSerializer.Deserialize<DaggerfallBlocks>(json, PublishedJson.SectionRead));
         Assert.NotNull(System.Text.Json.JsonSerializer.Deserialize<DaggerfallBlocks>(json, PublishedJson.Section));
@@ -409,15 +409,15 @@ public sealed class GeometryInventoryTests
             useSites);
 
     /// <summary>
-    /// The mesh numbers the published block section names, read from the pack exactly as the tool reads
-    /// them, so this test answers the same question the product does.
+    /// The mesh numbers the published block document names, read from it exactly as the tool reads them,
+    /// so this test answers the same question the product does.
     /// </summary>
     private static IReadOnlyList<DaggerfallGeometryUseSite> BlockUseSites()
     {
         List<DaggerfallGeometryUseSite> useSites = [];
-        using System.Text.Json.JsonDocument pack = System.Text.Json.JsonDocument.Parse(
-            File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json")));
-        foreach (System.Text.Json.JsonElement block in pack.RootElement.GetProperty("blocks").GetProperty("records").EnumerateArray())
+        using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(
+            File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
+        foreach (System.Text.Json.JsonElement block in document.RootElement.GetProperty("records").EnumerateArray())
         {
             if (!block.TryGetProperty("objects", out System.Text.Json.JsonElement objects) || objects.ValueKind != System.Text.Json.JsonValueKind.Object)
             {

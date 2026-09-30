@@ -381,7 +381,7 @@ internal static partial class Program
     }
 
     /// <summary>
-    /// Publishes the donor's static mobile table into the base pack as one normalized record per mobile.
+    /// Publishes the donor's static mobile table into the imported payload as one normalized record per mobile.
     /// The donor's table is the parameter authority and the pack is the identity authority; a mobile the
     /// pack does not publish keeps its parameters and states its disposition rather than disappearing.
     /// </summary>
@@ -389,23 +389,24 @@ internal static partial class Program
     {
         bool update = args.Contains("--update", StringComparer.Ordinal);
         bool archive = args.Contains("--archive", StringComparer.Ordinal);
-        if ((args.Count != (update ? 6 : 5) && args.Count != (update ? 8 : 7))
-            || args[1] != "--donor" || args[3] != "--pack" || (archive && args[5] != "--archive"))
+        if ((args.Count != (update ? 8 : 7) && args.Count != (update ? 10 : 9))
+            || args[1] != "--donor" || args[3] != "--authored" || args[5] != "--pack" || (archive && args[7] != "--archive"))
         {
-            throw new ArgumentException("usage: daggerfall-import-tool mobile-catalog --donor ENEMY_BASICS.cs --pack PACK.json [--archive MONSTER.BSA] [--update]");
+            throw new ArgumentException("usage: daggerfall-import-tool mobile-catalog --donor ENEMY_BASICS.cs --authored BASE.json --pack IMPORTED.json [--archive MONSTER.BSA] [--update]");
         }
 
         string donorFile = args[2];
-        string packFile = args[4];
+        string packFile = args[6];
         if (!File.Exists(donorFile)) throw new FileNotFoundException($"The donor's static mobile table is required to publish mobile parameters and is not at '{donorFile}'.", donorFile);
-        if (archive && !File.Exists(args[6])) throw new FileNotFoundException($"A mobile's career attack-modifier byte lives in its MONSTER.BSA configuration record and is not at '{args[6]}'.", args[6]);
+        if (archive && !File.Exists(args[8])) throw new FileNotFoundException($"A mobile's career attack-modifier byte lives in its MONSTER.BSA configuration record and is not at '{args[8]}'.", args[8]);
         // The attack-modifier byte is not in the donor's table; it lives in each mobile's ENEMY###.CFG
         // career record. Without the archive the catalog publishes zero flags for every mobile.
         MonsterArchiveInventory? enemyConfigurations = archive
-            ? MonsterArchiveInventory.Enumerate(File.ReadAllBytes(args[6]), Path.GetFileName(args[6]))
+            ? MonsterArchiveInventory.Enumerate(File.ReadAllBytes(args[8]), Path.GetFileName(args[8]))
             : null;
+        // The published actors are authored, so the identities the catalog joins come from the authored payload.
         Arena2MobileCatalogPublication publication = Arena2MobileCatalogDocument.Build(
-            File.ReadAllText(donorFile), File.ReadAllText(packFile), "research/daggerfall-unity/Assets/Scripts/Utility/EnemyBasics.cs", enemyConfigurations);
+            File.ReadAllText(donorFile), PayloadFiles.ReadAuthoredText(args[4]), "research/daggerfall-unity/Assets/Scripts/Utility/EnemyBasics.cs", enemyConfigurations);
         Console.WriteLine($"mobile catalog: {publication.Mobiles} donor mobiles, {publication.Published} published, {publication.HumanMobiles} human mobiles, {publication.Unpublished} unpublished");
         if (!update)
         {
@@ -413,15 +414,15 @@ internal static partial class Program
             return 0;
         }
 
-        JsonNode pack = JsonNode.Parse(File.ReadAllText(packFile))!.AsObject();
+        JsonObject pack = PayloadFiles.ReadGenerated(packFile);
         pack["mobiles"] = JsonNode.Parse(publication.Json);
-        File.WriteAllText(packFile, pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        PayloadFiles.Write(packFile, pack);
         Console.WriteLine($"pack: mobile catalog updated in {packFile}");
         return 0;
     }
 
     /// <summary>
-    /// Publishes the classic spell and magic-item catalogs into the base pack. Both source files are
+    /// Publishes the classic spell and magic-item catalogs into the imported payload. Both source files are
     /// required inputs: a catalog built from one of them would look complete while resolving half of what
     /// the game defines, and SPELL.RSC is refused by name because it is not a file this corpus carries.
     /// </summary>
@@ -430,7 +431,7 @@ internal static partial class Program
         bool update = args.Contains("--update", StringComparer.Ordinal);
         if (args.Count != (update ? 8 : 7) || args[1] != "--arena2" || args[3] != "--pack" || args[5] != "--donor-formulas")
         {
-            throw new ArgumentException("usage: daggerfall-import-tool magic-catalog --arena2 SOURCE_DIR --pack PACK.json --donor-formulas FormulaHelper.cs [--update]");
+            throw new ArgumentException("usage: daggerfall-import-tool magic-catalog --arena2 SOURCE_DIR --pack IMPORTED.json --donor-formulas FormulaHelper.cs [--update]");
         }
 
         string arena2 = args[2];
@@ -461,10 +462,10 @@ internal static partial class Program
             return 0;
         }
 
-        // Only the magic property is replaced; every other authored section keeps its own ordering.
-        JsonNode pack = JsonNode.Parse(File.ReadAllText(packFile))!.AsObject();
+        // Only the magic property is replaced; every other imported section keeps its own ordering.
+        JsonObject pack = PayloadFiles.ReadGenerated(packFile);
         pack["magic"] = JsonNode.Parse(publication.Json);
-        File.WriteAllText(packFile, pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        PayloadFiles.Write(packFile, pack);
         Console.WriteLine($"pack: magic catalog updated in {packFile}");
         return 0;
     }
@@ -476,12 +477,13 @@ internal static partial class Program
     /// </summary>
     private static int RunMobileLedgerCommand(IReadOnlyList<string> args)
     {
-        if (args.Count != 5 || args[1] != "--donor" || args[3] != "--pack")
+        if (args.Count != 7 || args[1] != "--donor" || args[3] != "--authored" || args[5] != "--pack")
         {
-            throw new ArgumentException("usage: daggerfall-import-tool mobile-ledger --donor ENEMY_BASICS.cs --pack PACK.json");
+            throw new ArgumentException("usage: daggerfall-import-tool mobile-ledger --donor ENEMY_BASICS.cs --authored BASE.json --pack IMPORTED.json");
         }
 
-        MobileLedger ledger = MobileLedgerBuilder.Build(File.ReadAllText(args[2]), File.ReadAllText(args[4]));
+        // The ledger joins the authored actors to the imported catalogs' enemy references.
+        MobileLedger ledger = MobileLedgerBuilder.Build(File.ReadAllText(args[2]), PayloadFiles.CombinedText(args[4], args[6]));
         Console.WriteLine($"donor mobiles: {ledger.DonorEntries}, published actors: {ledger.PublishedActors}, catalog enemies: {ledger.CatalogEntries}");
         Console.WriteLine($"published {ledger.Entries.Count(entry => entry.Disposition == MobileLedgerDisposition.Published)}, variants {ledger.Entries.Count(entry => entry.Disposition == MobileLedgerDisposition.PublishedVariant)}, human mobiles {ledger.Entries.Count(entry => entry.Disposition == MobileLedgerDisposition.HumanClass)}, unpublished {ledger.Unpublished.Count}");
         foreach (MobileLedgerEntry entry in ledger.Unpublished)
@@ -506,13 +508,13 @@ internal static partial class Program
     private static int RunItemTemplateLedgerCommand(IReadOnlyList<string> args)
     {
         bool update = args.Contains("--update", StringComparer.Ordinal);
-        if (args.Count != (update ? 8 : 7) || args[1] != "--donor" || args[3] != "--inventory" || args[5] != "--pack")
+        if (args.Count != (update ? 10 : 9) || args[1] != "--donor" || args[3] != "--inventory" || args[5] != "--authored" || args[7] != "--pack")
         {
-            throw new ArgumentException("usage: daggerfall-import-tool item-template-ledger --donor ITEMS_DIR --inventory INVENTORY.csv --pack PACK.json [--update]");
+            throw new ArgumentException("usage: daggerfall-import-tool item-template-ledger --donor ITEMS_DIR --inventory INVENTORY.csv --authored BASE.json --pack IMPORTED.json [--update]");
         }
 
         string donor = args[2];
-        string packFile = args[6];
+        string packFile = args[8];
         // The target's provenance comes from the documented inventory rather than from a
         // literal here, so a manifest-row change flows into the ledger instead of leaving
         // it silently stale.
@@ -525,8 +527,9 @@ internal static partial class Program
             File.ReadAllText(Path.Combine(donor, "ItemHelper.cs")),
             File.ReadAllText(Path.Combine(donor, "..", "..", "API", "ItemsFile.cs")),
             "donor");
-        JsonNode pack = JsonNode.Parse(File.ReadAllText(packFile))!.AsObject();
-        int publishedItems = pack["items"]?.AsArray().Count ?? 0;
+        JsonObject pack = PayloadFiles.ReadGenerated(packFile);
+        // The published items are authored; the ledger records how many there are.
+        int publishedItems = PayloadFiles.ReadAuthored(args[6])["items"]?.AsArray().Count ?? 0;
         JsonObject ledger = ItemTemplateLedgerBuilder.Build(
             baseline,
             family.Id,
@@ -554,7 +557,7 @@ internal static partial class Program
         }
 
         pack[ItemTemplateLedgerBuilder.SectionName] = JsonNode.Parse(rebuilt);
-        File.WriteAllText(packFile, pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        PayloadFiles.Write(packFile, pack);
         Console.WriteLine($"pack: {ItemTemplateLedgerBuilder.SectionName} updated in {packFile}");
         return 0;
     }
@@ -663,27 +666,29 @@ internal static partial class Program
 
     /// <summary>
     /// Builds the normalized reference catalogs from the supplied careers and the
-    /// documented inventory, reports what it found, and writes them into the base pack
+    /// documented inventory, reports what it found, and writes them into the imported payload
     /// when asked. The pack is the published artifact; this is how it is produced.
     /// </summary>
     private static int RunCatalogCommand(IReadOnlyList<string> args)
     {
         bool update = args.Contains("--update", StringComparer.Ordinal);
-        if (args.Count != (update ? 8 : 7) || args[1] != "--arena2" || args[3] != "--inventory" || args[5] != "--pack")
+        if (args.Count != (update ? 10 : 9) || args[1] != "--arena2" || args[3] != "--inventory" || args[5] != "--authored" || args[7] != "--pack")
         {
-            throw new ArgumentException("usage: daggerfall-import-tool catalogs --arena2 SOURCE_DIR --inventory INVENTORY.csv --pack PACK.json [--update]");
+            throw new ArgumentException("usage: daggerfall-import-tool catalogs --arena2 SOURCE_DIR --inventory INVENTORY.csv --authored BASE.json --pack IMPORTED.json [--update]");
         }
 
         string arena2 = args[2];
         string inventoryFile = args[4];
-        string packFile = args[6];
+        string authoredFile = args[6];
+        string packFile = args[8];
         IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(inventoryFile));
-        (List<string> attributes, List<string> skills) = ReadVocabulary(packFile);
+        // The vocabulary, actors and items are authored; the catalogs built from them are imported.
+        (List<string> attributes, List<string> skills) = ReadVocabulary(authoredFile);
         List<(string FileName, byte[] Bytes)> careers = [.. Directory
             .EnumerateFiles(arena2, "CLASS*.CFG")
             .OrderBy(path => path, StringComparer.Ordinal)
             .Select(path => (Path.GetFileName(path), File.ReadAllBytes(path)))];
-        (List<string> enemies, List<string> items) = ReadPackKeys(packFile);
+        (List<string> enemies, List<string> items) = ReadPackKeys(authoredFile);
         DaggerfallCatalogs catalogs = DaggerfallCatalogBuilder.Build(inventory, attributes, skills, careers, enemies, items);
         IReadOnlySet<string> inventoryIds = inventory.Select(row => row.Id).ToHashSet(StringComparer.Ordinal);
         byte[] section = DaggerfallCatalogSerializer.Serialize(catalogs, inventoryIds);
@@ -700,18 +705,17 @@ internal static partial class Program
             return 0;
         }
 
-        // Only the catalogs property is replaced; every other authored section keeps its
-        // own ordering and formatting.
-        JsonNode pack = JsonNode.Parse(File.ReadAllText(packFile))!.AsObject();
+        // Only the catalogs property is replaced; every other imported section keeps its own ordering.
+        JsonObject pack = PayloadFiles.ReadGenerated(packFile);
         pack["catalogs"] = JsonNode.Parse(System.Text.Encoding.UTF8.GetString(section));
-        File.WriteAllText(packFile, pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        PayloadFiles.Write(packFile, pack);
         Console.WriteLine($"pack: catalogs updated in {packFile}");
         return 0;
     }
 
     /// <summary>
     /// Publishes the character media the corpus supplies and builds the presentation section from it,
-    /// writing the artifacts under the content root and the references into the base pack when asked, so
+    /// writing the artifacts under the content root and the references into the imported payload when asked, so
     /// a character or social consumer resolves a race's layers by identity instead of reconstructing
     /// file names.
     /// </summary>
@@ -723,7 +727,7 @@ internal static partial class Program
     /// </remarks>
     private static int RunCharacterPresentationCommand(IReadOnlyList<string> args)
     {
-        const string Usage = "usage: daggerfall-import-tool character-presentation --arena2 SOURCE_DIR --inventory INVENTORY.csv --pack PACK.json --out CONTENT_ROOT [--group NAME] [--update]";
+        const string Usage = "usage: daggerfall-import-tool character-presentation --arena2 SOURCE_DIR --inventory INVENTORY.csv --pack IMPORTED.json --out CONTENT_ROOT [--group NAME] [--update]";
         bool update = args.Contains("--update", StringComparer.Ordinal);
         Dictionary<string, string> values = new(StringComparer.Ordinal);
         for (int index = 1; index < args.Count; index++)
@@ -878,9 +882,9 @@ internal static partial class Program
         File.WriteAllBytes(indexFile, indexBytes);
         Console.WriteLine($"content: {pass.Artifacts.Count} character artifacts and their index written under {outRoot}");
 
-        JsonNode pack = JsonNode.Parse(File.ReadAllText(packFile))!.AsObject();
+        JsonObject pack = PayloadFiles.ReadGenerated(packFile);
         pack["characterPresentation"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(presentation, PublishedJson.Section));
-        File.WriteAllText(packFile, pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        PayloadFiles.Write(packFile, pack);
         Console.WriteLine($"pack: characterPresentation updated in {packFile}");
         return 0;
     }
@@ -908,14 +912,14 @@ internal static partial class Program
     /// </summary>
     /// <summary>
     /// Reads every region's locations and dungeons from MAPS.BSA, joins each MAPPITEM to its RMB/FLD
-    /// facts from BLOCKS.BSA, and writes the complete location contract into the base pack when asked.
+    /// facts from BLOCKS.BSA, and writes the complete location contract into the imported payload when asked.
     /// </summary>
     private static int RunLocationsCommand(IReadOnlyList<string> args)
     {
         bool update = args.Contains("--update", StringComparer.Ordinal);
         if (args.Count != (update ? 6 : 5) || args[1] != "--arena2" || args[3] != "--pack")
         {
-            throw new ArgumentException("usage: daggerfall-import-tool locations --arena2 SOURCE_DIR --pack PACK.json [--update]");
+            throw new ArgumentException("usage: daggerfall-import-tool locations --arena2 SOURCE_DIR --pack IMPORTED.json [--update]");
         }
 
         string arena2 = args[2];
@@ -935,21 +939,21 @@ internal static partial class Program
             return 0;
         }
 
-        JsonNode pack = JsonNode.Parse(File.ReadAllText(packFile))!.AsObject();
+        JsonObject pack = PayloadFiles.ReadGenerated(packFile);
         pack["locations"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(locations, PublishedJson.Section));
-        File.WriteAllText(packFile, pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        PayloadFiles.Write(packFile, pack);
         Console.WriteLine($"pack: locations updated in {packFile}");
         return 0;
     }
 
     /// <summary>
-    /// Reads the climate and politic grids from their PAK files and writes them into the base pack
+    /// Reads the climate and politic grids from their PAK files and writes them into the imported payload
     /// when asked, so a terrain, weather or social consumer resolves a map pixel by the coordinates
     /// the source tiles rather than by a policy inferred from a cell value.
     /// </summary>
     private static int RunClimateCommand(IReadOnlyList<string> args)
     {
-        const string Usage = "usage: daggerfall-import-tool climate --arena2 SOURCE_DIR --pack PACK.json --inventory CSV [--update]";
+        const string Usage = "usage: daggerfall-import-tool climate --arena2 SOURCE_DIR --pack IMPORTED.json --inventory CSV [--update]";
         bool update = args.Contains("--update", StringComparer.Ordinal);
         Dictionary<string, string> values = new(StringComparer.Ordinal);
         for (int index = 1; index < args.Count; index++)
@@ -983,10 +987,10 @@ internal static partial class Program
             return 0;
         }
 
-        JsonNode pack = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
+        JsonObject pack = PayloadFiles.ReadGenerated(values["--pack"]);
         pack["climate"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(climate, PublishedJson.Section));
         pack["politic"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(politic, PublishedJson.Section));
-        File.WriteAllText(values["--pack"], pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        PayloadFiles.Write(values["--pack"], pack);
         Console.WriteLine($"pack: climate and politic updated in {values["--pack"]}");
         return 0;
     }
@@ -1044,13 +1048,13 @@ internal static partial class Program
     }
 
     /// <summary>
-    /// Reads the classic text resource into the base pack, so a text consumer resolves a value by the
+    /// Reads the classic text resource into the imported payload, so a text consumer resolves a value by the
     /// key the source gives it and reads the macros and variants the value carries rather than a
     /// rendered string this tool would have had to choose.
     /// </summary>
     private static int RunTextCommand(IReadOnlyList<string> args)
     {
-        const string Usage = "usage: daggerfall-import-tool text --arena2 SOURCE_DIR --pack PACK.json --inventory CSV --language LANG [--update]";
+        const string Usage = "usage: daggerfall-import-tool text --arena2 SOURCE_DIR --pack IMPORTED.json --inventory CSV --language LANG [--update]";
         bool update = args.Contains("--update", StringComparer.Ordinal);
         Dictionary<string, string> values = new(StringComparer.Ordinal);
         for (int index = 1; index < args.Count; index++)
@@ -1132,13 +1136,13 @@ internal static partial class Program
             return 0;
         }
 
-        JsonNode pack = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
+        JsonObject pack = PayloadFiles.ReadGenerated(values["--pack"]);
         pack["text"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(text, PublishedJson.Section));
         pack["names"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(names, PublishedJson.Section));
         pack["rumors"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(rumors, PublishedJson.Section));
         pack["biographies"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(biographies, PublishedJson.Section));
         pack["books"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(publishedBooks, PublishedJson.Section));
-        File.WriteAllText(values["--pack"], pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        PayloadFiles.Write(values["--pack"], pack);
         Console.WriteLine($"pack: text, names, rumors, biographies and books updated in {values["--pack"]}");
         return 0;
     }
@@ -1150,7 +1154,7 @@ internal static partial class Program
     /// </summary>
     private static int RunInternalStringsCommand(IReadOnlyList<string> args)
     {
-        const string Usage = "usage: daggerfall-import-tool internal-strings --source Internal_Strings.csv --label LOGICAL_PATH --pack PACK.json --language LANG [--update]";
+        const string Usage = "usage: daggerfall-import-tool internal-strings --source Internal_Strings.csv --label LOGICAL_PATH --pack IMPORTED.json --language LANG [--update]";
         bool update = args.Contains("--update", StringComparer.Ordinal);
         Dictionary<string, string> values = new(StringComparer.Ordinal);
         for (int index = 1; index < args.Count; index++)
@@ -1169,7 +1173,7 @@ internal static partial class Program
             throw new ArgumentException(Usage);
         }
 
-        string existingJson = File.ReadAllText(values["--pack"]);
+        string existingJson = PayloadFiles.ReadGeneratedText(values["--pack"]);
         JsonNode pack = JsonNode.Parse(existingJson)!.AsObject();
         DaggerfallText existing = JsonSerializer.Deserialize<DaggerfallText>(
             pack["text"]?.ToJsonString() ?? throw new InvalidOperationException("The target pack carries no text section to extend."),
@@ -1198,7 +1202,7 @@ internal static partial class Program
     /// <summary>Publishes the donor MapsFile regionRaces table used by classic %ef building-name expansion.</summary>
     private static int RunBuildingNameInputsCommand(IReadOnlyList<string> args)
     {
-        const string Usage = "usage: daggerfall-import-tool building-name-inputs --maps-file MapsFile.cs --label LOGICAL_PATH --pack PACK.json [--update]";
+        const string Usage = "usage: daggerfall-import-tool building-name-inputs --maps-file MapsFile.cs --label LOGICAL_PATH --pack IMPORTED.json [--update]";
         bool update = args.Contains("--update", StringComparer.Ordinal);
         Dictionary<string, string> values = new(StringComparer.Ordinal);
         for (int index = 1; index < args.Count; index++)
@@ -1227,7 +1231,7 @@ internal static partial class Program
             return 0;
         }
 
-        string existing = File.ReadAllText(values["--pack"]);
+        string existing = PayloadFiles.ReadGeneratedText(values["--pack"]);
         string updated = TopLevelJsonSectionRewriter.ReplaceOrAppend(existing, new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["buildingNames"] = JsonSerializer.Serialize(inputs, PublishedJson.Section),
@@ -1266,14 +1270,14 @@ internal static partial class Program
     private static string Arena2Label(string relativePath) => $"{Arena2LogicalRoot}/{relativePath}";
 
     /// <summary>
-    /// Reads the classic faction file into the base pack when asked, so a region, temple, guild or
+    /// Reads the classic faction file into the imported payload when asked, so a region, temple, guild or
     /// court resolves to the filed relations and bindings the source states rather than to policy
     /// inferred from them. Reputation, rank and service behavior stay out: the catalog publishes
     /// filed values, and the social consumers that read them own what those values do.
     /// </summary>
     private static int RunFactionsCommand(IReadOnlyList<string> args)
     {
-        const string Usage = "usage: daggerfall-import-tool factions --arena2 SOURCE_DIR --pack PACK.json --inventory CSV [--update]";
+        const string Usage = "usage: daggerfall-import-tool factions --arena2 SOURCE_DIR --pack IMPORTED.json --inventory CSV [--update]";
         bool update = args.Contains("--update", StringComparer.Ordinal);
         Dictionary<string, string> values = new(StringComparer.Ordinal);
         for (int index = 1; index < args.Count; index++)
@@ -1310,22 +1314,22 @@ internal static partial class Program
             return 0;
         }
 
-        JsonNode pack = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
+        JsonObject pack = PayloadFiles.ReadGenerated(values["--pack"]);
         pack["factions"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(factions, PublishedJson.Section));
-        File.WriteAllText(values["--pack"], pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        PayloadFiles.Write(values["--pack"], pack);
         Console.WriteLine($"pack: factions updated in {values["--pack"]}");
         return 0;
     }
 
     /// <summary>
-    /// Reads the classic wilderness file into the base pack when asked, so an exterior consumer
+    /// Reads the classic wilderness file into the imported payload when asked, so an exterior consumer
     /// resolves a map pixel by the coordinates the source tiles rather than by a second spatial
     /// system. The heightmap tiles rows; the cell samples travel as one span; the prefix bytes no
     /// reader consumes stay documented domains rather than republished bytes.
     /// </summary>
     private static int RunTerrainCommand(IReadOnlyList<string> args)
     {
-        const string Usage = "usage: daggerfall-import-tool terrain --arena2 SOURCE_DIR --pack PACK.json --inventory CSV [--update]";
+        const string Usage = "usage: daggerfall-import-tool terrain --arena2 SOURCE_DIR --pack IMPORTED.json --inventory CSV [--update]";
         bool update = args.Contains("--update", StringComparer.Ordinal);
         Dictionary<string, string> values = new(StringComparer.Ordinal);
         for (int index = 1; index < args.Count; index++)
@@ -1355,22 +1359,22 @@ internal static partial class Program
             return 0;
         }
 
-        JsonNode pack = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
+        JsonObject pack = PayloadFiles.ReadGenerated(values["--pack"]);
         pack["terrain"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(terrain, PublishedJson.Section));
-        File.WriteAllText(values["--pack"], pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        PayloadFiles.Write(values["--pack"], pack);
         Console.WriteLine($"pack: terrain updated in {values["--pack"]}");
         return 0;
     }
 
     /// <summary>
-    /// Reads donor-shaped quest text into the base pack when asked, so a quest source resolves
+    /// Reads donor-shaped quest text into the imported payload when asked, so a quest source resolves
     /// to its messages and finite top-level QBN blocks rather than to a binary blob. Action
     /// bodies remain ordered source lines for later action compilation; an unclaimed top-level
     /// line diagnoses the source.
     /// </summary>
     private static int RunQuestsCommand(IReadOnlyList<string> args)
     {
-        const string Usage = "usage: daggerfall-import-tool quests --arena2 SOURCE_DIR --quest-text SOURCE_DIR --tables TABLE_DIR --pack PACK.json --inventory CSV [--update]";
+        const string Usage = "usage: daggerfall-import-tool quests --arena2 SOURCE_DIR --quest-text SOURCE_DIR --tables TABLE_DIR --pack IMPORTED.json --records RECORDS.json --inventory CSV [--update]";
         bool update = args.Contains("--update", StringComparer.Ordinal);
         Dictionary<string, string> values = new(StringComparer.Ordinal);
         for (int index = 1; index < args.Count; index++)
@@ -1383,7 +1387,7 @@ internal static partial class Program
             }
         }
 
-        string[] accepted = ["--arena2", "--quest-text", "--tables", "--pack", "--inventory"];
+        string[] accepted = ["--arena2", "--quest-text", "--tables", "--pack", "--records", "--inventory"];
         if (values.Count != accepted.Length || accepted.Any(key => !values.ContainsKey(key)))
         {
             throw new ArgumentException(Usage);
@@ -1443,52 +1447,62 @@ internal static partial class Program
             return 0;
         }
 
-        string existing = File.ReadAllText(values["--pack"]);
+        string existing = PayloadFiles.ReadGeneratedText(values["--pack"]);
         string updated = TopLevelJsonSectionRewriter.ReplaceOrAppend(existing, new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["questCatalog"] = System.Text.Json.JsonSerializer.Serialize(catalog, PublishedJson.Section),
             ["questTables"] = System.Text.Json.JsonSerializer.Serialize(tables, PublishedJson.Section),
             ["questSources"] = System.Text.Json.JsonSerializer.Serialize(pack, PublishedJson.Section),
-            ["questOriginalSources"] = System.Text.Json.JsonSerializer.Serialize(originals, PublishedJson.Section),
         });
         File.WriteAllText(values["--pack"], updated);
         Console.WriteLine($"pack: quest sources updated in {values["--pack"]}");
+        // The original-source selections feed the quest corpus payloads, which carry what a session reads;
+        // nothing at runtime reads the selections themselves, so they stay in the import records.
+        string records = TopLevelJsonSectionRewriter.ReplaceOrAppend(PayloadFiles.ReadGeneratedText(values["--records"]), new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["questOriginalSources"] = System.Text.Json.JsonSerializer.Serialize(originals, PublishedJson.Section),
+        });
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(values["--records"]))!);
+        File.WriteAllText(values["--records"], records);
+        Console.WriteLine($"records: original quest sources updated in {values["--records"]}");
         return 0;
     }
 
     /// <summary>Publishes the selected Fighters Guild receipt from already normalized quest sections.</summary>
     private static int RunFightersQuestCorpusCommand(IReadOnlyList<string> args)
     {
-        const string Usage = "usage: daggerfall-import-tool fighters-quest-corpus --base BASE.json --out PAYLOAD.json";
-        if (args.Count != 5 || args[1] != "--base" || args[3] != "--out") throw new ArgumentException(Usage);
+        const string Usage = "usage: daggerfall-import-tool fighters-quest-corpus --pack IMPORTED.json --records RECORDS.json --out PAYLOAD.json";
+        if (args.Count != 7 || args[1] != "--pack" || args[3] != "--records" || args[5] != "--out") throw new ArgumentException(Usage);
         using JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(args[2]));
+        using JsonDocument recordDocument = JsonDocument.Parse(File.ReadAllBytes(args[4]));
         JsonElement root = document.RootElement;
         DaggerfallQuestCatalog catalog = JsonSerializer.Deserialize<DaggerfallQuestCatalog>(root.GetProperty("questCatalog").GetRawText(), PublishedJson.SectionRead)
-            ?? throw new InvalidOperationException("Base payload has no readable questCatalog section.");
+            ?? throw new InvalidOperationException("Imported payload has no readable questCatalog section.");
         DaggerfallQuestPack sources = JsonSerializer.Deserialize<DaggerfallQuestPack>(root.GetProperty("questSources").GetRawText(), PublishedJson.SectionRead)
-            ?? throw new InvalidOperationException("Base payload has no readable questSources section.");
-        DaggerfallQuestOriginalSourceSet originals = JsonSerializer.Deserialize<DaggerfallQuestOriginalSourceSet>(root.GetProperty("questOriginalSources").GetRawText(), PublishedJson.SectionRead)
-            ?? throw new InvalidOperationException("Base payload has no readable questOriginalSources section.");
+            ?? throw new InvalidOperationException("Imported payload has no readable questSources section.");
+        DaggerfallQuestOriginalSourceSet originals = JsonSerializer.Deserialize<DaggerfallQuestOriginalSourceSet>(recordDocument.RootElement.GetProperty("questOriginalSources").GetRawText(), PublishedJson.SectionRead)
+            ?? throw new InvalidOperationException("Import records have no readable questOriginalSources section.");
         DaggerfallFightersGuildQuestCorpus corpus = FightersGuildQuestCorpusPublication.Create(catalog, sources, originals);
-        File.WriteAllBytes(args[4], FightersGuildQuestCorpusPublication.Serialize(corpus));
+        File.WriteAllBytes(args[6], FightersGuildQuestCorpusPublication.Serialize(corpus));
         Console.WriteLine($"fighters quest corpus: {corpus.Quests.Count} exact records, fingerprint {corpus.Fingerprint.Value}");
         return 0;
     }
 
     private static int RunClassicQuestCorporaCommand(IReadOnlyList<string> args)
     {
-        const string Usage = "usage: daggerfall-import-tool classic-quest-corpora --base BASE.json --out DIRECTORY";
-        if (args.Count != 5 || args[1] != "--base" || args[3] != "--out") throw new ArgumentException(Usage);
+        const string Usage = "usage: daggerfall-import-tool classic-quest-corpora --pack IMPORTED.json --records RECORDS.json --out DIRECTORY";
+        if (args.Count != 7 || args[1] != "--pack" || args[3] != "--records" || args[5] != "--out") throw new ArgumentException(Usage);
         using JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(args[2]));
+        using JsonDocument recordDocument = JsonDocument.Parse(File.ReadAllBytes(args[4]));
         JsonElement root = document.RootElement;
-        DaggerfallQuestCatalog catalog = JsonSerializer.Deserialize<DaggerfallQuestCatalog>(root.GetProperty("questCatalog").GetRawText(), PublishedJson.SectionRead) ?? throw new InvalidOperationException("Base payload has no readable questCatalog section.");
-        DaggerfallQuestPack sources = JsonSerializer.Deserialize<DaggerfallQuestPack>(root.GetProperty("questSources").GetRawText(), PublishedJson.SectionRead) ?? throw new InvalidOperationException("Base payload has no readable questSources section.");
-        DaggerfallQuestOriginalSourceSet originals = JsonSerializer.Deserialize<DaggerfallQuestOriginalSourceSet>(root.GetProperty("questOriginalSources").GetRawText(), PublishedJson.SectionRead) ?? throw new InvalidOperationException("Base payload has no readable questOriginalSources section.");
-        Directory.CreateDirectory(args[4]);
+        DaggerfallQuestCatalog catalog = JsonSerializer.Deserialize<DaggerfallQuestCatalog>(root.GetProperty("questCatalog").GetRawText(), PublishedJson.SectionRead) ?? throw new InvalidOperationException("Imported payload has no readable questCatalog section.");
+        DaggerfallQuestPack sources = JsonSerializer.Deserialize<DaggerfallQuestPack>(root.GetProperty("questSources").GetRawText(), PublishedJson.SectionRead) ?? throw new InvalidOperationException("Imported payload has no readable questSources section.");
+        DaggerfallQuestOriginalSourceSet originals = JsonSerializer.Deserialize<DaggerfallQuestOriginalSourceSet>(recordDocument.RootElement.GetProperty("questOriginalSources").GetRawText(), PublishedJson.SectionRead) ?? throw new InvalidOperationException("Import records have no readable questOriginalSources section.");
+        Directory.CreateDirectory(args[6]);
         foreach (DaggerfallClassicQuestCorpusSpecification specification in ClassicQuestCorpusPublication.Specifications)
         {
             DaggerfallClassicQuestCorpus corpus = ClassicQuestCorpusPublication.Create(specification.Id, catalog, sources, originals);
-            File.WriteAllBytes(Path.Combine(args[4], $"daggerfall.quests.{specification.Id}.json"), ClassicQuestCorpusPublication.Serialize(corpus));
+            File.WriteAllBytes(Path.Combine(args[6], $"daggerfall.quests.{specification.Id}.json"), ClassicQuestCorpusPublication.Serialize(corpus));
             Console.WriteLine($"classic quest corpus {specification.Id}: {corpus.Quests.Count} records, fingerprint {corpus.Fingerprint.Value}");
         }
         return 0;
@@ -1501,7 +1515,7 @@ internal static partial class Program
     /// </summary>
     private static int RunVideosCommand(IReadOnlyList<string> args)
     {
-        const string Usage = "usage: daggerfall-import-tool videos --arena2 SOURCE_DIR --pack PACK.json --inventory CSV [--update]";
+        const string Usage = "usage: daggerfall-import-tool videos --arena2 SOURCE_DIR --pack IMPORTED.json --inventory CSV [--update]";
         bool update = args.Contains("--update", StringComparer.Ordinal);
         Dictionary<string, string> values = new(StringComparer.Ordinal);
         for (int index = 1; index < args.Count; index++)
@@ -1541,21 +1555,21 @@ internal static partial class Program
             return 0;
         }
 
-        JsonNode node = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
+        JsonObject node = PayloadFiles.ReadGenerated(values["--pack"]);
         node["cinematics"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(pack, PublishedJson.Section));
-        File.WriteAllText(values["--pack"], node.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        PayloadFiles.Write(values["--pack"], node);
         Console.WriteLine($"pack: cinematic identities updated in {values["--pack"]}");
         return 0;
     }
 
     /// <summary>
-    /// Reads the donor's exported template tables into the base pack when asked, so a native
+    /// Reads the donor's exported template tables into the imported payload when asked, so a native
     /// template index resolves to the substitute record the donor states rather than to a
     /// placeholder. Every record carries substitute provenance; the ledger targets resolve to it.
     /// </summary>
     private static int RunItemsCommand(IReadOnlyList<string> args)
     {
-        const string Usage = "usage: daggerfall-import-tool items --arena2 SOURCE_DIR --pack PACK.json --inventory CSV --item-templates FILE --magic-templates FILE [--update]";
+        const string Usage = "usage: daggerfall-import-tool items --arena2 SOURCE_DIR --pack IMPORTED.json --inventory CSV --item-templates FILE --magic-templates FILE [--update]";
         bool update = args.Contains("--update", StringComparer.Ordinal);
         Dictionary<string, string> values = new(StringComparer.Ordinal);
         for (int index = 1; index < args.Count; index++)
@@ -1598,10 +1612,10 @@ internal static partial class Program
             return 0;
         }
 
-        JsonNode pack = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
+        JsonObject pack = PayloadFiles.ReadGenerated(values["--pack"]);
         pack["itemTemplates"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(catalog, PublishedJson.Section));
         ResolveLedgerTargets(pack, catalog);
-        File.WriteAllText(values["--pack"], pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        PayloadFiles.Write(values["--pack"], pack);
         Console.WriteLine($"pack: item templates updated in {values["--pack"]}");
         return 0;
     }
@@ -1625,17 +1639,18 @@ internal static partial class Program
     }
 
     /// <summary>
-    /// Enumerates the classic mesh archive into the base pack, so a mesh identity is published whether or
-    /// not anything references it and the blocks that do reference one can be answered.
+    /// Enumerates the classic mesh archive into the import records, so a mesh identity is published whether
+    /// or not anything references it and the blocks that do reference one can be answered.
     /// </summary>
     /// <remarks>
-    /// The use sites come from the pack's own block section: which blocks name a mesh is a fact the block
-    /// inventory publishes, and reading it there keeps one owner for it. Running this before blocks exists
-    /// is refused rather than publishing an inventory whose use sites are silently empty.
+    /// The use sites come from the block document: which blocks name a mesh is a fact the block inventory
+    /// publishes, and reading it there keeps one owner for it. Running this before blocks exists is refused
+    /// rather than publishing an inventory whose use sites are silently empty. Nothing at runtime reads the
+    /// inventory, so it is written to the import records rather than into the runtime content root.
     /// </remarks>
     private static int RunGeometryCommand(IReadOnlyList<string> args)
     {
-        const string Usage = "usage: daggerfall-import-tool geometry --arena2 SOURCE_DIR --pack PACK.json --inventory CSV [--update]";
+        const string Usage = "usage: daggerfall-import-tool geometry --arena2 SOURCE_DIR --blocks BLOCKS.json --records RECORDS.json --inventory CSV [--update]";
         bool update = args.Contains("--update", StringComparer.Ordinal);
         Dictionary<string, string> values = new(StringComparer.Ordinal);
         for (int index = 1; index < args.Count; index++)
@@ -1648,17 +1663,14 @@ internal static partial class Program
             }
         }
 
-        string[] accepted = ["--arena2", "--pack", "--inventory"];
+        string[] accepted = ["--arena2", "--blocks", "--records", "--inventory"];
         if (values.Count != accepted.Length || accepted.Any(key => !values.ContainsKey(key)))
         {
             throw new ArgumentException(Usage);
         }
 
-        JsonNode pack = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
-        // The complete block document is the one the blocks command writes beside the pack. The pack's own
-        // blocks section has its placements stripped, and a stripped city block does not validate, so the
-        // use sites are read from the complete document rather than from the section.
-        string blocksPayload = BlockPlacementsPayloadPath(values["--pack"]);
+        JsonObject records = PayloadFiles.ReadGenerated(values["--records"]);
+        string blocksPayload = values["--blocks"];
         if (!File.Exists(blocksPayload))
         {
             throw new ArgumentException($"there is no block document at '{blocksPayload}', which is where mesh use sites come from: run the blocks command first");
@@ -1709,20 +1721,20 @@ internal static partial class Program
             return 0;
         }
 
-        pack["geometry"] = JsonNode.Parse(JsonSerializer.Serialize(geometry, PublishedJson.Section));
-        File.WriteAllText(values["--pack"], pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
-        Console.WriteLine($"pack: geometry updated in {values["--pack"]}");
+        records["geometry"] = JsonNode.Parse(JsonSerializer.Serialize(geometry, PublishedJson.Section));
+        PayloadFiles.Write(values["--records"], records);
+        Console.WriteLine($"records: geometry updated in {values["--records"]}");
         return 0;
     }
 
     /// <summary>
-    /// Enumerates the classic block archive into the base pack, so the tasks that publish dungeons,
+    /// Enumerates the classic block archive into the block document, so the tasks that publish dungeons,
     /// exteriors and geometry start from one inventory of what the corpus carries rather than decoding
     /// the archive again and disagreeing about what a name means.
     /// </summary>
     private static int RunBlocksCommand(IReadOnlyList<string> args)
     {
-        const string Usage = "usage: daggerfall-import-tool blocks --arena2 SOURCE_DIR --pack PACK.json --inventory CSV [--update]";
+        const string Usage = "usage: daggerfall-import-tool blocks --arena2 SOURCE_DIR --out BLOCKS.json --inventory CSV [--update]";
         bool update = args.Contains("--update", StringComparer.Ordinal);
         Dictionary<string, string> values = new(StringComparer.Ordinal);
         for (int index = 1; index < args.Count; index++)
@@ -1735,7 +1747,7 @@ internal static partial class Program
             }
         }
 
-        string[] accepted = ["--arena2", "--pack", "--inventory"];
+        string[] accepted = ["--arena2", "--out", "--inventory"];
         if (values.Count != accepted.Length || accepted.Any(key => !values.ContainsKey(key)))
         {
             throw new ArgumentException(Usage);
@@ -1768,56 +1780,14 @@ internal static partial class Program
             return 0;
         }
 
-        // Placements ride in their own payload beside the pack: 621k records would triple the
-        // base pack, while the base section keeps the counts existing consumers read. The full
-        // document is validated before either file is written, so the two never disagree.
-        DaggerfallBlocks stripped = StripPlacements(blocks);
-        JsonNode pack = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
-        pack["blocks"] = JsonNode.Parse(JsonSerializer.Serialize(stripped, PublishedJson.Section));
-        File.WriteAllText(values["--pack"], pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
-        Console.WriteLine($"pack: blocks updated in {values["--pack"]}");
-        string payloadPath = BlockPlacementsPayloadPath(values["--pack"]);
+        // The complete document, placements included, is the one owner of the block records: the
+        // daggerfall.blocks pack reads it at runtime and the geometry inventory reads its use sites.
+        string payloadPath = values["--out"];
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(payloadPath))!);
         File.WriteAllText(payloadPath, JsonSerializer.Serialize(blocks, PublishedJson.SectionCompact) + "\n");
-        Console.WriteLine($"pack: block placements updated in {payloadPath}");
+        Console.WriteLine($"blocks: block document written to {payloadPath}");
         return 0;
     }
-
-    /// <summary>The complete block document the blocks command writes beside the pack it updates.</summary>
-    private static string BlockPlacementsPayloadPath(string packFile) =>
-        Path.Combine(Path.GetDirectoryName(Path.GetFullPath(packFile))!, "daggerfall.blocks.json");
-
-    private static DaggerfallBlocks StripPlacements(DaggerfallBlocks blocks)
-    {
-        List<DaggerfallBlockRecord> records = [];
-        foreach (DaggerfallBlockRecord record in blocks.Records)
-        {
-            DaggerfallBlockObjects? objects = record.Objects is null ? null : record.Objects with
-            {
-                ModelPlacements = [],
-                FlatPlacements = [],
-                LightPlacements = [],
-                DoorPlacements = [],
-            };
-            DaggerfallBlockRmbHeader? rmb = record.Rmb;
-            if (rmb is not null)
-            {
-                rmb = rmb with
-                {
-                    Buildings = [.. rmb.Buildings.Select(building => building with
-                    {
-                        ExteriorPlacements = EmptyHalf(),
-                        InteriorPlacements = EmptyHalf(),
-                    })],
-                };
-            }
-
-            records.Add(record with { Objects = objects, Rmb = rmb, RmbPlacements = null });
-        }
-
-        return blocks with { Records = records };
-    }
-
-    private static DaggerfallBlockHalfPlacements EmptyHalf() => new([], [], [], [], []);
 
     /// <summary>
     /// Publishes the classic media into a content root, so the artifacts are admitted content a
@@ -2021,17 +1991,17 @@ internal static partial class Program
         })];
     }
 
-    private static (List<string> Attributes, List<string> Skills) ReadVocabulary(string packFile)
+    private static (List<string> Attributes, List<string> Skills) ReadVocabulary(string authoredFile)
     {
-        JsonNode vocabulary = JsonNode.Parse(File.ReadAllText(packFile))!.AsObject()["vocabulary"]!;
+        JsonNode vocabulary = PayloadFiles.ReadAuthored(authoredFile)["vocabulary"]!;
         return (
             [.. vocabulary["attributes"]!.AsArray().Select(value => value!.GetValue<string>())],
             [.. vocabulary["skills"]!.AsArray().Select(value => value!.GetValue<string>())]);
     }
 
-    private static (List<string> Enemies, List<string> Items) ReadPackKeys(string packFile)
+    private static (List<string> Enemies, List<string> Items) ReadPackKeys(string authoredFile)
     {
-        JsonNode root = JsonNode.Parse(File.ReadAllText(packFile))!.AsObject();
+        JsonObject root = PayloadFiles.ReadAuthored(authoredFile);
         List<string> ids(string property) =>
             [.. root[property]!.AsArray().Select(value => value!.AsObject()["id"]!.GetValue<string>())];
         // The player is an actor identity but not an enemy a catalog references.

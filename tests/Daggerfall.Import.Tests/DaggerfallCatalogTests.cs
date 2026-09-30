@@ -198,7 +198,7 @@ public sealed class DaggerfallCatalogTests
     [CorpusFact]
     public void The_published_pack_lists_exactly_the_source_records_it_cites()
     {
-        System.Text.Json.Nodes.JsonArray sources = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(PackPath()))!
+        System.Text.Json.Nodes.JsonArray sources = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(ImportedPath()))!
             ["catalogs"]!["sources"]!.AsArray();
         DaggerfallCatalogs catalogs = BuildFromRepository();
 
@@ -275,14 +275,14 @@ public sealed class DaggerfallCatalogTests
         // The published record is the carrier the runtime reads, so it must not carry
         // computed views: a view serialized by accident published an array of empty
         // objects beside the values it was derived from.
-        System.Text.Json.Nodes.JsonObject career = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(PackPath()))!
+        System.Text.Json.Nodes.JsonObject career = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(ImportedPath()))!
             ["catalogs"]!["careers"]!.AsArray()
             .Select(value => value!.AsObject())
             .First(value => value["id"]!.GetValue<string>() == "class00");
 
         Assert.DoesNotContain("flagBytes", career.Select(property => property.Key));
         Assert.DoesNotContain("skillReferences", career.Select(property => property.Key));
-        Assert.Equal(34, System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(PackPath()))!
+        Assert.Equal(34, System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(ImportedPath()))!
             ["catalogs"]!["careers"]!.AsArray()
             .Select(value => value!.AsObject())
             .Single(value => value["id"]!.GetValue<string>() == "class12")["resistanceFlags"]!.GetValue<int>());
@@ -298,7 +298,7 @@ public sealed class DaggerfallCatalogTests
         // the builder would otherwise leave a consumer resolving a key the catalog the
         // pack actually carries does not list. Comparing the builder's own inputs with
         // its own output would prove nothing, so this reads the pack file.
-        System.Text.Json.Nodes.JsonNode published = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(PackPath()))!;
+        System.Text.Json.Nodes.JsonNode published = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(ImportedPath()))!;
         string[] publishedEnemies = [.. published["catalogs"]!["enemies"]!.AsArray().Select(value => value!["id"]!.GetValue<string>())];
         string[] publishedItems = [.. published["catalogs"]!["itemTemplates"]!.AsArray().Select(value => value!["id"]!.GetValue<string>())];
         Assert.Equal(EnemyIds().Order(StringComparer.Ordinal), publishedEnemies.Order(StringComparer.Ordinal));
@@ -383,4 +383,6 @@ public sealed class DaggerfallCatalogTests
         [.. System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(PackPath()))!["items"]!.AsArray().Select(value => value!.AsObject()["id"]!.GetValue<string>())];
 
     private static string PackPath() => Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json");
+
+    private static string ImportedPath() => Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.imported.json");
 }

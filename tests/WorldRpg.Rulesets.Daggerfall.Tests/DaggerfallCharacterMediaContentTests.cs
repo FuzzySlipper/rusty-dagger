@@ -114,13 +114,13 @@ public sealed class DaggerfallCharacterMediaContentTests
     {
         // The reference resolves to nothing if the file it names was never accounted for, so the pack
         // is refused with the file named rather than loading a reference that points nowhere.
-        string pack = File.ReadAllText(PackPath()).Replace("\"sourceFile\": \"BODY00I0.IMG\"", "\"sourceFile\": \"ABSENT01I0.IMG\"", StringComparison.Ordinal);
+        string pack = TestPayload.CombinedText.Replace("\"sourceFile\": \"BODY00I0.IMG\"", "\"sourceFile\": \"ABSENT01I0.IMG\"", StringComparison.Ordinal);
         DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(pack)));
         Assert.Contains("ABSENT01I0.IMG", error.Message, StringComparison.Ordinal);
         Assert.Contains("does not account for", error.Message, StringComparison.Ordinal);
 
         // A layer name this reader does not know is refused rather than given a role by position.
-        string unknown = File.ReadAllText(PackPath()).Replace("\"layer\": \"background\"", "\"layer\": \"backdrop\"", StringComparison.Ordinal);
+        string unknown = TestPayload.CombinedText.Replace("\"layer\": \"background\"", "\"layer\": \"backdrop\"", StringComparison.Ordinal);
         DaggerfallContentException named = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(unknown)));
         Assert.Contains("not a layer name this reader knows", named.Message, StringComparison.Ordinal);
     }
@@ -145,7 +145,7 @@ public sealed class DaggerfallCharacterMediaContentTests
         // A dungeon naming a location the section does not carry is a diagnostic, not a silent load.
         // The corruption moves one dungeon's index rather than a region, because moving a region moves
         // its locations with it and the section stays consistent.
-        System.Text.Json.Nodes.JsonNode pack = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(PackPath()))!;
+        System.Text.Json.Nodes.JsonNode pack = System.Text.Json.Nodes.JsonNode.Parse(TestPayload.CombinedText)!;
         pack["locations"]!["dungeons"]![0]!["index"] = 999999;
         DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(
             () => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(pack.ToJsonString())));
@@ -154,5 +154,4 @@ public sealed class DaggerfallCharacterMediaContentTests
 
     private static DaggerfallDefinitions Read() => TestPayload.Definitions;
 
-    private static string PackPath() => Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json");
 }

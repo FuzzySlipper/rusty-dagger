@@ -427,7 +427,7 @@ public sealed class DaggerfallSiteContextTests
     {
         // Fifteen is one past the highest value the five-bit field carries. Every consumer that branches
         // on a kind would otherwise answer from a kind nobody published.
-        JsonNode pack = JsonNode.Parse(File.ReadAllText(PackPath()))!;
+        JsonNode pack = JsonNode.Parse(TestPayload.CombinedText)!;
         JsonNode location = pack["locations"]!["locations"]![0]!;
         Assert.Equal(0, (int)location["region"]!);
         Assert.Equal(0, (int)location["index"]!);
@@ -487,5 +487,4 @@ public sealed class DaggerfallSiteContextTests
 
     private static DaggerfallDefinitions Read() => TestPayload.Definitions;
 
-    private static string PackPath() => Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json");
 }

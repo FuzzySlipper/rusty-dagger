@@ -106,7 +106,7 @@ public sealed class DaggerfallNamesRumorsBiographiesTests
 
     private static byte[] Payload(Action<JsonObject> mutate)
     {
-        JsonObject payload = JsonNode.Parse(File.ReadAllBytes(PackPath()))!.AsObject();
+        JsonObject payload = JsonNode.Parse(TestPayload.CombinedBytes)!.AsObject();
         mutate(payload);
         return Encoding.UTF8.GetBytes(payload.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
     }
@@ -115,5 +115,4 @@ public sealed class DaggerfallNamesRumorsBiographiesTests
 
     private static JsonObject Biographies(JsonObject payload) => payload["biographies"]!.AsObject();
 
-    private static string PackPath() => Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json");
 }

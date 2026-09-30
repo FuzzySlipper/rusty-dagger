@@ -172,16 +172,16 @@ public static class Arena2MobileCatalogDocument
     public const string SourceRecordId = "CNT-007";
 
     /// <summary>
-    /// Loot table keys the published catalog carried before it was regenerated from the donor, where they
-    /// differ from the donor's table: the donor gives the Monk (140) "T" and the City Watch (146) no key. They
-    /// are kept, and each is listed in the document's <c>divergences</c>, until an owner decides which value
-    /// the product uses; the ruleset resolves a class mobile's loot through its key and refuses a class
-    /// mobile without one.
+    /// The product's loot table keys where they differ from the donor's table: the donor gives the Monk (140)
+    /// "T" and the City Watch (146) no key, and the product keeps "O" and "T". The ruleset resolves a class
+    /// mobile's loot through its key and refuses a class mobile without one. Each override is applied here,
+    /// where the catalog is generated, and listed in the document's <c>divergences</c> with the donor's
+    /// value beside the product's, so the difference is never silent.
     /// </summary>
     private static readonly Dictionary<int, string> RetainedLootTableKeys = new() { [140] = "O", [146] = "T" };
 
     private const string RetainedLootTableKeyReason =
-        "published before the catalog was regenerated from the donor; kept pending an owner decision because the ruleset refuses a class mobile without a loot table key";
+        "product override kept against the donor's table; the ruleset refuses a class mobile without a loot table key";
 
     /// <summary>
     /// Builds the document's JSON from the donor table and the published pack. The mobile table is the

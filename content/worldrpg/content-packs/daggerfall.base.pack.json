@@ -3,6 +3,8 @@
   "id": "daggerfall.base",
   "ruleset": "daggerfall",
   "role": "daggerfall.base",
-  "dependencies": [],
+  "dependencies": [
+    { "id": "daggerfall.imported" }
+  ],
   "payload": "worldrpg/payloads/daggerfall.base.json"
 }

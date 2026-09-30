@@ -407,9 +407,9 @@ public sealed class GeometryPublicationTests
     /// </summary>
     private static string[] ReferencedByTheShippedPlan()
     {
-        using JsonDocument pack = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json")));
+        using JsonDocument blocksDocument = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
         string[] blocks = ["B0000003.RDB", "B0000006.RDB", "B0000009.RDB", "B0000012.RDB", "S0000999.RDB"];
-        return [.. pack.RootElement.GetProperty("blocks").GetProperty("records").EnumerateArray()
+        return [.. blocksDocument.RootElement.GetProperty("records").EnumerateArray()
             .Where(record => blocks.Contains(record.GetProperty("sourceKey").GetString(), StringComparer.Ordinal))
             .SelectMany(record => record.GetProperty("objects").GetProperty("modelIds").EnumerateArray())
             .Select(model => model.GetString()!)

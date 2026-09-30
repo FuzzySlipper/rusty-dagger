@@ -13,7 +13,7 @@ public sealed class MapMediaLocationJoinTests
     public void Region_maps_join_to_normalized_regions_and_bytes_on_disk()
     {
         string root = TestData.RepositoryRoot;
-        JsonDocument pack = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        JsonDocument pack = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.imported.json")));
         JsonDocument sidecar = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/privateers-hold/media/classic/manifest.json")));
 
         // The normalized regions the locations task publishes.

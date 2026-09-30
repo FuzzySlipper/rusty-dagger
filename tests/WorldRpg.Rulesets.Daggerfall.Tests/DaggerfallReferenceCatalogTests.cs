@@ -68,14 +68,17 @@ public sealed class DaggerfallReferenceCatalogTests
         ResolvedGameComposition composition = GameCompositionResolver
             .Resolve(Content(null), new GameBundleId("daggerfall.privateers-hold"))
             .RequireComposition();
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(composition.RequireContentPack(new ContentPackId("daggerfall.base")).Payload);
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
+            composition.RequireContentPack(new ContentPackId("daggerfall.base")).Payload,
+            composition.RequireContentPack(new ContentPackId("daggerfall.imported")).Payload);
         Assert.Equal(19, definitions.Catalogs.Careers.Count);
 
         ResolvedGameComposition broken = GameCompositionResolver
             .Resolve(Content(root => root["catalogs"]!["careers"]!.AsArray()[0]!["primarySkills"]!.AsArray()[0] = "not-a-skill"), new GameBundleId("daggerfall.privateers-hold"))
             .RequireComposition();
-        ReadOnlyMemory<byte> brokenPayload = broken.RequireContentPack(new ContentPackId("daggerfall.base")).Payload;
-        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => { DaggerfallBaseContent.Read(brokenPayload); });
+        ReadOnlyMemory<byte> authoredPayload = broken.RequireContentPack(new ContentPackId("daggerfall.base")).Payload;
+        ReadOnlyMemory<byte> brokenPayload = broken.RequireContentPack(new ContentPackId("daggerfall.imported")).Payload;
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => { DaggerfallBaseContent.Read(authoredPayload, brokenPayload); });
         Assert.Contains("not-a-skill", error.Message, StringComparison.Ordinal);
     }
 
@@ -86,7 +89,7 @@ public sealed class DaggerfallReferenceCatalogTests
             .Select(path =>
             {
                 byte[] bytes = File.ReadAllBytes(path);
-                if (path.EndsWith("daggerfall.base.json", StringComparison.Ordinal) && change is not null)
+                if (path.EndsWith("daggerfall.imported.json", StringComparison.Ordinal) && change is not null)
                 {
                     JsonObject pack = JsonNode.Parse(bytes)!.AsObject();
                     change(pack);
@@ -253,12 +256,11 @@ public sealed class DaggerfallReferenceCatalogTests
 
     private static DaggerfallContentException Mutate(Action<JsonObject> change)
     {
-        JsonObject pack = JsonNode.Parse(File.ReadAllText(PackPath()))!.AsObject();
+        JsonObject pack = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
         change(pack);
         return Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(pack.ToJsonString())));
     }
 
     private static DaggerfallDefinitions ReadPack() => TestPayload.Definitions;
 
-    private static string PackPath() => Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json");
 }

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Regenerates every file under content/ that is derived from the operator's Daggerfall inputs.
+# Regenerates every file that is derived from the operator's Daggerfall inputs: the runtime content
+# under content/ and the importer's own records under import-records/. None of it is tracked.
 #
 # Inputs (all local, none tracked):
 #   --arena2 DIR   the Arena2 directory (default $DAGGER_ARENA2, else local/arena2)
@@ -7,8 +8,8 @@
 #   --sound DIR    the donor song folder (default local/Sound)
 #   ffmpeg/ffprobe on PATH, for the cinematics
 # Tracked inputs: the source inventory (data/content-source-manifest.csv), the authored UI
-# overlay (data/ui-authored-assets.json with data/ui-original/) and the authored sections of
-# content/worldrpg/payloads/daggerfall.base.json.
+# overlay (data/ui-authored-assets.json with data/ui-original/) and the authored base payload
+# content/worldrpg/payloads/daggerfall.base.json, which the commands read and never write.
 #
 # The order below is the importer's dependency order; several commands read what an earlier one
 # wrote. scripts/generated-content-paths.txt and docs/coverage/content-scope.md list what this
@@ -75,24 +76,34 @@ fi
 inventory=data/content-source-manifest.csv
 ui_assets=data/ui-authored-assets.json
 ui_original=data/ui-original
-base=content/worldrpg/payloads/daggerfall.base.json
+authored=content/worldrpg/payloads/daggerfall.base.json
+# The imported payload holds every base section the commands derive; the daggerfall.imported pack
+# carries it beside the authored daggerfall.base pack.
+imported=content/worldrpg/payloads/daggerfall.imported.json
+blocks=content/worldrpg/payloads/daggerfall.blocks.json
+# Importer records nothing at runtime reads (the mesh inventory and the original quest-source
+# selections the corpus payloads are built from); they stay outside the runtime content root.
+records=import-records/daggerfall.import-records.json
 music_manifest=content/worldrpg/media/music/manifest.json
-for file in "$inventory" "$ui_assets" "$base"; do
+for file in "$inventory" "$ui_assets" "$authored"; do
   [[ -f "$file" ]] || missing "tracked file '$file'"
 done
 
 # The cinematics' bytes depend on the FFmpeg build (each artifact records it), so name it up front.
 echo "regenerate-content: $(ffmpeg -version | head -n 1)"
 started=$SECONDS
+# Files written after this stamp are this run's output; the check at the end looks only at those, so an
+# uncommitted authored file does not count as generated.
+run_stamp=$(mktemp)
+trap 'rm -f "$run_stamp"' EXIT
 dotnet build src/Daggerfall.Import.Tool/Daggerfall.Import.Tool.csproj --configuration Release --nologo -v quiet
 tool() {
   echo "+ daggerfall-import-tool $*"
   dotnet src/Daggerfall.Import.Tool/bin/Release/net10.0/Daggerfall.Import.Tool.dll "$@"
 }
 
-# Whole generated files are removed first, so a file no command writes any more shows up as a
-# deletion rather than surviving from an earlier run. The partly authored base payload stays: its
-# derived sections are replaced in place below.
+# Every generated file is removed first, so a file no command writes any more disappears rather than
+# surviving from an earlier run, and the imported payload is rebuilt from nothing.
 while IFS= read -r entry; do
   [[ -z "$entry" || "$entry" == \#* ]] && continue
   # shellcheck disable=SC2086 # the entry is a glob
@@ -104,38 +115,39 @@ tool music-media --out content --sound "$sound" --require-all --update
 tool classic-media --arena2 "$arena2" --out content --group worldrpg \
   --ui-authored-assets "$ui_assets" --ui-original "$ui_original" --update
 
-# 2. Derived sections of the base payload, in dependency order.
-tool catalogs --arena2 "$arena2" --inventory "$inventory" --pack "$base" --update
-tool item-template-ledger --donor "$donor/Assets/Scripts/Game/Items" --inventory "$inventory" --pack "$base" --update
-tool character-presentation --arena2 "$arena2" --inventory "$inventory" --pack "$base" --out content --group worldrpg --update
-tool locations --arena2 "$arena2" --pack "$base" --update
-tool magic-catalog --arena2 "$arena2" --pack "$base" \
+# 2. The imported payload's sections, in dependency order, with the block document and the import
+#    records. Commands that join authored sections (vocabulary, actors, items) read the authored payload.
+tool catalogs --arena2 "$arena2" --inventory "$inventory" --authored "$authored" --pack "$imported" --update
+tool item-template-ledger --donor "$donor/Assets/Scripts/Game/Items" --inventory "$inventory" --authored "$authored" --pack "$imported" --update
+tool character-presentation --arena2 "$arena2" --inventory "$inventory" --pack "$imported" --out content --group worldrpg --update
+tool locations --arena2 "$arena2" --pack "$imported" --update
+tool magic-catalog --arena2 "$arena2" --pack "$imported" \
   --donor-formulas "$donor/Assets/Scripts/Game/Formulas/FormulaHelper.cs" --update
-tool mobile-catalog --donor "$donor/Assets/Scripts/Utility/EnemyBasics.cs" --pack "$base" --archive "$arena2/MONSTER.BSA" --update
-tool text --arena2 "$arena2" --pack "$base" --inventory "$inventory" --language en --update
+tool mobile-catalog --donor "$donor/Assets/Scripts/Utility/EnemyBasics.cs" --authored "$authored" --pack "$imported" --archive "$arena2/MONSTER.BSA" --update
+tool text --arena2 "$arena2" --pack "$imported" --inventory "$inventory" --language en --update
 tool internal-strings \
   --source "$donor/Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv" \
   --label "donor/daggerfall-unity/Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv" \
-  --pack "$base" --language en --update
-tool blocks --arena2 "$arena2" --pack "$base" --inventory "$inventory" --update
-tool geometry --arena2 "$arena2" --pack "$base" --inventory "$inventory" --update
-tool climate --arena2 "$arena2" --pack "$base" --inventory "$inventory" --update
-tool factions --arena2 "$arena2" --pack "$base" --inventory "$inventory" --update
-tool terrain --arena2 "$arena2" --pack "$base" --inventory "$inventory" --update
-tool items --arena2 "$arena2" --pack "$base" --inventory "$inventory" \
+  --pack "$imported" --language en --update
+tool blocks --arena2 "$arena2" --out "$blocks" --inventory "$inventory" --update
+tool geometry --arena2 "$arena2" --blocks "$blocks" --records "$records" --inventory "$inventory" --update
+tool climate --arena2 "$arena2" --pack "$imported" --inventory "$inventory" --update
+tool factions --arena2 "$arena2" --pack "$imported" --inventory "$inventory" --update
+tool terrain --arena2 "$arena2" --pack "$imported" --inventory "$inventory" --update
+tool items --arena2 "$arena2" --pack "$imported" --inventory "$inventory" \
   --item-templates "$donor/Assets/Resources/ItemTemplates.txt" \
   --magic-templates "$donor/Assets/Resources/MagicItemTemplates.txt" --update
 tool quests --arena2 "$arena2" --quest-text "$donor/Assets/StreamingAssets/Quests" \
-  --tables "$donor/Assets/StreamingAssets/Tables" --pack "$base" --inventory "$inventory" --update
-tool videos --arena2 "$arena2" --pack "$base" --inventory "$inventory" --update
-tool cinematic-media --arena2 "$arena2" --pack "$base" --out content --kind vid --update
-tool cinematic-media --arena2 "$arena2" --pack "$base" --out content --kind flc --update
+  --tables "$donor/Assets/StreamingAssets/Tables" --pack "$imported" --records "$records" --inventory "$inventory" --update
+tool videos --arena2 "$arena2" --pack "$imported" --inventory "$inventory" --update
+tool cinematic-media --arena2 "$arena2" --pack "$imported" --out content --kind vid --update
+tool cinematic-media --arena2 "$arena2" --pack "$imported" --out content --kind flc --update
 tool building-name-inputs --maps-file "$donor/Assets/Scripts/API/MapsFile.cs" \
-  --label donor/daggerfall-unity/Assets/Scripts/API/MapsFile.cs --pack "$base" --update
+  --label donor/daggerfall-unity/Assets/Scripts/API/MapsFile.cs --pack "$imported" --update
 
-# 3. Quest corpus payloads, read from the quest sections above.
-tool fighters-quest-corpus --base "$base" --out content/worldrpg/payloads/daggerfall.quests.fighters.json
-tool classic-quest-corpora --base "$base" --out content/worldrpg/payloads
+# 3. Quest corpus payloads, read from the quest sections and the original-source selections above.
+tool fighters-quest-corpus --pack "$imported" --records "$records" --out content/worldrpg/payloads/daggerfall.quests.fighters.json
+tool classic-quest-corpora --pack "$imported" --records "$records" --out content/worldrpg/payloads
 
 # 4. Site closures. Each carries the source manifest and names the published music cues.
 site_overlay() {
@@ -155,5 +167,20 @@ tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/charing/exte
   --region 17 --location Charing --profile exterior
 tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/charing/interior-1-1-0 \
   --region 17 --location Charing --profile interior --block-x 1 --block-y 1 --building 0
+
+# Nothing generated may be committed: the Arena2-derived data is not redistributed. In a Git
+# checkout, a file this run wrote that Git would pick up (untracked and not ignored) is named and the
+# run fails, so a new output path cannot slip into a commit unnoticed.
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  exposed=$(git status --porcelain --untracked-files=all -z -- content import-records \
+    | while IFS= read -r -d '' line; do
+        [[ "$line" == '?? '* && "${line#?? }" -nt "$run_stamp" ]] && echo "${line#?? }"
+      done || true)
+  if [[ -n "$exposed" ]]; then
+    echo "regenerate-content: these generated paths are not ignored; list them in scripts/generated-content-paths.txt and .gitignore:" >&2
+    echo "$exposed" | head -n 20 >&2
+    exit 1
+  fi
+fi
 
 echo "regenerate-content: finished in $((SECONDS - started))s"
