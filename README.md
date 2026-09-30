@@ -131,12 +131,27 @@ rusty update
 It installs the pair, rewrites the pin, and lists the release notes to read.
 `rusty update --check` reports what is available without changing anything.
 
+The game content is not in the repository: it is converted from your own copy of
+Daggerfall. Supply the game's `ARENA2` directory as `local/arena2` and the song
+folder as `local/Sound` (a link is fine; `local/` is ignored), have a Daggerfall
+Unity checkout (default `/home/research/daggerfall-unity`, or `DAGGER_DONOR_ROOT`)
+and FFmpeg on `PATH`, then generate the content once per checkout, and again after
+an importer change:
+
+```bash
+scripts/regenerate-content.sh
+```
+
 Ordinary edit-run development is CoreCLR through the pinned runtime:
 
 ```bash
 npm ci
 rusty dev --project ./src/WorldRpg.Host/WorldRpg.Host.csproj
 ```
+
+Without the generated content, staging the product stops with a message naming
+the script. See [third-party notices](THIRD_PARTY_NOTICES.md) for what is and is
+not redistributed.
 
 Use WASD to move and the mouse to look. **Z** draws or sheathes the equipped
 weapon; empty hands use unarmed art. **Left mouse** swings once per press by
@@ -229,10 +244,11 @@ content, typed tuning, `Daggerfall.Import`, and compiled Daggerfall ruleset
 policy; the former Rust workspace, TypeScript gameplay evaluator, and encounter
 demonstration topology are not present as fallback paths.
 
-Daggerfall/Arena2 source data remains operator-supplied. `scripts/regenerate-content.sh`
-rebuilds every derived file under `content/` from `local/arena2`, the donor checkout and
-`local/Sound`; [content scope](docs/coverage/content-scope.md) lists what is generated and what is
-authored. Preserve the authored assets, attribution, and provenance when adapting content.
+Daggerfall/Arena2 source data remains operator-supplied, and nothing converted from it is
+committed. `scripts/regenerate-content.sh` rebuilds every derived file (under `content/` and
+`import-records/`, all ignored by Git) from `local/arena2`, the donor checkout and `local/Sound`;
+[content scope](docs/coverage/content-scope.md) lists what is generated and what is authored.
+Preserve the authored assets, attribution, and provenance when adapting content.
 
 ## Guidance and proof
 
@@ -254,8 +270,10 @@ complete), and stages the CoreCLR product. Options:
   `refs/notes/verify` and pushes it; read it with
   `git log --notes=verify` after `git fetch origin refs/notes/verify:refs/notes/verify`.
 
-There is no hosted CI: most suites read the operator's Arena2 corpus, which a
-clean runner does not have, so the recorded local run is the gate's record.
+There is no hosted CI: most suites read the operator's Arena2 corpus and the content
+generated from it, which a clean runner does not have, so the recorded local run is the
+gate's record. Without the generated content the script says so, skips the ruleset suite and
+product staging with the reason printed, and refuses `--play` and `--aot`.
 
 To regenerate only the staged Product, use:
 

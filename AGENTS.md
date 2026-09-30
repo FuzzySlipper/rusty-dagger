@@ -73,6 +73,16 @@ runtime assembly loading, reflection discovery, `Assembly.Load`, ambient
 plug-in ABI. Named explicitly composed Kit services and typed RuleEvents are
 encouraged where they make gameplay ownership and contribution discoverable.
 
+Converted Bethesda data is never committed. Git tracks only pack, bundle and
+tuning descriptors, hand-authored payloads (the authored `daggerfall.base` and
+the site payloads), tuning payloads and the importer's inputs under `data/`.
+Everything derived from the operator's `local/arena2`, the donor checkout and
+`local/Sound` (the paths in `scripts/generated-content-paths.txt`, all ignored,
+including the `daggerfall.imported` payload) is rebuilt on checkout by one
+command, `scripts/regenerate-content.sh`. Never commit, hand-edit or copy an
+authored value into generated output; change the importer or the authored file.
+`docs/coverage/content-scope.md` names each section's owner.
+
 ## Kit, Daggerfall, and tuning rules
 
 Reusable mechanisms begin in `WorldRpg.Kit`; when placement is genuinely
