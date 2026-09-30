@@ -151,10 +151,9 @@ internal sealed partial class DaggerfallSession
     }
 
     /// <summary>
-    /// Reads the admitted character owner for the two recovery branches it currently exposes.
-    /// Character custom-class validation does not publish these classic trait ids yet, so all
-    /// current characters resolve to the ordinary formula branches; if #7986 later admits them,
-    /// rest will consume the same committed owner without another hardcoded flag.
+    /// Reads the two recovery branches from the committed character: a custom career's rapid-healing
+    /// advantage (when its light/dark condition holds here and now) and its inability-to-regenerate
+    /// disadvantage. A classic career has neither.
     /// </summary>
     private (bool RapidHealing, bool NoRegeneration) RestCharacterTraits()
     {

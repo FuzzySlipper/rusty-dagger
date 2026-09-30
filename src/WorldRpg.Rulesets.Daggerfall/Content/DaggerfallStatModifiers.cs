@@ -7,8 +7,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// Daggerfall stat modification in product vocabulary: permanent bases versus effect mods, with
 /// per-source and per-handle removal. The donor reads live values as permanent plus manager
 /// mods; the Engine Stat reads base plus modifiers the same way, so this owner only names which
-/// side a change belongs to and which identity may take it back. Effect records arrive with
-/// #7983; this is the application path they call.
+/// side a change belongs to and which identity may take it back. Effect records apply their stat
+/// changes through this path.
 /// </summary>
 internal static class DaggerfallStatModifiers
 {
