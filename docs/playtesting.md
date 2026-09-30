@@ -1,14 +1,19 @@
 # Adaptive playtesting
 
-Task #8722 adopts the shared Engine/Crew tools for Dagger's live 3D world.
-The tester chooses short actions from observations; C# remains the gameplay owner.
+Dagger uses the shared Engine/Crew playtest tools for its live 3D world. The
+tester chooses short actions from observations; C# remains the gameplay owner.
 Use Crew's [agent prompt guide](https://github.com/FuzzySlipper/crew-services/blob/main/docs/playtest-agent-prompts.md)
 and [integration guide](https://github.com/FuzzySlipper/crew-services/blob/main/docs/playtest-product-integration.md).
 
 ## Start and ownership
 
-Install the pinned Engine pair with `rusty install`, then run the `rusty dev`
-command documented in the README.
+Install the pinned Engine pair with `rusty install`, then start the host with
+`--live-debug`, as the repository development service (`.den-serve.json`) does:
+
+```bash
+rusty dev --project ./src/WorldRpg.Host/WorldRpg.Host.csproj --live-debug
+```
+
 Register the host URL as a local Crew browser profile and use the installed
 `playtest` CLI. Run `playtest assist --help` for current syntax.
 
@@ -43,9 +48,10 @@ Only stop browser sessions and hosts the tester owns.
    attack/use. A delivered swing with no target is a gameplay outcome, distinct
    from a disconnected browser or missing pointer lock.
 7. Stop at death, the mission deadline, repeated movement without progress, or an
-   unrecoverable transport failure. Preserve original captures and receipts, then
-   give an exit interview: progress, blockers, confusing fields, workarounds,
-   missing tools, and the next most useful improvement.
+   unrecoverable transport failure. Preserve original captures and receipts with
+   the owning Den record, not in the repository, then give an exit interview:
+   progress, blockers, confusing fields, workarounds, missing tools, and the next
+   most useful improvement.
 
 ## Current facts and limits
 

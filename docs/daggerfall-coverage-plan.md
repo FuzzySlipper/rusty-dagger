@@ -1,16 +1,12 @@
 # Daggerfall coverage plan
 
-Status: planning baseline, 2026-09-10. This defines scope, ownership, and work
-ordering; it is not an executable Den backlog or a claim of completed coverage.
-The [task-creation packet](daggerfall-task-preparation.md) now supplies the
-feature dispositions, behavior inventories, content scope and dependency inputs
-for expanding these families into explicit tasks. The current user request and
-owning task override older guidance.
-
-Task creation is complete: **Den campaign #7922**, with **255 planned children**.
-Use the [task index](coverage/task-index.md) for area navigation, concrete IDs and
-coverage mapping. Den owns live status and dependency scheduling; this document
-remains the scope and architectural baseline, not an implementation-complete claim.
+This is the scope, ownership and work-ordering baseline for Daggerfall coverage.
+It is not a Den backlog or a claim of completed coverage. The
+[coverage scope and decisions](daggerfall-task-preparation.md) document holds the
+scope contract, behavioral splits and decision register (DEC-01–DEC-11), and links
+the stable feature, supplemental, magic, quest and content inventories. The coverage
+tasks live in Den, which owns their status, inventory-ID mapping and dependencies.
+The current user request and owning task override older guidance.
 
 ## Purpose and references
 
@@ -21,8 +17,9 @@ This is an experiment in detailed planning and long autonomous implementation ru
 with narrow drift checks and later reconciliation. It does not use vertical slices,
 proof threads, or interactive demonstrations as the organizing unit of delivery.
 
-- [Feature map](daggerfall-feature-map.md): source references and point-in-time
-  implementation inventory. Its rows are not automatically implementation tasks.
+- `[doc: rusty-dagger/daggerfall-feature-map-2026-09]`: the archived DFU feature
+  survey with donor source references. Its rows are not implementation tasks; the
+  [feature ledger](coverage/feature-ledger.md) holds their stable IDs and dispositions.
 - [AGENTS.md](../AGENTS.md): active ownership and execution rules.
 - [Migration map](code-migration-map.md): current product graph and retired paths.
 - Den campaigns #7322 and #7533: completed foundation and migration history.
@@ -80,11 +77,12 @@ larger batches. Do not defer interoperability decisions that many tasks depend o
 
 ## 1. Coverage target and task inventory
 
-Preparation output: [task-creation packet](daggerfall-task-preparation.md), including
-the complete feature-map disposition ledger and specialist behavior/content
-inventories. Use those stable IDs when creating tasks; maintain their mapping to
-task IDs rather than restarting the survey. Exact formulas and API contracts are
-resolved while drafting the affected tasks, not through another global planning gate.
+Inventory: the [feature ledger](coverage/feature-ledger.md) and the specialist
+behavior/content inventories linked from
+[coverage scope and decisions](daggerfall-task-preparation.md). Use those stable IDs
+when creating tasks; Den keeps their mapping to task IDs, so do not restart the
+survey. Exact formulas and API contracts are resolved while drafting the affected
+tasks, not through another global planning gate.
 
 Breakdown:
 
@@ -93,7 +91,7 @@ Breakdown:
   adapt, exclude, or unresolved.
 - Separate behavior coverage from authored-content coverage. Inventory supported
   locations, actor/item catalogs, spells, quest corpus, books, and media; the
-  feature map intentionally does not enumerate these payloads.
+  feature ledger intentionally does not enumerate these payloads.
 - Record exact exclusions above, selected DFU differences, and explicit remaining
   questions. Deduplicate overlapping map rows rather than scheduling them twice.
 - For partial coverage, enumerate missing behavior and current limitations before
@@ -341,22 +339,22 @@ unconditional success, hardcoded demonstration, or unsupported no-op cannot coun
 
 ## Narrow drift review lanes
 
-Use separately scoped reviewers when they add value. The lane definitions below
-are available to the orchestrator; they do not require four reviewers for every
-task or create a new approval system. Review a task's change against its stated
-contract and relevant existing code, not the entire repository each time.
+Use separately scoped reviewers when they add value. The lanes below do not
+create a new approval system. Review a task's change against its stated contract
+and relevant existing code, not the entire repository each time.
 
-The first two lanes run on every task; the remaining lanes are selected per task
-to a total of two to four reviewers. The reusable reviewer packets live in
-[`docs/agent-review/`](agent-review/README.md), and the Den document
+Three lanes run on every task; optional lanes are selected per task. The
+[agent-review README](agent-review/README.md) holds the roster, reviewer counts
+and packets, including further optional lanes; the Den document
 `rusty-dagger/agent-review-workflow` owns the persistence and disagreement rules.
 
 | Lane | One question | Required basis for an actionable finding |
 | --- | --- | --- |
 | Engine reuse (always on) | Does this change recreate a mechanism already safely available upstream? | Name the current safe API, local duplicate and concrete replacement/adoption path; distinguish product policy from Engine guarantees. |
 | Existing product reuse (always on) | Does this change create a competing mechanism instead of extending rusty-dagger's existing owner? | Name both owners and their overlapping state/behavior, relevant callers, and consequence. A new file or similar name alone is not a defect. |
-| Ownership and values | Does this change leak Daggerfall policy into Kit/Host, source quirks into runtime, or authored/tunable values into incidental code? | Identify the actual assumption/value, current and correct owner, and affected use. Do not demand a universal abstraction or a constant for every literal. |
-| Behavior and interoperability | Does this implement the task's full specified behavior through the required shared operations? | Show a concrete missing branch, no-op, ignored input, disconnected caller, incompatible state contract, or donor-semantic mismatch. A passing demonstration does not close the finding. |
+| Runtime trust (always on) | Does this change add validation, verification or defensive machinery to a trusted first-party runtime path without a concrete failure it prevents? | Quote the ceremony with file and line, why the path is trusted, the failure it claims to prevent and why that has no caller, and the simpler shape. |
+| Ownership and values (optional) | Does this change leak Daggerfall policy into Kit/Host, source quirks into runtime, or authored/tunable values into incidental code? | Identify the actual assumption/value, current and correct owner, and affected use. Do not demand a universal abstraction or a constant for every literal. |
+| Behavior and interoperability (optional) | Does this implement the task's full specified behavior through the required shared operations? | Show a concrete missing branch, no-op, ignored input, disconnected caller, incompatible state contract, or donor-semantic mismatch. A passing demonstration does not close the finding. |
 
 Findings should be short and source-backed, distinguish confirmed defects from
 uncertainty, and stay within the lane. Do not introduce interactive gates, broad

@@ -1,9 +1,8 @@
 # Magic and effects inventory
 
-**Status:** bounded task-preparation inventory, 2026-09-10. This expands the
-magic rows in the coverage ledger (especially F025–F036 and F101) into named
-behavior families. It is an input to task drafting, not a set of Den tasks or
-an implementation claim.
+This bounded inventory expands the magic rows in the coverage ledger
+(especially F025–F036 and F101) into named behavior families. It is an input to
+task drafting, not a set of Den tasks or an implementation claim.
 
 **Behavior target:** original Daggerfall behavior is the default. Daggerfall
 Unity (DFU) is the semantic donor. Unity object topology, reflective discovery,
@@ -48,7 +47,7 @@ than assertions that an entire area is missing.
 | MAG-002 | Bundle, registry and cast admission (F025–F029, F014) | Compiled effect definitions and stable keys; normalized spell records; bundle versus live instance; caster/target, ready/cast, costs, target shape, chance, saves, immunity, absorption and reflection | Kit can provide typed coordination; Daggerfall interprets records and decides rules. Adapt; no reflective broker, `Activator`, singleton, or runtime assembly loading. | `EntityEffectBroker.cs` (`RegisterEffectTemplate`, `InstantiateEffect`, `MapClassicKey`); `EntityEffectBundle.cs`; `LiveEffectBundle.cs`; `EntityEffectManager.cs` (`AssignBundle`, `SetReadySpell`, `Update`) |
 | MAG-003 | Time, active state and save integration (F031–F034, F112, F136) | One admitted game-time model; minute/day ticks; rest/travel elapsed catch-up; periodic application exactly once; cure/expiry; effect-specific state and reconstruction | Daggerfall session/time policy owns advancement and save meaning; Kit supplies only reusable state coordination. Extend `DaggerfallSession.Update`, `DaggerfallSavePayload`, and existing save envelope; no second clock or object-graph serialization. | `EntityEffectManager.Update`; `Effects/Diseases/DiseaseEffect.cs`; `Effects/Poisons/PoisonEffect.cs`; `Game/Questing/Clock.cs`; `Game/Questing/Place.cs` |
 | MAG-004 | Alteration: resistance, conditions and magical movement (F030, F022, F062) | Stat/resistance sources; condition flags; shield damage; climb/jump/slowfall/water breathing and target rules over spatial stepping | Daggerfall owns keys, magnitude/chance, and eligibility. Kit/Engine provide stat/track and spatial coordination; extend existing movement and actor owners. Adapt. | `Effects/Alteration/*.cs`; `Player/` motors for donor behavior; `Kit/Controls/SpatialMovementSystem.cs`; `Kit/Actors/ActorNavigationCoordinator.cs` |
-| MAG-005 | Destruction: direct and continuous damage (F030, F011, F014) | Health/fatigue/magicka sinks, continuous rounds, disintegrate, aggro and target/caster ordering | Daggerfall policy invokes the existing guarded combat/vital-track operations. Kit may coordinate effect instances; no duplicate damage path. Implement/adapt. | `Effects/Destruction/ContinuousDamage*.cs`; `Damage*.cs`; `Disintegrate.cs`; `Modules/Combat/CombatModule.cs` |
+| MAG-005 | Destruction: direct and continuous damage (F030, F011, F014) | Health/fatigue/magicka sinks, continuous rounds, disintegrate, aggro and target/caster ordering | Daggerfall policy invokes the existing guarded combat/vital-track operations. Kit may coordinate effect instances; no duplicate damage path. Implement/adapt. | `Effects/Destruction/ContinuousDamage*.cs`; `Damage*.cs`; `Disintegrate.cs`; local `Modules/Combat/DaggerCombatRules.cs` |
 | MAG-006 | Destruction: drain and transfer (F030, F014) | Permanent/live attribute distinction; drain floor, healing/removal, same-kind accumulation; transfer target drain plus caster restoration | Daggerfall owns classic formulas and semantics; Engine ExactStat contributions/tracks are the candidate substrate through Kit. Implement/adapt; inspect health/fatigue/magicka and caster absence paths separately. | `Effects/Destruction/DrainEffect.cs`; `Drain*.cs`; `TransferEffect.cs`; `Transfer*.cs`; `Effects/Restoration/HealEffect.cs` |
 | MAG-007 | DFU-only vampiric-fortify helper | Whether any original behavior actually needs a permanent range-bound link | Keep visible as a donor experiment only. Exclude from baseline unless a separate source decision adopts it; do not create a provisional runtime wrapper. | `Effects/Destruction/VampiricFortifyEffect.cs` explicitly says work in progress and unused by any effect |
 | MAG-008 | Restoration: cure, fortify, heal and absorption (F030, F031, F032) | Cure scopes; live/permanent stat restoration; health/fatigue/magicka bounds; duration/magnitude/stacking; spell absorption | Daggerfall owns policy and effect keys. Kit coordinates Engine stat/track sources and active instances; existing formula/recovery policy remains the ruleset owner. Implement/adapt. | `Effects/Restoration/Cure*.cs`; `FortifyEffect.cs`; `HealEffect.cs`; `Regenerate.cs`; `SpellAbsorption.cs` |
@@ -59,7 +58,7 @@ than assertions that an entire area is missing.
 | MAG-013 | Infection and transformation stages (F031, F034, F086 selective) | Vampire/lycanthrope stage timers, race/state replacement, quest start/end, faction, spells, world relocation, full cure and save data | Daggerfall ruleset owns transformation meaning. Quest/world dependencies are selective and must use their future stable operations. Exclude the DFU video-player and Unity scene topology; preserve required original story/cinematic behavior under SUP-18 through an adapted Engine/media path. | `Effects/Diseases/LycanthropyInfection.cs`; `VampirismInfection.cs`; `WereboarInfection.cs`; `WerewolfInfection.cs`; `Effects/Special/VampirismEffect.cs`; `LycanthropyEffect.cs` |
 | MAG-014 | Poison archetype (F032) | Weapon poison/drug identity; minute onset and duration; periodic health/vital/stat effects; completion, positive-stat cleanup, cure, item consumption and save | Daggerfall owns poison tables and policy; Kit coordinates active effect/time state. Reuse item use/strike and guarded track/stat operations. Implement/adapt. | `Effects/Poisons/PoisonEffect.cs`; `Effects/Restoration/CurePoison.cs`; `FormulaHelper.InflictPoison` |
 | MAG-015 | Enchanting: held/passive effects (F033, F037, F041) | Equip/unequip source identity; stat/skill/reaction/weight/armor changes; item condition and magic-round cadence; stacking/exclusivity | Kit coordinates Engine equipment/inventory and effect sources. Daggerfall owns enchantment definitions, restrictions, values and policy. Adapt; no separate item store. | `Effects/Enchanting/EnhancesSkill.cs`, `GoodRepWith.cs`, `StrengthensArmor.cs`, etc.; `Kit/Inventory/MechanicsInventoryCoordinator.cs`; `MechanicsEquipmentCoordinator` |
-| MAG-016 | Enchanting: use/strike/held triggers and item callbacks (F033, F011, F017) | Callback context (`Equipped`, `Used`, `Strikes`, `Enchanted`, `Breaks`, `MagicRound`); spell delivery; durability; damage modulation and cleanup | Daggerfall ruleset consumes accepted equipment/strike/use results; Kit coordinates lifecycle. Extend `CombatModule`, item use/equipment callers and existing inventory; no second hit or dispatch path. | `Effects/Enchanting/CastWhenHeld.cs`; `CastWhenStrikes.cs`; `CastWhenUsed.cs`; `HealthLeech.cs`; `VampiricEffect.cs`; `CombatModule.cs` |
+| MAG-016 | Enchanting: use/strike/held triggers and item callbacks (F033, F011, F017) | Callback context (`Equipped`, `Used`, `Strikes`, `Enchanted`, `Breaks`, `MagicRound`); spell delivery; durability; damage modulation and cleanup | Daggerfall ruleset consumes accepted equipment/strike/use results; Kit coordinates lifecycle. Extend `DaggerCombatRules` and Kit `CombatResolution` contributions, item use/equipment callers and existing inventory; no second hit or dispatch path. | `Effects/Enchanting/CastWhenHeld.cs`; `CastWhenStrikes.cs`; `CastWhenUsed.cs`; `HealthLeech.cs`; `VampiricEffect.cs`; local `DaggerCombatRules.cs` |
 | MAG-017 | Artifacts, passive specials and racial overrides (F034, F005, F086 selective) | Artifact use/strike/hold effects; soul/summon/transform side effects; racial display, crime, inventory, rest/travel, quest and cure interactions | Daggerfall owns artifact identities and policy. Use Kit item/actor/time/fact coordination, ruleset quest/world operations, and current presentation. `RacialOverrideEffect` is a helper boundary, not a donor topology to copy. Implement/adapt; inspect each artifact caller. | `Effects/Special/*.cs`; `Game/Questing/QuestMachine.cs`; `DaggerfallSession.cs`; `PrivateersHoldAppearance.cs` |
 | MAG-018 | Spellbook, spellmaker, potion and item-maker scope (F035–F036, F101) | Known/ready spells; effect eligibility and costs; ingredient recipe identity; potion payloads; item enchantment choices; consume/create/condition behavior | Daggerfall records and crafting policy; Kit inventory/equipment coordination; thin DOM actions/projections. Exclude donor windows/widgets and runtime Unity form state. Adapt. | `Game/MagicAndEffects/PotionRecipe.cs`; `MagicAndEffectsStructs.cs` (`EffectProperties`, `EnchantmentSettings`, `PotionProperties`); `DaggerfallSpellBookWindow.cs`; `DaggerfallSpellMakerWindow.cs`; `DaggerfallPotionMakerWindow.cs`; `DaggerfallItemMakerWindow.cs` |
 | MAG-019 | Runtime callers, facts and presentation (F014, F045, F066, F097, F100) | Real damage/heal/condition/world/item callers; status/HUD projections; cast/impact feedback; save and UI interoperability | Daggerfall session remains the one Engine-admitted update. Facts/projections stay thin; Engine owns rendering/audio/spatial. Extend current owners and record separate consumers honestly. Adapt. | `DaggerfallSession.cs`; `Kit/Facts/FactBuffer.cs`; `Kit/Presentation/PresentationState.cs`; `DaggerfallHudProjection.cs`; `PrivateersHoldAppearance.cs` |
@@ -500,7 +499,7 @@ Daggerfall records, not a reason to create a universal gameplay DSL.
 | Concern | Kit coordination | Daggerfall ruleset/content |
 | --- | --- | --- |
 | Active effect identity | Source/target handles, lifecycle bookkeeping, cancellation and persistence coordination over verified Engine mechanisms | Which keys exist, like-kind meaning, stack/refresh/replace policy, duration/chance interpretation and effect cleanup meaning |
-| Stats, tracks and modifiers | Thin adapter to Engine Mechanics `ExactSource`/active-effect substrate after the safe C# contract is reverified | Daggerfall attribute/skill/resistance identities, permanent versus live semantics, magnitude formulas, floors, caps and cure policy |
+| Stats, tracks and modifiers | Thin adapter to Engine Mechanics `StatSource`/`StatContribution` and `EffectsComponent` after the safe C# contract is reverified | Daggerfall attribute/skill/resistance identities, permanent versus live semantics, magnitude formulas, floors, caps and cure policy |
 | Casting | Typed coordination of admission/result plumbing where it is reusable | Spell records, keys, bundle meaning, costs, target/element restrictions, chance/saves/immunity/reflection/absorption and caller policy |
 | Time | Reusable ordering shape only if it does not make a second clock | Daggerfall calendar, minute/day interpretation, rest/travel catch-up, periodic effects, infection/poison deadlines and restoration rules |
 | Items and equipment | Engine-backed inventory/equipment lifecycle, unique identity, containment and accepted equip/use/strike operation boundaries | Item definitions, enchantment payload parameters, condition values, soul/artifact identity, restrictions, durability and all item-effect policy |
@@ -508,23 +507,27 @@ Daggerfall records, not a reason to create a universal gameplay DSL.
 | Persistence | Existing save envelope/composition compatibility shape | Effect-specific state, active bundle meaning, disease/poison timers, transformation stages, item enchantment state and restore ordering |
 | Presentation and UI | Facts/projection transport and Engine Graphics/Audio/Spatial services | Status labels, spell/crafting choices, messages, spell feedback meaning and semantic UI actions; TypeScript remains a thin projection |
 
-Current stat source evidence matters here: `ActorsState.ReadStat` currently
-evaluates ordinary stats with `Array.Empty<ExactSource>()`, while
-`DaggerfallMechanicsState` creates the ruleset's stat/track identities and
-bases. The Engine's `ExactStatContribution` and active-effect mechanisms are
-reuse candidates, not proof that magic is already wired. A task should verify
-the safe generated C# surface and extend the existing owner rather than add
+Current stat and effect owners matter here: `DaggerfallMechanicsState` creates
+the ruleset's stat/track identities and bases on the Engine `StatsComponent`, and
+Kit `ActiveEffectLifecycle` coordinates active effects and their reversible
+contributions over the actor's Engine `EffectsComponent`. The session's effect
+catalog currently composes the disease and poison families only. A task should
+verify the safe generated C# surface and extend these owners rather than add
 local modifier arrays, a second inventory, or a downstream Engine substitute.
 
 ## Current local reuse pointers
 
-These are current source anchors for task drafting. They identify extension
-points and existing behavior; they do not claim that the magic runtime exists.
+These are source anchors for task drafting. They identify extension points and
+existing behavior; they do not claim that the spell runtime exists.
 
 - **Actor stats/tracks:** `src/WorldRpg.Kit/Actors/ActorsState.cs` and
   `src/WorldRpg.Rulesets.Daggerfall/Content/DaggerfallMechanicsState.cs` own
   actor identity, stat/track bases, reads and guarded mutations. Future effect
   sources should use the Engine Mechanics contribution path through this owner.
+- **Active effects:** `src/WorldRpg.Kit/Effects/ActiveEffectLifecycle.cs` and
+  `src/WorldRpg.Rulesets.Daggerfall/DaggerfallEffectLifecycle.cs` (compiled
+  `DaggerfallEffectCatalog`), with the disease and poison families in
+  `DaggerfallDiseasePolicy.cs` and `DaggerfallPoisonPolicy.cs`.
 - **Definitions and policy:** `src/WorldRpg.Rulesets.Daggerfall/Content/DaggerfallDefinitions.cs`,
   `DaggerfallMechanicsState.cs`, `DaggerfallBaseContent.cs` and
   `src/WorldRpg.Rulesets.Daggerfall/Policies/DaggerfallFormulaPolicy.cs` are
@@ -532,14 +535,17 @@ points and existing behavior; they do not claim that the magic runtime exists.
 - **Inventory/equipment:**
   `src/WorldRpg.Kit/Inventory/MechanicsInventoryCoordinator.cs`,
   `MechanicsInventoryContainerCoordinator.cs` and
-  `MechanicsEquipmentCoordinator` provide Engine-backed item, containment and
+  `MechanicsEquipmentCoordinator` (in `MechanicsInventoryCoordinator.cs`) provide Engine-backed item, containment and
   equipment lifecycle. Enchantments, soul sources, potions and item-triggered
   spells must extend these operations.
-- **Combat and accepted damage:**
-  `src/WorldRpg.Rulesets.Daggerfall/Modules/Combat/CombatModule.cs`,
-  `DaggerfallMeleeTargeting.cs` and `CombatDefinitions.cs` own current
-  targeting, hit/damage outcomes, cooldown and combat media. Strike enchantments
-  and health transfer should consume this path.
+- **Combat and accepted damage:** Kit `src/WorldRpg.Kit/Combat/AttackExecution.cs`
+  (attack lifecycle and cooldown), `CombatResolution.cs` (typed hit/damage/apply
+  RuleEvents and `CombatContributions`) and
+  `src/WorldRpg.Kit/Targeting/TargetingService.cs`; Daggerfall
+  `src/WorldRpg.Rulesets.Daggerfall/Modules/Combat/DaggerCombatRules.cs`
+  (formulas, hit/damage outcomes and application), `DaggerTargetingPolicy.cs` and
+  `CombatDefinitions.cs`. Strike enchantments and health transfer should consume
+  this path through contributions rather than a second hit path.
 - **Movement/navigation:**
   `src/WorldRpg.Kit/Controls/SpatialMovementSystem.cs` and
   `src/WorldRpg.Kit/Actors/ActorNavigationCoordinator.cs` are the current
@@ -569,7 +575,7 @@ points and existing behavior; they do not claim that the magic runtime exists.
   admitted sprite playback, and presents blood effects. Its `SpawnEffect`
   path and the `magicSparkle` normalized resource are a presentation reuse
   pointer for future spell facts; they do not implement spell runtime or magic
-  feedback by themselves. `PrivateersHoldContent.cs` admits the current
+  feedback by themselves. `src/WorldRpg.Rulesets.Daggerfall/Content/PrivateersHoldContent.cs` admits the current
   normalized effect resources.
 
 ## Focused uncertainties for task drafting
@@ -629,8 +635,7 @@ reflective template discovery and `Activator`; the manager performs bundle
 admission, saving/chance/absorption/reflection checks and effect rounds; disease
 and poison manage elapsed day/minute state and serialize their own data; and
 enchantment leaves use explicit held/used/strike/enchant/break callback flags.
-The coverage plan and feature map remain point-in-time planning documents. The
-current local appearance source supersedes the old broad absence note for
-equipped viewmodel selection, blood effects, and the reserved `magicSparkle`
-resource. No exhaustive per-effect semantic audit, runtime implementation,
-deployment, interactive test, proof gate, or Den task creation was performed.
+The local appearance source supersedes the archived feature survey's broad
+absence note for equipped viewmodel selection, blood effects, and the reserved
+`magicSparkle` resource. This inventory is not an exhaustive per-effect semantic
+audit.

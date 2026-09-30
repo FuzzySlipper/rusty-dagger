@@ -280,7 +280,7 @@ public sealed class ResidualSourceInventoryTests
 
     private static IReadOnlyList<SourceInventoryRow> DocumentedResidualRows() =>
     [
-        .. SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")))
+        .. SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")))
             .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, "CNT-027")),
     ];
 

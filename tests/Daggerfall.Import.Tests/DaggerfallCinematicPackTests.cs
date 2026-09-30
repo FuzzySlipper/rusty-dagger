@@ -75,7 +75,7 @@ public sealed class DaggerfallCinematicPackTests
             files.Add((fileName, kind.Value, bytes.LongLength, Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes))));
         }
 
-        DaggerfallCinematicPack pack = DaggerfallCinematicPackBuilder.Build(files, arena2, SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv"))));
+        DaggerfallCinematicPack pack = DaggerfallCinematicPackBuilder.Build(files, arena2, SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv"))));
         pack.Validate();
         Assert.Equal(33, pack.Cinematics.Count);
         Assert.Equal(19, pack.Cinematics.Count(record => record.Binding == DaggerfallCinematicBinding.Bound));

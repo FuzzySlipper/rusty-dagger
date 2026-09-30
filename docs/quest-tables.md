@@ -26,7 +26,7 @@ dotnet run --project src/Daggerfall.Import.Tool -- quests \
   --quest-text /home/research/daggerfall-unity/Assets/StreamingAssets/Quests \
   --tables /home/research/daggerfall-unity/Assets/StreamingAssets/Tables \
   --pack content/worldrpg/payloads/daggerfall.base.json \
-  --inventory docs/coverage/content-source-manifest.csv --update
+  --inventory data/content-source-manifest.csv --update
 ```
 
 Omit `--update` to inspect without writing. Each table keeps its logical source

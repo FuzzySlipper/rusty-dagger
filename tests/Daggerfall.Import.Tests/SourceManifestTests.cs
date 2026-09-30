@@ -37,7 +37,7 @@ public sealed class SourceManifestTests : IDisposable
             "CNT-001.file.GONE.CIF,file,CNT-001,source-file,local/arena2/GONE.CIF,1,5,GONE,scope,uninspected,note");
 
         SourceManifest manifest = SourceManifestBuilder.Build(
-            new SourceManifestRequest("local/arena2", "docs/coverage/content-source-manifest.csv", root, ["A.CIF"], ["B.CIF"], []),
+            new SourceManifestRequest("local/arena2", "data/content-source-manifest.csv", root, ["A.CIF"], ["B.CIF"], []),
             Encoding.UTF8.GetBytes(inventory));
 
         Assert.Equal(SourceRecordDisposition.Imported, Record(manifest, "CNT-001.file.A.CIF").Disposition);
@@ -63,7 +63,7 @@ public sealed class SourceManifestTests : IDisposable
             "CNT-001.file.GONE.CIF,file,CNT-001,source-file,local/arena2/GONE.CIF,1,5,GONE,scope,uninspected,note");
 
         SourceManifest manifest = SourceManifestBuilder.Build(
-            new SourceManifestRequest("local/arena2", "docs/coverage/content-source-manifest.csv", root, ["A.CIF"], [], []),
+            new SourceManifestRequest("local/arena2", "data/content-source-manifest.csv", root, ["A.CIF"], [], []),
             Encoding.UTF8.GetBytes(inventory));
 
         // A documented family the local tree supplies nothing for is still counted, so
@@ -84,7 +84,7 @@ public sealed class SourceManifestTests : IDisposable
             "CNT-001,family,CNT-001,cif,local/arena2/A.CIF,1,,A,scope,current-structural,note",
             "CNT-001.file.B.CIF,file,CNT-001,source-file,local/arena2/B.CIF,1,5,B,scope,uninspected,note",
             "CNT-001.file.A.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,uninspected,note");
-        SourceManifestRequest request = new("local/arena2", "docs/coverage/content-source-manifest.csv", root, ["B.CIF"], [], []);
+        SourceManifestRequest request = new("local/arena2", "data/content-source-manifest.csv", root, ["B.CIF"], [], []);
 
         byte[] first = SourceManifestSerializer.Serialize(SourceManifestBuilder.Build(request, Encoding.UTF8.GetBytes(inventory)));
         byte[] second = SourceManifestSerializer.Serialize(SourceManifestBuilder.Build(request, Encoding.UTF8.GetBytes(inventory)));
@@ -164,7 +164,7 @@ public sealed class SourceManifestTests : IDisposable
             "CNT-001.file.MIXED.CIF,file,CNT-001,source-file,local/arena2/MIXED.CIF,1,5,MIXED,scope,uninspected,note");
 
         SourceManifest manifest = SourceManifestBuilder.Build(
-            new SourceManifestRequest("local/arena2", "docs/coverage/content-source-manifest.csv", root, [], [], []),
+            new SourceManifestRequest("local/arena2", "data/content-source-manifest.csv", root, [], [], []),
             Encoding.UTF8.GetBytes(inventory));
 
         SourceManifestRecord record = Record(manifest, "CNT-001.file.MIXED.CIF");
@@ -181,7 +181,7 @@ public sealed class SourceManifestTests : IDisposable
             "CNT-005,family,CNT-005,blocks,local/arena2/ARCHIVE.BSA,1,,A,scope,current-structural,note",
             "CNT-005.file.ARCHIVE.BSA,file,CNT-005,source-file,local/arena2/ARCHIVE.BSA,1,5,ARCHIVE,scope,uninspected,note");
         SourceManifest manifest = SourceManifestBuilder.Build(
-            new SourceManifestRequest("local/arena2", "docs/coverage/content-source-manifest.csv", root, ["ARCHIVE.BSA"], [], []),
+            new SourceManifestRequest("local/arena2", "data/content-source-manifest.csv", root, ["ARCHIVE.BSA"], [], []),
             Encoding.UTF8.GetBytes(inventory));
         SourceManifestRecord archive = Record(manifest, "CNT-005.file.ARCHIVE.BSA");
 

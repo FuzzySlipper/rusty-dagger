@@ -1,6 +1,6 @@
 # Quest content inventory
 
-Prepared 2026-09-10 as a bounded content and source inventory for the
+This is a bounded quest content and source inventory for the
 [Daggerfall coverage plan](../daggerfall-coverage-plan.md). This file is a
 directory inventory plus a small semantic orientation survey. It is not a
 claim that the donor quest runtime has been behaviorally audited, and it is
@@ -8,11 +8,10 @@ not a task list. Task drafting should turn the records below into bounded
 work only after each source-backed behavior and its local owner is resolved.
 
 The source reference is the frozen Daggerfall Unity donor checkout at
-`/home/research/daggerfall-unity`. The checkout was indexed by Codebase Memory
-on 2026-08-12 with no recorded coverage issue in the quest, table, utility, or
-localization scopes. That index is a navigation aid; the paths and line
-anchors below were checked against the checkout itself. The counts in this
-file are measurements of that snapshot.
+`/home/research/daggerfall-unity`; its exact revision is logged in the Den
+coverage campaign. The Codebase Memory index of that checkout is a navigation
+aid; the paths and line anchors below were checked against the checkout itself.
+The counts in this file are measurements of that donor revision.
 
 ## Reading rules and bounded scope
 
@@ -39,31 +38,30 @@ file is found, and preserve the source path and donor revision in the record.
 
 ## Local anchors and ownership
 
-The [feature map's quest rows](../daggerfall-feature-map.md#quests) mark the
-quest machine, instance, parser, tasks/clock, places/persons, foes/items,
-messages/symbols, action library, and macro expansion as absent. The plan's
+The archived feature survey (`[doc: rusty-dagger/daggerfall-feature-map-2026-09]`)
+marked the quest machine, instance, parser, tasks/clock, places/persons,
+foes/items, messages/symbols, action library, and macro expansion as absent; the
+[feature ledger](feature-ledger.md) carries their current dispositions. The plan's
 [quest machinery section](../daggerfall-coverage-plan.md#11-quest-machinery-and-action-families)
 requires normalized classic source data, persistent instances and symbols,
 task/deadline/message behavior, stable world bindings, actual operations for
 actions, and explicit unsupported behavior.
 
-Current product anchors are deliberately small:
+Current product owners:
 
-* [`DaggerfallSession`](../../src/WorldRpg.Rulesets.Daggerfall/DaggerfallSession.cs#L23-L45)
-  composes actors, inventory, combat, spatial movement, presentation, and
-  save-facing state. It has no quest instance or quest clock.
-* [`DaggerfallState`](../../src/WorldRpg.Rulesets.Daggerfall/DaggerfallState.cs#L8-L16)
-  currently exposes player controls, actors, progression, inventory,
-  equipment, and containers.
-* [`DaggerfallSavePayload`](../../src/WorldRpg.Rulesets.Daggerfall/DaggerfallSavePayload.cs#L12-L24)
-  currently persists player/actor/progression/inventory/corpse/allocator and
-  combat-continuation data; it has no quest, task, symbol, journal, or clock
-  records.
-* The current content tree contains base and Privateer's Hold packs under
-  `content/worldrpg/content-packs/` and no quest pack or normalized quest
-  source. Quest source conversion belongs to `Daggerfall.Import`; Daggerfall
-  quest meaning belongs to the ruleset; reusable identity/state coordination
-  may belong to Kit. The Host must not acquire Daggerfall quest semantics.
+* `Daggerfall.Import` converts quest sources (`Arena2/QuestSourceReader.cs`,
+  `Normalized/DaggerfallQuests.cs` and the quest table readers) and publishes the
+  quest corpora (`Publication/ClassicQuestCorpusPublication.cs`).
+* `content/worldrpg/content-packs/` holds the published `daggerfall.quests.*`
+  packs beside the base and location packs.
+* The ruleset interprets them: `Content/DaggerfallQuests.cs` and the corpus
+  content readers; `DaggerfallQuestInstances.cs` (durable instance, resource and
+  symbol state), `DaggerfallQuestTasks.cs`, `DaggerfallQuestClocks.cs`,
+  `DaggerfallQuestMessages.cs` and `DaggerfallQuestRuntime.cs` (the session
+  adapter to player, progression and calendar owners). `DaggerfallState.Quests`
+  holds the instances and `DaggerfallSavePayload` persists them.
+* Reusable identity/state coordination may belong to Kit. The Host must not
+  acquire Daggerfall quest semantics.
 
 ## Donor source inventory
 
@@ -104,7 +102,7 @@ listed separately because it is a prerequisite rather than an action file:
 The action inventory is grouped by the capability it needs first. A row marked
 `R` is a runtime semantic candidate. A row marked `U` is still a runtime
 candidate, but a source-format, Engine capability, UI, or product-ownership
-detail must be resolved while drafting its task. Ownership follows the task packet;
+detail must be resolved while drafting its task. Ownership follows the coverage plan;
 these flags do not reopen settled Engine/Kit/ruleset boundaries or block unrelated
 task creation. `H` is a donor helper/demo
 and is not a classic runtime parity promise.

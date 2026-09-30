@@ -69,5 +69,5 @@ public sealed class CharacterMediaInventoryReconciliationTests
     }
 
     private static byte[] InventoryCsv() =>
-        File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv"));
+        File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv"));
 }

@@ -109,7 +109,7 @@ public sealed class DaggerfallQuestOriginalSourceTests
         string root = TestData.RepositoryRoot;
         string questText = TestData.Donor("Assets/StreamingAssets/Quests");
         string tables = TestData.Donor("Assets/StreamingAssets/Tables");
-        IReadOnlyList<SourceInventoryRow> manifest = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(root, "docs/coverage/content-source-manifest.csv")));
+        IReadOnlyList<SourceInventoryRow> manifest = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(root, "data/content-source-manifest.csv")));
         IReadOnlyDictionary<string, int> messages = DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(tables, "Quests-StaticMessages.txt")), "Tables/Quests-StaticMessages.txt").Lookup;
         IReadOnlyDictionary<string, int> globals = DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(tables, "Quests-GlobalVars.txt")), "Tables/Quests-GlobalVars.txt", globals: true).Lookup;
         List<QuestSourceDocument> documents = [];

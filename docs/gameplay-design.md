@@ -109,8 +109,9 @@ or payment/transfer must succeed as a whole. A quote may need its funds or item
 checked when accepted. These do not establish a baseline proposal/accept/commit
 protocol, revision guard or whole-state snapshot for every action.
 
-Timing remains deliberate product policy. Player attacks currently apply
-immediately; enemy attacks roll at start and apply at the authored impact.
+Timing remains deliberate product policy. Attacks roll at admission. A player
+swing with a target applies on the weapon's classic hit frame and an empty swing
+resolves immediately; enemy attacks apply at the authored damage marker.
 Interrupting delivery retains charged costs/cooldown. Pending strikes are
 transient on load; remaining cooldown is restored onto the new timeline. Keep
 keyed gameplay RNG and admitted-step catch-up semantics. Consult the
@@ -163,14 +164,14 @@ Start new work from the current owners, not a stale filename in a task:
 | Attack lifecycle and rules | Kit `AttackExecution` / `CombatResolution`, `DaggerCombatRules` |
 | Pursuit / corpse loot | Kit `PursuitCoordinator` / `CorpseLootCoordinator`, Dagger policy modules |
 | Equipment moves | `DaggerfallEquipmentMoves` + `DaggerfallEquipmentPolicy` over Kit inventory/equipment coordinators |
-| Saves | `DaggerSessionPersistence`, `DaggerfallSavePayload`, Host `WorldRpgSaveStore` |
+| Saves | `DaggerSessionPersistence`, `DaggerfallSavePayload`, Host `WorldRpgSaveSlots` / `WorldRpgSaveStore` |
 | Content admission | `GameCompositionResolver`, `DaggerfallRuleset` |
 | Host / UI actions | Host lifecycle and selection; ruleset `IEntryScreenSession` interpretation |
 
 The [code and migration map](code-migration-map.md) describes the broader graph.
 This document is design guidance, not a claim that all RPG features or visible
-acceptance are complete. Current followups include ordinary save/load controls,
-connected gameplay verification and UI-art delivery warnings (#8342–8344).
-Den owns their live status. Existing coverage tasks still carry their gameplay
+acceptance are complete. Den owns the current followups and their live status.
+Save/load controls exist: the game menu's save-slot panels over the Host's
+`WorldRpgSaveSlots`. Existing coverage tasks still carry their gameplay
 requirements; update obsolete implementation assumptions without inventing new
 features, duplicating owners or requiring proof-only gameplay scaffolding.

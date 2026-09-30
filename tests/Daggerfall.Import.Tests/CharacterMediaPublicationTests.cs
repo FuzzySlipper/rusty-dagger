@@ -458,7 +458,7 @@ public sealed class CharacterMediaPublicationTests
     public void TheDocumentedInventoryAndTheSuppliedCorpusAgree()
     {
         IReadOnlyList<SourceInventoryRow> rows = SourceManifestBuilder.ReadInventory(
-            File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")));
+            File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));
         string[] documented = [.. rows
             .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, "CNT-021"))
             .Select(row => System.IO.Path.GetFileName(row.PathOrPattern))

@@ -9,7 +9,7 @@ The target is the supported classic game record set needed by the playable Dagge
 world and location data; actors, races, careers, items and effects; text and books; main,
 guild and miscellaneous services/presentation; quests; ordinary sound and story media. A
 source file receives a planning disposition in the table below or in the companion
-[source manifest](content-source-manifest.csv); archive-internal record dispositions
+[source manifest](../../data/content-source-manifest.csv); archive-internal record dispositions
 are assigned by the relevant import/publication tasks. “All content” is not a disposition.
 
 ## Evidence and boundaries
@@ -21,7 +21,7 @@ source is outside that closure. Neither means that every record in the source is
 implemented, or that other publications cannot use it. Family rows retain their
 planning dispositions. After refreshing this bundle, run the import tool's
 `source-manifest` command with `--publication` pointing to the bundle and
-`--inventory docs/coverage/content-source-manifest.csv --update-inventory`, then
+`--inventory data/content-source-manifest.csv --update-inventory`, then
 run `plan` with that inventory to check drift. The reconciler changes only file
 dispositions; historical scope notes and source counts remain inventory evidence.
 

@@ -72,7 +72,7 @@ public sealed class CharacterMediaAdmissionTests
         || name.EndsWith(".CIF", StringComparison.OrdinalIgnoreCase)
         || name.EndsWith(".IMG", StringComparison.OrdinalIgnoreCase);
 
-    private static string ManifestPath() => Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv");
+    private static string ManifestPath() => Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv");
 
     private static string PackPath() => Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json");
 }

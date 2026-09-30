@@ -611,7 +611,7 @@ public sealed class BlockInventoryTests
         Inventory());
 
     private static IReadOnlyList<SourceInventoryRow> Inventory() => SourceManifestBuilder.ReadInventory(
-        File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")));
+        File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));
 
     private static IReadOnlyList<DaggerfallBlockRecord> Replaced(DaggerfallBlocks blocks, int ordinal, DaggerfallBlockRecord record) =>
         [.. blocks.Records.Select(value => value.Ordinal == ordinal ? record : value)];

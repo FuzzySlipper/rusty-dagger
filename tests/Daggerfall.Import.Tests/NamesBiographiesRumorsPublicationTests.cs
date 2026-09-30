@@ -213,5 +213,5 @@ public sealed class NamesBiographiesRumorsPublicationTests
     }
 
     private static IReadOnlyList<SourceInventoryRow> Inventory() =>
-        SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "docs/coverage/content-source-manifest.csv")));
+        SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));
 }
