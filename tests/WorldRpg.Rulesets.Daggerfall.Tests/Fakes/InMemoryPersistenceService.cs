@@ -2,17 +2,42 @@ using Rusty.Engine;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
-/// <summary>Small persistence service shared across two fresh EngineContext fakes in the host close/reopen test.</summary>
+/// <summary>
+/// Small persistence service that can be shared across fresh EngineContext fakes, as in the host
+/// close/reopen tests. Each open hands out its own store handle bound to the scope it named, and values
+/// live under that scope, so two scopes never see each other's keys while two opens of one scope do.
+/// </summary>
 internal sealed class InMemoryPersistenceService : IPersistenceService
 {
     private readonly Dictionary<(string Scope, string Key), Entry> _values = [];
     private readonly Dictionary<ulong, Entry?> _blobs = [];
+    private readonly Dictionary<ulong, string> _stores = [];
     private ulong _nextBlob;
+    private ulong _nextStore;
 
-    public PersistenceStore OpenStore(PersistenceOpenRequest request) => new(new PersistenceStoreHandle(1), static () => { });
+    /// <summary>Every scope a store was opened for, in the order they were opened.</summary>
+    internal List<string> OpenedScopes { get; } = [];
+
+    /// <summary>The keys currently stored under one scope, in ordinal order.</summary>
+    internal IReadOnlyList<string> Keys(string scope) => _values.Keys
+        .Where(entry => string.Equals(entry.Scope, scope, StringComparison.Ordinal))
+        .Select(entry => entry.Key)
+        .Order(StringComparer.Ordinal)
+        .ToArray();
+
+    public PersistenceStore OpenStore(PersistenceOpenRequest request)
+    {
+        ulong handle = ++_nextStore;
+        _stores.Add(handle, request.Scope);
+        OpenedScopes.Add(request.Scope);
+        return new(new PersistenceStoreHandle(handle), () => _stores.Remove(handle));
+    }
+
+    private string Scope(PersistenceStore store) => _stores.TryGetValue(store.Handle.Value, out string? scope)
+        ? scope : throw new InvalidOperationException($"Persistence store {store.Handle.Value} is not open.");
     public PersistenceSaveReceipt Save(PersistenceSaveRequest request)
     {
-        (string Scope, string Key) key = (request.Store.Handle.Value.ToString(), request.Key);
+        (string Scope, string Key) key = (Scope(request.Store), request.Key);
         bool present = _values.TryGetValue(key, out Entry? existing);
         if ((request.RevisionGuard == PersistenceRevisionGuard.Absent && present)
             || (request.RevisionGuard == PersistenceRevisionGuard.Exact && (!present || existing!.Revision != request.ExpectedRevision)))
@@ -23,7 +48,7 @@ internal sealed class InMemoryPersistenceService : IPersistenceService
     }
     public PersistenceDeleteReceipt Delete(PersistenceDeleteRequest request)
     {
-        (string Scope, string Key) key = (request.Store.Handle.Value.ToString(), request.Key);
+        (string Scope, string Key) key = (Scope(request.Store), request.Key);
         _values.TryGetValue(key, out Entry? existing);
         bool matches = request.RevisionGuard switch
         {
@@ -39,7 +64,7 @@ internal sealed class InMemoryPersistenceService : IPersistenceService
     }
     public PersistenceBlob Load(PersistenceLoadRequest request)
     {
-        Entry? value = _values.TryGetValue((request.Store.Handle.Value.ToString(), request.Key), out Entry? found) ? found : null;
+        Entry? value = _values.TryGetValue((Scope(request.Store), request.Key), out Entry? found) ? found : null;
         ulong handle = ++_nextBlob;
         _blobs.Add(handle, value);
         return new(new PersistenceBlobHandle(handle), static () => { });
