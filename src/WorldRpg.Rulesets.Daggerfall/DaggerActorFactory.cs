@@ -102,9 +102,9 @@ internal static class DaggerActorFactory
             {
                 if (!definitions.Actors.TryGetValue(source.ActorId, out DaggerfallActorDefinition? definition))
                     throw new InvalidOperationException($"Site placement '{source.EntityId}' refers to missing actor '{source.ActorId.Value}'.");
-                ActorState actor = actors.CreateActor(source.EntityId, new EntityTypeId(definition.Id.Value),
+                ActorState actor = CreateNonPlayerActor(actors, source.EntityId, definition,
                     mechanics.CreateStats(definition, InitialVitals(random, definition, source.EntityId)),
-                    new ActorPose(source.Position, 0f), definition.Combat.Health.Value);
+                    new ActorPose(source.Position, 0f));
                 if (saved is not null) RestoreStats(actor.Actor, saved.Actors.Single(value => value.EntityId == source.EntityId).Stats);
                 authored.Add(source.EntityId, definition);
                 RegisterActorInventory(actor, inventoryStore);
@@ -177,14 +177,9 @@ internal static class DaggerActorFactory
         AuthoredActor source, DaggerfallActorSave? restored = null)
     {
         DaggerfallActorDefinition definition = definitions.RequireActor(source.ActorId);
-        ActorState actor = actors.CreateActor(source.EntityId, new EntityTypeId(definition.Id.Value),
+        ActorState actor = CreateNonPlayerActor(actors, source.EntityId, definition,
             mechanics.CreateStats(definition, InitialVitals(random, definition, source.EntityId)),
-            new ActorPose(source.Position, 0F), definition.Combat.Health.Value);
-        // Site transitions happen after the enemy behavior module has been composed.  Attach the
-        // same per-actor pursuit state here so a freshly admitted destination can take its first
-        // real update without relying on the initial roster pass.
-        if (!actors.Store.TryGet<PursuitMemoryComponent>(actor.Actor.Entity, out _))
-            actors.Store.Add(actor.Actor.Entity, new PursuitMemoryComponent());
+            new ActorPose(source.Position, 0F));
         if (restored is not null) RestoreStats(actor.Actor, restored.Stats);
         RegisterActorInventory(actor, inventoryStore);
         if (restored is null)
@@ -256,10 +251,8 @@ internal static class DaggerActorFactory
         ArgumentNullException.ThrowIfNull(inventoryStore);
         ArgumentNullException.ThrowIfNull(npc);
         DaggerfallActorDefinition definition = CivilianDefinition(npc.DurableId);
-        ActorState actor = actors.CreateActor(npc.DurableId, new EntityTypeId(definition.Id.Value),
-            mechanics.CreateStats(definition, new DaggerfallVitalValues(1, 0, 0)), pose, definition.Combat.Health.Value);
-        if (!actors.Store.TryGet<PursuitMemoryComponent>(actor.Actor.Entity, out _))
-            actors.Store.Add(actor.Actor.Entity, new PursuitMemoryComponent());
+        ActorState actor = CreateNonPlayerActor(actors, npc.DurableId, definition,
+            mechanics.CreateStats(definition, new DaggerfallVitalValues(1, 0, 0)), pose);
         RegisterActorInventory(actor, inventoryStore);
         return actor;
     }
@@ -285,13 +278,9 @@ internal static class DaggerActorFactory
         // action identity and zero flat reward).  The save intentionally stores the canonical
         // definition identity, so reapply that pure policy while rebuilding the runtime binding.
         DaggerfallActorDefinition definition = ResolveDynamicDefinition(definitions, saved);
-        ActorState actor = actors.CreateActor(saved.EntityId, new EntityTypeId(definition.Id.Value),
+        ActorState actor = CreateNonPlayerActor(actors, saved.EntityId, definition,
             mechanics.CreateStats(definition, InitialVitals(random, definition, saved.EntityId)),
-            new ActorPose(new WorldPoint(saved.X, saved.Y, saved.Z), saved.HeadingRadians), definition.Combat.Health.Value);
-        // The behavior module's constructor only sees the initial roster.  Inactive-site dynamic
-        // actors are rebuilt later, so their canonical component must be attached at construction.
-        if (!actors.Store.TryGet<PursuitMemoryComponent>(actor.Actor.Entity, out _))
-            actors.Store.Add(actor.Actor.Entity, new PursuitMemoryComponent());
+            new ActorPose(new WorldPoint(saved.X, saved.Y, saved.Z), saved.HeadingRadians));
         RestoreStats(actor.Actor, saved.Stats);
         definitionsByActor.Add(saved.EntityId, definition);
         RegisterActorInventory(actor, inventoryStore);
@@ -325,14 +314,28 @@ internal static class DaggerActorFactory
             DaggerfallActorDefinition definition = ResolveDynamicDefinition(definitions, spawned);
             // Keyed draws are deterministic per identity, so this construction roll cannot skew
             // any other roll; the saved boundary replaces the whole component immediately after.
-            ActorState actor = actors.CreateActor(spawned.EntityId, new EntityTypeId(definition.Id.Value),
+            ActorState actor = CreateNonPlayerActor(actors, spawned.EntityId, definition,
                 mechanics.CreateStats(definition, InitialVitals(random, definition, spawned.EntityId)),
-                new ActorPose(new WorldPoint(spawned.X, spawned.Y, spawned.Z), spawned.HeadingRadians),
-                definition.Combat.Health.Value);
+                new ActorPose(new WorldPoint(spawned.X, spawned.Y, spawned.Z), spawned.HeadingRadians));
             RestoreStats(actor.Actor, spawned.Stats);
             definitionsByActor.Add(spawned.EntityId, definition);
             RegisterActorInventory(actor, inventoryStore);
         }
+    }
+
+    /// <summary>
+    /// Creates one non-player actor with the per-actor state every Daggerfall NPC carries: the Kit
+    /// actor components, pursuit memory and the enemy-senses memory the behavior policy reads.
+    /// Every placed, spawned, restored and civilian actor is created here, so no later owner
+    /// attaches either memory after the fact.
+    /// </summary>
+    internal static ActorState CreateNonPlayerActor(ActorsState actors, long durableId, DaggerfallActorDefinition definition,
+        StatsComponent stats, ActorPose pose)
+    {
+        ActorState actor = actors.CreateActor(durableId, new EntityTypeId(definition.Id.Value), stats, pose, definition.Combat.Health.Value);
+        actor.Actor.Add(new PursuitMemoryComponent());
+        actor.Actor.Add(new DaggerfallEnemyPerceptionMemory());
+        return actor;
     }
 
     /// <summary>
