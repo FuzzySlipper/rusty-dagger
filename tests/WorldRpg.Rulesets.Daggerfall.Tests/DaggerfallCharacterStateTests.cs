@@ -1,6 +1,3 @@
-using System;
-using System.IO;
-using System.Linq;
 using System.Reflection;
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
@@ -208,7 +205,7 @@ public sealed class DaggerfallCharacterStateTests
     public void Background_rolls_are_allocated_once_and_the_normalized_biography_round_trips()
     {
         DaggerfallCharacterState character = Create(out DaggerfallDefinitions definitions, out StatsComponent stats);
-        IRandomService random = MinimumRandom();
+        IRandomService random = RandomMinimum.Create();
         character.BeginChoices(random);
         DaggerfallCharacterCreationChoices draft = Assert.IsType<DaggerfallCharacterCreationChoices>(character.Pending);
         DaggerfallCharacterBackgroundSave rolled = Assert.IsType<DaggerfallCharacterBackgroundSave>(draft.Background);
@@ -280,7 +277,7 @@ public sealed class DaggerfallCharacterStateTests
     public void Biography_expands_the_selected_answer_fragments_into_the_backstory()
     {
         DaggerfallCharacterState character = Create(out DaggerfallDefinitions definitions, out _);
-        character.BeginChoices(MinimumRandom());
+        character.BeginChoices(RandomMinimum.Create());
         DaggerfallCharacterCreationChoices draft = Assert.IsType<DaggerfallCharacterCreationChoices>(character.Pending);
         DaggerfallCharacterBackgroundSave initial = Assert.IsType<DaggerfallCharacterBackgroundSave>(draft.Background);
         DaggerfallCareerDefinition career = definitions.Catalogs.RequireCareer("class00");
@@ -309,7 +306,7 @@ public sealed class DaggerfallCharacterStateTests
     {
         DaggerfallCharacterState character = Create(out DaggerfallDefinitions definitions, out _);
         DaggerfallCareerDefinition career = definitions.Catalogs.RequireCareer("class00");
-        character.BeginChoices(MinimumRandom());
+        character.BeginChoices(RandomMinimum.Create());
         DaggerfallCharacterBackgroundSave rolled = Assert.IsType<DaggerfallCharacterBackgroundSave>(character.Pending!.Background);
         DaggerfallBiographyDefinition biography = definitions.Biographies.Biographies.Single(value => value.ClassIndex == rolled.BiographyClassIndex);
         DaggerfallBiographyAnswerSave[] answers = biography.Questions.Select(question => new DaggerfallBiographyAnswerSave(question.Number,
@@ -337,8 +334,6 @@ public sealed class DaggerfallCharacterStateTests
         return new DaggerfallCharacterState(definitions, stats, player);
     }
 
-    private static IRandomService MinimumRandom() => DispatchProxy.Create<IRandomService, MinimumRandomProxy>();
-
     private static IRandomService SequenceRandom(out SequenceRandomProxy proxy)
     {
         IRandomService service = DispatchProxy.Create<IRandomService, SequenceRandomProxy>();
@@ -359,11 +354,5 @@ public sealed class DaggerfallCharacterStateTests
             int sequence = int.Parse(request.Key.AsSpan(0, separator), System.Globalization.CultureInfo.InvariantCulture);
             return new KeyedRngReceipt(Math.Min(request.Maximum, checked(request.Minimum + sequence - 1)));
         }
-    }
-
-    private class MinimumRandomProxy : DispatchProxy
-    {
-        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IRandomService.DrawKeyed)
-            ? new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Minimum) : throw new NotSupportedException(method?.Name);
     }
 }

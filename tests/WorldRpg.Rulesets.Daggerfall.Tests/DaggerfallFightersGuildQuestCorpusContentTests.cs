@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Text.Json.Nodes;
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -76,14 +75,5 @@ public sealed class DaggerfallFightersGuildQuestCorpusContentTests
 
         Assert.Contains("line 12: talk to _giver_", failure.Message, StringComparison.Ordinal);
         Assert.Contains("runner operation supports", failure.Message, StringComparison.Ordinal);
-    }
-
-    internal class RandomMinimum : DispatchProxy
-    {
-        internal static IRandomService Create() => DispatchProxy.Create<IRandomService, RandomMinimum>();
-
-        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IRandomService.DrawKeyed)
-            ? new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Minimum)
-            : throw new NotSupportedException(method?.Name);
     }
 }

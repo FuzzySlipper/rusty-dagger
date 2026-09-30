@@ -1,11 +1,5 @@
-using System.Reflection;
-using Rusty.Engine;
-using Rusty.Engine.Entities;
-using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
-using WorldRpg.Kit.World;
-using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 using Xunit;
@@ -119,15 +113,5 @@ public sealed class DaggerfallDialogueTests
         internal DaggerfallDialogueService Service { get; }
         internal DaggerfallActivationTarget Target { get; }
         internal DaggerfallDialogueView? View => _view;
-    }
-
-    private class RandomMinimum : DispatchProxy
-    {
-        internal static IRandomService Create() => DispatchProxy.Create<IRandomService, RandomMinimum>();
-
-        protected override object? Invoke(MethodInfo? method, object?[]? arguments) =>
-            method?.Name == nameof(IRandomService.DrawKeyed)
-                ? new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Minimum)
-                : throw new NotSupportedException(method?.Name);
     }
 }

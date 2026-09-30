@@ -1,5 +1,3 @@
-using System.Reflection;
-using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using Xunit;
@@ -105,7 +103,7 @@ public sealed class DaggerfallRegionalEconomyTests
         Assert.Equal(3, captured.LastAdvancedDay);
         Assert.NotEqual(750, initial.AdjustmentForRegion(0));
 
-        DaggerfallRegionalPriceState restored = new(definitions.Factions, MinimumRandom(), currentDay: 3, restored: captured);
+        DaggerfallRegionalPriceState restored = new(definitions.Factions, RandomMinimum.Create(), currentDay: 3, restored: captured);
         DaggerfallTradeQuoteService firstService = new(definitions, new DaggerfallItemValuation(definitions), initial);
         DaggerfallTradeQuoteService restoredService = new(definitions, new DaggerfallItemValuation(definitions), restored);
         DaggerfallTradeQuote first = Assert.IsType<DaggerfallTradeQuote>(firstService.Quote(DaggerfallTradeSide.BuyFromMerchant,
@@ -142,7 +140,7 @@ public sealed class DaggerfallRegionalEconomyTests
     }
 
     private static DaggerfallCreatedItem OrdinaryItem(DaggerfallDefinitions definitions, int currentCondition, int maximumCondition) =>
-        new DaggerfallItemFactory(definitions, MinimumRandom()).Create(new DaggerfallItemCreateRequest(
+        new DaggerfallItemFactory(definitions, RandomMinimum.Create()).Create(new DaggerfallItemCreateRequest(
             "Weapons", "regional-economy-test-weapon", DaggerfallItemOwner.Player,
             TemplateIndex: 113, Material: "iron")) with
         { Metadata = CreateItemWithCondition(definitions, currentCondition, maximumCondition) };
@@ -189,23 +187,14 @@ public sealed class DaggerfallRegionalEconomyTests
 
     private static DaggerfallCreatedItem MagicItem(DaggerfallDefinitions definitions)
     {
-        DaggerfallCreatedItem created = new DaggerfallItemFactory(definitions, MinimumRandom()).Create(new DaggerfallItemCreateRequest(
+        DaggerfallCreatedItem created = new DaggerfallItemFactory(definitions, RandomMinimum.Create()).Create(new DaggerfallItemCreateRequest(
             "Magic", "regional-economy-test-magic", DaggerfallItemOwner.Player,
             Race: "breton", Gender: "male", MagicItemKey: "magic-item.0010"));
         return created with { Metadata = created.Metadata with { Identified = true } };
     }
 
     private static DaggerfallRegionalPriceState PriceState(DaggerfallDefinitions definitions) =>
-        new(definitions.Factions, MinimumRandom(), currentDay: 0, randomizationKey: "regional-economy-test");
-
-    private static IRandomService MinimumRandom() => DispatchProxy.Create<IRandomService, MinimumRandomProxy>();
-
-    private class MinimumRandomProxy : DispatchProxy
-    {
-        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IRandomService.DrawKeyed)
-            ? new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Minimum)
-            : throw new NotSupportedException(method?.Name);
-    }
+        new(definitions.Factions, RandomMinimum.Create(), currentDay: 0, randomizationKey: "regional-economy-test");
 
     private static DaggerfallDefinitions LoadDefinitions() =>
         TestPayload.Definitions;
