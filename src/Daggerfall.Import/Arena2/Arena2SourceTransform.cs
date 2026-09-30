@@ -25,9 +25,12 @@ public readonly record struct Arena2Triangle(int First, int Second, int Third);
 /// </summary>
 public static class Arena2SourceTransform
 {
+    /// <summary>Metres per classic world unit, the one scale every source position and size is converted by.</summary>
+    public const float SourceUnitMetres = 0.025F;
+
     // Structural source-format values, kept beside the transformations that
     // consume them. They are not content or ruleset tuning handles.
-    private const float GlobalScaleMetres = 0.025F;
+    private const float GlobalScaleMetres = SourceUnitMetres;
     private const float MeshPointDivisor = 256F;
     private const float TextureCoordinateDivisor = 16F;
     private const float RawRotationUnitsPerTurn = 2048F;

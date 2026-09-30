@@ -258,13 +258,7 @@ public static class SourceManifestSerializer
 {
     public const string ManifestRelativePath = "sources/manifest.json";
 
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true,
-        NumberHandling = JsonNumberHandling.Strict,
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
-    };
+    private static readonly JsonSerializerOptions Options = PublishedJson.Section;
 
     public static byte[] Serialize(SourceManifest manifest)
     {

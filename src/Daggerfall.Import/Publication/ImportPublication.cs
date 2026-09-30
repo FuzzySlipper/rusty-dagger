@@ -241,13 +241,7 @@ public static class ImportPublicationManifestSerializer
 {
     public const string ManifestRelativePath = "import-manifest.json";
 
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true,
-        NumberHandling = JsonNumberHandling.Strict,
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
-    };
+    private static readonly JsonSerializerOptions Options = PublishedJson.Section;
 
     public static byte[] Serialize(CanonicalImportManifest manifest)
     {

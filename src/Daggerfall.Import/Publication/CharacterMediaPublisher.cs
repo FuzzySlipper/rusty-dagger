@@ -41,9 +41,6 @@ public static class CharacterMediaPublisher
     /// <summary>The relative path the generated character-media index is written to.</summary>
     public const string IndexRelativePath = "media/character/character-media-inventory.json";
 
-    /// <summary>The index's shape version, which a consumer states before it reads one.</summary>
-    public const int IndexSchemaVersion = 1;
-
     /// <summary>The index's generator identity, so an index that drifted from its producer is visible.</summary>
     public const string IndexGenerator = "daggerfall-import-tool character-presentation";
 
@@ -64,7 +61,7 @@ public static class CharacterMediaPublisher
     /// the corpus checkable rather than self-describing: a documented file the corpus lacks is a source gap
     /// worth refusing over, while a supplied file with no row is content this publication would emit without
     /// a record, which is reported and kept. The documented paths are cited root-relative
-    /// (<c>local/arena2/BODY00I0.IMG</c>) while the publication sees bare names, so membership is by file
+    /// (<c>arena2/BODY00I0.IMG</c>) while the publication sees bare names, so membership is by file
     /// name - the same rule the inventory's own family enumeration uses.
     /// </remarks>
     /// <param name="inventoryCsv">The documented inventory, as its published bytes.</param>
@@ -385,45 +382,32 @@ public static class CharacterMediaPublisher
                 reference.Consumer));
         }
 
-        // The document is built rather than serialized from a record so the entry keys are the classic
-        // index's own: it publishes the same facts under 'path', 'byteLength' and 'sha256', and a reader
-        // that resolves one group should not have to special-case the other's key names.
-        JsonSerializerOptions options = new(PublishedJson.Section);
-        JsonArray artifacts = [];
-        foreach (CharacterMediaIndexEntry entry in entries)
-        {
-            artifacts.Add(new JsonObject
+        // The index is the one inventory shape every media group writes, so one reader resolves the classic,
+        // character and music groups alike; the character facts ride beside the shared entry keys.
+        return ArtifactInventory.Write(
+            IndexGenerator,
+            entries.Select(entry =>
             {
-                ["mediaId"] = entry.MediaId,
-                ["path"] = contentGroup is null ? entry.Path : $"{contentGroup}/{entry.Path}",
-                ["byteLength"] = entry.ByteLength,
-                ["sha256"] = entry.Sha256,
-                ["width"] = entry.Width,
-                ["height"] = entry.Height,
-                ["family"] = entry.Family,
-                ["sourceFile"] = entry.SourceFile,
-                ["canvasIndex"] = entry.CanvasIndex,
-                ["palette"] = entry.Palette,
-                ["paletteSource"] = entry.PaletteSource,
-                ["binding"] = entry.Binding == MediaBinding.Admitted ? "admitted" : "requiredPending",
-                ["consumer"] = entry.Consumer,
-            });
-        }
-
-        JsonObject document = new()
-        {
-            ["schemaVersion"] = IndexSchemaVersion,
-            ["generator"] = IndexGenerator,
-            ["unreadableFamilies"] = JsonSerializer.SerializeToNode(
-                pass.UnreadableFamilies.Select(family => new CharacterMediaUnreadableFamily(
-                    family.Family,
-                    family.Kind,
-                    [.. family.Files.Order(StringComparer.Ordinal)],
-                    family.Reason,
-                    family.DonorAnchor)).ToArray(),
-                options),
-            ["artifacts"] = artifacts,
-        };
-        return [.. System.Text.Encoding.UTF8.GetBytes(document.ToJsonString(options)), (byte)'\n'];
+                JsonObject artifact = ArtifactInventory.Entry(
+                    contentGroup is null ? entry.Path : $"{contentGroup}/{entry.Path}",
+                    pass.Artifacts.Single(candidate => candidate.MediaId == entry.MediaId).Bytes,
+                    entry.MediaId);
+                artifact["width"] = entry.Width;
+                artifact["height"] = entry.Height;
+                artifact["family"] = entry.Family;
+                artifact["sourceFile"] = entry.SourceFile;
+                artifact["canvasIndex"] = entry.CanvasIndex;
+                artifact["palette"] = entry.Palette;
+                artifact["paletteSource"] = entry.PaletteSource;
+                artifact["binding"] = entry.Binding == MediaBinding.Admitted ? "admitted" : "requiredPending";
+                artifact["consumer"] = entry.Consumer;
+                return artifact;
+            }),
+            [.. pass.UnreadableFamilies.Select(family => new UnreadableMediaFamily(
+                family.Family,
+                family.Kind,
+                [.. family.Files.Order(StringComparer.Ordinal)],
+                family.Reason,
+                family.DonorAnchor))]);
     }
 }

@@ -12,6 +12,25 @@ namespace Daggerfall.Import.Normalization;
 /// mesh and the published per-mesh geometry artifact — and a frame, winding, normal rule or bounds rule
 /// that differed between them would leave those two views disagreeing with nothing failing.
 /// </remarks>
+/// <summary>Accumulates one material group's polygons into a normalized mesh.</summary>
+internal sealed class NormalizedMeshBuilder(string materialId, bool participatesInCollision)
+{
+    private readonly List<NormalizedVector3> vertices = [];
+    private readonly List<NormalizedVector3> normals = [];
+    private readonly List<NormalizedVector2> textureCoordinates = [];
+    private readonly List<NormalizedTriangle> triangles = [];
+
+    public IReadOnlyList<NormalizedVector3> Vertices => vertices;
+
+    /// <summary>Appends one planar polygon with its texture coordinates and face normal.</summary>
+    public void Add(IReadOnlyList<NormalizedVector3> polygon, IReadOnlyList<NormalizedVector2> uvs, NormalizedVector3 normal) =>
+        _ = MeshGeometry.AppendPolygon(vertices, normals, textureCoordinates, triangles, polygon, uvs, normal);
+
+    public NormalizedMesh ToMesh(string id, string artifactId) => new(
+        NormalizedMesh.CurrentSchemaVersion, id, artifactId, vertices, normals, textureCoordinates, triangles,
+        [new NormalizedMaterialGroup(materialId, 0, triangles.Count, participatesInCollision)]);
+}
+
 public static class MeshGeometry
 {
     /// <summary>Places one source point into the product's right-handed frame.</summary>

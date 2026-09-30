@@ -1283,17 +1283,7 @@ public sealed record Arena2ClassicMediaPublication(
             // through for exactly those: the automap pair and town caption in the automap windows,
             // the race-select world map, and the travel popup.
             PaletteAlphaMode alpha = CutoutMapFiles.Contains(record.FileName) ? PaletteAlphaMode.IndexZeroTransparent : PaletteAlphaMode.Opaque;
-            Rgba32[] colors = palette.ToRgba(image.Pixels.Span, alpha);
-            byte[] rgba = new byte[checked(colors.Length * 4)];
-            for (int index = 0; index < colors.Length; index++)
-            {
-                int target = index * 4;
-                rgba[target] = colors[index].Red;
-                rgba[target + 1] = colors[index].Green;
-                rgba[target + 2] = colors[index].Blue;
-                rgba[target + 3] = colors[index].Alpha;
-            }
-
+            byte[] rgba = palette.ToRgbaBytes(image.Pixels.Span, alpha);
             string mediaId = $"map.{Path.GetFileNameWithoutExtension(record.FileName).ToLowerInvariant()}";
             byte[] png = DeterministicPngEncoder.EncodeRgba8(image.Width, image.Height, rgba);
             RequireArtifactQuota(png, options, mediaId);
@@ -2177,21 +2167,8 @@ public sealed record Arena2ClassicMediaPublication(
         return canvas;
     }
 
-    private static byte[] EncodePalettePng(int width, int height, ReadOnlySpan<byte> indexed, Arena2Palette palette)
-    {
-        Rgba32[] colors = palette.ToRgba(indexed, PaletteAlphaMode.IndexZeroTransparent);
-        byte[] rgba = new byte[checked(colors.Length * 4)];
-        for (int index = 0; index < colors.Length; index++)
-        {
-            int target = index * 4;
-            rgba[target] = colors[index].Red;
-            rgba[target + 1] = colors[index].Green;
-            rgba[target + 2] = colors[index].Blue;
-            rgba[target + 3] = colors[index].Alpha;
-        }
-
-        return DeterministicPngEncoder.EncodeRgba8(width, height, rgba);
-    }
+    private static byte[] EncodePalettePng(int width, int height, ReadOnlySpan<byte> indexed, Arena2Palette palette) =>
+        DeterministicPngEncoder.EncodeRgba8(width, height, palette.ToRgbaBytes(indexed, PaletteAlphaMode.IndexZeroTransparent));
 
     private static void RequireArtifactQuota(byte[] bytes, Arena2ClassicMediaPublicationOptions options, string id)
     {
@@ -2201,7 +2178,7 @@ public sealed record Arena2ClassicMediaPublication(
         }
     }
 
-    private static string Slug(string value) => value.Replace('.', '-');
+    private static string Slug(string value) => PublishedIds.FileSlug(value);
 
     private sealed record WeaponActionSource(
         ClassicDaggerWeaponAction Action,

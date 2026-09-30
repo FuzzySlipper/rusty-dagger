@@ -298,21 +298,8 @@ public static class CharacterMediaPublication
         }
     }
 
-    private static byte[] Encode(int width, int height, ReadOnlySpan<byte> indexed, Arena2Palette palette)
-    {
-        Rgba32[] colors = palette.ToRgba(indexed, PaletteAlphaMode.IndexZeroTransparent);
-        byte[] rgba = new byte[checked(colors.Length * 4)];
-        for (int index = 0; index < colors.Length; index++)
-        {
-            int target = index * 4;
-            rgba[target] = colors[index].Red;
-            rgba[target + 1] = colors[index].Green;
-            rgba[target + 2] = colors[index].Blue;
-            rgba[target + 3] = colors[index].Alpha;
-        }
+    private static byte[] Encode(int width, int height, ReadOnlySpan<byte> indexed, Arena2Palette palette) =>
+        DeterministicPngEncoder.EncodeRgba8(width, height, palette.ToRgbaBytes(indexed, PaletteAlphaMode.IndexZeroTransparent));
 
-        return DeterministicPngEncoder.EncodeRgba8(width, height, rgba);
-    }
-
-    private static string Slug(string value) => value.Replace('.', '-');
+    private static string Slug(string value) => PublishedIds.FileSlug(value);
 }
