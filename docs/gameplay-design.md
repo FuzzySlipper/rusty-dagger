@@ -159,6 +159,9 @@ Start new work from the current owners, not a stale filename in a task:
 | Concern | Current entry point |
 | --- | --- |
 | Actor construction | `DaggerActorFactory`, Kit `ActorsState` / `EntityDirectory` |
+| Spawn, retire, site unload of actors | `DaggerfallActorRoster` |
+| Site transitions, inactive-site deltas, exterior window | `DaggerfallSiteLifecycle` |
+| Calendar consumers | `DaggerfallSession.AdvanceCalendar` with `DaggerfallCalendarAdvanceKind` |
 | Live gameplay services | `DaggerfallState.Kit`, `GameplayServices<TFact>` |
 | Target selection | Kit `TargetingService`, `DaggerTargetingPolicy` |
 | Attack lifecycle and rules | Kit `AttackExecution` / `CombatResolution`, `DaggerCombatRules` |

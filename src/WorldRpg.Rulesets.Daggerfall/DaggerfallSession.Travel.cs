@@ -74,7 +74,7 @@ internal sealed partial class DaggerfallSession
     {
         if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior)
         {
-            DaggerfallExteriorCellId cell = CurrentExteriorCell();
+            DaggerfallExteriorCellId cell = _sites.CurrentExteriorCell();
             return new(cell.X, cell.Y);
         }
         DaggerfallSiteRecord site = _site.ActiveSite

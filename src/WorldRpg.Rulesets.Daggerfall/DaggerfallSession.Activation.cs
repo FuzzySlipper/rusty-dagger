@@ -21,7 +21,6 @@ internal sealed partial class DaggerfallSession
     private DaggerfallActivationModule? _activation;
     private readonly DaggerfallActivationPresentation _activationPresentation = new();
     private DaggerfallDialogueService? _dialogue;
-    private DaggerfallDungeonActionTriggerRuntime _actionTriggers = null!;
 
     /// <summary>
     /// Wires activation after spatial, actor, and corpse owners exist. The normal session
@@ -48,13 +47,13 @@ internal sealed partial class DaggerfallSession
             new DaggerfallActivationContributions(
                 new DaggerfallCorpseActivationOwner(_corpseLoot, _lootUi, State.Actors, _facts),
                 new DaggerfallDoorActivationOwner(_doors, TriggerDungeonDoorActions, ActivateDoorForce),
-                new DaggerfallPortalActivationOwner(_siteProjection.Portals, ResolvePortalDestination, TryTransitionTo),
+                new DaggerfallPortalActivationOwner(_sites.Projection.Portals, ResolvePortalDestination, TryTransitionTo),
                 new DaggerfallGroundActivationOwner(_groundContainers, _lootUi),
                 npc: _dialogue));
     }
 
     private DaggerfallWorldProfileKey ResolvePortalDestination(string logicalProfile) =>
-        (_siteProfiles ?? throw new InvalidOperationException("Site profiles have not been admitted."))
+        (_sites.Profiles ?? throw new InvalidOperationException("Site profiles have not been admitted."))
             .RequireLogicalProfile(logicalProfile).ProfileKey;
 
     internal DaggerfallActivationMode ActivationMode => _activation?.Mode ?? DaggerfallActivationMode.Grab;
@@ -205,8 +204,8 @@ internal sealed partial class DaggerfallSession
         if (State.PlayerControl.Position is not WorldPoint position || direction.LengthSquared() <= .000001f)
             return null;
         SpatialHit hit = _spatial.CastRay(position.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight,
-            direction, (float)maximumDistance, _actionTriggers.ActiveRayEntities(),
-            _siteProjection.CharacterEnvironment(State.PlayerControl.Motion));
+            direction, (float)maximumDistance, _sites.ActionTriggers.ActiveRayEntities(),
+            _sites.Projection.CharacterEnvironment(State.PlayerControl.Motion));
         if (!hit.Present || hit.Kind != SpatialHitKind.Entity) return null;
         foreach (DaggerfallDoorView door in _doors.All)
             if (door.Entity.Value == hit.Entity) return door.Id;
@@ -224,13 +223,13 @@ internal sealed partial class DaggerfallSession
             return false;
 
         Vector3 rayOrigin = position.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight;
-        ReadOnlyMemory<SpatialEntityCollider> actionEntities = _actionTriggers.ActiveRayEntities();
+        ReadOnlyMemory<SpatialEntityCollider> actionEntities = _sites.ActionTriggers.ActiveRayEntities();
         SpatialHit hit = _spatial.CastRay(
             rayOrigin,
             direction,
             (float)maximumDistance,
             actionEntities,
-            _siteProjection.CharacterEnvironment(State.PlayerControl.Motion));
+            _sites.Projection.CharacterEnvironment(State.PlayerControl.Motion));
         if (!hit.Present) return false;
 
         if (hit.Kind == SpatialHitKind.Entity)
@@ -250,12 +249,12 @@ internal sealed partial class DaggerfallSession
             {
                 return ReportDungeonActions(graph.TriggerForDoor(selectedDoor.Id, @event));
             }
-            if (_actionTriggers.TryResolveAction(new EntityId(hit.Entity), out string? actionId))
+            if (_sites.ActionTriggers.TryResolveAction(new EntityId(hit.Entity), out string? actionId))
                 return ReportDungeonAction(graph.Trigger(actionId, @event));
             return false;
         }
 
-        if (hit.Kind == SpatialHitKind.StaticMesh && _siteProjection.Inputs.DungeonMap is DaggerfallDungeonMapContent map)
+        if (hit.Kind == SpatialHitKind.StaticMesh && _sites.Projection.Inputs.DungeonMap is DaggerfallDungeonMapContent map)
         {
             DaggerfallDungeonMapGeometry? placement = PlacementAt(map, hit.Point);
             if (placement is not null)
@@ -310,13 +309,13 @@ internal sealed partial class DaggerfallSession
     {
         ArgumentNullException.ThrowIfNull(action);
         if (!DaggerfallDungeonMotionPolicy.TryInterpret(action, modelDescription: null, out _)) return null;
-        if (!_siteProjection.Motion.TryGetEntity(action.Id, out _))
+        if (!_sites.Projection.Motion.TryGetEntity(action.Id, out _))
         {
             return new(action.Id, DaggerfallDungeonActionOutcome.MissingTarget,
                 Diagnostic: $"Dungeon motion action '{action.Id}' has no admitted action-model target.");
         }
 
-        DaggerfallDungeonMotionActivation activation = _siteProjection.ActivateMotion(action.Id);
+        DaggerfallDungeonMotionActivation activation = _sites.Projection.ActivateMotion(action.Id);
         return activation == DaggerfallDungeonMotionActivation.IgnoredWhileMoving
             ? new(action.Id, DaggerfallDungeonActionOutcome.AppliedWithoutChange,
                 Diagnostic: $"Dungeon motion action '{action.Id}' was retriggered while its tween was moving.")

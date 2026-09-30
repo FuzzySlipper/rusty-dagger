@@ -119,20 +119,20 @@ internal sealed partial class DaggerfallSession
             return new(false, Message: "You cannot rest without an admitted location record.");
         if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Interior)
         {
-            DaggerfallInteriorBuilding? building = _siteProfiles?.Require(_activeProfileKey).InteriorBuilding;
+            DaggerfallInteriorBuilding? building = _sites.Profiles?.Require(_activeProfileKey).InteriorBuilding;
             if (FightersGuildRestAllowed(building, State.GuildMembership, _activeProfileKey.Site.Region,
                 checked((int)_time.Calendar.DayNumber)))
                 return new(true);
             return new(false, Message: "You cannot rest in this interior without an admitted room or guild privilege.");
         }
         if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior
-            && CurrentExteriorCell() is { } current
+            && _sites.CurrentExteriorCell() is { } current
             && _definitions.Grids.Climate.GetCell(current.X, current.Y).Value is not (224 or 225 or 226 or 227 or 228 or 229 or 230 or 231 or 232))
             return new(false, Message: "You cannot rest on this terrain.");
         if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior
             && site.Kind is DaggerfallSiteKind.TownCity or DaggerfallSiteKind.TownHamlet or DaggerfallSiteKind.TownVillage)
         {
-            DaggerfallExteriorCellId cell = CurrentExteriorCell();
+            DaggerfallExteriorCellId cell = _sites.CurrentExteriorCell();
             if (site.Exterior is { } exterior && cell == new DaggerfallExteriorCellId(exterior.MapPixelX, exterior.MapPixelY))
                 return new(false, Message: "Camping in a town is not permitted.");
         }
@@ -220,7 +220,7 @@ internal sealed partial class DaggerfallSession
                 DungeonType: site.DungeonType, EnemyAlert: true);
         if (_activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior) return null;
 
-        DaggerfallExteriorCellId cell = CurrentExteriorCell();
+        DaggerfallExteriorCellId cell = _sites.CurrentExteriorCell();
         DaggerfallClimateCell climate = _definitions.Grids.Climate.GetCell(cell.X, cell.Y);
         if (climate.Value is not (224 or 225 or 226 or 227 or 228 or 229 or 230 or 231 or 232))
             throw new InvalidOperationException($"Exterior rest at {cell.X}/{cell.Y} has no encounter climate.");

@@ -89,7 +89,7 @@ internal sealed partial class DaggerfallSession
     {
         DaggerfallWorldProfileKey? owner = null;
         DaggerfallSiteRuntimeDelta? retained = null;
-        foreach ((DaggerfallWorldProfileKey profile, DaggerfallSiteRuntimeDelta delta) in _siteDeltas)
+        foreach ((DaggerfallWorldProfileKey profile, DaggerfallSiteRuntimeDelta delta) in _sites.Deltas)
         {
             if (!delta.DynamicActors.Any(actor => actor.EntityId == npcId)) continue;
             if (owner is not null)
@@ -132,13 +132,13 @@ internal sealed partial class DaggerfallSession
         if (_actorIdentities.Classify(actorIdentity) == DurableIdentityClassification.Live)
             _actorIdentities.Remove(actorIdentity);
 
-        _siteDeltas[profileKey] = retained with
+        _sites.ReplaceDelta(profileKey, retained with
         {
             DynamicActors = retained.DynamicActors.Where(value => value.EntityId != npcId).ToArray(),
             ActorInventories = retained.ActorInventories.Where(value => value.EntityId != npcId).ToArray(),
             Corpses = retained.Corpses.Where(value => value.ActorId != npcId).ToArray(),
             Effects = retained.Effects.Where(value => value.TargetId != npcId && value.CasterId != npcId).ToArray(),
-        };
+        });
         State.ItemInstances.RemoveOwner(DaggerfallItemOwner.Actor(npcId));
         State.ItemInstances.RemoveOwner(DaggerfallItemOwner.Corpse(npcId));
         return true;
