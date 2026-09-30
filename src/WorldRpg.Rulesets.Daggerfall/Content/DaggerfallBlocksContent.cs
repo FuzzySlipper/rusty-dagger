@@ -25,9 +25,8 @@ internal sealed class DaggerfallBlocksSnapshot(
 }
 
 /// <summary>
-/// Reads the normalized block sidecar once and projects only the source facts runtime consumers use.
-/// The full offline document remains an import artifact; this reader admits no placements or policy
-/// beyond RMB building fields.
+/// Reads the published building fields once: the one slice of the importer's block document runtime
+/// consumers use. The complete document, with every placement, stays an importer record.
 /// </summary>
 internal static class DaggerfallBlocksContent
 {
@@ -39,16 +38,17 @@ internal static class DaggerfallBlocksContent
             using JsonDocument document = JsonDocument.Parse(payload);
             JsonElement root = DaggerfallBaseContent.Object(document.RootElement, "blocks root", diagnostics);
             Dictionary<DaggerfallRmbBuildingId, DaggerfallRmbBuildingSource> buildings = [];
-            foreach (JsonElement record in DaggerfallBaseContent.Array(root, "records", diagnostics))
+            foreach (JsonElement building in DaggerfallBaseContent.Array(root, "buildings", diagnostics))
             {
-                string kind = DaggerfallBaseContent.Text(record, "kind", diagnostics);
-                string state = DaggerfallBaseContent.Text(record, "state", diagnostics);
-                if (state != "read") continue;
-                string sourceKey = DaggerfallBaseContent.Text(record, "sourceKey", diagnostics);
-                if (kind == "rmb")
-                {
-                    ReadBuildings(record, sourceKey, buildings, diagnostics);
-                }
+                DaggerfallRmbBuildingId id = new(
+                    DaggerfallBaseContent.Text(building, "block", diagnostics),
+                    DaggerfallBaseContent.Integer(building, "index", diagnostics));
+                DaggerfallRmbBuildingSource source = new(
+                    id,
+                    DaggerfallBaseContent.Integer(building, "buildingType", diagnostics),
+                    DaggerfallBaseContent.Integer(building, "factionId", diagnostics),
+                    DaggerfallBaseContent.Integer(building, "nameSeed", diagnostics));
+                if (!buildings.TryAdd(id, source)) diagnostics.Add($"Block payload carries RMB building '{id}' twice.");
             }
 
             if (buildings.Count == 0) diagnostics.Add("Block payload carries no readable RMB building slot.");
@@ -66,29 +66,4 @@ internal static class DaggerfallBlocksContent
             throw diagnostics.Exception();
         }
     }
-
-    private static void ReadBuildings(
-        JsonElement record,
-        string sourceKey,
-        Dictionary<DaggerfallRmbBuildingId, DaggerfallRmbBuildingSource> buildings,
-        DaggerfallContentDiagnostics diagnostics)
-    {
-        if (!record.TryGetProperty("rmb", out JsonElement rmb) || rmb.ValueKind != JsonValueKind.Object)
-        {
-            diagnostics.Add($"Readable RMB block '{sourceKey}' carries no RMB header.");
-            return;
-        }
-
-        foreach (JsonElement building in DaggerfallBaseContent.Array(rmb, "buildings", diagnostics))
-        {
-            DaggerfallRmbBuildingId id = new(sourceKey, DaggerfallBaseContent.Integer(building, "index", diagnostics));
-            DaggerfallRmbBuildingSource source = new(
-                id,
-                DaggerfallBaseContent.Integer(building, "buildingType", diagnostics),
-                DaggerfallBaseContent.Integer(building, "factionId", diagnostics),
-                DaggerfallBaseContent.Integer(building, "nameSeed", diagnostics));
-            if (!buildings.TryAdd(id, source)) diagnostics.Add($"Block payload carries RMB building '{id}' twice.");
-        }
-    }
-
 }
