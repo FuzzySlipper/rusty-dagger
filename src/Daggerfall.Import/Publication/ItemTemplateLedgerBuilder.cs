@@ -157,4 +157,23 @@ public static class ItemTemplateLedgerBuilder
             ["targets"] = targets,
         };
     }
+
+    /// <summary>
+    /// Moves every target the substitute table resolves to the <c>substitute</c> disposition. The provenance
+    /// stays, because it records how the target's groups were attributed, which the substitute read does
+    /// not change.
+    /// </summary>
+    public static JsonObject WithSubstituteTargets(JsonObject ledger, Normalized.DaggerfallItemTemplates catalog)
+    {
+        ArgumentNullException.ThrowIfNull(ledger);
+        ArgumentNullException.ThrowIfNull(catalog);
+        JsonObject resolved = ledger.DeepClone().AsObject();
+        HashSet<int> substitutes = [.. catalog.Templates.Select(template => template.Index)];
+        foreach (JsonNode? target in resolved["targets"]?.AsArray() ?? [])
+        {
+            if (target is not null && substitutes.Contains(target["index"]!.GetValue<int>())) target["disposition"] = "substitute";
+        }
+
+        return resolved;
+    }
 }

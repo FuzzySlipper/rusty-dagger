@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Daggerfall.Import.Publication;
 
 namespace Daggerfall.Import.Tool;
 
@@ -12,21 +13,34 @@ namespace Daggerfall.Import.Tool;
 /// </summary>
 internal static class PayloadFiles
 {
-    private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
-
-    /// <summary>A generated payload's root, or an empty object when no command has written it yet.</summary>
-    internal static JsonObject ReadGenerated(string path) =>
-        File.Exists(path) ? JsonNode.Parse(File.ReadAllText(path))!.AsObject() : [];
-
     /// <summary>A generated payload's text, or an empty object when no command has written it yet.</summary>
     internal static string ReadGeneratedText(string path) => File.Exists(path) ? File.ReadAllText(path) : "{\n}\n";
 
-    /// <summary>Writes a generated payload, creating its directory.</summary>
-    internal static void Write(string path, JsonObject root)
+    /// <summary>A generated payload's root, or an empty object when no command has written it yet.</summary>
+    internal static JsonObject ReadGenerated(string path) => JsonNode.Parse(ReadGeneratedText(path))!.AsObject();
+
+    /// <summary>One section of a generated payload read through its published contract.</summary>
+    internal static T ReadSection<T>(string path, string section) where T : class =>
+        (ReadGenerated(path)[section] ?? throw new InvalidOperationException($"'{path}' carries no {section} section."))
+            .Deserialize<T>(PublishedJson.SectionRead)
+            ?? throw new InvalidOperationException($"The {section} section of '{path}' could not be read.");
+
+    /// <summary>
+    /// Replaces or appends the named sections of a generated payload, leaving every other section's bytes as
+    /// they are, and creates the file when no command has written it yet.
+    /// </summary>
+    internal static void WriteSections(string path, IReadOnlyDictionary<string, string> sections)
     {
+        Dictionary<string, string> trimmed = sections.ToDictionary(pair => pair.Key, pair => pair.Value.TrimEnd(), StringComparer.Ordinal);
+        string updated = TopLevelJsonSectionRewriter.ReplaceOrAppend(ReadGeneratedText(path), trimmed);
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        File.WriteAllText(path, root.ToJsonString(Indented) + "\n");
+        File.WriteAllText(path, updated);
+        Console.WriteLine($"pack: {string.Join(", ", sections.Keys)} updated in {path}");
     }
+
+    /// <summary>Writes one section serialized in the published dialect.</summary>
+    internal static void WriteSection<T>(string path, string section, T value) =>
+        WriteSections(path, new Dictionary<string, string>(StringComparer.Ordinal) { [section] = JsonSerializer.Serialize(value, PublishedJson.Section) });
 
     /// <summary>The authored base payload's text; it is tracked, so its absence is refused.</summary>
     internal static string ReadAuthoredText(string path) => File.Exists(path)
@@ -53,5 +67,35 @@ internal static class PayloadFiles
         }
 
         return authored.ToJsonString();
+    }
+
+    /// <summary>
+    /// Reads an operator file under the individual source quota, refusing one that changed while it was read.
+    /// </summary>
+    internal static byte[] ReadBounded(string path, string subject)
+    {
+        string fullPath = Path.GetFullPath(path);
+        FileInfo info = new(fullPath);
+        if (!info.Exists) throw new FileNotFoundException($"Required {subject} '{fullPath}' was not found.", fullPath);
+        if (info.Length is <= 0 or > Arena2SiteSources.MaximumIndividualSourceBytes)
+            throw new InvalidOperationException($"{subject} is outside the permitted byte range.");
+        byte[] bytes = File.ReadAllBytes(fullPath);
+        if (bytes.LongLength != info.Length) throw new IOException($"{subject} changed while it was being read.");
+        return bytes;
+    }
+
+    /// <summary>Writes a group-relative artifact list under a content root.</summary>
+    internal static void WriteArtifacts(string root, IEnumerable<ImportPublicationArtifact> artifacts)
+    {
+        foreach (ImportPublicationArtifact artifact in artifacts)
+        {
+            WriteFile(Path.Combine(root, artifact.RelativePath.Replace('/', Path.DirectorySeparatorChar)), artifact.Bytes.Span);
+        }
+    }
+
+    internal static void WriteFile(string path, ReadOnlySpan<byte> bytes)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+        File.WriteAllBytes(path, bytes.ToArray());
     }
 }
