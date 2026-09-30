@@ -120,14 +120,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
     private string? _panelRequest;
     private ulong _panelRequestRevision;
     private double _panelRequestRemainingSeconds;
-    private int _lastHolidayId;
     private bool _disposed;
 
-    /// <summary>
-    /// The holiday announcement the calendar currently names for the session's site, or null when
-    /// the site is no settlement or no holiday is kept there today.
-    /// </summary>
-    internal World.DaggerfallHolidayAnnouncement? HolidayAnnouncement { get; private set; }
     internal DaggerfallCinematicPresentation? Cinematics { get; }
     private readonly DaggerfallOpeningCinematics _openingCinematics;
 
@@ -1127,35 +1121,30 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         // reads the body the player is wearing now rather than the one the previous update saw.
         State.HeldEnchantments.Refresh();
 
-        // Ordering within this one admitted update is clock, magic rounds, then calendar consumers
-        // and simulation.  A normal game minute is one magic round; a larger admitted interval uses
-        // the same lifecycle catch-up path as rest, travel, and prison, so no second effect timer can
-        // drift from the saved calendar.
-        DaggerfallCalendar calendarBefore = _time.Calendar;
-        long minuteBefore = MinuteIndex(calendarBefore);
-        _time.Advance(deltaSeconds * facts.AdmittedStepCount);
-        State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
-        _siteProjection.Lighting.UpdateAmbient(_time.Calendar);
-        State.Quests.AdvanceClocks(State.Variables, calendarBefore, _time.Calendar);
-        State.Social.AdvanceElapsedMinutes(minuteBefore, MinuteIndex(_time.Calendar));
-        AdvanceLoans();
-        AdvanceEffectsForCalendar(calendarBefore, ordinaryPlay: true);
-        AnnounceHoliday();
+        // A standing panel request ages on the same admitted world time as everything else.
         AgePanelRequest(deltaSeconds * facts.AdmittedStepCount);
 
-        // One admitted update owns one input slice. Later catch-up steps derive
-        // only committed held keyboard/mapped-direction intent; direct axes,
-        // direct digital movement, pointer deltas, and semantic actions do not replay.
-        // Simulation and reactions run per step; the final publication below (and the outer
-        // update's, after animation impacts) happens once, not once per step.
-        SimulateStep(firstStep, facts.Generation, facts.SimulationStep);
-        DeliverFacts();
-        for (uint step = 1; step < facts.AdmittedStepCount; step++)
+        // Ordering within this one admitted update is clock, calendar consumers (magic rounds among
+        // them), simulation, then locomotion minutes. A normal game minute is one magic round; a
+        // larger admitted interval uses the same lifecycle catch-up path as rest, travel, and prison,
+        // so no second effect timer can drift from the saved calendar.
+        DaggerfallCalendar calendarBefore = _time.Calendar;
+        _time.Advance(deltaSeconds * facts.AdmittedStepCount);
+        AdvanceCalendar(calendarBefore, DaggerfallCalendarAdvanceKind.OrdinaryPlay, simulate: () =>
         {
-            SimulateStep(new ProductUpdateState(deltaSeconds), facts.Generation, checked(facts.SimulationStep + step));
+            // One admitted update owns one input slice. Later catch-up steps derive
+            // only committed held keyboard/mapped-direction intent; direct axes,
+            // direct digital movement, pointer deltas, and semantic actions do not replay.
+            // Simulation and reactions run per step; the final publication below (and the outer
+            // update's, after animation impacts) happens once, not once per step.
+            SimulateStep(firstStep, facts.Generation, facts.SimulationStep);
             DeliverFacts();
-        }
-        _locomotion.AdvanceCalendarMinutes(minuteBefore, MinuteIndex(_time.Calendar), State.Actors.Player.Stats);
+            for (uint step = 1; step < facts.AdmittedStepCount; step++)
+            {
+                SimulateStep(new ProductUpdateState(deltaSeconds), facts.Generation, checked(facts.SimulationStep + step));
+                DeliverFacts();
+            }
+        });
     }
 
     /// <summary>
@@ -1275,55 +1264,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
     }
 
     /// <summary>
-    /// Advances a rest, travel, prison, or other ruleset-owned elapsed interval through the session's
-    /// single calendar.  A caller resumes <see cref="DaggerfallCalendarAdvance.RemainingSeconds"/>
-    /// after handling a consequence; only the portion the calendar accepted advances effects.
-    /// </summary>
-    internal DaggerfallCalendarAdvance AdvanceElapsedTime(long gameSeconds,
-        IReadOnlyList<(int Identity, long SecondsFromNow)>? consequences = null,
-        DaggerfallEncounterRequest? encounter = null,
-        bool deferSkillAdvancement = false)
-    {
-        DaggerfallCalendar calendarBefore = _time.Calendar;
-        long minuteBefore = MinuteIndex(calendarBefore);
-        DaggerfallCalendarAdvance advance = _time.AdvanceInterval(gameSeconds, consequences ?? []);
-        State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
-        _siteProjection.Lighting.UpdateAmbient(_time.Calendar);
-        State.Quests.AdvanceClocks(State.Variables, calendarBefore, _time.Calendar);
-        // Daily conditions and ordinary source-order operations observe the same admitted calendar
-        // after rest, travel, prison, or another interval, including an interval with no clock expiry.
-        State.Quests.Advance(State.Variables, _time.Calendar);
-        if (!deferSkillAdvancement)
-        {
-            State.SkillUses.RaiseSkills(_time.Calendar.ToAbsoluteSeconds());
-            State.LevelUps.BeginIfEligible();
-        }
-        State.Social.AdvanceElapsedMinutes(minuteBefore, MinuteIndex(_time.Calendar));
-        AdvanceLoans();
-        AdvanceEffectsForCalendar(calendarBefore, ordinaryPlay: false);
-        if (advance.AppliedSeconds > 0 && encounter is not null) QueueEncounter(encounter);
-        AnnounceHoliday();
-        return advance;
-    }
-
-    /// <summary>Applies a quest-owned training interval through the existing calendar without recursively re-running quest tasks.</summary>
-    private void AdvanceQuestTraining(long gameSeconds)
-    {
-        DaggerfallCalendar calendarBefore = _time.Calendar;
-        long minuteBefore = MinuteIndex(calendarBefore);
-        _ = _time.AdvanceInterval(gameSeconds, []);
-        State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
-        _siteProjection.Lighting.UpdateAmbient(_time.Calendar);
-        State.Quests.AdvanceClocks(State.Variables, calendarBefore, _time.Calendar);
-        State.SkillUses.RaiseSkills(_time.Calendar.ToAbsoluteSeconds());
-        State.LevelUps.BeginIfEligible();
-        State.Social.AdvanceElapsedMinutes(minuteBefore, MinuteIndex(_time.Calendar));
-        AdvanceLoans();
-        AdvanceEffectsForCalendar(calendarBefore, ordinaryPlay: false);
-        AnnounceHoliday();
-    }
-
-    /// <summary>
     /// Resolves one rest/travel/time encounter at the player pose. The result remains durable but
     /// unmaterialized until the next admitted simulation step, which makes a save between the two
     /// operations restore the selected source result rather than draw again.
@@ -1347,32 +1287,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         DaggerfallPoisonRandomKey.For(DaggerfallActorIdentity.PlayerEntityId, "admission", ++_poisonDraws, DaggerfallPoisonRandomKey.MinuteScope),
         minimum,
         maximum)).Value);
-
-    private void AdvanceEffectsForCalendar(DaggerfallCalendar before, bool ordinaryPlay)
-    {
-        long minuteBefore = MinuteIndex(before);
-        long minutes = MinuteIndex(_time.Calendar) - minuteBefore;
-        if (minutes <= 0) return;
-
-        // The normal path is expressed as its normal one-round operation.  Multiple minutes (whether
-        // an unusually long admitted update or an elapsed interval) retain the donor's bounded
-        // catch-up policy inside the lifecycle.
-        if (ordinaryPlay && minutes == 1)
-        {
-            State.Effects.AdvanceOrdinaryRound();
-            State.HeldEnchantments.AdvanceRounds(1);
-            return;
-        }
-
-        _ = State.Effects.AdvanceElapsedRounds(minutes);
-        State.HeldEnchantments.AdvanceRounds(checked((int)Math.Min(minutes, int.MaxValue)));
-    }
-
-    private static long MinuteIndex(DaggerfallCalendar calendar) =>
-        (calendar.DayNumber * DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour)
-        + (calendar.Hour * DaggerfallCalendar.MinutesPerHour)
-        + calendar.Minute;
-
 
     /// <summary>
     /// One simulation step: input, world time, and reactions. Publication is the caller's:
@@ -1655,34 +1569,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
     /// published, the same way a published loot revision is recognised rather than replayed.
     /// </remarks>
     internal DaggerfallPanelRequest? LatestPanelRequest => _panelRequest is null ? null : new DaggerfallPanelRequest(_panelRequest, _panelRequestRevision);
-
-    /// <summary>
-    /// Publishes the holiday announcement when the calendar names a new one for the session's site.
-    /// </summary>
-    /// <remarks>
-    /// The check runs on the first playing update and on every date change after it, which is how a
-    /// session constructed or restored onto a holiday announces once, the way the donor announces on
-    /// entering an eligible location and after loading: the tracking restarts unannounced, so the first observation
-    /// of a kept holiday is itself the entry. A session standing at a dungeon, a graveyard, a coven or
-    /// the player's ship never announces, and leaving a holiday clears the tracking silently rather than reporting the ordinary day.
-    /// </remarks>
-    private void AnnounceHoliday()
-    {
-        World.DaggerfallHolidayAnnouncement? announcement =
-            World.DaggerfallHolidayAnnouncement.ForDate(_time.Calendar, _site.Region, _site.ActiveSite?.Kind);
-        int holidayId = announcement?.HolidayId ?? 0;
-        if (holidayId == _lastHolidayId)
-        {
-            return;
-        }
-
-        _lastHolidayId = holidayId;
-        HolidayAnnouncement = announcement;
-        if (announcement is not null)
-        {
-            Presentation.SetOutcome(_definitions.TextPresentation.Resolve(announcement.TextKey, DaggerfallTextContext.Empty).Text);
-        }
-    }
 
     private void RequestPanel(string panel)
     {
