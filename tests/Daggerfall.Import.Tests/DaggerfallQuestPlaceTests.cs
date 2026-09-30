@@ -19,7 +19,7 @@ public sealed class DaggerfallQuestPlaceTests
         Assert.Equal(40, places.Rows[2].P3);
         Assert.Null(places.Rows[2].LocationKey);
         Assert.Null(places.Rows[2].TeleportTransfer);
-        Assert.Equal(ContentDigest.Compute(bytes), places.Source.ContentHash);
+        Assert.Equal(ContentDigest.Compute(bytes), places.Source.ContentDigest);
         Assert.Equal(new[] { 2, 3, 4 }, places.Rows.Select(row => row.SourceLine));
     }
 }

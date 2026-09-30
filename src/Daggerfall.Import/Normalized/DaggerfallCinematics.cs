@@ -174,8 +174,8 @@ public static class DaggerfallCinematicPackBuilder
         }
 
         DaggerfallCinematicPack pack = new(
-            new DaggerfallTextSource(DaggerfallTextKind.Resource, vid.Id, label, "en", files.Where(file => file.Kind == DaggerfallCinematicKind.Vid).Sum(file => file.ByteLength), 0, cinematics.Count(record => record.Kind == DaggerfallCinematicKind.Vid)),
-            new DaggerfallTextSource(DaggerfallTextKind.Resource, flc.Id, label, "en", files.Where(file => file.Kind == DaggerfallCinematicKind.Flc).Sum(file => file.ByteLength), 0, cinematics.Count(record => record.Kind == DaggerfallCinematicKind.Flc)),
+            new DaggerfallTextSource(DaggerfallTextKind.Resource, vid.PathOrPattern, "en", files.Where(file => file.Kind == DaggerfallCinematicKind.Vid).Sum(file => file.ByteLength), 0, cinematics.Count(record => record.Kind == DaggerfallCinematicKind.Vid)),
+            new DaggerfallTextSource(DaggerfallTextKind.Resource, flc.PathOrPattern, "en", files.Where(file => file.Kind == DaggerfallCinematicKind.Flc).Sum(file => file.ByteLength), 0, cinematics.Count(record => record.Kind == DaggerfallCinematicKind.Flc)),
             cinematics);
         pack.Validate();
         return pack;

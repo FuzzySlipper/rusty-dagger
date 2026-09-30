@@ -324,7 +324,6 @@ public sealed class TextResourceTests
 
         DaggerfallTextSource source = Assert.Single(text.Sources);
         Assert.Equal(DaggerfallTextKind.Resource, source.Kind);
-        Assert.Equal("CNT-016", source.RecordId);
         Assert.Equal("arena2/TEXT.RSC", source.Path);
         Assert.Equal("en", source.Language);
         Assert.Equal(353393, source.ByteLength);

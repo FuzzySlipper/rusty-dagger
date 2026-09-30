@@ -1,23 +1,11 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using Daggerfall.Import.Publication;
 
 namespace Daggerfall.Import.Normalized;
 
-/// <summary>The source that carries the donor's region-to-name-bank mapping.</summary>
-public sealed record DaggerfallBuildingNameSource(string Path, long ByteLength, int Regions)
-{
-    public void Validate()
-    {
-        NormalizedImportDocument.RequireLogicalPath(Path, nameof(Path));
-        if (ByteLength <= 0 || Regions != 62)
-        {
-            throw new InvalidOperationException($"Building-name source '{Path}' must retain bytes and exactly 62 classic regions.");
-        }
-    }
-}
-
 /// <summary>The exact classic region mapping used when a building-name fragment expands %ef.</summary>
-public sealed record DaggerfallBuildingNameInputs(DaggerfallBuildingNameSource Source, IReadOnlyList<int> RegionNameBanks)
+public sealed record DaggerfallBuildingNameInputs(PublishedSource Source, IReadOnlyList<int> RegionNameBanks)
 {
     public void Validate()
     {
@@ -61,7 +49,7 @@ public static partial class DaggerfallBuildingNameInputsBuilder
         }
 
         int[] banks = [.. Number().Matches(match.Groups["values"].Value).Select(value => int.Parse(value.Value, System.Globalization.CultureInfo.InvariantCulture))];
-        DaggerfallBuildingNameInputs published = new(new DaggerfallBuildingNameSource(label, bytes.LongLength, banks.Length), banks);
+        DaggerfallBuildingNameInputs published = new(PublishedSource.Of(label, bytes), banks);
         published.Validate();
         return published;
     }

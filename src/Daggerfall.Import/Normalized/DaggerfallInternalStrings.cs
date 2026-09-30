@@ -8,8 +8,6 @@ namespace Daggerfall.Import.Normalized;
 /// </summary>
 public static class DaggerfallInternalStringsBuilder
 {
-    /// <summary>The stable provenance identity for the donor's managed localization table.</summary>
-    public const string SourceRecordId = "DFU-Internal-Strings";
 
     /// <summary>Reads and merges the supplied table, refusing a second internal table or key collision.</summary>
     public static DaggerfallText Merge(DaggerfallText existing, byte[] bytes, string label, string language)
@@ -27,7 +25,6 @@ public static class DaggerfallInternalStringsBuilder
         InternalStringsCatalog catalog = InternalStringsReader.Read(bytes, label);
         DaggerfallTextSource source = new(
             DaggerfallTextKind.Internal,
-            SourceRecordId,
             label,
             language,
             bytes.LongLength,

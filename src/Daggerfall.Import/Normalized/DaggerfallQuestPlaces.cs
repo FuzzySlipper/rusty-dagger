@@ -7,7 +7,7 @@ namespace Daggerfall.Import.Normalized;
 public sealed record DaggerfallQuestPlace(string Name, string CanonicalName, int P1, int P2, int P3,
     uint? LocationKey, byte? TeleportTransfer, int SourceLine);
 
-public sealed record DaggerfallQuestPlaces(ImportPublicationSource Source, IReadOnlyList<DaggerfallQuestPlace> Rows);
+public sealed record DaggerfallQuestPlaces(PublishedSource Source, IReadOnlyList<DaggerfallQuestPlace> Rows);
 
 public static class DaggerfallQuestPlaceReader
 {

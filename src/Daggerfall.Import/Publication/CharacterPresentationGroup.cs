@@ -115,7 +115,7 @@ public sealed class CharacterPresentationGroup
             return new DaggerfallRaceKey(
                 race["id"]!.GetValue<string>(),
                 race["donorRaceId"]!.GetValue<int>(),
-                new DaggerfallCatalogSource(source["recordId"]!.GetValue<string>(), source["path"]!.GetValue<string>()));
+                new DaggerfallCatalogSource(source["path"]!.GetValue<string>()));
         })];
         Dictionary<string, string> careers = catalogs["careers"]!.AsArray().ToDictionary(
             value => value!["id"]!.GetValue<string>(),

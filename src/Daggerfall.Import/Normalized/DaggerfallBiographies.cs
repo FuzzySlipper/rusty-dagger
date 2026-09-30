@@ -251,11 +251,11 @@ public static class DaggerfallBiographiesBuilder
         ArgumentNullException.ThrowIfNull(textRecordIds);
         ArgumentNullException.ThrowIfNull(inventory);
         ArgumentException.ThrowIfNullOrWhiteSpace(language);
-        string defaultRecordId = RequireFile(inventory, defaultLabel);
+        string defaultPath = RequireFile(inventory, defaultLabel);
         BioDatCatalog defaults = BioDatReader.Read(defaultBytes, defaultLabel);
 
         List<DaggerfallTextSource> sources = [
-            new(DaggerfallTextKind.Biography, defaultRecordId, defaultLabel, language, defaultBytes.Length, 0, defaults.Lines.Count),
+            new(DaggerfallTextKind.Biography, defaultPath, language, defaultBytes.Length, 0, defaults.Lines.Count),
         ];
         List<DaggerfallTextRecord> records = [];
         for (int index = 0; index < defaults.Lines.Count; index++)
@@ -278,7 +278,7 @@ public static class DaggerfallBiographiesBuilder
             (DaggerfallBiography biography, IReadOnlyList<DaggerfallTextRecord> prose) = BuildQuestionnaire(
                 text, label, classIndex, biographyIndex, textRecordIds, imageBytes, inventory, language);
             sources.Add(new DaggerfallTextSource(
-                DaggerfallTextKind.Biography, RequireFile(inventory, label), label, language, text.Length, 0, prose.Count));
+                DaggerfallTextKind.Biography, RequireFile(inventory, label), language, text.Length, 0, prose.Count));
             records.AddRange(prose);
             biographies.Add(biography);
         }
@@ -401,7 +401,7 @@ public static class DaggerfallBiographiesBuilder
     private static string RequireFile(IReadOnlyList<SourceInventoryRow> inventory, string label)
     {
         ArgumentNullException.ThrowIfNull(inventory);
-        return inventory.FirstOrDefault(row => row.FamilyId == FamilyId && StringComparer.Ordinal.Equals(row.PathOrPattern, label))?.Id
+        return inventory.FirstOrDefault(row => row.FamilyId == FamilyId && StringComparer.Ordinal.Equals(row.PathOrPattern, label))?.PathOrPattern
             ?? throw new InvalidOperationException($"The documented inventory does not carry '{label}', so the biographies cite no provenance.");
     }
 }

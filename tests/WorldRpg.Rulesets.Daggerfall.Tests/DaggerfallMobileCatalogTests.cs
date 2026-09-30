@@ -15,7 +15,7 @@ public sealed class DaggerfallMobileCatalogTests
     {
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(Payload());
 
-        Assert.Contains("CNT-007", definitions.Mobiles.SourceRecords);
+        Assert.Contains("daggerfall-unity/Assets/Scripts/Utility/EnemyBasics.cs", definitions.Mobiles.SourcePaths);
         DaggerfallMobileDefinition rat = Assert.Contains(0, definitions.Mobiles.Mobiles);
         Assert.Equal("rat", rat.Identity);
         Assert.Equal("rat", rat.Actor);

@@ -565,7 +565,7 @@ public static class DaggerfallItemTemplatesBuilder
         }
 
         DaggerfallItemTemplates catalog = new(
-            new DaggerfallTextSource(DaggerfallTextKind.Resource, family.Id, label, "en", bytes.LongLength, 0, templates.Count),
+            new DaggerfallTextSource(DaggerfallTextKind.Resource, label, "en", bytes.LongLength, 0, templates.Count),
             [.. templates.OrderBy(template => template.Index)],
             [.. magicTemplates.OrderBy(template => template.Index)]);
         catalog.Validate();

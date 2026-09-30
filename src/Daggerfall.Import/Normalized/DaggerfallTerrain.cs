@@ -3,23 +3,6 @@ using Daggerfall.Import.Publication;
 
 namespace Daggerfall.Import.Normalized;
 
-/// <summary>The source a normalized terrain contract was read from.</summary>
-/// <param name="RecordId">The documented inventory record the contract is read under.</param>
-/// <param name="Path">The logical source path.</param>
-/// <param name="ByteLength">The source file's byte length.</param>
-public sealed record DaggerfallTerrainSource(string RecordId, string Path, long ByteLength)
-{
-    public void Validate()
-    {
-        NormalizedImportDocument.RequireLogicalId(RecordId, nameof(RecordId));
-        NormalizedImportDocument.RequireLogicalPath(Path, nameof(Path));
-        if (ByteLength <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(ByteLength), ByteLength, $"Terrain source '{Path}' states no bytes.");
-        }
-    }
-}
-
 /// <summary>One cell-prefix byte with the values the corpus states for it.</summary>
 /// <param name="Index">The byte's index within the 22-byte prefix.</param>
 /// <param name="Values">Every distinct value the corpus states, in ascending order.</param>
@@ -59,7 +42,7 @@ public sealed record DaggerfallTerrainPrefixByte(int Index, IReadOnlyList<int> V
 /// <param name="Prefix">The value domain of every cell-prefix byte.</param>
 /// <param name="DataSection">The donor-unread data section, base-64.</param>
 public sealed record DaggerfallTerrain(
-    DaggerfallTerrainSource Source,
+    PublishedSource Source,
     int Width,
     int Height,
     IReadOnlyList<DaggerfallGridRow> Heightmap,
@@ -180,7 +163,7 @@ public static class DaggerfallTerrainBuilder
         }
 
         DaggerfallTerrain terrain = new(
-            new DaggerfallTerrainSource(GetFileId(inventory, label), label, bytes.Length),
+            PublishedSource.Of(GetFilePath(inventory, label), bytes),
             WoodsReader.MapWidth,
             WoodsReader.MapHeight,
             rows,
@@ -194,9 +177,9 @@ public static class DaggerfallTerrainBuilder
         return terrain;
     }
 
-    private static string GetFileId(IReadOnlyList<SourceInventoryRow> inventory, string label)
+    private static string GetFilePath(IReadOnlyList<SourceInventoryRow> inventory, string label)
     {
-        return inventory.FirstOrDefault(row => row.FamilyId == TerrainFamily && StringComparer.Ordinal.Equals(row.PathOrPattern, label))?.Id
+        return inventory.FirstOrDefault(row => row.FamilyId == TerrainFamily && StringComparer.Ordinal.Equals(row.PathOrPattern, label))?.PathOrPattern
             ?? throw new InvalidOperationException($"The documented inventory does not carry '{label}', so the terrain cites no provenance.");
     }
 }

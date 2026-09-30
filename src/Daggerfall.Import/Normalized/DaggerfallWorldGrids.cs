@@ -73,28 +73,11 @@ public sealed record DaggerfallGridRun(int Count, int Value)
     }
 }
 
-/// <summary>The source a normalized grid was read from.</summary>
-/// <param name="RecordId">The documented inventory row id.</param>
-/// <param name="Path">The logical path of the source.</param>
-/// <param name="ByteLength">The source file's byte length.</param>
-public sealed record DaggerfallGridSource(string RecordId, string Path, long ByteLength)
-{
-    public void Validate()
-    {
-        NormalizedImportDocument.RequireLogicalId(RecordId, nameof(RecordId));
-        NormalizedImportDocument.RequireLogicalPath(Path, nameof(Path));
-        if (ByteLength <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(ByteLength), ByteLength, $"Grid source '{Path}' states no bytes.");
-        }
-    }
-}
-
 /// <summary>One normalized climate grid: every cell the source states, sentinel column kept.</summary>
 /// <param name="Source">The source the grid was read from.</param>
 /// <param name="Rows">The rows in order, each tiling the full width including the sentinel column.</param>
 /// <param name="Values">The distinct cell values with the climate each names, in first-appearance order.</param>
-public sealed record DaggerfallClimateGrid(DaggerfallGridSource Source, IReadOnlyList<DaggerfallGridRow> Rows, IReadOnlyList<DaggerfallClimateValue> Values)
+public sealed record DaggerfallClimateGrid(PublishedSource Source, IReadOnlyList<DaggerfallGridRow> Rows, IReadOnlyList<DaggerfallClimateValue> Values)
 {
     public void Validate()
     {
@@ -158,7 +141,7 @@ public sealed record DaggerfallClimateValue(int Value, string Name, DaggerfallCl
 /// <param name="Source">The source the grid was read from.</param>
 /// <param name="Rows">The rows in order, each tiling the full width including the sentinel column.</param>
 /// <param name="Values">The distinct cell values with the region each names, in first-appearance order.</param>
-public sealed record DaggerfallPoliticGrid(DaggerfallGridSource Source, IReadOnlyList<DaggerfallGridRow> Rows, IReadOnlyList<DaggerfallPoliticValue> Values)
+public sealed record DaggerfallPoliticGrid(PublishedSource Source, IReadOnlyList<DaggerfallGridRow> Rows, IReadOnlyList<DaggerfallPoliticValue> Values)
 {
     public void Validate()
     {
@@ -256,10 +239,10 @@ public static class DaggerfallWorldGridsBuilder
     /// <summary>Builds the climate grid and the rows it tiles.</summary>
     public static DaggerfallClimateGrid BuildClimate(ReadOnlySpan<byte> bytes, string label, IReadOnlyList<SourceInventoryRow> inventory)
     {
-        string recordId = RequireFile(inventory, ClimateFamilyId, label);
+        RequireFile(inventory, ClimateFamilyId, label);
         PakMap map = PakDecoder.Decode(bytes, label);
         return new DaggerfallClimateGrid(
-            new DaggerfallGridSource(recordId, label, bytes.Length),
+            PublishedSource.Of(label, bytes),
             Rows(map),
             ClimateValues(map));
     }
@@ -267,10 +250,10 @@ public static class DaggerfallWorldGridsBuilder
     /// <summary>Builds the politic grid and the rows it tiles.</summary>
     public static DaggerfallPoliticGrid BuildPolitic(ReadOnlySpan<byte> bytes, string label, IReadOnlyList<SourceInventoryRow> inventory)
     {
-        string recordId = RequireFile(inventory, PoliticFamilyId, label);
+        RequireFile(inventory, PoliticFamilyId, label);
         PakMap map = PakDecoder.Decode(bytes, label);
         return new DaggerfallPoliticGrid(
-            new DaggerfallGridSource(recordId, label, bytes.Length),
+            PublishedSource.Of(label, bytes),
             Rows(map),
             PoliticValues(map));
     }
@@ -352,10 +335,10 @@ public static class DaggerfallWorldGridsBuilder
         return values;
     }
 
-    private static string RequireFile(IReadOnlyList<SourceInventoryRow> inventory, string familyId, string label)
+    private static void RequireFile(IReadOnlyList<SourceInventoryRow> inventory, string familyId, string label)
     {
         ArgumentNullException.ThrowIfNull(inventory);
-        return inventory.FirstOrDefault(row => row.FamilyId == familyId && StringComparer.Ordinal.Equals(row.PathOrPattern, label))?.Id
+        _ = inventory.FirstOrDefault(row => row.FamilyId == familyId && StringComparer.Ordinal.Equals(row.PathOrPattern, label))
             ?? throw new InvalidOperationException($"The documented inventory does not carry '{label}', so the grids cite no provenance.");
     }
 }

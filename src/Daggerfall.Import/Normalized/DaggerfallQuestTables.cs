@@ -10,7 +10,7 @@ namespace Daggerfall.Import.Normalized;
 public sealed record DaggerfallQuestTableRow(int Id, string Name, int SourceLine);
 
 /// <summary>Named numeric identities with source provenance; aliases share numeric identity.</summary>
-public sealed record DaggerfallQuestTable(ImportPublicationSource Source, IReadOnlyList<DaggerfallQuestTableRow> Rows)
+public sealed record DaggerfallQuestTable(PublishedSource Source, IReadOnlyList<DaggerfallQuestTableRow> Rows)
 {
     [JsonIgnore]
     public IReadOnlyDictionary<string, int> Lookup => Rows.GroupBy(row => row.Name, StringComparer.OrdinalIgnoreCase)
@@ -27,7 +27,7 @@ public static class DaggerfallQuestTableReader
     public static DaggerfallQuestTable Read(byte[] bytes, string sourcePath, bool globals = false)
     {
         ArgumentNullException.ThrowIfNull(bytes);
-        ImportPublicationSource source = new(sourcePath, ContentDigest.Compute(bytes), bytes.LongLength);
+        PublishedSource source = new(sourcePath, ContentDigest.Compute(bytes), bytes.LongLength);
         source.Validate();
         string[] lines = new UTF8Encoding(false, true).GetString(bytes).TrimStart('\uFEFF').Split('\n');
         List<DaggerfallQuestTableRow> rows = [];

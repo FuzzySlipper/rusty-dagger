@@ -56,7 +56,7 @@ public sealed class InternalStringsReaderTests
         Assert.Equal("StoresA", internalRecord.Key.Id);
         Assert.Equal("The %ef", Assert.Single(internalRecord.Tokens).Text);
         Assert.Contains(merged.Macros, macro => macro.Symbol == "%ef" && macro.Records == 1);
-        Assert.Contains(merged.Sources, source => source.Kind == DaggerfallTextKind.Internal && source.RecordId == DaggerfallInternalStringsBuilder.SourceRecordId);
+        Assert.Contains(merged.Sources, source => source.Kind == DaggerfallTextKind.Internal);
     }
 
     [Fact]

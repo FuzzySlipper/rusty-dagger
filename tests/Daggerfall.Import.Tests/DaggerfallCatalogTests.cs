@@ -96,9 +96,9 @@ public sealed class DaggerfallCatalogTests
         // Every pack actor except the player is an enemy reference the catalog resolves.
         Assert.Equal(44, catalogs.Enemies.Count);
         Assert.Equal(31, catalogs.ItemTemplates.Count);
-        // Every record cites a documented inventory record, which the build validated.
-        Assert.All(catalogs.Careers, career => Assert.StartsWith("CNT-010.file.CLASS", career.Source.RecordId, StringComparison.Ordinal));
-        Assert.All(catalogs.Races, race => Assert.Equal("CNT-009", race.Source.RecordId));
+        // Every record cites a documented source path, which the build validated.
+        Assert.All(catalogs.Careers, career => Assert.StartsWith("arena2/CLASS", career.Source.Path, StringComparison.Ordinal));
+        Assert.All(catalogs.Races, race => Assert.Equal("daggerfall-unity/Assets/Scripts/Game/Entities/RaceTemplate.cs", race.Source.Path));
         // Two supplied records are both named Knight, so the collision is recorded and the
         // carrier's own file identity is the key.
         Assert.Equal(["Knight"], catalogs.CareerNameCollisions);
@@ -314,7 +314,7 @@ public sealed class DaggerfallCatalogTests
         DaggerfallCatalogs catalogs = BuildFromRepository();
         DaggerfallCatalogs invented = catalogs with
         {
-            Races = [.. catalogs.Races.Select((race, index) => index == 0 ? race with { Source = new DaggerfallCatalogSource("CNT-999", "arena2/nowhere") } : race)],
+            Races = [.. catalogs.Races.Select((race, index) => index == 0 ? race with { Source = new DaggerfallCatalogSource("arena2/nowhere") } : race)],
         };
 
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>

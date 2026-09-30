@@ -49,11 +49,11 @@ public sealed class DaggerfallReferenceCatalogTests
 
         Assert.All(definitions.Catalogs.Careers, career =>
         {
-            Assert.StartsWith("CNT-010.file.CLASS", career.Source.SourceRecordId, StringComparison.Ordinal);
+            Assert.StartsWith("arena2/CLASS", career.Source.Path, StringComparison.Ordinal);
             Assert.EndsWith(".CFG", career.Source.Path, StringComparison.Ordinal);
         });
-        Assert.All(definitions.Catalogs.Races, race => Assert.Equal("CNT-009", race.Source.SourceRecordId));
-        Assert.All(definitions.Catalogs.Skills, key => Assert.Equal("CNT-010", key.Source.SourceRecordId));
+        Assert.All(definitions.Catalogs.Races, race => Assert.Equal("daggerfall-unity/Assets/Scripts/Game/Entities/RaceTemplate.cs", race.Source.Path));
+        Assert.All(definitions.Catalogs.Skills, key => Assert.Equal("arena2/CLASS*.CFG;CLASSES.DAT", key.Source.Path));
     }
 
     [Fact]
@@ -161,10 +161,10 @@ public sealed class DaggerfallReferenceCatalogTests
 
         // A consumer can check a citation without owning the inventory, and the runtime
         // refuses a citation outside this set.
-        Assert.Equal(23, definitions.Catalogs.SourceRecords.Count);
-        Assert.Contains("CNT-009", definitions.Catalogs.SourceRecords);
-        Assert.Contains("CNT-010.file.CLASS00.CFG", definitions.Catalogs.SourceRecords);
-        Assert.All(definitions.Catalogs.Careers, career => Assert.Contains(career.Source.SourceRecordId, definitions.Catalogs.SourceRecords));
+        Assert.Equal(23, definitions.Catalogs.SourcePaths.Count);
+        Assert.Contains("daggerfall-unity/Assets/Scripts/Game/Entities/RaceTemplate.cs", definitions.Catalogs.SourcePaths);
+        Assert.Contains("arena2/CLASS00.CFG", definitions.Catalogs.SourcePaths);
+        Assert.All(definitions.Catalogs.Careers, career => Assert.Contains(career.Source.Path, definitions.Catalogs.SourcePaths));
     }
 
     [Fact]

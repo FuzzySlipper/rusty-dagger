@@ -114,14 +114,13 @@ public static class ItemTemplateLedgerBuilder
         {
             ["target"] = new JsonObject
             {
-                ["recordId"] = targetRecordId,
                 ["path"] = targetPath,
                 ["status"] = targetStatus,
                 ["reason"] = "The native item template records live in this file, which the supplied source does not carry, so no native template field is decoded and no target is resolved.",
             },
             ["baseline"] = new JsonObject
             {
-                ["rule"] = "DEC-11",
+                ["rule"] = "provisional-donor-code-baseline",
                 ["citation"] = "donor-code",
                 ["donorSource"] = "daggerfall-unity/Assets/Scripts/Game/Items/ItemEnums.cs + ItemHelper.GetEnumArray",
                 ["attribution"] = "Group attribution is the donor's own mapping from its item groups to its enumerations; it establishes which indices a group names, not what any template contains. This baseline cites donor code rather than a supplied source, which is why it carries no inventory record: the inventory documents the native file the target names, not the donor code standing in for it.",

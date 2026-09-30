@@ -202,7 +202,7 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     internal DaggerfallMobileCatalogSet Mobiles { get; } = mobiles;
 
     /// <summary>Retained source encounter tables consumed by the random encounter policy.</summary>
-    internal DaggerfallEncounterSet Encounters { get; } = encounters ?? new DaggerfallEncounterSet(new("legacy", "constructed-for-fixture"), []);
+    internal DaggerfallEncounterSet Encounters { get; } = encounters ?? new DaggerfallEncounterSet(new("constructed-for-fixture"), []);
 
     /// <summary>
     /// The published name tables, loaded from the pack alone: each bank resolves to its donor

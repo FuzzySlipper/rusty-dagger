@@ -210,7 +210,7 @@ public static class DaggerfallQuestPackBuilder
         }
 
         DaggerfallQuestPack pack = new(
-            new DaggerfallTextSource(DaggerfallTextKind.Resource, family.Id, label, "en", bytes.LongLength, 0, resolved.Count),
+            new DaggerfallTextSource(DaggerfallTextKind.Resource, label, "en", bytes.LongLength, 0, resolved.Count),
             [.. resolved.OrderBy(quest => quest.SourceFile, StringComparer.Ordinal)]);
         pack = pack with { Resources = DaggerfallQuestResourceBuilder.Build(pack) };
         pack.Validate();

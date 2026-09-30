@@ -82,7 +82,7 @@ public static class FightersGuildQuestCorpusPublication
 
 /// <summary>One scoped corpus receipt. Runtime computes readiness through its actual compiler.</summary>
 public sealed record DaggerfallFightersGuildQuestCorpus(
-    ImportPublicationSource CatalogSource,
+    PublishedSource CatalogSource,
     IReadOnlyList<DaggerfallFightersGuildQuestReceipt> Quests,
     ContentDigest Fingerprint)
 {

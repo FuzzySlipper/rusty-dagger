@@ -353,7 +353,7 @@ public sealed class CharacterMediaInventoryTests
     }
 
     /// <summary>The documented source every race in this fixture comes from.</summary>
-    private static DaggerfallCatalogSource Source() => new("CNT-021", "data/content-source-manifest.csv");
+    private static DaggerfallCatalogSource Source() => new("data/content-source-manifest.csv");
 
     [CorpusFact]
     public void Reports_the_same_records_whatever_order_the_sources_arrive_in()

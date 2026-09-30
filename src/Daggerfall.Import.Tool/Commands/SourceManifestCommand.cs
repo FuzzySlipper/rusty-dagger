@@ -20,7 +20,7 @@ internal static class SourceManifestCommand
         CanonicalImportManifest published = ImportPublicationManifestSerializer.Deserialize(
             File.ReadAllBytes(Path.Combine(args["--publication"], ImportPublicationManifestSerializer.ManifestRelativePath)));
         byte[] bytes = SourceManifestSerializer.Serialize(SourceManifestPublication.ForPublication(
-            published.Sources.Select(source => source.SourcePath), args["--arena2"], Path.GetFileName(inventoryFile), File.ReadAllBytes(inventoryFile)));
+            published.Sources.Select(source => source.Path), args["--arena2"], Path.GetFileName(inventoryFile), File.ReadAllBytes(inventoryFile)));
         PayloadFiles.WriteFile(args["--output"], bytes);
         SourceManifest manifest = SourceManifestSerializer.Deserialize(bytes);
 

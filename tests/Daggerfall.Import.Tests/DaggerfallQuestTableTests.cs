@@ -18,9 +18,9 @@ public sealed class DaggerfallQuestTableTests
         Assert.Equal("RumorsPostFailure", table.Rows[1].Name);
         Assert.Equal(1006, table.Lookup["RUMORSPOSTFAILURE"]);
         Assert.Equal(1045, table.Lookup["QuestTimeLapse"]);
-        Assert.Equal(bytes.Length, table.Source.ByteLen);
-        Assert.Equal(ContentDigest.Compute(bytes), table.Source.ContentHash);
-        Assert.Equal("Tables/messages.txt", table.Source.SourcePath);
+        Assert.Equal(bytes.Length, table.Source.ByteLength);
+        Assert.Equal(ContentDigest.Compute(bytes), table.Source.ContentDigest);
+        Assert.Equal("Tables/messages.txt", table.Source.Path);
     }
 
     [Fact]

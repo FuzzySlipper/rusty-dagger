@@ -93,7 +93,7 @@ internal static class DungeonSiteCommand
             .Select(entry => entry.Id)
             .ToHashSet(StringComparer.Ordinal);
         return Build([.. overlays.Where(overlay => dungeonIds.Contains(overlay.Id))], [.. overlays.Where(overlay => !dungeonIds.Contains(overlay.Id))])
-            .WithInvocation(SiteInputs.Invocation(args, [new ImportPublicationSource(overlayPath, ContentDigest.Compute(overlayBytes), overlayBytes.LongLength)]));
+            .WithInvocation(SiteInputs.Invocation(args, [new PublishedSource(overlayPath, ContentDigest.Compute(overlayBytes), overlayBytes.LongLength)]));
     }
 
     private static IReadOnlyDictionary<string, ContentDigest> HashClosure(string directory) => Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)
