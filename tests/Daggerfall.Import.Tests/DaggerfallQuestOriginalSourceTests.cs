@@ -89,7 +89,7 @@ public sealed class DaggerfallQuestOriginalSourceTests
         Assert.Contains(comparisons, comparison => comparison.PresentInRewrittenText && !comparison.TextMatches);
     }
 
-    [Fact]
+    [GeneratedContentFact]
     public void Base_payload_publishes_the_complete_original_source_selection()
     {
         using JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "import-records/daggerfall.import-records.json")));

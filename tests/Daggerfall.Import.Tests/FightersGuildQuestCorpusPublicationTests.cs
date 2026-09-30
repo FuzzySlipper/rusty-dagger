@@ -7,7 +7,7 @@ namespace Daggerfall.Import.Tests;
 
 public sealed class FightersGuildQuestCorpusPublicationTests
 {
-    [Fact]
+    [GeneratedContentFact]
     public void Publishes_the_exact_twenty_records_with_per_source_provenance_and_a_stable_fingerprint()
     {
         string root = TestData.RepositoryRoot;

@@ -59,7 +59,7 @@ public sealed class ClassicWorldVisualTests
         });
     }
 
-    [CorpusFact("PAL.PAL")]
+    [CorpusAndGeneratedContentFact("PAL.PAL")]
     public void PublishesTextureBytesThatAreTheRecordsOwnPaletteColours()
     {
         ClassicWorldVisualManifest visual = PublishedArrowDescriptor();
@@ -112,7 +112,7 @@ public sealed class ClassicWorldVisualTests
         Assert.Contains("does not carry", failure.Message, StringComparison.Ordinal);
     }
 
-    [CorpusFact("ARCH3D.BSA")]
+    [CorpusAndGeneratedContentFact("ARCH3D.BSA")]
     public void RefusesAPublishedDescriptorThatDisagreesWithTheMeshItNames()
     {
         (GeometryPublication geometry, _, _) = PublishArrowFromCorpus();
@@ -149,7 +149,7 @@ public sealed class ClassicWorldVisualTests
         Assert.Contains("not the geometry publication's", archive.Message, StringComparison.Ordinal);
     }
 
-    [CorpusFact("ARCH3D.BSA")]
+    [CorpusAndGeneratedContentFact("ARCH3D.BSA")]
     public void RefusesAPublishedDescriptorWhoseTextureIsNotWhereItSaysItIs()
     {
         (GeometryPublication geometry, _, _) = PublishArrowFromCorpus();

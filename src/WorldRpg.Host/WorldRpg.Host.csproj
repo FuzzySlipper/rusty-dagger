@@ -78,6 +78,19 @@
     <RustyEngineContentBundle Include="daggerfall.charing-interior-1-1-0-audio" Root="worldrpg/imports/charing/interior-1-1-0/media/audio/clips" />
   </ItemGroup>
 
+  <!-- Content derived from the operator's Arena2 files is not tracked; scripts/regenerate-content.sh
+       writes it. Every bundle root declared above is generated, so a missing one means the tree was
+       never regenerated (or the run did not finish). Staging would otherwise publish a product whose
+       composition fails at session start, so it stops here with the command named. -->
+  <Target Name="RequireRegeneratedContent" BeforeTargets="StageRustyEngineProductAssets">
+    <ItemGroup>
+      <_WorldRpgMissingGeneratedRoot Include="@(RustyEngineContentBundle->'%(Root)')"
+                                     Condition="!Exists('$(RustyEngineProductContentRoot)/%(RustyEngineContentBundle.Root)')" />
+    </ItemGroup>
+    <Error Condition="'@(_WorldRpgMissingGeneratedRoot)' != ''"
+           Text="The generated content is absent from $(RustyEngineProductContentRoot) (missing: @(_WorldRpgMissingGeneratedRoot, ', ')). It is derived from your Daggerfall files and is not tracked: supply local/arena2 (and local/Sound), then run scripts/regenerate-content.sh." />
+  </Target>
+
   <ItemGroup>
     <RustyEngineProductUiInput Include="$(MSBuildThisFileDirectory)../../package.json;$(MSBuildThisFileDirectory)../../package-lock.json;$(RustyEngineProductUiTypes)" />
   </ItemGroup>

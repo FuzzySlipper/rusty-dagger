@@ -44,7 +44,7 @@ public sealed class EmbeddedPaletteScreenTests
     /// Every one of the six supplied screens is published in its own palette, not just the first one that
     /// happened to have a consumer: a screen admitted later through a different path would show up here.
     /// </summary>
-    [CorpusTheory("DIE_00I0.IMG", "CHGN00I0.IMG", "PICK02I0.IMG", "PICK03I0.IMG", "PRIS00I0.IMG", "TITL00I0.IMG")]
+    [CorpusAndGeneratedContentTheory("DIE_00I0.IMG", "CHGN00I0.IMG", "PICK02I0.IMG", "PICK03I0.IMG", "PRIS00I0.IMG", "TITL00I0.IMG")]
     [InlineData("DIE_00I0.IMG", "screen-death")]
     [InlineData("CHGN00I0.IMG", "screen-character-generation")]
     [InlineData("PICK02I0.IMG", "screen-pick-02")]

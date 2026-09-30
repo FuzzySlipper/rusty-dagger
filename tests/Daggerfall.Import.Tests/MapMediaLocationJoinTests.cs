@@ -9,7 +9,7 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 public sealed class MapMediaLocationJoinTests
 {
-    [Fact]
+    [GeneratedContentFact]
     public void Region_maps_join_to_normalized_regions_and_bytes_on_disk()
     {
         string root = TestData.RepositoryRoot;

@@ -13,7 +13,7 @@ public sealed class ResidualScreenPublicationTests
 {
     private static readonly string[] Screens = ["CHGN00I0.IMG", "DIE_00I0.IMG", "PICK02I0.IMG", "PICK03I0.IMG", "PRIS00I0.IMG", "TITL00I0.IMG"];
 
-    [CorpusFact]
+    [CorpusAndGeneratedContentFact]
     public void Screens_publish_with_their_embedded_palette_scaled_by_four()
     {
         string root = TestData.RepositoryRoot;

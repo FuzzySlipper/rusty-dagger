@@ -36,6 +36,28 @@ donor_root=${DAGGER_DONOR_ROOT:-/home/research/daggerfall-unity}
 corpora="Arena2 corpus $arena2_root: $([[ -d "$arena2_root" ]] && echo present || echo absent); donor checkout $donor_root: $([[ -d "$donor_root" ]] && echo present || echo absent)"
 echo "corpora: $corpora"
 
+# The Arena2-derived content is not tracked; scripts/regenerate-content.sh writes every path
+# scripts/generated-content-paths.txt lists. Without it the product cannot be staged or played and the
+# ruleset suite has nothing to read, so those steps are skipped with the reason printed, and the import
+# suite skips the facts that read it.
+generated_missing=()
+while IFS= read -r entry; do
+  [[ -z "$entry" || "$entry" == \#* ]] && continue
+  path=${entry#/}
+  if [[ "$path" == *\** ]]; then
+    compgen -G "$path" >/dev/null || generated_missing+=("$path")
+  else
+    [[ -e "$path" ]] || generated_missing+=("$path")
+  fi
+done < scripts/generated-content-paths.txt
+if [[ ${#generated_missing[@]} -eq 0 ]]; then
+  generated="present"
+else
+  generated="absent (${generated_missing[*]}); run scripts/regenerate-content.sh with local/arena2 supplied"
+fi
+echo "generated content: $generated"
+skip() { echo "skipped $1: generated content is absent; run scripts/regenerate-content.sh"; }
+
 # A green run is only worth keeping if it names what it ran on. The record is a git note on the
 # exact commit, so it cannot drift from the tree it describes; a run over uncommitted changes would
 # attach a result to code that is not in that commit, so recording refuses a dirty tree.
@@ -56,13 +78,19 @@ if [[ "$record" == true ]]; then
   summary=$(
     echo "scripts/verify.sh ${gate_arguments[*]}"
     echo "corpora: $corpora"
-    grep -E '^# (pass|fail|skipped) |^(Passed|Failed)!|^play-smoke .* passed:|^Verified Engine pair' "$run_log" \
+    echo "generated content: $generated"
+    grep -E '^# (pass|fail|skipped) |^(Passed|Failed)!|^play-smoke .* passed:|^Verified Engine pair|^skipped ' "$run_log" \
       | sed -E 's/, Duration: [^-]*- / /'
   )
   git notes --ref=verify add -f -m "$summary" HEAD
   git push -q origin refs/notes/verify
   echo "Recorded the run on $(git rev-parse --short HEAD) in refs/notes/verify."
   exit 0
+fi
+
+if [[ ${#generated_missing[@]} -ne 0 ]] && [[ "$play" == true || "$aot" == true ]]; then
+  echo "--play and --aot stage the product, which needs the generated content: run scripts/regenerate-content.sh first." >&2
+  exit 2
 fi
 
 npm ci
@@ -72,7 +100,13 @@ node --test tests/WorldRpg.Ui.Tests/*.test.mjs
 # then restores and stages the host through rusty, which supplies the pair's
 # SDK feed; the later dotnet commands find the restored package.
 rusty install
-rusty build --project src/WorldRpg.Host/WorldRpg.Host.csproj
+if [[ ${#generated_missing[@]} -eq 0 ]]; then
+  rusty build --project src/WorldRpg.Host/WorldRpg.Host.csproj
+else
+  # rusty build stages the product, which refuses a content root without the generated content.
+  skip "rusty build (product staging)"
+  dotnet restore src/WorldRpg.Host/WorldRpg.Host.csproj
+fi
 pair_version=$(sed -n 's|.*<RustyEnginePackageVersion>\([^<]*\)</RustyEnginePackageVersion>.*|\1|p' Directory.Build.props)
 dotnet restore tests/WorldRpg.Architecture.Tests/WorldRpg.Architecture.Tests.csproj
 dotnet build src/WorldRpg.Host/WorldRpg.Host.csproj --configuration Release --no-restore
@@ -90,7 +124,11 @@ dotnet test tests/WorldRpg.Architecture.Tests/WorldRpg.Architecture.Tests.csproj
 # green, and a field added to an import record broke the tool the same way. A verification script that
 # only compiles reports on a tree that no longer runs.
 dotnet test tests/Daggerfall.Import.Tests/Daggerfall.Import.Tests.csproj
-dotnet test tests/WorldRpg.Rulesets.Daggerfall.Tests/WorldRpg.Rulesets.Daggerfall.Tests.csproj
+if [[ ${#generated_missing[@]} -eq 0 ]]; then
+  dotnet test tests/WorldRpg.Rulesets.Daggerfall.Tests/WorldRpg.Rulesets.Daggerfall.Tests.csproj
+else
+  skip "suite tests/WorldRpg.Rulesets.Daggerfall.Tests (its facts read the generated site closures and payloads)"
+fi
 dotnet test tests/WorldRpg.Rulesets.Canary.Tests/WorldRpg.Rulesets.Canary.Tests.csproj
 dotnet test tests/WorldRpg.Kit.Tests/WorldRpg.Kit.Tests.csproj
 dotnet test tests/WorldRpg.Host.Tests/WorldRpg.Host.Tests.csproj
@@ -99,7 +137,11 @@ dotnet test tests/WorldRpg.Host.Tests/WorldRpg.Host.Tests.csproj
 # project no longer compiled, and since nothing ran the project the rot was invisible. It is a product
 # in this repository, so its suite is part of the tree that must run.
 dotnet test tests/WorldRpg.SpriteWorkbench.Tests/WorldRpg.SpriteWorkbench.Tests.csproj
-dotnet msbuild src/WorldRpg.Host/WorldRpg.Host.csproj -t:StageRustyEngineCoreClrProduct -p:Configuration=Release
+if [[ ${#generated_missing[@]} -eq 0 ]]; then
+  dotnet msbuild src/WorldRpg.Host/WorldRpg.Host.csproj -t:StageRustyEngineCoreClrProduct -p:Configuration=Release
+else
+  skip "CoreCLR staging"
+fi
 
 # Every suite above proves its Engine-facing paths against fakes that do not enforce the Engine's
 # ownership rules; a render resource released under a live owner passed them all while the real
@@ -112,7 +154,9 @@ fi
 if [[ "$aot" == true ]]; then
   dotnet msbuild src/WorldRpg.Host/WorldRpg.Host.csproj -t:VerifyRustyEngineAot -p:Configuration=Release
   echo "Verified Engine pair ${pair_version}: CoreCLR and NativeAOT."
-else
+elif [[ ${#generated_missing[@]} -eq 0 ]]; then
   echo "Verified Engine pair ${pair_version}: CoreCLR. Use --aot for the NativeAOT fidelity publish."
+else
+  echo "Verified Engine pair ${pair_version}: builds and content-free suites only; the product was not staged because the generated content is absent."
 fi
 

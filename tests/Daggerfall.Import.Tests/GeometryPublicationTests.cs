@@ -417,7 +417,7 @@ public sealed class GeometryPublicationTests
             .OrderBy(model => model, StringComparer.Ordinal)];
     }
 
-    [CorpusFact]
+    [CorpusAndGeneratedContentFact]
     public void Publishes_the_geometry_the_shipped_plan_references()
     {
         // The corpus-level check: the meshes the published dungeon's own blocks name are all servable, and
