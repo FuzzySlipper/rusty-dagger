@@ -36,7 +36,7 @@ public sealed partial class NormalizedRuntimeSeamTests
             if (wilderness)
                 session.State.PlayerControl.MoveTo(new WorldPoint(DaggerfallExteriorCellResidency.CellSize + 1f, 1f, 1f).ToVector());
 
-            DaggerfallExteriorCellId cell = session.CurrentExteriorCell();
+            DaggerfallExteriorCellId cell = session.Sites.CurrentExteriorCell();
             int climate = definitions.Grids.Climate.GetCell(cell.X, cell.Y).Value;
             session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
 

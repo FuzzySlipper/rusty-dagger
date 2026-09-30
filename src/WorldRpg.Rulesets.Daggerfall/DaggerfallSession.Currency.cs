@@ -5,7 +5,6 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 internal sealed partial class DaggerfallSession
 {
-    private DaggerfallServiceProvider? _bankProvider;
 
     /// <summary>Opens banking only for a live, site-bound NPC that actually offers it.</summary>
     internal bool TryOpenBank(DaggerfallServiceProvider provider)
@@ -15,11 +14,11 @@ internal sealed partial class DaggerfallSession
         if (!string.Equals(provider.Service, "banking", StringComparison.Ordinal)
             || State.Services.ProviderAvailable(provider) != DaggerfallServiceDenial.None)
             return false;
-        _bankProvider = provider;
+        _sites.BankProvider = provider;
         return true;
     }
 
-    private int? ActiveBankRegion() => _bankProvider is { } provider
+    private int? ActiveBankRegion() => _sites.BankProvider is { } provider
         && State.Services.ProviderAvailable(provider) == DaggerfallServiceDenial.None
         ? provider.Site.Region
         : null;

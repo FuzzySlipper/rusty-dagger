@@ -17,7 +17,7 @@ internal sealed partial class DaggerfallSession
         bool dungeon = _activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon;
         float? exitDistance = null;
         if (dungeon && State.PlayerControl.Position is WorldPoint position
-            && _siteProjection.Inputs.DungeonMap is { } map)
+            && _sites.Projection.Inputs.DungeonMap is { } map)
         {
             Vector3 here = position.ToVector();
             foreach (DaggerfallDungeonMapMarker marker in map.Markers)
