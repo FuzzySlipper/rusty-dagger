@@ -26,7 +26,7 @@ internal sealed partial class DaggerfallSession
     /// </summary>
     private DaggerfallEnemyPerceptionContext BuildEnemyPerceptionContext(long actorId)
     {
-        if (!_definitionsByActor.TryGetValue(actorId, out DaggerfallActorDefinition? definition))
+        if (!_roster.Definitions.TryGetValue(actorId, out DaggerfallActorDefinition? definition))
             throw new InvalidOperationException($"Enemy perception actor '{actorId}' has no admitted Daggerfall definition.");
 
         StatsComponent playerStats = State.Actors.Player.Stats;

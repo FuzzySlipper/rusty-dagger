@@ -23,7 +23,6 @@ internal sealed class DaggerfallEnemyBehaviorModule
     private readonly PursuitCoordinator<IProductFact> _pursuit;
     private readonly Func<long, DaggerfallEnemyPerceptionContext> _contextProvider;
     private readonly Action<DaggerfallSkillUse> _recordSkillUse;
-    private readonly Dictionary<long, DaggerfallEnemyPerceptionMemory> _senses = [];
     /// <summary>
     /// Fixed pursuit configuration admitted once at composition. Detection, chase, and query
     /// bounds come from module tuning and never change per actor or per update; only the target,
@@ -53,11 +52,6 @@ internal sealed class DaggerfallEnemyBehaviorModule
         _pursuitTuning = new PursuitTuning(detectionDistance, minimumFacingCosine, admitted.ChaseSpeedUnitsPerSecond, admitted.NavigationMaximumVisited).Validate();
         _perceptionOptions = new PursuitPerceptionOptions(DaggerfallPerceptionQueryDefaults.AnyProjectionIdentity, DaggerfallPerceptionQueryDefaults.FirstPairCursor, DaggerfallPerceptionQueryDefaults.CompleteQueryPageSize).Validate();
         _pursuit = new PursuitCoordinator<IProductFact>(new DaggerfallEnemyPerceptionService(perception, Filter), spatial, navigation, combat);
-        foreach (ActorState actor in _actors.All)
-        {
-            _actors.Store.Add(actor.Actor.Entity, new PursuitMemoryComponent());
-            _senses.Add(actor.DurableId, new DaggerfallEnemyPerceptionMemory());
-        }
     }
 
     internal IReadOnlyDictionary<long, EnemyBehaviorEvidence> LastEvidence { get; private set; } = new Dictionary<long, EnemyBehaviorEvidence>();
@@ -69,7 +63,10 @@ internal sealed class DaggerfallEnemyBehaviorModule
     /// it does not keep a second hostility cache.
     /// </summary>
     internal bool IsPacified(long actorId) =>
-        _senses.TryGetValue(actorId, out DaggerfallEnemyPerceptionMemory? memory) && memory.Pacified;
+        _actors.TryGet(actorId, out ActorState actor) && Senses(actor).Pacified;
+
+    /// <summary>The enemy-senses memory the actor factory attaches to every non-player actor.</summary>
+    private static DaggerfallEnemyPerceptionMemory Senses(ActorState actor) => actor.Actor.Get<DaggerfallEnemyPerceptionMemory>();
 
     /// <summary>Applies a local action-door trespass to live enemies in the current site.</summary>
     internal void MakeActiveEnemiesHostile()
@@ -77,8 +74,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
         foreach (ActorState actor in _actors.All)
         {
             if (actor.IsDefeated) continue;
-            if (!_senses.TryGetValue(actor.DurableId, out DaggerfallEnemyPerceptionMemory? memory))
-                _senses.Add(actor.DurableId, memory = new DaggerfallEnemyPerceptionMemory());
+            DaggerfallEnemyPerceptionMemory memory = Senses(actor);
             memory.Pacified = false;
             memory.ForcedHostile = true;
         }
@@ -87,7 +83,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
     /// <summary>Clears remembered detection and pacification when a site leaves the live world.</summary>
     internal void ClearPerceptionMemory()
     {
-        foreach (DaggerfallEnemyPerceptionMemory memory in _senses.Values) memory.Clear();
+        foreach (ActorState actor in _actors.All) Senses(actor).Clear();
         _lastDecisions.Clear();
         LastPerception = new Dictionary<long, DaggerfallEnemyPerceptionDecision>();
     }
@@ -121,8 +117,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
             evidence.Add(actor.DurableId, new EnemyBehaviorEvidence(actor.DurableId, current, pursuit.Visibility, pursuit.Navigation));
             if (actor.IsDefeated)
                 _lastDecisions.Remove(actor.DurableId);
-            else if (_senses.ContainsKey(actor.DurableId)
-                && _lastDecisions.TryGetValue(actor.DurableId, out DaggerfallEnemyPerceptionDecision? decision))
+            else if (_lastDecisions.TryGetValue(actor.DurableId, out DaggerfallEnemyPerceptionDecision? decision))
                 perceptions[actor.DurableId] = decision;
         }
         LastEvidence = evidence;
@@ -148,8 +143,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
             .OrderBy(value => value.Distance)
             .Select(value => (PerceptionPair?)value)
             .FirstOrDefault();
-        if (!_senses.TryGetValue(actorId, out DaggerfallEnemyPerceptionMemory? memory))
-            _senses.Add(actorId, memory = new DaggerfallEnemyPerceptionMemory());
+        DaggerfallEnemyPerceptionMemory memory = Senses(actor);
 
         DaggerfallEnemyPerceptionContext context = _contextProvider(actorId);
         if (memory.ForcedHostile)

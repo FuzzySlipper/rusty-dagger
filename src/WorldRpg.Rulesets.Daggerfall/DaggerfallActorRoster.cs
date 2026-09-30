@@ -1,0 +1,406 @@
+using System.Numerics;
+using Rusty.Engine;
+using Rusty.Engine.Entities;
+using Rusty.Engine.Mechanics;
+using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.Inventory;
+using WorldRpg.Kit.Loot;
+using WorldRpg.Kit.World;
+using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
+using WorldRpg.Rulesets.Daggerfall.Policies;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
+
+namespace WorldRpg.Rulesets.Daggerfall;
+
+/// <summary>
+/// The session's live non-player actor roster beside <see cref="DaggerActorFactory"/>: which
+/// definition every live actor was registered from, which of them were spawned rather than placed,
+/// and the lifetime policy for spawning, retiring and unloading them.
+/// </summary>
+/// <remarks>
+/// The factory constructs entities; this owner decides what a spawn grants and what a retirement or
+/// site unload releases (effects, owned items, corpse containers, identities and the actor's
+/// appearance). It is the one mutable owner of the two actor maps; every other reader holds the same
+/// definition dictionary read-only.
+/// </remarks>
+internal sealed class DaggerfallActorRoster
+{
+    private readonly DaggerfallState _state;
+    private readonly DaggerfallDefinitions _definitions;
+    private readonly IRandomService _random;
+    private readonly DaggerfallMechanicsState _mechanics;
+    private readonly DurableIdentityAllocator _identities;
+    private readonly DaggerfallUniqueItemAllocator _uniqueItems;
+    private readonly IReadOnlySet<ulong> _authoredEntityIds;
+    private readonly Dictionary<long, DaggerfallActorDefinition> _definitionsByActor;
+    private readonly Dictionary<long, DaggerfallActorId> _dynamicActors;
+    private readonly DaggerfallActorGrounding _grounding;
+    private readonly Func<DaggerfallSiteProjection> _projection;
+    private readonly DaggerfallLootPresentation _lootUi;
+    private readonly DaggerfallCorpseLootModule _corpseLoot;
+
+    internal DaggerfallActorRoster(DaggerfallState state, DaggerfallDefinitions definitions, IRandomService random,
+        DaggerfallMechanicsState mechanics, DurableIdentityAllocator identities, DaggerfallUniqueItemAllocator uniqueItems,
+        IReadOnlySet<ulong> authoredEntityIds, Dictionary<long, DaggerfallActorDefinition> definitionsByActor,
+        IEnumerable<DaggerfallDynamicActorSave> restoredDynamicActors, DaggerfallActorGrounding grounding,
+        Func<DaggerfallSiteProjection> projection, DaggerfallLootPresentation lootUi, DaggerfallCorpseLootModule corpseLoot)
+    {
+        _state = state ?? throw new ArgumentNullException(nameof(state));
+        _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
+        _random = random ?? throw new ArgumentNullException(nameof(random));
+        _mechanics = mechanics ?? throw new ArgumentNullException(nameof(mechanics));
+        _identities = identities ?? throw new ArgumentNullException(nameof(identities));
+        _uniqueItems = uniqueItems ?? throw new ArgumentNullException(nameof(uniqueItems));
+        _authoredEntityIds = authoredEntityIds ?? throw new ArgumentNullException(nameof(authoredEntityIds));
+        _definitionsByActor = definitionsByActor ?? throw new ArgumentNullException(nameof(definitionsByActor));
+        _grounding = grounding ?? throw new ArgumentNullException(nameof(grounding));
+        _projection = projection ?? throw new ArgumentNullException(nameof(projection));
+        _lootUi = lootUi ?? throw new ArgumentNullException(nameof(lootUi));
+        _corpseLoot = corpseLoot ?? throw new ArgumentNullException(nameof(corpseLoot));
+        _dynamicActors = (restoredDynamicActors ?? throw new ArgumentNullException(nameof(restoredDynamicActors)))
+            .ToDictionary(spawned => spawned.EntityId, spawned => new DaggerfallActorId(spawned.Definition));
+    }
+
+    /// <summary>Every actor definition by durable identity: authored placements and spawned actors alike.</summary>
+    internal IReadOnlyDictionary<long, DaggerfallActorDefinition> Definitions => _definitionsByActor;
+
+    /// <summary>Spawned actors by durable identity to the definition each was registered from.</summary>
+    internal IReadOnlyDictionary<long, DaggerfallActorId> Dynamic => _dynamicActors;
+
+    private DaggerfallSiteAppearance Appearance => _projection().Appearance;
+
+    /// <summary>
+    /// Registers one actor from a published definition beyond the authored placements, with the
+    /// same Mechanics binding an authored actor is constructed with: catalog stats, pursuit
+    /// memory, managed inventory and equipment, definition loadout, and floor grounding.
+    /// Returns the allocated durable identity, which the save persists and restore reuses.
+    /// </summary>
+    internal long Spawn(string definitionId, ActorPose pose, int? level = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(definitionId);
+        DaggerfallActorDefinition definition = _definitions.RequireActor(new DaggerfallActorId(definitionId));
+        if (definition.Kind == DaggerfallActorKinds.Player)
+            throw new InvalidOperationException("The player actor is authored once; it cannot be spawned.");
+        if (level is < 1) throw new ArgumentOutOfRangeException(nameof(level));
+        // Class enemies level to the player the way the donor levels them; monsters carry their
+        // own level. Pack skills stay as authored: the donor overwrites every skill from the
+        // spawn level, but authored pack values own that meaning here.
+        int spawnLevel = level ?? definition.Level ?? (definition.Kind == DaggerfallActorKinds.EnemyClass ? _state.Progression.Level : 1);
+        DurableIdentityReference identity = _identities.Allocate(DurableIdentityKind.Actor);
+        long durableId = checked((long)identity.Value);
+        if (definition.Kind == DaggerfallActorKinds.EnemyClass && definition.MobileId == 146)
+            spawnLevel = checked(spawnLevel + (int)_random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, CombatRandomKey.EnemyScope,
+                $"class-guard-level:{durableId}", 3, 6)).Value);
+        DaggerfallActorDefinition spawnedDefinition = DaggerfallEncounterActors.AtLevel(definition, _definitions.Vocabulary, spawnLevel);
+        bool registered = false;
+        try
+        {
+            ActorState actor = DaggerActorFactory.CreateNonPlayerActor(_state.Actors, durableId, spawnedDefinition,
+                new DaggerfallMechanicsState().CreateStats(spawnedDefinition, SpawnVitals(spawnedDefinition, spawnLevel, durableId)),
+                pose);
+            DaggerActorFactory.RegisterActorInventory(actor, _state.InventoryStore);
+            GrantSpawnLoadout(actor, spawnedDefinition);
+            if (spawnedDefinition.Kind == DaggerfallActorKinds.EnemyClass)
+                GrantClassEnemyEquipment(actor, spawnedDefinition, spawnLevel);
+            if (spawnedDefinition.MobileId is int mobileId)
+            {
+                if (!_projection().Inputs.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
+                    throw new InvalidOperationException($"Spawned actor '{spawnedDefinition.Id.Value}' has no admitted mobile {mobileId} presentation.");
+                Appearance.AddActor(durableId, sprite);
+            }
+            _definitionsByActor.Add(durableId, spawnedDefinition);
+            _dynamicActors.Add(durableId, spawnedDefinition.Id);
+            registered = true;
+            if (definition.GroundOnSpawn) _grounding.Ground(actor);
+            return durableId;
+        }
+        catch
+        {
+            if (registered)
+            {
+                _definitionsByActor.Remove(durableId);
+                _dynamicActors.Remove(durableId);
+            }
+
+            _state.Actors.Entities.Destroy(identity);
+            _identities.Remove(identity);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Retires one spawned actor: definition and appearance references drop, an open loot
+    /// container for the actor closes, owned unique items
+    /// are destroyed with their identities tombstoned, the corpse container goes with the actor,
+    /// and the identity stays tombstoned so removal remains distinguishable from never-loaded.
+    /// Authored placement actors belong to the selected content and cannot retire; the player
+    /// can never retire. The shared managed store keeps unreachable per-actor state afterwards —
+    /// it has no unregister-owner path — but nothing reachable observes it: every read goes
+    /// through live actors.
+    /// </summary>
+    internal void Retire(long durableId)
+    {
+        if (durableId == DaggerfallActorIdentity.PlayerEntityId)
+            throw new InvalidOperationException("The player actor cannot be retired.");
+        if (durableId <= 0) throw new ArgumentOutOfRangeException(nameof(durableId));
+        if (!_dynamicActors.Remove(durableId, out _))
+        {
+            if (_state.Actors.TryGet(durableId, out _))
+                throw new InvalidOperationException($"Authored actor {durableId} belongs to the selected content and cannot be retired; only spawned actors retire.");
+            DurableIdentityClassification classification = _identities.Classify(new DurableIdentityReference(DurableIdentityKind.Actor, checked((ulong)durableId)));
+            throw new InvalidOperationException($"Actor {durableId} is {classification}; only a live spawned actor can be retired.");
+        }
+
+        _definitionsByActor.Remove(durableId);
+        Appearance.RetireActor(durableId);
+        _lootUi.CloseActor(durableId);
+        _ = _state.Effects.CancelActorReferences(durableId);
+        DestroyOwnedItems(durableId);
+        _corpseLoot.Retire(durableId);
+        _state.Actors.Entities.Destroy(ActorsState.Identity(durableId));
+        _identities.Remove(new DurableIdentityReference(DurableIdentityKind.Actor, checked((ulong)durableId)));
+        if (_state.Npcs.All.Any(npc => npc.DurableId == durableId && npc.Kind == DaggerfallNpcKind.Civilian))
+            _state.Npcs.SetPresence(durableId, DaggerfallNpcPresence.Removed);
+    }
+
+    /// <summary>
+    /// Materializes one registered civilian at an explicit world pose as a runtime civilian dynamic
+    /// actor, so its pose, inventory, corpse, and identity ledger participate in the save boundary.
+    /// </summary>
+    internal long MaterializeCivilian(DaggerfallNpc npc, ActorPose pose)
+    {
+        ArgumentNullException.ThrowIfNull(npc);
+        long npcId = npc.DurableId;
+        DurableIdentityReference identity = ActorsState.Identity(npcId);
+        if (_identities.Classify(identity) != DurableIdentityClassification.Live)
+            throw new InvalidOperationException($"NPC {npcId} does not own a live actor identity.");
+
+        DaggerfallActorDefinition definition = DaggerActorFactory.CivilianDefinition(npcId);
+        ActorState actor = DaggerActorFactory.CreateCivilianActor(_mechanics, _state.Actors, _state.InventoryStore, npc, pose);
+        try
+        {
+            if (!_definitionsByActor.TryAdd(npcId, definition))
+                throw new InvalidOperationException($"NPC {npcId} already has a runtime actor definition.");
+            if (!_dynamicActors.TryAdd(npcId, new DaggerfallActorId(DaggerfallActorKinds.Civilian)))
+                throw new InvalidOperationException($"NPC {npcId} already has a runtime actor binding.");
+            return actor.DurableId;
+        }
+        catch
+        {
+            _definitionsByActor.Remove(npcId);
+            _dynamicActors.Remove(npcId);
+            _state.Actors.Entities.Destroy(identity);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Releases a departing site's actors after their delta was captured: target-bound effects are
+    /// suspended, owned item entities released with their durable identities kept for the delta,
+    /// and the actor, its corpse container and its appearance retired.
+    /// </summary>
+    internal void UnloadSite(DaggerfallSiteProfile source, DaggerfallSiteRuntimeDelta? delta)
+    {
+        long[] ids = [.. source.Project.Actors.Keys.Concat(delta?.DynamicActors.Select(actor => actor.EntityId) ?? []).Order()];
+        // The delta was captured while these actors and their target-bound contributions were live.
+        // Detach every target lifecycle before destroying Engine entities; effects on a live player
+        // with one of these actors as caster remain active by durable caster identity.
+        _ = _state.Effects.SuspendTargets(ids);
+        foreach (long id in ids)
+        {
+            if (!_state.Actors.TryGet(id, out ActorState? actor)) continue;
+            _lootUi.CloseActor(actor.DurableId);
+            DestroySiteOwnedUniqueItems(actor);
+            _definitionsByActor.Remove(actor.DurableId);
+            if (_dynamicActors.Remove(actor.DurableId)) Appearance.RetireActor(actor.DurableId);
+            _state.ItemInstances.RemoveOwner(DaggerfallItemOwner.Actor(actor.DurableId));
+            // A corpse owns a second Engine inventory/container entity. Capture has already
+            // detached its durable facts, so retire that owner with the site actor rather than
+            // leaving an unreachable native container alive across the transition.
+            _state.ItemInstances.RemoveOwner(DaggerfallItemOwner.Corpse(actor.DurableId));
+            _corpseLoot.Unload(actor.DurableId);
+            _state.Actors.Entities.Destroy(ActorsState.Identity(actor.DurableId));
+        }
+    }
+
+    /// <summary>
+    /// Creates a destination site's authored placements and its retained spawned actors. The
+    /// caller restores the delta's inventories, corpses and effects onto them afterwards.
+    /// </summary>
+    internal void MaterializeSite(DaggerfallSiteProfile destination, DaggerfallSiteRuntimeDelta? delta)
+    {
+        Dictionary<long, DaggerfallActorSave> saved = delta?.Actors.ToDictionary(value => value.EntityId) ?? [];
+        foreach (AuthoredActor placement in destination.Project.Actors.Values.OrderBy(value => value.EntityId))
+        {
+            saved.TryGetValue(placement.EntityId, out DaggerfallActorSave? prior);
+            DaggerfallActorDefinition definition = _definitions.RequireActor(placement.ActorId);
+            ActorState actor = DaggerActorFactory.CreateAuthoredActor(_random, _mechanics, _definitions, _state.Actors, _state.InventoryStore,
+                _state.ItemDefinitions, _state.ItemInstances, placement, prior);
+            if (prior is not null) actor.ApplyPose(new ActorPose(new WorldPoint(prior.X, prior.Y, prior.Z), prior.HeadingRadians));
+            else if (definition.GroundOnSpawn) _grounding.Ground(actor);
+            _definitionsByActor.Add(actor.DurableId, definition);
+        }
+        if (delta is null) return;
+        foreach (DaggerfallDynamicActorSave savedDynamic in delta.DynamicActors.OrderBy(actor => actor.EntityId))
+        {
+            _ = DaggerActorFactory.CreateDynamicActor(_random, _mechanics, _definitions, _state.Actors, _state.InventoryStore,
+                _definitionsByActor, savedDynamic);
+            _dynamicActors.Add(savedDynamic.EntityId, new DaggerfallActorId(savedDynamic.Definition));
+            if (_definitionsByActor[savedDynamic.EntityId].MobileId is int mobileId)
+            {
+                if (!_projection().Inputs.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
+                    throw new InvalidOperationException($"Restored dynamic actor '{savedDynamic.Definition}' has no admitted mobile {mobileId} presentation.");
+                Appearance.AddActor(savedDynamic.EntityId, sprite);
+            }
+        }
+    }
+
+    /// <summary>
+    /// The living creatures a worn enchantment's near-creature condition can see: the group the
+    /// ruleset's own enemy-group policy gives them, and where they stand now. The donor flags a
+    /// civilian NPC as a humanoid outright, so a civilian definition answers humanoid here too
+    /// rather than falling through the enemy-group policy's monster and class arms.
+    /// </summary>
+    /// <remarks>
+    /// Static over the shared definition map because held enchantments first read it while the
+    /// session is still composing, before the roster's own presentation dependencies exist.
+    /// </remarks>
+    internal static IReadOnlyList<DaggerfallNearbyCreature> NearbyCreatures(ActorsState actors,
+        IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByActor)
+    {
+        List<DaggerfallNearbyCreature> nearby = [];
+        foreach (ActorState actor in actors.All)
+        {
+            if (actor.IsDefeated) continue;
+            if (!definitionsByActor.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition)) continue;
+            DaggerfallEnemyGroup group = definition.Kind == DaggerfallActorKinds.Civilian
+                ? DaggerfallEnemyGroup.Humanoid
+                : DaggerfallFormulaPolicy.EnemyGroupFor(definition);
+            nearby.Add(new DaggerfallNearbyCreature(group, actor.Position));
+        }
+        return nearby;
+    }
+
+    /// <summary>Releases live Engine item entities while preserving their durable identities for an inactive-site restore.</summary>
+    private void DestroySiteOwnedUniqueItems(ActorState actor)
+    {
+        List<ulong> identities = [];
+        if (_state.InventoryFor(actor.DurableId) is { } inventory)
+            identities.AddRange(inventory.Read().UniqueItems.Select(item => _state.Actors.Entities.IdentityOf(item.Entity).Value));
+        if (_corpseLoot.Corpses.TryGetValue(actor.DurableId, out CorpseContainer? corpse) && corpse.IsRegistered)
+            identities.AddRange(_state.Containers.Read(corpse.Owner).UniqueItems.Select(item => _state.Actors.Entities.IdentityOf(item.Entity).Value));
+        foreach (ulong itemId in identities.Distinct())
+        {
+            _state.ItemInstances.RemoveUnique(itemId);
+            _state.Actors.Entities.Destroy(new DurableIdentityReference(DurableIdentityKind.Item, itemId));
+        }
+    }
+
+    private DaggerfallVitalValues SpawnVitals(DaggerfallActorDefinition definition, int level, long durableId)
+    {
+        if (definition.Kind == DaggerfallActorKinds.EnemyClass && definition.HitPointsPerLevel is int hitPointsPerLevel)
+        {
+            // Each level roll draws under its own key: a keyed draw is deterministic per key, so
+            // reusing one key would repeat the same roll for every level.
+            int rollIndex = 0;
+            int health = DaggerfallFormulaPolicy.RollEnemyClassMaxHealth(level, hitPointsPerLevel, (minimum, maximum) =>
+                checked((int)_random.DrawKeyed(new KeyedRngRequest(
+                    CombatRandomKey.Seed,
+                    CombatRandomKey.EnemyScope,
+                    CombatRandomKey.ClassHealth(durableId, definition.Id.Value, rollIndex++),
+                    minimum,
+                    maximum)).Value));
+            return new DaggerfallVitalValues(health, 0, 0);
+        }
+
+        return DaggerActorFactory.InitialVitals(_random, definition, durableId);
+    }
+
+    private void GrantClassEnemyEquipment(ActorState actor, DaggerfallActorDefinition definition, int spawnLevel)
+    {
+        if (definition.MobileId is not int mobileId) throw new InvalidOperationException($"Class actor '{definition.Id.Value}' has no human mobile id.");
+        MechanicsInventoryCoordinator inventory = _state.InventoryFor(actor.DurableId)
+            ?? throw new InvalidOperationException($"Spawned actor {actor.DurableId} has no registered inventory.");
+        DaggerfallClassEnemyEquipmentPolicy.Equip(_definitions, _random, _state.ItemInstances, _uniqueItems, inventory, _state.EquipmentFor(actor.DurableId),
+            actor.DurableId, mobileId, _state.Progression.Level,
+            _state.Character.Identity.RaceId,
+            _state.Character.Identity.Gender == DaggerfallCharacterGender.Female ? "female" : "male");
+    }
+
+    private void GrantSpawnLoadout(ActorState actor, DaggerfallActorDefinition definition)
+    {
+        if (definition.Loadout.Count == 0) return;
+        foreach (DaggerfallLoadoutEntry entry in definition.Loadout)
+        {
+            if (!_definitions.Items.TryGetValue(entry.ItemId, out DaggerfallItemDefinition? item) || !item.IsFungible)
+                throw new InvalidOperationException($"Spawned actor '{definition.Id.Value}' loadout carries a unique or missing item, which spawned actors do not equip yet.");
+        }
+
+        MechanicsInventoryCoordinator actorInventory = _state.InventoryFor(actor.DurableId)
+            ?? throw new InvalidOperationException($"Spawned actor {actor.DurableId} has no registered inventory.");
+        int ordinal = 0;
+        foreach (DaggerfallLoadoutEntry entry in definition.Loadout)
+        {
+            InventoryStackId stackId = DaggerfallInventoryStackIds.ForSpawnLoadout(actor.DurableId, ordinal++);
+            actorInventory.Grant(new InventoryGrant(new InventoryItemId(entry.ItemId.Value), stackId, entry.Quantity));
+            _state.ItemInstances.RegisterDefaultStack(DaggerfallItemOwner.Actor(actor.DurableId),
+                new InventoryStack(stackId, ItemDefinitionId.Parse(entry.ItemId.Value), entry.Quantity), _definitions.Items[entry.ItemId]);
+        }
+    }
+
+    /// <summary>
+    /// Destroys the unique items one retiring actor owns — carried, equipped, and corpse-seeded —
+    /// and tombstones their identities so the save never reissues them. Fungible stacks and their instance metadata retire with the actor.
+    /// </summary>
+    private void DestroyOwnedItems(long durableId)
+    {
+        if (!_state.Actors.TryGet(durableId, out ActorState? actor)) return;
+        HashSet<ulong> owned = [];
+        if (_state.InventoryFor(durableId) is { } inventory)
+            foreach (var item in inventory.Read().UniqueItems)
+                owned.Add(_state.Actors.Entities.IdentityOf(item.Entity).Value);
+        // Equipment assignments name the same durable numbers directly.
+        foreach (var assignment in _state.EquipmentFor(durableId).Read().Assignments)
+            owned.Add(assignment.Item.EntityId);
+        if (actor.Actor.TryGet<CorpseLootComponent>(out CorpseLootComponent? corpse) && corpse is not null && corpse.HasRegisteredInventory)
+            foreach (var item in _state.Containers.Read(corpse.Owner).UniqueItems)
+                owned.Add(_state.Actors.Entities.IdentityOf(item.Entity).Value);
+        _state.ItemInstances.RemoveOwner(DaggerfallItemOwner.Actor(durableId));
+        _state.ItemInstances.RemoveOwner(DaggerfallItemOwner.Corpse(durableId));
+        foreach (ulong itemId in owned)
+        {
+            _state.ItemInstances.RemoveUnique(itemId);
+            _ = _state.Effects.CancelItemReferences(itemId);
+            DurableIdentityReference reference = new(DurableIdentityKind.Item, itemId);
+            _state.Actors.Entities.Destroy(reference);
+            // Authored reservations stay reserved: the destroyed entity is gone either way, and
+            // tombstoning one would misreport content as removed. This is the same rule as
+            // RemoveUniqueItemIdentity, minus the throw — retirement must not fail midway.
+            if (!_authoredEntityIds.Contains(itemId)) _uniqueItems.Remove(reference);
+        }
+    }
+}
+
+/// <summary>
+/// Settles a placed or spawned actor onto the floor below its authored marker through the Engine's
+/// own spatial ray query.
+/// </summary>
+internal sealed class DaggerfallActorGrounding(ISpatialService spatialService, SpatialMovementSystem spatial, float probeLift, double probeDistance)
+{
+    internal void Ground(ActorState actor)
+    {
+        // RDB marker heights are probe origins, not floor contacts. Unlike DFU's centered
+        // capsule, our navigation pose is the sprite's base.
+        SpatialHit floor = spatialService.CastRay(new SpatialRaycastRequest(
+            spatial.Session,
+            actor.Position.ToVector() + Vector3.UnitY * probeLift,
+            -Vector3.UnitY,
+            probeDistance,
+            new SpatialQueryFilter(uint.MaxValue, uint.MaxValue), default, default, default));
+        if (floor.Present && !floor.StartSolid && floor.Normal.Y > 0f)
+            actor.ApplyPose(new ActorPose(WorldPoint.From(floor.Point), actor.HeadingYawRadians));
+    }
+}

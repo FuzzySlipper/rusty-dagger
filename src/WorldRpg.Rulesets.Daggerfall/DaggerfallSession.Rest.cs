@@ -241,7 +241,7 @@ internal sealed partial class DaggerfallSession
         foreach (var actor in State.Actors.All)
         {
             if (actor.IsDefeated || _enemyBehavior.IsPacified(actor.DurableId)
-                || !_definitionsByActor.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition)
+                || !_roster.Definitions.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition)
                 || definition.Kind is not (DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass)
                 || definition.Team == "player-ally") continue;
             bool inSight = _enemyBehavior.LastPerception.TryGetValue(actor.DurableId, out var perception)

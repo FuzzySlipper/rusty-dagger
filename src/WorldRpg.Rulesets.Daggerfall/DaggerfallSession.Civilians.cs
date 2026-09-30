@@ -29,27 +29,7 @@ internal sealed partial class DaggerfallSession
             throw new InvalidOperationException($"NPC {npcId} has been removed and cannot be materialized.");
         if (State.Actors.TryGet(npcId, out _)) return npcId;
 
-        DurableIdentityReference identity = ActorsState.Identity(npcId);
-        if (_actorIdentities.Classify(identity) != DurableIdentityClassification.Live)
-            throw new InvalidOperationException($"NPC {npcId} does not own a live actor identity.");
-
-        DaggerfallActorDefinition definition = DaggerActorFactory.CivilianDefinition(npcId);
-        ActorState actor = DaggerActorFactory.CreateCivilianActor(_mechanics, State.Actors, State.InventoryStore, npc, pose);
-        try
-        {
-            if (!_definitionsByActor.TryAdd(npcId, definition))
-                throw new InvalidOperationException($"NPC {npcId} already has a runtime actor definition.");
-            if (!_dynamicActors.TryAdd(npcId, new DaggerfallActorId(DaggerfallActorKinds.Civilian)))
-                throw new InvalidOperationException($"NPC {npcId} already has a runtime actor binding.");
-            return actor.DurableId;
-        }
-        catch
-        {
-            _definitionsByActor.Remove(npcId);
-            _dynamicActors.Remove(npcId);
-            State.Actors.Entities.Destroy(identity);
-            throw;
-        }
+        return _roster.MaterializeCivilian(npc, pose);
     }
 
     /// <summary>Materializes every active civilian, using saved coordinates when present.</summary>

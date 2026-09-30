@@ -10,8 +10,9 @@ does not own its lifetime.
 Named properties (`Stats`, `Effects`, `Inventory`, `Equipment`, and player
 `Progression`) read the actual attached objects. The generic actor factory
 attaches stats, effects, targeting, attack state and defeat-track metadata; NPCs
-also have a pose, and players have progression. Dagger behavior assembly adds
-pursuit memory to its NPCs. Dagger's session factory explicitly registers and
+also have a pose, and players have progression. `DaggerActorFactory` creates
+every non-player actor through one path that also attaches pursuit memory and
+the enemy-senses memory the behavior policy reads. It explicitly registers and
 attaches inventory/equipment for the player and every placed actor. A facade
 property requires that its component has been attached; use Engine `TryGet<T>`
 for an optional capability on a differently assembled entity.
@@ -32,9 +33,11 @@ reverse lookup from attached metadata. Actor enumeration reads the store; there
 is no second actor state dictionary. Destroying a directory entry removes that
 entity and its attached components. Native resource owners still dispose their
 resources explicitly. The Dagger session owns the inventory store for its
-lifetime. Its dynamic-actor retirement path explicitly ends affected effects
-and destroys owned items before removing the actor; directory destruction alone
-does not provide that gameplay policy.
+lifetime. `DaggerfallActorRoster` owns which definition each live actor was
+registered from and which actors were spawned; its spawn, retirement and site
+unload paths explicitly end affected effects and destroy owned items before
+removing the actor; directory destruction alone does not provide that gameplay
+policy.
 
 ## Stats and recovery
 
