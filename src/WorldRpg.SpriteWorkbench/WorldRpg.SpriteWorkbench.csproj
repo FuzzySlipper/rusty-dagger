@@ -19,7 +19,7 @@
     <RustyEngineProductUiEntry>workbench.js</RustyEngineProductUiEntry>
     <!-- The SDK reruns tsc only when ../sprite-ui or a listed input changes. -->
     <RustyEngineProductUiSourceRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../sprite-ui'))</RustyEngineProductUiSourceRoot>
-    <RustyEngineProductUiBuildCommand>npm --prefix &quot;$(MSBuildThisFileDirectory)../..&quot; exec -- tsc --project &quot;$(MSBuildThisFileDirectory)../sprite-ui/tsconfig.json&quot; --noEmit false --outDir &quot;$(RustyEngineProductUiRoot)&quot;</RustyEngineProductUiBuildCommand>
+    <RustyEngineProductUiBuildCommand>npm --prefix &quot;$(MSBuildThisFileDirectory)../..&quot; exec -- tsc --target ES2022 --module ES2022 --moduleResolution bundler --strict --noEmitOnError --outDir &quot;$(RustyEngineProductUiRoot)&quot; &quot;$(RustyEngineProductUiTypes)&quot; &quot;$(MSBuildThisFileDirectory)../sprite-ui/workbench.ts&quot;</RustyEngineProductUiBuildCommand>
     <RustyEngineProductUiProjectionStream>worldrpg.sprite-workbench</RustyEngineProductUiProjectionStream>
     <RustyEngineProductUiProjectionContract>worldrpg.sprite-workbench.snapshot.v1</RustyEngineProductUiProjectionContract>
     <RustyEngineProductLifecycleMode>realtime</RustyEngineProductLifecycleMode>
@@ -28,8 +28,8 @@
     <RustyEngineWatchPaths>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../sprite-ui'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)workbench-content'))</RustyEngineWatchPaths>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../Daggerfall.Import/Daggerfall.Import.csproj" />
     <ProjectReference Include="../WorldRpg.Kit/WorldRpg.Kit.csproj" />
+    <ProjectReference Include="../WorldRpg.SpriteAuthoring/WorldRpg.SpriteAuthoring.csproj" />
     <PackageReference Include="Rusty.Engine" Version="[$(RustyEnginePackageVersion)]">
       <ExcludeAssets Condition="'$(RustyEngineUseSourceDevelopment)' == 'true'">compile;runtime</ExcludeAssets>
     </PackageReference>
@@ -37,7 +37,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <RustyEngineProductUiInput Include="$(MSBuildThisFileDirectory)../../package.json;$(MSBuildThisFileDirectory)../../package-lock.json" />
+    <RustyEngineProductUiInput Include="$(MSBuildThisFileDirectory)../../package.json;$(MSBuildThisFileDirectory)../../package-lock.json;$(RustyEngineProductUiTypes)" />
   </ItemGroup>
 
   <!-- The workbench shows the staged publication's atlas pages and its

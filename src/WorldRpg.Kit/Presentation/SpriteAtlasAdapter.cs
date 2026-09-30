@@ -8,6 +8,26 @@ public readonly record struct NormalizedSpriteFrame(uint Id, int X, int Y, int W
 public readonly record struct SpritePlaybackStep(uint? FrameId);
 public readonly record struct SpritePlaybackPlan(SpritePlaybackFrame[] Frames, SpritePlaybackMarker[] Markers);
 
+/// <summary>
+/// The per-frame world display size of a sprite whose frames keep their own source extents: each
+/// frame's source world size is scaled by the resource's display size over the resource's source
+/// world size, so frames of different extents keep their relative scale under one authored size.
+/// </summary>
+public static class SpriteFrameDisplaySize
+{
+    /// <summary>The scaled size, or null when any input is not finite and positive.</summary>
+    public static Vector2? Scale(Vector2 frameSourceWorldSize, Vector2 displaySize, Vector2 sourceWorldSize)
+    {
+        if (!PositiveFinite(frameSourceWorldSize) || !PositiveFinite(displaySize) || !PositiveFinite(sourceWorldSize)) return null;
+        Vector2 scaled = new(
+            frameSourceWorldSize.X * displaySize.X / sourceWorldSize.X,
+            frameSourceWorldSize.Y * displaySize.Y / sourceWorldSize.Y);
+        return PositiveFinite(scaled) ? scaled : null;
+    }
+
+    private static bool PositiveFinite(Vector2 value) => float.IsFinite(value.X) && float.IsFinite(value.Y) && value.X > 0F && value.Y > 0F;
+}
+
 /// <summary>Maps normalized pixel rectangles and sequence timing into Engine-owned sprite requests.</summary>
 public static class SpriteAtlasAdapter
 {

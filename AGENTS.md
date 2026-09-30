@@ -56,6 +56,8 @@ coverage work separately; `docs/code-migration-map.md` records disposition.
 | `WorldRpg.Rulesets.Daggerfall` | Daggerfall identities, formulas, attack and reward policy, content interpretation, presentation meaning, save behavior, and Daggerfall session composition. |
 | `WorldRpg.Host` product metadata | The one explicit product type and bundle declaration. The SDK generates ABI, lifecycle adaptation, services, handles, and both loader compositions beneath `obj`; there is no checked NativeProduct assembly. |
 | `Daggerfall.Import` | Offline Arena2 and Daggerfall Unity knowledge, source formats, conversion quirks, provenance, and differential validation. Runtime code consumes normalized packs, not source-shaped data. |
+| `WorldRpg.SpriteAuthoring` | Product-neutral sprite inspection document and authored-overlay contract shared by `Daggerfall.Import` and the sprite workbench. It has no references or packages and carries no ruleset vocabulary. |
+| `WorldRpg.SpriteWorkbench` | Admitted developer-only Engine product for inspecting sprite atlases and writing authored overlays; not part of a game bundle. It references only `WorldRpg.Kit` and `WorldRpg.SpriteAuthoring`, never the importer or a ruleset, and the architecture laws scan it like the shipped product. |
 | Content packs | Authored actors, items, worlds, placements, encounters, quests, assets, and scenario state interpreted by a ruleset. |
 | TypeScript UI | Thin DOM presentation of Engine-delivered projections and semantic actions. It owns neither gameplay state nor game-world rendering. |
 

@@ -7,6 +7,8 @@ using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
 using Rusty.Engine;
+using WorldRpg.Kit.Presentation;
+using WorldRpg.SpriteAuthoring;
 using Xunit;
 
 namespace WorldRpg.SpriteWorkbench.Tests;
@@ -76,6 +78,32 @@ public sealed class SpriteWorkbenchProductTests
         Assert.Equal(new Vector2(2F, 3F), edited[0].Size);
         Assert.Equal(new Vector2(4F, 9F), edited[1].Size);
         Assert.All(harness.Appearance.AtlasRequests[1].Frames.Span.ToArray(), frame => Assert.False(frame.HasSize));
+    }
+
+    [Fact]
+    public void Actor_frame_display_size_is_the_shared_presentation_rule()
+    {
+        // The workbench preview and the game's content reader both call this one rule.
+        Assert.Equal(new Vector2(4F, 9F), SpriteFrameDisplaySize.Scale(new Vector2(2F, 3F), new Vector2(2F, 3F), new Vector2(1F, 1F)));
+        Assert.Equal(new Vector2(1F, 1.5F), SpriteFrameDisplaySize.Scale(new Vector2(2F, 3F), new Vector2(1F, 1F), new Vector2(2F, 2F)));
+        Assert.Null(SpriteFrameDisplaySize.Scale(new Vector2(2F, 3F), new Vector2(0F, 1F), new Vector2(1F, 1F)));
+        Assert.Null(SpriteFrameDisplaySize.Scale(new Vector2(float.NaN, 3F), new Vector2(1F, 1F), new Vector2(1F, 1F)));
+    }
+
+    [Fact]
+    public void Construction_reads_only_the_inspection_document_and_its_atlases()
+    {
+        using Harness harness = Harness.Create(new HarnessOptions(AdmitOnlyInspectionAndAtlases: true));
+
+        Assert.Equal(harness.Publication.Catalog.Entries.Count, harness.Appearance.AtlasRequests.Count);
+        Assert.Equal("sprite.actor", ValueReader.StringField(harness.Ui.LastProjection.Value, "entries", 0, "id"));
+    }
+
+    [Fact]
+    public void Construction_rejects_a_missing_inspection_document_or_atlas()
+    {
+        Assert.Throws<FormatException>(() => Harness.Create(new HarnessOptions(OmitAdmittedPath: "sprite-inspection.json")));
+        Assert.Throws<FormatException>(() => Harness.Create(new HarnessOptions(OmitAdmittedPath: "media/dungeon/actor.png")));
     }
 
     [Fact]
@@ -355,7 +383,7 @@ public sealed class SpriteWorkbenchProductTests
         SpriteAuthoredOverlayDocument saved = SpriteAuthoredOverlayStore.Read(File.ReadAllBytes(harness.OverlayPath));
         SpriteAuthoredOverlay overlay = Assert.Single(saved.Overlays);
         Assert.Equal("Merged name", overlay.DisplayName);
-        Assert.Equal(new NormalizedVector2(2F, 3F), overlay.DisplaySize);
+        Assert.Equal(new SpriteVector2(2F, 3F), overlay.DisplaySize);
     }
 
     [Fact]
@@ -510,8 +538,15 @@ public sealed class SpriteWorkbenchProductTests
             List<ProductContentFile> admittedFiles =
             [
                 new("sprite-workbench.json"u8.ToArray(), Encoding.UTF8.GetBytes(config)),
-                .. fixture.Plan.Artifacts.Select(artifact => new ProductContentFile(Encoding.UTF8.GetBytes(artifact.RelativePath), artifact.Bytes.ToArray())),
+                .. fixture.Plan.Artifacts
+                    .Where(artifact => !options.AdmitOnlyInspectionAndAtlases || fixture.Content.ContainsKey(artifact.RelativePath))
+                    .Where(artifact => !StringComparer.Ordinal.Equals(artifact.RelativePath, options.OmitAdmittedPath))
+                    .Select(artifact => new ProductContentFile(Encoding.UTF8.GetBytes(artifact.RelativePath), artifact.Bytes.ToArray())),
             ];
+            if (!StringComparer.Ordinal.Equals(options.OmitAdmittedPath, "sprite-inspection.json"))
+            {
+                admittedFiles.Add(new("sprite-inspection.json"u8.ToArray(), SpriteInspectionDocumentSerializer.Serialize(fixture.Snapshot.ToInspectionDocument())));
+            }
             if (options.AddDuplicateAdmittedPath)
             {
                 ImportPublicationArtifact duplicate = fixture.Plan.Artifacts[0];
@@ -590,7 +625,7 @@ public sealed class SpriteWorkbenchProductTests
     private sealed class HarnessOptions(int? FailPlaybackCreateAt = null, ulong? ThrowOnPlaybackDisposeHandle = null,
         ulong? ThrowOnAtlasDisposeHandle = null, ulong? ThrowOnAppearanceDisposeHandle = null, bool ThrowOnUiDispose = false, int? FailPublishAt = null,
         bool CompleteOnAdvance = false, bool ThrowOnFrameSelection = false, bool MutateExternalPublicationAfterAdmission = false,
-        bool AddDuplicateAdmittedPath = false, bool AddInvalidAdmittedPath = false)
+        bool AddDuplicateAdmittedPath = false, bool AddInvalidAdmittedPath = false, bool AdmitOnlyInspectionAndAtlases = false, string? OmitAdmittedPath = null)
     {
         internal int? FailPlaybackCreateAt { get; } = FailPlaybackCreateAt;
         internal ulong? ThrowOnPlaybackDisposeHandle { get; } = ThrowOnPlaybackDisposeHandle;
@@ -603,18 +638,20 @@ public sealed class SpriteWorkbenchProductTests
         internal bool MutateExternalPublicationAfterAdmission { get; } = MutateExternalPublicationAfterAdmission;
         internal bool AddDuplicateAdmittedPath { get; } = AddDuplicateAdmittedPath;
         internal bool AddInvalidAdmittedPath { get; } = AddInvalidAdmittedPath;
+        internal bool AdmitOnlyInspectionAndAtlases { get; } = AdmitOnlyInspectionAndAtlases;
+        internal string? OmitAdmittedPath { get; } = OmitAdmittedPath;
         internal AppearanceFake? Appearance { get; set; }
         internal int OverlayReadCount { get; set; }
     }
 
     private class ContentFake : DispatchProxy
     {
-        private IReadOnlyDictionary<string, (ContentDigest Digest, long Length)> content = null!;
+        private IReadOnlyDictionary<string, (SpriteContentDigest Digest, long Length)> content = null!;
         internal IContentService Service { get; private set; } = null!;
         internal List<string> OpenRequests { get; } = [];
         internal List<string> ReadInfoRequests { get; } = [];
 
-        internal static ContentFake Create(IReadOnlyDictionary<string, (ContentDigest Digest, long Length)> content)
+        internal static ContentFake Create(IReadOnlyDictionary<string, (SpriteContentDigest Digest, long Length)> content)
         {
             IContentService service = DispatchProxy.Create<IContentService, ContentFake>();
             ContentFake fake = (ContentFake)(object)service;
@@ -645,7 +682,7 @@ public sealed class SpriteWorkbenchProductTests
         {
             string path = OpenRequests[checked((int)reference.Handle.Value) - 1];
             ReadInfoRequests.Add(path);
-            (ContentDigest digest, long length) = content[path];
+            (SpriteContentDigest digest, long length) = content[path];
             return new[] { new ContentReferenceInfo(path, ToEngineDigest(digest), checked((ulong)length)) };
         }
     }
@@ -1003,7 +1040,7 @@ public sealed class SpriteWorkbenchProductTests
             Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
         };
 
-        private TestPublication(ImportPublicationPlan plan, SpritePublicationSnapshot snapshot, IReadOnlyDictionary<string, (ContentDigest Digest, long Length)> content)
+        private TestPublication(ImportPublicationPlan plan, SpritePublicationSnapshot snapshot, IReadOnlyDictionary<string, (SpriteContentDigest Digest, long Length)> content)
         {
             Plan = plan;
             Snapshot = snapshot;
@@ -1012,7 +1049,7 @@ public sealed class SpriteWorkbenchProductTests
 
         internal ImportPublicationPlan Plan { get; }
         internal SpritePublicationSnapshot Snapshot { get; }
-        internal IReadOnlyDictionary<string, (ContentDigest Digest, long Length)> Content { get; }
+        internal IReadOnlyDictionary<string, (SpriteContentDigest Digest, long Length)> Content { get; }
 
         internal static TestPublication Create()
         {
@@ -1058,7 +1095,7 @@ public sealed class SpriteWorkbenchProductTests
             ];
             ImportPublicationPlan plan = ImportPublicationPlan.Create(provenance, artifacts);
             SpritePublicationSnapshot snapshot = SpritePublicationReader.FromPlan(plan);
-            Dictionary<string, (ContentDigest Digest, long Length)> content = snapshot.Catalog.Entries
+            Dictionary<string, (SpriteContentDigest Digest, long Length)> content = snapshot.Catalog.Entries
                 .Select(entry => entry.Closure)
                 .ToDictionary(closure => closure.RelativePath, closure => (closure.ContentDigest, closure.ByteLength), StringComparer.Ordinal);
             return new(plan, snapshot, content);
@@ -1072,7 +1109,7 @@ public sealed class SpriteWorkbenchProductTests
         private static byte[] Serialize<T>(T value) => [.. JsonSerializer.SerializeToUtf8Bytes(value, JsonOptions), (byte)'\n'];
     }
 
-    private static ContentSha256 ToEngineDigest(ContentDigest digest)
+    private static ContentSha256 ToEngineDigest(SpriteContentDigest digest)
     {
         byte[] bytes = Convert.FromHexString(digest.Value);
         return new(System.Buffers.Binary.BinaryPrimitives.ReadUInt64BigEndian(bytes), System.Buffers.Binary.BinaryPrimitives.ReadUInt64BigEndian(bytes.AsSpan(8)),

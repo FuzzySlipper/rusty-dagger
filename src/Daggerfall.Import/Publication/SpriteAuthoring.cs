@@ -2,100 +2,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
+using WorldRpg.SpriteAuthoring;
 
 namespace Daggerfall.Import.Publication;
-
-/// <summary>One explicitly inspectable generated sprite set.</summary>
-public sealed record SpriteInspectionEntry(
-    string Id,
-    string Label,
-    SpriteInspectionKind Kind,
-    SpriteInspectionClosure Closure,
-    SpriteInspectionAtlas Atlas,
-    IReadOnlyList<SpriteInspectionFrame> Frames,
-    IReadOnlyList<SpriteInspectionState> States,
-    IReadOnlyList<SpriteInspectionAction> Actions,
-    SpriteAuthoredValues AuthoredValues,
-    IReadOnlyList<SpriteInspectionFrame>? GeneratedFrames = null,
-    NormalizedVector2? SourceWorldSize = null);
-
-/// <summary>The source family that supplies the semantic meaning of a sprite set.</summary>
-public enum SpriteInspectionKind
-{
-    DungeonBillboard,
-    DungeonActor,
-    DungeonCorpse,
-    ClassicWeapon,
-    ClassicEffect,
-}
-
-/// <summary>Closure and provenance facts retained by the canonical publication.</summary>
-public sealed record SpriteInspectionClosure(
-    string RelativePath,
-    ContentDigest ContentDigest,
-    long ByteLength,
-    IReadOnlyList<string> DependsOnPaths,
-    IReadOnlyList<ImportPublicationSource> PublicationSources);
-
-/// <summary>Generated atlas facts. These are inspection-only and never editable through an overlay.</summary>
-public sealed record SpriteInspectionAtlas(int Width, int Height);
-
-/// <summary>One regenerated atlas frame and its optional dungeon source-layout facts.</summary>
-public sealed record SpriteInspectionFrame(
-    string Id,
-    int FrameIndex,
-    int X,
-    int Y,
-    int Width,
-    int Height,
-    int SourceWidth,
-    int SourceHeight,
-    bool Mirrored,
-    int? SourceRecord = null,
-    int? SourceFrame = null,
-    int? Orientation = null,
-    NormalizedVector2? SourceWorldSize = null);
-
-/// <summary>One source-labelled state layout. It describes data only; it does not play or render.</summary>
-public sealed record SpriteInspectionState(
-    string Name,
-    float SourceFramesPerSecond,
-    float FramesPerSecond,
-    bool Loops,
-    int FrameStart,
-    int FramesPerOrientation,
-    IReadOnlyList<int> FrameIndices,
-    bool IsPreferredRest);
-
-/// <summary>One named action or source sequence, including retained damage-marker values where present.</summary>
-public sealed record SpriteInspectionAction(
-    string Name,
-    float? FramesPerSecond,
-    bool? Loops,
-    IReadOnlyList<int> FrameIndices,
-    IReadOnlyList<SpriteSourceSequenceStep>? SourceSequence = null,
-    byte? AlternateChance = null,
-    float? SourceFramesPerSecond = null,
-    int? SourceRecordOrdinal = null);
-
-/// <summary>One source attack-sequence value. A negative-one value is a retained damage beat, not a frame index.</summary>
-public sealed record SpriteSourceSequenceStep(sbyte Value, bool IsDamageMarker);
-
-/// <summary>Only authored presentation values that may later be supplied to media normalization.</summary>
-public sealed record SpriteAuthoredValues(
-    string? DisplayName,
-    NormalizedVector2? Pivot,
-    NormalizedVector2? DisplaySize,
-    float? FramesPerSecond,
-    bool? Loop,
-    IReadOnlyList<int>? Sequence);
-
-/// <summary>Stable, typed inspection catalog over the generated dungeon and classic media sidecars.</summary>
-public sealed record SpriteInspectionCatalog(IReadOnlyList<SpriteInspectionEntry> Entries)
-{
-    public SpriteInspectionEntry Require(string id) => Entries.SingleOrDefault(entry => StringComparer.Ordinal.Equals(entry.Id, id))
-        ?? throw new InvalidOperationException($"Sprite set '{id}' is not present in this publication.");
-}
 
 /// <summary>
 /// Stable identity for authored sprite values. It retains source and generated
@@ -106,7 +15,7 @@ public static class SpriteAuthoringBasis
 {
     private static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-    public static ContentDigest Compute(CanonicalImportManifest publication, SpriteInspectionCatalog catalog)
+    public static SpriteContentDigest Compute(CanonicalImportManifest publication, SpriteInspectionCatalog catalog)
     {
         ArgumentNullException.ThrowIfNull(publication);
         ArgumentNullException.ThrowIfNull(catalog);
@@ -125,12 +34,12 @@ public static class SpriteAuthoringBasis
                     entry.Kind == SpriteInspectionKind.ClassicWeapon ? action.FrameIndices.Order().ToArray() : null,
                     action.SourceSequence?.Select(step => step.Value).ToArray(),
                     action.AlternateChance)).ToArray())).ToArray());
-        return ContentDigest.Compute(JsonSerializer.SerializeToUtf8Bytes(document, Json));
+        return SpriteContentDigest.Compute(JsonSerializer.SerializeToUtf8Bytes(document, Json));
     }
 
     private sealed record BasisDocument(string ImporterId, int ImporterVersion, IReadOnlyList<BasisSource> Sources, IReadOnlyList<BasisEntry> Entries);
     private sealed record BasisSource(string Path, ContentDigest Digest, long ByteLength);
-    private sealed record BasisEntry(string Id, SpriteInspectionKind Kind, string Path, ContentDigest Digest, long ByteLength, int AtlasWidth, int AtlasHeight, IReadOnlyList<BasisFrame> Frames, IReadOnlyList<BasisState> States, IReadOnlyList<BasisAction> Actions);
+    private sealed record BasisEntry(string Id, SpriteInspectionKind Kind, string Path, SpriteContentDigest Digest, long ByteLength, int AtlasWidth, int AtlasHeight, IReadOnlyList<BasisFrame> Frames, IReadOnlyList<BasisState> States, IReadOnlyList<BasisAction> Actions);
     private sealed record BasisFrame(string Id, int Index, int X, int Y, int Width, int Height, int SourceWidth, int SourceHeight, bool Mirrored, int? SourceRecord, int? SourceFrame, int? Orientation);
     private sealed record BasisState(string Name, int FrameStart, int FramesPerOrientation, IReadOnlyList<int> Frames, bool PreferredRest);
     private sealed record BasisAction(string Name, int? SourceRecordOrdinal, IReadOnlyList<int>? StructuralFrameIndices, IReadOnlyList<sbyte>? SourceSequence, byte? AlternateChance);
@@ -154,7 +63,7 @@ public static class SpriteInspectionCatalogBuilder
             ArgumentNullException.ThrowIfNull(dungeon);
             ArgumentNullException.ThrowIfNull(classic);
             publication.Validate();
-            ValidateSidecars(dungeon, classic);
+            Arena2MediaBundlePublication.ValidatePersistedSidecars(dungeon, classic);
 
             IReadOnlyDictionary<string, ImportPublicationManifestArtifact> closure = publication.Artifacts
                 .ToDictionary(artifact => artifact.RelativePath, StringComparer.Ordinal);
@@ -176,11 +85,6 @@ public static class SpriteInspectionCatalogBuilder
         {
             throw new FormatException("The sprite inspection input violates the canonical publication contract.", exception);
         }
-    }
-
-    internal static void ValidateSidecars(DungeonMediaManifestSidecar dungeon, ClassicMediaManifestSidecar classic)
-    {
-        Arena2MediaBundlePublication.ValidatePersistedSidecars(dungeon, classic);
     }
 
     private static void AddDungeonBillboards(
@@ -229,7 +133,7 @@ public static class SpriteInspectionCatalogBuilder
                 states,
                 [new("primary-attack-source", null, null, [], Sequence(actor.SourceAttackSequence.PrimaryFrames)),
                  .. actor.SourceAttackSequence.Alternates.Select((alternate, index) => new SpriteInspectionAction($"primary-attack-alternate-{index}", null, null, [], Sequence(alternate.Frames), alternate.Chance))],
-                Authored(descriptor), GeneratedFrames(descriptor, layouts, includeSourceWorldSize: true), actor.SourceWorldSize));
+                Authored(descriptor), GeneratedFrames(descriptor, layouts, includeSourceWorldSize: true), Vector(actor.SourceWorldSize)));
 
             if (actor.Corpse is not null)
             {
@@ -306,7 +210,8 @@ public static class SpriteInspectionCatalogBuilder
             throw new FormatException($"Sprite '{descriptor.Id}' does not agree with the publication closure.");
         }
 
-        return new(descriptor.RelativePath, descriptor.ContentDigest, descriptor.ByteLength, artifact.DependsOnPaths.ToArray(), sources.OrderBy(source => source.SourcePath, StringComparer.Ordinal).ToArray());
+        return new(descriptor.RelativePath, Digest(descriptor.ContentDigest), descriptor.ByteLength, artifact.DependsOnPaths.ToArray(),
+            sources.OrderBy(source => source.SourcePath, StringComparer.Ordinal).Select(source => new SpriteInspectionSource(source.SourcePath, Digest(source.ContentHash), source.ByteLen)).ToArray());
     }
 
     private static void ValidateMediaClosure(NormalizedMediaManifest media, IReadOnlyDictionary<string, ImportPublicationManifestArtifact> closure, string family)
@@ -331,7 +236,7 @@ public static class SpriteInspectionCatalogBuilder
             layoutByIndex.TryGetValue(frame.FrameIndex, out DungeonMediaFrameLayout? layout);
             return new SpriteInspectionFrame(frame.Id, frame.FrameIndex, frame.X, frame.Y, frame.Width, frame.Height,
                 frame.SourceWidth, frame.SourceHeight, frame.Mirrored, layout?.SourceRecord, layout?.SourceFrame, layout?.Orientation,
-                includeSourceWorldSize ? layout?.SourceWorldSize : null);
+                includeSourceWorldSize ? Vector(layout?.SourceWorldSize) : null);
         }).ToArray();
     }
 
@@ -339,7 +244,7 @@ public static class SpriteInspectionCatalogBuilder
         Frames(descriptor with { Frames = descriptor.GeneratedFrames ?? descriptor.Frames }, layouts, includeSourceWorldSize);
 
     private static SpriteAuthoredValues Authored(NormalizedMediaDescriptor descriptor) => new(
-        descriptor.DisplayName, descriptor.Pivot, descriptor.DisplaySize, descriptor.FramesPerSecond, descriptor.Loop, descriptor.Sequence?.ToArray());
+        descriptor.DisplayName, Vector(descriptor.Pivot), Vector(descriptor.DisplaySize), descriptor.FramesPerSecond, descriptor.Loop, descriptor.Sequence?.ToArray());
 
     private static IReadOnlyList<SpriteSourceSequenceStep> Sequence(IReadOnlyList<sbyte> source) => source
         .Select(value => new SpriteSourceSequenceStep(value, value == -1))
@@ -348,375 +253,25 @@ public static class SpriteInspectionCatalogBuilder
     private static NormalizedMediaDescriptor RequireDescriptor(NormalizedMediaManifest manifest, string id, string subject) => manifest.Resources.SingleOrDefault(resource => StringComparer.Ordinal.Equals(resource.Id, id))
         ?? throw new FormatException($"The {subject} references unknown media '{id}'.");
 
+    private static SpriteContentDigest Digest(ContentDigest digest) => new(digest.Value);
+
+    private static SpriteVector2? Vector(NormalizedVector2? value) => value is { } vector ? new(vector.X, vector.Y) : null;
 }
 
-/// <summary>Dedicated tracked input for future source regeneration; it is not a generated sidecar.</summary>
-public sealed record SpriteAuthoredOverlayDocument(int SchemaVersion, ContentDigest AuthoringBasisDigest, IReadOnlyList<SpriteAuthoredOverlay> Overlays)
+/// <summary>Converts a validated authored sprite overlay into the normalized-media input seam a regeneration consumes.</summary>
+public static class SpriteAuthoredMediaOverlays
 {
-    public const int CurrentSchemaVersion = 1;
-}
-
-/// <summary>Typed authored overlay values. Generated bytes, paths, hashes, and source facts have no fields here.</summary>
-public sealed record SpriteAuthoredFrameRect(int FrameIndex, int X, int Y, int Width, int Height);
-
-public sealed record SpriteAuthoredStateTiming(string Name, float? FramesPerSecond = null, bool? Loop = null);
-
-public sealed record SpriteAuthoredActionTiming(string Name, float? FramesPerSecond = null, bool? Loop = null);
-
-public sealed record SpriteAuthoredOverlay(
-    string Id,
-    string? DisplayName = null,
-    NormalizedVector2? Pivot = null,
-    NormalizedVector2? DisplaySize = null,
-    float? FramesPerSecond = null,
-    bool? Loop = null,
-    IReadOnlyList<int>? Sequence = null,
-    IReadOnlyList<SpriteAuthoredFrameRect>? FrameRects = null,
-    IReadOnlyList<SpriteAuthoredStateTiming>? StateTimings = null,
-    IReadOnlyList<SpriteAuthoredActionTiming>? ActionTimings = null);
-
-/// <summary>Applies saved authored values to an inspection projection without changing generated bytes or source facts.</summary>
-public static class SpriteAuthoredOverlayApplicator
-{
-    public static SpriteInspectionEntry Apply(SpriteInspectionEntry entry, SpriteAuthoredOverlay overlay)
+    public static IReadOnlyList<AuthoredMediaOverlay> ToMediaOverlays(SpriteAuthoredOverlayDocument document, SpriteInspectionCatalog catalog, SpriteContentDigest authoringBasisDigest)
     {
-        ArgumentNullException.ThrowIfNull(entry);
-        ArgumentNullException.ThrowIfNull(overlay);
-        if (!StringComparer.Ordinal.Equals(entry.Id, overlay.Id))
-        {
-            throw new ArgumentException("An authored overlay must identify the inspected sprite entry.", nameof(overlay));
-        }
-
-        SpriteAuthoredOverlayStore.ValidateValues(overlay, entry);
-        SpriteAuthoredValues values = entry.AuthoredValues;
-        return entry with
-        {
-            Label = overlay.DisplayName ?? entry.Label,
-            AuthoredValues = new(
-                overlay.DisplayName ?? values.DisplayName,
-                overlay.Pivot ?? values.Pivot,
-                overlay.DisplaySize ?? values.DisplaySize,
-                overlay.FramesPerSecond ?? values.FramesPerSecond,
-                overlay.Loop ?? values.Loop,
-                overlay.Sequence ?? values.Sequence),
-            Frames = entry.Frames.Select(frame => overlay.FrameRects?.SingleOrDefault(rect => rect.FrameIndex == frame.FrameIndex) is { } rect
-                ? frame with { X = rect.X, Y = rect.Y, Width = rect.Width, Height = rect.Height }
-                : frame).ToArray(),
-            States = entry.States.Select(state =>
-            {
-                SpriteAuthoredStateTiming? timing = overlay.StateTimings?.SingleOrDefault(value => StringComparer.Ordinal.Equals(value.Name, state.Name));
-                return state with
-                {
-                    FramesPerSecond = timing?.FramesPerSecond ?? overlay.FramesPerSecond ?? state.FramesPerSecond,
-                    Loops = timing?.Loop ?? overlay.Loop ?? state.Loops,
-                };
-            }).ToArray(),
-            Actions = entry.Actions.Select(action =>
-            {
-                if (action.FramesPerSecond is null && action.Loops is null)
-                {
-                    return action;
-                }
-
-                SpriteAuthoredActionTiming? timing = overlay.ActionTimings?.SingleOrDefault(value => StringComparer.Ordinal.Equals(value.Name, action.Name));
-                return action with
-                {
-                    FramesPerSecond = timing?.FramesPerSecond ?? overlay.FramesPerSecond ?? action.FramesPerSecond,
-                    Loops = timing?.Loop ?? overlay.Loop ?? action.Loops,
-                    FrameIndices = overlay.Sequence ?? action.FrameIndices,
-                };
-            }).ToArray(),
-        };
-    }
-}
-
-/// <summary>
-/// Strict JSON and safe filesystem operations for authored sprite overlays.
-/// The authoring root is separate from the generated publication root: callers
-/// later feed validated overlays to a regeneration request through
-/// <see cref="ToMediaOverlays"/> rather than placing them in a publication.
-/// </summary>
-public static class SpriteAuthoredOverlayStore
-{
-    private const int MaximumOverlayBytes = 1024 * 1024;
-    private static readonly JsonSerializerOptions Json = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true,
-        NumberHandling = JsonNumberHandling.Strict,
-        UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
-    };
-
-    public static SpriteAuthoredOverlayDocument Read(ReadOnlySpan<byte> bytes)
-    {
-        if (bytes.IsEmpty || bytes.Length > MaximumOverlayBytes)
-        {
-            throw new FormatException("A sprite overlay document is empty or exceeds its byte quota.");
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<SpriteAuthoredOverlayDocument>(bytes, Json)
-                ?? throw new FormatException("The sprite overlay document is empty.");
-        }
-        catch (JsonException exception)
-        {
-            throw new FormatException("The sprite overlay document is not a supported strict JSON document.", exception);
-        }
-    }
-
-    public static void Validate(SpriteAuthoredOverlayDocument document, SpriteInspectionCatalog catalog, ContentDigest authoringBasisDigest)
-    {
-        ArgumentNullException.ThrowIfNull(document);
-        ArgumentNullException.ThrowIfNull(catalog);
-        if (document.SchemaVersion != SpriteAuthoredOverlayDocument.CurrentSchemaVersion)
-        {
-            throw new FormatException("The sprite overlay schema version is not supported.");
-        }
-
-        document.AuthoringBasisDigest.Validate();
-        if (document.AuthoringBasisDigest != authoringBasisDigest)
-        {
-            throw new FormatException("The sprite overlay was authored against a different structural authoring basis.");
-        }
-
-        ArgumentNullException.ThrowIfNull(document.Overlays);
-        HashSet<string> ids = new(StringComparer.Ordinal);
-        foreach (SpriteAuthoredOverlay overlay in document.Overlays)
-        {
-            ArgumentNullException.ThrowIfNull(overlay);
-            NormalizedImportDocument.RequireLogicalId(overlay.Id, nameof(overlay.Id));
-            if (!ids.Add(overlay.Id))
-            {
-                throw new FormatException($"The sprite overlay contains duplicate ID '{overlay.Id}'.");
-            }
-
-            SpriteInspectionEntry entry = catalog.Require(overlay.Id);
-            if (entry.Kind == SpriteInspectionKind.ClassicWeapon
-                && (overlay.FramesPerSecond is not null || overlay.Loop is not null || overlay.Sequence is not null))
-            {
-                throw new FormatException("Classic weapon timing and sequence are action-specific and cannot be authored as resource-wide values.");
-            }
-            ValidateValues(overlay, entry);
-        }
-    }
-
-    /// <summary>Converts validated overlay data to the existing normalized-media input seam for a later regeneration command.</summary>
-    public static IReadOnlyList<AuthoredMediaOverlay> ToMediaOverlays(SpriteAuthoredOverlayDocument document, SpriteInspectionCatalog catalog, ContentDigest authoringBasisDigest)
-    {
-        Validate(document, catalog, authoringBasisDigest);
+        SpriteAuthoredOverlayStore.Validate(document, catalog, authoringBasisDigest);
         return document.Overlays.Select(overlay => new AuthoredMediaOverlay(
-            overlay.Id, true, overlay.DisplayName, overlay.Pivot, overlay.DisplaySize, overlay.FramesPerSecond, overlay.Loop, overlay.Sequence?.ToArray(),
+            overlay.Id, true, overlay.DisplayName, Vector(overlay.Pivot), Vector(overlay.DisplaySize), overlay.FramesPerSecond, overlay.Loop, overlay.Sequence?.ToArray(),
             overlay.FrameRects?.Select(rect => new AuthoredMediaFrameRect(rect.FrameIndex, rect.X, rect.Y, rect.Width, rect.Height)).ToArray(),
             overlay.StateTimings?.Select(timing => new AuthoredMediaStateTiming(timing.Name, timing.FramesPerSecond, timing.Loop)).ToArray(),
             overlay.ActionTimings?.Select(timing => new AuthoredMediaActionTiming(timing.Name, timing.FramesPerSecond, timing.Loop)).ToArray())).ToArray();
     }
 
-    public static string ResolveRelativePath(string rootDirectory, string relativePath)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(rootDirectory);
-        NormalizedImportDocument.RequireLogicalPath(relativePath, nameof(relativePath));
-        string root = Path.GetFullPath(rootDirectory);
-        string candidate = Path.GetFullPath(Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar)));
-        string prefix = root.EndsWith(Path.DirectorySeparatorChar) ? root : root + Path.DirectorySeparatorChar;
-        if (!candidate.StartsWith(prefix, StringComparison.Ordinal))
-        {
-            throw new ArgumentException("The overlay path escaped the publication directory.", nameof(relativePath));
-        }
-
-        return candidate;
-    }
-
-    /// <summary>
-    /// Proves that authored source files cannot reside in or contain the exact
-    /// generated publication tree. This check is lexical over normalized
-    /// absolute paths so it also works when discard is deliberately invoked
-    /// without opening a publication directory.
-    /// </summary>
-    public static void ValidateRootSeparation(string publicationDirectory, string authoringDirectory)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(publicationDirectory);
-        ArgumentException.ThrowIfNullOrWhiteSpace(authoringDirectory);
-        string publication = TrimTrailingSeparator(Path.GetFullPath(publicationDirectory));
-        string authoring = TrimTrailingSeparator(Path.GetFullPath(authoringDirectory));
-        if (StringComparer.Ordinal.Equals(publication, authoring)
-            || IsNestedWithin(publication, authoring)
-            || IsNestedWithin(authoring, publication))
-        {
-            throw new ArgumentException("The authored sprite source root must be distinct from, and neither contain nor be contained by, the generated publication root.");
-        }
-    }
-
-    /// <summary>Overlay files are JSON leaves relative to a separately selected authored source root.</summary>
-    public static void ValidateOverlayRelativePath(string relativePath)
-    {
-        NormalizedImportDocument.RequireLogicalPath(relativePath, nameof(relativePath));
-        if (!relativePath.StartsWith("sprites/", StringComparison.Ordinal)
-            || !relativePath.EndsWith(".json", StringComparison.Ordinal))
-        {
-            throw new ArgumentException("A sprite overlay must be a relative JSON sidecar under sprites/ in the authored source root.", nameof(relativePath));
-        }
-    }
-
-    public static void Write(string publicationDirectory, string authoringDirectory, string relativePath, SpriteAuthoredOverlayDocument document, SpriteInspectionCatalog catalog, ContentDigest authoringBasisDigest)
-    {
-        Validate(document, catalog, authoringBasisDigest);
-        ValidateRootSeparation(publicationDirectory, authoringDirectory);
-        ValidateOverlayRelativePath(relativePath);
-        string target = ResolveRelativePath(authoringDirectory, relativePath);
-        string? directory = Path.GetDirectoryName(target);
-        if (string.IsNullOrEmpty(directory))
-        {
-            throw new IOException("The overlay target has no parent directory.");
-        }
-
-        Directory.CreateDirectory(directory);
-        byte[] bytes = [.. JsonSerializer.SerializeToUtf8Bytes(document, Json), (byte)'\n'];
-        if (bytes.Length > MaximumOverlayBytes)
-        {
-            throw new FormatException("The serialized sprite overlay exceeds its byte quota.");
-        }
-        string temporary = Path.Combine(directory, $".{Path.GetFileName(target)}.{Guid.NewGuid():N}.tmp");
-        string backup = target + ".bak";
-        try
-        {
-            using (FileStream stream = new(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
-            {
-                stream.Write(bytes);
-                stream.Flush(flushToDisk: true);
-            }
-
-            if (File.Exists(target))
-            {
-                if (File.Exists(backup))
-                {
-                    throw new IOException("The sprite overlay recovery path already exists; inspect or move it before replacing the overlay.");
-                }
-
-                File.Replace(temporary, target, backup, ignoreMetadataErrors: true);
-            }
-            else
-            {
-                File.Move(temporary, target);
-            }
-        }
-        finally
-        {
-            if (File.Exists(temporary))
-            {
-                File.Delete(temporary);
-            }
-        }
-    }
-
-    /// <summary>Moves an overlay out of the separate authored root without reading or changing any publication.</summary>
-    public static bool Discard(string publicationDirectory, string authoringDirectory, string relativePath)
-    {
-        ValidateRootSeparation(publicationDirectory, authoringDirectory);
-        ValidateOverlayRelativePath(relativePath);
-        string target = ResolveRelativePath(authoringDirectory, relativePath);
-        if (!File.Exists(target))
-        {
-            return false;
-        }
-
-        string discarded = target + ".discarded";
-        if (File.Exists(discarded))
-        {
-            throw new IOException("The sprite overlay recovery path already exists; inspect or move it before discarding again.");
-        }
-
-        File.Move(target, discarded);
-        return true;
-    }
-
-    private static string TrimTrailingSeparator(string path)
-    {
-        string root = Path.GetPathRoot(path) ?? string.Empty;
-        return path.Length == root.Length ? path : path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-    }
-
-    private static bool IsNestedWithin(string candidate, string root)
-    {
-        string prefix = root.EndsWith(Path.DirectorySeparatorChar) ? root : root + Path.DirectorySeparatorChar;
-        return candidate.StartsWith(prefix, StringComparison.Ordinal);
-    }
-
-    internal static void ValidateValues(SpriteAuthoredOverlay overlay, SpriteInspectionEntry entry)
-    {
-        if (overlay.DisplayName is not null && (string.IsNullOrWhiteSpace(overlay.DisplayName) || overlay.DisplayName.Any(char.IsControl)))
-        {
-            throw new FormatException("A sprite overlay display name must be non-empty plain text.");
-        }
-
-        overlay.Pivot?.Validate(nameof(overlay.Pivot));
-        overlay.DisplaySize?.Validate(nameof(overlay.DisplaySize));
-        if (overlay.DisplaySize is { X: <= 0F } or { Y: <= 0F }
-            || overlay.FramesPerSecond is <= 0F
-            || (overlay.FramesPerSecond is not null && !float.IsFinite(overlay.FramesPerSecond.Value))
-            || overlay.Sequence is { Count: 0 }
-            || overlay.Sequence?.Any(index => index < 0 || index >= entry.Frames.Count) == true)
-        {
-            throw new FormatException("A sprite overlay contains invalid authored presentation values.");
-        }
-
-        ValidateFrameRects(overlay.FrameRects, entry);
-        ValidateTimings(overlay.StateTimings, entry.States.Select(state => state.Name), nameof(overlay.StateTimings));
-        ValidateTimings(overlay.ActionTimings,
-            entry.Actions.Where(action => action.FramesPerSecond is not null || action.Loops is not null).Select(action => action.Name),
-            nameof(overlay.ActionTimings));
-    }
-
-    private static void ValidateFrameRects(IReadOnlyList<SpriteAuthoredFrameRect>? rectangles, SpriteInspectionEntry entry)
-    {
-        if (rectangles is null) return;
-        HashSet<int> frames = [];
-        foreach (SpriteAuthoredFrameRect rect in rectangles)
-        {
-            ArgumentNullException.ThrowIfNull(rect);
-            if (rect.FrameIndex < 0 || rect.X < 0 || rect.Y < 0 || rect.Width <= 0 || rect.Height <= 0
-                || !frames.Add(rect.FrameIndex) || !entry.Frames.Any(frame => frame.FrameIndex == rect.FrameIndex)
-                || rect.X > entry.Atlas.Width - rect.Width || rect.Y > entry.Atlas.Height - rect.Height)
-            {
-                throw new FormatException("A sprite overlay frame rectangle must uniquely identify a generated frame and remain inside its atlas.");
-            }
-        }
-    }
-
-    private static void ValidateTimings<TTiming>(IReadOnlyList<TTiming>? timings, IEnumerable<string> availableNames, string parameterName)
-        where TTiming : class
-    {
-        if (timings is null) return;
-        HashSet<string> available = availableNames.ToHashSet(StringComparer.Ordinal);
-        HashSet<string> names = new(StringComparer.Ordinal);
-        foreach (TTiming timing in timings)
-        {
-            ArgumentNullException.ThrowIfNull(timing);
-            string name = timing switch
-            {
-                SpriteAuthoredStateTiming state => state.Name,
-                SpriteAuthoredActionTiming action => action.Name,
-                _ => throw new InvalidOperationException("Unknown sprite timing type."),
-            };
-            float? framesPerSecond = timing switch
-            {
-                SpriteAuthoredStateTiming state => state.FramesPerSecond,
-                SpriteAuthoredActionTiming action => action.FramesPerSecond,
-                _ => null,
-            };
-            bool? loop = timing switch
-            {
-                SpriteAuthoredStateTiming state => state.Loop,
-                SpriteAuthoredActionTiming action => action.Loop,
-                _ => null,
-            };
-            if (string.IsNullOrWhiteSpace(name) || name.Any(char.IsControl) || !available.Contains(name) || !names.Add(name)
-                || (framesPerSecond is null && loop is null) || framesPerSecond is <= 0F || (framesPerSecond is not null && !float.IsFinite(framesPerSecond.Value)))
-            {
-                throw new FormatException($"The sprite overlay has an invalid {parameterName} value.");
-            }
-        }
-    }
+    private static NormalizedVector2? Vector(SpriteVector2? value) => value is { } vector ? new(vector.X, vector.Y) : null;
 }
 
 /// <summary>Strict reader for the fixed generated sidecars required by sprite inspection.</summary>
@@ -734,24 +289,10 @@ public static class SpritePublicationReader
     };
 
     /// <summary>
-    /// Reads an already-admitted generated publication.  The source stays an
-    /// Import-level value so callers can obtain its bytes from an Engine
-    /// content snapshot without giving Import an Engine dependency.
+    /// Reads a generated publication from relative-path/byte entries, verifying
+    /// every sidecar and media artifact against the publication manifest.
     /// </summary>
-    public static SpritePublicationSnapshot Read(IReadOnlyList<SpritePublicationFile> files) =>
-        ReadCore(files, verifyContentDigests: true);
-
-    /// <summary>
-    /// Reads Engine-admitted publication files for a runtime host. Structural decoding is
-    /// identical to <see cref="Read(IReadOnlyList{SpritePublicationFile})"/> — same required files,
-    /// quotas, manifest validation, and catalog build — but content digests are not re-verified:
-    /// Engine admission already identifies immutable content, and strict integrity verification
-    /// stays in the offline publication paths.
-    /// </summary>
-    public static SpritePublicationSnapshot ReadAdmitted(IReadOnlyList<SpritePublicationFile> files) =>
-        ReadCore(files, verifyContentDigests: false);
-
-    private static SpritePublicationSnapshot ReadCore(IReadOnlyList<SpritePublicationFile> files, bool verifyContentDigests)
+    public static SpritePublicationSnapshot Read(IReadOnlyList<SpritePublicationFile> files)
     {
         IReadOnlyDictionary<string, ReadOnlyMemory<byte>> source = Index(files);
         ReadOnlyMemory<byte> manifestBytes = Require(source, ImportPublicationManifestSerializer.ManifestRelativePath);
@@ -764,8 +305,8 @@ public static class SpritePublicationReader
         try
         {
             manifest.Validate();
-            ValidateManifestArtifact(manifest, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath, dungeonBytes.Span, verifyContentDigests);
-            ValidateManifestArtifact(manifest, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, classicBytes.Span, verifyContentDigests);
+            ValidateManifestArtifact(manifest, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath, dungeonBytes.Span);
+            ValidateManifestArtifact(manifest, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, classicBytes.Span);
             catalog = SpriteInspectionCatalogBuilder.Create(manifest, dungeon, classic);
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or NullReferenceException or OverflowException)
@@ -773,15 +314,11 @@ public static class SpritePublicationReader
             throw new FormatException("The sprite publication metadata violates the canonical contract.", exception);
         }
 
-        VerifyMediaArtifacts(source, [.. dungeon.Media.Resources, .. classic.Media.Resources], verifyContentDigests);
+        VerifyMediaArtifacts(source, [.. dungeon.Media.Resources, .. classic.Media.Resources]);
         return new(catalog, SpriteAuthoringBasis.Compute(manifest, catalog), manifest);
     }
 
-    /// <summary>
-    /// Reads a generated publication from the filesystem for offline Import
-    /// tooling. Runtime consumers should instead pass the Engine-admitted
-    /// file snapshot to <see cref="ReadAdmitted(IReadOnlyList{SpritePublicationFile})"/>.
-    /// </summary>
+    /// <summary>Reads a generated publication from the filesystem for offline Import tooling.</summary>
     public static SpritePublicationSnapshot Read(string publicationDirectory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(publicationDirectory);
@@ -794,8 +331,8 @@ public static class SpritePublicationReader
         try
         {
             manifest.Validate();
-            ValidateManifestArtifact(manifest, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath, dungeonBytes, verifyContentDigests: true);
-            ValidateManifestArtifact(manifest, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, classicBytes, verifyContentDigests: true);
+            ValidateManifestArtifact(manifest, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath, dungeonBytes);
+            ValidateManifestArtifact(manifest, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, classicBytes);
             _ = SpriteInspectionCatalogBuilder.Create(manifest, dungeon, classic);
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or NullReferenceException or OverflowException)
@@ -863,12 +400,11 @@ public static class SpritePublicationReader
         }
     }
 
-    private static void ValidateManifestArtifact(CanonicalImportManifest manifest, string relativePath, ReadOnlySpan<byte> bytes, bool verifyContentDigests)
+    private static void ValidateManifestArtifact(CanonicalImportManifest manifest, string relativePath, ReadOnlySpan<byte> bytes)
     {
         ImportPublicationManifestArtifact artifact = manifest.Artifacts.SingleOrDefault(value => StringComparer.Ordinal.Equals(value.RelativePath, relativePath))
             ?? throw new FormatException($"The publication manifest does not contain '{relativePath}'.");
-        if (artifact.ByteLen != bytes.Length
-            || (verifyContentDigests && artifact.ContentHash != ContentDigest.Compute(bytes)))
+        if (artifact.ByteLen != bytes.Length || artifact.ContentHash != ContentDigest.Compute(bytes))
         {
             throw new FormatException($"The publication file '{relativePath}' does not match its manifest digest.");
         }
@@ -886,13 +422,13 @@ public static class SpritePublicationReader
                 NormalizedImportDocument.RequireLogicalPath(file.RelativePath, nameof(file.RelativePath));
                 if (!source.TryAdd(file.RelativePath, file.Bytes))
                 {
-                    throw new FormatException($"The admitted sprite publication contains duplicate path '{file.RelativePath}'.");
+                    throw new FormatException($"The sprite publication contains duplicate path '{file.RelativePath}'.");
                 }
             }
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or NullReferenceException)
         {
-            throw new FormatException("The admitted sprite publication contains an invalid path.", exception);
+            throw new FormatException("The sprite publication contains an invalid path.", exception);
         }
 
         return source;
@@ -909,7 +445,7 @@ public static class SpritePublicationReader
         return bytes;
     }
 
-    private static void VerifyMediaArtifacts(IReadOnlyDictionary<string, ReadOnlyMemory<byte>> source, IReadOnlyList<NormalizedMediaDescriptor> descriptors, bool verifyContentDigests)
+    private static void VerifyMediaArtifacts(IReadOnlyDictionary<string, ReadOnlyMemory<byte>> source, IReadOnlyList<NormalizedMediaDescriptor> descriptors)
     {
         long total = 0;
         foreach (NormalizedMediaDescriptor descriptor in descriptors)
@@ -925,7 +461,7 @@ public static class SpritePublicationReader
                 throw new FormatException($"Published media artifact '{descriptor.RelativePath}' is missing or has the wrong length.");
             }
 
-            if (verifyContentDigests && ContentDigest.Compute(bytes.Span) != descriptor.ContentDigest)
+            if (ContentDigest.Compute(bytes.Span) != descriptor.ContentDigest)
             {
                 throw new FormatException($"Published media artifact '{descriptor.RelativePath}' does not match its descriptor digest.");
             }
@@ -933,12 +469,12 @@ public static class SpritePublicationReader
     }
 }
 
-/// <summary>
-/// One immutable relative-path/byte entry from an admitted generated
-/// publication.  It is deliberately Engine-neutral so Import remains usable
-/// by offline tooling and by Engine-backed product hosts alike.
-/// </summary>
+/// <summary>One immutable relative-path/byte entry from a generated publication.</summary>
 public sealed record SpritePublicationFile(string RelativePath, ReadOnlyMemory<byte> Bytes);
 
 /// <summary>One validated inspection catalog and the digest that guards its authored overlay.</summary>
-public sealed record SpritePublicationSnapshot(SpriteInspectionCatalog Catalog, ContentDigest AuthoringBasisDigest, CanonicalImportManifest Manifest);
+public sealed record SpritePublicationSnapshot(SpriteInspectionCatalog Catalog, SpriteContentDigest AuthoringBasisDigest, CanonicalImportManifest Manifest)
+{
+    /// <summary>The product-neutral inspection document an authoring tool consumes instead of this publication's sidecars.</summary>
+    public SpriteInspectionDocument ToInspectionDocument() => new(AuthoringBasisDigest, Catalog);
+}

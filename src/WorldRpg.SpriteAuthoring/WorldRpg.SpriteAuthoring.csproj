@@ -1,4 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <!-- The product-neutral sprite-authoring contract shared by the offline
+       importer and the developer-only sprite workbench. It references nothing:
+       the importer stays free of the Engine package, and the workbench never
+       reaches the importer through it. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -9,7 +13,4 @@
     <Deterministic>true</Deterministic>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
-  <ItemGroup>
-    <ProjectReference Include="../WorldRpg.SpriteAuthoring/WorldRpg.SpriteAuthoring.csproj" />
-  </ItemGroup>
 </Project>

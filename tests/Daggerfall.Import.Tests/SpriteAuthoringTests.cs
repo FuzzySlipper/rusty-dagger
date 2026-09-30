@@ -4,6 +4,7 @@ using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
+using WorldRpg.SpriteAuthoring;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
@@ -19,13 +20,13 @@ public sealed class SpriteAuthoringTests
         SpriteInspectionEntry actor = catalog.Require("sprite.actor");
         Assert.Equal(SpriteInspectionKind.DungeonActor, actor.Kind);
         Assert.Equal("media/dungeon/actor.png", actor.Closure.RelativePath);
-        Assert.Equal(fixture.ActorDigest, actor.Closure.ContentDigest);
+        Assert.Equal(fixture.ActorDigest.Value, actor.Closure.ContentDigest.Value);
         Assert.Equal("arena2/test", Assert.Single(actor.Closure.PublicationSources).SourcePath);
         Assert.Equal(8, actor.Frames.Count);
         Assert.Equal(0, actor.Frames[0].SourceRecord);
         Assert.Equal(0, actor.Frames[0].Orientation);
-        Assert.Equal(new NormalizedVector2(1F, 1F), actor.SourceWorldSize);
-        Assert.Equal(new NormalizedVector2(1F, 1F), actor.Frames[0].SourceWorldSize);
+        Assert.Equal(new SpriteVector2(1F, 1F), actor.SourceWorldSize);
+        Assert.Equal(new SpriteVector2(1F, 1F), actor.Frames[0].SourceWorldSize);
         SpriteInspectionState state = Assert.Single(actor.States);
         Assert.Equal("Move", state.Name);
         Assert.Equal(6F, state.FramesPerSecond);
@@ -53,10 +54,10 @@ public sealed class SpriteAuthoringTests
     {
         Fixture fixture = CreateFixture();
         SpriteInspectionCatalog catalog = SpriteInspectionCatalogBuilder.Create(fixture.Manifest, fixture.Dungeon, fixture.Classic);
-        ContentDigest digest = ContentDigest.Compute("publication"u8);
+        SpriteContentDigest digest = SpriteContentDigest.Compute("publication"u8);
 
         Assert.Throws<FormatException>(() => SpriteAuthoredOverlayStore.Validate(
-            new(SpriteAuthoredOverlayDocument.CurrentSchemaVersion, ContentDigest.Compute("other"u8), []), catalog, digest));
+            new(SpriteAuthoredOverlayDocument.CurrentSchemaVersion, SpriteContentDigest.Compute("other"u8), []), catalog, digest));
         Assert.Throws<InvalidOperationException>(() => SpriteAuthoredOverlayStore.Validate(
             new(SpriteAuthoredOverlayDocument.CurrentSchemaVersion, digest, [new("sprite.unknown", DisplayName: "Unknown")]), catalog, digest));
         Assert.Throws<FormatException>(() => SpriteAuthoredOverlayStore.Read("""
@@ -119,7 +120,7 @@ public sealed class SpriteAuthoringTests
     {
         Fixture fixture = CreateFixture();
         SpriteInspectionCatalog firstCatalog = SpriteInspectionCatalogBuilder.Create(fixture.Manifest, fixture.Dungeon, fixture.Classic);
-        ContentDigest firstBasis = SpriteAuthoringBasis.Compute(fixture.Manifest, firstCatalog);
+        SpriteContentDigest firstBasis = SpriteAuthoringBasis.Compute(fixture.Manifest, firstCatalog);
         SpriteAuthoredOverlayDocument overlay = new(SpriteAuthoredOverlayDocument.CurrentSchemaVersion, firstBasis, [new("sprite.actor", DisplayName: "Authored rat")]);
 
         NormalizedMediaDescriptor actor = fixture.Dungeon.Media.Resources.Single(resource => resource.Id == "sprite.actor");
@@ -130,7 +131,7 @@ public sealed class SpriteAuthoringTests
                 : resource).ToArray()),
         };
         SpriteInspectionCatalog secondCatalog = SpriteInspectionCatalogBuilder.Create(fixture.Manifest, regenerated, fixture.Classic);
-        ContentDigest secondBasis = SpriteAuthoringBasis.Compute(fixture.Manifest, secondCatalog);
+        SpriteContentDigest secondBasis = SpriteAuthoringBasis.Compute(fixture.Manifest, secondCatalog);
         Assert.Equal(firstBasis, secondBasis);
         SpriteAuthoredOverlayStore.Validate(overlay, secondCatalog, secondBasis);
         SpriteAuthoredOverlayStore.Validate(overlay, secondCatalog, secondBasis);
@@ -139,7 +140,7 @@ public sealed class SpriteAuthoringTests
         {
             Sources = [new("arena2/test", ContentDigest.Compute("changed"u8), 7)],
         };
-        ContentDigest changedBasis = SpriteAuthoringBasis.Compute(changedSources, secondCatalog);
+        SpriteContentDigest changedBasis = SpriteAuthoringBasis.Compute(changedSources, secondCatalog);
         Assert.NotEqual(firstBasis, changedBasis);
         Assert.Throws<FormatException>(() => SpriteAuthoredOverlayStore.Validate(overlay, secondCatalog, changedBasis));
     }
@@ -149,7 +150,7 @@ public sealed class SpriteAuthoringTests
     {
         Fixture fixture = CreateFixture();
         SpriteInspectionCatalog catalog = SpriteInspectionCatalogBuilder.Create(fixture.Manifest, fixture.Dungeon, fixture.Classic);
-        ContentDigest basis = SpriteAuthoringBasis.Compute(fixture.Manifest, catalog);
+        SpriteContentDigest basis = SpriteAuthoringBasis.Compute(fixture.Manifest, catalog);
         SpriteAuthoredOverlay overlay = new(
             "sprite.actor",
             FrameRects: [new(0, 1, 0, 1, 1)],
@@ -168,7 +169,7 @@ public sealed class SpriteAuthoringTests
         SpriteInspectionAction sourceOnlyAttack = Assert.Single(applied.Actions);
         Assert.Null(sourceOnlyAttack.FramesPerSecond);
         Assert.Null(sourceOnlyAttack.Loops);
-        ContentDigest reopenedBasis = SpriteAuthoringBasis.Compute(fixture.Manifest, reopened);
+        SpriteContentDigest reopenedBasis = SpriteAuthoringBasis.Compute(fixture.Manifest, reopened);
         Assert.Equal(basis, reopenedBasis);
         SpriteAuthoredOverlayStore.Validate(document, reopened, reopenedBasis);
     }
@@ -178,7 +179,7 @@ public sealed class SpriteAuthoringTests
     {
         Fixture fixture = CreateFixture();
         SpriteInspectionCatalog catalog = SpriteInspectionCatalogBuilder.Create(fixture.Manifest, fixture.Dungeon, fixture.Classic);
-        ContentDigest baseline = SpriteAuthoringBasis.Compute(fixture.Manifest, catalog);
+        SpriteContentDigest baseline = SpriteAuthoringBasis.Compute(fixture.Manifest, catalog);
         SpriteInspectionEntry weapon = catalog.Require("sprite.weapon");
         SpriteInspectionEntry effect = catalog.Require("sprite.effect");
         SpriteInspectionCatalog changedWeaponRange = catalog with
@@ -203,7 +204,7 @@ public sealed class SpriteAuthoringTests
     {
         Fixture fixture = CreateFixture();
         SpriteInspectionCatalog catalog = SpriteInspectionCatalogBuilder.Create(fixture.Manifest, fixture.Dungeon, fixture.Classic);
-        ContentDigest digest = ContentDigest.Compute("publication"u8);
+        SpriteContentDigest digest = SpriteContentDigest.Compute("publication"u8);
         SpriteAuthoredOverlayDocument document = new(
             SpriteAuthoredOverlayDocument.CurrentSchemaVersion,
             digest,
@@ -229,7 +230,7 @@ public sealed class SpriteAuthoringTests
             Assert.Equal(expected.Sequence, actual.Sequence);
             Assert.Equal(expected.FrameRects, actual.FrameRects);
             Assert.Equal(expected.StateTimings, actual.StateTimings);
-            AuthoredMediaOverlay regeneratedInput = Assert.Single(SpriteAuthoredOverlayStore.ToMediaOverlays(read, catalog, digest));
+            AuthoredMediaOverlay regeneratedInput = Assert.Single(SpriteAuthoredMediaOverlays.ToMediaOverlays(read, catalog, digest));
             Assert.Equal(expected.FrameRects?.Select(rect => new AuthoredMediaFrameRect(rect.FrameIndex, rect.X, rect.Y, rect.Width, rect.Height)), regeneratedInput.FrameRects);
             Assert.Equal(expected.StateTimings?.Select(timing => new AuthoredMediaStateTiming(timing.Name, timing.FramesPerSecond, timing.Loop)), regeneratedInput.StateTimings);
 
@@ -265,7 +266,7 @@ public sealed class SpriteAuthoringTests
     {
         Fixture fixture = CreateFixture();
         SpriteInspectionCatalog catalog = SpriteInspectionCatalogBuilder.Create(fixture.Manifest, fixture.Dungeon, fixture.Classic);
-        ContentDigest digest = ContentDigest.Compute("publication"u8);
+        SpriteContentDigest digest = SpriteContentDigest.Compute("publication"u8);
         string generatedRoot = Path.Combine(Path.GetTempPath(), $"sprite-generated-{Guid.NewGuid():N}");
         string authoringRoot = Path.Combine(Path.GetTempPath(), $"sprite-authoring-{Guid.NewGuid():N}");
         try
@@ -370,7 +371,7 @@ public sealed class SpriteAuthoringTests
     }
 
     [Fact]
-    public void Admitted_read_skips_digest_reverification_but_keeps_structural_checks()
+    public void Inspection_document_carries_the_verified_catalog_and_basis_for_authoring_tools()
     {
         Fixture fixture = CreateFixture();
         byte[] dungeon = Serialize(fixture.Dungeon);
@@ -401,29 +402,34 @@ public sealed class SpriteAuthoringTests
             new("media/classic/font.bin", "fnt"u8.ToArray()),
             new("media/maps/map-fmap0i17.png", "map"u8.ToArray()),
         ];
-        SpritePublicationSnapshot strict = SpritePublicationReader.Read(files);
-        SpritePublicationSnapshot admitted = SpritePublicationReader.ReadAdmitted(files);
-        Assert.Equal(strict.Catalog.Entries.Count, admitted.Catalog.Entries.Count);
-        Assert.Equal(strict.AuthoringBasisDigest, admitted.AuthoringBasisDigest);
+        SpritePublicationSnapshot snapshot = SpritePublicationReader.Read(files);
 
-        // Same-length tampered media fails the strict digest check but resolves admittedly:
-        // the runtime does not rehash Engine-admitted bytes.
-        SpritePublicationFile[] tampered = files.Select(file =>
-            file.RelativePath == "media/dungeon/actor.png" ? file with { Bytes = "ACT"u8.ToArray() } : file).ToArray();
-        Assert.Throws<FormatException>(() => SpritePublicationReader.Read(tampered));
-        Assert.Equal(4, SpritePublicationReader.ReadAdmitted(tampered).Catalog.Entries.Count);
+        byte[] bytes = SpriteInspectionDocumentSerializer.Serialize(snapshot.ToInspectionDocument());
+        SpriteInspectionDocument read = SpriteInspectionDocumentSerializer.Read(bytes);
 
-        // Structural failures still reject admitted reads: missing manifest, malformed sidecar,
-        // missing media, and wrong media length are shape, not integrity re-verification.
-        Assert.Throws<FormatException>(() => SpritePublicationReader.ReadAdmitted(
-            files.Where(file => file.RelativePath != ImportPublicationManifestSerializer.ManifestRelativePath).ToArray()));
-        Assert.Throws<FormatException>(() => SpritePublicationReader.ReadAdmitted(files.Select(file =>
-            file.RelativePath == Arena2MediaBundlePublication.DungeonMediaManifestRelativePath
-                ? file with { Bytes = "not json"u8.ToArray() } : file).ToArray()));
-        Assert.Throws<FormatException>(() => SpritePublicationReader.ReadAdmitted(
-            files.Where(file => file.RelativePath != "media/dungeon/actor.png").ToArray()));
-        Assert.Throws<FormatException>(() => SpritePublicationReader.ReadAdmitted(files.Select(file =>
-            file.RelativePath == "media/dungeon/actor.png" ? file with { Bytes = "toolong"u8.ToArray() } : file).ToArray()));
+        Assert.Equal(snapshot.AuthoringBasisDigest, read.AuthoringBasisDigest);
+        Assert.Equal(snapshot.Catalog.Entries.Select(entry => entry.Id), read.Catalog.Entries.Select(entry => entry.Id));
+        SpriteInspectionEntry actor = read.Catalog.Require("sprite.actor");
+        Assert.Equal(SpriteInspectionKind.DungeonActor, actor.Kind);
+        Assert.Equal(new SpriteVector2(1F, 1F), actor.SourceWorldSize);
+        Assert.Equal(new sbyte[] { 0, -1 }, Assert.Single(actor.Actions).SourceSequence!.Select(step => step.Value));
+        Assert.Equal("arena2/test", Assert.Single(actor.Closure.PublicationSources).SourcePath);
+        // A tool validates overlays against the document exactly as against the publication.
+        SpriteAuthoredOverlayDocument overlay = new(SpriteAuthoredOverlayDocument.CurrentSchemaVersion, read.AuthoringBasisDigest, [new("sprite.actor", DisplayName: "Rat")]);
+        SpriteAuthoredOverlayStore.Validate(overlay, read.Catalog, read.AuthoringBasisDigest);
+        Assert.Equal(bytes, SpriteInspectionDocumentSerializer.Serialize(read));
+
+        Assert.Throws<FormatException>(() => SpriteInspectionDocumentSerializer.Read("{}"u8));
+        Assert.Throws<FormatException>(() => SpriteInspectionDocumentSerializer.Read(SpriteInspectionDocumentSerializer.Serialize(read)
+            .Concat("x"u8.ToArray()).ToArray()));
+        Assert.Throws<FormatException>(() => SpriteInspectionDocumentSerializer.Serialize(read with
+        {
+            Catalog = new([.. read.Catalog.Entries, read.Catalog.Entries[0]]),
+        }));
+        Assert.Throws<FormatException>(() => SpriteInspectionDocumentSerializer.Serialize(read with
+        {
+            Catalog = new([actor with { Closure = actor.Closure with { RelativePath = "../outside.png" } }]),
+        }));
     }
 
     private static IReadOnlyList<ClassicMapRegionManifest> EmptyMapRegions() =>
