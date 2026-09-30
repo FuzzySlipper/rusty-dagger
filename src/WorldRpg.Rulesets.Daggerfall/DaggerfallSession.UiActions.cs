@@ -131,10 +131,10 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.BankLoanRepayCarried: ChangeLoan(action); break;
             case DaggerfallUiActionKind.LootClose: _lootUi.Close(action.Container); break;
             case DaggerfallUiActionKind.LootTake: TakeLoot(action); break;
-            // Bare quick-save creates a named slot; quick-load selects slot-1. Both use
-            // the same catalog owner as the selectable DOM controls.
-            case DaggerfallUiActionKind.SaveGame: _saveSlotRequest = new(SaveSlotOperation.Save, Label: "Saved game"); break;
-            case DaggerfallUiActionKind.LoadGame: _saveSlotRequest = new(SaveSlotOperation.Load, "slot-1"); break;
+            // Quick save and quick load follow the Host's slot naming; the menu's slot actions name
+            // their own slots. All of them use the same catalog owner.
+            case DaggerfallUiActionKind.SaveGame: _saveSlotRequest = new(SaveSlotOperation.QuickSave); break;
+            case DaggerfallUiActionKind.LoadGame: _saveSlotRequest = new(SaveSlotOperation.QuickLoad); break;
             case DaggerfallUiActionKind.SaveSlots: _saveSlotRequest = new(SaveSlotOperation.List); break;
             case DaggerfallUiActionKind.SaveSlot: _saveSlotRequest = new(SaveSlotOperation.Save, action.Key, action.Label, action.Confirm); break;
             case DaggerfallUiActionKind.LoadSlot: _saveSlotRequest = new(SaveSlotOperation.Load, action.Key); break;

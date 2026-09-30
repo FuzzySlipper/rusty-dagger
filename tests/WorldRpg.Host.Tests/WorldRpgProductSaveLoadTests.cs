@@ -74,8 +74,9 @@ public sealed class WorldRpgProductSaveLoadTests
         session.ArmSlotRequest(new(SaveSlotOperation.Save, Label: "Before the dungeon"));
         product.Update(Update(1));
 
+        // The catalog names a revision whose payload was never stored.
         persistence.Put(WorldRpgSaveSlots.IndexKey, System.Text.Encoding.UTF8.GetBytes(
-            """[{"Key":"slot-1","Label":"Before the dungeon","SavedAtUtc":"2026-09-22T00:00:00Z","Ruleset":"test","Payload":"","Revision":1}]"""));
+            """[{"Key":"slot-1","Label":"Before the dungeon","SavedAtUtc":"2026-09-22T00:00:00Z","Ruleset":"test","Revision":5}]"""));
         session.ArmSlotRequest(new(SaveSlotOperation.Load, "slot-1"));
         product.Update(Update(2));
         Assert.Same(session, ruleset.RequireCurrent());

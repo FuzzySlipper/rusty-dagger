@@ -124,9 +124,12 @@ acceptable. No product schema versions, migration branches, historical readers,
 unknown-section preservation or content-fingerprint compatibility gates.
 Optional upstream migration utilities are not required product patterns.
 
-`WorldRpgSaveStore` uses Engine `ProductStateStore` and source-generated
-`JsonProductStateCodec`. `DaggerSessionPersistence` owns capture/restore of
-meaningful Dagger state; `DaggerfallSavePayload` is the current DTO contract.
+The Host's `WorldRpgSaveSlots` is the one save layout: a catalog of slot
+metadata and each slot's payload under its own key, over Engine
+`ProductStateStore` and source-generated `JsonProductStateCodec`.
+`DaggerSessionPersistence` owns capture/restore of meaningful Dagger state;
+`DaggerfallSavePayload` is the current DTO contract, and `ResolveRestore`
+checks every relationship before a session is composed from it.
 Restore creates fresh runtime entities and rebuilds shared stats/track maxima
 and authored sources through Engine capture helpers before restoring currents.
 Preserve distinct items, equipment assignments, progression, world/corpse state
@@ -167,7 +170,10 @@ Start new work from the current owners, not a stale filename in a task:
 | Attack lifecycle and rules | Kit `AttackExecution` / `CombatResolution`, `DaggerCombatRules` |
 | Pursuit / corpse loot | Kit `PursuitCoordinator` / `CorpseLootCoordinator`, Dagger policy modules |
 | Equipment moves | `DaggerfallEquipmentMoves` + `DaggerfallEquipmentPolicy` over Kit inventory/equipment coordinators |
-| Saves | `DaggerSessionPersistence`, `DaggerfallSavePayload`, Host `WorldRpgSaveSlots` / `WorldRpgSaveStore` |
+| Saves | `DaggerSessionPersistence`, `DaggerfallSavePayload`, Host `WorldRpgSaveSlots` |
+| Session start (new game / restore) | `DaggerfallSession.StartNew` / `Restore` over `DaggerfallSessionComposition` |
+| UI actions and their admitted modes | `DaggerfallUiAction.Rules`, `DaggerfallSession.UiActions.cs` |
+| Open interactions and the mode request | `DaggerfallOpenInteractions` |
 | Content admission | `GameCompositionResolver`, `DaggerfallRuleset` |
 | Host / UI actions | Host lifecycle and selection; ruleset `IEntryScreenSession` interpretation |
 
