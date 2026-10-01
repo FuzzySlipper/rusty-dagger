@@ -12,6 +12,7 @@ using WorldRpg.Rulesets.Daggerfall.Guilds;
 using WorldRpg.Rulesets.Daggerfall.Crime;
 using WorldRpg.Rulesets.Daggerfall.Banking;
 using WorldRpg.Rulesets.Daggerfall.Property;
+using WorldRpg.Rulesets.Daggerfall.Travel;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -40,6 +41,7 @@ internal sealed class DaggerfallState(
     DaggerfallLoanState loans,
     DaggerfallPropertyState property,
     DaggerfallLodgingState lodging,
+    DaggerfallTravelState travel,
     DaggerfallServiceTransactions services,
     DaggerfallSkillTrainingService skillTraining,
     DaggerfallRegionalPriceState regionalPrices,
@@ -102,6 +104,7 @@ internal sealed class DaggerfallState(
     internal DaggerfallLoanState Loans { get; } = loans;
     internal DaggerfallPropertyState Property { get; } = property;
     internal DaggerfallLodgingState Lodging { get; } = lodging;
+    internal DaggerfallTravelState Travel { get; } = travel;
     /// <summary>Typed Daggerfall service admission, quotes, outcomes, and pending concrete work.</summary>
     internal DaggerfallServiceTransactions Services { get; } = services;
     /// <summary>Permanent skill training through the current service and progression owners.</summary>

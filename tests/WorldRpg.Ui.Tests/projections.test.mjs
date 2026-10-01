@@ -741,3 +741,57 @@ test('tavern lodging renders paid hours and quotes before booking changed durati
     assert.equal(f.root.querySelector('.dagger-lodging').hidden, true);
   } finally { f.dispose(); }
 });
+
+test('travel accepts only the current quote and shows actual paid arrival or interruption', async () => {
+  const { mountTravel } = await import(pathToFileURL(join(output, 'travel.js')));
+  const f = fixture();
+  try {
+    const root = document.createElement('div'); f.root.append(root);
+    const actions = []; const view = mountTravel(root, action => actions.push(action));
+    const quote = { identity: 'live-quote', destination: 'Charing', minutes: 120, distance: 2, oceanPixels: 0,
+      innCost: 5, shipCost: 0, totalCost: 5, canAfford: true,
+      options: { cautious: true, inn: true, ship: false, hasHorse: false, hasCart: false, hasShip: false, availableGold: '50', availableGoldPieces: '50' } };
+    const value = { destinations: [{ region: 17, index: 3, name: 'Charing', kind: 'Town' }], quote,
+      executionAvailable: true, message: null, lastResult: null };
+    view.update(value);
+    root.querySelector('.dagger-travel-accept').click();
+    assert.deepEqual(actions.at(-1), { action: 'travel-accept', key: 'live-quote', amount: 5 });
+    root.querySelector('.dagger-travel-accept').click();
+    assert.equal(actions.length, 1);
+    const message = 'Arrived at Charing. Paid 5 gold; 7200 seconds elapsed.';
+    view.update({ ...value, quote: null, executionAvailable: false,
+      lastResult: { outcome: 'Arrived', paidGold: 5, elapsedSeconds: 7200, actualRegion: 17, actualIndex: 3, message }, message });
+    assert.equal(root.querySelector('.dagger-travel-last-result').textContent, message);
+    assert.equal(root.querySelector('.dagger-travel-accept').disabled, true);
+    const interrupted = 'Travel interrupted (Encounter); you remain at the departure. Paid 5 gold; 60 seconds elapsed.';
+    view.update({ ...value, executionAvailable: false, message: interrupted, lastResult: { message: interrupted } });
+    assert.match(root.querySelector('.dagger-travel-last-result').textContent, /60 seconds/);
+    assert.equal(root.querySelector('.dagger-travel-accept').disabled, true);
+    view.dispose();
+  } finally { f.dispose(); }
+});
+
+test('changing travel options disables acceptance until a fresh quote arrives, including a free journey', async () => {
+  const { mountTravel } = await import(pathToFileURL(join(output, 'travel.js')));
+  const f = fixture();
+  try {
+    const root = document.createElement('div'); f.root.append(root);
+    const actions = []; const view = mountTravel(root, action => actions.push(action));
+    const quote = { identity: 'old', destination: 'Known', minutes: 60, distance: 1, oceanPixels: 0, innCost: 0, shipCost: 0, totalCost: 0, canAfford: true,
+      options: { cautious: true, inn: false, ship: false } };
+    const value = { destinations: [{ region: 0, index: 1, name: 'Known', kind: 'Town' }], quote, executionAvailable: true, message: null, lastResult: null };
+    view.update(value);
+    const cautious = root.querySelector('input[type="checkbox"]'); cautious.checked = false;
+    cautious.dispatchEvent(new window.Event('change'));
+    assert.equal(root.querySelector('.dagger-travel-accept').disabled, true);
+    view.update(value); // An unrelated publication of the old quote cannot re-admit changed controls.
+    assert.equal(root.querySelector('.dagger-travel-accept').disabled, true);
+    cautious.checked = true; cautious.dispatchEvent(new window.Event('change'));
+    assert.equal(root.querySelector('.dagger-travel-accept').disabled, false); // Returning to the quoted choices is valid.
+    cautious.checked = false; cautious.dispatchEvent(new window.Event('change'));
+    view.update({ ...value, quote: { ...quote, identity: 'fresh', options: { ...quote.options, cautious: false } } });
+    root.querySelector('.dagger-travel-accept').click();
+    assert.deepEqual(actions.at(-1), { action: 'travel-accept', key: 'fresh', amount: 0 });
+    view.dispose();
+  } finally { f.dispose(); }
+});

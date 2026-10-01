@@ -1,4 +1,6 @@
 using WorldRpg.Rulesets.Daggerfall.Travel;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -30,7 +32,9 @@ internal sealed partial class DaggerfallSession
             throw new ArgumentException("Travel preview requires a selected destination.", nameof(action));
         _travelSelectedDestination = new DaggerfallSiteId(region, index);
         _travelSelectedOptions = (action.Cautious, action.Inn, action.Ship);
-        _ = CurrentTravelQuote();
+        _travelMessage = null;
+        DaggerfallTravelQuote? quote = CurrentTravelQuote();
+        if (quote is { CanAfford: false }) _travelMessage = "You cannot afford the selected route and lodging options.";
     }
 
     private DaggerfallTravelQuote? CurrentTravelQuote()
@@ -49,7 +53,6 @@ internal sealed partial class DaggerfallSession
                 AvailableGold: checked(funds.Gold + funds.LettersOfCredit),
                 AvailableGoldPieces: funds.Gold);
             DaggerfallTravelQuote quote = _travelPolicy.Quote(QuestTravelOrigin(), destination, options);
-            _travelMessage = quote.CanAfford ? null : "You cannot afford the selected route and lodging options.";
             return quote;
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or OverflowException)
@@ -59,14 +62,128 @@ internal sealed partial class DaggerfallSession
         }
     }
 
-    private DaggerfallTravelPresentation ReadTravelPresentation()
+    internal DaggerfallTravelPresentation ReadTravelPresentation()
     {
         if (!_travelSearchInitialized)
         {
             _travelSearchResults = [.. _travelPolicy.SupportedDestinations().Take(40)];
             _travelSearchInitialized = true;
         }
-        return new(_travelSearchResults, CurrentTravelQuote(), _travelMessage);
+        DaggerfallTravelQuote? quote = CurrentTravelQuote();
+        string? unavailable = quote is null ? null : TravelRefusal(quote, out _);
+        return new(_travelSearchResults, quote, _travelMessage ?? unavailable, unavailable is null && quote is { CanAfford: true }, State.Travel.LastResult);
+    }
+
+    /// <summary>Accepts the live quote once; all elapsed consequences use the session's single calendar.</summary>
+    internal DaggerfallTravelResult? ExecuteTravel(string expectedQuote, ulong expectedCost)
+    {
+        DaggerfallTravelQuote? quote = CurrentTravelQuote();
+        DaggerfallRelocationDestination? destination = null;
+        string? refusal = quote is null ? "Preview a current travel route before starting." : TravelRefusal(quote, out destination);
+        if (quote is not null && (expectedQuote != quote.Identity || expectedCost != (ulong)quote.TotalCost))
+            refusal = "The route or carried funds changed. Preview the journey again.";
+        if (refusal is not null || quote is null)
+        {
+            _travelMessage = refusal; Presentation.SetOutcome(refusal!); return null;
+        }
+        if (quote.TotalCost > 0 && !State.Currency.TrySpendCarried((ulong)quote.TotalCost, (ulong)quote.InnCost))
+        {
+            _travelMessage = "The carried payment is no longer available."; Presentation.SetOutcome(_travelMessage); return null;
+        }
+        // Retiring the selection prevents a second action from repeating the same accepted payment.
+        _travelSelectedDestination = null;
+        _input.Neutralize(); _locomotion.Neutralize();
+        DaggerfallWorldProfileKey origin = _activeProfileKey;
+        long started = _time.Calendar.ToAbsoluteSeconds();
+        State.Travel.Begin(origin.Site, quote, started);
+        DaggerfallTravelOutcome outcome = DaggerfallTravelOutcome.Stopped;
+        try
+        {
+            if (quote.Options.SpeedCautious)
+            {
+                (_, bool noRegen) = RestCharacterTraits();
+                DaggerfallRestRecoveryModule.RecoverForCautiousTravel(State.Actors.Player.Stats, noRegen);
+            }
+            outcome = AdvanceTravelTime(quote.TravelSeconds, origin, quote.Options);
+            if (outcome == DaggerfallTravelOutcome.Arrived)
+            {
+                long delay = TravelArrivalDelay(_time.Calendar,
+                    State.Character.CustomCareer?.Disadvantages.Any(trait => trait.Id == "damage" && trait.Target == "sunlight") == true,
+                    quote.Options.SpeedCautious);
+                if (delay > 0) outcome = AdvanceTravelTime(delay, origin, quote.Options);
+            }
+            if (outcome == DaggerfallTravelOutcome.Arrived && !_sites.TryRelocate(destination!))
+                outcome = DaggerfallTravelOutcome.Unavailable;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or IOException)
+        {
+            outcome = DaggerfallTravelOutcome.Unavailable;
+            _travelMessage = exception.Message;
+        }
+        long ended = _time.Calendar.ToAbsoluteSeconds();
+        DaggerfallTravelMapPixel actualPixel = QuestTravelOrigin();
+        string status = outcome == DaggerfallTravelOutcome.Arrived ? $"Arrived at {quote.Destination.Name}."
+            : $"Travel interrupted ({outcome}) at map pixel {actualPixel.X}/{actualPixel.Y}.";
+        string message = $"{status} Paid {quote.TotalCost} gold; {ended - started} seconds elapsed."
+            + (_travelMessage is null ? "" : " " + _travelMessage);
+        DaggerfallTravelResult result = State.Travel.Complete(ended, _activeProfileKey.Site, actualPixel, outcome, message);
+        _travelMessage = message; Presentation.SetOutcome(message);
+        if (ended > started && !State.Actors.Player.IsDefeated)
+        {
+            State.SkillUses.RaiseSkills(ended); State.LevelUps.BeginIfEligible();
+        }
+        return result;
+    }
+
+    private string? TravelRefusal(DaggerfallTravelQuote quote, out DaggerfallRelocationDestination? destination)
+    {
+        destination = null;
+        if (State.Actors.Player.IsDefeated) return "You cannot travel while defeated.";
+        if (_activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior) return "Leave the building or dungeon before travelling.";
+        if (HasNearbyRestEnemy()) return "Nearby enemies prevent travel.";
+        if (!quote.CanAfford) return "You cannot afford the route and its coin-only inn cost.";
+        DaggerfallWorldProfileKey[] profiles = [.. (_sites.Profiles?.Keys ?? [])
+            .Where(profile => profile.Site == quote.Destination.Id && profile.Kind == DaggerfallWorldProfileKind.Exterior)];
+        if (profiles.Length != 1) return $"{quote.Destination.Name} has no unique admitted exterior arrival profile.";
+        if (!_sites.Profiles!.Require(profiles[0]).Anchors.ContainsKey("start"))
+            return $"{quote.Destination.Name} has no admitted arrival anchor.";
+        destination = new(profiles[0], "start"); return null;
+    }
+
+    private DaggerfallTravelOutcome AdvanceTravelTime(long requestedSeconds, DaggerfallWorldProfileKey origin, DaggerfallTravelOptions options)
+    {
+        long started = _time.Calendar.ToAbsoluteSeconds();
+        while (_time.Calendar.ToAbsoluteSeconds() - started < requestedSeconds)
+        {
+            if (State.Actors.Player.IsDefeated) return DaggerfallTravelOutcome.Defeated;
+            if (_activeProfileKey != origin) return DaggerfallTravelOutcome.Relocated;
+            long now = _time.Calendar.ToAbsoluteSeconds();
+            long slice = Math.Min(requestedSeconds - (now - started), DaggerfallCalendar.SecondsPerMinute - now % DaggerfallCalendar.SecondsPerMinute);
+            DaggerfallCalendarAdvance advance = AdvanceElapsedTime(slice, deferSkillAdvancement: true);
+            if (State.Actors.Player.IsDefeated) return DaggerfallTravelOutcome.Defeated;
+            if (_activeProfileKey != origin) return DaggerfallTravelOutcome.Relocated;
+            if (advance.AppliedSeconds != slice) return DaggerfallTravelOutcome.Stopped;
+            if (!options.SleepModeInn && !options.TravelShip
+                && _time.Calendar.ToAbsoluteSeconds() % DaggerfallCalendar.SecondsPerMinute == 0)
+            {
+                long minute = _time.Calendar.ToAbsoluteSeconds() / DaggerfallCalendar.SecondsPerMinute;
+                DaggerfallEncounterRequest? encounter = RestEncounterRequest(minute);
+                if (encounter is not null && QueueEncounter(encounter).Choice.MobileId is not null)
+                    return DaggerfallTravelOutcome.Encounter;
+            }
+        }
+        return DaggerfallTravelOutcome.Arrived;
+    }
+
+    /// <summary>DFU cautious arrival is 07:10 by day; sunlight-vulnerable careers arrive at dusk instead.</summary>
+    internal static long TravelArrivalDelay(DaggerfallCalendar calendar, bool sunlightVulnerable, bool cautious = true)
+    {
+        long timeOfDay = calendar.SecondOfDay;
+        if (sunlightVulnerable) return calendar.IsDay ? DaggerfallCalendar.DuskHour * (DaggerfallCalendar.MinutesPerHour * DaggerfallCalendar.SecondsPerMinute) - timeOfDay : 0;
+        if (!cautious) return 0;
+        const long morning = 7 * (DaggerfallCalendar.MinutesPerHour * DaggerfallCalendar.SecondsPerMinute) + 10 * DaggerfallCalendar.SecondsPerMinute;
+        if (timeOfDay < morning) return morning - timeOfDay;
+        return calendar.Hour >= DaggerfallCalendar.DuskHour ? DaggerfallCalendar.SecondsPerDay - timeOfDay + morning : 0;
     }
 
     /// <summary>The current world-map pixel, including wilderness steps away from an exterior site.</summary>
@@ -86,4 +203,6 @@ internal sealed partial class DaggerfallSession
 internal sealed record DaggerfallTravelPresentation(
     IReadOnlyList<DaggerfallTravelDestination> Destinations,
     DaggerfallTravelQuote? Quote,
-    string? Message);
+    string? Message,
+    bool ExecutionAvailable,
+    DaggerfallTravelResult? LastResult);

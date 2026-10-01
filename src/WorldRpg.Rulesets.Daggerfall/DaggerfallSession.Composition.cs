@@ -330,6 +330,7 @@ internal sealed partial class DaggerfallSession
                 loans: loans,
                 property: property,
                 lodging: new DaggerfallLodgingState(saved?.Lodging),
+                travel: new DaggerfallTravelState(saved?.Travel),
                 services: services,
                 skillTraining: skillTraining,
                 regionalPrices: regionalPrices,
@@ -338,6 +339,7 @@ internal sealed partial class DaggerfallSession
                 wagon: wagon,
                 dungeonDiscoveries: dungeonDiscoveries,
                 dungeonActions: dungeonActions);
+            _travelMessage = State.Travel.LastResult?.Message;
             State.Quests.BindTextContext(QuestTextContext);
             _corpseLoot = new DaggerfallCorpseLootModule(
                 engine.Perception,
@@ -385,7 +387,7 @@ internal sealed partial class DaggerfallSession
                 characterCreationOpen: () => State.Character.Pending is not null,
                 levelUpOpen: () => State.LevelUps.Pending is not null,
                 bankOpen: () => ActiveBankRegion() is not null);
-            _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, _dungeonText, CapturePropertyStorage);
+            _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, _dungeonText, CapturePropertyStorage, QuestTravelOrigin);
             _roster = new DaggerfallActorRoster(State, definitions, _random, assembled.Mechanics, _actorIdentities, _uniqueItems,
                 _authoredEntityIds, authored, saved?.DynamicActors ?? [], _grounding, () => _sites.Projection, _lootUi, _corpseLoot);
             _sites = new DaggerfallSiteLifecycle(engine, State, definitions, tuning, _time, _site, _spatial, _camera, audioBundles,

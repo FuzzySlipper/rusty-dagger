@@ -332,15 +332,15 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         // The slice that opens an interaction admits no attack. Whichever order the Engine delivers
         // the keys in, swinging on the frame a container opens is an unintended attack.
         bool opensInteraction = playing && OpensInteraction(ui);
-        bool restSubmitted = false;
+        bool elapsedSubmitted = false;
         for (int index = 0; index < input.Length; index++)
         {
             firstStep.Add(input[index]);
             if (ui.IsUiAction(index))
-                AdmitUiAction(ui.ActionAt(index), phase, firstStep, opensInteraction, ref restSubmitted);
+                AdmitUiAction(ui.ActionAt(index), phase, firstStep, opensInteraction, ref elapsedSubmitted);
         }
 
-        if (restSubmitted)
+        if (elapsedSubmitted)
         {
             // Explicit elapsed time already passed through the one calendar and its consumers.
             // The same input slice must not also apply an ordinary realtime step or attack.
