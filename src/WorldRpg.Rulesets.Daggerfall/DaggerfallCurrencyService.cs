@@ -112,14 +112,18 @@ internal sealed class DaggerfallCurrencyService
     }
 
     /// <summary>Spends carried currency in the donor's gold-if-sufficient, otherwise letter-first order.</summary>
-    internal bool TrySpendCarried(ulong amount)
+    internal bool TrySpendCarried(ulong amount) => TrySpendCarried(amount, 0);
+
+    /// <summary>Reserves the coin-only portion, then settles the remainder with ordinary carried currency.</summary>
+    internal bool TrySpendCarried(ulong amount, ulong minimumGold)
     {
-        if (amount == 0) return false;
+        if (amount == 0 || minimumGold > amount) return false;
         DaggerfallCurrencyTotals funds = Read();
+        if (funds.Gold < minimumGold) return false;
         if (funds.Gold >= amount) return TrySpendGold(amount, []);
         if (funds.LettersOfCredit < amount - funds.Gold) return false;
 
-        ulong remaining = amount;
+        ulong remaining = amount - minimumGold;
         var letters = _inventory.Read().UniqueItems
             .Where(item => item.Definition.Value == LetterItem)
             .OrderBy(item => _inventory.GetDurableItemId(item.Entity).Value)
@@ -147,6 +151,7 @@ internal sealed class DaggerfallCurrencyService
                 remaining -= value;
             }
         }
+        remaining = checked(remaining + minimumGold);
         List<InventoryConsume> coins = [];
         foreach (InventoryStack stack in _inventory.Read().Stacks.Where(IsGold).OrderBy(stack => stack.Id.Value, StringComparer.Ordinal))
         {
@@ -158,7 +163,11 @@ internal sealed class DaggerfallCurrencyService
         if (remaining != 0) return false;
         if (retired.Count > 0 || coins.Count > 0)
             _inventory.CommitAtomic(coins, [], retired);
-        foreach (ulong id in retiredIds) _instances.RemoveUnique(id);
+        foreach (ulong id in retiredIds)
+        {
+            _instances.RemoveUnique(id);
+            _unique.Remove(new DurableIdentityReference(DurableIdentityKind.Item, id));
+        }
         if (partial is { } adjusted) _instances.ReplaceUnique(adjusted.Id, adjusted.Metadata);
         foreach (InventoryConsume spent in coins)
         {

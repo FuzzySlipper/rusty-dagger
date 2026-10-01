@@ -40,7 +40,7 @@ internal sealed partial class DaggerfallSession
     /// the interaction key is a coincidence of timing rather than an instruction.
     /// </summary>
     private static bool OpensInteraction(DaggerfallUiInput input) => input.ContainsAny(
-        DaggerfallUiActionKind.Loot, DaggerfallUiActionKind.ActivationMode, DaggerfallUiActionKind.DialogueTopic, DaggerfallUiActionKind.Rest, DaggerfallUiActionKind.LodgingBook);
+        DaggerfallUiActionKind.Loot, DaggerfallUiActionKind.ActivationMode, DaggerfallUiActionKind.DialogueTopic, DaggerfallUiActionKind.Rest, DaggerfallUiActionKind.LodgingBook, DaggerfallUiActionKind.TravelAccept);
 
     /// <summary>
     /// Admits one UI payload in the current phase. An unrecognized payload is reported in a live phase;
@@ -49,7 +49,7 @@ internal sealed partial class DaggerfallSession
     /// payload death does not admit is consumed silently.
     /// </summary>
     private void AdmitUiAction(DaggerfallPlayerUiAction? action, DaggerfallUiPhases phase, ProductUpdateState firstStep,
-        bool opensInteraction, ref bool restSubmitted)
+        bool opensInteraction, ref bool elapsedSubmitted)
     {
         if (action is null)
         {
@@ -62,10 +62,10 @@ internal sealed partial class DaggerfallSession
             if (phase != DaggerfallUiPhases.Dead && rule.Refusal is { } refusal) Presentation.SetOutcome(refusal);
             return;
         }
-        ApplyUiAction(action, firstStep, opensInteraction, ref restSubmitted);
+        ApplyUiAction(action, firstStep, opensInteraction, ref elapsedSubmitted);
     }
 
-    private void ApplyUiAction(DaggerfallPlayerUiAction action, ProductUpdateState firstStep, bool opensInteraction, ref bool restSubmitted)
+    private void ApplyUiAction(DaggerfallPlayerUiAction action, ProductUpdateState firstStep, bool opensInteraction, ref bool elapsedSubmitted)
     {
         switch (action.Kind)
         {
@@ -100,11 +100,14 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.TransportLeaveShip: ChangeTransport(action); break;
             case DaggerfallUiActionKind.TravelSearch:
             case DaggerfallUiActionKind.TravelPreview: ChangeTravel(action); break;
+            case DaggerfallUiActionKind.TravelAccept:
+                if (!elapsedSubmitted) { elapsedSubmitted = true; _ = ExecuteTravel(action.Key!, action.Amount!.Value); }
+                break;
             // One rest per input slice: explicit elapsed time is applied once.
             case DaggerfallUiActionKind.LodgingQuote:
             case DaggerfallUiActionKind.LodgingBook: ChangeLodging(action); break;
             case DaggerfallUiActionKind.Rest:
-                if (!restSubmitted) { ChangeRest(action); restSubmitted = true; }
+                if (!elapsedSubmitted) { ChangeRest(action); elapsedSubmitted = true; }
                 break;
             case DaggerfallUiActionKind.WagonPut:
             case DaggerfallUiActionKind.WagonTake: ChangeWagon(action); break;

@@ -6,6 +6,7 @@ using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
+using WorldRpg.Rulesets.Daggerfall.Travel;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
@@ -43,11 +44,12 @@ internal sealed class DaggerSessionPersistence
     private readonly DaggerfallClimbingPolicy _climbing;
     private readonly DaggerfallDungeonTextActions _dungeonText;
     private readonly Func<DaggerfallPropertyStorageKey, DaggerfallInventorySave> _capturePropertyStorage;
+    private readonly Func<DaggerfallTravelMapPixel> _travelPosition;
     internal DaggerSessionPersistence(DaggerfallState state, DaggerfallCorpseLootModule corpses, DaggerfallGroundContainers groundContainers, DaggerfallBookNotebook notebook,
         DaggerfallUniqueItemAllocator uniqueItems, FirstPersonCameraSystem camera, DaggerfallWorldTime time, DaggerfallSiteContext site,
         DaggerfallEffectLifecycle effects, Func<DaggerfallDoorRuntime> doors, DaggerfallLocomotionPolicy locomotion,
         DaggerfallClimbingPolicy climbing, DaggerfallDungeonTextActions dungeonText,
-        Func<DaggerfallPropertyStorageKey, DaggerfallInventorySave> capturePropertyStorage)
+        Func<DaggerfallPropertyStorageKey, DaggerfallInventorySave> capturePropertyStorage, Func<DaggerfallTravelMapPixel> travelPosition)
     {
         ArgumentNullException.ThrowIfNull(doors);
         ArgumentNullException.ThrowIfNull(locomotion);
@@ -56,6 +58,7 @@ internal sealed class DaggerSessionPersistence
         ArgumentNullException.ThrowIfNull(capturePropertyStorage);
         State = state; _corpseLoot = corpses; _groundContainers = groundContainers ?? throw new ArgumentNullException(nameof(groundContainers)); _notebook = notebook ?? throw new ArgumentNullException(nameof(notebook)); _uniqueItems = uniqueItems; _camera = camera; _time = time; _site = site; _effects = effects; _doors = doors; _locomotion = locomotion; _climbing = climbing; _dungeonText = dungeonText;
         _capturePropertyStorage = capturePropertyStorage;
+        _travelPosition = travelPosition ?? throw new ArgumentNullException(nameof(travelPosition));
     }
     internal RulesetSavePayload Capture(ulong? generation, ulong? step, IReadOnlyDictionary<long, DaggerfallActorId> dynamicActors, DaggerfallEncounterRuntime encounters, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> siteDeltas, DaggerfallWorldProfileKey activeProfile, DaggerfallWorldProfileKey? returnProfile, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallDungeonDiscovery> dungeonDiscoveries, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallDungeonActionGraph> dungeonActions, DaggerfallDungeonMotionSnapshot dungeonMotion, DaggerfallExteriorCellResidencySave? exteriorResidency)
     {
@@ -152,6 +155,7 @@ internal sealed class DaggerSessionPersistence
             Loans = State.Loans.Capture(),
             Property = State.Property.Capture(_capturePropertyStorage),
             Lodging = State.Lodging.Capture(_time.Calendar.ToAbsoluteSeconds()),
+            Travel = State.Travel.Capture(_time.Calendar.ToAbsoluteSeconds(), _site.Active, _travelPosition),
             Crime = State.Crime.Capture(),
             KnightlyClaims = State.KnightlyClaims.Capture(),
             Services = State.Services.Capture(),

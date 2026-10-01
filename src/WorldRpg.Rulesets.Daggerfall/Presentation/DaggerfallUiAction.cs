@@ -27,7 +27,7 @@ internal enum DaggerfallUiActionKind
     ActivationMode, Attack, Loot, Inventory, Character, Menu,
     DialogueTone, DialogueTopic, DialogueClose,
     TransportSelect, TransportToggle, TransportLeaveShip,
-    TravelSearch, TravelPreview,
+    TravelSearch, TravelPreview, TravelAccept,
     Rest, LodgingQuote, LodgingBook,
     WagonPut, WagonTake,
     QuestChoice, QuestDismiss,
@@ -167,6 +167,7 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.TransportLeaveShip, "transport-leave-ship", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TravelSearch, "travel-search", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TravelPreview, "travel-preview", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.TravelAccept, "travel-accept", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.LodgingQuote, "lodging-quote", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.LodgingBook, "lodging-book", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.Rest, "rest", DaggerfallUiPhases.Interaction),
@@ -309,7 +310,10 @@ internal static class DaggerfallUiAction
                     default: return null;
                 }
             }
-            if (amount == 0 && action != "lodging-book") return null;
+            if (amount == 0 && action is not ("lodging-book" or "travel-accept")) return null;
+            if (action == "travel-accept")
+                return fields.SetEquals(["action", "key", "amount"]) && !string.IsNullOrWhiteSpace(key) && amount is not null
+                    ? new(action, Key: key, Amount: amount) : null;
             if (action == "lodging-quote")
                 return fields.SetEquals(["action", "key", "days"]) && !string.IsNullOrWhiteSpace(key) && days is >= 1 and <= 350
                     ? new(action, Key: key, Days: days) : null;

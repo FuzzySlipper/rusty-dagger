@@ -119,6 +119,14 @@ internal sealed class DaggerfallRestRecoveryModule
             Message: Message(request.Mode, interruption, elapsed, recoveryHours));
     }
 
+    /// <summary>The donor restores cautious-travel vitals before its shared elapsed-time consequences.</summary>
+    internal static void RecoverForCautiousTravel(StatsComponent player, bool noRegeneration)
+    {
+        Recover(player, Maximum(player, DaggerfallMechanicsIds.HealthMaximum),
+            Maximum(player, DaggerfallMechanicsIds.StaminaMaximum),
+            noRegeneration ? 0 : Maximum(player, DaggerfallMechanicsIds.MagickaMaximum));
+    }
+
     private static void Recover(StatsComponent player, int health, int fatigue, int spellPoints)
     {
         Add(player.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)), health);

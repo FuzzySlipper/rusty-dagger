@@ -10,6 +10,7 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Encounters;
 using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using WorldRpg.Rulesets.Daggerfall.Banking;
 using WorldRpg.Rulesets.Daggerfall.Property;
+using WorldRpg.Rulesets.Daggerfall.Travel;
 using WorldRpg.Rulesets.Daggerfall.Crime;
 using WorldRpg.Rulesets.Daggerfall.Guilds;
 
@@ -74,6 +75,8 @@ internal sealed record DaggerfallSavePayload(
     public DaggerfallPropertySave Property { get; init; } = DaggerfallPropertySave.Empty;
     [JsonRequired]
     public DaggerfallLodgingSave Lodging { get; init; } = DaggerfallLodgingSave.Empty;
+    [JsonRequired]
+    public DaggerfallTravelSave Travel { get; init; } = DaggerfallTravelSave.Empty;
     [JsonRequired]
     public DaggerfallCrimeSave Crime { get; init; } = new([], [], [], 0, 0, 0, 0);
     [JsonRequired]
@@ -158,6 +161,7 @@ internal sealed record DaggerfallSavePayload(
         ArgumentNullException.ThrowIfNull(inputs);
         Notebook.Validate(definitions, definitions.TextPresentation);
         Lodging.Validate(definitions.Locations);
+        Travel.Validate(definitions.Locations);
         if (Transport.OnShip || Transport.Mode is DaggerfallTransportMode.Horse or DaggerfallTransportMode.Cart)
         {
             DaggerfallWorldProfileKey activeProfile = Site.ActiveProfile?.Require()
@@ -552,6 +556,8 @@ internal sealed record DaggerfallSavePayload(
         Property.Validate();
         ArgumentNullException.ThrowIfNull(Lodging);
         Lodging.Validate();
+        ArgumentNullException.ThrowIfNull(Travel);
+        Travel.Validate();
         ArgumentNullException.ThrowIfNull(Crime);
         Crime.Validate();
         ArgumentNullException.ThrowIfNull(KnightlyClaims);
@@ -585,6 +591,8 @@ internal sealed record DaggerfallSavePayload(
             throw new ArgumentOutOfRangeException(nameof(Experience), "Saved progression must be non-negative and begin at level one.");
         if (!double.IsFinite(Calendar.RemainderSeconds) || Calendar.RemainderSeconds < 0d || Calendar.RemainderSeconds >= 1d)
             throw new ArgumentException("Saved calendar remainder must be a fraction of one second.");
+        if (Travel.LastResult is { } journey && journey.EndedSeconds > new DaggerfallCalendar(Calendar.Year, Calendar.Month, Calendar.Day, Calendar.Hour, Calendar.Minute, Calendar.Second).ToAbsoluteSeconds())
+            throw new ArgumentException("Saved journey ends after the saved calendar.");
         Player.Validate();
         ValidateStats(Player.Stats, "player");
         HashSet<long> actorIds = [];

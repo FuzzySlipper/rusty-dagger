@@ -27,22 +27,33 @@ export interface TravelQuoteProjection {
   };
 }
 
+export interface TravelResultProjection {
+  readonly outcome: string; readonly paidGold: number; readonly elapsedSeconds: number;
+  readonly actualRegion: number; readonly actualIndex: number; readonly actualX: number; readonly actualY: number; readonly message: string;
+}
+
 export interface TravelProjection {
   readonly destinations: readonly TravelDestinationProjection[];
   readonly quote: TravelQuoteProjection | null;
   readonly message: string | null;
+  readonly executionAvailable: boolean;
+  readonly lastResult: TravelResultProjection | null;
 }
 
 export type TravelAction =
   | { readonly action: 'travel-search'; readonly text: string }
   | { readonly action: 'travel-preview'; readonly region: number; readonly destination: number;
-      readonly cautious: boolean; readonly inn: boolean; readonly ship: boolean };
+      readonly cautious: boolean; readonly inn: boolean; readonly ship: boolean }
+  | { readonly action: 'travel-accept'; readonly key: string; readonly amount: number };
 
 export function isTravelProjection(value: unknown): value is TravelProjection {
   if (typeof value !== 'object' || value === null) return false;
   const record = value as Record<string, unknown>;
   return Array.isArray(record.destinations) && (record.quote === null || typeof record.quote === 'object')
-    && (record.message === null || typeof record.message === 'string');
+    && (record.message === null || typeof record.message === 'string')
+    && typeof record.executionAvailable === 'boolean'
+    && (record.lastResult === null || (typeof record.lastResult === 'object' && record.lastResult !== null
+      && typeof (record.lastResult as Record<string, unknown>).message === 'string'));
 }
 
 export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => void): {
@@ -51,7 +62,7 @@ export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => 
 } {
   const shell = document.createElement('section');
   shell.className = 'dagger-travel';
-  shell.setAttribute('aria-label', 'Travel route preview');
+  shell.setAttribute('aria-label', 'Travel');
   const heading = document.createElement('h3');
   heading.textContent = 'Destination and route';
   const search = document.createElement('input');
@@ -80,15 +91,33 @@ export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => 
     claim({ action: 'travel-preview', region, destination: index,
       cautious: cautious.input.checked, inn: inn.input.checked, ship: ship.input.checked });
   });
+  let current: TravelProjection | null = null;
+  let selectionChanged = false;
+  let submittedIdentity: string | null = null;
+  let quotedDestination = '';
+  const accept = document.createElement('button'); accept.type = 'button'; accept.className = 'dagger-travel-accept'; accept.textContent = 'Begin journey'; accept.disabled = true;
+  accept.addEventListener('click', () => {
+    if (selectionChanged || !current?.executionAvailable || !current.quote) return;
+    const quote = current.quote; submittedIdentity = quote.identity; accept.disabled = true; current = null;
+    claim({ action: 'travel-accept', key: quote.identity, amount: quote.totalCost });
+  });
+  for (const input of [destination, cautious.input, inn.input, ship.input]) input.addEventListener('change', () => {
+    const quote = current?.quote;
+    selectionChanged = !quote || destination.value !== quotedDestination || cautious.input.checked !== quote.options.cautious
+      || inn.input.checked !== quote.options.inn || ship.input.checked !== quote.options.ship;
+    accept.disabled = selectionChanged || !current?.executionAvailable || !quote || quote.identity === submittedIdentity;
+  });
+  const lastResult = document.createElement('p'); lastResult.className = 'dagger-travel-last-result';
   const result = document.createElement('p');
   result.setAttribute('role', 'status');
   result.setAttribute('aria-live', 'polite');
-  shell.append(heading, search, searchButton, destination, cautious.label, inn.label, ship.label, preview, result);
+  shell.append(heading, search, searchButton, destination, cautious.label, inn.label, ship.label, preview, accept, result, lastResult);
   root.append(shell);
 
   let lastIdentity: string | null = null;
   return {
     update(value): void {
+      current = value;
       const previous = destination.value;
       destination.replaceChildren();
       for (const site of value?.destinations ?? []) {
@@ -104,6 +133,8 @@ export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => 
       const quote = value?.quote;
       if (quote) {
         if (quote.identity !== lastIdentity) {
+          selectionChanged = false;
+          quotedDestination = destination.value;
           cautious.input.checked = quote.options.cautious;
           inn.input.checked = quote.options.inn;
           ship.input.checked = quote.options.ship;
@@ -114,9 +145,13 @@ export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => 
           + (quote.canAfford ? 'Affordable.' : 'Insufficient funds.')
           + (value?.message ? ` ${value.message}` : '');
       } else {
+        selectionChanged = false;
+        submittedIdentity = null;
         lastIdentity = null;
         result.textContent = value?.message ?? 'Choose a discovered destination to preview the route.';
       }
+      accept.disabled = selectionChanged || !value?.executionAvailable || !quote || quote.identity === submittedIdentity;
+      lastResult.textContent = value?.lastResult?.message ?? '';
     },
     dispose(): void { shell.remove(); },
   };

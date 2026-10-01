@@ -57,6 +57,29 @@ public sealed class DaggerfallEncumbranceCurrencyTests
     }
 
     [Fact]
+    public void Coin_only_portion_is_reserved_across_multiple_letters_and_atomic_refusal()
+    {
+        using Fixture fixture = new(strength: 100);
+        DaggerfallCurrencyService currency = new(fixture.Definitions, fixture.Inventory, fixture.Instances, fixture.Load,
+            fixture.Unique, new DaggerfallCurrencySave(400, 1));
+        Assert.True(currency.WithdrawLetter(100));
+        Assert.True(currency.WithdrawLetter(200));
+        fixture.Inventory.Grant(new(new("gold-piece"), InventoryStackId.Parse("travel.coins"), 20));
+        var before = currency.Read();
+        Assert.False(currency.TrySpendCarried(150, 21));
+        Assert.Equal(before, currency.Read());
+        Assert.False(currency.TrySpendCarried(321, 20));
+        Assert.Equal(before, currency.Read());
+        Assert.True(currency.TrySpendCarried(150, 20));
+        Assert.Equal(0UL, currency.Read().Gold);
+        Assert.Equal(170UL, currency.Read().LettersOfCredit);
+        var remaining = Assert.Single(fixture.Inventory.Read().UniqueItems);
+        Assert.Equal(170UL, fixture.Instances.RequireUnique(fixture.Inventory.GetDurableItemId(remaining.Entity).Value).CreditValue);
+        Assert.Single(fixture.Unique.RemovedEntityIds);
+        Assert.Equal(before.AccountGold, currency.Read().AccountGold);
+    }
+
+    [Fact]
     public void Letter_withdrawal_at_capacity_refuses_before_creating_an_engine_unique_item()
     {
         using Fixture fixture = new(strength: 1);
