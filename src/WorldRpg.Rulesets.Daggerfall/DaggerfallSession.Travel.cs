@@ -105,15 +105,17 @@ internal sealed partial class DaggerfallSession
                 DaggerfallRestRecoveryModule.RecoverForCautiousTravel(State.Actors.Player.Stats, noRegen);
             }
             outcome = AdvanceTravelTime(quote.TravelSeconds, origin, quote.Options);
+            if (outcome == DaggerfallTravelOutcome.Arrived && !_sites.TryRelocate(destination!))
+                outcome = DaggerfallTravelOutcome.Unavailable;
             if (outcome == DaggerfallTravelOutcome.Arrived)
             {
                 long delay = TravelArrivalDelay(_time.Calendar,
                     State.Character.CustomCareer?.Disadvantages.Any(trait => trait.Id == "damage" && trait.Target == "sunlight") == true,
                     quote.Options.SpeedCautious);
-                if (delay > 0) outcome = AdvanceTravelTime(delay, origin, quote.Options);
+                // The donor suppresses new random spawns during its arrival adjustment. Effects
+                // and deadlines still run at the actual destination through the shared calendar.
+                if (delay > 0) outcome = AdvanceTravelTime(delay, _activeProfileKey, quote.Options, selectEncounters: false);
             }
-            if (outcome == DaggerfallTravelOutcome.Arrived && !_sites.TryRelocate(destination!))
-                outcome = DaggerfallTravelOutcome.Unavailable;
         }
         catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or IOException)
         {
@@ -150,7 +152,7 @@ internal sealed partial class DaggerfallSession
         destination = new(profiles[0], "start"); return null;
     }
 
-    private DaggerfallTravelOutcome AdvanceTravelTime(long requestedSeconds, DaggerfallWorldProfileKey origin, DaggerfallTravelOptions options)
+    private DaggerfallTravelOutcome AdvanceTravelTime(long requestedSeconds, DaggerfallWorldProfileKey origin, DaggerfallTravelOptions options, bool selectEncounters = true)
     {
         long started = _time.Calendar.ToAbsoluteSeconds();
         while (_time.Calendar.ToAbsoluteSeconds() - started < requestedSeconds)
@@ -163,7 +165,7 @@ internal sealed partial class DaggerfallSession
             if (State.Actors.Player.IsDefeated) return DaggerfallTravelOutcome.Defeated;
             if (_activeProfileKey != origin) return DaggerfallTravelOutcome.Relocated;
             if (advance.AppliedSeconds != slice) return DaggerfallTravelOutcome.Stopped;
-            if (!options.SleepModeInn && !options.TravelShip
+            if (selectEncounters && !options.SleepModeInn && !options.TravelShip
                 && _time.Calendar.ToAbsoluteSeconds() % DaggerfallCalendar.SecondsPerMinute == 0)
             {
                 long minute = _time.Calendar.ToAbsoluteSeconds() / DaggerfallCalendar.SecondsPerMinute;
