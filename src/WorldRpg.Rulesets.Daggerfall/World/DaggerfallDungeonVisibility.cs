@@ -24,7 +24,8 @@ internal sealed class DaggerfallDungeonVisibility
     }
 
     internal void Observe(DaggerfallDungeonDiscovery discovery, PlayerControlState player,
-        DaggerfallDoorRuntime doors, CharacterStepEnvironment environment, ulong simulationStep, float eyeHeight)
+        DaggerfallDoorRuntime doors, CharacterStepEnvironment environment, ulong simulationStep, float eyeHeight,
+        Vector3 compensation = default)
     {
         ArgumentNullException.ThrowIfNull(discovery);
         ArgumentNullException.ThrowIfNull(player);
@@ -40,18 +41,18 @@ internal sealed class DaggerfallDungeonVisibility
         Dictionary<ulong, DaggerfallRdbDoorId> doorsByEntity = doors.All
             .ToDictionary(view => view.Entity.Value, view => view.Id);
 
-        ScanTriplet(discovery, origin, -Vector3.UnitY, DownDistance, right, environment, doorsByEntity);
-        ScanTriplet(discovery, origin, forward, ForwardDistance, right, environment, doorsByEntity);
+        ScanTriplet(discovery, origin, -Vector3.UnitY, DownDistance, right, environment, doorsByEntity, compensation);
+        ScanTriplet(discovery, origin, forward, ForwardDistance, right, environment, doorsByEntity, compensation);
         SpatialHit forwardStop = _spatial.CastRay(origin, forward, ForwardDistance, environment);
         float clearDistance = forwardStop.Present ? MathF.Min((float)forwardStop.Distance, ForwardDistance) : ForwardDistance;
         for (float distance = 3f; distance < clearDistance; distance += 3f)
             ScanTriplet(discovery, origin + forward * distance, -Vector3.UnitY, DownDistance,
-                right, environment, doorsByEntity);
+                right, environment, doorsByEntity, compensation);
 
         foreach (DaggerfallDungeonMapMarker marker in discovery.Content.Markers)
         {
             if (discovery.WasMarkerVisitedThisEntry(marker.Id)) continue;
-            Vector3 target = marker.Position.ToVector();
+            Vector3 target = marker.Position.ToVector() + compensation;
             Vector3 delta = target - origin;
             float distance = delta.Length();
             if (distance > ForwardDistance || distance < .001f) continue;
@@ -63,7 +64,7 @@ internal sealed class DaggerfallDungeonVisibility
 
     private void ScanTriplet(DaggerfallDungeonDiscovery discovery, Vector3 origin, Vector3 direction,
         float distance, Vector3 right, CharacterStepEnvironment environment,
-        IReadOnlyDictionary<ulong, DaggerfallRdbDoorId> doorsByEntity)
+        IReadOnlyDictionary<ulong, DaggerfallRdbDoorId> doorsByEntity, Vector3 compensation)
     {
         string? placement = null;
         DaggerfallRdbDoorId? door = null;
@@ -99,14 +100,14 @@ internal sealed class DaggerfallDungeonVisibility
                 surfacePoint = hit.Point;
                 surfaceNormal = hit.Normal;
             }
-            DaggerfallDungeonMapGeometry? geometry = PlacementAt(discovery.Content, hit.Point);
+            DaggerfallDungeonMapGeometry? geometry = PlacementAt(discovery.Content, hit.Point - compensation);
             if (index == 0) placement = geometry?.PlacementId;
             else if (placement != geometry?.PlacementId) sourceUnambiguous = false;
         }
         if (door is { } seenDoor) discovery.ObserveDoor(seenDoor);
         else if (surfacePoint is { } seenSurface)
         {
-            discovery.ObserveSurface(seenSurface);
+            discovery.ObserveSurface(seenSurface - compensation);
             if (sourceUnambiguous && placement is not null) discovery.ObservePlacement(placement);
         }
     }

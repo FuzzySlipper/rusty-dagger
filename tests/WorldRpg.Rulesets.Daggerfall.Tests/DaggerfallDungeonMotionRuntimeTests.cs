@@ -8,6 +8,22 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class DaggerfallDungeonMotionRuntimeTests
 {
+    [Fact]
+    public void Rebasing_a_moving_model_keeps_its_anchor_for_the_remaining_motion()
+    {
+        Transform start = new(new Vector3(5, 2, -3), Quaternion.Identity, Vector3.One);
+        DaggerfallDungeonActionDefinition action = Action("platform", 0x01, 2, 40, 40);
+        using EntityStore store = CreateStore(start, out EntityId target);
+        DaggerfallDungeonMotionRuntime runtime = new(store, "dungeon/a", [new(action, target)]);
+        runtime.Activate(action.Id);
+        runtime.Advance(.5);
+        Vector3 delta = new(-1000, 3, 40);
+        runtime.Rebase(delta);
+        runtime.Advance(1.5);
+        Assert.Equal(new Vector3(4, 2, -3) + delta, store.Get(target, EngineComponentTypes.Transform).Translation);
+        Assert.Equal(DaggerfallDungeonMotionPhase.End, Assert.Single(runtime.Capture().Actions).Phase);
+    }
+
     [Theory]
     [InlineData(1, 2, 40, -1f, 0f, 0f)]
     [InlineData(1, 1, 40, 1f, 0f, 0f)]

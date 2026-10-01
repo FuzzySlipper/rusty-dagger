@@ -47,10 +47,12 @@ internal class EngineContextFake : DispatchProxy
     private IRandomService random = null!;
     private IUiService ui = null!;
     private IPersistenceService persistence = null!;
+    private IWorldOriginService worldOrigin = null!;
+    internal IReadOnlyList<WorldOriginCommitReceipt> OriginCommits => ((WorldOriginFake)(object)worldOrigin).Commits;
 
     internal static EngineContextFake Create(IContentService content, ISpatialService spatial, IGraphicsService appearance,
         IPerceptionService? perception = null, IPersistenceService? persistence = null, IRandomService? random = null,
-        IVideoService? video = null)
+        IVideoService? video = null, IWorldOriginService? worldOrigin = null)
     {
         IEngineContext context = DispatchProxy.Create<IEngineContext, EngineContextFake>();
         EngineContextFake fake = (EngineContextFake)(object)context;
@@ -66,6 +68,7 @@ internal class EngineContextFake : DispatchProxy
         fake.random = random ?? RandomMinimum.Create();
         fake.ui = UiServiceFake.Create(fake);
         fake.persistence = persistence ?? new InMemoryPersistenceService();
+        fake.worldOrigin = worldOrigin ?? DispatchProxy.Create<IWorldOriginService, WorldOriginFake>();
         return fake;
     }
 
@@ -85,8 +88,45 @@ internal class EngineContextFake : DispatchProxy
         "get_Random" => random,
         "get_Ui" => ui,
         "get_Persistence" => persistence,
+        "get_WorldOrigin" => worldOrigin,
         _ => throw new NotSupportedException(method?.Name),
     };
+
+    private class WorldOriginFake : DispatchProxy
+    {
+        private WorldOriginReadout origin = new(0, 0, 0, 0, 8192f, 0, 0);
+        private readonly Dictionary<ulong, WorldOriginPrepareRequest> prepared = [];
+        private ulong next;
+        internal List<WorldOriginCommitReceipt> Commits { get; } = [];
+
+        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
+        {
+            nameof(IWorldOriginService.Read) => origin,
+            nameof(IWorldOriginService.Prepare) => Prepare((WorldOriginPrepareRequest)arguments![0]!),
+            nameof(IWorldOriginService.Commit) => Commit((WorldOriginCommitRequest)arguments![0]!),
+            _ => throw new NotSupportedException(method?.Name),
+        };
+
+        private WorldOriginPrepared Prepare(WorldOriginPrepareRequest request)
+        {
+            ulong id = ++next;
+            prepared.Add(id, request);
+            return new(new WorldOriginPreparedHandle(id), () => prepared.Remove(id));
+        }
+
+        private WorldOriginCommitReceipt Commit(WorldOriginCommitRequest request)
+        {
+            WorldOriginPrepareRequest candidate = prepared[request.Prepared.Handle.Value];
+            prepared.Remove(request.Prepared.Handle.Value);
+            WorldOriginCommitReceipt receipt = new(origin.Revision, origin.Revision + 1,
+                origin.CellX, origin.CellY, origin.CellZ, candidate.TargetCellX, candidate.TargetCellY, candidate.TargetCellZ,
+                0, 0, 0, origin.LocalEnvelope);
+            origin = origin with { CellX = candidate.TargetCellX, CellY = candidate.TargetCellY,
+                CellZ = candidate.TargetCellZ, Revision = receipt.RevisionAfter };
+            Commits.Add(receipt);
+            return receipt;
+        }
+    }
 
     private class CameraServiceFake : DispatchProxy
     {

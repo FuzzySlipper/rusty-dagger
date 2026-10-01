@@ -131,6 +131,12 @@ internal sealed class DaggerfallDungeonMotionRuntime
 
     internal string ProfileId => _profileId;
 
+    internal void Rebase(Vector3 delta)
+    {
+        foreach (MotionState state in _actions.Values)
+            state.StartTransform = state.StartTransform with { Translation = state.StartTransform.Translation + delta };
+    }
+
     /// <summary>
     /// Validates saved motion against the selected profile's actual motion actions without creating
     /// Engine entities. Save admission uses this before the session materializes its projection.
@@ -372,7 +378,7 @@ internal sealed class DaggerfallDungeonMotionRuntime
     {
         internal DaggerfallDungeonActionDefinition Action { get; } = action;
         internal EntityId Entity { get; } = entity;
-        internal Transform StartTransform { get; } = startTransform;
+        internal Transform StartTransform { get; set; } = startTransform;
         internal DaggerfallDungeonMotionSpecification Specification { get; } = specification;
         internal DaggerfallDungeonMotionPhase Phase { get; set; } = DaggerfallDungeonMotionPhase.Start;
         internal DaggerfallDungeonMotionEndpoint EndpointIntent { get; set; } = DaggerfallDungeonMotionEndpoint.Start;

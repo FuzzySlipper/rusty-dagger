@@ -132,6 +132,15 @@ internal sealed class DaggerfallDungeonActionTriggerRuntime : IDisposable
         return entities;
     }
 
+    internal void RebaseActive(Vector3 delta)
+    {
+        foreach (TriggerRuntime trigger in RequireActiveProfile().Triggers)
+        {
+            Transform transform = _store.Get(trigger.Entity, EngineComponentTypes.Transform);
+            _store.Set(trigger.Entity, EngineComponentTypes.Transform, transform with { Translation = transform.Translation + delta });
+        }
+    }
+
     /// <summary>Resolves a direct/attack ray hit to the action source admitted by this runtime.</summary>
     internal bool TryResolveAction(EntityId entity, out string actionId)
     {

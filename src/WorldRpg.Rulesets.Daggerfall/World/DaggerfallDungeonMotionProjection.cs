@@ -120,6 +120,19 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
 
     internal string ProfileId => _motion.ProfileId;
 
+    internal void Rebase(Vector3 delta)
+    {
+        _motion.Rebase(delta);
+        foreach (EntityId entity in _entitiesByAction.Values)
+        {
+            Transform transform = _store.Get(entity, EngineComponentTypes.Transform);
+            _store.Set(entity, EngineComponentTypes.Transform, transform with { Translation = transform.Translation + delta });
+        }
+        // Native origin commit shifted retained meshes; replacing with these same new local poses
+        // also updates this projection's cache, so a later motion step cannot restore the old frame.
+        RebuildCollisionResidency();
+    }
+
     internal IReadOnlyList<(DaggerfallDungeonActionModelDefinition Model, EntityId Entity)> Visuals =>
         _entitiesByAction.OrderBy(pair => pair.Key, StringComparer.Ordinal)
             .Select(pair => (_modelsByAction[pair.Key], pair.Value))

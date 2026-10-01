@@ -12,6 +12,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 internal sealed class DaggerfallSiteLighting : IDisposable
 {
     private readonly IReadOnlyList<Light> _lights;
+    private readonly List<(Light Light, LightRequest Request)> _points = [];
     private readonly IGraphicsService _graphics;
     private readonly ICameraViewService _camera;
     private readonly DaggerfallWorldProfileKind _profileKind;
@@ -61,7 +62,9 @@ internal sealed class DaggerfallSiteLighting : IDisposable
                         0F,
                         0F,
                         LightShadowIntent.Disabled));
-                created.Add(graphics.CreateLight(request));
+                Light point = graphics.CreateLight(request);
+                created.Add(point);
+                _points.Add((point, request));
             }
             _ambient = graphics.CreateLight(AmbientRequest(_ambientLevel));
             created.Add(_ambient);
@@ -76,6 +79,17 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     }
 
     internal int Count => _lights.Count;
+
+    internal void Rebase(Vector3 delta)
+    {
+        for (int index = 0; index < _points.Count; index++)
+        {
+            (Light light, LightRequest request) = _points[index];
+            request = request with { Descriptor = request.Descriptor with { Position = request.Descriptor.Position + delta } };
+            _graphics.UpdateLight(new LightUpdateRequest(light, request));
+            _points[index] = (light, request);
+        }
+    }
 
     internal void UpdateAmbient(DaggerfallCalendar calendar)
     {

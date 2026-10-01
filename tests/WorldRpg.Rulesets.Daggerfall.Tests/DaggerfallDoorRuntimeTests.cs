@@ -11,6 +11,33 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallDoorRuntimeTests
 {
     [Fact]
+    public void Rebasing_an_opening_door_retains_its_shifted_anchor_through_close()
+    {
+        using EntityDirectory store = new();
+        using EntityDirectory controlStore = new();
+        using DaggerfallDoorRuntime doors = new(store, Random(1), [Door()], "shifted");
+        using DaggerfallDoorRuntime control = new(controlStore, Random(1), [Door()], "control");
+        DaggerfallRdbDoorId id = Door().Id;
+        doors.Open(id, DaggerfallDoorOperationSource.Player);
+        control.Open(id, DaggerfallDoorOperationSource.Player);
+        doors.Advance(.5);
+        control.Advance(.5);
+        Vector3 delta = new(-1000, -2, 40);
+        doors.Rebase(delta);
+        Assert.Equal(control.Read(id).Pose.Translation + delta, doors.Read(id).Pose.Translation);
+        doors.Advance(1);
+        control.Advance(1);
+        Assert.Equal(control.Read(id).Pose.Translation + delta, doors.Read(id).Pose.Translation);
+        Assert.Equal(control.Read(id).Pose.Rotation, doors.Read(id).Pose.Rotation);
+        doors.Close(id, DaggerfallDoorOperationSource.Player);
+        control.Close(id, DaggerfallDoorOperationSource.Player);
+        doors.Advance(1.5);
+        control.Advance(1.5);
+        Assert.Equal(control.Read(id).Pose.Translation + delta, doors.Read(id).Pose.Translation);
+        Assert.Equal(DaggerfallDoorMotion.Closed, doors.Read(id).Motion);
+    }
+
+    [Fact]
     public void Linked_action_flags_mutate_the_persistent_door_owner_in_graph_order()
     {
         using EntityDirectory store = new();

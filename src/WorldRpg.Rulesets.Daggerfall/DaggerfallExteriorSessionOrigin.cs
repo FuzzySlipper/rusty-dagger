@@ -12,10 +12,7 @@ internal static class DaggerfallExteriorSessionOrigin
     /// Engine retains global positions while changing local origin. Existing local transforms move by
     /// the previous cell minus the committed cell, in the same world-unit frame used by Spatial.
     /// </summary>
-    internal static Vector3 LocalDelta(WorldOriginCommitReceipt receipt) => new(
-        CellDelta(receipt.OriginBeforeCellX, receipt.OriginAfterCellX),
-        CellDelta(receipt.OriginBeforeCellY, receipt.OriginAfterCellY),
-        CellDelta(receipt.OriginBeforeCellZ, receipt.OriginAfterCellZ));
+    internal static Vector3 LocalDelta(WorldOriginCommitReceipt receipt) => receipt.LocalDelta;
 
     internal static WorldPoint Shift(WorldPoint position, Vector3 localDelta)
     {
@@ -62,11 +59,4 @@ internal static class DaggerfallExteriorSessionOrigin
         return cell;
     }
 
-    private static float CellDelta(long before, long after)
-    {
-        double delta = (double)before - after;
-        if (!double.IsFinite(delta) || delta < float.MinValue || delta > float.MaxValue)
-            throw new InvalidOperationException("WorldOrigin cell delta cannot be represented by product local coordinates.");
-        return (float)delta;
-    }
 }

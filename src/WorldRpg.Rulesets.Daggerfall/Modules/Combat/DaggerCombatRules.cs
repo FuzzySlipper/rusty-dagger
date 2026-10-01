@@ -323,6 +323,16 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         _inFlightRangedShots.Clear();
     }
 
+    internal void RebaseRangedFlight(Vector3 delta)
+    {
+        foreach ((RangedShotIdentity identity, InFlightRangedShot shot) in _inFlightRangedShots.ToArray())
+            _inFlightRangedShots[identity] = shot with
+            {
+                Origin = DaggerfallExteriorSessionOrigin.Shift(shot.Origin, delta),
+                Aim = DaggerfallExteriorSessionOrigin.Shift(shot.Aim, delta),
+            };
+    }
+
     /// <summary>A shot is any attack whose own action carries it to a target beyond a swing: the
     /// enemy's authored fixed-ranged action, or the player's ranged action while a bow is held.</summary>
     private bool IsRangedAction(long attackerId)
