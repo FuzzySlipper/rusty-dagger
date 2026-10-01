@@ -129,7 +129,11 @@ metadata and each slot's payload under its own key, over Engine
 `ProductStateStore` and source-generated `JsonProductStateCodec`.
 `DaggerSessionPersistence` owns capture/restore of meaningful Dagger state;
 `DaggerfallSavePayload` is the current DTO contract, and `ResolveRestore`
-checks every relationship before a session is composed from it.
+checks every relationship before a session is composed from it. The session
+constructor builds each owner once from the owners it reads, so the compiler
+enforces their order, and constructs `DaggerfallState` after every service it
+names; saved sections an owner is built from apply at construction, and
+`DaggerSessionPersistence.Restore` then applies the relational sections.
 Restore creates fresh runtime entities and rebuilds shared stats/track maxima
 and authored sources through Engine capture helpers before restoring currents.
 Preserve distinct items, equipment assignments, progression, world/corpse state
@@ -166,6 +170,7 @@ Start new work from the current owners, not a stale filename in a task:
 | Site transitions, inactive-site deltas, exterior window | `DaggerfallSiteLifecycle` |
 | Calendar consumers | `DaggerfallSession.AdvanceCalendar` with `DaggerfallCalendarAdvanceKind` |
 | Live gameplay services | `DaggerfallState.Kit`, `GameplayServices<TFact>` |
+| Named session owners | `DaggerfallState`, constructed once from `DaggerActorAssembly` and the services built over it |
 | Target selection | Kit `TargetingService`, `DaggerTargetingPolicy` |
 | Attack lifecycle and rules | Kit `AttackExecution` / `CombatResolution`, `DaggerCombatRules` |
 | Pursuit / corpse loot | Kit `PursuitCoordinator` / `CorpseLootCoordinator`, Dagger policy modules |
