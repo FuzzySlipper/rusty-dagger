@@ -58,7 +58,9 @@ internal sealed class CommandArguments
                 continue;
             }
 
-            if (index + 1 >= args.Count || !values.TryAdd(option.Name, args[++index])) throw new ArgumentException(command.Usage);
+            if (index + 1 >= args.Count || string.IsNullOrEmpty(args[index + 1])
+                || args[index + 1].StartsWith("--", StringComparison.Ordinal)
+                || !values.TryAdd(option.Name, args[++index])) throw new ArgumentException(command.Usage);
         }
 
         if (command.Options.Any(option => option.IsRequired && !values.ContainsKey(option.Name))) throw new ArgumentException(command.Usage);

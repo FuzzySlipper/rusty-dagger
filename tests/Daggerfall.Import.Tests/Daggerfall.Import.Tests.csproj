@@ -19,5 +19,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Daggerfall.Import/Daggerfall.Import.csproj" />
+    <ProjectReference Include="../../src/Daggerfall.Import.Tool/Daggerfall.Import.Tool.csproj" />
   </ItemGroup>
 </Project>
