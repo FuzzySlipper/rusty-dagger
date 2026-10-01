@@ -432,6 +432,8 @@ internal static class DaggerfallQuestTaskRunner
                             instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
                             instance.Outcome = exception.Message;
                             instance.Succeeded = false;
+                            instance.PendingEndPasses = 0;
+                            instance.TerminalMessageId = null;
                             return;
                         }
                         if (!changed)
@@ -439,6 +441,8 @@ internal static class DaggerfallQuestTaskRunner
                             instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
                             instance.Outcome = $"Quest action at line {operation.SourceLine} refers to missing clock '{operation.Targets.Single()}'.";
                             instance.Succeeded = false;
+                            instance.PendingEndPasses = 0;
+                            instance.TerminalMessageId = null;
                             return;
                         }
                         MarkCompleted(state, operationIndex);
@@ -461,6 +465,8 @@ internal static class DaggerfallQuestTaskRunner
                             instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
                             instance.Outcome = $"Quest prompt action at line {operation.SourceLine}: {promptDiagnostic}";
                             instance.Succeeded = false;
+                            instance.PendingEndPasses = 0;
+                            instance.TerminalMessageId = null;
                             return;
                         }
                         messages.Prompt(instance, promptMessage, PromptChoices(operation), task.Symbol, operationIndex);
@@ -488,9 +494,7 @@ internal static class DaggerfallQuestTaskRunner
                         break;
                     case DaggerfallQuestTaskOperationKind.End:
                         MarkCompleted(state, operationIndex);
-                        instance.Lifecycle = DaggerfallQuestLifecycle.Ended;
-                        instance.Outcome = "end quest";
-                        instance.Succeeded ??= false;
+                        if (instance.PendingEndPasses == 0) instance.PendingEndPasses = 2;
                         instance.TerminalMessageId = operation.MessageId;
                         if (operation.MessageId is { } messageId) messages.Popup(instance, messageId);
                         return;
@@ -498,6 +502,8 @@ internal static class DaggerfallQuestTaskRunner
                         instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
                         instance.Outcome = $"Unsupported quest action at line {operation.SourceLine}: {operation.Source}";
                         instance.Succeeded = false;
+                        instance.PendingEndPasses = 0;
+                        instance.TerminalMessageId = null;
                         return;
                     default:
                         throw new InvalidOperationException($"Quest task operation '{operation.Kind}' cannot run.");
@@ -511,6 +517,8 @@ internal static class DaggerfallQuestTaskRunner
                     instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
                     instance.Outcome = $"Quest task '{task.Symbol}' names missing persisted-until target '{task.PersistUntilTarget}'.";
                     instance.Succeeded = false;
+                    instance.PendingEndPasses = 0;
+                    instance.TerminalMessageId = null;
                     return;
                 }
                 if (target) Clear(task, state, variables);
@@ -543,6 +551,7 @@ internal static class DaggerfallQuestTaskRunner
         {
             MarkCompleted(state, prompt.OperationIndex);
             Start(choice.Target, instance.Tasks, program.TaskIndexes, program.Tasks, variables, instance.InstanceId, operation);
+            if (instance.PendingEndPasses > 0) instance.PendingEndPasses = 2;
         };
     }
 

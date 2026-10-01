@@ -74,6 +74,9 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
     public DaggerfallQuestTaskState[] Tasks { get; init; } = [];
     /// <summary>The retained end-quest message id; presentation delivery remains with its owning action.</summary>
     public int? TerminalMessageId { get; init; }
+    /// <summary>Admitted quest passes remaining before a requested end retires the runtime.</summary>
+    [JsonRequired]
+    public int PendingEndPasses { get; init; }
     public DaggerfallQuestClockState[] Clocks { get; init; } = [];
     /// <summary>The optional Daggerfall faction supplied by a quest giver; zero is the donor's unscoped value.</summary>
     public int FactionId { get; init; }
@@ -99,7 +102,9 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
         ArgumentNullException.ThrowIfNull(Symbols);
         ArgumentNullException.ThrowIfNull(Tasks);
         ArgumentNullException.ThrowIfNull(Clocks);
-        if (TerminalMessageId is < 0 || (TerminalMessageId is not null && Lifecycle != DaggerfallQuestLifecycle.Ended))
+        if (PendingEndPasses is < 0 or > 2 || (PendingEndPasses > 0 && Lifecycle != DaggerfallQuestLifecycle.Active))
+            throw new ArgumentException($"Quest instance '{InstanceId}' has an incompatible pending end.");
+        if (TerminalMessageId is < 0 || (TerminalMessageId is not null && Lifecycle != DaggerfallQuestLifecycle.Ended && PendingEndPasses == 0))
             throw new ArgumentException($"Quest instance '{InstanceId}' has an incompatible terminal message.");
         HashSet<string> resources = [];
         foreach (DaggerfallQuestResourceState resource in Resources)
@@ -242,7 +247,10 @@ internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[
                     if (resource.Binding.UniqueItemIds.Length == 1)
                     {
                         ulong itemId = resource.Binding.UniqueItemIds[0];
-                        if (identities.Classify(new DurableIdentityReference(DurableIdentityKind.Item, itemId)) != DurableIdentityClassification.Live)
+                        DurableIdentityClassification identity = identities.Classify(new DurableIdentityReference(DurableIdentityKind.Item, itemId));
+                        // Ending text may still name a legitimately consumed item. Unknown references remain invalid.
+                        bool ending = instance.Lifecycle != DaggerfallQuestLifecycle.Active || instance.PendingEndPasses > 0;
+                        if (identity != DurableIdentityClassification.Live && !(ending && identity == DurableIdentityClassification.Removed))
                             throw new ArgumentException($"Quest instance '{instance.InstanceId}' resource '{resource.Symbol}' refers to non-live unique item {itemId}.");
                     }
                     else
@@ -279,6 +287,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
         Resources = CopyResources(saved.Resources);
         Symbols = [.. saved.Symbols];
         TerminalMessageId = saved.TerminalMessageId;
+        PendingEndPasses = saved.PendingEndPasses;
         FactionId = saved.FactionId;
         ParentInstanceId = saved.ParentInstanceId;
         Succeeded = saved.Succeeded;
@@ -295,6 +304,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
     internal DaggerfallQuestResourceState[] Resources { get; set; }
     internal DaggerfallQuestSymbolState[] Symbols { get; set; }
     internal int? TerminalMessageId { get; set; }
+    internal int PendingEndPasses { get; set; }
     internal int FactionId { get; }
     internal string? ParentInstanceId { get; }
     internal bool? Succeeded { get; set; }
@@ -332,6 +342,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
         [.. Symbols])
     {
         TerminalMessageId = TerminalMessageId,
+        PendingEndPasses = PendingEndPasses,
         Tasks = [.. Tasks.Select(task => task.Capture())],
         Clocks = [.. Clocks],
         FactionId = FactionId,
@@ -356,6 +367,7 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
     private readonly Dictionary<string, DaggerfallQuestStartSave> _pendingStarts = new(StringComparer.Ordinal);
     private DaggerfallQuestRuntime? _runtime;
     private Func<DaggerfallSiteId, long>? _travelMinutes;
+    private Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestMessageContext> _textContext = _ => DaggerfallQuestMessageContext.Empty;
     private const long TombstoneRetentionSeconds = 7 * 24 * 60 * 60;
 
     internal DaggerfallQuestInstances(DaggerfallDefinitions definitions, IRandomService random, DaggerfallQuestRuntimeAdmission? admission = null, DaggerfallDisabledQuestSelection? disabledSelection = null)
@@ -375,6 +387,8 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
 
     /// <summary>Binds the one session's live player and elapsed-time owners after composition completes.</summary>
     internal void BindRuntime(DaggerfallQuestRuntime runtime) => _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+    internal void BindTextContext(Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestMessageContext> context) =>
+        _textContext = context ?? throw new ArgumentNullException(nameof(context));
 
     /// <summary>Uses the session's one route calculator for travel-derived quest deadlines.</summary>
     internal void BindTravelMinutes(Func<DaggerfallSiteId, long> travelMinutes)
@@ -448,6 +462,8 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
         _admission?.RequireRunnable(instance.SourceFile);
         if (instance.Lifecycle != DaggerfallQuestLifecycle.Active)
             throw new ArgumentException("A newly started quest instance must be active.", nameof(instance));
+        if (Messages.Journal.Any(entry => entry.InstanceId == instance.InstanceId && entry.SourceFile is not null))
+            throw new ArgumentException($"Quest instance '{instance.InstanceId}' already owns a finished journal; reusing it would overwrite readable history.", nameof(instance));
         instance.Validate(_definitions, validateClockState: false);
         if (instance.Tasks.Length != 0) throw new ArgumentException("A newly started quest instance cannot supply prior task state.", nameof(instance));
         DaggerfallQuestTaskProgram program = Program(instance.SourceFile);
@@ -476,7 +492,18 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
         AdmitPendingStarts();
         foreach (DaggerfallQuestRuntimeInstance instance in _instances.Values.ToArray())
             if (instance.Lifecycle == DaggerfallQuestLifecycle.Active)
+            {
+                // A final prompt owns its answer before retirement. No separate clock or scheduler.
+                if (Messages.Pending?.InstanceId == instance.InstanceId) continue;
+                if (instance.PendingEndPasses > 0 && --instance.PendingEndPasses == 0)
+                {
+                    instance.Lifecycle = DaggerfallQuestLifecycle.Ended;
+                    instance.Outcome = "end quest";
+                    instance.Succeeded ??= false;
+                    continue;
+                }
                 DaggerfallQuestTaskRunner.Advance(instance, Program(instance.SourceFile), variables, calendar, Messages, this);
+            }
         TombstoneAndCleanup(now);
     }
 
@@ -578,6 +605,8 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
         instance.Lifecycle = lifecycle;
         instance.Outcome = outcome;
         instance.Succeeded = lifecycle == DaggerfallQuestLifecycle.Completed;
+        instance.PendingEndPasses = 0;
+        instance.TerminalMessageId = null;
         ValidateRuntime(instance);
         return instance.Capture();
     }
@@ -692,6 +721,9 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
         foreach (DaggerfallQuestRuntimeInstance instance in _instances.Values)
             if (instance.Lifecycle is DaggerfallQuestLifecycle.Completed or DaggerfallQuestLifecycle.Failed or DaggerfallQuestLifecycle.Ended)
             {
+                Messages.RetainJournal(instance, _textContext);
+                instance.PendingEndPasses = 0;
+                instance.TerminalMessageId = null;
                 TerminateChildren(instance);
                 instance.Lifecycle = DaggerfallQuestLifecycle.Tombstoned;
                 instance.TombstoneAtSeconds = now;
@@ -753,6 +785,8 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
             child.Lifecycle = DaggerfallQuestLifecycle.Failed;
             child.Outcome = $"Parent quest '{parent.InstanceId}' ended.";
             child.Succeeded = false;
+            child.PendingEndPasses = 0;
+            child.TerminalMessageId = null;
         }
         foreach (string id in _pendingStarts.Values.Where(start => start.ParentInstanceId == parent.InstanceId).Select(start => start.InstanceId).ToArray())
             _pendingStarts.Remove(id);
