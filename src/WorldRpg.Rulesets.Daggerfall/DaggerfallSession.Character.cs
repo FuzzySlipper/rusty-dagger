@@ -20,8 +20,23 @@ internal sealed partial class DaggerfallSession
             switch (action.Kind)
             {
                 case DaggerfallUiActionKind.CharacterBegin:
+                    if (State.Character.Pending is not null) throw new ArgumentException("Character choices are already open.");
                     State.Character.BeginChoices(_random);
                     Presentation.SetOutcome("Character choices opened.");
+                    break;
+                case DaggerfallUiActionKind.CharacterClassQuestions:
+                    RequireCharacterDraft();
+                    State.Character.BeginClassQuestions(_random, Choices(action, null));
+                    Presentation.SetOutcome("Class questions opened.");
+                    break;
+                case DaggerfallUiActionKind.CharacterClassAnswer:
+                    State.Character.AnswerClassQuestion(action.Question ?? throw new ArgumentException("Class question is incomplete."),
+                        action.Answer ?? throw new ArgumentException("Class answer is incomplete."), _random);
+                    Presentation.SetOutcome(State.Character.CreationMode == "character-pick" ? "Recommended career selected; review and commit character choices." : "Class answer accepted.");
+                    break;
+                case DaggerfallUiActionKind.CharacterClassBack:
+                    State.Character.BackToClassPick();
+                    Presentation.SetOutcome("Returned to character choices.");
                     break;
                 case DaggerfallUiActionKind.CharacterCancel:
                     State.Character.CancelChoices();
@@ -58,6 +73,7 @@ internal sealed partial class DaggerfallSession
 
     private void RequireCharacterDraft()
     {
+        if (State.Character.CreationMode == "character-generation") throw new ArgumentException("Complete or leave class questions before editing choices.");
         if (State.Character.Pending is null)
             throw new ArgumentException("Open character choices before changing them.");
     }
@@ -106,6 +122,8 @@ internal sealed partial class DaggerfallSession
             : null;
         DaggerfallCharacterIdentity identity = new(action.Name, action.Race, gender, face, (DaggerfallCharacterReflexes)reflexes, action.Career);
         DaggerfallCharacterBackgroundSave? background = currentBackground;
+        if (background is not null && background.People.RaceId != identity.RaceId)
+            background = background with { People = DaggerfallBiographyPeople.Roll(_definitions, identity.RaceId, _random, background.RollSequence) };
         if (action.BackgroundAnswers is not null || action.AttributeAllocations is not null || action.SkillAllocations is not null)
         {
             if (currentBackground is null || action.BackgroundAnswers is null || action.AttributeAllocations is null || action.SkillAllocations is null)
@@ -113,7 +131,7 @@ internal sealed partial class DaggerfallSession
             DaggerfallCareerDefinition career = action.Career == DaggerfallCustomCareerPolicy.CareerId
                 ? DaggerfallCustomCareerPolicy.Compile(_definitions, custom!, State.Character.Career).Career
                 : _definitions.Catalogs.RequireCareer(action.Career);
-            background = action.Kind == DaggerfallUiActionKind.CharacterBackgroundReroll ? currentBackground : DaggerfallCharacterBackgroundPolicy.Update(_definitions, career, identity, currentBackground,
+            background = action.Kind == DaggerfallUiActionKind.CharacterBackgroundReroll ? background : DaggerfallCharacterBackgroundPolicy.Update(_definitions, career, identity, background!,
                 Answers(action.BackgroundAnswers), Allocations(action.AttributeAllocations, "attribute"), Allocations(action.SkillAllocations, "skill"));
         }
         return new DaggerfallCharacterCreationChoices(action.Name, action.Race, gender, face,

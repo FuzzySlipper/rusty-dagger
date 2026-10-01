@@ -689,6 +689,16 @@ internal static class DaggerfallBaseContent
 
         foreach (string collision in definitions.Catalogs.CareerNameCollisions) Add("catalog-career-name-collision", collision);
         foreach (string source in definitions.Catalogs.SourcePaths) Add("catalog-source", source);
+        if (definitions.Catalogs.ClassQuestionnaire is { } questionnaire)
+        {
+            foreach (var question in questionnaire.Questions)
+            {
+                Add("class-question", question.Number, question.Text);
+                foreach (var answer in question.Answers) Add("class-answer", question.Number, answer.Archetype, answer.Text);
+            }
+            foreach (var recommendation in questionnaire.Recommendations)
+                Add("class-recommendation", recommendation.Warrior, recommendation.Rogue, recommendation.Mage, recommendation.CareerId);
+        }
         foreach (DaggerfallCatalogReference enemy in definitions.Catalogs.Enemies.OrderBy(enemy => enemy.Id, StringComparer.Ordinal)) Add("catalog-enemy", enemy.Id, enemy.Source.Path);
         foreach (DaggerfallCatalogReference item in definitions.Catalogs.ItemTemplates.OrderBy(item => item.Id, StringComparer.Ordinal)) Add("catalog-item-template", item.Id, item.Source.Path);
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value.ToString())));
@@ -3152,7 +3162,28 @@ internal static class DaggerfallBaseContent
             }
         }
 
-        return new DaggerfallCatalogSet(attributes, skills, resistances, races, careers, collisions, enemies, itemTemplates, sources);
+        DaggerfallClassQuestionnaire? questionnaire = null;
+        if (value.TryGetProperty("classQuestionnaire", out JsonElement questionsValue) && questionsValue.ValueKind != JsonValueKind.Null)
+        {
+            var questions = Array(questionsValue, "questions", diagnostics).Select(question => new DaggerfallClassQuestion(
+                Integer(question, "number", diagnostics), Text(question, "text", diagnostics),
+                Array(question, "answers", diagnostics).Select(answer => new DaggerfallClassAnswer(Text(answer, "text", diagnostics), Integer(answer, "archetype", diagnostics))).ToArray())).ToArray();
+            var recommendations = Array(questionsValue, "recommendations", diagnostics).Select(row => new DaggerfallClassRecommendation(
+                Integer(row, "warrior", diagnostics), Integer(row, "rogue", diagnostics), Integer(row, "mage", diagnostics), Text(row, "careerId", diagnostics))).ToArray();
+            foreach (string source in ReadTexts(questionsValue, "sources", diagnostics))
+                if (!sources.Contains(source, StringComparer.Ordinal)) diagnostics.Add($"Class questionnaire source '{source}' is absent from the catalog sources.");
+            if (!questions.Select(question => question.Number).SequenceEqual(Enumerable.Range(1, 40))
+                || questions.Any(question => string.IsNullOrWhiteSpace(question.Text) || question.Answers.Count != 3
+                    || !question.Answers.Select(answer => answer.Archetype).Order().SequenceEqual(new[] { 0, 1, 2 })
+                    || question.Answers.Any(answer => string.IsNullOrWhiteSpace(answer.Text))))
+                diagnostics.Add("Class questionnaire must carry forty ordered questions with three classified answers each.");
+            if (recommendations.Length != 66 || recommendations.Select(row => (row.Warrior, row.Rogue, row.Mage)).Distinct().Count() != 66
+                || recommendations.Any(row => row.Warrior < 0 || row.Rogue < 0 || row.Mage < 0
+                || row.Warrior + row.Rogue + row.Mage != 10 || !careers.Any(career => career.Id == row.CareerId)))
+                diagnostics.Add("Class questionnaire recommendations must resolve all ten-answer results to published careers.");
+            questionnaire = new(questions, recommendations);
+        }
+        return new DaggerfallCatalogSet(attributes, skills, resistances, races, careers, collisions, enemies, itemTemplates, sources, questionnaire);
     }
 
     private static bool ValidEquipmentRestriction(string value)

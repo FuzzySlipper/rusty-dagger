@@ -99,6 +99,93 @@ public sealed class UiArtDeliverySessionTests
     }
 
     [Fact]
+    public void Character_steps_use_the_published_screens_and_semantic_actions_over_one_draft()
+    {
+        var inputs = ReadInputs(TestData.RepositoryRoot);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        var spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: RandomMinimum.Create());
+        using var session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
+        session.ApplyProductMode(WorldRpg.Kit.ProductMode.Title);
+        ulong step = 0;
+        Send("{\"action\":\"character-begin\"}");
+        Assert.Equal("character-pick", Creation()["mode"]);
+        var original = session.State.Character.Identity;
+        Assert.False(session.RequestsBegin([Ui("{\"action\":\"begin\"}")]));
+        Questions();
+        Assert.Equal("character-generation", Creation()["mode"]);
+        var hud = Assert.IsType<Dictionary<string, object?>>(engine.Published());
+        var art = Assert.IsType<Dictionary<string, object?>>(hud["uiArt"]);
+        var images = Assert.IsType<object?[]>(art["images"]).Cast<Dictionary<string, object?>>()
+            .ToDictionary(image => (string)image["id"]!, image => (string)image["image"]!);
+        foreach (var (id, file) in new[] { ("screen.character-generation", "screen-character-generation"), ("screen.pick.02", "screen-pick-02") })
+            Assert.Equal("data:image/png;base64," + Convert.ToBase64String(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/media/ui", file + ".png"))), images[id]);
+        Assert.Equal(new[] { "screen.pick.02" }, Assert.IsType<object?[]>(hud["pickScreens"]).Cast<string>());
+        for (int index = 0; index < 10; index++)
+        {
+            var quiz = session.State.Character.ReadClassQuiz()!;
+            var wire = Assert.IsType<Dictionary<string, object?>>(Creation()["classQuiz"]);
+            Assert.Equal((double)index, wire["answered"]);
+            Assert.Equal(quiz.Question.Text, Assert.IsType<Dictionary<string, object?>>(wire["question"])["text"]);
+            Send($"{{\"action\":\"character-class-answer\",\"question\":{quiz.Question.Number},\"answer\":0}}");
+        }
+        Assert.Equal("character-pick", Creation()["mode"]);
+        Assert.Null(Creation()["classQuiz"]);
+        Assert.NotNull(session.State.Character.Pending!.Background);
+        Assert.Equal(original, session.State.Character.Identity);
+        Questions();
+        Send("{\"action\":\"character-class-back\"}");
+        Assert.Equal("character-pick", Creation()["mode"]);
+        Send("{\"action\":\"character-cancel\"}");
+        Assert.Null(Creation()["mode"]);
+        Assert.True(session.RequestsBegin([Ui("{\"action\":\"begin\"}")]));
+        Assert.Equal(0, spatial.StepCalls);
+
+        Dictionary<string, object?> Creation()
+        {
+            session.PublishInitial();
+            var hud = Assert.IsType<Dictionary<string, object?>>(engine.Published());
+            return Assert.IsType<Dictionary<string, object?>>(Assert.IsType<Dictionary<string, object?>>(hud["character"])["creation"]);
+        }
+        void Questions()
+        {
+            var draft = session.State.Character.Pending!;
+            Send(JsonSerializer.Serialize(new { action = "character-class-questions", name = "Aubk-i", race = "khajiit", gender = "female", faceIndex = 0, reflexes = 2, career = draft.CareerId }));
+            Assert.Equal("Aubk-i", session.State.Character.Pending!.Name);
+            Assert.Equal("khajiit", session.State.Character.Pending.RaceId);
+        }
+        void Send(string json) => session.Update(new ProductUpdate(OuterUpdate(++step), [Ui(json)]));
+        static ProductInputEvent Ui(string json) => Input(InputEventKind.DirectDigital) with
+        {
+            ValueKind = InputValueKind.ProductPayload, PayloadContract = "dagger.ui.action.v1"u8.ToArray(), PayloadData = Encoding.UTF8.GetBytes(json),
+        };
+    }
+
+    [Fact]
+    public void Every_admitted_pick_artifact_is_delivered_as_a_set()
+    {
+        var inputs = ReadInputs(TestData.RepositoryRoot);
+        ContentFake content = new([]);
+        PopulateContent(content, inputs);
+        var inventory = JsonNode.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content", DaggerfallUiArt.InventoryPath)))!;
+        var artifacts = inventory["artifacts"]!.AsArray();
+        var pick = artifacts.Select(node => node!.AsObject()).Single(node => (string?)node["mediaId"] == "screen.pick.02");
+        // The operator corpus has one pick. A second admitted part exercises set consumption with
+        // real artifact bytes; it does not rename the corpus's separate PICK03 start-menu screen.
+        var second = pick.DeepClone().AsObject();
+        second["mediaId"] = "screen.pick.background";
+        artifacts.Add(second);
+        content.Add(DaggerfallUiArt.InventoryPath, Encoding.UTF8.GetBytes(inventory.ToJsonString()));
+        var art = DaggerfallUiArt.Read(content, [.. inputs.ClassicPresentation.InventoryIcons.Values]);
+        Assert.Equal(new[] { "screen.pick.02", "screen.pick.background" }, art.PickScreens);
+        Assert.Equal(art.Images.Single(image => image.Id == "screen.pick.02").Image,
+            art.Images.Single(image => image.Id == "screen.pick.background").Image);
+        Assert.DoesNotContain("screen.start-menu", art.PickScreens);
+    }
+
+    [Fact]
     public void Admitted_art_uses_its_current_bytes_without_runtime_digest_or_revision_hashing()
     {
         string root = TestData.RepositoryRoot;
@@ -204,6 +291,7 @@ public sealed class UiArtDeliverySessionTests
             ["byteLength"] = bytes.Length,
             ["sha256"] = Convert.ToHexStringLower(SHA256.HashData(bytes)),
             ["mediaId"] = mediaId,
+            ["slot"] = mediaId == "screen.pick.02" ? "pick" : null,
         };
     }
 

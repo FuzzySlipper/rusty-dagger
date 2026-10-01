@@ -23,6 +23,8 @@ export const TITLE_MODE = 'title';
 export const MODE_SCREENS: readonly ModeScreen[] = [
   { mode: TITLE_MODE, screen: 'screen.title' },
   { mode: 'dead', screen: 'screen.death' },
+  { mode: 'character-generation', screen: 'screen.character-generation' },
+  { mode: 'character-pick', screen: 'screen.pick.02' },
 ];
 
 /**
@@ -31,10 +33,10 @@ export const MODE_SCREENS: readonly ModeScreen[] = [
  * `screen.start-menu` is the donor's load, new and exit menu (`DaggerfallStartWindow`) and
  * `screen.prison` is the cell the donor shows while a prison sentence is served (`DaggerfallCourtWindow`,
  * days until freedom); neither is a state this product's lifecycle has, and neither is an opening
- * screen. `screen.character-generation` and `screen.pick.02` belong to a character-creation flow the
- * product does not have yet. All four are admitted, slotted and delivered to the DOM, and nothing
- * selects them. A delivered screen named in neither this list nor the table above is one the client
- * forgot, which is what the delivery test checks.
+ * screen. Character-generation and pick belong to the admitted character draft's questionnaire
+ * and choice steps. The pick slot is delivered as a set; the current corpus supplies PICK02I0.
+ * PICK03I0 is the donor start menu and retains that separate meaning.
+ * A delivered screen named in neither this list nor the table above is an unbound artifact.
  *
  * No published identity is an intro: the donor opens a new game on a sequence of cinematics rather than
  * on a screen, so a mode for it would be one showing an artifact no publication carries. That sequence
@@ -42,8 +44,6 @@ export const MODE_SCREENS: readonly ModeScreen[] = [
  * (`docs/coverage/content-scope.md`, CNT-025), not to this table.
  */
 export const MODE_LESS_SCREENS: readonly string[] = [
-  'screen.character-generation',
-  'screen.pick.02',
   'screen.prison',
   'screen.start-menu',
 ];

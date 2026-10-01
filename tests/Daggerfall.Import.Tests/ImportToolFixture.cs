@@ -176,7 +176,8 @@ internal sealed partial class ImportToolFixture : IDisposable
                     vocabulary["skills"]!.AsArray().Select(v => v!.GetValue<string>()).ToArray(),
                     Directory.EnumerateFiles(Arena2, "CLASS*.CFG").Order(StringComparer.Ordinal).Select(file => (Path.GetFileName(file), File.ReadAllBytes(file))).ToArray(),
                     authored["actors"]!.AsArray().Select(v => v!["id"]!.GetValue<string>()).Where(id => id != "player").ToArray(),
-                    authored["items"]!.AsArray().Select(v => v!["id"]!.GetValue<string>()).ToArray(), File.ReadAllText(Donor("Assets/Scripts/Game/Entities/RaceTemplate.cs")));
+                    authored["items"]!.AsArray().Select(v => v!["id"]!.GetValue<string>()).ToArray(), File.ReadAllText(Donor("Assets/Scripts/Game/Entities/RaceTemplate.cs")),
+                    Source("CLASSES.DAT"), DaggerfallTextBuilder.Build(Source("TEXT.RSC"), Label("TEXT.RSC"), Rows, "en"));
                 sections.Add("catalogs", Encoding.UTF8.GetString(DaggerfallCatalogSerializer.Serialize(catalogs, Rows.Select(row => row.PathOrPattern).ToHashSet(StringComparer.Ordinal)))); break;
             case "item-template-ledger":
                 var family = Rows.Single(row => row.RowType == "family" && row.Id == "CNT-011");

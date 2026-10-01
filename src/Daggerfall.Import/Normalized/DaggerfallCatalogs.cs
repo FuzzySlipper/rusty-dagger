@@ -259,6 +259,8 @@ public sealed record DaggerfallCatalogs(
     /// vocabulary carries a ninth, <c>reflexes</c>, which the donor adds and the classic
     /// carrier has no field for, so a career publishes values for these eight only.
     /// </summary>
+    public DaggerfallClassQuestionnaire? ClassQuestionnaire { get; init; }
+
     public const int ClassicAttributeCount = 8;
 
     /// <summary>The five classic resistance elements.</summary>
@@ -294,6 +296,7 @@ public sealed record DaggerfallCatalogs(
             throw new InvalidOperationException("The catalogs must carry the classic attribute, skill and element key spaces, the races and the careers; an empty catalog resolves nothing.");
         }
 
+        ClassQuestionnaire?.Validate(documentedPaths, Careers);
         ValidateIndexed(Attributes, "attribute", documentedPaths);
         ValidateIndexed(Skills, "skill", documentedPaths);
         ValidateIndexed(Resistances, "resistance", documentedPaths);
@@ -368,6 +371,7 @@ public sealed record DaggerfallCatalogs(
             .Concat(Careers.Select(career => career.Source.Path))
             .Concat(Enemies.Select(enemy => enemy.Source.Path))
             .Concat(ItemTemplates.Select(item => item.Source.Path))
+            .Concat(ClassQuestionnaire?.Sources ?? [])
             .Distinct(StringComparer.Ordinal);
 
     private static void ValidateReferenced(IReadOnlyList<DaggerfallReferenceKey> keys, string kind, IReadOnlySet<string> documentedPaths)

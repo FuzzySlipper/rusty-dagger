@@ -1,4 +1,4 @@
-export interface CharacterAction { readonly action: string; readonly name?: string; readonly race?: string; readonly gender?: string; readonly faceIndex?: number; readonly reflexes?: number; readonly career?: string; readonly primarySkills?: string; readonly majorSkills?: string; readonly minorSkills?: string; readonly hitPointsPerLevel?: number; readonly advantages?: string; readonly disadvantages?: string; readonly attribute?: string; readonly backgroundAnswers?: string; readonly attributeAllocations?: string; readonly skillAllocations?: string; }
+export interface CharacterAction { readonly action: string; readonly question?: number; readonly answer?: number; readonly name?: string; readonly race?: string; readonly gender?: string; readonly faceIndex?: number; readonly reflexes?: number; readonly career?: string; readonly primarySkills?: string; readonly majorSkills?: string; readonly minorSkills?: string; readonly hitPointsPerLevel?: number; readonly advantages?: string; readonly disadvantages?: string; readonly attribute?: string; readonly backgroundAnswers?: string; readonly attributeAllocations?: string; readonly skillAllocations?: string; }
 
 export interface CharacterStat {
   readonly id: string;
@@ -62,7 +62,11 @@ export interface CharacterGrantedSkill { readonly id: string; readonly tier: str
 export interface CharacterChoice { readonly id: string; readonly label: string; readonly available: boolean; readonly restriction: string | null; }
 export interface CharacterFace { readonly index: number; readonly mediaId: string; }
 export interface CharacterReflex { readonly value: number; readonly label: string; }
+export interface CharacterClassQuiz { readonly answered: number; readonly total: number; readonly question: { readonly number: number; readonly text: string; readonly answers: readonly { readonly index: number; readonly text: string }[] }; }
 export interface CharacterCreation {
+  readonly mode?: string | null;
+  readonly classQuestionsAvailable?: boolean;
+  readonly classQuiz?: CharacterClassQuiz | null;
   readonly editing: boolean;
   readonly current: { readonly name: string; readonly race: string; readonly gender: string; readonly faceIndex: number; readonly reflexes: number; readonly career: string; };
   readonly races: readonly CharacterChoice[]; readonly careers: readonly CharacterChoice[];
@@ -106,6 +110,7 @@ export interface CharacterProjection {
 import { image } from './art.js';
 
 export interface CharacterView {
+  readonly creationElement: HTMLElement;
   update(value: CharacterProjection): void;
   refresh(): void;
   dispose(): void;
@@ -152,6 +157,7 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
   let held: CharacterProjection | null = null;
 
   const view: CharacterView = {
+    creationElement: creation.element,
     update(value): void {
       if (disposed) return;
       held = value;
@@ -394,8 +400,19 @@ function isCreation(value: unknown): value is CharacterCreation {
     && 'careers' in value && isChoices(value.careers)
     && 'faces' in value && Array.isArray(value.faces) && value.faces.every(face => typeof face === 'object' && face !== null && 'index' in face && isNumber(face.index) && 'mediaId' in face && typeof face.mediaId === 'string')
     && 'reflexes' in value && Array.isArray(value.reflexes) && value.reflexes.every(reflex => typeof reflex === 'object' && reflex !== null && 'value' in reflex && isNumber(reflex.value) && 'label' in reflex && typeof reflex.label === 'string')
+    && (!('mode' in value) || value.mode === null || value.mode === 'character-pick' || value.mode === 'character-generation')
+    && (!('classQuestionsAvailable' in value) || typeof value.classQuestionsAvailable === 'boolean')
+    && (!('classQuiz' in value) || value.classQuiz === null || isClassQuiz(value.classQuiz))
     && (!('custom' in value) || value.custom === null || isCustomClass(value.custom))
     && (!('background' in value) || value.background === null || isBackground(value.background));
+
+function isClassQuiz(value: unknown): value is CharacterClassQuiz {
+  if (typeof value !== 'object' || value === null || !('answered' in value) || !isNumber(value.answered)
+    || !('total' in value) || !isNumber(value.total) || !('question' in value)) return false;
+  const q = value.question;
+  return typeof q === 'object' && q !== null && 'number' in q && isNumber(q.number) && 'text' in q && typeof q.text === 'string'
+    && 'answers' in q && Array.isArray(q.answers) && q.answers.every(a => typeof a === 'object' && a !== null && 'index' in a && isNumber(a.index) && 'text' in a && typeof a.text === 'string');
+}
 
 function isBackground(value: unknown): value is CharacterBackground {
   const allocation = (entry: unknown): boolean => typeof entry === 'object' && entry !== null && 'id' in entry && typeof entry.id === 'string' && 'allocated' in entry && isNumber(entry.allocated) && 'value' in entry && isNumber(entry.value);
@@ -440,6 +457,22 @@ function renderCreation(root: HTMLElement, value: CharacterCreation | null, avai
   const begin = document.createElement('button'); begin.type = 'button'; begin.textContent = 'Edit character';
   begin.disabled = value.editing; begin.dataset.testid = 'character-begin'; begin.addEventListener('click', () => send?.({ action: 'character-begin' }));
   if (!value.editing) { root.replaceChildren(begin); return; }
+  if (value.classQuiz) {
+    const quiz = value.classQuiz;
+    const heading = document.createElement('p'); heading.textContent = `Class question ${quiz.answered + 1} of ${quiz.total}`;
+    const prompt = document.createElement('p'); prompt.textContent = quiz.question.text;
+    const answers = quiz.question.answers.map(answer => {
+      const button = document.createElement('button'); button.type = 'button'; button.textContent = answer.text;
+      button.dataset.testid = `class-answer-${answer.index}`;
+      button.addEventListener('click', () => send?.({ action: 'character-class-answer', question: quiz.question.number, answer: answer.index }));
+      return button;
+    });
+    const back = document.createElement('button'); back.type = 'button'; back.textContent = 'Choose a class instead';
+    back.addEventListener('click', () => send?.({ action: 'character-class-back' }));
+    const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Cancel character';
+    cancel.addEventListener('click', () => send?.({ action: 'character-cancel' }));
+    root.replaceChildren(heading, prompt, ...answers, back, cancel); return;
+  }
   const name = document.createElement('input'); name.value = value.current.name; name.setAttribute('aria-label', 'Character name');
   const race = select(value.races, value.current.race); race.setAttribute('aria-label', 'Race');
   const gender = select([{ id: 'male', label: 'Male', available: true, restriction: null }, { id: 'female', label: 'Female', available: true, restriction: null }], value.current.gender); gender.setAttribute('aria-label', 'Gender');
@@ -463,16 +496,19 @@ function renderCreation(root: HTMLElement, value: CharacterCreation | null, avai
   career.addEventListener('change', updateVisibility); updateVisibility();
   const background = backgroundEditor(value.background ?? null);
   const commit = document.createElement('button'); commit.type = 'button'; commit.textContent = 'Commit character'; commit.dataset.testid = 'character-commit';
-  const action = (kind: 'character-update' | 'character-commit' | 'character-background-reroll'): CharacterAction => career.value === 'custom'
+  const action = (kind: 'character-update' | 'character-commit' | 'character-background-reroll' | 'character-class-questions'): CharacterAction => career.value === 'custom'
     ? { action: kind, name: name.value, race: race.value, gender: gender.value, faceIndex: Number(face.value), reflexes: Number(reflexes.value), career: career.value,
-      primarySkills: primary.values().join(','), majorSkills: major.values().join(','), minorSkills: minor.values().join(','), hitPointsPerLevel: Number(hp.value), advantages: advantages.value(), disadvantages: disadvantages.value(), ...background.values() }
-    : { action: kind, name: name.value, race: race.value, gender: gender.value, faceIndex: Number(face.value), reflexes: Number(reflexes.value), career: career.value, ...background.values() };
+      primarySkills: primary.values().join(','), majorSkills: major.values().join(','), minorSkills: minor.values().join(','), hitPointsPerLevel: Number(hp.value), advantages: advantages.value(), disadvantages: disadvantages.value(), ...(kind === 'character-class-questions' ? {} : background.values()) }
+    : { action: kind, name: name.value, race: race.value, gender: gender.value, faceIndex: Number(face.value), reflexes: Number(reflexes.value), career: career.value, ...(kind === 'character-class-questions' ? {} : background.values()) };
   const update = document.createElement('button'); update.type = 'button'; update.textContent = 'Check custom class'; update.dataset.testid = 'character-custom-update'; update.addEventListener('click', () => send?.(action('character-update')));
   commit.addEventListener('click', () => send?.(action('character-commit')));
   const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Cancel'; cancel.dataset.testid = 'character-cancel'; cancel.addEventListener('click', () => send?.({ action: 'character-cancel' }));
   const reroll = document.createElement('button'); reroll.type = 'button'; reroll.textContent = 'Reroll background'; reroll.dataset.testid = 'character-background-reroll'; reroll.disabled = value.background === null;
   reroll.addEventListener('click', () => send?.(action('character-background-reroll')));
-  root.replaceChildren(name, race, gender, face, reflexes, career, customFields, background.element, reroll, update, commit, cancel);
+  const questions = document.createElement('button'); questions.type = 'button'; questions.textContent = 'Answer class questions';
+  questions.dataset.testid = 'character-class-questions'; questions.disabled = value.classQuestionsAvailable !== true;
+  questions.addEventListener('click', () => send?.(action('character-class-questions')));
+  root.replaceChildren(name, race, gender, face, reflexes, career, questions, customFields, background.element, reroll, update, commit, cancel);
 }
 
 function backgroundEditor(value: CharacterBackground | null): { readonly element: HTMLElement; readonly values: () => Pick<CharacterAction, 'backgroundAnswers' | 'attributeAllocations' | 'skillAllocations'> } {

@@ -259,9 +259,12 @@ public sealed class ProductModeSessionTests
             int social = DaggerfallCharacterBackgroundPolicy.SocialReputations(definitions, career, complete).First().Group;
             int socialBefore = session.State.Social.PersonalReputation(social);
             session.State.Character.ReplacePending(session.State.Character.Pending! with { Background = complete });
-            session.Update(new ProductUpdate(OuterUpdate(5), [Ui("{\"action\":\"character-commit\",\"name\":\"Nameless\",\"race\":\"breton\",\"gender\":\"male\",\"faceIndex\":0,\"reflexes\":2,\"career\":\"class00\"}")]));
+            session.Update(new ProductUpdate(OuterUpdate(5), [Ui("{\"action\":\"character-commit\",\"name\":\"Nameless\",\"race\":\"khajiit\",\"gender\":\"male\",\"faceIndex\":0,\"reflexes\":2,\"career\":\"class00\"}")]));
 
             committed = Assert.IsType<DaggerfallCharacterBackgroundSave>(session.State.Character.Background);
+            Assert.Equal("khajiit", committed.People.RaceId);
+            Assert.Equal(DaggerfallBiographyPeople.Roll(definitions, "khajiit", RandomMinimum.Create(), rolled.RollSequence), committed.People);
+            Assert.NotEqual(rolled.People.Name, committed.People.Name);
             Assert.NotEmpty(committed.StartingGrants);
             ulong grantedGold = committed.StartingGrants.Where(grant => grant.ItemId == "template-276").Aggregate(0UL, (total, grant) => checked(total + grant.Quantity));
             goldAfterCommit = Gold(session);
@@ -303,6 +306,7 @@ public sealed class ProductModeSessionTests
         using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), saved);
         Assert.Equal(committed.Biography, resumed.State.Character.Background!.Biography);
         Assert.Equal(committed.Modifiers, resumed.State.Character.Background!.Modifiers);
+        Assert.Equal(committed.People, resumed.State.Character.Background!.People);
         Assert.Equal(goldAfterCommit, Gold(resumed));
 
         static ulong Gold(DaggerfallSession session) => session.State.Inventory.Read().Stacks.Where(stack => stack.Definition.Value == "template-276").Aggregate(0UL, (total, stack) => checked(total + stack.Quantity));

@@ -44,7 +44,7 @@ internal sealed record DaggerfallCharacterCreationChoices(
 /// Daggerfall's player-character choice owner. It resolves choices through normalized records,
 /// keeps drafts separate, and applies only committed career attribute bases to Mechanics.
 /// </summary>
-internal sealed class DaggerfallCharacterState
+internal sealed partial class DaggerfallCharacterState
 {
     private readonly DaggerfallDefinitions _definitions;
     private readonly StatsComponent _stats;
@@ -186,10 +186,10 @@ internal sealed class DaggerfallCharacterState
             : null;
         DaggerfallCharacterBackgroundPresentation? background = current.Background is { } backgroundDraft && (Pending is not null || _background is not null)
             ? DaggerfallCharacterBackgroundPolicy.Present(_definitions, CurrentCareer(current), current.ToIdentity(), backgroundDraft) : null;
-        return new DaggerfallCharacterCreationPresentation(Pending is not null, current, races, careers, faces, reflexes, custom, background);
+        return new DaggerfallCharacterCreationPresentation(Pending is not null, current, races, careers, faces, reflexes, custom, background, CreationMode, ReadClassQuiz(), _definitions.Catalogs.ClassQuestionnaire is not null && _background is null);
     }
 
-    internal void BeginChoices() => Pending = DaggerfallCharacterCreationChoices.From(Identity) with { Background = _background };
+    internal void BeginChoices() { _classQuestions = null; Pending = DaggerfallCharacterCreationChoices.From(Identity) with { Background = _background }; }
 
     /// <summary>Opening the title-screen flow captures its Engine-random rolls exactly once.</summary>
     internal void BeginChoices(Rusty.Engine.IRandomService random)
@@ -214,10 +214,11 @@ internal sealed class DaggerfallCharacterState
         Pending = choices;
     }
 
-    internal void CancelChoices() => Pending = null;
+    internal void CancelChoices() { Pending = null; _classQuestions = null; }
 
     internal DaggerfallCharacterBackgroundSave? CommitChoices()
     {
+        if (_classQuestions is not null) throw new ArgumentException("Complete or leave the class questions before committing character choices.");
         DaggerfallCharacterCreationChoices choices = Pending
             ?? throw new InvalidOperationException("There is no character-creation draft to commit.");
         DaggerfallCharacterIdentity committed = choices.ToIdentity();
@@ -294,7 +295,7 @@ internal sealed record DaggerfallCharacterFaceChoice(int Index, string MediaId);
 internal sealed record DaggerfallCharacterReflexChoice(int Value, string Label);
 internal sealed record DaggerfallCharacterCreationPresentation(bool Editing, DaggerfallCharacterCreationChoices Current,
     DaggerfallCharacterChoice[] Races, DaggerfallCharacterChoice[] Careers, DaggerfallCharacterFaceChoice[] Faces, DaggerfallCharacterReflexChoice[] Reflexes,
-    DaggerfallCustomCareerPresentation? Custom = null, DaggerfallCharacterBackgroundPresentation? Background = null);
+    DaggerfallCustomCareerPresentation? Custom = null, DaggerfallCharacterBackgroundPresentation? Background = null, string? Mode = null, DaggerfallClassQuizPresentation? ClassQuiz = null, bool ClassQuestionsAvailable = false);
 
 /// <summary>Current-schema durable identity. Definition keys are resolved before a session is built.</summary>
 internal sealed record DaggerfallCharacterSave(

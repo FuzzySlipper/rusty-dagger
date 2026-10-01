@@ -141,3 +141,8 @@
 .dagger-map-buildings { max-height: 12rem; overflow: auto; }
 .dagger-map-buildings button[aria-pressed="true"] { outline: 2px solid #ffe077; }
 .dagger-map-diagram [role="button"] { cursor: pointer; }
+
+.dagger-entry-create { position: absolute; bottom: 5%; padding: 8px 22px; font: inherit; color: #f6ddb0; background: #171713; border: 1px solid #c6a05a; cursor: pointer; }
+.dagger-entry-creation { position: absolute; inset: 4% 10%; overflow: auto; padding: 20px; color: #f6ddb0; background: rgba(8, 12, 10, .9); border: 1px solid #c6a05a; }
+.dagger-entry-parts { position: absolute; right: 0; bottom: 0; display: flex; pointer-events: none; }
+.dagger-entry-parts img { max-width: 320px; image-rendering: pixelated; }

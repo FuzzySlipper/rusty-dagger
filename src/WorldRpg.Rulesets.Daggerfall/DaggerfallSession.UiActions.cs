@@ -23,6 +23,11 @@ internal sealed partial class DaggerfallSession
     {
         DaggerfallUiInput parsed = _uiInput is { } cached && cached.Matches(input) ? cached : DaggerfallUiInput.Parse(input);
         _uiInput = parsed;
+        if (parsed.Contains(DaggerfallUiActionKind.Begin) && State.Character.Pending is not null)
+        {
+            Presentation.SetOutcome("Commit or cancel character choices before beginning play.");
+            return false;
+        }
         return parsed.Contains(DaggerfallUiActionKind.Begin);
     }
 
@@ -84,6 +89,9 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.ArtRequest: _hud.RequestArt(); break;
             case DaggerfallUiActionKind.ControlsRebind:
             case DaggerfallUiActionKind.ControlsReset: ChangeControls(action); break;
+            case DaggerfallUiActionKind.CharacterClassQuestions:
+            case DaggerfallUiActionKind.CharacterClassAnswer:
+            case DaggerfallUiActionKind.CharacterClassBack:
             case DaggerfallUiActionKind.CharacterBegin:
             case DaggerfallUiActionKind.CharacterUpdate:
             case DaggerfallUiActionKind.CharacterBackgroundReroll:

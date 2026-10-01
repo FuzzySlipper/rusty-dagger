@@ -839,3 +839,64 @@ test('city map selection sends the actual location and placed building identity 
     assert.match(f.root.querySelector('.dagger-map-target').textContent, /City Wall/);
   } finally { f.dispose(); }
 });
+
+
+test('character draft screens consume the published mode art and every pick part with semantic actions', async () => {
+  const { MODE_SCREENS, screenForMode } = await import(pathToFileURL(join(output, 'screens.js')));
+  const inventory = JSON.parse(await readFile(new URL('../../content/worldrpg/media/classic-media-inventory.json', import.meta.url), 'utf8'));
+  for (const mode of ['character-generation', 'character-pick']) {
+    const id = screenForMode(mode);
+    assert.ok(MODE_SCREENS.some(row => row.mode === mode && row.screen === id));
+    assert.ok(inventory.artifacts.some(artifact => artifact.mediaId === id), `${mode} must name a published artifact`);
+  }
+  assert.deepEqual(inventory.artifacts.filter(artifact => artifact.slot === 'pick').map(artifact => artifact.mediaId), ['screen.pick.02']);
+  const f = fixture();
+  try {
+    const ids = ['screen.title', 'screen.character-generation', 'screen.pick.02'];
+    const images = await Promise.all(ids.map(async id => {
+      const artifact = inventory.artifacts.find(artifact => artifact.mediaId === id);
+      const bytes = await readFile(new URL('../../content/' + artifact.path, import.meta.url));
+      return { id, image: 'data:image/png;base64,' + bytes.toString('base64') };
+    }));
+    // A second admitted pick part exercises the binding set, using actual artifact bytes.
+    images.push({ id: 'screen.pick.background', image: images[2].image });
+    const art = { revision: 'character-screen-fixture', images };
+    const character = { name: 'Nameless', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [], creationAvailable: true };
+    const creation = { editing: true, mode: 'character-pick', classQuestionsAvailable: true, classQuiz: null,
+      current: { name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' },
+      races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }], careers: [{ id: 'class00', label: 'Mage', available: true, restriction: null }],
+      faces: [{ index: 0, mediaId: 'character.head.male.00.0' }], reflexes: [{ value: 2, label: 'Average' }] };
+    const entry = f.root.querySelector('.dagger-entry');
+    f.publish({ mode: 'title', character: { ...character, creation: { ...creation, editing: false, mode: null } }, uiArt: art, uiArtRevision: art.revision });
+    f.root.querySelector('[data-testid="entry-create-character"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'character-begin' });
+    f.publish({ mode: 'title', character: { ...character, creation }, pickScreens: ['screen.pick.02', 'screen.pick.background'] });
+    assert.equal(entry.dataset.mode, 'character-pick');
+    assert.equal(entry.querySelector('.dagger-entry-screen').src, images[2].image);
+    assert.equal(entry.querySelector('[data-media-id="screen.pick.background"]').src, images[3].image);
+    assert.equal(entry.querySelectorAll('[data-testid="character-commit"]').length, 1);
+    assert.equal(f.root.querySelectorAll('[data-testid="character-commit"]').length, 1, 'The one character editor is moved, not copied.');
+    assert.equal(entry.querySelector('.dagger-entry-begin').hidden, true);
+    entry.querySelector('[data-testid="character-class-questions"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'character-class-questions', name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' });
+    f.publish({ mode: 'title', character: { ...character, creation: { ...creation, mode: 'character-generation', classQuiz: {
+      answered: 0, total: 10, question: { number: 22, text: 'A source question', answers: [{ index: 0, text: 'First answer' }, { index: 1, text: 'Second answer' }, { index: 2, text: 'Third answer' }] },
+    } } } });
+    assert.equal(entry.dataset.mode, 'character-generation');
+    assert.equal(entry.querySelector('.dagger-entry-screen').src, images[1].image);
+    assert.equal(entry.querySelector('[data-media-id="screen.pick.background"]'), null);
+    entry.querySelector('[data-testid="class-answer-1"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'character-class-answer', question: 22, answer: 1 });
+    const back = [...entry.querySelectorAll('button')].find(button => button.textContent === 'Choose a class instead'); back.click();
+    assert.deepEqual(f.actions.at(-1), { action: 'character-class-back' });
+    f.publish({ mode: 'title', character: { ...character, creation }, pickScreens: ['screen.pick.02'] });
+    assert.equal(entry.dataset.mode, 'character-pick');
+    entry.querySelector('[data-testid="character-commit"]').click();
+    assert.equal(f.actions.at(-1).action, 'character-commit');
+    f.publish({ mode: 'title', character: { ...character, creation: { ...creation, editing: false, mode: null } } });
+    assert.equal(entry.dataset.mode, 'title');
+    assert.equal(entry.querySelector('.dagger-entry-screen').src, images[0].image);
+    f.publish({ mode: 'playing', character: { ...character, creationAvailable: false } });
+    assert.equal(entry.hidden, true);
+  } finally { f.dispose(); }
+});

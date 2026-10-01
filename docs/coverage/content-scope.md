@@ -300,6 +300,9 @@ generated file Git would pick up):
   `catalogs`, `itemTemplateLedger`, `characterPresentation`, `locations`, `magic`, `mobiles`, `text`,
   `names`, `rumors`, `biographies`, `books`, `climate`, `politic`, `factions`, `terrain`,
   `itemTemplates`, `questTables`, `questCatalog`, `questSources`, `cinematics` and `buildingNames`.
+  The `catalogs` section includes the forty class questions from TEXT.RSC resource 9000,
+  their donor answer archetypes and the sixty-six CLASSES.DAT recommendation rows. The ruleset
+  consumes these normalized values in the existing character draft; it never opens source files.
   The `magic` section includes `enchantmentSettings`: the retained item-maker families transcribed
   in the importer from the donor effect classes, with costs, display/text keys, parameter variants
   and source-class provenance. Runtime enchantment consumers resolve this loaded catalog.

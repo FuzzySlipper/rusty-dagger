@@ -326,6 +326,103 @@ public sealed class DaggerfallCharacterStateTests
         Assert.DoesNotContain(DaggerfallCharacterBackgroundPolicy.Present(definitions, career, character.Pending!.ToIdentity(), selected).UnsupportedEffects, effect => effect.Contains("not active", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void Class_questions_use_ten_distinct_source_questions_and_select_only_the_existing_draft()
+    {
+        var character = Create(out var definitions, out var stats);
+        var random = SequenceRandom(out _);
+        var identity = character.Identity;
+        double strength = stats.GetStat(StatId.Parse("strength")).BaseValue;
+        character.BeginChoices(random);
+        Assert.Equal("character-pick", character.ReadCreation().Mode);
+        character.BeginClassQuestions(random);
+        Assert.Equal("character-generation", character.ReadCreation().Mode);
+        HashSet<int> seen = [];
+        for (int index = 0; index < 10; index++)
+        {
+            var quiz = character.ReadClassQuiz()!;
+            Assert.Equal(index, quiz.Answered);
+            Assert.True(seen.Add(quiz.Question.Number));
+            int answer = quiz.Question.Answers.Select((value, ordinal) => (value, ordinal)).Single(entry => entry.value.Archetype == 0).ordinal;
+            character.AnswerClassQuestion(quiz.Question.Number, answer, random);
+            Assert.Throws<ArgumentException>(() => character.AnswerClassQuestion(quiz.Question.Number, answer, random));
+        }
+        Assert.Equal("character-pick", character.ReadCreation().Mode);
+        Assert.Null(character.ReadClassQuiz());
+        Assert.Equal(definitions.Catalogs.ClassQuestionnaire!.Recommendations.First(row => row.Warrior == 10).CareerId, character.Pending!.CareerId);
+        Assert.NotNull(character.Pending.Background);
+        Assert.Equal(identity, character.Identity);
+        Assert.Equal(strength, stats.GetStat(StatId.Parse("strength")).BaseValue);
+        character.CancelChoices();
+        Assert.Null(character.CreationMode);
+    }
+
+    [Fact]
+    public void Questionnaire_back_preserves_choices_and_rejects_wrong_question_answer_and_commit()
+    {
+        var character = Create(out _, out _);
+        var random = SequenceRandom(out _);
+        Assert.Throws<ArgumentException>(() => character.BeginClassQuestions(random));
+        character.BeginChoices(random);
+        var draft = character.Pending;
+        character.BeginClassQuestions(random);
+        var question = character.ReadClassQuiz()!.Question;
+        Assert.Throws<ArgumentException>(() => character.AnswerClassQuestion(question.Number, 3, random));
+        Assert.Throws<ArgumentException>(() => character.AnswerClassQuestion(question.Number == 1 ? 2 : 1, 0, random));
+        Assert.Throws<ArgumentException>(() => character.CommitChoices());
+        Assert.Equal(0, character.ReadClassQuiz()!.Answered);
+        character.BackToClassPick();
+        Assert.Equal(draft, character.Pending);
+        Assert.Equal("character-pick", character.CreationMode);
+        Assert.Throws<ArgumentException>(() => character.BackToClassPick());
+    }
+
+    [Fact]
+    public void A_rejected_final_background_keeps_the_last_question_and_draft_available()
+    {
+        var character = Create(out _, out _);
+        var random = SequenceRandom(out var proxy);
+        character.BeginChoices(random);
+        character.BeginClassQuestions(random);
+        Assert.Throws<ArgumentException>(() => character.BeginClassQuestions(random));
+        for (int index = 0; index < 9; index++)
+            character.AnswerClassQuestion(character.ReadClassQuiz()!.Question.Number, 0, random);
+        var last = character.ReadClassQuiz()!;
+        var draft = character.Pending;
+        proxy.RejectBackground = true;
+        Assert.Throws<ArgumentException>(() => character.AnswerClassQuestion(last.Question.Number, 0, random));
+        Assert.Equal(9, character.ReadClassQuiz()!.Answered);
+        Assert.Equal(last.Question, character.ReadClassQuiz()!.Question);
+        Assert.Equal(draft, character.Pending);
+        proxy.RejectBackground = false;
+        character.AnswerClassQuestion(last.Question.Number, 0, random);
+        Assert.Equal("character-pick", character.CreationMode);
+    }
+
+    [Fact]
+    public void Every_recommended_career_has_a_renderable_background_for_every_supported_race()
+    {
+        Create(out var definitions, out _);
+        var random = RandomMinimum.Create();
+        int sequence = 0;
+        foreach (var race in definitions.Catalogs.Races)
+        foreach (var careerId in definitions.Catalogs.ClassQuestionnaire!.Recommendations.Select(row => row.CareerId).Distinct())
+        {
+            var career = definitions.Catalogs.RequireCareer(careerId);
+            var identity = new DaggerfallCharacterIdentity("Aubk-i", race.Id, DaggerfallCharacterGender.Female, 0, DaggerfallCharacterReflexes.Average, careerId);
+            var background = DaggerfallCharacterBackgroundPolicy.Roll(definitions, career, identity, random, ++sequence);
+            Assert.NotEmpty(background.Biography);
+            Assert.All(background.Biography, line => Assert.DoesNotContain("%", line, StringComparison.Ordinal));
+            var presentation = DaggerfallCharacterBackgroundPolicy.Present(definitions, career, identity, background);
+            Assert.Equal(background.Biography, presentation.Biography);
+            var complete = DaggerfallCharacterBackgroundPolicy.Update(definitions, career, identity, background, background.Answers,
+                [new(career.Attributes[0], background.AttributeBonusPool)],
+                [new(career.PrimarySkills[0], 6), new(career.MajorSkills[0], 6), new(career.MinorSkills[0], 6)]);
+            Assert.Equal(background.People, complete.People);
+            Assert.Equal(complete.Biography, DaggerfallCharacterBackgroundPolicy.RequireComplete(definitions, career, identity, complete).Biography);
+        }
+    }
+
     private static DaggerfallCharacterState Create(out DaggerfallDefinitions definitions, out StatsComponent stats)
     {
         definitions = TestPayload.Definitions;
@@ -344,12 +441,14 @@ public sealed class DaggerfallCharacterStateTests
     private class SequenceRandomProxy : DispatchProxy
     {
         internal List<KeyedRngRequest> Requests { get; } = [];
+        internal bool RejectBackground { get; set; }
 
         protected override object? Invoke(MethodInfo? method, object?[]? arguments)
         {
             if (method?.Name != nameof(IRandomService.DrawKeyed)) throw new NotSupportedException(method?.Name);
             KeyedRngRequest request = (KeyedRngRequest)arguments![0]!;
             Requests.Add(request);
+            if (RejectBackground && request.Key.Contains("attribute.", StringComparison.Ordinal)) throw new ArgumentException("Rejected background fixture.");
             int separator = request.Key.IndexOf('.', StringComparison.Ordinal);
             int sequence = int.Parse(request.Key.AsSpan(0, separator), System.Globalization.CultureInfo.InvariantCulture);
             return new KeyedRngReceipt(Math.Min(request.Maximum, checked(request.Minimum + sequence - 1)));

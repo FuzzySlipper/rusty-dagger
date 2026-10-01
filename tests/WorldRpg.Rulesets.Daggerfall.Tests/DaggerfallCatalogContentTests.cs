@@ -29,7 +29,8 @@ public sealed class DaggerfallCatalogContentTests
         string expectedFingerprint = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "tests/WorldRpg.Rulesets.Daggerfall.Tests/Fixtures/daggerfall.base.semantic.sha256")).Trim();
         // The fixture records the pack's semantic content, so it moves when the pack's meaning moves: the
         // archer gaining a ranged policy and the actions carrying their own reach are exactly that.
-        Assert.Equal(expectedFingerprint, DaggerfallBaseContent.Fingerprint(definitions));
+        string observedFingerprint = DaggerfallBaseContent.Fingerprint(definitions);
+        Assert.True(expectedFingerprint == observedFingerprint, $"Observed semantic fingerprint: {observedFingerprint}");
         // The archer's authored quiver: twelve arrows, the ammunition a fixed-ranged shot draws.
         DaggerfallActorDefinition archerDefinition = definitions.RequireActor(new DaggerfallActorId("archer"));
         Assert.Equal(new[] { (Item: new DaggerfallItemId("arrow"), Quantity: 12UL) }, archerDefinition.Loadout.Select(entry => (entry.ItemId, entry.Quantity)).ToArray());
@@ -344,4 +345,16 @@ public sealed class DaggerfallCatalogContentTests
         Assert.Contains(before, payload, StringComparison.Ordinal);
         Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.Replace(before, after, StringComparison.Ordinal))));
     }
+    [Theory]
+    [InlineData("duplicate-outcome")]
+    [InlineData("duplicate-archetype")]
+    public void Malformed_questionnaire_cannot_leave_a_live_answer_without_a_recommendation(string mutation)
+    {
+        var payload = System.Text.Json.Nodes.JsonNode.Parse(TestPayload.CombinedText)!;
+        var quiz = payload["catalogs"]!["classQuestionnaire"]!;
+        if (mutation == "duplicate-outcome") quiz["recommendations"]![0] = quiz["recommendations"]![1]!.DeepClone();
+        else quiz["questions"]![0]!["answers"]![0]!["archetype"] = quiz["questions"]![0]!["answers"]![1]!["archetype"]!.DeepClone();
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString())));
+    }
+
 }

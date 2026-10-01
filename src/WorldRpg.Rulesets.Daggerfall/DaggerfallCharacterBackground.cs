@@ -29,7 +29,7 @@ internal sealed record DaggerfallCharacterBackgroundSave(
     DaggerfallCreationAllocationSave[] SkillAllocations,
     DaggerfallStartingGrant[] StartingGrants,
     DaggerfallBiographyModifiersSave Modifiers,
-    string[] Biography);
+    string[] Biography, DaggerfallBiographyPeopleSave People);
 
 internal sealed record DaggerfallCharacterBackgroundPresentation(
     int BiographyClassIndex, string[] Biography, DaggerfallBiographyQuestionPresentation[] Questions,
@@ -62,7 +62,7 @@ internal static class DaggerfallCharacterBackgroundPolicy
         AddRolls(skills, career.MinorSkills, 13, "minor", random, rollSequence);
         DaggerfallBiographyAnswerSave[] answers = biography.Questions
             .Select(question => new DaggerfallBiographyAnswerSave(question.Number, question.Answers[0].Letter)).ToArray();
-        return Build(definitions, career, identity, biography, rollSequence, answers, attributes, [], Draw(random, rollSequence, "attribute-pool", AttributePoolMinimum, AttributePoolMaximum), skills.ToArray(), [], requireComplete: false);
+        return Build(definitions, career, identity, biography, rollSequence, answers, attributes, [], Draw(random, rollSequence, "attribute-pool", AttributePoolMinimum, AttributePoolMaximum), skills.ToArray(), [], requireComplete: false, DaggerfallBiographyPeople.Roll(definitions, identity.RaceId, random, rollSequence));
     }
 
     internal static DaggerfallCharacterBackgroundSave Update(DaggerfallDefinitions definitions, DaggerfallCareerDefinition career,
@@ -74,17 +74,17 @@ internal static class DaggerfallCharacterBackgroundPolicy
         if (current.BiographyClassIndex != biography.ClassIndex)
             throw new ArgumentException("Reroll the background after changing career so it uses that career's questionnaire.");
         return Build(definitions, career, identity, biography, current.RollSequence, answers.ToArray(), current.RolledAttributes, attributes.ToArray(), current.AttributeBonusPool,
-            current.RolledSkills, skills.ToArray(), requireComplete: false);
+            current.RolledSkills, skills.ToArray(), requireComplete: false, current.People);
     }
 
     internal static DaggerfallCharacterBackgroundSave RequireComplete(DaggerfallDefinitions definitions, DaggerfallCareerDefinition career, DaggerfallCharacterIdentity identity, DaggerfallCharacterBackgroundSave value) =>
         Build(definitions, career, identity, BiographyFor(definitions, career), value.RollSequence, value.Answers, value.RolledAttributes, value.AttributeAllocations,
-            value.AttributeBonusPool, value.RolledSkills, value.SkillAllocations, requireComplete: true);
+            value.AttributeBonusPool, value.RolledSkills, value.SkillAllocations, requireComplete: true, value.People);
 
     internal static DaggerfallCharacterBackgroundPresentation Present(DaggerfallDefinitions definitions, DaggerfallCareerDefinition career, DaggerfallCharacterIdentity identity, DaggerfallCharacterBackgroundSave value)
     {
         DaggerfallCharacterBackgroundSave background = Build(definitions, career, identity, BiographyFor(definitions, career), value.RollSequence, value.Answers, value.RolledAttributes,
-            value.AttributeAllocations, value.AttributeBonusPool, value.RolledSkills, value.SkillAllocations, requireComplete: false);
+            value.AttributeAllocations, value.AttributeBonusPool, value.RolledSkills, value.SkillAllocations, requireComplete: false, value.People);
         DaggerfallBiographyDefinition biography = BiographyFor(definitions, career);
         Dictionary<string, int> attributeAllocations = Values(background.AttributeAllocations);
         Dictionary<string, int> skillAllocations = Values(background.SkillAllocations);
@@ -134,9 +134,10 @@ internal static class DaggerfallCharacterBackgroundPolicy
 
     private static DaggerfallCharacterBackgroundSave Build(DaggerfallDefinitions definitions, DaggerfallCareerDefinition career, DaggerfallCharacterIdentity identity, DaggerfallBiographyDefinition biography, int rollSequence,
         DaggerfallBiographyAnswerSave[] answers, DaggerfallCreationAllocationSave[] rolledAttributes, DaggerfallCreationAllocationSave[] attributeAllocations,
-        int attributePool, DaggerfallCreationAllocationSave[] rolledSkills, DaggerfallCreationAllocationSave[] skillAllocations, bool requireComplete)
+        int attributePool, DaggerfallCreationAllocationSave[] rolledSkills, DaggerfallCreationAllocationSave[] skillAllocations, bool requireComplete, DaggerfallBiographyPeopleSave people)
     {
         if (rollSequence <= 0) throw new ArgumentOutOfRangeException(nameof(rollSequence));
+        DaggerfallBiographyPeople.Validate(people, identity.RaceId);
         _ = DaggerfallFormulaPolicy.CreationBonusPool(attributePool);
         RequireChoices(biography, answers);
         RequireExact(career.Attributes, rolledAttributes, "rolled attributes"); RequireExact(career.SkillReferences, rolledSkills, "rolled skills");
@@ -160,10 +161,10 @@ internal static class DaggerfallCharacterBackgroundPolicy
         DaggerfallStartingGrant[] grants = Effects(biography, answers).Where(effect => effect.Kind is DaggerfallBiographyEffectKind.Item or DaggerfallBiographyEffectKind.Gold)
             .Select(effect => effect.Kind == DaggerfallBiographyEffectKind.Item ? Grant(definitions, effect) : GoldGrant(definitions, effect)).ToArray();
         DaggerfallBiographyModifiersSave modifiers = Modifiers(biography, answers);
-        string[] prose = Biography(definitions, biography, answers, identity);
+        string[] prose = Biography(definitions, biography, answers, identity, people);
         return new(biography.ClassIndex, rollSequence, answers.OrderBy(answer => answer.Question).ToArray(), rolledAttributes.OrderBy(value => value.Id, StringComparer.Ordinal).ToArray(),
             attributeAllocations.OrderBy(value => value.Id, StringComparer.Ordinal).ToArray(), attributePool, rolledSkills.OrderBy(value => value.Id, StringComparer.Ordinal).ToArray(),
-            skillAllocations.OrderBy(value => value.Id, StringComparer.Ordinal).ToArray(), grants, modifiers, prose);
+            skillAllocations.OrderBy(value => value.Id, StringComparer.Ordinal).ToArray(), grants, modifiers, prose, people);
     }
 
     private static void AddRolls(List<DaggerfallCreationAllocationSave> values, IEnumerable<string> skills, int minimum, string scope, IRandomService random, int rollSequence)
@@ -178,9 +179,9 @@ internal static class DaggerfallCharacterBackgroundPolicy
     private static string Text(DaggerfallDefinitions definitions, IEnumerable<DaggerfallTextKey> keys) => string.Join(" ", keys.SelectMany(key => definitions.Text.Require(key).TextRuns)).Trim();
     private static IEnumerable<DaggerfallBiographyEffectDefinition> Effects(DaggerfallBiographyDefinition biography, IEnumerable<DaggerfallBiographyAnswerSave> answers) =>
         answers.Select(answer => biography.Questions.Single(question => question.Number == answer.Question).Answers.Single(value => value.Letter == answer.Letter)).SelectMany(answer => answer.Effects);
-    private static string[] Biography(DaggerfallDefinitions definitions, DaggerfallBiographyDefinition biography, DaggerfallBiographyAnswerSave[] answers, DaggerfallCharacterIdentity identity)
+    private static string[] Biography(DaggerfallDefinitions definitions, DaggerfallBiographyDefinition biography, DaggerfallBiographyAnswerSave[] answers, DaggerfallCharacterIdentity identity, DaggerfallBiographyPeopleSave people)
     {
-        DaggerfallTextContext context = BiographyContext(definitions, biography, answers, identity);
+        DaggerfallTextContext context = BiographyContext(definitions, biography, answers, identity, people);
         DaggerfallTextRenderResult rendered = definitions.TextPresentation.Resolve(biography.BackstoryKey, context);
         if (!rendered.IsComplete)
             throw new ArgumentException($"Biography '{biography.BackstoryKey}' cannot be rendered from its selected answers: {string.Join(", ", rendered.Diagnostics.Select(diagnostic => diagnostic.Detail))}.");
@@ -190,13 +191,16 @@ internal static class DaggerfallCharacterBackgroundPolicy
         return lines;
     }
 
-    private static DaggerfallTextContext BiographyContext(DaggerfallDefinitions definitions, DaggerfallBiographyDefinition biography, IEnumerable<DaggerfallBiographyAnswerSave> answers, DaggerfallCharacterIdentity identity)
+    private static DaggerfallTextContext BiographyContext(DaggerfallDefinitions definitions, DaggerfallBiographyDefinition biography, IEnumerable<DaggerfallBiographyAnswerSave> answers, DaggerfallCharacterIdentity identity, DaggerfallBiographyPeopleSave people)
     {
         string?[] primary = new string?[12], secondary = new string?[12], tertiary = new string?[12];
         DaggerfallTextPlayerContext player = identity.Gender == DaggerfallCharacterGender.Female
             ? new(Name: identity.Name, Race: identity.RaceId, PlayerPronoun: "she", PlayerObjectPronoun: "her", PlayerReflexivePronoun: "herself", PlayerPossessiveAdjective: "her", PlayerPossessivePronoun: "hers")
             : new(Name: identity.Name, Race: identity.RaceId, PlayerPronoun: "he", PlayerObjectPronoun: "him", PlayerReflexivePronoun: "himself", PlayerPossessiveAdjective: "his", PlayerPossessivePronoun: "his");
-        DaggerfallTextContext fragmentContext = DaggerfallTextContext.Empty with { Player = player };
+        var home = DaggerfallBiographyPeople.Home(definitions, identity.RaceId);
+        DaggerfallTextContext fragmentContext = DaggerfallTextContext.Empty with { Player = player,
+            Location = new(HomeProvince: home.Province, HomeGeographicalFeature: home.Feature),
+            Story = new(Name: people.Name, FemaleName: people.FemaleName, MaleName: people.MaleName, ImperialName: people.ImperialName) };
         foreach (DaggerfallBiographyAnswerSave selected in answers)
         {
             DaggerfallBiographyAnswerDefinition answer = biography.Questions.Single(question => question.Number == selected.Question).Answers.Single(answer => answer.Letter == selected.Letter);
@@ -213,10 +217,10 @@ internal static class DaggerfallCharacterBackgroundPolicy
                 }
             }
         }
-        return fragmentContext with { Story = new(
-            QuestionOne: primary[0], QuestionTwo: primary[1], QuestionThree: primary[2], QuestionFour: primary[3], QuestionFive: primary[4], QuestionSix: primary[5], QuestionSeven: primary[6], QuestionEight: primary[7], QuestionNine: primary[8], QuestionTen: primary[9], QuestionEleven: primary[10], QuestionTwelve: primary[11],
-            QuestionOneA: secondary[0], QuestionTwoA: secondary[1], QuestionThreeA: secondary[2], QuestionFourA: secondary[3], QuestionFiveA: secondary[4], QuestionSixA: secondary[5], QuestionSevenA: secondary[6], QuestionEightA: secondary[7], QuestionNineA: secondary[8], QuestionTenA: secondary[9], QuestionElevenA: secondary[10], QuestionTwelveA: secondary[11],
-            QuestionOneB: tertiary[0], QuestionTwoB: tertiary[1], QuestionThreeB: tertiary[2], QuestionFourB: tertiary[3], QuestionFiveB: tertiary[4], QuestionSixB: tertiary[5], QuestionSevenB: tertiary[6], QuestionEightB: tertiary[7], QuestionNineB: tertiary[8], QuestionTenB: tertiary[9], QuestionElevenB: tertiary[10], QuestionTwelveB: tertiary[11]) };
+        return fragmentContext with { Story = fragmentContext.Story with {
+            QuestionOne = primary[0], QuestionTwo = primary[1], QuestionThree = primary[2], QuestionFour = primary[3], QuestionFive = primary[4], QuestionSix = primary[5], QuestionSeven = primary[6], QuestionEight = primary[7], QuestionNine = primary[8], QuestionTen = primary[9], QuestionEleven = primary[10], QuestionTwelve = primary[11],
+            QuestionOneA = secondary[0], QuestionTwoA = secondary[1], QuestionThreeA = secondary[2], QuestionFourA = secondary[3], QuestionFiveA = secondary[4], QuestionSixA = secondary[5], QuestionSevenA = secondary[6], QuestionEightA = secondary[7], QuestionNineA = secondary[8], QuestionTenA = secondary[9], QuestionElevenA = secondary[10], QuestionTwelveA = secondary[11],
+            QuestionOneB = tertiary[0], QuestionTwoB = tertiary[1], QuestionThreeB = tertiary[2], QuestionFourB = tertiary[3], QuestionFiveB = tertiary[4], QuestionSixB = tertiary[5], QuestionSevenB = tertiary[6], QuestionEightB = tertiary[7], QuestionNineB = tertiary[8], QuestionTenB = tertiary[9], QuestionElevenB = tertiary[10], QuestionTwelveB = tertiary[11] } };
     }
     private static Dictionary<string, int> SkillBonuses(DaggerfallDefinitions definitions, DaggerfallBiographyDefinition biography, IEnumerable<DaggerfallBiographyAnswerSave> answers) =>
         Effects(biography, answers).Where(effect => effect.Kind == DaggerfallBiographyEffectKind.Skill).GroupBy(effect => definitions.Catalogs.Skills.Single(key => key.Index == Number(effect.First)).Id)
@@ -259,7 +263,9 @@ internal static class DaggerfallCharacterBackgroundPolicy
         string category = group switch { 2 => "Armor", 3 => "Weapons", 7 => "Books", 10 => "ReligiousItems", 14 => "Gems", 22 => "MiscellaneousIngredients2", 25 => "Jewellery", _ => throw new ArgumentException($"Biography item group {group} has no normalized category.") };
         DaggerfallItemTemplateDefinition template = definitions.ItemTemplateCatalog.Templates.Values.Where(value => value.Groups.Contains(category, StringComparer.Ordinal)).OrderBy(value => value.Index).ElementAtOrDefault(ordinal)
             ?? throw new ArgumentException($"Biography item {effect.Text} has no normalized template.");
-        string itemId = category is "Armor" or "Weapons"
+        // The normalized stackable weapon is an arrow: the donor ignores its material, and the
+        // item publication consequently has one template identity rather than material variants.
+        string itemId = category == "Armor" || category == "Weapons" && !template.Stackable
             ? $"template-{template.Index}-{WeaponMaterials[Number(effect.Third)]}"
             : $"template-{template.Index}";
         _ = definitions.RequireItem(new DaggerfallItemId(itemId));
