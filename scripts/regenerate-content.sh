@@ -45,7 +45,7 @@ missing() {
 # Every input is checked before anything is written, so an absent input stops the run with its
 # name instead of leaving a half-regenerated tree.
 [[ -d "$arena2" ]] || missing "Arena2 directory '$arena2' (link local/arena2 to the game's ARENA2 folder or pass --arena2)"
-for file in MAPS.BSA BLOCKS.BSA ARCH3D.BSA MONSTER.BSA DAGGER.SND TEXT.RSC CLIMATE.PAK POLITIC.PAK WOODS.WLD FACTION.TXT SPELLS.STD MAGIC.DEF ANIM0000.VID AZURA.FLC; do
+for file in MAPS.BSA BLOCKS.BSA ARCH3D.BSA MONSTER.BSA DAGGER.SND TEXT.RSC CLASSES.DAT CLIMATE.PAK POLITIC.PAK WOODS.WLD FACTION.TXT SPELLS.STD MAGIC.DEF ANIM0000.VID AZURA.FLC; do
   [[ -f "$arena2/$file" ]] || missing "Arena2 file '$arena2/$file'"
 done
 [[ -d "$arena2/books" ]] || missing "Arena2 books directory '$arena2/books'"

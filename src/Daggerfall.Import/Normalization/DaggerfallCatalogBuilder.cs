@@ -26,7 +26,7 @@ public static class DaggerfallCatalogBuilder
         IReadOnlyList<(string FileName, byte[] Bytes)> careers,
         IReadOnlyList<string> enemyIds,
         IReadOnlyList<string> itemTemplateIds,
-        string raceTemplateSource)
+        string raceTemplateSource, byte[]? classRecommendations = null, DaggerfallText? classQuestionText = null)
     {
         ArgumentNullException.ThrowIfNull(inventory);
         ArgumentNullException.ThrowIfNull(vocabularyAttributes);
@@ -134,6 +134,10 @@ public static class DaggerfallCatalogBuilder
             []);
         // The published sources are exactly what the records cite; Validate refuses a set
         // that disagrees, so this cannot drift from the citations a consumer reads.
+        if ((classRecommendations is null) != (classQuestionText is null))
+            throw new ArgumentException("Class recommendations and their question text must be supplied together.");
+        if (classRecommendations is not null)
+            catalogs = catalogs with { ClassQuestionnaire = DaggerfallClassQuestionnaireBuilder.Build(classRecommendations, classQuestionText!) };
         catalogs = catalogs with { Sources = [.. catalogs.CitedSources().Order(StringComparer.Ordinal)] };
         catalogs.Validate(documentedPaths);
         return catalogs;

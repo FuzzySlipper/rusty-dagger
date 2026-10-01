@@ -154,7 +154,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         {
             // The revision is cheap and always present, so the DOM can tell whether the copy it holds
             // is the one this session shows.
-            fields = [.. fields, ("uiArtRevision", builder.String(uiArt.Revision))];
+            fields = [.. fields, ("uiArtRevision", builder.String(uiArt.Revision)), ("pickScreens", builder.Array(uiArt.PickScreens.Select(builder.String).ToArray()))];
             if (_artPending)
             {
                 fields = [.. fields, ("uiArt", Art(builder, uiArt))];
@@ -436,6 +436,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
 
     private static uint Creation(UiValueBuilder builder, DaggerfallCharacterCreationPresentation creation) => builder.Object(
         ("editing", builder.Boolean(creation.Editing)),
+        ("mode", creation.Mode is null ? builder.Null() : builder.String(creation.Mode)),
+        ("classQuestionsAvailable", builder.Boolean(creation.ClassQuestionsAvailable)),
+        ("classQuiz", creation.ClassQuiz is null ? builder.Null() : ClassQuiz(builder, creation.ClassQuiz)),
         ("current", builder.Object(("name", builder.String(creation.Current.Name)), ("race", builder.String(creation.Current.RaceId)),
             ("gender", builder.String(creation.Current.Gender == DaggerfallCharacterGender.Female ? "female" : "male")), ("faceIndex", builder.Number(creation.Current.FaceIndex)),
             ("reflexes", builder.Number((int)creation.Current.Reflexes)), ("career", builder.String(creation.Current.CareerId)))),
@@ -444,6 +447,12 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("reflexes", builder.Array(creation.Reflexes.Select(reflex => builder.Object(("value", builder.Number(reflex.Value)), ("label", builder.String(reflex.Label)))).ToArray())),
         ("custom", creation.Custom is null ? builder.Null() : Custom(builder, creation.Custom)),
         ("background", creation.Background is null ? builder.Null() : Background(builder, creation.Background)));
+
+    private static uint ClassQuiz(UiValueBuilder builder, DaggerfallClassQuizPresentation quiz) => builder.Object(
+        ("answered", builder.Number(quiz.Answered)), ("total", builder.Number(quiz.Total)),
+        ("question", builder.Object(("number", builder.Number(quiz.Question.Number)), ("text", builder.String(quiz.Question.Text)),
+            ("answers", builder.Array(quiz.Question.Answers.Select((answer, index) => builder.Object(
+                ("index", builder.Number(index)), ("text", builder.String(answer.Text)))).ToArray())))));
 
     private static uint Background(UiValueBuilder builder, DaggerfallCharacterBackgroundPresentation background) => builder.Object(
         ("biographyClassIndex", builder.Number(background.BiographyClassIndex)),

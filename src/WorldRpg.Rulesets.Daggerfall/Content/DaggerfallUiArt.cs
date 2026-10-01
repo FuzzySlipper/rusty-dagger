@@ -31,7 +31,6 @@ internal sealed class DaggerfallUiArt
         // The supplied screens a mode is shown with. Each carries its own palette in the file, so the
         // published bytes are the ones the classic reader would paint.
         "screen.character-generation",
-        "screen.pick.02",
         "screen.prison",
         "screen.start-menu",
         "screen.title",
@@ -50,16 +49,18 @@ internal sealed class DaggerfallUiArt
     /// </summary>
     private const uint MaximumReadBytes = 1024 * 1024;
 
-    private DaggerfallUiArt(IReadOnlyList<(string Id, string Image)> images)
+    private DaggerfallUiArt(IReadOnlyList<(string Id, string Image)> images, IReadOnlyList<string> pickScreens)
     {
         // A new admitted image block invalidates retained DOM art, including across runtime restarts.
         // This token identifies the publication; it does not hash or verify the image bytes.
         Revision = Guid.NewGuid().ToString("N");
         Images = images;
+        PickScreens = pickScreens;
     }
 
     /// <summary>Publication-stable UI-art identity used by a reconnecting DOM to request the current image block.</summary>
     internal string Revision { get; }
+    internal IReadOnlyList<string> PickScreens { get; }
 
     /// <summary>Every resolved image as a data URL, ordered by media identity.</summary>
     internal IReadOnlyList<(string Id, string Image)> Images { get; }
@@ -78,8 +79,11 @@ internal sealed class DaggerfallUiArt
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(itemIcons);
         Dictionary<string, InventoryEntry> inventory = ReadInventory(content);
+        string[] pickScreens = inventory.Where(entry => entry.Value.Slot == "pick").Select(entry => entry.Key).Order(StringComparer.Ordinal).ToArray();
+        if (pickScreens.Length == 0 || !pickScreens.Contains("screen.pick.02", StringComparer.Ordinal))
+            throw new InvalidOperationException("The published pick slot must supply screen.pick.02.");
         List<(string Id, string Image)> images = [];
-        foreach (string id in AlwaysShown.Concat(itemIcons).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
+        foreach (string id in AlwaysShown.Concat(pickScreens).Concat(itemIcons).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
         {
             if (!inventory.TryGetValue(id, out InventoryEntry entry))
             {
@@ -90,7 +94,7 @@ internal sealed class DaggerfallUiArt
             images.Add((id, $"data:image/png;base64,{Convert.ToBase64String(bytes)}"));
         }
 
-        return new DaggerfallUiArt(images);
+        return new DaggerfallUiArt(images, pickScreens);
     }
 
     /// <summary>Reads the generated inventory by name and indexes it by the media identity it states.</summary>
@@ -119,7 +123,7 @@ internal sealed class DaggerfallUiArt
                     throw new InvalidOperationException($"The admitted content inventory states media '{mediaId}' without a usable path or length.");
                 }
 
-                if (!entries.TryAdd(mediaId, new InventoryEntry(path, byteLength)))
+                if (!entries.TryAdd(mediaId, new InventoryEntry(path, byteLength, artifact.TryGetProperty("slot", out var slot) ? slot.GetString() : null)))
                 {
                     throw new InvalidOperationException($"The admitted content inventory names media '{mediaId}' twice.");
                 }
@@ -188,5 +192,5 @@ internal sealed class DaggerfallUiArt
         return bytes;
     }
 
-    private readonly record struct InventoryEntry(string Path, long ByteLength);
+    private readonly record struct InventoryEntry(string Path, long ByteLength, string? Slot);
 }

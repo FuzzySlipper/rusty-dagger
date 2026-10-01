@@ -23,6 +23,7 @@ interface DaggerHud {
   readonly composition: CompositionIdentity;
   readonly inventory?: InventoryProjection;
   readonly character?: CharacterProjection;
+  readonly pickScreens?: readonly string[];
   readonly loot?: LootProjection | null;
   readonly uiArtRevision?: string;
   readonly uiArt?: UiArt | null;
@@ -396,6 +397,14 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const characterView = mountCharacter(characterRoot, action => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
   }));
+  const creationElement = characterView.creationElement;
+  const creationHome = creationElement.parentElement!;
+  const entryParts = document.createElement('div'); entryParts.className = 'dagger-entry-parts'; entryRoot.append(entryParts);
+  const entryCreate = document.createElement('button'); entryCreate.type = 'button'; entryCreate.textContent = 'Create character';
+  entryCreate.className = 'dagger-entry-create'; entryCreate.dataset.testid = 'entry-create-character'; entryRoot.append(entryCreate);
+  entryCreate.addEventListener('click', () => context.intents?.claim('dagger.ui', {
+    kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'character-begin' },
+  }));
   const notebookRoot = shell.querySelector<HTMLElement>('.dagger-notebook-root')!;
   const notebookView = mountNotebook(notebookRoot, action => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
@@ -737,6 +746,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   let artCooldown = 0;
   let deadMode = false;
   let titleMode = false;
+  let creationMode: string | null = null;
+  let pickScreens: readonly string[] = [];
   let currentDeath: DeathProjection | null = null;
   // The entry screen is the mode's own screen: the mode shows the published artifact, and the one thing
   // the screen does is ask the product to begin. The product decides, so the answer is the mode changing
@@ -754,8 +765,20 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       return;
     }
     context.ui.setInteractionMode('interface');
-    const entry = image(screenForMode(TITLE_MODE)!);
+    entryRoot.dataset.mode = creationMode ?? TITLE_MODE;
+    const creating = creationMode !== null;
+    if (creating && menu.open) menu.close();
+    (creating ? entryRoot : creationHome).append(creationElement);
+    creationElement.classList.toggle('dagger-entry-creation', creating);
+    shell.querySelector<HTMLButtonElement>('.dagger-entry-begin')!.hidden = creating;
+    entryCreate.hidden = creating;
+    const primary = screenForMode(creationMode ?? TITLE_MODE)!;
+    const entry = image(primary);
     if (entry !== null) entryScreen.src = entry;
+    entryParts.replaceChildren(...(creationMode === 'character-pick' ? pickScreens.filter(id => id !== primary) : []).flatMap(id => {
+      const source = image(id); if (source === null) return [];
+      const part = document.createElement('img'); part.src = source; part.alt = ''; part.dataset.mediaId = id; return [part];
+    }));
   };
   shell.querySelector<HTMLButtonElement>('.dagger-entry-begin')!.addEventListener('click', () => {
     context.intents?.claim('dagger.ui', {
@@ -894,6 +917,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     // The entry screen is the mode's screen, the way the death screen is the dead mode's: the mode
     // value decides which one is up, and the artifact the mode names is what it shows.
     titleMode = value.mode === TITLE_MODE;
+    creationMode = titleMode && value.character?.creation?.editing ? value.character.creation.mode ?? null : null;
+    pickScreens = value.pickScreens ?? [];
     redrawEntry();
 
     title.textContent = value.mode === 'paused' ? 'Paused' : value.mode === 'dead' ? 'Defeated'

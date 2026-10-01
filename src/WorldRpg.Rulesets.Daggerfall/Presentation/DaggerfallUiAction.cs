@@ -11,7 +11,7 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
     string? QuestInstance = null, int? QuestMessage = null, int? QuestChoice = null, string? QuestPrompt = null, string? QuestDelivery = null,
     string? Note = null, string? Text = null, int? Page = null, int? Destination = null,
     string? Tone = null, string? Topic = null, int? Hours = null, int? Region = null, int? Days = null,
-    bool Cautious = false, bool Inn = false, bool Ship = false, bool Open = false)
+    bool Cautious = false, bool Inn = false, bool Ship = false, bool Open = false, int? Question = null, int? Answer = null)
 {
     /// <summary>The typed action the wire name names; resolved once when the action is built.</summary>
     internal DaggerfallUiActionKind Kind { get; } = DaggerfallUiAction.KindOf(Action);
@@ -22,6 +22,7 @@ internal enum DaggerfallUiActionKind
 {
     Begin, CinematicSkip, ArtRequest,
     ControlsRebind, ControlsReset,
+    CharacterClassQuestions, CharacterClassAnswer, CharacterClassBack,
     CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel,
     CharacterLevelAllocate, CharacterLevelCommit,
     ActivationMode, Attack, Loot, Inventory, Character, Menu,
@@ -143,6 +144,9 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.ControlsRebind, "controls-rebind", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.ControlsReset, "controls-reset", DaggerfallUiPhases.Live),
         // Character creation checks the entry screen itself, so a refusal is reported rather than dropped.
+        new(DaggerfallUiActionKind.CharacterClassQuestions, "character-class-questions", DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.CharacterClassAnswer, "character-class-answer", DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.CharacterClassBack, "character-class-back", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.CharacterBegin, "character-begin", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.CharacterUpdate, "character-update", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.CharacterBackgroundReroll, "character-background-reroll", DaggerfallUiPhases.Live),
@@ -236,7 +240,7 @@ internal static class DaggerfallUiAction
             int? targetGrid = null, faceIndex = null, reflexes = null, hitPointsPerLevel = null, questMessage = null, page = null, destination = null, hours = null, region = null, days = null;
             ulong? amount = null;
             bool confirm = false, cautious = false, inn = false, ship = false, open = false;
-            int? questChoice = null;
+            int? questChoice = null, classQuestion = null, classAnswer = null;
             foreach (JsonProperty property in root.EnumerateObject())
             {
                 if (!fields.Add(property.Name)) return null;
@@ -269,6 +273,12 @@ internal static class DaggerfallUiAction
                     else if (property.Name == "inn") inn = property.Value.GetBoolean();
                     else if (property.Name == "open") open = property.Value.GetBoolean();
                     else ship = property.Value.GetBoolean();
+                    continue;
+                }
+                if (property.Name is "question" or "answer")
+                {
+                    if (!property.Value.TryGetInt32(out int selected)) return null;
+                    if (property.Name == "question") classQuestion = selected; else classAnswer = selected;
                     continue;
                 }
                 if (property.Name == "questChoice")
@@ -431,7 +441,7 @@ internal static class DaggerfallUiAction
                     ? new(action, Attribute: attribute) : null;
             if (action == "character-level-commit")
                 return fields.SetEquals(["action"]) ? new(action) : null;
-            if (action is "character-update" or "character-commit" or "character-background-reroll")
+            if (action is "character-update" or "character-commit" or "character-background-reroll" or "character-class-questions")
             {
                 HashSet<string> required = career == DaggerfallCustomCareerPolicy.CareerId
                     ? ["action", "name", "race", "gender", "faceIndex", "reflexes", "career", "primarySkills", "majorSkills", "minorSkills", "hitPointsPerLevel", "advantages", "disadvantages"]
@@ -446,6 +456,10 @@ internal static class DaggerfallUiAction
                         PrimarySkills: primarySkills, MajorSkills: majorSkills, MinorSkills: minorSkills, Advantages: advantages, Disadvantages: disadvantages, HitPointsPerLevel: hitPointsPerLevel,
                         BackgroundAnswers: backgroundAnswers, AttributeAllocations: attributeAllocations, SkillAllocations: skillAllocations) : null;
             }
+            if (action == "character-class-back") return fields.SetEquals(["action"]) ? new(action) : null;
+            if (action == "character-class-answer")
+                return fields.SetEquals(["action", "question", "answer"]) && classQuestion is >= 1 and <= 40 && classAnswer is >= 0 and <= 2
+                    ? new(action, Question: classQuestion, Answer: classAnswer) : null;
             if (action == "activation-mode")
                 return fields.SetEquals(["action", "mode"])
                     && mode is "grab" or "info" or "talk" or "steal" or "lockpick" or "bash"

@@ -356,7 +356,8 @@ public sealed class DaggerfallCatalogTests
     }
 
     private static DaggerfallCatalogs BuildFromRepository() => DaggerfallCatalogBuilder.Build(
-        ReadInventory(), VocabularyAttributes(), VocabularySkills(), ReadCareers(), EnemyIds(), ItemIds(), RaceTemplate());
+        ReadInventory(), VocabularyAttributes(), VocabularySkills(), ReadCareers(), EnemyIds(), ItemIds(), RaceTemplate(),
+        File.ReadAllBytes(TestData.Corpus("CLASSES.DAT")), DaggerfallTextBuilder.Build(File.ReadAllBytes(TestData.Corpus("TEXT.RSC")), "arena2/TEXT.RSC", ReadInventory(), "en"));
 
     private static string RaceTemplate() => File.ReadAllText(TestData.Donor("Assets/Scripts/Game/Entities/RaceTemplate.cs"));
 

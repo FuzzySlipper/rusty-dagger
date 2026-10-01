@@ -86,10 +86,12 @@ internal sealed class DaggerfallCatalogSet(
     IReadOnlyList<string> careerNameCollisions,
     IReadOnlyList<DaggerfallCatalogReference> enemies,
     IReadOnlyList<DaggerfallCatalogReference> itemTemplates,
-    IReadOnlyList<string> sourcePaths)
+    IReadOnlyList<string> sourcePaths, DaggerfallClassQuestionnaire? classQuestionnaire = null)
 {
     /// <summary>The classic element keys, in the index order the catalog publishes.</summary>
     internal static readonly string[] ElementKeys = ["fire", "frost", "disease-or-poison", "shock", "magic"];
+
+    internal DaggerfallClassQuestionnaire? ClassQuestionnaire { get; } = classQuestionnaire;
 
     internal IReadOnlyList<DaggerfallCatalogKey> Attributes { get; } = Array.AsReadOnly(attributes.ToArray());
 

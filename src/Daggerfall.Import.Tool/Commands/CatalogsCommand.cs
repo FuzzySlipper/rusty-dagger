@@ -33,7 +33,9 @@ internal static class CatalogsCommand
             careers,
             // The player is an actor identity but not an enemy a catalog references.
             [.. Ids("actors").Where(id => id != "player")],
-            Ids("items"), File.ReadAllText(args["--donor-races"]));
+            Ids("items"), File.ReadAllText(args["--donor-races"]),
+            File.ReadAllBytes(Path.Combine(args["--arena2"], "CLASSES.DAT")),
+            DaggerfallTextBuilder.Build(File.ReadAllBytes(Path.Combine(args["--arena2"], "TEXT.RSC")), "arena2/TEXT.RSC", inventory, "en"));
         byte[] section = DaggerfallCatalogSerializer.Serialize(catalogs, inventory.Select(row => row.PathOrPattern).ToHashSet(StringComparer.Ordinal));
 
         Console.WriteLine($"catalogs: {catalogs.Races.Count} races, {catalogs.Careers.Count} careers, {catalogs.Attributes.Count} attributes, {catalogs.Skills.Count} skills, {catalogs.Resistances.Count} elements, {catalogs.Enemies.Count} enemy references, {catalogs.ItemTemplates.Count} item-template references");
