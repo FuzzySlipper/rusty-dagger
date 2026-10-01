@@ -1,3 +1,4 @@
+using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -58,6 +59,8 @@ internal sealed class DaggerfallSocialState
     private readonly Dictionary<int, int> _personalReputations = [];
     private readonly Dictionary<int, DaggerfallGuildMembership> _memberships = [];
     private int _biographyReactionModifier;
+    // Live effects are reconstructed from their owners, never serialized as permanent standing.
+    private readonly Stat[] _reactionModifiers = Enumerable.Range(0, SocialGroupCount).Select(_ => new Stat(0)).ToArray();
 
     internal DaggerfallSocialState(DaggerfallFactionsSet catalog)
     {
@@ -87,13 +90,35 @@ internal sealed class DaggerfallSocialState
     {
         DaggerfallFactionDefinition faction = RequireFaction(factionId);
         int personal = faction.SocialGroup is >= 0 and < SocialGroupCount
-            ? PersonalReputation(faction.SocialGroup)
+            ? checked(PersonalReputation(faction.SocialGroup) + ReactionModifier(faction.SocialGroup))
             : 0;
         return new(faction.Id, FactionReputation(faction.Id), checked(personal + _biographyReactionModifier));
     }
 
     /// <summary>Sets the selected BIOG reaction assignment reconstructed from the character save.</summary>
     internal void SetBiographyReactionModifier(int value) => _biographyReactionModifier = value;
+
+    internal int ReactionModifier(int socialGroup)
+    {
+        RequireSocialGroup(socialGroup);
+        return _reactionModifiers[socialGroup].ValueInt;
+    }
+
+    internal void SetReactionSource(int socialGroup, MechanicsSourceIdentity identity, int amount)
+    {
+        RequireSocialGroup(socialGroup);
+        Stat stat = _reactionModifiers[socialGroup];
+        StatId id = StatId.Parse($"reaction.group.{socialGroup}");
+        stat.SetSources(id, [.. stat.Sources.Where(source => source.Identity != identity),
+            new StatSource(identity, SourceDefinitionId.Parse("daggerfall.social.reaction"), 0,
+                [new StatContributionDefinition(id, StackingGroupId.Parse("daggerfall.social.reaction"),
+                    MechanicsStackingPolicy.Sum, new StatContribution.Add(amount))])]);
+    }
+
+    internal void RemoveReactionSource(MechanicsSourceIdentity identity)
+    {
+        foreach (Stat stat in _reactionModifiers) stat.RemoveSource(identity);
+    }
 
     /// <summary>Computes the same reaction for an NPC whether or not it is currently active in the world.</summary>
     internal DaggerfallFactionReaction ReactionForNpc(DaggerfallNpc npc)

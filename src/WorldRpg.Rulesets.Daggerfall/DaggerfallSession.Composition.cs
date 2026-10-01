@@ -239,7 +239,9 @@ internal sealed partial class DaggerfallSession
             _heldEnchantments = new DaggerfallHeldEnchantments(equipmentCoordinator, itemInstances, definitions.Magic,
                 playerStats, actors.Entities, playerEntity, () => _time.Calendar,
                 () => assembled.PlayerControl.Position, () => DaggerfallActorRoster.NearbyCreatures(actors, authored), InSunlight, _itemCondition, InHolyPlace,
-                amount => _vitality.ResolveHeldEnchantmentDamage(actors.Player.Actor, amount));
+                amount => _vitality.ResolveHeldEnchantmentDamage(actors.Player.Actor, amount), social);
+            partiallyConstructed.Add(_heldEnchantments);
+            _equipmentMoves.Changed += _ => _heldEnchantments.Refresh();
             DaggerfallActorInventories actorInventories = assembled.ActorInventories;
             _combat = new DaggerCombatRules(_random, actors, equipmentCoordinator, actorInventories.InventoryFor, itemInstances, definitions, authored, targeting, use => skillUses.Record(use),
                 () => character.Background?.Modifiers.AvoidHit ?? 0, actorInventories.EquipmentFor, _itemCondition, combatRules,

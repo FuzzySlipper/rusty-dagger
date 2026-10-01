@@ -33,7 +33,7 @@ internal readonly record struct DaggerfallNearbyCreature(DaggerfallEnemyGroup Gr
 /// param carries its meaning: a skill index for EnhancesSkill, and the donor's own param order for the
 /// rest.
 /// </remarks>
-internal sealed class DaggerfallHeldEnchantments
+internal sealed class DaggerfallHeldEnchantments : IDisposable
 {
     // Classic EnchantmentTypes (API/ItemsFile.cs): ExtraSpellPts = 3, IncreasedWeightAllowance = 7,
     // EnhancesSkill = 10, ImprovesTalents = 13. Potent-vs, regeneration and the cast-when-* payloads
@@ -48,6 +48,8 @@ internal sealed class DaggerfallHeldEnchantments
     private const int ItemDeterioratesType = 16;
     private const int UserTakesDamageType = 17;
     private const int WeakensArmorType = 24;
+    private const int ArtifactEffectType = 26;
+    private const int MasqueOfClavicusParam = 0;
 
     internal const int EnhancedSkillPoints = 15;
 
@@ -112,6 +114,8 @@ internal sealed class DaggerfallHeldEnchantments
     private readonly Func<bool>? _playerInHolyPlace;
     private readonly Action<int>? _damageWearer;
     private readonly List<AppliedContribution> _applied = [];
+    private readonly DaggerfallSocialState? _social;
+    private readonly List<EffectSourceIdentity> _socialSources = [];
     // Indexed by the donor's RegensHealth params: always, in sunlight, in darkness, and one slot for a
     // param the donor never names, which counts for cleanup but never contributes a tick.
     private readonly int[] _regeneration = new int[4];
@@ -129,7 +133,7 @@ internal sealed class DaggerfallHeldEnchantments
         DaggerfallMagicCatalogSet magic, StatsComponent playerStats, EntityDirectory entities, EntityId actor,
         Func<DaggerfallCalendar> calendar, Func<WorldPoint?> playerPosition, Func<IReadOnlyList<DaggerfallNearbyCreature>> nearby,
         Func<bool>? playerInSunlight = null, DaggerfallItemConditionService? itemCondition = null,
-        Func<bool>? playerInHolyPlace = null, Action<int>? damageWearer = null)
+        Func<bool>? playerInHolyPlace = null, Action<int>? damageWearer = null, DaggerfallSocialState? social = null)
     {
         _equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
@@ -144,6 +148,7 @@ internal sealed class DaggerfallHeldEnchantments
         _itemCondition = itemCondition;
         _playerInHolyPlace = playerInHolyPlace;
         _damageWearer = damageWearer;
+        _social = social;
     }
 
     /// <summary>The talents the worn items improve right now.</summary>
@@ -166,7 +171,9 @@ internal sealed class DaggerfallHeldEnchantments
     /// </summary>
     internal void Refresh()
     {
+        if (!_entities.Store.IsAlive(_actor)) { Dispose(); return; }
         EquipmentRead read = _equipment.Read();
+        RefreshSocial(read);
         DaggerfallCalendar calendar = _calendar();
         IReadOnlyList<DaggerfallNearbyCreature> nearby = _nearby();
         HeldSignature signature = new(read.Revision, calendar.Season, MoonRatio(calendar), NearbySignature(nearby));
@@ -231,6 +238,37 @@ internal sealed class DaggerfallHeldEnchantments
         ArmorValueModifier = (strengthensArmor ? StrengthenedArmorValue : 0)
             + (weakensArmor ? WeakenedArmorValue : 0);
         _conditionPayloads = conditionPayloads;
+    }
+
+    // The donor clears reaction mods each round before its held effects contribute. Replace this
+    // owner's sources instead, preserving other live effects without accumulating reputation.
+    private void RefreshSocial(EquipmentRead read)
+    {
+        if (_social is null) return;
+        foreach (EffectSourceIdentity source in _socialSources) _social.RemoveReactionSource(source);
+        _socialSources.Clear();
+        int magnitude = Stat(DaggerfallMechanicsIds.Personality).ValueInt / 5;
+        foreach (WorldRpg.Kit.Inventory.EquipmentAssignment assignment in read.Assignments.DistinctBy(value => value.Item.EntityId))
+        {
+            if (!TryEnchantments(assignment, out IReadOnlyList<DaggerfallMagicEnchantmentDefinition> enchantments)) continue;
+            foreach (DaggerfallMagicEnchantmentDefinition enchantment in enchantments)
+            {
+                if (enchantment.Type != ArtifactEffectType || enchantment.Param != MasqueOfClavicusParam) continue;
+                EffectSourceIdentity source = IdentityFor(assignment, enchantment);
+                for (int group = 0; group < DaggerfallSocialState.SocialGroupCount; group++)
+                    _social.SetReactionSource(group, source, magnitude);
+                _socialSources.Add(source);
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        foreach (AppliedContribution applied in _applied) Stat(applied.StatId).RemoveSource(applied.Identity);
+        _applied.Clear();
+        foreach (EffectSourceIdentity source in _socialSources) _social?.RemoveReactionSource(source);
+        _socialSources.Clear();
+        _signature = null;
     }
 
     /// <summary>
