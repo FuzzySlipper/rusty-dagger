@@ -204,6 +204,14 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
         int absorbed = 0;
         for (int i = 0; i < bundle.Definitions.Length; i++)
         {
+            // An earlier payload or reflected bundle may have retired a participant synchronously.
+            if (ResolveSource(bundle.CasterId, bundle.ItemId) is null)
+            { bundle.Results.Add(new(i, targetId, DaggerfallCastOutcome.SourceUnavailable)); continue; }
+            Actor? liveTarget = ResolveSource(targetId, null);
+            if (liveTarget is null)
+            { bundle.Results.Add(new(i, targetId, DaggerfallCastOutcome.TargetUnavailable)); continue; }
+            target = liveTarget;
+            stats = target.Get<StatsComponent>();
             var defense = effects.MagicDefenseFor(targetId);
             var definition = bundle.Definitions[i];
             var binding = definition.Spell!;
@@ -287,7 +295,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
             }
             bundle.Results.Add(new(i, targetId, outcome));
         }
-        if (absorbed > 0)
+        if (absorbed > 0 && ResolveSource(targetId, null)?.Entity == target.Entity)
         {
             Track magicka = stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value));
             if (targetId == bundle.CasterId && bundle.Cost > 0) absorbed = Math.Min(absorbed, bundle.Cost);

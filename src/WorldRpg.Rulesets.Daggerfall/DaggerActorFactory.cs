@@ -132,6 +132,7 @@ internal static class DaggerActorFactory
                     new ActorPose(source.Position, 0f));
                 if (prior is not null) RestoreStats(actor.Actor, prior.Stats);
                 DaggerfallWabbajack.Restore(actor.Actor, prior?.WabbajackDefinition);
+                actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(prior?.ForcedHostile ?? false);
                 authored.Add(source.EntityId, definition);
                 RegisterActorInventory(actor, inventoryStore);
                 // A placed actor whose definition declares a loadout carries it in a managed
@@ -215,6 +216,7 @@ internal static class DaggerActorFactory
             new ActorPose(source.Position, 0F));
         if (restored is not null) RestoreStats(actor.Actor, restored.Stats);
         DaggerfallWabbajack.Restore(actor.Actor, restored?.WabbajackDefinition);
+        actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(restored?.ForcedHostile ?? false);
         RegisterActorInventory(actor, inventoryStore);
         if (restored is null)
         {
@@ -318,6 +320,7 @@ internal static class DaggerActorFactory
             new ActorPose(new WorldPoint(saved.X, saved.Y, saved.Z), saved.HeadingRadians));
         RestoreStats(actor.Actor, saved.Stats);
         DaggerfallWabbajack.Restore(actor.Actor, saved.WabbajackActive ? saved.Definition : null);
+        actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(saved.ForcedHostile);
         definitionsByActor.Add(saved.EntityId, definition);
         RegisterActorInventory(actor, inventoryStore);
         return actor;
@@ -355,6 +358,7 @@ internal static class DaggerActorFactory
                 new ActorPose(new WorldPoint(spawned.X, spawned.Y, spawned.Z), spawned.HeadingRadians));
             RestoreStats(actor.Actor, spawned.Stats);
             DaggerfallWabbajack.Restore(actor.Actor, spawned.WabbajackActive ? spawned.Definition : null);
+            actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(spawned.ForcedHostile);
             definitionsByActor.Add(spawned.EntityId, definition);
             RegisterActorInventory(actor, inventoryStore);
         }

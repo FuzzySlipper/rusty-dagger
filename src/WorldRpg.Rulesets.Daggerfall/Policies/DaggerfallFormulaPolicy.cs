@@ -150,6 +150,9 @@ internal static class DaggerfallFormulaPolicy
         return checked(healthDamage * 2 * FatigueUnitsPerAttributePoint);
     }
 
+    /// <summary>Spell fatigue uses one classic fatigue unit multiplier, unlike a nymph's doubled health-derived drain.</summary>
+    internal static int SpellFatigueDamage(int magnitude) => checked(magnitude * FatigueUnitsPerAttributePoint);
+
     internal static int SpellPoints(int intelligence, int multiplierMilli) =>
         FloorDivide(checked(intelligence * multiplierMilli), MilliScale);
 

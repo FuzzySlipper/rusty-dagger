@@ -1220,6 +1220,7 @@ internal sealed record DaggerfallPlayerSave(float X, float Y, float Z, float Yaw
 internal sealed record DaggerfallActorSave(long EntityId, float X, float Y, float Z, float HeadingRadians, DaggerfallStatsSave Stats)
 {
     public string? WabbajackDefinition { get; init; }
+    public bool ForcedHostile { get; init; }
     internal void Validate()
     {
         if (!float.IsFinite(X) || !float.IsFinite(Y) || !float.IsFinite(Z) || !float.IsFinite(HeadingRadians))
@@ -1270,6 +1271,7 @@ internal sealed record DaggerfallSiteDeltaSave(
 internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definition, float X, float Y, float Z, float HeadingRadians, DaggerfallStatsSave Stats)
 {
     public bool WabbajackActive { get; init; }
+    public bool ForcedHostile { get; init; }
     public bool PlayerAllied { get; init; }
     internal void Validate()
     {

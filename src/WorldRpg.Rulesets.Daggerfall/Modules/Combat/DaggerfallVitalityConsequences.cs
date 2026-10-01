@@ -14,6 +14,23 @@ internal sealed class DaggerfallVitalityConsequences
 
     internal DaggerfallVitalityConsequences(CombatResolution combat) => _combat = combat ?? throw new ArgumentNullException(nameof(combat));
 
+    internal DamageResult ResolveSpellHealth(Actor caster, Actor target, int amount, bool terminal)
+    {
+        Track health = target.Get<StatsComponent>().GetTrack(HealthTrack);
+        int calculated = terminal ? checked((int)Math.Ceiling(health.Current - health.Minimum)) : amount;
+        return _combat.ApplyToHealth(new(caster, target, terminal ? "disintegrate" : "spell health damage"),
+            calculated, 0, health, terminal ? HealthApplicationMode.Terminal : HealthApplicationMode.Damage).Result;
+    }
+
+    internal DaggerfallSpellTrackResult ResolveSpellTrack(Actor caster, Actor target, TrackId trackId, int amount)
+    {
+        Track track = target.Get<StatsComponent>().GetTrack(trackId);
+        double before = track.Current;
+        if (target.Get<StatsComponent>().GetTrack(HealthTrack).Current > 0)
+            track.SetCurrent(before - Math.Max(0, amount), clamp: true);
+        return new(caster, target, trackId, amount, before - track.Current);
+    }
+
     /// <summary>
     /// Applies the damage a worn enchantment does to its wearer, at the same health boundary combat and
     /// movement use, so an enchantment that takes the last point of health defeats its wearer the way any
@@ -50,3 +67,5 @@ internal sealed class DaggerfallVitalityConsequences
         return _combat.ApplyToHealth(new CombatParticipants(player, player, "fall"), damage, 0, health).Result;
     }
 }
+
+internal sealed record DaggerfallSpellTrackResult(Actor Source, Actor Target, TrackId Track, int CalculatedLoss, double ActualLoss);

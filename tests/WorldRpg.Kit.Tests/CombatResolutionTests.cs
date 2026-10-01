@@ -10,6 +10,22 @@ namespace WorldRpg.Kit.Tests;
 public sealed class CombatResolutionTests
 {
     [Fact]
+    public void Terminal_health_application_retains_one_death_transition_despite_damage_reduction()
+    {
+        using ActorsState actors = Actors(); var target = actors.Get(3);
+        var contributions = new CombatContributions(); target.Actor.Add(contributions);
+        contributions.Rules.Add(new ApplyingContribution(interaction => interaction.Damage = 0));
+        var resolution = new CombatResolution(); var health = target.Stats.GetTrack(TrackId.Parse("health"));
+        health.SetCurrent(3.75);
+        var participants = new CombatParticipants(actors.Get(2).Actor, target.Actor, "terminal");
+        var result = resolution.ApplyToHealth(participants, 4, 0, health, HealthApplicationMode.Terminal);
+        Assert.Equal(0, result.Damage); Assert.Equal(3.75, result.ActualHealthLost); Assert.True(result.Defeated);
+        Assert.Equal(HealthApplicationMode.Terminal, result.Mode);
+        var repeated = resolution.ApplyToHealth(participants, 4, 0, health, HealthApplicationMode.Terminal);
+        Assert.False(repeated.Defeated); Assert.Equal(0, repeated.ActualHealthLost);
+    }
+
+    [Fact]
     public void Participant_chance_bonus_changes_hit_without_reapplying_stat_modifiers()
     {
         using ActorsState actors = Actors();

@@ -29,8 +29,11 @@ public sealed class DamageEvent(CombatParticipants participants)
     public int CalculatedDamage { get => Damage; set => Damage = value; }
     public bool Allowed { get; set; } = true;
 }
-public sealed class ApplyHitEvent(CombatParticipants participants, int damage, int body)
+/// <summary>Ordinary damage or an admitted terminal health application, both using the same live track owner.</summary>
+public enum HealthApplicationMode { Damage, Terminal }
+public sealed class ApplyHitEvent(CombatParticipants participants, int damage, int body, HealthApplicationMode mode = HealthApplicationMode.Damage)
 {
+    public HealthApplicationMode Mode { get; } = mode;
     public CombatParticipants Participants { get; } = participants;
     /// <summary>The calculated amount handed to application before application contributions may reduce it.</summary>
     public int CalculatedDamage { get; } = damage;
@@ -81,9 +84,10 @@ public sealed class CombatResolution
         foreach (ICombatContribution rule in Gather(participants)) rule.Damage(interaction);
         return interaction;
     }
-    public ApplyHitEvent Apply(CombatParticipants participants, int damage, int body, Action<ApplyHitEvent> apply)
+    public ApplyHitEvent Apply(CombatParticipants participants, int damage, int body, Action<ApplyHitEvent> apply,
+        HealthApplicationMode mode = HealthApplicationMode.Damage)
     {
-        ApplyHitEvent interaction = new(participants, damage, body);
+        ApplyHitEvent interaction = new(participants, damage, body, mode);
         // A contribution may expire its own source while applying (for example, a depleted pool).
         foreach (ICombatContribution rule in Gather(participants).ToArray()) rule.Applying(interaction);
         apply(interaction);
@@ -93,17 +97,19 @@ public sealed class CombatResolution
     /// Runs application contributions then mutates the supplied canonical health track once. A
     /// target already at its minimum has no second death transition and loses no additional health.
     /// </summary>
-    public ApplyHitEvent ApplyToHealth(CombatParticipants participants, int damage, int body, Track health)
+    public ApplyHitEvent ApplyToHealth(CombatParticipants participants, int damage, int body, Track health,
+        HealthApplicationMode mode = HealthApplicationMode.Damage)
     {
         ArgumentNullException.ThrowIfNull(health);
         return Apply(participants, damage, body, interaction =>
         {
             double before = health.Current;
             if (before <= health.Minimum) return;
-            health.SetCurrent(Math.Max(health.Minimum, before - Math.Max(0d, interaction.Damage)), clamp: true);
+            health.SetCurrent(interaction.Mode == HealthApplicationMode.Terminal ? health.Minimum
+                : Math.Max(health.Minimum, before - Math.Max(0d, interaction.Damage)), clamp: true);
             interaction.ActualHealthLost = before - health.Current;
             interaction.Defeated = before > health.Minimum && health.Current <= health.Minimum;
-        });
+        }, mode);
     }
     private IEnumerable<ICombatContribution> Gather(CombatParticipants participants)
     {

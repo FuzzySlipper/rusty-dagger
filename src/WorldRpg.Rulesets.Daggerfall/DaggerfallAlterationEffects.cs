@@ -80,7 +80,8 @@ internal static class DaggerfallAlterationEffects
     {
         public void Applying(ApplyHitEvent interaction)
         {
-            if (interaction.Participants.Target.Entity != effect.Target.Entity || interaction.Damage <= 0
+            if (interaction.Mode == HealthApplicationMode.Terminal
+                || interaction.Participants.Target.Entity != effect.Target.Entity || interaction.Damage <= 0
                 || effect.Target.Get<StatsComponent>().GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0)
                 return;
             var prior = ReadShield(effect.State);

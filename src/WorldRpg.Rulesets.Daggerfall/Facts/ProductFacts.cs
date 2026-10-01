@@ -24,6 +24,8 @@ internal sealed record ActorTransformedFact(ulong SourceItemId, long SourceActor
 /// <summary>A monster's accepted fatigue consequence remains distinct from health damage and its bounded live loss is observable.</summary>
 internal sealed record FatigueAppliedFact(long SourceActorId, long TargetActorId,
     int CalculatedFatigueLoss, double ActualFatigueLost, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
+internal sealed record SpellPointsAppliedFact(long SourceActorId, long TargetActorId,
+    int CalculatedSpellPointLoss, double ActualSpellPointsLost, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
 /// <summary>One accepted dungeon action magicka drain on a canonical actor track.</summary>
 internal sealed record DungeonMagickaDrainedFact(long TargetActorId, string ActionId, double ActualMagickaLost,
     ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
