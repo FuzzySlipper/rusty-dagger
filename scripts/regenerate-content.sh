@@ -57,6 +57,7 @@ donor_files=(
   "Assets/Scripts/API/ItemsFile.cs"
   "Assets/Scripts/API/MapsFile.cs"
   "Assets/Scripts/Game/Formulas/FormulaHelper.cs"
+  "Assets/Scripts/Game/Entities/RaceTemplate.cs"
   "Assets/Resources/ItemTemplates.txt"
   "Assets/Resources/MagicItemTemplates.txt"
   "Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv"
@@ -120,7 +121,8 @@ tool classic-media --arena2 "$arena2" --out content --group worldrpg \
 
 # 2. The imported payload's sections, in dependency order, with the block document and the import
 #    records. Commands that join authored sections (vocabulary, actors, items) read the authored payload.
-tool catalogs --arena2 "$arena2" --inventory "$inventory" --authored "$authored" --pack "$imported" --update
+tool catalogs --arena2 "$arena2" --inventory "$inventory" --authored "$authored" --pack "$imported" \
+  --donor-races "$donor/Assets/Scripts/Game/Entities/RaceTemplate.cs" --update
 tool item-template-ledger --donor "$donor/Assets/Scripts/Game/Items" --inventory "$inventory" --authored "$authored" --pack "$imported" --update
 tool character-presentation --arena2 "$arena2" --inventory "$inventory" --pack "$imported" --out content --group worldrpg --update
 tool locations --arena2 "$arena2" --pack "$imported" --update

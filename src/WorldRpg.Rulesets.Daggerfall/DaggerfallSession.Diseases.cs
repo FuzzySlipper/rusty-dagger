@@ -9,7 +9,8 @@ internal sealed partial class DaggerfallSession
     /// </summary>
     internal DaggerfallDiseaseAdmission InflictDisease(DaggerfallDiseaseExposure exposure) =>
         DaggerfallDiseasePolicy.InflictDisease(State.Effects, State.Actors, _random, () => _time.Calendar.DayNumber,
-            exposure with { BiographyModifier = checked(exposure.BiographyModifier + (State.Character.Background?.Modifiers.DiseaseResistance ?? 0)) }, State.Character.Career);
+            exposure with { BiographyModifier = checked(exposure.BiographyModifier + (State.Character.Background?.Modifiers.DiseaseResistance ?? 0)),
+                RaceTolerance = _definitions.Catalogs.RequireRace(State.Character.Identity.RaceId).Tolerance(Content.DaggerfallCareerTolerances.Disease) }, State.Character.Career);
 
     internal int CureDisease(DaggerfallClassicDisease disease) =>
         DaggerfallDiseasePolicy.CureDisease(State.Effects, State.Actors.Player.DurableId, disease);

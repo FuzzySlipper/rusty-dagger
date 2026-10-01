@@ -25,7 +25,8 @@ public static class DaggerfallCatalogBuilder
         IReadOnlyList<string> vocabularySkills,
         IReadOnlyList<(string FileName, byte[] Bytes)> careers,
         IReadOnlyList<string> enemyIds,
-        IReadOnlyList<string> itemTemplateIds)
+        IReadOnlyList<string> itemTemplateIds,
+        string raceTemplateSource)
     {
         ArgumentNullException.ThrowIfNull(inventory);
         ArgumentNullException.ThrowIfNull(vocabularyAttributes);
@@ -69,12 +70,18 @@ public static class DaggerfallCatalogBuilder
             resistances.Add(new DaggerfallIndexedKey(DaggerfallCatalogs.ElementKeys[index], index, careerCitation));
         }
 
+        var raceFlags = DaggerfallRaceFlagsReader.Read(raceTemplateSource);
         List<DaggerfallRaceKey> races = [];
         string[] raceNames = raceFamily.RecordOrStem.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         for (int index = 0; index < raceNames.Length; index++)
         {
             // The donor's race values are contiguous from one in its own enumeration order.
-            races.Add(new DaggerfallRaceKey(Key(raceNames[index]), index + 1, family(raceFamily.PathOrPattern)));
+            string donorClass = raceNames[index].Replace(" ", "", StringComparison.Ordinal);
+            if (!raceFlags.TryGetValue(donorClass, out var flags))
+                throw new InvalidOperationException($"Documented race '{raceNames[index]}' has no donor RaceTemplate constructor.");
+            races.Add(new DaggerfallRaceKey(Key(raceNames[index]), index + 1, family(raceFamily.PathOrPattern))
+            { ResistanceFlags = flags.ResistanceFlags, ImmunityFlags = flags.ImmunityFlags,
+                LowToleranceFlags = flags.LowToleranceFlags, CriticalWeaknessFlags = flags.CriticalWeaknessFlags });
         }
 
         List<DaggerfallCareerRecord> careerRecords = [];

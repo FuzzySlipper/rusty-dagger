@@ -62,7 +62,8 @@ internal sealed record DaggerfallDiseaseExposure(
     string Settings = "classic",
     ulong? ItemId = null,
     int BiographyModifier = 0,
-    int? ActiveResistanceChance = null)
+    int? ActiveResistanceChance = null,
+    DaggerfallDiseaseCareerTolerance RaceTolerance = DaggerfallDiseaseCareerTolerance.Normal)
 {
     internal void ValidateSavingThrowInputs()
     {
@@ -180,14 +181,14 @@ internal static class DaggerfallDiseasePolicy
         if (actors.Player.Progression.Level <= 1) return DaggerfallDiseaseAdmission.LevelOneImmune;
 
         StatsComponent stats = actors.Player.Stats;
-        if (ReadStat(stats, DaggerfallMechanicsIds.ImmunityDisease) != 0) return DaggerfallDiseaseAdmission.Immune;
+        if (exposure.RaceTolerance == DaggerfallDiseaseCareerTolerance.Immune || ReadStat(stats, DaggerfallMechanicsIds.ImmunityDisease) != 0) return DaggerfallDiseaseAdmission.Immune;
         if (exposure.ActiveResistanceChance is int activeResistance
             && Draw(random, $"active-resist:{exposure.Instance}", 1, 100) <= activeResistance)
             return DaggerfallDiseaseAdmission.Resisted;
         int chance = DiseaseSavingThrowChance(
             ReadStat(stats, DaggerfallMechanicsIds.Willpower),
             career is null ? DaggerfallDiseaseCareerTolerance.Normal : CareerTolerance(career),
-            exposure.BiographyModifier);
+            exposure.BiographyModifier, exposure.RaceTolerance);
         int resistanceRoll = Draw(random, $"resist:{exposure.Instance}", 1, 100);
         if (DiseaseSavingThrowAmount(chance, resistanceRoll) == 0) return DaggerfallDiseaseAdmission.Resisted;
 
@@ -219,9 +220,16 @@ internal static class DaggerfallDiseasePolicy
     }
 
     /// <summary>The current actor baseline of the donor saving throw, before its single 1–100 roll.</summary>
-    internal static int DiseaseSavingThrowChance(int willpower, DaggerfallDiseaseCareerTolerance tolerance = DaggerfallDiseaseCareerTolerance.Normal, int biographyModifier = 0)
+    internal static int DiseaseSavingThrowChance(int willpower, DaggerfallDiseaseCareerTolerance tolerance = DaggerfallDiseaseCareerTolerance.Normal, int biographyModifier = 0, DaggerfallDiseaseCareerTolerance raceTolerance = DaggerfallDiseaseCareerTolerance.Normal)
     {
-        int chance = checked(50 + CareerToleranceModifier(tolerance) + biographyModifier);
+        int raceModifier = raceTolerance switch
+        {
+            DaggerfallDiseaseCareerTolerance.Normal => 0, DaggerfallDiseaseCareerTolerance.Resistant => 30,
+            DaggerfallDiseaseCareerTolerance.Immune => 50, DaggerfallDiseaseCareerTolerance.LowTolerance => -25,
+            DaggerfallDiseaseCareerTolerance.CriticalWeakness => -50, _ => throw new ArgumentOutOfRangeException(nameof(raceTolerance)),
+        };
+        if (raceTolerance == DaggerfallDiseaseCareerTolerance.Immune) return 100;
+        int chance = checked(50 + CareerToleranceModifier(tolerance) + raceModifier + biographyModifier);
         // The donor makes career immunity complete before adding magic resistance and applying the
         // ordinary 5–95 window.
         if (chance >= 100) return 100;

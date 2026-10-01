@@ -51,6 +51,11 @@ public sealed record DaggerfallReferenceKey(string Id, DaggerfallCatalogSource S
 /// <summary>A playable race identity with the donor's own race value.</summary>
 public sealed record DaggerfallRaceKey(string Id, int DonorRaceId, DaggerfallCatalogSource Source)
 {
+    public int ResistanceFlags { get; init; }
+    public int ImmunityFlags { get; init; }
+    public int LowToleranceFlags { get; init; }
+    public int CriticalWeaknessFlags { get; init; }
+
     public void Validate(IReadOnlySet<string> documentedPaths)
     {
         NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
@@ -59,6 +64,8 @@ public sealed record DaggerfallRaceKey(string Id, int DonorRaceId, DaggerfallCat
             throw new ArgumentOutOfRangeException(nameof(DonorRaceId), DonorRaceId, $"Race '{Id}' must carry the donor's positive race value.");
         }
 
+        if (((ResistanceFlags | ImmunityFlags | LowToleranceFlags | CriticalWeaknessFlags) & ~127) != 0)
+            throw new ArgumentOutOfRangeException(nameof(ResistanceFlags), $"Race '{Id}' carries unknown effect flag bits.");
         Source.Validate(documentedPaths);
     }
 }
