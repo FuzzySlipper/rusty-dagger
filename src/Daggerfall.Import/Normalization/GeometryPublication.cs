@@ -51,6 +51,10 @@ public sealed record GeometryMaterialLink(
 /// <param name="Triangles">How many triangles it carries.</param>
 /// <param name="Materials">The textures its planes select, in first-use order.</param>
 /// <param name="ContentDigest">The artifact's content address.</param>
+/// <param name="MaterialSlots">
+/// The static mesh material slot each material is drawn with, published from the assembly that wrote the
+/// artifact so a consumer binds textures to slots without reading the mesh bytes.
+/// </param>
 public sealed record GeometryMeshArtifact(
     string MeshId,
     long SourceRecordId,
@@ -60,7 +64,8 @@ public sealed record GeometryMeshArtifact(
     int Vertices,
     int Triangles,
     IReadOnlyList<GeometryMaterialLink> Materials,
-    string ContentDigest);
+    string ContentDigest,
+    IReadOnlyList<StaticMeshMaterialBinding> MaterialSlots);
 
 /// <summary>A mesh number a normalized pack references that the archive cannot serve.</summary>
 /// <param name="MeshId">The mesh number, spelled as the source spells it.</param>
@@ -230,6 +235,8 @@ public sealed record GeometryPublication(
             || document.Summary != Summary
             || !document.Meshes.Select(mesh => (mesh.MeshId, mesh.SourceRecordId, mesh.SourceOrdinal, mesh.ArtifactId, mesh.RelativePath, mesh.Vertices, mesh.Triangles, mesh.ContentDigest))
                 .SequenceEqual(Meshes.Select(mesh => (mesh.MeshId, mesh.SourceRecordId, mesh.SourceOrdinal, mesh.ArtifactId, mesh.RelativePath, mesh.Vertices, mesh.Triangles, mesh.ContentDigest)))
+            || !document.Meshes.SelectMany(mesh => mesh.MaterialSlots.Select(slot => (mesh.MeshId, slot)))
+                .SequenceEqual(Meshes.SelectMany(mesh => mesh.MaterialSlots.Select(slot => (mesh.MeshId, slot))))
             || !document.UnresolvedMeshes.Select(mesh => (mesh.MeshId, mesh.Reason))
                 .SequenceEqual(UnresolvedMeshes.Select(mesh => (mesh.MeshId, mesh.Reason))))
         {
@@ -281,7 +288,7 @@ public sealed record GeometryPublicationRequest(
 public static class GeometryPublicationBuilder
 {
     /// <summary>The relative path one mesh's artifact is published at.</summary>
-    public static string MeshRelativePath(uint meshNumber) => $"geometry/mesh-{meshNumber.ToString(CultureInfo.InvariantCulture)}.json";
+    public static string MeshRelativePath(uint meshNumber) => $"geometry/mesh-{meshNumber.ToString(CultureInfo.InvariantCulture)}{StaticMeshBinary.Extension}";
 
     /// <summary>The artifact identity one mesh's artifact carries.</summary>
     public static string MeshArtifactId(uint meshNumber) => $"geometry/mesh-{meshNumber.ToString(CultureInfo.InvariantCulture)}";
@@ -387,7 +394,8 @@ public static class GeometryPublicationBuilder
             string meshId = number.ToString(CultureInfo.InvariantCulture);
             NormalizedMesh normalized = new NormalizedMesh(meshId, MeshArtifactId(number), vertices, normals, uvs, triangles, groups).Canonicalize();
             normalized.Validate();
-            byte[] bytes = StaticMeshJson.Serialize(meshId, MeshGeometry.Bounds(vertices), MeshAssembly.Create([normalized]));
+            MeshAssembly assembly = MeshAssembly.Create([normalized]);
+            byte[] bytes = StaticMeshArtifact.Serialize(meshId, MeshGeometry.Bounds(vertices), assembly);
             GeneratedSpatialArtifact artifact = new(MeshArtifactId(number), MeshRelativePath(number), bytes, []);
             artifacts.Add(artifact);
             meshes.Add(new GeometryMeshArtifact(
@@ -399,7 +407,8 @@ public static class GeometryPublicationBuilder
                 vertices.Count,
                 triangles.Count,
                 materials,
-                artifact.ContentDigest.Value));
+                artifact.ContentDigest.Value,
+                [.. assembly.MaterialSlots.Select(binding => new StaticMeshMaterialBinding(binding.Material, binding.Slot))]));
         }
 
         // Every record the archive declares is published, unresolved, a reused number, or unused: the

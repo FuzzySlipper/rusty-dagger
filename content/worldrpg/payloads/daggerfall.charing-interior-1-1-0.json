@@ -126,8 +126,8 @@
       "layer": "scene"
     },
     "navigationGridId": 1,
-    "collisionNavigationPath": "spatial/charing/interior-1-1-0/collision-navigation.json",
-    "staticMeshPath": "spatial/charing/interior-1-1-0/static-mesh.json",
+    "collisionNavigationPath": "spatial/charing/interior-1-1-0/collision-navigation.rspatial",
+    "staticMeshPath": "spatial/charing/interior-1-1-0/static-mesh.rstatmsh",
     "profileKind": "interior",
     "rmbSource": {
       "format": "rmb",

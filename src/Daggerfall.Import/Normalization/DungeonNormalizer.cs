@@ -663,9 +663,9 @@ public static class DungeonNormalizer
             };
             DungeonSpatialPublication spatialPublication = DungeonSpatialPublication.Create(
                 staticMeshArtifactId,
-                $"spatial/{locationSlug}/static-mesh.json",
+                $"spatial/{locationSlug}/static-mesh{StaticMeshBinary.Extension}",
                 spatialArtifactId,
-                $"spatial/{locationSlug}/collision-navigation.json",
+                $"spatial/{locationSlug}/collision-navigation{SpatialArtifactBinary.Extension}",
                 resourceCatalogArtifactId,
                 $"resources/{locationSlug}/catalog.json",
                 visualMeshAssetId,

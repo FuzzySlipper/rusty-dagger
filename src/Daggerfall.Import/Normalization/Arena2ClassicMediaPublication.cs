@@ -422,6 +422,7 @@ public sealed record ClassicWorldVisualTextureRequest(
     ushort Archive,
     ushort Record,
     string MaterialResourceId,
+    int Slot,
     GeometryMaterialDisposition Disposition,
     string Note)
 {
@@ -451,6 +452,7 @@ public sealed record ClassicWorldVisualTexture(
     ushort Archive,
     ushort Record,
     string MaterialResourceId,
+    int Slot,
     string RelativePath,
     ContentDigest ContentDigest,
     long ByteLength)
@@ -534,8 +536,19 @@ public sealed record ClassicWorldVisualRequest(
                 throw new InvalidOperationException($"Missile visual '{visual.MediaId}' draws with texture {material.Archive}/{material.Record}, which the corpus does not serve: {material.Note}");
             }
 
-            return new ClassicWorldVisualTextureRequest(material.Archive, material.Record, material.MaterialResourceId, material.Disposition, material.Note);
+            // The slot is the one the mesh artifact was written with; the consumer binds by it.
+            StaticMeshMaterialBinding slot = mesh.MaterialSlots.SingleOrDefault(binding => StringComparer.Ordinal.Equals(binding.Material, material.MaterialResourceId));
+            if (slot.Material is null)
+            {
+                throw new InvalidOperationException($"Missile visual '{visual.MediaId}' selects material '{material.MaterialResourceId}', which mesh {meshId} draws with no slot.");
+            }
+
+            return new ClassicWorldVisualTextureRequest(material.Archive, material.Record, material.MaterialResourceId, slot.Slot, material.Disposition, material.Note);
         })];
+        if (textures.Count != mesh.MaterialSlots.Count)
+        {
+            throw new InvalidOperationException($"Missile visual '{visual.MediaId}' states {textures.Count} textures for the {mesh.MaterialSlots.Count} material slots of mesh {meshId}.");
+        }
 
         return new(
             visual.MediaId,
@@ -580,6 +593,7 @@ public sealed record ClassicWorldVisualRequest(
         }
 
         NormalizedImportDocument.ValidateUnique(Materials, material => material.MaterialResourceId, $"classic world visual '{MediaId}' material");
+        NormalizedImportDocument.ValidateUnique(Materials, material => material.Slot.ToString(CultureInfo.InvariantCulture), $"classic world visual '{MediaId}' material slot");
         foreach (ClassicWorldVisualTextureRequest material in Materials)
         {
             material.Validate(MediaId);
@@ -647,6 +661,7 @@ public sealed record ClassicWorldVisualManifest(
                     material.Archive,
                     material.Record,
                     material.MaterialResourceId,
+                    material.Slot,
                     path,
                     artifact.ContentHash,
                     artifact.Bytes.Length);
@@ -683,6 +698,7 @@ public sealed record ClassicWorldVisualManifest(
         }
 
         NormalizedImportDocument.ValidateUnique(Materials, material => material.MaterialResourceId, $"classic world visual '{MediaId}' material");
+        NormalizedImportDocument.ValidateUnique(Materials, material => material.Slot.ToString(CultureInfo.InvariantCulture), $"classic world visual '{MediaId}' material slot");
         foreach (ClassicWorldVisualTexture material in Materials)
         {
             material.Validate(MediaId);

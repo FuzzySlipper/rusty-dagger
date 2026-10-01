@@ -52,6 +52,12 @@ public sealed class ClassicWorldVisualTests
         // serves both, and the request names the material slot each texture fills.
         Assert.Equal([(ushort)1, (ushort)0], request.Materials.Select(material => material.Archive));
         Assert.Equal([(ushort)121, (ushort)72], request.Materials.Select(material => material.Record));
+        // Each slot is the one the published mesh draws that material with, so the site binds textures
+        // without reading the mesh bytes.
+        Assert.Equal([1, 0], request.Materials.Select(material => material.Slot));
+        Assert.Equal(
+            [new StaticMeshMaterialBinding("material/texture-0-72", 0), new StaticMeshMaterialBinding("material/texture-1-121", 1)],
+            geometry.Meshes.Single(mesh => mesh.MeshId == request.MeshId).MaterialSlots);
         Assert.All(request.Materials, material =>
         {
             Assert.Equal(GeometryMaterialDisposition.Resolved, material.Disposition);

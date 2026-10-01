@@ -58,12 +58,12 @@ public sealed class ImportPublicationTests : IDisposable
     public void PlanCarriesValidatedArtifactDependenciesAlongsideExactBytes()
     {
         ImportPublicationPlan plan = CreatePlan(
-            new ImportPublicationArtifact("spatial/static-mesh.json", "mesh"u8),
-            new ImportPublicationArtifact("spatial/collision-navigation.json", "spatial"u8, ["spatial/static-mesh.json"]),
-            new ImportPublicationArtifact("normalized.json", "normalized"u8, ["spatial/collision-navigation.json", "spatial/static-mesh.json"]));
+            new ImportPublicationArtifact("spatial/static-mesh.rstatmsh", "mesh"u8),
+            new ImportPublicationArtifact("spatial/collision-navigation.rspatial", "spatial"u8, ["spatial/static-mesh.rstatmsh"]),
+            new ImportPublicationArtifact("normalized.json", "normalized"u8, ["spatial/collision-navigation.rspatial", "spatial/static-mesh.rstatmsh"]));
 
-        ImportPublicationManifestArtifact spatial = plan.Manifest.Artifacts.Single(artifact => artifact.RelativePath == "spatial/collision-navigation.json");
-        Assert.Equal(["spatial/static-mesh.json"], spatial.DependsOnPaths);
+        ImportPublicationManifestArtifact spatial = plan.Manifest.Artifacts.Single(artifact => artifact.RelativePath == "spatial/collision-navigation.rspatial");
+        Assert.Equal(["spatial/static-mesh.rstatmsh"], spatial.DependsOnPaths);
         Assert.Equal(7, spatial.ByteLen);
         Assert.Contains("\"dependsOnPaths\"", Encoding.UTF8.GetString(ImportPublicationManifestSerializer.Serialize(plan.Manifest)), StringComparison.Ordinal);
         Assert.Throws<InvalidOperationException>(() => CreatePlan(new ImportPublicationArtifact("only.json", "only"u8, ["missing.json"])));

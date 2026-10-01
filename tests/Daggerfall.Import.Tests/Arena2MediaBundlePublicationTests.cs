@@ -38,8 +38,8 @@ public sealed class Arena2MediaBundlePublicationTests
                 Arena2MediaBundlePublication.ClassicMediaManifestRelativePath,
                 Arena2MediaBundlePublication.DungeonMediaManifestRelativePath,
                 "resources/test/catalog.json",
-                "spatial/test/collision-navigation.json",
-                "spatial/test/static-mesh.json",
+                "spatial/test/collision-navigation.rspatial",
+                "spatial/test/static-mesh.rstatmsh",
             ],
             normalized.DependsOnPaths);
 
@@ -71,7 +71,7 @@ public sealed class Arena2MediaBundlePublicationTests
         Arena2MediaBundlePublication publication = Arena2MediaBundlePublication.Create(rmb, CreateDungeonMedia(), CreateClassicMedia(), CreateGeometry());
 
         Assert.Contains(publication.Plan.Artifacts, artifact => artifact.RelativePath == Arena2MediaBundlePublication.NormalizedDocumentRelativePath);
-        Assert.Contains(publication.Plan.Artifacts, artifact => artifact.RelativePath == "spatial/test/collision-navigation.json");
+        Assert.Contains(publication.Plan.Artifacts, artifact => artifact.RelativePath == "spatial/test/collision-navigation.rspatial");
         Assert.Contains(publication.Plan.Artifacts, artifact => artifact.RelativePath == "geometry/index.json");
     }
 
@@ -339,9 +339,9 @@ public sealed class Arena2MediaBundlePublicationTests
             []);
         DungeonSpatialPublication spatial = DungeonSpatialPublication.Create(
             staticArtifactId,
-            "spatial/test/static-mesh.json",
+            "spatial/test/static-mesh.rstatmsh",
             collisionArtifactId,
-            "spatial/test/collision-navigation.json",
+            "spatial/test/collision-navigation.rspatial",
             resourcesArtifactId,
             "resources/test/catalog.json",
             "mesh/test",

@@ -127,13 +127,11 @@ public sealed class DungeonNormalizerTests
         Assert.Equal(model.LocalBounds, MeshBounds(localMesh.Vertices));
         Assert.Empty(result.SpatialPublication.Navigation.Cells);
 
-        using JsonDocument visual = JsonDocument.Parse(Assert.Single(result.SpatialPublication.ActionModelVisuals).Artifact.Bytes);
-        JsonElement localPositions = visual.RootElement.GetProperty("payload").GetProperty("source").GetProperty("positions");
-        Assert.Contains(localPositions.EnumerateArray(), value => value.GetSingle() == 0.025F);
-        using JsonDocument staticVisual = JsonDocument.Parse(result.SpatialPublication.StaticMesh.Bytes);
-        Assert.Equal(0, staticVisual.RootElement.GetProperty("payload").GetProperty("source").GetProperty("positions").GetArrayLength());
-        using JsonDocument staticCollision = JsonDocument.Parse(result.SpatialPublication.CollisionNavigation.Bytes);
-        Assert.Equal(0, staticCollision.RootElement.GetProperty("collision").GetProperty("triangles").GetArrayLength());
+        using EngineBinaryContent.StaticMesh visual = EngineBinaryContent.ReadStaticMesh(Assert.Single(result.SpatialPublication.ActionModelVisuals).Artifact.Bytes);
+        Assert.Contains(0.025F, visual.Positions);
+        using EngineBinaryContent.StaticMesh staticVisual = EngineBinaryContent.ReadStaticMesh(result.SpatialPublication.StaticMesh.Bytes);
+        Assert.Empty(staticVisual.Positions);
+        Assert.Empty(EngineBinaryContent.ReadSpatial(result.SpatialPublication.CollisionNavigation.Bytes.Span).Triangles);
         Assert.Contains(result.Document.Artifacts, artifact => artifact.Id == model.VisualArtifactId);
         result.Document.Validate();
     }
@@ -411,9 +409,9 @@ public sealed class DungeonNormalizerTests
         Assert.DoesNotContain(visualDoor.Id, result.Document.World.StaticMeshIds!);
         Assert.All(result.Document.World.MeshIds, meshId => Assert.Contains(result.Document.Meshes, mesh => mesh.Id == meshId));
         Assert.Equal([visualDoor.Id], Assert.Single(result.Document.World.Doors).VisualMeshIds);
-        string collisionNavigation = Encoding.UTF8.GetString(result.SpatialPublication.CollisionNavigation.Bytes.Span);
-        Assert.Contains("\"triangles\":[]", collisionNavigation, StringComparison.Ordinal);
-        Assert.Contains("\"positions\":[]", collisionNavigation, StringComparison.Ordinal);
+        EngineBinaryContent.SpatialArtifact collisionNavigation = EngineBinaryContent.ReadSpatial(result.SpatialPublication.CollisionNavigation.Bytes.Span);
+        Assert.Empty(collisionNavigation.Triangles);
+        Assert.Empty(collisionNavigation.Positions);
     }
 
     [Fact]

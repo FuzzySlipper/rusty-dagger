@@ -126,8 +126,8 @@
       "layer": "scene"
     },
     "navigationGridId": 1,
-    "collisionNavigationPath": "spatial/castle-necromoghan/collision-navigation.json",
-    "staticMeshPath": "spatial/castle-necromoghan/static-mesh.json",
+    "collisionNavigationPath": "spatial/castle-necromoghan/collision-navigation.rspatial",
+    "staticMeshPath": "spatial/castle-necromoghan/static-mesh.rstatmsh",
     "profileKind": "dungeon"
   }
 }
