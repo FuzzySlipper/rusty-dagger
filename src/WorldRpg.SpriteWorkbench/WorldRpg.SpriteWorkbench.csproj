@@ -19,7 +19,7 @@
     <RustyEngineProductUiEntry>workbench.js</RustyEngineProductUiEntry>
     <!-- The SDK reruns tsc only when ../sprite-ui or a listed input changes. -->
     <RustyEngineProductUiSourceRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../sprite-ui'))</RustyEngineProductUiSourceRoot>
-    <RustyEngineProductUiBuildCommand>npm --prefix &quot;$(MSBuildThisFileDirectory)../..&quot; exec -- tsc --target ES2022 --module ES2022 --moduleResolution bundler --strict --noEmitOnError --outDir &quot;$(RustyEngineProductUiRoot)&quot; &quot;$(RustyEngineProductUiTypes)&quot; &quot;$(MSBuildThisFileDirectory)../sprite-ui/workbench.ts&quot;</RustyEngineProductUiBuildCommand>
+    <RustyEngineProductUiBuildCommand>mkdir -p &quot;$(MSBuildThisFileDirectory)../sprite-ui/engine-types&quot; &amp;&amp; (cmp -s &quot;$(RustyEngineProductUiTypes)&quot; &quot;$(MSBuildThisFileDirectory)../sprite-ui/engine-types/rusty-engine-product-ui.d.ts&quot; || cp &quot;$(RustyEngineProductUiTypes)&quot; &quot;$(MSBuildThisFileDirectory)../sprite-ui/engine-types/rusty-engine-product-ui.d.ts&quot;) &amp;&amp; npm --prefix &quot;$(MSBuildThisFileDirectory)../..&quot; exec -- tsc -p &quot;$(MSBuildThisFileDirectory)../sprite-ui/tsconfig.json&quot; --outDir &quot;$(RustyEngineProductUiRoot)&quot;</RustyEngineProductUiBuildCommand>
     <RustyEngineProductUiProjectionStream>worldrpg.sprite-workbench</RustyEngineProductUiProjectionStream>
     <RustyEngineProductUiProjectionContract>worldrpg.sprite-workbench.snapshot.v1</RustyEngineProductUiProjectionContract>
     <RustyEngineProductLifecycleMode>realtime</RustyEngineProductLifecycleMode>
@@ -37,7 +37,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <RustyEngineProductUiInput Include="$(MSBuildThisFileDirectory)../../package.json;$(MSBuildThisFileDirectory)../../package-lock.json;$(RustyEngineProductUiTypes)" />
+    <RustyEngineProductUiInput Include="$(MSBuildThisFileDirectory)../../package.json;$(MSBuildThisFileDirectory)../../package-lock.json;$(MSBuildThisFileDirectory)../../tsconfig.base.json;$(RustyEngineProductUiTypes)" />
   </ItemGroup>
 
   <!-- The workbench shows the staged publication's atlas pages and its
