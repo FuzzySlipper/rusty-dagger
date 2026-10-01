@@ -32,22 +32,26 @@ internal sealed record AttackRejectedFact(AttackRejection Reason, long? ActorId 
 /// its admitted target. An admitted swing with neither resolves inside its own update.
 /// </summary>
 internal sealed record PlayerAttackStartedFact(ulong OriginatingGeneration, ulong OriginatingSimulationStep,
-    long? TargetId = null, double FrameSeconds = 0d, int HitFrame = 2) : IProductFact;
+    long? TargetId = null, double FrameSeconds = 0d, int HitFrame = 2) : IProductFact
+{ internal DaggerfallStrikeFeedback Feedback { get; init; } = DaggerfallStrikeFeedback.Unarmed; }
 /// <summary>
 /// One enemy melee swing began. The attack's outcome is already decided, so the
 /// presentation can play the matching strike, but nothing has been applied yet:
 /// the damage lands when the authored damage frame is reached.
 /// </summary>
-internal sealed record EnemyAttackStartedFact(long AttackerId, long TargetId, bool WillHit, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
+internal sealed record EnemyAttackStartedFact(long AttackerId, long TargetId, bool WillHit, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact
+{ internal DaggerfallStrikeFeedback Feedback { get; init; } = DaggerfallStrikeFeedback.Unarmed; }
 /// <summary>
 /// A released shot met admitted static geometry before its aim. The missile died on the cover, so
 /// nothing about the target's dodge or the shooter's roll decided anything.
 /// </summary>
 internal sealed record RangedShotBlockedFact(long AttackerId, long TargetId, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
-internal sealed record AttackMissedFact(long AttackerId, long TargetId, int Roll, int Chance, bool EnemyAttack, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
+internal sealed record AttackMissedFact(long AttackerId, long TargetId, int Roll, int Chance, bool EnemyAttack, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact
+{ internal DaggerfallStrikeFeedback Feedback { get; init; } = DaggerfallStrikeFeedback.Unarmed; }
 /// <summary>Physical contact is distinct from accepted health loss; body follows the donor table.</summary>
 internal sealed record AttackHitFact(long AttackerId, long TargetId, int CalculatedDamage, double ActualHealthLost,
-    int StruckBody, bool EnemyAttack, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
+    int StruckBody, bool EnemyAttack, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact
+{ internal DaggerfallStrikeFeedback Feedback { get; init; } = DaggerfallStrikeFeedback.Unarmed; }
 internal sealed record LootAwardedFact(long ActorId, string ItemId, ulong Quantity, ulong OriginatingSequence) : IProductFact;
 /// <summary>
 /// One item's condition changed through an accepted physical hit, carrying the break that the change
@@ -65,3 +69,9 @@ internal sealed record CorpseSearchedEmptyFact(long ActorId) : IProductFact;
 internal sealed record ExperienceAwardedFact(long ActorId, int Amount) : IProductFact;
 /// <summary>Ruleset-owned state change; presentation maps it to normalized actor media without depending on behavior internals.</summary>
 internal sealed record EnemyBehaviorTransitionFact(long ActorId, EnemyBehaviorState Previous, EnemyBehaviorState Current, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
+
+/// <summary>Accepted weapon meaning captured before impact wear can break or unequip the source.</summary>
+internal readonly record struct DaggerfallStrikeFeedback(bool Weapon, string SwingCue)
+{
+    internal static DaggerfallStrikeFeedback Unarmed => new(false, "swing");
+}

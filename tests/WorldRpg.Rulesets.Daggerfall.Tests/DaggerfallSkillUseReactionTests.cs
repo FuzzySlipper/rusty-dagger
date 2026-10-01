@@ -204,7 +204,9 @@ public sealed class DaggerfallSkillUseReactionTests
 
         combat.Apply(
             new AttackRequest(99, DaggerfallActorIdentity.PlayerEntityId, 1, 2, 1d, Delayed: true),
-            new PreparedAttack(1d, new AttackOutcome(Hit: false, Allowed: true, Body: 0, Damage: 0, Roll: 99, Chance: 1)),
+            new DaggerCombatRules.DaggerfallPreparedAttack(1d,
+                new AttackOutcome(Hit: false, Allowed: true, Body: 0, Damage: 0, Roll: 99, Chance: 1),
+                DaggerfallStrikeFeedback.Unarmed),
             facts);
 
         Assert.Equal([new DaggerfallSkillUse("dodging", DaggerfallSkillUseReason.DodgingEnemyAttack, DaggerfallSkillUseOutcome.Attempted)], uses);

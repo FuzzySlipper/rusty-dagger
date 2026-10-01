@@ -134,7 +134,15 @@
     "volume": 1.0,
     "pitch": 1.0,
     "spatialBlend": 0.0,
-    "attenuation": 1.0
+    "attenuation": 1.0,
+    "attractRadius": 16.0,
+    "attractMinimumDelaySeconds": 3,
+    "attractMaximumDelaySeconds": 9,
+    "attractMoveChancePercent": 20,
+    "attackCueChancePercent": 50,
+    "occludedVolumeScale": 0.25,
+    "muteHumanSounds": true,
+    "contactPitch": 1.1
   },
   "progression": {
     "enableExperimentalKillExperience": false,

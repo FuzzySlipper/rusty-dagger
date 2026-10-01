@@ -337,7 +337,8 @@ public sealed class DaggerCombatDamagePolicyTests
         IReadOnlyList<IProductFact> facts = fixture.StartSwing(request, out bool started);
 
         Assert.True(started);
-        Assert.Equal(new PlayerAttackStartedFact(5, 9), Assert.Single(facts.OfType<PlayerAttackStartedFact>()));
+        Assert.Equal(new PlayerAttackStartedFact(5, 9) { Feedback = new(true, "sound.347") },
+            Assert.Single(facts.OfType<PlayerAttackStartedFact>()));
         Assert.Contains(new AttackRejectedFact(AttackRejection.NoTargetInReach), facts);
     }
 

@@ -285,6 +285,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             && update.Facts.AdmittedStepCount > 0)
         {
             _appearance.Advance(update.Facts);
+            _appearance.AdvanceMobileFeedback(update.Facts, State.Actors, State.PlayerControl.Position, ShotBlockedByCover);
             // A held value is recomputed before anything this update can read it: impacts resolve, the
             // flight advances and presentation publishes against what the player is wearing now.
             _heldEnchantments.Refresh();

@@ -440,11 +440,16 @@ public sealed partial class DaggerfallEquipmentWearTests
             _itemInstances.ReplaceUnique(durable, _itemInstances.RequireUnique(durable) with { CurrentCondition = condition });
         }
 
-        internal IReadOnlyList<IProductFact> RunPlayerAttack(bool requireAccepted = true)
+        internal IReadOnlyList<IProductFact> RunPlayerAttack(bool requireAccepted = true, Action? beforeImpact = null)
         {
             FactBuffer<IProductFact> facts = new();
-            bool accepted = _combat.Execution.Start(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, Enemy, 5, 9, .125d, Delayed: false), facts);
+            bool accepted = _combat.Execution.Start(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, Enemy, 5, 9, .125d, Delayed: beforeImpact is not null), facts);
             Assert.Equal(requireAccepted, accepted);
+            if (accepted && beforeImpact is not null)
+            {
+                beforeImpact();
+                _combat.Execution.ApplyImpacts([new(DaggerfallActorIdentity.PlayerEntityId, Enemy, 5, 9, false)], 5, facts);
+            }
             return Delivered(facts);
         }
 

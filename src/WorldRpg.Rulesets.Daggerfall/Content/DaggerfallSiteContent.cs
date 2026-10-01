@@ -1303,6 +1303,7 @@ internal static class DaggerfallSiteContent
                     AttackSequences = attacks,
                     RangedAttackSequence = rangedAttack,
                     Corpse = corpse,
+                    Feedback = ReadActorFeedback(actor, mobileId, diagnostics),
                 })) diagnostics.Add($"Generated actor media repeats mobile '{mobileId}'.");
             }
             NormalizedGroundContainerSprite? groundContainerSprite = ReadGroundContainerSprite(root, resources, diagnostics);
@@ -1467,6 +1468,19 @@ internal static class DaggerfallSiteContent
             return;
         }
         target.Add(new NormalizedAttackSequence(chance, source, stateName));
+    }
+
+    private static DaggerfallActorFeedback? ReadActorFeedback(JsonElement actor, int mobileId, DaggerfallContentDiagnostics diagnostics)
+    {
+        JsonElement feedback = DaggerfallBaseContent.Property(actor, "feedback", diagnostics);
+        if (feedback.ValueKind == JsonValueKind.Null) return null;
+        int feedbackMobile = DaggerfallBaseContent.Integer(feedback, "mobileId", diagnostics);
+        int blood = DaggerfallBaseContent.Integer(feedback, "bloodIndex", diagnostics);
+        if (feedbackMobile != mobileId || blood is < 0 or > 2) diagnostics.Add($"Generated mobile '{mobileId}' feedback identity or blood index is invalid.");
+        return new(feedbackMobile,
+            DaggerfallBaseContent.Text(feedback, "moveCue", diagnostics), DaggerfallBaseContent.Text(feedback, "barkCue", diagnostics),
+            DaggerfallBaseContent.Text(feedback, "attackCue", diagnostics), DaggerfallBaseContent.Boolean(feedback, "parrySounds", diagnostics),
+            blood);
     }
 
     private static NormalizedActorSprite? ReadCorpse(JsonElement actor, IReadOnlyDictionary<string, MediaResource> resources, string publicationRoot, IReadOnlyDictionary<string, ContentSha256> artifacts, int mobileId, DaggerfallContentDiagnostics diagnostics)
@@ -2246,8 +2260,10 @@ internal sealed record NormalizedClassicPresentation(IReadOnlyDictionary<string,
 internal sealed record ClassicViewmodelStyle(int RenderOrder);
 internal sealed record NormalizedClassicMediaResource(string Id, string Kind, string RelativePath, ContentSha256 Sha256, long ByteLength);
 internal sealed record NormalizedGroundContainerSprite(string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, uint InitialFrameId, Vector2 Pivot, Vector2 Size);
+internal sealed record DaggerfallActorFeedback(int MobileId, string MoveCue, string BarkCue, string AttackCue, bool ParrySounds, int BloodIndex);
 internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, uint InitialFrameId, Vector2 Pivot, Vector2 Size)
 {
+    internal DaggerfallActorFeedback? Feedback { get; init; }
     internal IReadOnlyDictionary<string, NormalizedSpriteState> States { get; init; } = new ReadOnlyDictionary<string, NormalizedSpriteState>(new Dictionary<string, NormalizedSpriteState>());
     /// <summary>Resolved Daggerfall rest-state policy. Null preserves the generic idle-then-move fallback.</summary>
     internal string? PreferredRestState { get; init; }

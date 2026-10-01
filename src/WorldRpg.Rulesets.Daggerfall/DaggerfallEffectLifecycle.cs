@@ -33,7 +33,12 @@ internal sealed record DaggerfallEffectOutcome(
     DaggerfallEffectOutcomeKind Kind,
     string Instance,
     string EffectKey,
-    long TargetId);
+    long TargetId)
+{
+    internal DaggerfallEffectFeedback Feedback { get; init; }
+}
+
+internal enum DaggerfallEffectFeedback { None, MagicSparkle }
 
 /// <summary>How Daggerfall treats another active effect of the same compiled kind on one target.</summary>
 internal enum DaggerfallEffectStacking
@@ -83,7 +88,8 @@ internal sealed record DaggerfallEffectDefinition(
     Action<DaggerfallActiveEffect>? MagicRound = null,
     Func<DaggerfallActiveEffect, IEnumerable<IActiveEffectContribution>>? Resume = null,
     DaggerfallMovementProtection MovementProtection = default,
-    DaggerfallPerceptionEffectState Perception = default)
+    DaggerfallPerceptionEffectState Perception = default,
+    DaggerfallEffectFeedback Feedback = DaggerfallEffectFeedback.None)
 {
     internal EffectDefinition ToEngineDefinition(string source) => new(
         EffectDefinitionId.Parse($"daggerfall.{Key}"),
@@ -538,7 +544,7 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
         SourceDefinitionId.Parse($"daggerfall.{context.Source.Key}"));
 
     private void Publish(DaggerfallEffectOutcomeKind kind, string instance, string effectKey, long targetId) =>
-        Completed?.Invoke(new DaggerfallEffectOutcome(kind, instance, effectKey, targetId));
+        Completed?.Invoke(new DaggerfallEffectOutcome(kind, instance, effectKey, targetId) { Feedback = _catalog.Require(effectKey).Feedback });
 
 
 }

@@ -233,7 +233,7 @@ internal static class TestSessions
         return content;
     }
 
-    internal static DaggerfallSiteProfile MediaInputs(int primaryChance = 50, IReadOnlyList<int>? primaryFrames = null, bool includeAlternate = true, bool directional = false, IReadOnlyList<NormalizedAudioClip>? audio = null, string? preferredRestState = null, NormalizedClassicPresentation? classic = null, IReadOnlyList<NormalizedAtlasFrame>? actorFrames = null, IReadOnlyList<int>? rangedFrames = null, bool shortAttackDirection = false, NormalizedGroundContainerSprite? groundContainerSprite = null)
+    internal static DaggerfallSiteProfile MediaInputs(int primaryChance = 50, IReadOnlyList<int>? primaryFrames = null, bool includeAlternate = true, bool directional = false, IReadOnlyList<NormalizedAudioClip>? audio = null, string? preferredRestState = null, NormalizedClassicPresentation? classic = null, IReadOnlyList<NormalizedAtlasFrame>? actorFrames = null, IReadOnlyList<int>? rangedFrames = null, bool shortAttackDirection = false, NormalizedGroundContainerSprite? groundContainerSprite = null, DaggerfallActorFeedback? feedback = null, long spriteActorId = 11)
     {
         NormalizedSpriteState idle = new("idle", [0], 10F, true)
         {
@@ -262,6 +262,7 @@ internal static class TestSessions
             actorFrames ?? [new NormalizedAtlasFrame(0, 0, 0, 8, 8), new NormalizedAtlasFrame(1, 8, 0, 8, 8), new NormalizedAtlasFrame(2, 16, 0, 8, 8), new NormalizedAtlasFrame(3, 24, 0, 8, 8)],
             0, new Vector2(.5F, 0F), Vector2.One)
         {
+            Feedback = feedback,
             States = states,
             PreferredRestState = preferredRestState,
             AttackSequences = includeAlternate
@@ -276,7 +277,7 @@ internal static class TestSessions
             new AuthoredWorldAppearance(new Color(1, 1, 1, 1), new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), true, RenderLayer.Scene),
             new PlayerInitialLook(0, 0),
             [],
-            new Dictionary<long, NormalizedActorSprite> { [11] = sprite },
+            new Dictionary<long, NormalizedActorSprite> { [spriteActorId] = sprite },
             null,
             audio ??
             [
@@ -347,10 +348,11 @@ internal static class TestSessions
         return stats;
     }
 
+    internal static int EffectCount(DaggerfallSiteAppearance presentation) => ((List<DaggerfallSiteAppearance.EffectVisual>)typeof(DaggerfallSiteAppearance).GetField("effects", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(presentation)!).Count;
     internal static DaggerfallSiteAppearance.EffectVisual Effect(DaggerfallSiteAppearance presentation) => Assert.Single((List<DaggerfallSiteAppearance.EffectVisual>)typeof(DaggerfallSiteAppearance).GetField("effects", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(presentation)!);
     internal static DaggerfallSiteAppearance.ViewmodelVisual Viewmodel(DaggerfallSiteAppearance presentation) => Assert.IsType<DaggerfallSiteAppearance.ViewmodelVisual>(typeof(DaggerfallSiteAppearance).GetField("viewmodel", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(presentation));
 
-    internal static (DaggerfallSession Session, AppearanceFake Appearance, PerceptionFake Perception) VisibleEnemySession(List<string> releases, double distance = 1d)
+    internal static (DaggerfallSession Session, AppearanceFake Appearance, PerceptionFake Perception) VisibleEnemySession(List<string> releases, double distance = 1d, Action<EngineContextFake>? engineCreated = null)
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
@@ -362,6 +364,7 @@ internal static class TestSessions
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, distance, 1d, PerceptionPairKind.Visible, distance));
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
+        engineCreated?.Invoke(engine);
         return (DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)), appearance, perception);
     }
 

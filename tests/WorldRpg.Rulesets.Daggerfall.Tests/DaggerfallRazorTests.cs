@@ -10,6 +10,21 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed partial class DaggerfallEquipmentWearTests
 {
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Delayed_melee_feedback_retains_the_accepted_weapon_after_its_source_is_removed(bool hit)
+    {
+        using WearFixture f = new();
+        f.Script(body: 9, critical: 50, hit: hit ? 1 : 100, damage: hit ? 15 : null);
+        var facts = f.RunPlayerAttack(beforeImpact: () => f.DestroyNamira(1001));
+        var feedback = hit ? Assert.Single(facts.OfType<AttackHitFact>()).Feedback
+            : Assert.Single(facts.OfType<AttackMissedFact>()).Feedback;
+        Assert.True(feedback.Weapon);
+        Assert.Equal("sound.347", feedback.SwingCue);
+        Assert.DoesNotContain(f.PlayerEquipment.Read().Assignments, item => item.Item.Definition.Value == "iron-longsword");
+    }
+
+    [Theory]
     [InlineData(1, false)]
     [InlineData(100, true)]
     public void Razor_uses_the_victims_magic_save_and_one_ordinary_hit_and_death(int save, bool terminal)
@@ -91,5 +106,7 @@ public sealed partial class DaggerfallEquipmentWearTests
         Assert.DoesNotContain(f.PlayerEquipment.Read().Assignments, assignment => assignment.Item.Definition.Value == "template-113-orcish-magic-magic-item-0001");
         Assert.Single(facts.OfType<ActorDiedFact>());
         Assert.Single(facts.OfType<EquipmentWornFact>(), x => x.Broken);
+        Assert.True(Assert.Single(facts.OfType<AttackHitFact>()).Feedback.Weapon);
+        Assert.Equal("swing", Assert.Single(facts.OfType<AttackHitFact>()).Feedback.SwingCue);
     }
 }

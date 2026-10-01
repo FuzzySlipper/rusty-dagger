@@ -175,7 +175,7 @@ public sealed class ActorSpritePresentationTests
         }
 
         Assert.Equal("daggerfall.media.attack-alternate.v1", random.Requests[0].Scope);
-        Assert.Equal("daggerfall.media.hit-cue.v1", random.Requests[1].Scope);
+        Assert.Single(random.Requests); // A start cannot choose the hit cue before an applied result.
     }
 
     [Fact]
@@ -241,9 +241,8 @@ public sealed class ActorSpritePresentationTests
         presentation.Advance(OuterUpdate(2));
 
         Assert.Equal(playbacksBefore, appearance.PlaybackRequests.Count);
-        // The authored damage frame is the strike beat: it sounds once and reports the
-        // impact once, and the ruleset — not the presentation — owns the consequence.
-        Assert.Equal(audioBefore + 1, audio.Emits.Count);
+        // The marker admits one strike. No hit is audible until the ruleset applies it.
+        Assert.Equal(audioBefore, audio.Emits.Count);
         AttackImpactNotice impact = Assert.Single(presentation.TakeAttackImpacts());
         Assert.False(impact.Expired);
         Assert.Equal(11, impact.AttackerId);
@@ -264,7 +263,7 @@ public sealed class ActorSpritePresentationTests
         ContentFake content = MediaContent(releases);
         AppearanceFake appearance = new(releases);
         AudioRecorder audio = AudioRecorder.Create();
-        DaggerfallPresentationAudioTuning tuning = new(.25F, 1.5F, .75F, 12F);
+        DaggerfallPresentationAudioTuning tuning = new(.25F, 1.5F, .75F, 12F) { ContactPitch = 1.5F };
         using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(), audio.Service, tuning);
         EnemyAttackStartedFact hit = new(11, 12, true, 7, 9);
 
@@ -273,6 +272,10 @@ public sealed class ActorSpritePresentationTests
         presentation.React(hit);
 
         Assert.Equal(playbackCount, appearance.PlaybackRequests.Count);
+        Assert.Empty(audio.Emits);
+        AttackHitFact applied = new(11, 12, 3, 3, 0, true, 7, 9);
+        presentation.React(applied);
+        presentation.React(applied);
         AudioEmitRequest emitted = Assert.Single(audio.Emits);
         Assert.Equal(.25F, emitted.Descriptor.Volume);
         Assert.Equal(1.5F, emitted.Descriptor.Pitch);
@@ -393,7 +396,7 @@ public sealed class ActorSpritePresentationTests
     {
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
-        EnemyAttackStartedFact hit = new(11, 12, true, 8, 13);
+        AttackHitFact hit = new(11, 12, 3, 3, 0, true, 8, 13) { Feedback = new(true, "swing") };
         AudioRecorder firstAudio = AudioRecorder.Create();
         AppearanceFake firstAppearance = new(releases);
         DaggerfallSiteProfile hitInputs = MediaInputs(includeAlternate: false);
@@ -431,7 +434,7 @@ public sealed class ActorSpritePresentationTests
         ];
 
         using DaggerfallSiteAppearance presentation = new(content, new AppearanceFake(releases), MediaInputs(includeAlternate: false, audio: authoredAudio), audio.Service, random: KeyedRandomFake.Create(2).Service);
-        presentation.React(new EnemyAttackStartedFact(11, 12, true, 8, 13));
+        presentation.React(new AttackHitFact(11, 12, 1, 1, 0, true, 8, 13) { Feedback = new(true, "swing") });
 
         Assert.Equal((ulong)3, Assert.Single(audio.Emits).Descriptor.Clip.Handle.Value);
     }
@@ -475,7 +478,9 @@ public sealed class ActorSpritePresentationTests
             ContentFake content = MediaContent(releases);
             AppearanceFake appearance = new(releases);
             NormalizedClassicPresentation classic = ClassicEffects(expectedSizes);
-            using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: classic), random: KeyedRandomFake.Create(ordinal).Service);
+            DaggerfallSiteProfile inputs = MediaInputs(classic: classic, spriteActorId: 12,
+                feedback: new(0, "swing", "swing", "swing", false, ordinal));
+            using DaggerfallSiteAppearance presentation = new(content, appearance, inputs, random: KeyedRandomFake.Create(2 - ordinal).Service);
             using ActorsState actors = ActorsAt(new WorldPoint(2F, 0F, 3F));
 
             presentation.React(new AttackHitFact(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 1d, ordinal, false, 2, 3), actors);
@@ -488,5 +493,4 @@ public sealed class ActorSpritePresentationTests
         }
     }
 
-    private static int EffectCount(DaggerfallSiteAppearance presentation) => ((List<DaggerfallSiteAppearance.EffectVisual>)typeof(DaggerfallSiteAppearance).GetField("effects", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(presentation)!).Count;
 }
