@@ -22,7 +22,7 @@
          reruns this only when a file under ../ui or a listed dependency
          changes, so C#-only edits skip it and UI edits skip the C# build. -->
     <RustyEngineProductUiSourceRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui'))</RustyEngineProductUiSourceRoot>
-    <RustyEngineProductUiBuildCommand>npm --prefix &quot;$(MSBuildThisFileDirectory)../..&quot; exec -- tsc --target ES2022 --module ES2022 --moduleResolution bundler --strict --noEmitOnError --outDir &quot;$(RustyEngineProductUiRoot)&quot; &quot;$(RustyEngineProductUiTypes)&quot; &quot;$(MSBuildThisFileDirectory)../ui/main.ts&quot; &amp;&amp; cp &quot;$(MSBuildThisFileDirectory)../ui/&quot;*.css &quot;$(RustyEngineProductUiRoot)/&quot;</RustyEngineProductUiBuildCommand>
+    <RustyEngineProductUiBuildCommand>mkdir -p &quot;$(MSBuildThisFileDirectory)../ui/engine-types&quot; &amp;&amp; (cmp -s &quot;$(RustyEngineProductUiTypes)&quot; &quot;$(MSBuildThisFileDirectory)../ui/engine-types/rusty-engine-product-ui.d.ts&quot; || cp &quot;$(RustyEngineProductUiTypes)&quot; &quot;$(MSBuildThisFileDirectory)../ui/engine-types/rusty-engine-product-ui.d.ts&quot;) &amp;&amp; npm --prefix &quot;$(MSBuildThisFileDirectory)../..&quot; exec -- tsc -p &quot;$(MSBuildThisFileDirectory)../ui/tsconfig.json&quot; --outDir &quot;$(RustyEngineProductUiRoot)&quot; &amp;&amp; cp &quot;$(MSBuildThisFileDirectory)../ui/&quot;*.css &quot;$(RustyEngineProductUiRoot)/&quot;</RustyEngineProductUiBuildCommand>
     <RustyEngineProductUiProjectionStream>dagger.hud</RustyEngineProductUiProjectionStream>
     <RustyEngineProductUiProjectionContract>dagger.ui.snapshot.v1</RustyEngineProductUiProjectionContract>
     <RustyEngineProductLifecycleMode>realtime</RustyEngineProductLifecycleMode>
@@ -92,6 +92,6 @@
   </Target>
 
   <ItemGroup>
-    <RustyEngineProductUiInput Include="$(MSBuildThisFileDirectory)../../package.json;$(MSBuildThisFileDirectory)../../package-lock.json;$(RustyEngineProductUiTypes)" />
+    <RustyEngineProductUiInput Include="$(MSBuildThisFileDirectory)../../package.json;$(MSBuildThisFileDirectory)../../package-lock.json;$(MSBuildThisFileDirectory)../../tsconfig.base.json;$(RustyEngineProductUiTypes)" />
   </ItemGroup>
 </Project>

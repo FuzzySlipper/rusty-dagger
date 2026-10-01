@@ -1,0 +1,4 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "files": ["engine-types/rusty-engine-product-ui.d.ts", "main.ts"]
+}
