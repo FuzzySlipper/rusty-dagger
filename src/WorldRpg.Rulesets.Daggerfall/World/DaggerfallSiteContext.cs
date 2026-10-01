@@ -138,6 +138,7 @@ internal sealed class DaggerfallSiteContext
             throw new InvalidOperationException("Classic building names are already admitted for this site context.");
         }
 
+        Blocks = blocks;
         _buildingFactions = definitions.Factions;
         _buildingNames = new DaggerfallBuildingNameService(random, definitions, blocks, this);
     }
@@ -150,6 +151,18 @@ internal sealed class DaggerfallSiteContext
     internal DaggerfallBuildingNameResult ResolveBuildingName(DaggerfallSiteId site, DaggerfallRmbBuildingId building) =>
         _buildingNames?.Resolve(site, building)
         ?? DaggerfallBuildingNameResult.Missing("Classic building-name content has not been admitted for this site context.");
+
+    internal DaggerfallBlocksSnapshot? Blocks { get; private set; }
+    // A map selection is an interface target for directions, not discovery or a durable world change.
+    internal (DaggerfallSiteId Site, DaggerfallSiteBuildingId Building)? SelectedBuilding { get; private set; }
+    internal DaggerfallSiteBuildingRecord SelectBuilding(DaggerfallSiteId site, DaggerfallSiteBuildingId building)
+    {
+        if (ActiveSite?.Id != site) throw new InvalidOperationException("That building is not at the active site.");
+        DaggerfallSiteBuildingRecord selected = RequireBuilding(site, building);
+        if (string.IsNullOrWhiteSpace(selected.Name)) throw new InvalidOperationException("That building has no named directions target.");
+        SelectedBuilding = (site, building);
+        return selected;
+    }
 
     internal DaggerfallSiteBuildingSource RequireBuildingSource(DaggerfallSiteId site, DaggerfallSiteBuildingId building)
     {
@@ -220,6 +233,7 @@ internal sealed class DaggerfallSiteContext
             ReturnAnchor = previous;
         }
 
+        SelectedBuilding = null;
         Active = record.Id;
         Reveal(record);
     }
@@ -240,6 +254,7 @@ internal sealed class DaggerfallSiteContext
             ReturnAnchor = previous;
             _returnPose = new DaggerfallSiteReturnPose(sourcePosition, sourceYawRadians, sourcePitchRadians);
         }
+        SelectedBuilding = null;
         Active = record.Id;
         Reveal(record);
     }

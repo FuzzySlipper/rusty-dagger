@@ -60,6 +60,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Func<DaggerfallCharacterIdentity> _playerIdentity;
     private readonly Action<DaggerfallDialogueView?> _publish;
     private readonly Action<string> _setOutcome;
+    private readonly Func<(string Name, string Hint)?>? _directions;
     private TalkSession? _current;
     private long _nextRevision;
 
@@ -74,7 +75,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<DaggerfallSiteRecord?> activeSite,
         Func<DaggerfallCharacterIdentity> playerIdentity,
         Action<DaggerfallDialogueView?> publish,
-        Action<string> setOutcome)
+        Action<string> setOutcome,
+        Func<(string Name, string Hint)?>? directions = null)
     {
         _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
@@ -87,6 +89,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         _activeSite = activeSite ?? throw new ArgumentNullException(nameof(activeSite));
         _playerIdentity = playerIdentity ?? throw new ArgumentNullException(nameof(playerIdentity));
         _publish = publish ?? throw new ArgumentNullException(nameof(publish));
+        _directions = directions;
         _setOutcome = setOutcome ?? throw new ArgumentNullException(nameof(setOutcome));
     }
 
@@ -194,7 +197,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         int socialGroup = ResolveSocialGroup(npc);
         int questionModifier = topic == DaggerfallDialogueTopic.Directions ? LocationQuestionReaction : NormalQuestionReaction;
         int band = ReactionBand(session, npc, socialGroup, questionModifier, topic);
-        DaggerfallTextContext context = Context(npc, site, session.OpeningLine ?? string.Empty);
+        var destination = topic == DaggerfallDialogueTopic.Directions ? _directions?.Invoke() : null;
+        DaggerfallTextContext context = Context(npc, site, session.OpeningLine ?? string.Empty, destination?.Name, destination?.Hint);
 
         DaggerfallTextKey questionKey = topic == DaggerfallDialogueTopic.Directions
             ? Resource(7225 + (int)session.Tone)
@@ -210,7 +214,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         {
             int responseId = DirectionAnswers[15 + 3 * socialGroup + band];
             DaggerfallTextContext responseContext = Context(npc, site, session.OpeningLine ?? string.Empty,
-                subject: site.Name, hint: "here");
+                subject: destination?.Name ?? site.Name, hint: destination?.Hint ?? "here");
             (session.Reply, IReadOnlyList<string> responseDiagnostics) = RenderSelectedRun(
                 Resource(responseId), responseContext, $"{session.Revision}:{session.QuestionCount}:directions:answer");
             session.Diagnostics.AddRange(responseDiagnostics);

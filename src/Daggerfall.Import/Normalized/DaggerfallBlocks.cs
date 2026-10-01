@@ -1,6 +1,7 @@
 using System.Globalization;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Publication;
+using Daggerfall.Import.Normalization;
 
 namespace Daggerfall.Import.Normalized;
 
@@ -200,7 +201,11 @@ public sealed record DaggerfallBlockBuilding(
     DaggerfallBlockObjectCounts Exterior,
     DaggerfallBlockObjectCounts Interior,
     DaggerfallBlockHalfPlacements ExteriorPlacements,
-    DaggerfallBlockHalfPlacements InteriorPlacements);
+    DaggerfallBlockHalfPlacements InteriorPlacements)
+{
+    /// <summary>The building header origin in normalized right-handed metres.</summary>
+    public NormalizedVector3 MapPosition { get; init; }
+}
 
 /// <summary>One half's placements: every record its counts declare, in the donor's order.</summary>
 /// <param name="Models">The 3D object placements.</param>
@@ -274,7 +279,11 @@ public sealed record DaggerfallBlockRmbHeader(
     int Misc3dObjects,
     int MiscFlatObjects,
     IReadOnlyList<DaggerfallBlockBuilding> Buildings,
-    int TrailingBytes);
+    int TrailingBytes)
+{
+    /// <summary>All source automap occupancy cells; interpreted only by offline map publication.</summary>
+    public IReadOnlyList<byte> AutoMapData { get; init; } = [];
+}
 
 /// <summary>The fields of one RMB building slot the runtime reads: its type, faction and name seed.</summary>
 /// <param name="Block">The source key of the readable city block that carries the slot.</param>
@@ -282,23 +291,32 @@ public sealed record DaggerfallBlockRmbHeader(
 /// <param name="BuildingType">The building type byte the slot carries.</param>
 /// <param name="FactionId">The faction the slot names, or zero when it names none.</param>
 /// <param name="NameSeed">The seed the building's generated name derives from.</param>
-public sealed record DaggerfallBlockBuildingFields(string Block, int Index, int BuildingType, int FactionId, int NameSeed);
+public sealed record DaggerfallBlockBuildingFields(string Block, int Index, int BuildingType, int FactionId, int NameSeed)
+{
+    public NormalizedVector3 MapPosition { get; init; }
+}
 
 /// <summary>
-/// The runtime's view of the block document: every building slot of every readable city block, and no
-/// placement. The <c>daggerfall.blocks</c> pack carries this; the complete document stays an importer
-/// record, because nothing at runtime reads the rest of it.
+/// The runtime's view of the block document: every building slot and compact map footprints of every readable city block. The <c>daggerfall.blocks</c> pack carries this; the complete document stays an importer
+/// record, runtime never reads its source placement records.
 /// </summary>
 /// <param name="Buildings">One entry per building slot, in block and slot order.</param>
 public sealed record DaggerfallBlockBuildingSet(IReadOnlyList<DaggerfallBlockBuildingFields> Buildings)
 {
+    /// <summary>Source-normalized city footprints, shared by repeated block placements.</summary>
+    public IReadOnlyList<DaggerfallBlockMap> Maps { get; init; } = [];
     public static DaggerfallBlockBuildingSet From(DaggerfallBlocks blocks)
     {
         ArgumentNullException.ThrowIfNull(blocks);
         return new([.. blocks.Records
             .Where(record => record.Kind == DaggerfallBlockKind.Rmb && record.State == DaggerfallBlockState.Read && record.Rmb is not null)
             .SelectMany(record => record.Rmb!.Buildings.Select(building =>
-                new DaggerfallBlockBuildingFields(record.SourceKey, building.Index, building.BuildingType, building.FactionId, building.NameSeed)))]);
+                new DaggerfallBlockBuildingFields(record.SourceKey, building.Index, building.BuildingType, building.FactionId, building.NameSeed)
+                    { MapPosition = building.MapPosition }))])
+        {
+            Maps = [.. blocks.Records.Where(record => record.Kind == DaggerfallBlockKind.Rmb && record.State == DaggerfallBlockState.Read && record.Rmb is not null)
+                .Select(record => DaggerfallCityMapBuilder.Build(record.SourceKey, record.Rmb!.AutoMapData))],
+        };
     }
 }
 
@@ -856,8 +874,9 @@ public static class DaggerfallBlocksBuilder
             [.. summary.Buildings.Select((building, index) => new DaggerfallBlockBuilding(
                 building.Index, building.ByteLength, building.PaddingBytes, building.BuildingType, building.FactionId, building.Quality, building.NameSeed,
                 Publish(building.Exterior), Publish(building.Interior),
-                PublishHalf(placements?.Buildings.ElementAtOrDefault(index)?.Exterior), PublishHalf(placements?.Buildings.ElementAtOrDefault(index)?.Interior)))],
-            summary.TrailingBytes);
+                PublishHalf(placements?.Buildings.ElementAtOrDefault(index)?.Exterior), PublishHalf(placements?.Buildings.ElementAtOrDefault(index)?.Interior))
+                { MapPosition = MeshGeometry.ToRightHanded(Arena2SourceTransform.ToRmbBuildingOrigin(building)) })],
+            summary.TrailingBytes) { AutoMapData = summary.AutoMapData };
 
     private static DaggerfallBlockHalfPlacements PublishHalf(RmbHalfPlacements? half) =>
         new(

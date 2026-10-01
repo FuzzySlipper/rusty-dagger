@@ -795,3 +795,47 @@ test('changing travel options disables acceptance until a fresh quote arrives, i
     view.dispose();
   } finally { f.dispose(); }
 });
+
+test('map controls change only presentation and retain live player position without discovering geometry', () => {
+  const f = fixture();
+  try {
+    const map = { id: 'privateers', name: "Privateer's Hold", kind: 'dungeon', region: null, location: null,
+      player: { x: 1, y: 2, z: 3, yaw: .5 }, labels: [],
+      areas: [{ id: 'known-room', minX: 0, minZ: 0, maxX: 10, maxZ: 10, minY: 1, maxY: 3, kind: 1 },
+        { id: 'known-upper', minX: 0, minZ: 0, maxX: 10, maxZ: 10, minY: 4, maxY: 6, kind: 1 }] };
+    f.publish({ map }); f.root.querySelector('[data-action="map"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'map-open', open: true });
+    const group = f.root.querySelector('.dagger-map-diagram > g');
+    const initial = group.getAttribute('transform'); const count = f.actions.length;
+    const press = label => Array.from(f.root.querySelectorAll('.dagger-map-controls button')).find(button => button.textContent === label).click();
+    press('Pan right'); assert.notEqual(group.getAttribute('transform'), initial);
+    press('Zoom in'); press('Rotate right'); press('Level up');
+    assert.equal(group.querySelectorAll('rect').length, 1);
+    assert.equal(group.querySelector('rect').dataset.id, 'known-room');
+    const height = f.root.querySelector('.dagger-map-level'); height.value = '5'; height.dispatchEvent(new window.Event('change', { bubbles: true }));
+    assert.equal(group.querySelector('rect').dataset.id, 'known-upper');
+    assert.equal(f.actions.length, count);
+    f.publish({ map: { ...map, player: { ...map.player, x: 8 } } });
+    assert.match(group.querySelector('[data-player]').getAttribute('transform'), /translate\(8 3\)/);
+    assert.equal(group.querySelectorAll('rect').length, 1);
+    f.root.querySelector('[data-action="back"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'map-open', open: false });
+  } finally { f.dispose(); }
+});
+
+test('city map selection sends the actual location and placed building identity to the shared owner', () => {
+  const f = fixture();
+  try {
+    const map = { id: '17/45', name: 'Charing', kind: 'city', region: 17, location: 45,
+      player: { x: 0, y: 0, z: 0, yaw: 0 }, areas: [],
+      labels: [{ id: '0/0/3', name: 'City Wall', x: 1, y: 0, z: 2, selected: false },
+        { id: '1/0/3', name: 'City Wall', x: 103.4, y: 0, z: 2, selected: false }] };
+    f.publish({ map });
+    const buttons = f.root.querySelectorAll('.dagger-map-buildings button');
+    assert.equal(buttons.length, 2); buttons[1].click();
+    assert.deepEqual(f.actions.at(-1), { action: 'map-building', region: 17, destination: 45, item: '1/0/3' });
+    f.publish({ map: { ...map, labels: map.labels.map(label => ({ ...label, selected: label.id === '1/0/3' })) } });
+    assert.equal(f.root.querySelector('[data-building="1/0/3"]').getAttribute('aria-pressed'), 'true');
+    assert.match(f.root.querySelector('.dagger-map-target').textContent, /City Wall/);
+  } finally { f.dispose(); }
+});

@@ -559,8 +559,24 @@ internal static class DaggerfallBaseContent
         return new DaggerfallSiteExterior(mapPixelX, mapPixelY, width, height, tileOriginX, tileOriginY,
             custom, clearance, minX, maxX, minY, maxY)
         {
+            Blocks = ReadSiteBlocks(exterior, width, height, diagnostics),
             Buildings = ReadSiteBuildings(exterior, region, index, width, height, diagnostics),
         };
+    }
+
+    private static IReadOnlyList<DaggerfallSiteBlock> ReadSiteBlocks(JsonElement exterior, int width, int height, DaggerfallContentDiagnostics diagnostics)
+    {
+        List<DaggerfallSiteBlock> blocks = [];
+        HashSet<(int, int)> positions = [];
+        foreach (JsonElement value in Array(exterior, "blocks", diagnostics))
+        {
+            DaggerfallSiteBlock block = new(Text(value, "sourceName", diagnostics), Integer(value, "x", diagnostics), Integer(value, "y", diagnostics));
+            if (block.X < 0 || block.Y < 0 || block.X >= width || block.Y >= height || !positions.Add((block.X, block.Y)))
+                diagnostics.Add($"Location exterior repeats or misplaces block '{block.SourceName}'.");
+            blocks.Add(block);
+        }
+        if (blocks.Count != width * height) diagnostics.Add("Location exterior must publish its complete block grid.");
+        return blocks.AsReadOnly();
     }
 
     private static IReadOnlyDictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource> ReadSiteBuildings(JsonElement exterior, int region, int index,

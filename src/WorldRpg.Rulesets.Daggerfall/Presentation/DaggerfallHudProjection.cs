@@ -38,7 +38,8 @@ internal sealed record DaggerfallHudFrame(
     DaggerfallRestView? Rest = null,
     DaggerfallTravelPresentation? Travel = null,
     string? SiteName = null,
-    DaggerfallLodgingView? Lodging = null);
+    DaggerfallLodgingView? Lodging = null,
+    DaggerfallMapPresentation? Map = null);
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
 internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<DaggerfallHudResourceDefinition> resources, ResolvedCompositionIdentity? compositionIdentity, DaggerfallUiArt? uiArt = null) : IDisposable
@@ -59,7 +60,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ArgumentNullException.ThrowIfNull(frame);
         var (player, progression, presentation, mode, controls, slots, inventory, loot, character, panelRequest,
             saveSlots, saveSlotDiagnostic, controlSettings, controlDiagnostic, activation, quests, notebook, transport,
-            dungeonText, death, rest, travel, siteName, lodging) = frame;
+            dungeonText, death, rest, travel, siteName, lodging, map) = frame;
         UiValueBuilder builder = new();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
         (string Key, uint Value)[] fields =
@@ -139,6 +140,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("key", builder.String(lodging.Key)), ("name", builder.String(lodging.Name)),
             ("days", builder.Number(lodging.Days)), ("price", builder.Number(lodging.Price)),
             ("remainingHours", builder.Number(lodging.RemainingHours)), ("canBook", builder.Boolean(lodging.CanBook))))];
+        fields = [.. fields, ("map", map is null ? builder.Null() : DaggerfallMapProjection.Wire(builder, map))];
         if (travel is not null) fields = [.. fields, ("travel", Travel(builder, travel))];
         if (inventory is not null) fields = [.. fields, ("inventory", Inventory(builder, inventory))];
         // Contents are an affordance the same way focus is: a dead or paused product refuses the take
