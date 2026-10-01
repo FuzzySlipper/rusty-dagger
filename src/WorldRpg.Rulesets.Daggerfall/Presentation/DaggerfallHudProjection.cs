@@ -283,6 +283,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("id", builder.String(note.Id)), ("text", builder.String(note.Text)))).ToArray())));
 
     private static uint QuestMessage(UiValueBuilder builder, DaggerfallQuestRenderedMessage message) => builder.Object(
+        ("entryId", message.EntryId is null ? builder.Null() : builder.String(message.EntryId)),
         ("instance", builder.String(message.InstanceId)),
         ("message", builder.Number(message.MessageId)),
         ("delivery", builder.String(message.Delivery.ToString().ToLowerInvariant())),

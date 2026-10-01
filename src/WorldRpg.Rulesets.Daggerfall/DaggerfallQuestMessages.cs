@@ -9,12 +9,18 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal enum DaggerfallQuestMessageDelivery { Popup, Letter, Rumor, Journal, Prompt }
 
 /// <summary>A source-backed message awaiting ordinary DOM presentation.</summary>
-internal sealed record DaggerfallQuestMessageDeliverySave(string InstanceId, int MessageId, DaggerfallQuestMessageDelivery Delivery, int Variant = 0);
+internal sealed record DaggerfallQuestMessageDeliverySave(string InstanceId, int MessageId, DaggerfallQuestMessageDelivery Delivery, int Variant = 0)
+{
+    [System.Text.Json.Serialization.JsonRequired]
+    public ulong Id { get; init; }
+    internal string EntryId => $"quest-message:{Id}";
+}
 internal sealed record DaggerfallQuestJournalEntrySave(string InstanceId, int Step, int MessageId)
 {
     // Finished entries retain just their readable source and bound text values, not a quest runtime.
     public string? SourceFile { get; init; }
     public DaggerfallQuestMessageContext? Context { get; init; }
+    internal string EntryId => $"quest-journal/{Uri.EscapeDataString(InstanceId)}/{Step}";
 }
 internal sealed record DaggerfallQuestPromptOption(int Id, string Label, string Target);
 internal sealed record DaggerfallQuestPromptSave(string InstanceId, int MessageId, DaggerfallQuestPromptOption[] Options, string TaskSymbol, int OperationIndex, int Occurrence)
@@ -29,6 +35,8 @@ internal sealed record DaggerfallQuestMessagesSave(
 {
     [System.Text.Json.Serialization.JsonRequired]
     public DaggerfallQuestChoiceSave[] Choices { get; init; } = [];
+    [System.Text.Json.Serialization.JsonRequired]
+    public ulong LastDeliveryId { get; init; }
 }
 
 /// <summary>Every non-global resource spelling the retained quest message grammar selects.</summary>
@@ -51,7 +59,10 @@ internal sealed record DaggerfallQuestRenderedMessage(
     DaggerfallQuestMessageDelivery Delivery,
     string Text,
     IReadOnlyList<string> Diagnostics,
-    string? Signoff = null, string? PromptId = null, IReadOnlyList<DaggerfallQuestPromptOption>? Options = null);
+    string? Signoff = null, string? PromptId = null, IReadOnlyList<DaggerfallQuestPromptOption>? Options = null)
+{
+    public string? EntryId { get; init; }
+}
 internal sealed record DaggerfallQuestPresentation(
     IReadOnlyList<DaggerfallQuestRenderedMessage> Deliveries,
     IReadOnlyList<DaggerfallQuestRenderedMessage> Journal,
@@ -73,9 +84,10 @@ internal sealed class DaggerfallQuestMessages
     private readonly IReadOnlyDictionary<string, int> _staticMessages;
     private readonly IRandomService? _random;
     private readonly List<DaggerfallQuestMessageDeliverySave> _deliveries = [];
-    private readonly Dictionary<(string Instance, int Step), DaggerfallQuestJournalEntrySave> _journal = [];
+    private readonly List<DaggerfallQuestJournalEntrySave> _journal = [];
     private readonly List<DaggerfallQuestChoiceSave> _choices = [];
     private DaggerfallQuestPromptSave? _pending;
+    private ulong _lastDeliveryId;
 
     internal DaggerfallQuestMessages(DaggerfallDefinitions definitions, IRandomService random)
         : this(definitions?.TextPresentation ?? throw new ArgumentNullException(nameof(definitions)), definitions.QuestSources.Quests,
@@ -94,7 +106,7 @@ internal sealed class DaggerfallQuestMessages
     }
 
     internal IReadOnlyList<DaggerfallQuestMessageDeliverySave> Deliveries => _deliveries;
-    internal IReadOnlyList<DaggerfallQuestJournalEntrySave> Journal => _journal.Values.OrderBy(value => value.InstanceId, StringComparer.Ordinal).ThenBy(value => value.Step).ToArray();
+    internal IReadOnlyList<DaggerfallQuestJournalEntrySave> Journal => _journal.ToArray();
     internal IReadOnlyList<DaggerfallQuestChoiceSave> Choices => _choices;
     internal DaggerfallQuestPromptSave? Pending => _pending;
 
@@ -117,14 +129,22 @@ internal sealed class DaggerfallQuestMessages
     {
         RequireMessage(instance, messageId);
         if (step < 0) throw new ArgumentOutOfRangeException(nameof(step));
-        _journal[(instance.InstanceId, step)] = new(instance.InstanceId, step, messageId);
+        _journal.RemoveAll(entry => entry.InstanceId == instance.InstanceId && entry.Step == step);
+        _journal.Add(new(instance.InstanceId, step, messageId));
     }
 
     internal void RemoveLog(DaggerfallQuestRuntimeInstance instance, int step)
     {
         if (step < 0) throw new ArgumentOutOfRangeException(nameof(step));
-        _journal.Remove((instance.InstanceId, step));
+        _journal.RemoveAll(entry => entry.InstanceId == instance.InstanceId && entry.Step == step);
     }
+
+    internal string NoteText(DaggerfallQuestRuntimeInstance instance, int messageId, DaggerfallQuestMessageContext context) =>
+        Render(instance, messageId, DaggerfallQuestMessageDelivery.Journal, 0, context).Text;
+
+    internal bool Dismiss(string instanceId, string entryId) => _deliveries.RemoveAll(delivery =>
+        delivery.InstanceId == instanceId && delivery.EntryId == entryId
+        && delivery.Delivery is DaggerfallQuestMessageDelivery.Popup or DaggerfallQuestMessageDelivery.Letter) > 0;
 
     /// <summary>Opens one source-declared choice. Its owning operation remains incomplete until TryChoose records it.</summary>
     internal bool Prompt(DaggerfallQuestRuntimeInstance instance, int messageId, DaggerfallQuestPromptOption[] options, string taskSymbol, int operationIndex)
@@ -223,7 +243,7 @@ internal sealed class DaggerfallQuestMessages
             (string text, string? signoff, IReadOnlyList<string> diagnostics) = Render(instance, delivery.MessageId, delivery.Delivery, delivery.Variant, context(instance));
             DaggerfallQuestPromptSave? prompt = delivery.Delivery == DaggerfallQuestMessageDelivery.Prompt
                 && _pending?.InstanceId == delivery.InstanceId && _pending.MessageId == delivery.MessageId ? _pending : null;
-            return new DaggerfallQuestRenderedMessage(delivery.InstanceId, delivery.MessageId, delivery.Delivery, text, diagnostics, signoff, prompt?.Id, prompt?.Options);
+            return new DaggerfallQuestRenderedMessage(delivery.InstanceId, delivery.MessageId, delivery.Delivery, text, diagnostics, signoff, prompt?.Id, prompt?.Options) { EntryId = delivery.EntryId };
         }).ToArray();
     }
 
@@ -241,11 +261,11 @@ internal sealed class DaggerfallQuestMessages
                 ? Render(source, entry.MessageId, DaggerfallQuestMessageDelivery.Journal, 0, entry.Context!)
                 : Render(RequireInstance(entry.InstanceId, byId), entry.MessageId, DaggerfallQuestMessageDelivery.Journal, 0,
                     context(RequireInstance(entry.InstanceId, byId)));
-            return new DaggerfallQuestRenderedMessage(entry.InstanceId, entry.MessageId, DaggerfallQuestMessageDelivery.Journal, text, diagnostics);
+            return new DaggerfallQuestRenderedMessage(entry.InstanceId, entry.MessageId, DaggerfallQuestMessageDelivery.Journal, text, diagnostics) { EntryId = entry.EntryId };
         }).ToArray();
     }
 
-    internal DaggerfallQuestMessagesSave Capture() => new([.. _deliveries], [.. Journal], _pending) { Choices = [.. _choices] };
+    internal DaggerfallQuestMessagesSave Capture() => new([.. _deliveries], [.. Journal], _pending) { Choices = [.. _choices], LastDeliveryId = _lastDeliveryId };
 
     internal void RetainJournal(DaggerfallQuestRuntimeInstance instance,
         Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestMessageContext> context)
@@ -255,11 +275,11 @@ internal sealed class DaggerfallQuestMessages
             _deliveries.RemoveAll(delivery => delivery.InstanceId == instance.InstanceId && delivery.Delivery == DaggerfallQuestMessageDelivery.Prompt);
             _pending = null;
         }
-        DaggerfallQuestJournalEntrySave[] entries = [.. _journal.Values.Where(entry => entry.InstanceId == instance.InstanceId && entry.SourceFile is null)];
+        DaggerfallQuestJournalEntrySave[] entries = [.. _journal.Where(entry => entry.InstanceId == instance.InstanceId && entry.SourceFile is null)];
         if (entries.Length == 0) return;
         DaggerfallQuestMessageContext bound = BindSymbols(instance, context(instance));
         foreach (DaggerfallQuestJournalEntrySave entry in entries)
-            _journal[(entry.InstanceId, entry.Step)] = entry with { SourceFile = instance.SourceFile, Context = bound };
+            _journal[_journal.IndexOf(entry)] = entry with { SourceFile = instance.SourceFile, Context = bound };
     }
 
     /// <summary>Releases presentation and prompt history when the owning tombstone expires.</summary>
@@ -267,8 +287,7 @@ internal sealed class DaggerfallQuestMessages
     {
         ArgumentNullException.ThrowIfNull(instanceIds);
         _deliveries.RemoveAll(value => instanceIds.Contains(value.InstanceId));
-        foreach ((string InstanceId, int Step) key in _journal.Keys.Where(key => instanceIds.Contains(key.Instance) && _journal[key].SourceFile is null).ToArray())
-            _journal.Remove(key);
+        _journal.RemoveAll(entry => instanceIds.Contains(entry.InstanceId) && entry.SourceFile is null);
         _choices.RemoveAll(value => instanceIds.Contains(value.InstanceId));
         if (_pending is { } pending && instanceIds.Contains(pending.InstanceId)) _pending = null;
     }
@@ -282,11 +301,15 @@ internal sealed class DaggerfallQuestMessages
         _deliveries.Clear();
         _journal.Clear();
         _choices.Clear();
+        _lastDeliveryId = saved.LastDeliveryId;
+        HashSet<ulong> deliveryIds = [];
         foreach (DaggerfallQuestMessageDeliverySave delivery in saved.Deliveries)
         {
             DaggerfallQuestRuntimeInstance instance = RequireInstance(delivery.InstanceId, instances);
             RequireMessage(instance, delivery.MessageId);
             if (!Enum.IsDefined(delivery.Delivery)) throw new ArgumentException("Saved quest message delivery has an unknown kind.");
+            if (delivery.Id == 0 || delivery.Id > _lastDeliveryId || !deliveryIds.Add(delivery.Id))
+                throw new ArgumentException("Saved quest message delivery identity is malformed or duplicated.");
             _deliveries.Add(delivery);
         }
         foreach (DaggerfallQuestJournalEntrySave entry in saved.Journal)
@@ -310,7 +333,9 @@ internal sealed class DaggerfallQuestMessages
                 if (entry.Context is not null) throw new ArgumentException("Active quest journal entry has a finished text context.");
                 RequireMessage(RequireInstance(entry.InstanceId, instances), entry.MessageId);
             }
-            if (entry.Step < 0 || !_journal.TryAdd((entry.InstanceId, entry.Step), entry)) throw new ArgumentException("Saved quest journal entries are malformed or duplicated.");
+            if (entry.Step < 0 || _journal.Any(value => value.InstanceId == entry.InstanceId && value.Step == entry.Step))
+                throw new ArgumentException("Saved quest journal entries are malformed or duplicated.");
+            _journal.Add(entry);
         }
         foreach (DaggerfallQuestChoiceSave choice in saved.Choices)
         {
@@ -358,7 +383,7 @@ internal sealed class DaggerfallQuestMessages
         int variant = delivery is DaggerfallQuestMessageDelivery.Popup or DaggerfallQuestMessageDelivery.Rumor && _random is not null && variants > 1
             ? checked((int)_random.DrawKeyed(new KeyedRngRequest(0, "daggerfall.quest.message", $"{instance.InstanceId}:{messageId}:{_deliveries.Count}", 0, variants - 1)).Value)
             : 0;
-        _deliveries.Add(new(instance.InstanceId, messageId, delivery, variant));
+        _deliveries.Add(new(instance.InstanceId, messageId, delivery, variant) { Id = checked(++_lastDeliveryId) });
     }
 
     private (string Text, string? Signoff, IReadOnlyList<string> Diagnostics) Render(

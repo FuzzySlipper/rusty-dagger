@@ -5,7 +5,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>The source-defined forms whose trigger state belongs to a quest instance.</summary>
 internal enum DaggerfallQuestTaskKind { Headless, Standard, Variable, PersistUntil, Global }
-internal enum DaggerfallQuestTaskOperationKind { When, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, TrainPc, End, Unsupported }
+internal enum DaggerfallQuestTaskOperationKind { When, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, TrainPc, End, Unsupported }
 internal enum DaggerfallQuestTaskConditionOperator { When, WhenNot, And, AndNot, Or, OrNot }
 
 /// <summary>One durable trigger state. Operation completion aligns with the compiled source operation order.</summary>
@@ -77,7 +77,9 @@ internal static partial class DaggerfallQuestTaskCompiler
     private static readonly Regex WhenAttributeLevel = Header("^when\\s+attribute\\s+(?<attribute>\\w+)\\s+is\\s+at\\s+least\\s+(?<minimum>\\d+)$");
     private static readonly Regex WhenSkillLevel = Header("^when\\s+skill\\s+(?<skill>\\w+)\\s+is\\s+at\\s+least\\s+(?<minimum>\\d+)$");
     private static readonly Regex TrainPc = Header("^train\\s+pc\\s+(?<skill>\\w+)$");
-    private static readonly Regex Journal = Header("^log\\s+(?<message>\\d+)\\s+step\\s+(?<step>\\d+)$");
+    private static readonly Regex Journal = Header("^log\\s+(?<message>\\d+)\\s+(?:step\\s+)?(?<step>\\d+)$");
+    private static readonly Regex JournalNote = Header(@"^journal\s+note\s+(?<message>\d+)$");
+    private static readonly Regex Say = Header(@"^say\s+(?<message>[a-zA-Z0-9_.]+)$");
     private static readonly Regex RemoveJournal = Header("^remove\\s+log\\s+step\\s+(?<step>\\d+)$");
     private static readonly Regex Rumor = Header("^rumor\\s+mill\\s+(?<message>\\d+)$");
     private static string ButtonLabel(int id) => id switch
@@ -235,6 +237,14 @@ internal static partial class DaggerfallQuestTaskCompiler
             return new(DaggerfallQuestTaskOperationKind.Journal, sourceLine, line, [], [], Message(journal.Groups["message"].Value), Step(journal.Groups["step"].Value, sourceLine));
         if (RemoveJournal.Match(line) is { Success: true } removeJournal)
             return new(DaggerfallQuestTaskOperationKind.RemoveJournal, sourceLine, line, [], [], null, Step(removeJournal.Groups["step"].Value, sourceLine));
+        if (JournalNote.Match(line) is { Success: true } note)
+            return new(DaggerfallQuestTaskOperationKind.JournalNote, sourceLine, line, [], [], Message(note.Groups["message"].Value));
+        if (Say.Match(line) is { Success: true } say)
+        {
+            string token = say.Groups["message"].Value;
+            int? message = int.TryParse(token, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int parsed) ? Message(token) : null;
+            return new(DaggerfallQuestTaskOperationKind.Say, sourceLine, line, [], [], message, MessageAlias: message is null ? token : null);
+        }
         if (Rumor.Match(line) is { Success: true } rumor)
             return new(DaggerfallQuestTaskOperationKind.Rumor, sourceLine, line, [], [], Message(rumor.Groups["message"].Value));
         if (PickOneOf.Match(line) is { Success: true } pick)
@@ -339,6 +349,7 @@ internal interface IDaggerfallQuestTaskLifecycle
     bool IsAttributeAtLeast(string attribute, int minimum);
     bool IsSkillAtLeast(string skill, int minimum);
     void Train(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation);
+    void JournalNote(DaggerfallQuestRuntimeInstance instance, int messageId, string task, int operationIndex);
     string Pick(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation, int operationIndex, DaggerfallQuestTaskRuntimeState state);
     string? RunChild(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskDefinition task, DaggerfallQuestTaskOperation operation, int operationIndex, DaggerfallQuestTaskRuntimeState state);
     void Schedule(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation);
@@ -453,6 +464,23 @@ internal static class DaggerfallQuestTaskRunner
                         break;
                     case DaggerfallQuestTaskOperationKind.RemoveJournal:
                         messages.RemoveLog(instance, operation.Step!.Value);
+                        MarkCompleted(state, operationIndex);
+                        break;
+                    case DaggerfallQuestTaskOperationKind.JournalNote:
+                        lifecycle.JournalNote(instance, operation.MessageId!.Value, task.Symbol, operationIndex);
+                        MarkCompleted(state, operationIndex);
+                        break;
+                    case DaggerfallQuestTaskOperationKind.Say:
+                        if (!messages.TryResolveMessage(instance, operation.MessageId, operation.MessageAlias, out int sayMessage, out string? sayDiagnostic))
+                        {
+                            instance.Lifecycle = DaggerfallQuestLifecycle.Failed;
+                            instance.Outcome = $"Quest say action at line {operation.SourceLine}: {sayDiagnostic}";
+                            instance.Succeeded = false;
+                            instance.PendingEndPasses = 0;
+                            instance.TerminalMessageId = null;
+                            return;
+                        }
+                        messages.Popup(instance, sayMessage);
                         MarkCompleted(state, operationIndex);
                         break;
                     case DaggerfallQuestTaskOperationKind.Rumor:
@@ -750,6 +778,7 @@ internal static class DaggerfallQuestTaskRunner
 
     // These donor actions opt out of rearm.  RunQuest also retains its live child id while waiting.
     private static bool PersistsAcrossRearm(DaggerfallQuestTaskOperation operation) => operation.Kind is
-        DaggerfallQuestTaskOperationKind.StartQuest or DaggerfallQuestTaskOperationKind.RunQuest or DaggerfallQuestTaskOperationKind.TrainPc;
+        DaggerfallQuestTaskOperationKind.StartQuest or DaggerfallQuestTaskOperationKind.RunQuest or DaggerfallQuestTaskOperationKind.TrainPc
+        or DaggerfallQuestTaskOperationKind.Say or DaggerfallQuestTaskOperationKind.JournalNote;
     private static void MarkCompleted(DaggerfallQuestTaskRuntimeState state, int index) => state.OperationCompleted[index] = true;
 }
