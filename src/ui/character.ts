@@ -83,7 +83,7 @@ export interface CharacterCustomClass {
   readonly eligibility: readonly string[]; readonly skills: readonly string[]; readonly supportedAdvantages: readonly string[]; readonly supportedDisadvantages: readonly string[];
 }
 export interface CharacterLevelUpAttribute { readonly id: string; readonly label: string; readonly permanent: number; readonly live: number; readonly pending: number; readonly canAllocate: boolean; }
-export interface CharacterLevelUp { readonly level: number; readonly bonusPool: number; readonly remainingPoints: number; readonly healthGain: number; readonly canCommit: boolean; readonly attributes: readonly CharacterLevelUpAttribute[]; }
+export interface CharacterLevelUp { readonly title: string; readonly level: number; readonly bonusPool: number; readonly remainingPoints: number; readonly healthGain: number; readonly canCommit: boolean; readonly attributes: readonly CharacterLevelUpAttribute[]; }
 
 /** Read-only Daggerfall sheet values supplied by the C# projection. */
 export interface CharacterProjection {
@@ -207,6 +207,7 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
         testid: `character-sheet-granted-${skill.id}`,
       })));
       renderCreation(creation.rows, value.creation ?? null, value.creationAvailable === true, send);
+      levelUp.heading.textContent = value.levelUp?.title ?? "Level up";
       renderLevelUp(levelUp.rows, value.levelUp ?? null, send);
     },
     // The sheet's chrome is published art that can arrive after the sheet's own state.
@@ -241,7 +242,7 @@ export function isCharacterProjection(value: unknown): value is CharacterProject
     && (!('levelUp' in value) || value.levelUp === null || isLevelUp(value.levelUp));
 }
 
-function section(title: string): { readonly element: HTMLElement; readonly rows: HTMLElement } {
+function section(title: string): { readonly element: HTMLElement; readonly rows: HTMLElement; readonly heading: HTMLElement } {
   const element = document.createElement('section');
   element.className = 'dagger-character-section';
   const heading = document.createElement('h3');
@@ -249,7 +250,7 @@ function section(title: string): { readonly element: HTMLElement; readonly rows:
   const rows = document.createElement('dl');
   rows.className = 'dagger-character-rows';
   element.append(heading, rows);
-  return { element, rows };
+  return { element, rows, heading };
 }
 
 function overviewRow(label: string, value: string): HTMLElement {
@@ -297,6 +298,7 @@ function isStats(value: unknown): value is readonly CharacterStat[] {
 
 function isLevelUp(value: unknown): value is CharacterLevelUp {
   return typeof value === 'object' && value !== null
+    && 'title' in value && typeof value.title === 'string'
     && 'level' in value && isNumber(value.level) && 'bonusPool' in value && isNumber(value.bonusPool)
     && 'remainingPoints' in value && isNumber(value.remainingPoints) && 'healthGain' in value && isNumber(value.healthGain)
     && 'canCommit' in value && typeof value.canCommit === 'boolean'
@@ -501,7 +503,7 @@ function renderLevelUp(root: HTMLElement, value: CharacterLevelUp | null, send?:
   if (value === null) { root.replaceChildren(); return; }
   const summary = document.createElement('p');
   summary.dataset.testid = 'character-level-up-summary';
-  summary.textContent = `Level ${format(value.level)}: ${format(value.remainingPoints)} of ${format(value.bonusPool)} points remain; health gain ${format(value.healthGain)}.`;
+  summary.textContent = `${value.title} · Level ${format(value.level)}: ${format(value.remainingPoints)} of ${format(value.bonusPool)} points remain; health gain ${format(value.healthGain)}.`;
   const allocations = document.createElement('dl');
   allocations.dataset.testid = 'character-level-up-attributes';
   for (const attribute of value.attributes) {
@@ -514,7 +516,7 @@ function renderLevelUp(root: HTMLElement, value: CharacterLevelUp | null, send?:
     allocate.addEventListener('click', () => send?.({ action: 'character-level-allocate', attribute: attribute.id }));
     row.append(label, detail, allocate); allocations.append(row);
   }
-  const commit = document.createElement('button'); commit.type = 'button'; commit.textContent = 'Commit level up';
+  const commit = document.createElement('button'); commit.type = 'button'; commit.textContent = 'Apply attribute choices';
   commit.disabled = !value.canCommit; commit.dataset.testid = 'character-level-up-commit';
   commit.addEventListener('click', () => send?.({ action: 'character-level-commit' }));
   root.replaceChildren(summary, allocations, commit);

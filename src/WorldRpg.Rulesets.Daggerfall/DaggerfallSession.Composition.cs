@@ -363,7 +363,13 @@ internal sealed partial class DaggerfallSession
             _inventoryUi.UseGroundDrops(_groundContainers, () => State.PlayerControl.Position);
             _notebook = new DaggerfallBookNotebook(definitions, new DaggerfallTextResolver(definitions.Text));
             _inventoryUi.UseItemActions(new DaggerfallInventoryUseService(State.Inventory, definitions, State.ItemInstances, _uniqueItems, _site, _random, _itemCondition, _notebook,
-                useDrug: variant => UseDrug(variant) == DaggerfallPoisonAdmission.Admitted));
+                useDrug: variant => UseDrug(variant) == DaggerfallPoisonAdmission.Admitted,
+                useOghma: () =>
+                {
+                    if (!State.LevelUps.BeginOghma()) return false;
+                    RequestPanel(DaggerfallPanel.Character);
+                    return true;
+                }));
             _inventoryUi.BookOpened += _ => RequestPanel(DaggerfallPanel.Journal);
             _lootUi = new DaggerfallLootPresentation(_corpseLoot, _inventoryUi, _groundContainers);
             _interactions = new DaggerfallOpenInteractions(

@@ -6,6 +6,8 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
+internal enum DaggerfallAttributeAllocationKind { LevelUp, OghmaInfinium }
+
 /// <summary>Durable, staged allocation for one classic level, before its permanent mutations are applied.</summary>
 internal sealed record DaggerfallLevelUpSave(
     int Level,
@@ -13,9 +15,23 @@ internal sealed record DaggerfallLevelUpSave(
     int HealthGain,
     DaggerfallLevelUpAttributeSave[] Allocations)
 {
+    public DaggerfallAttributeAllocationKind Kind { get; init; }
+
+    internal bool MatchesProgressionLevel(int currentLevel) => Kind switch
+    {
+        DaggerfallAttributeAllocationKind.OghmaInfinium => Level == currentLevel,
+        DaggerfallAttributeAllocationKind.LevelUp => Level == currentLevel + 1,
+        _ => false,
+    };
+
     internal DaggerfallLevelUpSave Validate()
     {
-        if (Level < 2 || BonusPool is < 4 or > 6 || HealthGain < 1)
+        if (Kind switch
+        {
+            DaggerfallAttributeAllocationKind.LevelUp => Level < 2 || BonusPool is < 4 or > 6 || HealthGain < 1,
+            DaggerfallAttributeAllocationKind.OghmaInfinium => Level < 1 || BonusPool != DaggerfallLevelUpState.OghmaBonusPool || HealthGain != 0,
+            _ => true,
+        })
             throw new ArgumentOutOfRangeException(nameof(Level), "Saved Daggerfall level-up values are outside the classic bounds.");
         ArgumentNullException.ThrowIfNull(Allocations);
         HashSet<string> attributes = new(StringComparer.Ordinal);
@@ -37,7 +53,10 @@ internal sealed record DaggerfallLevelUpAttributeSave(string Attribute, int Poin
 
 internal sealed record DaggerfallLevelUpAttributePresentation(string Id, string Label, long Permanent, long Live, int Pending, bool CanAllocate);
 internal sealed record DaggerfallLevelUpPresentation(int Level, int BonusPool, int RemainingPoints, int HealthGain,
-    bool CanCommit, DaggerfallLevelUpAttributePresentation[] Attributes);
+    bool CanCommit, DaggerfallLevelUpAttributePresentation[] Attributes)
+{
+    public string Title { get; init; } = "Level up";
+}
 
 /// <summary>
 /// Daggerfall level-up policy over the existing skill-eligibility and Mechanics owners.  The
@@ -46,6 +65,7 @@ internal sealed record DaggerfallLevelUpPresentation(int Level, int BonusPool, i
 /// </summary>
 internal sealed class DaggerfallLevelUpState
 {
+    internal const int OghmaBonusPool = 30;
     private const int MaximumAttribute = 100;
     private const int MinimumBonusPool = 4;
     private const int MaximumBonusPool = 6;
@@ -83,6 +103,17 @@ internal sealed class DaggerfallLevelUpState
         return true;
     }
 
+    /// <summary>Stages the artifact's attribute-only reward without rolling or advancing a level.</summary>
+    internal bool BeginOghma()
+    {
+        if (_pending is not null) return false;
+        _pending = new DaggerfallLevelUpSave(_progression.Level, OghmaBonusPool, 0, [])
+        {
+            Kind = DaggerfallAttributeAllocationKind.OghmaInfinium,
+        }.Validate();
+        return true;
+    }
+
     internal void Allocate(string attribute)
     {
         DaggerfallLevelUpSave pending = RequirePending();
@@ -99,7 +130,7 @@ internal sealed class DaggerfallLevelUpState
     internal void Commit()
     {
         DaggerfallLevelUpSave pending = RequirePending();
-        if (pending.Level != _progression.Level + 1 || !_skills.PendingLevelUp)
+        if (!IsEligible(pending))
             throw new ArgumentException("This level-up is no longer eligible to commit.");
         if (Remaining(pending) != 0 && !AllAttributesAtMaximum(pending))
             throw new ArgumentException("Allocate all available level-up bonus points before committing.");
@@ -107,7 +138,8 @@ internal sealed class DaggerfallLevelUpState
         foreach (DaggerfallLevelUpAttributeSave allocation in pending.Allocations)
             DaggerfallStatModifiers.AdjustPermanent(_stats, new DaggerfallStatId(allocation.Attribute), allocation.Points);
         DaggerfallStatModifiers.RefreshPlayerDerivedMaxima(_stats, _career());
-        _rewards.CommitLevelUp(pending.Level, pending.HealthGain);
+        if (pending.Kind == DaggerfallAttributeAllocationKind.LevelUp)
+            _rewards.CommitLevelUp(pending.Level, pending.HealthGain);
         _pending = null;
     }
 
@@ -117,7 +149,7 @@ internal sealed class DaggerfallLevelUpState
     {
         if (pending is null) { _pending = null; return; }
         pending = pending.Validate();
-        if (pending.Level != _progression.Level + 1 || !_skills.PendingLevelUp)
+        if (!IsEligible(pending))
             throw new ArgumentException("Saved Daggerfall level-up is not eligible against the restored progression state.", nameof(pending));
         foreach (DaggerfallLevelUpAttributeSave allocation in pending.Allocations)
         {
@@ -135,8 +167,14 @@ internal sealed class DaggerfallLevelUpState
         return new(pending.Level, pending.BonusPool, Remaining(pending), pending.HealthGain,
             Remaining(pending) == 0 || AllAttributesAtMaximum(pending),
             _attributes.Select(id => new DaggerfallLevelUpAttributePresentation(id.Value, Label(id.Value), Permanent(id), Live(id),
-                Points(pending, id.Value), Remaining(pending) > 0 && Permanent(id) + Points(pending, id.Value) < MaximumAttribute)).ToArray());
+                Points(pending, id.Value), Remaining(pending) > 0 && Permanent(id) + Points(pending, id.Value) < MaximumAttribute)).ToArray())
+        {
+            Title = pending.Kind == DaggerfallAttributeAllocationKind.OghmaInfinium ? "Oghma Infinium" : "Level up",
+        };
     }
+
+    private bool IsEligible(DaggerfallLevelUpSave pending) => pending.MatchesProgressionLevel(_progression.Level)
+        && (pending.Kind == DaggerfallAttributeAllocationKind.OghmaInfinium || _skills.PendingLevelUp);
 
     private DaggerfallLevelUpSave RequirePending() => _pending ?? throw new ArgumentException("No level-up allocation is pending.");
     private int Remaining(DaggerfallLevelUpSave pending) => checked(pending.BonusPool - pending.Allocations.Sum(item => item.Points));

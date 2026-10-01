@@ -79,6 +79,33 @@ public sealed class DaggerfallLevelUpTests
         Assert.Equal(2, progression.Level);
     }
 
+    [Fact]
+    public void Oghma_allocation_preserves_caps_and_does_not_replace_a_pending_normal_level()
+    {
+        var (levels, progression, stats, random) = Eligible();
+        Assert.True(levels.BeginIfEligible());
+        DaggerfallLevelUpSave normal = levels.Pending!;
+        Assert.False(levels.BeginOghma());
+        Assert.Same(normal, levels.Pending);
+        levels.Restore(null);
+        foreach (string attribute in new[] { "strength", "intelligence", "willpower", "agility", "endurance", "personality", "speed", "luck", "reflexes" })
+            stats.GetStat(StatId.Parse(attribute)).BaseValue = 100;
+        stats.GetStat(StatId.Parse("strength")).BaseValue = 99;
+        int draws = random.Requests.Count;
+        int level = progression.Level;
+        Assert.True(levels.BeginOghma());
+        Assert.False(levels.BeginOghma());
+        levels.Allocate("strength");
+        Assert.Throws<ArgumentException>(() => levels.Allocate("strength"));
+        Assert.Equal(29, levels.Read()!.RemainingPoints);
+        Assert.True(levels.Read()!.CanCommit);
+        levels.Commit();
+        Assert.Equal(level, progression.Level);
+        Assert.Equal(draws, random.Requests.Count);
+        Assert.Equal(100, stats.GetStat(StatId.Parse("strength")).BaseValue);
+        Assert.Null(levels.Pending);
+    }
+
     private static (DaggerfallLevelUpState LevelUps, ProgressionState Progression, StatsComponent Stats, RecordingRandom Random) Eligible()
     {
         DaggerfallDefinitions definitions = TestPayload.Definitions;

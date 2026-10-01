@@ -394,6 +394,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
     }
 
     private static uint LevelUp(UiValueBuilder builder, DaggerfallLevelUpPresentation levelUp) => builder.Object(
+        ("title", builder.String(levelUp.Title)),
         ("level", builder.Number(levelUp.Level)), ("bonusPool", builder.Number(levelUp.BonusPool)),
         ("remainingPoints", builder.Number(levelUp.RemainingPoints)), ("healthGain", builder.Number(levelUp.HealthGain)),
         ("canCommit", builder.Boolean(levelUp.CanCommit)),

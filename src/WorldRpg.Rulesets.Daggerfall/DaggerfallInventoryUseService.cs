@@ -28,7 +28,8 @@ internal sealed class DaggerfallInventoryUseService(
     IRandomService random,
     DaggerfallItemConditionService? condition = null,
     DaggerfallBookNotebook? notebook = null,
-    Func<int, bool>? useDrug = null)
+    Func<int, bool>? useDrug = null,
+    Func<bool>? useOghma = null)
 {
     private const int FirstDrugTemplate = 78;
     private const int LastDrugTemplate = 81;
@@ -86,8 +87,18 @@ internal sealed class DaggerfallInventoryUseService(
 
     private DaggerfallInventoryUseResult Route(string itemId, DaggerfallItemInstanceMetadata metadata, Action consume, string useKey)
     {
-        if (metadata.Enchantment is not null)
+        if (metadata.Enchantment is { } enchantment)
+        {
+            if (definitions.Magic.MagicItems.TryGetValue(enchantment, out DaggerfallMagicItemDefinition? magic)
+                && magic.Enchantments.Any(effect => effect.ParamMeaning == "artifact-effect" && effect.Param == 5))
+            {
+                if (useOghma is null) return new(false, "Oghma Infinium allocation is unavailable.", DaggerfallInventoryUseReceiver.UsedEnchantment);
+                if (!useOghma()) return new(false, "Finish your current attribute allocation before using Oghma Infinium.");
+                consume();
+                return new(true, "Oghma Infinium grants 30 attribute points. Allocate them on your character sheet.");
+            }
             return new(false, "Used enchantment effects are not available yet.", DaggerfallInventoryUseReceiver.UsedEnchantment);
+        }
         if (metadata.BookId is int bookId)
         {
             if (notebook is null) return new(false, "Reading this book is not available yet.", DaggerfallInventoryUseReceiver.BookReading);
