@@ -12,6 +12,18 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallMusicDirectorTests
 {
     [Fact]
+    public void Alternate_playlist_lists_preserve_the_donors_order_and_duplicates()
+    {
+        Assert.Equal(new[] { "song_fday___d", "song_fm_swim2", "song_fm_sunny", "song_02fm", "song_03fm", "song_22fm" },
+            DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Sunny, true));
+        Assert.Equal(new[] { "song_11fm", "song_fcurse", "song_feerie", "song_fruins", "song_18fm", "song_21fm" },
+            DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Night, true));
+        Assert.Equal(new[] { "song_fm_dngn1", "song_fm_dngn1", "song_fm_dngn2", "song_fm_dngn3", "song_fm_dngn4", "song_fm_dngn5", "song_fdngn10", "song_fdngn11", "song_fdungn4", "song_fdungn9", "song_04fm", "song_05fm", "song_07fm", "song_15fm", "song_15fm" },
+            DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Dungeon, true));
+        Assert.Equal(DaggerfallMusicDirector.SunnySongs, DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Sunny));
+    }
+
+    [Fact]
     public void Selects_donor_songs_and_keeps_one_loop()
     {
         IAudioService service = AudioFake.Create(out AudioFake audio);

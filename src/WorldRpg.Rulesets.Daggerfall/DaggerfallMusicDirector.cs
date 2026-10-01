@@ -90,6 +90,25 @@ public sealed class DaggerfallMusicDirector : IDisposable
     /// <summary>The donor's snow songs, in list order.</summary>
     public static readonly IReadOnlyList<string> SnowSongs = ["song_20", "song_gsnow__b", "song_oversnow"];
 
+    /// <summary>The donor's alternate dungeon songs, retaining list order and duplicates.</summary>
+    public static readonly IReadOnlyList<string> DungeonSongsFM =
+    [
+        "song_fm_dngn1", "song_fm_dngn1", "song_fm_dngn2", "song_fm_dngn3", "song_fm_dngn4", "song_fm_dngn5", "song_fdngn10", "song_fdngn11", "song_fdungn4", "song_fdungn9", "song_04fm", "song_05fm", "song_07fm", "song_15fm", "song_15fm",
+    ];
+
+    /// <summary>The donor's alternate sunny songs, retaining list order and duplicates.</summary>
+    public static readonly IReadOnlyList<string> SunnySongsFM =
+    [
+        "song_fday___d", "song_fm_swim2", "song_fm_sunny", "song_02fm", "song_03fm", "song_22fm",
+    ];
+
+    /// <summary>The donor's alternate night songs, retaining list order and duplicates.</summary>
+    public static readonly IReadOnlyList<string> NightSongsFM =
+    [
+        "song_11fm", "song_fcurse", "song_feerie", "song_fruins", "song_18fm", "song_21fm",
+    ];
+
+    private readonly bool _alternatePlaylists;
     private readonly IAudioService? _audio;
     private readonly Func<string, AudioClip?> _resolve;
     private readonly Action<string>? _retire;
@@ -99,8 +118,9 @@ public sealed class DaggerfallMusicDirector : IDisposable
     private AudioVoice? _voice;
 
     /// <summary>Creates a director over Engine audio with a track resolver.</summary>
-    public DaggerfallMusicDirector(IAudioService? audio, Func<string, AudioClip?> resolve, Action<string>? retire = null)
+    public DaggerfallMusicDirector(IAudioService? audio, Func<string, AudioClip?> resolve, Action<string>? retire = null, bool alternatePlaylists = false)
     {
+        _alternatePlaylists = alternatePlaylists;
         _audio = audio;
         _resolve = resolve ?? throw new ArgumentNullException(nameof(resolve));
         _retire = retire;
@@ -239,7 +259,7 @@ public sealed class DaggerfallMusicDirector : IDisposable
     /// the session asks here, then names one of these tracks through <see cref="Update"/>. A context the
     /// donor leaves to whatever plays — combat and the menu — answers the empty list.
     /// </remarks>
-    public static IReadOnlyList<string> PlaylistFor(DaggerfallMusicContext context)
+    public static IReadOnlyList<string> PlaylistFor(DaggerfallMusicContext context, bool alternatePlaylists = false)
     {
         if (!Enum.IsDefined(context))
         {
@@ -248,9 +268,9 @@ public sealed class DaggerfallMusicDirector : IDisposable
 
         return context switch
         {
-            DaggerfallMusicContext.Dungeon => DungeonSongs,
-            DaggerfallMusicContext.Sunny => SunnySongs,
-            DaggerfallMusicContext.Night => NightSongs,
+            DaggerfallMusicContext.Dungeon => alternatePlaylists ? DungeonSongsFM : DungeonSongs,
+            DaggerfallMusicContext.Sunny => alternatePlaylists ? SunnySongsFM : SunnySongs,
+            DaggerfallMusicContext.Night => alternatePlaylists ? NightSongsFM : NightSongs,
             DaggerfallMusicContext.Tavern => TavernSongs,
             DaggerfallMusicContext.Shop => ShopSongs,
             DaggerfallMusicContext.MagesGuild => MagesGuildSongs,
@@ -267,21 +287,10 @@ public sealed class DaggerfallMusicDirector : IDisposable
     // Combat and the menu name no donor song: battle never interrupts the song and the menu
     // never starts one, so both keep whatever plays. Pause, load and quit retire through Stop and
     // resume through Resume rather than through a context.
-    private string? TrackFor(DaggerfallMusicContext context, int pick) => context switch
+    private string? TrackFor(DaggerfallMusicContext context, int pick)
     {
-        DaggerfallMusicContext.Dungeon => DungeonSongs[pick % DungeonSongs.Count],
-        DaggerfallMusicContext.Sunny => SunnySongs[pick % SunnySongs.Count],
-        DaggerfallMusicContext.Night => NightSongs[pick % NightSongs.Count],
-        DaggerfallMusicContext.Combat => _playing,
-        DaggerfallMusicContext.Menu => _playing,
-        DaggerfallMusicContext.Tavern => TavernSongs[pick % TavernSongs.Count],
-        DaggerfallMusicContext.Shop => ShopSongs[pick % ShopSongs.Count],
-        DaggerfallMusicContext.MagesGuild => MagesGuildSongs[pick % MagesGuildSongs.Count],
-        DaggerfallMusicContext.Temple => TempleSongs[pick % TempleSongs.Count],
-        DaggerfallMusicContext.Knight => KnightSongs[pick % KnightSongs.Count],
-        DaggerfallMusicContext.Cloudy => CloudySongs[pick % CloudySongs.Count],
-        DaggerfallMusicContext.Rain => RainSongs[pick % RainSongs.Count],
-        DaggerfallMusicContext.Snow => SnowSongs[pick % SnowSongs.Count],
-        _ => throw new ArgumentOutOfRangeException(nameof(context), context, "Music answers to no context the contract declares."),
-    };
+        if (context is DaggerfallMusicContext.Combat or DaggerfallMusicContext.Menu) return _playing;
+        IReadOnlyList<string> playlist = PlaylistFor(context, _alternatePlaylists);
+        return playlist[pick % playlist.Count];
+    }
 }

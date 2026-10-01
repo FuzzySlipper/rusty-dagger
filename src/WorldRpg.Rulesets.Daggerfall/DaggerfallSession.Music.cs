@@ -20,6 +20,7 @@ internal sealed partial class DaggerfallSession
     private readonly DaggerfallMusicDirector? _music;
     private readonly Dictionary<string, AudioClip> _musicClips = new(StringComparer.Ordinal);
     private int _musicRotation;
+    private DaggerfallMusicContext? _silentMusicContext;
 
     /// <summary>The donor track playing now, or nothing when no admitted track plays.</summary>
     internal string? MusicTrack => _music?.Playing;
@@ -42,7 +43,7 @@ internal sealed partial class DaggerfallSession
         if (_music is null || _musicBundle is null) return;
         string? playing = _music.Playing;
         DaggerfallMusicContext context = MusicContext();
-        IReadOnlyList<string> playlist = DaggerfallMusicDirector.PlaylistFor(context);
+        IReadOnlyList<string> playlist = DaggerfallMusicDirector.PlaylistFor(context, _tuning.Music.AlternatePlaylists);
         for (int offset = 0; offset < playlist.Count; offset++)
         {
             // The rotation is per site change, so a place with more than one published song starts a
@@ -51,6 +52,7 @@ internal sealed partial class DaggerfallSession
             if (!_musicBundle.CanPlay(playlist[pick])) continue;
             // A cue that cannot open throws out of the update and stays terminal for it. The loop it
             // replaced was already reported by the director, so nothing ends here unreported.
+            _silentMusicContext = null;
             _music.Update(context, pick);
             if (!string.Equals(playing, _music.Playing, StringComparison.Ordinal) && _music.Playing is { } started)
             {
@@ -63,6 +65,11 @@ internal sealed partial class DaggerfallSession
         // Nothing published answers this context. The director retires whatever played rather than
         // holding a loop the new context does not own, and reports the retirement itself.
         _music.Stop();
+        if (_silentMusicContext != context)
+        {
+            _silentMusicContext = context;
+            Report("cue.unavailable", $"No published music cue for context '{context}' in the {(_tuning.Music.AlternatePlaylists ? "alternate" : "standard")} playlist.");
+        }
     }
 
     /// <summary>Records that a cue started, and for which admitted context the session chose it.</summary>
