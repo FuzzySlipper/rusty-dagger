@@ -104,7 +104,7 @@ internal static class DaggerfallBaseContent
             DaggerfallCinematicSet cinematics = ReadCinematics(root, diagnostics);
             ValidateReferences(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, catalogs, mobiles, hud, diagnostics);
             ValidateCatalog(actors, armorValues, actions, lootTables, lootCategoryPools, diagnostics);
-            foreach (string problem in DaggerfallEnchantmentSettings.Validate(DaggerfallEnchantmentSettings.All))
+            foreach (string problem in DaggerfallEnchantmentSettings.Validate(magic.EnchantmentSettings.Values))
                 diagnostics.Add(problem);
             diagnostics.ThrowIfAny();
             return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles, names, rumors, biographies, grids, books, factions, terrain, itemTemplatesCatalog, questSources, cinematics, encounters)
@@ -2342,7 +2342,8 @@ internal static class DaggerfallBaseContent
                 new Dictionary<string, DaggerfallMagicItemDefinition>(StringComparer.Ordinal),
                 [],
                 [],
-                new Dictionary<(int Type, int SubType), DaggerfallMagicEffectCostDefinition>());
+                new Dictionary<(int Type, int SubType), DaggerfallMagicEffectCostDefinition>(),
+                new Dictionary<string, DaggerfallEnchantmentSetting>(StringComparer.Ordinal));
         }
 
         Dictionary<string, DaggerfallSpellDefinition> spells = new(StringComparer.Ordinal);
@@ -2467,7 +2468,23 @@ internal static class DaggerfallBaseContent
             diagnostics.Add("The published magic catalog carries no spell, so nothing resolves through it.");
         }
 
-        return new DaggerfallMagicCatalogSet(spells, items, dispositions, sources, costs);
+        Dictionary<string, DaggerfallEnchantmentSetting> settings = new(StringComparer.Ordinal);
+        foreach (JsonElement row in Array(section, "enchantmentSettings", diagnostics))
+        {
+            string key = Text(row, "key", diagnostics);
+            List<int> variants = [];
+            foreach (JsonElement variant in Array(row, "parameterVariants", diagnostics))
+                variants.Add(variant.GetInt32());
+            DaggerfallEnchantmentSetting setting = new(key, Integer(row, "type", diagnostics),
+                Integer(row, "param", diagnostics), Integer(row, "cost", diagnostics),
+                Text(row, "meaning", diagnostics), Text(row, "displayName", diagnostics),
+                Text(row, "textKey", diagnostics),
+                row.TryGetProperty("parameterTextKey", out JsonElement textKey) && textKey.ValueKind == JsonValueKind.String ? textKey.GetString() : null,
+                Text(row, "sourceClass", diagnostics), variants.AsReadOnly());
+            if (!settings.TryAdd(key, setting))
+                diagnostics.Add($"Enchantment setting '{key}' is published twice, so a consumer cannot resolve it to one setting.");
+        }
+        return new DaggerfallMagicCatalogSet(spells, items, dispositions, sources, costs, settings);
     }
 
     private static DaggerfallItemTemplateLedger ReadItemTemplateLedger(JsonElement root, DaggerfallCatalogSet catalogs, int publishedItems, DaggerfallContentDiagnostics diagnostics)

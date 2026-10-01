@@ -50,6 +50,35 @@ public sealed class Arena2MagicCatalogDocumentTests
         Assert.Equal(1, publication.UnresolvedLinks);
     }
 
+    [Fact]
+    public void Publishes_the_item_maker_settings_with_donor_costs_and_display_metadata()
+    {
+        JsonArray settings = JsonNode.Parse(Arena2MagicCatalogDocument.Build(
+            SpellTable(), MagicItemTable(), "arena2/SPELLS.STD", "arena2/MAGIC.DEF").Json)!["enchantmentSettings"]!.AsArray();
+        Assert.Equal(62, settings.Count);
+        Assert.Equal(62, settings.Select(row => row!["key"]!.GetValue<string>()).Distinct().Count());
+        foreach ((int type, int count, string source) in new[] {
+            (10, 35, "EnhancesSkill"), (3, 11, "ExtraSpellPts"),
+            (7, 2, "IncreasedWeightAllowance"), (13, 3, "ImprovesTalents") })
+        {
+            JsonNode[] family = [.. settings.Where(row => row!["type"]!.GetValue<int>() == type).Select(row => row!)];
+            Assert.Equal(count, family.Length);
+            Assert.Equal(Enumerable.Range(0, count), family.Select(row => row["param"]!.GetValue<int>()));
+            Assert.All(family, row =>
+            {
+                Assert.Equal(Enumerable.Range(0, count), row["parameterVariants"]!.AsArray().Select(value => value!.GetValue<int>()));
+                Assert.Equal(source, row["textKey"]!.GetValue<string>());
+                Assert.Contains($"/{source}.cs#GetEnchantmentSettings", row["sourceClass"]!.GetValue<string>(), StringComparison.Ordinal);
+                Assert.False(string.IsNullOrWhiteSpace(row["displayName"]!.GetValue<string>()));
+                Assert.False(string.IsNullOrWhiteSpace(row["parameterTextKey"]!.GetValue<string>()));
+            });
+        }
+        Assert.Equal(new[] {500,500,500,500,200,200,200,700,800,900,1000},
+            settings.Where(row => row!["type"]!.GetValue<int>() == 3).Select(row => row!["cost"]!.GetValue<int>()));
+        Assert.Equal(new[] {500,600,600},
+            settings.Where(row => row!["type"]!.GetValue<int>() == 13).Select(row => row!["cost"]!.GetValue<int>()));
+    }
+
     [CorpusFact("SPELLS.STD", "MAGIC.DEF")]
     public void ReportsTheRealCorpusCountsAndLeavesUnresolvedLinksLegible()
     {

@@ -289,6 +289,9 @@ generated file Git would pick up):
   `catalogs`, `itemTemplateLedger`, `characterPresentation`, `locations`, `magic`, `mobiles`, `text`,
   `names`, `rumors`, `biographies`, `books`, `climate`, `politic`, `factions`, `terrain`,
   `itemTemplates`, `questTables`, `questCatalog`, `questSources`, `cinematics` and `buildingNames`.
+  The `magic` section includes `enchantmentSettings`: the retained item-maker families transcribed
+  in the importer from the donor effect classes, with costs, display/text keys, parameter variants
+  and source-class provenance. Runtime enchantment consumers resolve this loaded catalog.
 - `content/worldrpg/payloads/daggerfall.blocks.json` (`blocks --buildings`: the type, faction and
   name seed of every RMB building slot, which is all the `daggerfall.blocks` pack's runtime reader
   needs) and `content/worldrpg/payloads/daggerfall.quests.*.json` (`fighters-quest-corpus`,

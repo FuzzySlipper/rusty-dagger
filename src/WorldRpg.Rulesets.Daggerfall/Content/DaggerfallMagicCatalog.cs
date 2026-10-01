@@ -160,7 +160,8 @@ internal sealed record DaggerfallMagicCatalogSet(
     IReadOnlyDictionary<string, DaggerfallMagicItemDefinition> MagicItems,
     IReadOnlyList<DaggerfallMagicDisposition> Dispositions,
     IReadOnlyList<string> SourcePaths,
-    IReadOnlyDictionary<(int Type, int SubType), DaggerfallMagicEffectCostDefinition> EffectCosts)
+    IReadOnlyDictionary<(int Type, int SubType), DaggerfallMagicEffectCostDefinition> EffectCosts,
+    IReadOnlyDictionary<string, DaggerfallEnchantmentSetting> EnchantmentSettings)
 {
     internal DaggerfallMagicEffectCostDefinition RequireEffectCost(DaggerfallSpellEffectDefinition effect) =>
         EffectCosts.TryGetValue((effect.Type, effect.SubType), out DaggerfallMagicEffectCostDefinition? cost)

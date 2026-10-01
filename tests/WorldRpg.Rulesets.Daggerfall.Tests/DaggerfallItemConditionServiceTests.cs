@@ -58,7 +58,7 @@ public sealed class DaggerfallItemConditionServiceTests
         // rather than demand a published magic template it does not have.
         using Fixture f = new();
         UniqueItem sword = f.CreatePlainWeapon(407, 115, "daedric");
-        string settingKey = DaggerfallEnchantmentSettings.All.Single(candidate => candidate.Type == 7 && candidate.Param == 0).Key;
+        string settingKey = TestPayload.Definitions.Magic.EnchantmentSettings.Values.Single(candidate => candidate.Type == 7 && candidate.Param == 0).Key;
         DaggerfallItemInstanceMetadata before = f.Instances.RequireUnique(407);
         f.Instances.ReplaceUnique(407, before with { Enchantment = settingKey, Identified = false });
 
@@ -76,7 +76,7 @@ public sealed class DaggerfallItemConditionServiceTests
         using var fixture = new ConditionSessionFixture();
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(fixture.Session.CaptureSave());
         DaggerfallUniqueSave target = saved.Inventory.UniqueItems.First();
-        string settingKey = DaggerfallEnchantmentSettings.All.Single(candidate => candidate.Type == 7 && candidate.Param == 0).Key;
+        string settingKey = TestPayload.Definitions.Magic.EnchantmentSettings.Values.Single(candidate => candidate.Type == 7 && candidate.Param == 0).Key;
         DaggerfallSavePayload enchanted = saved with
         {
             Inventory = saved.Inventory with
@@ -271,7 +271,7 @@ public sealed class DaggerfallItemConditionServiceTests
         // A setting has no template and no uses, so the item keeps its condition and its own identity
         // while gaining the enchantment and identification; a magic item's uses are not copied onto it.
         using Fixture f = new();
-        DaggerfallEnchantmentSetting setting = DaggerfallEnchantmentSettings.All.Single(candidate => candidate.Type == 7 && candidate.Param == 0);
+        DaggerfallEnchantmentSetting setting = TestPayload.Definitions.Magic.EnchantmentSettings.Values.Single(candidate => candidate.Type == 7 && candidate.Param == 0);
         // Daedric carries the largest enchantment capacity, as the published-item fact above uses.
         UniqueItem sword = f.CreatePlainWeapon(406, 115, "daedric");
         DaggerfallItemInstanceMetadata before = f.Instances.RequireUnique(406);
@@ -293,12 +293,30 @@ public sealed class DaggerfallItemConditionServiceTests
         // The claim is that the row names what the setting does; the condition prefix belongs to the
         // condition owner and is asserted where that behavior is.
         Assert.True(row.Identified);
-        Assert.Contains("One Quarter More", row.Details, StringComparison.Ordinal);
+        Assert.Contains("Increased Weight Allowance: 25% additional", row.Details, StringComparison.Ordinal);
         // An identified setting leaves the item's value alone rather than standing in for a magic template.
         Assert.Equal(f.Definitions.RequireItem(new DaggerfallItemId(stored.ItemId)).Value, row.Value);
         // The quotation entry point answers for a setting too, at the donor's own cost.
         DaggerfallItemEnchantmentQuote quote = f.Service.QuoteEnchantment(sword, setting.Key);
         Assert.Equal((true, setting.Cost), (quote.Eligible, quote.RequiredPoints));
+    }
+
+    [Fact]
+    public void The_enchanting_action_quotes_the_loaded_setting_cost()
+    {
+        System.Text.Json.Nodes.JsonObject payload = System.Text.Json.Nodes.JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
+        System.Text.Json.Nodes.JsonObject setting = payload["magic"]!["enchantmentSettings"]!.AsArray()
+            .Single(row => row!["key"]!.GetValue<string>() == "enchantment.7.0")!.AsObject();
+        setting["cost"] = 417;
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()));
+        using Fixture fixture = new(definitions);
+        UniqueItem item = fixture.CreatePlainWeapon(501, 115, "daedric");
+        Assert.Equal(417, fixture.Service.QuoteEnchantment(item, "enchantment.7.0").RequiredPoints);
+        Assert.Equal(DaggerfallItemConditionOutcome.Enchanted, fixture.Service.Enchant(item, "enchantment.7.0").Outcome);
+        Assert.Equal("enchantment.7.0", fixture.Instances.RequireUnique(501).Enchantment);
+        Assert.True(DaggerfallMagicCostPolicy.TryGetNonSpellEnchantmentCost(definitions.Magic,
+            DaggerfallEnchantmentSettings.ToEffect(definitions.Magic.EnchantmentSettings["enchantment.7.0"]), out int cost));
+        Assert.Equal(417, cost);
     }
 
     [Fact]
@@ -311,7 +329,7 @@ public sealed class DaggerfallItemConditionServiceTests
         ulong durable = 500;
         foreach ((int type, int param) in families)
         {
-            DaggerfallEnchantmentSetting setting = DaggerfallEnchantmentSettings.All.Single(candidate => candidate.Type == type && candidate.Param == param);
+            DaggerfallEnchantmentSetting setting = TestPayload.Definitions.Magic.EnchantmentSettings.Values.Single(candidate => candidate.Type == type && candidate.Param == param);
             UniqueItem item = f.CreatePlainWeapon(durable, 115, "daedric");
             int condition = f.Instances.RequireUnique(durable).CurrentCondition;
 
@@ -325,7 +343,7 @@ public sealed class DaggerfallItemConditionServiceTests
 
         // A detriment carries a negative donor cost, and the donor sums raw costs: a drawback-only build
         // is legal and pays nothing, so it lands like any other setting and keeps the item's condition.
-        DaggerfallEnchantmentSetting detriment = DaggerfallEnchantmentSettings.All.Single(candidate => candidate.Type == 24 && candidate.Param == -1);
+        DaggerfallEnchantmentSetting detriment = TestPayload.Definitions.Magic.EnchantmentSettings.Values.Single(candidate => candidate.Type == 24 && candidate.Param == -1);
         UniqueItem cursed = f.CreatePlainWeapon(durable, 115, "daedric");
         int cursedCondition = f.Instances.RequireUnique(durable).CurrentCondition;
         DaggerfallItemConditionResult cursedResult = f.Service.Enchant(cursed, detriment.Key);
@@ -368,9 +386,9 @@ public sealed class DaggerfallItemConditionServiceTests
         internal readonly DaggerfallItemConditionService Service;
         internal readonly DaggerfallInventoryPresentation Presentation;
 
-        internal Fixture()
+        internal Fixture(DaggerfallDefinitions? definitions = null)
         {
-            Definitions = TestPayload.Definitions;
+            Definitions = definitions ?? TestPayload.Definitions;
             var items = Definitions.Items.Values.Concat(Definitions.TemplateItems.Values).ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
             var slots = Definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
             InventoryStore world = new();

@@ -63,7 +63,7 @@ public sealed class DaggerfallHeldEnchantmentSessionTests
                 new InventoryItemId("template-115-daedric"));
             int initial = session.State.ItemInstances.RequireUnique(durableId).CurrentCondition;
             Assert.True(initial > 30, $"authored condition was {initial}");
-            string setting = DaggerfallEnchantmentSettings.All.Single(value => value.Type == 16 && value.Param == 0).Key;
+            string setting = TestPayload.Definitions.Magic.EnchantmentSettings.Values.Single(value => value.Type == 16 && value.Param == 0).Key;
             Assert.Equal(DaggerfallItemConditionOutcome.Enchanted, session.ItemCondition.Enchant(item, setting).Outcome);
             EquipmentMoveResult equipped = session.EquipmentMoves.MoveToSlot(item, new EquipmentSlotId("right-hand"));
             Assert.True(equipped.Outcome == EquipmentMoveOutcome.Applied, equipped.Detail);
@@ -87,7 +87,7 @@ public sealed class DaggerfallHeldEnchantmentSessionTests
         using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, composition), saved);
         DaggerfallItemInstanceMetadata retained = restored.State.ItemInstances.RequireUnique(durableId);
         Assert.Equal(afterFirstHour, retained.CurrentCondition);
-        Assert.Equal(DaggerfallEnchantmentSettings.All.Single(value => value.Type == 16 && value.Param == 0).Key,
+        Assert.Equal(TestPayload.Definitions.Magic.EnchantmentSettings.Values.Single(value => value.Type == 16 && value.Param == 0).Key,
             retained.Enchantment);
         Assert.Contains(restored.State.Equipment.Read().Assignments,
             assignment => restored.State.Equipment.GetDurableItemId(new EntityId(assignment.Item.EntityId)).Value == durableId);

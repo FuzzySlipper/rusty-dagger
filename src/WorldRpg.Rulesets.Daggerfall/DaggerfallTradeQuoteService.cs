@@ -132,7 +132,7 @@ internal sealed class DaggerfallTradeQuoteService
             // An item the item maker enchanted carries one of its settings, which has no published magic
             // item by design; it keeps the ordinary item's value until identification for the same reason
             // an unidentified published enchantment does.
-            if (DaggerfallEnchantmentSettings.TryResolve(enchantment, out _)) return definition.Value;
+            if (_definitions.Magic.EnchantmentSettings.TryGetValue(enchantment, out _)) return definition.Value;
             if (!_definitions.Magic.MagicItems.ContainsKey(enchantment))
                 throw new InvalidOperationException($"Item '{definition.Id.Value}' names unpublished magic metadata '{enchantment}'.");
 

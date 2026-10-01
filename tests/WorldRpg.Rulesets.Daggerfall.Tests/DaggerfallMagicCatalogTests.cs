@@ -85,6 +85,46 @@ public sealed class DaggerfallMagicCatalogTests
             $"the missing catalog was not named: {string.Join(" | ", failure.Diagnostics)}");
     }
 
+    [Fact]
+    public void Settings_are_loaded_with_display_text_variants_and_donor_provenance()
+    {
+        DaggerfallMagicCatalogSet magic = TestPayload.Definitions.Magic;
+        foreach ((int type, int count) in new[] { (10, 35), (3, 11), (7, 2), (13, 3) })
+        {
+            DaggerfallEnchantmentSetting[] family = [.. magic.EnchantmentSettings.Values.Where(row => row.Type == type)];
+            Assert.Equal(count, family.Length);
+            Assert.All(family, row =>
+            {
+                Assert.Equal(Enumerable.Range(0, count), row.ParameterVariants);
+                Assert.False(string.IsNullOrWhiteSpace(row.DisplayName));
+                Assert.False(string.IsNullOrWhiteSpace(row.ParameterTextKey));
+                Assert.Contains($"/{row.TextKey}.cs#GetEnchantmentSettings", row.SourceClass, StringComparison.Ordinal);
+            });
+        }
+        DaggerfallEnchantmentSetting winter = magic.EnchantmentSettings["enchantment.3.0"];
+        Assert.Equal((500, "duringWinter", "Extra spell pts: during Winter"),
+            (winter.Cost, winter.ParameterTextKey, winter.DisplayName));
+    }
+
+    [Theory]
+    [InlineData("param")]
+    [InlineData("meaning")]
+    [InlineData("duplicate")]
+    [InlineData("parameterVariants")]
+    public void Malformed_published_settings_fail_at_content_admission(string field)
+    {
+        JsonObject payload = JsonNode.Parse(PayloadJson())!.AsObject();
+        JsonArray settings = payload["magic"]!["enchantmentSettings"]!.AsArray();
+        JsonObject row = settings.First(value => value!["type"]!.GetValue<int>() == 3)!.AsObject();
+        if (field == "param") { row["param"] = 11; row["key"] = "enchantment.3.11"; }
+        else if (field == "meaning") row["meaning"] = "unresolved";
+        else if (field == "parameterVariants") row["parameterVariants"] = new JsonArray(0, 11);
+        else settings.Add(row.DeepClone());
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() =>
+            DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString())));
+        Assert.Contains(error.Diagnostics, message => message.Contains("Enchantment setting", StringComparison.Ordinal));
+    }
+
     private static byte[] Payload() => System.Text.Encoding.UTF8.GetBytes(PayloadJson());
 
     private static string PayloadJson() => TestPayload.CombinedText;

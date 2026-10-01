@@ -159,7 +159,7 @@ public sealed class DaggerfallRegionalEconomyTests
         // as unpublished metadata: it keeps the ordinary item's value until identification, exactly as an
         // unidentified published enchantment does.
         DaggerfallDefinitions definitions = LoadDefinitions();
-        string setting = DaggerfallEnchantmentSettings.All.Single(candidate => candidate.Type == 7 && candidate.Param == 0).Key;
+        string setting = TestPayload.Definitions.Magic.EnchantmentSettings.Values.Single(candidate => candidate.Type == 7 && candidate.Param == 0).Key;
         DaggerfallItemDefinition definition = definitions.RequireItem(new DaggerfallItemId("iron-longsword"));
         DaggerfallItemInstanceMetadata metadata = DaggerfallItemInstanceMetadata.Default(definition, DaggerfallItemOwner.Player);
         DaggerfallRegionalPriceState prices = PriceState(definitions);

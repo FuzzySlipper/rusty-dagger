@@ -428,6 +428,37 @@ public sealed class DaggerfallHeldEnchantmentTests
         Assert.Equal(plain, fixture.MagickaMaximum());
     }
 
+    [Theory]
+    [InlineData(4)]
+    [InlineData(7)]
+    public void Published_moon_and_nearby_settings_contribute_only_while_the_condition_matches(int param)
+    {
+        using Fixture fixture = new();
+        int plain = fixture.MagickaMaximum();
+        fixture.Calendar = fixture.Calendar with { Year = 405, Month = 0, Day = 1 };
+        fixture.Position = new WorldPoint(0f, 0f, 0f);
+        fixture.EnchantAndWear("template-120-daedric", 9301, type: 3, param: param);
+        fixture.Refresh();
+        Assert.Equal(plain, fixture.MagickaMaximum());
+
+        if (param == 4) fixture.Calendar = fixture.Calendar with { Day = 20 };
+        else fixture.Nearby = [new DaggerfallNearbyCreature(DaggerfallEnemyGroup.Undead, new WorldPoint(0f, 0f, 17f))];
+        fixture.Refresh();
+        Assert.Equal(plain + 75, fixture.MagickaMaximum());
+
+        if (param == 4) fixture.Calendar = fixture.Calendar with { Day = 21 };
+        else fixture.Nearby = [new DaggerfallNearbyCreature(DaggerfallEnemyGroup.Undead, new WorldPoint(0f, 0f, 18f))];
+        fixture.Refresh();
+        Assert.Equal(plain, fixture.MagickaMaximum());
+
+        if (param == 4) fixture.Calendar = fixture.Calendar with { Day = 20 };
+        else fixture.Nearby = [new DaggerfallNearbyCreature(DaggerfallEnemyGroup.Undead, new WorldPoint(0f, 0f, 17f))];
+        fixture.Refresh();
+        fixture.Unequip(9301);
+        fixture.Refresh();
+        Assert.Equal(plain, fixture.MagickaMaximum());
+    }
+
     [Fact]
     public void The_item_makers_settings_are_the_donors_own_table()
     {
@@ -438,8 +469,8 @@ public sealed class DaggerfallHeldEnchantmentTests
         // regeneration 4000/3000/3000 for always/sunlight/darkness, StrengthensArmor and RepairsObjects
         // are single settings at param -1, and the detriments are priced negatively: ItemDeteriorates
         // -3000/-1500/-500, UserTakesDamage -6000/-1000, WeakensArmor -700.
-        Assert.Equal(35 + 11 + 2 + 3 + 3 + 1 + 1 + 1 + 3 + 2, DaggerfallEnchantmentSettings.All.Count);
-        Assert.All(DaggerfallEnchantmentSettings.All, setting => Assert.Equal(setting.Key, $"enchantment.{setting.Type}.{setting.Param}"));
+        Assert.Equal(35 + 11 + 2 + 3 + 3 + 1 + 1 + 1 + 3 + 2, TestPayload.Definitions.Magic.EnchantmentSettings.Count);
+        Assert.All(TestPayload.Definitions.Magic.EnchantmentSettings.Values, setting => Assert.Equal(setting.Key, $"enchantment.{setting.Type}.{setting.Param}"));
 
         Assert.Equal(900, SettingCost(10, 29));                       // long blade, the donor's flat price
         Assert.Equal(500, SettingCost(3, 0));                         // during winter
@@ -460,13 +491,13 @@ public sealed class DaggerfallHeldEnchantmentTests
         Assert.Equal(-1000, SettingCost(17, 1));                      // damages its wearer in holy places
 
         // Each setting resolves to the effect shape the held owner applies, and an unknown key does not.
-        DaggerfallEnchantmentSetting setting = DaggerfallEnchantmentSettings.All.Single(candidate => candidate.Type == 3 && candidate.Param == 7);
+        DaggerfallEnchantmentSetting setting = TestPayload.Definitions.Magic.EnchantmentSettings.Values.Single(candidate => candidate.Type == 3 && candidate.Param == 7);
         DaggerfallMagicEnchantmentDefinition effect = DaggerfallEnchantmentSettings.ToEffect(setting);
         Assert.Equal(3, effect.Type);
         Assert.Equal(7, effect.Param);
         Assert.Equal("near-undead", effect.ParamMeaning);
-        Assert.False(DaggerfallEnchantmentSettings.TryResolve("enchantment.5.9", out _));
-        Assert.False(DaggerfallEnchantmentSettings.TryResolve("magic-item.0050", out _));
+        Assert.False(TestPayload.Definitions.Magic.EnchantmentSettings.TryGetValue("enchantment.5.9", out _));
+        Assert.False(TestPayload.Definitions.Magic.EnchantmentSettings.TryGetValue("magic-item.0050", out _));
     }
 
     [Fact]
@@ -478,7 +509,7 @@ public sealed class DaggerfallHeldEnchantmentTests
         static int Cost(int type, int param)
         {
             Assert.True(DaggerfallMagicCostPolicy.TryGetNonSpellEnchantmentCost(
-                new DaggerfallMagicEnchantmentDefinition("test", type, param, "test", null, false), out int cost));
+                TestPayload.Definitions.Magic,                 new DaggerfallMagicEnchantmentDefinition("test", type, param, "test", null, false), out int cost));
             return cost;
         }
 
@@ -492,18 +523,18 @@ public sealed class DaggerfallHeldEnchantmentTests
         Assert.Equal(600, Cost(13, 2));      // ImprovesTalents adrenaline rush
         Assert.Equal(-3000, Cost(16, 0));    // ItemDeteriorates all the time, a detriment
         Assert.False(DaggerfallMagicCostPolicy.TryGetNonSpellEnchantmentCost(
-            new DaggerfallMagicEnchantmentDefinition("test", 99, 0, "test", null, false), out _));
+                TestPayload.Definitions.Magic,             new DaggerfallMagicEnchantmentDefinition("test", 99, 0, "test", null, false), out _));
     }
 
     [Fact]
     public void The_settings_table_validates_and_a_broken_row_is_reported()
     {
-        // Every load reads the compiled table through this, so the checks have to be the ones that would
+        // Every load validates the published settings, so these checks catch a malformed row that would
         // catch a transcription: a key that does not name its own type and param, an undefined classic
         // type, a param below the donor's sentinel, an empty meaning, a zero cost or a repeated pair.
-        Assert.Empty(DaggerfallEnchantmentSettings.Validate(DaggerfallEnchantmentSettings.All));
+        Assert.Empty(DaggerfallEnchantmentSettings.Validate(TestPayload.Definitions.Magic.EnchantmentSettings.Values));
 
-        DaggerfallEnchantmentSetting sound = DaggerfallEnchantmentSettings.All[0];
+        DaggerfallEnchantmentSetting sound = TestPayload.Definitions.Magic.EnchantmentSettings.Values.First();
         string[] problems = [.. DaggerfallEnchantmentSettings.Validate(
         [
             sound with { Key = "wrong" },
@@ -521,6 +552,25 @@ public sealed class DaggerfallHeldEnchantmentTests
         Assert.Contains(problems, problem => problem.Contains("has no param meaning", StringComparison.Ordinal));
         Assert.Contains(problems, problem => problem.Contains("costs nothing", StringComparison.Ordinal));
         Assert.Contains(problems, problem => problem.Contains("repeats type", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData(3, 11)]
+    [InlineData(7, 2)]
+    [InlineData(10, 35)]
+    [InlineData(13, 3)]
+    [InlineData(5, 3)]
+    [InlineData(16, 3)]
+    [InlineData(17, 2)]
+    [InlineData(12, 0)]
+    [InlineData(8, 0)]
+    [InlineData(24, 0)]
+    [InlineData(3, -1)]
+    public void Settings_reject_params_outside_the_payload_owners_supported_variants(int type, int param)
+    {
+        DaggerfallEnchantmentSetting sound = TestPayload.Definitions.Magic.EnchantmentSettings.Values.First(row => row.Type == type);
+        DaggerfallEnchantmentSetting invalid = sound with { Key = $"enchantment.{type}.{param}", Param = param };
+        Assert.Contains(DaggerfallEnchantmentSettings.Validate([invalid]), problem => problem.Contains("invalid param", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -637,10 +687,10 @@ public sealed class DaggerfallHeldEnchantmentTests
 
     /// <summary>The donor's own item-maker settings, addressed by the key a worn item carries.</summary>
     private static int SettingCost(int type, int param) =>
-        DaggerfallEnchantmentSettings.All.Single(setting => setting.Type == type && setting.Param == param).Cost;
+        TestPayload.Definitions.Magic.EnchantmentSettings.Values.Single(setting => setting.Type == type && setting.Param == param).Cost;
 
     private static string SettingKey(int type, int param) =>
-        DaggerfallEnchantmentSettings.All.Single(setting => setting.Type == type && setting.Param == param).Key;
+        TestPayload.Definitions.Magic.EnchantmentSettings.Values.Single(setting => setting.Type == type && setting.Param == param).Key;
 
     private sealed class Fixture : IDisposable
     {
@@ -677,7 +727,7 @@ public sealed class DaggerfallHeldEnchantmentTests
             _equipment = new MechanicsEquipmentCoordinator(inventory, equipment, _actors.Entities, items, slots);
             DaggerfallEquipmentMoves moves = new(coordinator, _equipment, Definitions, itemInstances: _instances);
             _conditions = new DaggerfallItemConditionService(Definitions, _instances, moves);
-            _held = new DaggerfallHeldEnchantments(_equipment, _instances, MagicItems, player.Stats, _actors.Entities, PlayerEntity,
+            _held = new DaggerfallHeldEnchantments(_equipment, _instances, Definitions.Magic with { MagicItems = MagicItems }, player.Stats, _actors.Entities, PlayerEntity,
                 () => _calendar, () => _positions.TryGetValue(DaggerfallActorIdentity.PlayerEntityId, out WorldPoint position) ? position : new WorldPoint(0f, 0f, 0f),
                 () => _nearby, () => _sunlight, _conditions, () => InHolyPlace, DamagePlayer);
             _encumbrance = new DaggerfallEncumbrancePolicy(coordinator, player.Stats, () => _held.CarryMultiplier);

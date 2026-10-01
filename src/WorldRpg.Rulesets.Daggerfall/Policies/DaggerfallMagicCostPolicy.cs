@@ -127,7 +127,7 @@ internal static class DaggerfallMagicCostPolicy
             int cost;
             if (enchantment.SpellKey is { } spellKey)
                 cost = SpellEnchantPoints(definitions.Magic, definitions.Magic.Spells[spellKey]);
-            else if (!TryGetNonSpellEnchantmentCost(enchantment, out cost))
+            else if (!TryGetNonSpellEnchantmentCost(definitions.Magic, enchantment, out cost))
                 return new(capacity, 0, false, $"{magic.Key} has no retained item-maker cost for {enchantment.ParamMeaning} ({enchantment.Type}, {enchantment.Param}).");
             total = checked(total + cost);
         }
@@ -148,8 +148,7 @@ internal static class DaggerfallMagicCostPolicy
     {
         ArgumentNullException.ThrowIfNull(item);
         int capacity = ItemEnchantmentPower(item, metadata);
-        if (!TryGetNonSpellEnchantmentCost(DaggerfallEnchantmentSettings.ToEffect(setting), out int cost))
-            return new(capacity, 0, false, $"{setting.Key} has no retained item-maker cost for {setting.Meaning}.");
+        int cost = setting.Cost;
         // As with a published magic item, a detriment's negative cost is retained rather than refused.
         return cost <= capacity ? new(capacity, cost, true, null) : new(capacity, cost, false, "The item lacks enchantment capacity.");
     }
@@ -259,14 +258,20 @@ internal static class DaggerfallMagicCostPolicy
     /// enumerates the families this product's held and condition work needs; a payload the catalog does
     /// not enumerate yet is costed here as well, because the donor prices it all the same.
     /// </summary>
-    internal static bool TryGetNonSpellEnchantmentCost(DaggerfallMagicEnchantmentDefinition value, out int cost)
+    internal static bool TryGetNonSpellEnchantmentCost(DaggerfallMagicCatalogSet magic, DaggerfallMagicEnchantmentDefinition value, out int cost)
     {
         ArgumentNullException.ThrowIfNull(value);
         // VampiricEffect: param 0 at range, param 1 when strikes. DFU offers both at the item maker.
         if ((value.Type, value.Param) is (6, 0)) { cost = 2000; return true; }
         if ((value.Type, value.Param) is (6, 1)) { cost = 1000; return true; }
         if ((value.Type, value.Param) is (9, -1)) { cost = 1500; return true; }  // AbsorbsSpells
-        return DaggerfallEnchantmentSettings.TryCost(value.Type, value.Param, out cost);
+        if (magic.EnchantmentSettings.TryGetValue($"enchantment.{value.Type}.{value.Param}", out DaggerfallEnchantmentSetting setting))
+        {
+            cost = setting.Cost;
+            return true;
+        }
+        cost = 0;
+        return false;
     }
     private static int MaterialMultiplier(string material, bool weapon) => material switch
     {
