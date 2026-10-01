@@ -72,6 +72,13 @@ internal sealed class DaggerfallEnemyBehaviorModule
     internal bool IsPacified(long actorId) =>
         _actors.TryGet(actorId, out ActorState actor) && Senses(actor).Pacified;
 
+    internal void MakeHostile(long actorId)
+    {
+        if (!_actors.TryGet(actorId, out var actor) || actor.IsDefeated || _isPlayerAllied(actorId)) return;
+        var memory = Senses(actor);
+        memory.SetForcedHostile(true);
+    }
+
     /// <summary>The enemy-senses memory the actor factory attaches to every non-player actor.</summary>
     private static DaggerfallEnemyPerceptionMemory Senses(ActorState actor) => actor.Actor.Get<DaggerfallEnemyPerceptionMemory>();
 
@@ -82,8 +89,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
         {
             if (actor.IsDefeated || _isPlayerAllied(actor.DurableId)) continue;
             DaggerfallEnemyPerceptionMemory memory = Senses(actor);
-            memory.Pacified = false;
-            memory.ForcedHostile = true;
+            memory.SetForcedHostile(true);
         }
     }
 

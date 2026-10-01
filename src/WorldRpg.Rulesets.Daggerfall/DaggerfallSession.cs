@@ -534,6 +534,23 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         AppendDamage(effect.Result, DaggerfallDamageCause.Effect, 0);
     }
 
+    private void ReactToSpellAttack(long caster, long target)
+    {
+        if (caster != DaggerfallActorIdentity.PlayerEntityId || target == caster) return;
+        if (_enemyBehavior.IsPacified(target)) _enemyBehavior.MakeActiveEnemiesHostile();
+        _enemyBehavior.MakeHostile(target);
+    }
+
+    private void AppendSpellTrackLoss(DaggerfallSpellTrackResult result)
+    {
+        long source = checked((long)result.Source.Get<DurableEntityIdentity>().Identity.Value);
+        long target = checked((long)result.Target.Get<DurableEntityIdentity>().Identity.Value);
+        ulong generation = _latestUpdateGeneration ?? 1UL, step = _latestSimulationStep ?? 1UL;
+        _facts.Append(result.Track == TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)
+            ? new FatigueAppliedFact(source, target, result.CalculatedLoss, result.ActualLoss, generation, step)
+            : new SpellPointsAppliedFact(source, target, result.CalculatedLoss, result.ActualLoss, generation, step));
+    }
+
     private void AppendDamage(DamageResult result, DaggerfallDamageCause cause, int struckBody)
     {
         long source = checked((long)result.Source.Get<DurableEntityIdentity>().Identity.Value);

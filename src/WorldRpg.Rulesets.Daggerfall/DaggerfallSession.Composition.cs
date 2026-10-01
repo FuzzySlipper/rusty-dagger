@@ -209,6 +209,9 @@ internal sealed partial class DaggerfallSession
             effects = new(actors, composition.Effects ?? new DaggerfallEffectCatalog(
             [
                 .. DaggerfallAlterationEffects.Definitions(effect => effects.Cancel(effect.Context.Instance)),
+                .. DaggerfallDestructionEffects.Definitions(_vitality, AppendEffectDamage, AppendSpellTrackLoss,
+                    id => authored.TryGetValue(id, out var definition) && IsHostileActor(id, definition),
+                    ReactToSpellAttack),
                 .. DaggerfallDiseasePolicy.Definitions(
                     _random,
                     () => _time.Calendar.DayNumber,

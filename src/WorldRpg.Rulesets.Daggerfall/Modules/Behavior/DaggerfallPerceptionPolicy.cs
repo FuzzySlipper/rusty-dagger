@@ -91,6 +91,17 @@ internal sealed class DaggerfallEnemyPerceptionMemory
     internal long? LastStealthCheckMinute { get; set; }
     internal long? LastDirectSightMinute { get; set; }
 
+    internal void SetForcedHostile(bool hostile)
+    {
+        ForcedHostile = hostile;
+        if (hostile)
+        {
+            Pacified = false;
+            // Attacking is already an encounter; language cannot pacify the same actor on its next detection.
+            HasEncounteredPlayer = true;
+        }
+    }
+
     internal void Clear()
     {
         Detected = false;
