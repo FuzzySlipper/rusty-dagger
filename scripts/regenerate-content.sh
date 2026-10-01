@@ -81,7 +81,7 @@ authored=content/worldrpg/payloads/daggerfall.base.json
 # carries it beside the authored daggerfall.base pack.
 imported=content/worldrpg/payloads/daggerfall.imported.json
 # The complete block document is an importer record (geometry reads its use sites); the daggerfall.blocks
-# pack carries only the building fields the runtime reads.
+# pack carries building fields, map positions, and compact automap footprints the runtime reads.
 blocks=import-records/daggerfall.blocks.json
 buildings=content/worldrpg/payloads/daggerfall.blocks.json
 # Importer records nothing at runtime reads (the mesh inventory and the original quest-source

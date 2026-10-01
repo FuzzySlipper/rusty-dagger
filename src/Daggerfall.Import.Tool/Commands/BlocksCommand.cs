@@ -10,7 +10,7 @@ namespace Daggerfall.Import.Tool.Commands;
 /// Enumerates the classic block archive into the block document, so the tasks that publish dungeons,
 /// exteriors and geometry start from one inventory of what the corpus carries rather than decoding the
 /// archive again and disagreeing about what a name means. The complete document is an importer record
-/// (the geometry inventory reads its use sites); the runtime reads only the building fields, which are
+/// (the geometry inventory reads its use sites); the runtime reads building fields and compact automap footprints, which are
 /// published on their own as the <c>daggerfall.blocks</c> payload.
 /// </summary>
 internal static class BlocksCommand

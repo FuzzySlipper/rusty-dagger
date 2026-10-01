@@ -40,7 +40,7 @@ internal sealed partial class DaggerfallSession
             () => _site.ActiveSite,
             () => State.Character.Identity,
             view => _activationPresentation.SetDialogue(view),
-            message => Presentation.SetOutcome(message));
+            message => Presentation.SetOutcome(message), MapDirections);
         _activation = new DaggerfallActivationModule(
             new InteractionTargetingService(engine.Perception, _spatial, State.Actors.Entities),
             reach,

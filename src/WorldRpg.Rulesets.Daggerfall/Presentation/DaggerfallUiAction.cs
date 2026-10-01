@@ -27,7 +27,7 @@ internal enum DaggerfallUiActionKind
     ActivationMode, Attack, Loot, Inventory, Character, Menu,
     DialogueTone, DialogueTopic, DialogueClose,
     TransportSelect, TransportToggle, TransportLeaveShip,
-    TravelSearch, TravelPreview, TravelAccept,
+    TravelSearch, TravelPreview, TravelAccept, MapOpen, MapBuilding,
     Rest, LodgingQuote, LodgingBook,
     WagonPut, WagonTake,
     QuestChoice, QuestDismiss,
@@ -165,6 +165,8 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.TransportSelect, "transport-select", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TransportToggle, "transport-toggle", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TransportLeaveShip, "transport-leave-ship", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.MapOpen, "map-open", DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.MapBuilding, "map-building", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TravelSearch, "travel-search", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TravelPreview, "travel-preview", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TravelAccept, "travel-accept", DaggerfallUiPhases.Interaction),
@@ -399,6 +401,10 @@ internal static class DaggerfallUiAction
                     && !string.IsNullOrWhiteSpace(item) && !string.IsNullOrWhiteSpace(key)
                     ? new(action, Item: item, Key: key, Confirm: confirm) : null;
             if (action == "controls-reset") return fields.SetEquals(["action"]) ? new(action) : null;
+            if (action == "map-open") return fields.SetEquals(["action", "open"]) ? new(action, Open: open) : null;
+            if (action == "map-building") return fields.SetEquals(["action", "region", "destination", "item"])
+                && region is >= 0 && destination is >= 0 && !string.IsNullOrWhiteSpace(item)
+                ? new(action, Region: region, Destination: destination, Item: item) : null;
             if (action == "menu") return fields.SetEquals(["action", "open"]) ? new(action, Open: open) : null;
             if (action == "save-slots") return fields.SetEquals(["action"]) ? new(action) : null;
             if (action == "save-slot")

@@ -1,3 +1,4 @@
+import { mountMap, isMapProjection, type MapProjection } from './maps.js';
 import { mountLodging, isLodgingProjection, type LodgingProjection } from './lodging.js';
 import { mountControls, type ControlsProjection, type ControlAction } from './controls.js';
 import { mountLiveDebugPanel, type LiveDebugPanelMount } from '@rusty-engine/live-debug';
@@ -31,6 +32,7 @@ interface DaggerHud {
   readonly activation?: { readonly mode: string; readonly message: string; readonly applied: boolean; readonly dialogue?: DialogueProjection | null };
   readonly transport?: TransportProjection | null;
   readonly travel?: TravelProjection | null;
+  readonly map?: MapProjection | null;
   readonly quests?: QuestPresentation;
   readonly notebook?: NotebookProjection;
   readonly view?: { readonly yawRadians: number; readonly pitchRadians: number; readonly interaction: string };
@@ -231,6 +233,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
         <button data-action="resume" autofocus>Return to game</button>
         <button data-action="inventory">Inventory &amp; equipment · I</button>
         <button data-action="character">Character · C</button>
+        <button data-action="map">Map</button>
         <button data-action="transport">Travel &amp; transport</button>
         <button data-action="rest">Rest &amp; loiter</button>
         <button data-action="journal">Journal &amp; notes</button>
@@ -251,6 +254,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       <div class="dagger-controls-root" hidden></div>
       <div class="dagger-inventory-root" hidden></div>
       <div class="dagger-character-root" hidden></div>
+      <div class="dagger-map-root" hidden></div>
       <div class="dagger-transport-root" hidden></div>
       <section class="dagger-rest-root" hidden aria-label="Rest and loiter">
         <h2>Rest &amp; loiter</h2>
@@ -341,6 +345,18 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const inventoryView = mountInventory(inventoryRoot, (action) => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
   }));
+  const mapRoot = shell.querySelector<HTMLElement>('.dagger-map-root')!;
+  const mapView = mountMap(mapRoot, action => context.intents?.claim('dagger.ui', {
+    kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
+  }), () => showPanel('transport'));
+  let mapReported = false;
+  const reportMap = (open: boolean): void => {
+    if (mapReported === open) return;
+    mapReported = open;
+    context.intents?.claim('dagger.ui', {
+      kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'map-open', open },
+    });
+  };
   const transportRoot = shell.querySelector<HTMLElement>('.dagger-transport-root')!;
   const transportView = mountTransport(transportRoot, action => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
@@ -476,8 +492,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       if (host.isConnected) host.textContent = `Debug console unavailable: ${error instanceof Error ? error.message : String(error)}`;
     });
   };
-  let activePanel: 'diagnostics' | 'inventory' | 'character' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings' | null = null;
+  let activePanel: 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings' | null = null;
   const showHome = (): void => {
+    reportMap(false);
     controlsView.cancel();
     const previous = activePanel;
     if (previous === 'debug') closeDebug();
@@ -495,6 +512,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'menu', open },
   });
   const closeMenu = (): void => {
+    reportMap(false);
     controlsView.cancel();
     controllerDirection = 0;
     if (activePanel === 'loot') closeLoot();
@@ -520,16 +538,18 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     else if (menu.open) closeMenu();
     else openMenu();
   };
-  const showPanel = (action: 'diagnostics' | 'inventory' | 'character' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings'): void => {
+  const showPanel = (action: 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings'): void => {
     if (!menu.open) openMenu();
     if (activePanel === 'loot' && action !== 'loot') closeLoot();
     if (activePanel === 'debug') closeDebug();
+    reportMap(action === 'map');
     activePanel = action;
     home.hidden = true;
     panel.hidden = false;
     diagnostics.hidden = action !== 'diagnostics';
     inventoryRoot.hidden = action !== 'inventory';
     characterRoot.hidden = action !== 'character';
+    mapRoot.hidden = action !== 'map';
     transportRoot.hidden = action !== 'transport';
     restRoot.hidden = action !== 'rest';
     notebookRoot.hidden = action !== 'journal';
@@ -547,7 +567,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     menu.classList.toggle('has-loot', action === 'loot');
     menu.classList.toggle('has-debug', action === 'debug');
     menuTitle.textContent = action === 'settings' ? 'Control settings' : action === 'diagnostics' ? 'Composition diagnostics'
-      : action === 'inventory' ? 'Inventory & equipment' : action === 'character' ? 'Character' : action === 'transport' ? 'Travel & transport' : action === 'rest' ? 'Rest & loiter' : action === 'journal' ? 'Journal & notes'
+      : action === 'inventory' ? 'Inventory & equipment' : action === 'character' ? 'Character' : action === 'map' ? 'Map' : action === 'transport' ? 'Travel & transport' : action === 'rest' ? 'Rest & loiter' : action === 'journal' ? 'Journal & notes'
       : action === 'loot' ? 'Loot' : action === 'debug' ? 'Engine debug console'
       : saveSlotMode === 'save' ? 'Save game' : 'Load game';
     if (action === 'character') {
@@ -593,7 +613,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     else if (action === 'loot') claim('loot');
     else if (action === 'save-game') showSaveSlots('save');
     else if (action === 'load-game') showSaveSlots('load');
-    else if (action === 'settings' || action === 'diagnostics' || action === 'inventory' || action === 'character' || action === 'transport' || action === 'rest' || action === 'journal' || action === 'debug') showPanel(action);
+    else if (action === 'settings' || action === 'diagnostics' || action === 'inventory' || action === 'character' || action === 'map' || action === 'transport' || action === 'rest' || action === 'journal' || action === 'debug') showPanel(action);
   };
   const onMenuClick = (event: MouseEvent): void => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button');
@@ -819,6 +839,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
 
     if (value.inventory) inventoryView.update(value.inventory);
     transportView.update(isTransportProjection(value.transport) ? value.transport : null, value.inventory);
+    mapView.update(isMapProjection(value.map) ? value.map : null);
     travelView.update(isTravelProjection(value.travel) ? value.travel : null);
     if (value.character && isCharacterProjection(value.character)) characterView.update(value.character);
     if (value.notebook) notebookView.update(value.notebook);
@@ -927,12 +948,14 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     composition.replaceChildren(...diagnosticRows(value.composition));
   }) ?? (() => {});
   return { dispose: () => {
+    reportMap(false);
     unsubscribeController?.();
     unsubscribe();
     closeDebug();
     controlsView.dispose();
     inventoryView.dispose();
     transportView.dispose();
+    mapView.dispose();
     travelView.dispose();
     lodgingView.dispose();
     characterView.dispose();

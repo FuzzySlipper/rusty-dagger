@@ -438,6 +438,15 @@ internal sealed class DaggerfallSiteLifecycle
     /// pose at the site still starts in the site's cell; after admission, crossing a terrain tile
     /// boundary advances the center without creating a second world-position authority.
     /// </summary>
+    internal WorldPoint ExteriorSitePosition(WorldPoint position)
+    {
+        DaggerfallExteriorCellId site = ActiveExteriorCell();
+        DaggerfallExteriorWorldOrigin origin = _exteriorResidency is { IsInitialized: true } residency
+            ? residency.Origin : DaggerfallExteriorWorldOrigin.At(site);
+        Vector3 translation = origin.LocalTranslation(site);
+        return new(position.X - translation.X, position.Y - translation.Y, position.Z - translation.Z);
+    }
+
     internal DaggerfallExteriorCellId CurrentExteriorCell()
     {
         DaggerfallExteriorCellId site = ActiveExteriorCell();

@@ -135,3 +135,9 @@
 
 /* Gamepad-driven programmatic focus must be visible without a prior keyboard event. */
 .dagger-hud.controller-navigation :focus { outline: 2px solid #f4d983; outline-offset: 2px; }
+
+.dagger-map-diagram { width: 100%; height: min(60vh, 600px); background: #17232b; border: 1px solid #87969f; }
+.dagger-map-controls, .dagger-map-buildings { display: flex; flex-wrap: wrap; gap: .4rem; }
+.dagger-map-buildings { max-height: 12rem; overflow: auto; }
+.dagger-map-buildings button[aria-pressed="true"] { outline: 2px solid #ffe077; }
+.dagger-map-diagram [role="button"] { cursor: pointer; }
