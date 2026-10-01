@@ -151,6 +151,7 @@ internal sealed class DaggerSessionPersistence
             Bank = State.Bank.Capture(),
             Loans = State.Loans.Capture(),
             Property = State.Property.Capture(_capturePropertyStorage),
+            Lodging = State.Lodging.Capture(_time.Calendar.ToAbsoluteSeconds()),
             Crime = State.Crime.Capture(),
             KnightlyClaims = State.KnightlyClaims.Capture(),
             Services = State.Services.Capture(),

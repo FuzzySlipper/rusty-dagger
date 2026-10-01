@@ -37,7 +37,8 @@ internal sealed record DaggerfallHudFrame(
     DaggerfallDeathView? Death = null,
     DaggerfallRestView? Rest = null,
     DaggerfallTravelPresentation? Travel = null,
-    string? SiteName = null);
+    string? SiteName = null,
+    DaggerfallLodgingView? Lodging = null);
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
 internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<DaggerfallHudResourceDefinition> resources, ResolvedCompositionIdentity? compositionIdentity, DaggerfallUiArt? uiArt = null) : IDisposable
@@ -58,7 +59,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ArgumentNullException.ThrowIfNull(frame);
         var (player, progression, presentation, mode, controls, slots, inventory, loot, character, panelRequest,
             saveSlots, saveSlotDiagnostic, controlSettings, controlDiagnostic, activation, quests, notebook, transport,
-            dungeonText, death, rest, travel, siteName) = frame;
+            dungeonText, death, rest, travel, siteName, lodging) = frame;
         UiValueBuilder builder = new();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
         (string Key, uint Value)[] fields =
@@ -134,6 +135,10 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("requiresAnswer", builder.Boolean(dungeonText.Kind == DaggerfallDungeonTextActionKind.ShowTextWithInput))))];
         fields = [.. fields, ("death", death is null ? builder.Null() : Death(builder, death))];
         fields = [.. fields, ("rest", rest is null ? builder.Null() : Rest(builder, rest))];
+        fields = [.. fields, ("lodging", lodging is null ? builder.Null() : builder.Object(
+            ("key", builder.String(lodging.Key)), ("name", builder.String(lodging.Name)),
+            ("days", builder.Number(lodging.Days)), ("price", builder.Number(lodging.Price)),
+            ("remainingHours", builder.Number(lodging.RemainingHours)), ("canBook", builder.Boolean(lodging.CanBook))))];
         if (travel is not null) fields = [.. fields, ("travel", Travel(builder, travel))];
         if (inventory is not null) fields = [.. fields, ("inventory", Inventory(builder, inventory))];
         // Contents are an affordance the same way focus is: a dead or paused product refuses the take

@@ -101,9 +101,7 @@ internal sealed partial class DaggerfallSession
     }
 
     /// <summary>
-    /// Supplies the current location/player gate without inventing rental or ownership state that the
-    /// product does not yet publish. The admitted profile remains the authority for whether a rest
-    /// action has a world to advance in; a missing player pose is a concrete rejection.
+    /// Reads the current location, paid room and guild privileges at the ordinary rest boundary.
     /// </summary>
     private DaggerfallRestEligibility CurrentRestEligibility()
     {
@@ -120,6 +118,9 @@ internal sealed partial class DaggerfallSession
         if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Interior)
         {
             DaggerfallInteriorBuilding? building = CurrentInteriorBuilding();
+            if (building is not null && State.Lodging.RemainingSeconds(_activeProfileKey.Site,
+                new(building.BlockX, building.BlockY, building.Building.Index), _time.Calendar.ToAbsoluteSeconds()) > 0)
+                return new(true);
             if (FightersGuildRestAllowed(building, State.GuildMembership, _activeProfileKey.Site.Region,
                 checked((int)_time.Calendar.DayNumber)))
                 return new(true);
@@ -184,9 +185,15 @@ internal sealed partial class DaggerfallSession
         long applied = 0;
         while (applied < requestedSeconds)
         {
+            if (!CurrentRestEligibility().Allowed)
+                return new(requestedSeconds, applied, DaggerfallRestInterruption.Prevented);
             long secondsToMinute = DaggerfallCalendar.SecondsPerMinute
                 - (_time.Calendar.ToAbsoluteSeconds() % DaggerfallCalendar.SecondsPerMinute);
             long slice = Math.Min(requestedSeconds - applied, secondsToMinute);
+            if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Interior
+                && CurrentInteriorBuilding() is { BuildingType: DaggerfallLodgingState.TavernBuildingType } tavern)
+                slice = Math.Min(slice, State.Lodging.RemainingSeconds(_activeProfileKey.Site,
+                    new(tavern.BlockX, tavern.BlockY, tavern.Building.Index), _time.Calendar.ToAbsoluteSeconds()));
             DaggerfallCalendarAdvance advance = AdvanceElapsedTime(slice, deferSkillAdvancement: true);
             applied = checked(applied + advance.AppliedSeconds);
             if (State.Actors.Player.IsDefeated)

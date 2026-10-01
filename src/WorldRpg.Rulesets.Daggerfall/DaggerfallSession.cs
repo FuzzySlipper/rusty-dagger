@@ -581,6 +581,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             DungeonText: _dungeonTextProjection,
             Death: _deathPresentation.View,
             Rest: RestView,
+            Lodging: LodgingView,
             Travel: ReadTravelPresentation(),
             SiteName: Site.ActiveSite?.Name));
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());

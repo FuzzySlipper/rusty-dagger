@@ -10,7 +10,7 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
     string? Attribute = null, string? BackgroundAnswers = null, string? AttributeAllocations = null, string? SkillAllocations = null, ulong? Amount = null,
     string? QuestInstance = null, int? QuestMessage = null, int? QuestChoice = null, string? QuestPrompt = null, string? QuestDelivery = null,
     string? Note = null, string? Text = null, int? Page = null, int? Destination = null,
-    string? Tone = null, string? Topic = null, int? Hours = null, int? Region = null,
+    string? Tone = null, string? Topic = null, int? Hours = null, int? Region = null, int? Days = null,
     bool Cautious = false, bool Inn = false, bool Ship = false, bool Open = false)
 {
     /// <summary>The typed action the wire name names; resolved once when the action is built.</summary>
@@ -28,7 +28,7 @@ internal enum DaggerfallUiActionKind
     DialogueTone, DialogueTopic, DialogueClose,
     TransportSelect, TransportToggle, TransportLeaveShip,
     TravelSearch, TravelPreview,
-    Rest,
+    Rest, LodgingQuote, LodgingBook,
     WagonPut, WagonTake,
     QuestChoice, QuestDismiss,
     DungeonTextAnswer, DungeonTextClose,
@@ -167,6 +167,8 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.TransportLeaveShip, "transport-leave-ship", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TravelSearch, "travel-search", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TravelPreview, "travel-preview", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.LodgingQuote, "lodging-quote", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.LodgingBook, "lodging-book", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.Rest, "rest", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.WagonPut, "wagon-put", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.WagonTake, "wagon-take", DaggerfallUiPhases.Interaction),
@@ -228,14 +230,14 @@ internal static class DaggerfallUiAction
             if (root.ValueKind != JsonValueKind.Object) return null;
             HashSet<string> fields = new(StringComparer.Ordinal);
             string? action = null, revision = null, item = null, targetEquipment = null, container = null, key = null, label = null, name = null, race = null, gender = null, career = null, mode = null, primarySkills = null, majorSkills = null, minorSkills = null, advantages = null, disadvantages = null, attribute = null, backgroundAnswers = null, attributeAllocations = null, skillAllocations = null, questInstance = null, questPrompt = null, questDelivery = null, note = null, text = null, tone = null, topic = null;
-            int? targetGrid = null, faceIndex = null, reflexes = null, hitPointsPerLevel = null, questMessage = null, page = null, destination = null, hours = null, region = null;
+            int? targetGrid = null, faceIndex = null, reflexes = null, hitPointsPerLevel = null, questMessage = null, page = null, destination = null, hours = null, region = null, days = null;
             ulong? amount = null;
             bool confirm = false, cautious = false, inn = false, ship = false, open = false;
             int? questChoice = null;
             foreach (JsonProperty property in root.EnumerateObject())
             {
                 if (!fields.Add(property.Name)) return null;
-                if (property.Name is "targetGrid" or "faceIndex" or "reflexes" or "hitPointsPerLevel" or "questMessage" or "page" or "destination" or "hours" or "region")
+                if (property.Name is "targetGrid" or "faceIndex" or "reflexes" or "hitPointsPerLevel" or "questMessage" or "page" or "destination" or "hours" or "region" or "days")
                 {
                     if (!property.Value.TryGetInt32(out int grid)) return null;
                     if (property.Name == "targetGrid") targetGrid = grid;
@@ -246,12 +248,13 @@ internal static class DaggerfallUiAction
                     else if (property.Name == "page") page = grid;
                     else if (property.Name == "destination") destination = grid;
                     else if (property.Name == "hours") hours = grid;
+                    else if (property.Name == "days") days = grid;
                     else region = grid;
                     continue;
                 }
                 if (property.Name == "amount")
                 {
-                    if (!property.Value.TryGetUInt64(out ulong parsed) || parsed == 0) return null;
+                    if (!property.Value.TryGetUInt64(out ulong parsed)) return null;
                     amount = parsed;
                     continue;
                 }
@@ -306,6 +309,13 @@ internal static class DaggerfallUiAction
                     default: return null;
                 }
             }
+            if (amount == 0 && action != "lodging-book") return null;
+            if (action == "lodging-quote")
+                return fields.SetEquals(["action", "key", "days"]) && !string.IsNullOrWhiteSpace(key) && days is >= 1 and <= 350
+                    ? new(action, Key: key, Days: days) : null;
+            if (action == "lodging-book")
+                return fields.SetEquals(["action", "key", "days", "amount"]) && !string.IsNullOrWhiteSpace(key) && days is >= 1 and <= 350 && amount is not null
+                    ? new(action, Key: key, Days: days, Amount: amount) : null;
             if (action == "inventory-move")
             {
                 if (string.IsNullOrWhiteSpace(revision) || string.IsNullOrWhiteSpace(item)

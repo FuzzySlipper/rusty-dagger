@@ -40,7 +40,7 @@ internal sealed partial class DaggerfallSession
     /// the interaction key is a coincidence of timing rather than an instruction.
     /// </summary>
     private static bool OpensInteraction(DaggerfallUiInput input) => input.ContainsAny(
-        DaggerfallUiActionKind.Loot, DaggerfallUiActionKind.ActivationMode, DaggerfallUiActionKind.DialogueTopic, DaggerfallUiActionKind.Rest);
+        DaggerfallUiActionKind.Loot, DaggerfallUiActionKind.ActivationMode, DaggerfallUiActionKind.DialogueTopic, DaggerfallUiActionKind.Rest, DaggerfallUiActionKind.LodgingBook);
 
     /// <summary>
     /// Admits one UI payload in the current phase. An unrecognized payload is reported in a live phase;
@@ -101,6 +101,8 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.TravelSearch:
             case DaggerfallUiActionKind.TravelPreview: ChangeTravel(action); break;
             // One rest per input slice: explicit elapsed time is applied once.
+            case DaggerfallUiActionKind.LodgingQuote:
+            case DaggerfallUiActionKind.LodgingBook: ChangeLodging(action); break;
             case DaggerfallUiActionKind.Rest:
                 if (!restSubmitted) { ChangeRest(action); restSubmitted = true; }
                 break;
