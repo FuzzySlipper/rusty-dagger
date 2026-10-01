@@ -238,7 +238,7 @@ internal sealed class DaggerfallActorRoster
             saved.TryGetValue(placement.EntityId, out DaggerfallActorSave? prior);
             DaggerfallActorDefinition definition = _definitions.RequireActor(placement.ActorId);
             ActorState actor = DaggerActorFactory.CreateAuthoredActor(_random, _mechanics, _definitions, _state.Actors, _state.InventoryStore,
-                _state.ItemDefinitions, _state.ItemInstances, placement, prior);
+                _state.ActorInventories.ItemDefinitions, _state.ItemInstances, placement, prior);
             if (prior is not null) actor.ApplyPose(new ActorPose(new WorldPoint(prior.X, prior.Y, prior.Z), prior.HeadingRadians));
             else if (definition.GroundOnSpawn) _grounding.Ground(actor);
             _definitionsByActor.Add(actor.DurableId, definition);
@@ -288,7 +288,7 @@ internal sealed class DaggerfallActorRoster
     private void DestroySiteOwnedUniqueItems(ActorState actor)
     {
         List<ulong> identities = [];
-        if (_state.InventoryFor(actor.DurableId) is { } inventory)
+        if (_state.ActorInventories.InventoryFor(actor.DurableId) is { } inventory)
             identities.AddRange(inventory.Read().UniqueItems.Select(item => _state.Actors.Entities.IdentityOf(item.Entity).Value));
         if (_corpseLoot.Corpses.TryGetValue(actor.DurableId, out CorpseContainer? corpse) && corpse.IsRegistered)
             identities.AddRange(_state.Containers.Read(corpse.Owner).UniqueItems.Select(item => _state.Actors.Entities.IdentityOf(item.Entity).Value));
@@ -322,9 +322,9 @@ internal sealed class DaggerfallActorRoster
     private void GrantClassEnemyEquipment(ActorState actor, DaggerfallActorDefinition definition, int spawnLevel)
     {
         if (definition.MobileId is not int mobileId) throw new InvalidOperationException($"Class actor '{definition.Id.Value}' has no human mobile id.");
-        MechanicsInventoryCoordinator inventory = _state.InventoryFor(actor.DurableId)
+        MechanicsInventoryCoordinator inventory = _state.ActorInventories.InventoryFor(actor.DurableId)
             ?? throw new InvalidOperationException($"Spawned actor {actor.DurableId} has no registered inventory.");
-        DaggerfallClassEnemyEquipmentPolicy.Equip(_definitions, _random, _state.ItemInstances, _uniqueItems, inventory, _state.EquipmentFor(actor.DurableId),
+        DaggerfallClassEnemyEquipmentPolicy.Equip(_definitions, _random, _state.ItemInstances, _uniqueItems, inventory, _state.ActorInventories.EquipmentFor(actor.DurableId),
             actor.DurableId, mobileId, _state.Progression.Level,
             _state.Character.Identity.RaceId,
             _state.Character.Identity.Gender == DaggerfallCharacterGender.Female ? "female" : "male");
@@ -339,7 +339,7 @@ internal sealed class DaggerfallActorRoster
                 throw new InvalidOperationException($"Spawned actor '{definition.Id.Value}' loadout carries a unique or missing item, which spawned actors do not equip yet.");
         }
 
-        MechanicsInventoryCoordinator actorInventory = _state.InventoryFor(actor.DurableId)
+        MechanicsInventoryCoordinator actorInventory = _state.ActorInventories.InventoryFor(actor.DurableId)
             ?? throw new InvalidOperationException($"Spawned actor {actor.DurableId} has no registered inventory.");
         int ordinal = 0;
         foreach (DaggerfallLoadoutEntry entry in definition.Loadout)
@@ -359,11 +359,11 @@ internal sealed class DaggerfallActorRoster
     {
         if (!_state.Actors.TryGet(durableId, out ActorState? actor)) return;
         HashSet<ulong> owned = [];
-        if (_state.InventoryFor(durableId) is { } inventory)
+        if (_state.ActorInventories.InventoryFor(durableId) is { } inventory)
             foreach (var item in inventory.Read().UniqueItems)
                 owned.Add(_state.Actors.Entities.IdentityOf(item.Entity).Value);
         // Equipment assignments name the same durable numbers directly.
-        foreach (var assignment in _state.EquipmentFor(durableId).Read().Assignments)
+        foreach (var assignment in _state.ActorInventories.EquipmentFor(durableId).Read().Assignments)
             owned.Add(assignment.Item.EntityId);
         if (actor.Actor.TryGet<CorpseLootComponent>(out CorpseLootComponent? corpse) && corpse is not null && corpse.HasRegisteredInventory)
             foreach (var item in _state.Containers.Read(corpse.Owner).UniqueItems)

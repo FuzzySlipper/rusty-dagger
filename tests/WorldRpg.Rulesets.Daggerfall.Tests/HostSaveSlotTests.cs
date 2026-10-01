@@ -57,7 +57,7 @@ public sealed class HostSaveSlotTests
                 false, true, "quest-99", "relic", null, DaggerfallItemOwner.Player).Validate();
             sourceSession.State.ItemInstances.ReplaceStack(DaggerfallItemOwner.Player, stack.Id, savedStackMetadata);
             DurableIdentityReference npcUniqueIdentity = sourceSession.UniqueItemAllocator.AllocateReference();
-            MechanicsEquipmentCoordinator npcEquipment = sourceSession.State.EquipmentFor(2000);
+            MechanicsEquipmentCoordinator npcEquipment = sourceSession.State.ActorInventories.EquipmentFor(2000);
             var npcUnique = npcEquipment.Materialize(npcUniqueIdentity, new InventoryItemId("iron-dagger"));
             sourceSession.State.ItemInstances.RegisterDefaultUnique(npcUniqueIdentity.Value,
                 definitions.Items[new DaggerfallItemId("iron-dagger")], DaggerfallItemOwner.Actor(2000));
@@ -102,11 +102,11 @@ public sealed class HostSaveSlotTests
         Assert.Equal(savedStackQuantity, restoredSession.State.Inventory.Read().Stacks.Single(value => value.Definition == sourceSession.State.Inventory.Read().Stacks.First().Definition).Quantity);
         Assert.Equal(savedStackMetadata, restoredSession.State.ItemInstances.RequireStack(DaggerfallItemOwner.Player,
             restoredSession.State.Inventory.Read().Stacks.Single(value => value.Definition == sourceSession.State.Inventory.Read().Stacks.First().Definition).Id));
-        MechanicsInventoryCoordinator restoredNpcInventory = Assert.IsType<MechanicsInventoryCoordinator>(restoredSession.State.InventoryFor(2000));
+        MechanicsInventoryCoordinator restoredNpcInventory = Assert.IsType<MechanicsInventoryCoordinator>(restoredSession.State.ActorInventories.InventoryFor(2000));
         var restoredNpcUnique = Assert.Single(restoredNpcInventory.Read().UniqueItems, item => item.Definition.Value == "iron-dagger");
         Assert.Equal(savedNpcUniqueId, restoredSession.State.Actors.Entities.IdentityOf(restoredNpcUnique.Entity).Value);
         Assert.Equal(savedUniqueMetadata, restoredSession.State.ItemInstances.RequireUnique(savedNpcUniqueId));
-        Assert.Contains(restoredSession.State.EquipmentFor(2000).Read().Assignments,
+        Assert.Contains(restoredSession.State.ActorInventories.EquipmentFor(2000).Read().Assignments,
             assignment => assignment.Slot.Value == "right-hand" && assignment.Item.EntityId == restoredNpcUnique.Entity.Value);
 
         _ = restoredMaximum.AddModifier(1);

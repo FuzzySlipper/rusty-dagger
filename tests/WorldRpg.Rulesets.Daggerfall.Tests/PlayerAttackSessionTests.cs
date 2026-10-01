@@ -121,7 +121,7 @@ public sealed class PlayerAttackSessionTests
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
         authored[2000] = authored[2000] with { MinimumMaterial = "daedric" };
         TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
-        DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.InventoryFor,
+        DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.ActorInventories.InventoryFor,
             session.State.ItemInstances, definitions, authored, targeting);
 
         double staminaBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current;
@@ -162,9 +162,9 @@ public sealed class PlayerAttackSessionTests
         session.State.Equipment.Swap(equipped, new WorldRpg.Kit.Inventory.UniqueInventoryItem(steelItem.Entity.Value, steelDagger.Item),
             [new WorldRpg.Kit.Inventory.EquipmentSlotId("right-hand")]);
         authored[2000] = authored[2000] with { MinimumMaterial = "steel" };
-        DaggerCombatRules steelCombat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.InventoryFor,
+        DaggerCombatRules steelCombat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.ActorInventories.InventoryFor,
             session.State.ItemInstances, definitions, authored, targeting,
-            actorEquipment: session.State.EquipmentFor, itemCondition: session.ItemCondition);
+            actorEquipment: session.State.ActorInventories.EquipmentFor, itemCondition: session.ItemCondition);
 
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         int healthBeforeSteelHit = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).ValueInt;
@@ -306,9 +306,9 @@ public sealed class PlayerAttackSessionTests
             placement => placement.EntityId,
             placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
-        DaggerCombatRules combat = new(RandomMaximum.Create(), session.State.Actors, session.State.Equipment, session.State.InventoryFor,
+        DaggerCombatRules combat = new(RandomMaximum.Create(), session.State.Actors, session.State.Equipment, session.State.ActorInventories.InventoryFor,
             session.State.ItemInstances, definitions, authored, null!, use => session.State.SkillUses.Record(use),
-            actorEquipment: session.State.EquipmentFor, itemCondition: session.ItemCondition,
+            actorEquipment: session.State.ActorInventories.EquipmentFor, itemCondition: session.ItemCondition,
             playerPosition: () => session.State.PlayerControl.Position);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("backstabbing")).BaseValue = 37;
 
@@ -563,7 +563,7 @@ public sealed class PlayerAttackSessionTests
             placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
         TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
-        DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.InventoryFor,
+        DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.ActorInventories.InventoryFor,
             session.State.ItemInstances, definitions, authored, targeting);
         FactBuffer<IProductFact> facts = new();
 

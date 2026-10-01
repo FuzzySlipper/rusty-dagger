@@ -38,7 +38,7 @@ public sealed class ActorLifecycleSessionTests
             Assert.Equal(new DaggerfallActorId("imp"), session.DynamicActors[second]);
             // The spawn carries the same Mechanics binding an authored actor is built with.
             Assert.NotNull(session.State.Actors.Get(second).Stats.GetTrack(TrackId.Parse("health")));
-            Assert.NotNull(session.State.InventoryFor(second));
+            Assert.NotNull(session.State.ActorInventories.InventoryFor(second));
             // Distinct state before retirement: only the second moves.
             session.State.Actors.Get(second).ApplyPose(new ActorPose(new WorldPoint(21, 0, 21), 2f));
             session.RetireActor(first);
@@ -94,8 +94,8 @@ public sealed class ActorLifecycleSessionTests
         DaggerfallActorDefinition definition = session.DefinitionsByActor[actorId];
         Assert.Equal((144, "class16", "enemy-class-equipped-melee", "T"), (definition.MobileId, definition.Career, definition.ActionId, definition.LootTableKey));
         Assert.Equal(50, session.State.Actors.Get(actorId).Stats.GetStat(StatId.Parse("long-blade")).ValueInt);
-        Assert.NotEmpty(session.State.InventoryFor(actorId)!.Read().UniqueItems);
-        Assert.NotEmpty(session.State.EquipmentFor(actorId).Read().Assignments);
+        Assert.NotEmpty(session.State.ActorInventories.InventoryFor(actorId)!.Read().UniqueItems);
+        Assert.NotEmpty(session.State.ActorInventories.EquipmentFor(actorId).Read().Assignments);
 
         // The generated class actor enters the same defeat/corpse owner as an authored mobile;
         // its normalized T loot table is populated through the canonical corpse coordinator.

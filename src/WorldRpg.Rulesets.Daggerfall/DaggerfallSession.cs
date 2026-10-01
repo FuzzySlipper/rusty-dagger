@@ -77,7 +77,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
     internal const ulong DynamicActorFirstIdentity = 1_000_000_000_000UL;
     internal const ulong GroundContainerFirstIdentity = 2_000_000_000_000UL;
     private readonly DurableIdentityAllocator _actorIdentities;
-    private DaggerfallHeldEnchantments _heldEnchantments = null!;
+    private readonly DaggerfallHeldEnchantments _heldEnchantments;
     private readonly DaggerfallActorRoster _roster;
     private readonly DaggerfallActorGrounding _grounding;
     private readonly DaggerfallDefinitions _definitions;
