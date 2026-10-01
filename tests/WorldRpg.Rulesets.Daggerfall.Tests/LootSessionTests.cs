@@ -221,6 +221,57 @@ public sealed class LootSessionTests
         Assert.Null(loot.PrepareLoot(new PlayerControlState(new WorldPoint(0, 0, 0), 0, 0), ForwardLook()));
     }
 
+    [Theory]
+    [InlineData("encounter-monk", true)]
+    [InlineData("encounter-city-watch-the-haltmeister", false)]
+    public void Enemy_corpse_rolls_its_mobile_map_chance_and_only_a_keyed_enemy_rolls_potion_and_recipe(string actorId, bool keyed)
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        Dictionary<InventoryItemId, ItemDefinition> items = definitions.Items.Values.Concat(definitions.TemplateItems.Values).ToDictionary(
+            item => new InventoryItemId(item.Id.Value),
+            item => new ItemDefinition(ItemDefinitionId.Parse(item.Id.Value), item.IsFungible ? ItemKind.Fungible : ItemKind.Unique, item.MaximumQuantity));
+        using ActorsState actors = ActorsWithNpc(2000, DefeatedMechanics(), new WorldPoint(0f, 0f, 1f));
+        InventoryStore world = new();
+        MechanicsInventoryContainerCoordinator containers = new(world, actors.Entities, items);
+        containers.RegisterOwner(actors.Player.Actor.Entity);
+        using SpatialMovementSystem movement = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
+        DaggerfallActorDefinition actor = definitions.RequireActor(new DaggerfallActorId(actorId));
+        KeyedRandomFake random = KeyedRandomFake.Create(0);
+        DaggerfallItemInstances itemInstances = new();
+        DaggerfallCorpseLootModule loot = new(
+            PerceptionFake.Create().Service, movement, containers, itemInstances, actors.Player.Actor.Entity, actors,
+            new Dictionary<long, DaggerfallActorDefinition> { [2000] = actor },
+            definitions, random.Service, new DaggerfallUniqueItemAllocator(1_000), new ProgressionState(), DaggerfallTuning.Defaults.LootInteraction,
+            CharacterForLoot(definitions));
+
+        loot.Create(new ActorDiedFact(2000, 77, DaggerfallDamageCause.PhysicalAttack, 3, 3d, 2, 3));
+
+        // The Monk (key T, MapChance 1) and the keyless City Watch (MapChance 0) both roll the map.
+        Assert.Equal(keyed, actor.LootTableKey is not null);
+        Assert.Equal(keyed ? 1 : 0, definitions.Mobiles.Mobiles[actor.MobileId!.Value].MapChance);
+        string[] extras = random.Requests.Select(request => request.Key[(request.Key.LastIndexOf(':') + 1)..])
+            .Where(roll => roll.StartsWith("corpse.loot.enemy.", StringComparison.Ordinal)).ToArray();
+        Assert.Equal(keyed
+            ? ["corpse.loot.enemy.map", "corpse.loot.enemy.potion", "corpse.loot.enemy.potion.recipe", "corpse.loot.enemy.potion-recipe", "corpse.loot.enemy.potion-recipe.recipe"]
+            : ["corpse.loot.enemy.map"], extras);
+        if (!keyed)
+        {
+            Assert.False(loot.Corpses[2000].IsRegistered);
+            return;
+        }
+        InventoryView contents = Assert.IsType<InventoryView>(loot.ReadContents(2000));
+        Assert.Contains(contents.UniqueItems, item => item.Definition.Value == "template-287");
+        Assert.Contains(contents.UniqueItems, item => item.Definition.Value == "template-278");
+        InventoryStack potion = Assert.Single(contents.Stacks, stack => stack.Definition.Value == "template-83");
+        Assert.Equal(221871, itemInstances.RequireStack(DaggerfallItemOwner.Corpse(2000), potion.Id).PotionRecipeKey);
+    }
+
     private static StatsComponent DefeatedMechanics()
     {
         Stat maximum = new(100, quantum: 1, rounding: MidpointRounding.ToZero, integerRounding: MidpointRounding.ToZero);
@@ -626,6 +677,14 @@ public sealed class LootSessionTests
         Assert.Equal(5001UL, Assert.Single(savedThief.UniqueItems, item => item.ItemId == "iron-dagger").EntityId);
         Assert.Equal(221871, savedThief.Stacks.Single(stack => stack.StackId == "test.loot.4903").Metadata.PotionRecipeKey);
         Assert.Equal(221871, savedThief.UniqueItems.Single(item => item.EntityId == 5002).Metadata.PotionRecipeKey);
+        // The thief's own death rolled its enemy chances (key T, MapChance 2) on minimum random:
+        // a map, a stacked potion and a recipe sheet, each carried by the save with its recipe.
+        DaggerfallUniqueSave generatedMap = Assert.Single(savedThief.UniqueItems, item => item.ItemId == "template-287");
+        DaggerfallStackSave generatedPotion = Assert.Single(savedThief.Stacks, stack => stack.ItemId == "template-83" && stack.StackId != "test.loot.4903");
+        DaggerfallUniqueSave generatedRecipe = Assert.Single(savedThief.UniqueItems, item => item.ItemId == "template-278" && item.EntityId != 5002);
+        Assert.Null(generatedMap.Metadata.PotionRecipeKey);
+        Assert.Equal(221871, generatedPotion.Metadata.PotionRecipeKey);
+        Assert.Equal(221871, generatedRecipe.Metadata.PotionRecipeKey);
         // The live corpse path now uses retained template definitions, and its material and
         // appearance facts must survive the normal save boundary rather than becoming defaults.
         DaggerfallUniqueSave savedTemplateWeapon = savedThief.UniqueItems.First(item => definitions.RequireItem(new DaggerfallItemId(item.ItemId)).Weapon is not null);
@@ -664,6 +723,12 @@ public sealed class LootSessionTests
             Assert.Equal(savedTemplateWeapon.Metadata.Material, resumed.State.ItemInstances.RequireUnique(restoredTemplateIdentity).Material);
             Assert.Equal(221871, resumed.State.ItemInstances.RequireStack(DaggerfallItemOwner.Corpse(2000), InventoryStackId.Parse("test.loot.4903")).PotionRecipeKey);
             Assert.Equal(221871, resumed.State.ItemInstances.RequireUnique(5002).PotionRecipeKey);
+            Assert.Contains(restoredThief.UniqueItems, item => item.Definition.Value == "template-287"
+                && resumed.State.Actors.Entities.IdentityOf(item.Entity).Value == generatedMap.EntityId);
+            Assert.Equal((generatedPotion.Quantity, 221871), (
+                restoredThief.Stacks.Single(stack => stack.Id.Value == generatedPotion.StackId).Quantity,
+                resumed.State.ItemInstances.RequireStack(DaggerfallItemOwner.Corpse(2000), InventoryStackId.Parse(generatedPotion.StackId)).PotionRecipeKey));
+            Assert.Equal(221871, resumed.State.ItemInstances.RequireUnique(generatedRecipe.EntityId).PotionRecipeKey);
             Assert.False(resumed.Corpses[2006].IsRegistered);
 
             // The next generated unique must not reuse a restored live identity.

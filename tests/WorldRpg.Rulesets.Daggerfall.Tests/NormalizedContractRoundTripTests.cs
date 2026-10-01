@@ -91,6 +91,33 @@ public sealed class NormalizedContractRoundTripTests
         Assert.NotEmpty(definitions.Catalogs.Careers);
     }
 
+    /// <summary>
+    /// The mobile catalog is a builder section, so its loot inputs are joined here directly: the importer's
+    /// builder writes each donor mobile's loot key and map chance from the donor table, and the ruleset's
+    /// read, which corpse loot rolls from, must carry the same values for every mobile.
+    /// </summary>
+    [DonorFact("Assets/Scripts/Utility/EnemyBasics.cs")]
+    public void Mobile_loot_inputs_the_importer_writes_read_back_through_the_ruleset()
+    {
+        string enemyBasics = File.ReadAllText(TestData.Donor("Assets/Scripts/Utility/EnemyBasics.cs"));
+        byte[] authored = File.ReadAllBytes(PayloadPath("daggerfall.base.json"));
+        global::Daggerfall.Import.Arena2.Arena2MobileCatalogPublication publication = global::Daggerfall.Import.Arena2.Arena2MobileCatalogDocument.Build(
+            enemyBasics, Encoding.UTF8.GetString(authored), "donor/EnemyBasics.cs");
+        JsonObject imported = ReadImported();
+        imported["mobiles"] = JsonNode.Parse(publication.Json);
+
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(authored, Encoding.UTF8.GetBytes(imported.ToJsonString(PublishedJson.Section)));
+
+        IReadOnlyList<global::Daggerfall.Import.Arena2.Arena2MobileTableEntry> table = global::Daggerfall.Import.Arena2.Arena2MobileTable.Read(enemyBasics);
+        Assert.Equal(
+            table.Select(entry => (entry.Id, entry.LootTableKey, entry.MapChance)).OrderBy(value => value.Id),
+            definitions.Mobiles.Mobiles.Values.Select(mobile => (mobile.DonorId, mobile.LootTableKey, mobile.MapChance)).OrderBy(value => value.DonorId));
+        // The donor's own values: the Lich's 4, the keyed Monk's 1 and the keyless City Watch's 0.
+        Assert.Equal(4, definitions.Mobiles.Mobiles[32].MapChance);
+        Assert.Equal(("T", 1), (definitions.Mobiles.Mobiles[140].LootTableKey, definitions.Mobiles.Mobiles[140].MapChance));
+        Assert.Equal(((string?)null, 0), (definitions.Mobiles.Mobiles[146].LootTableKey, definitions.Mobiles.Mobiles[146].MapChance));
+    }
+
     [Fact]
     public void The_site_reader_admits_exactly_the_media_kinds_the_importer_publishes()
     {

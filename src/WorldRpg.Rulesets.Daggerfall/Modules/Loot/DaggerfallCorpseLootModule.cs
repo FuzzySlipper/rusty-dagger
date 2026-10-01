@@ -153,17 +153,21 @@ internal sealed class DaggerfallCorpseLootModule
         // A corpse is a distinct container, even when the actor already has a quiver.
         try
         {
-            DaggerfallLootPopulationResult? generated = actor.LootTableKey is string tableKey
+            // An actor with a mobile is the donor's EnemyEntity, which rolls its mobile's map chance
+            // whether or not the mobile names a loot table; potion and recipe chances follow the key.
+            int? mapChance = actor.MobileId is int mobileId ? RequireMobile(actor, mobileId).MapChance : null;
+            DaggerfallLootPopulationResult? generated = actor.LootTableKey is not null || mapChance is not null
                 ? _population.Generate(new DaggerfallLootPopulationRequest(
                     new DaggerfallLootPopulationId("corpse", checked((ulong)fact.ActorId)),
                     DaggerfallItemOwner.Corpse(fact.ActorId),
-                    tableKey,
+                    actor.LootTableKey,
                     _progression.Level,
                     fact.OriginatingGeneration,
                     fact.OriginatingSequence,
                     _character.Identity.RaceId,
                     _character.Identity.Gender == DaggerfallCharacterGender.Male ? "male" : "female",
-                    _character.Identity.Gender == DaggerfallCharacterGender.Male ? "MensClothing" : "WomensClothing"))
+                    _character.Identity.Gender == DaggerfallCharacterGender.Male ? "MensClothing" : "WomensClothing",
+                    EnemyMapChance: mapChance))
                 : null;
             // Donor RemoveLootContainer disables interaction but preserves the
             // corpse marker. Even an empty generated corpse is targetable once so
@@ -356,6 +360,13 @@ internal sealed class DaggerfallCorpseLootModule
     }
 
     private static readonly EntityTypeId CorpseType = new("daggerfall.corpse");
+
+    // Content admission already rejects an actor naming a mobile the catalog lacks; reaching this
+    // throw means the corpse would silently lose its donor map chance.
+    private DaggerfallMobileDefinition RequireMobile(DaggerfallActorDefinition actor, int mobileId) =>
+        _catalog.Mobiles.Mobiles.TryGetValue(mobileId, out DaggerfallMobileDefinition? mobile)
+            ? mobile
+            : throw new InvalidOperationException($"Actor '{actor.Id.Value}' names mobile {mobileId}, which the mobile catalog does not carry, so its corpse map chance is unknown.");
 
     /// <summary>
     /// Releases the live Engine owner for a site unload while retaining the

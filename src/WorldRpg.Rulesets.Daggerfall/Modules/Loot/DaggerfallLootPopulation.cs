@@ -46,13 +46,20 @@ internal sealed class DaggerfallLootPopulation
         DaggerfallDungeonLootResult? dungeon = request.DungeonType is int dungeonType
             ? DaggerfallLootPolicy.GenerateDungeon(_catalog, dungeonType, request.PlayerLevel, draw, request.ClothingGroup)
             : null;
-        DaggerfallLootResult loot = dungeon?.Loot ?? DaggerfallLootPolicy.Generate(
-            _catalog, request.TableKey, request.PlayerLevel, draw, request.ClothingGroup);
+        // EnemyEntity's order: an empty loot key generates no table items, then every enemy's extra
+        // chances follow the table drops.
+        DaggerfallLootResult? loot = dungeon?.Loot ?? (request.TableKey is string tableKey
+            ? DaggerfallLootPolicy.Generate(_catalog, tableKey, request.PlayerLevel, draw, request.ClothingGroup)
+            : null);
+        DaggerfallEnemyLootExtrasResult? enemy = request.EnemyMapChance is int mapChance
+            ? DaggerfallLootPolicy.GenerateEnemyExtras(mapChance, request.TableKey is not null, draw)
+            : null;
         List<GeneratedLootSeed> seeds = [];
-        foreach ((DaggerfallLootDrop drop, int ordinal) in loot.Drops.Select((drop, ordinal) => (drop, ordinal)))
+        IEnumerable<DaggerfallLootDrop> drops = (loot?.Drops ?? []).Concat(enemy?.Drops ?? []);
+        foreach ((DaggerfallLootDrop drop, int ordinal) in drops.Select((drop, ordinal) => (drop, ordinal)))
             AddSeed(request, drop, ordinal, seeds);
 
-        return new(request.Id, request.Owner, dungeon?.TableKey ?? request.TableKey, loot, seeds);
+        return new(request.Id, request.Owner, dungeon?.TableKey ?? request.TableKey, loot, enemy?.Extras ?? [], seeds);
     }
 
     /// <summary>Registers the product meaning of seeds after their source created the Engine container.</summary>
@@ -130,24 +137,31 @@ internal sealed record DaggerfallLootPopulationId(string Scope, ulong Value)
     }
 }
 
-/// <summary>Inputs shared by corpse, world-treasure, and encounter population callers.</summary>
+/// <summary>
+/// Inputs shared by corpse, world-treasure, and encounter population callers. A corpse of an enemy
+/// mobile states that mobile's map chance, which also admits a keyless enemy with no table.
+/// </summary>
 internal sealed record DaggerfallLootPopulationRequest(
     DaggerfallLootPopulationId Id,
     DaggerfallItemOwner Owner,
-    string TableKey,
+    string? TableKey,
     int PlayerLevel,
     ulong Generation,
     ulong Sequence,
     string Race,
     string Gender,
     string ClothingGroup,
-    int? DungeonType = null)
+    int? DungeonType = null,
+    int? EnemyMapChance = null)
 {
     internal DaggerfallLootPopulationRequest Validate()
     {
         (Id ?? throw new ArgumentNullException(nameof(Id))).Validate();
         (Owner ?? throw new ArgumentNullException(nameof(Owner))).Validate();
-        ArgumentException.ThrowIfNullOrWhiteSpace(TableKey);
+        if (TableKey is null ? EnemyMapChance is null : string.IsNullOrWhiteSpace(TableKey))
+            throw new ArgumentException("Loot population needs a table key unless it is an enemy corpse's extra chances alone.", nameof(TableKey));
+        if (EnemyMapChance is not null && (Id.Scope != "corpse" || DungeonType is not null || EnemyMapChance is < 0 or > 100))
+            throw new ArgumentException("Enemy map chance is a percentage applied only to a corpse population.", nameof(EnemyMapChance));
         ArgumentException.ThrowIfNullOrWhiteSpace(Race);
         if (Owner.Scope != Id.Scope || Owner.Id != checked((long)Id.Value)
             || PlayerLevel < 1 || Generation == 0 || Sequence == 0 || DungeonType is < 0 or > 18
@@ -159,12 +173,16 @@ internal sealed record DaggerfallLootPopulationRequest(
     }
 }
 
-/// <summary>One source's retained inventory seeds and the table receipt that selected them.</summary>
+/// <summary>
+/// One source's retained inventory seeds, the table receipt that selected them (none for a keyless
+/// enemy) and any enemy map/potion/recipe rolls.
+/// </summary>
 internal sealed record DaggerfallLootPopulationResult(
     DaggerfallLootPopulationId Id,
     DaggerfallItemOwner Owner,
-    string TableKey,
-    DaggerfallLootResult Loot,
+    string? TableKey,
+    DaggerfallLootResult? Loot,
+    IReadOnlyList<DaggerfallLootExtraRoll> EnemyExtras,
     IReadOnlyList<GeneratedLootSeed> Generated)
 {
     internal IReadOnlyList<InventoryContainerSeed> Seeds => Generated.Select(value => value.Seed).ToArray();
