@@ -24,6 +24,9 @@ internal static class LocationsCommand
             Console.WriteLine($"  {gap.Count()} regions have no {gap.Key}");
         }
 
+        foreach (DaggerfallLocationMap location in locations.Locations.Where(location => location.Exterior?.MissingCityBuildings.Count > 0))
+            Console.WriteLine($"  warning: location {location.Region}/{location.Index}: {string.Join("; ", location.Exterior!.MissingCityBuildings)}");
+
         if (!args.Switch("--update")) return Options.ReportOnly("these locations");
         PayloadFiles.WriteSection(args["--pack"], "locations", locations);
         return 0;

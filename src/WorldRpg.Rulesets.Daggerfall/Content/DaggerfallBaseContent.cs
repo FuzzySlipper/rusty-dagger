@@ -557,7 +557,30 @@ internal static class DaggerfallBaseContent
         if (width <= 0 || height <= 0 || clearance is not 2 and not 3 || maxX < minX || maxY < minY)
             diagnostics.Add($"Published location {region}/{index} has invalid normalized exterior terrain bounds.");
         return new DaggerfallSiteExterior(mapPixelX, mapPixelY, width, height, tileOriginX, tileOriginY,
-            custom, clearance, minX, maxX, minY, maxY);
+            custom, clearance, minX, maxX, minY, maxY)
+        {
+            Buildings = ReadSiteBuildings(exterior, region, index, width, height, diagnostics),
+        };
+    }
+
+    private static IReadOnlyDictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource> ReadSiteBuildings(JsonElement exterior, int region, int index,
+        int width, int height, DaggerfallContentDiagnostics diagnostics)
+    {
+        List<DaggerfallSiteBuildingSource> result = [];
+        HashSet<DaggerfallSiteBuildingId> identities = [];
+        foreach (JsonElement value in Array(exterior, "buildings", diagnostics))
+        {
+            DaggerfallSiteBuildingId id = new(Integer(value, "blockX", diagnostics), Integer(value, "blockY", diagnostics), Integer(value, "buildingIndex", diagnostics));
+            DaggerfallRmbBuildingSource source = new(new(Text(value, "sourceKey", diagnostics), id.Index),
+                Integer(value, "buildingType", diagnostics), Integer(value, "factionId", diagnostics), Integer(value, "nameSeed", diagnostics));
+            int quality = Integer(value, "quality", diagnostics);
+            if (id.BlockX < 0 || id.BlockX >= width || id.BlockY < 0 || id.BlockY >= height || id.Index is < 0 or > 255
+                || source.BuildingType is < 0 or > 255 || source.FactionId is < 0 or > 65535 || source.NameSeed is < 0 or > 65535 || quality is < 0 or > 20)
+                diagnostics.Add($"Location {region}/{index} building '{id}' carries invalid placement or policy fields.");
+            if (!identities.Add(id)) diagnostics.Add($"Location {region}/{index} carries building '{id}' twice.");
+            result.Add(new(id, source, quality));
+        }
+        return new ReadOnlyDictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource>(result.DistinctBy(building => building.Id).ToDictionary(building => building.Id));
     }
 
     /// <summary>

@@ -30,6 +30,7 @@ internal sealed class DaggerfallSiteContext
     private readonly IReadOnlyList<DaggerfallSiteRecord> _ordered;
     private readonly HashSet<DaggerfallSiteId> _discovered = [];
     private DaggerfallBuildingNameService? _buildingNames;
+    private DaggerfallFactionsSet? _buildingFactions;
     private DaggerfallSiteReturnPose? _returnPose;
 
     internal DaggerfallSiteContext(DaggerfallLocationSet locations)
@@ -137,6 +138,7 @@ internal sealed class DaggerfallSiteContext
             throw new InvalidOperationException("Classic building names are already admitted for this site context.");
         }
 
+        _buildingFactions = definitions.Factions;
         _buildingNames = new DaggerfallBuildingNameService(random, definitions, blocks, this);
     }
 
@@ -148,6 +150,28 @@ internal sealed class DaggerfallSiteContext
     internal DaggerfallBuildingNameResult ResolveBuildingName(DaggerfallSiteId site, DaggerfallRmbBuildingId building) =>
         _buildingNames?.Resolve(site, building)
         ?? DaggerfallBuildingNameResult.Missing("Classic building-name content has not been admitted for this site context.");
+
+    internal DaggerfallSiteBuildingSource RequireBuildingSource(DaggerfallSiteId site, DaggerfallSiteBuildingId building)
+    {
+        DaggerfallSiteRecord record = Require(site);
+        return record.Exterior is { } exterior && exterior.Buildings.TryGetValue(building, out var source) ? source
+            : throw new InvalidOperationException($"The selected content carries no building '{building}' at site '{site}'.");
+    }
+
+    internal IReadOnlyList<DaggerfallSiteBuildingSource> BuildingsAt(DaggerfallSiteId site) =>
+        Require(site).Exterior is { } exterior ? [.. exterior.Buildings.Values] : [];
+
+    internal DaggerfallSiteBuildingRecord RequireBuilding(DaggerfallSiteId site, DaggerfallSiteBuildingId building)
+    {
+        DaggerfallSiteBuildingSource source = RequireBuildingSource(site, building);
+        DaggerfallBuildingNameResult name = _buildingNames?.Resolve(site, source.Source)
+            ?? DaggerfallBuildingNameResult.Missing("Classic building-name content has not been admitted.");
+        if (!name.IsResolved) throw new InvalidOperationException($"Building '{building}' at site '{site}': {name.Unresolved}");
+        DaggerfallFactionDefinition? faction = null;
+        if (source.Source.FactionId != 0 && (_buildingFactions is null || !_buildingFactions.Factions.TryGetValue(source.Source.FactionId, out faction)))
+            throw new InvalidOperationException($"Building '{building}' at site '{site}' names unpublished faction {source.Source.FactionId}.");
+        return new(site, source, name.Name, faction);
+    }
 
     /// <summary>Resolves a site's record, naming the identity the bundle does not carry.</summary>
     internal DaggerfallSiteRecord Require(DaggerfallSiteId id) =>
@@ -306,3 +330,13 @@ internal sealed record DaggerfallSiteContextCheckpoint(
     DaggerfallSiteId? ReturnAnchor,
     DaggerfallSiteReturnPose? ReturnPose,
     DaggerfallSiteId[] Discovered);
+
+/// <summary>One resolved immutable building, shared by location consumers without loading its appearance.</summary>
+internal sealed record DaggerfallSiteBuildingRecord(DaggerfallSiteId Site, DaggerfallSiteBuildingSource Source,
+    string Name, DaggerfallFactionDefinition? Faction)
+{
+    internal DaggerfallSiteBuildingId Id => Source.Id;
+    internal int BuildingType => Source.Source.BuildingType;
+    internal int FactionId => Source.Source.FactionId;
+    internal int Quality => Source.Quality;
+}

@@ -59,6 +59,14 @@ internal sealed class DaggerfallBuildingNameService(
             return DaggerfallBuildingNameResult.Missing($"Building name source '{buildingId}' is not a published RMB building.");
         }
 
+        return Resolve(siteId, building);
+    }
+
+    internal DaggerfallBuildingNameResult Resolve(DaggerfallSiteId siteId, DaggerfallRmbBuildingSource building)
+    {
+        if (!_sites.TryFind(siteId, out DaggerfallSiteRecord? site))
+            return DaggerfallBuildingNameResult.Missing($"Building name site '{siteId}' is not published.");
+        DaggerfallRmbBuildingId buildingId = building.Id;
         // The donor returns this localized value before it draws from DFRandom. Preserve that ordering:
         // even a supplied RNG must observe no request for a house-for-sale name.
         if (building.BuildingType == HouseForSale)

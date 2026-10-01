@@ -37,7 +37,14 @@ public sealed record MapsExteriorLayout(
     byte Width,
     byte Height,
     char Letter1,
-    IReadOnlyList<MapsExteriorBlock> Blocks);
+    IReadOnlyList<MapsExteriorBlock> Blocks)
+{
+    /// <summary>The source city building pool, consumed in order by matching RMB type.</summary>
+    public IReadOnlyList<MapsExteriorBuilding> Buildings { get; init; } = [];
+}
+
+/// <summary>The MAPPITEM values that specialize a named RMB building for its location.</summary>
+public sealed record MapsExteriorBuilding(int NameSeed, int FactionId, int BuildingType, int Quality);
 
 /// <summary>Decoder for region-linked MAPS.BSA source records.</summary>
 /// <summary>What happened when one region table was read.</summary>
@@ -588,7 +595,15 @@ public static class MapsDecoder
 
         int buildingCount = reader.ReadUInt16();
         reader.ReadBytes(5);
-        reader.ReadBytes(CheckedMultiply(buildingCount, 26, source, "MAPPITEM building records"));
+        List<MapsExteriorBuilding> buildings = new(buildingCount);
+        for (int index = 0; index < buildingCount; index++)
+        {
+            int nameSeed = reader.ReadUInt16();
+            reader.ReadBytes(16); // service limit and unknown fields
+            int factionId = reader.ReadUInt16();
+            reader.ReadBytes(4); // sector and source location id
+            buildings.Add(new(nameSeed, factionId, reader.ReadByte(), reader.ReadByte()));
+        }
 
         _ = reader.ReadNullTerminatedAscii(32); // another exterior name; the MAPNAMES identity is authoritative here.
         _ = reader.ReadInt32(); // duplicate map id in the exterior payload
@@ -614,7 +629,7 @@ public static class MapsDecoder
                 checked((byte)(index / width))));
         }
 
-        return new MapsExteriorLayout(region, locationIndex, locationName, mapId, longitude, latitude, locationId, width, height, letter1, blocks);
+        return new MapsExteriorLayout(region, locationIndex, locationName, mapId, longitude, latitude, locationId, width, height, letter1, blocks) { Buildings = buildings };
     }
 
     private static CheckedLittleEndianReader ExteriorRecordReader(ReadOnlyMemory<byte> data, string source, int locationCount, int locationIndex)

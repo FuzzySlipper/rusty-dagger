@@ -119,7 +119,7 @@ internal sealed partial class DaggerfallSession
             return new(false, Message: "You cannot rest without an admitted location record.");
         if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Interior)
         {
-            DaggerfallInteriorBuilding? building = _sites.Profiles?.Require(_activeProfileKey).InteriorBuilding;
+            DaggerfallInteriorBuilding? building = CurrentInteriorBuilding();
             if (FightersGuildRestAllowed(building, State.GuildMembership, _activeProfileKey.Site.Region,
                 checked((int)_time.Calendar.DayNumber)))
                 return new(true);

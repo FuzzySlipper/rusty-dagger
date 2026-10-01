@@ -87,6 +87,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
                 RequireSingle(selected, roles, BaseRole).Payload, RequireSingle(selected, roles, ImportedRole).Payload);
             DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(RequireSingle(selected, roles, BlocksRole).Payload);
+            blocks.AdmitLocations(definitions.Locations);
             // The composition keeps bundle order with each pack's dependencies ahead of it, so the first
             // site pack is the first site the bundle selects: that site is where a new game starts.
             DaggerfallSiteProfile[] sites = [.. roles[SiteRole].Select(pack => DaggerfallSiteContent.Read(selected.Content, pack.Payload, definitions))];

@@ -179,7 +179,16 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
     /// </summary>
     private bool InHolyPlace() => IsHolyPlace(_activeProfileKey.Kind,
         _activeProfileKey.Kind == DaggerfallWorldProfileKind.Interior
-            ? _sites.Profiles?.Require(_activeProfileKey).InteriorBuilding : null);
+            ? CurrentInteriorBuilding() : null);
+
+    private DaggerfallInteriorBuilding? CurrentInteriorBuilding()
+    {
+        DaggerfallInteriorBuilding? placement = _sites.Profiles?.Require(_activeProfileKey).InteriorBuilding;
+        if (placement is null) return null;
+        DaggerfallSiteBuildingSource building = _site.RequireBuildingSource(_activeProfileKey.Site,
+            new(placement.BlockX, placement.BlockY, placement.Building.Index));
+        return placement with { BuildingType = building.Source.BuildingType, FactionId = building.Source.FactionId };
+    }
 
     internal static bool IsHolyPlace(DaggerfallWorldProfileKind kind, DaggerfallInteriorBuilding? building) =>
         kind == DaggerfallWorldProfileKind.Interior
