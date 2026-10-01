@@ -205,8 +205,10 @@ internal sealed partial class DaggerfallSession
             _vitality = new DaggerfallVitalityConsequences(combatRules);
             // One catalog answers every effect family this ruleset compiles, so a saved effect names the
             // definition that has to interpret it rather than the family that happened to start it.
-            DaggerfallEffectLifecycle effects = new(actors, composition.Effects ?? new DaggerfallEffectCatalog(
+            DaggerfallEffectLifecycle effects = null!;
+            effects = new(actors, composition.Effects ?? new DaggerfallEffectCatalog(
             [
+                .. DaggerfallAlterationEffects.Definitions(effect => effects.Cancel(effect.Context.Instance)),
                 .. DaggerfallDiseasePolicy.Definitions(
                     _random,
                     () => _time.Calendar.DayNumber,
