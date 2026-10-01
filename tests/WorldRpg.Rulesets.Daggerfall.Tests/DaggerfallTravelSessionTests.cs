@@ -170,6 +170,31 @@ public sealed class DaggerfallTravelSessionTests
     }
 
     [Fact]
+    public void Arrival_adjustment_effect_observes_destination_and_interruption_keeps_arrived_location()
+    {
+        Fixture? current = null;
+        using Fixture fixture = current = new(round: effect =>
+        {
+            if (current!.Session.Site.Active == current.Destination.Site)
+                effect.Target.Get<StatsComponent>().GetTrack(TrackId.Parse("health")).SetCurrent(0);
+        });
+        fixture.AddGold(1000);
+        var quote = fixture.Preview(inn: true, cautious: true);
+        long predicted = (fixture.Now + quote.TravelSeconds) % DaggerfallCalendar.SecondsPerDay;
+        fixture.Session.AdvanceElapsedTime((18 * 3600 - predicted + DaggerfallCalendar.SecondsPerDay) % DaggerfallCalendar.SecondsPerDay);
+        fixture.StartEffect(10000);
+        fixture.Accept(quote);
+        var result = fixture.Session.State.Travel.LastResult!;
+        Assert.Equal(DaggerfallTravelOutcome.Defeated, result.Outcome);
+        Assert.Equal(fixture.Destination.Site!.Value, result.ActualSite);
+        Assert.Equal(quote.Destination.MapPixel, result.ActualPixel);
+        Assert.InRange(result.ElapsedSeconds - quote.TravelSeconds, 1, 60);
+        using var restored = fixture.Restore(fixture.Session.CaptureSave());
+        Assert.Equal(fixture.Destination.Site, restored.Site.Active);
+        Assert.Equal(result, restored.State.Travel.LastResult);
+    }
+
+    [Fact]
     public void Capture_during_effect_round_terminates_saved_attempt_with_paid_amount_and_actual_time()
     {
         RulesetSavePayload? captured = null;
@@ -343,8 +368,8 @@ public sealed class DaggerfallTravelSessionTests
             Assert.True(Session.State.Currency.TryCreditAccount(amount + amount / 100));
             Assert.True(Session.State.Currency.WithdrawLetter(amount));
         }
-        internal void StartEffect() => Session.State.Effects.Start(new("travel-test-instance", "travel-test", "spell", null,
-            DaggerfallActorIdentity.PlayerEntityId, "classic", "magic", null, 1, 4, JsonDocument.Parse("{}").RootElement.Clone()));
+        internal void StartEffect(uint rounds = 4) => Session.State.Effects.Start(new("travel-test-instance", "travel-test", "spell", null,
+            DaggerfallActorIdentity.PlayerEntityId, "classic", "magic", null, 1, rounds, JsonDocument.Parse("{}").RootElement.Clone()));
         public void Dispose() => Session.Dispose();
     }
 }
