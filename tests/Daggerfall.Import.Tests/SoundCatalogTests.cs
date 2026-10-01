@@ -102,8 +102,10 @@ public sealed class SoundCatalogTests
         // The admitted set is the publication's own audio manifests, so these two records of the same
         // fact cannot drift: an entry the catalog calls admitted is one the publication emitted.
         DaggerfallSoundClip[] admitted = [.. catalog.Clips.Where(clip => clip.Disposition == DaggerfallSoundClipDisposition.Admitted)];
-        Assert.Equal(7, admitted.Length);
-        Assert.Equal([106, 108, 109, 110, 111, 112, 405], admitted.Select(clip => clip.Ordinal));
+        // Retain the original melee/death closure as further concrete consumers are admitted.
+        // The complete closure below follows the publication's current audio manifests.
+        foreach (int ordinal in new[] { 106, 108, 109, 110, 111, 112, 405 })
+            Assert.Contains(admitted, clip => clip.Ordinal == ordinal);
         Assert.Equal(
             publication.Audio.Select(audio => (audio.SourceRecordOrdinal, audio.MediaId)).OrderBy(entry => entry.SourceRecordOrdinal),
             admitted.Select(clip => (clip.Ordinal, clip.MediaId!)).OrderBy(entry => entry.Item1));
@@ -112,7 +114,8 @@ public sealed class SoundCatalogTests
         // the binding is also pinned against this test's own literals: a consistent republish that
         // swapped two identities would move the table and the artifacts together and stay green here
         // and everywhere else.
-        Assert.Equal(Admissions().Select(admission => (admission.Ordinal, admission.MediaId)), admitted.Select(clip => (clip.Ordinal, clip.MediaId!)));
+        foreach (DaggerfallSoundAdmission admission in Admissions())
+            Assert.Equal(admission.MediaId, Assert.Single(admitted, clip => clip.Ordinal == admission.Ordinal).MediaId);
 
         foreach (DaggerfallSoundClip clip in admitted)
         {
@@ -199,7 +202,7 @@ public sealed class SoundCatalogTests
         Assert.Contains("no sample bytes", unsupported.Message, StringComparison.Ordinal);
     }
 
-    /// <summary>The seven clips the product publishes today, stated here so the identity test does not read them off the producer.</summary>
+    /// <summary>The original melee/death closure, stated independently of the producer's growing reference set.</summary>
     private static IReadOnlyList<DaggerfallSoundAdmission> Admissions() =>
     [
         new(106, "audio.melee.dagger.swing"),
