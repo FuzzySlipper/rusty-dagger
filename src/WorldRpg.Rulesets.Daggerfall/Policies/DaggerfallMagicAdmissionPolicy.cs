@@ -153,13 +153,15 @@ internal sealed record DaggerfallMagicActiveResistance(DaggerfallMagicResistance
 internal sealed record DaggerfallMagicTargetProfile(
     int LiveWillpower,
     DaggerfallMagicCareerTolerances CareerTolerances,
-    DaggerfallMagicRaceToleranceFlags? PlayerRaceTolerances,
+    DaggerfallRaceDefinition? PlayerRace,
     int BiographyMagicResistance,
     int BiographyPoisonResistance,
     int BiographyDiseaseResistance,
     DaggerfallMagicResistanceModifiers ResistanceModifiers,
     DaggerfallMagicActiveResistance[] ActiveResistances)
 {
+    internal DaggerfallMagicRaceToleranceFlags? PlayerRaceTolerances => PlayerRace?.MagicTolerances;
+
     internal DaggerfallMagicTargetProfile Validate()
     {
         ArgumentOutOfRangeException.ThrowIfNegative(LiveWillpower);

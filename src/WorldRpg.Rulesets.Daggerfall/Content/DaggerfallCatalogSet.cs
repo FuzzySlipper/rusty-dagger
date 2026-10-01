@@ -11,7 +11,20 @@ internal sealed record DaggerfallCatalogCitation(string Path);
 internal sealed record DaggerfallCatalogKey(string Id, int Index, DaggerfallCatalogCitation Source);
 
 /// <summary>A playable race identity with the donor's own race value.</summary>
-internal sealed record DaggerfallRaceDefinition(string Id, int DonorRaceId, DaggerfallCatalogCitation Source);
+internal sealed record DaggerfallRaceDefinition(string Id, int DonorRaceId, DaggerfallCatalogCitation Source)
+{
+    internal int ResistanceFlags { get; init; }
+    internal int ImmunityFlags { get; init; }
+    internal int LowToleranceFlags { get; init; }
+    internal int CriticalWeaknessFlags { get; init; }
+    internal DaggerfallDiseaseCareerTolerance Tolerance(int effectFlag) => DaggerfallCareerTolerances.Tolerance(
+        ResistanceFlags, ImmunityFlags, LowToleranceFlags, CriticalWeaknessFlags, effectFlag);
+    internal Policies.DaggerfallMagicRaceToleranceFlags MagicTolerances => new(
+        (Policies.DaggerfallMagicEffectFlags)ResistanceFlags,
+        (Policies.DaggerfallMagicEffectFlags)(ImmunityFlags & ~ResistanceFlags),
+        (Policies.DaggerfallMagicEffectFlags)(LowToleranceFlags & ~(ResistanceFlags | ImmunityFlags)),
+        (Policies.DaggerfallMagicEffectFlags)(CriticalWeaknessFlags & ~(ResistanceFlags | ImmunityFlags | LowToleranceFlags)));
+}
 
 /// <summary>
 /// One decoded career: the classic record's identity, trained skills, and authored initial

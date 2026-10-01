@@ -67,7 +67,7 @@ public sealed class DaggerfallCatalogTests
         Assert.Equal(40, record.MajorSkill1);
 
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => DaggerfallCatalogBuilder.Build(
-            ReadInventory(), VocabularyAttributes(), VocabularySkills(), [("CLASS00.CFG", bytes)], EnemyIds(), ItemIds()));
+            ReadInventory(), VocabularyAttributes(), VocabularySkills(), [("CLASS00.CFG", bytes)], EnemyIds(), ItemIds(), RaceTemplate()));
         Assert.Contains("CLASS00.CFG", error.Message, StringComparison.Ordinal);
         Assert.Contains("40", error.Message, StringComparison.Ordinal);
     }
@@ -128,7 +128,7 @@ public sealed class DaggerfallCatalogTests
         carrier[18] = ClassCfgDecoder.NoSkillIndex;
 
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => DaggerfallCatalogBuilder.Build(
-            ReadInventory(), VocabularyAttributes(), VocabularySkills(), [("CLASS00.CFG", carrier)], EnemyIds(), ItemIds()));
+            ReadInventory(), VocabularyAttributes(), VocabularySkills(), [("CLASS00.CFG", carrier)], EnemyIds(), ItemIds(), RaceTemplate()));
 
         Assert.Contains("class00", error.Message, StringComparison.Ordinal);
         Assert.Contains("primary", error.Message, StringComparison.Ordinal);
@@ -157,7 +157,7 @@ public sealed class DaggerfallCatalogTests
         // A suffix match would have cited SS00.CFG as the CLASS00 carrier, publishing
         // provenance the inventory does not support.
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => DaggerfallCatalogBuilder.Build(
-            ReadInventory(), VocabularyAttributes(), VocabularySkills(), [("SS00.CFG", ReadClass("CLASS00.CFG"))], EnemyIds(), ItemIds()));
+            ReadInventory(), VocabularyAttributes(), VocabularySkills(), [("SS00.CFG", ReadClass("CLASS00.CFG"))], EnemyIds(), ItemIds(), RaceTemplate()));
 
         Assert.Contains("SS00.CFG", error.Message, StringComparison.Ordinal);
     }
@@ -175,7 +175,7 @@ public sealed class DaggerfallCatalogTests
         Assert.Contains("empty catalog", error.Message, StringComparison.Ordinal);
 
         InvalidOperationException builderError = Assert.Throws<InvalidOperationException>(() => DaggerfallCatalogBuilder.Build(
-            ReadInventory(), VocabularyAttributes(), VocabularySkills(), [], EnemyIds(), ItemIds()));
+            ReadInventory(), VocabularyAttributes(), VocabularySkills(), [], EnemyIds(), ItemIds(), RaceTemplate()));
         Assert.Contains("empty catalog", builderError.Message, StringComparison.Ordinal);
     }
 
@@ -213,7 +213,7 @@ public sealed class DaggerfallCatalogTests
         IReadOnlyList<SourceInventoryRow> inventory = [.. ReadInventory().Where(row => row.Id != "CNT-010.file.CLASS18.CFG")];
 
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => DaggerfallCatalogBuilder.Build(
-            inventory, VocabularyAttributes(), VocabularySkills(), ReadCareers(), EnemyIds(), ItemIds()));
+            inventory, VocabularyAttributes(), VocabularySkills(), ReadCareers(), EnemyIds(), ItemIds(), RaceTemplate()));
 
         Assert.Contains("CLASS18.CFG", error.Message, StringComparison.Ordinal);
     }
@@ -356,7 +356,9 @@ public sealed class DaggerfallCatalogTests
     }
 
     private static DaggerfallCatalogs BuildFromRepository() => DaggerfallCatalogBuilder.Build(
-        ReadInventory(), VocabularyAttributes(), VocabularySkills(), ReadCareers(), EnemyIds(), ItemIds());
+        ReadInventory(), VocabularyAttributes(), VocabularySkills(), ReadCareers(), EnemyIds(), ItemIds(), RaceTemplate());
+
+    private static string RaceTemplate() => File.ReadAllText(TestData.Donor("Assets/Scripts/Game/Entities/RaceTemplate.cs"));
 
     private static IReadOnlyList<SourceInventoryRow> ReadInventory() =>
         SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));

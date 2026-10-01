@@ -681,7 +681,7 @@ internal static class DaggerfallBaseContent
         foreach (DaggerfallCatalogKey key in definitions.Catalogs.Attributes) Add("catalog-attribute", key.Id, key.Index, key.Source.Path);
         foreach (DaggerfallCatalogKey key in definitions.Catalogs.Skills) Add("catalog-skill", key.Id, key.Index, key.Source.Path);
         foreach (DaggerfallCatalogKey key in definitions.Catalogs.Resistances) Add("catalog-resistance", key.Id, key.Index, key.Source.Path);
-        foreach (DaggerfallRaceDefinition race in definitions.Catalogs.Races.OrderBy(race => race.Id, StringComparer.Ordinal)) Add("catalog-race", race.Id, race.DonorRaceId, race.Source.Path);
+        foreach (DaggerfallRaceDefinition race in definitions.Catalogs.Races.OrderBy(race => race.Id, StringComparer.Ordinal)) Add("catalog-race", race.Id, race.DonorRaceId, race.ResistanceFlags, race.ImmunityFlags, race.LowToleranceFlags, race.CriticalWeaknessFlags, race.Source.Path);
         foreach (DaggerfallCareerDefinition career in definitions.Catalogs.Careers.OrderBy(career => career.Id, StringComparer.Ordinal))
         {
             Add("catalog-career", career.Id, career.Name, string.Join(',', career.PrimarySkills), string.Join(',', career.MajorSkills), string.Join(',', career.MinorSkills), string.Join(',', career.Attributes), string.Join(',', career.AttributeValues), career.HitPointsPerLevel, career.SpellPointMultiplierMilli, FingerprintField(career.AdvancementMultiplier), string.Join(',', career.ResistanceElements), string.Join(',', career.ImmunityElements), string.Join(',', career.FlagBytes.Select(flag => $"{flag.Name}={flag.Value}")), string.Join(',', career.ForbiddenEquipment), career.Source.Path);
@@ -2995,7 +2995,13 @@ internal static class DaggerfallBaseContent
             DaggerfallRaceDefinition definition = new(
                 Text(race, "id", diagnostics),
                 Integer(race, "donorRaceId", diagnostics),
-                ReadCitation(race, sources, diagnostics));
+                ReadCitation(race, sources, diagnostics))
+            {
+                ResistanceFlags = Integer(race, "resistanceFlags", diagnostics), ImmunityFlags = Integer(race, "immunityFlags", diagnostics),
+                LowToleranceFlags = Integer(race, "lowToleranceFlags", diagnostics), CriticalWeaknessFlags = Integer(race, "criticalWeaknessFlags", diagnostics),
+            };
+            if (((definition.ResistanceFlags | definition.ImmunityFlags | definition.LowToleranceFlags | definition.CriticalWeaknessFlags) & ~127) != 0)
+                diagnostics.Add($"Race '{definition.Id}' carries unknown effect flag bits.");
             if (definition.DonorRaceId <= 0)
             {
                 diagnostics.Add($"Race '{definition.Id}' must carry the donor's positive race value.");

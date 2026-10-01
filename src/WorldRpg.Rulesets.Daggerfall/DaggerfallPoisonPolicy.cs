@@ -88,7 +88,8 @@ internal sealed record DaggerfallPoisonExposure(
     int Willpower,
     DaggerfallDiseaseCareerTolerance Tolerance = DaggerfallDiseaseCareerTolerance.Normal,
     int BiographyModifier = 0,
-    bool BypassResistance = false);
+    bool BypassResistance = false,
+    DaggerfallDiseaseCareerTolerance RaceTolerance = DaggerfallDiseaseCareerTolerance.Normal);
 
 /// <summary>
 /// FORM-06's poison admission, as the donor's <c>FormulaHelper.InflictPoison</c> orders it: a target
@@ -163,7 +164,7 @@ internal static class DaggerfallPoisonPolicy
         if (exposure.TargetLevel == 1) return DaggerfallPoisonAdmission.Immune;
         if (exposure.BypassResistance) return DaggerfallPoisonAdmission.Admitted;
 
-        int chance = SavingThrowChance(exposure.Willpower, exposure.Tolerance, exposure.BiographyModifier);
+        int chance = SavingThrowChance(exposure.Willpower, exposure.Tolerance, exposure.BiographyModifier, exposure.RaceTolerance);
         return chance == 100 ? DaggerfallPoisonAdmission.Immune : DaggerfallPoisonAdmission.Admitted;
     }
 
@@ -178,7 +179,7 @@ internal static class DaggerfallPoisonPolicy
         DaggerfallPoisonAdmission decided = AdmitBeforeThrow(exposure);
         if (decided != DaggerfallPoisonAdmission.Admitted || exposure.BypassResistance)
             return decided;
-        int chance = SavingThrowChance(exposure.Willpower, exposure.Tolerance, exposure.BiographyModifier);
+        int chance = SavingThrowChance(exposure.Willpower, exposure.Tolerance, exposure.BiographyModifier, exposure.RaceTolerance);
         return DaggerfallDiseasePolicy.DiseaseSavingThrowAmount(chance, roll) == 0
             ? DaggerfallPoisonAdmission.Resisted
             : DaggerfallPoisonAdmission.Admitted;
@@ -221,7 +222,7 @@ internal static class DaggerfallPoisonPolicy
         // the same, a bypassed delivery skips the throw, and only then does the level matter — which is why
         // a first-level target that would have been refused still drew the throw the donor made.
         if (exposure.CareerImmune || exposure.RaceImmune) return DaggerfallPoisonAdmission.Immune;
-        int chance = SavingThrowChance(exposure.Willpower, exposure.Tolerance, exposure.BiographyModifier);
+        int chance = SavingThrowChance(exposure.Willpower, exposure.Tolerance, exposure.BiographyModifier, exposure.RaceTolerance);
         DaggerfallPoisonAdmission decided;
         if (chance == 100) decided = DaggerfallPoisonAdmission.Immune;
         else if (exposure.BypassResistance) decided = DaggerfallPoisonAdmission.Admitted;
@@ -258,6 +259,6 @@ internal static class DaggerfallPoisonPolicy
     /// same arithmetic the disease path uses — so the two differ only in which tolerance and background
     /// value the caller supplies, never in the formula.
     /// </summary>
-    internal static int SavingThrowChance(int willpower, DaggerfallDiseaseCareerTolerance tolerance = DaggerfallDiseaseCareerTolerance.Normal, int biographyModifier = 0) =>
-        DaggerfallDiseasePolicy.DiseaseSavingThrowChance(willpower, tolerance, biographyModifier);
+    internal static int SavingThrowChance(int willpower, DaggerfallDiseaseCareerTolerance tolerance = DaggerfallDiseaseCareerTolerance.Normal, int biographyModifier = 0, DaggerfallDiseaseCareerTolerance raceTolerance = DaggerfallDiseaseCareerTolerance.Normal) =>
+        DaggerfallDiseasePolicy.DiseaseSavingThrowChance(willpower, tolerance, biographyModifier, raceTolerance);
 }

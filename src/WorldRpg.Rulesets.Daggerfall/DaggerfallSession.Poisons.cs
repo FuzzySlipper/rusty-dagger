@@ -22,7 +22,9 @@ internal sealed partial class DaggerfallSession
             State.Actors,
             exposure with
             {
-                BiographyModifier = checked(exposure.BiographyModifier + (State.Character.Background?.Modifiers.PoisonResistance ?? 0)),
+                RaceImmune = exposure.TargetId == State.Actors.Player.DurableId ? PlayerRacePoisonTolerance == DaggerfallDiseaseCareerTolerance.Immune : exposure.RaceImmune,
+                RaceTolerance = exposure.TargetId == State.Actors.Player.DurableId ? PlayerRacePoisonTolerance : exposure.RaceTolerance,
+                BiographyModifier = checked(exposure.BiographyModifier + (exposure.TargetId == State.Actors.Player.DurableId ? State.Character.Background?.Modifiers.PoisonResistance ?? 0 : 0)),
             },
             variant,
             PoisonRoll,
@@ -32,11 +34,11 @@ internal sealed partial class DaggerfallSession
     /// <summary>
     /// What a delivery aimed at the player reads. The career's own poison tolerance comes from the raw
     /// career bytes; the level is the live one, because the donor refuses a first-level target; Willpower
-    /// is the player's own. Race immunity is false because the imported race catalogue carries no immunity
-    /// flags at all — the donor's own nine races set none for poison (only the High Elf sets any, and that
-    /// is paralysis) — so this must be revisited when race flags are imported rather than standing in for
-    /// a value that was never read.
+    /// is the player's own. Race tolerance comes from the normalized selected race catalogue.
     /// </summary>
+    private DaggerfallDiseaseCareerTolerance PlayerRacePoisonTolerance =>
+        _definitions.Catalogs.RequireRace(State.Character.Identity.RaceId).Tolerance(DaggerfallCareerTolerances.Poison);
+
     internal DaggerfallPoisonExposure PlayerPoisonExposure(bool bypassResistance)
     {
         Actor player = State.Actors.Player.Actor;
@@ -44,10 +46,10 @@ internal sealed partial class DaggerfallSession
             State.Actors.Player.DurableId,
             TargetLevel: player.Get<ProgressionState>().Level,
             CareerImmune: false,
-            RaceImmune: false,
+            RaceImmune: PlayerRacePoisonTolerance == DaggerfallDiseaseCareerTolerance.Immune,
             Willpower: player.Get<StatsComponent>().GetStat(StatId.Parse(DaggerfallMechanicsIds.Willpower.Value)).ValueInt,
             BypassResistance: bypassResistance,
-            Tolerance: DaggerfallPoisonPolicy.CareerTolerance(State.Character.Career));
+            Tolerance: DaggerfallPoisonPolicy.CareerTolerance(State.Character.Career), RaceTolerance: PlayerRacePoisonTolerance);
     }
 
     /// <summary>
@@ -86,9 +88,12 @@ internal sealed partial class DaggerfallSession
                 targetActorId,
                 TargetLevel: struck.Get<ProgressionState>().Level,
                 CareerImmune: false,
-                RaceImmune: false,
+                RaceImmune: targetActorId == State.Actors.Player.DurableId && PlayerRacePoisonTolerance == DaggerfallDiseaseCareerTolerance.Immune,
                 Willpower: struck.Get<StatsComponent>().GetStat(StatId.Parse(DaggerfallMechanicsIds.Willpower.Value)).ValueInt,
-                Tolerance: DaggerfallCareerTolerances.Tolerance(State.Character.Career, DaggerfallCareerTolerances.Poison)),
+                Tolerance: targetActorId == State.Actors.Player.DurableId ? DaggerfallPoisonPolicy.CareerTolerance(State.Character.Career)
+                    : _roster.Definitions.TryGetValue(targetActorId, out var definition) && definition.Career is string career
+                        ? DaggerfallPoisonPolicy.CareerTolerance(_definitions.Catalogs.RequireCareer(career)) : DaggerfallDiseaseCareerTolerance.Normal,
+                RaceTolerance: targetActorId == State.Actors.Player.DurableId ? PlayerRacePoisonTolerance : DaggerfallDiseaseCareerTolerance.Normal),
             variant,
             weaponItemId);
         State.ItemInstances.ReplaceUnique(weaponItemId, weapon with { PoisonVariant = null });

@@ -127,11 +127,7 @@ public sealed class DaggerfallMagicAdmissionPolicyTests
     {
         DaggerfallMagicTargetProfile racial = Target() with
         {
-            PlayerRaceTolerances = new(
-                Resistance: DaggerfallMagicEffectFlags.None,
-                Immunity: DaggerfallMagicEffectFlags.Paralysis,
-                LowTolerance: DaggerfallMagicEffectFlags.None,
-                CriticalWeakness: DaggerfallMagicEffectFlags.None),
+            PlayerRace = TestPayload.Definitions.Catalogs.RequireRace("high-elf"),
         };
         Assert.Equal(0, DaggerfallMagicAdmissionPolicy.SavingThrow(
             DaggerfallMagicResistanceElement.Fire,
@@ -192,7 +188,7 @@ public sealed class DaggerfallMagicAdmissionPolicyTests
     private static DaggerfallMagicTargetProfile Target(int willpower = 0) => new(
         willpower,
         Career(),
-        PlayerRaceTolerances: null,
+        PlayerRace: null,
         BiographyMagicResistance: 0,
         BiographyPoisonResistance: 0,
         BiographyDiseaseResistance: 0,

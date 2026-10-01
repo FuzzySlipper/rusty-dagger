@@ -14,10 +14,15 @@ internal static class DaggerfallCareerTolerances
     internal static DaggerfallDiseaseCareerTolerance Tolerance(DaggerfallCareerDefinition career, int effectFlag)
     {
         ArgumentNullException.ThrowIfNull(career);
-        if ((career.ResistanceFlags & effectFlag) != 0) return DaggerfallDiseaseCareerTolerance.Resistant;
-        if ((career.ImmunityFlags & effectFlag) != 0) return DaggerfallDiseaseCareerTolerance.Immune;
-        if ((career.LowToleranceFlags & effectFlag) != 0) return DaggerfallDiseaseCareerTolerance.LowTolerance;
-        if ((career.CriticalWeaknessFlags & effectFlag) != 0) return DaggerfallDiseaseCareerTolerance.CriticalWeakness;
+        return Tolerance(career.ResistanceFlags, career.ImmunityFlags, career.LowToleranceFlags, career.CriticalWeaknessFlags, effectFlag);
+    }
+
+    internal static DaggerfallDiseaseCareerTolerance Tolerance(int resistance, int immunity, int lowTolerance, int criticalWeakness, int effectFlag)
+    {
+        if ((resistance & effectFlag) != 0) return DaggerfallDiseaseCareerTolerance.Resistant;
+        if ((immunity & effectFlag) != 0) return DaggerfallDiseaseCareerTolerance.Immune;
+        if ((lowTolerance & effectFlag) != 0) return DaggerfallDiseaseCareerTolerance.LowTolerance;
+        if ((criticalWeakness & effectFlag) != 0) return DaggerfallDiseaseCareerTolerance.CriticalWeakness;
         return DaggerfallDiseaseCareerTolerance.Normal;
     }
 }
