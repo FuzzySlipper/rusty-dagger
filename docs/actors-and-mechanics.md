@@ -77,10 +77,18 @@ Admission uses the existing cost/save policies, live actor and biography inputs,
 and active defense projections before the lifecycle attaches effects. Release
 and terminal delivery each emit one fact; repeated callbacks apply nothing.
 
-The shipped catalog currently composes disease and poison families. Ordinary
-spell families add their compiled bindings through that same composition seam;
+The shipped catalog composes disease, poison, five elemental resistance variants
+and Shield. Additional spell families add their bindings through that same composition seam;
 unmapped effects refuse before payment or skill use. UI selection, spell flight
 presentation and item-trigger policy remain separate consumers.
+
+Resistance keeps each admitted source's chance and lifetime in active-effect state.
+The live projection sums matching chances up to full resistance, retaining the
+distinction between no marker and a zero-chance marker. Casting, disease exposure
+and Razor read that projection. Shield keeps one starting/remaining pool, extends
+its incumbent rounds and tops up within the original starting cap. Its participant
+contribution reduces accepted damage before the canonical health mutation;
+depletion and expiry remove the contribution, and saves retain the remaining pool.
 
 ## Active effects
 

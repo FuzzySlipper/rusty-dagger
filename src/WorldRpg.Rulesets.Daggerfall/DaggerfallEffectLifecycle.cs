@@ -93,7 +93,9 @@ internal sealed record DaggerfallEffectDefinition(
     DaggerfallPerceptionEffectState Perception = default,
     DaggerfallEffectFeedback Feedback = DaggerfallEffectFeedback.None,
     DaggerfallSpellBinding? Spell = null,
-    Func<DaggerfallActiveEffect, DaggerfallMagicDefense>? MagicDefense = null)
+    Func<DaggerfallActiveEffect, DaggerfallMagicDefense>? MagicDefense = null,
+    Action<DaggerfallActiveEffect, JsonElement>? RefreshState = null,
+    bool ExtendIncumbentDuration = false)
 {
     internal EffectDefinition ToEngineDefinition(string source) => new(
         EffectDefinitionId.Parse($"daggerfall.{Key}"),
@@ -245,14 +247,16 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
     }
 
     /// <summary>Incoming like-kind effects settle their incumbent before a new effect's saving throw.</summary>
-    internal bool TryAdmitIncumbent(DaggerfallEffectRequest request, out DaggerfallEffectAdmissionOutcome outcome)
+    internal bool TryAdmitIncumbent(DaggerfallEffectRequest request, out DaggerfallEffectAdmissionOutcome outcome,
+        Func<JsonElement>? incomingState = null)
     {
         DaggerfallEffectDefinition definition = _catalog.Require(request.EffectKey);
         if (definition.Stacking is DaggerfallEffectStacking.RefreshDuration or DaggerfallEffectStacking.Reject
             && Active.Any(effect => checked((long)effect.Context.Target.Value) == request.TargetId
                 && effect.Definition.LikeKind == definition.LikeKind))
         {
-            outcome = Start(request);
+            outcome = Start(definition.RefreshState is not null && incomingState is not null
+                ? request with { State = incomingState() } : request);
             return true;
         }
         outcome = default;
@@ -280,11 +284,12 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
             DaggerfallActiveEffect incumbent = likeKind.OrderBy(effect => effect.Lifecycle.Context.Instance.Value, StringComparer.Ordinal).First();
             if (incumbent.Definition.Key != definition.Key)
                 throw new InvalidOperationException("Daggerfall refresh keeps one compiled effect definition; a different effect key must replace or stack.");
-            // Daggerfall refresh extends the incumbent duration only.  Its original source, caster,
-            // settings, element, item, stacks, state, Engine provenance, and reversible contribution
-            // remain authoritative; accepting a new payload would require definition-specific atomic
-            // migration rather than a generic lifecycle guess.
-            lifecycle.RefreshDuration(incumbent.Lifecycle.Context.Instance, request.RemainingRounds);
+            // Only an explicitly compiled family may merge incoming state (such as a shield top-up).
+            definition.RefreshState?.Invoke(incumbent, request.State);
+            uint? refreshed = definition.ExtendIncumbentDuration
+                ? incumbent.Lifecycle.RemainingRounds is uint prior && request.RemainingRounds is uint added ? checked(prior + added) : null
+                : request.RemainingRounds;
+            lifecycle.RefreshDuration(incumbent.Lifecycle.Context.Instance, refreshed);
             Publish(DaggerfallEffectOutcomeKind.Refreshed, incumbent.Lifecycle.Context.Instance.Value, definition.Key, request.TargetId);
             return DaggerfallEffectAdmissionOutcome.Refreshed;
         }

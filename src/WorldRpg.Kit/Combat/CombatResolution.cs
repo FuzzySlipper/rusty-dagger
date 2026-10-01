@@ -84,7 +84,8 @@ public sealed class CombatResolution
     public ApplyHitEvent Apply(CombatParticipants participants, int damage, int body, Action<ApplyHitEvent> apply)
     {
         ApplyHitEvent interaction = new(participants, damage, body);
-        foreach (ICombatContribution rule in Gather(participants)) rule.Applying(interaction);
+        // A contribution may expire its own source while applying (for example, a depleted pool).
+        foreach (ICombatContribution rule in Gather(participants).ToArray()) rule.Applying(interaction);
         apply(interaction);
         return interaction;
     }

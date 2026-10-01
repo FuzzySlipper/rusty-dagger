@@ -30,7 +30,7 @@ internal sealed record DaggerfallMagicDefense(int AbsorptionChance, int Reflecti
         return new(values.Select(value => value.AbsorptionChance).DefaultIfEmpty().Max(),
             values.Select(value => value.ReflectionChance).DefaultIfEmpty().Max(),
             values.SelectMany(value => value.Resistances).GroupBy(value => value.Element)
-                .Select(group => new DaggerfallMagicActiveResistance(group.Key, group.Max(value => value.Chance))).ToArray(),
+                .Select(group => new DaggerfallMagicActiveResistance(group.Key, checked((int)Math.Min(100L, group.Sum(value => (long)value.Chance))))).ToArray(),
             values.Any(value => value.BlocksCasting));
     }
 }
@@ -243,7 +243,14 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                 JsonElement preliminary = JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(setting,
                     bundle.CasterLevel, 0, 100), DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
                 if (effects.TryAdmitIncumbent(new(instance, definition.Key, $"spell.{bundle.Spell.Key}", bundle.CasterId,
-                    targetId, setting.Key, bundle.Element.ToString(), bundle.ItemId, 1, baseDuration, preliminary), out var incumbent))
+                    targetId, setting.Key, bundle.Element.ToString(), bundle.ItemId, 1, baseDuration, preliminary), out var incumbent,
+                    () =>
+                    {
+                        var incoming = new DaggerfallCastEffectState(setting, bundle.CasterLevel,
+                            binding.SupportsMagnitude ? DaggerfallMagicAdmissionPolicy.RollEffectMagnitude(setting, bundle.CasterLevel, roll) : 0, 100);
+                        return binding.CreateState?.Invoke(incoming)
+                            ?? JsonSerializer.SerializeToElement(incoming, DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+                    }))
                 {
                     string? actual = incumbent == DaggerfallEffectAdmissionOutcome.Refreshed
                         ? effects.Active.First(effect => checked((long)effect.Context.Target.Value) == targetId

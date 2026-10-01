@@ -111,6 +111,23 @@ public sealed class CombatResolutionTests
     }
 
     [Fact]
+    public void Applying_contribution_can_remove_its_own_source_without_skipping_remaining_contributors()
+    {
+        using ActorsState actors = Actors();
+        var target = actors.Get(3);
+        CombatContributions contributions = new(); target.Actor.Add(contributions);
+        ICombatContribution? removable = null;
+        removable = new ApplyingContribution(interaction => { interaction.Damage -= 2; contributions.Rules.Remove(removable!); });
+        contributions.Rules.Add(removable);
+        contributions.Rules.Add(new ApplyingContribution(interaction => interaction.Damage -= 1));
+        var health = target.Stats.GetTrack(TrackId.Parse("health"));
+        var resolution = new CombatResolution(); var participants = new CombatParticipants(actors.Get(2).Actor, target.Actor, "melee");
+        Assert.Equal(2, resolution.ApplyToHealth(participants, 5, 0, health).ActualHealthLost);
+        Assert.Single(contributions.Rules);
+        Assert.Equal(4, resolution.ApplyToHealth(participants, 5, 0, health).ActualHealthLost);
+    }
+
+    [Fact]
     public void A_source_that_is_also_the_target_contributes_once()
     {
         using ActorsState actors = Actors();
