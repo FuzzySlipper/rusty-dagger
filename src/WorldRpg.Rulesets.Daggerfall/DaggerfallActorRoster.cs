@@ -137,9 +137,8 @@ internal sealed class DaggerfallActorRoster
     /// are destroyed with their identities tombstoned, the corpse container goes with the actor,
     /// and the identity stays tombstoned so removal remains distinguishable from never-loaded.
     /// Authored placement actors belong to the selected content and cannot retire; the player
-    /// can never retire. The shared managed store keeps unreachable per-actor state afterwards —
-    /// it has no unregister-owner path — but nothing reachable observes it: every read goes
-    /// through live actors.
+    /// can never retire. The actor's inventory and equipment registrations, and its corpse
+    /// container's, leave the shared inventory store with it.
     /// </summary>
     internal void Retire(long durableId)
     {
@@ -352,6 +351,33 @@ internal sealed class DaggerfallActorRoster
     }
 
     /// <summary>
+    /// Empties the retiring actor's inventory, equipment and corpse container and retires those owners
+    /// from the shared inventory store in one edit, so the store keeps no registration for an actor that
+    /// no longer exists. The store retires only an empty owner, so every assignment, unique item and
+    /// stack goes through its own call first; the item identities and metadata are retired separately.
+    /// </summary>
+    private void RetireInventoryOwners(ActorState actor)
+    {
+        InventoryStore store = _state.InventoryStore;
+        List<EntityId> owners = [actor.Actor.Entity];
+        if (actor.Actor.TryGet<CorpseLootComponent>(out CorpseLootComponent? corpse) && corpse is { HasRegisteredInventory: true })
+            owners.Add(corpse.Owner);
+        using InventoryEdit edit = store.Prepare();
+        foreach (EntityId owner in owners)
+        {
+            if (!store.TryGetInventory(owner, out _)) continue;
+            if (store.TryGetEquipment(owner, out EquipmentState? equipment) && equipment is not null)
+                foreach (Rusty.Engine.Mechanics.EquipmentAssignment assignment in equipment.Assignments.DistinctBy(assignment => assignment.Item))
+                    edit.Unequip(owner, assignment.Item);
+            InventoryView view = store.View(owner);
+            foreach (Rusty.Engine.Mechanics.UniqueInventoryItem item in view.UniqueItems) edit.DestroyUnique(item.Entity);
+            foreach (InventoryStack stack in view.Stacks) edit.Consume(owner, stack.Id, stack.Quantity);
+            edit.RetireOwner(owner);
+        }
+        edit.Publish();
+    }
+
+    /// <summary>
     /// Destroys the unique items one retiring actor owns — carried, equipped, and corpse-seeded —
     /// and tombstones their identities so the save never reissues them. Fungible stacks and their instance metadata retire with the actor.
     /// </summary>
@@ -368,6 +394,7 @@ internal sealed class DaggerfallActorRoster
         if (actor.Actor.TryGet<CorpseLootComponent>(out CorpseLootComponent? corpse) && corpse is not null && corpse.HasRegisteredInventory)
             foreach (var item in _state.Containers.Read(corpse.Owner).UniqueItems)
                 owned.Add(_state.Actors.Entities.IdentityOf(item.Entity).Value);
+        RetireInventoryOwners(actor);
         _state.ItemInstances.RemoveOwner(DaggerfallItemOwner.Actor(durableId));
         _state.ItemInstances.RemoveOwner(DaggerfallItemOwner.Corpse(durableId));
         foreach (ulong itemId in owned)
