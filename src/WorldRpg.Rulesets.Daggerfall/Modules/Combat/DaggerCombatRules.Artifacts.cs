@@ -14,6 +14,29 @@ internal sealed partial class DaggerCombatRules
     private const int NamiraArtifact = 7;
     private const string NamiraDamage = "artifact.namira";
 
+    private ulong? CaptureWabbajackSource(long attacker)
+    {
+        if (EquippedWeapon(attacker) is not { } weapon) return null;
+        var equipment = attacker == PlayerId ? _equipment : _actorEquipment(attacker);
+        ulong identity = equipment.GetDurableItemId(new EntityId(weapon.EntityId)).Value;
+        if (!_itemInstances.ContainsUnique(identity)) return null;
+        var item = _itemInstances.RequireUnique(identity);
+        return item.CurrentCondition > 0 && item.Enchantment is { } key
+            && _catalog.Magic.TryEnchantments(key, out var payloads)
+            && payloads.Any(payload => payload.Type == SpecialArtifactEffect && payload.Param == 6) ? identity : null;
+    }
+
+    private bool TryTransform(AttackRequest request, PreparedAttack attack, FactBuffer<IProductFact> facts, out ActorTransformedFact? transformation)
+    {
+        transformation = null;
+        if (request.TargetId is not long target || attack is not DaggerfallPreparedAttack { WabbajackSource: ulong source }) return false;
+        DaggerfallWabbajackResult result = _transformActor?.Invoke(request.AttackerId, target, source, request.Generation, request.SimulationStep)
+            ?? new(DaggerfallWabbajackOutcome.InvalidTarget, target);
+        transformation = new ActorTransformedFact(source, request.AttackerId, target, result.Outcome, result.Definition, request.Generation, request.SimulationStep);
+        if (result.Outcome == DaggerfallWabbajackOutcome.Transformed) facts.Append(transformation);
+        return result.Outcome == DaggerfallWabbajackOutcome.Transformed;
+    }
+
     // MehrunesRazorEffect adds the victim's current health to the accepted strike and charges
     // that same amount to its source. The ordinary damage path applies health once and
     // charges physical wear separately from this magic cost.

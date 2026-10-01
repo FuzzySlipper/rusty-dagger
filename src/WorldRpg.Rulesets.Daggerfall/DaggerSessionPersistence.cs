@@ -81,7 +81,7 @@ internal sealed class DaggerSessionPersistence
             .Select(actor => new DaggerfallActorSave(
                 actor.DurableId,
                 actor.Position.X, actor.Position.Y, actor.Position.Z, actor.HeadingYawRadians,
-                DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity)))
+                DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity)) { WabbajackDefinition = DaggerfallWabbajack.DefinitionOf(actor.Actor) })
             .ToArray();
         DaggerfallDynamicActorSave[] spawned = dynamicActors
             .OrderBy(entry => entry.Key)
@@ -92,7 +92,7 @@ internal sealed class DaggerSessionPersistence
                     entry.Key,
                     entry.Value.Value,
                     actor.Position.X, actor.Position.Y, actor.Position.Z, actor.HeadingYawRadians,
-                    DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity));
+                    DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity)) { WabbajackActive = DaggerfallWabbajack.DefinitionOf(actor.Actor) is not null };
             })
             .ToArray();
         DaggerfallInventorySave inventorySave = CaptureInventory(State.Inventory, State.Equipment, DaggerfallItemOwner.Player);
@@ -197,13 +197,13 @@ internal sealed class DaggerSessionPersistence
                 ? current
                 : throw new InvalidOperationException($"Site actor {id} disappeared before its site state could be captured.");
             return new DaggerfallActorSave(actor.DurableId, actor.Position.X, actor.Position.Y, actor.Position.Z,
-                actor.HeadingYawRadians, DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity));
+                actor.HeadingYawRadians, DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity)) { WabbajackDefinition = DaggerfallWabbajack.DefinitionOf(actor.Actor) };
         }).ToArray();
         DaggerfallDynamicActorSave[] spawned = dynamicActors.OrderBy(entry => entry.Key).Select(entry =>
         {
             ActorState actor = LiveDynamicActor(entry.Key);
             return new DaggerfallDynamicActorSave(entry.Key, entry.Value.Value, actor.Position.X, actor.Position.Y, actor.Position.Z,
-                actor.HeadingYawRadians, DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity));
+                actor.HeadingYawRadians, DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity)) { WabbajackActive = DaggerfallWabbajack.DefinitionOf(actor.Actor) is not null };
         }).ToArray();
         long[] ids = [.. authoredIds, .. spawned.Select(actor => actor.EntityId)];
         DaggerfallActorInventorySave[] inventories = ids.Select(id => new DaggerfallActorInventorySave(

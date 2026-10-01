@@ -123,10 +123,13 @@ internal static class DaggerActorFactory
             {
                 if (!definitions.Actors.TryGetValue(source.ActorId, out DaggerfallActorDefinition? definition))
                     throw new InvalidOperationException($"Site placement '{source.EntityId}' refers to missing actor '{source.ActorId.Value}'.");
+                DaggerfallActorSave? prior = saved?.Actors.Single(value => value.EntityId == source.EntityId);
+                if (prior?.WabbajackDefinition is { } transformed) definition = DaggerfallWabbajack.RequireDefinition(definitions, transformed);
                 ActorState actor = CreateNonPlayerActor(actors, source.EntityId, definition,
                     mechanics.CreateStats(definition, InitialVitals(random, definition, source.EntityId)),
                     new ActorPose(source.Position, 0f));
-                if (saved is not null) RestoreStats(actor.Actor, saved.Actors.Single(value => value.EntityId == source.EntityId).Stats);
+                if (prior is not null) RestoreStats(actor.Actor, prior.Stats);
+                DaggerfallWabbajack.Restore(actor.Actor, prior?.WabbajackDefinition);
                 authored.Add(source.EntityId, definition);
                 RegisterActorInventory(actor, inventoryStore);
                 // A placed actor whose definition declares a loadout carries it in a managed
@@ -203,11 +206,13 @@ internal static class DaggerActorFactory
         IReadOnlyDictionary<InventoryItemId, ItemDefinition> items, DaggerfallItemInstances instances,
         AuthoredActor source, DaggerfallActorSave? restored = null)
     {
-        DaggerfallActorDefinition definition = definitions.RequireActor(source.ActorId);
+        DaggerfallActorDefinition definition = restored?.WabbajackDefinition is { } transformed
+            ? DaggerfallWabbajack.RequireDefinition(definitions, transformed) : definitions.RequireActor(source.ActorId);
         ActorState actor = CreateNonPlayerActor(actors, source.EntityId, definition,
             mechanics.CreateStats(definition, InitialVitals(random, definition, source.EntityId)),
             new ActorPose(source.Position, 0F));
         if (restored is not null) RestoreStats(actor.Actor, restored.Stats);
+        DaggerfallWabbajack.Restore(actor.Actor, restored?.WabbajackDefinition);
         RegisterActorInventory(actor, inventoryStore);
         if (restored is null)
         {
@@ -309,6 +314,7 @@ internal static class DaggerActorFactory
             mechanics.CreateStats(definition, InitialVitals(random, definition, saved.EntityId)),
             new ActorPose(new WorldPoint(saved.X, saved.Y, saved.Z), saved.HeadingRadians));
         RestoreStats(actor.Actor, saved.Stats);
+        DaggerfallWabbajack.Restore(actor.Actor, saved.WabbajackActive ? saved.Definition : null);
         definitionsByActor.Add(saved.EntityId, definition);
         RegisterActorInventory(actor, inventoryStore);
         return actor;
@@ -345,6 +351,7 @@ internal static class DaggerActorFactory
                 mechanics.CreateStats(definition, InitialVitals(random, definition, spawned.EntityId)),
                 new ActorPose(new WorldPoint(spawned.X, spawned.Y, spawned.Z), spawned.HeadingRadians));
             RestoreStats(actor.Actor, spawned.Stats);
+            DaggerfallWabbajack.Restore(actor.Actor, spawned.WabbajackActive ? spawned.Definition : null);
             definitionsByActor.Add(spawned.EntityId, definition);
             RegisterActorInventory(actor, inventoryStore);
         }

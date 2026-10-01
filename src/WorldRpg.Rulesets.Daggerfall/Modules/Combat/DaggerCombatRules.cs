@@ -46,6 +46,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     /// <summary>The armor-value shift the defender's worn enchantments give, zero when none do.</summary>
     private readonly Func<int> _armorValueModifier;
     private readonly Func<int> _attackChanceModifier;
+    private readonly Func<long, long, ulong, ulong, ulong, DaggerfallWabbajackResult>? _transformActor;
     internal AttackCapabilities<IProductFact> Attacks { get; }
     internal TargetingService Targeting { get; }
     internal AttackExecution<IProductFact> Execution { get; }
@@ -66,9 +67,11 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         Func<WorldPoint?>? playerPosition = null, Func<DaggerfallCharacterState?>? character = null,
         Func<DaggerfallSwingDirection>? playerSwing = null, Func<WorldPoint, WorldPoint, bool>? coverBlocksShot = null,
         Func<int>? armorValueModifier = null,
-        Action<long, ulong>? deliverWeaponPoison = null, Func<int>? attackChanceModifier = null)
+        Action<long, ulong>? deliverWeaponPoison = null, Func<int>? attackChanceModifier = null,
+        Func<long, long, ulong, ulong, ulong, DaggerfallWabbajackResult>? transformActor = null)
     {
         _random = random;
+        _transformActor = transformActor;
         _deliverWeaponPoison = deliverWeaponPoison;
         Rules = rules ?? new CombatResolution();
         Execution = new(actors, this, DeferRangedImpact);
@@ -132,8 +135,9 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
             if (action.Interpretation == "fixed-ranged" && !TrySpendArrow(request.AttackerId, facts)) return false;
         }
         DaggerfallStrikeFeedback feedback = StrikeFeedback(request.AttackerId);
+        ulong? wabbajackSource = CaptureWabbajackSource(request.AttackerId);
         if (request.TargetId is not long targetId)
-        { prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, default, feedback); return true; }
+        { prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, default, feedback, wabbajackSource); return true; }
         if (!TryResolve(targetId, out Combatant target)) { Refused(AttackRefusal.UnknownActor, facts); return false; }
         ExplicitMeleeRequest explicitRequest = new(request.AttackerId, targetId, request.Generation, request.SimulationStep, request.FixedDeltaSeconds);
         CombatParticipants participants = Participants(attacker.Id, targetId, request.Action ?? attacker.Definition.ActionId ?? "attack");
@@ -149,12 +153,12 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         int body = DaggerfallFormulaPolicy.CalculateStruckBodyPart(Draw(explicitRequest, attacker.Id, target.Id, CombatRandomKey.BodySalt, 0, 19, enemyAttack));
         if (attacker.Definition.Kind == DaggerfallActorKinds.Monster && attack.Skill == DaggerfallMechanicsIds.HandToHand.Value)
         {
-            prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, MonsterAttackSet(participants, explicitRequest, attacker, target, attack, body, enemyAttack), feedback);
+            prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, MonsterAttackSet(participants, explicitRequest, attacker, target, attack, body, enemyAttack), feedback, wabbajackSource);
             return true;
         }
         TryHitEvent hit = ResolveHit(participants, explicitRequest, attacker, target, attack, body, enemyAttack, modifiers.ToHit, backstabChance);
         DamageEvent? damage = hit.Hit ? ResolveDamage(participants, explicitRequest, attacker, target, attack, body, enemyAttack, modifiers.Damage, backstabChance) : null;
-        prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, new(hit.Hit, damage?.Allowed ?? true, body, damage?.Damage ?? 0, hit.Roll, hit.Chance), feedback);
+        prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, new(hit.Hit, damage?.Allowed ?? true, body, damage?.Damage ?? 0, hit.Roll, hit.Chance), feedback, wabbajackSource);
         return true;
     }
     public void Started(AttackRequest request, PreparedAttack attack, FactBuffer<IProductFact> facts)
@@ -175,10 +179,25 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         // never reaches this method and therefore cannot manufacture a use.
         if (request.AttackerId != PlayerId && target == PlayerId)
             _skillUses?.Invoke(new DaggerfallSkillUse(DaggerfallMechanicsIds.Dodging.Value, DaggerfallSkillUseReason.DodgingEnemyAttack, DaggerfallSkillUseOutcome.Attempted));
-        if (!outcome.Hit)
-        { facts.Append(new AttackMissedFact(request.AttackerId, target, outcome.Roll, outcome.Chance, enemyAttack, request.Generation, request.SimulationStep) { Feedback = feedback }); return; }
-        if (!outcome.Allowed)
+        if (outcome.Hit && !outcome.Allowed)
         { facts.Append(new AttackRejectedFact(AttackRejection.InsufficientWeaponMaterial)); return; }
+        // WeaponManager invokes Strikes even when contact misses. Wabbajack's replacement
+        // inherits prior wounds before the removed enemy receives this strike's damage.
+        if (TryTransform(request, attack, facts, out ActorTransformedFact? transformation))
+        {
+            string? weaponSkill = request.AttackerId == PlayerId && outcome.Hit ? PlayerWeaponSkill() : null;
+            if (outcome.Hit && outcome.Allowed && outcome.Damage > 0 && EquippedWeapon(request.AttackerId) is { } source)
+                DamageCondition(source, request.AttackerId, ConditionUnits(request.AttackerId, target, outcome.Damage, enemyAttack,
+                    request.Generation, request.SimulationStep, CombatRandomKey.WeaponConditionSalt), request.Generation, request.SimulationStep, facts);
+            if (weaponSkill is not null) RecordPlayerWeaponHit(weaponSkill);
+            if (_actors.Get(target).IsDefeated)
+                facts.Append(new ActorDiedFact(target, request.AttackerId, DaggerfallDamageCause.Effect, 0, 0, request.Generation, request.SimulationStep));
+            return;
+        }
+        if (!outcome.Hit)
+        { facts.Append(new AttackMissedFact(request.AttackerId, target, outcome.Roll, outcome.Chance, enemyAttack, request.Generation, request.SimulationStep) { Feedback = feedback });
+            if (transformation is not null) facts.Append(transformation);
+            return; }
         string action = request.Action ?? _definitions[request.AttackerId].ActionId ?? "attack";
         // Capture the weapon skill at the admitted operation boundary. Applying the hit may break
         // the weapon through physical wear and unequip it before the skill-use reaction runs.
@@ -187,9 +206,15 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
             enemyAttack, request.Generation, request.SimulationStep, feedback, facts);
         if (request.AttackerId == PlayerId)
         {
-            _skillUses?.Invoke(new DaggerfallSkillUse(playerWeaponSkill!, DaggerfallSkillUseReason.WeaponHit, DaggerfallSkillUseOutcome.Succeeded));
-            _skillUses?.Invoke(new DaggerfallSkillUse("critical-strike", DaggerfallSkillUseReason.CriticalStrikeHit, DaggerfallSkillUseOutcome.Succeeded));
+            RecordPlayerWeaponHit(playerWeaponSkill!);
         }
+        if (transformation is not null) facts.Append(transformation);
+    }
+
+    private void RecordPlayerWeaponHit(string weaponSkill)
+    {
+        _skillUses?.Invoke(new DaggerfallSkillUse(weaponSkill, DaggerfallSkillUseReason.WeaponHit, DaggerfallSkillUseOutcome.Succeeded));
+        _skillUses?.Invoke(new DaggerfallSkillUse("critical-strike", DaggerfallSkillUseReason.CriticalStrikeHit, DaggerfallSkillUseOutcome.Succeeded));
     }
 
     /// <summary>
@@ -679,7 +704,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     }
 
     internal sealed record DaggerfallPreparedAttack(double CooldownSeconds, AttackOutcome Outcome,
-        DaggerfallStrikeFeedback Feedback) : PreparedAttack(CooldownSeconds, Outcome);
+        DaggerfallStrikeFeedback Feedback, ulong? WabbajackSource = null) : PreparedAttack(CooldownSeconds, Outcome);
 
     private static DaggerfallStrikeFeedback PreparedFeedback(PreparedAttack attack) => attack is DaggerfallPreparedAttack accepted
         ? accepted.Feedback : throw new InvalidOperationException("A Daggerfall strike requires its accepted source feedback; re-reading changed equipment would misidentify the strike.");

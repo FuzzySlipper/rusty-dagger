@@ -181,11 +181,13 @@ internal sealed partial class DaggerfallSession
             // Dynamic actors restore before the site projection, while authored placements are
             // already in ActorSprites.  Admit their mobile media here without replaying any item
             // creation or combat rolls.
-            foreach (ActorState actor in actors.All.Where(actor => !inputs.ActorSprites.ContainsKey(actor.DurableId)))
+            foreach (ActorState actor in actors.All.Where(actor => !inputs.ActorSprites.ContainsKey(actor.DurableId)
+                || DaggerfallWabbajack.DefinitionOf(actor.Actor) is not null))
             {
                 if (!authored.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition) || definition.MobileId is not int mobileId) continue;
                 if (!inputs.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
                     throw new InvalidOperationException($"Restored dynamic actor '{definition.Id.Value}' has no admitted mobile {mobileId} presentation.");
+                projection.Appearance.RetireActor(actor.DurableId);
                 projection.Appearance.AddActor(actor.DurableId, sprite);
             }
             if (saved is null)
@@ -249,7 +251,7 @@ internal sealed partial class DaggerfallSession
                     && character.CustomCareer?.Advantages.Any(trait => trait.Id == "adrenaline-rush") == true
                     ? new DaggerfallAdrenalineRush(Enabled: true, Improved: _heldEnchantments.Talents.AdrenalineRush) : default,
                 () => assembled.PlayerControl.Position, () => character, _playerSwings.TryGesture, ShotBlockedByCover,
-                () => _heldEnchantments.ArmorValueModifier, DeliverWeaponPoison, () => _heldEnchantments.AttackChanceModifier);
+                () => _heldEnchantments.ArmorValueModifier, DeliverWeaponPoison, () => _heldEnchantments.AttackChanceModifier, TransformWithWabbajack);
             GameplayServices<IProductFact> kit = new(actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, inventory, equipmentCoordinator);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
                 engine.Perception,

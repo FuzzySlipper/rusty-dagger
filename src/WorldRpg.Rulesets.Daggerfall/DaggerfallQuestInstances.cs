@@ -384,6 +384,12 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
     }
 
     internal IReadOnlyCollection<DaggerfallQuestInstanceSave> All => _instances.Values.Select(instance => instance.Capture()).ToArray();
+
+    /// <summary>A live resource owned by an active quest may not be replaced by an artifact.</summary>
+    internal bool ProtectsActor(long actorId) => _instances.Values.Any(instance =>
+        instance.Lifecycle == DaggerfallQuestLifecycle.Active
+        && instance.Resources.Any(resource => resource.Binding.Kind == DaggerfallQuestResourceBindingKind.Actor
+            && resource.Binding.ActorIds.Contains(actorId)));
     internal DaggerfallQuestMessages Messages { get; }
 
     /// <summary>Binds the one session's live player and elapsed-time owners after composition completes.</summary>
