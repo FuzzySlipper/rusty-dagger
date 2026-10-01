@@ -505,8 +505,8 @@
       "layer": "scene"
     },
     "navigationGridId": 1,
-    "collisionNavigationPath": "spatial/privateer-s-hold/collision-navigation.json",
-    "staticMeshPath": "spatial/privateer-s-hold/static-mesh.json",
+    "collisionNavigationPath": "spatial/privateer-s-hold/collision-navigation.rspatial",
+    "staticMeshPath": "spatial/privateer-s-hold/static-mesh.rstatmsh",
     "profileKind": "dungeon"
   }
 }

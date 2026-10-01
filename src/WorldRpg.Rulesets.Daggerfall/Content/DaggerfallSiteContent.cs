@@ -489,6 +489,7 @@ internal static class DaggerfallSiteContent
                 List<Vector3> collisionVertices = [];
                 List<Triangle> collisionTriangles = [];
                 HashSet<string> referencedMeshIds = new(StringComparer.Ordinal);
+                HashSet<string> visualMaterialIds = new(StringComparer.Ordinal);
                 foreach (JsonElement meshIdValue in DaggerfallBaseContent.Array(model, "meshIds", diagnostics))
                 {
                     if (meshIdValue.ValueKind != JsonValueKind.String || meshIdValue.GetString() is not { Length: > 0 } meshId)
@@ -518,6 +519,7 @@ internal static class DaggerfallSiteContent
                     {
                         JsonElement group = DaggerfallBaseContent.Object(groupValue, $"action model '{actionId}' material group", diagnostics);
                         string materialId = DaggerfallBaseContent.Text(group, "materialResourceId", diagnostics);
+                        visualMaterialIds.Add(materialId);
                         int start = DaggerfallBaseContent.Integer(group, "startTriangle", diagnostics);
                         int count = DaggerfallBaseContent.Integer(group, "triangleCount", diagnostics);
                         if (!group.TryGetProperty("participatesInCollision", out _))
@@ -552,10 +554,10 @@ internal static class DaggerfallSiteContent
 
                 try
                 {
-                    ReadOnlyMemory<byte> visualBytes = files.GetExactlyOne(visualArtifact.Path)
-                        ?? throw new InvalidOperationException($"Normalized action-model visual '{visualArtifact.Path}' is not admitted.");
-                    IReadOnlyList<DaggerfallMeshMaterialBinding> materialBindings = ReadActionModelMaterials(
-                        visualBytes, actionId, worldMaterialSlots, diagnostics);
+                    if (files.GetExactlyOne(visualArtifact.Path) is null)
+                        throw new InvalidOperationException($"Normalized action-model visual '{visualArtifact.Path}' is not admitted.");
+                    IReadOnlyList<DaggerfallMeshMaterialBinding> materialBindings = ActionModelMaterials(
+                        visualMaterialIds, actionId, worldMaterialSlots, diagnostics);
                     DaggerfallDoorVisual visual = new DaggerfallDoorVisual(visualArtifact.Path, visualArtifact.Sha256, materialBindings).Validate();
                     result.Add(new DaggerfallDungeonActionModelDefinition(
                         actionId,
@@ -585,34 +587,28 @@ internal static class DaggerfallSiteContent
         }
     }
 
-    private static IReadOnlyList<DaggerfallMeshMaterialBinding> ReadActionModelMaterials(
-        ReadOnlyMemory<byte> bytes,
+    /// <summary>
+    /// Binds an action model's visual to the world's material table. The importer writes the visual with
+    /// the world's material universe, as it writes door visuals, so each material the model's meshes draw
+    /// with sits at its world slot; the visual's bytes go to the Engine unread.
+    /// </summary>
+    private static IReadOnlyList<DaggerfallMeshMaterialBinding> ActionModelMaterials(
+        IReadOnlySet<string> materialIds,
         string actionId,
         IReadOnlyDictionary<string, uint> worldMaterialSlots,
         DaggerfallContentDiagnostics diagnostics)
     {
-        using JsonDocument document = JsonDocument.Parse(bytes);
-        JsonElement root = DaggerfallBaseContent.Object(document.RootElement, $"action model '{actionId}' visual artifact", diagnostics);
         List<DaggerfallMeshMaterialBinding> bindings = [];
-        HashSet<uint> localSlots = [];
-        foreach (JsonElement value in DaggerfallBaseContent.Array(root, "materialSlots", diagnostics))
+        foreach (string materialId in materialIds.Order(StringComparer.Ordinal))
         {
-            JsonElement slot = DaggerfallBaseContent.Object(value, $"action model '{actionId}' material slot", diagnostics);
-            int local = DaggerfallBaseContent.Integer(slot, "slot", diagnostics);
-            string resourceId = DaggerfallBaseContent.Text(slot, "material", diagnostics);
-            if (local < 0 || !localSlots.Add(checked((uint)Math.Max(local, 0))))
+            if (!worldMaterialSlots.TryGetValue(materialId, out uint worldSlot))
             {
-                diagnostics.Add($"Action model '{actionId}' has a negative or repeated visual material slot.");
+                diagnostics.Add($"Action model '{actionId}' visual refers to missing material resource '{materialId}'.");
                 continue;
             }
-            if (!worldMaterialSlots.TryGetValue(resourceId, out uint worldSlot))
-            {
-                diagnostics.Add($"Action model '{actionId}' visual refers to missing material resource '{resourceId}'.");
-                continue;
-            }
-            bindings.Add(new DaggerfallMeshMaterialBinding(checked((uint)local), worldSlot));
+            bindings.Add(new DaggerfallMeshMaterialBinding(worldSlot, worldSlot));
         }
-        if (bindings.Count == 0) diagnostics.Add($"Action model '{actionId}' visual artifact has no admitted material slots.");
+        if (bindings.Count == 0) diagnostics.Add($"Action model '{actionId}' visual has no admitted material slots.");
         return bindings.OrderBy(binding => binding.MeshSlot).ToArray();
     }
 
@@ -1727,20 +1723,23 @@ internal static class DaggerfallSiteContent
                 continue;
             }
 
-            if (files.GetExactlyOne(path) is not ReadOnlyMemory<byte> bytes)
+            if (files.GetExactlyOne(path) is null)
             {
                 diagnostics.Add($"Classic world visual '{mediaId}' has no published mesh body at '{relativePath}'.");
                 continue;
             }
 
-            // The descriptor states the texture each of the mesh's own material slots draws with; the
-            // slots themselves are read from the artifact, so the binding describes what will be drawn.
-            Dictionary<string, DaggerfallMissileTextureBinding> textureByMaterial = new(StringComparer.Ordinal);
+            // The descriptor states the texture each of the mesh's own material slots draws with. The
+            // importer publishes each slot from the assembly that wrote the mesh and checks that every
+            // slot has its texture; the mesh bytes go to the Engine unread.
+            List<DaggerfallMissileTextureBinding> textures = [];
+            HashSet<string> materials = new(StringComparer.Ordinal);
             bool usable = true;
             foreach (JsonElement material in DaggerfallBaseContent.Array(visual, "materials", diagnostics))
             {
                 JsonElement texture = DaggerfallBaseContent.Object(material, "classic world visual material", diagnostics);
                 string materialResourceId = DaggerfallBaseContent.Text(texture, "materialResourceId", diagnostics);
+                int slot = DaggerfallBaseContent.Integer(texture, "slot", diagnostics);
                 string textureRelativePath = DaggerfallBaseContent.Text(texture, "relativePath", diagnostics);
                 string texturePath = $"{publicationRoot.TrimEnd('/')}/{textureRelativePath}";
                 ContentSha256 textureDigest = ContentHash(DaggerfallBaseContent.Text(texture, "contentDigest", diagnostics), diagnostics);
@@ -1754,11 +1753,14 @@ internal static class DaggerfallSiteContent
                     continue;
                 }
 
-                if (!textureByMaterial.TryAdd(materialResourceId, new DaggerfallMissileTextureBinding(0, texturePath, textureDigest)))
+                if (!materials.Add(materialResourceId) || slot < 0 || textures.Any(binding => binding.MeshSlot == (uint)slot))
                 {
-                    diagnostics.Add($"Classic world visual '{mediaId}' repeats material '{materialResourceId}'.");
+                    diagnostics.Add($"Classic world visual '{mediaId}' repeats material '{materialResourceId}' or states a negative or repeated slot {slot}.");
                     usable = false;
+                    continue;
                 }
+
+                textures.Add(new DaggerfallMissileTextureBinding(checked((uint)slot), texturePath, textureDigest));
             }
 
             if (!usable)
@@ -1766,10 +1768,15 @@ internal static class DaggerfallSiteContent
                 continue;
             }
 
+            if (textures.Count == 0)
+            {
+                diagnostics.Add($"Classic world visual '{mediaId}' states no textures.");
+                continue;
+            }
+
             try
             {
-                IReadOnlyList<DaggerfallMissileTextureBinding> textures = ReadMissileTextures(bytes, mediaId, textureByMaterial, diagnostics);
-                visuals.Add(new DaggerfallMissileVisual(mediaId, use, path, artifact, textures).Validate());
+                visuals.Add(new DaggerfallMissileVisual(mediaId, use, path, artifact, [.. textures.OrderBy(texture => texture.MeshSlot)]).Validate());
             }
             catch (ArgumentException exception)
             {
@@ -1778,53 +1785,6 @@ internal static class DaggerfallSiteContent
         }
 
         return Array.AsReadOnly(visuals.OrderBy(visual => visual.MediaId, StringComparer.Ordinal).ToArray());
-    }
-
-    /// <summary>Binds a missile mesh's own material slots to the textures its descriptor publishes.</summary>
-    private static IReadOnlyList<DaggerfallMissileTextureBinding> ReadMissileTextures(
-        ReadOnlyMemory<byte> bytes,
-        string mediaId,
-        IReadOnlyDictionary<string, DaggerfallMissileTextureBinding> textureByMaterial,
-        DaggerfallContentDiagnostics diagnostics)
-    {
-        using JsonDocument document = JsonDocument.Parse(bytes);
-        JsonElement root = DaggerfallBaseContent.Object(document.RootElement, $"missile visual '{mediaId}' artifact", diagnostics);
-        List<DaggerfallMissileTextureBinding> textures = [];
-        HashSet<uint> slots = [];
-        HashSet<string> drawn = new(StringComparer.Ordinal);
-        foreach (JsonElement value in DaggerfallBaseContent.Array(root, "materialSlots", diagnostics))
-        {
-            JsonElement slot = DaggerfallBaseContent.Object(value, $"missile visual '{mediaId}' material slot", diagnostics);
-            int local = DaggerfallBaseContent.Integer(slot, "slot", diagnostics);
-            string resourceId = DaggerfallBaseContent.Text(slot, "material", diagnostics);
-            if (local < 0 || !slots.Add(checked((uint)Math.Max(local, 0))))
-            {
-                diagnostics.Add($"Missile visual '{mediaId}' has a negative or repeated material slot.");
-                continue;
-            }
-            if (!textureByMaterial.TryGetValue(resourceId, out DaggerfallMissileTextureBinding texture))
-            {
-                diagnostics.Add($"Missile visual '{mediaId}' draws slot {local} with material '{resourceId}', which its descriptor does not carry.");
-                continue;
-            }
-
-            drawn.Add(resourceId);
-            textures.Add(texture with { MeshSlot = checked((uint)local) });
-        }
-
-        if (textures.Count == 0)
-        {
-            diagnostics.Add($"Missile visual '{mediaId}' artifact has no admitted textures.");
-        }
-
-        // Every stated texture has to be one a slot draws with: a surplus entry is a descriptor that no
-        // longer describes this mesh, and dropping it quietly would leave the mismatch unreported.
-        foreach (string unused in textureByMaterial.Keys.Where(resourceId => !drawn.Contains(resourceId)).Order(StringComparer.Ordinal))
-        {
-            diagnostics.Add($"Missile visual '{mediaId}' states texture material '{unused}', which none of its mesh's slots draws with.");
-        }
-
-        return [.. textures.OrderBy(texture => texture.MeshSlot)];
     }
 
     private static IReadOnlyDictionary<string, NormalizedClassicWeapon> ReadClassicWeapons(JsonElement root, IReadOnlyDictionary<string, ClassicMediaResource> resources, DaggerfallContentDiagnostics diagnostics)

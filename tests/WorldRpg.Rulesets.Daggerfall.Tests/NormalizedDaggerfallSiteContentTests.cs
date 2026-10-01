@@ -87,8 +87,8 @@ public sealed class NormalizedDaggerfallSiteContentTests
 
         DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(GeneratedContent(root), payload, definitions);
 
-        Assert.Equal("worldrpg/imports/privateers-hold/spatial/privateer-s-hold/collision-navigation.json", inputs.SpatialArtifact.Path);
-        Assert.Equal("worldrpg/imports/privateers-hold/spatial/privateer-s-hold/static-mesh.json", inputs.StaticMesh.Path);
+        Assert.Equal("worldrpg/imports/privateers-hold/spatial/privateer-s-hold/collision-navigation.rspatial", inputs.SpatialArtifact.Path);
+        Assert.Equal("worldrpg/imports/privateers-hold/spatial/privateer-s-hold/static-mesh.rstatmsh", inputs.StaticMesh.Path);
         Assert.NotEmpty(inputs.Materials);
         Assert.Equal(inputs.Materials.Count, inputs.Materials.Select(material => material.Slot).Distinct().Count());
         Assert.NotEmpty(inputs.ActorSprites);
@@ -114,7 +114,7 @@ public sealed class NormalizedDaggerfallSiteContentTests
         // evidence that the descriptor's digests are the import manifest's own.
         DaggerfallMissileVisual visual = Assert.Single(inputs.ClassicPresentation.WorldVisuals);
         Assert.Equal("visual.missile.arrow", visual.MediaId);
-        Assert.Equal("worldrpg/imports/privateers-hold/geometry/mesh-99800.json", visual.Path);
+        Assert.Equal("worldrpg/imports/privateers-hold/geometry/mesh-99800.rstatmsh", visual.Path);
         Assert.Equal([0u, 1u], visual.Textures.Select(texture => texture.MeshSlot));
         Assert.All(visual.Textures, texture =>
             Assert.StartsWith("worldrpg/imports/privateers-hold/media/world-visuals/", texture.TexturePath, StringComparison.Ordinal));
@@ -122,9 +122,9 @@ public sealed class NormalizedDaggerfallSiteContentTests
         Assert.All(visual.Textures, texture => Assert.NotEqual(default, texture.TextureSha256));
 
         // The published mesh selects two textures, and the artifact states the same two slots.
-        using JsonDocument artifact = JsonDocument.Parse(
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/privateers-hold/geometry/mesh-99800.json")));
-        Assert.Equal(2, artifact.RootElement.GetProperty("materialSlots").GetArrayLength());
+        using EngineBinaryContent.StaticMesh artifact = EngineBinaryContent.ReadStaticMesh(
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/privateers-hold/geometry/mesh-99800.rstatmsh")));
+        Assert.Equal(2, artifact.Root.GetProperty("materialSlots").GetArrayLength());
 
         // The visual's textures travel with the visual rather than through the site's static-mesh
         // material table, whose slots address the combined world mesh and not this one.
@@ -168,9 +168,9 @@ public sealed class NormalizedDaggerfallSiteContentTests
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")),
             definitions));
 
-        // A stated texture no mesh slot draws with is a sidecar that no longer describes the published
-        // mesh; it is reported rather than dropped. The extra entry keeps valid bytes and its own
-        // material identity, so every slot still resolves and the surplus branch is the only failure.
+        // A second texture stated for a slot is a sidecar that no longer describes the published mesh;
+        // it is reported rather than dropped. The extra entry keeps valid bytes and its own material
+        // identity, so the repeated slot is the only failure.
         Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(
             ContentWithMutatedClassicVisual(root, visual =>
             {
@@ -291,7 +291,7 @@ public sealed class NormalizedDaggerfallSiteContentTests
         DaggerfallSiteProfiles profiles = new([destination]);
 
         Assert.Equal(new DaggerfallSiteId(17, 9), destination.Site);
-        Assert.Equal("worldrpg/imports/castle-necromoghan/spatial/castle-necromoghan/collision-navigation.json", destination.SpatialArtifact.Path);
+        Assert.Equal("worldrpg/imports/castle-necromoghan/spatial/castle-necromoghan/collision-navigation.rspatial", destination.SpatialArtifact.Path);
         Assert.Empty(destination.Project.Actors);
         Assert.Equal(125, destination.Doors.Count);
         Assert.Same(destination, profiles.Require(destination.ProfileKey));
@@ -372,14 +372,14 @@ public sealed class NormalizedDaggerfallSiteContentTests
         byte[] payload = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
         ProductContent content = GeneratedContent(root);
         ProductContentFile[] changed = content.Files.ToArray();
-        int index = Array.FindIndex(changed, file => Encoding.UTF8.GetString(file.Path.Span).EndsWith("collision-navigation.json", StringComparison.Ordinal));
+        int index = Array.FindIndex(changed, file => Encoding.UTF8.GetString(file.Path.Span).EndsWith("collision-navigation.rspatial", StringComparison.Ordinal));
         Assert.True(index >= 0);
         byte[] bytes = changed[index].Bytes.ToArray();
         bytes[0] ^= 1;
         changed[index] = new ProductContentFile(changed[index].Path, bytes);
 
         DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(new ProductContent(changed), payload, definitions);
-        Assert.Equal("worldrpg/imports/privateers-hold/spatial/privateer-s-hold/collision-navigation.json", inputs.SpatialArtifact.Path);
+        Assert.Equal("worldrpg/imports/privateers-hold/spatial/privateer-s-hold/collision-navigation.rspatial", inputs.SpatialArtifact.Path);
     }
 
     [Fact]

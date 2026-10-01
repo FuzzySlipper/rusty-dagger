@@ -993,9 +993,11 @@ public sealed record Arena2MediaBundlePublication(
             // The descriptor carries each texture's own artifact; the mesh's plane selections must still
             // be the ones the geometry publication resolved, in the same first-use order.
             if (!mesh.Materials.Select(material => (material.Archive, material.Record, material.MaterialResourceId))
-                .SequenceEqual(visual.Materials.Select(material => (material.Archive, material.Record, material.MaterialResourceId))))
+                .SequenceEqual(visual.Materials.Select(material => (material.Archive, material.Record, material.MaterialResourceId)))
+                || !mesh.MaterialSlots.OrderBy(slot => slot.Slot).SequenceEqual(visual.Materials
+                    .Select(material => new StaticMeshMaterialBinding(material.MaterialResourceId, material.Slot)).OrderBy(slot => slot.Slot)))
             {
-                throw new InvalidOperationException($"Classic world visual '{visual.MediaId}' states material references that differ from the ones mesh '{visual.MeshId}' was published with.");
+                throw new InvalidOperationException($"Classic world visual '{visual.MediaId}' states material references or slots that differ from the ones mesh '{visual.MeshId}' was published with.");
             }
         }
     }

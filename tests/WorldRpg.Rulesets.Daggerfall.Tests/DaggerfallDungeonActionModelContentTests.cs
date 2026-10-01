@@ -18,11 +18,10 @@ public sealed class DaggerfallDungeonActionModelContentTests
         int expectedTriangleCount)
     {
         const string publicationRoot = "worldrpg/imports/fixture-dungeon";
-        const string visualPath = publicationRoot + "/spatial/actions/platform.json";
+        const string visualPath = publicationRoot + "/spatial/actions/platform.rstatmsh";
         ContentSha256 hash = new(1, 2, 3, 4);
-        byte[] visual = """
-            {"materialSlots":[{"slot":0,"material":"material/stone"}]}
-            """u8.ToArray();
+        // The visual's bytes go to the Engine unread; its slots are the world's, bound from the meshes.
+        byte[] visual = "RSTATMSH"u8.ToArray();
         string normalizedJson = """
             {
               "world": {
@@ -39,7 +38,7 @@ public sealed class DaggerfallDungeonActionModelContentTests
                   "meshIds": ["mesh/action/platform"]
                 }]
               },
-              "artifacts": [{"id":"artifact/action-platform","relativePath":"spatial/actions/platform.json"}],
+              "artifacts": [{"id":"artifact/action-platform","relativePath":"spatial/actions/platform.rstatmsh"}],
               "meshes": [{
                 "id":"mesh/action/platform",
                 "artifactId":"artifact/action-platform",
@@ -74,6 +73,7 @@ public sealed class DaggerfallDungeonActionModelContentTests
         Assert.Equal((byte)188, model.RawIndex);
         Assert.Equal(new Vector3(3, 4, 5), model.InitialTransform.Translation);
         Assert.Equal(Vector3.One, model.InitialTransform.Scale);
+        Assert.Equal([new DaggerfallMeshMaterialBinding(7, 7)], model.Visual.Materials);
         Assert.Equal(expectedTriangleCount, model.CollisionTriangles.Length);
         Assert.Equal(expectedTriangleCount == 0 ? 0 : 3, model.CollisionVertices.Length);
         if (expectedTriangleCount != 0)

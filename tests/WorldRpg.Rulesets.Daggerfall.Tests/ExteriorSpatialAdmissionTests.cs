@@ -12,8 +12,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// <summary>
 /// The Charing exterior's published spatial closure, admitted by the Engine's own Spatial and Appearance
 /// services rather than the suite's fakes: the fakes never parse the artifact bytes, so only this shows
-/// the importer still writes what the Engine admits. It reports how long the profile read and each
-/// admission take, the costs the exterior's artifact size drives.
+/// the importer still writes what the Engine admits. Both artifacts are the Engine's binary forms
+/// (<c>RSPATIAL</c> and <c>RSTATMSH</c>). It reports how long the profile read and each admission take,
+/// the costs the exterior's artifact size drives.
 /// </summary>
 public sealed class ExteriorSpatialAdmissionTests(ITestOutputHelper output)
 {
@@ -34,6 +35,8 @@ public sealed class ExteriorSpatialAdmissionTests(ITestOutputHelper output)
             [exterior.SpatialArtifact.Path] = File.ReadAllBytes(Path.Combine(root, "content", exterior.SpatialArtifact.Path)),
             [exterior.StaticMesh.Path] = File.ReadAllBytes(Path.Combine(root, "content", exterior.StaticMesh.Path)),
         };
+        Assert.True(files[exterior.SpatialArtifact.Path].Span.StartsWith("RSPATIAL"u8));
+        Assert.True(files[exterior.StaticMesh.Path].Span.StartsWith("RSTATMSH"u8));
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
         host.Call(engine =>
         {

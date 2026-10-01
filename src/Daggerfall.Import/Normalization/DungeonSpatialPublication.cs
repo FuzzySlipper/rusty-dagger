@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -175,8 +176,8 @@ public sealed record DungeonSpatialPublication(
         // A valid RDB can contain only action-door visual geometry. Its static bundle is intentionally
         // empty; the world bounds remain the truthful content bounds for that inline asset.
         NormalizedBounds staticBounds = staticMeshes.Length == 0 ? bounds : MeshGeometry.Bounds(staticMeshes.SelectMany(mesh => mesh.Vertices).ToArray());
-        byte[] staticMesh = StaticMeshJson.Serialize(visualMeshAssetId, staticBounds, assembly);
-        byte[] collisionNavigation = CollisionNavigationJson.Serialize(staticMeshArtifactId, bounds, staticMeshes, navigation);
+        byte[] staticMesh = StaticMeshArtifact.Serialize(visualMeshAssetId, staticBounds, assembly);
+        byte[] collisionNavigation = CollisionNavigationArtifact.Serialize(staticMeshArtifactId, bounds, staticMeshes, navigation);
         byte[] resourceCatalog = ResourceCatalogJson.Serialize(resources);
         string directory = staticMeshRelativePath[..staticMeshRelativePath.LastIndexOf('/')];
         List<DungeonActionModelVisual> actionVisuals = [];
@@ -184,12 +185,14 @@ public sealed record DungeonSpatialPublication(
         foreach (NormalizedActionModelPlacement model in world.ActionModels.OrderBy(value => value.ActionId, StringComparer.Ordinal))
         {
             NormalizedMesh[] localMeshes = model.MeshIds.Select(meshId => meshById[meshId]).ToArray();
-            MeshAssembly localAssembly = MeshAssembly.Create(localMeshes);
+            // The world's material universe, as door visuals use: each local slot is the world slot of its
+            // material, so a consumer binds the visual from the normalized meshes without reading its bytes.
+            MeshAssembly localAssembly = MeshAssembly.Create(localMeshes, materialUniverse: materialUniverse);
             string fileName = ActionArtifactFileName(model.ActionId);
             GeneratedSpatialArtifact artifact = new(
                 model.VisualArtifactId,
-                $"{directory}/actions/{fileName}.json",
-                StaticMeshJson.Serialize(
+                $"{directory}/actions/{fileName}{StaticMeshBinary.Extension}",
+                StaticMeshArtifact.Serialize(
                     $"mesh/action/{fileName}",
                     model.LocalBounds,
                     localAssembly),
@@ -215,9 +218,9 @@ public sealed record DungeonSpatialPublication(
             MeshAssembly doorAssembly = MeshAssembly.Create(localMeshes, materialUniverse: materialUniverse);
             string suffix = door.Id["door/".Length..].Replace('/', '-');
             string artifactId = $"{staticMeshArtifactId}/door/{suffix}";
-            string relativePath = $"{directory}/doors/{suffix}.json";
+            string relativePath = $"{directory}/doors/{suffix}{StaticMeshBinary.Extension}";
             GeneratedSpatialArtifact artifact = new(artifactId, relativePath,
-                StaticMeshJson.Serialize($"mesh/{door.Id}", MeshGeometry.Bounds(localMeshes.SelectMany(mesh => mesh.Vertices).ToArray()), doorAssembly), []);
+                StaticMeshArtifact.Serialize($"mesh/{door.Id}", MeshGeometry.Bounds(localMeshes.SelectMany(mesh => mesh.Vertices).ToArray()), doorAssembly), []);
             doorVisuals.Add(new DungeonDoorVisual(door.Id, artifact, doorAssembly.MaterialSlots
                 .Select(binding => new DungeonMaterialSlot(binding.Material, checked((uint)binding.Slot))).ToArray()));
         }
@@ -451,169 +454,56 @@ public static class OfflineNavigationDeriver
     private readonly record struct CollisionTriangle(NormalizedVector3 A, NormalizedVector3 B, NormalizedVector3 C);
 }
 
-internal static class StaticMeshJson
+/// <summary>The importer's static meshes, published in the Engine's binary static mesh form.</summary>
+internal static class StaticMeshArtifact
 {
     public static byte[] Serialize(string asset, NormalizedBounds bounds, MeshAssembly assembly)
     {
         ArgumentNullException.ThrowIfNull(assembly);
-        using MemoryStream stream = new();
-        // Unindented: the Engine's JSON readers ignore whitespace, and indentation more than doubled a
-        // town's published bytes and the time to write, stage and parse them.
-        using (Utf8JsonWriter writer = new(stream, new JsonWriterOptions { Indented = false }))
-        {
-            writer.WriteStartObject();
-            writer.WriteString("asset", asset);
-            writer.WritePropertyName("payload");
-            writer.WriteStartObject();
-            writer.WritePropertyName("layout");
-            writer.WriteStartObject();
-            writer.WriteNumber("vertexCount", assembly.Vertices.Count);
-            writer.WriteNumber("indexCount", assembly.Indices.Count);
-            writer.WriteString("indexWidth", "u32");
-            writer.WritePropertyName("attributes");
-            writer.WriteStartArray();
-            WriteAttribute(writer, "position", 3);
-            WriteAttribute(writer, "normal", 3);
-            WriteAttribute(writer, "uv", 2);
-            writer.WriteEndArray();
-            writer.WriteEndObject();
-            writer.WritePropertyName("groups");
-            writer.WriteStartArray();
-            foreach (MeshAssemblyGroup group in assembly.Groups)
-            {
-                writer.WriteStartObject();
-                writer.WriteNumber("materialSlot", group.MaterialSlot);
-                writer.WriteNumber("start", group.Start);
-                writer.WriteNumber("count", group.Count);
-                writer.WriteEndObject();
-            }
-            writer.WriteEndArray();
-            writer.WritePropertyName("bounds");
-            WriteBounds(writer, bounds);
-            writer.WritePropertyName("source");
-            writer.WriteStartObject();
-            writer.WriteString("kind", "inline");
-            WriteVector3Stream(writer, "positions", assembly.Vertices);
-            WriteVector3Stream(writer, "normals", assembly.Normals);
-            WriteVector2Stream(writer, "uvs", assembly.Uvs);
-            writer.WritePropertyName("indices");
-            writer.WriteStartArray();
-            foreach (uint index in assembly.Indices) writer.WriteNumberValue(index);
-            writer.WriteEndArray();
-            writer.WriteEndObject();
-            writer.WriteString("provenance", "staticAsset");
-            writer.WriteEndObject();
-            writer.WritePropertyName("materialSlots");
-            writer.WriteStartArray();
-            foreach ((string material, int slot) in assembly.MaterialSlots)
-            {
-                writer.WriteStartObject();
-                writer.WriteNumber("slot", slot);
-                writer.WriteString("material", material);
-                writer.WriteEndObject();
-            }
-            writer.WriteEndArray();
-            writer.WritePropertyName("collision");
-            writer.WriteStartObject();
-            writer.WriteString("kind", "visualOnly");
-            writer.WriteEndObject();
-            writer.WriteEndObject();
-        }
-
-        return [.. stream.ToArray(), (byte)'\n'];
-    }
-
-    private static void WriteAttribute(Utf8JsonWriter writer, string name, int components)
-    {
-        writer.WriteStartObject();
-        writer.WriteString("name", name);
-        writer.WriteNumber("components", components);
-        writer.WriteString("kind", "f32");
-        writer.WriteEndObject();
-    }
-
-    internal static void WriteBounds(Utf8JsonWriter writer, NormalizedBounds bounds)
-    {
-        writer.WriteStartObject();
-        WriteVector3(writer, "min", bounds.Minimum);
-        WriteVector3(writer, "max", bounds.Maximum);
-        writer.WriteEndObject();
-    }
-
-    internal static void WriteVector3(Utf8JsonWriter writer, string name, NormalizedVector3 value)
-    {
-        writer.WritePropertyName(name);
-        writer.WriteStartArray();
-        writer.WriteNumberValue(value.X);
-        writer.WriteNumberValue(value.Y);
-        writer.WriteNumberValue(value.Z);
-        writer.WriteEndArray();
-    }
-
-    private static void WriteVector3Stream(Utf8JsonWriter writer, string name, IReadOnlyList<NormalizedVector3> values)
-    {
-        writer.WritePropertyName(name);
-        writer.WriteStartArray();
-        foreach (NormalizedVector3 value in values)
-        {
-            writer.WriteNumberValue(value.X);
-            writer.WriteNumberValue(value.Y);
-            writer.WriteNumberValue(value.Z);
-        }
-        writer.WriteEndArray();
-    }
-
-    private static void WriteVector2Stream(Utf8JsonWriter writer, string name, IReadOnlyList<NormalizedVector2> values)
-    {
-        writer.WritePropertyName(name);
-        writer.WriteStartArray();
-        foreach (NormalizedVector2 value in values)
-        {
-            writer.WriteNumberValue(value.X);
-            writer.WriteNumberValue(value.Y);
-        }
-        writer.WriteEndArray();
+        return StaticMeshBinary.Write(new(
+            asset,
+            bounds,
+            assembly.Vertices,
+            assembly.Normals,
+            assembly.Uvs,
+            assembly.Indices,
+            assembly.Groups,
+            [.. assembly.MaterialSlots.Select(binding => new StaticMeshMaterialBinding(binding.Material, binding.Slot))]));
     }
 }
 
-internal static class CollisionNavigationJson
+/// <summary>The importer's collision and navigation, published in the Engine's binary Spatial content artifact form.</summary>
+internal static class CollisionNavigationArtifact
 {
-    /// <summary>The format version the Engine's collision and navigation artifact states, and its navigation config.</summary>
-    private const int EngineArtifactVersion = 1;
-
     public static byte[] Serialize(string staticMeshArtifactId, NormalizedBounds bounds, IReadOnlyList<NormalizedMesh> meshes, NormalizedNavigationSurface navigation)
     {
-        (List<NormalizedVector3> positions, List<(uint A, uint B, uint C)> triangles) = Weld(MeshAssembly.Create(meshes, collisionOnly: true));
-        using MemoryStream stream = new();
-        // Unindented, as the static mesh: the navigation cells alone are hundreds of thousands of objects.
-        using (Utf8JsonWriter writer = new(stream, new JsonWriterOptions { Indented = false }))
-        {
-            writer.WriteStartObject();
-            writer.WriteNumber("schemaVersion", EngineArtifactVersion);
-            writer.WriteString("staticMeshArtifactId", staticMeshArtifactId);
-            writer.WritePropertyName("bounds");
-            StaticMeshJson.WriteBounds(writer, bounds);
-            writer.WritePropertyName("collision");
-            writer.WriteStartObject();
-            WriteVector3Collection(writer, "positions", positions);
-            writer.WritePropertyName("triangles");
-            writer.WriteStartArray();
-            foreach ((uint a, uint b, uint c) in triangles)
-            {
-                writer.WriteStartArray();
-                writer.WriteNumberValue(a);
-                writer.WriteNumberValue(b);
-                writer.WriteNumberValue(c);
-                writer.WriteEndArray();
-            }
-            writer.WriteEndArray();
-            writer.WriteEndObject();
-            writer.WritePropertyName("navigation");
-            WriteNavigation(writer, navigation);
-            writer.WriteEndObject();
-        }
+        (List<NormalizedVector3> positions, List<SpatialArtifactTriangle> triangles) = Weld(MeshAssembly.Create(meshes, collisionOnly: true));
+        NavigationDerivationConfig config = navigation.Config;
+        return SpatialArtifactBinary.Write(new(
+            staticMeshArtifactId,
+            Position(bounds.Minimum),
+            Position(bounds.Maximum),
+            [.. positions.Select(Position)],
+            triangles,
+            navigation.Id,
+            new(Decimal(config.CellSize), Decimal(config.LevelQuantum), Decimal(config.MaximumSlopeDegrees), Decimal(config.RequiredHeadroom), Decimal(config.SupportProbeDrop)),
+            [.. navigation.Cells.OrderBy(cell => cell.Column).ThenBy(cell => cell.Row).ThenBy(cell => cell.Level)
+                .Select(cell => new SpatialArtifactCell(cell.Column, cell.Row, cell.Level, Decimal(cell.SupportHeight), cell.Walkable))]));
+    }
 
-        return [.. stream.ToArray(), (byte)'\n'];
+    private static SpatialArtifactPosition Position(NormalizedVector3 value) => new(Decimal(value.X), Decimal(value.Y), Decimal(value.Z));
+
+    /// <summary>
+    /// The double a float's shortest round-trip decimal names (0.1F is 0.1, not 0.100000001490116). The
+    /// artifact's f64 facts are the importer's f32 values as decimals state them, the values the JSON
+    /// form carried, so both forms of one import admit the same collision and navigation.
+    /// </summary>
+    private static double Decimal(float value)
+    {
+        Span<char> text = stackalloc char[32];
+        if (!value.TryFormat(text, out int written, provider: CultureInfo.InvariantCulture))
+            throw new InvalidOperationException("A float did not format as a decimal.");
+        return double.Parse(text[..written], NumberStyles.Float, CultureInfo.InvariantCulture);
     }
 
     /// <summary>
@@ -622,7 +512,7 @@ internal static class CollisionNavigationJson
     /// equal positions keeps the geometry identical. A triangle whose corners weld together had zero area
     /// and the Engine refuses repeated indices, so it is dropped.
     /// </summary>
-    private static (List<NormalizedVector3> Positions, List<(uint A, uint B, uint C)> Triangles) Weld(MeshAssembly collision)
+    private static (List<NormalizedVector3> Positions, List<SpatialArtifactTriangle> Triangles) Weld(MeshAssembly collision)
     {
         Dictionary<(float X, float Y, float Z), uint> indexByPosition = [];
         List<NormalizedVector3> positions = [];
@@ -641,59 +531,15 @@ internal static class CollisionNavigationJson
             welded[vertex] = index;
         }
 
-        List<(uint A, uint B, uint C)> triangles = new(collision.Indices.Count / 3);
+        List<SpatialArtifactTriangle> triangles = new(collision.Indices.Count / 3);
         for (int index = 0; index < collision.Indices.Count; index += 3)
         {
             uint a = welded[collision.Indices[index]], b = welded[collision.Indices[index + 1]], c = welded[collision.Indices[index + 2]];
-            if (a != b && b != c && a != c) triangles.Add((a, b, c));
+            if (a != b && b != c && a != c) triangles.Add(new(a, b, c));
         }
         // The Engine admits positions only with triangles that use them.
         if (triangles.Count == 0) positions.Clear();
         return (positions, triangles);
-    }
-
-    private static void WriteVector3Collection(Utf8JsonWriter writer, string name, IReadOnlyList<NormalizedVector3> values)
-    {
-        writer.WritePropertyName(name);
-        writer.WriteStartArray();
-        foreach (NormalizedVector3 value in values)
-        {
-            writer.WriteStartArray();
-            writer.WriteNumberValue(value.X);
-            writer.WriteNumberValue(value.Y);
-            writer.WriteNumberValue(value.Z);
-            writer.WriteEndArray();
-        }
-        writer.WriteEndArray();
-    }
-
-    private static void WriteNavigation(Utf8JsonWriter writer, NormalizedNavigationSurface navigation)
-    {
-        writer.WriteStartObject();
-        writer.WriteString("id", navigation.Id);
-        writer.WritePropertyName("config");
-        writer.WriteStartObject();
-        writer.WriteNumber("schemaVersion", EngineArtifactVersion);
-        writer.WriteNumber("cellSize", navigation.Config.CellSize);
-        writer.WriteNumber("levelQuantum", navigation.Config.LevelQuantum);
-        writer.WriteNumber("maximumSlopeDegrees", navigation.Config.MaximumSlopeDegrees);
-        writer.WriteNumber("requiredHeadroom", navigation.Config.RequiredHeadroom);
-        writer.WriteNumber("supportProbeDrop", navigation.Config.SupportProbeDrop);
-        writer.WriteEndObject();
-        writer.WritePropertyName("cells");
-        writer.WriteStartArray();
-        foreach (NormalizedNavigationCell cell in navigation.Cells.OrderBy(cell => cell.Column).ThenBy(cell => cell.Row).ThenBy(cell => cell.Level))
-        {
-            writer.WriteStartObject();
-            writer.WriteNumber("column", cell.Column);
-            writer.WriteNumber("row", cell.Row);
-            writer.WriteNumber("level", cell.Level);
-            writer.WriteNumber("supportHeight", cell.SupportHeight);
-            writer.WriteBoolean("walkable", cell.Walkable);
-            writer.WriteEndObject();
-        }
-        writer.WriteEndArray();
-        writer.WriteEndObject();
     }
 }
 
@@ -736,7 +582,7 @@ internal sealed class MeshAssembly
         IReadOnlyList<NormalizedVector3> normals,
         IReadOnlyList<NormalizedVector2> uvs,
         IReadOnlyList<uint> indices,
-        IReadOnlyList<MeshAssemblyGroup> groups,
+        IReadOnlyList<StaticMeshGroup> groups,
         IReadOnlyList<(string Material, int Slot)> materialSlots)
     {
         Vertices = vertices;
@@ -751,7 +597,7 @@ internal sealed class MeshAssembly
     public IReadOnlyList<NormalizedVector3> Normals { get; }
     public IReadOnlyList<NormalizedVector2> Uvs { get; }
     public IReadOnlyList<uint> Indices { get; }
-    public IReadOnlyList<MeshAssemblyGroup> Groups { get; }
+    public IReadOnlyList<StaticMeshGroup> Groups { get; }
     public IReadOnlyList<(string Material, int Slot)> MaterialSlots { get; }
 
     public static MeshAssembly Create(IReadOnlyList<NormalizedMesh> meshes, bool collisionOnly = false, IReadOnlyList<string>? materialUniverse = null)
@@ -773,7 +619,7 @@ internal sealed class MeshAssembly
         List<NormalizedVector3> normals = [];
         List<NormalizedVector2> uvs = [];
         List<uint> indices = [];
-        List<MeshAssemblyGroup> groups = [];
+        List<StaticMeshGroup> groups = [];
         foreach (NormalizedMesh mesh in orderedMeshes)
         {
             NormalizedMaterialGroup[] selectedGroups = mesh.MaterialGroups
@@ -814,5 +660,3 @@ internal sealed class MeshAssembly
             materials.Select((material, slot) => (material, slot)).ToArray());
     }
 }
-
-internal readonly record struct MeshAssemblyGroup(int MaterialSlot, int Start, int Count);

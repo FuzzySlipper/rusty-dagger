@@ -152,15 +152,13 @@ public sealed class GeometryPublicationTests
         foreach (string meshId in new[] { "55000", "41313", "21141" })
         {
             GeometryMeshArtifact mesh = Assert.Single(Publish([meshId], Textures()).Meshes);
-            using JsonDocument document = JsonDocument.Parse(
-                Publish([meshId], Textures()).Artifacts.Single(artifact => artifact.RelativePath == mesh.RelativePath).Bytes);
             // The artifact is the mesh the contract validated when it was assembled — every triangle index
             // is one the vertex list carries, which the mesh contract refuses otherwise — and it names the
             // source mesh it came from.
-            string raw = System.Text.Encoding.UTF8.GetString(
-                Publish([meshId], Textures()).Artifacts.Single(artifact => artifact.RelativePath == mesh.RelativePath).Bytes.Span);
-            JsonDocument.Parse(raw).Dispose();
-            Assert.Contains($"\"{mesh.MeshId}\"", raw, StringComparison.Ordinal);
+            using EngineBinaryContent.StaticMesh artifact = EngineBinaryContent.ReadStaticMesh(
+                Publish([meshId], Textures()).Artifacts.Single(artifact => artifact.RelativePath == mesh.RelativePath).Bytes);
+            Assert.Equal(mesh.MeshId, artifact.Root.GetProperty("asset").GetString());
+            Assert.All(artifact.Indices, index => Assert.True(index < artifact.Positions.Length / 3));
             Assert.True(mesh.Vertices > 0 && mesh.Triangles > 0);
         }
     }

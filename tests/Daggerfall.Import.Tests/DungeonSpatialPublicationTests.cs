@@ -9,7 +9,7 @@ namespace Daggerfall.Import.Tests;
 public sealed class DungeonSpatialPublicationTests
 {
     [Fact]
-    public void StaticMeshOutputUsesExactInlineEngineContentShapeAndPreservesAllVisualGroups()
+    public void StaticMeshOutputUsesTheEngineBinaryContentShapeAndPreservesAllVisualGroups()
     {
         NormalizedMesh collision = Floor("mesh/example/floor", "artifact/generated/static", "material/stone", 0F, true);
         NormalizedMesh doorVisual = Floor("mesh/example/door", "artifact/generated/static", "material/door", 2F, false);
@@ -30,9 +30,9 @@ public sealed class DungeonSpatialPublicationTests
         ];
         DungeonSpatialPublication publication = DungeonSpatialPublication.Create(
             "artifact/generated/static",
-            "spatial/example/static-mesh.json",
+            "spatial/example/static-mesh.rstatmsh",
             "artifact/generated/spatial",
-            "spatial/example/collision-navigation.json",
+            "spatial/example/collision-navigation.rspatial",
             "artifact/generated/resources",
             "resources/example/catalog.json",
             world.VisualMeshAssetId,
@@ -42,21 +42,28 @@ public sealed class DungeonSpatialPublicationTests
             navigation,
             resources);
 
-        using JsonDocument staticMesh = JsonDocument.Parse(publication.StaticMesh.Bytes);
-        JsonElement root = staticMesh.RootElement;
+        using EngineBinaryContent.StaticMesh staticMesh = EngineBinaryContent.ReadStaticMesh(publication.StaticMesh.Bytes);
+        JsonElement root = staticMesh.Root;
         Assert.Equal("mesh/example", root.GetProperty("asset").GetString());
         JsonElement payload = root.GetProperty("payload");
         Assert.Equal("u32", payload.GetProperty("layout").GetProperty("indexWidth").GetString());
-        Assert.Equal("inline", payload.GetProperty("source").GetProperty("kind").GetString());
+        Assert.Equal("resource", payload.GetProperty("source").GetProperty("kind").GetString());
+        Assert.Equal("packedStreamsLeV2", payload.GetProperty("source").GetProperty("encoding").GetString());
         Assert.Equal("staticAsset", payload.GetProperty("provenance").GetString());
         Assert.Equal("visualOnly", root.GetProperty("collision").GetProperty("kind").GetString());
         Assert.Equal(2, payload.GetProperty("groups").GetArrayLength());
         Assert.Equal(2, root.GetProperty("materialSlots").GetArrayLength());
+        Assert.Equal(8 * 3, staticMesh.Positions.Length);
+        Assert.Equal(8 * 2, staticMesh.Uvs!.Length);
+        Assert.Equal(4 * 3, staticMesh.Indices.Length);
 
-        using JsonDocument spatial = JsonDocument.Parse(publication.CollisionNavigation.Bytes);
-        Assert.Equal("artifact/generated/static", spatial.RootElement.GetProperty("staticMeshArtifactId").GetString());
-        Assert.Equal(2, spatial.RootElement.GetProperty("collision").GetProperty("triangles").GetArrayLength());
-        Assert.Equal("navigation/example", spatial.RootElement.GetProperty("navigation").GetProperty("id").GetString());
+        EngineBinaryContent.SpatialArtifact spatial = EngineBinaryContent.ReadSpatial(publication.CollisionNavigation.Bytes.Span);
+        Assert.Equal("artifact/generated/static", spatial.StaticMeshArtifactId);
+        Assert.Equal(2, spatial.Triangles.Length);
+        Assert.Equal("navigation/example", spatial.NavigationId);
+        // Each f32 import value is the double its decimal names, as the JSON form stated it.
+        Assert.Equal([1, 0.5, 45, 1.8, 0.05], spatial.Config);
+        Assert.Equal(publication.Navigation.Cells.Count, spatial.Cells.Length);
         Assert.Equal(["artifact/generated/static"], publication.CollisionNavigation.DependsOnArtifactIds);
         using JsonDocument resourceCatalog = JsonDocument.Parse(publication.ResourceCatalog.Bytes);
         Assert.Equal("artifact/generated/resources", resourceCatalog.RootElement.GetProperty("resources")[0].GetProperty("artifactId").GetString());
@@ -124,9 +131,9 @@ public sealed class DungeonSpatialPublicationTests
 
         Assert.Throws<InvalidOperationException>(() => DungeonSpatialPublication.Create(
             "artifact/static",
-            "spatial/example/static.json",
+            "spatial/example/static.rstatmsh",
             "artifact/spatial",
-            "spatial/example/spatial.json",
+            "spatial/example/spatial.rspatial",
             "artifact/resources",
             "resources/example/catalog.json",
             world.VisualMeshAssetId,
@@ -158,16 +165,14 @@ public sealed class DungeonSpatialPublicationTests
             .Select(material => new NormalizedResourceCatalogEntry(material, NormalizedResourceKind.Material, "artifact/resources", [], [])).ToArray();
 
         DungeonSpatialPublication publication = DungeonSpatialPublication.Create(
-            "artifact/static", "spatial/example/static.json", "artifact/spatial", "spatial/example/spatial.json",
+            "artifact/static", "spatial/example/static.rstatmsh", "artifact/spatial", "spatial/example/spatial.rspatial",
             "artifact/resources", "resources/example/catalog.json", world.VisualMeshAssetId,
             new(new(0F, 0F, 0F), new(2F, 0F, 2F)), [first, second, collapsed], world, navigation, resources);
 
-        using JsonDocument spatial = JsonDocument.Parse(publication.CollisionNavigation.Bytes);
-        JsonElement collision = spatial.RootElement.GetProperty("collision");
-        Assert.Equal(4, collision.GetProperty("positions").GetArrayLength());
-        Assert.Equal(4, collision.GetProperty("triangles").GetArrayLength());
-        Assert.All(collision.GetProperty("triangles").EnumerateArray(), triangle =>
-            Assert.Equal(3, triangle.EnumerateArray().Select(index => index.GetUInt32()).Distinct().Count()));
+        EngineBinaryContent.SpatialArtifact spatial = EngineBinaryContent.ReadSpatial(publication.CollisionNavigation.Bytes.Span);
+        Assert.Equal(4, spatial.Positions.Length);
+        Assert.Equal(4, spatial.Triangles.Length);
+        Assert.All(spatial.Triangles, triangle => Assert.Equal(3, new[] { triangle.A, triangle.B, triangle.C }.Distinct().Count()));
     }
 
     private static NormalizedMesh Floor(string id, string artifactId, string material, float height, bool collision, float minimum = 0F, bool upward = true) => new(
