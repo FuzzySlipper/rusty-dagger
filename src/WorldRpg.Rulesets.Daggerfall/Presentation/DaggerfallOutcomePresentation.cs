@@ -73,13 +73,17 @@ internal sealed class DaggerfallOutcomePresentation(
                 break;
             case AttackMissedFact missed when Actor(missed.EnemyAttack ? missed.AttackerId : missed.TargetId, out DaggerfallActorDefinition definition):
                 _lineIsResult = true;
-                presentation.SetOutcome(missed.EnemyAttack
+                presentation.SetOutcome(missed.EnemyAttack && missed.TargetId != DaggerfallActorIdentity.PlayerEntityId
+                    ? $"{Name(missed.AttackerId)} missed {Name(missed.TargetId)} ({missed.Roll} vs {missed.Chance})"
+                    : missed.EnemyAttack
                     ? $"{definition.Id.Value} missed you ({missed.Roll} vs {missed.Chance})"
                     : $"Missed {definition.Id.Value} ({missed.Roll} vs {missed.Chance})");
                 break;
             case AttackHitFact hit when Actor(hit.EnemyAttack ? hit.AttackerId : hit.TargetId, out DaggerfallActorDefinition definition):
                 _lineIsResult = true;
-                presentation.SetOutcome(hit.EnemyAttack ? $"{definition.Id.Value} hit you for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage" : $"Hit {definition.Id.Value} for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage");
+                presentation.SetOutcome(hit.EnemyAttack && hit.TargetId != DaggerfallActorIdentity.PlayerEntityId
+                    ? $"{Name(hit.AttackerId)} hit {Name(hit.TargetId)} for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage"
+                    : hit.EnemyAttack ? $"{definition.Id.Value} hit you for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage" : $"Hit {definition.Id.Value} for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage");
                 break;
             case ActorDiedFact died when Actor(died.ActorId, out DaggerfallActorDefinition definition):
                 _lineIsResult = true;

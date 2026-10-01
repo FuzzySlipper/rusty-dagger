@@ -273,16 +273,7 @@ public sealed class SpatialMovementSystem : IDisposable
             || !float.IsFinite(maxDistance) || maxDistance <= 0f)
             throw new ArgumentOutOfRangeException(nameof(maxDistance), "Spatial ray inputs must be finite and distance positive.");
         ValidateColliders(entities.Span, nameof(entities));
-        ReadOnlyMemory<SpatialEntityCollider> obstacles = SpatialColliders(environment);
-        SpatialEntityCollider[]? merged = null;
-        ReadOnlyMemory<SpatialEntityCollider> projected = entities;
-        if (!obstacles.IsEmpty)
-        {
-            merged = new SpatialEntityCollider[entities.Length + obstacles.Length];
-            entities.Span.CopyTo(merged);
-            obstacles.Span.CopyTo(merged.AsSpan(entities.Length));
-            projected = merged;
-        }
+        ReadOnlyMemory<SpatialEntityCollider> projected = QueryColliders(entities, environment);
         SpatialRaycastRequest request = new(
             _session,
             origin,
@@ -293,6 +284,27 @@ public sealed class SpatialMovementSystem : IDisposable
             ReadOnlyMemory<ulong>.Empty,
             ReadOnlyMemory<SpatialEntityCollider>.Empty);
         return _spatial.CastRay(request);
+    }
+
+    /// <summary>Queries Engine capsule overlap against the same admitted geometry and call-local obstacles as movement.</summary>
+    public SpatialHit OverlapCapsule(Vector3 center, double halfHeight, double radius,
+        ReadOnlyMemory<SpatialEntityCollider> entities, CharacterStepEnvironment? environment = null)
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
+        return _spatial.OverlapCapsule(new SpatialCapsuleQueryRequest(_session, center, halfHeight, radius,
+            Vector3.Zero, 0d, new SpatialQueryFilter(uint.MaxValue, uint.MaxValue),
+            QueryColliders(entities, environment), ReadOnlyMemory<ulong>.Empty));
+    }
+
+    private static ReadOnlyMemory<SpatialEntityCollider> QueryColliders(
+        ReadOnlyMemory<SpatialEntityCollider> entities, CharacterStepEnvironment? environment)
+    {
+        ReadOnlyMemory<SpatialEntityCollider> obstacles = SpatialColliders(environment);
+        if (obstacles.IsEmpty) return entities;
+        SpatialEntityCollider[] merged = new SpatialEntityCollider[entities.Length + obstacles.Length];
+        entities.Span.CopyTo(merged);
+        obstacles.Span.CopyTo(merged.AsSpan(entities.Length));
+        return merged;
     }
 
     /// <summary>

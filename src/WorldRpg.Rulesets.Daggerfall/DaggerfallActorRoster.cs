@@ -82,6 +82,7 @@ internal sealed class DaggerfallActorRoster
             return new(DaggerfallWabbajackOutcome.AlreadyTransformed, durableId);
         DaggerfallActorDefinition definition = _definitions.Actors.Values.Single(value => value.MobileId == selectedMobile);
         _ = DaggerfallWabbajack.RequireDefinition(_definitions, definition.Id.Value);
+        if (oldDefinition.Team == "player-ally") definition = definition with { Team = "player-ally" };
         if (!_projection().Inputs.MobileSprites.TryGetValue(selectedMobile, out var sprite))
             return new(DaggerfallWabbajackOutcome.UnavailableAppearance, durableId);
         ActorPose pose = original.Pose;
@@ -114,7 +115,7 @@ internal sealed class DaggerfallActorRoster
     /// memory, managed inventory and equipment, definition loadout, and floor grounding.
     /// Returns the allocated durable identity, which the save persists and restore reuses.
     /// </summary>
-    internal long Spawn(string definitionId, ActorPose pose, int? level = null)
+    internal long Spawn(string definitionId, ActorPose pose, int? level = null, bool playerAllied = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(definitionId);
         DaggerfallActorDefinition definition = _definitions.RequireActor(new DaggerfallActorId(definitionId));
@@ -131,6 +132,7 @@ internal sealed class DaggerfallActorRoster
             spawnLevel = checked(spawnLevel + (int)_random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, CombatRandomKey.EnemyScope,
                 $"class-guard-level:{durableId}", 3, 6)).Value);
         DaggerfallActorDefinition spawnedDefinition = DaggerfallEncounterActors.AtLevel(definition, _definitions.Vocabulary, spawnLevel);
+        if (playerAllied) spawnedDefinition = spawnedDefinition with { Team = "player-ally" };
         bool registered = false;
         try
         {

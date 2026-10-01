@@ -30,6 +30,9 @@ internal sealed class DaggerfallEnemyBehaviorModule
     /// </summary>
     private readonly PursuitTuning _pursuitTuning;
     private readonly PursuitPerceptionOptions _perceptionOptions;
+    private readonly IAttackCapabilities<IProductFact> _combat;
+    private readonly Func<long, bool> _isPlayerAllied;
+    private readonly Func<long, PursuitTarget?>? _selectAllyTarget;
 
     internal DaggerfallEnemyBehaviorModule(
         IPerceptionService perception,
@@ -39,8 +42,12 @@ internal sealed class DaggerfallEnemyBehaviorModule
         IAttackCapabilities<IProductFact> combat,
         DaggerfallEnemyBehaviorTuning tuning,
         Func<long, DaggerfallEnemyPerceptionContext> contextProvider,
-        Action<DaggerfallSkillUse> recordSkillUse)
+        Action<DaggerfallSkillUse> recordSkillUse,
+        Func<long, bool>? isPlayerAllied = null, Func<long, PursuitTarget?>? selectAllyTarget = null)
     {
+        _combat = combat;
+        _isPlayerAllied = isPlayerAllied ?? (_ => false);
+        _selectAllyTarget = selectAllyTarget;
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
         _contextProvider = contextProvider ?? throw new ArgumentNullException(nameof(contextProvider));
         _recordSkillUse = recordSkillUse ?? throw new ArgumentNullException(nameof(recordSkillUse));
@@ -73,7 +80,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
     {
         foreach (ActorState actor in _actors.All)
         {
-            if (actor.IsDefeated) continue;
+            if (actor.IsDefeated || _isPlayerAllied(actor.DurableId)) continue;
             DaggerfallEnemyPerceptionMemory memory = Senses(actor);
             memory.Pacified = false;
             memory.ForcedHostile = true;
@@ -98,10 +105,24 @@ internal sealed class DaggerfallEnemyBehaviorModule
         Dictionary<long, DaggerfallEnemyPerceptionDecision> perceptions = [];
         foreach (ActorState actor in _actors.All.OrderBy(value => value.DurableId))
         {
+            PursuitTarget? target = _isPlayerAllied(actor.DurableId)
+                ? _selectAllyTarget?.Invoke(actor.DurableId)
+                : new PursuitTarget(DaggerfallActorIdentity.PlayerEntityId, playerPosition);
+            if (target is null)
+            {
+                PursuitState desired = actor.IsDefeated ? PursuitState.Dead : PursuitState.Idle;
+                PursuitState previousState = actor.Pursuit.TransitionTo(desired);
+                _combat.InterruptPendingAttack(actor.DurableId, generation);
+                _lastDecisions.Remove(actor.DurableId);
+                if (previousState != desired)
+                    facts.Append(new EnemyBehaviorTransitionFact(actor.DurableId, ToDaggerState(previousState), ToDaggerState(desired), generation, simulationStep));
+                evidence.Add(actor.DurableId, new(actor.DurableId, ToDaggerState(desired), null, null));
+                continue;
+            }
             PursuitEvidence pursuit = _pursuit.Update(
                 actor,
                 actor.Pursuit,
-                new PursuitTarget(DaggerfallActorIdentity.PlayerEntityId, playerPosition),
+                target.Value,
                 _pursuitTuning,
                 _perceptionOptions,
                 generation,
@@ -138,6 +159,8 @@ internal sealed class DaggerfallEnemyBehaviorModule
             _lastDecisions.Remove(actorId);
             return receipt;
         }
+        // The player's stealth/language policy does not reinterpret an ally's enemy visibility.
+        if (_isPlayerAllied(actorId)) return receipt;
         PerceptionPair? pair = receipt.Pairs.ToArray()
             .Where(value => value.Observer == checked((ulong)actorId) && value.Target == checked((ulong)DaggerfallActorIdentity.PlayerEntityId))
             .OrderBy(value => value.Distance)

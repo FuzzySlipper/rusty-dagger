@@ -261,7 +261,9 @@ internal sealed partial class DaggerfallSession
                 kit.Attacks,
                 tuning.EnemyBehavior,
                 contextProvider: BuildEnemyPerceptionContext,
-                recordSkillUse: use => skillUses.Record(use));
+                recordSkillUse: use => skillUses.Record(use),
+                isPlayerAllied: id => authored.TryGetValue(id, out var actor) && actor.Team == "player-ally",
+                selectAllyTarget: SelectAllyTarget);
             _authoredEntityIds = DaggerActorFactory.AdmittedAuthoredEntityIds(inputs, playerDefinition.Loadout);
             if (restore is null)
             {
@@ -378,7 +380,7 @@ internal sealed partial class DaggerfallSession
                     if (!State.LevelUps.BeginOghma()) return false;
                     RequestPanel(DaggerfallPanel.Character);
                     return true;
-                }));
+                }, useSanguineRose: UseSanguineRose));
             _inventoryUi.BookOpened += _ => RequestPanel(DaggerfallPanel.Journal);
             _lootUi = new DaggerfallLootPresentation(_corpseLoot, _inventoryUi, _groundContainers);
             _interactions = new DaggerfallOpenInteractions(
@@ -389,7 +391,7 @@ internal sealed partial class DaggerfallSession
                 characterCreationOpen: () => State.Character.Pending is not null,
                 levelUpOpen: () => State.LevelUps.Pending is not null,
                 bankOpen: () => ActiveBankRegion() is not null);
-            _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, _dungeonText, CapturePropertyStorage, QuestTravelOrigin);
+            _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, _dungeonText, CapturePropertyStorage, QuestTravelOrigin, authored);
             _roster = new DaggerfallActorRoster(State, definitions, _random, assembled.Mechanics, _actorIdentities, _uniqueItems,
                 _authoredEntityIds, authored, saved?.DynamicActors ?? [], _grounding, () => _sites.Projection, _lootUi, _corpseLoot);
             _sites = new DaggerfallSiteLifecycle(engine, State, definitions, tuning, _time, _site, _spatial, _camera, audioBundles,

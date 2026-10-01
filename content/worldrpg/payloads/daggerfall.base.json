@@ -1548,7 +1548,8 @@
           "minimumDamage": 15,
           "maximumDamage": 50
         }
-      ]
+      ],
+      "action": "monster-strike"
     },
     {
       "id": "vampire",
