@@ -127,6 +127,9 @@
     "pointsPerSecond": 5.0,
     "delayAfterAttackSeconds": 2.0
   },
+  "music": {
+    "alternatePlaylists": false
+  },
   "presentationAudio": {
     "volume": 1.0,
     "pitch": 1.0,

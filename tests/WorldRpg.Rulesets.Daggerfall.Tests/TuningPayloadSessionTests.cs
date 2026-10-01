@@ -10,6 +10,17 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class TuningPayloadSessionTests
 {
     [Fact]
+    public void Music_playlist_tuning_defaults_to_standard_and_requires_a_boolean()
+    {
+        string root = TestData.RepositoryRoot;
+        Assert.False(DaggerfallTuning.Read(File.ReadAllBytes(Path.Combine(root,
+            "content/worldrpg/tuning-payloads/daggerfall.defaults.json"))).Music.AlternatePlaylists);
+        Assert.True(DaggerfallTuning.Read(MutatedTuning(root, tuning => tuning["music"]!["alternatePlaylists"] = true)).Music.AlternatePlaylists);
+        Assert.Throws<InvalidOperationException>(() => DaggerfallTuning.Read(MutatedTuning(root,
+            tuning => tuning["music"]!["alternatePlaylists"] = "true")));
+    }
+
+    [Fact]
     public void Daggerfall_tuning_exposes_its_controller_values_in_loaded_payloads()
     {
         string root = TestData.RepositoryRoot;

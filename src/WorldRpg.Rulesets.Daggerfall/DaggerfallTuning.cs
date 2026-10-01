@@ -24,6 +24,8 @@ internal sealed record DaggerfallTuning(
     DaggerfallPropertyTuning Property,
     DaggerfallTransportTuning Transport)
 {
+    internal DaggerfallMusicTuning Music { get; init; } = new(AlternatePlaylists: false);
+
     internal static DaggerfallTuning Defaults { get; } = new(
         // Screen-space mouse Y increases downward; Engine camera pitch increases upward.
         new PlayerControlTuning(.0035f, -1.5533f, 1.5533f, .35f, InvertHorizontal: false, InvertVertical: true, WrapYaw: true),
@@ -214,7 +216,9 @@ internal sealed record DaggerfallTuning(
                 transport.GetProperty("cartBaseClassicUnits").GetInt32(),
                 transport.GetProperty("wagonCapacityClassicUnits").GetInt32(),
                 transport.GetProperty("wagonAccessRange").GetSingle()))
-            .Validate();
+        {
+            Music = new DaggerfallMusicTuning(root.GetProperty("music").GetProperty("alternatePlaylists").GetBoolean()),
+        }.Validate();
     }
 
     private static DaggerfallShipArrivalAnchor ReadShipArrival(JsonElement anchor) => new(
@@ -434,3 +438,6 @@ internal readonly record struct PlayerInitialLook(float YawRadians, float PitchR
         return this;
     }
 }
+
+/// <summary>Chooses the donor's standard or alternate playlists; JSON admission requires a Boolean.</summary>
+internal sealed record DaggerfallMusicTuning(bool AlternatePlaylists);
