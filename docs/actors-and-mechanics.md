@@ -110,6 +110,26 @@ and expect later assignments to appear in it.
 
 ## Named gameplay services
 
+Worn social enchantments contribute temporary sources through `State.Social`:
+GoodRepWith adds ten and BadRepWith subtracts ten from the selected social group;
+All means the five named groups, while the Masque affects all eleven groups using
+live Personality divided by five. Contributions sum across equipped items and
+never change permanent standing. Faction and NPC reactions read those same sources.
+Equipment changes, retirement and disposal remove the item's sources; restore
+rebuilds them from saved item metadata and equipment.
+
+BadReactionsFrom applies only while the matching humanoid, animal or Daedra group
+is strictly within eight metres. Each matching worn source subtracts five from
+player attack chance. Its armor contribution follows the donor's literal minus
+five in the nonstacking decreased-armor slot, including the sign difference from
+the donor comment; StrengthensArmor remains a separate slot. The current enchant
+action accepts one setting or one loaded bundle per item. Mixed construction,
+same-item parameter exclusivity and drawback budgets belong to item-making;
+within one construction, All excludes other options of its own family and a
+Good/Bad pair with the same group excludes its opposite. BadReactionsFrom adds
+no custom parameter exclusivity. Equipped items may
+independently carry opposing social sources.
+
 `DaggerfallState` names the session's owners. The session constructs it once,
 from `DaggerActorFactory`'s `DaggerActorAssembly` and the services built over
 it, so no member is null or replaced; `DaggerfallActorInventories` gives any

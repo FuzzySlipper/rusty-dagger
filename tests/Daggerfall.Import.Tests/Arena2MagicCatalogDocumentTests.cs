@@ -55,11 +55,12 @@ public sealed class Arena2MagicCatalogDocumentTests
     {
         JsonArray settings = JsonNode.Parse(Arena2MagicCatalogDocument.Build(
             SpellTable(), MagicItemTable(), "arena2/SPELLS.STD", "arena2/MAGIC.DEF").Json)!["enchantmentSettings"]!.AsArray();
-        Assert.Equal(62, settings.Count);
-        Assert.Equal(62, settings.Select(row => row!["key"]!.GetValue<string>()).Distinct().Count());
+        Assert.Equal(77, settings.Count);
+        Assert.Equal(77, settings.Select(row => row!["key"]!.GetValue<string>()).Distinct().Count());
         foreach ((int type, int count, string source) in new[] {
             (10, 35, "EnhancesSkill"), (3, 11, "ExtraSpellPts"),
-            (7, 2, "IncreasedWeightAllowance"), (13, 3, "ImprovesTalents") })
+            (7, 2, "IncreasedWeightAllowance"), (13, 3, "ImprovesTalents"),
+            (14, 6, "GoodRepWith"), (25, 6, "BadRepWith"), (22, 3, "BadReactionsFrom") })
         {
             JsonNode[] family = [.. settings.Where(row => row!["type"]!.GetValue<int>() == type).Select(row => row!)];
             Assert.Equal(count, family.Length);
@@ -77,6 +78,12 @@ public sealed class Arena2MagicCatalogDocumentTests
             settings.Where(row => row!["type"]!.GetValue<int>() == 3).Select(row => row!["cost"]!.GetValue<int>()));
         Assert.Equal(new[] {500,600,600},
             settings.Where(row => row!["type"]!.GetValue<int>() == 13).Select(row => row!["cost"]!.GetValue<int>()));
+        Assert.Equal(new[] {1000,1000,1000,1000,1000,5000},
+            settings.Where(row => row!["type"]!.GetValue<int>() == 14).Select(row => row!["cost"]!.GetValue<int>()));
+        Assert.Equal(new[] {-1000,-1000,-1000,-1000,-1000,-5000},
+            settings.Where(row => row!["type"]!.GetValue<int>() == 25).Select(row => row!["cost"]!.GetValue<int>()));
+        Assert.Equal(new[] {-120,-80,-120},
+            settings.Where(row => row!["type"]!.GetValue<int>() == 22).Select(row => row!["cost"]!.GetValue<int>()));
     }
 
     [CorpusFact("SPELLS.STD", "MAGIC.DEF")]

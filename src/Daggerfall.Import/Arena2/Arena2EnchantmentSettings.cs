@@ -104,6 +104,30 @@ internal static class Arena2EnchantmentSettings
             (1, 600, "improved-athleticism", "athleticismLower", "athleticism"),
             (2, 600, "improved-adrenaline-rush", "adrenalineRushLower", "adrenaline rush"),
         ]);
+        AddFamily(14, "GoodRepWith", "Good rep with",
+        [
+            (0, 1000, "commoners", "commoners", "Commoners"),
+            (1, 1000, "merchants", "merchants", "Merchants"),
+            (2, 1000, "scholars", "scholars", "Scholars"),
+            (3, 1000, "nobility", "nobility", "Nobility"),
+            (4, 1000, "underworld", "underworld", "Underworld"),
+            (5, 5000, "all", "all", "All"),
+        ]);
+        AddFamily(25, "BadRepWith", "Bad rep with",
+        [
+            (0, -1000, "commoners", "commoners", "Commoners"),
+            (1, -1000, "merchants", "merchants", "Merchants"),
+            (2, -1000, "scholars", "scholars", "Scholars"),
+            (3, -1000, "nobility", "nobility", "Nobility"),
+            (4, -1000, "underworld", "underworld", "Underworld"),
+            (5, -5000, "all", "all", "All"),
+        ]);
+        AddFamily(22, "BadReactionsFrom", "Bad reactions from",
+        [
+            (0, -120, "from-humanoids", "fromHumanoids", "from humanoids"),
+            (1, -80, "from-animals", "fromAnimals", "from animals"),
+            (2, -120, "from-daedra", "fromDaedra", "from Daedra"),
+        ]);
         return settings;
 
         void AddFamily(int type, string sourceClass, string primaryDisplayName,

@@ -19,6 +19,96 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// </summary>
 public sealed class DaggerfallHeldEnchantmentTests
 {
+    public static IEnumerable<object[]> SocialParameters =>
+        from type in new[] { 14, 25 }
+        from param in Enumerable.Range(0, 6)
+        select new object[] { type, param };
+
+    [Theory]
+    [MemberData(nameof(SocialParameters))]
+    public void Every_social_setting_reaches_only_its_retained_groups_and_leaves_on_unequip(int type, int param)
+    {
+        using Fixture fixture = new();
+        // Good All costs 5000: test it as a bundle payload; Bad All is an affordable -5000 drawback.
+        if (type == 14 && param == 5) fixture.EquipAuthored("template-120-daedric", 9501, type, param, equip: true);
+        else fixture.EnchantAndWear("template-120-daedric", 9501, type, param);
+        fixture.Refresh();
+        int amount = type == 14 ? 10 : -10;
+        for (int group = 0; group < DaggerfallSocialState.SocialGroupCount; group++)
+            Assert.Equal((param == 5 ? group < 5 : group == param) ? amount : 0, fixture.Social.ReactionModifier(group));
+        fixture.AdvanceRounds(100);
+        Assert.Equal(amount, fixture.Social.ReactionModifier(param == 5 ? 4 : param));
+        Assert.All(fixture.Social.Capture().Personal, value => Assert.Equal(0, value.Value));
+        fixture.Unequip(9501);
+        fixture.Refresh();
+        for (int group = 0; group < DaggerfallSocialState.SocialGroupCount; group++)
+            Assert.Equal(0, fixture.Social.ReactionModifier(group));
+    }
+
+    [Fact]
+    public void Opposing_equipped_social_sources_cancel_and_transfer_or_destruction_removes_only_the_owner()
+    {
+        using Fixture fixture = new();
+        var other = new IntrinsicSourceIdentity(fixture.PlayerEntity, SourceInstanceId.Parse("independent-reaction"));
+        fixture.Social.SetReactionSource(0, other, 3);
+        fixture.EnchantAndWear("template-120-daedric", 9501, 14, 0);
+        fixture.EnchantAndWear("template-120-daedric", 9502, 25, 0);
+        Assert.Equal(3, fixture.Social.ReactionModifier(0));
+        fixture.AdvanceRounds(100);
+        Assert.Equal(3, fixture.Social.ReactionModifier(0));
+        fixture.TransferAway(9501);
+        fixture.Refresh();
+        Assert.Equal(-7, fixture.Social.ReactionModifier(0));
+        fixture.DestroyPlayer();
+        fixture.Refresh();
+        Assert.Equal(3, fixture.Social.ReactionModifier(0));
+    }
+
+    [Fact]
+    public void Independent_good_sources_stack_with_an_opposing_all_source()
+    {
+        using Fixture fixture = new();
+        fixture.EnchantAndWear("template-120-daedric", 9501, 14, 1);
+        fixture.EnchantAndWear("template-120-daedric", 9502, 14, 1);
+        Assert.Equal(20, fixture.Social.ReactionModifier(1));
+        fixture.EquipAuthored("iron-cuirass", 9503, 25, 5, equip: true);
+        fixture.Refresh();
+        Assert.Equal(10, fixture.Social.ReactionModifier(1));
+        Assert.Equal(-10, fixture.Social.ReactionModifier(0));
+        Assert.Equal(0, fixture.Social.ReactionModifier(5));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void Every_bad_reaction_option_uses_its_eight_meter_boundary_and_source_stacking(int param)
+    {
+        DaggerfallEnemyGroup group = param switch { 0 => DaggerfallEnemyGroup.Humanoid, 1 => DaggerfallEnemyGroup.Animals, _ => DaggerfallEnemyGroup.Daedra };
+        using Fixture fixture = new();
+        fixture.EnchantAndWear("template-120-daedric", 9501, 22, param);
+        fixture.Nearby = [new(group == DaggerfallEnemyGroup.Animals ? DaggerfallEnemyGroup.Daedra : DaggerfallEnemyGroup.Animals, new WorldPoint(1, 0, 0))];
+        fixture.Refresh();
+        Assert.Equal(0, fixture.AttackChanceModifier);
+        fixture.Nearby = [new(group, new WorldPoint(8, 0, 0))];
+        fixture.Refresh();
+        Assert.Equal(0, fixture.AttackChanceModifier);
+        fixture.Nearby = [new(group, new WorldPoint(7.99f, 0, 0))];
+        fixture.Refresh();
+        Assert.Equal(-5, fixture.AttackChanceModifier);
+        Assert.Equal(-5, fixture.ArmorValueModifier);
+        fixture.EnchantAndWear("template-120-daedric", 9502, 22, param);
+        Assert.Equal(-10, fixture.AttackChanceModifier);
+        Assert.Equal(-5, fixture.ArmorValueModifier);
+        fixture.Unequip(9501);
+        fixture.Refresh();
+        Assert.Equal(-5, fixture.AttackChanceModifier);
+        fixture.Nearby = [];
+        fixture.Refresh();
+        Assert.Equal(0, fixture.AttackChanceModifier);
+        Assert.Equal(0, fixture.ArmorValueModifier);
+    }
+
     [Fact]
     public void Masque_reactions_follow_live_personality_and_leave_permanent_standing_untouched()
     {
@@ -506,7 +596,7 @@ public sealed class DaggerfallHeldEnchantmentTests
         // regeneration 4000/3000/3000 for always/sunlight/darkness, StrengthensArmor and RepairsObjects
         // are single settings at param -1, and the detriments are priced negatively: ItemDeteriorates
         // -3000/-1500/-500, UserTakesDamage -6000/-1000, WeakensArmor -700.
-        Assert.Equal(35 + 11 + 2 + 3 + 3 + 1 + 1 + 1 + 3 + 2, TestPayload.Definitions.Magic.EnchantmentSettings.Count);
+        Assert.Equal(35 + 11 + 2 + 3 + 3 + 1 + 1 + 1 + 3 + 2 + 6 + 6 + 3, TestPayload.Definitions.Magic.EnchantmentSettings.Count);
         Assert.All(TestPayload.Definitions.Magic.EnchantmentSettings.Values, setting => Assert.Equal(setting.Key, $"enchantment.{setting.Type}.{setting.Param}"));
 
         Assert.Equal(900, SettingCost(10, 29));                       // long blade, the donor's flat price
@@ -787,8 +877,7 @@ public sealed class DaggerfallHeldEnchantmentTests
             new WorldRpg.Kit.Inventory.UniqueInventoryItem(_actors.Entities.Resolve(new DurableIdentityReference(DurableIdentityKind.Item, id)).Value, new InventoryItemId("iron-longsword")),
             [new WorldRpg.Kit.Inventory.EquipmentSlotId("right-hand")]);
 
-        private Dictionary<string, DaggerfallMagicItemDefinition> MagicItems => Published.Concat(Authored)
-            .ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal);
+        private readonly Dictionary<string, DaggerfallMagicItemDefinition> MagicItems = new(Published, StringComparer.Ordinal);
 
         internal DaggerfallCalendar Calendar { get => _calendar; set => _calendar = value; }
 
@@ -828,7 +917,7 @@ public sealed class DaggerfallHeldEnchantmentTests
         internal void EquipAuthored(string itemId, ulong uniqueId, int type, int param, bool equip = false)
         {
             string key = $"authored.{type}.{param}";
-            Authored[key] = new DaggerfallMagicItemDefinition(key, 0L, key, 0, 0, 0, 0, 0, 0,
+            MagicItems[key] = new DaggerfallMagicItemDefinition(key, 0L, key, 0, 0, 0, 0, 0, 0,
                 [new DaggerfallMagicEnchantmentDefinition($"{key}.enchantment.1", type, param, "authored", null, false)]);
             EquipEnchanted(itemId, uniqueId, key, equip);
         }
@@ -914,6 +1003,7 @@ public sealed class DaggerfallHeldEnchantmentTests
         internal bool ConditionHolds(int param) => _held.ConditionHolds(param);
 
         internal int ArmorValueModifier => _held.ArmorValueModifier;
+        internal int AttackChanceModifier => _held.AttackChanceModifier;
 
         internal int Skill(string skill) => _actors.Player.Stats.GetStat(StatId.Parse(skill)).ValueInt;
 
@@ -923,9 +1013,6 @@ public sealed class DaggerfallHeldEnchantmentTests
 
         private static DaggerfallDefinitions Definitions { get; } = DaggerfallBaseContent.Read(
             TestPayload.CombinedBytes);
-
-        /// <summary>Payloads authored by a fact that needs one no published item or setting carries.</summary>
-        private readonly Dictionary<string, DaggerfallMagicItemDefinition> Authored = new(StringComparer.Ordinal);
 
         /// <summary>The published magic items a worn item can name.</summary>
         private static Dictionary<string, DaggerfallMagicItemDefinition> Published { get; } =

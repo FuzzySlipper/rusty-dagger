@@ -368,6 +368,21 @@ public sealed class DaggerfallItemConditionServiceTests
     }
 
     [Fact]
+    public void Social_settings_preserve_capacity_and_existing_item_enchantment_exclusivity()
+    {
+        using Fixture f = new();
+        UniqueItem item = f.CreatePlainWeapon(507, 115, "daedric");
+        DaggerfallItemInstanceMetadata before = f.Instances.RequireUnique(507);
+        Assert.False(f.Service.QuoteEnchantment(item, "enchantment.14.5").Eligible);
+        Assert.Throws<InvalidOperationException>(() => f.Service.Enchant(item, "enchantment.14.5"));
+        Assert.Equal(before, f.Instances.RequireUnique(507));
+        Assert.Equal(DaggerfallItemConditionOutcome.Enchanted, f.Service.Enchant(item, "enchantment.14.0").Outcome);
+        Assert.Equal(DaggerfallItemConditionOutcome.AlreadyEnchanted, f.Service.Enchant(item, "enchantment.14.0").Outcome);
+        Assert.Throws<InvalidOperationException>(() => f.Service.Enchant(item, "enchantment.25.0"));
+        Assert.Equal("enchantment.14.0", f.Instances.RequireUnique(507).Enchantment);
+    }
+
+    [Fact]
     public void Condition_percentage_has_the_donor_zero_maximum_and_truncating_rules()
     {
         Assert.Equal(100, DaggerfallFormulaPolicy.ConditionPercentage(0, 0));

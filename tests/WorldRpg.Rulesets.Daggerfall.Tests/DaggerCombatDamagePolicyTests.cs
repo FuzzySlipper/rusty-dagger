@@ -414,6 +414,23 @@ public sealed class DaggerCombatDamagePolicyTests
     }
 
     [Fact]
+    public void Bad_reactions_reduce_player_attack_chance_without_penalizing_the_enemy()
+    {
+        using DamagePolicyFixture plain = new();
+        using DamagePolicyFixture penalized = new(attackChanceShift: -10);
+        AttackRequest playerAttack = new(DaggerfallActorIdentity.PlayerEntityId, 2, 5, 9, .125d, Delayed: true);
+        plain.Script(body: 5, critical: 50, hit: 1, damage: 7);
+        penalized.Script(body: 5, critical: 50, hit: 1, damage: 7);
+        Assert.Equal(plain.Run(playerAttack).Outcome.Chance - 10, penalized.Run(playerAttack).Outcome.Chance);
+        plain.EquipNpcWeapon(2, "iron-longsword", 9001);
+        penalized.EquipNpcWeapon(2, "iron-longsword", 9001);
+        AttackRequest enemyAttack = new(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true);
+        plain.Script(body: 5, critical: 50, hit: 1, damage: 7);
+        penalized.Script(body: 5, critical: 50, hit: 1, damage: 7);
+        Assert.Equal(plain.Run(enemyAttack).Outcome.Chance, penalized.Run(enemyAttack).Outcome.Chance);
+    }
+
+    [Fact]
     public void A_shot_that_meets_cover_lands_nothing_and_says_so()
     {
         // Static geometry on the release line stops the missile before the target: neither the roll
@@ -499,7 +516,7 @@ public sealed class DaggerCombatDamagePolicyTests
 
         private DaggerfallCharacterState? _character;
 
-        internal DamagePolicyFixture(bool armed = true, Func<WorldPoint, WorldPoint, bool>? coverBlocks = null, int armorValueShift = 0)
+        internal DamagePolicyFixture(bool armed = true, Func<WorldPoint, WorldPoint, bool>? coverBlocks = null, int armorValueShift = 0, int attackChanceShift = 0)
         {
             DaggerfallDefinitions definitions = Definitions;
             DaggerfallActorDefinition playerDefinition = definitions.RequireActor(new DaggerfallActorId("player"));
@@ -530,7 +547,7 @@ public sealed class DaggerCombatDamagePolicyTests
                 _itemInstances, definitions, _authored, null!,
                 actorEquipment: id => _actorEquipment.TryGetValue(id, out MechanicsEquipmentCoordinator? coordinator) ? coordinator : _playerEquipment,
                 playerPosition: () => _playerPosition, character: () => _character, coverBlocksShot: coverBlocks,
-                armorValueModifier: () => armorValueShift);
+                armorValueModifier: () => armorValueShift, attackChanceModifier: () => attackChanceShift);
         }
 
         internal void Script(int body, int critical, int hit, int? damage = null, int? backstabRoll = null)

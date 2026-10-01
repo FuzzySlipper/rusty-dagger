@@ -20,6 +20,9 @@ internal static class DaggerfallEnchantmentSettings
     internal const int UserTakesDamageType = 17;
     internal const int WeakensArmorType = 24;
     internal const int ImprovesTalentsType = 13;
+    internal const int GoodRepWithType = 14;
+    internal const int BadReactionsFromType = 22;
+    internal const int BadRepWithType = 25;
 
 
     internal static IReadOnlyList<string> Validate(IEnumerable<DaggerfallEnchantmentSetting> settings)
@@ -71,6 +74,8 @@ internal static class DaggerfallEnchantmentSettings
         17 => ["in-sunlight", "in-holy-places"],
         7 => ["one-quarter-more", "one-half-more"],
         13 => ["improved-acute-hearing", "improved-athleticism", "improved-adrenaline-rush"],
+        14 or 25 => ["commoners", "merchants", "scholars", "nobility", "underworld", "all"],
+        22 => ["from-humanoids", "from-animals", "from-daedra"],
         _ => [],
     };
 
