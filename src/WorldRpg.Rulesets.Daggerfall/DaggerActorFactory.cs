@@ -295,6 +295,7 @@ internal static class DaggerActorFactory
         DaggerfallActorDefinition definition = saved.Definition == DaggerfallActorKinds.Civilian
             ? CivilianDefinition(saved.EntityId)
             : definitions.RequireActor(new DaggerfallActorId(saved.Definition));
+        if (saved.PlayerAllied) definition = definition with { Team = "player-ally" };
         return definition.Kind == DaggerfallActorKinds.Civilian
             ? definition
             : DaggerfallEncounterActors.ApplyEncounterClassPolicy(definition);

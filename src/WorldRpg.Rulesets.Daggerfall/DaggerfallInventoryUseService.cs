@@ -29,7 +29,8 @@ internal sealed class DaggerfallInventoryUseService(
     DaggerfallItemConditionService? condition = null,
     DaggerfallBookNotebook? notebook = null,
     Func<int, bool>? useDrug = null,
-    Func<bool>? useOghma = null)
+    Func<bool>? useOghma = null,
+    Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useSanguineRose = null)
 {
     private const int FirstDrugTemplate = 78;
     private const int LastDrugTemplate = 81;
@@ -82,13 +83,20 @@ internal sealed class DaggerfallInventoryUseService(
             inventory.Entities.Destroy(identity);
             instances.RemoveUnique(identity.Value);
             uniqueItems.Remove(identity);
-        }, $"unique:{identity.Value}");
+        }, $"unique:{identity.Value}", new KitUniqueInventoryItem(found.Entity.Value, new InventoryItemId(found.Definition.Value)));
     }
 
-    private DaggerfallInventoryUseResult Route(string itemId, DaggerfallItemInstanceMetadata metadata, Action consume, string useKey)
+    private DaggerfallInventoryUseResult Route(string itemId, DaggerfallItemInstanceMetadata metadata, Action consume, string useKey, KitUniqueInventoryItem? unique = null)
     {
         if (metadata.Enchantment is { } enchantment)
         {
+            if (definitions.Magic.TryEnchantments(enchantment, out var payloads)
+                && payloads.Any(effect => effect.Type == 26 && effect.Param == 4))
+            {
+                if (metadata.CurrentCondition <= 0) return new(false, "The Sanguine Rose is broken.");
+                if (unique is not { } source) return new(false, "Sanguine Rose requires a unique item source.");
+                return useSanguineRose?.Invoke(source) ?? new(false, "Sanguine Rose summoning is unavailable.");
+            }
             if (definitions.Magic.MagicItems.TryGetValue(enchantment, out DaggerfallMagicItemDefinition? magic)
                 && magic.Enchantments.Any(effect => effect.ParamMeaning == "artifact-effect" && effect.Param == 5))
             {

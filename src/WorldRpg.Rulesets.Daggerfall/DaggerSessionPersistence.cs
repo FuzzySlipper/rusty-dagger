@@ -45,17 +45,19 @@ internal sealed class DaggerSessionPersistence
     private readonly DaggerfallDungeonTextActions _dungeonText;
     private readonly Func<DaggerfallPropertyStorageKey, DaggerfallInventorySave> _capturePropertyStorage;
     private readonly Func<DaggerfallTravelMapPixel> _travelPosition;
+    private readonly IReadOnlyDictionary<long, DaggerfallActorDefinition> _actorDefinitions;
     internal DaggerSessionPersistence(DaggerfallState state, DaggerfallCorpseLootModule corpses, DaggerfallGroundContainers groundContainers, DaggerfallBookNotebook notebook,
         DaggerfallUniqueItemAllocator uniqueItems, FirstPersonCameraSystem camera, DaggerfallWorldTime time, DaggerfallSiteContext site,
         DaggerfallEffectLifecycle effects, Func<DaggerfallDoorRuntime> doors, DaggerfallLocomotionPolicy locomotion,
         DaggerfallClimbingPolicy climbing, DaggerfallDungeonTextActions dungeonText,
-        Func<DaggerfallPropertyStorageKey, DaggerfallInventorySave> capturePropertyStorage, Func<DaggerfallTravelMapPixel> travelPosition)
+        Func<DaggerfallPropertyStorageKey, DaggerfallInventorySave> capturePropertyStorage, Func<DaggerfallTravelMapPixel> travelPosition, IReadOnlyDictionary<long, DaggerfallActorDefinition> actorDefinitions)
     {
         ArgumentNullException.ThrowIfNull(doors);
         ArgumentNullException.ThrowIfNull(locomotion);
         ArgumentNullException.ThrowIfNull(climbing);
         ArgumentNullException.ThrowIfNull(dungeonText);
         ArgumentNullException.ThrowIfNull(capturePropertyStorage);
+        _actorDefinitions = actorDefinitions;
         State = state; _corpseLoot = corpses; _groundContainers = groundContainers ?? throw new ArgumentNullException(nameof(groundContainers)); _notebook = notebook ?? throw new ArgumentNullException(nameof(notebook)); _uniqueItems = uniqueItems; _camera = camera; _time = time; _site = site; _effects = effects; _doors = doors; _locomotion = locomotion; _climbing = climbing; _dungeonText = dungeonText;
         _capturePropertyStorage = capturePropertyStorage;
         _travelPosition = travelPosition ?? throw new ArgumentNullException(nameof(travelPosition));
@@ -92,7 +94,7 @@ internal sealed class DaggerSessionPersistence
                     entry.Key,
                     entry.Value.Value,
                     actor.Position.X, actor.Position.Y, actor.Position.Z, actor.HeadingYawRadians,
-                    DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity)) { WabbajackActive = DaggerfallWabbajack.DefinitionOf(actor.Actor) is not null };
+                    DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity)) { WabbajackActive = DaggerfallWabbajack.DefinitionOf(actor.Actor) is not null, PlayerAllied = _actorDefinitions[actor.DurableId].Team == "player-ally" };
             })
             .ToArray();
         DaggerfallInventorySave inventorySave = CaptureInventory(State.Inventory, State.Equipment, DaggerfallItemOwner.Player);
@@ -203,7 +205,7 @@ internal sealed class DaggerSessionPersistence
         {
             ActorState actor = LiveDynamicActor(entry.Key);
             return new DaggerfallDynamicActorSave(entry.Key, entry.Value.Value, actor.Position.X, actor.Position.Y, actor.Position.Z,
-                actor.HeadingYawRadians, DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity)) { WabbajackActive = DaggerfallWabbajack.DefinitionOf(actor.Actor) is not null };
+                actor.HeadingYawRadians, DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity)) { WabbajackActive = DaggerfallWabbajack.DefinitionOf(actor.Actor) is not null, PlayerAllied = _actorDefinitions[actor.DurableId].Team == "player-ally" };
         }).ToArray();
         long[] ids = [.. authoredIds, .. spawned.Select(actor => actor.EntityId)];
         DaggerfallActorInventorySave[] inventories = ids.Select(id => new DaggerfallActorInventorySave(
