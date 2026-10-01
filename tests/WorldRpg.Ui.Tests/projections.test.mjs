@@ -409,7 +409,7 @@ test('pending level up shows permanent and live values and sends guarded semanti
   try {
     f.publish({ mode: 'playing', character: {
       name: 'Aubk-i', attributes: [{ id: 'strength', label: 'Strength', value: 48, permanent: 50 }], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [], creationAvailable: false, creation: null,
-      levelUp: { level: 2, bonusPool: 4, remainingPoints: 4, healthGain: 6, canCommit: false,
+      levelUp: { title: 'Level up', level: 2, bonusPool: 4, remainingPoints: 4, healthGain: 6, canCommit: false,
         attributes: [{ id: 'strength', label: 'Strength', permanent: 50, live: 48, pending: 0, canAllocate: true }, { id: 'intelligence', label: 'Intelligence', permanent: 100, live: 100, pending: 0, canAllocate: false }] },
     } });
     assert.match(f.root.querySelector('[data-testid="character-sheet-attribute-strength"]').textContent, /48 live \/ 50 permanent/);
@@ -420,7 +420,7 @@ test('pending level up shows permanent and live values and sends guarded semanti
     assert.equal(f.root.querySelector('[data-testid="character-level-up-commit"]').disabled, true);
     f.publish({ mode: 'playing', character: {
       name: 'Aubk-i', attributes: [{ id: 'strength', label: 'Strength', value: 48, permanent: 50 }], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [], creationAvailable: false, creation: null,
-      levelUp: { level: 2, bonusPool: 4, remainingPoints: 0, healthGain: 6, canCommit: true,
+      levelUp: { title: 'Level up', level: 2, bonusPool: 4, remainingPoints: 0, healthGain: 6, canCommit: true,
         attributes: [{ id: 'strength', label: 'Strength', permanent: 50, live: 48, pending: 4, canAllocate: false }] },
     } });
     f.root.querySelector('[data-testid="character-level-up-commit"]').click();
@@ -681,5 +681,21 @@ test('the game menu tells the product when it opens and closes, because an open 
     assert.deepEqual(f.actions.at(-1), { action: 'menu', open: true });
     toggle.click();
     assert.deepEqual(f.actions.at(-1), { action: 'menu', open: false });
+  } finally { f.dispose(); }
+});
+
+
+test('Oghma uses the shared attribute controls with its own title and zero health reward', () => {
+  const f = fixture();
+  try {
+    f.publish({ mode: 'playing', character: {
+      name: 'Aubk-i', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [], creationAvailable: false, creation: null,
+      levelUp: { title: 'Oghma Infinium', level: 1, bonusPool: 30, remainingPoints: 23, healthGain: 0, canCommit: false,
+        attributes: [{ id: 'strength', label: 'Strength', permanent: 50, live: 50, pending: 7, canAllocate: true }] },
+    } });
+    assert.match(f.root.querySelector('[data-testid="character-level-up-summary"]').textContent, /Oghma Infinium.*23 of 30 points remain; health gain 0/);
+    f.root.querySelector('[data-testid="character-level-up-strength"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'character-level-allocate', attribute: 'strength' });
+    assert.equal(f.root.querySelector('[data-testid="character-level-up-commit"]').disabled, true);
   } finally { f.dispose(); }
 });

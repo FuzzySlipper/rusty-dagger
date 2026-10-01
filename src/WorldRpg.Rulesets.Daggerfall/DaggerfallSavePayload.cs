@@ -574,8 +574,8 @@ internal sealed record DaggerfallSavePayload(
         Encounters.Validate();
         ArgumentNullException.ThrowIfNull(Character);
         LevelUp?.Validate();
-        if (LevelUp is not null && LevelUp.Level != Level + 1)
-            throw new ArgumentException("Saved Daggerfall level-up must target exactly the next progression level.", nameof(LevelUp));
+        if (LevelUp is not null && !LevelUp.MatchesProgressionLevel(Level))
+            throw new ArgumentException("Saved Daggerfall attribute allocation does not match its progression level.", nameof(LevelUp));
         if (Experience < 0 || Level < 1)
             throw new ArgumentOutOfRangeException(nameof(Experience), "Saved progression must be non-negative and begin at level one.");
         if (!double.IsFinite(Calendar.RemainderSeconds) || Calendar.RemainderSeconds < 0d || Calendar.RemainderSeconds >= 1d)
