@@ -231,7 +231,7 @@ internal static class DaggerfallMagicCostPolicy
     private static int RequireSkill(IReadOnlyDictionary<string, int> values, string school) =>
         values.TryGetValue(school, out int skill) && skill is >= 0 and <= 100 ? skill : throw new ArgumentException($"A 0..100 '{school}' skill is required.", nameof(values));
 
-    private static DaggerfallSpellTarget TargetForRangeType(int rangeType) => rangeType switch
+    internal static DaggerfallSpellTarget TargetForRangeType(int rangeType) => rangeType switch
     {
         0 => DaggerfallSpellTarget.CasterOnly,
         1 => DaggerfallSpellTarget.ByTouch,

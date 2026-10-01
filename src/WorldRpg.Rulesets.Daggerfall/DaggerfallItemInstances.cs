@@ -119,6 +119,8 @@ internal sealed record DaggerfallItemInstanceMetadata(
 /// </summary>
 internal sealed class DaggerfallItemInstances
 {
+    internal event Action<ulong>? SourceUnavailable;
+
     private readonly Dictionary<(DaggerfallItemOwner Owner, string Stack), DaggerfallItemInstanceMetadata> _stacks = [];
     private readonly Dictionary<ulong, DaggerfallItemInstanceMetadata> _unique = [];
     private ulong _revision;
@@ -237,9 +239,11 @@ internal sealed class DaggerfallItemInstances
 
     internal void ReplaceUnique(ulong itemId, DaggerfallItemInstanceMetadata metadata)
     {
-        _ = RequireUnique(itemId);
+        var previous = RequireUnique(itemId);
         _unique[itemId] = metadata.Validate();
         _revision++;
+        if (previous.CurrentCondition > 0 && metadata.MaximumCondition > 0 && metadata.CurrentCondition == 0)
+            SourceUnavailable?.Invoke(itemId);
     }
 
     internal void MoveUnique(ulong itemId, DaggerfallItemOwner owner)
@@ -263,7 +267,7 @@ internal sealed class DaggerfallItemInstances
 
     internal void RemoveUnique(ulong itemId)
     {
-        if (_unique.Remove(itemId)) _revision++;
+        if (_unique.Remove(itemId)) { _revision++; SourceUnavailable?.Invoke(itemId); }
     }
 
     private static DaggerfallItemInstanceMetadata MetadataFor(DaggerfallItemOwner owner, DaggerfallItemInstanceMetadata metadata) =>

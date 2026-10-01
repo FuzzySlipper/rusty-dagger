@@ -55,27 +55,8 @@ internal sealed partial class DaggerCombatRules
             || !payloads.Any(effect => effect.Type == SpecialArtifactEffect && effect.Param == 1)) return damage;
         if (!TryResolve(target, out var victim)) return damage;
         var character = target == PlayerId ? _character() : null;
-        var career = character?.Career ?? (victim.Definition.Career is string careerId ? _catalog.Catalogs.RequireCareer(careerId) : null);
-        var mobile = _catalog.Mobiles.ForActor(victim.Definition.Id.Value);
-        DaggerfallMagicTolerance Tolerance(int flag) => (career is not null
-            ? DaggerfallCareerTolerances.Tolerance(career, flag)
-            : DaggerfallCareerTolerances.Tolerance(mobile?.ResistanceFlags ?? 0, mobile?.ImmunityFlags ?? 0,
-                mobile?.LowToleranceFlags ?? 0, mobile?.CriticalWeaknessFlags ?? 0, flag)) switch
-        {
-            DaggerfallDiseaseCareerTolerance.Immune => DaggerfallMagicTolerance.Immune,
-            DaggerfallDiseaseCareerTolerance.Resistant => DaggerfallMagicTolerance.Resistant,
-            DaggerfallDiseaseCareerTolerance.LowTolerance => DaggerfallMagicTolerance.LowTolerance,
-            DaggerfallDiseaseCareerTolerance.CriticalWeakness => DaggerfallMagicTolerance.CriticalWeakness,
-            _ => DaggerfallMagicTolerance.Normal,
-        };
-        var biography = character?.Background?.Modifiers;
-        DaggerfallMagicTargetProfile profile = new(ReadStat(victim, DaggerfallMechanicsIds.Willpower),
-            new(Tolerance(1), Tolerance(2), Tolerance(4), Tolerance(8), Tolerance(16), Tolerance(32), Tolerance(64)),
-            character is not null ? _catalog.Catalogs.RequireRace(character.Identity.RaceId) : null,
-            biography?.MagicResistance ?? 0, biography?.PoisonResistance ?? 0, biography?.DiseaseResistance ?? 0,
-            new(0, 0, 0, 0, 0), []);
-        // This donor direct-input overload deliberately passes modifier zero. The current compiled
-        // effect families admit no resistance-spell channel; ordinary defensive stats are not that channel.
+        DaggerfallMagicTargetProfile profile = DaggerfallMagicProfiles.Create(victim.Stats, victim.Definition,
+            character, _catalog, _magicDefense(target));
         int save = DaggerfallMagicAdmissionPolicy.SavingThrow(DaggerfallMagicResistanceElement.Magic,
             DaggerfallMagicEffectFlags.Magic, profile, 0,
             () => Draw(new(attacker, target, generation, step, 1d), attacker, target,

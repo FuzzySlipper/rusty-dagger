@@ -64,6 +64,24 @@ Room quotes reuse classic trade pricing and guild privileges; booking spends the
 canonical carried coins or letters of credit through the currency owner. Saves retain the booking across
 site transitions and reject a room whose tavern no longer exists in the admitted directory.
 
+## Spell casting
+
+`DaggerfallSession.Casting` resolves known/ready spell keys against normalized
+records and explicit compiled `(Type, SubType)` bindings in `DaggerfallEffectCatalog`.
+Readiness is attached to the canonical actor, retains its quoted cost, and clears
+on cancel, release, site transition, save or disposal. Released bundles retain
+source/item identity, target shape, element, settings and per-effect outcomes.
+Touch uses an Engine capsule sweep; ranged flight consumers submit their actual
+segment to `DeliverSpellImpact`; blast candidates come from paged Engine perception.
+Admission uses the existing cost/save policies, live actor and biography inputs,
+and active defense projections before the lifecycle attaches effects. Release
+and terminal delivery each emit one fact; repeated callbacks apply nothing.
+
+The shipped catalog currently composes disease and poison families. Ordinary
+spell families add their compiled bindings through that same composition seam;
+unmapped effects refuse before payment or skill use. UI selection, spell flight
+presentation and item-trigger policy remain separate consumers.
+
 ## Active effects
 
 Kit `ActiveEffectLifecycle` coordinates stable instance context, round counters
@@ -78,7 +96,8 @@ contributions; it changes only remaining rounds. Replacement, cancellation,
 expiry, actor/item retirement and session disposal use the cleanup owner.
 Current saves retain durable references, never runtime entity handles.
 
-Capture is read-only. Stat sources carrying effect provenance are rebuilt with
+Effect capture is read-only; a full session save clears transient spell readiness
+and pending ranged casts. Stat sources carrying effect provenance are rebuilt with
 fresh actor identities before tracks, through Engine's existing capture/rebuild
 helper. A compiled definition that applies contributions supplies a separate
 resume callback to bind cleanup to restored state without applying a second

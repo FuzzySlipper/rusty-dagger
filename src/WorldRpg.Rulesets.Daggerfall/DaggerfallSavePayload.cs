@@ -48,6 +48,9 @@ internal sealed record DaggerfallSavePayload(
     DaggerfallCharacterSave? Character = null,
     DaggerfallLevelUpSave? LevelUp = null)
 {
+    [JsonRequired]
+    public long NextCastSequence { get; init; } = 1;
+
     /// <summary>Every current quest instance; an empty collection is meaningful current state.</summary>
     [JsonRequired]
     public DaggerfallQuestInstancesSave Quests { get; init; } = new([]);
@@ -125,6 +128,7 @@ internal sealed record DaggerfallSavePayload(
     internal static RulesetSavePayload Encode(DaggerfallSavePayload value)
     {
         ArgumentNullException.ThrowIfNull(value);
+        if (value.NextCastSequence < 1) throw new ArgumentException("Saved next cast sequence must be positive.");
         value.Validate();
         return new RulesetSavePayload(
             DaggerfallRuleset.Identity,
@@ -365,7 +369,7 @@ internal sealed record DaggerfallSavePayload(
                 throw new ArgumentException($"Saved civilian actor {actor.EntityId} does not name a live civilian NPC identity.");
         }
 
-        HashSet<ulong> uniqueItems = [];
+        Dictionary<ulong, DaggerfallItemMetadataSave> uniqueItems = [];
         ValidateInventory(Inventory, definitions, uniqueItems, DaggerfallItemOwner.Player, requireEquipment: true);
         HashSet<ulong> containerIdentities = [];
         HashSet<long> corpseActors = [];
@@ -442,7 +446,7 @@ internal sealed record DaggerfallSavePayload(
             throw new ArgumentException("Saved active and inactive site actors must not share durable identities.");
         if (!actorInventories.SetEquals(allActors))
             throw new ArgumentException("Current save must carry one actor inventory section for every saved actor.");
-        RequireLiveUniqueItems(savedLedger, uniqueItems);
+        RequireLiveUniqueItems(savedLedger, uniqueItems.Keys);
         Encounters.Validate();
         HashSet<string> admittedEncounterProfiles = profiles is null
             ? [inputs.ProfileKey.LogicalId]
@@ -501,6 +505,7 @@ internal sealed record DaggerfallSavePayload(
 
     internal DaggerfallSavePayload Validate()
     {
+        if (NextCastSequence < 1) throw new ArgumentException("Saved next cast sequence must be positive.");
         ArgumentNullException.ThrowIfNull(Player);
         ArgumentNullException.ThrowIfNull(Actors);
         ArgumentNullException.ThrowIfNull(DynamicActors);
@@ -726,14 +731,14 @@ internal sealed record DaggerfallSavePayload(
         && (StringComparer.Ordinal.Equals(definition, DaggerfallActorKinds.Civilian)
             || definitions.Actors.ContainsKey(new DaggerfallActorId(definition)));
 
-    private static void ValidateInventory(DaggerfallInventorySave inventory, DaggerfallDefinitions definitions, HashSet<ulong> allUnique, DaggerfallItemOwner owner, bool requireEquipment)
+    private static void ValidateInventory(DaggerfallInventorySave inventory, DaggerfallDefinitions definitions, Dictionary<ulong, DaggerfallItemMetadataSave> allUnique, DaggerfallItemOwner owner, bool requireEquipment)
     {
         inventory.Validate();
         foreach (DaggerfallStackSave stack in inventory.Stacks) RequireFungible(definitions, stack, owner);
         Dictionary<ulong, DaggerfallItemDefinition> unique = [];
         foreach (DaggerfallUniqueSave saved in inventory.UniqueItems)
         {
-            if (!definitions.TryResolveItem(new DaggerfallItemId(saved.ItemId), out DaggerfallItemDefinition definition) || definition.IsFungible || !allUnique.Add(saved.EntityId))
+            if (!definitions.TryResolveItem(new DaggerfallItemId(saved.ItemId), out DaggerfallItemDefinition definition) || definition.IsFungible || !allUnique.TryAdd(saved.EntityId, saved.Metadata))
                 throw new ArgumentException($"Saved {owner.Scope} {owner.Id} unique item '{saved.EntityId}' is missing, incompatible, or duplicated.");
             RequireMetadata(definitions, saved.ItemId, saved.Metadata, owner);
             unique.Add(saved.EntityId, definition);
@@ -831,7 +836,7 @@ internal sealed record DaggerfallSavePayload(
         }
     }
 
-    private static void ValidateActiveEffects(IEnumerable<DaggerfallActiveEffectSave> effects, ISet<long> actors, ISet<ulong> uniqueItems)
+    private static void ValidateActiveEffects(IEnumerable<DaggerfallActiveEffectSave> effects, ISet<long> actors, IReadOnlyDictionary<ulong, DaggerfallItemMetadataSave> uniqueItems)
     {
         HashSet<string> instances = new(StringComparer.Ordinal);
         foreach (DaggerfallActiveEffectSave effect in effects)
@@ -840,7 +845,12 @@ internal sealed record DaggerfallSavePayload(
             if (!instances.Add(effect.Instance)) throw new ArgumentException($"Saved effect instance '{effect.Instance}' appears more than once.");
             if (!actors.Contains(effect.TargetId)) throw new ArgumentException($"Saved effect instance '{effect.Instance}' targets missing actor {effect.TargetId}.");
             if (effect.CasterId is long caster && !actors.Contains(caster)) throw new ArgumentException($"Saved effect instance '{effect.Instance}' names missing caster {caster}.");
-            if (effect.ItemId is ulong item && !uniqueItems.Contains(item)) throw new ArgumentException($"Saved effect instance '{effect.Instance}' names missing item {item}.");
+            if (effect.ItemId is ulong item)
+            {
+                if (!uniqueItems.TryGetValue(item, out var metadata)) throw new ArgumentException($"Saved effect instance '{effect.Instance}' names missing item {item}.");
+                if (metadata.MaximumCondition > 0 && metadata.CurrentCondition == 0)
+                    throw new ArgumentException($"Saved effect instance '{effect.Instance}' names broken item {item}.");
+            }
         }
     }
 }
@@ -1272,6 +1282,7 @@ internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definiti
 }
 
 [JsonSourceGenerationOptions(WriteIndented = false)]
+[JsonSerializable(typeof(DaggerfallCastEffectState))]
 [JsonSerializable(typeof(DaggerfallSavePayload))]
 [JsonSerializable(typeof(DaggerfallStatsSave))]
 [JsonSerializable(typeof(DaggerfallNotebookSave))]

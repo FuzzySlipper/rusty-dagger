@@ -149,7 +149,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
 
     void IDaggerfallSiteTransitionHost.RebuildActivation() => InitializeActivation(_engine, _tuning.LootInteraction);
 
-    void IDaggerfallSiteTransitionHost.EnteredSite() => ChangeMusicSite();
+    void IDaggerfallSiteTransitionHost.EnteredSite() { Casting.ClearTransient(); ChangeMusicSite(); }
 
     /// <summary>
     /// A swing the departing projection was still timing ends with it: retire and hand its
@@ -263,6 +263,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         ObjectDisposedException.ThrowIf(_disposed, this);
         // A modal equipment action can be saved before another playing step. Capture the worn set
         // that actually owns the items, rather than a prior frame's held stat sources.
+        Casting.ClearTransient();
         _heldEnchantments.Refresh();
         return _persistence.Capture(_latestUpdateGeneration, _latestSimulationStep, _roster.Dynamic, _encounters,
             _sites.Deltas, _activeProfileKey, _sites.ReturnProfile, State.DungeonDiscoveries, State.DungeonActions,
@@ -499,6 +500,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
     public void Dispose()
     {
         if (_disposed) return;
+        Casting.ClearTransient();
         _disposed = true;
         // DisposeAll walks backward: projection door entities must release before the actor store.
         Exception? failure = null;

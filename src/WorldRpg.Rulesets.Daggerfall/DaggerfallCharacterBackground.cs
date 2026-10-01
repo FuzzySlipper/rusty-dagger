@@ -254,7 +254,6 @@ internal static class DaggerfallCharacterBackgroundPolicy
             .Select(_ => "A selected background story detail is unavailable in the current content."));
         if (modifiers.PoisonResistance != 0) values.Add("A poison-resistance background effect is recorded but is not active in current play.");
         if (modifiers.Fatigue != 0) values.Add("The source retains this fatigue background effect without a gameplay consequence.");
-        if (modifiers.MagicResistance != 0) values.Add("A magic-resistance background effect is recorded but is not active in current play.");
         return values.ToArray();
     }
     private static DaggerfallStartingGrant Grant(DaggerfallDefinitions definitions, DaggerfallBiographyEffectDefinition effect)

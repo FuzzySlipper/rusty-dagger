@@ -380,6 +380,16 @@ internal static class DaggerfallMagicAdmissionPolicy
         return (int)(amount * percent);
     }
 
+    internal static int CalculateEffectChance(DaggerfallSpellEffectDefinition settings, int level) => checked(
+        settings.ChanceBase + settings.ChanceMod * (level / Math.Max(1, settings.ChancePerLevel)));
+
+    internal static int CalculateEffectDuration(DaggerfallSpellEffectDefinition settings, int level) => checked(
+        settings.DurationBase + settings.DurationMod * Math.Max(1, level / Math.Max(1, settings.DurationPerLevel)));
+
+    internal static int RollEffectMagnitude(DaggerfallSpellEffectDefinition settings, int level, Func<int, int, int> roll) => checked(
+        roll(settings.MagnitudeBaseLow, settings.MagnitudeBaseHigh)
+        + roll(settings.MagnitudeLevelBase, settings.MagnitudeLevelHigh) * (level / Math.Max(1, settings.MagnitudePerLevel)));
+
     private static readonly IReadOnlyDictionary<string, int> EmptySkills = new Dictionary<string, int>(StringComparer.Ordinal);
 
     private static DaggerfallMagicEffectSource RequireBundledEffect(DaggerfallMagicEffectSource effect)

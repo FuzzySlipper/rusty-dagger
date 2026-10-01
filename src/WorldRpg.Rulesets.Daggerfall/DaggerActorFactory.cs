@@ -71,6 +71,7 @@ internal static class DaggerActorFactory
                 .ToDictionary(slot => new KitEquipmentSlotId(slot.Id.Value), ToManagedSlot);
             PlayerActorState player = actors.CreatePlayer(checked((long)PlayerMechanicsEntityId),
                 new EntityTypeId(playerDefinition.Id.Value), mechanics.CreateStats(playerDefinition, DaggerfallPlayerVitals.Initial(playerDefinition.Stats, initialCareer)), playerDefinition.Combat.Health.Value);
+            player.Actor.Add(new DaggerfallSpellReadiness());
             EntityId playerEntity = player.Actor.Entity;
             if (saved is not null) RestoreStats(player.Actor, saved.Player.Stats);
             InventoryStore inventoryStore = new();
@@ -368,6 +369,7 @@ internal static class DaggerActorFactory
         StatsComponent stats, ActorPose pose)
     {
         ActorState actor = actors.CreateActor(durableId, new EntityTypeId(definition.Id.Value), stats, pose, definition.Combat.Health.Value);
+        actor.Actor.Add(new DaggerfallSpellReadiness());
         actor.Actor.Add(new PursuitMemoryComponent());
         actor.Actor.Add(new DaggerfallEnemyPerceptionMemory());
         return actor;
