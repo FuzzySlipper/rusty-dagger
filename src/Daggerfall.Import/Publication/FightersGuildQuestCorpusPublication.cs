@@ -44,7 +44,7 @@ public static class FightersGuildQuestCorpusPublication
                 || !string.Equals(source.SourceFile, row.Name + ".txt", StringComparison.Ordinal))
                 throw new InvalidOperationException($"Fighters Guild quest '{row.Name}' does not resolve to its exact text source file.");
             if (!originalsByStem.TryGetValue(row.Name, out DaggerfallQuestOriginalSource? original))
-                throw new InvalidOperationException($"Fighters Guild quest '{row.Name}' has no #8008 original-source comparison.");
+                throw new InvalidOperationException($"Fighters Guild quest '{row.Name}' has no original quest source to compare against.");
 
             source.Validate();
 
