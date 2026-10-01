@@ -1,10 +1,12 @@
 using System.Text;
 using System.Text.Json;
 using Rusty.Engine;
+using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
@@ -41,8 +43,15 @@ public sealed class ActorLifecycleSessionTests
             Assert.NotNull(session.State.ActorInventories.InventoryFor(second));
             // Distinct state before retirement: only the second moves.
             session.State.Actors.Get(second).ApplyPose(new ActorPose(new WorldPoint(21, 0, 21), 2f));
+            // The retiring actor holds a stack, so its store registrations can only go once it is emptied.
+            EntityId firstOwner = session.State.Actors.Get(first).Actor.Entity;
+            session.State.ActorInventories.InventoryFor(first)!.Grant(
+                new InventoryGrant(new InventoryItemId("arrow"), InventoryStackId.Parse("test.quiver"), 3));
+            Assert.Contains(firstOwner, session.State.InventoryStore.InventoryOwners);
             session.RetireActor(first);
             Assert.False(session.State.Actors.TryGet(first, out _));
+            Assert.DoesNotContain(firstOwner, session.State.InventoryStore.InventoryOwners);
+            Assert.DoesNotContain(firstOwner, session.State.InventoryStore.EquipmentOwners);
             Assert.False(session.DefinitionsByActor.ContainsKey(first));
             Assert.False(session.DynamicActors.ContainsKey(first));
             // Removal is terminal and distinct from never-loaded: every other shape refuses loudly.
