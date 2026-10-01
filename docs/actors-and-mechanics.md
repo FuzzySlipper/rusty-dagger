@@ -81,6 +81,12 @@ contribution or replaying the initial round. The session composes one
 and poison (`DaggerfallPoisonEffects.Definitions`) families, so a saved effect
 names the definition that interprets it; unknown effect definitions fail clearly.
 
+Held skill and spell-point sources retain the equipped item's durable provenance.
+Save admission resolves their cleanup owner through the saved equipment and its
+published enchantment, and the existing stat rebuild restores them before tracks.
+The held owner recomputes those sources once from equipment. Unequip, break and
+wearer destruction remove them and clear carry, talent and magic-round values.
+
 ## Ranged delivery
 
 The Ring of Namira reflects an accepted enemy physical hit on the player once,

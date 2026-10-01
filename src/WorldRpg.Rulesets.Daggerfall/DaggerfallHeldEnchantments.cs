@@ -207,6 +207,10 @@ internal sealed class DaggerfallHeldEnchantments : IDisposable
             if (!TryEnchantments(assignment, out IReadOnlyList<DaggerfallMagicEnchantmentDefinition> enchantments)) continue;
             foreach (DaggerfallMagicEnchantmentDefinition enchantment in enchantments)
             {
+                // A restored source already exists before this fresh owner's first refresh.
+                // Remove it even when its current condition no longer grants a contribution.
+                if (HeldStatFor(enchantment) is { } stat)
+                    Stat(stat).RemoveSource(IdentityFor(assignment, enchantment));
                 switch (enchantment.Type)
                 {
                     case EnhancesSkillType when SkillFor(enchantment.Param) is { } skill:
@@ -298,8 +302,12 @@ internal sealed class DaggerfallHeldEnchantments : IDisposable
         foreach (EffectSourceIdentity source in _socialSources) _social?.RemoveReactionSource(source);
         _socialSources.Clear();
         _signature = null;
+        CarryMultiplier = 1d;
+        Talents = default;
         AttackChanceModifier = 0;
         ArmorValueModifier = 0;
+        Array.Clear(_regeneration);
+        _conditionPayloads = false;
     }
 
     /// <summary>
@@ -458,23 +466,56 @@ internal sealed class DaggerfallHeldEnchantments : IDisposable
         enchantments = [];
         if (_entities.IdentityOf(new EntityId(assignment.Item.EntityId)) is not { Kind: DurableIdentityKind.Item } identity) return false;
         if (!_instances.ContainsUnique(identity.Value)) return false;
-        if (_instances.RequireUnique(identity.Value).Enchantment is not { } key) return false;
+        DaggerfallItemInstanceMetadata metadata = _instances.RequireUnique(identity.Value);
+        if (metadata.MaximumCondition > 0 && metadata.CurrentCondition == 0) return false;
+        if (metadata.Enchantment is not { } key) return false;
         return _magic.TryEnchantments(key, out enchantments);
     }
 
     private EffectSourceIdentity IdentityFor(WorldRpg.Kit.Inventory.EquipmentAssignment assignment, DaggerfallMagicEnchantmentDefinition enchantment)
     {
         DurableIdentityReference identity = _entities.IdentityOf(new EntityId(assignment.Item.EntityId));
-        return new EffectSourceIdentity(_actor, EffectInstanceId.Parse($"held.{identity.Value}"), 1,
-            SourceDefinitionId.Parse($"daggerfall.held.{enchantment.Key}"));
+        return IdentityFor(_actor, identity.Value, enchantment.Key);
+    }
+
+    private static EffectSourceIdentity IdentityFor(EntityId actor, ulong item, string enchantment) =>
+        new(actor, EffectInstanceId.Parse($"held.{item}"), 1, SourceDefinitionId.Parse($"daggerfall.held.{enchantment}"));
+
+    /// <summary>A held source is cleaned up by its saved equipment owner, rather than a timed effect instance.</summary>
+    internal static bool OwnsSavedSource(DaggerfallStatSourceSave source, DaggerfallInventorySave inventory, DaggerfallMagicCatalogSet magic)
+    {
+        foreach (ulong id in inventory.Equipment.Select(value => value.ItemEntityId).Distinct())
+        {
+            DaggerfallUniqueSave item = inventory.UniqueItems.Single(value => value.EntityId == id);
+            if (item.Metadata.CurrentCondition <= 0 || item.Metadata.Enchantment is not { } key
+                || !magic.TryEnchantments(key, out var enchantments)) continue;
+            foreach (var enchantment in enchantments.Where(value => value.Type is EnhancesSkillType or ExtraSpellPointsType))
+            {
+                if (HeldStatFor(enchantment) is not { } stat || source.StatId != stat.Value || source.SourceStatId != stat.Value
+                    || source.Contributions.Any(value => value.StatId != stat.Value)) continue;
+                EffectSourceIdentity expected = IdentityFor(default, id, enchantment.Key);
+                if (source.Identity.Kind == DaggerfallStatSourceIdentityKind.Effect
+                    && source.Identity.InstanceId == expected.Effect.Value && source.Identity.Stack == expected.Stack
+                    && source.Identity.SourceId == expected.Source.Value && source.DefinitionId == expected.Source.Value)
+                    return true;
+            }
+        }
+        return false;
     }
 
     private Stat Stat(DaggerfallStatId id) => _stats.GetStat(StatId.Parse(id.Value));
 
     /// <summary>The pack skill a classic skill index names, or null for an index the pack does not carry.</summary>
-    private string? SkillFor(int classicIndex) => classicIndex >= 0 && classicIndex < ClassicSkillIds.Length
+    private static string? SkillFor(int classicIndex) => classicIndex >= 0 && classicIndex < ClassicSkillIds.Length
         ? ClassicSkillIds[classicIndex]
         : null;
+
+    private static DaggerfallStatId? HeldStatFor(DaggerfallMagicEnchantmentDefinition enchantment) => enchantment.Type switch
+    {
+        EnhancesSkillType when SkillFor(enchantment.Param) is { } skill => new DaggerfallStatId(skill),
+        ExtraSpellPointsType => DaggerfallMechanicsIds.MagickaMaximum,
+        _ => null,
+    };
 
     /// <summary>
     /// Whether an ExtraSpellPts param's condition holds now. Params 0-3 are the seasons, 4-6 the lunar

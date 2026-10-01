@@ -19,6 +19,24 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// </summary>
 public sealed class DaggerfallHeldEnchantmentTests
 {
+    public static IEnumerable<object[]> SkillParameters => TestPayload.Definitions.Catalogs.Skills
+        .Select(skill => new object[] { skill.Index, skill.Id });
+
+    [Theory]
+    [MemberData(nameof(SkillParameters))]
+    public void Every_published_skill_setting_applies_to_its_catalog_identity(int param, string skill)
+    {
+        using Fixture fixture = new();
+        var before = TestPayload.Definitions.Catalogs.Skills.ToDictionary(value => value.Id, value => fixture.Skill(value.Id));
+        fixture.EquipEnchanted("iron-longsword", 9701, SettingKey(10, param), equip: true);
+        fixture.Refresh();
+        foreach (var entry in before)
+            Assert.Equal(entry.Value + (entry.Key == skill ? 15 : 0), fixture.Skill(entry.Key));
+        fixture.Unequip(9701);
+        fixture.Refresh();
+        Assert.Equal(before[skill], fixture.Skill(skill));
+    }
+
     public static IEnumerable<object[]> SocialParameters =>
         from type in new[] { 14, 25 }
         from param in Enumerable.Range(0, 6)
@@ -370,6 +388,26 @@ public sealed class DaggerfallHeldEnchantmentTests
         fixture.Nearby = [new DaggerfallNearbyCreature(DaggerfallEnemyGroup.None, new WorldPoint(0f, 0f, 4f))];
         Assert.False(fixture.ConditionHolds(9));
         Assert.False(fixture.ConditionHolds(10));
+    }
+
+    [Fact]
+    public void Destroying_the_wearer_clears_carry_talents_and_all_magic_round_payloads()
+    {
+        using Fixture fixture = new();
+        fixture.EnchantAndWear("template-120-daedric", 9601, 7, 1);
+        fixture.EnchantAndWear("template-120-daedric", 9602, 13, 2);
+        fixture.EquipAuthored("iron-cuirass", 9603, 5, 0, equip: true);
+        fixture.Refresh();
+        Assert.Equal(1.5d, fixture.CarryMultiplier);
+        Assert.True(fixture.Talents.AdrenalineRush);
+        Assert.Equal(1, fixture.RegeneratingSources);
+        fixture.DestroyPlayer();
+        fixture.Refresh();
+        Assert.Equal(1d, fixture.CarryMultiplier);
+        Assert.Equal(default, fixture.Talents);
+        Assert.Equal(0, fixture.RegeneratingSources);
+        fixture.AdvanceRounds(8);
+        Assert.Equal(0, fixture.RegeneratingSources);
     }
 
     [Fact]
@@ -993,6 +1031,8 @@ public sealed class DaggerfallHeldEnchantmentTests
 
         internal void SetHealth(int value) =>
             _actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).SetCurrent(value, clamp: true);
+
+        internal int RegeneratingSources => _held.RegeneratingSources;
 
         internal double CarryMultiplier => _held.CarryMultiplier;
 
