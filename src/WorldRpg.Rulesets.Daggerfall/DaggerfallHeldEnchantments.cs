@@ -100,7 +100,7 @@ internal sealed class DaggerfallHeldEnchantments
 
     private readonly MechanicsEquipmentCoordinator _equipment;
     private readonly DaggerfallItemInstances _instances;
-    private readonly IReadOnlyDictionary<string, DaggerfallMagicItemDefinition> _magicItems;
+    private readonly DaggerfallMagicCatalogSet _magic;
     private readonly StatsComponent _stats;
     private readonly EntityDirectory _entities;
     private readonly EntityId _actor;
@@ -126,14 +126,14 @@ internal sealed class DaggerfallHeldEnchantments
         + _regeneration[DarknessRegenerates];
 
     internal DaggerfallHeldEnchantments(MechanicsEquipmentCoordinator equipment, DaggerfallItemInstances instances,
-        IReadOnlyDictionary<string, DaggerfallMagicItemDefinition> magicItems, StatsComponent playerStats, EntityDirectory entities, EntityId actor,
+        DaggerfallMagicCatalogSet magic, StatsComponent playerStats, EntityDirectory entities, EntityId actor,
         Func<DaggerfallCalendar> calendar, Func<WorldPoint?> playerPosition, Func<IReadOnlyList<DaggerfallNearbyCreature>> nearby,
         Func<bool>? playerInSunlight = null, DaggerfallItemConditionService? itemCondition = null,
         Func<bool>? playerInHolyPlace = null, Action<int>? damageWearer = null)
     {
         _equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
-        _magicItems = magicItems ?? throw new ArgumentNullException(nameof(magicItems));
+        _magic = magic ?? throw new ArgumentNullException(nameof(magic));
         _stats = playerStats ?? throw new ArgumentNullException(nameof(playerStats));
         _entities = entities ?? throw new ArgumentNullException(nameof(entities));
         _actor = actor;
@@ -390,12 +390,12 @@ internal sealed class DaggerfallHeldEnchantments
         if (_entities.IdentityOf(new EntityId(assignment.Item.EntityId)) is not { Kind: DurableIdentityKind.Item } identity) return false;
         if (!_instances.ContainsUnique(identity.Value)) return false;
         if (_instances.RequireUnique(identity.Value).Enchantment is not { } key) return false;
-        if (_magicItems.TryGetValue(key, out DaggerfallMagicItemDefinition? published))
+        if (_magic.MagicItems.TryGetValue(key, out DaggerfallMagicItemDefinition? published))
         {
             enchantments = published.Enchantments;
             return true;
         }
-        if (!DaggerfallEnchantmentSettings.TryResolve(key, out DaggerfallEnchantmentSetting setting)) return false;
+        if (!_magic.EnchantmentSettings.TryGetValue(key, out DaggerfallEnchantmentSetting setting)) return false;
         enchantments = [DaggerfallEnchantmentSettings.ToEffect(setting)];
         return true;
     }

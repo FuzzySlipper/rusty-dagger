@@ -51,7 +51,7 @@ internal sealed class DaggerfallItemConditionService(
         DaggerfallItemDefinition definition = definitions.RequireItem(new DaggerfallItemId(metadata.ItemId));
         // The quotation entry point answers for both kinds of enchantment an item can receive, exactly as
         // the action that applies them does.
-        if (DaggerfallEnchantmentSettings.TryResolve(magicItemKey, out DaggerfallEnchantmentSetting setting))
+        if (definitions.Magic.EnchantmentSettings.TryGetValue(magicItemKey, out DaggerfallEnchantmentSetting setting))
             return DaggerfallMagicCostPolicy.QuoteItemEnchantment(definition, metadata, setting);
         DaggerfallMagicItemDefinition magic = definitions.Magic.MagicItems.TryGetValue(magicItemKey, out DaggerfallMagicItemDefinition? found)
             ? found : throw new InvalidOperationException($"Magic item '{magicItemKey}' is not published.");
@@ -173,7 +173,7 @@ internal sealed class DaggerfallItemConditionService(
             return new(DaggerfallItemConditionOutcome.AlreadyIdentified, durableItemId, metadata, metadata.CurrentCondition);
         // A setting has no published template to disclose, so it is identified by its own param meaning;
         // anything else must still name a published magic item.
-        if (!DaggerfallEnchantmentSettings.TryResolve(metadata.Enchantment, out _)) RequireMagic(metadata);
+        if (!definitions.Magic.EnchantmentSettings.TryGetValue(metadata.Enchantment, out _)) RequireMagic(metadata);
         DaggerfallItemInstanceMetadata identified = metadata with { Identified = true };
         instances.ReplaceUnique(durableItemId, identified);
         return new(DaggerfallItemConditionOutcome.Identified, durableItemId, identified, metadata.CurrentCondition);
@@ -197,7 +197,7 @@ internal sealed class DaggerfallItemConditionService(
         // setting brings only its donor cost, so the item keeps its condition and its own identity.
         DaggerfallMagicItemDefinition? magic = null;
         DaggerfallItemEnchantmentQuote quote;
-        if (DaggerfallEnchantmentSettings.TryResolve(magicItemKey, out DaggerfallEnchantmentSetting setting))
+        if (definitions.Magic.EnchantmentSettings.TryGetValue(magicItemKey, out DaggerfallEnchantmentSetting setting))
         {
             quote = DaggerfallMagicCostPolicy.QuoteItemEnchantment(definition, metadata, setting);
         }
@@ -241,7 +241,7 @@ internal sealed class DaggerfallItemConditionService(
             throw new InvalidOperationException($"Item instance names unpublished definition '{metadata.ItemId}'.");
         // An item maker's setting is a legitimate enchantment that has no published magic item, so it is
         // not held to the published-template requirement here; anything else still is.
-        if (metadata.Enchantment is { } enchantment && !DaggerfallEnchantmentSettings.TryResolve(enchantment, out _))
+        if (metadata.Enchantment is { } enchantment && !definitions.Magic.EnchantmentSettings.TryGetValue(enchantment, out _))
             _ = RequireMagic(metadata);
     }
 
