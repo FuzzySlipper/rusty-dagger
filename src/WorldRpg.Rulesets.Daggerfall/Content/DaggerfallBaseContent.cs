@@ -674,7 +674,7 @@ internal static class DaggerfallBaseContent
         foreach ((IReadOnlyList<int> table, int index) in definitions.Encounters.Tables.Select((table, index) => (table, index)))
             Add("encounter-table", index, string.Join(',', table));
         foreach (DaggerfallMobileDefinition mobile in definitions.Mobiles.Mobiles.Values.OrderBy(mobile => mobile.DonorId))
-            Add("mobile", mobile.DonorId, mobile.Identity, mobile.Actor, mobile.CastsMagic, mobile.LootTableKey, mobile.Disposition, mobile.Team);
+            Add("mobile", mobile.DonorId, mobile.Identity, mobile.Actor, mobile.CastsMagic, mobile.LootTableKey, mobile.Disposition, mobile.Team, mobile.ResistanceFlags, mobile.ImmunityFlags, mobile.LowToleranceFlags, mobile.CriticalWeaknessFlags);
         // The published catalogs are content a consumer resolves keys through, so the
         // fingerprint covers them: a key, an index, a decoded career field or a
         // provenance citation that changes is a semantic change to the pack.
@@ -1158,7 +1158,13 @@ internal static class DaggerfallBaseContent
                 Integer(mobile, "mapChance", diagnostics),
                 Integer(mobile, "weight", diagnostics),
                 OptionalText(mobile, "team"),
-                FlagByte(mobile, "attackModifierFlags", diagnostics));
+                FlagByte(mobile, "attackModifierFlags", diagnostics))
+            {
+                ResistanceFlags = FlagByte(mobile, "resistanceFlags", diagnostics),
+                ImmunityFlags = FlagByte(mobile, "immunityFlags", diagnostics),
+                LowToleranceFlags = FlagByte(mobile, "lowToleranceFlags", diagnostics),
+                CriticalWeaknessFlags = FlagByte(mobile, "criticalWeaknessFlags", diagnostics),
+            };
 
             // A donor id identifies one mobile; two records claiming it would make a lookup ambiguous.
             if (!mobiles.TryAdd(donorId, definition))

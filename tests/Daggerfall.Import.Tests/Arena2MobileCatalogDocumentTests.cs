@@ -131,6 +131,15 @@ public sealed class Arena2MobileCatalogDocumentTests
             enemyConfigurations: MonsterArchiveInventory.Enumerate(File.ReadAllBytes(archivePath), "MONSTER.BSA"));
         JsonArray mobiles = JsonNode.Parse(publication.Json)!["mobiles"]!.AsArray();
 
+        var configurations = MonsterArchiveInventory.Enumerate(File.ReadAllBytes(archivePath), "MONSTER.BSA");
+        foreach (var record in configurations.EnemyConfigurations.Where(x => x.Configuration is not null))
+        {
+            var published = mobiles.Single(x => x!["donorId"]!.GetValue<int>() == record.MobileId)!;
+            Assert.Equal((int)record.Configuration!.ResistanceFlags, published["resistanceFlags"]!.GetValue<int>());
+            Assert.Equal((int)record.Configuration.ImmunityFlags, published["immunityFlags"]!.GetValue<int>());
+            Assert.Equal((int)record.Configuration.LowToleranceFlags, published["lowToleranceFlags"]!.GetValue<int>());
+            Assert.Equal((int)record.Configuration.CriticalWeaknessFlags, published["criticalWeaknessFlags"]!.GetValue<int>());
+        }
         // The supplied classic corpus pays the humanoid bonus for the vampire (28) and the
         // zombie (30) families and nothing for the rat (0).
         Assert.Equal(0x04, mobiles.Single(mobile => mobile!["donorId"]!.GetValue<int>() == 28)!["attackModifierFlags"]!.GetValue<int>());

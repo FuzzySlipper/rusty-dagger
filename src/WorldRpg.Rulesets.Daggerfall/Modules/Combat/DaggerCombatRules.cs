@@ -569,6 +569,8 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         ulong generation, ulong step, FactBuffer<IProductFact> facts)
     {
         Track health = participants.TargetStats.GetTrack(TrackId.Parse(HealthTrack));
+        int physicalDamage = damage;
+        damage = ApplyRazor(attacker, target, damage, health, enemy, generation, step, facts, out var razorWeapon, out int razorWear);
         ApplyHitEvent applied = Rules.ApplyToHealth(participants, damage, body, health);
         facts.Append(new AttackHitFact(attacker, target, applied.CalculatedDamage, applied.ActualHealthLost, body, enemy, generation, step));
         facts.Append(new DamageAppliedFact(attacker, target, DaggerfallDamageCause.PhysicalAttack,
@@ -593,7 +595,9 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
                 applied.CalculatedDamage, applied.ActualHealthLost, generation, step));
         if (applied.ActualHealthLost > 0d)
             ApplyFatigueConsequence(attacker, target, applied.Damage, generation, step, facts);
-        if (applied.Damage > 0) ApplyPhysicalWear(attacker, target, body, applied.Damage, enemy, generation, step, facts);
+        int physicalWearDamage = razorWear > 0 ? physicalDamage : applied.Damage;
+        if (physicalWearDamage > 0) ApplyPhysicalWear(attacker, target, body, physicalWearDamage, enemy, generation, step, facts);
+        if (razorWeapon is { } charged) DamageCondition(charged, attacker, razorWear, generation, step, facts);
         ReflectNamira(participants, attacker, target, applied, generation, step, facts);
     }
 
