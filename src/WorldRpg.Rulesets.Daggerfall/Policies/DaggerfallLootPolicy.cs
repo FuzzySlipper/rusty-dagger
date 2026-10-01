@@ -105,23 +105,55 @@ internal static class DaggerfallLootPolicy
         List<DaggerfallLootExtraRoll> extras = [];
         if (tableKey[0] is >= 'J' and <= 'O')
         {
+            string prefix = $"loot.dungeon.{dungeonType}";
             int mapChance = DungeonMapChances[tableKey[0] - 'J'];
-            AddExtra("map", "template-287", mapChance, null);
-            AddExtra("potion", "template-83", 4, PotionRecipeKeys);
-            AddExtra("potion-recipe", "template-278", 2, PotionRecipeKeys);
+            RollExtra(draw, prefix, "map", MapItem, mapChance, null, extras, drops);
+            RollExtra(draw, prefix, "potion", PotionItem, 4, PotionRecipeKeys, extras, drops);
+            RollExtra(draw, prefix, "potion-recipe", PotionRecipeItem, 2, PotionRecipeKeys, extras, drops);
         }
         return new(dungeonType, tableKey, ordinary with { Drops = drops }, extras);
+    }
 
-        void AddExtra(string kind, string itemId, int chance, IReadOnlyList<int>? recipes)
+    /// <summary>
+    /// The chances EnemyEntity applies after its table loot and equipment: every enemy rolls its
+    /// mobile's map chance, and only an enemy whose mobile names a loot table then rolls the donor's
+    /// 3% potion and 2% potion recipe. A keyless enemy (the City Watch) gets the map roll alone.
+    /// </summary>
+    internal static DaggerfallEnemyLootExtrasResult GenerateEnemyExtras(
+        int mapChance,
+        bool hasLootTable,
+        Func<string, int, int, int> draw)
+    {
+        ArgumentNullException.ThrowIfNull(draw);
+        if (mapChance is < 0 or > 100) throw new ArgumentOutOfRangeException(nameof(mapChance), "A mobile's map chance is a percentage.");
+        List<DaggerfallLootDrop> drops = [];
+        List<DaggerfallLootExtraRoll> extras = [];
+        RollExtra(draw, EnemyExtraPrefix, "map", MapItem, mapChance, null, extras, drops);
+        if (hasLootTable)
         {
-            int roll = Draw(draw, $"loot.dungeon.{dungeonType}.{kind}", 0, 99);
-            bool success = roll < chance;
-            int? recipe = success && recipes is not null
-                ? recipes[Draw(draw, $"loot.dungeon.{dungeonType}.{kind}.recipe", 0, recipes.Count - 1)]
-                : null;
-            extras.Add(new(kind, chance, roll, success, recipe));
-            if (success) drops.Add(new DaggerfallLootDrop(itemId, 1, kind, recipe));
+            // CreateRandomPotion picks among the effect broker's registered recipes, which without
+            // mods are exactly the twenty classic ones the recipe sheet also picks from.
+            RollExtra(draw, EnemyExtraPrefix, "potion", PotionItem, EnemyPotionChance, PotionRecipeKeys, extras, drops);
+            RollExtra(draw, EnemyExtraPrefix, "potion-recipe", PotionRecipeItem, EnemyPotionRecipeChance, PotionRecipeKeys, extras, drops);
         }
+        return new(extras, drops);
+    }
+
+    /// <summary>
+    /// One donor <c>Dice100.SuccessRoll</c> (a 0-99 roll below the chance) and, for a potion or a
+    /// recipe sheet, a uniform pick of its classic recipe.
+    /// </summary>
+    private static void RollExtra(
+        Func<string, int, int, int> draw, string prefix, string kind, string itemId, int chance, IReadOnlyList<int>? recipes,
+        List<DaggerfallLootExtraRoll> extras, List<DaggerfallLootDrop> drops)
+    {
+        int roll = Draw(draw, $"{prefix}.{kind}", 0, 99);
+        bool success = roll < chance;
+        int? recipe = success && recipes is not null
+            ? recipes[Draw(draw, $"{prefix}.{kind}.recipe", 0, recipes.Count - 1)]
+            : null;
+        extras.Add(new(kind, chance, roll, success, recipe));
+        if (success) drops.Add(new DaggerfallLootDrop(itemId, 1, kind, recipe));
     }
 
     /// <summary>The donor's <c>DFRegion.DungeonTypes</c> ordinal to loot-letter table.</summary>
@@ -144,6 +176,16 @@ internal static class DaggerfallLootPolicy
     ];
 
     private static readonly int[] DungeonMapChances = [2, 1, 1, 2, 2, 15];
+
+    // DaggerfallLoot's item templates: MiscItems.Map, UselessItems1.Potion and MiscItems.Potion_recipe.
+    private const string MapItem = "template-287";
+    private const string PotionItem = "template-83";
+    private const string PotionRecipeItem = "template-278";
+
+    // EnemyEntity's fixed RandomlyAddPotion(3) and RandomlyAddPotionRecipe(2) chances.
+    private const int EnemyPotionChance = 3;
+    private const int EnemyPotionRecipeChance = 2;
+    private const string EnemyExtraPrefix = "loot.enemy";
 
     // The classic-list order is retained from PotionRecipe.classicRecipeKeys.
     // It is an item-instance identity used by both a potion (template 83) and
@@ -224,5 +266,10 @@ internal sealed record DaggerfallDungeonLootResult(
     string TableKey,
     DaggerfallLootResult Loot,
     IReadOnlyList<DaggerfallLootExtraRoll> Extras);
+
+/// <summary>An enemy's map/potion/recipe rolls and the drops they added after its table loot.</summary>
+internal sealed record DaggerfallEnemyLootExtrasResult(
+    IReadOnlyList<DaggerfallLootExtraRoll> Extras,
+    IReadOnlyList<DaggerfallLootDrop> Drops);
 
 internal sealed record DaggerfallLootExtraRoll(string Kind, int Chance, int Roll, bool Success, int? PotionRecipeKey);
