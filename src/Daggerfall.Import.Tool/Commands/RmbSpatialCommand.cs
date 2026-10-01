@@ -47,7 +47,7 @@ internal static class RmbSpatialCommand
         plan = plan.WithInvocation(SiteInputs.Invocation(args));
         ImportPublicationWriter.Write(plan, Path.GetFullPath(args[SiteInputs.Output.Name]));
         SiteInputs.WriteSourceManifest(args, plan);
-        Console.WriteLine($"rmb spatial: {result.Layout.LocationName} {args[Profile.Name]}, {result.Document.Meshes.Count} meshes, {result.Document.Navigation!.Cells.Count} navigation cells, {plan.Artifacts.Count} closure artifacts");
+        Console.WriteLine($"rmb spatial: {result.Layout.LocationName} {args[Profile.Name]}, {result.Document.Meshes.Count} meshes, {result.SpatialPublication.Navigation.Cells.Count} navigation cells, {plan.Artifacts.Count} closure artifacts");
         return 0;
     }
 }

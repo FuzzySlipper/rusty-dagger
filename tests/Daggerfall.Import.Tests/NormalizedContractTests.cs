@@ -139,11 +139,6 @@ public sealed class NormalizedContractTests
                 [new(0, 1, 2), new(2, 3, 0)],
                 [new("material/stone", 0, 2, true)])],
             new(
-                "navigation/example",
-                "artifact/geometry",
-                NavigationDerivationConfig.ClassicDefault with { CellSize = 1F, LevelQuantum = 1F },
-                [new(0, 0, 0, 0F, true), new(1, 0, 0, 0F, true)]),
-            new(
                 "mesh/example",
                 ["mesh/example"],
                 "navigation/example",

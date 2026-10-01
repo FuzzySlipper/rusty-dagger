@@ -363,7 +363,6 @@ public sealed class Arena2MediaBundlePublicationTests
                 1F),
             bounds,
             [mesh],
-            navigation,
             world,
             [texture, material]).Canonicalize();
         return new(document, [], spatial, [], []);

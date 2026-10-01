@@ -33,8 +33,8 @@ public sealed class RmbExteriorNormalizerTests
         Assert.Equal(614.4F, exterior.Document.Bounds.Maximum.X);
         Assert.Contains(exterior.Document.Meshes.SelectMany(mesh => mesh.Vertices), point => point.X == 0F && point.Y == 0F && point.Z == 0F);
         Assert.Contains(exterior.Document.Meshes.SelectMany(mesh => mesh.Vertices), point => point.X == 614.4F && point.Y == 0F && point.Z == -614.4F);
-        Assert.NotEmpty(exterior.Document.Navigation!.Cells);
-        Assert.Contains(exterior.Document.Navigation.Cells, cell => cell.SupportHeight == 0F);
+        Assert.NotEmpty(exterior.SpatialPublication.Navigation.Cells);
+        Assert.Contains(exterior.SpatialPublication.Navigation.Cells, cell => cell.SupportHeight == 0F);
         Assert.Equal(exterior.SpatialPublication.StaticMesh.Bytes.ToArray(), exteriorAgain.SpatialPublication.StaticMesh.Bytes.ToArray());
         Assert.Equal(exterior.SpatialPublication.CollisionNavigation.Bytes.ToArray(), exteriorAgain.SpatialPublication.CollisionNavigation.Bytes.ToArray());
         Assert.Equal("RESIAL05.RMB", interior.Layout.Blocks.Single(block => block.X == 1 && block.Y == 1).SourceName);
@@ -50,7 +50,7 @@ public sealed class RmbExteriorNormalizerTests
         Assert.Equal((summary!.Buildings[0].BuildingType, summary.Buildings[0].FactionId), ((byte)building.BuildingType, (ushort)building.FactionId));
         Assert.Equal(building, NormalizedImportSerializer.Deserialize(NormalizedImportSerializer.Serialize(interior.Document)).World.InteriorBuilding);
         Assert.NotEmpty(interior.Document.Meshes);
-        Assert.NotEmpty(interior.Document.Navigation!.Cells);
+        Assert.NotEmpty(interior.SpatialPublication.Navigation.Cells);
         Assert.Equal(new NormalizedMarker("marker/enter", new NormalizedVector3(8F, 0F, 4.8F)), interior.Document.World.EnterMarker);
         Assert.All([exterior, interior], profile =>
         {

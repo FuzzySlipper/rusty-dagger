@@ -10,7 +10,9 @@ namespace Daggerfall.Import.Normalized;
 /// <summary>
 /// The stable, Engine-free schema emitted by an offline content importer.  It
 /// records normalized source facts and artifact closure only; ruleset policy
-/// and runtime objects deliberately live elsewhere.
+/// and runtime objects deliberately live elsewhere. The navigation surface the
+/// world names is not repeated here: its one home is the collision/navigation
+/// artifact the spatial publication writes.
 /// </summary>
 public sealed record NormalizedImportDocument(
     ImportProvenance Provenance,
@@ -18,7 +20,6 @@ public sealed record NormalizedImportDocument(
     NormalizedCoordinateConvention Coordinates,
     NormalizedBounds Bounds,
     IReadOnlyList<NormalizedMesh> Meshes,
-    NormalizedNavigationSurface? Navigation,
     NormalizedWorld World,
     IReadOnlyList<NormalizedResourceCatalogEntry> Resources)
 {
@@ -29,7 +30,6 @@ public sealed record NormalizedImportDocument(
             .Select(artifact => artifact.Canonicalize()).ToArray(),
         Meshes = Meshes.OrderBy(mesh => mesh.Id, StringComparer.Ordinal)
             .Select(mesh => mesh.Canonicalize()).ToArray(),
-        Navigation = Navigation?.Canonicalize(),
         World = World.Canonicalize(),
         Resources = Resources.OrderBy(resource => resource.Id, StringComparer.Ordinal)
             .Select(resource => resource.Canonicalize()).ToArray(),
@@ -83,17 +83,6 @@ public sealed record NormalizedImportDocument(
             {
                 RequireReference(group.MaterialResourceId, resourceIds, $"mesh '{mesh.Id}' material group");
             }
-        }
-
-        Navigation?.Validate(artifactIds);
-        if (World.NavigationId is not null && (Navigation is null || !StringComparer.Ordinal.Equals(World.NavigationId, Navigation.Id)))
-        {
-            throw new InvalidOperationException($"World navigation '{World.NavigationId}' does not identify the normalized navigation grid.");
-        }
-
-        if (World.NavigationId is null && Navigation is not null)
-        {
-            throw new InvalidOperationException("A normalized navigation grid must be referenced by the normalized world.");
         }
 
         World.Validate(
