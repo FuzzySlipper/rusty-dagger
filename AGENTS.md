@@ -253,7 +253,10 @@ document, and the document is not the owner of that identity. Exact revisions
 belong in logged Den records, or in machine-checked configuration such as
 `Directory.Build.props`, which the `rusty` CLI reads. Move the Engine pin with
 `rusty update`, which installs the newest published pair, rewrites that file, and
-lists the release notes; never hand-edit a version into prose. Durable documents
+lists the release notes; never hand-edit a version into prose. Commit and push a
+pin move together with the code it needs in the same turn, and do it in a
+worktree: an uncommitted pin left in the shared checkout blocks the next pull for
+every other agent. Durable documents
 describe current state; evidence, receipts and dated reports go to Den records,
 not the repository.
 
