@@ -390,6 +390,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   let saveSlotMode: 'save' | 'load' = 'save';
   let saveConfirm = false;
   let deleteConfirm = false;
+  // A load asked for from the menu: a successful one replaces the session, which starts in play, so
+  // the menu that asked closes rather than stay open over a world that is running again.
+  let loadRequested = false;
   const claimDeath = (action: string, key?: string): void => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: key ? { action, key } : { action },
   });
@@ -491,6 +494,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     if (activePanel === 'loot') closeLoot();
     closeDebug();
     activePanel = null;
+    loadRequested = false;
     menu.close();
     reportMenu(false);
     context.ui.setInteractionMode(titleMode || deadMode ? 'interface' : 'gameplay');
@@ -499,6 +503,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const openMenu = (): void => {
     controllerDirection = 0;
     context.ui.setInteractionMode('interface');
+    loadRequested = false;
     menu.showModal();
     reportMenu(true);
     showHome();
@@ -606,6 +611,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     }
     if (action === 'load-slot' && saveSlotsSelect.value) {
       context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'load-slot', key: saveSlotsSelect.value } });
+      loadRequested = true;
       return;
     }
     if (action === 'delete-slot' && saveSlotsSelect.value) {
@@ -851,6 +857,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     // joining it; its semantic choices and effects arrive in the same projection as the image.
     deadMode = value.mode === 'dead';
     if (deadMode && menu.open) closeMenu();
+    // The open menu holds the world, so the product reports modal until a requested load replaces the
+    // session; a failed load leaves the old session, still modal, and the menu shows why.
+    if (loadRequested && menu.open && value.mode === 'playing') closeMenu();
     currentDeath = isDeathProjection(value.death) ? value.death : null;
     redrawDeath(currentDeath);
 

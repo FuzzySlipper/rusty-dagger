@@ -637,6 +637,41 @@ test('wagon put is refused for the definitions the ruleset names', () => {
   } finally { f.dispose(); }
 });
 
+test('a load from the menu closes the menu once the loaded session is playing, and a failed load keeps it open', () => {
+  const f = fixture();
+  try {
+    const menu = f.root.querySelector('.dagger-menu');
+    const click = action => f.root.querySelector(`[data-action="${action}"]`).click();
+    const saveSlots = { entries: [{ key: 'slot-1', label: 'Before the dungeon', savedAtUtc: '2026-09-22T00:00:00.0000000Z', ruleset: 'daggerfall' }], diagnostic: null };
+    f.publish({ mode: 'playing', saveSlots });
+    f.root.querySelector('.dagger-menu-toggle').click();
+    f.publish({ mode: 'modal', saveSlots });
+    click('load-game');
+    const select = f.root.querySelector('.dagger-save-slots-select');
+    select.value = 'slot-1';
+    select.dispatchEvent(new window.Event('change'));
+    click('load-slot');
+    assert.deepEqual(f.actions.at(-1), { action: 'load-slot', key: 'slot-1' });
+    f.publish({ mode: 'modal', saveSlots, lastOutcome: 'Load failed: the save is unreadable.' });
+    assert.equal(menu.open, true);
+    click('load-slot');
+    f.publish({ mode: 'playing', saveSlots, lastOutcome: 'Game loaded.' });
+    assert.equal(menu.open, false);
+    assert.deepEqual(f.actions.at(-1), { action: 'menu', open: false });
+  } finally { f.dispose(); }
+});
+
+test('an open menu stays open while the product plays when no load was asked for', () => {
+  const f = fixture();
+  try {
+    const menu = f.root.querySelector('.dagger-menu');
+    f.publish({ mode: 'playing' });
+    f.root.querySelector('.dagger-menu-toggle').click();
+    f.publish({ mode: 'playing' });
+    assert.equal(menu.open, true);
+  } finally { f.dispose(); }
+});
+
 test('the game menu tells the product when it opens and closes, because an open menu holds the world', () => {
   const f = fixture();
   try {
