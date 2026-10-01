@@ -211,6 +211,10 @@ public sealed class WorldRpgSaveSlots : IDisposable
         {
             throw new WorldRpgSaveFormatException($"Save slot '{key}' payload is null.", error);
         }
+        catch (PersistenceStorageException error)
+        {
+            throw new WorldRpgSaveFormatException($"Save slot '{key}' payload cannot be read ({error.Failure}).", error);
+        }
 
         if (!loaded.Present || loaded.State is null || loaded.State.Length == 0)
         {
@@ -234,6 +238,10 @@ public sealed class WorldRpgSaveSlots : IDisposable
         catch (InvalidOperationException error) when (error is not WorldRpgSaveFormatException)
         {
             throw MalformedCatalog("its stored value is null", error);
+        }
+        catch (PersistenceStorageException error)
+        {
+            throw MalformedCatalog($"its stored file cannot be read ({error.Failure})", error);
         }
 
         if (!loaded.Present) return new([], false, 0);

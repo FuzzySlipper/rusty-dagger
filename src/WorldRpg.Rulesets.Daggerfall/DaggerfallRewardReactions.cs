@@ -72,7 +72,7 @@ internal sealed class DaggerfallRewardReactions(
         Stat healthMaximum = playerMechanics.GetStat(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value));
         StatSource expected = DaggerfallLevelUpHealthSource.Create(playerEntity, level, healthGain);
         if (healthMaximum.Sources.Any(source => source.Identity == expected.Identity))
-            throw new MechanicsException($"Daggerfall level-up health source {expected.Identity} already exists.");
+            throw new InvalidOperationException($"Daggerfall level-up health source {expected.Identity} already exists.");
         healthMaximum.SetSources(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value), [.. healthMaximum.Sources, expected]);
         progression.AdvanceTo(progression.Experience, level);
     }
@@ -116,7 +116,7 @@ internal sealed class DaggerfallRewardReactions(
             }
 
             if (!DaggerfallLevelUpHealthSource.Matches(existing, expected))
-                throw new MechanicsException($"Daggerfall level-up source {expected.Identity} already exists with different policy.");
+                throw new InvalidOperationException($"Daggerfall level-up source {expected.Identity} already exists with different policy.");
         }
 
         if (changed)
@@ -139,7 +139,7 @@ internal sealed class DaggerfallRewardReactions(
             planned.SetSources(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value), prospectiveSources);
             if (planned.Value != expectedMaximum || plannedHealth.Current != expectedCurrent)
             {
-                throw new MechanicsException("Daggerfall level-up health gain was constrained before it could raise maximum and current equally.");
+                throw new InvalidOperationException("Daggerfall level-up health gain was constrained before it could raise maximum and current equally.");
             }
         }
         return new ProgressionAwardPlan(nextExperience, nextLevel, changed ? prospectiveSources.ToArray() : null);
@@ -202,7 +202,7 @@ internal static class DaggerfallLevelUpHealthSource
             minimum,
             maximum)).Value);
         if (roll < minimum || roll > maximum)
-            throw new MechanicsException($"Daggerfall level-up roll for level {level} was outside [{minimum}, {maximum}].");
+            throw new InvalidOperationException($"Daggerfall level-up roll for level {level} was outside [{minimum}, {maximum}].");
         return DaggerfallFormulaPolicy.HitPointsPerLevelUp(roll, permanentEndurance);
     }
 

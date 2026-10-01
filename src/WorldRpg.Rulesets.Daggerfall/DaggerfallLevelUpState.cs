@@ -150,7 +150,7 @@ internal sealed class DaggerfallLevelUpState
         int result = checked((int)_random.DrawKeyed(new KeyedRngRequest(
             CombatRandomKey.Seed, CombatRandomKey.PlayerScope, $"player.level-up.{level}.{roll}", minimum, maximum)).Value);
         if (result < minimum || result > maximum)
-            throw new MechanicsException($"Daggerfall level-up {roll} for level {level} was outside [{minimum}, {maximum}].");
+            throw new InvalidOperationException($"Daggerfall level-up {roll} for level {level} was outside [{minimum}, {maximum}].");
         return result;
     }
 
