@@ -175,6 +175,11 @@ tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/charing/exte
 tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/charing/interior-1-1-0 \
   --source-manifest "$site_records/charing-interior-1-1-0.sources.json" --region 17 --location Charing --profile interior --block-x 1 --block-y 1 --building 0
 
+# 5. Reconcile all current producer citations and raw-record ledgers. This is import coverage,
+#    not runtime parity certification; unknown identities and dangling required references fail.
+tool source-coverage --arena2 "$arena2" --inventory "$inventory" --repository "$PWD" \
+  --output import-records/source-coverage.json
+
 # Nothing generated may be committed: the Arena2-derived data is not redistributed. In a Git
 # checkout, a file this run wrote that Git would pick up (untracked and not ignored) is named and the
 # run fails, so a new output path cannot slip into a commit unnoticed.
