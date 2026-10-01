@@ -501,7 +501,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         _disposed = true;
         // DisposeAll walks backward: projection door entities must release before the actor store.
         Exception? failure = null;
-        try { DisposeAll([_hud, _camera, _spatial, State.Actors, _sites.Projection, State.Effects, _sites.ActionTriggers, .. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }]); }
+        try { DisposeAll([_hud, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.ActionTriggers, .. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }]); }
         catch (Exception exception) { failure = exception; }
         try { _sites.RetireExteriorAppearance(); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
@@ -563,6 +563,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
 
     private void PublishPresentation()
     {
+        _heldEnchantments.Refresh();
         _hud.Publish(new DaggerfallHudFrame(State.Actors.Player, State.Progression, Presentation, _mode, State.PlayerControl, Slots,
             Inventory: _inventoryUi.Read(),
             Loot: _lootUi.Read(),

@@ -20,6 +20,43 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallHeldEnchantmentTests
 {
     [Fact]
+    public void Masque_reactions_follow_live_personality_and_leave_permanent_standing_untouched()
+    {
+        using Fixture fixture = new();
+        var other = new IntrinsicSourceIdentity(fixture.PlayerEntity, SourceInstanceId.Parse("other-social-effect"));
+        fixture.Social.SetReactionSource(0, other, 3);
+        fixture.EquipEnchanted("iron-longsword", 9301, "magic-item.0000", equip: false);
+        fixture.Refresh();
+        Assert.Equal(3, fixture.Social.ReactionModifier(0));
+        fixture.Wear(9301);
+        fixture.Personality = 74;
+        fixture.Refresh();
+        Assert.Equal(17, fixture.Social.ReactionModifier(0));
+        for (int group = 1; group < DaggerfallSocialState.SocialGroupCount; group++)
+            Assert.Equal(14, fixture.Social.ReactionModifier(group));
+        fixture.AdvanceRounds(100);
+        Assert.Equal(17, fixture.Social.ReactionModifier(0));
+        Assert.All(fixture.Social.Capture().Personal, value => Assert.Equal(0, value.Value));
+        fixture.Personality = 95;
+        fixture.Refresh(); // No equipment/calendar signature change: the live stat still matters.
+        Assert.Equal(22, fixture.Social.ReactionModifier(0));
+        fixture.Unequip(9301);
+        fixture.Refresh();
+        Assert.Equal(3, fixture.Social.ReactionModifier(0));
+        Assert.Equal(0, fixture.Social.ReactionModifier(1));
+        fixture.Wear(9301);
+        fixture.Refresh();
+        fixture.TransferAway(9301);
+        fixture.Refresh();
+        Assert.Equal(3, fixture.Social.ReactionModifier(0));
+        fixture.EquipEnchanted("iron-saber", 9302, "magic-item.0000", equip: true);
+        fixture.Refresh();
+        fixture.DestroyPlayer();
+        fixture.Refresh();
+        Assert.Equal(3, fixture.Social.ReactionModifier(0));
+    }
+
+    [Fact]
     public void A_worn_items_skill_enchantment_raises_the_skill_the_donor_names()
     {
         // Chrysamere's published enchantment is EnhancesSkill with the classic param for long blade, and
@@ -700,6 +737,8 @@ public sealed class DaggerfallHeldEnchantmentTests
         private readonly DaggerfallEncumbrancePolicy _encumbrance;
         private readonly DaggerfallHeldEnchantments _held;
         private readonly DaggerfallItemConditionService _conditions;
+        private readonly InventoryComponent _inventory;
+        internal DaggerfallSocialState Social { get; } = new(Definitions.Factions);
         private readonly Dictionary<ulong, WorldPoint> _positions = [];
         private IReadOnlyList<DaggerfallNearbyCreature> _nearby = [];
         private bool _sunlight;
@@ -716,6 +755,7 @@ public sealed class DaggerfallHeldEnchantmentTests
             world.RegisterInventory(new InventoryState(PlayerEntity, [new InventoryCapacityLimit(DaggerActorFactory.ClassicWeightMetric, ulong.MaxValue)]));
             world.RegisterEquipment(new EquipmentState(PlayerEntity));
             InventoryComponent inventory = new(world, PlayerEntity);
+            _inventory = inventory;
             EquipmentComponent equipment = new(world, PlayerEntity);
             player.Actor.Add(inventory);
             player.Actor.Add(equipment);
@@ -729,11 +769,23 @@ public sealed class DaggerfallHeldEnchantmentTests
             _conditions = new DaggerfallItemConditionService(Definitions, _instances, moves);
             _held = new DaggerfallHeldEnchantments(_equipment, _instances, Definitions.Magic with { MagicItems = MagicItems }, player.Stats, _actors.Entities, PlayerEntity,
                 () => _calendar, () => _positions.TryGetValue(DaggerfallActorIdentity.PlayerEntityId, out WorldPoint position) ? position : new WorldPoint(0f, 0f, 0f),
-                () => _nearby, () => _sunlight, _conditions, () => InHolyPlace, DamagePlayer);
+                () => _nearby, () => _sunlight, _conditions, () => InHolyPlace, DamagePlayer, Social);
             _encumbrance = new DaggerfallEncumbrancePolicy(coordinator, player.Stats, () => _held.CarryMultiplier);
         }
 
         internal EntityId PlayerEntity { get; }
+        internal int Personality { set => _actors.Player.Stats.GetStat(StatId.Parse("personality")).BaseValue = value; }
+        internal void DestroyPlayer() => _actors.Entities.Destroy(ActorsState.Identity(DaggerfallActorIdentity.PlayerEntityId));
+        internal void TransferAway(ulong id)
+        {
+            Unequip(id);
+            EntityId recipient = _actors.Entities.Create(new DurableIdentityReference(DurableIdentityKind.Actor, 9303), new EntityTypeId("social-recipient"));
+            _inventory.Store.RegisterInventory(new InventoryState(recipient, [new InventoryCapacityLimit(DaggerActorFactory.ClassicWeightMetric, ulong.MaxValue)]));
+            _inventory.TransferUnique(_actors.Entities.Resolve(new DurableIdentityReference(DurableIdentityKind.Item, id)), recipient);
+        }
+        internal void Wear(ulong id) => _equipment.Equip(
+            new WorldRpg.Kit.Inventory.UniqueInventoryItem(_actors.Entities.Resolve(new DurableIdentityReference(DurableIdentityKind.Item, id)).Value, new InventoryItemId("iron-longsword")),
+            [new WorldRpg.Kit.Inventory.EquipmentSlotId("right-hand")]);
 
         private Dictionary<string, DaggerfallMagicItemDefinition> MagicItems => Published.Concat(Authored)
             .ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal);
@@ -881,6 +933,6 @@ public sealed class DaggerfallHeldEnchantmentTests
 
 
 
-        public void Dispose() => _actors.Dispose();
+        public void Dispose() { _held.Dispose(); _actors.Dispose(); }
     }
 }
