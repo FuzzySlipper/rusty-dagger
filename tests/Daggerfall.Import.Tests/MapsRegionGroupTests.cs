@@ -214,6 +214,7 @@ public sealed class MapsRegionGroupTests
             ("MAPDITEM.017", [0, 0, 0, 0])), "fixture");
 
         MapsExteriorLayout layout = MapsDecoder.DecodeExteriorLayout(archive, 17, "Location 0");
+        Assert.Equal(new MapsExteriorBuilding(12345, 456, 11, 17), Assert.Single(layout.Buildings));
 
         Assert.Equal(17, layout.Region);
         Assert.Equal(0, layout.LocationIndex);
@@ -341,12 +342,18 @@ public sealed class MapsRegionGroupTests
     {
         // MAPPITEM's four-byte offset table points directly at one record.  Its source block arrays
         // always span 64 slots even when the declared grid is smaller.
-        const int recordHeader = 4 + 112 + 2 + 5;
+        const int recordHeader = 4 + 112 + 2 + 5 + 26;
         const int exteriorFixed = 32 + 4 + 4 + 1 + 1 + 4 + 1 + 2;
         byte[] bytes = new byte[sizeof(uint) + recordHeader + exteriorFixed + (64 * 3)];
         int record = sizeof(uint);
         BitConverter.GetBytes(0U).CopyTo(bytes, 0);
         BitConverter.GetBytes(7).CopyTo(bytes, record + 4 + 33);
+        BitConverter.GetBytes((ushort)1).CopyTo(bytes, record + 4 + 112);
+        int building = record + 4 + 112 + 2 + 5;
+        BitConverter.GetBytes((ushort)12345).CopyTo(bytes, building);
+        BitConverter.GetBytes((ushort)456).CopyTo(bytes, building + 18);
+        bytes[building + 24] = 11;
+        bytes[building + 25] = 17;
         int exterior = record + recordHeader;
         BitConverter.GetBytes(42).CopyTo(bytes, exterior + 32);
         BitConverter.GetBytes(7U).CopyTo(bytes, exterior + 36);

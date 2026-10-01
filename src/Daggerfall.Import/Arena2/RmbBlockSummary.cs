@@ -85,6 +85,9 @@ public sealed record RmbBlockSummary(
     IReadOnlyList<RmbBuildingSlot> Buildings,
     int TrailingBytes)
 {
+    /// <summary>Other-name slots, including the classic Order of the Raven discriminator.</summary>
+    public IReadOnlyList<string> OtherNameSlots { get; init; } = [];
+
     /// <summary>All 16-by-16 ground tiles read from the source FLD header.</summary>
     public IReadOnlyList<RmbGroundTile> GroundTiles { get; init; } = [];
 
@@ -257,6 +260,7 @@ public static class RmbBlockSummaryReader
             buildings,
             (int)(length - accounted))
         {
+            OtherNameSlots = Enumerable.Range(0, OtherNameSlots).Select(index => Text(bytes, offset + NameOffset + NameSlotBytes + (index * NameSlotBytes), NameSlotBytes)).ToArray(),
             GroundTiles = groundTiles,
             AutoMapData = bytes.Skip(offset + AutoMapOffset).Take(AutoMapBytes).ToArray(),
         };

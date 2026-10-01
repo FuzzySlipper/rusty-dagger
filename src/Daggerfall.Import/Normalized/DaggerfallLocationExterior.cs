@@ -72,6 +72,12 @@ public sealed record DaggerfallLocationExterior(
     DaggerfallLocationTerrainRect FlattenRect,
     IReadOnlyList<DaggerfallLocationExteriorBlock> Blocks)
 {
+    /// <summary>Placed building facts specialized for this location, in donor traversal order.</summary>
+    public IReadOnlyList<DaggerfallLocationBuilding> Buildings { get; init; } = [];
+
+    /// <summary>Recoverable exhausted city-pool placements; their donor zero values remain published.</summary>
+    public IReadOnlyList<string> MissingCityBuildings { get; init; } = [];
+
     private const int MapWidth = 1000;
     private const int MapHeight = 500;
 
@@ -113,3 +119,7 @@ public sealed record DaggerfallLocationExterior(
         FlattenRect.Validate(owner);
     }
 }
+
+/// <summary>A building's source placement and resolved location-specific policy inputs.</summary>
+public sealed record DaggerfallLocationBuilding(string SourceKey, int BlockX, int BlockY, int BuildingIndex,
+    int BuildingType, int FactionId, int NameSeed, int Quality);

@@ -22,6 +22,15 @@ internal sealed class DaggerfallBlocksSnapshot(
 {
     internal IReadOnlyDictionary<DaggerfallRmbBuildingId, DaggerfallRmbBuildingSource> RmbBuildings { get; } =
         new ReadOnlyDictionary<DaggerfallRmbBuildingId, DaggerfallRmbBuildingSource>(rmbBuildings.ToDictionary());
+
+    /// <summary>Joins location placements to their source catalog once at selected-content admission.</summary>
+    internal void AdmitLocations(DaggerfallLocationSet locations)
+    {
+        foreach (DaggerfallSiteRecord site in locations.Records)
+        foreach (DaggerfallSiteBuildingSource building in site.Exterior?.Buildings.Values ?? [])
+            if (!RmbBuildings.ContainsKey(building.Source.Id))
+                throw new InvalidOperationException($"Site '{site.Id}' building '{building.Id}' names unpublished RMB source '{building.Source.Id}'.");
+    }
 }
 
 /// <summary>

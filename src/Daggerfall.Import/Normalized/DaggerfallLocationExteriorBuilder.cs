@@ -52,6 +52,9 @@ internal sealed class DaggerfallLocationExteriorBuilder
             ? 55
             : (RmbTilesPerTerrain - (layout.Height * RmbTilesPerBlock)) / 2;
 
+        List<MapsExteriorBuilding> pool = [.. layout.Buildings.Where(building => IsNamedBuilding(building.BuildingType))];
+        List<DaggerfallLocationBuilding> buildings = [];
+        List<string> missingCityBuildings = [];
         int minX = int.MaxValue;
         int minY = int.MaxValue;
         int maxX = int.MinValue;
@@ -62,6 +65,32 @@ internal sealed class DaggerfallLocationExteriorBuilder
             if (summary.GroundTiles.Count != RmbTilesPerBlock * RmbTilesPerBlock)
             {
                 throw new InvalidOperationException($"RMB block '{block.SourceName}' for location {location.Region}:{location.Index} carries {summary.GroundTiles.Count} FLD ground tiles instead of {RmbTilesPerBlock * RmbTilesPerBlock}.");
+            }
+
+            foreach (RmbBuildingSlot building in summary.Buildings)
+            {
+                int type = building.BuildingType;
+                int faction = building.FactionId;
+                int seed = building.NameSeed;
+                int quality = building.Quality;
+                if (IsNamedBuilding(type))
+                {
+                    int match = pool.FindIndex(candidate => candidate.BuildingType == type);
+                    // The donor's exhausted pool returns a zero-initialized record, then reports it.
+                    // Keep those observable values rather than substituting the generic block data.
+                    MapsExteriorBuilding city = match >= 0 ? pool[match] : new(0, 0, type, 0);
+                    if (match >= 0) pool.RemoveAt(match);
+                    else missingCityBuildings.Add($"{block.X}/{block.Y}/{building.Index}: no remaining city building of type {type}; name seed, faction and quality are zero.");
+                    faction = city.FactionId;
+                    seed = city.NameSeed;
+                    quality = city.Quality;
+                    if (summary.OtherNameSlots[building.Index] == "KRAVE01.HS2")
+                    {
+                        type = 11;
+                        faction = 414;
+                    }
+                }
+                buildings.Add(new(block.SourceName, block.X, block.Y, building.Index, type, faction, seed, quality));
             }
 
             foreach (RmbGroundTile tile in summary.GroundTiles)
@@ -104,10 +133,16 @@ internal sealed class DaggerfallLocationExteriorBuilder
                 checked(maxX + clearance),
                 checked(minY - clearance),
                 checked(maxY + clearance)),
-            [.. layout.Blocks.Select(block => new DaggerfallLocationExteriorBlock(block.SourceName, block.X, block.Y))]);
+            [.. layout.Blocks.Select(block => new DaggerfallLocationExteriorBlock(block.SourceName, block.X, block.Y))])
+        {
+            Buildings = buildings,
+            MissingCityBuildings = missingCityBuildings,
+        };
         result.Validate($"{location.Region}:{location.Index} '{location.Name}'");
         return result;
     }
+
+    internal static bool IsNamedBuilding(int type) => type is 0 or 2 or 3 or 5 or 6 or 7 or 8 or 9 or 10 or 11 or 12 or 13 or 14 or 15 or 16;
 
     private RmbBlockSummary ReadSummary(string sourceName, DaggerfallLocationMap location)
     {

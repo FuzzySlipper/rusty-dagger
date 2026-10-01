@@ -35,6 +35,13 @@ public sealed class DaggerfallLocationExteriorTests
 
         Assert.Equal(15251, locations.Locations.Count);
         Assert.Equal(15251, locations.Locations.Count(location => location.Exterior is not null));
+        Assert.Equal(444274, locations.Locations.Sum(location => location.Exterior!.Buildings.Count));
+        Assert.All(locations.Locations, location => Assert.Empty(location.Exterior!.MissingCityBuildings));
+        DaggerfallLocationMap charing = Assert.Single(locations.Locations, location => location.Region == 17 && location.Index == 4);
+        DaggerfallLocationBuilding[] reusedArmorer = [.. charing.Exterior!.Buildings.Where(building => building.SourceKey == "ARMRAL00.RMB" && building.BuildingIndex == 0)];
+        Assert.Equal(2, reusedArmorer.Length);
+        Assert.Equal((4, 3, 510, 15941, 16), (reusedArmorer[0].BlockX, reusedArmorer[0].BlockY, reusedArmorer[0].FactionId, reusedArmorer[0].NameSeed, reusedArmorer[0].Quality));
+        Assert.Equal((3, 5, 510, 18089, 15), (reusedArmorer[1].BlockX, reusedArmorer[1].BlockY, reusedArmorer[1].FactionId, reusedArmorer[1].NameSeed, reusedArmorer[1].Quality));
         Assert.Equal(["arena2/MAPS.BSA", "arena2/BLOCKS.BSA"], locations.Sources);
         Assert.All(locations.Locations, location =>
         {
