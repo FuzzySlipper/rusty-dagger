@@ -110,8 +110,11 @@ and expect later assignments to appear in it.
 
 ## Named gameplay services
 
-`DaggerfallState.Kit` is the Dagger session's discoverable route to the named
-Kit owners: actors, targeting, attack capabilities and execution, combat
+`DaggerfallState` names the session's owners. The session constructs it once,
+from `DaggerActorFactory`'s `DaggerActorAssembly` and the services built over
+it, so no member is null or replaced; `DaggerfallActorInventories` gives any
+live actor's inventory and equipment coordinators. `DaggerfallState.Kit` is the
+Dagger session's discoverable route to the named Kit owners: actors, targeting, attack capabilities and execution, combat
 resolution, inventory, and equipment. Kit's `Combat`, `Targeting`, `Ai`, and
 `Loot` namespaces provide the reusable mechanisms; `DaggerCombatRules` supplies
 Daggerfall eligibility, formulas, timing, and authored meaning. Direct reads and
