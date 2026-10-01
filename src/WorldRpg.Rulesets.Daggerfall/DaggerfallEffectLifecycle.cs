@@ -5,6 +5,8 @@ using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Effects;
 using WorldRpg.Kit.World;
+using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -89,7 +91,9 @@ internal sealed record DaggerfallEffectDefinition(
     Func<DaggerfallActiveEffect, IEnumerable<IActiveEffectContribution>>? Resume = null,
     DaggerfallMovementProtection MovementProtection = default,
     DaggerfallPerceptionEffectState Perception = default,
-    DaggerfallEffectFeedback Feedback = DaggerfallEffectFeedback.None)
+    DaggerfallEffectFeedback Feedback = DaggerfallEffectFeedback.None,
+    DaggerfallSpellBinding? Spell = null,
+    Func<DaggerfallActiveEffect, DaggerfallMagicDefense>? MagicDefense = null)
 {
     internal EffectDefinition ToEngineDefinition(string source) => new(
         EffectDefinitionId.Parse($"daggerfall.{Key}"),
@@ -110,6 +114,7 @@ internal sealed record DaggerfallEffectDefinition(
 internal sealed class DaggerfallEffectCatalog
 {
     private readonly IReadOnlyDictionary<string, DaggerfallEffectDefinition> _definitions;
+    private readonly IReadOnlyDictionary<(int Type, int SubType), DaggerfallEffectDefinition> _spells;
 
     internal static DaggerfallEffectCatalog Empty { get; } = new([]);
 
@@ -119,7 +124,12 @@ internal sealed class DaggerfallEffectCatalog
         _definitions = definitions.ToDictionary(
             definition => definition.Key,
             StringComparer.Ordinal);
+        _spells = _definitions.Values.Where(value => value.Spell is not null)
+            .ToDictionary(value => (value.Spell!.Type, value.Spell.SubType));
     }
+
+    internal bool TryResolveSpell(DaggerfallSpellEffectDefinition effect, out DaggerfallEffectDefinition definition) =>
+        _spells.TryGetValue((effect.Type, effect.SubType), out definition!);
 
     internal DaggerfallEffectDefinition Require(string key) => _definitions.TryGetValue(key, out DaggerfallEffectDefinition? definition)
         ? definition
@@ -199,6 +209,12 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
         .OrderBy(effect => effect.Lifecycle.Context.Instance.Value, StringComparer.Ordinal)
         .ToArray();
 
+    internal DaggerfallEffectCatalog Catalog => _catalog;
+
+    internal DaggerfallMagicDefense MagicDefenseFor(long targetId) => DaggerfallMagicDefense.Combine(
+        _effects.Values.Where(effect => checked((long)effect.Context.Target.Value) == targetId)
+            .Select(effect => effect.Definition.MagicDefense?.Invoke(effect) ?? DaggerfallMagicDefense.None));
+
     /// <summary>Reads current compiled effect meaning for one target without retaining an independent movement-effect cache.</summary>
     internal bool PreventsFallDamage(long targetId) => _effects.Values.Any(effect =>
         checked((long)effect.Lifecycle.Context.Target.Value) == targetId
@@ -226,6 +242,21 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
             perception = perception.Combine(effect.Definition.Perception);
         }
         return perception.Validate();
+    }
+
+    /// <summary>Incoming like-kind effects settle their incumbent before a new effect's saving throw.</summary>
+    internal bool TryAdmitIncumbent(DaggerfallEffectRequest request, out DaggerfallEffectAdmissionOutcome outcome)
+    {
+        DaggerfallEffectDefinition definition = _catalog.Require(request.EffectKey);
+        if (definition.Stacking is DaggerfallEffectStacking.RefreshDuration or DaggerfallEffectStacking.Reject
+            && Active.Any(effect => checked((long)effect.Context.Target.Value) == request.TargetId
+                && effect.Definition.LikeKind == definition.LikeKind))
+        {
+            outcome = Start(request);
+            return true;
+        }
+        outcome = default;
+        return false;
     }
 
     internal DaggerfallEffectAdmissionOutcome Start(DaggerfallEffectRequest request)

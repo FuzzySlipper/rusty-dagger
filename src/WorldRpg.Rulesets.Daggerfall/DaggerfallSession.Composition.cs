@@ -251,7 +251,7 @@ internal sealed partial class DaggerfallSession
                     && character.CustomCareer?.Advantages.Any(trait => trait.Id == "adrenaline-rush") == true
                     ? new DaggerfallAdrenalineRush(Enabled: true, Improved: _heldEnchantments.Talents.AdrenalineRush) : default,
                 () => assembled.PlayerControl.Position, () => character, _playerSwings.TryGesture, ShotBlockedByCover,
-                () => _heldEnchantments.ArmorValueModifier, DeliverWeaponPoison, () => _heldEnchantments.AttackChanceModifier, TransformWithWabbajack);
+                () => _heldEnchantments.ArmorValueModifier, DeliverWeaponPoison, () => _heldEnchantments.AttackChanceModifier, TransformWithWabbajack, effects.MagicDefenseFor);
             GameplayServices<IProductFact> kit = new(actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, inventory, equipmentCoordinator);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
                 engine.Perception,
@@ -391,7 +391,14 @@ internal sealed partial class DaggerfallSession
                 characterCreationOpen: () => State.Character.Pending is not null,
                 levelUpOpen: () => State.LevelUps.Pending is not null,
                 bankOpen: () => ActiveBankRegion() is not null);
-            _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, _dungeonText, CapturePropertyStorage, QuestTravelOrigin, authored);
+            itemInstances.SourceUnavailable += item => effects.CancelItemReferences(item);
+            Casting = new(definitions.Magic, effects, CastActor, MagicProfile, item => itemInstances.ContainsUnique(item)
+                    && (itemInstances.RequireUnique(item).MaximumCondition == 0 || itemInstances.RequireUnique(item).CurrentCondition > 0),
+                use => State.SkillUses.Record(use), result => _facts.Append(new SpellCastFact(result.Outcome, result.Bundle?.Sequence, result.Bundle?.CasterId,
+                    result.Bundle?.Spell.Key, result.Bundle?.Cost ?? 0, result.Bundle?.Results.ToArray() ?? [])),
+                _random, actors.Player.DurableId, saved?.NextCastSequence ?? 1, State.Character.KnownSpells.Contains,
+                id => id == actors.Player.DurableId ? actors.Player.Progression.Level : authored[id].Level ?? 1);
+            _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, _dungeonText, CapturePropertyStorage, QuestTravelOrigin, authored, () => Casting.NextSequence);
             _roster = new DaggerfallActorRoster(State, definitions, _random, assembled.Mechanics, _actorIdentities, _uniqueItems,
                 _authoredEntityIds, authored, saved?.DynamicActors ?? [], _grounding, () => _sites.Projection, _lootUi, _corpseLoot);
             _sites = new DaggerfallSiteLifecycle(engine, State, definitions, tuning, _time, _site, _spatial, _camera, audioBundles,

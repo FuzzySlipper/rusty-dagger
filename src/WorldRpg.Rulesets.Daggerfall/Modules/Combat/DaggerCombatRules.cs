@@ -58,6 +58,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     // The classic skeleton mobile: its mobile id, as the donor's skeleton-warrior damage adjustment keys on it.
     private const int SkeletalWarriorMobileId = 15;
 
+    private readonly Func<long, DaggerfallMagicDefense> _magicDefense;
     internal DaggerCombatRules(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment,
         Func<long, MechanicsInventoryCoordinator?> actorInventories, DaggerfallItemInstances itemInstances,
         DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity,
@@ -68,8 +69,9 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         Func<DaggerfallSwingDirection>? playerSwing = null, Func<WorldPoint, WorldPoint, bool>? coverBlocksShot = null,
         Func<int>? armorValueModifier = null,
         Action<long, ulong>? deliverWeaponPoison = null, Func<int>? attackChanceModifier = null,
-        Func<long, long, ulong, ulong, ulong, DaggerfallWabbajackResult>? transformActor = null)
+        Func<long, long, ulong, ulong, ulong, DaggerfallWabbajackResult>? transformActor = null, Func<long, DaggerfallMagicDefense>? magicDefense = null)
     {
+        _magicDefense = magicDefense ?? (_ => DaggerfallMagicDefense.None);
         _random = random;
         _transformActor = transformActor;
         _deliverWeaponPoison = deliverWeaponPoison;

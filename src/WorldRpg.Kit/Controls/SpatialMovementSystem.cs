@@ -287,6 +287,15 @@ public sealed class SpatialMovementSystem : IDisposable
     }
 
     /// <summary>Queries Engine capsule overlap against the same admitted geometry and call-local obstacles as movement.</summary>
+    /// <summary>Sweeps an Engine capsule against admitted geometry and current call-local obstacles.</summary>
+    public SpatialHit CastCapsule(Vector3 center, double halfHeight, double radius, Vector3 translation,
+        ReadOnlyMemory<SpatialEntityCollider> entities, CharacterStepEnvironment? environment = null)
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
+        return _spatial.CastCapsule(new SpatialCapsuleQueryRequest(_session, center, halfHeight, radius,
+            translation, 0d, new SpatialQueryFilter(uint.MaxValue, uint.MaxValue), QueryColliders(entities, environment), ReadOnlyMemory<ulong>.Empty));
+    }
+
     public SpatialHit OverlapCapsule(Vector3 center, double halfHeight, double radius,
         ReadOnlyMemory<SpatialEntityCollider> entities, CharacterStepEnvironment? environment = null)
     {

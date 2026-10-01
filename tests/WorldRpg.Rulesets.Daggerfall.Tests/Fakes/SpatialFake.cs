@@ -11,6 +11,9 @@ internal class SpatialFake : DispatchProxy
     internal Func<SpatialCapsuleQueryRequest, SpatialHit> OverlapHit { get; set; } = _ => default;
     internal List<SpatialCapsuleQueryRequest> OverlapRequests { get; } = [];
     private SpatialHit Overlap(SpatialCapsuleQueryRequest request) { OverlapRequests.Add(request); return OverlapHit(request); }
+    internal Func<SpatialCapsuleQueryRequest, SpatialHit> CapsuleCastHit { get; set; } = _ => default;
+    internal List<SpatialCapsuleQueryRequest> CapsuleCastRequests { get; } = [];
+    private SpatialHit CastCapsule(SpatialCapsuleQueryRequest request) { CapsuleCastRequests.Add(request); return CapsuleCastHit(request); }
     internal Func<SpatialRaycastRequest, SpatialHit> FloorHit { get; set; } = _ => default;
     internal List<SpatialRaycastRequest> FloorProbes { get; } = [];
     private SpatialHit ProbeFloor(SpatialRaycastRequest request) { FloorProbes.Add(request); return FloorHit(request); }
@@ -77,6 +80,7 @@ internal class SpatialFake : DispatchProxy
         nameof(ISpatialService.CreateSession) => CreateSession(),
         nameof(ISpatialService.DefaultCharacterControllerConfig) => RepresentativeValidConfig,
         nameof(ISpatialService.OverlapCapsule) => Overlap((SpatialCapsuleQueryRequest)arguments![0]!),
+        nameof(ISpatialService.CastCapsule) => CastCapsule((SpatialCapsuleQueryRequest)arguments![0]!),
         nameof(ISpatialService.CastRay) => ProbeFloor((SpatialRaycastRequest)arguments![0]!),
         nameof(ISpatialService.ValidateCharacterControllerConfig) => ValidateConfig((CharacterControllerConfig)arguments![0]!),
         nameof(ISpatialService.ValidateCharacterControllerCommand) => ValidateCommand((CharacterControllerValidationRequest)arguments![0]!),

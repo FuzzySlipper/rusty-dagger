@@ -4,6 +4,8 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 namespace WorldRpg.Rulesets.Daggerfall.Facts;
 
 internal interface IProductFact : IWorldRpgFact;
+internal sealed record SpellCastFact(DaggerfallCastOutcome Outcome, long? Sequence, long? CasterId,
+    string? SpellKey, int Cost, DaggerfallCastEffectResult[] Effects) : IProductFact;
 internal enum DaggerfallDamageCause { PhysicalAttack, Fall, Hazard, Effect }
 /// <summary>One accepted live health application. Calculated damage and actual health lost intentionally differ at bounds or contributions.</summary>
 internal sealed record DamageAppliedFact(long SourceActorId, long TargetActorId, DaggerfallDamageCause Cause,
