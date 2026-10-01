@@ -72,6 +72,42 @@ internal sealed class DaggerfallActorRoster
 
     private DaggerfallSiteAppearance Appearance => _projection().Appearance;
 
+    /// <summary>Replaces the runtime entity at one durable actor identity; no hidden original remains.</summary>
+    internal DaggerfallWabbajackResult Transform(long durableId, int selectedMobile)
+    {
+        if (!_state.Actors.TryGet(durableId, out var original) || !_definitionsByActor.TryGetValue(durableId, out var oldDefinition)
+            || oldDefinition.Kind is not (DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass))
+            return new(DaggerfallWabbajackOutcome.InvalidTarget, durableId);
+        if (DaggerfallWabbajack.DefinitionOf(original.Actor) is not null)
+            return new(DaggerfallWabbajackOutcome.AlreadyTransformed, durableId);
+        DaggerfallActorDefinition definition = _definitions.Actors.Values.Single(value => value.MobileId == selectedMobile);
+        _ = DaggerfallWabbajack.RequireDefinition(_definitions, definition.Id.Value);
+        if (!_projection().Inputs.MobileSprites.TryGetValue(selectedMobile, out var sprite))
+            return new(DaggerfallWabbajackOutcome.UnavailableAppearance, durableId);
+        ActorPose pose = original.Pose;
+        Track health = original.Stats.GetTrack(TrackId.Parse(oldDefinition.Combat.Health.Value));
+        double wounds = health.Maximum.Value - health.Current;
+        int level = definition.Level ?? 1;
+        StatsComponent stats = _mechanics.CreateStats(definition, SpawnVitals(definition, level, durableId));
+        // The replacement starts with its own maximum and retains the original's missing health.
+        stats.GetTrack(TrackId.Parse(definition.Combat.Health.Value)).SetCurrent(
+            stats.GetTrack(TrackId.Parse(definition.Combat.Health.Value)).Maximum.Value - wounds, clamp: true);
+        _lootUi.CloseActor(durableId);
+        _ = _state.Effects.CancelActorReferences(durableId);
+        DestroyOwnedItems(durableId);
+        _corpseLoot.Retire(durableId);
+        Appearance.RetireActor(durableId);
+        _state.Actors.Entities.Destroy(ActorsState.Identity(durableId));
+        ActorState replacement = DaggerActorFactory.CreateNonPlayerActor(_state.Actors, durableId, definition, stats, pose);
+        DaggerActorFactory.RegisterActorInventory(replacement, _state.InventoryStore);
+        DaggerfallWabbajack.Restore(replacement.Actor, definition.Id.Value);
+        GrantSpawnLoadout(replacement, definition);
+        _definitionsByActor[durableId] = definition;
+        if (_dynamicActors.ContainsKey(durableId)) _dynamicActors[durableId] = definition.Id;
+        Appearance.AddActor(durableId, sprite);
+        return new(DaggerfallWabbajackOutcome.Transformed, durableId, definition.Id.Value);
+    }
+
     /// <summary>
     /// Registers one actor from a published definition beyond the authored placements, with the
     /// same Mechanics binding an authored actor is constructed with: catalog stats, pursuit
@@ -235,12 +271,18 @@ internal sealed class DaggerfallActorRoster
         foreach (AuthoredActor placement in destination.Project.Actors.Values.OrderBy(value => value.EntityId))
         {
             saved.TryGetValue(placement.EntityId, out DaggerfallActorSave? prior);
-            DaggerfallActorDefinition definition = _definitions.RequireActor(placement.ActorId);
+            DaggerfallActorDefinition definition = prior?.WabbajackDefinition is { } transformed
+                ? DaggerfallWabbajack.RequireDefinition(_definitions, transformed) : _definitions.RequireActor(placement.ActorId);
             ActorState actor = DaggerActorFactory.CreateAuthoredActor(_random, _mechanics, _definitions, _state.Actors, _state.InventoryStore,
                 _state.ActorInventories.ItemDefinitions, _state.ItemInstances, placement, prior);
             if (prior is not null) actor.ApplyPose(new ActorPose(new WorldPoint(prior.X, prior.Y, prior.Z), prior.HeadingRadians));
             else if (definition.GroundOnSpawn) _grounding.Ground(actor);
             _definitionsByActor.Add(actor.DurableId, definition);
+            if (prior?.WabbajackDefinition is not null && definition.MobileId is int changedMobile)
+            {
+                Appearance.RetireActor(actor.DurableId);
+                Appearance.AddActor(actor.DurableId, destination.MobileSprites[changedMobile]);
+            }
         }
         if (delta is null) return;
         foreach (DaggerfallDynamicActorSave savedDynamic in delta.DynamicActors.OrderBy(actor => actor.EntityId))
@@ -388,9 +430,9 @@ internal sealed class DaggerfallActorRoster
         if (_state.ActorInventories.InventoryFor(durableId) is { } inventory)
             foreach (var item in inventory.Read().UniqueItems)
                 owned.Add(_state.Actors.Entities.IdentityOf(item.Entity).Value);
-        // Equipment assignments name the same durable numbers directly.
+        // Equipment carries runtime item references; metadata and the allocator use durable identities.
         foreach (var assignment in _state.ActorInventories.EquipmentFor(durableId).Read().Assignments)
-            owned.Add(assignment.Item.EntityId);
+            owned.Add(_state.Actors.Entities.IdentityOf(new EntityId(assignment.Item.EntityId)).Value);
         if (actor.Actor.TryGet<CorpseLootComponent>(out CorpseLootComponent? corpse) && corpse is not null && corpse.HasRegisteredInventory)
             foreach (var item in _state.Containers.Read(corpse.Owner).UniqueItems)
                 owned.Add(_state.Actors.Entities.IdentityOf(item.Entity).Value);

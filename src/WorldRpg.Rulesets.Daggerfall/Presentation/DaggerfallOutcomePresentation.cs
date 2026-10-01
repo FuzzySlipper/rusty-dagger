@@ -23,6 +23,18 @@ internal sealed class DaggerfallOutcomePresentation(
     {
         switch (fact)
         {
+            case ActorTransformedFact changed:
+                _lineIsResult = true;
+                presentation.SetOutcome(changed.Outcome switch
+                {
+                    DaggerfallWabbajackOutcome.Transformed => $"Wabbajack transformed the target into {changed.ReplacementDefinition}",
+                    DaggerfallWabbajackOutcome.ProtectedQuestTarget => "Wabbajack cannot transform a quest target",
+                    DaggerfallWabbajackOutcome.AlreadyTransformed => "This target is already transformed",
+                    DaggerfallWabbajackOutcome.SourceUnavailable => "The Wabbajack source is no longer available",
+                    DaggerfallWabbajackOutcome.UnavailableAppearance => "This site cannot display the Wabbajack replacement",
+                    _ => "Wabbajack cannot transform this target",
+                });
+                break;
             case AttackRejectedFact rejected:
                 // A rejection is about an action that did not happen, and a held attack button produces
                 // one every update. It therefore yields to a result that is still fresh: the line the

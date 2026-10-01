@@ -286,6 +286,7 @@ internal sealed record DaggerfallSavePayload(
                     if (!inactiveAuthoredActorIds.Add(actor.EntityId))
                         throw new ArgumentException($"Saved inactive site '{site}' repeats authored actor {actor.EntityId}.");
                     ValidateStats(actor.Stats, $"inactive actor {actor.EntityId}");
+                    if (actor.WabbajackDefinition is { } transformation) _ = DaggerfallWabbajack.RequireDefinition(definitions, transformation);
                 }
                 foreach (DaggerfallDynamicActorSave actor in delta.DynamicActors)
                 {
@@ -294,6 +295,7 @@ internal sealed record DaggerfallSavePayload(
                     if (!IsAdmittedDynamicDefinition(definitions, actor.Definition))
                         throw new ArgumentException($"Saved inactive dynamic actor {actor.EntityId} refers to missing definition '{actor.Definition}'.");
                     ValidateStats(actor.Stats, $"inactive dynamic actor {actor.EntityId}");
+                    if (actor.WabbajackActive) _ = DaggerfallWabbajack.RequireDefinition(definitions, actor.Definition);
                 }
                 HashSet<long> inventoryOwners = [.. delta.ActorInventories.Select(inventory => inventory.EntityId)];
                 HashSet<long> selectedSiteActors = [.. selectedActors, .. delta.DynamicActors.Select(actor => actor.EntityId)];
@@ -318,6 +320,7 @@ internal sealed record DaggerfallSavePayload(
                 throw new ArgumentException($"Saved actor {actor.EntityId} is not placed by the selected content.");
             if (!definitions.Actors.ContainsKey(placement.ActorId))
                 throw new ArgumentException($"Saved actor {actor.EntityId} refers to missing definition '{placement.ActorId.Value}'.");
+            if (actor.WabbajackDefinition is { } transformation) _ = DaggerfallWabbajack.RequireDefinition(definitions, transformation);
             if (!savedActorIds.Add(actor.EntityId))
                 throw new ArgumentException($"Saved actor {actor.EntityId} appears more than once.");
         }
@@ -335,6 +338,7 @@ internal sealed record DaggerfallSavePayload(
             ArgumentNullException.ThrowIfNull(actor);
             if (actor.EntityId <= 0 || !dynamicActorIds.Add(actor.EntityId))
                 throw new ArgumentException("Saved dynamic actor identities must be positive and unique.");
+            if (actor.WabbajackActive) _ = DaggerfallWabbajack.RequireDefinition(definitions, actor.Definition);
             if (inactiveDynamicActorIds.Contains(actor.EntityId))
                 throw new ArgumentException($"Saved dynamic actor {actor.EntityId} is active and inactive at once.");
             if (savedActorIds.Contains(actor.EntityId))
@@ -1205,6 +1209,7 @@ internal sealed record DaggerfallPlayerSave(float X, float Y, float Z, float Yaw
 
 internal sealed record DaggerfallActorSave(long EntityId, float X, float Y, float Z, float HeadingRadians, DaggerfallStatsSave Stats)
 {
+    public string? WabbajackDefinition { get; init; }
     internal void Validate()
     {
         if (!float.IsFinite(X) || !float.IsFinite(Y) || !float.IsFinite(Z) || !float.IsFinite(HeadingRadians))
@@ -1254,6 +1259,7 @@ internal sealed record DaggerfallSiteDeltaSave(
 /// </summary>
 internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definition, float X, float Y, float Z, float HeadingRadians, DaggerfallStatsSave Stats)
 {
+    public bool WabbajackActive { get; init; }
     internal void Validate()
     {
         if (!float.IsFinite(X) || !float.IsFinite(Y) || !float.IsFinite(Z) || !float.IsFinite(HeadingRadians))
