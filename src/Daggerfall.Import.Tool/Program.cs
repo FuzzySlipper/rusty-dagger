@@ -10,7 +10,7 @@ namespace Daggerfall.Import.Tool;
 /// </summary>
 internal static class Program
 {
-    private static readonly IReadOnlyDictionary<string, ToolCommand> Commands = new ToolCommand[]
+    internal static readonly IReadOnlyDictionary<string, ToolCommand> Commands = new ToolCommand[]
     {
         // Product-wide media.
         MusicMediaCommand.Command,
@@ -60,7 +60,7 @@ internal static class Program
         SpriteOverlayDiscardCommand.Command,
     }.ToDictionary(command => command.Name, StringComparer.Ordinal);
 
-    private static int Main(string[] args)
+    internal static int Main(string[] args)
     {
         try
         {

@@ -12,5 +12,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Daggerfall.Import/Daggerfall.Import.csproj" />
+    <InternalsVisibleTo Include="Daggerfall.Import.Tests" />
   </ItemGroup>
 </Project>
