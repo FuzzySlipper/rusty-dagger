@@ -17,7 +17,7 @@ using WorldRpg.Rulesets.Daggerfall;
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 /// <summary>Direct Daggerfall attack policy over Engine-authoritative Mechanics state.</summary>
-internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
+internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
 {
     private const long PlayerId = DaggerfallActorIdentity.PlayerEntityId;
     private const string HealthTrack = "health";
@@ -594,6 +594,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         if (applied.ActualHealthLost > 0d)
             ApplyFatigueConsequence(attacker, target, applied.Damage, generation, step, facts);
         if (applied.Damage > 0) ApplyPhysicalWear(attacker, target, body, applied.Damage, enemy, generation, step, facts);
+        ReflectNamira(participants, attacker, target, applied, generation, step, facts);
     }
 
     /// <summary>

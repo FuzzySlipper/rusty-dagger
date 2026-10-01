@@ -459,14 +459,7 @@ internal sealed class DaggerfallHeldEnchantments : IDisposable
         if (_entities.IdentityOf(new EntityId(assignment.Item.EntityId)) is not { Kind: DurableIdentityKind.Item } identity) return false;
         if (!_instances.ContainsUnique(identity.Value)) return false;
         if (_instances.RequireUnique(identity.Value).Enchantment is not { } key) return false;
-        if (_magic.MagicItems.TryGetValue(key, out DaggerfallMagicItemDefinition? published))
-        {
-            enchantments = published.Enchantments;
-            return true;
-        }
-        if (!_magic.EnchantmentSettings.TryGetValue(key, out DaggerfallEnchantmentSetting setting)) return false;
-        enchantments = [DaggerfallEnchantmentSettings.ToEffect(setting)];
-        return true;
+        return _magic.TryEnchantments(key, out enchantments);
     }
 
     private EffectSourceIdentity IdentityFor(WorldRpg.Kit.Inventory.EquipmentAssignment assignment, DaggerfallMagicEnchantmentDefinition enchantment)
