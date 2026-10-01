@@ -50,6 +50,13 @@ internal sealed class DaggerfallHeldEnchantments : IDisposable
     private const int WeakensArmorType = 24;
     private const int ArtifactEffectType = 26;
     private const int MasqueOfClavicusParam = 0;
+    private const int GoodRepWithType = DaggerfallEnchantmentSettings.GoodRepWithType;
+    private const int BadRepWithType = DaggerfallEnchantmentSettings.BadRepWithType;
+    private const int BadReactionsFromType = DaggerfallEnchantmentSettings.BadReactionsFromType;
+    internal const int SocialReactionAdjustment = 10;
+    internal const double BadReactionRangeMeters = 8d;
+    internal const int BadReactionArmorValue = -5;
+    internal const int BadReactionHitChance = -5;
 
     internal const int EnhancedSkillPoints = 15;
 
@@ -159,6 +166,7 @@ internal sealed class DaggerfallHeldEnchantments : IDisposable
 
     /// <summary>The armor-value shift the worn items give, zero when neither armor effect is worn.</summary>
     internal int ArmorValueModifier { get; private set; }
+    internal int AttackChanceModifier { get; private set; }
 
     /// <summary>How many worn sources regenerate health, one tick each.</summary>
     internal int RegeneratingSources => _regenerationTotal;
@@ -189,6 +197,8 @@ internal sealed class DaggerfallHeldEnchantments : IDisposable
         double carry = 1d;
         bool strengthensArmor = false;
         bool weakensArmor = false;
+        bool badReactionArmor = false;
+        int badReactionSources = 0;
         bool conditionPayloads = false;
         Array.Clear(_regeneration);
 
@@ -214,6 +224,10 @@ internal sealed class DaggerfallHeldEnchantments : IDisposable
                     case WeakensArmorType:
                         weakensArmor = true;
                         break;
+                    case BadReactionsFromType when IsNear(nearby, BadReactionGroup(enchantment.Param), BadReactionRangeMeters):
+                        badReactionArmor = true;
+                        badReactionSources++;
+                        break;
                     case RegeneratesHealthType:
                         _regeneration[RegenerationCondition(enchantment.Param)]++;
                         break;
@@ -234,9 +248,11 @@ internal sealed class DaggerfallHeldEnchantments : IDisposable
         }
 
         CarryMultiplier = carry;
-        // Each effect is nonstacking on its own. A strengthening and a weakening source cancel.
+        // Each armor slot is nonstacking. BadReactionsFrom passes literal -5 to the donor's
+        // minimum-only decreased slot, despite its "penalty" comment; it supersedes WeakensArmor.
         ArmorValueModifier = (strengthensArmor ? StrengthenedArmorValue : 0)
-            + (weakensArmor ? WeakenedArmorValue : 0);
+            + (badReactionArmor ? BadReactionArmorValue : weakensArmor ? WeakenedArmorValue : 0);
+        AttackChanceModifier = checked(badReactionSources * BadReactionHitChance);
         _conditionPayloads = conditionPayloads;
     }
 
@@ -253,11 +269,24 @@ internal sealed class DaggerfallHeldEnchantments : IDisposable
             if (!TryEnchantments(assignment, out IReadOnlyList<DaggerfallMagicEnchantmentDefinition> enchantments)) continue;
             foreach (DaggerfallMagicEnchantmentDefinition enchantment in enchantments)
             {
-                if (enchantment.Type != ArtifactEffectType || enchantment.Param != MasqueOfClavicusParam) continue;
                 EffectSourceIdentity source = IdentityFor(assignment, enchantment);
-                for (int group = 0; group < DaggerfallSocialState.SocialGroupCount; group++)
-                    _social.SetReactionSource(group, source, magnitude);
-                _socialSources.Add(source);
+                if (enchantment.Type == ArtifactEffectType && enchantment.Param == MasqueOfClavicusParam)
+                {
+                    for (int group = 0; group < DaggerfallSocialState.SocialGroupCount; group++)
+                        _social.SetReactionSource(group, source, magnitude);
+                    _socialSources.Add(source);
+                }
+                else if (enchantment.Type is GoodRepWithType or BadRepWithType)
+                {
+                    if (enchantment.Param is < 0 or > 5)
+                        throw new InvalidOperationException($"Social enchantment '{enchantment.Key}' has invalid group {enchantment.Param}.");
+                    int amount = enchantment.Type == GoodRepWithType ? SocialReactionAdjustment : -SocialReactionAdjustment;
+                    if (enchantment.Param == 5)
+                        for (int group = 0; group < 5; group++) _social.SetReactionSource(group, source, amount);
+                    else
+                        _social.SetReactionSource(enchantment.Param, source, amount);
+                    _socialSources.Add(source);
+                }
             }
         }
     }
@@ -269,6 +298,8 @@ internal sealed class DaggerfallHeldEnchantments : IDisposable
         foreach (EffectSourceIdentity source in _socialSources) _social?.RemoveReactionSource(source);
         _socialSources.Clear();
         _signature = null;
+        AttackChanceModifier = 0;
+        ArmorValueModifier = 0;
     }
 
     /// <summary>
@@ -474,14 +505,15 @@ internal sealed class DaggerfallHeldEnchantments : IDisposable
         _ => false,
     };
 
-    private bool IsNear(IReadOnlyList<DaggerfallNearbyCreature> nearby, DaggerfallEnemyGroup group)
+    private bool IsNear(IReadOnlyList<DaggerfallNearbyCreature> nearby, DaggerfallEnemyGroup group,
+        double radius = NearbyCreatureMeters)
     {
         if (_playerPosition() is not WorldPoint player) return false;
         foreach (DaggerfallNearbyCreature creature in nearby)
         {
             if (creature.Group != group) continue;
             // The donor's lookup keeps every object strictly inside the radius.
-            if (Distance(player, creature.Position) < NearbyCreatureMeters) return true;
+            if (Distance(player, creature.Position) < radius) return true;
         }
         return false;
     }
@@ -526,8 +558,19 @@ internal sealed class DaggerfallHeldEnchantments : IDisposable
         if (IsNear(nearby, DaggerfallEnemyGroup.Daedra)) signature |= 2;
         if (IsNear(nearby, DaggerfallEnemyGroup.Humanoid)) signature |= 4;
         if (IsNear(nearby, DaggerfallEnemyGroup.Animals)) signature |= 8;
+        if (IsNear(nearby, DaggerfallEnemyGroup.Humanoid, BadReactionRangeMeters)) signature |= 16;
+        if (IsNear(nearby, DaggerfallEnemyGroup.Animals, BadReactionRangeMeters)) signature |= 32;
+        if (IsNear(nearby, DaggerfallEnemyGroup.Daedra, BadReactionRangeMeters)) signature |= 64;
         return signature;
     }
+
+    private static DaggerfallEnemyGroup BadReactionGroup(int param) => param switch
+    {
+        0 => DaggerfallEnemyGroup.Humanoid,
+        1 => DaggerfallEnemyGroup.Animals,
+        2 => DaggerfallEnemyGroup.Daedra,
+        _ => throw new InvalidOperationException($"Bad reactions enchantment has invalid creature group {param}."),
+    };
 
     /// <summary>
     /// The donor's RegensHealth params: all the time, in sunlight, in darkness. The donor leaves its

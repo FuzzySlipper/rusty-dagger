@@ -45,6 +45,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
     private readonly Func<WorldPoint, WorldPoint, bool>? coverBlocksShot;
     /// <summary>The armor-value shift the defender's worn enchantments give, zero when none do.</summary>
     private readonly Func<int> _armorValueModifier;
+    private readonly Func<int> _attackChanceModifier;
     internal AttackCapabilities<IProductFact> Attacks { get; }
     internal TargetingService Targeting { get; }
     internal AttackExecution<IProductFact> Execution { get; }
@@ -65,7 +66,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         Func<WorldPoint?>? playerPosition = null, Func<DaggerfallCharacterState?>? character = null,
         Func<DaggerfallSwingDirection>? playerSwing = null, Func<WorldPoint, WorldPoint, bool>? coverBlocksShot = null,
         Func<int>? armorValueModifier = null,
-        Action<long, ulong>? deliverWeaponPoison = null)
+        Action<long, ulong>? deliverWeaponPoison = null, Func<int>? attackChanceModifier = null)
     {
         _random = random;
         _deliverWeaponPoison = deliverWeaponPoison;
@@ -90,6 +91,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         _playerSwing = playerSwing ?? (() => DaggerfallSwingDirection.None);
         this.coverBlocksShot = coverBlocksShot;
         _armorValueModifier = armorValueModifier ?? (() => 0);
+        _attackChanceModifier = attackChanceModifier ?? (() => 0);
         Targeting = targeting;
         Attacks = new(PlayerId, Targeting, Execution, ReachOf, facts => facts.Append(new AttackRejectedFact(AttackRejection.MissingPlayerPosition)));
     }
@@ -791,6 +793,7 @@ internal sealed class DaggerCombatRules : IAttackRules<IProductFact>
         if (attack.Material is not null)
             chanceToHitMod = DaggerfallFormulaPolicy.AdjustWeaponHitChanceMod(checked(
                 chanceToHitMod + DaggerfallFormulaPolicy.CalculateWeaponToHit(attack.Material, _weaponMaterialModifiers)));
+        if (attacker.Id == PlayerId) chanceToHitMod = checked(chanceToHitMod + _attackChanceModifier());
         return DaggerfallFormulaPolicy.CalculateSuccessfulHitChance(
             chanceToHitMod,
             ArmorToHit(target, body),
