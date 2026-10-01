@@ -25,7 +25,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// for a weapon strike, charges the weapon first, then the shield covering the struck body part or that
 /// part's armour, and every condition change comes from one accepted hit receipt.
 /// </summary>
-public sealed class DaggerfallEquipmentWearTests
+public sealed partial class DaggerfallEquipmentWearTests
 {
     private const long Enemy = 2;
 
@@ -323,6 +323,9 @@ public sealed class DaggerfallEquipmentWearTests
 
         internal DaggerfallDefinitions Definitions { get; }
         internal MechanicsEquipmentCoordinator PlayerEquipment { get; }
+        internal CombatResolution CombatRules => _combat.Rules;
+        internal Actor Player => _actors.Player.Actor;
+        internal Actor EnemyActor => _actors.TryGet(Enemy, out ActorState actor) ? actor.Actor : throw new InvalidOperationException("Enemy is missing.");
 
         internal WearFixture()
         {
@@ -398,6 +401,25 @@ public sealed class DaggerfallEquipmentWearTests
 
         internal int Condition(ulong durableItemId) => _itemInstances.RequireUnique(durableItemId).CurrentCondition;
 
+        internal void EquipNamira(ulong id = 9501, string slot = "ring0", int condition = 1500)
+        {
+            const string itemId = "template-135-magic-magic-item-0007";
+            EquipPlayerItem(itemId, id, slot);
+            _itemInstances.ReplaceUnique(id, _itemInstances.RequireUnique(id) with
+            { Enchantment = "magic-item.0007", CurrentCondition = condition, MaximumCondition = 1500 });
+        }
+
+        internal void DestroyNamira(ulong id)
+        {
+            UniqueItem item = PlayerItem(id);
+            PlayerEquipment.Unequip(item);
+            var inventory = new MechanicsInventoryCoordinator(PlayerEquipment.Inventory, _actors.Entities,
+                Definitions.Items.Values.Concat(Definitions.TemplateItems.Values).ToDictionary(value => new InventoryItemId(value.Id.Value), DaggerActorFactory.ToManagedItem));
+            inventory.Destroy(item);
+            _actors.Entities.Destroy(new DurableIdentityReference(DurableIdentityKind.Item, id));
+            _itemInstances.RemoveUnique(id);
+        }
+
         internal UniqueItem PlayerItem(ulong durableItemId) =>
             PlayerEquipment.Read().Assignments.Single(assignment =>
                 PlayerEquipment.GetDurableItemId(new EntityId(assignment.Item.EntityId)).Value == durableItemId).Item;
@@ -415,11 +437,12 @@ public sealed class DaggerfallEquipmentWearTests
             return Delivered(facts);
         }
 
-        internal IReadOnlyList<IProductFact> RunEnemyAttack(ulong step = 9)
+        internal IReadOnlyList<IProductFact> RunEnemyAttack(ulong step = 9, bool retireBeforeImpact = false)
         {
             FactBuffer<IProductFact> facts = new();
             AttackRequest request = new(Enemy, DaggerfallActorIdentity.PlayerEntityId, 5, step, .125d, Delayed: true);
             Assert.True(_combat.Execution.Start(request, facts));
+            if (retireBeforeImpact) _actors.Entities.Destroy(ActorsState.Identity(Enemy));
             _combat.Execution.ApplyImpacts([new AttackImpactNotice(Enemy, DaggerfallActorIdentity.PlayerEntityId, 5, step, Expired: false)], 5, facts);
             return Delivered(facts);
         }

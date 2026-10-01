@@ -83,6 +83,14 @@ names the definition that interprets it; unknown effect definitions fail clearly
 
 ## Ranged delivery
 
+The Ring of Namira reflects an accepted enemy physical hit on the player once,
+using the current ring slots and loaded artifact payload. Animal and spriggan
+teams are excluded; daedra receive half and undead twice the incoming damage
+after application defenses. Reflection uses the shared health application and
+ordinary damage/death notifications, then charges that ring's condition through
+the item-condition owner. Two rings do not double the effect. Equipment and item
+metadata alone determine its state after unequip, break, retirement or restore.
+
 Kit attack execution releases a delayed impact to Dagger's flight policy.
 The session records release origin/aim and advances travel inside admitted
 updates; arrival checks the target's current position for a dodge. Flight is

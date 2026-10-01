@@ -163,6 +163,23 @@ internal sealed record DaggerfallMagicCatalogSet(
     IReadOnlyDictionary<(int Type, int SubType), DaggerfallMagicEffectCostDefinition> EffectCosts,
     IReadOnlyDictionary<string, DaggerfallEnchantmentSetting> EnchantmentSettings)
 {
+    /// <summary>The loaded payloads owned by one item key, including maker-authored settings.</summary>
+    internal bool TryEnchantments(string key, out IReadOnlyList<DaggerfallMagicEnchantmentDefinition> enchantments)
+    {
+        if (MagicItems.TryGetValue(key, out var magic))
+        {
+            enchantments = magic.Enchantments;
+            return true;
+        }
+        if (EnchantmentSettings.TryGetValue(key, out var setting))
+        {
+            enchantments = [DaggerfallEnchantmentSettings.ToEffect(setting)];
+            return true;
+        }
+        enchantments = [];
+        return false;
+    }
+
     internal DaggerfallMagicEffectCostDefinition RequireEffectCost(DaggerfallSpellEffectDefinition effect) =>
         EffectCosts.TryGetValue((effect.Type, effect.SubType), out DaggerfallMagicEffectCostDefinition? cost)
             ? cost.RegularComponents is not null
