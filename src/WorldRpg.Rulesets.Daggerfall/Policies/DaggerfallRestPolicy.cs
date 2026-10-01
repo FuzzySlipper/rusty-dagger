@@ -42,9 +42,8 @@ internal sealed record DaggerfallRestRequest(DaggerfallRestMode Mode, int Hours 
 
 /// <summary>Facts the current world owner supplies when deciding whether a player may rest.</summary>
 /// <remarks>
-/// The donor checks town camping, owned or rented rooms, and guild privileges. Rusty Dagger has no
-/// authored rental or ownership service yet, so those facts stay with the caller rather than being
-/// guessed by this formula owner.
+/// The session supplies town camping, live rented-room and guild privileges. Recovery consumes
+/// these facts without maintaining a second room or location owner.
 /// </remarks>
 internal sealed record DaggerfallRestEligibility(bool Allowed, bool IsAlive = true, string? Message = null)
 {

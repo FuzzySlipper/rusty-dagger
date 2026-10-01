@@ -1,3 +1,4 @@
+import { mountLodging, isLodgingProjection, type LodgingProjection } from './lodging.js';
 import { mountControls, type ControlsProjection, type ControlAction } from './controls.js';
 import { mountLiveDebugPanel, type LiveDebugPanelMount } from '@rusty-engine/live-debug';
 import { adopt, heldRevision, image, type ArtRequestAction, type UiArt } from './art.js';
@@ -38,6 +39,7 @@ interface DaggerHud {
   readonly dungeonText?: { readonly actionId: string; readonly kind: string; readonly text: string; readonly revision: string; readonly requiresAnswer: boolean } | null;
   readonly death?: DeathProjection | null;
   readonly rest?: RestProjection | null;
+  readonly lodging?: LodgingProjection | null;
 }
 
 interface RestProjection {
@@ -347,6 +349,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
   }));
   const restRoot = shell.querySelector<HTMLElement>('.dagger-rest-root')!;
+  const lodgingView = mountLodging(restRoot, action => context.intents?.claim('dagger.ui', {
+    kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
+  }));
   const restStatus = shell.querySelector<HTMLElement>('.dagger-rest-status')!;
   const restHours = shell.querySelector<HTMLInputElement>('.dagger-rest-hours')!;
   const submitRest = (mode: string): void => {
@@ -827,6 +832,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       dungeonTextForm.hidden = !dungeonText.requiresAnswer;
       dungeonTextClose.textContent = dungeonText.requiresAnswer ? 'Cancel' : 'Continue';
     }
+    lodgingView.update(isLodgingProjection(value.lodging) ? value.lodging : null);
     if (value.rest && isRestProjection(value.rest)) {
       restStatus.textContent = value.rest.message
         ?? (value.rest.hasResult ? `Rested for ${formatRestHours(value.rest.elapsedSeconds)}.` : 'Choose a rest action.');
@@ -928,6 +934,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     inventoryView.dispose();
     transportView.dispose();
     travelView.dispose();
+    lodgingView.dispose();
     characterView.dispose();
     notebookView.dispose();
     lootView.dispose();

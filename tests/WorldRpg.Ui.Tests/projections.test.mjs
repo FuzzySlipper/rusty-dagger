@@ -714,3 +714,30 @@ test('Oghma uses the shared attribute controls with its own title and zero healt
     assert.equal(f.root.querySelector('[data-testid="character-level-up-commit"]').disabled, true);
   } finally { f.dispose(); }
 });
+
+test('tavern lodging renders paid hours and quotes before booking changed duration', () => {
+  const f = fixture();
+  try {
+    const lodging = { key: '17/3/1/2/8', name: 'The Dancing Chasm', days: 1, price: 3, remainingHours: 23, canBook: true };
+    f.publish({ lodging });
+    f.root.querySelector('[data-action="rest"]').click();
+    assert.equal(f.root.querySelector('.dagger-lodging').hidden, false);
+    assert.match(f.root.querySelector('.dagger-lodging-status').textContent, /23 paid hour/);
+    const days = f.root.querySelector('.dagger-lodging-days');
+    days.value = '2';
+    days.dispatchEvent(new window.Event('input', { bubbles: true }));
+    assert.equal(f.root.querySelector('.dagger-lodging-book').disabled, true);
+    f.root.querySelector('.dagger-lodging-quote').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'lodging-quote', key: lodging.key, days: 2 });
+    f.publish({ lodging: { ...lodging, days: 2, price: 7 } });
+    f.root.querySelector('.dagger-lodging-book').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'lodging-book', key: lodging.key, days: 2, amount: 7 });
+    f.publish({ lodging: { ...lodging, days: 2, price: 0 } });
+    f.root.querySelector('.dagger-lodging-book').click();
+    assert.equal(f.actions.at(-1).amount, 0);
+    f.publish({ lodging: { ...lodging, canBook: false } });
+    assert.equal(f.root.querySelector('.dagger-lodging-book').disabled, true);
+    f.publish({ lodging: null });
+    assert.equal(f.root.querySelector('.dagger-lodging').hidden, true);
+  } finally { f.dispose(); }
+});

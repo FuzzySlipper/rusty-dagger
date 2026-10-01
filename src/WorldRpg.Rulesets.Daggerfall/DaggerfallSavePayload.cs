@@ -73,6 +73,8 @@ internal sealed record DaggerfallSavePayload(
     [JsonRequired]
     public DaggerfallPropertySave Property { get; init; } = DaggerfallPropertySave.Empty;
     [JsonRequired]
+    public DaggerfallLodgingSave Lodging { get; init; } = DaggerfallLodgingSave.Empty;
+    [JsonRequired]
     public DaggerfallCrimeSave Crime { get; init; } = new([], [], [], 0, 0, 0, 0);
     [JsonRequired]
     public DaggerfallKnightlyOrderClaimStateSave KnightlyClaims { get; init; } = DaggerfallKnightlyOrderClaimStateSave.Empty;
@@ -155,6 +157,7 @@ internal sealed record DaggerfallSavePayload(
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(inputs);
         Notebook.Validate(definitions, definitions.TextPresentation);
+        Lodging.Validate(definitions.Locations);
         if (Transport.OnShip || Transport.Mode is DaggerfallTransportMode.Horse or DaggerfallTransportMode.Cart)
         {
             DaggerfallWorldProfileKey activeProfile = Site.ActiveProfile?.Require()
@@ -547,6 +550,8 @@ internal sealed record DaggerfallSavePayload(
         Loans.Validate();
         ArgumentNullException.ThrowIfNull(Property);
         Property.Validate();
+        ArgumentNullException.ThrowIfNull(Lodging);
+        Lodging.Validate();
         ArgumentNullException.ThrowIfNull(Crime);
         Crime.Validate();
         ArgumentNullException.ThrowIfNull(KnightlyClaims);

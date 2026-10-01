@@ -329,6 +329,7 @@ internal sealed partial class DaggerfallSession
                 bank: bank,
                 loans: loans,
                 property: property,
+                lodging: new DaggerfallLodgingState(saved?.Lodging),
                 services: services,
                 skillTraining: skillTraining,
                 regionalPrices: regionalPrices,

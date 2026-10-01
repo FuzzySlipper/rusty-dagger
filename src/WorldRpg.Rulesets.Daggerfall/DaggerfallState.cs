@@ -39,6 +39,7 @@ internal sealed class DaggerfallState(
     DaggerfallRegionalBankState bank,
     DaggerfallLoanState loans,
     DaggerfallPropertyState property,
+    DaggerfallLodgingState lodging,
     DaggerfallServiceTransactions services,
     DaggerfallSkillTrainingService skillTraining,
     DaggerfallRegionalPriceState regionalPrices,
@@ -100,6 +101,7 @@ internal sealed class DaggerfallState(
     internal DaggerfallRegionalBankState Bank { get; } = bank;
     internal DaggerfallLoanState Loans { get; } = loans;
     internal DaggerfallPropertyState Property { get; } = property;
+    internal DaggerfallLodgingState Lodging { get; } = lodging;
     /// <summary>Typed Daggerfall service admission, quotes, outcomes, and pending concrete work.</summary>
     internal DaggerfallServiceTransactions Services { get; } = services;
     /// <summary>Permanent skill training through the current service and progression owners.</summary>

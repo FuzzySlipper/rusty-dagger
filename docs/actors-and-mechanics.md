@@ -58,6 +58,12 @@ It keeps meaningful state and relationships, including charged combat cooldowns;
 held input, AI/perception work, native continuation, presentation, and an
 in-flight attack are reconstructed or transient after restore.
 
+`DaggerfallLodgingState` retains room expiry against the placed tavern and the shared
+calendar. The ordinary rest caller reads that privilege and stops when it expires.
+Room quotes reuse classic trade pricing and guild privileges; booking spends the
+canonical carried coins or letters of credit through the currency owner. Saves retain the booking across
+site transitions and reject a room whose tavern no longer exists in the admitted directory.
+
 ## Active effects
 
 Kit `ActiveEffectLifecycle` coordinates stable instance context, round counters
