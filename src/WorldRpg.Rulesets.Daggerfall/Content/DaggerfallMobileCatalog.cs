@@ -38,6 +38,11 @@ internal sealed record DaggerfallMobileDefinition(
     string Team,
     int AttackModifierFlags)
 {
+    internal int ResistanceFlags { get; init; }
+    internal int ImmunityFlags { get; init; }
+    internal int LowToleranceFlags { get; init; }
+    internal int CriticalWeaknessFlags { get; init; }
+
     /// <summary>Whether this mobile is one the product places as an actor.</summary>
     internal bool IsPublished => Disposition is "published" or "published-variant";
 

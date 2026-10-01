@@ -209,6 +209,7 @@ public static class Arena2MobileCatalogDocument
             else if (disposition == "human-mobile") human++;
             else unpublished++;
 
+            var career = enemyConfigurations?.EnemyConfigurations.SingleOrDefault(record => record.MobileId == entry.Id)?.Configuration;
             mobiles.Add(new JsonObject
             {
                 ["donorId"] = entry.Id,
@@ -243,6 +244,10 @@ public static class Arena2MobileCatalogDocument
                 ["weight"] = entry.Weight,
                 ["team"] = entry.Team,
                 ["attackModifierFlags"] = AttackModifierFlags(enemyConfigurations, entry.Id),
+                ["resistanceFlags"] = (int)(career?.ResistanceFlags ?? 0),
+                ["immunityFlags"] = (int)(career?.ImmunityFlags ?? 0),
+                ["lowToleranceFlags"] = (int)(career?.LowToleranceFlags ?? 0),
+                ["criticalWeaknessFlags"] = (int)(career?.CriticalWeaknessFlags ?? 0),
             });
         }
 

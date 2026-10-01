@@ -327,9 +327,9 @@ public sealed partial class DaggerfallEquipmentWearTests
         internal Actor Player => _actors.Player.Actor;
         internal Actor EnemyActor => _actors.TryGet(Enemy, out ActorState actor) ? actor.Actor : throw new InvalidOperationException("Enemy is missing.");
 
-        internal WearFixture()
+        internal WearFixture(DaggerfallDefinitions? definitions = null)
         {
-            Definitions = DaggerfallEquipmentWearTests.Definitions;
+            Definitions = definitions ?? DaggerfallEquipmentWearTests.Definitions;
             DaggerfallActorDefinition playerDefinition = Definitions.RequireActor(new DaggerfallActorId("player"));
             _random = (IRandomService)(object)_scripted;
             _actors = new ActorsState();
@@ -365,10 +365,11 @@ public sealed partial class DaggerfallEquipmentWearTests
                 itemCondition: _itemCondition, playerPosition: () => new WorldPoint(0f, 0f, 0f));
         }
 
-        internal void Script(int body, int critical, int hit, int? damage = null, int? wornWeaponRoll = null, int? wornArmourRoll = null)
+        internal void Script(int body, int critical, int hit, int? damage = null, int? wornWeaponRoll = null, int? wornArmourRoll = null, int? razorSave = null)
         {
             List<int> draws = [body, critical, hit];
             if (damage is int rolled) draws.Add(rolled);
+            if (razorSave is int save) draws.Add(save);
             if (wornWeaponRoll is int weapon) draws.Add(weapon);
             if (wornArmourRoll is int armour) draws.Add(armour);
             _scripted.Feed(draws);
@@ -409,6 +410,15 @@ public sealed partial class DaggerfallEquipmentWearTests
             { Enchantment = "magic-item.0007", CurrentCondition = condition, MaximumCondition = 1500 });
         }
 
+        internal void EquipRazor(int condition = 1500)
+        {
+            if (PlayerEquipment.Read().TryGet(new SlotId("right-hand"), out var previous)) PlayerEquipment.Unequip(previous);
+            const string item = "template-113-orcish-magic-magic-item-0001";
+            EquipPlayerItem(item, 9501, "right-hand");
+            _itemInstances.ReplaceUnique(9501, _itemInstances.RequireUnique(9501) with
+            { Enchantment = "magic-item.0001", CurrentCondition = condition, MaximumCondition = 1500 });
+        }
+
         internal void DestroyNamira(ulong id)
         {
             UniqueItem item = PlayerItem(id);
@@ -430,10 +440,11 @@ public sealed partial class DaggerfallEquipmentWearTests
             _itemInstances.ReplaceUnique(durable, _itemInstances.RequireUnique(durable) with { CurrentCondition = condition });
         }
 
-        internal IReadOnlyList<IProductFact> RunPlayerAttack()
+        internal IReadOnlyList<IProductFact> RunPlayerAttack(bool requireAccepted = true)
         {
             FactBuffer<IProductFact> facts = new();
-            Assert.True(_combat.Execution.Start(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, Enemy, 5, 9, .125d, Delayed: false), facts));
+            bool accepted = _combat.Execution.Start(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, Enemy, 5, 9, .125d, Delayed: false), facts);
+            Assert.Equal(requireAccepted, accepted);
             return Delivered(facts);
         }
 

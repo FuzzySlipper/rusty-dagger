@@ -15,6 +15,8 @@ internal sealed record ActorDiedFact(long ActorId, long KillerId, DaggerfallDama
 /// <summary>One ring's accepted reflection, tied to its durable item source and ordinary damage result.</summary>
 internal sealed record ArtifactDamageReflectedFact(ulong SourceItemId, long SourceActorId, long TargetActorId,
     int ReflectedDamage, double ActualHealthLost, ulong OriginatingGeneration, ulong OriginatingSequence) : IProductFact;
+internal sealed record ArtifactTerminalStrikeFact(ulong SourceItemId, long SourceActorId, long TargetActorId,
+    int AddedDamage, ulong OriginatingGeneration, ulong OriginatingSequence) : IProductFact;
 /// <summary>A monster's accepted fatigue consequence remains distinct from health damage and its bounded live loss is observable.</summary>
 internal sealed record FatigueAppliedFact(long SourceActorId, long TargetActorId,
     int CalculatedFatigueLoss, double ActualFatigueLost, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
