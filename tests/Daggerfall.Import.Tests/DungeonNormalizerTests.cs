@@ -23,8 +23,8 @@ public sealed class DungeonNormalizerTests
         Assert.All(mesh.MaterialGroups, group => Assert.True(group.ParticipatesInCollision));
         Assert.Equal("marker/start", result.Document.World.StartMarker!.Id);
         Assert.Single(result.Document.World.Lights);
-        Assert.NotNull(result.Document.Navigation);
-        Assert.All(result.Document.Navigation!.Cells, cell => Assert.True(cell.Walkable));
+        Assert.NotNull(result.SpatialPublication.Navigation);
+        Assert.All(result.SpatialPublication.Navigation.Cells, cell => Assert.True(cell.Walkable));
         Assert.Contains(result.RecordProvenance, record => record.Kind == "rdb-model");
         Assert.Contains(result.Document.Resources, resource => resource.Id == "material/texture-2-0");
         Assert.All(result.Document.Meshes, published => Assert.DoesNotContain("artifact/source", published.ArtifactId, StringComparison.Ordinal));
@@ -125,7 +125,7 @@ public sealed class DungeonNormalizerTests
         Assert.Contains(new NormalizedVector3(0.025F, 0F, 0F), localMesh.Vertices);
         Assert.Contains(new NormalizedVector3(0F, 0F, -0.025F), localMesh.Vertices);
         Assert.Equal(model.LocalBounds, MeshBounds(localMesh.Vertices));
-        Assert.Empty(result.Document.Navigation!.Cells);
+        Assert.Empty(result.SpatialPublication.Navigation.Cells);
 
         using JsonDocument visual = JsonDocument.Parse(Assert.Single(result.SpatialPublication.ActionModelVisuals).Artifact.Bytes);
         JsonElement localPositions = visual.RootElement.GetProperty("payload").GetProperty("source").GetProperty("positions");
@@ -412,8 +412,8 @@ public sealed class DungeonNormalizerTests
         Assert.All(result.Document.World.MeshIds, meshId => Assert.Contains(result.Document.Meshes, mesh => mesh.Id == meshId));
         Assert.Equal([visualDoor.Id], Assert.Single(result.Document.World.Doors).VisualMeshIds);
         string collisionNavigation = Encoding.UTF8.GetString(result.SpatialPublication.CollisionNavigation.Bytes.Span);
-        Assert.Contains("\"triangles\": []", collisionNavigation, StringComparison.Ordinal);
-        Assert.Contains("\"positions\": []", collisionNavigation, StringComparison.Ordinal);
+        Assert.Contains("\"triangles\":[]", collisionNavigation, StringComparison.Ordinal);
+        Assert.Contains("\"positions\":[]", collisionNavigation, StringComparison.Ordinal);
     }
 
     [Fact]

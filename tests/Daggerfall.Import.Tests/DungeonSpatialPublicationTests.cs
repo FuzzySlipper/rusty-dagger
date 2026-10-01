@@ -137,6 +137,39 @@ public sealed class DungeonSpatialPublicationTests
             resources));
     }
 
+    [Fact]
+    public void CollisionPublishesEachPositionOnceAndDropsTrianglesWeldedToZeroArea()
+    {
+        // Two collision floors over the same square: the visual assembly keeps eight vertices, collision
+        // needs the four positions once. A third mesh collapses onto one
+        // corner, negative zero included, and so has no collision area.
+        NormalizedMesh first = Floor("mesh/first", "artifact/static", "material/first", 0F, true);
+        NormalizedMesh second = Floor("mesh/second", "artifact/static", "material/second", 0F, true);
+        NormalizedMesh collapsed = first with
+        {
+            Id = "mesh/collapsed",
+            Vertices = [new(0F, 0F, 0F), new(0F, 0F, 0F), new(-0F, 0F, 0F), new(0F, 0F, 0F)],
+            MaterialGroups = [new("material/collapsed", 0, 2, true)],
+        };
+        NormalizedNavigationSurface navigation = OfflineNavigationDeriver.Derive(
+            "navigation/example", "artifact/spatial", [first, second], NavigationDerivationConfig.ClassicDefault with { CellSize = 1F });
+        NormalizedWorld world = new("mesh/example", [first.Id, second.Id, collapsed.Id], navigation.Id, null, null, [], [], [], [], []);
+        NormalizedResourceCatalogEntry[] resources = new[] { "material/first", "material/second", "material/collapsed" }
+            .Select(material => new NormalizedResourceCatalogEntry(material, NormalizedResourceKind.Material, "artifact/resources", [], [])).ToArray();
+
+        DungeonSpatialPublication publication = DungeonSpatialPublication.Create(
+            "artifact/static", "spatial/example/static.json", "artifact/spatial", "spatial/example/spatial.json",
+            "artifact/resources", "resources/example/catalog.json", world.VisualMeshAssetId,
+            new(new(0F, 0F, 0F), new(2F, 0F, 2F)), [first, second, collapsed], world, navigation, resources);
+
+        using JsonDocument spatial = JsonDocument.Parse(publication.CollisionNavigation.Bytes);
+        JsonElement collision = spatial.RootElement.GetProperty("collision");
+        Assert.Equal(4, collision.GetProperty("positions").GetArrayLength());
+        Assert.Equal(4, collision.GetProperty("triangles").GetArrayLength());
+        Assert.All(collision.GetProperty("triangles").EnumerateArray(), triangle =>
+            Assert.Equal(3, triangle.EnumerateArray().Select(index => index.GetUInt32()).Distinct().Count()));
+    }
+
     private static NormalizedMesh Floor(string id, string artifactId, string material, float height, bool collision, float minimum = 0F, bool upward = true) => new(
         id,
         artifactId,

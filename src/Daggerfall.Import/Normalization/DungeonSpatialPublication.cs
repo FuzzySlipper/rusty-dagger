@@ -62,7 +62,9 @@ public sealed record DungeonActionModelVisual(string ActionId, GeneratedSpatialA
 /// <summary>
 /// Deterministic spatial closure for one normalized location.  The static mesh
 /// is shaped exactly for Engine's content-backed static-mesh admission while
-/// collision and navigation remain purpose-neutral offline facts.
+/// collision and navigation remain purpose-neutral offline facts. The
+/// collision/navigation artifact is the navigation surface's one published
+/// home; <see cref="Navigation"/> is the surface it was written from.
 /// </summary>
 public sealed record DungeonSpatialPublication(
     GeneratedSpatialArtifact StaticMesh,
@@ -70,7 +72,8 @@ public sealed record DungeonSpatialPublication(
     GeneratedSpatialArtifact ResourceCatalog,
     IReadOnlyList<DungeonMaterialSlot> MaterialSlots,
     IReadOnlyList<DungeonDoorVisual> DoorVisuals,
-    IReadOnlyList<DungeonActionModelVisual> ActionModelVisuals)
+    IReadOnlyList<DungeonActionModelVisual> ActionModelVisuals,
+    NormalizedNavigationSurface Navigation)
 {
     public IReadOnlyList<GeneratedSpatialArtifact> Artifacts
     {
@@ -118,6 +121,11 @@ public sealed record DungeonSpatialPublication(
         if (!StringComparer.Ordinal.Equals(navigation.ArtifactId, collisionNavigationArtifactId))
         {
             throw new InvalidOperationException("The navigation surface must refer to the generated collision/navigation artifact.");
+        }
+        navigation.Validate(new HashSet<string>([collisionNavigationArtifactId], StringComparer.Ordinal));
+        if (!StringComparer.Ordinal.Equals(world.NavigationId, navigation.Id))
+        {
+            throw new InvalidOperationException($"World navigation '{world.NavigationId}' does not identify the published navigation surface '{navigation.Id}'.");
         }
 
         Dictionary<string, NormalizedMesh> meshById = meshes.ToDictionary(mesh => mesh.Id, StringComparer.Ordinal);
@@ -219,7 +227,8 @@ public sealed record DungeonSpatialPublication(
             new GeneratedSpatialArtifact(resourceCatalogArtifactId, resourceCatalogRelativePath, resourceCatalog, []),
             Array.AsReadOnly(materialSlots),
             doorVisuals,
-            actionVisuals);
+            actionVisuals,
+            navigation.Canonicalize());
     }
 
     private static string ActionArtifactFileName(string actionId)
@@ -253,6 +262,10 @@ public sealed record DungeonSpatialPublication(
     {
         ArgumentNullException.ThrowIfNull(document);
         document.Validate();
+        if (!StringComparer.Ordinal.Equals(document.World.NavigationId, Navigation.Id))
+        {
+            throw new InvalidOperationException($"World navigation '{document.World.NavigationId}' does not identify the published navigation surface '{Navigation.Id}'.");
+        }
         foreach (GeneratedSpatialArtifact artifact in Artifacts)
         {
             NormalizedArtifactDescriptor descriptor = document.Artifacts.SingleOrDefault(candidate => StringComparer.Ordinal.Equals(candidate.Id, artifact.Id))
@@ -444,7 +457,9 @@ internal static class StaticMeshJson
     {
         ArgumentNullException.ThrowIfNull(assembly);
         using MemoryStream stream = new();
-        using (Utf8JsonWriter writer = new(stream, new JsonWriterOptions { Indented = true }))
+        // Unindented: the Engine's JSON readers ignore whitespace, and indentation more than doubled a
+        // town's published bytes and the time to write, stage and parse them.
+        using (Utf8JsonWriter writer = new(stream, new JsonWriterOptions { Indented = false }))
         {
             writer.WriteStartObject();
             writer.WriteString("asset", asset);
@@ -568,9 +583,10 @@ internal static class CollisionNavigationJson
 
     public static byte[] Serialize(string staticMeshArtifactId, NormalizedBounds bounds, IReadOnlyList<NormalizedMesh> meshes, NormalizedNavigationSurface navigation)
     {
-        MeshAssembly collision = MeshAssembly.Create(meshes, collisionOnly: true);
+        (List<NormalizedVector3> positions, List<(uint A, uint B, uint C)> triangles) = Weld(MeshAssembly.Create(meshes, collisionOnly: true));
         using MemoryStream stream = new();
-        using (Utf8JsonWriter writer = new(stream, new JsonWriterOptions { Indented = true }))
+        // Unindented, as the static mesh: the navigation cells alone are hundreds of thousands of objects.
+        using (Utf8JsonWriter writer = new(stream, new JsonWriterOptions { Indented = false }))
         {
             writer.WriteStartObject();
             writer.WriteNumber("schemaVersion", EngineArtifactVersion);
@@ -579,15 +595,15 @@ internal static class CollisionNavigationJson
             StaticMeshJson.WriteBounds(writer, bounds);
             writer.WritePropertyName("collision");
             writer.WriteStartObject();
-            WriteVector3Collection(writer, "positions", collision.Vertices);
+            WriteVector3Collection(writer, "positions", positions);
             writer.WritePropertyName("triangles");
             writer.WriteStartArray();
-            for (int index = 0; index < collision.Indices.Count; index += 3)
+            foreach ((uint a, uint b, uint c) in triangles)
             {
                 writer.WriteStartArray();
-                writer.WriteNumberValue(collision.Indices[index]);
-                writer.WriteNumberValue(collision.Indices[index + 1]);
-                writer.WriteNumberValue(collision.Indices[index + 2]);
+                writer.WriteNumberValue(a);
+                writer.WriteNumberValue(b);
+                writer.WriteNumberValue(c);
                 writer.WriteEndArray();
             }
             writer.WriteEndArray();
@@ -598,6 +614,42 @@ internal static class CollisionNavigationJson
         }
 
         return [.. stream.ToArray(), (byte)'\n'];
+    }
+
+    /// <summary>
+    /// Collision needs each position once, not once per rendered face as the visual assembly carries it
+    /// for its normals and UVs: a town's collision shares about two thirds of its vertices. Welding exact
+    /// equal positions keeps the geometry identical. A triangle whose corners weld together had zero area
+    /// and the Engine refuses repeated indices, so it is dropped.
+    /// </summary>
+    private static (List<NormalizedVector3> Positions, List<(uint A, uint B, uint C)> Triangles) Weld(MeshAssembly collision)
+    {
+        Dictionary<(float X, float Y, float Z), uint> indexByPosition = [];
+        List<NormalizedVector3> positions = [];
+        uint[] welded = new uint[collision.Vertices.Count];
+        for (int vertex = 0; vertex < collision.Vertices.Count; vertex++)
+        {
+            NormalizedVector3 value = collision.Vertices[vertex];
+            // Negative zero is the same position as zero.
+            (float X, float Y, float Z) key = (value.X + 0F, value.Y + 0F, value.Z + 0F);
+            if (!indexByPosition.TryGetValue(key, out uint index))
+            {
+                index = checked((uint)positions.Count);
+                indexByPosition.Add(key, index);
+                positions.Add(new NormalizedVector3(key.X, key.Y, key.Z));
+            }
+            welded[vertex] = index;
+        }
+
+        List<(uint A, uint B, uint C)> triangles = new(collision.Indices.Count / 3);
+        for (int index = 0; index < collision.Indices.Count; index += 3)
+        {
+            uint a = welded[collision.Indices[index]], b = welded[collision.Indices[index + 1]], c = welded[collision.Indices[index + 2]];
+            if (a != b && b != c && a != c) triangles.Add((a, b, c));
+        }
+        // The Engine admits positions only with triangles that use them.
+        if (triangles.Count == 0) positions.Clear();
+        return (positions, triangles);
     }
 
     private static void WriteVector3Collection(Utf8JsonWriter writer, string name, IReadOnlyList<NormalizedVector3> values)

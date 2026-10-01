@@ -436,7 +436,6 @@ public sealed class Arena2DungeonMediaPublicationTests
             new NormalizedCoordinateConvention(NormalizedHandedness.Right, NormalizedVerticalAxis.PositiveY, 1F),
             new NormalizedBounds(new NormalizedVector3(0, 0, 0), new NormalizedVector3(1, 1, 1)),
             [mesh],
-            null,
             world,
             [texture, material, sprite, actor]);
     }

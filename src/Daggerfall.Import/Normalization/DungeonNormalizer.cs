@@ -681,7 +681,6 @@ public static class DungeonNormalizer
                 new NormalizedCoordinateConvention(NormalizedHandedness.Right, NormalizedVerticalAxis.PositiveY, 1F),
                 bounds,
                 meshes,
-                navigation,
                 world,
                 resources).Canonicalize();
             DungeonNormalizationResult result = new(
