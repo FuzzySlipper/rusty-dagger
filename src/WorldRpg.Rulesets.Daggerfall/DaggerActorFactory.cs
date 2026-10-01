@@ -25,7 +25,28 @@ using KitUniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-internal sealed record DaggerActorAssembly(DaggerfallState State, Dictionary<long, DaggerfallActorDefinition> Definitions, DaggerfallActorDefinition PlayerDefinition, DaggerfallMechanicsState Mechanics);
+/// <summary>
+/// The actors, inventories and registries the factory constructs from admitted definitions or a current
+/// save's actor sections, before any session service exists; <see cref="DaggerfallState"/> names them.
+/// </summary>
+internal sealed record DaggerActorAssembly(
+    PlayerControlState PlayerControl,
+    ActorsState Actors,
+    InventoryStore InventoryStore,
+    MechanicsInventoryCoordinator Inventory,
+    MechanicsEquipmentCoordinator Equipment,
+    MechanicsInventoryContainerCoordinator Containers,
+    DaggerfallActorInventories ActorInventories,
+    DaggerfallItemInstances ItemInstances,
+    DaggerfallVariableStore Variables,
+    DaggerfallNpcRegistry Npcs,
+    DaggerfallSocialState Social,
+    DaggerfallCharacterState Character,
+    DaggerfallQuestInstances Quests,
+    DaggerfallQuestTrainingState QuestTraining,
+    Dictionary<long, DaggerfallActorDefinition> Definitions,
+    DaggerfallActorDefinition PlayerDefinition,
+    DaggerfallMechanicsState Mechanics);
 
 /// <summary>Explicit entity/component construction from admitted Dagger definitions or current saves.</summary>
 internal static class DaggerActorFactory
@@ -161,11 +182,17 @@ internal static class DaggerActorFactory
             }
 
             DaggerfallCharacterState character = new(definitions, player.Stats, playerDefinition, saved?.Character);
-            DaggerfallState state = new(new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians), actors, inventory, equipmentCoordinator, containers, itemDefinitions, equipmentSlots, inventoryStore, variables, npcs, social, itemInstances, character, new DaggerfallQuestInstances(definitions, random, questAdmission, disabledQuestSelection));
-            state.QuestTraining = new DaggerfallQuestTrainingState(saved?.QuestTraining);
+            DaggerfallQuestInstances quests = new(definitions, random, questAdmission, disabledQuestSelection);
             authored.Add(DaggerfallActorIdentity.PlayerEntityId, playerDefinition);
             if (saved is not null) MaterializeDynamicActors(random, actors, mechanics, definitions, saved, authored, inventoryStore);
-            return new(state, authored, playerDefinition, mechanics);
+            return new(
+                new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians),
+                actors, inventoryStore, inventory, equipmentCoordinator, containers,
+                new DaggerfallActorInventories(actors, itemDefinitions, equipmentSlots),
+                itemInstances, variables, npcs, social, character,
+                quests,
+                new DaggerfallQuestTrainingState(saved?.QuestTraining),
+                authored, playerDefinition, mechanics);
         }
         catch { actors.Dispose(); throw; }
     }

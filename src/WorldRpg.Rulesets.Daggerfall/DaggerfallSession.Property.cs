@@ -9,24 +9,13 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 internal sealed partial class DaggerfallSession
 {
-    private DaggerfallPropertyStorage? _propertyStorage;
-
     /// <summary>
-    /// Called by the shared Session constructor after State.Property and the durable identity
-    /// allocator exist. Restore is deliberately explicit so persistence never invents a container.
+    /// Owned property's storage containers, built beside the property state and restored from the save's
+    /// property section at construction, so persistence never invents a container.
     /// </summary>
-    internal void InitializePropertyStorage(DaggerfallPropertySave? saved)
-    {
-        if (_propertyStorage is not null)
-            throw new InvalidOperationException("Property storage is already initialized.");
-        _propertyStorage = new DaggerfallPropertyStorage(State.Containers, State.ItemInstances, _definitions,
-            _actorIdentities, State.Property, State.Actors.Player.Actor.Entity);
-        if (saved is not null)
-            _propertyStorage.Restore(saved);
-    }
+    private readonly DaggerfallPropertyStorage _propertyStorage;
 
-    internal DaggerfallPropertyStorage PropertyStorage => _propertyStorage
-        ?? throw new InvalidOperationException("Property storage has not been initialized.");
+    internal DaggerfallPropertyStorage PropertyStorage => _propertyStorage;
 
     internal DaggerfallInventorySave CapturePropertyStorage(DaggerfallPropertyStorageKey key) =>
         PropertyStorage.Capture(key);

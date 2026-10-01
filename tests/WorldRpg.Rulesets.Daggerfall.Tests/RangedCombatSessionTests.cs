@@ -281,7 +281,7 @@ public sealed class RangedCombatSessionTests
         TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors,
             new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
         DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment,
-            session.State.InventoryFor, session.State.ItemInstances, definitions, authored, targeting);
+            session.State.ActorInventories.InventoryFor, session.State.ItemInstances, definitions, authored, targeting);
         const long archer = 2004;
         const ulong generation = 77;
         const ulong releaseStep = 400;
@@ -377,11 +377,11 @@ public sealed class RangedCombatSessionTests
             placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
         TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
-        DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.InventoryFor,
+        DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.ActorInventories.InventoryFor,
             session.State.ItemInstances, definitions, authored, targeting);
         FactBuffer<IProductFact> facts = new();
         long archer = Assert.Single(inputs.Project.Actors.Values, placement => placement.ActorId == new DaggerfallActorId("archer")).EntityId;
-        WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator quiver = Assert.IsType<WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator>(session.State.InventoryFor(archer));
+        WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator quiver = Assert.IsType<WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator>(session.State.ActorInventories.InventoryFor(archer));
 
         // The pack authors the archer's quiver; the managed inventory carries it.
         InventoryStackId arrowStack = quiver.Read().Stacks.Single(stack => stack.Definition.Value == "arrow").Id;
@@ -415,11 +415,11 @@ public sealed class RangedCombatSessionTests
             placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
         TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
-        DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.InventoryFor,
+        DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.ActorInventories.InventoryFor,
             session.State.ItemInstances, definitions, authored, targeting);
         FactBuffer<IProductFact> facts = new();
         long archer = Assert.Single(inputs.Project.Actors.Values, placement => placement.ActorId == new DaggerfallActorId("archer")).EntityId;
-        WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator archerInventory = Assert.IsType<WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator>(session.State.InventoryFor(archer));
+        WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator archerInventory = Assert.IsType<WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator>(session.State.ActorInventories.InventoryFor(archer));
         archerInventory.Consume(new WorldRpg.Kit.Inventory.InventoryConsume(
             archerInventory.Read().Stacks.Single(stack => stack.Definition.Value == "arrow").Id, 12));
         double playerHealthBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
@@ -455,7 +455,7 @@ public sealed class RangedCombatSessionTests
         using (DaggerfallSession original = DaggerfallSession.StartNew(source.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
             // One drawn arrow leaves eleven; the save must carry exactly that, not a refill.
-            WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator archerInventory = Assert.IsType<WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator>(original.State.InventoryFor(archer));
+            WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator archerInventory = Assert.IsType<WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator>(original.State.ActorInventories.InventoryFor(archer));
             archerInventory.Consume(new WorldRpg.Kit.Inventory.InventoryConsume(
                 archerInventory.Read().Stacks.Single(stack => stack.Definition.Value == "arrow").Id, 1));
             payload = original.CaptureSave();
@@ -471,7 +471,7 @@ public sealed class RangedCombatSessionTests
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
         using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), payload);
 
-        Assert.Equal(11UL, Assert.IsType<WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator>(resumed.State.InventoryFor(archer)).Read().Stacks.Single(stack => stack.Definition.Value == "arrow").Quantity);
+        Assert.Equal(11UL, Assert.IsType<WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator>(resumed.State.ActorInventories.InventoryFor(archer)).Read().Stacks.Single(stack => stack.Definition.Value == "arrow").Quantity);
     }
 
     private static DaggerfallSession CreateArcherSession(string root, DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs,

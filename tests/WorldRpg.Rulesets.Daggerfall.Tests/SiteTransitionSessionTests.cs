@@ -64,7 +64,7 @@ public sealed class SiteTransitionSessionTests
         DurableIdentityReference archerIdentity = new(DurableIdentityKind.Actor, checked((ulong)sourceArcher));
         Assert.Equal(DurableEntityResolution.Materialized,
             session.State.Actors.Entities.Classify(archerIdentity, session.State.Npcs.Identities!));
-        MechanicsInventoryCoordinator archerInventory = Assert.IsType<MechanicsInventoryCoordinator>(session.State.InventoryFor(sourceArcher));
+        MechanicsInventoryCoordinator archerInventory = Assert.IsType<MechanicsInventoryCoordinator>(session.State.ActorInventories.InventoryFor(sourceArcher));
         InventoryStackId arrows = archerInventory.Read().Stacks.Single(stack => stack.Definition.Value == "arrow").Id;
         archerInventory.Consume(new InventoryConsume(arrows, 1));
 
@@ -93,7 +93,7 @@ public sealed class SiteTransitionSessionTests
         Assert.True(session.Corpses.ContainsKey(sourceActorId));
         Assert.Equal(sourceCorpseStacks, session.State.Containers.Read(session.Corpses[sourceActorId].Owner).Stacks.Count);
         Assert.Equal(actorPosition, session.State.Actors.Get(sourceActorId).Position);
-        Assert.Equal(11UL, Assert.IsType<MechanicsInventoryCoordinator>(session.State.InventoryFor(sourceArcher))
+        Assert.Equal(11UL, Assert.IsType<MechanicsInventoryCoordinator>(session.State.ActorInventories.InventoryFor(sourceArcher))
             .Read().Stacks.Single(stack => stack.Definition.Value == "arrow").Quantity);
     }
 

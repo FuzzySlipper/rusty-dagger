@@ -109,8 +109,8 @@ internal sealed class DaggerSessionPersistence
                 stacks,
                 uniques);
         }).ToArray();
-        DaggerfallActorInventorySave[] actorInventories = State.ActorInventories.OrderBy(entry => entry.Key)
-            .Select(entry => new DaggerfallActorInventorySave(entry.Key, CaptureInventory(entry.Value, State.EquipmentFor(entry.Key), DaggerfallItemOwner.Actor(entry.Key)))).ToArray();
+        DaggerfallActorInventorySave[] actorInventories = State.ActorInventories.All.OrderBy(entry => entry.Key)
+            .Select(entry => new DaggerfallActorInventorySave(entry.Key, CaptureInventory(entry.Value, State.ActorInventories.EquipmentFor(entry.Key), DaggerfallItemOwner.Actor(entry.Key)))).ToArray();
         return DaggerfallSavePayload.Encode(new DaggerfallSavePayload(
             player,
             actors,
@@ -203,8 +203,8 @@ internal sealed class DaggerSessionPersistence
         long[] ids = [.. authoredIds, .. spawned.Select(actor => actor.EntityId)];
         DaggerfallActorInventorySave[] inventories = ids.Select(id => new DaggerfallActorInventorySave(
             id,
-            CaptureInventory(State.InventoryFor(id) ?? throw new InvalidOperationException($"Site actor {id} has no inventory."),
-                State.EquipmentFor(id), DaggerfallItemOwner.Actor(id)))).ToArray();
+            CaptureInventory(State.ActorInventories.InventoryFor(id) ?? throw new InvalidOperationException($"Site actor {id} has no inventory."),
+                State.ActorInventories.EquipmentFor(id), DaggerfallItemOwner.Actor(id)))).ToArray();
         DaggerfallActiveEffectSave[] effects = State.Effects.Active
             .Where(effect => ids.Contains(checked((long)effect.Lifecycle.Context.Target.Value)))
             .Select(effect => new DaggerfallActiveEffectSave(
@@ -404,9 +404,9 @@ internal sealed class DaggerSessionPersistence
     {
         foreach (DaggerfallActorInventorySave section in saved)
         {
-            MechanicsInventoryCoordinator inventory = State.InventoryFor(section.EntityId)
+            MechanicsInventoryCoordinator inventory = State.ActorInventories.InventoryFor(section.EntityId)
                 ?? throw new ArgumentException($"Saved inventory owner {section.EntityId} is missing.");
-            ApplyInventory(section.Inventory, inventory, State.EquipmentFor(section.EntityId), DaggerfallItemOwner.Actor(section.EntityId));
+            ApplyInventory(section.Inventory, inventory, State.ActorInventories.EquipmentFor(section.EntityId), DaggerfallItemOwner.Actor(section.EntityId));
         }
     }
 }

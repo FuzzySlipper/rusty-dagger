@@ -104,17 +104,24 @@ internal sealed partial class DaggerfallSession
             Cinematics = composition.CinematicContent is null ? null : new DaggerfallCinematicPresentation(engine, composition.CinematicContent, definitions.Cinematics);
             if (Cinematics is not null) partiallyConstructed.Add(Cinematics);
             _openingCinematics = new DaggerfallOpeningCinematics(Cinematics, composition.VideosEnabled);
+            // Owners are built in dependency order, each from the owners it reads; the named state is
+            // constructed once every service it names exists, so nothing reads a service before it is built.
             DaggerActorAssembly assembled = DaggerActorFactory.Create(_random, definitions, inputs, saved, composition.QuestAdmission, composition.DisabledQuestSelection);
-            State = assembled.State;
-            State.Social.SetBiographyReactionModifier(State.Character.Background?.Modifiers.Reaction ?? 0);
-            ActorsState actors = State.Actors;
+            ActorsState actors = assembled.Actors;
             partiallyConstructed.Add(actors);
+            DaggerfallCharacterState character = assembled.Character;
+            DaggerfallSocialState social = assembled.Social;
+            DaggerfallItemInstances itemInstances = assembled.ItemInstances;
+            DaggerfallNpcRegistry npcs = assembled.Npcs;
+            social.SetBiographyReactionModifier(character.Background?.Modifiers.Reaction ?? 0);
             Dictionary<long, DaggerfallActorDefinition> authored = assembled.Definitions;
             DaggerfallActorDefinition playerDefinition = assembled.PlayerDefinition;
             EntityId playerEntity = actors.Player.Actor.Entity;
-            MechanicsInventoryCoordinator inventory = State.Inventory;
-            MechanicsEquipmentCoordinator equipmentCoordinator = State.Equipment;
-            MechanicsInventoryContainerCoordinator containers = State.Containers;
+            StatsComponent playerStats = actors.Player.Stats;
+            ProgressionState progression = actors.Player.Progression;
+            MechanicsInventoryCoordinator inventory = assembled.Inventory;
+            MechanicsEquipmentCoordinator equipmentCoordinator = assembled.Equipment;
+            MechanicsInventoryContainerCoordinator containers = assembled.Containers;
             Presentation = new PresentationState("Ready");
             _time = new DaggerfallWorldTime(
                 saved?.Calendar is { } restored
@@ -142,32 +149,34 @@ internal sealed partial class DaggerfallSession
             _grounding = new DaggerfallActorGrounding(engine.Spatial, _spatial,
                 tuning.EnemyBehavior.SpawnGroundProbeLift, tuning.EnemyBehavior.SpawnGroundProbeDistance);
             partiallyConstructed.Add(_spatial);
+            Dictionary<DaggerfallWorldProfileKey, DaggerfallDungeonActionGraph> dungeonActions = [];
             foreach ((DaggerfallWorldProfileKey key, DaggerfallSiteProfile admitted) in DaggerfallSiteLifecycle.ActionProfiles(inputs, profiles))
             {
                 DaggerfallDungeonActionGraphSnapshot? snapshot = saved?.DungeonActions
                     .SingleOrDefault(value => StringComparer.Ordinal.Equals(value.ProfileId, key.LogicalId));
-                State.DungeonActions.Add(key, new DaggerfallDungeonActionGraph(
+                dungeonActions.Add(key, new DaggerfallDungeonActionGraph(
                     key.LogicalId,
                     admitted.DungeonActions,
-                    State.Variables,
+                    assembled.Variables,
                     snapshot,
                     ExecuteDungeonFamilyAction));
             }
             // ResolveRestore admitted every saved discovery against a dungeon profile of the catalog.
+            Dictionary<DaggerfallWorldProfileKey, DaggerfallDungeonDiscovery> dungeonDiscoveries = [];
             foreach (DaggerfallDungeonDiscoverySnapshot snapshot in saved?.DungeonDiscovery ?? [])
             {
                 DaggerfallSiteProfile admitted = snapshot.Profile == inputs.ProfileKey ? inputs : profiles!.Require(snapshot.Profile);
-                State.DungeonDiscoveries.Add(snapshot.Profile, new DaggerfallDungeonDiscovery(snapshot.Profile, admitted.DungeonMap!, snapshot));
+                dungeonDiscoveries.Add(snapshot.Profile, new DaggerfallDungeonDiscovery(snapshot.Profile, admitted.DungeonMap!, snapshot));
             }
-            if (inputs.DungeonMap is { } initialMap && !State.DungeonDiscoveries.ContainsKey(activeProfile))
-                State.DungeonDiscoveries.Add(activeProfile, new DaggerfallDungeonDiscovery(activeProfile, initialMap));
+            if (inputs.DungeonMap is { } initialMap && !dungeonDiscoveries.ContainsKey(activeProfile))
+                dungeonDiscoveries.Add(activeProfile, new DaggerfallDungeonDiscovery(activeProfile, initialMap));
             // The selected site's normalized RDB doors restore their Engine pose/collider projection
             // before activation can query them and before the first character step consumes them.
-            DaggerfallSiteProjection projection = DaggerfallSiteProjection.Create(engine, State.Actors.Entities, _random, tuning, _time.Calendar,
+            DaggerfallSiteProjection projection = DaggerfallSiteProjection.Create(engine, actors.Entities, _random, tuning, _time.Calendar,
                 inputs, audioBundles?.Require(inputs.ProfileKey), _spatial, saved?.Doors, saved?.DungeonMotion);
             partiallyConstructed.Add(projection);
             DaggerfallDungeonActionTriggerRuntime actionTriggers = new(
-                State.Actors.Entities, engine.Spatial, _spatial, DaggerfallSiteLifecycle.ActionProfiles(inputs, profiles), activeProfile);
+                actors.Entities, engine.Spatial, _spatial, DaggerfallSiteLifecycle.ActionProfiles(inputs, profiles), activeProfile);
             partiallyConstructed.Add(actionTriggers);
             // Dynamic actors restore before the site projection, while authored placements are
             // already in ActorSprites.  Admit their mobile media here without replaying any item
@@ -184,9 +193,9 @@ internal sealed partial class DaggerfallSession
                 foreach (ActorState actor in actors.All.Where(actor => authored[actor.DurableId].GroundOnSpawn))
                     _grounding.Ground(actor);
             }
-            _camera = new FirstPersonCameraSystem(engine.CameraView, State.PlayerControl, tuning.Camera);
+            _camera = new FirstPersonCameraSystem(engine.CameraView, assembled.PlayerControl, tuning.Camera);
             partiallyConstructed.Add(_camera);
-            TargetingService targeting = new(engine.Perception, _spatial, State.Actors,
+            TargetingService targeting = new(engine.Perception, _spatial, actors,
                 new DaggerTargetingPolicy(authored, tuning.MeleeTargeting, () => _sites.Projection.Inputs));
             _staminaRecovery = new DaggerfallStaminaRecoveryModule(tuning.StaminaRecovery);
             CombatResolution combatRules = new();
@@ -194,56 +203,61 @@ internal sealed partial class DaggerfallSession
             _vitality = new DaggerfallVitalityConsequences(combatRules);
             // One catalog answers every effect family this ruleset compiles, so a saved effect names the
             // definition that has to interpret it rather than the family that happened to start it.
-            State.Effects = new DaggerfallEffectLifecycle(State.Actors, composition.Effects ?? new DaggerfallEffectCatalog(
+            DaggerfallEffectLifecycle effects = new(actors, composition.Effects ?? new DaggerfallEffectCatalog(
             [
                 .. DaggerfallDiseasePolicy.Definitions(
                     _random,
                     () => _time.Calendar.DayNumber,
-                    () => State.Character.Career,
+                    () => character.Career,
                     combatRules,
                     AppendEffectDamage),
-                .. DaggerfallPoisonEffects.Definitions(_random, _vitality, () => State.Character.Career),
+                .. DaggerfallPoisonEffects.Definitions(_random, _vitality, () => character.Career),
             ]));
-            partiallyConstructed.Add(State.Effects);
+            partiallyConstructed.Add(effects);
             _rewards = new DaggerfallRewardReactions(
-                State.Progression,
-                State.Actors.Player.Stats,
-                State.Actors.Player.Actor.Entity,
-                () => State.Character.Career,
+                progression,
+                playerStats,
+                playerEntity,
+                () => character.Career,
                 _random,
                 authored,
                 tuning.Progression);
-            State.SkillUses = new DaggerfallSkillUseReactions(State.Progression, State.Actors.Player.Stats, definitions, () => State.Character.Career);
-            State.GuildMembership = new DaggerfallGuildMembershipPolicy(State.Social,
-                State.SkillUses.PermanentSkillValue, DaggerfallConcreteGuildCatalog.AllMembershipPolicies);
-            State.ConcreteGuildMembership = new DaggerfallConcreteGuildMembershipRuntime(State.GuildMembership);
-            State.Quests.BindRuntime(new DaggerfallQuestRuntime(State.Progression, State.Actors.Player.Stats, definitions,
-                State.QuestTraining, tuning.Locomotion, _random, () => _time.Calendar, AdvanceQuestTraining));
-            State.Quests.BindTravelMinutes(site => _travelPolicy.CautiousQuestLegMinutes(QuestTravelOrigin(), site));
-            State.Character.BindCareerCommitted(State.SkillUses.RebaseForCareerSelection);
-            State.LevelUps = new DaggerfallLevelUpState(State.Progression, State.SkillUses, State.Actors.Player.Stats,
-                definitions, () => State.Character.Career, _random, _rewards);
+            DaggerfallSkillUseReactions skillUses = new(progression, playerStats, definitions, () => character.Career);
+            DaggerfallGuildMembershipPolicy guildMembership = new(social,
+                skillUses.PermanentSkillValue, DaggerfallConcreteGuildCatalog.AllMembershipPolicies);
+            DaggerfallConcreteGuildMembershipRuntime concreteGuildMembership = new(guildMembership);
+            assembled.Quests.BindRuntime(new DaggerfallQuestRuntime(progression, playerStats, definitions,
+                assembled.QuestTraining, tuning.Locomotion, _random, () => _time.Calendar, AdvanceQuestTraining));
+            assembled.Quests.BindTravelMinutes(site => _travelPolicy.CautiousQuestLegMinutes(QuestTravelOrigin(), site));
+            character.BindCareerCommitted(skillUses.RebaseForCareerSelection);
+            DaggerfallLevelUpState levelUps = new(progression, skillUses, playerStats,
+                definitions, () => character.Career, _random, _rewards);
             _equipmentMoves = new DaggerfallEquipmentMoves(inventory, equipmentCoordinator, definitions,
-                () => State.Character.Career.ForbiddenEquipment, State.ItemInstances);
-            _itemCondition = new DaggerfallItemConditionService(definitions, State.ItemInstances, _equipmentMoves);
+                () => character.Career.ForbiddenEquipment, itemInstances);
+            _itemCondition = new DaggerfallItemConditionService(definitions, itemInstances, _equipmentMoves);
             _playerSwings = new DaggerfallSwingTracker(_tuning.MeleeTargeting.MinimumSwingGestureRadians);
-            _combat = new DaggerCombatRules(_random, State.Actors, State.Equipment, State.InventoryFor, State.ItemInstances, definitions, authored, targeting, use => State.SkillUses.Record(use),
-                () => State.Character.Background?.Modifiers.AvoidHit ?? 0, State.EquipmentFor, _itemCondition, combatRules,
+            _heldEnchantments = new DaggerfallHeldEnchantments(equipmentCoordinator, itemInstances, definitions.Magic.MagicItems,
+                playerStats, actors.Entities, playerEntity, () => _time.Calendar,
+                () => assembled.PlayerControl.Position, () => DaggerfallActorRoster.NearbyCreatures(actors, authored), InSunlight, _itemCondition, InHolyPlace,
+                amount => _vitality.ResolveHeldEnchantmentDamage(actors.Player.Actor, amount));
+            DaggerfallActorInventories actorInventories = assembled.ActorInventories;
+            _combat = new DaggerCombatRules(_random, actors, equipmentCoordinator, actorInventories.InventoryFor, itemInstances, definitions, authored, targeting, use => skillUses.Record(use),
+                () => character.Background?.Modifiers.AvoidHit ?? 0, actorInventories.EquipmentFor, _itemCondition, combatRules,
                 actorId => actorId == DaggerfallActorIdentity.PlayerEntityId
-                    && State.Character.CustomCareer?.Advantages.Any(trait => trait.Id == "adrenaline-rush") == true
+                    && character.CustomCareer?.Advantages.Any(trait => trait.Id == "adrenaline-rush") == true
                     ? new DaggerfallAdrenalineRush(Enabled: true, Improved: _heldEnchantments.Talents.AdrenalineRush) : default,
-                () => State.PlayerControl.Position, () => State.Character, _playerSwings.TryGesture, ShotBlockedByCover,
+                () => assembled.PlayerControl.Position, () => character, _playerSwings.TryGesture, ShotBlockedByCover,
                 () => _heldEnchantments.ArmorValueModifier, DeliverWeaponPoison);
-            State.Kit = new(State.Actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, State.Inventory, State.Equipment);
+            GameplayServices<IProductFact> kit = new(actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, inventory, equipmentCoordinator);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
                 engine.Perception,
                 _spatial,
                 new ActorNavigationCoordinator(engine.Spatial, _spatial.Session),
-                State.Actors,
-                State.Kit.Attacks,
+                actors,
+                kit.Attacks,
                 tuning.EnemyBehavior,
                 contextProvider: BuildEnemyPerceptionContext,
-                recordSkillUse: use => State.SkillUses.Record(use));
+                recordSkillUse: use => skillUses.Record(use));
             _authoredEntityIds = DaggerActorFactory.AdmittedAuthoredEntityIds(inputs, playerDefinition.Loadout);
             if (restore is null)
             {
@@ -262,46 +276,65 @@ internal sealed partial class DaggerfallSession
             }
 
             _uniqueItems = DaggerfallUniqueItemAllocator.Sharing(_actorIdentities);
-            State.Npcs.Identities = _actorIdentities;
-            _heldEnchantments = new DaggerfallHeldEnchantments(State.Equipment, State.ItemInstances, definitions.Magic.MagicItems,
-                State.Actors.Player.Stats, State.Actors.Entities, State.Actors.Player.Actor.Entity, () => _time.Calendar,
-                () => State.PlayerControl.Position, () => DaggerfallActorRoster.NearbyCreatures(State.Actors, authored), InSunlight, _itemCondition, InHolyPlace,
-                amount => _vitality.ResolveHeldEnchantmentDamage(State.Actors.Player.Actor, amount));
-            State.HeldEnchantments = _heldEnchantments;
+            npcs.Identities = _actorIdentities;
             // Poisons are active effects, so restoring them is the effect lifecycle's own restore: this
             // owner reads, starts and cures them and keeps no state of its own to carry.
-            _poisons = new DaggerfallPoisonRuntime(State.Effects, PoisonRoll, () => State.Character.Career);
-            State.Poisons = _poisons;
-            State.Encumbrance = new DaggerfallEncumbrancePolicy(State.Inventory, State.Actors.Player.Stats,
+            _poisons = new DaggerfallPoisonRuntime(effects, PoisonRoll, () => character.Career);
+            DaggerfallEncumbrancePolicy encumbrance = new(inventory, playerStats,
                 () => _heldEnchantments.CarryMultiplier);
             // A new game wears its loadout now; a restore refreshes once, after its equipment is restored.
             if (restore is null) _heldEnchantments.Refresh();
-            State.Currency = new DaggerfallCurrencyService(definitions, State.Inventory, State.ItemInstances, State.Encumbrance, _uniqueItems, saved?.Currency);
-            State.Bank = new DaggerfallRegionalBankState(State.Currency, State.Inventory, State.ItemInstances, saved?.Bank);
-            State.Loans = new DaggerfallLoanState(saved?.Loans);
-            State.Property = new DaggerfallPropertyState(tuning.Property, saved?.Property);
-            InitializePropertyStorage(saved?.Property);
-            State.Crime = new DaggerfallCrimeState(saved?.Crime);
-            State.Services = new DaggerfallServiceTransactions(State.Npcs, State.Social, State.Inventory, State.ItemInstances,
-                State.Currency, _uniqueItems, () => _time.Calendar, () => _site.ActiveSite is { } active
+            DaggerfallCurrencyService currency = new(definitions, inventory, itemInstances, encumbrance, _uniqueItems, saved?.Currency);
+            DaggerfallRegionalBankState bank = new(currency, inventory, itemInstances, saved?.Bank);
+            DaggerfallLoanState loans = new(saved?.Loans);
+            DaggerfallPropertyState property = new(tuning.Property, saved?.Property);
+            _propertyStorage = new DaggerfallPropertyStorage(containers, itemInstances, definitions, _actorIdentities, property, playerEntity);
+            if (saved?.Property is { } savedProperty) _propertyStorage.Restore(savedProperty);
+            DaggerfallCrimeState crime = new(saved?.Crime);
+            DaggerfallServiceTransactions services = new(npcs, social, inventory, itemInstances,
+                currency, _uniqueItems, () => _time.Calendar, () => _site.ActiveSite is { } active
                     ? new DaggerfallNpcSite(active.Id.Region, active.Name, string.Empty)
                     : null, saved?.Services);
-            State.ConcreteGuildServices = new DaggerfallConcreteGuildServiceRuntime(
-                State.GuildMembership, State.Npcs, State.Services);
-            State.KnightlyClaims = new DaggerfallKnightlyOrderClaimState(saved?.KnightlyClaims);
-            State.KnightlyClaimActions = new DaggerfallKnightlyOrderClaimRuntime(
-                State.ConcreteGuildServices, State.KnightlyClaims, _random);
-            State.SkillTraining = new DaggerfallSkillTrainingService(State.Services, State.Npcs, State.Social,
-                State.Progression, State.SkillUses, State.QuestTraining, State.Actors.Player.Stats,
+            DaggerfallConcreteGuildServiceRuntime concreteGuildServices = new(guildMembership, npcs, services);
+            DaggerfallKnightlyOrderClaimState knightlyClaims = new(saved?.KnightlyClaims);
+            DaggerfallKnightlyOrderClaimRuntime knightlyClaimActions = new(concreteGuildServices, knightlyClaims, _random);
+            DaggerfallSkillTrainingService skillTraining = new(services, npcs, social,
+                progression, skillUses, assembled.QuestTraining, playerStats,
                 tuning.Locomotion, () => _time.Calendar, seconds => { _ = AdvanceElapsedTime(seconds); });
-            State.RegionalPrices = new DaggerfallRegionalPriceState(definitions.Factions, _random,
+            DaggerfallRegionalPriceState regionalPrices = new(definitions.Factions, _random,
                 _time.Calendar.DayNumber, saved?.RegionalPrices);
-            State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
-            State.TradeQuotes = new DaggerfallTradeQuoteService(definitions, new DaggerfallItemValuation(definitions),
-                State.RegionalPrices);
-            State.Transport = new DaggerfallTransportPolicy(tuning.Transport);
-            State.Wagon = new DaggerfallWagonStorage(State.Containers, State.ItemInstances, definitions,
+            regionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
+            DaggerfallTradeQuoteService tradeQuotes = new(definitions, new DaggerfallItemValuation(definitions), regionalPrices);
+            DaggerfallTransportPolicy transport = new(tuning.Transport);
+            DaggerfallWagonStorage wagon = new(containers, itemInstances, definitions,
                 playerEntity, _actorIdentities, tuning.Transport);
+            State = new DaggerfallState(
+                assembled,
+                kit: kit,
+                effects: effects,
+                skillUses: skillUses,
+                levelUps: levelUps,
+                heldEnchantments: _heldEnchantments,
+                poisons: _poisons,
+                crime: crime,
+                guildMembership: guildMembership,
+                concreteGuildMembership: concreteGuildMembership,
+                concreteGuildServices: concreteGuildServices,
+                knightlyClaims: knightlyClaims,
+                knightlyClaimActions: knightlyClaimActions,
+                encumbrance: encumbrance,
+                currency: currency,
+                bank: bank,
+                loans: loans,
+                property: property,
+                services: services,
+                skillTraining: skillTraining,
+                regionalPrices: regionalPrices,
+                tradeQuotes: tradeQuotes,
+                transport: transport,
+                wagon: wagon,
+                dungeonDiscoveries: dungeonDiscoveries,
+                dungeonActions: dungeonActions);
             _corpseLoot = new DaggerfallCorpseLootModule(
                 engine.Perception,
                 _spatial,
