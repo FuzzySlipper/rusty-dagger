@@ -479,7 +479,7 @@ internal sealed record DaggerfallSavePayload(
             .. SiteDeltas.SelectMany(delta => delta.Actors).Select(actor => (actor.EntityId, actor.Stats)),
             .. SiteDeltas.SelectMany(delta => delta.DynamicActors).Select(actor => (actor.EntityId, actor.Stats)),
         ],
-        allEffects);
+        allEffects, Inventory, definitions.Magic);
         IReadOnlySet<long> tombstonedActors = savedLedger.RemovedIdentities(DurableIdentityKind.Actor)
             .Select(value => checked((long)value))
             .ToHashSet();
@@ -727,6 +727,9 @@ internal sealed record DaggerfallSavePayload(
         {
             if (!unique.TryGetValue(group.Key, out DaggerfallItemDefinition? item) || item.Equipment is null)
                 throw new ArgumentException($"Saved {owner} equipment refers to unknown unique item {group.Key}.");
+            DaggerfallItemMetadataSave metadata = inventory.UniqueItems.Single(value => value.EntityId == group.Key).Metadata;
+            if (metadata.MaximumCondition > 0 && metadata.CurrentCondition == 0)
+                throw new ArgumentException($"Saved equipment refers to broken unique item {group.Key}.");
             foreach (DaggerfallEquipmentSave equipped in group)
             {
                 if (!definitions.EquipmentSlots.TryGetValue(new DaggerfallEquipmentSlotId(equipped.SlotId), out DaggerfallEquipmentSlotDefinition? slot)
@@ -790,10 +793,12 @@ internal sealed record DaggerfallSavePayload(
         return restored;
     }
 
-    /// <summary>Every effect-backed stat source must have the active instance that owns its eventual cleanup.</summary>
+    /// <summary>Every effect-backed stat source must have the active effect or equipped item that owns its cleanup.</summary>
     private static void ValidateEffectSourceReferences(
         IEnumerable<(long ActorId, DaggerfallStatsSave Stats)> actors,
-        IEnumerable<DaggerfallActiveEffectSave> activeEffects)
+        IEnumerable<DaggerfallActiveEffectSave> activeEffects,
+        DaggerfallInventorySave playerInventory,
+        DaggerfallMagicCatalogSet magic)
     {
         HashSet<(string Instance, long Target)> active = activeEffects
             .Select(effect => (effect.Instance, effect.TargetId))
@@ -802,6 +807,8 @@ internal sealed record DaggerfallSavePayload(
         foreach (DaggerfallStatSourceSave source in stats.Sources)
         {
             if (source.Identity.Kind != DaggerfallStatSourceIdentityKind.Effect) continue;
+            if (actorId == DaggerfallActorIdentity.PlayerEntityId
+                && DaggerfallHeldEnchantments.OwnsSavedSource(source, playerInventory, magic)) continue;
             if (!active.Contains((source.Identity.InstanceId, actorId)))
                 throw new ArgumentException($"Saved effect source '{source.Identity.InstanceId}' on actor {actorId} has no matching active effect cleanup owner.");
         }
