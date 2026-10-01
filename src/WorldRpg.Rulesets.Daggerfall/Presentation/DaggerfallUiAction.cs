@@ -8,7 +8,7 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
     string? Name = null, string? Race = null, string? Gender = null, int? FaceIndex = null, int? Reflexes = null, string? Career = null, string? Mode = null,
     string? PrimarySkills = null, string? MajorSkills = null, string? MinorSkills = null, string? Advantages = null, string? Disadvantages = null, int? HitPointsPerLevel = null,
     string? Attribute = null, string? BackgroundAnswers = null, string? AttributeAllocations = null, string? SkillAllocations = null, ulong? Amount = null,
-    string? QuestInstance = null, int? QuestMessage = null, int? QuestChoice = null, string? QuestPrompt = null,
+    string? QuestInstance = null, int? QuestMessage = null, int? QuestChoice = null, string? QuestPrompt = null, string? QuestDelivery = null,
     string? Note = null, string? Text = null, int? Page = null, int? Destination = null,
     string? Tone = null, string? Topic = null, int? Hours = null, int? Region = null,
     bool Cautious = false, bool Inn = false, bool Ship = false, bool Open = false)
@@ -30,7 +30,7 @@ internal enum DaggerfallUiActionKind
     TravelSearch, TravelPreview,
     Rest,
     WagonPut, WagonTake,
-    QuestChoice,
+    QuestChoice, QuestDismiss,
     DungeonTextAnswer, DungeonTextClose,
     InventoryMove, InventoryInspect, InventoryUse, InventoryDrop,
     NotebookPage, NotebookAdd, NotebookEdit, NotebookRemove, NotebookMove,
@@ -172,6 +172,7 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.WagonTake, "wagon-take", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.QuestChoice, "quest-choice", DaggerfallUiPhases.Interaction,
             "Quest choice rejected: this prompt is no longer pending or the choice is invalid."),
+        new(DaggerfallUiActionKind.QuestDismiss, "quest-dismiss", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.DungeonTextAnswer, "dungeon-text-answer", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.DungeonTextClose, "dungeon-text-close", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.InventoryMove, "inventory-move", DaggerfallUiPhases.Interaction),
@@ -226,7 +227,7 @@ internal static class DaggerfallUiAction
             JsonElement root = document.RootElement;
             if (root.ValueKind != JsonValueKind.Object) return null;
             HashSet<string> fields = new(StringComparer.Ordinal);
-            string? action = null, revision = null, item = null, targetEquipment = null, container = null, key = null, label = null, name = null, race = null, gender = null, career = null, mode = null, primarySkills = null, majorSkills = null, minorSkills = null, advantages = null, disadvantages = null, attribute = null, backgroundAnswers = null, attributeAllocations = null, skillAllocations = null, questInstance = null, questPrompt = null, note = null, text = null, tone = null, topic = null;
+            string? action = null, revision = null, item = null, targetEquipment = null, container = null, key = null, label = null, name = null, race = null, gender = null, career = null, mode = null, primarySkills = null, majorSkills = null, minorSkills = null, advantages = null, disadvantages = null, attribute = null, backgroundAnswers = null, attributeAllocations = null, skillAllocations = null, questInstance = null, questPrompt = null, questDelivery = null, note = null, text = null, tone = null, topic = null;
             int? targetGrid = null, faceIndex = null, reflexes = null, hitPointsPerLevel = null, questMessage = null, page = null, destination = null, hours = null, region = null;
             ulong? amount = null;
             bool confirm = false, cautious = false, inn = false, ship = false, open = false;
@@ -297,6 +298,7 @@ internal static class DaggerfallUiAction
                     case "skillAllocations": skillAllocations = value; break;
                     case "questInstance": questInstance = value; break;
                     case "questPrompt": questPrompt = value; break;
+                    case "questDelivery": questDelivery = value; break;
                     case "note": note = value; break;
                     case "text": text = value; break;
                     case "tone": tone = value; break;
@@ -465,6 +467,10 @@ internal static class DaggerfallUiAction
                 return fields.SetEquals(["action", "questInstance", "questMessage", "questPrompt", "questChoice"])
                     && !string.IsNullOrWhiteSpace(questInstance) && !string.IsNullOrWhiteSpace(questPrompt) && questMessage is > 0 && questChoice is not null
                     ? new(action, QuestInstance: questInstance, QuestMessage: questMessage, QuestChoice: questChoice, QuestPrompt: questPrompt) : null;
+            if (action == "quest-dismiss")
+                return fields.SetEquals(["action", "questInstance", "questDelivery"])
+                    && !string.IsNullOrWhiteSpace(questInstance) && !string.IsNullOrWhiteSpace(questDelivery)
+                    ? new(action, QuestInstance: questInstance, QuestDelivery: questDelivery) : null;
             // "begin" is the entry screen's own action, which the product answers: the session accepts the
             // shape so a slice carrying it is a known action it does not act on, rather than an
             // unrecognized one it reports over the screen that asked.

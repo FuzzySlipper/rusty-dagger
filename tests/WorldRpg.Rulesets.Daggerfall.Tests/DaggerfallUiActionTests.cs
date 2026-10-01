@@ -141,6 +141,14 @@ public sealed class DaggerfallUiActionTests
         Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
 
     [Theory]
+    [InlineData("{\"action\":\"quest-dismiss\",\"questInstance\":\"quest:1\",\"questDelivery\":\"quest-message:2\"}", true)]
+    [InlineData("{\"action\":\"quest-dismiss\",\"questInstance\":\"quest:1\"}", false)]
+    [InlineData("{\"action\":\"quest-dismiss\",\"questInstance\":\"quest:1\",\"questDelivery\":\" \"}", false)]
+    [InlineData("{\"action\":\"quest-dismiss\",\"questInstance\":\"quest:1\",\"questDelivery\":\"quest-message:2\",\"text\":\"Same text\"}", false)]
+    public void Quest_dismissal_names_a_delivery_instead_of_its_rendered_text(string json, bool accepted) =>
+        Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
+
+    [Theory]
     [InlineData("{\"action\":\"dialogue-tone\",\"revision\":\"3\",\"tone\":\"polite\"}", true)]
     [InlineData("{\"action\":\"dialogue-tone\",\"revision\":\"3\",\"tone\":\"shout\"}", false)]
     [InlineData("{\"action\":\"dialogue-tone\",\"tone\":\"polite\"}", false)]

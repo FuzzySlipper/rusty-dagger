@@ -142,6 +142,9 @@ internal sealed class DaggerfallBookNotebook(DaggerfallDefinitions definitions, 
         Add(id, text);
     }
 
+    /// <summary>A compiled quest action appends one ordinary durable personal note.</summary>
+    internal void AddQuestNote(string id, string text) => Add(id, text);
+
     private void Add(string id, string text)
     {
         if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(text)) throw new ArgumentException("A note needs an identity and text.");

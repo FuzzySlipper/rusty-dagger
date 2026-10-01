@@ -319,6 +319,21 @@ test('view is cleared when the product no longer supplies it', () => {
   } finally { f.dispose(); }
 });
 
+test('quest messages dismiss by durable entry identity even when their text is identical', () => {
+  const f = fixture();
+  try {
+    const message = { instance: 'quest:1', message: 10, delivery: 'popup', text: 'Same text.', signoff: null,
+      diagnostics: [], promptId: null, options: [], entryId: 'quest-message:1' };
+    f.publish({ quests: { deliveries: [message, { ...message, entryId: 'quest-message:2' }], journal: [], pending: null } });
+    const buttons = f.root.querySelectorAll('.dagger-quest-popup button');
+    assert.equal(buttons.length, 2);
+    buttons[1].click();
+    assert.deepEqual(f.actions.at(-1), { action: 'quest-dismiss', questInstance: 'quest:1', questDelivery: 'quest-message:2' });
+    f.publish({ quests: { deliveries: [message], journal: [], pending: null } });
+    assert.equal(f.root.querySelectorAll('.dagger-quest-popup').length, 1);
+  } finally { f.dispose(); }
+});
+
 test('a projected quest prompt renders once and returns the selected semantic choice', () => {
   const f = fixture();
   try {

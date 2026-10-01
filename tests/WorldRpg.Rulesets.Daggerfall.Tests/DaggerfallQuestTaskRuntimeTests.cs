@@ -12,7 +12,7 @@ using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
-public sealed class DaggerfallQuestTaskRuntimeTests
+public sealed partial class DaggerfallQuestTaskRuntimeTests
 {
     [Fact]
     public void Session_save_restores_pending_end_and_uses_its_bound_text_context_for_finished_journal()
@@ -788,7 +788,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         Assert.Equal(DaggerfallCalendar.Start.Advance(3 * 60 * 60, out _), calendar);
         Assert.True(Assert.Single(instances.All).Succeeded);
         Assert.NotNull(training.LastSkillTrainingSecond);
-        if (hasRewardMessage) Assert.Equal(new DaggerfallQuestMessageDeliverySave("training", 1004, DaggerfallQuestMessageDelivery.Popup), Assert.Single(instances.Messages.Deliveries));
+        if (hasRewardMessage) Assert.Equal(new DaggerfallQuestMessageDeliverySave("training", 1004, DaggerfallQuestMessageDelivery.Popup) { Id = 1 }, Assert.Single(instances.Messages.Deliveries));
         else Assert.Empty(instances.Messages.Deliveries);
     }
 
@@ -985,6 +985,7 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         public bool IsAttributeAtLeast(string attribute, int minimum) => false;
         public bool IsSkillAtLeast(string skill, int minimum) => false;
         public void Train(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) { }
+        public void JournalNote(DaggerfallQuestRuntimeInstance instance, int messageId, string task, int operationIndex) => throw new InvalidOperationException("This fixture has no notebook owner.");
         public string Pick(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation, int operationIndex, DaggerfallQuestTaskRuntimeState state)
         {
             string selected = pick ?? operation.Targets[0];

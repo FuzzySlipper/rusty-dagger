@@ -80,3 +80,12 @@ source/message reference and bound text values, so they remain readable after
 the runtime tombstone expires. Runtime deliveries and choice history retire with
 the instance. The journal shares the ordinary text resolver and DOM projection;
 it does not become a user note or retain the quest's actor/resource graph.
+
+`log` writes ordered journal entries identified by quest instance and step.
+Replacing a step moves it to its latest write position; `remove log step` removes
+that identity without comparing rendered text. Saves retain this order.
+`journal note` resolves text into the existing personal notebook. It and `say`
+complete once per source action, including across task rearming and saves.
+`say` accepts numeric messages and the published static-message names. Popup and
+letter deliveries have durable IDs for dismissal; dismissed messages remain
+dismissed after reload, while prompts continue through their answer action.

@@ -368,6 +368,7 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
     private DaggerfallQuestRuntime? _runtime;
     private Func<DaggerfallSiteId, long>? _travelMinutes;
     private Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestMessageContext> _textContext = _ => DaggerfallQuestMessageContext.Empty;
+    private Action<string, string>? _appendNote;
     private const long TombstoneRetentionSeconds = 7 * 24 * 60 * 60;
 
     internal DaggerfallQuestInstances(DaggerfallDefinitions definitions, IRandomService random, DaggerfallQuestRuntimeAdmission? admission = null, DaggerfallDisabledQuestSelection? disabledSelection = null)
@@ -389,6 +390,8 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
     internal void BindRuntime(DaggerfallQuestRuntime runtime) => _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
     internal void BindTextContext(Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestMessageContext> context) =>
         _textContext = context ?? throw new ArgumentNullException(nameof(context));
+
+    internal void BindNotebook(Action<string, string> appendNote) => _appendNote = appendNote ?? throw new ArgumentNullException(nameof(appendNote));
 
     /// <summary>Uses the session's one route calculator for travel-derived quest deadlines.</summary>
     internal void BindTravelMinutes(Func<DaggerfallSiteId, long> travelMinutes)
@@ -665,6 +668,12 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
     bool IDaggerfallQuestTaskLifecycle.IsAttributeAtLeast(string attribute, int minimum) => Runtime.IsAttributeAtLeast(attribute, minimum);
     bool IDaggerfallQuestTaskLifecycle.IsSkillAtLeast(string skill, int minimum) => Runtime.IsSkillAtLeast(skill, minimum);
     void IDaggerfallQuestTaskLifecycle.Train(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => Runtime.Train(instance, operation);
+    void IDaggerfallQuestTaskLifecycle.JournalNote(DaggerfallQuestRuntimeInstance instance, int messageId, string task, int operationIndex)
+    {
+        var append = _appendNote ?? throw new InvalidOperationException("Quest journal notes require the session notebook owner.");
+        append($"quest-note/{Uri.EscapeDataString(instance.InstanceId)}/{Uri.EscapeDataString(task)}/{operationIndex}",
+            Messages.NoteText(instance, messageId, _textContext(instance)));
+    }
 
     void IDaggerfallQuestTaskLifecycle.Schedule(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) =>
         ScheduleStart(ResolveSource(operation.Targets.Single()), null, instance.FactionId,

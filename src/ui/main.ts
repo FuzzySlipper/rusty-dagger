@@ -79,6 +79,7 @@ interface DialogueProjection {
 }
 
 interface QuestMessageProjection {
+  readonly entryId: string | null;
   readonly promptId: string | null;
   readonly options: readonly { readonly id: number; readonly label: string }[];
   readonly instance: string;
@@ -1196,6 +1197,13 @@ function renderQuestMessages(root: HTMLElement, value: QuestPresentation | undef
     const text = document.createElement('p');
     text.textContent = message.text;
     article.append(title, text);
+    if (message.entryId && (message.delivery === 'popup' || message.delivery === 'letter')) {
+      const dismiss = document.createElement('button');
+      dismiss.type = 'button'; dismiss.textContent = 'Dismiss';
+      dismiss.addEventListener('click', () => claim({ action: 'quest-dismiss', questInstance: message.instance,
+        questDelivery: message.entryId ?? undefined }));
+      article.append(dismiss);
+    }
     if (message.signoff) {
       const signoff = document.createElement('p');
       signoff.textContent = message.signoff;
