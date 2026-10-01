@@ -266,6 +266,10 @@ public sealed class EnemyCombatSessionTests
         presentation.React(new EnemyAttackStartedFact(11, 12, true, 3, 4));
         presentation.Advance(OuterUpdate(1));
 
+        Assert.Empty(audio.Emits);
+        AttackHitFact applied = new(11, 12, 3, 3, 0, true, 3, 4);
+        presentation.React(applied);
+        presentation.React(applied);
         Assert.Single(audio.Emits);
         AttackImpactNotice impact = Assert.Single(presentation.TakeAttackImpacts());
         Assert.False(impact.Expired);
@@ -292,7 +296,8 @@ public sealed class EnemyCombatSessionTests
     public void An_enemy_that_loses_reach_before_the_damage_frame_cancels_its_swing()
     {
         List<string> releases = [];
-        (DaggerfallSession session, AppearanceFake appearance, PerceptionFake perception) = VisibleEnemySession(releases);
+        EngineContextFake engine = null!;
+        (DaggerfallSession session, AppearanceFake appearance, PerceptionFake perception) = VisibleEnemySession(releases, engineCreated: created => engine = created);
         using DaggerfallSession disposable = session;
         long healthBefore = PlayerHealth(session);
         session.Update(new ProductUpdate(OuterUpdate(1), []));
@@ -305,6 +310,7 @@ public sealed class EnemyCombatSessionTests
 
         Assert.Equal(EnemyBehaviorState.Chase, session.LastEnemyBehavior[2000].State);
         Assert.Equal(healthBefore, PlayerHealth(session));
+        Assert.DoesNotContain(engine.EmittedAudio, cue => cue.SignalId.Split('.').Last().StartsWith("hit", StringComparison.Ordinal));
     }
 
     [Fact]

@@ -66,7 +66,12 @@ public sealed record DungeonActorMediaManifest(
     NormalizedVector2 SourceWorldSize,
     IReadOnlyList<DungeonActorSpriteStateLayout> States,
     DungeonActorCorpseMediaManifest? Corpse,
-    string MediaId);
+    string MediaId)
+{
+    public DungeonActorFeedback? Feedback { get; init; }
+}
+
+public sealed record DungeonActorFeedback(int MobileId, string MoveCue, string BarkCue, string AttackCue, bool ParrySounds, int BloodIndex);
 
 /// <summary>
 /// The canonical typed sidecar for selected classic Daggerfall media. It owns
@@ -221,6 +226,13 @@ public sealed record Arena2MediaBundlePublication(
             IReadOnlyDictionary<string, NormalizedMediaDescriptor> classicMedia = ValidatePersistedMedia(classic.Media, "classic");
             ValidatePersistedDungeonSidecar(dungeon, dungeonMedia);
             ValidatePersistedClassicSidecar(classic, classicMedia);
+            foreach (DungeonActorMediaManifest actor in dungeon.Actors)
+            {
+                DungeonActorFeedback expected = FeedbackFor(new Arena2MobileId(actor.MobileId));
+                if (actor.Feedback != expected) throw new InvalidOperationException($"Mobile '{actor.MobileId}' feedback disagrees with its normalized source metadata.");
+                foreach (string cue in new[] { expected.MoveCue, expected.BarkCue, expected.AttackCue })
+                    if (!classic.Audio.Any(clip => clip.Clip == cue)) throw new InvalidOperationException($"Mobile '{actor.MobileId}' feedback clip '{cue}' is not admitted.");
+            }
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or NullReferenceException)
         {
@@ -681,7 +693,7 @@ public sealed record Arena2MediaBundlePublication(
                         media.Corpse.SourceWorldSize,
                         media.Corpse.Frame,
                         media.Corpse.Descriptor.Id),
-                media.Descriptor.Id))
+                media.Descriptor.Id) { Feedback = FeedbackFor(media.MobileId) })
             .ToArray());
     }
 
@@ -704,6 +716,14 @@ public sealed record Arena2MediaBundlePublication(
         // Canonical order makes the sidecar's digest a fact about the cue set rather than the order the
         // catalogue happened to declare it in.
         publication.Music.OrderBy(cue => cue.MediaId, StringComparer.Ordinal).ToArray());
+
+    private static DungeonActorFeedback FeedbackFor(Arena2MobileId id)
+    {
+        if (!MobileSourceMetadata.TryGet(id, out var source))
+            throw new InvalidOperationException($"Mobile {id.Value} has no source feedback metadata.");
+        string Cue(string name) => $"sound.{DaggerfallSoundNames.ForName(name)}";
+        return new(id.Value, Cue(source.Links.MoveSoundCue), Cue(source.Links.BarkSoundCue), Cue(source.Links.AttackSoundCue), source.Links.ParrySounds, source.Links.BloodIndex);
+    }
 
     private static DungeonActorSpriteStateLayout CanonicalizeState(DungeonActorSpriteStateLayout state) => state with
     {

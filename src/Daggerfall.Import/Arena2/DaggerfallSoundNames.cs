@@ -181,7 +181,6 @@ public static class DaggerfallSoundNames
         [177] = "EnemyScorpionAttack",
         [178] = "EnemyOrcShamanMove",
         [179] = "EnemyOrcShamanBark",
-        [138] = "EnemyOrcShamanAttack",
         [181] = "EnemyGargoyleMove",
         [182] = "EnemyGargoyleBark",
         [180] = "EnemyGargoyleAttack",
@@ -389,6 +388,9 @@ public static class DaggerfallSoundNames
         [457] = "Halt2",
         [458] = "Groan",
     };
+
+    /// <summary>The numeric identity for a source symbol used by mobile and item metadata.</summary>
+    public static int ForName(string name) => name == "EnemyOrcShamanAttack" ? 138 : Names.Single(pair => pair.Value == name).Key;
 
     /// <summary>How many clips the donor names.</summary>
     public static int Count => Names.Count;

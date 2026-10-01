@@ -131,7 +131,8 @@ public sealed class PlayerAttackSessionTests
         facts.Deliver(emptySpace.Add);
 
         Assert.Equal(staminaBefore - 5, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
-        Assert.Equal(new PlayerAttackStartedFact(7, 13), Assert.Single(emptySpace.OfType<PlayerAttackStartedFact>()));
+        Assert.Equal(new PlayerAttackStartedFact(7, 13) { Feedback = new(true, "sound.347") },
+            Assert.Single(emptySpace.OfType<PlayerAttackStartedFact>()));
         Assert.Contains(new AttackRejectedFact(AttackRejection.NoTargetInReach), emptySpace);
         Assert.Equal(new AttackCooldown(DaggerfallActorIdentity.PlayerEntityId, 6), Assert.Single(combat.Execution.CaptureCooldowns(7, 13)));
 
@@ -144,7 +145,8 @@ public sealed class PlayerAttackSessionTests
         combat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 8, 20, .125), facts);
         List<IProductFact> materialImmune = [];
         facts.Deliver(materialImmune.Add);
-        Assert.Equal(new PlayerAttackStartedFact(8, 20), Assert.Single(materialImmune.OfType<PlayerAttackStartedFact>()));
+        Assert.Equal(new PlayerAttackStartedFact(8, 20) { Feedback = new(true, "sound.347") },
+            Assert.Single(materialImmune.OfType<PlayerAttackStartedFact>()));
         Assert.Contains(new AttackRejectedFact(AttackRejection.InsufficientWeaponMaterial), materialImmune);
         Assert.DoesNotContain(materialImmune, fact => fact is AttackHitFact or AttackMissedFact);
 

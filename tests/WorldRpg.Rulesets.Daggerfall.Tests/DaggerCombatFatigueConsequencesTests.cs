@@ -54,5 +54,7 @@ public sealed class DaggerCombatFatigueConsequencesTests
         new(2, DaggerfallActorIdentity.PlayerEntityId, 7, 13, .125d, Delayed: true);
 
     private static PreparedAttack Prepared() =>
-        new(.5d, new AttackOutcome(Hit: true, Allowed: true, Body: 0, Damage: 2, Roll: 1, Chance: 100));
+        new DaggerCombatRules.DaggerfallPreparedAttack(.5d,
+            new AttackOutcome(Hit: true, Allowed: true, Body: 0, Damage: 2, Roll: 1, Chance: 100),
+            DaggerfallStrikeFeedback.Unarmed);
 }

@@ -13,6 +13,7 @@ internal class EngineContextFake : DispatchProxy
         .Select(entry => $"{entry.Source}/{entry.Code}: {entry.Message}")
         .ToArray();
     /// <summary>The retained audio voices started so far, in order.</summary>
+    internal IReadOnlyList<AudioEmitRequest> EmittedAudio => ((AudioServiceFake)(object)audio).Emits;
     internal IReadOnlyList<string> StartedAudioVoices => ((AudioServiceFake)(object)audio).StartedVoices;
     /// <summary>How many of those voices the product released.</summary>
     internal int ReleasedAudioVoices => ((AudioServiceFake)(object)audio).ReleasedVoices;
@@ -135,6 +136,7 @@ internal class EngineContextFake : DispatchProxy
     private class AudioServiceFake : DispatchProxy
     {
         internal List<string> StartedVoices { get; } = [];
+        internal List<AudioEmitRequest> Emits { get; } = [];
         internal int ReleasedVoices { get; private set; }
         /// <summary>How many clips the product opened from content, which is how a cue really resolves.</summary>
         internal int OpenedContentClips { get; private set; }
@@ -143,10 +145,12 @@ internal class EngineContextFake : DispatchProxy
         {
             nameof(IAudioService.OpenClip) => OpenClip(),
             nameof(IAudioService.OpenClipFromContent) => OpenClipFromContent(),
-            nameof(IAudioService.Emit) => new AudioSignalHandle(1),
+            nameof(IAudioService.Emit) => Emit((AudioEmitRequest)arguments![0]!),
             nameof(IAudioService.CreateVoice) => CreateVoice(),
             _ => throw new NotSupportedException(method?.Name),
         };
+
+        private AudioSignalHandle Emit(AudioEmitRequest request) { Emits.Add(request); return new AudioSignalHandle(1); }
 
         private AudioClip OpenClip() => new(new AudioClipHandle(1), static () => { });
 

@@ -83,6 +83,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     private ulong nextVisualEntityId = (1UL << 53) - 1;
     private readonly HashSet<PresentationEventIdentity> deliveredEvents = [];
     private readonly HashSet<PresentationEventIdentity> appliedImpacts = [];
+    private readonly HashSet<(string Instance, DaggerfallEffectOutcomeKind Kind, ulong Generation, ulong Step)> effectFeedback = [];
     private readonly List<AttackImpactNotice> attackImpacts = [];
     private readonly List<SpriteAtlas> atlases = [];
     private SpriteAtlas? groundContainerAtlas;
@@ -411,7 +412,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
                 if (!StartWeaponStrike(swing, started.FrameSeconds, started.TargetId, started.HitFrame))
                     attackImpacts.Add(new AttackImpactNotice(DaggerfallActorIdentity.PlayerEntityId, started.TargetId ?? 0,
                         started.OriginatingGeneration, started.OriginatingSimulationStep, Expired: false));
-                Emit("swing", swing, 0);
+                Emit(started.Feedback.SwingCue, swing, 0);
                 deliveredEvents.Add(swing);
                 break;
             case EnemyAttackStartedFact started:
@@ -421,6 +422,11 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
                 PresentationEventIdentity startEvent = Event(started.AttackerId, started.TargetId, started.OriginatingGeneration, started.OriginatingSimulationStep, started.WillHit ? "hit" : "miss");
                 if (deliveredEvents.Contains(startEvent)) break;
                 deliveredEvents.Add(startEvent);
+                if (started.Feedback.SwingCue == "sound.3") EmitAtActor(started.Feedback.SwingCue, startEvent, started.AttackerId, actorState);
+                if (actors.TryGetValue(started.AttackerId, out ActorVisual? attackingVisual)
+                    && CanVoice(attackingVisual.Sprite.Feedback)
+                    && DrawCue(startEvent, "attack", 1, 100) <= audioTuning.AttackCueChancePercent)
+                    EmitAtActor(attackingVisual.Sprite.Feedback!.AttackCue, startEvent, started.AttackerId, actorState);
                 if (!StartAttack(started.AttackerId, started.TargetId, started.OriginatingGeneration, started.OriginatingSimulationStep, startEvent))
                     attackImpacts.Add(new AttackImpactNotice(started.AttackerId, started.TargetId, started.OriginatingGeneration, started.OriginatingSimulationStep, Expired: false));
                 break;
@@ -431,17 +437,19 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
                 if (hit.AttackerId == DaggerfallActorIdentity.PlayerEntityId && deliveredEvents.Add(hitEvent))
                     StartAttack(hit.AttackerId, hit.TargetId, hit.OriginatingGeneration, hit.OriginatingSimulationStep, hitEvent);
                 if (!appliedImpacts.Add(hitEvent)) break;
+                if (hit.ActualHealthLost <= 0) { EmitMiss(hit.Feedback, hitEvent, actorState); break; }
+                EmitAtActor(SelectHitCue(hitEvent, hit.Feedback.Weapon), hitEvent,
+                    hit.TargetId == DaggerfallActorIdentity.PlayerEntityId ? hit.AttackerId : hit.TargetId,
+                    actorState, pitch: audioTuning.ContactPitch);
                 StartState(hit.TargetId, "hurt", null);
                 if (hit.AttackerId == DaggerfallActorIdentity.PlayerEntityId && actorState is not null) SpawnBlood(hit, hitEvent, actorState);
                 break;
             case AttackMissedFact miss:
-                // An enemy miss was already presented at its swing; only the player's
-                // swing is started by its own resolved outcome.
-                if (miss.AttackerId != DaggerfallActorIdentity.PlayerEntityId) break;
                 PresentationEventIdentity missEvent = Event(miss.AttackerId, miss.TargetId, miss.OriginatingGeneration, miss.OriginatingSimulationStep, "miss");
-                if (deliveredEvents.Contains(missEvent)) break;
-                StartAttack(miss.AttackerId, miss.TargetId, miss.OriginatingGeneration, miss.OriginatingSimulationStep, missEvent);
-                deliveredEvents.Add(missEvent);
+                if (!appliedImpacts.Add(missEvent)) break;
+                EmitMiss(miss.Feedback, missEvent, actorState);
+                if (miss.AttackerId == DaggerfallActorIdentity.PlayerEntityId && deliveredEvents.Add(missEvent))
+                    StartAttack(miss.AttackerId, miss.TargetId, miss.OriginatingGeneration, miss.OriginatingSimulationStep, missEvent);
                 break;
             case ActorDiedFact died:
                 TransitionToCorpse(died.ActorId);
@@ -501,7 +509,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
                     if (crossingAttack.ImpactReported) continue;
                     if (crossingAttack.DamageMarkerId is not ulong damageMarker || crossing.MarkerId != damageMarker) continue;
                     visual.ActiveAttack = crossingAttack with { ImpactReported = true };
-                    if (crossingAttack.Identity.Outcome == "hit") Emit(crossingAttack.HitCue, crossingAttack.Identity, crossing.CrossingSequence);
+                    // The marker admits an impact; only an applied result can sound a hit.
                     attackImpacts.Add(new AttackImpactNotice(crossingAttack.Identity.Attacker, crossingAttack.Identity.Target, crossingAttack.Identity.Generation, crossingAttack.Identity.SimulationStep, Expired: false));
                 }
             }
@@ -705,15 +713,14 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
             stateName = "primaryAttack";
         }
         StartState(entityId, stateName, visual, selected);
-        string hitCue = SelectHitCue(presentationEvent);
         // The authored damage frame is the playback marker at its own source position: a source step
         // number is carried as a marker, and its identity is that step's place in the sequence.
         ulong? damageMarker = null;
         for (int index = 0; index < selected.SourceFrames.Count; index++)
             if (selected.SourceFrames[index] == -1) { damageMarker = checked((ulong)index + 1); break; }
-        visual.ActiveAttack = new ActiveAttackPresentation(presentationEvent, hitCue, damageMarker);
+        visual.ActiveAttack = new ActiveAttackPresentation(presentationEvent, damageMarker);
         bool hasDamageFrame = damageMarker is not null;
-        if (presentationEvent.Outcome == "hit" && !hasDamageFrame) Emit(hitCue, presentationEvent, 0);
+
         return hasDamageFrame;
     }
 
@@ -745,13 +752,8 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     {
         if (!actors.TryGet(hit.TargetId, out ActorState? target)) return;
         WorldPoint position = target.Position;
-        string[] names = ["blood0", "blood1", "blood2"];
-        int ordinal = random is null ? 0 : checked((int)random.DrawKeyed(new KeyedRngRequest(
-            CombatRandomKey.Seed,
-            "daggerfall.media.blood-effect.v1",
-            CombatRandomKey.For(identity.Generation, identity.SimulationStep, identity.Attacker, identity.Target, 43),
-            0,
-            names.Length - 1)).Value);
+        int blood = this.actors.TryGetValue(hit.TargetId, out var visual) ? visual.Sprite.Feedback?.BloodIndex ?? 0 : 0;
+        string name = $"blood{blood}";
         // Classic media belongs to presentation policy; the combat fact already
         // owns applied damage. A retry is stopped by deliveredEvents above.
         // These resources are reconstructed from the admitted normalized pack.
@@ -761,7 +763,19 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         //
         // The selected resource is resolved through the stored normalized input
         // at construction-time via the effect catalog injected below.
-        SpawnEffect(names[ordinal], position, identity);
+        SpawnEffect(name, position, identity);
+    }
+
+    /// <summary>Completed compiled effect meaning uses the same admitted effect projection; restore emits no outcome.</summary>
+    internal void ReactEffectOutcome(DaggerfallEffectOutcome outcome, ActorsState actors, WorldPoint? player,
+        ulong generation, ulong step)
+    {
+        if (disposed || outcome.Feedback != DaggerfallEffectFeedback.MagicSparkle
+            || outcome.Kind is not (DaggerfallEffectOutcomeKind.Started or DaggerfallEffectOutcomeKind.Refreshed or DaggerfallEffectOutcomeKind.Replaced)) return;
+        WorldPoint? position = outcome.TargetId == DaggerfallActorIdentity.PlayerEntityId ? player
+            : actors.TryGet(outcome.TargetId, out ActorState target) ? target.Position : null;
+        if (position is not WorldPoint targetPosition || !effectFeedback.Add((outcome.Instance, outcome.Kind, generation, step))) return;
+        SpawnEffect("magicSparkle", targetPosition, Event(0, outcome.TargetId, generation, step, "effect"));
     }
 
     private void SpawnEffect(string name, WorldPoint position, PresentationEventIdentity identity)
@@ -904,12 +918,55 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         return sequences[0];
     }
 
-    private string SelectHitCue(PresentationEventIdentity identity)
+    private int DrawCue(PresentationEventIdentity identity, string purpose, int minimum, int maximum) =>
+        random is null ? minimum : checked((int)random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed,
+            $"daggerfall.media.{purpose}.v1", CombatRandomKey.For(identity.Generation, identity.SimulationStep,
+                identity.Attacker, identity.Target, CombatRandomKey.MediaHitCueSalt), minimum, maximum)).Value);
+
+    private string SelectHitCue(PresentationEventIdentity identity, bool weapon)
     {
-        if (hitCues.Count == 0 || random is null) return hitCues.FirstOrDefault() ?? string.Empty;
-        int ordinal = checked((int)random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, CombatRandomKey.MediaHitCueScope, CombatRandomKey.For(identity.Generation, identity.SimulationStep, identity.Attacker, identity.Target, CombatRandomKey.MediaHitCueSalt), 1, hitCues.Count)).Value);
-        return hitCues[ordinal - 1];
+        IReadOnlyList<string> family = weapon ? hitCues : hitCues.Where(cue => cue is "hit3" or "hit4").ToArray();
+        return family.Count == 0 ? string.Empty : family[DrawCue(identity, "hit-cue", 1, family.Count) - 1];
     }
+
+    private void EmitMiss(DaggerfallStrikeFeedback feedback, PresentationEventIdentity identity, ActorsState? state)
+    {
+        bool parry = feedback.Weapon && (identity.Attacker == DaggerfallActorIdentity.PlayerEntityId || feedback.SwingCue == "sound.3")
+            && actors.TryGetValue(identity.Target, out ActorVisual? target)
+            && target.Sprite.Feedback is { ParrySounds: true };
+        string cue = parry ? $"sound.{428 + DrawCue(identity, "parry", 0, 8)}" : feedback.SwingCue;
+        EmitAtActor(cue, identity, parry ? identity.Target : identity.Attacker, state,
+            pitch: parry ? audioTuning.ContactPitch : null);
+    }
+
+    private bool CanVoice(DaggerfallActorFeedback? feedback) => feedback is not null
+        && (!audioTuning.MuteHumanSounds || feedback.MobileId < 128 || feedback.MobileId == 146);
+
+    /// <summary>Source attract policy advances only by Engine-admitted time; Engine owns spatial audio.</summary>
+    internal void AdvanceMobileFeedback(ProductUpdateFacts update, ActorsState state, WorldPoint? player,
+        Func<WorldPoint, WorldPoint, bool> blockedByCover)
+    {
+        if (disposed || update.AdmittedStepCount == 0) return;
+        AppearanceOuterUpdate outer = new(update.Generation, update.ControlRevision, update.SimulationStep, update.AdmittedStepCount);
+        foreach (ActorState actor in state.All)
+        {
+            if (!actors.TryGetValue(actor.DurableId, out ActorVisual? visual) || actor.IsDefeated
+                || !CanVoice(visual.Sprite.Feedback) || visual.LastFeedbackUpdate == outer) continue;
+            visual.LastFeedbackUpdate = outer;
+            PresentationEventIdentity identity = Event(actor.DurableId, DaggerfallActorIdentity.PlayerEntityId, update.Generation, update.SimulationStep, "attract");
+            visual.AttractRemainingSeconds ??= DrawCue(identity, "attract-delay", audioTuning.AttractMinimumDelaySeconds, audioTuning.AttractMaximumDelaySeconds);
+            visual.AttractRemainingSeconds -= update.FixedDeltaSeconds * update.AdmittedStepCount;
+            if (visual.AttractRemainingSeconds >= 0 || player is not WorldPoint viewpoint
+                || Vector3.Distance(actor.Position.ToVector(), viewpoint.ToVector()) >= audioTuning.AttractRadius) continue;
+            DaggerfallActorFeedback feedback = visual.Sprite.Feedback!;
+            string cue = DrawCue(identity, "attract-choice", 1, 100) <= audioTuning.AttractMoveChancePercent ? feedback.MoveCue : feedback.BarkCue;
+            Emit(cue, identity, 0, actor.Position, blockedByCover(actor.Position, viewpoint) ? audioTuning.OccludedVolumeScale : 1F);
+            visual.AttractRemainingSeconds = DrawCue(identity, "attract-delay", audioTuning.AttractMinimumDelaySeconds, audioTuning.AttractMaximumDelaySeconds);
+        }
+    }
+
+    private void EmitAtActor(string cue, PresentationEventIdentity identity, long actorId, ActorsState? state, float? pitch = null)
+        => Emit(cue, identity, 0, state is not null && state.TryGet(actorId, out ActorState actor) ? actor.Position : null, pitch: pitch);
 
     private void StartState(long entityId, string stateName, NormalizedAttackSequence? attack)
     {
@@ -938,6 +995,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         SpritePlayback? previous = visual.Playback;
         visual.Playback = staged;
         visual.State = stateName;
+        visual.ActiveAttack = null;
         visual.CompletedOuterUpdate = false;
         visual.LastMarkerCrossing = 0;
         visual.LastPlaybackFrameIndex = 0;
@@ -988,9 +1046,9 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
 
     private static PresentationEventIdentity Event(long attacker, long target, ulong generation, ulong simulationStep, string outcome) => new(generation, simulationStep, attacker, target, outcome);
 
-    private void Emit(string clipId, PresentationEventIdentity identity, ulong marker)
+    private void Emit(string clipId, PresentationEventIdentity identity, ulong marker, WorldPoint? position = null, float volumeScale = 1F, float? pitch = null)
     {
-        if (audio is null) return;
+        if (audio is null || string.IsNullOrEmpty(clipId)) return;
         if (!audioClips.TryGetValue(clipId, out AudioClip? clip))
         {
             if (audioBundle is null) return;
@@ -998,7 +1056,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
             audioClips.Add(clipId, clip);
         }
         string signalId = $"daggerfall.media.{identity.Generation}.{identity.SimulationStep}.{identity.Attacker}.{identity.Target}.{identity.Outcome}.{marker}.{clipId}";
-        audio.Emit(new AudioEmitRequest(signalId, new AudioSourceDescriptor(clip, AudioBus.Sfx, audioTuning.Volume, audioTuning.Pitch, false, audioTuning.SpatialBlend, audioTuning.Attenuation, 0F, AudioEmitterKind.Global2d, Vector3.Zero, 0, Vector3.Zero)));
+        audio.Emit(new AudioEmitRequest(signalId, new AudioSourceDescriptor(clip, AudioBus.Sfx, audioTuning.Volume * volumeScale, pitch ?? audioTuning.Pitch, false, position is null ? audioTuning.SpatialBlend : 1F, audioTuning.Attenuation, 0F, position is null ? AudioEmitterKind.Global2d : AudioEmitterKind.World3d, position?.ToVector() ?? Vector3.Zero, 0, Vector3.Zero)));
     }
 
     internal sealed class ActorVisual(long entityId, NormalizedActorSprite sprite, SpriteAtlas atlas, Appearance live, SpriteAtlas? corpseAtlas, Appearance? corpse)
@@ -1020,6 +1078,8 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         internal int Orientation { get; set; }
         internal ActiveAttackPresentation? ActiveAttack { get; set; }
         internal AppearanceOuterUpdate? LastOuterUpdate { get; set; }
+        internal AppearanceOuterUpdate? LastFeedbackUpdate { get; set; }
+        internal double? AttractRemainingSeconds { get; set; }
         internal void Dispose(ref List<Exception>? failures)
         {
             if (Playback is { } playback) DaggerfallSiteAppearance.Dispose(playback, ref failures);
@@ -1093,5 +1153,5 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
 
     internal readonly record struct PresentationEventIdentity(ulong Generation, ulong SimulationStep, long Attacker, long Target, string Outcome);
     internal readonly record struct AppearanceOuterUpdate(ulong Generation, ulong ControlRevision, ulong SimulationStep, uint AdmittedStepCount);
-    internal readonly record struct ActiveAttackPresentation(PresentationEventIdentity Identity, string HitCue, ulong? DamageMarkerId = null, bool ImpactReported = false);
+    internal readonly record struct ActiveAttackPresentation(PresentationEventIdentity Identity, ulong? DamageMarkerId = null, bool ImpactReported = false);
 }

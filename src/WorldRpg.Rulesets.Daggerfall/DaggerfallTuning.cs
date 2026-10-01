@@ -178,7 +178,17 @@ internal sealed record DaggerfallTuning(
                 presentationAudio.GetProperty("volume").GetSingle(),
                 presentationAudio.GetProperty("pitch").GetSingle(),
                 presentationAudio.GetProperty("spatialBlend").GetSingle(),
-                presentationAudio.GetProperty("attenuation").GetSingle()),
+                presentationAudio.GetProperty("attenuation").GetSingle())
+            {
+                AttractRadius = presentationAudio.GetProperty("attractRadius").GetSingle(),
+                AttractMinimumDelaySeconds = presentationAudio.GetProperty("attractMinimumDelaySeconds").GetInt32(),
+                AttractMaximumDelaySeconds = presentationAudio.GetProperty("attractMaximumDelaySeconds").GetInt32(),
+                AttractMoveChancePercent = presentationAudio.GetProperty("attractMoveChancePercent").GetInt32(),
+                AttackCueChancePercent = presentationAudio.GetProperty("attackCueChancePercent").GetInt32(),
+                OccludedVolumeScale = presentationAudio.GetProperty("occludedVolumeScale").GetSingle(),
+                MuteHumanSounds = presentationAudio.GetProperty("muteHumanSounds").GetBoolean(),
+                ContactPitch = presentationAudio.GetProperty("contactPitch").GetSingle(),
+            },
             new DaggerfallProgressionTuning(
                 progression.GetProperty("enableExperimentalKillExperience").GetBoolean(),
                 progression.GetProperty("experiencePerLevel").GetInt32()),
@@ -399,12 +409,25 @@ internal sealed record DaggerfallMeleeTargetingTuning(double MaximumDistance, do
 /// <summary>Ruleset-authored descriptor values for one-shot classic presentation audio.</summary>
 internal sealed record DaggerfallPresentationAudioTuning(float Volume, float Pitch, float SpatialBlend, float Attenuation)
 {
+    internal float AttractRadius { get; init; } = 16F;
+    internal int AttractMinimumDelaySeconds { get; init; } = 3;
+    internal int AttractMaximumDelaySeconds { get; init; } = 9;
+    internal int AttractMoveChancePercent { get; init; } = 20;
+    internal int AttackCueChancePercent { get; init; } = 50;
+    internal float OccludedVolumeScale { get; init; } = .25F;
+    internal bool MuteHumanSounds { get; init; } = true;
+    internal float ContactPitch { get; init; } = 1.1F;
     internal DaggerfallPresentationAudioTuning Validate()
     {
         if (!float.IsFinite(Volume) || Volume < 0F) throw new ArgumentOutOfRangeException(nameof(Volume));
         if (!float.IsFinite(Pitch) || Pitch <= 0F) throw new ArgumentOutOfRangeException(nameof(Pitch));
         if (!float.IsFinite(SpatialBlend) || SpatialBlend is < 0F or > 1F) throw new ArgumentOutOfRangeException(nameof(SpatialBlend));
         if (!float.IsFinite(Attenuation) || Attenuation <= 0F) throw new ArgumentOutOfRangeException(nameof(Attenuation));
+        if (!float.IsFinite(AttractRadius) || AttractRadius <= 0F) throw new ArgumentOutOfRangeException(nameof(AttractRadius));
+        if (AttractMinimumDelaySeconds < 0 || AttractMaximumDelaySeconds < AttractMinimumDelaySeconds) throw new ArgumentOutOfRangeException(nameof(AttractMaximumDelaySeconds));
+        if (AttractMoveChancePercent is < 0 or > 100 || AttackCueChancePercent is < 0 or > 100) throw new ArgumentOutOfRangeException(nameof(AttackCueChancePercent));
+        if (!float.IsFinite(OccludedVolumeScale) || OccludedVolumeScale is < 0F or > 1F) throw new ArgumentOutOfRangeException(nameof(OccludedVolumeScale));
+        if (!float.IsFinite(ContactPitch) || ContactPitch <= 0F) throw new ArgumentOutOfRangeException(nameof(ContactPitch));
         return this;
     }
 }

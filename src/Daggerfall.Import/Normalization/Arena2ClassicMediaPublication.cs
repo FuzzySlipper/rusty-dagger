@@ -394,11 +394,12 @@ public sealed record ClassicEffectManifest(ClassicEffect Effect, string MediaId,
 }
 
 /// <summary>Source identity retained for one offline WAV emission.</summary>
-public sealed record ClassicAudioManifest(ClassicDaggerAudioClip Clip, string MediaId, int SourceRecordOrdinal, uint SourceNumericId, uint SampleRate)
+public sealed record ClassicAudioManifest(string Clip, string MediaId, int SourceRecordOrdinal, uint SourceNumericId, uint SampleRate)
 {
     internal void Validate()
     {
-        if (!Enum.IsDefined(Clip) || SourceRecordOrdinal < 0 || SampleRate != SoundArchive.SampleRate)
+        NormalizedImportDocument.RequireLogicalId(Clip, nameof(Clip));
+        if (SourceRecordOrdinal < 0 || SampleRate != SoundArchive.SampleRate)
         {
             throw new ArgumentOutOfRangeException(nameof(SourceRecordOrdinal));
         }
@@ -1499,7 +1500,20 @@ public sealed record Arena2ClassicMediaPublication(
         SoundArchive sounds = SoundArchive.Parse(soundBytes, DaggerSoundSourcePath);
         List<GeneratedMediaArtifact> result = [];
         List<ClassicAudioManifest> semantic = [];
-        foreach (AudioSource source in AudioSources)
+        var selected = AudioSources.Select(source => (Id: char.ToLowerInvariant(source.Clip.ToString()[0]) + source.Clip.ToString()[1..], source.MediaId, source.SourceRecordOrdinal)).ToList();
+        // Every retained mobile's named sounds, the weapon pitches and the parry family come
+        // from the existing offline sound-name authority. Keep their numeric archive identities.
+        var names = MobileSourceMetadata.All.SelectMany(mobile => new[] { mobile.Links.MoveSoundCue, mobile.Links.BarkSoundCue, mobile.Links.AttackSoundCue })
+            .Concat(new[] { "ArrowShoot", "SwingLowPitch", "SwingMediumPitch", "SwingHighPitch" })
+            .Concat(Enumerable.Range(1, 9).Select(index => $"Parry{index}"))
+            .Where(name => !string.IsNullOrWhiteSpace(name)).ToHashSet(StringComparer.Ordinal);
+        foreach (int ordinal in names.Select(DaggerfallSoundNames.ForName).Distinct().Order())
+        {
+            if (ordinal >= sounds.Count) throw new InvalidOperationException($"Required mobile/weapon sound {ordinal} is absent from the source archive.");
+            if (selected.All(source => source.SourceRecordOrdinal != ordinal))
+                selected.Add(($"sound.{ordinal}", $"audio.source.{ordinal}", ordinal));
+        }
+        foreach (var source in selected)
         {
             Arena2PcmClip clip = sounds.GetClip(source.SourceRecordOrdinal);
             byte[] wave = sounds.CreateWave(source.SourceRecordOrdinal);
@@ -1509,7 +1523,7 @@ public sealed record Arena2ClassicMediaPublication(
             // consumers resolve the published media identity through the manifest, never by
             // constructing a source filename.
             result.Add(new(source.MediaId, NormalizedMediaKind.Audio, $"media/audio/clips/{Slug(source.MediaId)}.wav", wave, 0, 0, null, "audio/wav"));
-            ClassicAudioManifest manifest = new(source.Clip, source.MediaId, source.SourceRecordOrdinal, clip.NumericId, SoundArchive.SampleRate);
+            ClassicAudioManifest manifest = new(source.Id, source.MediaId, source.SourceRecordOrdinal, clip.NumericId, SoundArchive.SampleRate);
             manifest.Validate();
             semantic.Add(manifest);
         }
