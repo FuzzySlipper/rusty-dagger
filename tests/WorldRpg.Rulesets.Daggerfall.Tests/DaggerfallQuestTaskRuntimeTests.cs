@@ -1,6 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Rusty.Engine.Mechanics;
+using WorldRpg.Kit;
+using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.Progression;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Policies;
@@ -12,6 +14,142 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class DaggerfallQuestTaskRuntimeTests
 {
+    [Fact]
+    public void Session_save_restores_pending_end_and_uses_its_bound_text_context_for_finished_journal()
+    {
+        DaggerfallDefinitions definitions = DefinitionsWithEndingFixture(retiredItem: true);
+        var inputs = TestSessions.ReadInputs(TestData.RepositoryRoot);
+        EngineContextFake Engine()
+        {
+            List<string> releases = [];
+            ContentFake content = new(releases);
+            TestSessions.PopulateContent(content, inputs);
+            return EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+        }
+        var identity = GameCompositionResolver.Resolve(TestSessions.FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        DaggerfallSessionComposition composition = new(definitions, inputs, DaggerfallTuning.Defaults, identity);
+        RulesetSavePayload save;
+        ulong itemId;
+        using (DaggerfallSession session = DaggerfallSession.StartNew(Engine().Context, composition))
+        {
+            var itemIdentity = session.UniqueItemAllocator.AllocateReference();
+            itemId = itemIdentity.Value;
+            var item = definitions.RequireItem(new DaggerfallItemId("template-116-daedric"));
+            session.State.Equipment.Materialize(itemIdentity, new InventoryItemId(item.Id.Value));
+            session.State.ItemInstances.RegisterDefaultUnique(itemId, item, DaggerfallItemOwner.Player);
+            session.State.Quests.Start(new("ending-session", "ending.txt", "ending", DaggerfallQuestLifecycle.Active, null,
+                [new("gift", DaggerfallQuestResourceBinding.UniqueItem(itemId))], [new("giver", "Akorithi")]));
+            session.State.Quests.Advance(session.State.Variables, DaggerfallCalendar.Start);
+            save = session.CaptureSave();
+        }
+        using DaggerfallSession restored = DaggerfallSession.Restore(Engine().Context, composition, save);
+        var retiredItem = restored.State.Inventory.Read().UniqueItems.Single(item => restored.State.Inventory.GetDurableItemId(item.Entity).Value == itemId);
+        var retiredIdentity = restored.State.Inventory.GetDurableItemId(retiredItem.Entity);
+        restored.State.Inventory.Destroy(new WorldRpg.Kit.Inventory.UniqueInventoryItem(retiredItem.Entity.Value, new InventoryItemId(retiredItem.Definition.Value)));
+        restored.State.Actors.Entities.Destroy(retiredIdentity);
+        restored.State.ItemInstances.RemoveUnique(itemId);
+        restored.RemoveUniqueItemIdentity(itemId);
+        restored.State.Quests.Advance(restored.State.Variables, DaggerfallCalendar.Start);
+        DaggerfallQuestPromptSave prompt = Assert.IsType<DaggerfallQuestPromptSave>(restored.State.Quests.Messages.Pending);
+        Assert.True(restored.State.Quests.ChoosePrompt(restored.State.Variables, prompt.InstanceId, prompt.MessageId, prompt.Id, 3));
+        restored.State.Quests.Advance(restored.State.Variables, DaggerfallCalendar.Start);
+        restored.State.Quests.Advance(restored.State.Variables, DaggerfallCalendar.Start);
+        using (DaggerfallSession tombstone = DaggerfallSession.Restore(Engine().Context, composition, restored.CaptureSave()))
+            Assert.Equal(DaggerfallQuestLifecycle.Tombstoned, Assert.Single(tombstone.State.Quests.All).Lifecycle);
+        restored.State.Quests.Advance(restored.State.Variables, DaggerfallCalendar.Start.Advance(7 * 24 * 60 * 60 + 1, out _));
+        using DaggerfallSession retired = DaggerfallSession.Restore(Engine().Context, composition, restored.CaptureSave());
+        DaggerfallQuestPresentation presentation = retired.State.Quests.ReadPresentation(_ => throw new Exception("Retired journal requested a runtime."));
+        string player = retired.State.Character.Identity.Name;
+        Assert.Equal([$"{player} met Akorithi with Shortsword.", $"{player} finished for Akorithi."], presentation.Journal.Select(entry => entry.Text));
+        Assert.All(presentation.Journal, entry => Assert.Empty(entry.Diagnostics));
+    }
+
+    [Theory]
+    [InlineData(3, 20, "finished", true)]
+    [InlineData(3, 20, "finished", false)]
+    [InlineData(4, 30, "declined", true)]
+    [InlineData(4, 30, "declined", false)]
+    public void Final_prompt_and_branch_survive_pending_end_save_then_journal_outlives_the_runtime(int choice, int message, string result, bool succeeded)
+    {
+        DaggerfallDefinitions definitions = DefinitionsWithEndingFixture();
+        DaggerfallQuestInstances instances = Instances(definitions);
+        DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal));
+        instances.Start(new("ending", "ending.txt", "ending", DaggerfallQuestLifecycle.Active, null, [], [new("giver", "Akorithi")]) { Succeeded = succeeded ? true : null });
+        instances.Advance(variables, DaggerfallCalendar.Start);
+        Assert.Equal(2, Assert.Single(instances.All).PendingEndPasses);
+        Assert.Null(instances.Messages.Pending); // Final task precedes its starter in source order.
+        DaggerfallQuestInstances restored = Instances(definitions);
+        restored.Restore(RoundTrip(instances.Capture()));
+        restored.Advance(variables, DaggerfallCalendar.Start);
+        DaggerfallQuestPromptSave prompt = Assert.IsType<DaggerfallQuestPromptSave>(restored.Messages.Pending);
+        DaggerfallQuestInstances awaiting = Instances(definitions);
+        awaiting.Restore(RoundTrip(restored.Capture()));
+        for (int index = 0; index < 3; index++) awaiting.Advance(variables, DaggerfallCalendar.Start);
+        Assert.Equal(1, Assert.Single(awaiting.All).PendingEndPasses);
+        Assert.True(awaiting.ChoosePrompt(variables, "ending", 1010, prompt.Id, choice));
+        Assert.False(awaiting.ChoosePrompt(variables, "ending", 1010, prompt.Id, choice));
+        awaiting.BindTextContext(_ => new(new(new(Name: "Nulfaga"), new(), new(), new(), new(), new()),
+            new Dictionary<string, DaggerfallQuestResourceTextContext>(StringComparer.Ordinal)));
+        awaiting.Advance(variables, DaggerfallCalendar.Start);
+        Assert.Equal([10, message], awaiting.Messages.Journal.Select(entry => entry.MessageId));
+        awaiting.Advance(variables, DaggerfallCalendar.Start);
+        DaggerfallQuestInstanceSave ended = Assert.Single(awaiting.All);
+        Assert.Equal(DaggerfallQuestLifecycle.Tombstoned, ended.Lifecycle);
+        Assert.Equal(succeeded, ended.Succeeded);
+        DaggerfallCalendar afterWeek = DaggerfallCalendar.Start.Advance(7 * 24 * 60 * 60 + 1, out _);
+        awaiting.Advance(variables, afterWeek);
+        Assert.Empty(awaiting.All);
+        Assert.Empty(awaiting.Messages.Deliveries);
+        DaggerfallQuestInstances retired = Instances(definitions);
+        retired.Restore(RoundTrip(awaiting.Capture()));
+        DaggerfallQuestPresentation journal = retired.ReadPresentation(_ => throw new Exception("Retired journal used a live runtime."));
+        Assert.Equal(["Nulfaga met Akorithi.", $"Nulfaga {result} for Akorithi."], journal.Journal.Select(entry => entry.Text));
+        Assert.All(journal.Journal, entry => Assert.Empty(entry.Diagnostics));
+        Assert.Throws<ArgumentException>(() => retired.Start(new("ending", "ending.txt", "ending", DaggerfallQuestLifecycle.Active, null, [], [])));
+    }
+
+    [Fact]
+    public void Finished_journal_rejects_missing_source_message_or_bound_context()
+    {
+        DaggerfallDefinitions definitions = DefinitionsWithEndingFixture();
+        DaggerfallQuestJournalEntrySave entry = new("expired", 1, 10)
+        {
+            SourceFile = "ending.txt", Context = DaggerfallQuestMessageContext.Empty,
+        };
+        DaggerfallQuestInstancesSave Save(DaggerfallQuestJournalEntrySave row) => new([])
+        { Messages = new([], [row], null) };
+        Assert.Throws<InvalidOperationException>(() => Instances(definitions).Restore(Save(entry with { SourceFile = "missing.txt" })));
+        Assert.Throws<ArgumentException>(() => Instances(definitions).Restore(Save(entry with { MessageId = 999 })));
+        Assert.Throws<ArgumentException>(() => Instances(definitions).Restore(Save(entry with { Context = null })));
+        Assert.Throws<ArgumentException>(() => Instances(definitions).Restore(Save(entry with { SourceFile = null })));
+        DaggerfallQuestInstances live = Instances(definitions);
+        live.Start(new("expired", "ending.txt", "ending", DaggerfallQuestLifecycle.Active, null, [], []));
+        DaggerfallQuestInstancesSave collision = live.Capture() with { Messages = new([], [entry], null) };
+        Assert.Throws<ArgumentException>(() => Instances(definitions).Restore(collision));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Explicit_result_supersedes_a_pending_end_without_leaving_invalid_current_save_state(bool success)
+    {
+        DaggerfallDefinitions definitions = DefinitionsWithEndingFixture();
+        DaggerfallQuestInstances instances = Instances(definitions);
+        instances.Start(new("ending", "ending.txt", "ending", DaggerfallQuestLifecycle.Active, null, [], []));
+        DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal));
+        instances.Advance(variables, DaggerfallCalendar.Start);
+        instances.Advance(variables, DaggerfallCalendar.Start);
+        Assert.NotNull(instances.Messages.Pending);
+        DaggerfallQuestInstanceSave terminal = success ? instances.Complete("ending", "completed") : instances.Fail("ending", "failed");
+        Assert.Equal(0, terminal.PendingEndPasses);
+        Assert.Equal(success, terminal.Succeeded);
+        DaggerfallQuestInstances restored = Instances(definitions);
+        restored.Restore(RoundTrip(instances.Capture()));
+        restored.Advance(variables, DaggerfallCalendar.Start);
+        Assert.Null(restored.Messages.Pending);
+        Assert.DoesNotContain(restored.Messages.Deliveries, delivery => delivery.Delivery == DaggerfallQuestMessageDelivery.Prompt);
+    }
+
     [Fact]
     public void Saved_prompt_history_is_required_to_prevent_occurrence_reuse()
     {
@@ -226,7 +364,8 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         DaggerfallQuestTaskRunner.Advance(runtime, Program(source), new(new Dictionary<string, int>(StringComparer.Ordinal)), DaggerfallCalendar.Start, messages, new LifecycleFake());
 
         Assert.Empty(messages.Journal);
-        Assert.Equal(DaggerfallQuestLifecycle.Ended, runtime.Lifecycle);
+        Assert.Equal(DaggerfallQuestLifecycle.Active, runtime.Lifecycle);
+        Assert.Equal(2, runtime.PendingEndPasses);
         Assert.Equal([DaggerfallQuestMessageDelivery.Rumor, DaggerfallQuestMessageDelivery.Popup], messages.Deliveries.Select(value => value.Delivery));
     }
 
@@ -272,8 +411,9 @@ public sealed class DaggerfallQuestTaskRuntimeTests
 
         DaggerfallQuestInstanceSave advanced = Advance(source);
 
-        Assert.Equal(DaggerfallQuestLifecycle.Ended, advanced.Lifecycle);
-        Assert.Equal("end quest", advanced.Outcome);
+        Assert.Equal(DaggerfallQuestLifecycle.Active, advanced.Lifecycle);
+        Assert.Equal(2, advanced.PendingEndPasses);
+        Assert.Null(advanced.Outcome);
         Assert.Equal(42, advanced.TerminalMessageId);
         DaggerfallQuestTaskState gate = advanced.Tasks.Single(task => task.Symbol == "gate");
         Assert.False(gate.IsSet);
@@ -291,7 +431,8 @@ public sealed class DaggerfallQuestTaskRuntimeTests
 
         DaggerfallQuestInstanceSave advanced = Advance(source);
 
-        Assert.Equal(DaggerfallQuestLifecycle.Ended, advanced.Lifecycle);
+        Assert.Equal(DaggerfallQuestLifecycle.Active, advanced.Lifecycle);
+        Assert.Equal(2, advanced.PendingEndPasses);
     }
 
     [Fact]
@@ -565,6 +706,9 @@ public sealed class DaggerfallQuestTaskRuntimeTests
         instances.Advance(variables, DaggerfallCalendar.Start);
         instances.Advance(variables, DaggerfallCalendar.Start);
         instances.Advance(variables, DaggerfallCalendar.Start);
+        Assert.False(Assert.Single(instances.All, instance => instance.InstanceId == "parent").Tasks.Single(task => task.Symbol == "failure").IsSet);
+        instances.Advance(variables, DaggerfallCalendar.Start);
+        instances.Advance(variables, DaggerfallCalendar.Start);
 
         DaggerfallQuestInstanceSave saved = Assert.Single(instances.All, instance => instance.InstanceId == "parent");
         Assert.True(saved.Tasks.Single(task => task.Symbol == "failure").IsSet);
@@ -772,6 +916,24 @@ public sealed class DaggerfallQuestTaskRuntimeTests
     private static DaggerfallDefinitions Definitions()
     {
         return TestPayload.Definitions;
+    }
+
+    private static DaggerfallDefinitions DefinitionsWithEndingFixture(bool retiredItem = false)
+    {
+        JsonObject root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
+        root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
+            {"name":"ending","displayName":"Ending","sourceFile":"ending.txt","disposition":"compiled",
+             "messages":[{"id":10,"firstLine":1,"lines":["%pcn met _giver_."]},{"id":1010,"firstLine":2,"lines":["Did you use the painting?"]},{"id":20,"firstLine":3,"lines":["%pcn finished for _giver_."]},{"id":30,"firstLine":4,"lines":["%pcn declined for _giver_."]}],
+             "blocks":[{"kind":"task","firstLine":1,"lines":["_final_ task:","prompt 1010 yes _yes_ no _no_"],"global":null},{"kind":"task","firstLine":4,"lines":["_yes_ task:","log 20 step 2"],"global":null},{"kind":"task","firstLine":7,"lines":["_no_ task:","log 30 step 2"],"global":null},{"kind":"headless","firstLine":10,"lines":["log 10 step 1","start task _final_","end quest"],"global":null}],"diagnostics":[]}
+            """));
+        if (retiredItem)
+        {
+            root["questSources"]!["quests"]!.AsArray().Last()!["messages"]![0]!["lines"]![0] = "%pcn met _giver_ with _gift_.";
+            root["questSources"]!["resources"]!["declarations"]!.AsArray().Add(JsonNode.Parse("""
+                {"quest":"ending","sourceFile":"ending.txt","sourceLine":30,"kind":"item","symbol":{"sourceSpelling":"_gift_","canonicalId":"gift"},"sourceText":"Item _gift_ shortsword","targetSourceSpelling":"shortsword","targetCanonicalId":"shortsword","placeKind":null,"parameters":[],"foe":null,"item":{"artifact":false,"class":null,"subclass":null,"template":116,"key":null,"rangeLow":null,"rangeHigh":null,"usedMessage":null,"anyInfoMessage":null},"person":null,"place":null}
+                """));
+        }
+        return DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(root.ToJsonString()));
     }
 
     private static DaggerfallDefinitions DefinitionsWithLifecycleFixtures(bool hasRewardMessage = true)

@@ -120,7 +120,8 @@ public sealed class DaggerfallQuestClockTests
             DaggerfallQuestTaskRuntimeTests.Messages(source), new DaggerfallQuestTaskRuntimeTests.LifecycleFake());
 
         DaggerfallQuestInstanceSave advanced = runtime.Capture();
-        Assert.Equal(DaggerfallQuestLifecycle.Ended, advanced.Lifecycle);
+        Assert.Equal(DaggerfallQuestLifecycle.Active, advanced.Lifecycle);
+        Assert.Equal(2, advanced.PendingEndPasses);
         Assert.True(advanced.Tasks.Single(task => task.Symbol == "result").IsSet);
         Assert.All(advanced.Clocks, clock => Assert.True(clock.Finished));
     }

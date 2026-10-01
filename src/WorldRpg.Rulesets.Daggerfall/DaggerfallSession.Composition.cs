@@ -337,6 +337,7 @@ internal sealed partial class DaggerfallSession
                 wagon: wagon,
                 dungeonDiscoveries: dungeonDiscoveries,
                 dungeonActions: dungeonActions);
+            State.Quests.BindTextContext(QuestTextContext);
             _corpseLoot = new DaggerfallCorpseLootModule(
                 engine.Perception,
                 _spatial,

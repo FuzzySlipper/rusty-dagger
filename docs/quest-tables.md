@@ -68,3 +68,15 @@ rank/level/reputation threshold meaning, adult and one-time flags, source lines
 and notes. Disabled Oblivion rows that omit membership preserve that absence.
 The publication does not include DFU-only lists or discover quest packs, and
 does not apply faction eligibility policy at runtime.
+
+`DaggerfallQuestInstances` advances compiled task programs within the admitted
+session update. An end request keeps the runtime active for a final task pass;
+the pending count survives saves. A final prompt retains its answer and chosen
+branch before retirement. The actual success flag remains independent of an end
+request or a prompt choice.
+
+Quest journals remain in `DaggerfallQuestMessages`. Finished entries retain their
+source/message reference and bound text values, so they remain readable after
+the runtime tombstone expires. Runtime deliveries and choice history retire with
+the instance. The journal shares the ordinary text resolver and DOM projection;
+it does not become a user note or retain the quest's actor/resource graph.

@@ -136,8 +136,12 @@ internal sealed partial class DaggerfallSession
                 .FirstOrDefault(value => value is not null);
             string? actorRole = resource.Binding.ActorIds.Select(id => State.Npcs.All.FirstOrDefault(npc => npc.DurableId == id)?.Role)
                 .FirstOrDefault(value => value is not null);
-            string? item = resource.Binding.UniqueItemIds.Select(id => State.ItemInstances.RequireUnique(id).ItemId)
-                .FirstOrDefault(value => value is not null);
+            // A quest can consume its item before ending. Its source meaning outlives the live item.
+            string? item = resource.Binding.UniqueItemIds.Where(State.ItemInstances.ContainsUnique)
+                .Select(id => State.ItemInstances.RequireUnique(id).ItemId).FirstOrDefault(value => value is not null);
+            if (item is null && declared.Kind == "item")
+                item = declared.Item?.Template is int template && _definitions.ItemTemplateCatalog.Templates.TryGetValue(template, out var itemTemplate)
+                    ? itemTemplate.Name : declared.TargetSourceSpelling?.Replace('_', ' ');
             string? named = declared.Person?.Named?.Replace('_', ' ');
             string? faction = declared.Person?.Faction?.Replace('_', ' ');
             string? group = declared.Person?.Group?.Replace('_', ' ');

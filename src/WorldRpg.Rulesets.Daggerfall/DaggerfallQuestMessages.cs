@@ -10,7 +10,12 @@ internal enum DaggerfallQuestMessageDelivery { Popup, Letter, Rumor, Journal, Pr
 
 /// <summary>A source-backed message awaiting ordinary DOM presentation.</summary>
 internal sealed record DaggerfallQuestMessageDeliverySave(string InstanceId, int MessageId, DaggerfallQuestMessageDelivery Delivery, int Variant = 0);
-internal sealed record DaggerfallQuestJournalEntrySave(string InstanceId, int Step, int MessageId);
+internal sealed record DaggerfallQuestJournalEntrySave(string InstanceId, int Step, int MessageId)
+{
+    // Finished entries retain just their readable source and bound text values, not a quest runtime.
+    public string? SourceFile { get; init; }
+    public DaggerfallQuestMessageContext? Context { get; init; }
+}
 internal sealed record DaggerfallQuestPromptOption(int Id, string Label, string Target);
 internal sealed record DaggerfallQuestPromptSave(string InstanceId, int MessageId, DaggerfallQuestPromptOption[] Options, string TaskSymbol, int OperationIndex, int Occurrence)
 {
@@ -232,20 +237,37 @@ internal sealed class DaggerfallQuestMessages
         Dictionary<string, DaggerfallQuestRuntimeInstance> byId = instances.ToDictionary(value => value.InstanceId, StringComparer.Ordinal);
         return Journal.Select(entry =>
         {
-            DaggerfallQuestRuntimeInstance instance = RequireInstance(entry.InstanceId, byId);
-            (string text, _, IReadOnlyList<string> diagnostics) = Render(instance, entry.MessageId, DaggerfallQuestMessageDelivery.Journal, 0, context(instance));
+            (string text, _, IReadOnlyList<string> diagnostics) = entry.SourceFile is { } source
+                ? Render(source, entry.MessageId, DaggerfallQuestMessageDelivery.Journal, 0, entry.Context!)
+                : Render(RequireInstance(entry.InstanceId, byId), entry.MessageId, DaggerfallQuestMessageDelivery.Journal, 0,
+                    context(RequireInstance(entry.InstanceId, byId)));
             return new DaggerfallQuestRenderedMessage(entry.InstanceId, entry.MessageId, DaggerfallQuestMessageDelivery.Journal, text, diagnostics);
         }).ToArray();
     }
 
     internal DaggerfallQuestMessagesSave Capture() => new([.. _deliveries], [.. Journal], _pending) { Choices = [.. _choices] };
 
+    internal void RetainJournal(DaggerfallQuestRuntimeInstance instance,
+        Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestMessageContext> context)
+    {
+        if (_pending?.InstanceId == instance.InstanceId)
+        {
+            _deliveries.RemoveAll(delivery => delivery.InstanceId == instance.InstanceId && delivery.Delivery == DaggerfallQuestMessageDelivery.Prompt);
+            _pending = null;
+        }
+        DaggerfallQuestJournalEntrySave[] entries = [.. _journal.Values.Where(entry => entry.InstanceId == instance.InstanceId && entry.SourceFile is null)];
+        if (entries.Length == 0) return;
+        DaggerfallQuestMessageContext bound = BindSymbols(instance, context(instance));
+        foreach (DaggerfallQuestJournalEntrySave entry in entries)
+            _journal[(entry.InstanceId, entry.Step)] = entry with { SourceFile = instance.SourceFile, Context = bound };
+    }
+
     /// <summary>Releases presentation and prompt history when the owning tombstone expires.</summary>
     internal void RemoveInstances(IReadOnlySet<string> instanceIds)
     {
         ArgumentNullException.ThrowIfNull(instanceIds);
         _deliveries.RemoveAll(value => instanceIds.Contains(value.InstanceId));
-        foreach ((string InstanceId, int Step) key in _journal.Keys.Where(key => instanceIds.Contains(key.Instance)).ToArray())
+        foreach ((string InstanceId, int Step) key in _journal.Keys.Where(key => instanceIds.Contains(key.Instance) && _journal[key].SourceFile is null).ToArray())
             _journal.Remove(key);
         _choices.RemoveAll(value => instanceIds.Contains(value.InstanceId));
         if (_pending is { } pending && instanceIds.Contains(pending.InstanceId)) _pending = null;
@@ -269,8 +291,25 @@ internal sealed class DaggerfallQuestMessages
         }
         foreach (DaggerfallQuestJournalEntrySave entry in saved.Journal)
         {
-            DaggerfallQuestRuntimeInstance instance = RequireInstance(entry.InstanceId, instances);
-            RequireMessage(instance, entry.MessageId);
+            if (entry.SourceFile is { } source)
+            {
+                RequireMessage(source, entry.MessageId);
+                if (instances.TryGetValue(entry.InstanceId, out var retained)
+                    && (retained.Lifecycle != DaggerfallQuestLifecycle.Tombstoned || retained.SourceFile != source))
+                    throw new ArgumentException("Finished quest journal collides with an incompatible live instance.");
+                if (_sources[source].Disposition != DaggerfallQuestDisposition.Compiled)
+                    throw new ArgumentException($"Finished quest journal source '{source}' is not compiled.");
+                if (string.IsNullOrWhiteSpace(entry.InstanceId) || entry.Context?.Text is null || entry.Context.Resources is null
+                    || entry.Context.Text.Player is null || entry.Context.Text.Calendar is null || entry.Context.Text.Location is null
+                    || entry.Context.Text.Faction is null || entry.Context.Text.Item is null || entry.Context.Text.Story is null
+                    || entry.Context.Resources.Any(value => string.IsNullOrWhiteSpace(value.Key) || value.Value is null))
+                    throw new ArgumentException("Finished quest journal entry has no valid bound text context.");
+            }
+            else
+            {
+                if (entry.Context is not null) throw new ArgumentException("Active quest journal entry has a finished text context.");
+                RequireMessage(RequireInstance(entry.InstanceId, instances), entry.MessageId);
+            }
             if (entry.Step < 0 || !_journal.TryAdd((entry.InstanceId, entry.Step), entry)) throw new ArgumentException("Saved quest journal entries are malformed or duplicated.");
         }
         foreach (DaggerfallQuestChoiceSave choice in saved.Choices)
@@ -328,19 +367,28 @@ internal sealed class DaggerfallQuestMessages
         DaggerfallQuestMessageDelivery delivery,
         int variant,
         DaggerfallQuestMessageContext context)
+        => Render(instance.SourceFile, messageId, delivery, variant, BindSymbols(instance, context));
+
+    private static DaggerfallQuestMessageContext BindSymbols(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestMessageContext context)
     {
-        DaggerfallQuestMessageDefinition message = RequireMessage(instance, messageId);
-        List<string> issues = [];
-        string text = string.Join('\n', Variant(message.Lines, variant)).Replace("<ce>", string.Empty, StringComparison.Ordinal);
         Dictionary<string, DaggerfallQuestResourceTextContext> resources = new(context.Resources, StringComparer.Ordinal);
         foreach (DaggerfallQuestSymbolState symbol in instance.Symbols)
         {
             string symbolKey = DaggerfallQuestInstanceSave.Canonical(symbol.Symbol, "quest message symbol");
             resources.TryAdd(symbolKey, new(symbol.Value, symbol.Value, symbol.Value, symbol.Value, symbol.Value, symbol.Value, symbol.Value));
         }
+        return context with { Resources = resources };
+    }
 
-        text = ResourceMacro.Replace(text, match => ExpandResource(match, resources, delivery, issues));
-        DaggerfallTextKey key = new(DaggerfallTextKind.Resource, $"quest:{instance.SourceFile}:{messageId}");
+    private (string Text, string? Signoff, IReadOnlyList<string> Diagnostics) Render(string sourceFile, int messageId,
+        DaggerfallQuestMessageDelivery delivery, int variant, DaggerfallQuestMessageContext context)
+    {
+        DaggerfallQuestMessageDefinition message = RequireMessage(sourceFile, messageId);
+        List<string> issues = [];
+        string text = string.Join('\n', Variant(message.Lines, variant)).Replace("<ce>", string.Empty, StringComparison.Ordinal);
+
+        text = ResourceMacro.Replace(text, match => ExpandResource(match, context.Resources, delivery, issues));
+        DaggerfallTextKey key = new(DaggerfallTextKind.Resource, $"quest:{sourceFile}:{messageId}");
         DaggerfallTextRenderResult global = _text.ResolveRaw(text, key, context.Text);
         issues.AddRange(global.Diagnostics.Select(diagnostic => $"{diagnostic.Kind}: {diagnostic.Detail}"));
         string rendered = global.Text;
@@ -397,12 +445,15 @@ internal sealed class DaggerfallQuestMessages
     }
 
     private DaggerfallQuestMessageDefinition RequireMessage(DaggerfallQuestRuntimeInstance instance, int messageId)
+        => RequireMessage(instance.SourceFile, messageId);
+
+    private DaggerfallQuestMessageDefinition RequireMessage(string sourceFile, int messageId)
     {
         if (messageId <= 0) throw new ArgumentOutOfRangeException(nameof(messageId));
-        if (!_sources.TryGetValue(instance.SourceFile, out DaggerfallQuestSourceDefinition? source))
-            throw new InvalidOperationException($"Quest instance '{instance.InstanceId}' refers to unavailable source '{instance.SourceFile}'.");
+        if (!_sources.TryGetValue(sourceFile, out DaggerfallQuestSourceDefinition? source))
+            throw new InvalidOperationException($"Quest journal refers to unavailable source '{sourceFile}'.");
         return source.Messages.SingleOrDefault(message => message.Id == messageId)
-            ?? throw new ArgumentException($"Quest source '{instance.SourceFile}' has no message {messageId}.");
+            ?? throw new ArgumentException($"Quest source '{sourceFile}' has no message {messageId}.");
     }
 
     private static DaggerfallQuestRuntimeInstance RequireInstance(string id, IReadOnlyDictionary<string, DaggerfallQuestRuntimeInstance> instances) =>
