@@ -44,6 +44,7 @@ internal static class Program
         RmbSpatialCommand.Command,
         // Reports and reconciliation against the documented inventory.
         SourceManifestCommand.Command,
+        SourceCoverageCommand.Command,
         MobileLedgerCommand.Command,
         MonsterArchiveCommand.Command,
         QuestSourcesCommand.Command,

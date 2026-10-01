@@ -25,6 +25,17 @@ manifest file to write and `--inventory data/content-source-manifest.csv --updat
 then run `plan` with that inventory to check drift. The reconciler changes only file
 dispositions; historical scope notes and source counts remain inventory evidence.
 
+The regeneration command also writes `import-records/source-coverage.json`. To refresh
+only that report, run `source-coverage --arena2 local/arena2 --inventory
+data/content-source-manifest.csv --repository . --output import-records/source-coverage.json`
+through the import tool. It joins all published producer citations, raw block/model
+ledgers and original-quest comparisons with corpus receipts. Family citations, offline
+record evidence and normalized pack references remain distinct. Pending, unused,
+duplicate, malformed, source-gap and unsupported dispositions remain visible; a
+missing disposition or required source without a reference makes reconciliation fail.
+MIDI remains excluded. This report never certifies runtime behavior parity and is
+generated local evidence, so it is ignored and never committed.
+
 The supplied source corpus (`local/arena2`, read only) contains 1,590 files at its root and 90
 files under `books/`, occupying about 517 MiB. Counts below are filesystem counts or archive-header counts unless explicitly marked
 as a donor count. The raw files remain local provenance; this document does not copy their
