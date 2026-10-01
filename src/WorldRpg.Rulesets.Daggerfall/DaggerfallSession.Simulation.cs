@@ -110,7 +110,8 @@ internal sealed partial class DaggerfallSession
             _ = ReportDungeonActions(_sites.ActionTriggers.Reconcile(actionGraph, State.PlayerControl,
                 State.Actors.Player.Actor.Entity, simulationStep));
         if (movement is not null && State.DungeonDiscoveries.TryGetValue(_activeProfileKey, out DaggerfallDungeonDiscovery? discovery))
-            _dungeonVisibility.Observe(discovery, State.PlayerControl, _doors, doorEnvironment, simulationStep, _tuning.Camera.EyeHeight);
+            _dungeonVisibility.Observe(discovery, State.PlayerControl, _doors, doorEnvironment, simulationStep,
+                _tuning.Camera.EyeHeight, _sites.LocalCompensation);
         CharacterMotion landingBefore = releasedVerticalDrive && positionBefore is WorldPoint releasePosition
             ? motionBefore with { PeakY = releasePosition.Y, FallOriginY = releasePosition.Y }
             : motionBefore;
@@ -118,9 +119,11 @@ internal sealed partial class DaggerfallSession
         _climbing.CompleteStep(climb, movement, use => State.SkillUses.Record(use));
         if (_vitality.ResolveLanding(State.Actors.Player.Actor, landing, State.Effects.PreventsFallDamage(DaggerfallActorIdentity.PlayerEntityId)) is { } fall)
             AppendDamage(fall, DaggerfallDamageCause.Fall, 0);
+        _sites.RebaseExteriorIfNeeded();
         _camera.Update(State.PlayerControl);
         if (!alive || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d) return;
-        _ = _encounters.MaterializePending(_activeProfileKey.LogicalId, (definition, pose, level) => SpawnActor(definition, pose, level));
+        _ = _encounters.MaterializePending(_activeProfileKey.LogicalId, (definition, pose, level) =>
+            SpawnActor(definition, new ActorPose(_sites.ProfileToLocal(pose.Position), pose.HeadingYawRadians), level));
         _enemyBehavior.Update(State.PlayerControl, generation, simulationStep, update.DeltaSeconds, _facts);
         // Enemy attack-start facts must reach presentation before the post-enemy actions below.
         // A hit marker is consumed by the outer admitted update after this simulation step; if

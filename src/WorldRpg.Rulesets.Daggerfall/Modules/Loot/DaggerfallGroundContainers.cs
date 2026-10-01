@@ -39,6 +39,12 @@ internal sealed class DaggerfallGroundContainers
     internal IReadOnlyDictionary<long, DaggerfallGroundContainer> All => _ground.Values
         .Where(container => container.Profile == _activeProfile)
         .ToDictionary(container => container.Id);
+
+    internal void RebaseActive(System.Numerics.Vector3 delta)
+    {
+        foreach (DaggerfallGroundContainer container in All.Values)
+            _ground[container.Id] = container with { Position = DaggerfallExteriorSessionOrigin.Shift(container.Position, delta) };
+    }
     /// <summary>All loaded pile state for save capture. Off-profile owners remain Engine-backed but inaccessible.</summary>
     internal IReadOnlyCollection<DaggerfallGroundContainer> Persisted => _ground.Values.ToArray();
 

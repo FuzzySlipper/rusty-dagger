@@ -1,3 +1,4 @@
+using System.Numerics;
 using Rusty.Engine;
 using Rusty.Engine.Entities;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -98,6 +99,15 @@ internal sealed class DaggerfallSiteProjection : IDisposable
 
     internal void RebuildMotionCollisionResidency() => Motion.RebuildCollisionResidency();
 
+    internal void Rebase(Vector3 delta)
+    {
+        Doors.Rebase(delta);
+        Motion.Rebase(delta);
+        Portals.Rebase(delta);
+        Appearance.Rebase(delta);
+        Lighting.Rebase(delta);
+    }
+
     internal CharacterStepEnvironment CharacterEnvironment(CharacterMotion motion)
     {
         CharacterStepEnvironment motionModels = Motion.CharacterEnvironment();
@@ -146,7 +156,7 @@ internal sealed class DaggerfallSitePortalRuntime : IDisposable
 {
     private static readonly EntityTypeId PortalType = new("daggerfall.site-portal");
     private readonly EntityDirectory _entities;
-    private readonly IReadOnlyDictionary<string, (DaggerfallSitePortal Portal, DurableIdentityReference Identity, EntityId Entity)> _portals;
+    private readonly Dictionary<string, (DaggerfallSitePortal Portal, DurableIdentityReference Identity, EntityId Entity)> _portals;
     private bool _disposed;
 
     internal DaggerfallSitePortalRuntime(EntityDirectory entities, DaggerfallWorldProfileKey profile, IEnumerable<DaggerfallSitePortal> portals)
@@ -175,6 +185,15 @@ internal sealed class DaggerfallSitePortalRuntime : IDisposable
 
     internal IEnumerable<(DaggerfallSitePortal Portal, DurableIdentityReference Identity, EntityId Entity)> All => _portals.Values
         .OrderBy(value => value.Portal.Id, StringComparer.Ordinal).Select(value => (value.Portal, value.Identity, value.Entity));
+
+    internal void Rebase(Vector3 delta)
+    {
+        foreach (string id in _portals.Keys.ToArray())
+        {
+            var value = _portals[id];
+            _portals[id] = (value.Portal with { Position = DaggerfallExteriorSessionOrigin.Shift(value.Portal.Position, delta) }, value.Identity, value.Entity);
+        }
+    }
 
     public void Dispose()
     {

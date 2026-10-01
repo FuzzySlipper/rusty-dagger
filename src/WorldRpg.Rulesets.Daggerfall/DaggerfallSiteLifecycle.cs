@@ -21,6 +21,8 @@ internal interface IDaggerfallSiteTransitionHost
     /// <summary>Rebuilds contextual activation over the lifecycle's current projection.</summary>
     void RebuildActivation();
 
+    void RebaseTransientWorld(Vector3 delta);
+
     /// <summary>The destination became the active site; site-scoped session presentation moves on.</summary>
     void EnteredSite();
 
@@ -205,12 +207,12 @@ internal sealed class DaggerfallSiteLifecycle
             ActorState actor = _state.Actors.TryGet(destination.ActorId, out ActorState? live)
                 ? live
                 : throw new InvalidOperationException($"Actor {destination.ActorId} is not live in the active profile.");
-            actor.ApplyPose(new ActorPose(anchor.Position, anchor.YawRadians));
+            actor.ApplyPose(new ActorPose(ProfileToLocal(anchor.Position), anchor.YawRadians));
             return true;
         }
         if (destination.Profile == ActiveProfile)
         {
-            _host.RelocatePlayer(anchor.Position, anchor.YawRadians, anchor.PitchRadians);
+            _host.RelocatePlayer(ProfileToLocal(anchor.Position), anchor.YawRadians, anchor.PitchRadians);
             return true;
         }
         return TryTransitionTo(destination.Profile, anchor, useReturnDestination: false);
@@ -222,6 +224,10 @@ internal sealed class DaggerfallSiteLifecycle
     private bool TryTransitionTo(DaggerfallWorldProfileKey destination, DaggerfallSiteAnchor? arrival, bool useReturnDestination)
     {
         DaggerfallSiteProfile target = RequireProfiles().Require(destination);
+        // Detached site state and return poses use the profile's authored frame. Restore that
+        // frame before capture and before replacing the native artifact (which retains its origin).
+        if (ActiveProfile.Kind == DaggerfallWorldProfileKind.Exterior)
+            NormalizeExteriorOrigin();
         PlayerControlState player = _state.PlayerControl;
         WorldPoint sourcePosition = player.Position ?? throw new InvalidOperationException("A site transition requires a player position.");
         DaggerfallSiteReturnDestination? returnDestination = useReturnDestination && ReturnProfile == destination
@@ -509,10 +515,66 @@ internal sealed class DaggerfallSiteLifecycle
         DaggerfallExteriorCellResidencySave save)
     {
         RequireExteriorProfile();
+        Vector3 compensation = new(save.CompensationX, save.CompensationY, save.CompensationZ);
+        if (!float.IsFinite(compensation.X) || !float.IsFinite(compensation.Y) || !float.IsFinite(compensation.Z)
+            || compensation.X != MathF.Truncate(compensation.X)
+            || compensation.Y != MathF.Truncate(compensation.Y)
+            || compensation.Z != MathF.Truncate(compensation.Z))
+            throw new InvalidOperationException("Saved exterior compensation must represent whole Engine origin units.");
+        using (WorldOriginPrepared prepared = _engine.WorldOrigin.Prepare(new(_spatial.Session,
+            checked(-(long)compensation.X), checked(-(long)compensation.Y), checked(-(long)compensation.Z),
+            ReadOnlyMemory<WorldOriginEntityRow>.Empty)))
+        {
+            WorldOriginCommitReceipt receipt = _engine.WorldOrigin.Commit(new(prepared));
+            // Save restoration already supplied player, actor and ground positions in this local
+            // frame. Only fresh authored owners and the native artifact need the translation.
+            Vector3 delta = receipt.LocalDelta;
+            Projection.Rebase(delta);
+            ActionTriggers.RebaseActive(delta);
+            ActionTriggers.RebaseRestoredPlayer(_state.PlayerControl, _state.Actors.Player.Actor.Entity);
+        }
         DaggerfallExteriorCellResidency residency = EnsureExteriorResidency();
         DaggerfallExteriorCellResidencyUpdate update = residency.Restore(save);
         ReconcileExteriorTerrainAppearance(residency);
         return update;
+    }
+
+    internal Vector3 LocalCompensation => _exteriorResidency is { IsInitialized: true } residency
+        ? residency.Origin.Compensation : Vector3.Zero;
+
+    internal WorldPoint ProfileToLocal(WorldPoint position) => DaggerfallExteriorSessionOrigin.Shift(position, LocalCompensation);
+    internal Vector3 LocalToProfile(Vector3 position) => position - LocalCompensation;
+
+    /// <summary>Rebase at a terrain-cell boundary, inside the existing admitted update.</summary>
+    internal void RebaseExteriorIfNeeded()
+    {
+        if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior
+            || _state.PlayerControl.Position is not WorldPoint position) return;
+        float cellSize = DaggerfallExteriorCellResidency.CellSize;
+        if (MathF.Abs(position.X) < cellSize && MathF.Abs(position.Z) < cellSize) return;
+        WorldOriginReadout origin = _engine.WorldOrigin.Read(new(_spatial.Session));
+        RequireOriginPair(origin);
+        long x = checked(origin.CellX + (long)Math.Floor(position.X));
+        long z = checked(origin.CellZ + (long)Math.Floor(position.Z));
+        using WorldOriginPrepared prepared = _engine.WorldOrigin.Prepare(new(_spatial.Session,
+            x, origin.CellY, z, ReadOnlyMemory<WorldOriginEntityRow>.Empty));
+        ApplyExteriorOriginCommit(_engine.WorldOrigin.Commit(new(prepared)));
+    }
+
+    private void NormalizeExteriorOrigin()
+    {
+        WorldOriginReadout origin = _engine.WorldOrigin.Read(new(_spatial.Session));
+        RequireOriginPair(origin);
+        if (origin.CellX == 0 && origin.CellY == 0 && origin.CellZ == 0) return;
+        using WorldOriginPrepared prepared = _engine.WorldOrigin.Prepare(new(_spatial.Session,
+            0, 0, 0, ReadOnlyMemory<WorldOriginEntityRow>.Empty));
+        ApplyExteriorOriginCommit(_engine.WorldOrigin.Commit(new(prepared)));
+    }
+
+    private void RequireOriginPair(WorldOriginReadout origin)
+    {
+        if (LocalCompensation != new Vector3(-origin.CellX, -origin.CellY, -origin.CellZ))
+            throw new InvalidOperationException("Exterior product compensation does not match the Engine origin; rebasing would corrupt world positions.");
     }
 
     /// <summary>
@@ -554,15 +616,19 @@ internal sealed class DaggerfallSiteLifecycle
                     pose.HeadingYawRadians));
             }
 
+            Projection.Rebase(localDelta);
+            ActionTriggers.RebaseActive(localDelta);
+            _groundContainers.RebaseActive(localDelta);
+            _host.RebaseTransientWorld(localDelta);
+            ActionTriggers.RebaseRestoredPlayer(_state.PlayerControl, _state.Actors.Player.Actor.Entity);
+
             DaggerfallExteriorWorldOrigin prior = residency.Origin;
             residency.AdoptRebasedOrigin(prior with { Compensation = prior.Compensation + localDelta });
         }
 
         // The camera is Engine-owned but its descriptor is derived from the product player pose.
         // Refresh it after shifting that pose, before the caller publishes the next presentation
-        // snapshot. This is safe only as part of a product-wide rebase contract; doors, actions,
-        // and portals still need corresponding authoritative rebase ownership before this method
-        // can be used as a live WorldOrigin commit caller.
+        // snapshot.
         _camera.Update(_state.PlayerControl);
         DaggerfallExteriorCellResidencyUpdate update = residency.Update(CurrentExteriorCell(), residency.Origin);
         ReconcileExteriorTerrainAppearance(residency);

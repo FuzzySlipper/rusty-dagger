@@ -106,10 +106,20 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     private readonly List<IDisposable> nextRetired = [];
     private Appearance? world;
     private Appearance? arrowAppearance;
-    private readonly AuthoredWorldAppearance worldAppearance;
+    private AuthoredWorldAppearance worldAppearance;
     private Action<List<AppearanceFact>>? appendSnapshotFacts;
     private Action? completeSnapshot;
     private bool disposed;
+
+    internal void Rebase(Vector3 delta)
+    {
+        worldAppearance = worldAppearance with
+        {
+            Transform = worldAppearance.Transform with { Translation = worldAppearance.Transform.Translation + delta },
+        };
+        foreach (EffectVisual effect in effects)
+            effect.Position = DaggerfallExteriorSessionOrigin.Shift(effect.Position, delta);
+    }
 
     internal DaggerfallSiteAppearance(IContentService content, IGraphicsService appearance, DaggerfallSiteProfile inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallDoorRuntime? doors = null, DaggerfallDungeonMotionProjection? dungeonMotion = null)
     {
@@ -1146,7 +1156,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         internal long? TargetActor { get; init; }
         internal long? SourceActor { get; init; }
         internal ulong? SourceItem { get; init; }
-        internal WorldPoint Position { get; } = position;
+        internal WorldPoint Position { get; set; } = position;
         internal SpriteAtlas Atlas { get; } = atlas;
         internal Appearance Appearance { get; } = appearance;
         internal SpritePlayback Playback { get; } = playback;

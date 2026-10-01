@@ -348,6 +348,14 @@ public sealed class RangedCombatSessionTests
         combat.Execution.ApplyImpacts([new AttackImpactNotice(archer, DaggerfallActorIdentity.PlayerEntityId, generation, releaseStep, Expired: false)], generation, facts);
         combat.AdvanceRangedFlight(generation, releaseStep, .125, positions, facts);
         Assert.Single(combat.ReadRangedFlights(generation, releaseStep));
+        DaggerfallRangedFlightView beforeRebase = Assert.Single(combat.ReadRangedFlights(generation, releaseStep + 1));
+        Vector3 delta = new(-1000, 3, 40);
+        combat.RebaseRangedFlight(delta);
+        DaggerfallRangedFlightView afterRebase = Assert.Single(combat.ReadRangedFlights(generation, releaseStep + 1));
+        Assert.Equal(beforeRebase.Position.ToVector() + delta, afterRebase.Position.ToVector());
+        Assert.Equal(beforeRebase.Direction, afterRebase.Direction);
+        foreach (long id in positions.Keys.ToArray())
+            positions[id] = WorldPoint.From(positions[id].ToVector() + delta);
         // A fresh admitted generation drops the old transient record rather than comparing its
         // release step to the new timeline's present step and accidentally landing it.
         combat.AdvanceRangedFlight(generation + 1, releaseStep + 1, .125, positions, facts);

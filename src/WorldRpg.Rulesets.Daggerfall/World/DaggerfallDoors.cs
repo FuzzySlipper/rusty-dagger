@@ -185,6 +185,15 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
 
     internal IEnumerable<DaggerfallDoorView> All => _doors.Values.OrderBy(door => door.Definition.Id.SourceKey, StringComparer.Ordinal).ThenBy(door => door.Definition.Id.BlockX).ThenBy(door => door.Definition.Id.BlockZ).ThenBy(door => door.Definition.Id.ModelIndex).Select(View);
 
+    internal void Rebase(Vector3 delta)
+    {
+        foreach (Door door in _doors.Values)
+        {
+            door.Definition = door.Definition with { Position = door.Definition.Position + delta };
+            Apply(door);
+        }
+    }
+
     internal bool TryRead(DaggerfallRdbDoorId id, out DaggerfallDoorView view)
     {
         if (_doors.TryGetValue(id, out Door? door)) { view = View(door); return true; }
@@ -553,7 +562,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
 
     private sealed class Door(DaggerfallRdbDoorDefinition definition, EntityId entity, DaggerfallDoorMotion motion, float progress, int lockValue, ulong bashAttempts, int? failedLockpickingSkill)
     {
-        internal DaggerfallRdbDoorDefinition Definition { get; } = definition;
+        internal DaggerfallRdbDoorDefinition Definition { get; set; } = definition;
         internal EntityId Entity { get; } = entity;
         internal DaggerfallDoorMotion Motion { get; set; } = motion;
         internal float Progress { get; set; } = progress;

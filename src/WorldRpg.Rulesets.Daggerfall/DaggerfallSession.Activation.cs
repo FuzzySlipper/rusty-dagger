@@ -260,7 +260,7 @@ internal sealed partial class DaggerfallSession
 
         if (hit.Kind == SpatialHitKind.StaticMesh && _sites.Projection.Inputs.DungeonMap is DaggerfallDungeonMapContent map)
         {
-            DaggerfallDungeonMapGeometry? placement = PlacementAt(map, hit.Point);
+            DaggerfallDungeonMapGeometry? placement = PlacementAt(map, _sites.LocalToProfile(hit.Point));
             if (placement is not null)
             {
                 DaggerfallDungeonActionDispatch? dispatch = graph.TriggerForPlacement(placement.PlacementId, @event);
