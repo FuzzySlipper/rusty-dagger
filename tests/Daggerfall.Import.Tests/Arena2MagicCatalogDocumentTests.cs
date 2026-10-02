@@ -117,15 +117,15 @@ public sealed class Arena2MagicCatalogDocumentTests
         JsonArray costs = JsonNode.Parse(publication.Json)!["effectCosts"]!.AsArray();
 
         // Both spells carry one effect without a subtype, so each type resolves through its first slot.
-        Assert.Equal([7, 7, 16, 26, 31], costs.Select(cost => cost!["type"]!.GetValue<int>()));
-        JsonObject first = costs[2]!.AsObject();
+        Assert.Equal([7, 7, 10, 10, 10, 10, 10, 10, 10, 10, 16, 26, 31], costs.Select(cost => cost!["type"]!.GetValue<int>()));
+        JsonObject first = costs[10]!.AsObject();
         Assert.Equal(-1, first["subType"]!.GetValue<int>());
         Assert.Equal(3, first["settingsType"]!.GetValue<int>());
         Assert.Equal("mysticism", first["school"]!.GetValue<string>());
         Assert.Equal(5, first["coefficients"]!["first"]!.GetValue<int>());
         Assert.Equal(25, first["coefficients"]!["second"]!.GetValue<int>());
-        Assert.Equal("illusion", costs[4]!["school"]!.GetValue<string>());
-        Assert.Equal(2, costs[4]!["coefficients"]!["first"]!.GetValue<int>());
+        Assert.Equal("illusion", costs[12]!["school"]!.GetValue<string>());
+        Assert.Equal(2, costs[12]!["coefficients"]!["first"]!.GetValue<int>());
 
         // Without the donor's tables the catalog states no cost rather than inventing one.
         Assert.Null(JsonNode.Parse(Arena2MagicCatalogDocument.Build(
@@ -145,7 +145,8 @@ public sealed class Arena2MagicCatalogDocumentTests
         HashSet<(int, int)> used = [.. document["spells"]!.AsArray().SelectMany(spell => spell!["effects"]!.AsArray())
             .Select(effect => (effect!["type"]!.GetValue<int>(), effect["subType"]!.GetValue<int>()))];
 
-        Assert.Equal(63, rows.Count);
+        Assert.Equal(71, rows.Count);
+        for (int subtype = 0; subtype < 8; subtype++) used.Add((10, subtype));
         Assert.Contains((26, -1), rows);
         used.Add((26, -1));
         used.Add((7, 4)); used.Add((7, 7));

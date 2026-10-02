@@ -31,6 +31,14 @@ internal sealed class DaggerfallVitalityConsequences
         return new(caster, target, trackId, amount, before - track.Current);
     }
 
+    /// <summary>Restores the canonical bounded track without resurrecting an accepted death.</summary>
+    internal double RestoreSpellTrack(Actor target, TrackId track, int amount)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(amount);
+        return target.Get<StatsComponent>().GetTrack(HealthTrack).Current > 0
+            ? target.Get<StatsComponent>().GetTrack(track).Restore(amount) : 0;
+    }
+
     /// <summary>Direct loss precedes bounded caster recovery; classic transfer restores the admitted amount, not the bounded loss.</summary>
     internal DaggerfallSpellTransferResult ResolveSpellTransfer(Actor caster, Actor target, int magnitude, bool fatigue, bool permitsFatigueLoss)
     {
