@@ -135,7 +135,7 @@
     "volume": 1.0,
     "pitch": 1.0,
     "spatialBlend": 0.0,
-    "attenuation": 1.0,
+    "maxDistance": 16.0,
     "attractRadius": 16.0,
     "attractMinimumDelaySeconds": 3,
     "attractMaximumDelaySeconds": 9,

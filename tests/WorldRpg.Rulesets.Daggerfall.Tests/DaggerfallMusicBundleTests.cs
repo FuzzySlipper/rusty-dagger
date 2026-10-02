@@ -208,6 +208,7 @@ public sealed class DaggerfallMusicBundleTests
         protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
         {
             nameof(IContentService.OpenBundle) => Open((ContentBundleOpenRequest)arguments![0]!),
+            nameof(IContentService.ReadBundleIdentity) => TestSessions.Digest(Encoding.UTF8.GetBytes(string.Join("\n", clipPaths.Order(StringComparer.Ordinal)))),
             nameof(IContentService.ReadBundleFiles) => (ReadOnlyMemory<ContentReferenceInfo>)clipPaths
                 .Select(path => new ContentReferenceInfo(path, default, 1))
                 .ToArray(),

@@ -52,7 +52,7 @@ internal sealed record DaggerfallTuning(
         new DaggerfallLootInteractionTuning(2.25d, .5d),
         new DaggerfallTimeTuning(12d),
         new DaggerfallStaminaRecoveryTuning(5d, 2d),
-        new DaggerfallPresentationAudioTuning(1F, 1F, 0F, 1F),
+        new DaggerfallPresentationAudioTuning(1F, 1F, 0F, 16F),
         new DaggerfallProgressionTuning(EnableExperimentalKillExperience: false, ExperiencePerLevel: 500),
         DaggerfallSiteLightingTuning.Classic,
         DaggerfallClimbingTuning.Classic,
@@ -180,7 +180,7 @@ internal sealed record DaggerfallTuning(
                 presentationAudio.GetProperty("volume").GetSingle(),
                 presentationAudio.GetProperty("pitch").GetSingle(),
                 presentationAudio.GetProperty("spatialBlend").GetSingle(),
-                presentationAudio.GetProperty("attenuation").GetSingle())
+                presentationAudio.GetProperty("maxDistance").GetSingle())
             {
                 AttractRadius = presentationAudio.GetProperty("attractRadius").GetSingle(),
                 AttractMinimumDelaySeconds = presentationAudio.GetProperty("attractMinimumDelaySeconds").GetInt32(),
@@ -410,7 +410,7 @@ internal sealed record DaggerfallMeleeTargetingTuning(double MaximumDistance, do
 }
 
 /// <summary>Ruleset-authored descriptor values for one-shot classic presentation audio.</summary>
-internal sealed record DaggerfallPresentationAudioTuning(float Volume, float Pitch, float SpatialBlend, float Attenuation)
+internal sealed record DaggerfallPresentationAudioTuning(float Volume, float Pitch, float SpatialBlend, float MaxDistance)
 {
     internal float AttractRadius { get; init; } = 16F;
     internal int AttractMinimumDelaySeconds { get; init; } = 3;
@@ -425,7 +425,7 @@ internal sealed record DaggerfallPresentationAudioTuning(float Volume, float Pit
         if (!float.IsFinite(Volume) || Volume < 0F) throw new ArgumentOutOfRangeException(nameof(Volume));
         if (!float.IsFinite(Pitch) || Pitch <= 0F) throw new ArgumentOutOfRangeException(nameof(Pitch));
         if (!float.IsFinite(SpatialBlend) || SpatialBlend is < 0F or > 1F) throw new ArgumentOutOfRangeException(nameof(SpatialBlend));
-        if (!float.IsFinite(Attenuation) || Attenuation <= 0F) throw new ArgumentOutOfRangeException(nameof(Attenuation));
+        if (!float.IsFinite(MaxDistance) || MaxDistance <= 0F) throw new ArgumentOutOfRangeException(nameof(MaxDistance));
         if (!float.IsFinite(AttractRadius) || AttractRadius <= 0F) throw new ArgumentOutOfRangeException(nameof(AttractRadius));
         if (AttractMinimumDelaySeconds < 0 || AttractMaximumDelaySeconds < AttractMinimumDelaySeconds) throw new ArgumentOutOfRangeException(nameof(AttractMaximumDelaySeconds));
         if (AttractMoveChancePercent is < 0 or > 100 || AttackCueChancePercent is < 0 or > 100) throw new ArgumentOutOfRangeException(nameof(AttackCueChancePercent));

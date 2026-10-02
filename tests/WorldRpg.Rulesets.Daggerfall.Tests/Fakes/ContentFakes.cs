@@ -6,6 +6,11 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 internal sealed class ContentFake : IContentService
 {
 
+    public ContentBundle OpenContainer(ContentContainerOpenRequest request) =>
+        throw new NotSupportedException("This fake does not admit installed content containers.");
+    public ContentSha256 ReadBundleIdentity(ContentBundle bundle) =>
+        throw new NotSupportedException("This fake does not model container identities.");
+
     public PortableAsset LoadPortableAsset(PortableAssetLoadRequest request) => throw new NotSupportedException();
     public PortableAssetReadoutResult ReadPortableAsset(PortableAsset asset) => throw new NotSupportedException();
     public ContentReference OpenPortableAssetMember(PortableAssetMemberRequest request) => throw new NotSupportedException();
@@ -93,6 +98,16 @@ internal sealed class ContentFake : IContentService
 /// <summary>Build-declared bundles for full-product tests; bodies stay outside the eager snapshot.</summary>
 internal sealed class BundleContentFake : IContentService
 {
+
+    public ContentBundle OpenContainer(ContentContainerOpenRequest request) =>
+        throw new NotSupportedException("This fake does not admit installed content containers.");
+    public ContentSha256 ReadBundleIdentity(ContentBundle bundle)
+    {
+        // Identity reflects the fake's admitted entries; it is not a container-format test.
+        string entries = string.Join("\n", ReadBundleFiles(bundle).Span.ToArray()
+            .Select(entry => $"{entry.Path}:{entry.Sha256}:{entry.ByteLength}"));
+        return Digest(System.Text.Encoding.UTF8.GetBytes(entries));
+    }
 
     public PortableAsset LoadPortableAsset(PortableAssetLoadRequest request) => throw new NotSupportedException();
     public PortableAssetReadoutResult ReadPortableAsset(PortableAsset asset) => throw new NotSupportedException();
