@@ -241,7 +241,7 @@ public sealed class SanguineRoseSessionTests
         public void Damage(DamageEvent value) => value.Damage = 1;
     }
 
-    private sealed class Fixture : IDisposable
+    internal sealed class Fixture : IDisposable
     {
         internal readonly DaggerfallSiteProfile Inputs;
         internal readonly DaggerfallSiteProfile Castle;
@@ -257,7 +257,7 @@ public sealed class SanguineRoseSessionTests
         private ulong _step;
         internal int Condition => Session.State.ItemInstances.RequireUnique(Source).CurrentCondition;
         internal string Message => Engine.PublishedNested("inventory", "message")!;
-        internal Fixture(bool appearance = true)
+        internal Fixture(bool appearance = true, string magicItemKey = "magic-item.0004")
         {
             var inputs = ReadInputs(TestData.RepositoryRoot);
             Inputs = appearance ? inputs : new DaggerfallSiteProfile(inputs.Project, inputs.SpatialArtifact, inputs.StaticMesh,
@@ -278,7 +278,7 @@ public sealed class SanguineRoseSessionTests
             Session.State.Actors.Get(Enemy).ApplyPose(new(new WorldPoint(0, 0, -6), 0));
             Perception.Responder = request => Respond(request);
             var created = new DaggerfallItemFactory(TestPayload.Definitions, Engine.Context.Random)
-                .Create(new("Magic", "sanguine-rose", DaggerfallItemOwner.Player, MagicItemKey: "magic-item.0004"));
+                .Create(new("Magic", "sanguine-rose", DaggerfallItemOwner.Player, MagicItemKey: magicItemKey));
             var identityItem = Session.UniqueItemAllocator.AllocateReference(); Source = identityItem.Value;
             Item = Session.State.Equipment.Materialize(identityItem, created.Item);
             Session.State.ItemInstances.RegisterUnique(Source, created.Metadata);
