@@ -77,9 +77,13 @@ public sealed class ItemSoulEffectsSessionTests
         s.State.Kit.Rules.RegisterAction(s.DefinitionsByActor[1].ActionId!, new LethalStrike());
         s.ResolveExplicitMelee(new(1, f.Enemy, 1, 10000, .125)); f.Update();
         Assert.True(s.State.Actors.Get(f.Enemy).IsDefeated);
+        Assert.DoesNotContain(s.State.Effects.Active, effect => effect.Definition.Key == "soul-trap");
         Assert.Contains("Soul trapped", s.Presentation.LastOutcome);
         Assert.Single(s.State.ItemInstances.UniqueItems, value => value.Value.CapturedSoulMobileId == 7);
         var saved = DaggerfallSavePayload.Read(s.CaptureSave()); Assert.Single(saved.Corpses, corpse => corpse.ActorId == f.Enemy);
+        Assert.DoesNotContain(saved.ActiveEffects, effect => effect.EffectKey == "soul-trap");
+        using var restored = f.Restore();
+        Assert.DoesNotContain(restored.State.Effects.Active, effect => effect.Definition.Key == "soul-trap");
     }
 
     private sealed class LethalStrike : ICombatContribution
