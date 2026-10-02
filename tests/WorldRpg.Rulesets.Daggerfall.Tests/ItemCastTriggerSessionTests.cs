@@ -62,6 +62,31 @@ public sealed class ItemCastTriggerSessionTests
     }
 
     [Fact]
+    public void Zero_elapsed_and_refused_or_already_recovered_rest_do_not_consume_a_pending_reroll()
+    {
+        using var f = new SanguineRoseSessionTests.Fixture(magicItemKey: "magic-item.0035");
+        var s = f.Session; Equip(s, f.Item);
+        s.AdvanceElapsedTime(360 * 60, resting: true);
+        long sequence = s.Casting.NextSequence;
+        Assert.True(s.State.ItemInstances.RequireUnique(f.Source).HeldCast!.RerollPending);
+        s.AdvanceElapsedTime(0);
+        var refused = s.ApplyRest(new(DaggerfallRestMode.Timed, 1), new(false), _ => throw new InvalidOperationException());
+        Assert.False(refused.Accepted);
+        foreach (string track in new[] { "health", "stamina", "magicka" })
+        {
+            var value = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse(track));
+            value.SetCurrent(value.Maximum.Value);
+        }
+        var recovered = s.ApplyRest(new(DaggerfallRestMode.UntilHealed, 0), new(true), _ => throw new InvalidOperationException());
+        Assert.True(recovered.Accepted); Assert.Equal(0, recovered.ElapsedSeconds);
+        Assert.Equal(sequence, s.Casting.NextSequence);
+        Assert.True(s.State.ItemInstances.RequireUnique(f.Source).HeldCast!.RerollPending);
+        s.AdvanceElapsedTime(1);
+        Assert.Equal(sequence + 1, s.Casting.NextSequence);
+        Assert.False(s.State.ItemInstances.RequireUnique(f.Source).HeldCast!.RerollPending);
+    }
+
+    [Fact]
     public void Missing_saved_held_effect_is_rejected_but_canonical_cancellation_clears_its_relationship()
     {
         using var f = new SanguineRoseSessionTests.Fixture(magicItemKey: "magic-item.0035");
