@@ -61,6 +61,15 @@ internal enum DaggerfallEffectStacking
 /// <summary>Typed movement meaning supplied by compiled effect families; the movement owner never infers it from effect names.</summary>
 internal readonly record struct DaggerfallMovementProtection(bool PreventsFallDamage, bool GrantsLevitation = false, bool EnhancesClimbing = false);
 
+[Flags]
+internal enum DaggerfallConcealment
+{
+    None = 0,
+    InvisibleNormal = 1, InvisibleTrue = 2,
+    BlendingNormal = 4, BlendingTrue = 8,
+    ShadeNormal = 16, ShadeTrue = 32,
+}
+
 /// <summary>
 /// Typed perception meaning supplied by a compiled effect family. Perception reads this
 /// projection instead of inferring concealment or language bonuses from effect keys or payloads.
@@ -69,7 +78,8 @@ internal readonly record struct DaggerfallPerceptionEffectState(
     bool Invisible = false,
     bool Blending = false,
     bool Shade = false,
-    int ComprehendLanguagesBonus = 0)
+    int ComprehendLanguagesBonus = 0,
+    DaggerfallConcealment Concealment = DaggerfallConcealment.None)
 {
     internal DaggerfallPerceptionEffectState Validate()
     {
@@ -82,7 +92,8 @@ internal readonly record struct DaggerfallPerceptionEffectState(
         Invisible || other.Invisible,
         Blending || other.Blending,
         Shade || other.Shade,
-        checked(ComprehendLanguagesBonus + other.ComprehendLanguagesBonus)).Validate();
+        checked(ComprehendLanguagesBonus + other.ComprehendLanguagesBonus),
+        Concealment | other.Concealment).Validate();
 }
 
 /// <summary>One compiled Daggerfall effect policy. Future effect families provide their own payload and state meaning here.</summary>
