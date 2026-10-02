@@ -327,7 +327,8 @@ public sealed partial class DaggerfallEquipmentWearTests
         internal Actor Player => _actors.Player.Actor;
         internal Actor EnemyActor => _actors.TryGet(Enemy, out ActorState actor) ? actor.Actor : throw new InvalidOperationException("Enemy is missing.");
 
-        internal WearFixture(DaggerfallDefinitions? definitions = null)
+        internal WearFixture(DaggerfallDefinitions? definitions = null,
+            Func<long, long, ulong, int, int, ulong, ulong, (double Magicka, int Strength)>? molagBalStrike = null)
         {
             Definitions = definitions ?? DaggerfallEquipmentWearTests.Definitions;
             DaggerfallActorDefinition playerDefinition = Definitions.RequireActor(new DaggerfallActorId("player"));
@@ -362,7 +363,7 @@ public sealed partial class DaggerfallEquipmentWearTests
             _actorEquipment[Enemy] = BuildEquipment(enemy.Actor.Entity, enemy.Actor, out _);
             _combat = new DaggerCombatRules(_random, _actors, PlayerEquipment, _ => null, _itemInstances, Definitions, _authored, null!,
                 actorEquipment: id => _actorEquipment.TryGetValue(id, out MechanicsEquipmentCoordinator? coordinator) ? coordinator : PlayerEquipment,
-                itemCondition: _itemCondition, playerPosition: () => new WorldPoint(0f, 0f, 0f));
+                itemCondition: _itemCondition, playerPosition: () => new WorldPoint(0f, 0f, 0f), molagBalStrike: molagBalStrike);
         }
 
         internal void Script(int body, int critical, int hit, int? damage = null, int? wornWeaponRoll = null, int? wornArmourRoll = null, int? razorSave = null)
@@ -408,6 +409,15 @@ public sealed partial class DaggerfallEquipmentWearTests
             EquipPlayerItem(itemId, id, slot);
             _itemInstances.ReplaceUnique(id, _itemInstances.RequireUnique(id) with
             { Enchantment = "magic-item.0007", CurrentCondition = condition, MaximumCondition = 1500 });
+        }
+
+        internal void EquipEnemyMace(ulong id, int condition)
+        {
+            string item = Definitions.TemplateItems.Values.First(definition => definition.Weapon is not null
+                && definition.Id.Value.EndsWith("-magic-magic-item-0002", StringComparison.Ordinal)).Id.Value;
+            EquipEnemyWeapon(item, id);
+            _itemInstances.ReplaceUnique(id, _itemInstances.RequireUnique(id) with
+                { Enchantment = "magic-item.0002", CurrentCondition = condition, MaximumCondition = 1500 });
         }
 
         internal void EquipRazor(int condition = 1500)

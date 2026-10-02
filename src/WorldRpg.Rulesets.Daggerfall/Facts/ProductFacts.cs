@@ -26,6 +26,8 @@ internal sealed record ArtifactDamageReflectedFact(ulong SourceItemId, long Sour
     int ReflectedDamage, double ActualHealthLost, ulong OriginatingGeneration, ulong OriginatingSequence) : IProductFact;
 internal sealed record ArtifactTerminalStrikeFact(ulong SourceItemId, long SourceActorId, long TargetActorId,
     int AddedDamage, ulong OriginatingGeneration, ulong OriginatingSequence) : IProductFact;
+internal sealed record ArtifactResourceTransferredFact(ulong SourceItemId, long SourceActorId, long TargetActorId,
+    double Magicka, int Strength, ulong OriginatingGeneration, ulong OriginatingSequence) : IProductFact;
 internal sealed record ActorTransformedFact(ulong SourceItemId, long SourceActorId, long TargetActorId,
     DaggerfallWabbajackOutcome Outcome, string? ReplacementDefinition, ulong OriginatingGeneration, ulong OriginatingSequence) : IProductFact;
 /// <summary>A monster's accepted fatigue consequence remains distinct from health damage and its bounded live loss is observable.</summary>
