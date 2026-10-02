@@ -9,7 +9,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>Meaningful equipped-callback and cadence state, carried by the actual durable item.</summary>
 internal sealed record DaggerfallItemStrikeSource(ulong ItemId, string Enchantment);
 
-internal sealed record DaggerfallHeldCastState(long CasterId, long LastRerollMinute);
+internal sealed record DaggerfallHeldCastState(long CasterId, long LastRerollMinute, string[] ActiveEffectInstances, bool RerollPending = false);
 
 /// <summary>Item trigger policy; casting, equipment, calendar, condition and effects keep their one owners.</summary>
 internal sealed class DaggerfallItemCastTriggers(DaggerfallMagicCatalogSet magic, DaggerfallItemInstances instances,
@@ -60,7 +60,7 @@ internal sealed class DaggerfallItemCastTriggers(DaggerfallMagicCatalogSet magic
                 }
                 if (metadata.HeldCast is { } previous && previous.CasterId == casterId) continue;
                 effects.CancelHeldItem(entry.Key);
-                instances.ReplaceUnique(entry.Key, metadata with { HeldCast = new(casterId!.Value, minuteIndex()) });
+                instances.ReplaceUnique(entry.Key, metadata with { HeldCast = new(casterId!.Value, minuteIndex(), []) });
                 foreach (var payload in payloads)
                 {
                     if (!Available(entry.Key)) break;
@@ -68,6 +68,7 @@ internal sealed class DaggerfallItemCastTriggers(DaggerfallMagicCatalogSet magic
                     if (result.Bundle is not null && casting.AvailableSpellCost(casterId.Value, payload.SpellKey!) is int cost)
                         Wear(casterId.Value, item!.Value, Math.Max(1, cost));
                 }
+                RememberActiveEffects(entry.Key);
             }
         }
         finally { _refreshing = false; }
@@ -79,7 +80,11 @@ internal sealed class DaggerfallItemCastTriggers(DaggerfallMagicCatalogSet magic
         var metadata = instances.RequireUnique(id);
         var payloads = Payloads(metadata, UsedType);
         if (payloads.Count == 0) return new(false, "This enchantment has no use effect.");
-        if (!Available(id)) return new(false, "This magic item is broken.");
+        if (!Available(id))
+        {
+            Wear(metadata.Owner.Id, item, ActivationWear); // The condition owner reports AlreadyBroken.
+            return new(false, "This magic item is broken.");
+        }
         bool accepted = false;
         DaggerfallCastOutcome outcome = DaggerfallCastOutcome.UnknownSpell;
         foreach (var payload in payloads)
@@ -138,15 +143,44 @@ internal sealed class DaggerfallItemCastTriggers(DaggerfallMagicCatalogSet magic
                 long ticks = (roundBefore + count + cadence - 1) / cadence - (roundBefore + cadence - 1) / cadence;
                 if (ticks > 0) Wear(held.CasterId, item, checked((int)ticks));
             }
-            if ((synthetic || resting) && held.CasterId == DaggerfallActorIdentity.PlayerEntityId
+            if (held.CasterId == DaggerfallActorIdentity.PlayerEntityId
                 && minuteIndex() - held.LastRerollMinute >= RerollMinutes && Available(entry.Key))
-            {
-                effects.CancelHeldItem(entry.Key);
-                instances.ReplaceUnique(entry.Key, instances.RequireUnique(entry.Key) with { HeldCast = held with { LastRerollMinute = minuteIndex() } });
-                foreach (var payload in Payloads(instances.RequireUnique(entry.Key), HeldType))
-                    Trigger(held.CasterId, entry.Key, payload, DaggerfallCastSource.ItemHeld, held.CasterId);
-            }
+                instances.ReplaceUnique(entry.Key, instances.RequireUnique(entry.Key) with
+                { HeldCast = instances.RequireUnique(entry.Key).HeldCast! with { RerollPending = true } });
         }
+    }
+
+    /// <summary>Sleep/synthetic-time completion executes scheduled rerolls once at the final calendar.</summary>
+    internal void CompleteTimeIncrease()
+    {
+        Refresh();
+        foreach (var entry in instances.UniqueItems.Where(value => value.Value.HeldCast?.RerollPending == true).ToArray())
+        {
+            var held = entry.Value.HeldCast!;
+            if (!Available(entry.Key) || Equipped(held.CasterId, entry.Key) is null) continue;
+            effects.CancelHeldItem(entry.Key);
+            instances.ReplaceUnique(entry.Key, instances.RequireUnique(entry.Key) with
+            { HeldCast = held with { LastRerollMinute = minuteIndex(), RerollPending = false, ActiveEffectInstances = [] } });
+            foreach (var payload in Payloads(instances.RequireUnique(entry.Key), HeldType))
+                Trigger(held.CasterId, entry.Key, payload, DaggerfallCastSource.ItemHeld, held.CasterId);
+            RememberActiveEffects(entry.Key);
+        }
+    }
+
+    private void RememberActiveEffects(ulong id)
+    {
+        if (!instances.ContainsUnique(id) || instances.RequireUnique(id).HeldCast is not { } held) return;
+        string[] active = effects.Capture().Where(value => value.ItemId == id && value.BundleKind == DaggerfallEffectBundleKind.HeldMagicItem)
+            .Select(value => value.Instance).ToArray();
+        instances.ReplaceUnique(id, instances.RequireUnique(id) with { HeldCast = held with { ActiveEffectInstances = active } });
+    }
+
+    internal void EffectCompleted(DaggerfallEffectOutcome outcome)
+    {
+        if (outcome.Kind is not (DaggerfallEffectOutcomeKind.Cancelled or DaggerfallEffectOutcomeKind.Cured or DaggerfallEffectOutcomeKind.Expired)) return;
+        foreach (var entry in instances.UniqueItems.Where(value => value.Value.HeldCast?.ActiveEffectInstances.Contains(outcome.Instance) == true).ToArray())
+            instances.ReplaceUnique(entry.Key, entry.Value with { HeldCast = entry.Value.HeldCast! with
+            { ActiveEffectInstances = entry.Value.HeldCast.ActiveEffectInstances.Where(value => value != outcome.Instance).ToArray() } });
     }
 
     private DaggerfallCastResult Trigger(long casterId, ulong id, DaggerfallMagicEnchantmentDefinition payload,

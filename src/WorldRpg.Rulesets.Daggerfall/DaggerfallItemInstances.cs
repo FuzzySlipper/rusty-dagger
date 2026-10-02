@@ -72,7 +72,9 @@ internal sealed record DaggerfallItemInstanceMetadata(
             throw new ArgumentOutOfRangeException(nameof(CreditValue), "A letter of credit must carry a positive amount.");
         if (ItemId != "template-275" && CreditValue is not null)
             throw new ArgumentException("Only a letter of credit can carry a credit amount.", nameof(CreditValue));
-        if (HeldCast is { } held && (held.CasterId <= 0 || held.CasterId != Owner.Id || Owner.Scope is not ("player" or "actor") || held.LastRerollMinute < 0 || Enchantment is null))
+        if (HeldCast is { } held && (held.CasterId <= 0 || held.CasterId != Owner.Id || Owner.Scope is not ("player" or "actor") || held.LastRerollMinute < 0 || Enchantment is null
+            || held.ActiveEffectInstances is null || held.ActiveEffectInstances.Any(string.IsNullOrWhiteSpace)
+            || held.ActiveEffectInstances.Distinct().Count() != held.ActiveEffectInstances.Length))
             throw new ArgumentException("Held spell cadence requires a positive caster, nonnegative calendar/cadence, and enchantment.");
         Owner.Validate();
         return this;
@@ -96,7 +98,8 @@ internal sealed record DaggerfallItemInstanceMetadata(
             && string.Equals(Dye, other.Dye, StringComparison.Ordinal)
             && BookId == other.BookId
             && PotionRecipeKey == other.PotionRecipeKey
-            && CreditValue == other.CreditValue;
+            && CreditValue == other.CreditValue
+            && HeldCast is null && other.HeldCast is null;
     }
 
     internal static DaggerfallItemInstanceMetadata Default(DaggerfallItemDefinition definition, DaggerfallItemOwner owner, ulong? creditValue = null) =>

@@ -8,6 +8,7 @@ using WorldRpg.Kit;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using Xunit;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using UniqueItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 using SlotId = WorldRpg.Kit.Inventory.EquipmentSlotId;
 
@@ -38,6 +39,50 @@ public sealed class ItemCastTriggerSessionTests
         Assert.Null(restored.State.ItemInstances.RequireUnique(f.Source).HeldCast);
         Assert.DoesNotContain(restored.State.Effects.Capture(), value => value.ItemId == f.Source);
         Assert.Equal(strength, Stat(restored, "strength").Value);
+    }
+
+    [Fact]
+    public void Rest_schedules_rerolls_until_completion_then_rerolls_once_at_the_final_calendar()
+    {
+        using var f = new SanguineRoseSessionTests.Fixture(magicItemKey: "magic-item.0035");
+        var s = f.Session; Equip(s, f.Item);
+        long sequence = s.Casting.NextSequence;
+        s.ApplyRest(new(DaggerfallRestMode.Timed, 12), new(true), seconds =>
+        {
+            var advance = s.AdvanceElapsedTime(seconds, deferSkillAdvancement: true, resting: true);
+            Assert.Equal(sequence, s.Casting.NextSequence);
+            return new(seconds, advance.AppliedSeconds);
+        });
+        Assert.Equal(sequence + 1, s.Casting.NextSequence);
+        var held = s.State.ItemInstances.RequireUnique(f.Source).HeldCast!;
+        Assert.False(held.RerollPending);
+        Assert.Single(held.ActiveEffectInstances);
+        var calendar = DaggerfallSavePayload.Read(s.CaptureSave()).Calendar;
+        Assert.Equal(new World.DaggerfallCalendar(calendar.Year, calendar.Month, calendar.Day, calendar.Hour, calendar.Minute, calendar.Second).ToAbsoluteSeconds() / 60, held.LastRerollMinute);
+    }
+
+    [Fact]
+    public void Missing_saved_held_effect_is_rejected_but_canonical_cancellation_clears_its_relationship()
+    {
+        using var f = new SanguineRoseSessionTests.Fixture(magicItemKey: "magic-item.0035");
+        var s = f.Session; Equip(s, f.Item);
+        var saved = DaggerfallSavePayload.Read(s.CaptureSave());
+        var bad = saved with { ActiveEffects = saved.ActiveEffects.Where(value => value.ItemId != f.Source).ToArray() };
+        Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(f.Engine.Context, f.Composition, DaggerfallSavePayload.Encode(bad)));
+        s.State.Effects.CancelHeldItem(f.Source);
+        Assert.Empty(s.State.ItemInstances.RequireUnique(f.Source).HeldCast!.ActiveEffectInstances);
+        using var restored = f.Restore();
+        Assert.DoesNotContain(restored.State.Effects.Capture(), value => value.ItemId == f.Source);
+    }
+
+    [Fact]
+    public void Item_ready_save_with_nonzero_magicka_cost_is_rejected_without_normalization()
+    {
+        using var f = new SanguineRoseSessionTests.Fixture(magicItemKey: "magic-item.0019");
+        f.Use(); var saved = DaggerfallSavePayload.Read(f.Session.CaptureSave());
+        var bad = saved with { ReadySpell = saved.ReadySpell! with { Cost = 1 } };
+        Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(f.Engine.Context, f.Composition, DaggerfallSavePayload.Encode(bad)));
+        Assert.Throws<ArgumentException>(() => f.Session.Casting.RestoreReadySpell(bad.ReadySpell));
     }
 
     [Fact]
@@ -84,7 +129,11 @@ public sealed class ItemCastTriggerSessionTests
         Assert.Equal(before, f.Condition);
         var held = s.State.ItemInstances.RequireUnique(f.Source).HeldCast;
         using var restored = f.Restore();
-        Assert.Equal(held, restored.State.ItemInstances.RequireUnique(f.Source).HeldCast);
+        var restoredHeld = restored.State.ItemInstances.RequireUnique(f.Source).HeldCast!;
+        Assert.Equal(held!.CasterId, restoredHeld.CasterId);
+        Assert.Equal(held.LastRerollMinute, restoredHeld.LastRerollMinute);
+        Assert.Equal(held.RerollPending, restoredHeld.RerollPending);
+        Assert.Equal(held.ActiveEffectInstances, restoredHeld.ActiveEffectInstances);
         long resumed = Assert.Single(restored.State.Effects.Capture(), value => value.ItemId == f.Source).BundleSequence;
         restored.AdvanceElapsedTime(60);
         Assert.Equal(resumed, Assert.Single(restored.State.Effects.Capture(), value => value.ItemId == f.Source).BundleSequence);

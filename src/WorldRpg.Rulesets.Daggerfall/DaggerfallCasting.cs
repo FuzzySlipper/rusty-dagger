@@ -152,12 +152,13 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
     {
         if (!Enum.IsDefined(ready.Source) || ready.Source is DaggerfallCastSource.ItemHeld or DaggerfallCastSource.ItemStrike
             || (ready.ItemId is null) != (ready.Source == DaggerfallCastSource.Spell)
+            || ready.Cost < 0 || ready.ItemId is not null && ready.Cost != 0
             || ResolveSource(playerId, ready.ItemId) is null
             || !catalog.Spells.TryGetValue(ready.SpellKey, out var spell) || spell.Name.StartsWith('!') || !TryDefinitions(spell, out _)
             || ready.ItemId is null && playerKnowsSpell?.Invoke(ready.SpellKey) == false)
             throw new ArgumentException($"Saved ready spell '{ready.SpellKey}' has an unavailable source or effect.");
         var state = Readiness(playerId)!;
-        state.Ready = ready with { Cost = ready.ItemId is null ? ready.Cost : 0 }; _armed.Add(state);
+        state.Ready = ready; _armed.Add(state);
     }
 
     internal void CancelItemReferences(ulong itemId)
@@ -176,7 +177,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
         if (!catalog.Spells.TryGetValue(key, out var spell) || spell.Name.StartsWith('!') || spell.Effects.Count == 0)
             return Finish(DaggerfallCastOutcome.UnknownSpell);
         if (!TryDefinitions(spell, out var definitions)) return Finish(DaggerfallCastOutcome.UnsupportedEffect);
-        var release = CreateBundle(actor, casterId, new(key, itemId, 0, source), spell, definitions, null, null);
+        var release = CreateBundle(actor, casterId, new(key, itemId, 0, source), spell, definitions, null, null, publishRelease: false);
         return Deliver(release.Bundle!, [targetId]);
     }
 
@@ -215,7 +216,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
     }
 
     private DaggerfallCastResult CreateBundle(Actor actor, long casterId, DaggerfallReadySpell ready,
-        DaggerfallSpellDefinition spell, DaggerfallEffectDefinition[] definitions, Vector3? origin, Vector3? direction)
+        DaggerfallSpellDefinition spell, DaggerfallEffectDefinition[] definitions, Vector3? origin, Vector3? direction, bool publishRelease = true)
     {
         int cost = ready.Cost;
         long sequence = NextSequence;
@@ -233,7 +234,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                 recordSkill(new(catalog.RequireEffectCost(effect).School, DaggerfallSkillUseReason.ReleasedSpellEffect,
                     DaggerfallSkillUseOutcome.Accepted));
         _pending.Add(bundle);
-        return Finish(DaggerfallCastOutcome.Released, bundle);
+        return publishRelease ? Finish(DaggerfallCastOutcome.Released, bundle) : new(DaggerfallCastOutcome.Released, bundle);
     }
 
     internal DaggerfallCastResult Deliver(DaggerfallLiveSpell bundle, IReadOnlyList<long> targets)

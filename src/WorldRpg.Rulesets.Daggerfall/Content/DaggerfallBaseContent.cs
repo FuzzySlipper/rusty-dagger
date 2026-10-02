@@ -2471,9 +2471,12 @@ internal static partial class DaggerfallBaseContent
                     spellKey = null;
                 }
 
+                int enchantmentType = Integer(enchantment, "type", diagnostics);
+                if (enchantmentType is 0 or 1 or 2 && string.IsNullOrWhiteSpace(spellKey))
+                    diagnostics.Add($"Published spell trigger '{enchantmentKey}' has no normalized spell link.");
                 enchantments.Add(new DaggerfallMagicEnchantmentDefinition(
                     enchantmentKey,
-                    Integer(enchantment, "type", diagnostics),
+                    enchantmentType,
                     Integer(enchantment, "param", diagnostics),
                     Text(enchantment, "paramMeaning", diagnostics),
                     spellKey,

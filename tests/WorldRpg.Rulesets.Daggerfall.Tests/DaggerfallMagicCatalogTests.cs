@@ -50,6 +50,20 @@ public sealed class DaggerfallMagicCatalogTests
         Assert.Null(Assert.Single(first.Enchantments).SpellKey);
     }
 
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void Rejects_trigger_content_without_a_normalized_spell_link(bool setting)
+    {
+        var payload = JsonNode.Parse(PayloadJson())!.AsObject();
+        JsonNode row = setting
+            ? payload["magic"]!["enchantmentSettings"]!.AsArray().First(value => value!["type"]!.GetValue<int>() is 0 or 1 or 2)!
+            : payload["magic"]!["magicItems"]!.AsArray().SelectMany(value => value!["enchantments"]!.AsArray())
+                .First(value => value!["type"]!.GetValue<int>() is 0 or 1 or 2)!;
+        row["spell"] = null;
+        var failure = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString())));
+        Assert.Contains(failure.Diagnostics, value => value.Contains(setting ? "trigger metadata" : "normalized spell link"));
+    }
+
     [Fact]
     public void RejectsACatalogThatDisagreesWithItself()
     {
