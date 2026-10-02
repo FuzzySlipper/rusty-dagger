@@ -162,6 +162,8 @@ public sealed class BlockInventoryTests
         Assert.Equal(mark.Offset + 643 + 26 + 18, mark.Offset + 643 + 26 + 18);
         Assert.Equal(slot.FactionId, bytes[mark.Offset + 643 + 26 + 18] | (bytes[mark.Offset + 643 + 26 + 19] << 8));
         Assert.Equal(slot.NameSeed, bytes[mark.Offset + 643 + 26] | (bytes[mark.Offset + 643 + 26 + 1] << 8));
+        Assert.Equal(slot.LocationId, bytes[mark.Offset + 643 + 26 + 22] | (bytes[mark.Offset + 643 + 26 + 23] << 8));
+        Assert.Equal(slot.Sector, unchecked((short)(bytes[mark.Offset + 643 + 26 + 20] | (bytes[mark.Offset + 643 + 26 + 21] << 8))));
         Assert.Equal(slot.BuildingType, bytes[mark.Offset + 643 + 26 + 24]);
         Assert.Equal(slot.Quality, bytes[mark.Offset + 643 + 26 + 25]);
 

@@ -321,6 +321,7 @@ public static class DungeonNormalizer
         private readonly List<NormalizedDungeonAction> actions = [];
         private readonly List<DoorDraft> doorDrafts = [];
         private readonly List<DungeonRecordProvenance> provenance = [];
+        private readonly List<NormalizedQuestMarker> questMarkers = [];
         private NormalizedMarker? startMarker;
         private NormalizedMarker? enterMarker;
         private int models;
@@ -365,6 +366,12 @@ public static class DungeonNormalizer
             {
                 RdbFlatSource flat = block.Flats[index];
                 NormalizedVector3 position = MeshGeometry.ToRightHanded(Place(flat.X, flat.Y, flat.Z, reference));
+                if (QuestMarkerNormalization.Read($"quest/{blockPlacementId}/{index}", flat.TextureArchive, flat.TextureRecord, position) is { } marker)
+                {
+                    questMarkers.Add(marker with { SourceOrdinal = index, BlockX = reference.X, BlockZ = reference.Z });
+                    AddProvenance(marker.Id, "rdb-quest-marker", blocks.Source, index);
+                    continue;
+                }
                 if (reference.IsStart && RdbSourceClassification.IsStartMarker(flat))
                 {
                     startMarker ??= new("marker/start", position);
@@ -644,6 +651,7 @@ public static class DungeonNormalizer
                 doors)
             {
                 Actions = actions,
+                QuestMarkers = questMarkers,
                 GeometryPlacements = normalizedGeometryPlacements,
                 StaticMeshIds = staticGeometry.Select(mesh => mesh.Id).ToArray(),
                 ActionModels = actionModelDrafts

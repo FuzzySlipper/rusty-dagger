@@ -63,7 +63,7 @@ public sealed class DaggerfallDungeonDiscoveryTests
         Assert.Empty(doorVisualMeshIds.Intersect(staticMeshIds));
         Assert.All(map.GeometryPlacements.SelectMany(placement => placement.MeshIds), meshId => Assert.Contains(meshId, staticMeshIds));
 
-        DaggerfallDungeonMapMarker entrance = Assert.Single(map.Markers, value => value.Kind == DaggerfallDungeonMapMarkerKind.Entrance);
+        DaggerfallSiteMarker entrance = Assert.Single(map.Markers, value => value.Kind == DaggerfallSiteMarkerKind.Entrance);
         JsonElement sourceEntrance = world.GetProperty("enterMarker");
         Assert.Equal(sourceEntrance.GetProperty("id").GetString(), entrance.Id);
         Assert.Equal(ReadVector3(sourceEntrance.GetProperty("position")), new Vector3(entrance.Position.X, entrance.Position.Y, entrance.Position.Z));
@@ -101,7 +101,7 @@ public sealed class DaggerfallDungeonDiscoveryTests
         DaggerfallRdbDoorId doorId = map.DoorIds[0];
         Vector3 seenSurface = map.GeometryPlacements[0].SamplePoints[0];
         DaggerfallDungeonSurfaceCell seenCell = DaggerfallDungeonSurfaceCell.At(seenSurface);
-        DaggerfallDungeonMapMarker entrance = Assert.Single(map.Markers, marker => marker.Kind == DaggerfallDungeonMapMarkerKind.Entrance);
+        DaggerfallSiteMarker entrance = Assert.Single(map.Markers, marker => marker.Kind == DaggerfallSiteMarkerKind.Entrance);
 
         Assert.True(discovery.ObservePlacement(placementId));
         Assert.True(discovery.ObserveDoor(doorId));
@@ -184,8 +184,8 @@ public sealed class DaggerfallDungeonDiscoveryTests
             Encoding.UTF8.GetBytes(payload.ToJsonString()),
             definitions);
         DaggerfallDungeonMapContent map = Assert.IsType<DaggerfallDungeonMapContent>(inputs.DungeonMap);
-        DaggerfallDungeonMapMarker portal = Assert.Single(map.Markers, value => value.Id == "portal/stone-door");
-        Assert.Equal(DaggerfallDungeonMapMarkerKind.Portal, portal.Kind);
+        DaggerfallSiteMarker portal = Assert.Single(map.Markers, value => value.Id == "portal/stone-door");
+        Assert.Equal(DaggerfallSiteMarkerKind.Portal, portal.Kind);
         Assert.Equal(new WorldRpg.Kit.Controls.WorldPoint(4F, 5F, 6F), portal.Position);
         Assert.Equal("worldrpg/imports/stone-chamber", portal.DestinationLogicalProfile);
 

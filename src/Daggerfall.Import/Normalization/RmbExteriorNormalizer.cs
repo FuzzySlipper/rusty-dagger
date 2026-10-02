@@ -118,6 +118,7 @@ public static class RmbExteriorNormalizer
         private readonly Dictionary<(ushort Archive, ushort Record), TextureInfo> textures = [];
         private readonly SortedSet<string> referencedMeshes = new(StringComparer.Ordinal);
         private readonly HashSet<(int X, int Z)> outdoorNavigationCells = [];
+        private readonly List<NormalizedQuestMarker> questMarkers = [];
         private NormalizedMarker? startMarker;
         private NormalizedMarker? enterMarker;
         private NormalizedInteriorBuilding? interiorBuilding;
@@ -195,8 +196,8 @@ public static class RmbExteriorNormalizer
             // exterior block or building-subrecord transform into the interior scene.
             foreach (RmbModelPlacement model in placements.Buildings[buildingIndex].Interior.Models)
                 AddInteriorModel(model, $"{Slug(reference.SourceName)}/{buildingIndex}/interior");
-            foreach (RmbFlatPlacement flat in placements.Buildings[buildingIndex].Interior.Flats)
-                AddInteriorMarker(flat);
+            foreach (var (flat, index) in placements.Buildings[buildingIndex].Interior.Flats.Select((flat, index) => (flat, index)))
+                AddInteriorMarker(flat, index);
         }
 
         private (RmbBlockSummary Summary, RmbBlockPlacements Placements, BsaRecord Record) ReadBlock(MapsExteriorBlock reference)
@@ -230,9 +231,11 @@ public static class RmbExteriorNormalizer
                 enterMarker ??= new NormalizedMarker("marker/enter", position);
         }
 
-        private void AddInteriorMarker(RmbFlatPlacement flat)
+        private void AddInteriorMarker(RmbFlatPlacement flat, int index)
         {
             NormalizedVector3 position = MeshGeometry.ToRightHanded(Arena2SourceTransform.ToRmbImportPoint(flat.X, flat.Y, flat.Z));
+            if (QuestMarkerNormalization.Read($"quest/{index}", flat.TextureArchive, flat.TextureRecord, position) is { } marker)
+                questMarkers.Add(marker with { SourceOrdinal = index });
             if (flat.TextureArchive == RdbSourceClassification.EditorFlatArchive && flat.TextureRecord == RdbSourceClassification.StartMarkerRecord)
                 startMarker ??= new NormalizedMarker("marker/start", position);
             else if (flat.TextureArchive == RdbSourceClassification.EditorFlatArchive && flat.TextureRecord == RdbSourceClassification.EnterMarkerRecord)
@@ -315,6 +318,7 @@ public static class RmbExteriorNormalizer
             NormalizedWorld world = new($"mesh/{root}", meshes.Select(mesh => mesh.Id).ToArray(), navigation.Id, startMarker, enterMarker, [], [], [], [], [])
             {
                 InteriorBuilding = interiorBuilding,
+                QuestMarkers = questMarkers,
             };
             DungeonSpatialPublication spatial = DungeonSpatialPublication.Create(staticId, $"spatial/{slug}/{profile}/static-mesh{StaticMeshBinary.Extension}", collisionId,
                 $"spatial/{slug}/{profile}/collision-navigation{SpatialArtifactBinary.Extension}", resourcesId, $"resources/{slug}/{profile}/catalog.json", world.VisualMeshAssetId, bounds, meshes, world, navigation, resources);

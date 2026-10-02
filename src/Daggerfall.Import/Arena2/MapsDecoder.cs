@@ -45,7 +45,11 @@ public sealed record MapsExteriorLayout(
 }
 
 /// <summary>The MAPPITEM values that specialize a named RMB building for its location.</summary>
-public sealed record MapsExteriorBuilding(int NameSeed, int FactionId, int BuildingType, int Quality);
+public sealed record MapsExteriorBuilding(int NameSeed, int FactionId, int BuildingType, int Quality)
+{
+    public short Sector { get; init; }
+    public ushort LocationId { get; init; }
+}
 
 /// <summary>Decoder for region-linked MAPS.BSA source records.</summary>
 /// <summary>What happened when one region table was read.</summary>
@@ -602,8 +606,10 @@ public static class MapsDecoder
             int nameSeed = reader.ReadUInt16();
             reader.ReadBytes(16); // service limit and unknown fields
             int factionId = reader.ReadUInt16();
-            reader.ReadBytes(4); // sector and source location id
-            buildings.Add(new(nameSeed, factionId, reader.ReadByte(), reader.ReadByte()));
+            short sector = reader.ReadInt16();
+            ushort buildingLocationId = reader.ReadUInt16();
+            buildings.Add(new(nameSeed, factionId, reader.ReadByte(), reader.ReadByte())
+            { Sector = sector, LocationId = buildingLocationId });
         }
 
         _ = reader.ReadNullTerminatedAscii(32); // another exterior name; the MAPNAMES identity is authoritative here.

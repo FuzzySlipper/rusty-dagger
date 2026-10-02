@@ -203,6 +203,8 @@ public sealed record DaggerfallBlockBuilding(
     DaggerfallBlockHalfPlacements ExteriorPlacements,
     DaggerfallBlockHalfPlacements InteriorPlacements)
 {
+    public ushort LocationId { get; init; }
+    public short Sector { get; init; }
     /// <summary>The building header origin in normalized right-handed metres.</summary>
     public NormalizedVector3 MapPosition { get; init; }
 }
@@ -305,6 +307,7 @@ public sealed record DaggerfallBlockBuildingSet(IReadOnlyList<DaggerfallBlockBui
 {
     /// <summary>Source-normalized city footprints, shared by repeated block placements.</summary>
     public IReadOnlyList<DaggerfallBlockMap> Maps { get; init; } = [];
+    public IReadOnlyList<DaggerfallBlockQuestMarkers> QuestMarkers { get; init; } = [];
     public static DaggerfallBlockBuildingSet From(DaggerfallBlocks blocks)
     {
         ArgumentNullException.ThrowIfNull(blocks);
@@ -314,11 +317,31 @@ public sealed record DaggerfallBlockBuildingSet(IReadOnlyList<DaggerfallBlockBui
                 new DaggerfallBlockBuildingFields(record.SourceKey, building.Index, building.BuildingType, building.FactionId, building.NameSeed)
                     { MapPosition = building.MapPosition }))])
         {
+            QuestMarkers = [.. blocks.Records.Where(record => record.State == DaggerfallBlockState.Read)
+                .SelectMany(QuestMarkerSets)],
             Maps = [.. blocks.Records.Where(record => record.Kind == DaggerfallBlockKind.Rmb && record.State == DaggerfallBlockState.Read && record.Rmb is not null)
                 .Select(record => DaggerfallCityMapBuilder.Build(record.SourceKey, record.Rmb!.AutoMapData))],
         };
     }
+
+    private static IEnumerable<DaggerfallBlockQuestMarkers> QuestMarkerSets(DaggerfallBlockRecord record)
+    {
+        if (record.Rmb is { } rmb)
+            foreach (DaggerfallBlockBuilding building in rmb.Buildings)
+                yield return new(record.SourceKey, building.Index, [.. building.InteriorPlacements.Flats
+                    .Select((flat, index) => QuestMarkerNormalization.Read($"quest/{index}", flat.TextureArchive, flat.TextureRecord,
+                        MeshGeometry.ToRightHanded(Arena2SourceTransform.ToRmbImportPoint(flat.X, flat.Y, flat.Z))) is { } marker
+                            ? marker with { SourceOrdinal = index } : null).OfType<NormalizedQuestMarker>()]);
+        if (record.Objects is { } objects)
+            yield return new(record.SourceKey, null, [.. objects.FlatPlacements
+                .Select(flat => QuestMarkerNormalization.Read($"quest/{flat.Index}", flat.TextureArchive, flat.TextureRecord,
+                    MeshGeometry.ToRightHanded(Arena2SourceTransform.ToImportPoint(flat.X, flat.Y, flat.Z))) is { } marker
+                        ? marker with { SourceOrdinal = flat.Index } : null).OfType<NormalizedQuestMarker>()]);
+    }
 }
+
+/// <summary>Offline allocation points for one interior or dungeon block, in source order.</summary>
+public sealed record DaggerfallBlockQuestMarkers(string SourceKey, int? BuildingIndex, IReadOnlyList<NormalizedQuestMarker> Markers);
 
 /// <summary>One record of the block archive, classified and summarized.</summary>
 /// <param name="Ordinal">The record's position in the archive directory, which is its stable identity.</param>
@@ -875,7 +898,7 @@ public static class DaggerfallBlocksBuilder
                 building.Index, building.ByteLength, building.PaddingBytes, building.BuildingType, building.FactionId, building.Quality, building.NameSeed,
                 Publish(building.Exterior), Publish(building.Interior),
                 PublishHalf(placements?.Buildings.ElementAtOrDefault(index)?.Exterior), PublishHalf(placements?.Buildings.ElementAtOrDefault(index)?.Interior))
-                { MapPosition = MeshGeometry.ToRightHanded(Arena2SourceTransform.ToRmbBuildingOrigin(building)) })],
+                { LocationId = building.LocationId, Sector = building.Sector, MapPosition = MeshGeometry.ToRightHanded(Arena2SourceTransform.ToRmbBuildingOrigin(building)) })],
             summary.TrailingBytes) { AutoMapData = summary.AutoMapData };
 
     private static DaggerfallBlockHalfPlacements PublishHalf(RmbHalfPlacements? half) =>

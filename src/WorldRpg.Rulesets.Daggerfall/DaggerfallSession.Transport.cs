@@ -20,9 +20,9 @@ internal sealed partial class DaggerfallSession
             && _sites.Projection.Inputs.DungeonMap is { } map)
         {
             Vector3 here = position.ToVector();
-            foreach (DaggerfallDungeonMapMarker marker in map.Markers)
+            foreach (DaggerfallSiteMarker marker in map.Markers)
             {
-                if (marker.Kind != DaggerfallDungeonMapMarkerKind.Entrance) continue;
+                if (marker.Kind != DaggerfallSiteMarkerKind.Entrance) continue;
                 float distance = Vector3.Distance(here, marker.Position.ToVector());
                 exitDistance = exitDistance is float current ? Math.Min(current, distance) : distance;
             }

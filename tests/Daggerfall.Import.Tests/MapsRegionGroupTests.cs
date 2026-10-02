@@ -214,7 +214,7 @@ public sealed class MapsRegionGroupTests
             ("MAPDITEM.017", [0, 0, 0, 0])), "fixture");
 
         MapsExteriorLayout layout = MapsDecoder.DecodeExteriorLayout(archive, 17, "Location 0");
-        Assert.Equal(new MapsExteriorBuilding(12345, 456, 11, 17), Assert.Single(layout.Buildings));
+        Assert.Equal(new MapsExteriorBuilding(12345, 456, 11, 17) { Sector = -123, LocationId = 54321 }, Assert.Single(layout.Buildings));
 
         Assert.Equal(17, layout.Region);
         Assert.Equal(0, layout.LocationIndex);
@@ -352,6 +352,8 @@ public sealed class MapsRegionGroupTests
         int building = record + 4 + 112 + 2 + 5;
         BitConverter.GetBytes((ushort)12345).CopyTo(bytes, building);
         BitConverter.GetBytes((ushort)456).CopyTo(bytes, building + 18);
+        BitConverter.GetBytes((short)-123).CopyTo(bytes, building + 20);
+        BitConverter.GetBytes((ushort)54321).CopyTo(bytes, building + 22);
         bytes[building + 24] = 11;
         bytes[building + 25] = 17;
         int exterior = record + recordHeader;

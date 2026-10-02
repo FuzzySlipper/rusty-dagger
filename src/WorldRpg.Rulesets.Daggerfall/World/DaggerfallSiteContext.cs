@@ -171,6 +171,34 @@ internal sealed class DaggerfallSiteContext
             : throw new InvalidOperationException($"The selected content carries no building '{building}' at site '{site}'.");
     }
 
+    /// <summary>Resolves the fixed quest source id through MAPS sector and raw RMB identity.</summary>
+    internal bool TryResolveQuestBuilding(DaggerfallSiteId site, int sourceLocationId,
+        out DaggerfallSiteBuildingSource? building, out string? unavailable)
+    {
+        building = null;
+        DaggerfallSiteExterior? exterior = Require(site).Exterior;
+        if (sourceLocationId is <= 0 or > ushort.MaxValue || exterior is null)
+        {
+            unavailable = $"Site '{site}' has no fixed building reference for source id {sourceLocationId}.";
+            return false;
+        }
+        DaggerfallSiteBuildingReference? reference = exterior.BuildingReferences.FirstOrDefault(value => value.LocationId == sourceLocationId);
+        if (reference is null || reference.Sector < 0 || reference.Sector >= exterior.Width * exterior.Height)
+        {
+            unavailable = $"Site '{site}' has no valid MAPS sector for source building id {sourceLocationId}.";
+            return false;
+        }
+        int x = reference.Sector % exterior.Width;
+        int y = reference.Sector / exterior.Width;
+        DaggerfallSiteBlock? block = exterior.Blocks.SingleOrDefault(value => value.X == x && value.Y == y);
+        // The donor scans the complete block and retains the last matching actual slot.
+        building = block is null ? null : exterior.Buildings.Values
+            .Where(value => value.Id.BlockX == x && value.Id.BlockY == y && value.Source.Id.SourceKey == block.SourceName
+                && value.SourceLocationId == sourceLocationId).OrderBy(value => value.Id.Index).LastOrDefault();
+        unavailable = building is null ? $"Site '{site}' MAPS sector {reference.Sector} has no RMB building for source id {sourceLocationId}." : null;
+        return building is not null;
+    }
+
     internal IReadOnlyList<DaggerfallSiteBuildingSource> BuildingsAt(DaggerfallSiteId site) =>
         Require(site).Exterior is { } exterior ? [.. exterior.Buildings.Values] : [];
 

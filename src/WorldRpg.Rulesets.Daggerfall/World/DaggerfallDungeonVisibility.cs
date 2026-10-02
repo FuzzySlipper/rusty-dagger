@@ -49,7 +49,7 @@ internal sealed class DaggerfallDungeonVisibility
             ScanTriplet(discovery, origin + forward * distance, -Vector3.UnitY, DownDistance,
                 right, environment, doorsByEntity, compensation);
 
-        foreach (DaggerfallDungeonMapMarker marker in discovery.Content.Markers)
+        foreach (DaggerfallSiteMarker marker in discovery.Content.Markers)
         {
             if (discovery.WasMarkerVisitedThisEntry(marker.Id)) continue;
             Vector3 target = marker.Position.ToVector() + compensation;

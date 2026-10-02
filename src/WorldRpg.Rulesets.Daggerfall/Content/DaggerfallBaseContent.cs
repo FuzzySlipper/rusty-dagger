@@ -542,6 +542,8 @@ internal static partial class DaggerfallBaseContent
         JsonElement exterior = Object(value, $"location {region}/{index} exterior", diagnostics);
         int mapPixelX = Integer(exterior, "mapPixelX", diagnostics);
         int mapPixelY = Integer(exterior, "mapPixelY", diagnostics);
+        int? sourceLocationId = exterior.TryGetProperty("locationId", out _) ? Integer(exterior, "locationId", diagnostics) : null;
+        if (sourceLocationId is < 0 or > ushort.MaxValue) diagnostics.Add($"Location {region}/{index} has invalid source location identity.");
         int port = Integer(exterior, "portTownAndUnknown", diagnostics);
         if (port is < 0 or > 255) diagnostics.Add($"Location {region}/{index} has invalid source port byte {port}.");
         int width = Integer(exterior, "width", diagnostics);
@@ -563,10 +565,28 @@ internal static partial class DaggerfallBaseContent
         return new DaggerfallSiteExterior(mapPixelX, mapPixelY, width, height, tileOriginX, tileOriginY,
             custom, clearance, minX, maxX, minY, maxY)
         {
+            SourceLocationId = sourceLocationId,
             PortTownAndUnknown = port,
             Blocks = ReadSiteBlocks(exterior, width, height, diagnostics),
             Buildings = ReadSiteBuildings(exterior, region, index, width, height, diagnostics),
+            BuildingReferences = ReadBuildingReferences(exterior, diagnostics),
         };
+    }
+
+    private static IReadOnlyList<DaggerfallSiteBuildingReference> ReadBuildingReferences(JsonElement exterior, DaggerfallContentDiagnostics diagnostics)
+    {
+        // Authored sites need not publish MAPS fixed-building references.
+        if (!exterior.TryGetProperty("buildingReferences", out _)) return [];
+        List<DaggerfallSiteBuildingReference> result = [];
+        foreach (JsonElement value in Array(exterior, "buildingReferences", diagnostics))
+        {
+            int locationId = Integer(value, "locationId", diagnostics);
+            int sector = Integer(value, "sector", diagnostics);
+            if (locationId is < 0 or > ushort.MaxValue || sector is < short.MinValue or > short.MaxValue)
+                diagnostics.Add("Location building reference carries invalid source values.");
+            result.Add(new(locationId, sector));
+        }
+        return result.AsReadOnly();
     }
 
     private static IReadOnlyList<DaggerfallSiteBlock> ReadSiteBlocks(JsonElement exterior, int width, int height, DaggerfallContentDiagnostics diagnostics)
@@ -604,7 +624,10 @@ internal static partial class DaggerfallBaseContent
                 && radiusValue.TryGetSingle(out float r) ? r : null;
             if (radius is float invalid && (!float.IsFinite(invalid) || invalid < 0))
                 diagnostics.Add($"Location {region}/{index} building '{id}' carries invalid model radius.");
-            result.Add(new(id, source, quality) { ModelId = modelId, ModelRadius = radius });
+            int? sourceLocationId = value.TryGetProperty("sourceLocationId", out _) ? Integer(value, "sourceLocationId", diagnostics) : null;
+            if (sourceLocationId is < 0 or > ushort.MaxValue)
+                diagnostics.Add($"Location {region}/{index} building '{id}' carries invalid source location id.");
+            result.Add(new(id, source, quality) { SourceLocationId = sourceLocationId, ModelId = modelId, ModelRadius = radius });
         }
         return new ReadOnlyDictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource>(result.DistinctBy(building => building.Id).ToDictionary(building => building.Id));
     }

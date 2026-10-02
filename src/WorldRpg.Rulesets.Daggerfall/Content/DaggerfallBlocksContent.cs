@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Text.Json;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
@@ -20,19 +21,25 @@ internal sealed record DaggerfallRmbBuildingSource(
     internal WorldPoint MapPosition { get; init; }
 }
 
+internal readonly record struct DaggerfallBlockQuestMarkerKey(string SourceKey, int? BuildingIndex);
+
 internal sealed record DaggerfallCityFootprint(float MinX, float MinZ, float MaxX, float MaxZ, int Kind);
 internal sealed record DaggerfallCityBlockMap(string Block, float BlockSize, IReadOnlyList<DaggerfallCityFootprint> Footprints);
 
 /// <summary>Immutable block-derived inputs consumed by building, map, talk, and quest-place owners.</summary>
 internal sealed class DaggerfallBlocksSnapshot(
     IReadOnlyDictionary<DaggerfallRmbBuildingId, DaggerfallRmbBuildingSource> rmbBuildings,
-    IReadOnlyDictionary<string, DaggerfallCityBlockMap>? maps = null)
+    IReadOnlyDictionary<string, DaggerfallCityBlockMap>? maps = null,
+    IReadOnlyDictionary<DaggerfallBlockQuestMarkerKey, IReadOnlyList<DaggerfallSiteMarker>>? questMarkers = null)
 {
     internal IReadOnlyDictionary<DaggerfallRmbBuildingId, DaggerfallRmbBuildingSource> RmbBuildings { get; } =
         new ReadOnlyDictionary<DaggerfallRmbBuildingId, DaggerfallRmbBuildingSource>(rmbBuildings.ToDictionary());
 
     internal IReadOnlyDictionary<string, DaggerfallCityBlockMap> Maps { get; } =
         new ReadOnlyDictionary<string, DaggerfallCityBlockMap>((maps ?? new Dictionary<string, DaggerfallCityBlockMap>()).ToDictionary());
+
+    internal IReadOnlyDictionary<DaggerfallBlockQuestMarkerKey, IReadOnlyList<DaggerfallSiteMarker>> QuestMarkers { get; } =
+        new ReadOnlyDictionary<DaggerfallBlockQuestMarkerKey, IReadOnlyList<DaggerfallSiteMarker>>((questMarkers ?? new Dictionary<DaggerfallBlockQuestMarkerKey, IReadOnlyList<DaggerfallSiteMarker>>()).ToDictionary());
 
     /// <summary>Joins location placements to their source catalog once at selected-content admission.</summary>
     internal void AdmitLocations(DaggerfallLocationSet locations)
@@ -108,8 +115,21 @@ internal static class DaggerfallBlocksContent
             foreach (DaggerfallRmbBuildingSource building in buildings.Values)
                 if (!maps.ContainsKey(building.Id.SourceKey)) diagnostics.Add($"Building '{building.Id}' has no published automap.");
             if (buildings.Count == 0) diagnostics.Add("Block payload carries no readable RMB building slot.");
+            Dictionary<DaggerfallBlockQuestMarkerKey, IReadOnlyList<DaggerfallSiteMarker>> questMarkers = [];
+            if (root.TryGetProperty("questMarkers", out _))
+                foreach (JsonElement value in DaggerfallBaseContent.Array(root, "questMarkers", diagnostics))
+                {
+                    string sourceKey = DaggerfallBaseContent.Text(value, "sourceKey", diagnostics);
+                    int? buildingIndex = value.TryGetProperty("buildingIndex", out JsonElement index) && index.ValueKind != JsonValueKind.Null
+                        ? DaggerfallBaseContent.Integer(value, "buildingIndex", diagnostics) : null;
+                    DaggerfallBlockQuestMarkerKey key = new(sourceKey, buildingIndex);
+                    if (buildingIndex is < 0 || buildingIndex is int ordinal && !buildings.ContainsKey(new(sourceKey, ordinal)))
+                        diagnostics.Add($"Quest marker set '{key}' names no published building.");
+                    if (!questMarkers.TryAdd(key, DaggerfallQuestMarkerContent.Read(value, "markers", diagnostics)))
+                        diagnostics.Add($"Quest marker set '{key}' appears more than once.");
+                }
             diagnostics.ThrowIfAny();
-            return new DaggerfallBlocksSnapshot(buildings, maps);
+            return new DaggerfallBlocksSnapshot(buildings, maps, questMarkers);
         }
         catch (JsonException exception)
         {

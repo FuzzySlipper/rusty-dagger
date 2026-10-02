@@ -48,6 +48,16 @@ public sealed class RmbExteriorNormalizerTests
         byte[] sourceBytes = blockArchive.GetPayload(sourceRecord!).ToArray();
         Assert.True(RmbBlockSummaryReader.TryRead(sourceBytes, blockArchive.Source, 0, sourceBytes.Length, out RmbBlockSummary? summary, out _));
         Assert.Equal((summary!.Buildings[0].BuildingType, summary.Buildings[0].FactionId), ((byte)building.BuildingType, (ushort)building.FactionId));
+        RmbBlockPlacements rawPlacements = RmbPlacementReader.Read(sourceBytes, 0, summary!, blockArchive.Source);
+        var expectedMarkers = rawPlacements.Buildings[0].Interior.Flats.Select((flat, ordinal) => (flat, ordinal))
+            .Where(value => value.flat.TextureArchive == 199 && value.flat.TextureRecord is 11 or 18).ToArray();
+        Assert.Equal(expectedMarkers.Select(value => value.ordinal), interior.Document.World.QuestMarkers.Select(value => value.SourceOrdinal));
+        Assert.Empty(exterior.Document.World.QuestMarkers);
+        foreach (var (raw, published) in expectedMarkers.Zip(interior.Document.World.QuestMarkers))
+        {
+            Assert.Equal(new NormalizedVector3(raw.flat.X * .025f, -raw.flat.Y * .025f, -raw.flat.Z * .025f), published.Position);
+            Assert.Equal(raw.flat.TextureRecord == 11 ? NormalizedQuestMarkerKind.Spawn : NormalizedQuestMarkerKind.Item, published.Kind);
+        }
         Assert.Equal(building, NormalizedImportSerializer.Deserialize(NormalizedImportSerializer.Serialize(interior.Document)).World.InteriorBuilding);
         Assert.NotEmpty(interior.Document.Meshes);
         Assert.NotEmpty(interior.SpatialPublication.Navigation.Cells);
@@ -59,6 +69,29 @@ public sealed class RmbExteriorNormalizerTests
             Assert.NotEmpty(profile.SpatialPublication.MaterialSlots);
             profile.Validate();
         });
+    }
+
+    [CorpusFact]
+    public void Marker_bearing_city_interior_publishes_the_same_source_points_as_the_compact_catalog()
+    {
+        DungeonLogicalSourceSet sources = Sources();
+        BsaArchive maps = BsaArchive.Parse(sources.Require("MAPS.BSA").Bytes.Span, "arena2/MAPS.BSA");
+        BsaArchive blocks = BsaArchive.Parse(sources.Require("BLOCKS.BSA").Bytes.Span, "arena2/BLOCKS.BSA");
+        DaggerfallBlocks catalog = DaggerfallBlocksBuilder.Build(sources.Require("BLOCKS.BSA").Bytes.ToArray(), "arena2/BLOCKS.BSA",
+            Daggerfall.Import.Publication.SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv"))));
+        DaggerfallBlockBuildingSet compact = DaggerfallBlockBuildingSet.From(catalog);
+        MapsExteriorLayout layout = MapsDecoder.DecodeExteriorLayout(maps, 17, "Charing");
+        var selection = layout.Blocks.SelectMany(block => compact.QuestMarkers
+            .Where(set => set.SourceKey == block.SourceName && set.BuildingIndex is not null && set.Markers.Count > 0)
+            .Select(set => (Block: block, Set: set))).First();
+        RmbExteriorNormalizationResult interior = RmbExteriorNormalizer.Normalize(new(sources, 17, "Charing", RmbWorldProfileKind.Interior)
+        {
+            Building = new(selection.Block.X, selection.Block.Y, selection.Set.BuildingIndex!.Value),
+            Navigation = NavigationDerivationConfig.ClassicDefault with { CellSize = 2F },
+        });
+        Assert.Equal(selection.Set.Markers, interior.Document.World.QuestMarkers);
+        Assert.Equal(interior.Document.World.QuestMarkers,
+            NormalizedImportSerializer.Deserialize(NormalizedImportSerializer.Serialize(interior.Document)).World.QuestMarkers);
     }
 
     [CorpusFact]

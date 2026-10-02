@@ -59,7 +59,12 @@ public sealed record RmbBuildingSlot(
     byte Quality,
     ushort NameSeed,
     RmbObjectCounts Exterior,
-    RmbObjectCounts Interior);
+    RmbObjectCounts Interior)
+{
+    /// <summary>The raw FLD building identity used by fixed quest Place selection.</summary>
+    public ushort LocationId { get; init; }
+    public short Sector { get; init; }
+}
 
 /// <summary>
 /// The bounded header summary of one RMB city or exterior block: what the block itself declares it
@@ -220,7 +225,9 @@ public static class RmbBlockSummaryReader
                 bytes[slotOffset + 25],
                 (ushort)(bytes[slotOffset] | (bytes[slotOffset + 1] << 8)),
                 exterior,
-                interior));
+                interior)
+            { LocationId = (ushort)(bytes[slotOffset + 22] | (bytes[slotOffset + 23] << 8)),
+                Sector = unchecked((short)(bytes[slotOffset + 20] | (bytes[slotOffset + 21] << 8))) });
             position += size;
         }
 

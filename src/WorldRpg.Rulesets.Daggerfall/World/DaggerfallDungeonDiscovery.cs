@@ -4,12 +4,6 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall.World;
 
-internal enum DaggerfallDungeonMapMarkerKind
-{
-    Entrance,
-    Portal,
-}
-
 /// <summary>One source model placement with exact bounds and references to its aggregate render meshes.</summary>
 internal sealed record DaggerfallDungeonMapGeometry(
     string PlacementId,
@@ -48,48 +42,18 @@ internal sealed record DaggerfallDungeonMapGeometry(
         float.IsFinite(value.X) && float.IsFinite(value.Y) && float.IsFinite(value.Z);
 }
 
-/// <summary>A stable source marker admitted with one dungeon profile.</summary>
-internal sealed record DaggerfallDungeonMapMarker(
-    string Id,
-    DaggerfallDungeonMapMarkerKind Kind,
-    WorldPoint Position,
-    string? DestinationLogicalProfile = null)
-{
-    internal DaggerfallDungeonMapMarker Validate()
-    {
-        if (!DaggerfallBaseContent.ValidId(Id))
-            throw new ArgumentException("Dungeon map markers must use stable source ids.", nameof(Id));
-        if (!Enum.IsDefined(Kind)) throw new ArgumentOutOfRangeException(nameof(Kind));
-        if (!float.IsFinite(Position.X) || !float.IsFinite(Position.Y) || !float.IsFinite(Position.Z))
-            throw new ArgumentOutOfRangeException(nameof(Position));
-
-        if (Kind == DaggerfallDungeonMapMarkerKind.Entrance)
-        {
-            if (DestinationLogicalProfile is not null)
-                throw new ArgumentException("An entrance marker cannot name a destination profile.", nameof(DestinationLogicalProfile));
-        }
-        else if (string.IsNullOrWhiteSpace(DestinationLogicalProfile)
-            || !DaggerfallBaseContent.ValidId(DestinationLogicalProfile.Replace('/', '-')))
-        {
-            throw new ArgumentException("A portal marker must name its stable destination profile.", nameof(DestinationLogicalProfile));
-        }
-
-        return this;
-    }
-}
-
 /// <summary>Source-normalized dungeon map facts, independent of Engine artifact bytes.</summary>
 internal sealed class DaggerfallDungeonMapContent
 {
     private readonly HashSet<string> _placementIds;
     private readonly IReadOnlyDictionary<string, DaggerfallDungeonMapGeometry> _geometryById;
     private readonly HashSet<DaggerfallRdbDoorId> _doorIds;
-    private readonly Dictionary<string, DaggerfallDungeonMapMarker> _markers;
+    private readonly Dictionary<string, DaggerfallSiteMarker> _markers;
 
     internal DaggerfallDungeonMapContent(
         IEnumerable<DaggerfallDungeonMapGeometry> geometry,
         IEnumerable<DaggerfallRdbDoorId> doors,
-        IEnumerable<DaggerfallDungeonMapMarker> markers)
+        IEnumerable<DaggerfallSiteMarker> markers)
     {
         ArgumentNullException.ThrowIfNull(geometry);
         ArgumentNullException.ThrowIfNull(doors);
@@ -112,7 +76,7 @@ internal sealed class DaggerfallDungeonMapContent
         if (admittedDoors.Distinct().Count() != admittedDoors.Length)
             throw new ArgumentException("Dungeon map content repeats a normalized RDB door id.", nameof(doors));
 
-        DaggerfallDungeonMapMarker[] admittedMarkers = markers
+        DaggerfallSiteMarker[] admittedMarkers = markers
             .Select(value => (value ?? throw new ArgumentException("Dungeon map markers cannot contain null.", nameof(markers))).Validate())
             .OrderBy(value => value.Id, StringComparer.Ordinal)
             .ToArray();
@@ -135,18 +99,18 @@ internal sealed class DaggerfallDungeonMapContent
 
     internal IReadOnlyList<DaggerfallDungeonMapGeometry> GeometryPlacements { get; }
     internal IReadOnlyList<DaggerfallRdbDoorId> DoorIds { get; }
-    internal IReadOnlyList<DaggerfallDungeonMapMarker> Markers { get; }
+    internal IReadOnlyList<DaggerfallSiteMarker> Markers { get; }
 
     internal bool ContainsPlacement(string placementId) => _placementIds.Contains(placementId);
     internal bool ContainsDoor(DaggerfallRdbDoorId id) => _doorIds.Contains(id);
-    internal bool TryGetMarker(string id, out DaggerfallDungeonMapMarker marker) => _markers.TryGetValue(id, out marker!);
+    internal bool TryGetMarker(string id, out DaggerfallSiteMarker marker) => _markers.TryGetValue(id, out marker!);
 
     internal DaggerfallDungeonMapGeometry RequirePlacement(string placementId) =>
         _geometryById.TryGetValue(placementId, out DaggerfallDungeonMapGeometry? geometry)
             ? geometry
             : throw new InvalidOperationException($"Dungeon map profile has no source geometry placement '{placementId}'.");
 
-    internal DaggerfallDungeonMapMarker RequireMarker(string id) => TryGetMarker(id, out DaggerfallDungeonMapMarker marker)
+    internal DaggerfallSiteMarker RequireMarker(string id) => TryGetMarker(id, out DaggerfallSiteMarker marker)
         ? marker
         : throw new InvalidOperationException($"Dungeon map profile has no source marker '{id}'.");
 

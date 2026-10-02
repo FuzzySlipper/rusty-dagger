@@ -44,6 +44,16 @@ public sealed class DaggerfallLocationExteriorTests
         Assert.Equal(2, reusedArmorer.Length);
         Assert.Equal((4, 3, 510, 15941, 16), (reusedArmorer[0].BlockX, reusedArmorer[0].BlockY, reusedArmorer[0].FactionId, reusedArmorer[0].NameSeed, reusedArmorer[0].Quality));
         Assert.Equal((3, 5, 510, 18089, 15), (reusedArmorer[1].BlockX, reusedArmorer[1].BlockY, reusedArmorer[1].FactionId, reusedArmorer[1].NameSeed, reusedArmorer[1].Quality));
+        MapsExteriorLayout rawLayout = MapsDecoder.DecodeExteriorLayout(maps, charing.Region, charing.Index);
+        Assert.Equal(rawLayout.Buildings.Select(value => (value.LocationId, value.Sector)),
+            charing.Exterior!.BuildingReferences.Select(value => (value.LocationId, value.Sector)));
+        foreach (DaggerfallLocationBuilding building in charing.Exterior.Buildings)
+        {
+            Assert.True(blocks.TryGetByName(building.SourceKey, out BsaRecord? rawBlock));
+            byte[] raw = blocks.GetPayload(rawBlock!).ToArray();
+            int offset = 643 + building.BuildingIndex * 26 + 22;
+            Assert.Equal(BinaryPrimitives.ReadUInt16LittleEndian(raw.AsSpan(offset)), building.SourceLocationId);
+        }
         Assert.Equal(["arena2/MAPS.BSA", "arena2/BLOCKS.BSA", "arena2/ARCH3D.BSA"], locations.Sources);
         Assert.Contains(locations.Locations, value => value.Exterior!.PortTownAndUnknown > 0);
         Assert.Contains(locations.Locations, value => value.Exterior!.PortTownAndUnknown == 0);
