@@ -89,6 +89,7 @@ internal static partial class DaggerfallBaseContent
             DaggerfallItemTemplateLedger itemTemplates = ReadItemTemplateLedger(root, catalogs, items.Count, diagnostics);
             DaggerfallCharacterPresentationSet characterPresentation = ReadCharacterPresentation(root, catalogs, diagnostics);
             DaggerfallMagicCatalogSet magic = ReadMagicCatalog(root, diagnostics);
+            DaggerfallEnemySpells enemySpells = ReadEnemySpells(root, mobiles, magic, diagnostics);
             DaggerfallLocationSet locations = ReadLocations(root, diagnostics);
             DaggerfallTextSet text = ReadText(root, diagnostics);
             DaggerfallBuildingNameInputs buildingNames = ReadBuildingNameInputs(root, locations.Regions, diagnostics);
@@ -111,6 +112,7 @@ internal static partial class DaggerfallBaseContent
             return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles, names, rumors, biographies, grids, books, factions, terrain, itemTemplatesCatalog, questSources, cinematics, encounters)
             {
                 BuildingNames = buildingNames,
+                EnemySpells = enemySpells,
                 NewGame = newGame,
             };
         }
@@ -664,6 +666,8 @@ internal static partial class DaggerfallBaseContent
         StringBuilder value = new();
         void Add(params object?[] fields) => value.AppendJoin('|', fields.Select(FingerprintField)).Append('\n');
         Add("vocabulary", string.Join(',', definitions.Vocabulary.Attributes.Select(id => id.Value)), string.Join(',', definitions.Vocabulary.Skills.Select(id => id.Value)), string.Join(',', definitions.Vocabulary.Tracks.Select(id => id.Value)), string.Join(',', definitions.Vocabulary.ArmorParts), string.Join(',', definitions.Vocabulary.Progression.Select(id => id.Value)));
+        foreach (var list in definitions.EnemySpells.MobileLists.OrderBy(pair => pair.Key)) Add("enemy-spells", list.Key, string.Join(',', list.Value));
+        foreach (var tier in definitions.EnemySpells.ClassTiers.Select((spells, index) => (spells, index))) Add("enemy-spell-tier", tier.index, string.Join(',', tier.spells));
         foreach (DaggerfallActorDefinition actor in definitions.Actors.Values.OrderBy(actor => actor.Id.Value))
         {
             Add("actor", actor.Id.Value, actor.Kind, actor.MobileId, actor.HitPointsPerLevel, actor.Armor, actor.Rewards.ExperienceReward, actor.Team, actor.MinimumMaterial, actor.LootTableKey, actor.Level, actor.Weight, actor.ActionId, actor.Health.Minimum, actor.Health.Maximum, actor.GroundOnSpawn, actor.Presentation.PreferredRestState, string.Join(',', actor.Presentation.EffectiveFramesPerSecond.OrderBy(pair => pair.Key).Select(pair => $"{pair.Key}={FingerprintField(pair.Value)}")));
