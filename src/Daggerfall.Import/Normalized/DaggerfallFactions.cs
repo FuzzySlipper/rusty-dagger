@@ -24,6 +24,9 @@ public enum DaggerfallRegionFactionDisposition
 /// <summary>Normalized billboard address decoded offline from the faction flat field.</summary>
 public sealed record DaggerfallFactionFlat(int Id, int Archive, int Record);
 
+/// <summary>One localized flat caption, with its address decoded offline.</summary>
+public sealed record DaggerfallNpcCaption(int Archive, int Record, string Caption);
+
 /// <summary>One published faction: its filed identity, relations and bindings.</summary>
 /// <param name="Id">The faction's identity.</param>
 /// <param name="FiledId">The identity the file states, before duplicate resolution.</param>
@@ -147,10 +150,18 @@ public sealed record DaggerfallFactions(
     IReadOnlyList<DaggerfallRegionFactions> Regions,
     IReadOnlyList<DaggerfallFactionNameAlias> DuplicateNames)
 {
+    public PublishedSource? NpcCaptionSource { get; init; }
+    public IReadOnlyList<DaggerfallNpcCaption> NpcCaptions { get; init; } = [];
     public void Validate()
     {
         ArgumentNullException.ThrowIfNull(Source);
         Source.Validate();
+        NpcCaptionSource?.Validate();
+        if (NpcCaptions.Count != 0 && NpcCaptionSource is null)
+            throw new InvalidOperationException("NPC captions require their published donor source.");
+        if (NpcCaptions.Any(value => value.Archive < 0 || value.Record is < 0 or > 127 || string.IsNullOrWhiteSpace(value.Caption))
+            || NpcCaptions.Select(value => (value.Archive, value.Record)).Distinct().Count() != NpcCaptions.Count)
+            throw new InvalidOperationException("NPC captions carry malformed or duplicate flat addresses.");
         if (Factions.Count == 0)
         {
             throw new InvalidOperationException("The faction catalog carries no factions.");
@@ -208,6 +219,20 @@ public sealed record DaggerfallFactionNameAlias(string Name, IReadOnlyList<int> 
 /// </summary>
 public static class DaggerfallFactionsBuilder
 {
+    /// <summary>Reuses the strict donor CSV reader for the flat-caption table.</summary>
+    public static DaggerfallFactions WithNpcCaptions(DaggerfallFactions factions, byte[] bytes, string label)
+    {
+        var catalog = InternalStringsReader.Read(bytes, label);
+        var captions = catalog.Records.Select(row =>
+        {
+            if (!int.TryParse(row.Key, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int id))
+                throw new InvalidOperationException($"NPC caption source '{label}' has nonnumeric flat identity '{row.Key}'.");
+            return new DaggerfallNpcCaption(id >> 7, id & 127, row.Value);
+        }).ToArray();
+        var result = factions with { NpcCaptionSource = PublishedSource.Of(label, bytes), NpcCaptions = captions };
+        result.Validate();
+        return result;
+    }
     /// <summary>The inventory family the faction file is documented under.</summary>
     public const string FactionsFamily = "CNT-013";
 

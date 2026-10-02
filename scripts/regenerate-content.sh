@@ -138,7 +138,7 @@ tool internal-strings \
 tool blocks --arena2 "$arena2" --document "$blocks" --buildings "$buildings" --inventory "$inventory" --update
 tool geometry --arena2 "$arena2" --blocks "$blocks" --records "$records" --inventory "$inventory" --update
 tool climate --arena2 "$arena2" --pack "$imported" --inventory "$inventory" --update
-tool factions --arena2 "$arena2" --pack "$imported" --inventory "$inventory" --update
+tool factions --arena2 "$arena2" --pack "$imported" --inventory "$inventory" --flat-captions "$donor/Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Flats.csv" --update
 tool terrain --arena2 "$arena2" --pack "$imported" --inventory "$inventory" --update
 tool items --arena2 "$arena2" --pack "$imported" --inventory "$inventory" \
   --item-templates "$donor/Assets/Resources/ItemTemplates.txt" \

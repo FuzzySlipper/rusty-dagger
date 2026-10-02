@@ -176,6 +176,12 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
                     || appearance.FactionId != person.FactionId || appearance.NameSeed != person.NameSeed
                     || appearance.BillboardArchive < 0 || appearance.BillboardRecord is < 0 or > 127)))
                 throw new ArgumentException($"Quest resource '{symbol}' has invalid selected Person meaning.");
+            if (resource.SelectedPerson?.Home is { } home)
+            {
+                if (home.Binding.Kind != DaggerfallQuestResourceBindingKind.Place || home.Text is null)
+                    throw new ArgumentException($"Quest resource '{symbol}' has invalid Person home meaning.");
+                home.Binding.Validate(symbol + ".home");
+            }
             if (resource.Binding.Kind == DaggerfallQuestResourceBindingKind.Pending && resource.SelectedItem is null && resource.SelectedFoe is null && resource.SelectedPerson is null)
                 throw new ArgumentException($"Pending quest resource '{symbol}' has no selected meaning.");
         }
@@ -233,25 +239,22 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
                     || person.QuestorId is long questor && !resource.Binding.ActorIds.Contains(questor))
                     throw new ArgumentException($"Quest resource '{symbol}' has incompatible selected Person meaning.");
             }
-            if (resource.Binding.Building is { } claim)
+        }
+        foreach (var resource in Resources)
+            foreach (var binding in DaggerfallQuestPlaceAllocator.LocationBindings(resource))
             {
-                DaggerfallSiteId site = resource.Binding.Places[0].Require();
+                binding.Validate(resource.Symbol);
+                DaggerfallSiteId site = binding.Places[0].Require();
                 var location = definitions.Locations.Records.SingleOrDefault(value => value.Id == site);
-                if (location?.Exterior is not { } exterior
+                if (location is null) throw new ArgumentException($"Quest resource '{resource.Symbol}' refers to missing site {site}.");
+                if (binding.Building is { } claim && (location.Exterior is not { } exterior
                     || !exterior.Buildings.TryGetValue(new(claim.BlockX, claim.BlockY, claim.Index), out var building)
-                    || building.Source.Id != new DaggerfallRmbBuildingId(claim.SourceKey, claim.Index))
-                    throw new ArgumentException($"Quest instance '{InstanceId}' resource '{symbol}' refers to missing building {claim.SourceKey}/{claim.Index} at site {site}, block {claim.BlockX}/{claim.BlockY}.");
+                    || building.Source.Id != new DaggerfallRmbBuildingId(claim.SourceKey, claim.Index)))
+                    throw new ArgumentException($"Quest instance '{InstanceId}' resource '{resource.Symbol}' refers to missing building {claim.SourceKey}/{claim.Index} at site {site}, block {claim.BlockX}/{claim.BlockY}.");
+                if (binding.PlaceSelection is { } selection && (location.MapId != selection.MapId
+                    || binding.Building is { } selected && selection.BuildingKey != DaggerfallQuestPlaceAllocator.BuildingKey(new(selected.BlockX, selected.BlockY, selected.Index))))
+                    throw new ArgumentException($"Quest instance '{InstanceId}' resource '{resource.Symbol}' has an incompatible selected map/building identity.");
             }
-        }
-        foreach (DaggerfallQuestResourceState resource in Resources.Where(resource => resource.Binding.PlaceSelection is not null))
-        {
-            var selection = resource.Binding.PlaceSelection!;
-            DaggerfallSiteId site = resource.Binding.Places[0].Require();
-            DaggerfallSiteRecord? record = definitions.Locations.Records.SingleOrDefault(value => value.Id == site);
-            if (record?.MapId != selection.MapId || (resource.Binding.Building is { } building
-                && selection.BuildingKey != DaggerfallQuestPlaceAllocator.BuildingKey(new(building.BlockX, building.BlockY, building.Index))))
-                throw new ArgumentException($"Quest instance '{InstanceId}' resource '{resource.Symbol}' has an incompatible selected map/building identity.");
-        }
         if (validateClockState)
             ValidateClocks(DaggerfallQuestClockCompiler.Compile(definition));
     }
@@ -461,7 +464,15 @@ internal sealed class DaggerfallQuestRuntimeInstance
     };
 
     private static DaggerfallQuestResourceState[] CopyResources(IEnumerable<DaggerfallQuestResourceState> resources) =>
-        resources.Select(resource => resource with { Binding = resource.Binding with { ActorIds = [.. resource.Binding.ActorIds], UniqueItemIds = [.. resource.Binding.UniqueItemIds], Stacks = [.. resource.Binding.Stacks], Places = [.. resource.Binding.Places] } }).ToArray();
+        resources.Select(resource => resource with
+        {
+            Binding = CopyBinding(resource.Binding),
+            SelectedPerson = resource.SelectedPerson is { Home: { } home } person
+                ? person with { Home = home with { Binding = CopyBinding(home.Binding) } } : resource.SelectedPerson,
+        }).ToArray();
+
+    private static DaggerfallQuestResourceBinding CopyBinding(DaggerfallQuestResourceBinding binding) => binding with
+    { ActorIds = [.. binding.ActorIds], UniqueItemIds = [.. binding.UniqueItemIds], Stacks = [.. binding.Stacks], Places = [.. binding.Places] };
 }
 
 /// <summary>Session-owned quest instances and immutable admitted task programs.</summary>
@@ -504,10 +515,7 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
             && resource.Binding.ActorIds.Contains(actorId)));
     internal bool ClaimsBuilding(DaggerfallSiteId site, DaggerfallSiteBuildingSource building) =>
         _instances.Values.Any(instance => instance.Lifecycle == DaggerfallQuestLifecycle.Active
-            && instance.Resources.Any(resource => resource.Binding.Building is { } claim
-                && resource.Binding.Places[0].Require() == site
-                && claim.SourceKey == building.Source.Id.SourceKey && claim.Index == building.Source.Id.Index
-                && claim.BlockX == building.Id.BlockX && claim.BlockY == building.Id.BlockY));
+            && instance.Resources.Any(resource => DaggerfallQuestPlaceAllocator.Claims(resource, site, building)));
     internal DaggerfallQuestMessages Messages { get; }
 
     /// <summary>Binds the one session's live player and elapsed-time owners after composition completes.</summary>
@@ -541,16 +549,16 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
     {
         Func<DaggerfallSiteId, long> route = _travelMinutes
             ?? throw new NotSupportedException("Travel-derived quest clocks require the admitted route calculator.");
-        DaggerfallQuestResourceState[] places = [.. resources.Where(resource => resource.Binding.Kind == DaggerfallQuestResourceBindingKind.Place
-            && (destinationSymbol is null || resource.Symbol == destinationSymbol))];
+        var places = resources.Where(resource => destinationSymbol is null || resource.Symbol == destinationSymbol)
+            .SelectMany(DaggerfallQuestPlaceAllocator.LocationBindings).ToArray();
         if (places.Length == 0)
             throw new NotSupportedException(destinationSymbol is null
                 ? "Travel-derived quest clock has no bound Place resource."
                 : $"Travel-derived quest clock has no bound Place resource '{destinationSymbol}'.");
         long totalMinutes = 0;
-        foreach (DaggerfallQuestResourceState place in places)
+        foreach (DaggerfallQuestResourceBinding place in places)
         {
-            DaggerfallSiteId site = place.Binding.Places[0].Require();
+            DaggerfallSiteId site = place.Places[0].Require();
             long minutes = route(site);
             if (minutes < 0) throw new InvalidOperationException($"Travel-derived quest clock has a negative route to {site.Region}:{site.Index}.");
             totalMinutes = checked(totalMinutes + Math.Max(1440, minutes));
@@ -628,7 +636,8 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
             foreach (var declaration in _definitions.QuestSources.Resources
                 .Where(value => value.SourceFile == instance.SourceFile && value.Kind == "person").OrderBy(value => value.SourceLine))
                 if (!resources.Any(resource => DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "quest start resource") == declaration.CanonicalId))
-                    resources.Add(_personAllocator.Allocate(instance, declaration));
+                    resources.Add(_personAllocator.Allocate(instance, declaration, resources,
+                        _instances.Values.Where(value => value.Lifecycle == DaggerfallQuestLifecycle.Active).SelectMany(value => value.Resources)));
             instance = instance with { Resources = [.. resources] };
             instance.Validate(_definitions, validateClockState: false);
         }

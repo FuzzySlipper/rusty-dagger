@@ -2011,10 +2011,20 @@ internal static partial class DaggerfallBaseContent
             diagnostics.Add($"The published faction catalog claims {regions.Count} regions for the {regionCount} published regions.");
         }
 
+        Dictionary<(int Archive, int Record), string> npcCaptions = [];
+        if (section.TryGetProperty("npcCaptions", out var captionRows))
+            foreach (var row in captionRows.EnumerateArray())
+            {
+                int archive = Integer(row, "archive", diagnostics), record = Integer(row, "record", diagnostics);
+                string caption = Text(row, "caption", diagnostics);
+                if (archive < 0 || record is < 0 or > 127 || string.IsNullOrWhiteSpace(caption)
+                    || !npcCaptions.TryAdd((archive, record), caption))
+                    diagnostics.Add($"NPC caption has malformed or duplicate flat address {archive}/{record}.");
+            }
         return new DaggerfallFactionsSet(
             new ReadOnlyDictionary<int, DaggerfallFactionDefinition>(factions),
             new ReadOnlyDictionary<int, DaggerfallRegionFactionDefinition>(regions),
-            new ReadOnlyDictionary<string, int>(names));
+            new ReadOnlyDictionary<string, int>(names)) { NpcCaptions = new ReadOnlyDictionary<(int, int), string>(npcCaptions) };
     }
 
     /// <summary>

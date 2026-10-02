@@ -391,10 +391,11 @@ internal sealed partial class DaggerfallSession
             _travelMessage = State.Travel.LastResult?.Message;
             State.Quests.BindTextContext(QuestTextContext);
             DaggerfallNames questNames = new(definitions, engine.Random);
-            State.Quests.BindPlaceAllocator(new(definitions, _site, engine.Random,
+            var questPlaces = new DaggerfallQuestPlaceAllocator(definitions, _site, engine.Random,
                 (site, building) => State.Property.OwnsHouse(new(site, building.Source.Id, building.Id.BlockX, building.Id.BlockY)),
                 region => region >= 0 && region < definitions.BuildingNames.RegionNames.Count ? definitions.BuildingNames.RegionNames[region] : null,
-                questNames.Residence));
+                questNames.Residence);
+            State.Quests.BindPlaceAllocator(questPlaces);
 
             _corpseLoot = new DaggerfallCorpseLootModule(
                 engine.Perception,
@@ -423,7 +424,9 @@ internal sealed partial class DaggerfallSession
                 State.Social.GuildEligibility, State.RegionalPrices.AdjustmentForRegion, _inventoryUi.DescribeCreatedItem));
             State.Quests.BindPersonAllocator(new(definitions, engine.Random, questNames,
                 instance => new(_site.ActiveSite ?? throw new NotSupportedException("Quest Person selection requires the current site."),
-                    instance.QuestorId is long giver ? State.Npcs.Require(giver) : null), State.Npcs.SetDisplayName));
+                    instance.QuestorId is long giver ? State.Npcs.Require(giver) : null, CurrentProfile: _sites.ActiveProfile,
+                    Interior: _sites.Projection.Inputs.InteriorBuilding),
+                State.Npcs.SetDisplayName, questPlaces));
             _inventoryUi.UseBank(State.Bank, ActiveBankRegion);
             _inventoryUi.UseLoans(State.Loans, () => _time.Calendar, () => State.Progression.Level);
             _inventoryUi.UseItemValuation(new DaggerfallItemValuation(definitions), State.ItemInstances, DaggerfallItemOwner.Player,

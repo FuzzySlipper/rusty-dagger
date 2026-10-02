@@ -98,8 +98,8 @@ internal sealed class DaggerfallQuestPlaceAllocator(
                     kind = DaggerfallWorldProfileKind.Dungeon;
                     DaggerfallSiteRecord[] DungeonCandidates(int type) => [.. region.Where(value => IsDungeon(value.Kind)
                         && (type == -1 ? value.DungeonType is >= 0 and <= 16 : value.DungeonType == type)
-                        && !parent.Concat(active).Any(resource => resource.Binding.PlaceSelection?.Kind == DaggerfallWorldProfileKind.Dungeon
-                            && resource.Binding.Places[0].Require() == value.Id))];
+                        && !parent.Concat(active).SelectMany(LocationBindings).Any(binding => binding.PlaceSelection?.Kind == DaggerfallWorldProfileKind.Dungeon
+                            && binding.Places[0].Require() == value.Id))];
                     DaggerfallSiteRecord? SelectDungeon(int type)
                     {
                         var candidates = DungeonCandidates(type);
@@ -120,13 +120,58 @@ internal sealed class DaggerfallQuestPlaceAllocator(
             default: throw new ArgumentException($"Place '{resource.CanonicalId}' has unknown scope '{resource.PlaceKind}'.");
         }
 
+        return Selected(resource.CanonicalId, identity, site, building, kind, magic);
+    }
+
+    internal DaggerfallQuestResourceState? AllocatePersonHome(string instanceId, DaggerfallQuestResourceDefinition person,
+        bool individual, bool questor, DaggerfallWorldProfileKey currentProfile, DaggerfallInteriorBuilding? currentInterior,
+        IEnumerable<DaggerfallQuestResourceState> parentResources, IEnumerable<DaggerfallQuestResourceState> activeResources)
+    {
+        var options = person.Person ?? throw new ArgumentException("Person home selection requires its source options.");
+        string symbol = person.CanonicalId + ".home", identity = instanceId + "/" + symbol;
+        if (questor || individual && options.AtHome)
+        {
+            var site = sites.ActiveSite ?? throw new NotSupportedException("A quest giver home requires the actual current site.");
+            if (currentProfile.Site != site.Id) throw new ArgumentException("The current Person home profile does not project the current site.");
+            if (currentProfile.Kind == DaggerfallWorldProfileKind.Interior && currentInterior is null)
+                throw new ArgumentException("The current interior Person home requires its actual building identity.");
+            DaggerfallSiteBuildingSource? building = currentInterior is { } interior
+                ? sites.RequireBuildingSource(site.Id, new(interior.BlockX, interior.BlockY, interior.Building.Index)) : null;
+            return Selected(symbol, identity, site, building, currentProfile.Kind, 0,
+                building is null ? null : sites.RequireBuilding(site.Id, building.Id).Name);
+        }
+        if (individual) return null; // Explicit place-at supplies this individual's dialog place later.
+        var current = sites.ActiveSite ?? throw new NotSupportedException("Person home selection requires the current region.");
+        string scope = options.Scope ?? (current.Exterior?.Buildings.Count > 0
+            && random.DrawKeyed(new(0, "daggerfall.quest.person-home", identity + "/scope", 0, 1)).Value == 0 ? "local" : "remote");
+        string preferred = "house";
+        string? factionTableKey = options.Group ?? options.FactionType ?? options.Faction;
+        if (factionTableKey is not null)
+        {
+            var hint = definitions.QuestSources.Tables.ActorItemTables.Factions.Resolve(factionTableKey);
+            if (hint.P1 == 0 && hint.P2 is >= 0 and <= 20 && hint.P3 == 0)
+                preferred = definitions.QuestSources.Tables.Places.Rows.FirstOrDefault(row => row.P2 == hint.P2)?.Name ?? "house";
+        }
+        DaggerfallQuestResourceDefinition Declaration(string type) => person with
+        {
+            Kind = "place", CanonicalId = symbol, PlaceKind = scope, Person = null,
+            TargetSourceSpelling = type, TargetCanonicalId = type,
+        };
+        try { return Allocate(instanceId, Declaration(preferred), parentResources, activeResources); }
+        catch (NotSupportedException) when (preferred != "house")
+        { return Allocate(instanceId, Declaration("house"), parentResources, activeResources); }
+    }
+
+    private DaggerfallQuestResourceState Selected(string symbol, string identity, DaggerfallSiteRecord site,
+        DaggerfallSiteBuildingSource? building, DaggerfallWorldProfileKind kind, int magic, string? currentName = null)
+    {
         int? key = building is null ? null : BuildingKey(building.Id);
         DaggerfallQuestResourceBinding binding = building is null ? DaggerfallQuestResourceBinding.Place(new(site.Region, site.Index))
             : DaggerfallQuestResourceBinding.PlaceBuilding(sites, site.MapId, key!.Value);
         binding = binding with { PlaceSelection = new(kind, site.MapId, key, magic) };
-        string? display = building is null ? null : building.Source.BuildingType is >= 17 and <= 20
-            ? residenceName(identity, site.Region) : sites.RequireBuilding(site.Id, building.Id).Name;
-        return new(resource.CanonicalId, binding)
+        string? display = currentName ?? (building is null ? null : building.Source.BuildingType is >= 17 and <= 20
+            ? residenceName(identity, site.Region) : sites.RequireBuilding(site.Id, building.Id).Name);
+        return new(symbol, binding)
         { Text = new(Name: display, NameTwo: site.Name, NameThree: site.Name, NameFour: regionName(site.Region)) };
     }
 
@@ -161,9 +206,15 @@ internal sealed class DaggerfallQuestPlaceAllocator(
 
     private static bool IsDungeon(DaggerfallSiteKind kind) => kind is DaggerfallSiteKind.DungeonKeep
         or DaggerfallSiteKind.DungeonLabyrinth or DaggerfallSiteKind.DungeonRuin or DaggerfallSiteKind.Graveyard;
-    private static bool Claims(DaggerfallQuestResourceState resource, DaggerfallSiteId site, DaggerfallSiteBuildingSource building) =>
-        resource.Binding.Building is { } claim && resource.Binding.Places[0].Require() == site
-        && claim == new DaggerfallQuestBuildingClaim(building.Source.Id.SourceKey, building.Source.Id.Index, building.Id.BlockX, building.Id.BlockY);
+    internal static IEnumerable<DaggerfallQuestResourceBinding> LocationBindings(DaggerfallQuestResourceState resource)
+    {
+        if (resource.Binding.Kind == DaggerfallQuestResourceBindingKind.Place) yield return resource.Binding;
+        if (resource.SelectedPerson?.Home is { } home) yield return home.Binding;
+    }
+
+    internal static bool Claims(DaggerfallQuestResourceState resource, DaggerfallSiteId site, DaggerfallSiteBuildingSource building) =>
+        LocationBindings(resource).Any(binding => binding.Building is { } claim && binding.Places[0].Require() == site
+            && claim == new DaggerfallQuestBuildingClaim(building.Source.Id.SourceKey, building.Source.Id.Index, building.Id.BlockX, building.Id.BlockY));
     internal static int BuildingKey(DaggerfallSiteBuildingId id)
     {
         int key = (id.BlockX << 16) | (id.BlockY << 8) | id.Index;

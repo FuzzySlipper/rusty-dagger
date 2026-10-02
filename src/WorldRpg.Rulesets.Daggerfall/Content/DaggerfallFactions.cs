@@ -95,6 +95,7 @@ internal sealed record DaggerfallFactionsSet(
     IReadOnlyDictionary<int, DaggerfallRegionFactionDefinition> Regions,
     IReadOnlyDictionary<string, int> Names)
 {
+    internal IReadOnlyDictionary<(int Archive, int Record), string> NpcCaptions { get; init; } = new Dictionary<(int, int), string>();
     /// <summary>
     /// Resolves a politic cell's region to the factions that claim it: the records a social
     /// consumer reads, or the explicit unclaimed region when none does.
