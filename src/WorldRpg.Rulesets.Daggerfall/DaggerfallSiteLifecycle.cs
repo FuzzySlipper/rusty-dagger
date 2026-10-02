@@ -430,6 +430,7 @@ internal sealed class DaggerfallSiteLifecycle
     private void MaterializeSiteActors(DaggerfallSiteProfile destination, DaggerfallSiteRuntimeDelta? delta)
     {
         _roster.MaterializeSite(destination, delta);
+        _roster.MaterializeStaticNpcs(destination);
         if (delta is null) return;
         _persistence.RestoreSiteDelta(delta);
         Projection.Appearance.SyncRestoredDefeat(_state.Actors);

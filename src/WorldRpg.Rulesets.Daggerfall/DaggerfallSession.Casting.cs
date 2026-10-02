@@ -56,7 +56,7 @@ internal sealed partial class DaggerfallSession
         _definitions, State.Effects.MagicDefenseFor(id));
 
     private Actor? CastActor(long id) => id == State.Actors.Player.DurableId ? State.Actors.Player.Actor
-        : State.Actors.TryGet(id, out ActorState actor) ? actor.Actor : null;
+        : !State.Npcs.IsStatic(id) && State.Actors.TryGet(id, out ActorState actor) ? actor.Actor : null;
 
     /// <summary>Releases the ready source at its live position. Ranged bundles await Engine collision delivery.</summary>
     internal DaggerfallCastResult ReleaseReadySpell(long casterId, Vector3 direction)

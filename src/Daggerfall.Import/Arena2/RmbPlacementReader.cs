@@ -33,7 +33,11 @@ public sealed record RmbSectionPlacement(int X, int Y, int Z);
 /// <param name="TextureRecord">The texture record.</param>
 /// <param name="FactionId">The NPC faction.</param>
 /// <param name="Flags">The NPC flags.</param>
-public sealed record RmbPeoplePlacement(int X, int Y, int Z, int TextureArchive, int TextureRecord, short FactionId, byte Flags);
+public sealed record RmbPeoplePlacement(int X, int Y, int Z, int TextureArchive, int TextureRecord, short FactionId, byte Flags)
+{
+    /// <summary>Record position in its source RMB, used by the classic static name seed.</summary>
+    public int SourceOffset { get; init; }
+}
 
 /// <summary>One placed door: its position, rotation and model.</summary>
 /// <param name="X">The X position.</param>
@@ -90,9 +94,9 @@ public static class RmbPlacementReader
         foreach (RmbBuildingSlot slot in summary.Buildings)
         {
             int exteriorStart = offset + position + RmbBlockSummaryReader.SubRecordHeaderBytes;
-            RmbHalfPlacements exterior = ReadHalf(bytes, exteriorStart, slot.Exterior, $"{source} building {slot.Index} outside", source);
+            RmbHalfPlacements exterior = ReadHalf(bytes, exteriorStart, offset, slot.Exterior, $"{source} building {slot.Index} outside", source);
             int interiorStart = exteriorStart + slot.Exterior.BodyBytes + RmbBlockSummaryReader.SubRecordHeaderBytes;
-            RmbHalfPlacements interior = ReadHalf(bytes, interiorStart, slot.Interior, $"{source} building {slot.Index} inside", source);
+            RmbHalfPlacements interior = ReadHalf(bytes, interiorStart, offset, slot.Interior, $"{source} building {slot.Index} inside", source);
             buildings.Add(new RmbBuildingPlacements(exterior, interior));
             position += slot.ByteLength;
         }
@@ -114,7 +118,7 @@ public static class RmbPlacementReader
         return new RmbBlockPlacements(buildings, miscModels, miscFlats);
     }
 
-    private static RmbHalfPlacements ReadHalf(byte[] bytes, int start, RmbObjectCounts counts, string what, string source)
+    private static RmbHalfPlacements ReadHalf(byte[] bytes, int start, int sourceOffset, RmbObjectCounts counts, string what, string source)
     {
         List<RmbModelPlacement> models = [];
         int cursor = start;
@@ -148,7 +152,7 @@ public static class RmbPlacementReader
             int archive = ReadUShort(bytes, at + 12) >> 7;
             people.Add(new RmbPeoplePlacement(
                 ReadInt(bytes, at), ReadInt(bytes, at + 4), ReadInt(bytes, at + 8),
-                archive, ReadUShort(bytes, at + 12) & 0x7f, ReadShort(bytes, at + 14), bytes[at + 16]));
+                archive, ReadUShort(bytes, at + 12) & 0x7f, ReadShort(bytes, at + 14), bytes[at + 16]) { SourceOffset = at - sourceOffset });
         }
 
         cursor += counts.People * RmbObjectCounts.PeopleRecordBytes;

@@ -175,7 +175,7 @@ internal static class DaggerActorFactory
                     entry.DurableId,
                     (DaggerfallNpcKind)entry.Kind,
                     entry.StableKey,
-                    new DaggerfallNpcSite(entry.Region, entry.Location, entry.Building),
+                    new DaggerfallNpcSite(entry.Region, entry.Location, entry.Building, entry.ProfileId),
                     new DaggerfallNpcAppearance(entry.Race, entry.Gender, entry.BillboardArchive, entry.BillboardRecord, entry.NameSeed, entry.FactionId),
                     entry.Role,
                     entry.Services,
@@ -240,7 +240,7 @@ internal static class DaggerActorFactory
     /// supplies only the mechanics contract needed by ActorsState, combat
     /// eligibility, and corpse policy.
     /// </summary>
-    internal static DaggerfallActorDefinition CivilianDefinition(long durableId)
+    internal static DaggerfallActorDefinition CivilianDefinition(long durableId, bool isStatic = false)
     {
         if (durableId <= 0) throw new ArgumentOutOfRangeException(nameof(durableId));
         Dictionary<DaggerfallStatId, int> stats = new()
@@ -255,8 +255,8 @@ internal static class DaggerActorFactory
             [DaggerfallMechanicsIds.Luck] = 50,
         };
         return new DaggerfallActorDefinition(
-            new DaggerfallActorId(DaggerfallActorKinds.Civilian),
-            DaggerfallActorKinds.Civilian,
+            new DaggerfallActorId(isStatic ? DaggerfallActorKinds.StaticNpc : DaggerfallActorKinds.Civilian),
+            isStatic ? DaggerfallActorKinds.StaticNpc : DaggerfallActorKinds.Civilian,
             new DaggerfallStatBases(stats),
             // DFU CivilianEntity defaults to one health point; retain that
             // lightweight non-combat entity policy without inventing a combat
@@ -289,7 +289,7 @@ internal static class DaggerActorFactory
         ArgumentNullException.ThrowIfNull(actors);
         ArgumentNullException.ThrowIfNull(inventoryStore);
         ArgumentNullException.ThrowIfNull(npc);
-        DaggerfallActorDefinition definition = CivilianDefinition(npc.DurableId);
+        DaggerfallActorDefinition definition = CivilianDefinition(npc.DurableId, npc.Kind == DaggerfallNpcKind.Static);
         ActorState actor = CreateNonPlayerActor(actors, npc.DurableId, definition,
             mechanics.CreateStats(definition, new DaggerfallVitalValues(1, 0, 0)), pose);
         RegisterActorInventory(actor, inventoryStore);
@@ -299,11 +299,11 @@ internal static class DaggerActorFactory
     /// <summary>Resolves authored encounter definitions and the explicit runtime civilian definition.</summary>
     private static DaggerfallActorDefinition ResolveDynamicDefinition(DaggerfallDefinitions definitions, DaggerfallDynamicActorSave saved)
     {
-        DaggerfallActorDefinition definition = saved.Definition == DaggerfallActorKinds.Civilian
-            ? CivilianDefinition(saved.EntityId)
+        DaggerfallActorDefinition definition = saved.Definition is DaggerfallActorKinds.Civilian or DaggerfallActorKinds.StaticNpc
+            ? CivilianDefinition(saved.EntityId, saved.Definition == DaggerfallActorKinds.StaticNpc)
             : definitions.RequireActor(new DaggerfallActorId(saved.Definition));
         if (saved.PlayerAllied) definition = definition with { Team = "player-ally" };
-        return definition.Kind == DaggerfallActorKinds.Civilian
+        return definition.Kind is DaggerfallActorKinds.Civilian or DaggerfallActorKinds.StaticNpc
             ? definition
             : DaggerfallEncounterActors.ApplyEncounterClassPolicy(definition);
     }

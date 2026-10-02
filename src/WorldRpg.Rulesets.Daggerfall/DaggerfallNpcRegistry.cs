@@ -26,7 +26,7 @@ public enum DaggerfallNpcPresence
 /// <param name="Region">The classic region.</param>
 /// <param name="Location">The location name.</param>
 /// <param name="Building">The building key, empty when the NPC belongs to no building.</param>
-public readonly record struct DaggerfallNpcSite(int Region, string Location, string Building);
+public readonly record struct DaggerfallNpcSite(int Region, string Location, string Building, string? ProfileId = null);
 
 /// <summary>One NPC's appearance: what the world sees.</summary>
 /// <param name="Race">The race name.</param>
@@ -35,7 +35,7 @@ public readonly record struct DaggerfallNpcSite(int Region, string Location, str
 /// <param name="BillboardRecord">The billboard texture record.</param>
 /// <param name="NameSeed">The seed the name derives from.</param>
 /// <param name="FactionId">The faction the NPC answers to, or zero.</param>
-public readonly record struct DaggerfallNpcAppearance(string Race, string Gender, int BillboardArchive, int BillboardRecord, ushort NameSeed, int FactionId);
+public readonly record struct DaggerfallNpcAppearance(string Race, string Gender, int BillboardArchive, int BillboardRecord, int NameSeed, int FactionId);
 
 /// <summary>One NPC: its durable identity, kind, site, appearance, role and presence.</summary>
 /// <param name="DurableId">The durable actor identity.</param>
@@ -123,6 +123,9 @@ public sealed class DaggerfallNpcRegistry
     /// <summary>Reads one NPC by its durable identity.</summary>
     public DaggerfallNpc Require(long durableId) =>
         _npcs.TryGetValue(durableId, out DaggerfallNpc? npc) ? npc : throw new InvalidOperationException($"No NPC answers durable identity {durableId}.");
+
+    internal bool IsStatic(long durableId) => _npcs.TryGetValue(durableId, out DaggerfallNpc? npc)
+        && npc.Kind == DaggerfallNpcKind.Static;
 
     /// <summary>Every registered NPC.</summary>
     public IReadOnlyList<DaggerfallNpc> All => [.. _npcs.Values.OrderBy(npc => npc.DurableId)];

@@ -144,7 +144,7 @@ internal sealed class DaggerSessionPersistence
                 npc.DurableId, (int)npc.Kind, npc.StableKey, npc.Site.Region, npc.Site.Location, npc.Site.Building,
                 npc.Appearance.Race, npc.Appearance.Gender, npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord,
                 npc.Appearance.NameSeed, npc.Appearance.FactionId, npc.Role, [.. npc.Services],
-                (int)npc.Presence, npc.X, npc.Y, npc.Z))]),
+                (int)npc.Presence, npc.X, npc.Y, npc.Z, npc.Site.ProfileId))]),
             _effects.Capture(),
             State.SkillUses.Capture(),
             State.Social.Capture(),
