@@ -71,9 +71,16 @@ internal sealed partial class DaggerfallSession
     /// </summary>
     internal void DeliverWeaponPoison(long targetActorId, ulong weaponItemId)
     {
+        if (State.ItemInstances.ContainsUnique(weaponItemId) && State.ItemInstances.RequireUnique(weaponItemId).PoisonVariant is int variant)
+            DeliverWeaponPoison(targetActorId, new DaggerfallWeaponPoisonSource(weaponItemId, variant));
+    }
+
+    internal void DeliverWeaponPoison(long targetActorId, DaggerfallWeaponPoisonSource admitted)
+    {
+        ulong weaponItemId = admitted.ItemId;
         if (!State.ItemInstances.ContainsUnique(weaponItemId)) return;
         DaggerfallItemInstanceMetadata weapon = State.ItemInstances.RequireUnique(weaponItemId);
-        if (weapon.PoisonVariant is not int variant) return;
+        if (weapon.PoisonVariant is not int variant || variant != admitted.Variant) return;
         // The player answers for itself: the durable-id lookup that finds a site actor needs an actor body,
         // which the player does not carry, so asking only that would report the player as missing.
         Actor? struck = State.Actors.Player.DurableId == targetActorId
@@ -86,7 +93,9 @@ internal sealed partial class DaggerfallSession
         _ = InflictPoison(
             new DaggerfallPoisonExposure(
                 targetActorId,
-                TargetLevel: struck.Get<ProgressionState>().Level,
+                TargetLevel: targetActorId == State.Actors.Player.DurableId ? State.Actors.Player.Progression.Level
+                    : _roster.Definitions.TryGetValue(targetActorId, out var targetDefinition)
+                        ? targetDefinition.Level ?? 1 : throw new InvalidOperationException($"Poison target {targetActorId} has no admitted level."),
                 CareerImmune: false,
                 RaceImmune: targetActorId == State.Actors.Player.DurableId && PlayerRacePoisonTolerance == DaggerfallDiseaseCareerTolerance.Immune,
                 Willpower: struck.Get<StatsComponent>().GetStat(StatId.Parse(DaggerfallMechanicsIds.Willpower.Value)).ValueInt,
@@ -94,8 +103,9 @@ internal sealed partial class DaggerfallSession
                     : _roster.Definitions.TryGetValue(targetActorId, out var definition) && definition.Career is string career
                         ? DaggerfallPoisonPolicy.CareerTolerance(_definitions.Catalogs.RequireCareer(career)) : DaggerfallDiseaseCareerTolerance.Normal,
                 RaceTolerance: targetActorId == State.Actors.Player.DurableId ? PlayerRacePoisonTolerance : DaggerfallDiseaseCareerTolerance.Normal),
-            variant,
-            weaponItemId);
+            // The deposited dose belongs to its target. Keeping a live item reference would
+            // make breaking or retiring the source weapon cure an already admitted poison.
+            variant);
         State.ItemInstances.ReplaceUnique(weaponItemId, weapon with { PoisonVariant = null });
     }
 

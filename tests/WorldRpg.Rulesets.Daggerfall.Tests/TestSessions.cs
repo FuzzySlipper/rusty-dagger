@@ -469,7 +469,7 @@ internal sealed class ConditionSessionFixture : IDisposable
     internal DaggerfallSession Session { get; }
     internal DaggerfallDefinitions Definitions => definitions;
 
-    internal ConditionSessionFixture()
+    internal ConditionSessionFixture(IRandomService? random = null)
     {
         string root = TestData.RepositoryRoot;
         definitions = TestPayload.Definitions;
@@ -478,7 +478,7 @@ internal sealed class ConditionSessionFixture : IDisposable
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
-        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: random);
         Session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
     }
 

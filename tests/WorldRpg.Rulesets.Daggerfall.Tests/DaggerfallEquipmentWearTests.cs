@@ -378,7 +378,7 @@ public sealed partial class DaggerfallEquipmentWearTests
 
         internal void ScriptMonster(int body, int reflex, int critical, int hit, int damage)
         {
-            _scripted.Feed([body, reflex, critical, hit, damage]);
+            _scripted.Feed([body, reflex, critical, hit, damage, 100, reflex, reflex]);
         }
 
         internal void ReplaceActor(long entityId, DaggerfallActorDefinition definition) => _authored[entityId] = definition;

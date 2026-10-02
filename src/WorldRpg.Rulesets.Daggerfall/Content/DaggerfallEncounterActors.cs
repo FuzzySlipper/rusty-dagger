@@ -63,8 +63,8 @@ internal static class DaggerfallEncounterActors
     {
         ArgumentNullException.ThrowIfNull(actor);
         ArgumentNullException.ThrowIfNull(vocabulary);
-        if (actor.Kind != DaggerfallActorKinds.EnemyClass) return actor;
         if (level < 1) throw new ArgumentOutOfRangeException(nameof(level));
+        if (actor.Kind != DaggerfallActorKinds.EnemyClass) return actor with { Level = level };
         int skill = Math.Min(100, checked(level * 5 + 30));
         Dictionary<DaggerfallStatId, int> values = actor.Stats.Values.ToDictionary(pair => pair.Key, pair => pair.Value);
         foreach (DaggerfallStatId id in vocabulary.Skills) values[id] = skill;
@@ -73,6 +73,7 @@ internal static class DaggerfallEncounterActors
         // equipment and does not receive the old projected flat-XP reward.
         return ApplyEncounterClassPolicy(actor) with
         {
+            Level = level,
             Stats = new DaggerfallStatBases(new ReadOnlyDictionary<DaggerfallStatId, int>(values)),
         };
     }

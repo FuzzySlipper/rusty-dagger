@@ -296,7 +296,7 @@ internal sealed partial class DaggerfallSession
                     ? new DaggerfallAdrenalineRush(Enabled: true, Improved: _heldEnchantments.Talents.AdrenalineRush) : default,
                 () => assembled.PlayerControl.Position, () => character, _playerSwings.TryGesture, ShotBlockedByCover,
                 () => _heldEnchantments.ArmorValueModifier, DeliverWeaponPoison, () => _heldEnchantments.AttackChanceModifier, TransformWithWabbajack, effects.MagicDefenseFor,
-                actorId => effects.ControlsFor(actorId).PhysicalAttacks, TransferMolagBal, (caster, target, item, damage) => _itemCastTriggers.Strike(caster, target, item, damage));
+                actorId => effects.ControlsFor(actorId).PhysicalAttacks, TransferMolagBal, (caster, target, item, damage) => _itemCastTriggers.Strike(caster, target, item, damage), DeliverMonsterHit);
             GameplayServices<IProductFact> kit = new(actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, inventory, equipmentCoordinator);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
                 engine.Perception,
@@ -466,6 +466,7 @@ internal sealed partial class DaggerfallSession
             _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, _dungeonText, CapturePropertyStorage, QuestTravelOrigin, authored, () => Casting.NextSequence);
             _roster = new DaggerfallActorRoster(State, definitions, _random, assembled.Mechanics, _actorIdentities, _uniqueItems,
                 _authoredEntityIds, authored, saved?.DynamicActors ?? [], _grounding, () => _sites.Projection, _lootUi, _corpseLoot);
+            if (saved is null) _roster.GrantInitialAuthoredEquipment();
             _pendingCreateItem = saved?.PendingCreateItem;
             _pendingDispel = saved?.PendingDispel;
             _pendingTeleport = saved?.PendingTeleport;

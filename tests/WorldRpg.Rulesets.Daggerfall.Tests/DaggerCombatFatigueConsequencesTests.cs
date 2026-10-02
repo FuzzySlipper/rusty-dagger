@@ -6,6 +6,7 @@ using WorldRpg.Kit.Facts;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -56,5 +57,5 @@ public sealed class DaggerCombatFatigueConsequencesTests
     private static PreparedAttack Prepared() =>
         new DaggerCombatRules.DaggerfallPreparedAttack(.5d,
             new AttackOutcome(Hit: true, Allowed: true, Body: 0, Damage: 2, Roll: 1, Chance: 100),
-            DaggerfallStrikeFeedback.Unarmed);
+            DaggerfallStrikeFeedback.Unarmed, MonsterHits: [new(0, 2, DaggerfallMonsterHitConsequence.Fatigue)]);
 }
