@@ -50,6 +50,8 @@ internal sealed class DaggerSessionPersistence
     internal Func<DaggerfallReadySpell?> ReadySpell {get;set;}=()=>null;
     internal Func<DaggerfallIdentifyRequest?> PendingIdentify { get; set; } = () => null;
     internal Func<DaggerfallDispelRequest?> PendingDispel { get; set; } = () => null;
+    internal Func<string?> PendingTeleport { get; set; } = () => null;
+    internal Func<DaggerfallTeleportAnchor?> TeleportAnchor { get; set; } = () => null;
     internal Func<IReadOnlySet<long>> BanishedActors { get; set; } = () => new HashSet<long>();
     internal DaggerSessionPersistence(DaggerfallState state, DaggerfallCorpseLootModule corpses, DaggerfallGroundContainers groundContainers, DaggerfallBookNotebook notebook,
         DaggerfallUniqueItemAllocator uniqueItems, FirstPersonCameraSystem camera, DaggerfallWorldTime time, DaggerfallSiteContext site,
@@ -152,6 +154,8 @@ internal sealed class DaggerSessionPersistence
             NextCastSequence = _nextCastSequence(),
             ReadySpell=ReadySpell(),
             PendingDispel = PendingDispel(),
+            PendingTeleport = PendingTeleport(),
+            TeleportAnchor = TeleportAnchor(),
             PendingIdentify = PendingIdentify(),
             BanishedActors = [.. BanishedActors().Order()],
             Quests = State.Quests.Capture(),

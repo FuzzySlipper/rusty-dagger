@@ -216,7 +216,7 @@ internal sealed partial class DaggerfallSession
                     target => DaggerfallDiseasePolicy.CureAllDiseases(effects, target),
                     CurePoison, target => DaggerfallParalysisEffects.Cure(effects, target)),
                 .. DaggerfallMysticismEffects.Definitions(id => id == actors.Player.DurableId ? actors.Player.Progression.Level : authored[id].Level ?? 1,
-                    request => _pendingDispel = request, BanishNearby),
+                    request => _pendingDispel = request, BanishNearby, ReactToSpellAttack, request => _pendingTeleport = request),
                 .. DaggerfallSocialMagicEffects.Definitions(ApplyPacify,RequestIdentify),
                 .. DaggerfallConcealmentEffects.Definitions(),
                 .. DaggerfallDetectionEffects.Definitions(),
@@ -428,7 +428,7 @@ internal sealed partial class DaggerfallSession
                 dialogueOpen: () => _activationPresentation.View.Dialogue is not null,
                 characterCreationOpen: () => State.Character.Pending is not null,
                 levelUpOpen: () => State.LevelUps.Pending is not null,
-                bankOpen: () => ActiveBankRegion() is not null, dispelOpen: () => _pendingDispel is not null, identifyOpen: () => _pendingIdentify is not null);
+                bankOpen: () => ActiveBankRegion() is not null, dispelOpen: () => _pendingDispel is not null, identifyOpen: () => _pendingIdentify is not null, teleportOpen: () => _pendingTeleport is not null);
             itemInstances.SourceUnavailable += item =>
             { effects.CancelItemReferences(item); Casting?.CancelItemReferences(item); if (_pendingIdentify?.SourceItem==item) _pendingIdentify=null; };
             Casting = new(definitions.Magic, effects, CastActor, MagicProfile, item => itemInstances.ContainsUnique(item)
@@ -454,11 +454,15 @@ internal sealed partial class DaggerfallSession
             _roster = new DaggerfallActorRoster(State, definitions, _random, assembled.Mechanics, _actorIdentities, _uniqueItems,
                 _authoredEntityIds, authored, saved?.DynamicActors ?? [], _grounding, () => _sites.Projection, _lootUi, _corpseLoot);
             _pendingDispel = saved?.PendingDispel;
+            _pendingTeleport = saved?.PendingTeleport;
+            _teleportAnchor = saved?.TeleportAnchor;
             _pendingIdentify = saved?.PendingIdentify;
             State.Character.SpellForgotten+=key=>
             { if(Casting.ReadyFor(actors.Player.DurableId)?.SpellKey==key) Casting.Cancel(actors.Player.DurableId); };
             _persistence.ReadySpell=()=>Casting.ReadyFor(actors.Player.DurableId);
             _persistence.PendingDispel = () => _pendingDispel;
+            _persistence.PendingTeleport = () => _pendingTeleport;
+            _persistence.TeleportAnchor = () => _teleportAnchor;
             _persistence.PendingIdentify = () => CurrentIdentifyRequest;
             _roster.BanishedActors.UnionWith(saved?.BanishedActors ?? []);
             _persistence.BanishedActors = () => _roster.BanishedActors;

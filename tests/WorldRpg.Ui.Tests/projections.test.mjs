@@ -902,6 +902,24 @@ test('character draft screens consume the published mode art and every pick part
 });
 
 
+test('teleport presents the paid anchor choice and sends current semantic actions', () => {
+  const f = fixture();
+  try {
+    f.publish({mode:'modal',teleport:{revision:'cast.12',anchorSet:false}});
+    const panel=f.root.querySelector('.dagger-teleport');
+    assert.equal(panel.hidden,false);
+    let buttons=panel.querySelectorAll('button');
+    assert.equal(buttons[1].disabled,true);
+    buttons[0].click();
+    assert.deepEqual(f.actions.at(-1),{action:'teleport-select',revision:'cast.12',key:'anchor'});
+    f.publish({teleport:{revision:'cast.13',anchorSet:true}});
+    buttons=panel.querySelectorAll('button');assert.equal(buttons[1].disabled,false);
+    buttons[1].click();assert.deepEqual(f.actions.at(-1),{action:'teleport-select',revision:'cast.13',key:'recall'});
+    buttons[2].click();assert.deepEqual(f.actions.at(-1),{action:'teleport-select',revision:'cast.13',key:'cancel'});
+    f.publish({teleport:null});assert.equal(panel.hidden,true);assert.equal(panel.children.length,0);
+  } finally {f.dispose();}
+});
+
 test('dispel choice renders published bundles and sends current select and cancel actions', () => {
   const f = fixture();
   try {

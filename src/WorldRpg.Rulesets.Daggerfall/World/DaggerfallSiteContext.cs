@@ -274,6 +274,15 @@ internal sealed class DaggerfallSiteContext
         _returnPose = null;
     }
 
+    internal void RestoreReturnDestination(DaggerfallSiteId? site, DaggerfallSiteReturnPose? pose)
+    {
+        if ((site is null) != (pose is null)) throw new ArgumentException("An entrance requires its site and pose together.");
+        if (site is { } destination) _ = Require(destination);
+        pose?.Validate();
+        ReturnAnchor = site;
+        _returnPose = pose;
+    }
+
     /// <summary>Returns the destination and exact pose without mutating; commit with <see cref="Leave"/> only after it admits.</summary>
     internal DaggerfallSiteReturnDestination RequireReturnDestination() => ReturnAnchor is { } site && _returnPose is { } pose
         ? new(site, pose)

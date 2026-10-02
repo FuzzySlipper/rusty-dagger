@@ -18,6 +18,43 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class PropertySessionTests
 {
+    [Fact]
+    public void Teleport_ship_anchor_restores_owned_boarding_context_and_refuses_a_sold_ship()
+    {
+        using Fixture f = new(); f.OpenBank();
+        Assert.True(f.Session.State.Bank.TryCreditAccount(f.Land.Site!.Value.Region, 100000));
+        f.Submit(new { action = "property-buy", key = "ship/small" });
+        var landPosition = f.Session.State.PlayerControl.Position;
+        f.Submit(new { action = "transport-board-ship" });
+        int sequence = 0;
+        void Teleport(DaggerfallSession s, string choice)
+        {
+            var setting = new DaggerfallSpellEffectDefinition("teleport-test", 43, -1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1);
+            s.State.Effects.Start(new($"ship-teleport-{sequence++}", "teleport", "spell.teleport", 1, 1, "teleport", "Magic", null, 1, 1,
+                JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(setting, 1, 0, 100), DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)));
+            s.ChooseTeleport(s.TeleportView!.Revision, choice);
+        }
+        Teleport(f.Session, "anchor");
+        f.Submit(new { action = "transport-leave-ship" });
+        using var restored = f.Restore(f.Session.CaptureSave());
+        Teleport(restored, "recall");
+        Assert.True(restored.State.Transport.OnShip); Assert.Equal(f.Small.ProfileKey, restored.Sites.ActiveProfile);
+        Assert.Null(restored.Sites.ReturnProfile);
+        Assert.Equal(f.Land.ProfileKey, restored.State.Transport.ShipReturnProfile);
+        restored.Update(new ProductUpdate(OuterUpdate(80), [Ui("{\"action\":\"transport-leave-ship\"}")]));
+        Assert.Equal(landPosition, restored.State.PlayerControl.Position);
+        // The other session still has its unspent remembered ship location, but a sale does not
+        // let that remembered location stand in for current property ownership.
+        f.OpenBank(); f.Submit(new { action = "property-sell", key = "ship/small" });
+        Teleport(f.Session, "recall");
+        Assert.Contains("no longer owned", f.Session.Presentation.LastOutcome);
+        Assert.Equal(f.Land.ProfileKey, f.Session.Sites.ActiveProfile);
+        Assert.False(f.Session.State.Transport.OnShip);
+        Assert.NotNull(DaggerfallSavePayload.Read(f.Session.CaptureSave()).TeleportAnchor);
+        using var sold = f.Restore(f.Session.CaptureSave());
+        Assert.False(sold.State.Property.OwnsShip);
+    }
+
     [Theory]
     [InlineData("small", 100000UL)]
     [InlineData("large", 200000UL)]

@@ -650,7 +650,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             Lodging: LodgingView,
             Travel: ReadTravelPresentation(),
             SiteName: Site.ActiveSite?.Name,
-            Map: _mapOpen ? ReadMapPresentation() : null, Dispel: DispelView, Identify: IdentifyView, Spells: ReadSpells(), Detectors: ReadDetectors()));
+            Map: _mapOpen ? ReadMapPresentation() : null, Teleport: TeleportView, Dispel: DispelView, Identify: IdentifyView, Spells: ReadSpells(), Detectors: ReadDetectors()));
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors, _groundContainers.All,

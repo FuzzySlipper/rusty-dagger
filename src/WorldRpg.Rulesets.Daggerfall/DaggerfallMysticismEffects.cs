@@ -21,8 +21,32 @@ internal sealed record DaggerfallDispelView(string Revision, IReadOnlyList<Dagge
 internal static class DaggerfallMysticismEffects
 {
     internal static IEnumerable<DaggerfallEffectDefinition> Definitions(Func<long, int> level,
-        Action<DaggerfallDispelRequest> requestDispel, Action<DaggerfallActiveEffect, bool> banish)
+        Action<DaggerfallDispelRequest> requestDispel, Action<DaggerfallActiveEffect, bool> banish,
+        Action<long, long>? attacked = null, Action<string>? requestTeleport = null)
     {
+        yield return new("silence", "silence", DaggerfallEffectStacking.RefreshDuration, 1, 1,
+            Apply: effect =>
+            {
+                Read(effect, 19, -1);
+                if (effect.Context.Caster is { } caster) attacked?.Invoke(checked((long)caster.Value), checked((long)effect.Context.Target.Value));
+                return [];
+            }, Resume: effect => Validate(effect, 19, -1),
+            Spell: new(19, -1, SupportsDuration: true, RollChanceOnCast: true,
+                AllowedElements: DaggerfallMagicAllowedElements.Fire | DaggerfallMagicAllowedElements.Cold
+                    | DaggerfallMagicAllowedElements.Poison | DaggerfallMagicAllowedElements.Shock | DaggerfallMagicAllowedElements.Magic,
+                AllowedTargets: DaggerfallMagicAllowedTargets.All),
+            MagicDefense: _ => new(0, 0, [], BlocksCasting: true),
+            ExtendIncumbentDuration: true, IncumbentSettingsMatch: (_, _) => true);
+        yield return new("teleport", "teleport", DaggerfallEffectStacking.Stack, ushort.MaxValue, 1,
+            Apply: effect =>
+            {
+                Read(effect, 43, -1);
+                if (effect.Context.Target.Value != DaggerfallActorIdentity.PlayerEntityId || requestTeleport is null)
+                    effect.InitialOutcome = DaggerfallEffectAdmissionOutcome.NoMatch;
+                else requestTeleport(effect.Context.Instance.Value);
+                return [];
+            }, Resume: _ => throw new ArgumentException("Teleport is an immediate paid choice, not an ongoing effect."),
+            Spell: new(43, -1, AllowedTargets: DaggerfallMagicAllowedTargets.CasterOnly), ShowSpellIcon: false);
         yield return new("comprehend-languages", "comprehend-languages", DaggerfallEffectStacking.Stack, ushort.MaxValue, 1,
             Apply: effect => Validate(effect, 44, -1), Resume: effect => Validate(effect, 44, -1),
             Spell: new(44, -1, SupportsDuration: true, AllowedTargets: DaggerfallMagicAllowedTargets.CasterOnly),

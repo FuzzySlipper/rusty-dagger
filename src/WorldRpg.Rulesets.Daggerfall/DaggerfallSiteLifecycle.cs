@@ -210,12 +210,21 @@ internal sealed class DaggerfallSiteLifecycle
             actor.ApplyPose(new ActorPose(ProfileToLocal(anchor.Position), anchor.YawRadians));
             return true;
         }
-        if (destination.Profile == ActiveProfile)
+        return TryRelocatePlayer(destination.Profile, anchor);
+    }
+
+    /// <summary>Recalls a saved pose through the same admission and movement owner as named anchors.</summary>
+    internal bool TryRelocatePlayer(DaggerfallWorldProfileKey profile, DaggerfallSiteAnchor pose)
+    {
+        profile.Validate();
+        if (profile != ActiveProfile) _ = RequireProfiles().Require(profile);
+        pose.Validate();
+        if (profile == ActiveProfile)
         {
-            _host.RelocatePlayer(ProfileToLocal(anchor.Position), anchor.YawRadians, anchor.PitchRadians);
+            _host.RelocatePlayer(ProfileToLocal(pose.Position), pose.YawRadians, pose.PitchRadians);
             return true;
         }
-        return TryTransitionTo(destination.Profile, anchor, useReturnDestination: false);
+        return TryTransitionTo(profile, pose, useReturnDestination: false);
     }
 
     /// <summary>World relocation has no doorway back; its caller may own a different return workflow.</summary>
@@ -223,6 +232,14 @@ internal sealed class DaggerfallSiteLifecycle
     {
         ReturnProfile = null;
         _site.ClearReturnDestination();
+    }
+
+    internal void RestoreReturnDestination(DaggerfallWorldProfileKey? profile, DaggerfallSiteReturnPose? pose)
+    {
+        if ((profile is null) != (pose is null)) throw new ArgumentException("A saved entrance requires its profile and pose together.");
+        if (profile is { } destination) _ = RequireProfiles().Require(destination);
+        _site.RestoreReturnDestination(profile?.Site, pose);
+        ReturnProfile = profile;
     }
 
     /// <summary>Attempts one real site transition; failed destination admission leaves the source projection live.</summary>
