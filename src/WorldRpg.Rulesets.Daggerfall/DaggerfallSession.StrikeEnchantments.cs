@@ -11,11 +11,11 @@ internal sealed partial class DaggerfallSession
     private void DrainNearbyHealth()
     {
         if (State.PlayerControl.Position is not { } origin) return;
-        double rangeSquared = _tuning.StrikeEnchantments.VampiricRange * _tuning.StrikeEnchantments.VampiricRange;
-        foreach (var actor in State.Actors.All.ToArray())
+        foreach (long id in AreaSpellTargets(State.Actors.Player.DurableId, origin.ToVector(),
+            excludeCaster: true, radius: _tuning.StrikeEnchantments.VampiricRange))
         {
-            if (actor.IsDefeated || !_roster.Definitions.TryGetValue(actor.DurableId, out var definition)
-                || definition.Kind is not (DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass) || (actor.Position.ToVector() - origin.ToVector()).LengthSquared() > rangeSquared) continue;
+            if (!State.Actors.TryGet(id, out var actor) || actor.IsDefeated || !_roster.Definitions.TryGetValue(id, out var definition)
+                || definition.Kind is not (DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass)) continue;
             AppendSpellTransfer(_vitality.ResolveSpellTransfer(State.Actors.Player.Actor, actor.Actor, 1, fatigue: false, permitsFatigueLoss: true));
         }
     }
