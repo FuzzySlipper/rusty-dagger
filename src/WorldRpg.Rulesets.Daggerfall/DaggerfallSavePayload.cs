@@ -195,7 +195,9 @@ internal sealed record DaggerfallSavePayload(
             if (site?.Exterior is not { } exterior
                 || !exterior.Buildings.TryGetValue(new(house.BlockX, house.BlockY, house.Building.Index), out var building)
                 || building.Source.Id != house.Building
-                || building.Source.BuildingType is not (1 or >= 17 and <= 20))
+                || !DaggerfallPropertyPolicy.IsEligibleHouse(new(house.Site, house.Building,
+                    building.Source.BuildingType, site.Kind, building.ModelRadius ?? 0f,
+                    false, house.BlockX, house.BlockY)))
                 throw new ArgumentException($"Saved property house '{house}' does not resolve to an admitted house building.");
         }
         if (Transport.OnShip)
@@ -211,7 +213,8 @@ internal sealed record DaggerfallSavePayload(
                 if (Site.ReturnProfile is not null || Site.ReturnAnchor is not null || Site.ReturnPose is not null)
                     throw new ArgumentException("Saved ship exterior must not duplicate the transport land return destination.");
             }
-            else if (Site.ReturnProfile?.Require() is not { Kind: DaggerfallWorldProfileKind.Exterior } deck || deck.Site != active.Site)
+            else if (active.Kind != DaggerfallWorldProfileKind.Interior
+                || Site.ReturnProfile?.Require() is not { Kind: DaggerfallWorldProfileKind.Exterior } deck || deck.Site != active.Site)
                 throw new ArgumentException("Saved ship interior must return to its owned ship exterior.");
             DaggerfallShipArrivalAnchor anchor = DaggerfallPropertyPolicy.ShipArrival(Property.Ship.Ship, (tuning ?? DaggerfallTuning.Defaults).Property);
             DaggerfallSiteRecord activeShip = definitions.Locations.Records.Single(record => record.Id == Site.ActiveProfile!.Require().Site);

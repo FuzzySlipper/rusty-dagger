@@ -180,6 +180,23 @@ public sealed class PropertySessionTests
         var badHouse = DaggerfallHouseOwnershipSave.Capture(f.HouseIdentity) with { BuildingSourceKey = "ABSENT.RMB" };
         malformed = saved with { Property = saved.Property with { Houses = [badHouse] } };
         Assert.Contains("admitted house", Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(malformed))).Message);
+        var nonTown = TestPayload.Definitions.Locations.Records.First(site => site.Exterior is not null
+            && site.Kind is not (DaggerfallSiteKind.TownCity or DaggerfallSiteKind.TownHamlet or DaggerfallSiteKind.TownVillage)
+            && site.Exterior.Buildings.Values.Any(building => building.Source.BuildingType is 1 or >= 17 and <= 20));
+        var nonTownBuilding = nonTown.Exterior!.Buildings.Values.First(building => building.Source.BuildingType is 1 or >= 17 and <= 20);
+        var invalidHouse = DaggerfallHouseOwnershipSave.Capture(new(nonTown.Id, nonTownBuilding.Source.Id,
+            nonTownBuilding.Id.BlockX, nonTownBuilding.Id.BlockY));
+        foreach (bool retained in new[] { false, true })
+        {
+            malformed = saved with { Property = saved.Property with {
+                Houses = retained ? [] : [invalidHouse], RetainedHouses = retained ? [invalidHouse] : [] } };
+            Assert.Contains("admitted house", Assert.Throws<ArgumentException>(() => f.Resolve(malformed)).Message);
+        }
+        malformed = saved with { Site = saved.Site with {
+            ActiveProfile = saved.Site.ActiveProfile! with { Kind = (int)DaggerfallWorldProfileKind.Dungeon },
+            ReturnAnchor = saved.Site.Active, ReturnProfile = saved.Site.ActiveProfile,
+            ReturnPose = new(1, 1, 1, 0, 0) } };
+        Assert.Contains("ship interior", Assert.Throws<ArgumentException>(() => f.Resolve(malformed)).Message);
     }
 
     private sealed class Fixture : IDisposable
@@ -267,6 +284,7 @@ public sealed class PropertySessionTests
         }
         internal void Submit(object action) => Session.Update(new ProductUpdate(OuterUpdate(step++), [Ui(JsonSerializer.Serialize(action))]));
         internal DaggerfallSession Restore(RulesetSavePayload save) => Create(save);
+        internal void Resolve(DaggerfallSavePayload save) => save.ResolveRestore(definitions, Land, profiles);
         public void Dispose() => Session.Dispose();
     }
 }
