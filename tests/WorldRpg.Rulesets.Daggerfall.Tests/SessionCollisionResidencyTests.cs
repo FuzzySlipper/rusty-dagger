@@ -163,13 +163,16 @@ public sealed class SessionCollisionResidencyTests
         Assert.Equal(east, moved.Center);
         Assert.Equal(window.Origin, moved.Origin);
 
-        // The crossing is an ordinary step: the player keeps the pose it walked to and its vitals, and
-        // the actor sharing the window stays where it was.
-        Assert.Equal(crossed, session.State.PlayerControl.Position);
+        // The crossing also commits Engine origin rebasing. Local poses shift together while
+        // their durable profile positions, vitals and relative separation remain unchanged.
+        Vector3 compensation = session.Sites.LocalCompensation;
+        Assert.NotEqual(Vector3.Zero, compensation);
+        Assert.Equal(crossed.ToVector() + compensation, session.State.PlayerControl.Position!.Value.ToVector());
+        Assert.Equal(crossed.ToVector(), session.Sites.LocalToProfile(session.State.PlayerControl.Position.Value.ToVector()));
         Assert.Equal(yaw, session.State.PlayerControl.YawRadians);
         Assert.Equal(health, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
         Assert.True(session.State.Actors.TryGet(rat, out ActorState? ratState));
-        Assert.Equal(new WorldPoint(9f, 0f, 9f), ratState.Position);
+        Assert.Equal(new Vector3(9f, 0f, 9f) + compensation, ratState.Position.ToVector());
         Assert.Equal(exterior.Site, session.Site.Active);
 
         // Entering the interior removes the whole window before the interior's content replaces the

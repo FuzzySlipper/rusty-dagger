@@ -1,4 +1,5 @@
 {
+  "worldOrigin": { "verticalRebaseDistance": 500.0 },
   "detection": { "maximumDistance": 14.0 },
   "playerControl": {
     "lookSensitivity": 0.0035,

@@ -176,6 +176,15 @@ internal sealed record DaggerfallSavePayload(
     {
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(inputs);
+        if (ExteriorResidency is { } savedExterior)
+        {
+            DaggerfallExteriorWorldOrigin origin = new(savedExterior.Origin.X, savedExterior.Origin.Y,
+                new System.Numerics.Vector3(savedExterior.CompensationX, savedExterior.CompensationY, savedExterior.CompensationZ));
+            DaggerfallExteriorCellId playerCell = DaggerfallExteriorSessionOrigin.CellForLocalPosition(
+                new(Player.X, Player.Y, Player.Z), origin, new(definitions.Terrain.Width, definitions.Terrain.Height));
+            if (savedExterior.Center != playerCell)
+                throw new ArgumentException("Saved exterior window is not centered on the saved player; restoring it would admit the wrong terrain cells.");
+        }
         ArgumentNullException.ThrowIfNull(CustomSpells);
         if (CustomSpells.Any(spell => spell is null || !spell.IsPlayerCreated))
             throw new ArgumentException("Saved custom spells must be actual player-created definitions.");
