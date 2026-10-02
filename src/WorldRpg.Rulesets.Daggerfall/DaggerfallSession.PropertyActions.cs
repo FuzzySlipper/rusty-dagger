@@ -21,15 +21,14 @@ internal sealed partial class DaggerfallSession
     private DaggerfallHouseOffer[] CurrentHouseOffers(bool includeOwned = false)
     {
         if (_site.ActiveSite is not { Exterior: { } exterior } site) return [];
-        // Building-level quest claims are not yet published by quest bindings; #9141 owns
-        // that source identity and its random House1–4 filter. Never guess a whole-site claim.
         DaggerfallHouseCandidate[] candidates = [.. exterior.Buildings.Values
             .Where(building => building.ModelRadius is > 0)
             .OrderBy(building => building.Id.BlockY).ThenBy(building => building.Id.BlockX).ThenBy(building => building.Id.Index)
             .Select(building => new DaggerfallHouseCandidate(site.Id, building.Source.Id,
-                building.Source.BuildingType, site.Kind, building.ModelRadius!.Value, false, building.Id.BlockX, building.Id.BlockY))];
+                building.Source.BuildingType, site.Kind, building.ModelRadius!.Value,
+                State.Quests.ClaimsBuilding(site.Id, building), building.Id.BlockX, building.Id.BlockY))];
         List<DaggerfallHouseCandidate> selected = [.. candidates.Where(value => value.BuildingType == 1)];
-        List<DaggerfallHouseCandidate> ordinary = [.. candidates.Where(value => value.BuildingType is >= 17 and <= 20)];
+        List<DaggerfallHouseCandidate> ordinary = [.. candidates.Where(value => value.BuildingType is >= 17 and <= 20 && !value.IsQuestBuilding)];
         int limit = Math.Min(exterior.Buildings.Count / 10, 20);
         for (int draw = 0; selected.Count < limit && ordinary.Count > 0; draw++)
         {

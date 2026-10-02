@@ -19,6 +19,87 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class PropertySessionTests
 {
     [Fact]
+    public void Quest_building_claim_filters_only_that_monthly_house_and_survives_unload_and_save()
+    {
+        using Fixture f = new(questBuildingScenario: true); f.OpenBank();
+        var s = f.Session; var site = s.Site.ActiveSite!;
+        var offers = s.ReadPropertyPresentation().Offers;
+        var house = site.Exterior!.Buildings.Values.First(building => building.Source.BuildingType is >= 17 and <= 20
+            && offers.Any(offer => offer.Key == HouseKey(site.Id, building)));
+        var other = site.Exterior.Buildings.Values.First(building => building.Source.BuildingType is >= 17 and <= 20 && building.Id != house.Id);
+        StartBuilding(s, "claimed-house", house);
+        Assert.True(s.State.Quests.ClaimsBuilding(site.Id, house));
+        Assert.False(s.State.Quests.ClaimsBuilding(site.Id, other));
+        Assert.DoesNotContain(s.ReadPropertyPresentation().Offers, offer => offer.Key == HouseKey(site.Id, house));
+        Assert.Contains(s.ReadPropertyPresentation().Offers, offer => offer.Key.StartsWith("house/")
+            && site.Exterior.Buildings.Values.Any(building => building.Source.BuildingType is >= 17 and <= 20 && HouseKey(site.Id, building) == offer.Key));
+        var explicitHouse = site.Exterior.Buildings.Values.Single(building => building.Source.Id == f.HouseIdentity.Building
+            && building.Id.BlockX == f.HouseIdentity.BlockX && building.Id.BlockY == f.HouseIdentity.BlockY);
+        StartBuilding(s, "claimed-explicit", explicitHouse);
+        Assert.Contains(s.ReadPropertyPresentation().Offers, offer => offer.Key == HouseKey(site.Id, explicitHouse));
+        Assert.True(s.TryTransitionTo(f.Destination.ProfileKey));
+        Assert.True(s.State.Quests.ClaimsBuilding(site.Id, house));
+        using var restored = f.Restore(s.CaptureSave());
+        Assert.True(restored.State.Quests.ClaimsBuilding(site.Id, house));
+        Assert.True(restored.TryTransitionTo(f.Land.ProfileKey));
+        f.OpenBank(restored);
+        Assert.DoesNotContain(restored.ReadPropertyPresentation().Offers, offer => offer.Key == HouseKey(site.Id, house));
+        restored.State.Quests.Complete("claimed-house", "finished");
+        Assert.False(restored.State.Quests.ClaimsBuilding(site.Id, house));
+        Assert.Contains(restored.ReadPropertyPresentation().Offers, offer => offer.Key == HouseKey(site.Id, house));
+        using var finished = f.Restore(restored.CaptureSave());
+        Assert.False(finished.State.Quests.ClaimsBuilding(site.Id, house));
+        Assert.True(finished.State.Quests.ClaimsBuilding(site.Id, explicitHouse));
+    }
+
+    [Fact]
+    public void Building_claim_rebinding_and_multiple_active_quests_use_current_resource_owners()
+    {
+        using Fixture f = new(questBuildingScenario: true); var s = f.Session; var site = s.Site.ActiveSite!;
+        var houses = site.Exterior!.Buildings.Values.Where(building => building.Source.BuildingType is >= 17 and <= 20).Take(2).ToArray();
+        StartBuilding(s, "first", houses[0]); StartBuilding(s, "second", houses[0]);
+        s.State.Quests.SetResource("first", new("_mondung_", Binding(s, houses[1])));
+        Assert.True(s.State.Quests.ClaimsBuilding(site.Id, houses[0]));
+        Assert.True(s.State.Quests.ClaimsBuilding(site.Id, houses[1]));
+        s.State.Quests.Complete("second", "finished");
+        Assert.False(s.State.Quests.ClaimsBuilding(site.Id, houses[0]));
+        s.State.Quests.Fail("first", "failed");
+        Assert.False(s.State.Quests.ClaimsBuilding(site.Id, houses[1]));
+    }
+
+    [Fact]
+    public void Source_building_resolution_handles_origin_key_and_diagnoses_missing_or_malformed_claims()
+    {
+        using Fixture f = new(); var s = f.Session;
+        var originSite = s.Site.Records.First(site => site.Exterior?.Buildings.ContainsKey(new(0, 0, 0)) == true
+            && s.Site.Records.Count(other => other.MapId == site.MapId) == 1);
+        var binding = DaggerfallQuestResourceBinding.PlaceBuilding(s.Site, originSite.MapId, 1 << 24);
+        Assert.Equal(originSite.Id, binding.Places[0].Require());
+        Assert.Equal(originSite.Exterior!.Buildings[new(0, 0, 0)].Source.Id.SourceKey, binding.Building!.SourceKey);
+        Assert.Equal(0, binding.Building.Index); Assert.Equal(0, binding.Building.BlockX); Assert.Equal(0, binding.Building.BlockY);
+        Assert.Contains("resolves to 0", Assert.Throws<ArgumentException>(() => DaggerfallQuestResourceBinding.PlaceBuilding(s.Site, int.MaxValue, 1)).Message);
+        Assert.Contains("invalid building key", Assert.Throws<ArgumentException>(() => DaggerfallQuestResourceBinding.PlaceBuilding(s.Site, originSite.MapId, 0)).Message);
+        Assert.Contains("no building", Assert.Throws<InvalidOperationException>(() => DaggerfallQuestResourceBinding.PlaceBuilding(s.Site, originSite.MapId, 0xffffff)).Message);
+        var house = s.Site.ActiveSite!.Exterior!.Buildings.Values.First(); StartBuilding(s, "malformed", house);
+        var saved = DaggerfallSavePayload.Read(s.CaptureSave());
+        var quest = saved.Quests.Instances.Single(); var resource = quest.Resources.Single();
+        var bad = saved with { Quests = saved.Quests with { Instances = [quest with { Resources = [resource with
+            { Binding = resource.Binding with { Building = resource.Binding.Building! with { SourceKey = "MISSING.RMB" } } }] }] } };
+        Assert.Contains("missing building", Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(bad))).Message);
+    }
+
+    private static string HouseKey(DaggerfallSiteId site, DaggerfallSiteBuildingSource building) =>
+        DaggerfallPropertyStorageKey.ForHouse(new(site, building.Source.Id, building.Id.BlockX, building.Id.BlockY)).Value;
+    private static DaggerfallQuestResourceBinding Binding(DaggerfallSession session, DaggerfallSiteBuildingSource building)
+    {
+        int key = (building.Id.BlockX << 16) | (building.Id.BlockY << 8) | building.Id.Index;
+        return DaggerfallQuestResourceBinding.PlaceBuilding(session.Site, session.Site.ActiveSite!.MapId, key == 0 ? 1 << 24 : key);
+    }
+    private static void StartBuilding(DaggerfallSession session, string instance, DaggerfallSiteBuildingSource building) =>
+        session.State.Quests.Start(new(instance, "00B00Y00.txt", "00B00Y00", DaggerfallQuestLifecycle.Active, null,
+            [new("_mondung_", Binding(session, building))], []));
+
+    [Fact]
     public void Teleport_ship_anchor_restores_owned_boarding_context_and_refuses_a_sold_ship()
     {
         using Fixture f = new(); f.OpenBank();
@@ -252,7 +333,7 @@ public sealed class PropertySessionTests
         internal DaggerfallSiteProfile Small { get; }
         internal DaggerfallSiteProfile Large { get; }
         internal DaggerfallHouseIdentity HouseIdentity { get; }
-        internal Fixture(bool admitShips = true)
+        internal Fixture(bool admitShips = true, bool questBuildingScenario = false)
         {
             string root = TestData.RepositoryRoot;
             var content = FullContent(root); var source = ReadInputs(root);
@@ -260,7 +341,10 @@ public sealed class PropertySessionTests
             blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.blocks.json")));
             var site = definitions.Locations.Records.First(value => value.Kind == DaggerfallSiteKind.TownCity
                 && value.Exterior is { PortTownAndUnknown: > 0 } exterior
-                && exterior.Buildings.Values.Any(building => building.Source.BuildingType == 1 && building.ModelRadius > 0));
+                && exterior.Buildings.Values.Any(building => building.Source.BuildingType == 1 && building.ModelRadius > 0)
+                && (!questBuildingScenario || (exterior.Buildings.Values.Count(building => building.Source.BuildingType == 1)
+                    < Math.Min(exterior.Buildings.Count / 10, 20)
+                    && exterior.Buildings.Values.Count(building => building.Source.BuildingType is >= 17 and <= 20 && building.ModelRadius > 0) >= 2)));
             var building = site.Exterior!.Buildings.Values.Where(value => value.Source.BuildingType == 1)
                 .OrderBy(value => value.Id.BlockY).ThenBy(value => value.Id.BlockX).ThenBy(value => value.Id.Index).First();
             HouseIdentity = new(site.Id, building.Source.Id, building.Id.BlockX, building.Id.BlockY);
@@ -294,13 +378,14 @@ public sealed class PropertySessionTests
             DaggerfallSessionComposition composition = new(definitions, Land, DaggerfallTuning.Defaults, identity) { Profiles = profiles, Blocks = blocks };
             return saved is null ? DaggerfallSession.StartNew(engine.Context, composition) : DaggerfallSession.Restore(engine.Context, composition, saved);
         }
-        internal void OpenBank()
+        internal void OpenBank(DaggerfallSession? session = null)
         {
-            var site = Session.Site.ActiveSite!;
+            session ??= Session;
+            var site = session.Site.ActiveSite!;
             var npcSite = new DaggerfallNpcSite(site.Region, site.Name, string.Empty);
-            long id = Session.State.Npcs.RegisterStable(DaggerfallNpcKind.Static, "property-test.banker", npcSite,
+            long id = session.State.Npcs.RegisterStable(DaggerfallNpcKind.Static, "property-test.banker", npcSite,
                 new("Breton", "Male", 0, 0, 0, 0), "banker", ["banking"]);
-            Assert.True(Session.TryOpenBank(new(id, npcSite, "banking")));
+            Assert.True(session.TryOpenBank(new(id, npcSite, "banking")));
         }
         internal string OpenBankDialogue()
         {
