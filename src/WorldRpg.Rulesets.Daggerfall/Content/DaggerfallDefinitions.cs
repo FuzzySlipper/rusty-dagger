@@ -191,6 +191,8 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     /// <summary>The normalized reference catalogs a consumer resolves keys through.</summary>
     internal DaggerfallCatalogSet Catalogs { get; } = catalogs;
 
+    internal DaggerfallEnemySpells EnemySpells { get; init; } = DaggerfallEnemySpells.Empty;
+
     /// <summary>
     /// The published spells and magic-item templates, loaded from the pack alone: a spell resolves by key
     /// to its source identity and effects, and an item enchantment resolves to the spell it names.

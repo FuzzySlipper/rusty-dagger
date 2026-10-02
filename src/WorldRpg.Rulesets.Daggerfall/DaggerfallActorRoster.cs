@@ -139,7 +139,7 @@ internal sealed class DaggerfallActorRoster
         try
         {
             ActorState actor = DaggerActorFactory.CreateNonPlayerActor(_state.Actors, durableId, spawnedDefinition,
-                new DaggerfallMechanicsState().CreateStats(spawnedDefinition, SpawnVitals(spawnedDefinition, spawnLevel, durableId)),
+                _mechanics.CreateStats(spawnedDefinition, SpawnVitals(spawnedDefinition, spawnLevel, durableId)),
                 pose);
             DaggerActorFactory.RegisterActorInventory(actor, _state.InventoryStore);
             GrantSpawnLoadout(actor, spawnedDefinition);
