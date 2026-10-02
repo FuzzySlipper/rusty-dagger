@@ -215,6 +215,8 @@ public static class Arena2MagicCatalogDocument
             document["effectCosts"] = new JsonArray([.. spells.Spells
                 .SelectMany(spell => spell.Effects)
                 .Select(effect => (effect.Type, effect.SubType))
+                // Free Action has no stock SPELLS.STD entry, but normalized crafted spells and potions need its row.
+                .Concat([(Type: 26, SubType: -1)])
                 .Distinct()
                 .Order()
                 .Select(variant => effectCosts.Resolve(variant.Type, variant.SubType))

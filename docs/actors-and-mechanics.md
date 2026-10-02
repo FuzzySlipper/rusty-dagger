@@ -78,7 +78,8 @@ and active defense projections before the lifecycle attaches effects. Release
 and terminal delivery each emit one fact; repeated callbacks apply nothing.
 
 The shipped catalog composes disease, poison, five elemental resistance variants,
-Shield, paralysis, immediate health/fatigue/spell-point damage and Disintegrate.
+Shield, paralysis, Free Action, Regenerate, Spell Absorption, immediate
+health/fatigue/spell-point damage and Disintegrate.
 Additional spell families add their bindings through that same composition seam;
 unmapped effects refuse before payment or skill use. UI selection, spell flight
 presentation and item-trigger policy remain separate consumers.
@@ -107,6 +108,19 @@ replaying the initial magic round. Site perception resets retain saved hostility
 Nonzero non-magnitude saving throws retain the admitted duration; full resistance
 prevents attachment. Cure spells compose the same lifecycle cleanup in their own
 spell family.
+
+Free Action releases active paralysis restrictions while its immunity lasts and
+rejects new paralysis; it does not erase another source's remaining condition.
+Regenerate heals through bounded health tracks on ordinary and elapsed magic
+rounds. Equivalent settings from the same caster/item extend one incumbent without another initial heal;
+different settings coexist. Current saves retain the next round's random-draw
+identity and never repeat the initial heal. Spell Absorption retains incumbent
+settings and extends duration; chance uses the receiver's current level. Casting
+reserves combined refund capacity and reports one terminal delivery result before
+applying the aggregate refund. Distinct caster/item sources retain their own cleanup and lifetime. Source
+retirement, cure and expiry use the same
+active-effect cleanup. Free Action's donor cost row is published even though the
+stock spell table contains no spell using it.
 
 ## Active effects
 
