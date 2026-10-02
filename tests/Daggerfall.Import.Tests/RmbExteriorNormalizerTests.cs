@@ -61,6 +61,22 @@ public sealed class RmbExteriorNormalizerTests
         });
     }
 
+    [CorpusFact]
+    public void Duplicate_Your_Ship_names_publish_unique_source_worlds_and_real_start_markers()
+    {
+        DungeonLogicalSourceSet sources = Sources();
+        var small = RmbExteriorNormalizer.Normalize(new(sources, 31, "Your Ship", RmbWorldProfileKind.Exterior)
+        { LocationIndex = 1, Navigation = NavigationDerivationConfig.ClassicDefault with { CellSize = 1F } });
+        var large = RmbExteriorNormalizer.Normalize(new(sources, 31, "Your Ship", RmbWorldProfileKind.Exterior)
+        { LocationIndex = 2, Navigation = NavigationDerivationConfig.ClassicDefault with { CellSize = 1F } });
+        Assert.Equal(1, small.Layout.LocationIndex);
+        Assert.Equal(2, large.Layout.LocationIndex);
+        Assert.NotEqual(small.Document.World.VisualMeshAssetId, large.Document.World.VisualMeshAssetId);
+        Assert.NotEqual(small.SpatialPublication.CollisionNavigation.Bytes.ToArray(), large.SpatialPublication.CollisionNavigation.Bytes.ToArray());
+        Assert.Equal(new NormalizedVector3(106.2F, 9.575F, 31.400005F), small.Document.World.StartMarker!.Position);
+        Assert.Equal(new NormalizedVector3(37.775F, 11.3F, -31.675003F), large.Document.World.StartMarker!.Position);
+    }
+
     private static DungeonLogicalSourceSet Sources()
     {
         string arena2 = TestData.CorpusRoot;

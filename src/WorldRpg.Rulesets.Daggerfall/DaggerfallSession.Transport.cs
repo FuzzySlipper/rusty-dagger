@@ -31,9 +31,7 @@ internal sealed partial class DaggerfallSession
             IsIndoor: _activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior,
             IsDungeon: dungeon,
             DungeonExitDistance: exitDistance,
-            // The donor allows a ship only in a port town, a fact the normalized site exterior does
-            // not carry yet; until it does, no admitted site offers ship access.
-            ShipAccessAllowed: false);
+            ShipAccessAllowed: ResolveOwnedShipProfile() is not null);
     }
 
     private void ChangeTransport(DaggerfallPlayerUiAction action)
@@ -48,7 +46,8 @@ internal sealed partial class DaggerfallSession
                 "cart" => DaggerfallTransportMode.Cart,
                 _ => throw new InvalidOperationException("Parsed transport mode is not supported."),
             }, State.Inventory.Read(), TransportAccess()),
-            DaggerfallUiActionKind.TransportLeaveShip => State.Transport.LeaveShip(),
+            DaggerfallUiActionKind.TransportBoardShip => BoardPropertyShip(),
+            DaggerfallUiActionKind.TransportLeaveShip => LeavePropertyShip(),
             _ => throw new InvalidOperationException("Parsed transport action is not supported."),
         };
         if (result.Applied)

@@ -119,7 +119,13 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.DialogueClose: _ = ApplyDialogueAction(action); break;
             case DaggerfallUiActionKind.TransportSelect:
             case DaggerfallUiActionKind.TransportToggle:
-            case DaggerfallUiActionKind.TransportLeaveShip: ChangeTransport(action); break;
+            case DaggerfallUiActionKind.TransportLeaveShip:
+            case DaggerfallUiActionKind.TransportBoardShip: ChangeTransport(action); break;
+            case DaggerfallUiActionKind.PropertyBuy:
+            case DaggerfallUiActionKind.PropertySell:
+            case DaggerfallUiActionKind.PropertyEnter:
+            case DaggerfallUiActionKind.PropertyPut:
+            case DaggerfallUiActionKind.PropertyTake: ChangeProperty(action); break;
             case DaggerfallUiActionKind.TravelSearch:
             case DaggerfallUiActionKind.TravelPreview: ChangeTravel(action); break;
             case DaggerfallUiActionKind.TravelAccept:
@@ -157,6 +163,7 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.CurrencyDepositLetters:
             case DaggerfallUiActionKind.CurrencyWithdrawLetter:
             case DaggerfallUiActionKind.BankTransfer: ChangeCurrency(action); break;
+            case DaggerfallUiActionKind.BankOpen: OpenCurrentBank(action.Revision); break;
             case DaggerfallUiActionKind.BankLoanIssue:
             case DaggerfallUiActionKind.BankLoanRepayAccount:
             case DaggerfallUiActionKind.BankLoanRepayCarried: ChangeLoan(action); break;

@@ -169,7 +169,7 @@ public sealed class ExteriorOriginSessionTests
     }
 
     [Fact]
-    public void Session_rebase_keeps_pending_encounter_and_ship_return_local_through_save_restore()
+    public void Session_rebase_keeps_pending_encounter_local_through_save_restore()
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
@@ -186,8 +186,6 @@ public sealed class ExteriorOriginSessionTests
         session.State.PlayerControl.YawRadians = .3f;
         var encounter = session.QueueEncounter(new(DaggerfallEncounterContext.WildernessDay, 1, Climate: 224));
         Assert.NotNull(encounter.ActorDefinition);
-        Assert.True(session.State.Transport.BoardShip(true, new(),
-            new DaggerfallTransportPose(new WorldPoint(1002, 3, 7), .3f, .1f)).Applied);
         session.Sites.RebaseExteriorIfNeeded();
         Vector3 delta = session.Sites.LocalCompensation;
         RulesetSavePayload saved = session.CaptureSave();
@@ -195,7 +193,6 @@ public sealed class ExteriorOriginSessionTests
         Assert.Equal(encounter.Pose.Position.ToVector() + delta, Assert.Single(payload.Encounters.Resolved).Pose.Position.ToVector());
         Assert.Equal(.3f, Assert.Single(payload.Encounters.Resolved).Pose.HeadingYawRadians);
         Assert.Null(Assert.Single(payload.Encounters.Resolved).SpawnedActorId);
-        Assert.Equal(1002 + delta.X, payload.Transport.ShipReturnX);
         List<string> restoredReleases = [];
         ContentFake restoredContent = new(restoredReleases);
         PopulateContent(restoredContent, exterior);
@@ -204,7 +201,6 @@ public sealed class ExteriorOriginSessionTests
         EngineContextFake restoredEngine = EngineContextFake.Create(restoredContent, restoredSpatial.Service,
             new AppearanceFake(restoredReleases));
         using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, composition, saved);
-        Assert.Equal(new WorldPoint(1002 + delta.X, 3 + delta.Y, 7 + delta.Z), restored.State.Transport.LeaveShip().Relocation!.Position);
         restored.Update(new ProductUpdate(OuterUpdate(1), []));
         var materialized = Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).Encounters.Resolved);
         Assert.NotNull(materialized.SpawnedActorId);

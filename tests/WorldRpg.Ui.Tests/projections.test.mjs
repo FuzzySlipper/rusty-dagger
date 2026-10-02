@@ -145,7 +145,7 @@ test('status rows preserve owner-published order and disappear when removed', ()
   } finally { f.dispose(); }
 });
 
-test('transport projection exposes land selection and keeps ship boarding disabled without ownership', () => {
+test('transport projection exposes land selection and admitted ship boarding', () => {
   const f = fixture();
   try {
     f.publish({ transport: {
@@ -165,9 +165,9 @@ test('transport projection exposes land selection and keeps ship boarding disabl
     f.root.querySelector('[data-action="transport-toggle"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'transport-toggle' });
     const ship = f.root.querySelector('[data-transport-mode="ship"]');
-    assert.equal(ship.disabled, true);
+    assert.equal(ship.disabled, false);
     ship.click();
-    assert.notEqual(f.actions.at(-1)?.action, 'transport-board-ship');
+    assert.equal(f.actions.at(-1)?.action, 'transport-board-ship');
   } finally { f.dispose(); }
 });
 
@@ -1021,5 +1021,41 @@ test('spell seller and spellbook use confirmed semantic changes and source setti
     book.querySelector('[data-action="spell-delete"]').click();assert.deepEqual(f.actions.at(-1),{action:'spell-delete',key:'spell.023',confirm:true});
     accepted=false;book.querySelector('[data-action="spell-delete"]').click();
     assert.equal(f.actions.filter(action=>action.action==='spell-delete').length,1);
+  } finally { f.dispose(); }
+});
+
+
+test('property projection sends live ownership and store actions through the inventory panel', () => {
+  const f = fixture();
+  try {
+    const item = { key: 'stack:coins', definition: 'gold-piece', label: 'Gold', quantity: '4', weight: 0, value: 1,
+      details: '', icon: null, condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [] };
+    f.publish({ inventory: { revision: 'ui-revision', message: '', equipmentChange: null, items: [item], slots: [] },
+      property: { bankAvailable: true, offers: [{ key: 'ship/small', name: 'Small ship', price: '100000', salePrice: '85000',
+        owned: false, canBuy: true, canSell: false, canEnter: false }], storage: { key: 'house/17/4/A.RMB/0/0/1', revision: '12',
+          items: [{ key: 'stack:stored', definition: 'gold-piece', quantity: '2' }] } } });
+    f.root.querySelector('[data-action="inventory"]').click();
+    const controls = [...f.root.querySelectorAll('.dagger-property-root button')];
+    controls.find(button => button.textContent === 'Buy').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'property-buy', key: 'ship/small' });
+    controls.find(button => button.textContent.startsWith('Store')).click();
+    assert.deepEqual(f.actions.at(-1), { action: 'property-put', key: 'house/17/4/A.RMB/0/0/1', item: 'stack:coins', revision: '12', amount: 4 });
+    controls.find(button => button.textContent.startsWith('Take')).click();
+    assert.deepEqual(f.actions.at(-1), { action: 'property-take', key: 'house/17/4/A.RMB/0/0/1', item: 'stack:stored', revision: '12', amount: 2 });
+    f.publish({ property: { bankAvailable: false, offers: [], storage: null } });
+    assert.equal(f.root.querySelector('.dagger-property-root').hidden, true);
+  } finally { f.dispose(); }
+});
+
+test('live banking dialogue emits bank-open with its actual revision', () => {
+  const f = fixture();
+  try {
+    const dialogue = { revision: 'bank-7', targetLabel: 'Bank teller', greeting: 'Welcome', tone: 'normal',
+      topics: [], diagnostics: [], bankAvailable: true };
+    f.publish({ activation: { mode: 'talk', dialogue } });
+    f.root.querySelector('[data-bank-open]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'bank-open', revision: 'bank-7' });
+    f.publish({ activation: { mode: 'talk', dialogue: { ...dialogue, bankAvailable: false } } });
+    assert.equal(f.root.querySelector('[data-bank-open]'), null);
   } finally { f.dispose(); }
 });

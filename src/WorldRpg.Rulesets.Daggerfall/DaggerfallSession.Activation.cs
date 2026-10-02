@@ -61,7 +61,7 @@ internal sealed partial class DaggerfallSession
     internal DaggerfallActivationView ActivationView => _activationPresentation.View with
     {
         Dialogue = _activationPresentation.View.Dialogue is { } dialogue ? dialogue with
-        { ComprehendLanguagesBonus = State.Effects.PerceptionFor(DaggerfallActorIdentity.PlayerEntityId).ComprehendLanguagesBonus } : null,
+        { BankAvailable = CurrentBankServiceAvailable(), ComprehendLanguagesBonus = State.Effects.PerceptionFor(DaggerfallActorIdentity.PlayerEntityId).ComprehendLanguagesBonus } : null,
     };
     internal DaggerfallDialogueService Dialogue => _dialogue ?? throw new InvalidOperationException("The session has no dialogue owner.");
 

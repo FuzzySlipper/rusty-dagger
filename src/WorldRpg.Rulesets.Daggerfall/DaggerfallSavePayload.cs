@@ -167,7 +167,7 @@ internal sealed record DaggerfallSavePayload(
     /// Checks every current-state relationship against the admitted content before any session is
     /// composed from the save, so a malformed or mismatched save fails here with its reason.
     /// </summary>
-    internal DaggerfallResolvedRestore ResolveRestore(DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallSiteProfiles? profiles = null)
+    internal DaggerfallResolvedRestore ResolveRestore(DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallSiteProfiles? profiles = null, DaggerfallTuning? tuning = null)
     {
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(inputs);
@@ -178,7 +178,7 @@ internal sealed record DaggerfallSavePayload(
         {
             DaggerfallWorldProfileKey activeProfile = Site.ActiveProfile?.Require()
                 ?? throw new ArgumentException("Saved transport state requires an active world profile.");
-            if (activeProfile.Kind != DaggerfallWorldProfileKind.Exterior)
+            if (!Transport.OnShip && activeProfile.Kind != DaggerfallWorldProfileKind.Exterior)
                 throw new ArgumentException("Saved riding or ship state cannot be active inside a building or dungeon.");
             if (Transport.Mode is DaggerfallTransportMode.Horse or DaggerfallTransportMode.Cart)
             {
@@ -187,6 +187,36 @@ internal sealed record DaggerfallSavePayload(
                 if (!Inventory.UniqueItems.Any(item => StringComparer.Ordinal.Equals(item.ItemId, requiredItem)))
                     throw new ArgumentException($"Saved {Transport.Mode} transport requires its owned item in player inventory.");
             }
+        }
+        foreach (DaggerfallHouseOwnershipSave savedHouse in Property.Houses.Concat(Property.RetainedHouses))
+        {
+            DaggerfallHouseIdentity house = savedHouse.Identity;
+            DaggerfallSiteRecord? site = definitions.Locations.Records.SingleOrDefault(record => record.Id == house.Site);
+            if (site?.Exterior is not { } exterior
+                || !exterior.Buildings.TryGetValue(new(house.BlockX, house.BlockY, house.Building.Index), out var building)
+                || building.Source.Id != house.Building
+                || building.Source.BuildingType is not (1 or >= 17 and <= 20))
+                throw new ArgumentException($"Saved property house '{house}' does not resolve to an admitted house building.");
+        }
+        if (Transport.OnShip)
+        {
+            DaggerfallWorldProfileKey land = Transport.ShipReturnProfile!.Require();
+            if (Property.Ship is null) throw new ArgumentException("Saved boarding requires owned ship state.");
+            if (profiles is not null) _ = profiles.Require(land);
+            // Transport owns the detached land return. A doorway inside the ship only
+            // returns to its deck; the exterior carries no duplicate land entrance relation.
+            DaggerfallWorldProfileKey active = Site.ActiveProfile!.Require();
+            if (active.Kind == DaggerfallWorldProfileKind.Exterior)
+            {
+                if (Site.ReturnProfile is not null || Site.ReturnAnchor is not null || Site.ReturnPose is not null)
+                    throw new ArgumentException("Saved ship exterior must not duplicate the transport land return destination.");
+            }
+            else if (Site.ReturnProfile?.Require() is not { Kind: DaggerfallWorldProfileKind.Exterior } deck || deck.Site != active.Site)
+                throw new ArgumentException("Saved ship interior must return to its owned ship exterior.");
+            DaggerfallShipArrivalAnchor anchor = DaggerfallPropertyPolicy.ShipArrival(Property.Ship.Ship, (tuning ?? DaggerfallTuning.Defaults).Property);
+            DaggerfallSiteRecord activeShip = definitions.Locations.Records.Single(record => record.Id == Site.ActiveProfile!.Require().Site);
+            if (activeShip.Kind != DaggerfallSiteKind.HomeYourShips || activeShip.MapPixelX != anchor.MapPixelX || activeShip.MapPixelY != anchor.MapPixelY)
+                throw new ArgumentException("Saved boarding must be at the owned ship's actual world site.");
         }
         HashSet<DaggerfallWorldProfileKey> admittedGroundProfiles = profiles is null
             ? [inputs.ProfileKey]

@@ -1,0 +1,49 @@
+{
+  "ruleset": "daggerfall",
+  "startingState": {
+    "look": {
+      "yawRadians": 0,
+      "pitchRadians": 0
+    },
+    "site": {
+      "region": 31,
+      "index": 2
+    }
+  },
+  "placements": [],
+  "world": {
+    "publicationRoot": "worldrpg/imports/large-ship/exterior",
+    "audioBundle": "daggerfall.large-ship-audio",
+    "appearance": {
+      "tint": [
+        0.72,
+        0.7,
+        0.65,
+        1
+      ],
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "visible": true,
+      "layer": "scene"
+    },
+    "navigationGridId": 1,
+    "collisionNavigationPath": "spatial/your-ship-31-2/exterior/collision-navigation.rspatial",
+    "staticMeshPath": "spatial/your-ship-31-2/exterior/static-mesh.rstatmsh",
+    "profileKind": "exterior",
+    "arrivalFromSourceMarker": true
+  }
+}

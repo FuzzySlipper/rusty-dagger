@@ -1,0 +1,13 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.large-ship",
+  "ruleset": "daggerfall",
+  "role": "daggerfall.site",
+  "dependencies": [
+    {
+      "id": "daggerfall.base"
+    }
+  ],
+  "description": "Normalized source Your Ship exterior, MAPS region 31 index 2.",
+  "payload": "worldrpg/payloads/daggerfall.large-ship.json"
+}

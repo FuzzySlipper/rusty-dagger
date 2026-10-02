@@ -1,3 +1,4 @@
+import { mountProperty, type PropertyProjection } from './property.js';
 import { mountMap, isMapProjection, type MapProjection } from './maps.js';
 import { mountLodging, isLodgingProjection, type LodgingProjection } from './lodging.js';
 import { mountControls, type ControlsProjection, type ControlAction } from './controls.js';
@@ -39,6 +40,7 @@ interface DaggerHud {
   readonly controls?: ControlsProjection;
   readonly activation?: { readonly mode: string; readonly message: string; readonly applied: boolean; readonly dialogue?: DialogueProjection | null };
   readonly transport?: TransportProjection | null;
+  readonly property?: PropertyProjection | null;
   readonly travel?: TravelProjection | null;
   readonly map?: MapProjection | null;
   readonly quests?: QuestPresentation;
@@ -87,6 +89,7 @@ interface DeathProjection {
 }
 
 interface DialogueProjection {
+  readonly bankAvailable?: boolean;
   readonly comprehendLanguagesBonus?: number;
   readonly revision: string;
   readonly targetLabel: string;
@@ -170,6 +173,7 @@ type TransportAction =
   | { readonly action: 'transport-select'; readonly mode: Exclude<TransportMode, 'ship'> }
   | { readonly action: 'transport-toggle' }
   | { readonly action: 'transport-leave-ship' }
+  | { readonly action: 'transport-board-ship' }
   | { readonly action: 'wagon-put'; readonly revision: string; readonly item: string; readonly amount?: number }
   | { readonly action: 'wagon-take'; readonly revision: string; readonly item: string; readonly amount?: number };
 
@@ -385,6 +389,12 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   };
   const transportRoot = shell.querySelector<HTMLElement>('.dagger-transport-root')!;
   const transportView = mountTransport(transportRoot, action => context.intents?.claim('dagger.ui', {
+    kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
+  }));
+  const propertyRoot = document.createElement('section');
+  propertyRoot.className = 'dagger-property-root';
+  inventoryRoot.append(propertyRoot);
+  const propertyView = mountProperty(propertyRoot, action => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
   }));
   const travelView = mountTravel(transportRoot, action => context.intents?.claim('dagger.ui', {
@@ -946,6 +956,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     renderSpells(spellsRoot,spellbook);
     renderSpellSales(spellSalesRoot,spellbook);
     if (value.inventory) inventoryView.update(value.inventory);
+    propertyView.update(value.property ?? null, value.inventory);
     transportView.update(isTransportProjection(value.transport) ? value.transport : null, value.inventory);
     mapView.update(isMapProjection(value.map) ? value.map : null);
     travelView.update(isTravelProjection(value.travel) ? value.travel : null);
@@ -1037,6 +1048,14 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
         button.textContent = topic.label;
         return button;
       }));
+      if (dialogue.bankAvailable) {
+        const bank = document.createElement('button'); bank.type = 'button'; bank.textContent = 'Bank services';
+        bank.dataset.bankOpen = 'true';
+        bank.addEventListener('click', () => context.intents?.claim('dagger.ui', {
+          kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'bank-open', revision: dialogue.revision },
+        }));
+        dialogueTopics.append(bank);
+      }
       dialogueDiagnostics.replaceChildren(...dialogue.diagnostics.map(detail => {
         const item = document.createElement('li');
         item.textContent = detail;
@@ -1203,11 +1222,11 @@ function mountTransport(root: HTMLElement, claim: (action: TransportAction) => v
       button.textContent = `${option.label}${option.selected ? ' · selected' : ''}`;
       button.title = option.message;
       if (optionMode === 'ship') {
-        // Ship possession/access is owned by the future property task. A saved on-ship state may
-        // still be left, but the DOM never invents an enabled boarding affordance from this view.
-        button.disabled = !current.onShip;
-        button.textContent = current.onShip ? 'Leave ship' : `${option.label} · unavailable`;
-        if (current.onShip) button.addEventListener('click', () => claim({ action: 'transport-leave-ship' }));
+        button.disabled = !current.onShip && !option.available;
+        button.textContent = current.onShip ? 'Leave ship' : 'Board ship';
+        if (!button.disabled) button.addEventListener('click', () => claim({
+          action: current?.onShip ? 'transport-leave-ship' : 'transport-board-ship',
+        }));
       } else {
         button.disabled = current.onShip || !option.available;
         if (!button.disabled) button.addEventListener('click', () => claim({ action: 'transport-select', mode: optionMode }));

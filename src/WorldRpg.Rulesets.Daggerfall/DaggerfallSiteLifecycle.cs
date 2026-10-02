@@ -218,6 +218,13 @@ internal sealed class DaggerfallSiteLifecycle
         return TryTransitionTo(destination.Profile, anchor, useReturnDestination: false);
     }
 
+    /// <summary>World relocation has no doorway back; its caller may own a different return workflow.</summary>
+    internal void ClearReturnDestination()
+    {
+        ReturnProfile = null;
+        _site.ClearReturnDestination();
+    }
+
     /// <summary>Attempts one real site transition; failed destination admission leaves the source projection live.</summary>
     internal bool TryTransitionTo(DaggerfallWorldProfileKey destination) => TryTransitionTo(destination, null, useReturnDestination: true);
 
@@ -562,7 +569,7 @@ internal sealed class DaggerfallSiteLifecycle
         CommitExteriorOrigin(prepared);
     }
 
-    private void NormalizeExteriorOrigin()
+    internal void NormalizeExteriorOrigin()
     {
         WorldOriginReadout origin = _engine.WorldOrigin.Read(new(_spatial.Session));
         RequireOriginPair(origin);

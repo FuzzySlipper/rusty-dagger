@@ -18,6 +18,20 @@ internal sealed partial class DaggerfallSession
         return true;
     }
 
+    private bool CurrentBankServiceAvailable() => _dialogue?.CurrentNpc() is { } npc
+        && npc.Services.Contains("banking", StringComparer.Ordinal)
+        && State.Services.ProviderAvailable(new(npc.DurableId, npc.Site, "banking")) == DaggerfallServiceDenial.None;
+
+    private void OpenCurrentBank(string? revision)
+    {
+        var npc = _dialogue?.CurrentNpc(revision);
+        if (npc is null || !TryOpenBank(new(npc.DurableId, npc.Site, "banking")))
+        { Presentation.SetOutcome("That bank service is no longer available."); return; }
+        _dialogue!.Close();
+        _interactions.RequestPanel("inventory");
+        Presentation.SetOutcome("Bank services opened.");
+    }
+
     private int? ActiveBankRegion() => _sites.BankProvider is { } provider
         && State.Services.ProviderAvailable(provider) == DaggerfallServiceDenial.None
         ? provider.Site.Region

@@ -16,7 +16,8 @@ internal static class LocationsCommand
         string arena2 = args["--arena2"];
         BsaArchive archive = BsaArchive.Parse(File.ReadAllBytes(Path.Combine(arena2, "MAPS.BSA")), "arena2/MAPS.BSA");
         BsaArchive blocks = BsaArchive.Parse(File.ReadAllBytes(Path.Combine(arena2, "BLOCKS.BSA")), "arena2/BLOCKS.BSA");
-        DaggerfallLocations locations = DaggerfallLocationBuilder.Build(archive, blocks);
+        BsaArchive models = BsaArchive.Parse(File.ReadAllBytes(Path.Combine(arena2, "ARCH3D.BSA")), "arena2/ARCH3D.BSA");
+        DaggerfallLocations locations = DaggerfallLocationBuilder.Build(archive, blocks, models);
 
         Console.WriteLine($"locations: {locations.Locations.Count} locations over {locations.Locations.Select(location => location.Region).Distinct().Count()} regions, {locations.Dungeons.Count} dungeons, {locations.Locations.Count(location => location.Exterior is not null)} exterior metadata records, {locations.RegionsWithoutTables.Count} regions without usable tables");
         foreach (IGrouping<string, DaggerfallRegionGap> gap in locations.RegionsWithoutTables.GroupBy(gap => string.Join('+', gap.EmptyTables.Select(name => name[..name.IndexOf('.', StringComparison.Ordinal)]))))

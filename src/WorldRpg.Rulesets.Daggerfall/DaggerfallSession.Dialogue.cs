@@ -29,6 +29,7 @@ internal sealed record DaggerfallDialogueView(
     IReadOnlyList<string> Diagnostics)
 {
     internal int ComprehendLanguagesBonus { get; init; }
+    internal bool BankAvailable { get; init; }
 }
 
 /// <summary>

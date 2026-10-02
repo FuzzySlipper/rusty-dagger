@@ -218,7 +218,7 @@ public static class DaggerfallLocationBuilder
     /// placement/flattening contract beside each location. The two archives stay separate because
     /// MAPS owns location identity while BLOCKS owns the RMB/FLD bytes referenced by MAPPITEM.
     /// </summary>
-    public static DaggerfallLocations Build(BsaArchive archive, BsaArchive? blocks)
+    public static DaggerfallLocations Build(BsaArchive archive, BsaArchive? blocks, BsaArchive? models = null)
     {
         ArgumentNullException.ThrowIfNull(archive);
         if (blocks is not null && StringComparer.Ordinal.Equals(archive.Source, blocks.Source))
@@ -231,7 +231,7 @@ public static class DaggerfallLocationBuilder
         List<DaggerfallDungeonGap> dungeonGaps = [];
         List<DaggerfallRegionGap> withoutTables = [];
         List<DaggerfallRegionProvenance> regions = [];
-        DaggerfallLocationExteriorBuilder? exteriorBuilder = blocks is null ? null : new DaggerfallLocationExteriorBuilder(blocks);
+        DaggerfallLocationExteriorBuilder? exteriorBuilder = blocks is null ? null : new DaggerfallLocationExteriorBuilder(blocks, models);
         foreach (MapsRegionGroup group in MapsDecoder.DecodeRegionGroups(archive))
         {
             // Every region's tables are recorded whatever they hold, including the ones with no bytes:
@@ -309,7 +309,7 @@ public static class DaggerfallLocationBuilder
             [.. withoutTables.OrderBy(gap => gap.Region)],
             [.. dungeonGaps.OrderBy(gap => gap.Region).ThenBy(gap => gap.Index)],
             [.. regions.OrderBy(region => region.Region)],
-            blocks is null ? [archive.Source] : [archive.Source, blocks.Source]);
+            blocks is null ? [archive.Source] : models is null ? [archive.Source, blocks.Source] : [archive.Source, blocks.Source, models.Source]);
         published.Validate();
         return published;
     }

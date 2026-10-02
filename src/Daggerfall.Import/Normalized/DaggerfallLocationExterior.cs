@@ -74,6 +74,7 @@ public sealed record DaggerfallLocationExterior(
 {
     /// <summary>Placed building facts specialized for this location, in donor traversal order.</summary>
     public IReadOnlyList<DaggerfallLocationBuilding> Buildings { get; init; } = [];
+    public byte PortTownAndUnknown { get; init; }
 
     /// <summary>Recoverable exhausted city-pool placements; their donor zero values remain published.</summary>
     public IReadOnlyList<string> MissingCityBuildings { get; init; } = [];
@@ -122,4 +123,8 @@ public sealed record DaggerfallLocationExterior(
 
 /// <summary>A building's source placement and resolved location-specific policy inputs.</summary>
 public sealed record DaggerfallLocationBuilding(string SourceKey, int BlockX, int BlockY, int BuildingIndex,
-    int BuildingType, int FactionId, int NameSeed, int Quality);
+    int BuildingType, int FactionId, int NameSeed, int Quality)
+{
+    public string? ModelId { get; init; }
+    public float? ModelRadius { get; init; }
+}

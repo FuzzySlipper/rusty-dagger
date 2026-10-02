@@ -124,6 +124,7 @@ internal sealed record DaggerfallSiteExterior(
     int MaxY)
 {
     internal IReadOnlyList<DaggerfallSiteBlock> Blocks { get; init; } = [];
+    internal int PortTownAndUnknown { get; init; }
     internal IReadOnlyDictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource> Buildings { get; init; } = new Dictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource>();
 }
 
@@ -136,7 +137,11 @@ internal readonly record struct DaggerfallSiteBuildingId(int BlockX, int BlockY,
 }
 
 internal sealed record DaggerfallSiteBuildingSource(DaggerfallSiteBuildingId Id,
-    DaggerfallRmbBuildingSource Source, int Quality);
+    DaggerfallRmbBuildingSource Source, int Quality)
+{
+    internal string? ModelId { get; init; }
+    internal float? ModelRadius { get; init; }
+}
 
 internal static class DaggerfallSiteKinds
 {
