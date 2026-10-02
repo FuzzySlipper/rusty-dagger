@@ -979,3 +979,21 @@ test('identify formats authoritative choices and sends a semantic batch selectio
     f.publish({identify:null});assert.equal(panel.hidden,true);assert.equal(panel.children.length,0);
   } finally {f.dispose();}
 });
+
+
+test('committed character summary stays at the entry screen and sends launch restart and abandon actions', () => {
+  const f = fixture();
+  try {
+    f.publish({ mode: 'title', character: {
+      name: 'New adventurer', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [], creationAvailable: true,
+      creation: { editing: false, current: { name: 'New adventurer', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' },
+        races: [], careers: [], faces: [], reflexes: [], summary: ['New adventurer — Mage.', '100 gold plus biography grants.', 'Spell: Shock'] },
+    } });
+    const summary = f.root.querySelector('[data-testid="new-game-summary"]');
+    assert.ok(summary.closest('.dagger-entry'));
+    assert.match(summary.textContent, /Spell: Shock/);
+    f.root.querySelector('[data-testid="new-game-launch"]').click(); assert.deepEqual(f.actions.at(-1), { action: 'begin' });
+    f.root.querySelector('[data-testid="character-begin"]').click(); assert.deepEqual(f.actions.at(-1), { action: 'character-begin' });
+    f.root.querySelector('[data-testid="new-game-abandon"]').click(); assert.deepEqual(f.actions.at(-1), { action: 'character-cancel' });
+  } finally { f.dispose(); }
+});

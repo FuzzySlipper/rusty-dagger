@@ -42,6 +42,7 @@ public sealed class ProductModeSessionTests
             // The product a launcher starts shows its entry screen, and a client that has read it asks to
             // begin; the admitted update under test is the first one that reaches the world.
             Assert.Equal(ProductMode.Title, product.Mode);
+            NewGameSessionTests.Commit(ruleset.RequireSession());
             product.Begin();
             Assert.Equal(ProductMode.Playing, product.Mode);
             ProductUpdateFacts facts = new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d);
@@ -50,7 +51,7 @@ public sealed class ProductModeSessionTests
             product.Shutdown();
         }
 
-        Assert.Equal(1, engine.UiOpenCalls);
+        Assert.Equal(2, engine.UiOpenCalls);
         Assert.True(releases.IndexOf("session") < releases.LastIndexOf("content"));
     }
 
@@ -71,6 +72,7 @@ public sealed class ProductModeSessionTests
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.privateers-hold"));
 
         product.Start();
+        NewGameSessionTests.Commit(ruleset.RequireSession());
         ProductModeChange result = product.Begin();
 
         Assert.Equal(ProductMode.Title, product.Mode);
@@ -99,14 +101,16 @@ public sealed class ProductModeSessionTests
         Assert.Equal(ProductMode.Title, product.Mode);
         // The entry screen's own action starts the opening rather than play: the first cinematic is
         // playing and the product waits at its entry screen for the Engine to report it finished.
-        product.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"begin\"}")]));
+        product.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"character-begin\"}")]));
+        product.Update(new ProductUpdate(OuterUpdate(2), [Ui(NewGameSessionTests.CommitPayload())]));
+        product.Update(new ProductUpdate(OuterUpdate(3), [Ui("{\"action\":\"begin\"}")]));
         Assert.Equal(ProductMode.Title, product.Mode);
         Assert.Single(video.Played);
         Assert.Equal(0, spatial.StepCalls);
 
         // Each completion the Engine reports advances to the next cinematic on the next admitted update,
         // and the product stays at its entry screen until the last one completes.
-        ulong step = 1;
+        ulong step = 3;
         for (int played = 1; played < 3; played++)
         {
             video.Complete(video.Played[^1]);
@@ -212,7 +216,7 @@ public sealed class ProductModeSessionTests
     }
 
     [Fact]
-    public void Title_background_commit_materializes_biography_grants_once_and_restores_them()
+    public void Title_background_commit_prepares_choices_then_launch_grants_once_and_restores_them()
     {
         static ProductInputEvent Ui(string json) => Input(InputEventKind.DirectDigital) with
         {
@@ -267,20 +271,23 @@ public sealed class ProductModeSessionTests
             Assert.NotEqual(rolled.People.Name, committed.People.Name);
             Assert.NotEmpty(committed.StartingGrants);
             ulong grantedGold = committed.StartingGrants.Where(grant => grant.ItemId == "template-276").Aggregate(0UL, (total, grant) => checked(total + grant.Quantity));
-            goldAfterCommit = Gold(session);
-            Assert.Equal(goldBefore + grantedGold, goldAfterCommit);
-            Assert.True(session.State.Inventory.Read().Stacks.Any(item => committed.StartingGrants.Any(grant => grant.ItemId == item.Definition.Value))
-                || session.State.Inventory.Read().UniqueItems.Any(item => committed.StartingGrants.Any(grant => grant.ItemId == item.Definition.Value)));
-            Assert.True(session.State.Social.FactionReputation(faction) > factionBefore);
-            Assert.True(session.State.Social.PersonalReputation(social) > socialBefore);
+            Assert.Equal(goldBefore, Gold(session));
+            using var initialized = Assert.IsType<DaggerfallSession>(session.CreateNewGame());
+            goldAfterCommit = Gold(initialized);
+            Assert.Equal((ulong)definitions.NewGame.Gold + grantedGold, goldAfterCommit);
+            Assert.True(initialized.State.Inventory.Read().Stacks.Any(item => committed.StartingGrants.Any(grant => grant.ItemId == item.Definition.Value))
+                || initialized.State.Inventory.Read().UniqueItems.Any(item => committed.StartingGrants.Any(grant => grant.ItemId == item.Definition.Value)));
+            Assert.True(initialized.State.Social.FactionReputation(faction) > factionBefore);
+            Assert.True(initialized.State.Social.PersonalReputation(social) > socialBefore);
             Assert.Equal(-5, committed.Modifiers.DiseaseResistance);
             Assert.Equal(committed.RolledSkills.Single(skill => skill.Id == career.PrimarySkills[0]).Points + 6,
                 session.State.Actors.Player.Stats.GetStat(StatId.Parse(career.PrimarySkills[0])).BaseValue);
 
             session.Update(new ProductUpdate(OuterUpdate(6), [Ui("{\"action\":\"character-begin\"}")]));
             session.Update(new ProductUpdate(OuterUpdate(7), [Ui("{\"action\":\"character-commit\",\"name\":\"Nameless\",\"race\":\"breton\",\"gender\":\"male\",\"faceIndex\":0,\"reflexes\":2,\"career\":\"class00\"}")]));
-            Assert.Equal(goldAfterCommit, Gold(session));
-            saved = session.CaptureSave();
+            Assert.Equal(goldBefore, Gold(session));
+            Assert.Equal(goldAfterCommit, Gold(initialized));
+            saved = initialized.CaptureSave();
 
             void Select(DaggerfallBiographyEffectKind kind)
             {

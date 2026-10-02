@@ -201,7 +201,7 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
         if ((mens && request.Gender is not null && request.Gender != "male") || (womens && request.Gender is not null && request.Gender != "female"))
             throw new ArgumentException($"Template {template.Index} belongs to the {(mens ? "men's" : "women's")} clothing catalog.", nameof(request));
         string dye = request.Dye ?? (mens || womens
-            ? request.TemplateIndex is null ? ClothingDyes[Draw(request.Key + ".dye", 0, ClothingDyes.Length - 1)] : "blue"
+            ? request.TemplateIndex is null || request.RandomizeClothingDye ? ClothingDyes[Draw(request.Key + ".dye", 0, ClothingDyes.Length - 1)] : "blue"
             : material);
         if (mens || womens)
         {
@@ -291,7 +291,7 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
 internal sealed record DaggerfallItemCreateRequest(string Category, string Key, DaggerfallItemOwner Owner, ulong? Quantity = null,
     int? TemplateIndex = null, string? Material = null, int? Variant = null, int Level = 1, bool Stolen = false,
     string? QuestId = null, string? QuestSymbol = null, string? Race = null, string? Gender = null, string? Dye = null,
-    int? BookId = null, string? MagicItemKey = null, int? PotionRecipeKey = null, ulong? CreditValue = null)
+    int? BookId = null, string? MagicItemKey = null, int? PotionRecipeKey = null, ulong? CreditValue = null, bool RandomizeClothingDye = false)
 {
     internal void Validate()
     {

@@ -141,6 +141,18 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         if (_mode != ProductMode.Title)
             return Apply(ProductMode.Playing, "the entry screen asked for ordinary play", closesEntryScreen: true);
 
+        if (_session is ICharacterCreationSession { RequiresCharacterInitialization: true } creation)
+        {
+            try
+            {
+                ReplaceSession(creation.CreateNewGame(), ProductMode.Title, "the product initialized the committed character");
+            }
+            catch (ArgumentException error)
+            {
+                return Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, error.Message));
+            }
+        }
+
         if (_session is not IEntryScreenStartupSession startup)
             return Apply(ProductMode.Playing, "the entry screen asked for ordinary play", closesEntryScreen: true);
 
@@ -197,8 +209,9 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             return;
         }
 
-        ReplaceSession(_ruleset.CreateSession(new GameSessionContext(_context.Engine, _composition)),
-            ProductMode.Playing, "the product replaced its session");
+        IGameSession replacement = _ruleset.CreateSession(new GameSessionContext(_context.Engine, _composition));
+        ReplaceSession(replacement, replacement is ICharacterCreationSession ? ProductMode.Title : ProductMode.Playing,
+            "the product replaced its session");
         _started = true;
     }
 

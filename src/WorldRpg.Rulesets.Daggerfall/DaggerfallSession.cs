@@ -35,7 +35,7 @@ using KitUniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Concrete Daggerfall composition of catalog policy, module state, and named Engine capabilities.</summary>
-internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, ISaveRequestingGameSession, IPlayerPreferencesSession, IPlayerDefeatOutcomeSession,
+internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, ICharacterCreationSession, ISaveRequestingGameSession, IPlayerPreferencesSession, IPlayerDefeatOutcomeSession,
     IDaggerfallSiteTransitionHost
 {
     private readonly IRandomService _random;
@@ -630,6 +630,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             Inventory: _inventoryUi.Read(),
             Loot: _lootUi.Read(),
             Character: _characterUi.Read(State.Actors.Player, State.Progression),
+            CharacterCreationAvailable: !_newGameInitialized,
             PanelRequest: LatestPanelRequest,
             SaveSlots: _saveSlots,
             SaveSlotDiagnostic: _saveSlotDiagnostic,

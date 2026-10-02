@@ -985,7 +985,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     // The entry screen is the mode's screen, the way the death screen is the dead mode's: the mode
     // value decides which one is up, and the artifact the mode names is what it shows.
     titleMode = value.mode === TITLE_MODE;
-    creationMode = titleMode && value.character?.creation?.editing ? value.character.creation.mode ?? null : null;
+    creationMode = titleMode && value.character?.creationAvailable && value.character.creation ? value.character.creation.editing
+      ? value.character.creation.mode ?? null : value.character.creation.summary ? 'character-pick' : null : null;
     pickScreens = value.pickScreens ?? [];
     redrawEntry();
 

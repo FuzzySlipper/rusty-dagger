@@ -64,6 +64,7 @@ export interface CharacterFace { readonly index: number; readonly mediaId: strin
 export interface CharacterReflex { readonly value: number; readonly label: string; }
 export interface CharacterClassQuiz { readonly answered: number; readonly total: number; readonly question: { readonly number: number; readonly text: string; readonly answers: readonly { readonly index: number; readonly text: string }[] }; }
 export interface CharacterCreation {
+  readonly summary?: readonly string[] | null;
   readonly mode?: string | null;
   readonly classQuestionsAvailable?: boolean;
   readonly classQuiz?: CharacterClassQuiz | null;
@@ -402,6 +403,7 @@ function isCreation(value: unknown): value is CharacterCreation {
     && 'reflexes' in value && Array.isArray(value.reflexes) && value.reflexes.every(reflex => typeof reflex === 'object' && reflex !== null && 'value' in reflex && isNumber(reflex.value) && 'label' in reflex && typeof reflex.label === 'string')
     && (!('mode' in value) || value.mode === null || value.mode === 'character-pick' || value.mode === 'character-generation')
     && (!('classQuestionsAvailable' in value) || typeof value.classQuestionsAvailable === 'boolean')
+    && (!('summary' in value) || value.summary === null || Array.isArray(value.summary) && value.summary.every(item => typeof item === 'string'))
     && (!('classQuiz' in value) || value.classQuiz === null || isClassQuiz(value.classQuiz))
     && (!('custom' in value) || value.custom === null || isCustomClass(value.custom))
     && (!('background' in value) || value.background === null || isBackground(value.background));
@@ -456,7 +458,18 @@ function renderCreation(root: HTMLElement, value: CharacterCreation | null, avai
   if (!available) { root.replaceChildren(); return; }
   const begin = document.createElement('button'); begin.type = 'button'; begin.textContent = 'Edit character';
   begin.disabled = value.editing; begin.dataset.testid = 'character-begin'; begin.addEventListener('click', () => send?.({ action: 'character-begin' }));
-  if (!value.editing) { root.replaceChildren(begin); return; }
+  if (!value.editing) {
+    if (!value.summary) { root.replaceChildren(begin); return; }
+    const summary = document.createElement('section'); summary.dataset.testid = 'new-game-summary';
+    const heading = document.createElement('h3'); heading.textContent = 'Final character summary'; summary.append(heading);
+    for (const line of value.summary) { const item = document.createElement('p'); item.textContent = line; summary.append(item); }
+    begin.textContent = 'Restart character creation';
+    const launch = document.createElement('button'); launch.type = 'button'; launch.textContent = 'Begin new game';
+    launch.dataset.testid = 'new-game-launch'; launch.addEventListener('click', () => send?.({ action: 'begin' }));
+    const abandon = document.createElement('button'); abandon.type = 'button'; abandon.textContent = 'Abandon character';
+    abandon.dataset.testid = 'new-game-abandon'; abandon.addEventListener('click', () => send?.({ action: 'character-cancel' }));
+    root.replaceChildren(summary, launch, begin, abandon); return;
+  }
   if (value.classQuiz) {
     const quiz = value.classQuiz;
     const heading = document.createElement('p'); heading.textContent = `Class question ${quiz.answered + 1} of ${quiz.total}`;

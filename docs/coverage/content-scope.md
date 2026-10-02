@@ -12,6 +12,8 @@ source file receives a planning disposition in the table below or in the compani
 [source manifest](../../data/content-source-manifest.csv); archive-internal record dispositions
 are assigned by the relevant import/publication tasks. “All content” is not a disposition.
 
+The authored `daggerfall.base` payload owns the `newGame` starting-loadout section: playable-career weapons and spell keys, custom-class starting items, gender-specific clothing, spellbook and gold. These values resolve through the normalized item and spell catalogs; session construction consumes them once. The selected bundle owns the start site.
+
 ## Evidence and boundaries
 
 The companion CSV's **file-row disposition** is reconciled against the source
