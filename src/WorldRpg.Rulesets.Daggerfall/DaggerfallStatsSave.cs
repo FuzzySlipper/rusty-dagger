@@ -1,5 +1,7 @@
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
+using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -85,6 +87,9 @@ internal static class DaggerfallStatsSaveBoundary
         Dictionary<string, IReadOnlyList<StatModifierHandle>> handles = new(StringComparer.Ordinal);
         StatsComponent rebuilt = StatsComponentCapture.Rebuild(saved.Snapshot, (captured, stat, restoredHandles) =>
         {
+            if (DaggerfallMechanicsIds.Attributes.Any(attribute => attribute.Value == captured.Id)
+                && (stat.Minimum != 0 || stat.Maximum != DaggerfallFormulaPolicy.MaxStatValue()))
+                throw new ArgumentException($"Saved attribute '{captured.Id}' must use the canonical live bounds 0..{DaggerfallFormulaPolicy.MaxStatValue()}.", nameof(saved));
             handles.Add(captured.Id, restoredHandles);
             if (!sources.TryGetValue(captured.Id, out DaggerfallStatSourceSave[]? statSources)) return;
             string sourceStatId = statSources[0].SourceStatId;

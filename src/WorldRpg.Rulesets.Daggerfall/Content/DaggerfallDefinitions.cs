@@ -62,6 +62,8 @@ internal static class DaggerfallMechanicsIds
     internal static readonly DaggerfallStatId Personality = new("personality");
     internal static readonly DaggerfallStatId Speed = new("speed");
     internal static readonly DaggerfallStatId Luck = new("luck");
+    internal static readonly DaggerfallStatId[] Attributes =
+        [Strength, Intelligence, Willpower, Agility, Endurance, Personality, Speed, Luck];
     internal static readonly DaggerfallStatId Reflexes = new("reflexes");
     internal static readonly DaggerfallStatId ResistanceFire = new("resistance-fire");
     internal static readonly DaggerfallStatId ResistanceFrost = new("resistance-frost");
