@@ -78,7 +78,7 @@ and active defense projections before the lifecycle attaches effects. Release
 and terminal delivery each emit one fact; repeated callbacks apply nothing.
 
 The shipped catalog composes disease, poison, five elemental resistance variants,
-Shield, immediate health/fatigue/spell-point damage and Disintegrate.
+Shield, paralysis, immediate health/fatigue/spell-point damage and Disintegrate.
 Additional spell families add their bindings through that same composition seam;
 unmapped effects refuse before payment or skill use. UI selection, spell flight
 presentation and item-trigger policy remain separate consumers.
@@ -97,6 +97,16 @@ use the same accepted health owner and death notifications; Disintegrate bypasse
 Shield without spending its pool. Fatigue uses classic fatigue units and protects
 peaceful non-player targets. Fatigue and spell-point outcomes report bounded live
 loss, while saves retain the resulting tracks and affected enemy hostility.
+
+Paralysis retains independent source-scoped durations. Its live control projection
+blocks movement, jump and physical attacks without suppressing look, casting or
+Engine gravity. Pending strikes and arrow releases stop; already released arrows
+keep their existing flight. Expiry, cure, death and source retirement release the
+restriction. Current saves restore the restriction and hostile response without
+replaying the initial magic round. Site perception resets retain saved hostility.
+Nonzero non-magnitude saving throws retain the admitted duration; full resistance
+prevents attachment. Cure spells compose the same lifecycle cleanup in their own
+spell family.
 
 ## Active effects
 

@@ -94,7 +94,7 @@ public sealed class PlayerInputSystem
     public void ClearHeldInput() => _held.Clear();
 
     /// <summary>Interprets and applies one admitted input slice before its dependent Engine movement proposal.</summary>
-    public void Apply(PlayerControlState player, ProductUpdateState update)
+    public void Apply(PlayerControlState player, ProductUpdateState update, ActorControlRestrictions restrictions = default)
     {
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(update);
@@ -168,7 +168,7 @@ public sealed class PlayerInputSystem
         _held.CopyFrom(held);
         player.YawRadians = yawRadians;
         player.PitchRadians = pitchRadians;
-        update.PlanarIntent = Combine(sliceIntent, ControllerMoveIntent(held.Axes));
+        update.PlanarIntent = restrictions.Movement ? Vector2.Zero : Combine(sliceIntent, ControllerMoveIntent(held.Axes));
         foreach (InputActionId action in actions) update.Request(action);
     }
 

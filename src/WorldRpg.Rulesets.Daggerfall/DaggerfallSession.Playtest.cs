@@ -51,6 +51,9 @@ internal sealed partial class DaggerfallSession
         bool moving = binding.StartsWith("move.", StringComparison.Ordinal);
         bool available = _mode == ProductMode.Playing && !State.Actors.Player.IsDefeated;
         string? reason = available ? null : State.Actors.Player.IsDefeated ? "player-dead" : $"mode-{_mode}; use ordinary UI";
+        var restrictions = State.Effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId);
+        if (available && (moving && restrictions.Movement || id == "attack" && restrictions.PhysicalAttacks))
+        { available = false; reason = "incapacitated"; }
         double duration = moving ? 200 : 100;
         string? equipment = null;
         if (id == "attack")

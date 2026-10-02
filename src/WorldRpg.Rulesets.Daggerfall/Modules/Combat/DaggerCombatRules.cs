@@ -59,6 +59,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     private const int SkeletalWarriorMobileId = 15;
 
     private readonly Func<long, DaggerfallMagicDefense> _magicDefense;
+    private readonly Func<long, bool> _physicalAttacksBlocked;
     internal DaggerCombatRules(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment,
         Func<long, MechanicsInventoryCoordinator?> actorInventories, DaggerfallItemInstances itemInstances,
         DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity,
@@ -69,8 +70,10 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         Func<DaggerfallSwingDirection>? playerSwing = null, Func<WorldPoint, WorldPoint, bool>? coverBlocksShot = null,
         Func<int>? armorValueModifier = null,
         Action<long, ulong>? deliverWeaponPoison = null, Func<int>? attackChanceModifier = null,
-        Func<long, long, ulong, ulong, ulong, DaggerfallWabbajackResult>? transformActor = null, Func<long, DaggerfallMagicDefense>? magicDefense = null)
+        Func<long, long, ulong, ulong, ulong, DaggerfallWabbajackResult>? transformActor = null, Func<long, DaggerfallMagicDefense>? magicDefense = null,
+        Func<long, bool>? physicalAttacksBlocked = null)
     {
+        _physicalAttacksBlocked = physicalAttacksBlocked ?? (_ => false);
         _magicDefense = magicDefense ?? (_ => DaggerfallMagicDefense.None);
         _random = random;
         _transformActor = transformActor;
@@ -117,6 +120,8 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     {
         prepared = null!;
         if (!TryResolve(request.AttackerId, out Combatant attacker)) { Refused(AttackRefusal.UnknownActor, facts); return false; }
+        if (_physicalAttacksBlocked(request.AttackerId))
+        { facts.Append(new AttackRejectedFact(AttackRejection.Incapacitated, request.AttackerId)); return false; }
         // Whether an attack is the player's or an enemy's decides the admission policy, the random
         // scope and which facts describe it. Delivery timing is a separate question: a targeted
         // player swing and every enemy swing wait for their animation's impact frame.
@@ -171,6 +176,9 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     }
     public void Apply(AttackRequest request, PreparedAttack attack, FactBuffer<IProductFact> facts)
     {
+        // An already released projectile remains its own admitted flight; paralysis stops new strikes and releases.
+        if (_physicalAttacksBlocked(request.AttackerId) && attack is not DaggerfallPreparedAttack { ReleasedProjectile: true })
+        { facts.Append(new AttackRejectedFact(AttackRejection.Incapacitated, request.AttackerId)); return; }
         if (request.TargetId is not long target)
         { facts.Append(new AttackRejectedFact(AttackRejection.NoTargetInReach)); return; }
         AttackOutcome outcome = attack.Outcome;
@@ -229,7 +237,10 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     private bool DeferRangedImpact(DeferredAttackImpact impact, FactBuffer<IProductFact> facts)
     {
         if (!impact.Request.Delayed || !IsRangedAction(impact.Request.AttackerId)) return false;
-        _releasedRangedShots.Add(impact);
+        if (_physicalAttacksBlocked(impact.Request.AttackerId))
+        { facts.Append(new AttackRejectedFact(AttackRejection.Incapacitated, impact.Request.AttackerId)); return true; }
+        var released = (DaggerfallPreparedAttack)impact.Attack;
+        _releasedRangedShots.Add(impact with { Attack = released with { ReleasedProjectile = true } });
         return true;
     }
 
@@ -414,6 +425,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     // Reads policy/resources only. Actual admission still owns the atomic spends and their receipts.
     internal AttackRejection? InspectPlayerAttackRefusal()
     {
+        if (_physicalAttacksBlocked(PlayerId)) return AttackRejection.Incapacitated;
         if (!TryResolve(PlayerId, out Combatant player)
             || !TryReadPlayerAttackPolicy(player, null, out _, out var action)) return AttackRejection.NoAttackPolicy;
         if (action.Interpretation == "player-equipped-ranged")
@@ -706,7 +718,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     }
 
     internal sealed record DaggerfallPreparedAttack(double CooldownSeconds, AttackOutcome Outcome,
-        DaggerfallStrikeFeedback Feedback, ulong? WabbajackSource = null) : PreparedAttack(CooldownSeconds, Outcome);
+        DaggerfallStrikeFeedback Feedback, ulong? WabbajackSource = null, bool ReleasedProjectile = false) : PreparedAttack(CooldownSeconds, Outcome);
 
     private static DaggerfallStrikeFeedback PreparedFeedback(PreparedAttack attack) => attack is DaggerfallPreparedAttack accepted
         ? accepted.Feedback : throw new InvalidOperationException("A Daggerfall strike requires its accepted source feedback; re-reading changed equipment would misidentify the strike.");

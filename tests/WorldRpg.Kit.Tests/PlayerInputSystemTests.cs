@@ -8,6 +8,24 @@ namespace WorldRpg.Kit.Tests;
 public sealed class PlayerInputSystemTests
 {
     [Fact]
+    public void Active_restrictions_mask_movement_without_losing_look_or_held_input_and_release_vertical_drive()
+    {
+        PlayerInputSystem input = new(TestTuning(), DirectionalControls());
+        PlayerControlState player = new(new WorldPoint(0,0,0), 0, 0);
+        var blocked = new ProductUpdateState(1f);
+        blocked.Add(Input(InputEventKind.Key, InputEdge.Pressed, key: KeyboardControl.KeyW));
+        blocked.Add(Input(InputEventKind.PointerDelta, x: 20));
+        var restrictions = new ActorControlRestrictions(Movement: true, PhysicalAttacks: true);
+        input.Apply(player, blocked, restrictions);
+        Assert.Equal(Vector2.Zero, blocked.PlanarIntent); Assert.NotEqual(0, player.YawRadians);
+        var released = new ProductUpdateState(1f); input.Apply(player, released);
+        Assert.Equal(new Vector2(0,1), released.PlanarIntent);
+        var controls = restrictions.Restrict(new(JumpPressed:true, JumpHeld:true, CrouchRequested:true, VerticalVelocity:3f));
+        Assert.Equal(Vector2.Zero, controls.PlanarIntent); Assert.Null(controls.VerticalVelocity);
+        Assert.False(controls.JumpPressed); Assert.False(controls.JumpHeld); Assert.False(controls.CrouchRequested);
+    }
+
+    [Fact]
     public void Movement_uses_ruleset_supplied_intents_and_keys()
     {
         PlayerControlBindings controls = new(["stride"u8.ToArray()], KeyboardControl.KeyI, KeyboardControl.KeyK, KeyboardControl.KeyJ, KeyboardControl.KeyL);

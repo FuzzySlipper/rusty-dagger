@@ -49,12 +49,13 @@ internal sealed partial class DaggerfallSession
         if (State.DungeonActions.TryGetValue(_activeProfileKey, out DaggerfallDungeonActionGraph? actionGraph))
             actionGraph.Advance(update.DeltaSeconds);
         State.Kit.AttackExecution.ObserveTimeline(generation, simulationStep);
-        _input.Apply(State.PlayerControl, update);
+        var restrictions = State.Effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId);
+        _input.Apply(State.PlayerControl, update, restrictions);
         // The Engine still receives an ordinary character step (grounding and gravity remain its
         // responsibility), but classic over-capacity removes planar intent before that proposal.
         bool alive = State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current > 0d;
         if (!State.Encumbrance.Read().CanMove || !alive) update.PlanarIntent = Vector2.Zero;
-        bool canMove = State.Encumbrance.Read().CanMove && alive;
+        bool canMove = State.Encumbrance.Read().CanMove && alive && !restrictions.Movement;
         State.Transport.Reconcile(State.Inventory.Read(), new DaggerfallTransportAccessContext(
             IsIndoor: _activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior,
             IsDungeon: _activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon));
@@ -99,6 +100,7 @@ internal sealed partial class DaggerfallSession
             Running = !levitation.IsLevitating && locomotion.Running,
             JumpRequested = !levitation.IsLevitating && locomotion.JumpRequested,
         };
+        locomotion = locomotion with { Controls = restrictions.Restrict(locomotion.Controls) };
         bool releasedVerticalDrive = _verticalMovementDriven && !locomotion.Controls.VerticalVelocity.HasValue;
         CharacterStepReceipt? movement = _spatial.Step(State.PlayerControl, update, doorEnvironment, locomotion.Controls);
         if (movement is not null) _verticalMovementDriven = locomotion.Controls.VerticalVelocity.HasValue;
@@ -146,7 +148,8 @@ internal sealed partial class DaggerfallSession
         // Interaction owns this slice once requested. Direct semantic input can carry both intents
         // in the same Engine delivery, and it must follow the same no-attack rule as a DOM loot action.
         bool contextualInteraction = update.IsRequested(DaggerfallInput.Interact);
-        if (!contextualInteraction && update.IsRequested(DaggerfallInput.Attack) && _appearance.CanStartPlayerAttack)
+        restrictions = State.Effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId);
+        if (!restrictions.PhysicalAttacks && !contextualInteraction && update.IsRequested(DaggerfallInput.Attack) && _appearance.CanStartPlayerAttack)
         {
             State.Kit.Attacks.TryPlayerMelee(State.PlayerControl, currentLook, generation, simulationStep, update.DeltaSeconds, _facts);
             // WeaponManager sends Attack to an action on the environment after the ordinary hit
