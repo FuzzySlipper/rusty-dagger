@@ -219,6 +219,8 @@ public static class Arena2MagicCatalogDocument
                 // Endurance and Luck drains also have no stock spell; crafted spells still require their costs.
                 .Concat([(Type: 26, SubType: -1), (Type: 7, SubType: 4), (Type: 7, SubType: 7)])
                 // Attribute healing has no stock spell either; all eight crafted variants use the donor tables.
+                // True-power concealment and immediate fatigue damage have no stock spell but are retained crafted effects.
+                .Concat([(Type: 13, SubType: 1), (Type: 23, SubType: 1), (Type: 24, SubType: 1), (Type: 4, SubType: 1)])
                 .Concat(Enumerable.Range(0, 8).Select(subtype => (Type: 10, SubType: subtype)))
                 .Distinct()
                 .Order()

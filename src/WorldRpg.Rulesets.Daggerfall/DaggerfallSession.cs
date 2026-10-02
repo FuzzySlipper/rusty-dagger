@@ -536,6 +536,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
 
     private void ReactToSpellAttack(long caster, long target)
     {
+        DaggerfallConcealmentEffects.BreakNormal(State.Effects, caster);
         if (caster != DaggerfallActorIdentity.PlayerEntityId || target == caster) return;
         if (_enemyBehavior.IsPacified(target)) _enemyBehavior.MakeActiveEnemiesHostile();
         _enemyBehavior.MakeHostile(target);
@@ -580,10 +581,12 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
     {
         ObservePlaytestCombatFact(fact);
         _staminaRecovery.React(fact);
+        if (fact is AttackHitFact hit) DaggerfallConcealmentEffects.AfterPhysicalHit(State.Effects, hit);
         if (fact is ActorDiedFact died)
         {
             DaggerfallParalysisEffects.EndOnDeath(State.Effects, died.ActorId);
             DaggerfallContinuousDestructionEffects.EndOnDeath(State.Effects, died.ActorId);
+            DaggerfallConcealmentEffects.End(State.Effects, died.ActorId);
             _corpseLoot.Create(died);
             _rewards.React(died, _facts);
         }
@@ -595,6 +598,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
     private void PublishPresentation()
     {
         _heldEnchantments.Refresh();
+        DaggerfallConcealmentEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);
         _hud.Publish(new DaggerfallHudFrame(State.Actors.Player, State.Progression, Presentation, _mode, State.PlayerControl, Slots,
             Inventory: _inventoryUi.Read(),
             Loot: _lootUi.Read(),
@@ -621,7 +625,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         _appearance.Publish(State.Actors, _groundContainers.All,
             _latestUpdateGeneration is ulong generation && _latestSimulationStep is ulong simulationStep
                 ? _combat.ReadRangedFlights(generation, simulationStep) : [],
-            _tuning.Camera.EyeHeight);
+            _tuning.Camera.EyeHeight, State.Effects.PerceptionFor);
     }
 
     /// <summary>The panel the player asked for through a device the DOM has no channel of its own for.</summary>

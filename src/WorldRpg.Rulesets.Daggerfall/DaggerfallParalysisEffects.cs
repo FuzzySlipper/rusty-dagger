@@ -17,8 +17,8 @@ internal static class DaggerfallParalysisEffects
             return [];
         }, Resume: effect =>
         {
+            // Restoring the completed attack's control state must not perform another attack reaction.
             Validate(effect);
-            if (effect.Context.Caster is { } caster) attacked(checked((long)caster.Value), checked((long)effect.Context.Target.Value));
             return [];
         },
         Feedback: DaggerfallEffectFeedback.MagicSparkle,
