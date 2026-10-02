@@ -75,7 +75,13 @@ internal sealed partial class DaggerfallSession
     /// still performs pose validation and durable on-ship state changes.
     /// </summary>
     internal DaggerfallTransportActionResult BoardOwnedPropertyShip(
-        DaggerfallTransportAccessContext context, DaggerfallTransportPose? currentPose)
+        DaggerfallTransportAccessContext context, DaggerfallTransportPose? currentPose, DaggerfallWorldProfileKey? returnProfile = null)
+    {
+        if (PropertyShipBoardingRefusal(context) is { } refusal) return refusal;
+        return State.Transport.BoardShip(State.Property.OwnsShip, context, currentPose, returnProfile ?? _activeProfileKey);
+    }
+
+    private DaggerfallTransportActionResult? PropertyShipBoardingRefusal(DaggerfallTransportAccessContext context)
     {
         DaggerfallPropertyAccessResult access = State.Property.ShipBoarding(
             new DaggerfallShipAccessContext(context.IsIndoor, context.IsDungeon, context.ShipAccessAllowed));
@@ -89,7 +95,7 @@ internal sealed partial class DaggerfallSession
                         or DaggerfallPropertyAccessDenial.ShipUnavailableAtSite => DaggerfallTransportRejection.ShipUnavailableAtSite,
                     _ => DaggerfallTransportRejection.ShipUnavailableAtSite,
                 }, access.Message);
-        return State.Transport.BoardShip(State.Property.OwnsShip, context, currentPose);
+        return null;
     }
 
     internal DaggerfallShipArrivalAnchor? PropertyShipArrival() => State.Property.OwnedShip is { } ship

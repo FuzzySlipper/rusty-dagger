@@ -243,8 +243,7 @@ internal static class DaggerfallPropertyPolicy
         ArgumentNullException.ThrowIfNull(candidate);
         candidate.Validate();
         return candidate.SiteKind is DaggerfallSiteKind.TownCity or DaggerfallSiteKind.TownHamlet or DaggerfallSiteKind.TownVillage
-            && !candidate.IsQuestBuilding
-            && (candidate.BuildingType == HouseForSale || candidate.BuildingType is >= House1 and <= House4)
+            && (candidate.BuildingType == HouseForSale || (!candidate.IsQuestBuilding && candidate.BuildingType is >= House1 and <= House4))
             && candidate.ModelRadius > 0f;
     }
 

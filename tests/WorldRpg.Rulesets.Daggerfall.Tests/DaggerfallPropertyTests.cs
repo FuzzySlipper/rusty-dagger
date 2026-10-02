@@ -19,7 +19,7 @@ public sealed class DaggerfallPropertyTests
         DaggerfallHouseCandidate houseForSale = Candidate(town, "TOWN00.RMB", 1, 2.5f, blockX: 0, blockY: 0);
         DaggerfallHouseCandidate houseOne = Candidate(town, "TOWN00.RMB", 2, 1.25f, buildingType: 17, blockX: 0, blockY: 0);
         DaggerfallHouseCandidate houseFive = Candidate(town, "TOWN00.RMB", 3, 1.25f, buildingType: 21, blockX: 0, blockY: 0);
-        DaggerfallHouseCandidate questHouse = Candidate(town, "TOWN00.RMB", 4, 1.25f, isQuestBuilding: true, blockX: 0, blockY: 0);
+        DaggerfallHouseCandidate questHouse = Candidate(town, "TOWN00.RMB", 4, 1.25f, isQuestBuilding: true, buildingType: 17, blockX: 0, blockY: 0);
         DaggerfallHouseCandidate dungeonHouse = Candidate(new DaggerfallSiteId(17, 179), "DUNGEON.RMB", 0, 4f,
             siteKind: DaggerfallSiteKind.DungeonLabyrinth, blockX: 0, blockY: 0);
 
@@ -32,6 +32,7 @@ public sealed class DaggerfallPropertyTests
         Assert.Equal(2_720UL, first.SalePrice);
         Assert.Equal("house/17/4/TOWN00.RMB/0/0/1", first.StorageKey.Value);
         Assert.Equal(houseOne.Identity, Assert.Single(offers, offer => offer.Identity.Building.Index == 2).Candidate.Identity);
+        Assert.Single(DaggerfallPropertyPolicy.HousesForSale([questHouse with { BuildingType = 1 }], Tuning));
     }
 
     [Fact]

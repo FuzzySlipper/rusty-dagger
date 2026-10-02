@@ -23,6 +23,7 @@ public sealed record RmbBuildingSelection(byte BlockX, byte BlockY, int Building
 public sealed record RmbExteriorNormalizationRequest(DungeonLogicalSourceSet Sources, int Region, string LocationName, RmbWorldProfileKind ProfileKind)
 {
     public RmbBuildingSelection? Building { get; init; }
+    public int? LocationIndex { get; init; }
     public NavigationDerivationConfig Navigation { get; init; } = NavigationDerivationConfig.ClassicDefault;
 
     public void Validate()
@@ -74,7 +75,10 @@ public static class RmbExteriorNormalizer
         BsaArchive blocks = BsaArchive.Parse(request.Sources.Require("BLOCKS.BSA").Bytes.Span, request.Sources.Require("BLOCKS.BSA").Label);
         BsaArchive arch = BsaArchive.Parse(request.Sources.Require("ARCH3D.BSA").Bytes.Span, request.Sources.Require("ARCH3D.BSA").Label);
         PakMap climate = PakDecoder.Decode(request.Sources.Require("CLIMATE.PAK").Bytes.Span, request.Sources.Require("CLIMATE.PAK").Label);
-        MapsExteriorLayout layout = MapsDecoder.DecodeExteriorLayout(maps, request.Region, request.LocationName);
+        MapsExteriorLayout layout = request.LocationIndex is int index
+            ? MapsDecoder.DecodeExteriorLayout(maps, request.Region, index)
+            : MapsDecoder.DecodeExteriorLayout(maps, request.Region, request.LocationName);
+        if (layout.LocationName != request.LocationName) throw new InvalidOperationException("Selected location index does not match its source name.");
         (int mapX, int climateY) = MapsDecoder.ToMapPixel(layout.Longitude, layout.Latitude);
         // MapsFile.GetClimateIndex advances the X pixel to align the climate and height-map source grids.
         int climateX = mapX + 1;
@@ -124,12 +128,22 @@ public static class RmbExteriorNormalizer
             for (int index = 0; index < summary.Buildings.Count; index++)
             {
                 RmbBuildingSlot slot = summary.Buildings[index];
+                foreach (RmbFlatPlacement flat in placements.Buildings[index].Exterior.Flats)
+                {
+                    Matrix3 rotation = Matrix3.Yaw(Arena2SourceTransform.ToRmbYawDegrees(slot.YRotation));
+                    Arena2ImportPoint point = Arena2SourceTransform.ToRmbImportPoint(flat.X, flat.Y, flat.Z);
+                    AddSourceMarker(flat.TextureArchive, flat.TextureRecord, Add(Arena2SourceTransform.ToExteriorBlockOrigin(reference),
+                        Add(Arena2SourceTransform.ToRmbBuildingOrigin(slot), rotation.Transform(point))));
+                }
                 foreach (RmbModelPlacement model in placements.Buildings[index].Exterior.Models)
                     AddModel(model, Arena2SourceTransform.ToExteriorBlockOrigin(reference), slot, $"{Slug(reference.SourceName)}/{index}");
             }
             Arena2ImportPoint origin = Arena2SourceTransform.ToExteriorBlockOrigin(reference);
             foreach (RmbModelPlacement model in placements.MiscModels)
                 AddMiscModel(model, origin, $"{Slug(reference.SourceName)}/misc");
+            foreach (RmbFlatPlacement flat in placements.MiscFlats)
+                AddSourceMarker(flat.TextureArchive, flat.TextureRecord, Add(origin,
+                    Add(Arena2SourceTransform.ToRmbImportPoint(0, 0, 4096), Arena2SourceTransform.ToRmbImportPoint(flat.X, flat.Y, flat.Z))));
             AddGround(summary, origin, reference);
         }
 
@@ -207,6 +221,15 @@ public static class RmbExteriorNormalizer
 
         private void AddInteriorModel(RmbModelPlacement model, string identity) => AddMesh(model, point => point, identity);
 
+        private void AddSourceMarker(int archive, int record, Arena2ImportPoint point)
+        {
+            NormalizedVector3 position = MeshGeometry.ToRightHanded(point);
+            if (archive == RdbSourceClassification.EditorFlatArchive && record == RdbSourceClassification.StartMarkerRecord)
+                startMarker ??= new NormalizedMarker("marker/start", position);
+            else if (archive == RdbSourceClassification.EditorFlatArchive && record == RdbSourceClassification.EnterMarkerRecord)
+                enterMarker ??= new NormalizedMarker("marker/enter", position);
+        }
+
         private void AddInteriorMarker(RmbFlatPlacement flat)
         {
             NormalizedVector3 position = MeshGeometry.ToRightHanded(Arena2SourceTransform.ToRmbImportPoint(flat.X, flat.Y, flat.Z));
@@ -268,7 +291,7 @@ public static class RmbExteriorNormalizer
         public RmbExteriorNormalizationResult Build()
         {
             if (geometry.Count == 0) throw new InvalidOperationException("RMB normalization produced no ARCH3D static geometry.");
-            string slug = Slug(layout.LocationName);
+            string slug = Slug(layout.LocationName) + (request.LocationIndex is int index ? $"-{layout.Region}-{index}" : "");
             string profile = request.ProfileKind == RmbWorldProfileKind.Exterior ? "exterior" : $"interior-{request.Building!.BlockX}-{request.Building.BlockY}-{request.Building.BuildingIndex}";
             string root = $"rmb/{slug}/{profile}";
             string staticId = $"artifact/{root}/static-mesh", collisionId = $"artifact/{root}/collision-navigation", resourcesId = $"artifact/{root}/resource-catalog";

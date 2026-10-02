@@ -78,7 +78,7 @@ public static class Arena2SitePublication
         int region,
         string location,
         RmbBuildingSelection? building,
-        Arena2SiteMedia media)
+        Arena2SiteMedia media, int? locationIndex = null)
     {
         ArgumentNullException.ThrowIfNull(sources);
         ArgumentNullException.ThrowIfNull(media);
@@ -86,7 +86,7 @@ public static class Arena2SitePublication
         {
             RmbExteriorNormalizationResult result = RmbExteriorNormalizer.Normalize(new(
                 new DungeonLogicalSourceSet(sources.DungeonSources), region, location,
-                building is null ? RmbWorldProfileKind.Exterior : RmbWorldProfileKind.Interior) { Building = building });
+                building is null ? RmbWorldProfileKind.Exterior : RmbWorldProfileKind.Interior) { Building = building, LocationIndex = locationIndex });
             (GeometryPublication geometry, Arena2DungeonMediaPublication dungeonMedia, Arena2ClassicMediaPublication classicMedia) =
                 PublishMedia(sources, result.Document, result.ReferencedMeshIds, media, $"selected RMB media '{result.Layout.LocationName}'");
             return (Arena2MediaBundlePublication.Create(result, dungeonMedia, classicMedia, geometry).Plan, result);

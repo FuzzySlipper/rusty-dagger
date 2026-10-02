@@ -24,7 +24,7 @@ internal static class DaggerfallSiteContent
             DaggerfallBaseContent.RejectDuplicateProperties(root, "root", diagnostics);
             if (DaggerfallBaseContent.Text(root, "ruleset", diagnostics) != DaggerfallRuleset.Identity.Value) diagnostics.Add("Site payload must identify ruleset 'daggerfall'.");
             AdmittedFiles files = AdmittedFiles.From(content);
-            ScenarioStart start = ReadStart(DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "startingState", diagnostics), "startingState", diagnostics), diagnostics);
+            ScenarioStart start = ReadStart(DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "startingState", diagnostics), "startingState", diagnostics), diagnostics, ReadSourceArrival(files, root, diagnostics));
             // A starting site the published locations do not carry would leave the session standing at a
             // location nothing can name, so it is refused against the section that does carry them. The
             // identity set answers this question; `ResolveSite` asks the records instead, because there
@@ -2015,9 +2015,24 @@ internal static class DaggerfallSiteContent
     private static bool PositiveFinite(Vector2 value) =>
         float.IsFinite(value.X) && float.IsFinite(value.Y) && value.X > 0F && value.Y > 0F;
 
-    private static ScenarioStart ReadStart(JsonElement value, DaggerfallContentDiagnostics diagnostics)
+    private static WorldPoint? ReadSourceArrival(AdmittedFiles files, JsonElement root, DaggerfallContentDiagnostics diagnostics)
     {
-        WorldPoint position = Point(DaggerfallBaseContent.Property(value, "position", diagnostics), "startingState.position", diagnostics);
+        JsonElement world = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "world", diagnostics), "world", diagnostics);
+        if (!world.TryGetProperty("arrivalFromSourceMarker", out JsonElement enabled) || enabled.ValueKind != JsonValueKind.True) return null;
+        string path = DaggerfallBaseContent.Text(world, "publicationRoot", diagnostics) + "/normalized.json";
+        ReadOnlyMemory<byte>? bytes = files.GetExactlyOne(path);
+        if (bytes is null) throw new InvalidOperationException($"The source arrival world has no admitted normalized document '{path}'.");
+        using JsonDocument normalized = JsonDocument.Parse(bytes.Value);
+        JsonElement marker = normalized.RootElement.GetProperty("world").GetProperty("startMarker");
+        if (marker.ValueKind != JsonValueKind.Object) throw new InvalidOperationException("The selected world has no normalized source start marker for arrival.");
+        JsonElement point = marker.GetProperty("position");
+        return new WorldPoint(DaggerfallBaseContent.Number(point, "x", diagnostics),
+            DaggerfallBaseContent.Number(point, "y", diagnostics), DaggerfallBaseContent.Number(point, "z", diagnostics));
+    }
+
+    private static ScenarioStart ReadStart(JsonElement value, DaggerfallContentDiagnostics diagnostics, WorldPoint? sourcePosition = null)
+    {
+        WorldPoint position = sourcePosition ?? Point(DaggerfallBaseContent.Property(value, "position", diagnostics), "startingState.position", diagnostics);
         JsonElement look = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(value, "look", diagnostics), "startingState.look", diagnostics);
         PlayerInitialLook initialLook = new(DaggerfallBaseContent.Number(look, "yawRadians", diagnostics), DaggerfallBaseContent.Number(look, "pitchRadians", diagnostics));
         return new(position, initialLook, ReadStartSite(value, diagnostics));

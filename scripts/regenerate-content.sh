@@ -178,6 +178,13 @@ tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/charing/exte
 tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/charing/interior-1-1-0 \
   --source-manifest "$site_records/charing-interior-1-1-0.sources.json" --region 17 --location Charing --profile interior --block-x 1 --block-y 1 --building 0
 
+# The two source locations share their display name; select the MAPS indices explicitly.
+for ship in small-ship large-ship; do
+  if [[ "$ship" == small-ship ]]; then ship_index=1; else ship_index=2; fi
+  tool rmb-spatial "${site_common[@]}" --out "content/worldrpg/imports/$ship/exterior" \
+    --source-manifest "$site_records/$ship.sources.json" --region 31 --location "Your Ship" --location-index "$ship_index" --profile exterior
+done
+
 # 5. Reconcile all current producer citations and raw-record ledgers. This is import coverage,
 #    not runtime parity certification; unknown identities and dangling required references fail.
 tool source-coverage --arena2 "$arena2" --inventory "$inventory" --repository "$PWD" \

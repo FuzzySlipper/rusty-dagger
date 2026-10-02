@@ -1,4 +1,5 @@
 using Daggerfall.Import.Arena2;
+using System.Buffers.Binary;
 using Daggerfall.Import.Normalized;
 using Xunit;
 
@@ -31,7 +32,8 @@ public sealed class DaggerfallLocationExteriorTests
         BsaArchive maps = BsaArchive.Parse(File.ReadAllBytes(TestData.Corpus("MAPS.BSA")), "arena2/MAPS.BSA");
         BsaArchive blocks = BsaArchive.Parse(File.ReadAllBytes(TestData.Corpus("BLOCKS.BSA")), "arena2/BLOCKS.BSA");
 
-        DaggerfallLocations locations = DaggerfallLocationBuilder.Build(maps, blocks);
+        BsaArchive models = BsaArchive.Parse(File.ReadAllBytes(TestData.Corpus("ARCH3D.BSA")), "arena2/ARCH3D.BSA");
+        DaggerfallLocations locations = DaggerfallLocationBuilder.Build(maps, blocks, models);
 
         Assert.Equal(15251, locations.Locations.Count);
         Assert.Equal(15251, locations.Locations.Count(location => location.Exterior is not null));
@@ -42,7 +44,14 @@ public sealed class DaggerfallLocationExteriorTests
         Assert.Equal(2, reusedArmorer.Length);
         Assert.Equal((4, 3, 510, 15941, 16), (reusedArmorer[0].BlockX, reusedArmorer[0].BlockY, reusedArmorer[0].FactionId, reusedArmorer[0].NameSeed, reusedArmorer[0].Quality));
         Assert.Equal((3, 5, 510, 18089, 15), (reusedArmorer[1].BlockX, reusedArmorer[1].BlockY, reusedArmorer[1].FactionId, reusedArmorer[1].NameSeed, reusedArmorer[1].Quality));
-        Assert.Equal(["arena2/MAPS.BSA", "arena2/BLOCKS.BSA"], locations.Sources);
+        Assert.Equal(["arena2/MAPS.BSA", "arena2/BLOCKS.BSA", "arena2/ARCH3D.BSA"], locations.Sources);
+        Assert.Contains(locations.Locations, value => value.Exterior!.PortTownAndUnknown > 0);
+        Assert.Contains(locations.Locations, value => value.Exterior!.PortTownAndUnknown == 0);
+        var pricedHouse = locations.Locations.SelectMany(value => value.Exterior!.Buildings)
+            .First(value => value.BuildingType == 1 && value.ModelRadius > 0);
+        Assert.True(models.TryGetByNumericId(uint.Parse(pricedHouse.ModelId!), out BsaRecord? model));
+        // Classic DFMesh radius is the uint header at byte12 / 256, independent of mesh bounds.
+        Assert.Equal(BinaryPrimitives.ReadUInt32LittleEndian(models.GetPayload(model!).Span[12..]) / 256f, pricedHouse.ModelRadius);
         Assert.All(locations.Locations, location =>
         {
             DaggerfallLocationExterior exterior = Assert.IsType<DaggerfallLocationExterior>(location.Exterior);

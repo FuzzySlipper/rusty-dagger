@@ -12,7 +12,17 @@ public sealed record Arch3dMesh(string Source, string Version, int DeclaredPoint
 /// <summary>Decoder for numeric ARCH3D.BSA mesh records.</summary>
 public static class Arch3dDecoder
 {
-    /// <summary>The version strings the mesh format declares, which are the ones this decoder admits.</summary>
+    /// <summary>Classic model radius in DFMesh units, from the header rather than transformed bounds.</summary>
+    public static float ReadModelRadius(ReadOnlySpan<byte> bytes, string source)
+    {
+        CheckedLittleEndianReader reader = new(bytes, source);
+        string version = reader.ReadNullTerminatedAscii(4);
+        if (!Versions.Contains(version, StringComparer.Ordinal)) throw reader.Error($"unsupported ARCH3D version {version}");
+        reader.ReadInt32(); reader.ReadInt32();
+        return reader.ReadUInt32() / 256f;
+    }
+
+    /// <summary>The version strings admitted by the mesh format decoder.</summary>
     public static readonly IReadOnlyList<string> Versions = ["v2.5", "v2.6", "v2.7"];
 
     private const int HeaderBytes = 64;

@@ -267,6 +267,13 @@ internal sealed class DaggerfallSiteContext
         _returnPose = null;
     }
 
+    /// <summary>Retires an entrance relation after a world relocation, without changing the active site.</summary>
+    internal void ClearReturnDestination()
+    {
+        ReturnAnchor = null;
+        _returnPose = null;
+    }
+
     /// <summary>Returns the destination and exact pose without mutating; commit with <see cref="Leave"/> only after it admits.</summary>
     internal DaggerfallSiteReturnDestination RequireReturnDestination() => ReturnAnchor is { } site && _returnPose is { } pose
         ? new(site, pose)

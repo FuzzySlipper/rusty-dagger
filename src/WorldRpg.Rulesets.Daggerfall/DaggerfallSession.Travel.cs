@@ -95,7 +95,7 @@ internal sealed partial class DaggerfallSession
         _input.Neutralize(); _locomotion.Neutralize();
         DaggerfallWorldProfileKey origin = _activeProfileKey;
         long started = _time.Calendar.ToAbsoluteSeconds();
-        State.Travel.Begin(origin.Site, quote, started);
+        State.Travel.Begin(State.Transport.ShipReturnProfile?.Site ?? origin.Site, quote, started);
         DaggerfallTravelOutcome outcome = DaggerfallTravelOutcome.Stopped;
         try
         {
@@ -109,6 +109,13 @@ internal sealed partial class DaggerfallSession
                 outcome = DaggerfallTravelOutcome.Unavailable;
             if (outcome == DaggerfallTravelOutcome.Arrived)
             {
+                if (State.Transport.OnShip)
+                {
+                    // Source fast travel disembarks at the destination; stored ship contents
+                    // remain on the inactive ship, while its detached land return is retired.
+                    _ = State.Transport.LeaveShip();
+                    _sites.ClearReturnDestination();
+                }
                 long delay = TravelArrivalDelay(_time.Calendar,
                     State.Character.CustomCareer?.Disadvantages.Any(trait => trait.Id == "damage" && trait.Target == "sunlight") == true,
                     quote.Options.SpeedCautious);
@@ -191,6 +198,14 @@ internal sealed partial class DaggerfallSession
     /// <summary>The current world-map pixel, including wilderness steps away from an exterior site.</summary>
     private DaggerfallTravelMapPixel QuestTravelOrigin()
     {
+        if (State.Transport.OnShip && State.Transport.ShipReturnProfile is { } land && State.Transport.ShipReturnPose is { } pose)
+        {
+            DaggerfallSiteRecord origin = _site.Records.Single(record => record.Id == land.Site);
+            DaggerfallExteriorCellId cell = DaggerfallExteriorSessionOrigin.CellForLocalPosition(pose.Position,
+                DaggerfallExteriorWorldOrigin.At(new(origin.MapPixelX, origin.MapPixelY)),
+                new DaggerfallExteriorWorldBounds(_definitions.Terrain.Width, _definitions.Terrain.Height));
+            return new(cell.X, cell.Y);
+        }
         if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior)
         {
             DaggerfallExteriorCellId cell = _sites.CurrentExteriorCell();

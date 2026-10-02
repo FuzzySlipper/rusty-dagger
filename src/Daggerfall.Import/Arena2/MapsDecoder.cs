@@ -41,6 +41,7 @@ public sealed record MapsExteriorLayout(
 {
     /// <summary>The source city building pool, consumed in order by matching RMB type.</summary>
     public IReadOnlyList<MapsExteriorBuilding> Buildings { get; init; } = [];
+    public byte PortTownAndUnknown { get; init; }
 }
 
 /// <summary>The MAPPITEM values that specialize a named RMB building for its location.</summary>
@@ -615,7 +616,8 @@ public static class MapsDecoder
             throw reader.Error($"MAPPITEM exterior grid {width}x{height} exceeds its 64 source block slots");
         reader.ReadBytes(4);
         char letter1 = (char)reader.ReadByte();
-        reader.ReadBytes(2);
+        byte portTownAndUnknown = reader.ReadByte();
+        reader.ReadByte();
         ReadOnlySpan<byte> blockIndices = reader.ReadBytes(64);
         ReadOnlySpan<byte> blockNumbers = reader.ReadBytes(64);
         ReadOnlySpan<byte> blockCharacters = reader.ReadBytes(64);
@@ -629,7 +631,7 @@ public static class MapsDecoder
                 checked((byte)(index / width))));
         }
 
-        return new MapsExteriorLayout(region, locationIndex, locationName, mapId, longitude, latitude, locationId, width, height, letter1, blocks) { Buildings = buildings };
+        return new MapsExteriorLayout(region, locationIndex, locationName, mapId, longitude, latitude, locationId, width, height, letter1, blocks) { Buildings = buildings, PortTownAndUnknown = portTownAndUnknown };
     }
 
     private static CheckedLittleEndianReader ExteriorRecordReader(ReadOnlyMemory<byte> data, string source, int locationCount, int locationIndex)

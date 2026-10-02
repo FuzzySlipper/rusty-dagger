@@ -122,6 +122,8 @@ internal sealed partial class DaggerfallSession
             if (building is not null && State.Lodging.RemainingSeconds(_activeProfileKey.Site,
                 new(building.BlockX, building.BlockY, building.Building.Index), _time.Calendar.ToAbsoluteSeconds()) > 0)
                 return new(true);
+            if (building is not null && State.Property.HouseAccess(new(_activeProfileKey.Site, building.Building, building.BlockX, building.BlockY)).Allowed)
+                return new(true);
             if (FightersGuildRestAllowed(building, State.GuildMembership, _activeProfileKey.Site.Region,
                 checked((int)_time.Calendar.DayNumber)))
                 return new(true);

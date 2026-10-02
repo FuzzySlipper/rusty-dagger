@@ -15,11 +15,15 @@ internal sealed class DaggerfallLocationExteriorBuilder
     private const int TownCityLocationType = 0;
 
     private readonly BsaArchive blocks;
+    private readonly BsaArchive? models;
+    private readonly Dictionary<string, RmbBlockPlacements> placements = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, float> radii = new(StringComparer.Ordinal);
     private readonly Dictionary<string, RmbBlockSummary> summaries = new(StringComparer.Ordinal);
 
-    public DaggerfallLocationExteriorBuilder(BsaArchive blocks)
+    public DaggerfallLocationExteriorBuilder(BsaArchive blocks, BsaArchive? models = null)
     {
         this.blocks = blocks ?? throw new ArgumentNullException(nameof(blocks));
+        this.models = models;
     }
 
     public DaggerfallLocationExterior Build(BsaArchive maps, DaggerfallLocationMap location)
@@ -90,7 +94,10 @@ internal sealed class DaggerfallLocationExteriorBuilder
                         faction = 414;
                     }
                 }
-                buildings.Add(new(block.SourceName, block.X, block.Y, building.Index, type, faction, seed, quality));
+                string? modelId = placements[block.SourceName].Buildings[building.Index].Exterior.Models.FirstOrDefault()?.ModelId;
+                float? radius = modelId is null || models is null ? null : ReadRadius(modelId);
+                buildings.Add(new(block.SourceName, block.X, block.Y, building.Index, type, faction, seed, quality)
+                { ModelId = modelId, ModelRadius = radius });
             }
 
             foreach (RmbGroundTile tile in summary.GroundTiles)
@@ -136,6 +143,7 @@ internal sealed class DaggerfallLocationExteriorBuilder
             [.. layout.Blocks.Select(block => new DaggerfallLocationExteriorBlock(block.SourceName, block.X, block.Y))])
         {
             Buildings = buildings,
+            PortTownAndUnknown = layout.PortTownAndUnknown,
             MissingCityBuildings = missingCityBuildings,
         };
         result.Validate($"{location.Region}:{location.Index} '{location.Name}'");
@@ -143,6 +151,16 @@ internal sealed class DaggerfallLocationExteriorBuilder
     }
 
     internal static bool IsNamedBuilding(int type) => type is 0 or 2 or 3 or 5 or 6 or 7 or 8 or 9 or 10 or 11 or 12 or 13 or 14 or 15 or 16;
+
+    private float ReadRadius(string modelId)
+    {
+        if (radii.TryGetValue(modelId, out float radius)) return radius;
+        if (!uint.TryParse(modelId, out uint id) || !models!.TryGetByNumericId(id, out BsaRecord? record) || record is null)
+            throw new InvalidOperationException($"ARCH3D.BSA has no building model '{modelId}'.");
+        radius = Arch3dDecoder.ReadModelRadius(models.GetPayload(record).Span, models.Source);
+        radii.Add(modelId, radius);
+        return radius;
+    }
 
     private RmbBlockSummary ReadSummary(string sourceName, DaggerfallLocationMap location)
     {
@@ -163,6 +181,7 @@ internal sealed class DaggerfallLocationExteriorBuilder
             throw new InvalidOperationException($"RMB block '{sourceName}' referenced by location {location.Region}:{location.Index} cannot be read: {reason}.");
         }
 
+        placements.Add(sourceName, RmbPlacementReader.Read(payload.ToArray(), 0, summary, blocks.Source));
         summaries.Add(sourceName, summary);
         return summary;
     }

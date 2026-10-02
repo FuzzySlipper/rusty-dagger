@@ -156,7 +156,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         Casting.Rebase(delta);
         _encounters.RebasePending(_activeProfileKey.LogicalId, delta);
         _dialogue?.Rebase(delta);
-        State.Transport.Rebase(delta);
+        // Ship return pose is detached in the land profile; active-world origin moves do not own it.
     }
 
     void IDaggerfallSiteTransitionHost.EnteredSite() { Casting.ClearTransient(); ChangeMusicSite(); }
@@ -630,6 +630,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         _appearance.RetireUnavailableMagic(State.Actors, State.ItemInstances.ContainsUnique);
         _hud.Publish(new DaggerfallHudFrame(State.Actors.Player, State.Progression, Presentation, _mode, State.PlayerControl, Slots,
             Inventory: _inventoryUi.Read(),
+            Property: ReadPropertyPresentation(),
             Loot: _lootUi.Read(),
             Character: _characterUi.Read(State.Actors.Player, State.Progression),
             CharacterCreationAvailable: !_newGameInitialized,

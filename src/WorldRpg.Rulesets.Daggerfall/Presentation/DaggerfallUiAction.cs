@@ -27,7 +27,8 @@ internal enum DaggerfallUiActionKind
     CharacterLevelAllocate, CharacterLevelCommit,
     ActivationMode, Attack, Loot, Inventory, Character, Menu,
     DialogueTone, DialogueTopic, DialogueClose, DispelSelect, DispelCancel, IdentifySelect, IdentifyCancel,
-    TransportSelect, TransportToggle, TransportLeaveShip,
+    TransportSelect, TransportToggle, TransportLeaveShip, TransportBoardShip,
+    PropertyBuy, PropertySell, PropertyEnter, PropertyPut, PropertyTake,
     TravelSearch, TravelPreview, TravelAccept, MapOpen, MapBuilding,
     Rest, LodgingQuote, LodgingBook,
     WagonPut, WagonTake,
@@ -36,7 +37,7 @@ internal enum DaggerfallUiActionKind
     InventoryMove, InventoryInspect, InventoryUse, InventoryDrop,
     NotebookPage, NotebookAdd, NotebookEdit, NotebookRemove, NotebookMove,
     CurrencyDepositGold, CurrencyWithdrawGold, CurrencyDepositLetters, CurrencyWithdrawLetter, BankTransfer,
-    BankLoanIssue, BankLoanRepayAccount, BankLoanRepayCarried,
+    BankOpen, BankLoanIssue, BankLoanRepayAccount, BankLoanRepayCarried,
     LootClose, LootTake,
     SaveGame, LoadGame, SaveSlots, SaveSlot, LoadSlot, DeleteSlot,
     DeathNewGame, DeathLoadGame, DeathQuit,
@@ -178,6 +179,12 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.DialogueClose, "dialogue-close", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TransportSelect, "transport-select", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TransportToggle, "transport-toggle", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.TransportBoardShip, "transport-board-ship", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.PropertyBuy, "property-buy", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.PropertySell, "property-sell", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.PropertyEnter, "property-enter", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.PropertyPut, "property-put", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.PropertyTake, "property-take", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TransportLeaveShip, "transport-leave-ship", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.MapOpen, "map-open", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.MapBuilding, "map-building", DaggerfallUiPhases.Interaction),
@@ -208,6 +215,7 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.CurrencyDepositLetters, "currency-deposit-letters", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.CurrencyWithdrawLetter, "currency-withdraw-letter", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.BankTransfer, "bank-transfer", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.BankOpen, "bank-open", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.BankLoanIssue, "bank-loan-issue", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.BankLoanRepayAccount, "bank-loan-repay-account", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.BankLoanRepayCarried, "bank-loan-repay-carried", DaggerfallUiPhases.Interaction),
@@ -491,7 +499,7 @@ internal static class DaggerfallUiAction
                 return fields.SetEquals(["action", "mode"])
                     && mode is "foot" or "horse" or "cart"
                     ? new(action, Mode: mode) : null;
-            if (action is "transport-toggle" or "transport-leave-ship")
+            if (action is "transport-toggle" or "transport-leave-ship" or "transport-board-ship")
                 return fields.SetEquals(["action"]) ? new(action) : null;
             if (action == "rest")
             {
@@ -502,6 +510,12 @@ internal static class DaggerfallUiAction
                     : untilHealed && fields.SetEquals(["action", "mode"]);
                 return shape ? new(action, Mode: mode, Hours: hours) : null;
             }
+            if (action is "property-buy" or "property-sell" or "property-enter")
+                return fields.SetEquals(["action", "key"]) && !string.IsNullOrWhiteSpace(key) ? new(action, Key: key) : null;
+            if (action is "property-put" or "property-take")
+                return fields.IsSubsetOf(["action", "key", "item", "amount", "revision"])
+                    && !string.IsNullOrWhiteSpace(key) && !string.IsNullOrWhiteSpace(item) && !string.IsNullOrWhiteSpace(revision)
+                    && amount is null or > 0 ? new(action, Key: key, Item: item, Amount: amount, Revision: revision) : null;
             if (action is "wagon-put" or "wagon-take")
                 return (fields.SetEquals(["action", "revision", "item"])
                     || fields.SetEquals(["action", "revision", "item", "amount"]))
@@ -510,6 +524,8 @@ internal static class DaggerfallUiAction
             if (action is "dispel-select" or "identify-select")
                 return fields.SetEquals(["action", "revision", "key"]) && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(key) ? new(action, Revision: revision, Key: key) : null;
             if (action is "dispel-cancel" or "identify-cancel")
+                return fields.SetEquals(["action", "revision"]) && !string.IsNullOrWhiteSpace(revision) ? new(action, Revision: revision) : null;
+            if (action == "bank-open")
                 return fields.SetEquals(["action", "revision"]) && !string.IsNullOrWhiteSpace(revision) ? new(action, Revision: revision) : null;
             if (action == "dialogue-tone")
                 return fields.SetEquals(["action", "revision", "tone"])

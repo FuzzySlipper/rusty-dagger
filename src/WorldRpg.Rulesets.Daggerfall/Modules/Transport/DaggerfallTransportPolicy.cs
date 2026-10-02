@@ -1,3 +1,4 @@
+using WorldRpg.Rulesets.Daggerfall.Content;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Controls;
 
@@ -93,7 +94,8 @@ internal sealed record DaggerfallTransportSave(
     float? ShipReturnY = null,
     float? ShipReturnZ = null,
     float? ShipReturnYawRadians = null,
-    float? ShipReturnPitchRadians = null)
+    float? ShipReturnPitchRadians = null,
+    DaggerfallWorldProfileKeySave? ShipReturnProfile = null)
 {
     internal DaggerfallTransportSave Validate()
     {
@@ -104,6 +106,10 @@ internal sealed record DaggerfallTransportSave(
             && ShipReturnYawRadians is not null && ShipReturnPitchRadians is not null;
         if (anyPose != completePose)
             throw new ArgumentException("A transport save must carry all ship return pose fields or none.");
+        if (OnShip != (ShipReturnProfile is not null))
+            throw new ArgumentException("A ship return pose requires its actual land world profile.");
+        if (ShipReturnProfile?.Require().Kind is { } kind && kind != DaggerfallWorldProfileKind.Exterior)
+            throw new ArgumentException("A ship return profile must be a land exterior.");
         if (OnShip != completePose)
             throw new ArgumentException("A ship transport save must carry its return pose exactly while on ship.");
         if (completePose)
@@ -176,6 +182,7 @@ internal sealed class DaggerfallTransportPolicy
     private DaggerfallTransportMode _mode;
     private bool _onShip;
     private DaggerfallTransportPose? _shipReturnPose;
+    internal DaggerfallWorldProfileKey? ShipReturnProfile { get; private set; }
 
     internal DaggerfallTransportPolicy(DaggerfallTransportTuning tuning)
     {
@@ -240,7 +247,7 @@ internal sealed class DaggerfallTransportPolicy
     }
 
     internal DaggerfallTransportActionResult BoardShip(bool ownsShip, DaggerfallTransportAccessContext context,
-        DaggerfallTransportPose? currentPose)
+        DaggerfallTransportPose? currentPose, DaggerfallWorldProfileKey currentProfile)
     {
         context.Validate();
         if (_onShip) return Reject(DaggerfallTransportRejection.ShipUnavailableAtSite, "You are already on the ship.");
@@ -248,6 +255,9 @@ internal sealed class DaggerfallTransportPolicy
         if (!context.ShipAccessAllowed) return Reject(DaggerfallTransportRejection.ShipUnavailableAtSite, "The ship is unavailable at this site.");
         if (context.IsIndoor) return Reject(DaggerfallTransportRejection.Indoor, "You cannot board a ship indoors.");
         if (currentPose is null) return Reject(DaggerfallTransportRejection.MissingPosition, "A ship trip requires a current position.");
+        currentProfile.Validate();
+        if (currentProfile.Kind != DaggerfallWorldProfileKind.Exterior) throw new ArgumentException("Boarding requires a land exterior.");
+        ShipReturnProfile = currentProfile;
         _shipReturnPose = currentPose.Validate();
         _onShip = true;
         // Ship is a travel state rather than a riding speed. Retain Foot as the land
@@ -262,6 +272,7 @@ internal sealed class DaggerfallTransportPolicy
             return Reject(DaggerfallTransportRejection.NotOnShip, "You are not on a ship.");
         DaggerfallTransportPose returnPose = _shipReturnPose;
         _shipReturnPose = null;
+        ShipReturnProfile = null;
         _onShip = false;
         _mode = DaggerfallTransportMode.Foot;
         return Accepted("You left the ship.", returnPose);
@@ -308,15 +319,10 @@ internal sealed class DaggerfallTransportPolicy
         return (liveSpeed + MovementBaseClassicUnits()) / classicToEngineRatio;
     }
 
-    internal void Rebase(System.Numerics.Vector3 delta)
-    {
-        if (_shipReturnPose is { } pose)
-            _shipReturnPose = pose with { Position = DaggerfallExteriorSessionOrigin.Shift(pose.Position, delta) };
-    }
-
     internal DaggerfallTransportSave Capture() => (_onShip
         ? new DaggerfallTransportSave(DaggerfallTransportMode.Foot, true, _shipReturnPose!.Position.X,
-            _shipReturnPose.Position.Y, _shipReturnPose.Position.Z, _shipReturnPose.YawRadians, _shipReturnPose.PitchRadians)
+            _shipReturnPose.Position.Y, _shipReturnPose.Position.Z, _shipReturnPose.YawRadians, _shipReturnPose.PitchRadians,
+            DaggerfallWorldProfileKeySave.Capture(ShipReturnProfile!.Value))
         : new DaggerfallTransportSave(_mode, false)).Validate();
 
     internal void Restore(DaggerfallTransportSave saved)
@@ -325,6 +331,7 @@ internal sealed class DaggerfallTransportPolicy
         saved.Validate();
         _mode = saved.Mode;
         _onShip = saved.OnShip;
+        ShipReturnProfile = saved.ShipReturnProfile?.Require();
         _shipReturnPose = saved.OnShip
             ? new DaggerfallTransportPose(new WorldPoint(saved.ShipReturnX!.Value, saved.ShipReturnY!.Value, saved.ShipReturnZ!.Value),
                 saved.ShipReturnYawRadians!.Value, saved.ShipReturnPitchRadians!.Value).Validate()

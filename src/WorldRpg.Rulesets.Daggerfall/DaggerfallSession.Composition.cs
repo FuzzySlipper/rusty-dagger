@@ -58,7 +58,7 @@ internal sealed partial class DaggerfallSession
             : raw.Site.ActiveProfile is { } profile
                 ? profiles.Require(profile.Require())
                 : profiles.RequireUniqueSite(ToSiteId(raw.Site.Active) ?? throw new ArgumentException("A restored Daggerfall session must name an active site.", nameof(saved)));
-        DaggerfallResolvedRestore restore = raw.ResolveRestore(composition.Definitions, activeInputs, profiles);
+        DaggerfallResolvedRestore restore = raw.ResolveRestore(composition.Definitions, activeInputs, profiles, composition.Tuning);
         return new DaggerfallSession(engine, composition, activeInputs, restore).AdmitComposition(engine, composition);
     }
 

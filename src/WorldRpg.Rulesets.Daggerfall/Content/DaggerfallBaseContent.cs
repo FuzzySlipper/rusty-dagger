@@ -542,6 +542,8 @@ internal static partial class DaggerfallBaseContent
         JsonElement exterior = Object(value, $"location {region}/{index} exterior", diagnostics);
         int mapPixelX = Integer(exterior, "mapPixelX", diagnostics);
         int mapPixelY = Integer(exterior, "mapPixelY", diagnostics);
+        int port = Integer(exterior, "portTownAndUnknown", diagnostics);
+        if (port is < 0 or > 255) diagnostics.Add($"Location {region}/{index} has invalid source port byte {port}.");
         int width = Integer(exterior, "width", diagnostics);
         int height = Integer(exterior, "height", diagnostics);
         int tileOriginX = Integer(exterior, "tileOriginX", diagnostics);
@@ -561,6 +563,7 @@ internal static partial class DaggerfallBaseContent
         return new DaggerfallSiteExterior(mapPixelX, mapPixelY, width, height, tileOriginX, tileOriginY,
             custom, clearance, minX, maxX, minY, maxY)
         {
+            PortTownAndUnknown = port,
             Blocks = ReadSiteBlocks(exterior, width, height, diagnostics),
             Buildings = ReadSiteBuildings(exterior, region, index, width, height, diagnostics),
         };
@@ -596,7 +599,12 @@ internal static partial class DaggerfallBaseContent
                 || source.BuildingType is < 0 or > 255 || source.FactionId is < 0 or > 65535 || source.NameSeed is < 0 or > 65535 || quality is < 0 or > 20)
                 diagnostics.Add($"Location {region}/{index} building '{id}' carries invalid placement or policy fields.");
             if (!identities.Add(id)) diagnostics.Add($"Location {region}/{index} carries building '{id}' twice.");
-            result.Add(new(id, source, quality));
+            string? modelId = value.TryGetProperty("modelId", out JsonElement model) && model.ValueKind == JsonValueKind.String ? model.GetString() : null;
+            float? radius = value.TryGetProperty("modelRadius", out JsonElement radiusValue) && radiusValue.ValueKind == JsonValueKind.Number
+                && radiusValue.TryGetSingle(out float r) ? r : null;
+            if (radius is float invalid && (!float.IsFinite(invalid) || invalid < 0))
+                diagnostics.Add($"Location {region}/{index} building '{id}' carries invalid model radius.");
+            result.Add(new(id, source, quality) { ModelId = modelId, ModelRadius = radius });
         }
         return new ReadOnlyDictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource>(result.DistinctBy(building => building.Id).ToDictionary(building => building.Id));
     }
