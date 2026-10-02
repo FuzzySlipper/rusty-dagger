@@ -96,7 +96,9 @@ internal sealed record DaggerfallEffectDefinition(
     Func<DaggerfallActiveEffect, DaggerfallMagicDefense>? MagicDefense = null,
     Action<DaggerfallActiveEffect, JsonElement>? RefreshState = null,
     bool ExtendIncumbentDuration = false,
-    WorldRpg.Kit.Controls.ActorControlRestrictions ControlRestrictions = default)
+    WorldRpg.Kit.Controls.ActorControlRestrictions ControlRestrictions = default,
+    Func<JsonElement, JsonElement, bool>? IncumbentSettingsMatch = null,
+    bool SourceScopedIncumbent = false)
 {
     internal EffectDefinition ToEngineDefinition(string source) => new(
         EffectDefinitionId.Parse($"daggerfall.{Key}"),
@@ -221,8 +223,10 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
     internal WorldRpg.Kit.Controls.ActorControlRestrictions ControlsFor(long targetId)
     {
         WorldRpg.Kit.Controls.ActorControlRestrictions restrictions = default;
+        bool preventsParalysis = MagicDefenseFor(targetId).PreventsParalysis;
         foreach (var effect in Active.Where(effect => checked((long)effect.Context.Target.Value) == targetId))
-            restrictions = restrictions.Combine(effect.Definition.ControlRestrictions);
+            if (!preventsParalysis || effect.Definition.Spell?.IsParalysis != true)
+                restrictions = restrictions.Combine(effect.Definition.ControlRestrictions);
         return restrictions;
     }
 
@@ -255,14 +259,20 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
         return perception.Validate();
     }
 
+    internal bool IsLikeKind(DaggerfallActiveEffect effect, DaggerfallEffectDefinition definition, long targetId, JsonElement incoming,
+        long? casterId = null, ulong? itemId = null) =>
+        checked((long)effect.Context.Target.Value) == targetId && effect.Definition.LikeKind == definition.LikeKind
+        && (!definition.SourceScopedIncumbent || effect.Context.Caster?.Value == (ulong?)casterId && effect.Context.Item?.Value == itemId)
+        && (definition.IncumbentSettingsMatch?.Invoke(effect.State, incoming) ?? true);
+
     /// <summary>Incoming like-kind effects settle their incumbent before a new effect's saving throw.</summary>
     internal bool TryAdmitIncumbent(DaggerfallEffectRequest request, out DaggerfallEffectAdmissionOutcome outcome,
         Func<JsonElement>? incomingState = null)
     {
         DaggerfallEffectDefinition definition = _catalog.Require(request.EffectKey);
-        if (definition.Stacking is DaggerfallEffectStacking.RefreshDuration or DaggerfallEffectStacking.Reject
-            && Active.Any(effect => checked((long)effect.Context.Target.Value) == request.TargetId
-                && effect.Definition.LikeKind == definition.LikeKind))
+        if ((definition.Stacking is DaggerfallEffectStacking.RefreshDuration or DaggerfallEffectStacking.Reject
+                || definition.IncumbentSettingsMatch is not null)
+            && Active.Any(effect => IsLikeKind(effect, definition, request.TargetId, request.State, request.CasterId, request.ItemId)))
         {
             outcome = Start(definition.RefreshState is not null && incomingState is not null
                 ? request with { State = incomingState() } : request);
@@ -280,15 +290,14 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
         if (_effects.ContainsKey(context.Instance))
             throw new ArgumentException($"Effect instance '{request.Instance}' is already active.", nameof(request));
         ActiveEffectLifecycle lifecycle = LifecycleFor(request.TargetId);
-        DaggerfallActiveEffect[] likeKind = Active.Where(effect => effect.Lifecycle.Context.Target == context.Target
-            && effect.Definition.LikeKind == definition.LikeKind).ToArray();
+        DaggerfallActiveEffect[] likeKind = Active.Where(effect => IsLikeKind(effect, definition, request.TargetId, request.State, request.CasterId, request.ItemId)).ToArray();
         if (definition.Stacking == DaggerfallEffectStacking.Reject && likeKind.Length != 0)
         {
             Publish(DaggerfallEffectOutcomeKind.Rejected, request.Instance, definition.Key, request.TargetId);
             return DaggerfallEffectAdmissionOutcome.Rejected;
         }
 
-        if (definition.Stacking == DaggerfallEffectStacking.RefreshDuration && likeKind.Length != 0)
+        if ((definition.Stacking == DaggerfallEffectStacking.RefreshDuration || definition.IncumbentSettingsMatch is not null) && likeKind.Length != 0)
         {
             DaggerfallActiveEffect incumbent = likeKind.OrderBy(effect => effect.Lifecycle.Context.Instance.Value, StringComparer.Ordinal).First();
             if (incumbent.Definition.Key != definition.Key)

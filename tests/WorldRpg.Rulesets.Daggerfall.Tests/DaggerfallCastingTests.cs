@@ -136,9 +136,10 @@ public sealed class DaggerfallCastingTests
         h.Defense = new(100, 0, []); h.ApplyDefense(1);
         var bundle = h.Release();
         h.Casting.Deliver(bundle, [1]);
-        Assert.All(bundle.Results, result => Assert.Equal(DaggerfallCastOutcome.Absorbed, result.Outcome));
-        Assert.Equal(1000, h.Magicka(1).Current);
-        Assert.Single(h.Effects.Active); // Defensive effect only.
+        Assert.Equal(DaggerfallCastOutcome.Absorbed, bundle.Results[0].Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Applied, bundle.Results[1].Outcome); // aggregate refunds cannot exceed available capacity
+        Assert.Equal(999, h.Magicka(1).Current);
+        Assert.Equal(2, h.Effects.Active.Count); // defense and the effect that could not be absorbed
         Assert.Equal(2, h.Uses.Count);
     }
 

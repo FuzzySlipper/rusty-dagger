@@ -14,7 +14,8 @@ internal sealed record DaggerfallSpellBinding(int Type, int SubType, bool Suppor
     bool RollChanceOnCast = false, bool SupportsMagnitude = false, bool IsParalysis = false,
     bool IsDisease = false, DaggerfallMagicAllowedElements AllowedElements = DaggerfallMagicAllowedElements.Magic,
     Func<DaggerfallCastEffectState, JsonElement>? CreateState = null,
-    DaggerfallMagicAllowedTargets AllowedTargets = DaggerfallMagicAllowedTargets.All);
+    DaggerfallMagicAllowedTargets AllowedTargets = DaggerfallMagicAllowedTargets.All,
+    bool MagnitudePerRound = false);
 
 /// <summary>Meaningful settings retained with an admitted effect, never a runtime handle.</summary>
 internal sealed record DaggerfallCastEffectState(DaggerfallSpellEffectDefinition Settings, int CasterLevel,
@@ -22,7 +23,7 @@ internal sealed record DaggerfallCastEffectState(DaggerfallSpellEffectDefinition
 
 /// <summary>Computed from actual active effects; no independently retained defense state.</summary>
 internal sealed record DaggerfallMagicDefense(int AbsorptionChance, int ReflectionChance,
-    DaggerfallMagicActiveResistance[] Resistances, bool BlocksCasting = false)
+    DaggerfallMagicActiveResistance[] Resistances, bool BlocksCasting = false, bool PreventsParalysis = false)
 {
     internal static DaggerfallMagicDefense None { get; } = new(0, 0, []);
     internal static DaggerfallMagicDefense Combine(IEnumerable<DaggerfallMagicDefense> defenses)
@@ -32,7 +33,7 @@ internal sealed record DaggerfallMagicDefense(int AbsorptionChance, int Reflecti
             values.Select(value => value.ReflectionChance).DefaultIfEmpty().Max(),
             values.SelectMany(value => value.Resistances).GroupBy(value => value.Element)
                 .Select(group => new DaggerfallMagicActiveResistance(group.Key, checked((int)Math.Min(100L, group.Sum(value => (long)value.Chance))))).ToArray(),
-            values.Any(value => value.BlocksCasting));
+            values.Any(value => value.BlocksCasting), values.Any(value => value.PreventsParalysis));
     }
 }
 
@@ -222,7 +223,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
             var flags = DaggerfallMagicAdmissionPolicy.GetEffectFlags(source);
             var raceFlags = liveProfile.PlayerRaceTolerances?.Immunity ?? DaggerfallMagicEffectFlags.None;
             bool hardImmune = binding.IsDisease && Read(stats, DaggerfallMechanicsIds.ImmunityDisease.Value) > 0
-                || binding.IsParalysis && Read(stats, DaggerfallMechanicsIds.ImmunityParalysis.Value) > 0
+                || binding.IsParalysis && (Read(stats, DaggerfallMechanicsIds.ImmunityParalysis.Value) > 0 || defense.PreventsParalysis)
                 || (raceFlags & flags & (DaggerfallMagicEffectFlags.Disease | DaggerfallMagicEffectFlags.Paralysis)) != 0
                 || binding.IsDisease && liveProfile.CareerTolerances.Disease == DaggerfallMagicTolerance.Immune
                 || binding.IsParalysis && liveProfile.CareerTolerances.Paralysis == DaggerfallMagicTolerance.Immune;
@@ -230,7 +231,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
             if (hardImmune) outcome = DaggerfallCastOutcome.Immune;
             else if (bundle.Source != DaggerfallCastSource.ItemHeld && catalog.RequireEffectCost(setting).School == "destruction" && defense.AbsorptionChance > 0
                 && stats.TryGetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value), out var magicka)
-                && AbsorptionCost(target, bundle, setting) is int refund && magicka.Current + refund <= magicka.Maximum.Value
+                && AbsorptionCost(target, bundle, setting) is int refund && magicka.Current + absorbed + refund <= magicka.Maximum.Value
                 && roll(1, 100) <= defense.AbsorptionChance)
             { absorbed = checked(absorbed + refund); outcome = DaggerfallCastOutcome.Absorbed; }
             else if (!bundle.BypassSave && targetId != bundle.CasterId && !bundle.Reflected && defense.ReflectionChance > 0 && roll(1, 100) <= defense.ReflectionChance)
@@ -249,26 +250,27 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                 string instance = $"cast.{bundle.Sequence}.{targetId}.{i}.{(reflected ? "reflected" : "direct")}";
                 uint? baseDuration = binding.SupportsDuration ? checked((uint)Math.Max(1,
                     DaggerfallMagicAdmissionPolicy.CalculateEffectDuration(setting, bundle.CasterLevel))) : 1u;
-                JsonElement preliminary = JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(setting,
-                    bundle.CasterLevel, 0, 100), DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+                var preliminaryState = new DaggerfallCastEffectState(setting, bundle.CasterLevel, 0, 100);
+                JsonElement preliminary = binding.CreateState?.Invoke(preliminaryState)
+                    ?? JsonSerializer.SerializeToElement(preliminaryState, DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
                 if (effects.TryAdmitIncumbent(new(instance, definition.Key, $"spell.{bundle.Spell.Key}", bundle.CasterId,
                     targetId, setting.Key, bundle.Element.ToString(), bundle.ItemId, 1, baseDuration, preliminary), out var incumbent,
                     () =>
                     {
                         var incoming = new DaggerfallCastEffectState(setting, bundle.CasterLevel,
-                            binding.SupportsMagnitude ? DaggerfallMagicAdmissionPolicy.RollEffectMagnitude(setting, bundle.CasterLevel, roll) : 0, 100);
+                            binding.SupportsMagnitude && !binding.MagnitudePerRound ? DaggerfallMagicAdmissionPolicy.RollEffectMagnitude(setting, bundle.CasterLevel, roll) : 0, 100);
                         return binding.CreateState?.Invoke(incoming)
                             ?? JsonSerializer.SerializeToElement(incoming, DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
                     }))
                 {
                     string? actual = incumbent == DaggerfallEffectAdmissionOutcome.Refreshed
                         ? effects.Active.First(effect => checked((long)effect.Context.Target.Value) == targetId
-                            && effect.Definition.LikeKind == definition.LikeKind).Context.Instance.Value : null;
+                            && effects.IsLikeKind(effect, definition, targetId, preliminary, bundle.CasterId, bundle.ItemId)).Context.Instance.Value : null;
                     bundle.Results.Add(new(i, targetId, incumbent == DaggerfallEffectAdmissionOutcome.Refreshed
                         ? DaggerfallCastOutcome.Refreshed : DaggerfallCastOutcome.IncumbentRejected, Instance: actual));
                     continue;
                 }
-                int amount = binding.SupportsMagnitude ? DaggerfallMagicAdmissionPolicy.RollEffectMagnitude(setting, bundle.CasterLevel, roll) : 0;
+                int amount = binding.SupportsMagnitude && !binding.MagnitudePerRound ? DaggerfallMagicAdmissionPolicy.RollEffectMagnitude(setting, bundle.CasterLevel, roll) : 0;
                 int percent = bundle.BypassSave || bundle.Target == DaggerfallSpellTarget.CasterOnly ? 100 : DaggerfallMagicAdmissionPolicy.SavingThrow(source, liveProfile, () => roll(1, 100));
                 if (percent == 0) { bundle.Results.Add(new(i, targetId, DaggerfallCastOutcome.Resisted, percent)); continue; }
                 uint? duration = baseDuration;
@@ -289,7 +291,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                 };
                 if (admission == DaggerfallEffectAdmissionOutcome.Refreshed)
                     instance = effects.Active.Single(effect => checked((long)effect.Context.Target.Value) == targetId
-                        && effect.Definition.LikeKind == definition.LikeKind).Context.Instance.Value;
+                        && effects.IsLikeKind(effect, definition, targetId, payload, bundle.CasterId, bundle.ItemId)).Context.Instance.Value;
                 bundle.Results.Add(new(i, targetId, outcome, percent, instance));
                 continue;
             }
