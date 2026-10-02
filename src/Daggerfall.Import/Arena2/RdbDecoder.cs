@@ -58,6 +58,9 @@ public static class RdbSourceClassification
     /// <summary>Classic editor-flat enter-marker record.</summary>
     public const ushort EnterMarkerRecord = 8;
 
+    public const ushort QuestSpawnMarkerRecord = 11;
+    public const ushort QuestItemMarkerRecord = 18;
+
     /// <summary>Classic editor-flat random-treasure marker record.</summary>
     public const ushort RandomTreasureMarkerRecord = 19;
 

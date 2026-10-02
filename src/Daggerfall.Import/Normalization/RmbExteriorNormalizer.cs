@@ -234,8 +234,9 @@ public static class RmbExteriorNormalizer
         private void AddInteriorMarker(RmbFlatPlacement flat, int index)
         {
             NormalizedVector3 position = MeshGeometry.ToRightHanded(Arena2SourceTransform.ToRmbImportPoint(flat.X, flat.Y, flat.Z));
-            if (QuestMarkerNormalization.Read($"quest/{index}", flat.TextureArchive, flat.TextureRecord, position) is { } marker)
-                questMarkers.Add(marker with { SourceOrdinal = index });
+            if (QuestMarkerNormalization.Read($"quest/{index}", flat.TextureArchive, flat.TextureRecord, position,
+                interiorBuilding!.SourceKey, interiorBuilding.BuildingIndex, index) is { } marker)
+                questMarkers.Add(marker);
             if (flat.TextureArchive == RdbSourceClassification.EditorFlatArchive && flat.TextureRecord == RdbSourceClassification.StartMarkerRecord)
                 startMarker ??= new NormalizedMarker("marker/start", position);
             else if (flat.TextureArchive == RdbSourceClassification.EditorFlatArchive && flat.TextureRecord == RdbSourceClassification.EnterMarkerRecord)

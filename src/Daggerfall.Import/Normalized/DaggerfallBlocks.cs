@@ -330,13 +330,11 @@ public sealed record DaggerfallBlockBuildingSet(IReadOnlyList<DaggerfallBlockBui
             foreach (DaggerfallBlockBuilding building in rmb.Buildings)
                 yield return new(record.SourceKey, building.Index, [.. building.InteriorPlacements.Flats
                     .Select((flat, index) => QuestMarkerNormalization.Read($"quest/{index}", flat.TextureArchive, flat.TextureRecord,
-                        MeshGeometry.ToRightHanded(Arena2SourceTransform.ToRmbImportPoint(flat.X, flat.Y, flat.Z))) is { } marker
-                            ? marker with { SourceOrdinal = index } : null).OfType<NormalizedQuestMarker>()]);
+                        MeshGeometry.ToRightHanded(Arena2SourceTransform.ToRmbImportPoint(flat.X, flat.Y, flat.Z)), record.SourceKey, building.Index, index)).OfType<NormalizedQuestMarker>()]);
         if (record.Objects is { } objects)
             yield return new(record.SourceKey, null, [.. objects.FlatPlacements
                 .Select(flat => QuestMarkerNormalization.Read($"quest/{flat.Index}", flat.TextureArchive, flat.TextureRecord,
-                    MeshGeometry.ToRightHanded(Arena2SourceTransform.ToImportPoint(flat.X, flat.Y, flat.Z))) is { } marker
-                        ? marker with { SourceOrdinal = flat.Index } : null).OfType<NormalizedQuestMarker>()]);
+                    MeshGeometry.ToRightHanded(Arena2SourceTransform.ToImportPoint(flat.X, flat.Y, flat.Z)), record.SourceKey, null, flat.Index)).OfType<NormalizedQuestMarker>()]);
     }
 }
 

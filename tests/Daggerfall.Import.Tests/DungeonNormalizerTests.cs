@@ -47,6 +47,8 @@ public sealed class DungeonNormalizerTests
         Assert.Equal(kind, marker.Kind);
         Assert.Equal((1, 1, 0), (marker.BlockX, marker.BlockZ, marker.SourceOrdinal));
         Assert.Equal("quest/s0000007-rdb/1/1/0", marker.Id);
+        Assert.Equal("S0000007.RDB", marker.SourceKey);
+        Assert.Null(marker.BuildingIndex);
         Assert.Empty(result.Document.World.Billboards);
         Assert.Equal(marker, Assert.Single(NormalizedImportSerializer.Deserialize(NormalizedImportSerializer.Serialize(result.Document)).World.QuestMarkers));
     }
