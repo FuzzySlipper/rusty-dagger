@@ -249,3 +249,5 @@ Daggerfall eligibility, formulas, timing, and authored meaning. Direct reads and
 actions use those owners. Typed facts and RuleEvents remain available where an
 interaction has real contributors; ordinary gameplay does not require a
 proposal/acceptance or replay protocol.
+
+Immediate healing uses matching permanent drain sources separately from disease or poison cure. The compiled eight attribute variants heal only their own drain; health and fatigue restore the canonical bounded tracks, with classic fatigue scaling. Potion-only spell-point healing is a named self-targeted compiled payload without a fabricated classic spell identity. Healing expires after its initial round, cannot resurrect an accepted death, and current saves retain the resulting stats and tracks without replay.
