@@ -574,6 +574,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         if (fact is ActorDiedFact died)
         {
             DaggerfallParalysisEffects.EndOnDeath(State.Effects, died.ActorId);
+            DaggerfallContinuousDestructionEffects.EndOnDeath(State.Effects, died.ActorId);
             _corpseLoot.Create(died);
             _rewards.React(died, _facts);
         }
