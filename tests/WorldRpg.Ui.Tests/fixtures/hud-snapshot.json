@@ -1,4 +1,14 @@
 {
+  "dispel": null,
+  "detectors": [],
+  "identify": null,
+  "spells": {
+    "available": [],
+    "ready": null,
+    "result": "",
+    "sale": null,
+    "information": null
+  },
   "resources": [
     {
       "id": "health",
@@ -185,7 +195,9 @@
     "dialogue": {
       "revision": "1",
       "targetLabel": "guard",
+      "bankAvailable": false,
       "greeting": "How can I help you, stranger?",
+      "comprehendLanguagesBonus": 0,
       "tone": "normal",
       "question": null,
       "reply": null,
@@ -211,6 +223,11 @@
     "revision": "0",
     "book": null,
     "notes": []
+  },
+  "property": {
+    "bankAvailable": false,
+    "offers": [],
+    "storage": null
   },
   "transport": {
     "mode": "foot",
@@ -313,6 +330,8 @@
     "interruption": "none",
     "message": null
   },
+  "lodging": null,
+  "map": null,
   "travel": {
     "destinations": [
       {
@@ -557,6 +576,8 @@
       }
     ],
     "message": null,
+    "executionAvailable": false,
+    "lastResult": null,
     "quote": null
   },
   "inventory": {
@@ -1223,6 +1244,9 @@
     "creationAvailable": false,
     "creation": {
       "editing": false,
+      "mode": null,
+      "classQuestionsAvailable": true,
+      "classQuiz": null,
       "current": {
         "name": "Nameless",
         "race": "breton",
@@ -1393,8 +1417,8 @@
         {
           "id": "class18",
           "label": "Knight",
-          "available": true,
-          "restriction": "The corpus supplies no class portrait named for \u0027Knight\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+          "available": false,
+          "restriction": "This career is not selectable for a new player character."
         },
         {
           "id": "custom",
@@ -1468,6 +1492,7 @@
         }
       ],
       "custom": null,
+      "summary": null,
       "background": null
     },
     "levelUp": null,
@@ -1614,9 +1639,14 @@
       "daggerfall.quests.witches-commoners",
       "daggerfall.quests.merchants-vampires",
       "daggerfall.quests.disabled",
-      "daggerfall.quests.nobility"
+      "daggerfall.quests.nobility",
+      "daggerfall.small-ship",
+      "daggerfall.large-ship"
     ],
     "tuning": "daggerfall.defaults"
   },
-  "uiArtRevision": "session-art-revision"
+  "uiArtRevision": "session-art-revision",
+  "pickScreens": [
+    "screen.pick.02"
+  ]
 }
