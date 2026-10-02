@@ -39,7 +39,7 @@ internal sealed record DaggerfallHudFrame(
     DaggerfallTravelPresentation? Travel = null,
     string? SiteName = null,
     DaggerfallLodgingView? Lodging = null,
-    DaggerfallMapPresentation? Map = null, DaggerfallDispelView? Dispel = null);
+    DaggerfallMapPresentation? Map = null, DaggerfallDispelView? Dispel = null, IReadOnlyList<DaggerfallDetectorView>? Detectors = null);
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
 internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<DaggerfallHudResourceDefinition> resources, ResolvedCompositionIdentity? compositionIdentity, DaggerfallUiArt? uiArt = null) : IDisposable
@@ -60,13 +60,20 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ArgumentNullException.ThrowIfNull(frame);
         var (player, progression, presentation, mode, controls, slots, inventory, loot, character, panelRequest,
             saveSlots, saveSlotDiagnostic, controlSettings, controlDiagnostic, activation, quests, notebook, transport,
-            dungeonText, death, rest, travel, siteName, lodging, map, dispel) = frame;
+            dungeonText, death, rest, travel, siteName, lodging, map, dispel, detectors) = frame;
         UiValueBuilder builder = new();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
         (string Key, uint Value)[] fields =
         [
             ("dispel", dispel is null ? builder.Null() : builder.Object(("revision", builder.String(dispel.Revision)),
                 ("options", builder.Array(dispel.Options.Select(option => builder.Object(("id", builder.String(option.Id)), ("label", builder.String(option.Label)))).ToArray())))),
+            ("detectors", builder.Array((detectors ?? []).Select(source => builder.Object(
+                ("source", builder.String(source.Source)), ("kind", builder.String(source.Kind)),
+                ("contacts", builder.Array(source.Contacts.Select(contact => builder.Object(
+                    ("kind", builder.String(contact.Kind)), ("id", builder.String(contact.Id)),
+                    ("distance", builder.Number(contact.Distance)), ("bearingRadians", builder.Number(contact.BearingRadians)),
+                    ("items", builder.Array(contact.Items.Select(item => builder.Object(("id", builder.String(item.Id)),
+                        ("definition", builder.String(item.Definition)), ("quantity", builder.Number(checked((long)item.Quantity))))).ToArray())))).ToArray())))).ToArray())),
             ("resources", builder.Array(rows)),
             ("experience", builder.Number(progression.Experience)),
             ("lastOutcome", builder.String(presentation.LastOutcome)),

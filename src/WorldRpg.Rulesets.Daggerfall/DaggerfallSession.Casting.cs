@@ -92,21 +92,29 @@ internal sealed partial class DaggerfallSession
     }
     private long[] AreaSpellTargets(long caster, Vector3 center, bool excludeCaster, double radius = 4d, bool exclusive = false)
     {
-        var candidates = CurrentPositions().Where(pair => !excludeCaster || pair.Key != caster)
-            .Select(pair => new PerceptionTarget(checked((ulong)pair.Key), pair.Value.ToVector())).ToArray();
+        return NearbyContacts(caster, center, CurrentPositions().Where(pair => !excludeCaster || pair.Key != caster), radius, exclusive)
+            .Keys.Order().ToArray();
+    }
+    /// <summary>Engine supplies current distances; callers decide strict range and target eligibility without a second spatial index.</summary>
+    private Dictionary<long, double> NearbyContacts(long observer, Vector3 center,
+        IEnumerable<KeyValuePair<long, WorldRpg.Kit.Controls.WorldPoint>> positions, double radius, bool exclusive)
+    {
+        var candidates = positions.Select(pair => new PerceptionTarget(checked((ulong)pair.Key), pair.Value.ToVector())).ToArray();
+        if (candidates.Length == 0) return [];
         PerceptionQueryRequest request = new(_spatial.Session,
-            new[] { new PerceptionObserver(checked((ulong)caster), center, Vector3.UnitZ, radius, -1d, 1d) }, candidates,
+            new[] { new PerceptionObserver(checked((ulong)observer), center, Vector3.UnitZ, radius, -1d, 1d) }, candidates,
             ReadOnlyMemory<SpatialEntityCollider>.Empty, 0, 0, 64);
-        HashSet<long> targets = [];
+        Dictionary<long, double> contacts = [];
         PerceptionReadoutResult receipt;
         do
         {
             receipt = _engine.Perception.QueryVisibility(request);
-            // Classic blast radius does not test line of sight. Engine supplies distance, not product policy.
-            foreach (var pair in receipt.Pairs.ToArray()) if (exclusive ? pair.Distance < radius : pair.Distance <= radius) targets.Add(checked((long)pair.Target));
+            // Classic detection and blast radii do not test line of sight.
+            foreach (var pair in receipt.Pairs.ToArray())
+                if (exclusive ? pair.Distance < radius : pair.Distance <= radius) contacts[checked((long)pair.Target)] = pair.Distance;
             if (receipt.HasNextPairCursor) request = request with { PairCursor = receipt.NextPairCursor, ExpectedProjectionIdentity = receipt.ProjectionIdentity };
         } while (receipt.HasNextPairCursor);
-        return targets.Order().ToArray();
+        return contacts;
     }
     private static bool ValidDirection(Vector3 value) => float.IsFinite(value.X) && float.IsFinite(value.Y)
         && float.IsFinite(value.Z) && value.LengthSquared() > .000001f;

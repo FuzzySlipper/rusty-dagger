@@ -24,6 +24,7 @@ internal sealed record DaggerfallTuning(
     DaggerfallPropertyTuning Property,
     DaggerfallTransportTuning Transport)
 {
+    internal DaggerfallDetectionTuning Detection { get; init; } = new(14d);
     internal DaggerfallMusicTuning Music { get; init; } = new(AlternatePlaylists: false);
 
     internal static DaggerfallTuning Defaults { get; } = new(
@@ -94,6 +95,7 @@ internal sealed record DaggerfallTuning(
         Climbing = Climbing.Validate(),
         Property = Property.Validate(),
         Transport = Transport.Validate(),
+        Detection = Detection.Validate(),
     };
 
     internal static DaggerfallTuning Read(ReadOnlySpan<byte> payload)
@@ -227,6 +229,7 @@ internal sealed record DaggerfallTuning(
                 transport.GetProperty("wagonCapacityClassicUnits").GetInt32(),
                 transport.GetProperty("wagonAccessRange").GetSingle()))
         {
+            Detection = new(root.GetProperty("detection").GetProperty("maximumDistance").GetDouble()),
             Music = new DaggerfallMusicTuning(root.GetProperty("music").GetProperty("alternatePlaylists").GetBoolean()),
         }.Validate();
     }
@@ -464,3 +467,13 @@ internal readonly record struct PlayerInitialLook(float YawRadians, float PitchR
 
 /// <summary>Chooses the donor's standard or alternate playlists; JSON admission requires a Boolean.</summary>
 internal sealed record DaggerfallMusicTuning(bool AlternatePlaylists);
+
+internal sealed record DaggerfallDetectionTuning(double MaximumDistance)
+{
+    internal DaggerfallDetectionTuning Validate()
+    {
+        if (!double.IsFinite(MaximumDistance) || MaximumDistance <= 0d)
+            throw new ArgumentOutOfRangeException(nameof(MaximumDistance));
+        return this;
+    }
+}

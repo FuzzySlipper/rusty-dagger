@@ -15,6 +15,10 @@ import type { RustyApplicationUiContext } from '@rusty-engine/product-ui';
 interface UiAction { readonly action: string; readonly [field: string]: string | number | boolean | undefined; }
 
 interface DaggerHud {
+  readonly detectors?: readonly { readonly source: string; readonly kind: string; readonly contacts: readonly {
+    readonly kind: string; readonly id: string; readonly distance: number; readonly bearingRadians: number;
+    readonly items: readonly { readonly id: string; readonly definition: string; readonly quantity: number }[];
+  }[] }[];
   readonly dispel?: { readonly revision: string; readonly options: readonly { readonly id: string; readonly label: string }[] } | null;
   readonly resources: readonly { readonly id: string; readonly label: string; readonly current: number; readonly maximum: number }[];
   readonly lastOutcome: string;
@@ -208,7 +212,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     </section>
     <p class="dagger-outcome" role="status">Awaiting projection…</p>
     <section class="dagger-quests" aria-live="polite"></section>
-    <p class="dagger-view" aria-live="polite"></p><section class="dagger-status"></section><button class="dagger-focus-close" hidden></button>
+    <p class="dagger-view" aria-live="polite"></p><section class="dagger-detectors" aria-label="Detected nearby objects"></section><section class="dagger-status"></section><button class="dagger-focus-close" hidden></button>
     <div class="dagger-death" role="alertdialog" aria-labelledby="dagger-death-title" aria-describedby="dagger-death-message" hidden>
       <img class="dagger-death-screen" alt="You have died.">
       <div class="dagger-death-fade" aria-hidden="true"></div>
@@ -311,6 +315,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   dispel.hidden = true;
   quests.before(dispel);
   const view = shell.querySelector<HTMLParagraphElement>('.dagger-view')!;
+  const detectors = shell.querySelector<HTMLElement>('.dagger-detectors')!;
   const status = shell.querySelector<HTMLElement>('.dagger-status')!;
   const focusClose = shell.querySelector<HTMLButtonElement>('.dagger-focus-close')!;
   focusClose.addEventListener('click', () => { if (focusClose.dataset.container && focusClose.dataset.close) context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: focusClose.dataset.close, container: focusClose.dataset.container } }); });
@@ -987,6 +992,17 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       if (!dialogueWindow.open) dialogueWindow.showModal();
     }
     view.textContent = value.view ? viewSummary(value.view) : '';
+    detectors.replaceChildren();
+    detectors.hidden = !value.detectors?.length;
+    for (const source of value.detectors ?? []) {
+      const row = document.createElement('p');
+      row.dataset.source = source.source;
+      row.textContent = `Detect ${source.kind}: ` + (source.contacts.length ? source.contacts.map(contact => {
+        const bearing = Math.round(contact.bearingRadians * 180 / Math.PI);
+        return `${contact.kind} ${contact.id}, ${contact.distance.toFixed(1)} m, bearing ${bearing}°`;
+      }).join('; ') : 'none nearby');
+      detectors.append(row);
+    }
     status.replaceChildren(...(value.slots ?? []).map(row => { const item = document.createElement('p'); item.textContent = `${row.label}: ${row.detail}`; return item; }));
     const focus = value.focus ?? null;
     focusClose.hidden = focus === null;

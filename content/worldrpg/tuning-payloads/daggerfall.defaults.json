@@ -1,4 +1,5 @@
 {
+  "detection": { "maximumDistance": 14.0 },
   "playerControl": {
     "lookSensitivity": 0.0035,
     "pitchMinimumRadians": -1.5533,
