@@ -7,6 +7,16 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallUiActionTests
 {
     [Theory]
+    [InlineData("{\"action\":\"teleport-select\",\"revision\":\"cast.1\",\"key\":\"anchor\"}", true)]
+    [InlineData("{\"action\":\"teleport-select\",\"revision\":\"cast.1\",\"key\":\"recall\"}", true)]
+    [InlineData("{\"action\":\"teleport-select\",\"revision\":\"cast.1\",\"key\":\"cancel\"}", true)]
+    [InlineData("{\"action\":\"teleport-select\",\"key\":\"anchor\"}", false)]
+    [InlineData("{\"action\":\"teleport-select\",\"revision\":\"cast.1\",\"key\":\"other\"}", false)]
+    [InlineData("{\"action\":\"teleport-select\",\"revision\":\"cast.1\",\"key\":\"anchor\",\"profile\":\"fake\"}", false)]
+    public void Teleport_choice_uses_only_the_current_paid_request_and_named_choice(string json, bool accepted)
+        => Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
+
+    [Theory]
     [InlineData("{\"action\":\"attack\"}", "attack")]
     [InlineData("{\"action\":\"loot\"}", "loot")]
     [InlineData("{\"action\":\"inventory\"}", "inventory")]

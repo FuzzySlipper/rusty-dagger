@@ -22,6 +22,7 @@ interface DaggerHud {
   }[] }[];
   readonly spells?: SpellbookProjection | null;
   readonly identify?: { readonly revision:string; readonly cost:number; readonly options:readonly { readonly id:string; readonly label:string }[] } | null;
+  readonly teleport?: { readonly revision:string; readonly anchorSet:boolean } | null;
   readonly dispel?: { readonly revision: string; readonly options: readonly { readonly id: string; readonly label: string }[] } | null;
   readonly resources: readonly { readonly id: string; readonly label: string; readonly current: number; readonly maximum: number }[];
   readonly lastOutcome: string;
@@ -328,6 +329,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const quests = shell.querySelector<HTMLElement>('.dagger-quests')!;
   const identify = document.createElement('section');
   identify.className = 'dagger-identify'; identify.hidden = true; quests.before(identify);
+  const teleport = document.createElement('section');
+  teleport.className = 'dagger-teleport'; teleport.hidden = true; quests.before(teleport);
   const dispel = document.createElement('section');
   dispel.className = 'dagger-dispel';
   dispel.hidden = true;
@@ -910,6 +913,19 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
         button.addEventListener('click',()=>choose(option.id));identify.append(button);
       }
       const cancel=document.createElement('button');cancel.textContent='Cancel';cancel.addEventListener('click',()=>choose());identify.append(cancel);
+    }
+    teleport.hidden = !value.teleport;
+    teleport.replaceChildren();
+    if (value.teleport) {
+      const choice=value.teleport;
+      const title=document.createElement('h2');title.textContent='Teleport';teleport.append(title);
+      for (const [key,label] of [['anchor','Set anchor'],['recall','Recall to anchor'],['cancel','Cancel']] as const) {
+        const button=document.createElement('button');button.textContent=label;
+        button.disabled=key==='recall' && !choice.anchorSet;
+        button.addEventListener('click',()=>context.intents?.claim('dagger.ui', {
+          kind:'product-payload',contract:UI_ACTION_CONTRACT,data:{action:'teleport-select',revision:choice.revision,key},
+        }));teleport.append(button);
+      }
     }
     dispel.hidden = !value.dispel;
     dispel.replaceChildren();

@@ -14,6 +14,122 @@ public sealed class DaggerfallMysticismEffectsTests
 {
     private static long _nextTestCast;
     [Fact]
+    public void Silence_cast_chance_failure_has_no_condition_and_success_has_canonical_defense()
+    {
+        using Fixture f = new(); var s = f.Session;
+        var failed = Cast(s, Setting(19, -1, 0));
+        Assert.Equal(DaggerfallCastOutcome.ChanceFailed, Assert.Single(failed.Results).Outcome);
+        Assert.False(s.State.Effects.MagicDefenseFor(1).BlocksCasting);
+        var applied = Cast(s, Setting(19, -1, 100));
+        Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(applied.Results).Outcome);
+        Assert.True(s.State.Effects.MagicDefenseFor(1).BlocksCasting);
+        s.State.Effects.Cancel(Assert.Single(s.State.Effects.Active).Context.Instance);
+        Assert.False(s.State.Effects.MagicDefenseFor(1).BlocksCasting);
+    }
+    [Fact]
+    public void Silence_blocks_ready_and_release_before_payment_restores_and_cures_or_expires()
+    {
+        using Fixture f = new(); var s = f.Session;
+        var spell = new DaggerfallSpellDefinition("test.silence-block", 1, false, "Languages", 4, 0, 0, 0, [Setting(44, -1, 20)]);
+        var track = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka"));
+        track.Maximum.BaseValue = 10000; track.SetCurrent(10000);
+        var casting = new DaggerfallCasting(TestPayload.Definitions.Magic with { Spells = new Dictionary<string, DaggerfallSpellDefinition> { [spell.Key] = spell } }, s.State.Effects,
+            id => id == 1 ? s.State.Actors.Player.Actor : null, s.MagicProfile, _ => true, _ => { }, _ => { }, RandomMaximum.Create(), 1, playerKnowsSpell: _ => true);
+        Assert.Equal(DaggerfallCastOutcome.Ready, casting.Ready(1, spell.Key).Outcome);
+        void Silence(string id) => s.State.Effects.Start(new(id, "silence", "spell.foreign", 2000, 1, "silence", "Magic", null, 1, 10,
+            JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(Setting(19, -1, 100), 1, 0, 100), DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)));
+        Silence("silence-one"); Silence("silence-two");
+        Assert.Equal(19u, Assert.Single(s.State.Effects.Active).Lifecycle.RemainingRounds);
+        double before = track.Current;
+        Assert.Equal(DaggerfallCastOutcome.Silenced, casting.Release(1, true).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Silenced, casting.Ready(1, spell.Key).Outcome);
+        Assert.Equal(before, track.Current);
+        using var restored = f.Restore(s.CaptureSave());
+        Assert.True(restored.State.Effects.MagicDefenseFor(1).BlocksCasting);
+        restored.State.Effects.AdvanceElapsedRounds(19);
+        Assert.False(restored.State.Effects.MagicDefenseFor(1).BlocksCasting);
+        Assert.True(s.State.Effects.Cure(Assert.Single(s.State.Effects.Active).Context.Instance));
+        Assert.False(s.State.Effects.MagicDefenseFor(1).BlocksCasting);
+        Assert.Equal(DaggerfallCastOutcome.Ready, casting.Ready(1, spell.Key).Outcome);
+    }
+
+    [Fact]
+    public void Paid_teleport_choice_and_anchor_restore_then_recall_exact_pose_once_without_elapsed_time()
+    {
+        using Fixture f = new(twoSites: true); var s = f.Session;
+        var position = new WorldRpg.Kit.Controls.WorldPoint(17, 3, -11);
+        s.State.PlayerControl.MoveTo(position.ToVector()); s.State.PlayerControl.YawRadians = .7f; s.State.PlayerControl.PitchRadians = -.2f;
+        Cast(s, Setting(43, -1, 0)); var view = s.TeleportView!;
+        Assert.False(view.AnchorSet); Assert.Equal(ProductMode.Modal, s.PendingModeRequest);
+        var before = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")).Current;
+        using var pending = f.Restore(s.CaptureSave()); Assert.Equal(view.Revision, pending.TeleportView!.Revision);
+        pending.ChooseTeleport("stale", "anchor"); Assert.NotNull(pending.TeleportView);
+        pending.Update(new ProductUpdate(OuterUpdate(7), [Ui(JsonSerializer.Serialize(new { action = "teleport-select", revision = view.Revision, key = "anchor" }))]));
+        Assert.Null(pending.TeleportView); Assert.NotNull(DaggerfallSavePayload.Read(pending.CaptureSave()).TeleportAnchor);
+        Assert.Equal(before, pending.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")).Current);
+        Assert.True(pending.TryTransitionTo(f.Destination!.ProfileKey));
+        using var away = f.Restore(pending.CaptureSave());
+        Cast(away, Setting(43, -1, 0)); var calendar = DaggerfallSavePayload.Read(away.CaptureSave()).Calendar; var paid = away.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")).Current;
+        away.ChooseTeleport(away.TeleportView!.Revision, "recall");
+        Assert.Equal(f.Composition.StartSite.ProfileKey, away.Sites.ActiveProfile);
+        Assert.Equal(position, away.State.PlayerControl.Position); Assert.Equal(.7f, away.State.PlayerControl.YawRadians); Assert.Equal(-.2f, away.State.PlayerControl.PitchRadians);
+        Assert.Equal(calendar, DaggerfallSavePayload.Read(away.CaptureSave()).Calendar); Assert.Equal(paid, away.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")).Current);
+        Assert.Null(DaggerfallSavePayload.Read(away.CaptureSave()).TeleportAnchor); Assert.Null(away.Sites.ReturnProfile);
+        using var arrived = f.Restore(away.CaptureSave()); Assert.Equal(position, arrived.State.PlayerControl.Position);
+        Cast(arrived, Setting(43, -1, 0)); arrived.ChooseTeleport(arrived.TeleportView!.Revision, "recall");
+        Assert.Contains("must be set", arrived.Presentation.LastOutcome);
+    }
+
+    [Fact]
+    public void Interior_anchor_restores_its_original_entrance_instead_of_the_recall_departure()
+    {
+        using Fixture f = new(twoSites: true); var s = f.Session;
+        var original = s.State.PlayerControl.Position;
+        Assert.True(s.TryTransitionTo(f.Destination!.ProfileKey));
+        Cast(s, Setting(43, -1, 0)); s.ChooseTeleport(s.TeleportView!.Revision, "anchor");
+        var anchored = s.State.PlayerControl.Position;
+        Assert.True(s.TryTransitionTo(f.Composition.StartSite.ProfileKey));
+        s.State.PlayerControl.MoveTo(new System.Numerics.Vector3(100, 1, 100));
+        Cast(s, Setting(43, -1, 0)); s.ChooseTeleport(s.TeleportView!.Revision, "recall");
+        Assert.Equal(anchored, s.State.PlayerControl.Position);
+        using var restored = f.Restore(s.CaptureSave());
+        Assert.True(restored.TryTransitionTo(f.Composition.StartSite.ProfileKey));
+        Assert.Equal(original, restored.State.PlayerControl.Position);
+    }
+
+    [Fact]
+    public void Teleport_cancel_retains_paid_cost_and_malformed_anchor_is_rejected()
+    {
+        using Fixture f = new(); var s = f.Session;
+        Cast(s, Setting(43, -1, 0)); double paid = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")).Current;
+        s.ChooseTeleport(s.TeleportView!.Revision, "cancel"); Assert.Null(s.TeleportView);
+        Assert.Equal(paid, s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")).Current);
+        Cast(s, Setting(43, -1, 0)); s.ChooseTeleport(s.TeleportView!.Revision, "anchor");
+        var saved = DaggerfallSavePayload.Read(s.CaptureSave());
+        var malformed = saved with { TeleportAnchor = saved.TeleportAnchor! with {
+            Profile = saved.TeleportAnchor.Profile with { LogicalId = "not-admitted" } } };
+        Assert.Throws<InvalidOperationException>(() => f.Restore(DaggerfallSavePayload.Encode(malformed)));
+    }
+
+    [Fact]
+    public void Rejected_recall_keeps_the_departure_world_and_anchor_for_a_later_paid_attempt()
+    {
+        using Fixture f = new(twoSites: true); var s = f.Session;
+        Cast(s, Setting(43, -1, 0)); s.ChooseTeleport(s.TeleportView!.Revision, "anchor");
+        Assert.True(s.TryTransitionTo(f.Destination!.ProfileKey)); var departed = s.State.PlayerControl.Position;
+        var relation = s.Sites.ReturnProfile;
+        Cast(s, Setting(43, -1, 0)); f.Spatial.RejectContentReplacement = true;
+        s.ChooseTeleport(s.TeleportView!.Revision, "recall");
+        Assert.Contains("failed", s.Presentation.LastOutcome);
+        Assert.Equal(f.Destination.ProfileKey, s.Sites.ActiveProfile); Assert.Equal(departed, s.State.PlayerControl.Position);
+        Assert.Equal(relation, s.Sites.ReturnProfile);
+        Assert.NotNull(DaggerfallSavePayload.Read(s.CaptureSave()).TeleportAnchor);
+        f.Spatial.RejectContentReplacement = false;
+        Cast(s, Setting(43, -1, 0)); s.ChooseTeleport(s.TeleportView!.Revision, "recall");
+        Assert.Equal(f.Composition.StartSite.ProfileKey, s.Sites.ActiveProfile);
+        Assert.Null(DaggerfallSavePayload.Read(s.CaptureSave()).TeleportAnchor);
+    }
+    [Fact]
     public void Language_bonus_keeps_first_settings_extends_duration_and_restores_then_expires()
     {
         using Fixture f = new(); var s = f.Session;
@@ -98,7 +214,7 @@ public sealed class DaggerfallMysticismEffectsTests
     {
         using Fixture f = new(); var s = f.Session;
         ulong item = s.State.Inventory.Read().UniqueItems.Select(value => s.State.Inventory.GetDurableItemId(value.Entity).Value).First();
-        s.State.Effects.Start(new("held", "invisibility-true", "item", 1, 1, "invisibility", "Magic", item, 1, 10,
+        s.State.Effects.Start(new("held", "invisibility-true", "item", 1, 1, "invisibility", "Magic", item, 1, null,
             JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(Setting(13, 1, 0), 1, 0, 100), DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)) { BundleId = "held.bundle", BundleKind = DaggerfallEffectBundleKind.HeldMagicItem });
         Cast(s, Setting(24, 1, 0)); Cast(s, Setting(6, 0, 100)); var revision = s.DispelView!.Revision;
         s.State.ItemInstances.ReplaceUnique(item, s.State.ItemInstances.RequireUnique(item) with { CurrentCondition = 0 });
@@ -149,6 +265,7 @@ public sealed class DaggerfallMysticismEffectsTests
         internal DaggerfallSiteProfile? Destination { get; }
         internal PerceptionFake Perception { get; } = PerceptionFake.Create();
         internal DaggerfallSession Session { get; }
+        internal SpatialFake Spatial { get; private set; } = null!;
         internal Fixture(bool twoSites = false)
         {
             var source = ReadInputs(TestData.RepositoryRoot);
@@ -159,7 +276,8 @@ public sealed class DaggerfallMysticismEffectsTests
         private EngineContextFake Engine()
         {
             List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, Composition.StartSite); if (Destination is not null) PopulateContent(content, Destination);
-            return EngineContextFake.Create(content, SpatialFake.Create(Composition.StartSite.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases), Perception.Service, random: RandomMaximum.Create());
+            Spatial = SpatialFake.Create(Composition.StartSite.SpatialArtifact.Sha256, releases);
+            return EngineContextFake.Create(content, Spatial.Service, new AppearanceFake(releases), Perception.Service, random: RandomMaximum.Create());
         }
         internal DaggerfallSession Restore(RulesetSavePayload payload) => DaggerfallSession.Restore(Engine().Context, Composition, payload);
         public void Dispose() => Session.Dispose();

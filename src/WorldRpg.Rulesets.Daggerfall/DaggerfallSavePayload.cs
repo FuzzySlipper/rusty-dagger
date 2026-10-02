@@ -55,6 +55,8 @@ internal sealed record DaggerfallSavePayload(
     public DaggerfallReadySpell? ReadySpell {get;init;}
     [JsonRequired]
     public DaggerfallDispelRequest? PendingDispel { get; init; }
+    [JsonRequired] public string? PendingTeleport { get; init; }
+    [JsonRequired] public DaggerfallTeleportAnchor? TeleportAnchor { get; init; }
     [JsonRequired] public DaggerfallIdentifyRequest? PendingIdentify { get; init; }
     [JsonRequired]
     public long[] BanishedActors { get; init; } = [];
@@ -171,6 +173,7 @@ internal sealed record DaggerfallSavePayload(
     {
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(inputs);
+        TeleportAnchor?.Resolve(definitions, inputs, profiles, tuning ?? DaggerfallTuning.Defaults);
         Notebook.Validate(definitions, definitions.TextPresentation);
         Lodging.Validate(definitions.Locations);
         Travel.Validate(definitions.Locations);
@@ -574,6 +577,8 @@ internal sealed record DaggerfallSavePayload(
         if (NextCastSequence < 1) throw new ArgumentException("Saved next cast sequence must be positive.");
         ArgumentNullException.ThrowIfNull(Player);
         PendingDispel?.Validate();
+        if (PendingTeleport is not null && string.IsNullOrWhiteSpace(PendingTeleport)) throw new ArgumentException("Saved teleport choice requires its paid cast identity.");
+        TeleportAnchor?.Validate();
         PendingIdentify?.Validate();
         ArgumentNullException.ThrowIfNull(Actors);
         ArgumentNullException.ThrowIfNull(DynamicActors);
@@ -1392,6 +1397,7 @@ internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definiti
 
 [JsonSourceGenerationOptions(WriteIndented = false)]
 [JsonSerializable(typeof(DaggerfallDispelRequest))]
+[JsonSerializable(typeof(DaggerfallTeleportAnchor))]
 [JsonSerializable(typeof(DaggerfallIdentifyRequest))]
 [JsonSerializable(typeof(DaggerfallCastEffectState))]
 [JsonSerializable(typeof(DaggerfallShieldState))]
