@@ -449,6 +449,7 @@ internal sealed partial class DaggerfallSession
                         DaggerfallTemplateItemDefinitions.BreaksInPlural(template), result.PreviousCondition, result.Metadata.CurrentCondition,
                         result.Outcome == DaggerfallItemConditionOutcome.Broken, _latestUpdateGeneration ?? 0, _latestSimulationStep ?? 0));
                 });
+            effects.Completed += _itemCastTriggers.EffectCompleted;
             _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, _dungeonText, CapturePropertyStorage, QuestTravelOrigin, authored, () => Casting.NextSequence);
             _roster = new DaggerfallActorRoster(State, definitions, _random, assembled.Mechanics, _actorIdentities, _uniqueItems,
                 _authoredEntityIds, authored, saved?.DynamicActors ?? [], _grounding, () => _sites.Projection, _lootUi, _corpseLoot);

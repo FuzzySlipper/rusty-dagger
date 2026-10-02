@@ -498,10 +498,10 @@ internal sealed record DaggerfallSavePayload(
             AddQuestStacks(questStacks, DaggerfallItemOwner.Actor(inventory.EntityId), inventory.Inventory.Stacks);
         Quests.ValidateBindings(combatants, savedLedger, locations, questStacks);
         DaggerfallActiveEffectSave[] allEffects = [.. ActiveEffects, .. SiteDeltas.SelectMany(delta => delta.Effects)];
-        ValidateActiveEffects(allEffects, combatants, uniqueItems);
+        ValidateActiveEffects(allEffects, combatants, uniqueItems, definitions.Magic);
         Social.Validate(definitions.Factions);
         Character?.Validate(definitions);
-        if (ReadySpell is { } ready && (!Enum.IsDefined(ready.Source) || ready.Cost < 0
+        if (ReadySpell is { } ready && (!Enum.IsDefined(ready.Source) || ready.Cost < 0 || ready.ItemId is not null && ready.Cost != 0
             || ready.Source is DaggerfallCastSource.ItemHeld or DaggerfallCastSource.ItemStrike
             || (ready.ItemId is null) != (ready.Source == DaggerfallCastSource.Spell)
             || !definitions.Magic.Spells.ContainsKey(ready.SpellKey)
@@ -882,10 +882,16 @@ internal sealed record DaggerfallSavePayload(
         }
     }
 
-    private static void ValidateActiveEffects(IEnumerable<DaggerfallActiveEffectSave> effects, ISet<long> actors, IReadOnlyDictionary<ulong, DaggerfallItemMetadataSave> uniqueItems)
+    private static void ValidateActiveEffects(IEnumerable<DaggerfallActiveEffectSave> effects, ISet<long> actors, IReadOnlyDictionary<ulong, DaggerfallItemMetadataSave> uniqueItems, DaggerfallMagicCatalogSet magic)
     {
+        DaggerfallActiveEffectSave[] savedEffects = effects.ToArray();
+        foreach (var item in uniqueItems.Where(value => value.Value.HeldCast is not null))
+        foreach (string instance in item.Value.HeldCast!.ActiveEffectInstances)
+            if (!savedEffects.Any(effect => effect.Instance == instance && effect.ItemId == item.Key
+                && effect.BundleKind == DaggerfallEffectBundleKind.HeldMagicItem && effect.CasterId == item.Value.HeldCast.CasterId))
+                throw new ArgumentException($"Saved held source {item.Key} names missing active effect '{instance}'.");
         HashSet<string> instances = new(StringComparer.Ordinal);
-        foreach (DaggerfallActiveEffectSave effect in effects)
+        foreach (DaggerfallActiveEffectSave effect in savedEffects)
         {
             effect.Validate();
             if (!instances.Add(effect.Instance)) throw new ArgumentException($"Saved effect instance '{effect.Instance}' appears more than once.");
@@ -897,7 +903,10 @@ internal sealed record DaggerfallSavePayload(
             {
                 if (!uniqueItems.TryGetValue(item, out var metadata)) throw new ArgumentException($"Saved effect instance '{effect.Instance}' names missing item {item}.");
                 if (effect.BundleKind == DaggerfallEffectBundleKind.HeldMagicItem
-                    && (metadata.HeldCast is not { } held || effect.CasterId != held.CasterId || effect.TargetId != held.CasterId || effect.RemainingRounds is not null))
+                    && (effect.CasterId is null || effect.TargetId != effect.CasterId || effect.RemainingRounds is not null
+                        || metadata.HeldCast is null && metadata.Enchantment is { } enchantment
+                            && magic.TryEnchantments(enchantment, out var payloads) && payloads.Any(value => value.Type == 1)
+                        || metadata.HeldCast is { } held && (effect.CasterId != held.CasterId || !held.ActiveEffectInstances.Contains(effect.Instance))))
                     throw new ArgumentException($"Saved held effect '{effect.Instance}' has no matching held source or lifetime.");
                 if (metadata.MaximumCondition > 0 && metadata.CurrentCondition == 0)
                     throw new ArgumentException($"Saved effect instance '{effect.Instance}' names broken item {item}.");

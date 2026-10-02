@@ -76,6 +76,7 @@ internal sealed partial class DaggerfallSession
                 return (player.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).ValueInt,
                     player.GetStat(StatId.Parse("medical")).ValueInt, rapid, noRegen);
             });
+        _itemCastTriggers.CompleteTimeIncrease();
         _restPresentation.Publish(result);
         Presentation.SetOutcome(result.Message ?? (result.Accepted ? "Rest complete." : "Rest refused."));
         return result;

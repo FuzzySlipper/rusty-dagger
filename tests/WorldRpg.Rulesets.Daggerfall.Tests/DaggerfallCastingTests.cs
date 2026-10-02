@@ -301,6 +301,18 @@ public sealed class DaggerfallCastingTests
         Assert.Equal((ulong)102, Assert.Single(h.Effects.Capture()).ItemId);
     }
 
+    [Theory]
+    [InlineData((int)DaggerfallCastSource.ItemUse)]
+    [InlineData((int)DaggerfallCastSource.ItemHeld)]
+    [InlineData((int)DaggerfallCastSource.ItemStrike)]
+    public void Immediate_item_trigger_publishes_one_terminal_cast_outcome(int source)
+    {
+        using Harness h = new(range: 0);
+        var result = h.Casting.Trigger(1, "spell", 101, (DaggerfallCastSource)source, 1);
+        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, result.Outcome);
+        Assert.Equal(result, Assert.Single(h.Completed));
+    }
+
     [Fact]
     public void Held_bundle_without_item_identity_is_rejected_before_Engine_admission()
     {

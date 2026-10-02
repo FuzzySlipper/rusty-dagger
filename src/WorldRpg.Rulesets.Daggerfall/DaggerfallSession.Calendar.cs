@@ -104,6 +104,7 @@ internal sealed partial class DaggerfallSession
         AdvanceCalendar(calendarBefore,
             deferSkillAdvancement ? DaggerfallCalendarAdvanceKind.ElapsedDeferringSkills : DaggerfallCalendarAdvanceKind.Elapsed,
             advance.AppliedSeconds > 0 ? encounter : null, resting: resting);
+        if (!resting) _itemCastTriggers.CompleteTimeIncrease();
         return advance;
     }
 
@@ -113,6 +114,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallCalendar calendarBefore = _time.Calendar;
         _ = _time.AdvanceInterval(gameSeconds, []);
         AdvanceCalendar(calendarBefore, DaggerfallCalendarAdvanceKind.QuestTraining);
+        _itemCastTriggers.CompleteTimeIncrease();
     }
 
     private void AdvanceEffectsForCalendar(DaggerfallCalendar before, bool ordinaryPlay, bool resting)

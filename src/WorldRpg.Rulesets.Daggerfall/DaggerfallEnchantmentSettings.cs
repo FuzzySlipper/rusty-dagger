@@ -39,7 +39,8 @@ internal static class DaggerfallEnchantmentSettings
                 if (!variants.Contains(setting.Param) || !setting.ParameterVariants.SequenceEqual(variants)
                     || setting.Meaning != meaning || setting.Cost <= 0 || setting.Key != $"enchantment.{setting.Type}.{setting.Param}"
                     || string.IsNullOrWhiteSpace(setting.DisplayName) || string.IsNullOrWhiteSpace(setting.SourceClass)
-                    || string.IsNullOrWhiteSpace(setting.TextKey) || string.IsNullOrWhiteSpace(setting.ParameterTextKey))
+                    || string.IsNullOrWhiteSpace(setting.TextKey) || string.IsNullOrWhiteSpace(setting.ParameterTextKey)
+                    || string.IsNullOrWhiteSpace(setting.SpellKey))
                     problems.Add($"Enchantment setting '{setting.Key}' has invalid classic spell trigger metadata.");
                 if (!seen.Add((setting.Type, setting.Param))) problems.Add($"Enchantment setting '{setting.Key}' is duplicated.");
                 continue;
