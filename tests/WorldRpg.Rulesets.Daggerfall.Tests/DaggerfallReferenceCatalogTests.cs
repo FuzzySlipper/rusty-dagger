@@ -161,7 +161,9 @@ public sealed class DaggerfallReferenceCatalogTests
 
         // A consumer can check a citation without owning the inventory, and the runtime
         // refuses a citation outside this set.
-        Assert.Equal(23, definitions.Catalogs.SourcePaths.Count);
+        Assert.Equal(25, definitions.Catalogs.SourcePaths.Count);
+        Assert.Contains("arena2/CLASSES.DAT", definitions.Catalogs.SourcePaths);
+        Assert.Contains("arena2/TEXT.RSC", definitions.Catalogs.SourcePaths);
         Assert.Contains("daggerfall-unity/Assets/Scripts/Game/Entities/RaceTemplate.cs", definitions.Catalogs.SourcePaths);
         Assert.Contains("arena2/CLASS00.CFG", definitions.Catalogs.SourcePaths);
         Assert.All(definitions.Catalogs.Careers, career => Assert.Contains(career.Source.Path, definitions.Catalogs.SourcePaths));
