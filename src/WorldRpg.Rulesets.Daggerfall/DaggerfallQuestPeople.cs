@@ -5,24 +5,28 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
+internal sealed record DaggerfallQuestPersonHome(DaggerfallQuestResourceBinding Binding, DaggerfallQuestResourceTextContext Text);
+
 /// <summary>Selected Person meaning before its world projection is admitted.</summary>
 internal sealed record DaggerfallQuestPersonSelection(int FactionId, string Race, string Gender,
     int HudFace, int? SourceFace, ushort NameSeed, string DisplayName, bool Individual,
     int? VampireClanFactionId, long? QuestorId = null)
 {
     public DaggerfallNpcAppearance? Appearance { get; init; }
+    public DaggerfallQuestPersonHome? Home { get; init; }
 }
 
 /// <summary>Explicit current-world inputs; permanent player transformation is supplied by its racial owner.</summary>
 internal sealed record DaggerfallQuestPersonContext(DaggerfallSiteRecord Site, DaggerfallNpc? Questor = null,
-    int? PermanentPlayerClanFactionId = null);
+    int? PermanentPlayerClanFactionId = null, DaggerfallWorldProfileKey? CurrentProfile = null, DaggerfallInteriorBuilding? Interior = null);
 
 /// <summary>Person source policy over the published faction and race catalogs.</summary>
 internal sealed class DaggerfallQuestPersonAllocator(DaggerfallDefinitions definitions, IRandomService random,
     DaggerfallNames names, Func<DaggerfallQuestInstanceSave, DaggerfallQuestPersonContext> context,
-    Action<long, string>? retainNpcName = null)
+    Action<long, string>? retainNpcName = null, DaggerfallQuestPlaceAllocator? places = null)
 {
-    internal DaggerfallQuestResourceState Allocate(DaggerfallQuestInstanceSave instance, DaggerfallQuestResourceDefinition declaration)
+    internal DaggerfallQuestResourceState Allocate(DaggerfallQuestInstanceSave instance, DaggerfallQuestResourceDefinition declaration,
+        IEnumerable<DaggerfallQuestResourceState>? parentResources = null, IEnumerable<DaggerfallQuestResourceState>? activeResources = null)
     {
         if (declaration.Kind != "person" || declaration.Person is not { } options)
             throw new ArgumentException("Person allocation requires a normalized Person declaration.");
@@ -57,14 +61,32 @@ internal sealed class DaggerfallQuestPersonAllocator(DaggerfallDefinitions defin
             ? faction.FlatVisuals[gender == "Female" ? 1 : 0] : null;
         DaggerfallNpcAppearance? appearance = existing?.Appearance
             ?? (flat is null ? null : new(race, gender, flat.Archive, flat.Record, seed, factionId));
+        var home = places?.AllocatePersonHome(instance.InstanceId, declaration, individual, questor,
+            current.CurrentProfile ?? throw new NotSupportedException("Person home allocation requires the actual current profile."), current.Interior,
+            parentResources ?? [], activeResources ?? []);
         var selection = new DaggerfallQuestPersonSelection(factionId, race, gender, face, options.Face, seed, name, individual, clan, existing?.DurableId)
-            { Appearance = appearance };
+            { Appearance = appearance, Home = home is null ? null : new(home.Binding, home.Text!) };
         return new(declaration.CanonicalId, existing is null ? DaggerfallQuestResourceBinding.Pending() : DaggerfallQuestResourceBinding.Actors(existing.DurableId))
         {
             SelectedPerson = selection,
-            Text = new(Name: name, Faction: questor && instance.FactionId != 0 ? RequireFaction(instance.FactionId).Name : faction.Name,
+            Text = new(Name: name, NameTwo: home?.Text?.Name, NameThree: home?.Text?.NameThree, NameFour: home?.Text?.NameFour,
+                Details: FlatDetails(flat, race),
+                Faction: questor && instance.FactionId != 0 ? RequireFaction(instance.FactionId).Name : faction.Name,
                 NpcVampireClan: clan is int id ? ClanName(id) : null),
         };
+    }
+
+    private string FlatDetails(DaggerfallFactionFlatDefinition? flat, string race)
+    {
+        if (flat is { } visual)
+        {
+            if (definitions.Factions.NpcCaptions.Count == 0)
+                throw new NotSupportedException("Person details require the published NPC flat-caption catalog.");
+            if (definitions.Factions.NpcCaptions.TryGetValue((visual.Archive, visual.Record), out var caption))
+                return caption;
+        }
+        string key = race switch { "dark-elf" => "darkElf", "high-elf" => "highElf", "wood-elf" => "woodElf", _ => race };
+        return definitions.Text.RequireInternalEntry(key, 0);
     }
 
     private string ClanName(int factionId)

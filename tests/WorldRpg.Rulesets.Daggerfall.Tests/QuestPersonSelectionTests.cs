@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -170,6 +171,92 @@ public sealed class QuestPersonSelectionTests
         Assert.Contains("one of the Vraseth", rendered.Text);
         Assert.DoesNotContain("Thrafey", rendered.Text);
         Assert.DoesNotContain(rendered.Diagnostics, value => value.Contains("%vcn", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Ordinary_Person_home_claim_excludes_the_next_selection_and_survives_encoded_save_and_completion()
+    {
+        JsonObject root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
+        var declaration = root["questSources"]!["resources"]!["declarations"]!.AsArray().Single(value =>
+            value!["sourceFile"]!.GetValue<string>() == "R0C11Y28.txt" && value["symbol"]!["canonicalId"]!.GetValue<string>() == "vamp")!.DeepClone();
+        declaration["quest"] = "homes"; declaration["sourceFile"] = "homes.txt";
+        root["questSources"]!["resources"]!["declarations"]!.AsArray().Add(declaration);
+        root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
+            {"name":"homes","displayName":"","sourceFile":"homes.txt","disposition":"compiled","messages":[],"blocks":[],"diagnostics":[]}
+            """));
+        var definitions = DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(root.ToJsonString()));
+        var blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
+        bool Eligible(DaggerfallSiteBuildingSource building) => building.Source.BuildingType is >= 17 and <= 20
+            && building.Source.FactionId is not (42 or 108) && blocks.QuestMarkers.TryGetValue(new(building.Source.Id.SourceKey, building.Source.Id.Index), out var markers)
+            && markers.Count > 0;
+        var site = definitions.Locations.Records.First(value => value.Region == 17 && value.Exterior?.Buildings.Values.Count(Eligible) >= 2);
+        DaggerfallSiteContext sites = new(definitions.Locations, site.Id, null, []);
+        sites.AdmitBuildingNames(RandomMinimum.Create(), definitions, blocks);
+        DaggerfallNames names = new(definitions, RandomMinimum.Create());
+        DaggerfallQuestPlaceAllocator places = new(definitions, sites, RandomMinimum.Create(), (_, _) => false,
+            region => definitions.BuildingNames.RegionNames[region], names.Residence);
+        DaggerfallQuestInstances quests = new(definitions, RandomMinimum.Create());
+        quests.BindPersonAllocator(new(definitions, RandomMinimum.Create(), names,
+            _ => new(site, CurrentProfile: new(site.Id, DaggerfallWorldProfileKind.Exterior, "exterior")), places: places));
+        var first = quests.Start(Instance("homes.txt") with { InstanceId = "first-home" });
+        var firstPerson = first.Resources.Single();
+        var home = firstPerson.SelectedPerson!.Home!;
+        var claim = home.Binding.Building!;
+        var claimed = site.Exterior!.Buildings[new(claim.BlockX, claim.BlockY, claim.Index)];
+        Assert.True(quests.ClaimsBuilding(site.Id, claimed));
+        Assert.Equal(home.Text.Name, firstPerson.Text!.NameTwo);
+        Assert.Equal(site.Name, firstPerson.Text.NameThree);
+        Assert.Equal("Daggerfall", firstPerson.Text.NameFour);
+        Assert.Equal(definitions.Factions.NpcCaptions[(firstPerson.SelectedPerson.Appearance!.Value.BillboardArchive,
+            firstPerson.SelectedPerson.Appearance.Value.BillboardRecord)], firstPerson.Text.Details);
+        var second = quests.Start(Instance("homes.txt") with { InstanceId = "second-home" });
+        Assert.NotEqual(home.Binding.Building, second.Resources.Single().SelectedPerson!.Home!.Binding.Building);
+        var encoded = JsonSerializer.SerializeToUtf8Bytes(quests.Capture(), DaggerfallSaveJsonContext.Default.DaggerfallQuestInstancesSave);
+        DaggerfallQuestInstances restored = new(definitions, RandomMaximum.Create());
+        restored.Restore(JsonSerializer.Deserialize(encoded, DaggerfallSaveJsonContext.Default.DaggerfallQuestInstancesSave)!);
+        Assert.True(restored.ClaimsBuilding(site.Id, claimed));
+        Assert.True(restored.TryGet(first.InstanceId, out var saved));
+        Assert.Equal(home.Binding.Building, saved!.Resources.Single().SelectedPerson!.Home!.Binding.Building);
+        Assert.Equal(firstPerson.Text, saved.Resources.Single().Text);
+        restored.Complete(first.InstanceId, "completed");
+        Assert.False(restored.ClaimsBuilding(site.Id, claimed));
+    }
+
+    [Theory]
+    [InlineData((int)DaggerfallWorldProfileKind.Exterior)]
+    [InlineData((int)DaggerfallWorldProfileKind.Interior)]
+    [InlineData((int)DaggerfallWorldProfileKind.Dungeon)]
+    public void Questor_home_uses_the_actual_current_profile_kind_and_exact_interior_building(int profileKind)
+    {
+        var kind = (DaggerfallWorldProfileKind)profileKind;
+        var definitions = TestPayload.Definitions;
+        var blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
+        var site = definitions.Locations.Records.First(value => value.Region == 17 &&
+            (kind == DaggerfallWorldProfileKind.Dungeon ? value.DungeonBlocks.Count > 0 : value.Exterior?.Buildings.Count > 0));
+        var building = kind == DaggerfallWorldProfileKind.Interior ? site.Exterior!.Buildings.Values.First() : null;
+        DaggerfallSiteContext sites = new(definitions.Locations, site.Id, null, []);
+        sites.AdmitBuildingNames(RandomMinimum.Create(), definitions, blocks);
+        var places = new DaggerfallQuestPlaceAllocator(definitions, sites, RandomMinimum.Create(), (_, _) => false,
+            region => definitions.BuildingNames.RegionNames[region], new DaggerfallNames(definitions, RandomMinimum.Create()).Residence);
+        var declaration = definitions.QuestSources.Resources.First(value => value.Kind == "person" && value.Person?.Group == "Questor");
+        DaggerfallInteriorBuilding? interior = kind == DaggerfallWorldProfileKind.Interior
+            ? new(building!.Id.BlockX, building.Id.BlockY, building.Source.Id, building.Source.BuildingType, building.Source.FactionId) : null;
+        var allocator = new DaggerfallQuestPersonAllocator(definitions, RandomMinimum.Create(), new(definitions, RandomMinimum.Create()),
+            _ => new(site, Giver(), CurrentProfile: new(site.Id, kind, "current"), Interior: interior), places: places);
+        var selected = allocator.Allocate(Instance(declaration.SourceFile), declaration);
+        var home = selected.SelectedPerson!.Home!;
+        var factionFlat = definitions.Factions.Factions[Giver().Appearance.FactionId].FlatVisuals[0];
+        Assert.Equal(definitions.Factions.NpcCaptions[(factionFlat.Archive, factionFlat.Record)], selected.Text!.Details);
+        Assert.Equal(Giver().Appearance, selected.SelectedPerson.Appearance);
+        Assert.Equal(kind, home.Binding.PlaceSelection!.Kind);
+        Assert.Equal(site.MapId, home.Binding.PlaceSelection.MapId);
+        if (kind == DaggerfallWorldProfileKind.Interior)
+        {
+            Assert.Equal(DaggerfallQuestPlaceAllocator.BuildingKey(building!.Id), home.Binding.PlaceSelection.BuildingKey);
+            Assert.Equal(building.Source.Id.SourceKey, home.Binding.Building!.SourceKey);
+            Assert.Equal(sites.RequireBuilding(site.Id, building.Id).Name, selected.Text!.NameTwo);
+        }
+        else Assert.Null(home.Binding.Building);
     }
 
     private static DaggerfallQuestInstanceSave Instance(string file) => new("instance/" + file, file, Path.GetFileNameWithoutExtension(file),

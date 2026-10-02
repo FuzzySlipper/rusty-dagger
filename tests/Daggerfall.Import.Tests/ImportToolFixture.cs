@@ -102,6 +102,7 @@ internal sealed partial class ImportToolFixture : IDisposable
             ["--quest-text"] = Donor("Assets/StreamingAssets/Quests"), ["--tables"] = Donor("Assets/StreamingAssets/Tables"),
             ["--item-templates"] = Donor("Assets/Resources/ItemTemplates.txt"), ["--magic-templates"] = Donor("Assets/Resources/MagicItemTemplates.txt"),
             ["--item-enums"] = Donor("Assets/Scripts/Game/Items/ItemEnums.cs"), ["--item-helper"] = Donor("Assets/Scripts/Game/Items/ItemHelper.cs"),
+            ["--flat-captions"] = Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Flats.csv"),
             ["--maps-file"] = Donor("Assets/Scripts/API/MapsFile.cs"), ["--label"] = PublishedSourcePath.Donor("Assets/Scripts/API/MapsFile.cs"),
             ["--source"] = Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv"),
             ["--output"] = At("report.json"), ["--repository"] = TestData.RepositoryRoot, ["--publication"] = Publication,
@@ -157,7 +158,10 @@ internal sealed partial class ImportToolFixture : IDisposable
             case "climate":
                 Section("climate", DaggerfallWorldGridsBuilder.BuildClimate(Source("CLIMATE.PAK"), Label("CLIMATE.PAK"), Rows));
                 Section("politic", DaggerfallWorldGridsBuilder.BuildPolitic(Source("POLITIC.PAK"), Label("POLITIC.PAK"), Rows)); break;
-            case "factions": Section("factions", DaggerfallFactionsBuilder.Build(File.ReadAllText(Path.Combine(Arena2, "FACTION.TXT")), Label("FACTION.TXT"), Source("FACTION.TXT"), Rows)); break;
+            case "factions": Section("factions", DaggerfallFactionsBuilder.WithNpcCaptions(
+                DaggerfallFactionsBuilder.Build(File.ReadAllText(Path.Combine(Arena2, "FACTION.TXT")), Label("FACTION.TXT"), Source("FACTION.TXT"), Rows),
+                File.ReadAllBytes(Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Flats.csv")),
+                PublishedSourcePath.Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Flats.csv"))); break;
             case "terrain": Section("terrain", DaggerfallTerrainBuilder.Build(Source("WOODS.WLD"), Label("WOODS.WLD"), Rows)); break;
             case "building-name-inputs": Section("buildingNames", DaggerfallBuildingNameInputsBuilder.Build(File.ReadAllBytes(Donor("Assets/Scripts/API/MapsFile.cs")), PublishedSourcePath.Donor("Assets/Scripts/API/MapsFile.cs"))); break;
             case "blocks":
