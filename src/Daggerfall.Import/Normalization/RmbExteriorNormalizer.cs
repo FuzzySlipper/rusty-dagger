@@ -121,6 +121,7 @@ public static class RmbExteriorNormalizer
         private NormalizedMarker? startMarker;
         private NormalizedMarker? enterMarker;
         private NormalizedInteriorBuilding? interiorBuilding;
+        private readonly List<NormalizedStaticNpcPlacement> staticNpcs = [];
 
         public void AddExterior(MapsExteriorBlock reference)
         {
@@ -197,6 +198,32 @@ public static class RmbExteriorNormalizer
                 AddInteriorModel(model, $"{Slug(reference.SourceName)}/{buildingIndex}/interior");
             foreach (RmbFlatPlacement flat in placements.Buildings[buildingIndex].Interior.Flats)
                 AddInteriorMarker(flat);
+            int buildingKey = (reference.X << 16) + (reference.Y << 8) + buildingIndex;
+            if (buildingKey == 0) buildingKey = 1 << 24;
+            IReadOnlyDictionary<int, ClassicFaction> factions = placements.Buildings[buildingIndex].Interior.People.Count == 0
+                ? new Dictionary<int, ClassicFaction>()
+                : FactionReader.Read(Encoding.UTF8.GetString(request.Sources.Require("FACTION.TXT").Bytes.Span),
+                    request.Sources.Require("FACTION.TXT").Label).ToDictionary(faction => faction.Id);
+            foreach ((RmbPeoplePlacement person, int ordinal) in placements.Buildings[buildingIndex].Interior.People.Select((person, ordinal) => (person, ordinal)))
+                staticNpcs.Add(new($"person/{ordinal}",
+                    MeshGeometry.ToRightHanded(Arena2SourceTransform.ToRmbImportPoint(person.X, person.Y, person.Z)),
+                    person.TextureArchive, person.TextureRecord, person.FactionId,
+                    StaticNpcRace(person.FactionId, factions),
+                    (person.Flags & 32) != 0 ? "Female" : "Male",
+                    person.SourceOffset ^ (buildingKey + layout.LocationIndex)));
+        }
+
+        /// <summary>StaticNPC.GetRaceFromFaction, RaceTemplate and MapsFile.RegionRaces source policy.</summary>
+        private static string? StaticNpcRace(int factionId, IReadOnlyDictionary<int, ClassicFaction> factions)
+        {
+            string? race = factions.GetValueOrDefault(factionId)?.Race switch
+            {
+                0 => "nord", 1 => "khajiit", 2 => "redguard", 3 => "breton",
+                4 => "argonian", 5 => "wood-elf", 6 => "high-elf", 7 => "dark-elf", _ => null,
+            };
+            // A null faction race requests the existing published regional name-bank table at
+            // ruleset content admission; this normalizer never carries another copy of that table.
+            return factionId != 0 ? race : null;
         }
 
         private (RmbBlockSummary Summary, RmbBlockPlacements Placements, BsaRecord Record) ReadBlock(MapsExteriorBlock reference)
@@ -315,6 +342,7 @@ public static class RmbExteriorNormalizer
             NormalizedWorld world = new($"mesh/{root}", meshes.Select(mesh => mesh.Id).ToArray(), navigation.Id, startMarker, enterMarker, [], [], [], [], [])
             {
                 InteriorBuilding = interiorBuilding,
+                StaticNpcs = staticNpcs,
             };
             DungeonSpatialPublication spatial = DungeonSpatialPublication.Create(staticId, $"spatial/{slug}/{profile}/static-mesh{StaticMeshBinary.Extension}", collisionId,
                 $"spatial/{slug}/{profile}/collision-navigation{SpatialArtifactBinary.Extension}", resourcesId, $"resources/{slug}/{profile}/catalog.json", world.VisualMeshAssetId, bounds, meshes, world, navigation, resources);

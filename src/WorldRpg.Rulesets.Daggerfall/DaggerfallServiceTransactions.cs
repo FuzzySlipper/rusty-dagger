@@ -291,6 +291,7 @@ internal sealed class DaggerfallServiceTransactions
         DaggerfallNpcSite? current = _currentSite();
         return current is { } site && site.Region == provider.Site.Region
             && string.Equals(site.Location, provider.Site.Location, StringComparison.Ordinal)
+            && (provider.Site.ProfileId is null || StringComparer.Ordinal.Equals(site.ProfileId, provider.Site.ProfileId))
             ? DaggerfallServiceDenial.None
             : DaggerfallServiceDenial.SiteChanged;
     }

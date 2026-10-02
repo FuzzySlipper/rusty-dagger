@@ -25,6 +25,7 @@ public sealed class Arena2SiteSources
         "ARCH3D.BSA",
         "CLIMATE.PAK",
         "PAL.PAL",
+        "FACTION.TXT",
     ];
 
     /// <summary>

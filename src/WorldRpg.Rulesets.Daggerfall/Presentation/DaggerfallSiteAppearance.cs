@@ -250,6 +250,11 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         catch { List<Exception>? failures = null; visual.Dispose(ref failures); if (failures is { Count: > 0 }) throw new AggregateException(failures); throw; }
     }
 
+    internal void AdmitActor(long durableId, NormalizedActorSprite sprite)
+    {
+        if (!actors.ContainsKey(durableId)) AddActor(durableId, sprite);
+    }
+
     internal void RetireActor(long durableId)
     {
         if (actors.Remove(durableId, out ActorVisual? visual) && visual is not null)
