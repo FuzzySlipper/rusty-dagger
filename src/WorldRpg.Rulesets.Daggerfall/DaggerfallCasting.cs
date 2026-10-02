@@ -296,6 +296,8 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                     targetId, setting.Key, bundle.Element.ToString(), operationalItem, 1, duration, payload));
                 outcome = admission switch
                 {
+                    DaggerfallEffectAdmissionOutcome.TargetUnavailable => DaggerfallCastOutcome.TargetUnavailable,
+                    DaggerfallEffectAdmissionOutcome.SourceUnavailable => DaggerfallCastOutcome.SourceUnavailable,
                     DaggerfallEffectAdmissionOutcome.NoMatch => DaggerfallCastOutcome.NoMatch,
                     DaggerfallEffectAdmissionOutcome.Rejected => DaggerfallCastOutcome.IncumbentRejected,
                     DaggerfallEffectAdmissionOutcome.Refreshed => DaggerfallCastOutcome.Refreshed,
@@ -305,7 +307,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                 if (admission == DaggerfallEffectAdmissionOutcome.Refreshed)
                     instance = effects.Active.Single(effect => checked((long)effect.Context.Target.Value) == targetId
                         && effects.IsLikeKind(effect, definition, targetId, payload, operationalCaster, operationalItem)).Context.Instance.Value;
-                bundle.Results.Add(new(i, targetId, outcome, percent, outcome == DaggerfallCastOutcome.NoMatch ? null : instance));
+                bundle.Results.Add(new(i, targetId, outcome, percent, outcome is DaggerfallCastOutcome.NoMatch or DaggerfallCastOutcome.SourceUnavailable or DaggerfallCastOutcome.TargetUnavailable ? null : instance));
                 continue;
             }
             bundle.Results.Add(new(i, targetId, outcome));

@@ -218,6 +218,8 @@ internal sealed partial class DaggerfallSession
                     id => id == actors.Player.DurableId ? actors.Player.Progression.Level : authored[id].Level ?? 1),
                 .. DaggerfallContinuousDestructionEffects.Definitions(_random, _vitality, AppendEffectDamage, AppendSpellTrackLoss,
                     id => authored.TryGetValue(id, out var definition) && IsHostileActor(id, definition), ReactToSpellAttack),
+                .. DaggerfallTransferEffects.Definitions(_vitality, AppendSpellTransfer,
+                    id => authored.TryGetValue(id, out var definition) && IsHostileActor(id, definition), ReactToSpellAttack),
                 .. DaggerfallDestructionEffects.Definitions(_vitality, AppendEffectDamage, AppendSpellTrackLoss,
                     id => authored.TryGetValue(id, out var definition) && IsHostileActor(id, definition),
                     ReactToSpellAttack),

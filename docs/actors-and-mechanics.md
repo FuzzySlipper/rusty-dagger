@@ -104,6 +104,14 @@ Shield without spending its pool. Fatigue uses classic fatigue units and protect
 peaceful non-player targets. Fatigue and spell-point outcomes report bounded live
 loss, while saves retain the resulting tracks and affected enemy hostility.
 
+Health and fatigue transfers apply direct target loss before bounded caster recovery.
+The classic admitted magnitude determines recovery even when Shield or a track bound
+reduces actual loss; fatigue uses the same 64-unit scale at both ends. Transfers
+require an actual living caster and target, expire after initial delivery, and
+report loss, recovery and terminal outcomes through ordinary facts. Saves retain
+the resulting tracks without a transfer to replay. A reflected terminal self-hit
+retains accepted death instead of restoring its dead caster.
+
 Continuous destruction shares those health/track consequences and source-scoped
 incumbents. An initial payload and each admitted ordinary or elapsed round use
 the saved cast settings and next draw identity. Same-kind effects from the same
