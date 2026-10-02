@@ -20,6 +20,7 @@ interface DaggerHud {
     readonly items: readonly { readonly id: string; readonly definition: string; readonly quantity: number }[];
   }[] }[];
   readonly spells?: SpellbookProjection | null;
+  readonly identify?: { readonly revision:string; readonly cost:number; readonly options:readonly { readonly id:string; readonly label:string }[] } | null;
   readonly dispel?: { readonly revision: string; readonly options: readonly { readonly id: string; readonly label: string }[] } | null;
   readonly resources: readonly { readonly id: string; readonly label: string; readonly current: number; readonly maximum: number }[];
   readonly lastOutcome: string;
@@ -315,6 +316,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const siteName = shell.querySelector<HTMLElement>('.dagger-title .dagger-site')!;
   const outcome = shell.querySelector<HTMLParagraphElement>('.dagger-outcome')!;
   const quests = shell.querySelector<HTMLElement>('.dagger-quests')!;
+  const identify = document.createElement('section');
+  identify.className = 'dagger-identify'; identify.hidden = true; quests.before(identify);
   const dispel = document.createElement('section');
   dispel.className = 'dagger-dispel';
   dispel.hidden = true;
@@ -868,6 +871,21 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const unsubscribe = context.projection?.subscribe((projection) => {
     if (projection?.contract !== 'dagger.ui.snapshot.v1' || !isHud(projection.value)) return;
     const value = projection.value;
+    identify.hidden = !value.identify;
+    identify.replaceChildren();
+    if (value.identify) {
+      const choice=value.identify;
+      const title=document.createElement('h2');title.textContent=`Identify (${choice.cost} magicka per selection)`;identify.append(title);
+      const choose=(key?:string):void=>{context.intents?.claim('dagger.ui',{
+        kind:'product-payload',contract:UI_ACTION_CONTRACT,
+        data:key ? {action:'identify-select',revision:choice.revision,key} : {action:'identify-cancel',revision:choice.revision},
+      });};
+      for(const option of [...choice.options,...(choice.options.length ? [{id:'all',label:'All unidentified items'}] : [])]) {
+        const button=document.createElement('button');button.textContent=option.label;
+        button.addEventListener('click',()=>choose(option.id));identify.append(button);
+      }
+      const cancel=document.createElement('button');cancel.textContent='Cancel';cancel.addEventListener('click',()=>choose());identify.append(cancel);
+    }
     dispel.hidden = !value.dispel;
     dispel.replaceChildren();
     if (value.dispel) {

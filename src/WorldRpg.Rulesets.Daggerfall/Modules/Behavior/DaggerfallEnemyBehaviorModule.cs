@@ -75,6 +75,15 @@ internal sealed class DaggerfallEnemyBehaviorModule
     internal bool IsPacified(long actorId) =>
         _actors.TryGet(actorId, out ActorState actor) && Senses(actor).Pacified;
 
+    internal void Pacify(long actorId)
+    {
+        if (!_actors.TryGet(actorId,out var actor) || actor.IsDefeated) return;
+        var memory=Senses(actor);
+        memory.SetForcedHostile(false);
+        memory.MagicallyPacified=true;
+        memory.HasEncounteredPlayer=true;
+    }
+
     internal void MakeHostile(long actorId)
     {
         if (!_actors.TryGet(actorId, out var actor) || actor.IsDefeated || _isPlayerAllied(actorId)) return;

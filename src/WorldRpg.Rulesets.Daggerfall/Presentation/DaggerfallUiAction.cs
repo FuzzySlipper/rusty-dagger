@@ -26,7 +26,7 @@ internal enum DaggerfallUiActionKind
     CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel,
     CharacterLevelAllocate, CharacterLevelCommit,
     ActivationMode, Attack, Loot, Inventory, Character, Menu,
-    DialogueTone, DialogueTopic, DialogueClose, DispelSelect, DispelCancel,
+    DialogueTone, DialogueTopic, DialogueClose, DispelSelect, DispelCancel, IdentifySelect, IdentifyCancel,
     TransportSelect, TransportToggle, TransportLeaveShip,
     TravelSearch, TravelPreview, TravelAccept, MapOpen, MapBuilding,
     Rest, LodgingQuote, LodgingBook,
@@ -166,6 +166,8 @@ internal static class DaggerfallUiAction
         // The DOM reports whether its game menu (and so any of its panels) is open, because an open
         // menu holds the world. A menu closed over death still reaches the session.
         new(DaggerfallUiActionKind.Menu, "menu", DaggerfallUiPhases.Live | DaggerfallUiPhases.Dead),
+        new(DaggerfallUiActionKind.IdentifySelect, "identify-select", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.IdentifyCancel, "identify-cancel", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.DispelSelect, "dispel-select", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.DispelCancel, "dispel-cancel", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.DialogueTone, "dialogue-tone", DaggerfallUiPhases.Interaction),
@@ -493,9 +495,9 @@ internal static class DaggerfallUiAction
                     || fields.SetEquals(["action", "revision", "item", "amount"]))
                     && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
                     ? new(action, Revision: revision, Item: item, Amount: amount) : null;
-            if (action == "dispel-select")
+            if (action is "dispel-select" or "identify-select")
                 return fields.SetEquals(["action", "revision", "key"]) && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(key) ? new(action, Revision: revision, Key: key) : null;
-            if (action == "dispel-cancel")
+            if (action is "dispel-cancel" or "identify-cancel")
                 return fields.SetEquals(["action", "revision"]) && !string.IsNullOrWhiteSpace(revision) ? new(action, Revision: revision) : null;
             if (action == "dialogue-tone")
                 return fields.SetEquals(["action", "revision", "tone"])

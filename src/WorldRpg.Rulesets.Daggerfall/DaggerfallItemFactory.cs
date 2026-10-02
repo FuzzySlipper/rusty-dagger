@@ -81,7 +81,7 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
             ItemId = itemId,
             CurrentCondition = magic.Uses,
             MaximumCondition = magic.Uses,
-            Identified = true,
+            Identified = magic.Type != 0,
             Enchantment = magic.Key,
         };
         return new(baseItem.TemplateIndex, new InventoryItemId(itemId), Stackable: false, Quantity: 1, metadata.Validate());

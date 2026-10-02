@@ -39,7 +39,7 @@ internal sealed record DaggerfallHudFrame(
     DaggerfallTravelPresentation? Travel = null,
     string? SiteName = null,
     DaggerfallLodgingView? Lodging = null,
-    DaggerfallMapPresentation? Map = null, DaggerfallDispelView? Dispel = null, IReadOnlyList<DaggerfallDetectorView>? Detectors = null, DaggerfallSpellbookView? Spells=null);
+    DaggerfallMapPresentation? Map = null, DaggerfallDispelView? Dispel = null, DaggerfallIdentifyView? Identify=null, IReadOnlyList<DaggerfallDetectorView>? Detectors = null, DaggerfallSpellbookView? Spells=null);
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
 internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<DaggerfallHudResourceDefinition> resources, ResolvedCompositionIdentity? compositionIdentity, DaggerfallUiArt? uiArt = null) : IDisposable
@@ -60,7 +60,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ArgumentNullException.ThrowIfNull(frame);
         var (player, progression, presentation, mode, controls, slots, inventory, loot, character, panelRequest,
             saveSlots, saveSlotDiagnostic, controlSettings, controlDiagnostic, activation, quests, notebook, transport,
-            dungeonText, death, rest, travel, siteName, lodging, map, dispel, detectors, spells) = frame;
+            dungeonText, death, rest, travel, siteName, lodging, map, dispel, identifyView, detectors, spells) = frame;
         UiValueBuilder builder = new();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
         (string Key, uint Value)[] fields =
@@ -74,6 +74,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                     ("distance", builder.Number(contact.Distance)), ("bearingRadians", builder.Number(contact.BearingRadians)),
                     ("items", builder.Array(contact.Items.Select(item => builder.Object(("id", builder.String(item.Id)),
                         ("definition", builder.String(item.Definition)), ("quantity", builder.Number(checked((long)item.Quantity))))).ToArray())))).ToArray())))).ToArray())),
+            ("identify", frame.Identify is not { } identify ? builder.Null() : builder.Object(
+                ("revision",builder.String(identify.Revision)),("cost",builder.Number(identify.Cost)),
+                ("options",builder.Array(identify.Options.Select(option=>builder.Object(("id",builder.String(option.Id)),("label",builder.String(option.Label)))).ToArray())))),
             ("spells",frame.Spells is null ? builder.Null() : builder.Object(
                 ("available",builder.Array(frame.Spells.Available.Select(spell=>builder.Object(("key",builder.String(spell.Key)),
                     ("name",builder.String(spell.Name)),("cost",builder.Number(spell.Cost)))).ToArray())),
