@@ -53,6 +53,7 @@ internal sealed partial class DaggerfallCharacterState
     private DaggerfallCharacterBackgroundSave? _background;
     private readonly HashSet<string> _knownSpells = new(StringComparer.Ordinal);
     private int _backgroundRollSequence;
+    private readonly DaggerfallCharacterIdentity _initialIdentity;
 
     internal DaggerfallCharacterState(DaggerfallDefinitions definitions, StatsComponent stats, DaggerfallActorDefinition player, DaggerfallCharacterSave? restored = null)
     {
@@ -83,6 +84,7 @@ internal sealed partial class DaggerfallCharacterState
             : null;
         _background = restored?.Background;
         _backgroundRollSequence = _background?.RollSequence ?? 0;
+        _initialIdentity = new("Nameless", player.Race!, DaggerfallCharacterGender.Male, 0, DaggerfallCharacterReflexes.Average, player.Career!);
         Validate(Identity);
         if (_background is not null)
             _background = DaggerfallCharacterBackgroundPolicy.RequireComplete(_definitions, Career, Identity, _background);
@@ -172,8 +174,8 @@ internal sealed partial class DaggerfallCharacterState
             return new DaggerfallCharacterChoice(race.Id, race.Id, available, restriction);
         }).ToArray();
         DaggerfallCharacterChoice[] careers = _definitions.Catalogs.Careers.Select(career => new DaggerfallCharacterChoice(
-            career.Id, career.Name, true,
-            _definitions.CharacterPresentation.CareersWithoutPortrait.FirstOrDefault(value => value.CareerId == career.Id)?.Reason))
+            career.Id, career.Name, _definitions.NewGame.Careers.Any(value => value.Career == career.Id),
+            _definitions.NewGame.Careers.All(value => value.Career != career.Id) ? "This career is not selectable for a new player character." : _definitions.CharacterPresentation.CareersWithoutPortrait.FirstOrDefault(value => value.CareerId == career.Id)?.Reason))
             .Append(new DaggerfallCharacterChoice(DaggerfallCustomCareerPolicy.CareerId, "Custom class", true, null)).ToArray();
         DaggerfallCharacterFaceChoice[] faces = _definitions.CharacterPresentation.Races.TryGetValue(current.RaceId, out DaggerfallRaceLayers? selected)
             ? [.. selected.Heads(current.Gender).Select(face => new DaggerfallCharacterFaceChoice(face.HeadIndex, face.MediaId))] : [];
@@ -191,7 +193,8 @@ internal sealed partial class DaggerfallCharacterState
             : null;
         DaggerfallCharacterBackgroundPresentation? background = current.Background is { } backgroundDraft && (Pending is not null || _background is not null)
             ? DaggerfallCharacterBackgroundPolicy.Present(_definitions, CurrentCareer(current), current.ToIdentity(), backgroundDraft) : null;
-        return new DaggerfallCharacterCreationPresentation(Pending is not null, current, races, careers, faces, reflexes, custom, background, CreationMode, ReadClassQuiz(), _definitions.Catalogs.ClassQuestionnaire is not null && _background is null);
+        return new DaggerfallCharacterCreationPresentation(Pending is not null, current, races, careers, faces, reflexes, custom, background, CreationMode, ReadClassQuiz(), _definitions.Catalogs.ClassQuestionnaire is not null,
+            Pending is null && _background is not null ? NewGameSummary() : null);
     }
 
     internal void BeginChoices() { _classQuestions = null; Pending = DaggerfallCharacterCreationChoices.From(Identity) with { Background = _background }; }
@@ -204,10 +207,40 @@ internal sealed partial class DaggerfallCharacterState
             Pending = Pending! with { Background = DaggerfallCharacterBackgroundPolicy.Roll(_definitions, Career, Identity, random, NextBackgroundRollSequence()) };
     }
 
+    internal void BeginFreshChoices(Rusty.Engine.IRandomService random)
+    {
+        AbandonCreation();
+        BeginChoices();
+        Pending = Pending! with { Background = DaggerfallCharacterBackgroundPolicy.Roll(_definitions, Career, Identity, random, NextBackgroundRollSequence()) };
+    }
+
+    internal void AbandonCreation()
+    {
+        CancelChoices(); _background = null; _customCareer = null; _knownSpells.Clear();
+        Identity = _initialIdentity; ApplyCareerBases();
+    }
+
+    private string[] NewGameSummary()
+    {
+        var config = _definitions.NewGame;
+        var items = _customCareer is null ? config.Careers.Single(value => value.Career == Career.Id).Items : config.CustomItems;
+        var spells = _customCareer is null ? config.Careers.Single(value => value.Career == Career.Id).Spells
+            : Career.PrimarySkills.Concat(Career.MajorSkills).Any(skill => skill is "destruction" or "restoration" or "illusion" or "alteration" or "thaumaturgy" or "mysticism")
+                ? config.CustomMagicSpells : [];
+        return [ $"{Identity.Name} — {Identity.RaceId}, {Identity.Gender.ToString().ToLowerInvariant()}, {Career.Name}; reflexes {Identity.Reflexes}.",
+            .. Career.Attributes.Select(id => $"{id}: {_stats.GetStat(StatId.Parse(id)).ValueInt}"),
+            .. GrantedSkills.Select(skill => $"{skill.SkillId}: {_stats.GetStat(StatId.Parse(skill.SkillId)).ValueInt} ({skill.Tier})"),
+            .. _stats.Tracks.Select(pair => $"{pair.Key.Value}: {pair.Value.Maximum.ValueInt}"),
+            "Starting clothing and spellbook.", $"{config.Gold} gold plus biography grants.",
+            .. items.Select(item => $"{item.Quantity} × {item.Material} {_definitions.ItemTemplateCatalog.Templates[item.Template].Name}"),
+            .. _background!.StartingGrants.Select(item => $"{item.Quantity} × {_definitions.RequireItem(new DaggerfallItemId(item.ItemId)).Template!.Name}"),
+            .. spells.Select(key => $"Spell: {_definitions.Magic.Spells[key].Name}") ];
+    }
+
     internal void RerollBackground(Rusty.Engine.IRandomService random)
     {
         DaggerfallCharacterCreationChoices current = Pending ?? throw new ArgumentException("Open character choices before rerolling the background.");
-        if (_background is not null) throw new ArgumentException("A committed background cannot be rerolled.");
+
         DaggerfallCharacterIdentity identity = current.ToIdentity(); Validate(identity);
         DaggerfallCareerDefinition career = CurrentCareer(current);
         Pending = current with { Background = DaggerfallCharacterBackgroundPolicy.Roll(_definitions, career, identity, random, NextBackgroundRollSequence()) };
@@ -221,7 +254,7 @@ internal sealed partial class DaggerfallCharacterState
 
     internal void CancelChoices() { Pending = null; _classQuestions = null; }
 
-    internal DaggerfallCharacterBackgroundSave? CommitChoices()
+    internal DaggerfallCharacterBackgroundSave? CommitChoices(bool replaceCommitted = false)
     {
         if (_classQuestions is not null) throw new ArgumentException("Complete or leave the class questions before committing character choices.");
         DaggerfallCharacterCreationChoices choices = Pending
@@ -232,13 +265,15 @@ internal sealed partial class DaggerfallCharacterState
             ? DaggerfallCustomCareerPolicy.Compile(_definitions, choices.CustomCareer ?? throw new ArgumentException("Custom class fields are incomplete."), Career)
             : null;
         DaggerfallCareerDefinition committedCareer = custom?.Career ?? _definitions.Catalogs.RequireCareer(committed.CareerId);
+        if (custom is null && !_definitions.NewGame.Careers.Any(value => value.Career == committed.CareerId))
+            throw new ArgumentException("This career is not selectable for a new player character.");
         DaggerfallCharacterBackgroundSave? background = choices.Background is null ? null : DaggerfallCharacterBackgroundPolicy.RequireComplete(_definitions, committedCareer, committed, choices.Background);
-        if (_background is not null && background is not null)
+        if (!replaceCommitted && _background is not null && background is not null)
             throw new ArgumentException("Character creation has already been committed.");
         Identity = committed;
         _customCareer = custom;
         bool firstBackgroundCommit = _background is null && background is not null;
-        _background ??= background;
+        _background = replaceCommitted ? background : _background ?? background;
         Pending = null;
         ApplyCareerBases();
         _careerCommitted?.Invoke();
@@ -262,8 +297,10 @@ internal sealed partial class DaggerfallCharacterState
             throw new ArgumentException("A character name cannot be empty.", nameof(identity));
         if (!Enum.IsDefined(identity.Gender) || !Enum.IsDefined(identity.Reflexes))
             throw new ArgumentOutOfRangeException(nameof(identity), "Character gender or reflexes are not supported.");
-        _ = _definitions.Catalogs.RequireRace(identity.RaceId);
-        if (identity.CareerId != DaggerfallCustomCareerPolicy.CareerId) _ = _definitions.Catalogs.RequireCareer(identity.CareerId);
+        if (!_definitions.Catalogs.TryGetRace(identity.RaceId, out _))
+            throw new ArgumentException($"Race '{identity.RaceId}' is not published.");
+        if (identity.CareerId != DaggerfallCustomCareerPolicy.CareerId && !_definitions.Catalogs.TryGetCareer(identity.CareerId, out _))
+            throw new ArgumentException($"Career '{identity.CareerId}' is not published.");
         DaggerfallRaceLayers layers = _definitions.CharacterPresentation.RequireRace(identity.RaceId);
         if (!layers.Heads(identity.Gender).Any(head => head.HeadIndex == identity.FaceIndex))
             throw new ArgumentException($"Race '{identity.RaceId}' has no {identity.Gender.ToString().ToLowerInvariant()} face {identity.FaceIndex}.", nameof(identity));
@@ -300,7 +337,7 @@ internal sealed record DaggerfallCharacterFaceChoice(int Index, string MediaId);
 internal sealed record DaggerfallCharacterReflexChoice(int Value, string Label);
 internal sealed record DaggerfallCharacterCreationPresentation(bool Editing, DaggerfallCharacterCreationChoices Current,
     DaggerfallCharacterChoice[] Races, DaggerfallCharacterChoice[] Careers, DaggerfallCharacterFaceChoice[] Faces, DaggerfallCharacterReflexChoice[] Reflexes,
-    DaggerfallCustomCareerPresentation? Custom = null, DaggerfallCharacterBackgroundPresentation? Background = null, string? Mode = null, DaggerfallClassQuizPresentation? ClassQuiz = null, bool ClassQuestionsAvailable = false);
+    DaggerfallCustomCareerPresentation? Custom = null, DaggerfallCharacterBackgroundPresentation? Background = null, string? Mode = null, DaggerfallClassQuizPresentation? ClassQuiz = null, bool ClassQuestionsAvailable = false, string[]? Summary = null);
 
 /// <summary>Current-schema durable identity. Definition keys are resolved before a session is built.</summary>
 internal sealed record DaggerfallCharacterSave(

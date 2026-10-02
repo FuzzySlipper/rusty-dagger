@@ -90,6 +90,8 @@ internal sealed partial class DaggerfallSession
         try
         {
             _engine = engine;
+            _composition = composition;
+            _newGameInitialized = saved is not null;
             _tuning = tuning;
             // The score's clips are named by the site's cue list and carried by the product-wide music
             // bundle, so the resolver the director asks is this session's own: it keeps the Engine

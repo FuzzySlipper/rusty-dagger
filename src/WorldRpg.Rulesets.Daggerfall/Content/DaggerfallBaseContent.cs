@@ -13,7 +13,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// vocabulary, actors, items, loot, encounters) and the daggerfall.imported payload the import tool
 /// generates from the operator's Arena2 files (catalogs, world records, text, quest sources).
 /// </summary>
-internal static class DaggerfallBaseContent
+internal static partial class DaggerfallBaseContent
 {
     private const int MaximumAuthoredDamage = 100_000;
     private const int MaximumAuthoredArmor = 1_000;
@@ -106,10 +106,12 @@ internal static class DaggerfallBaseContent
             ValidateCatalog(actors, armorValues, actions, lootTables, lootCategoryPools, diagnostics);
             foreach (string problem in DaggerfallEnchantmentSettings.Validate(magic.EnchantmentSettings.Values))
                 diagnostics.Add(problem);
+            DaggerfallNewGameDefinition newGame = ReadNewGame(root, catalogs, itemTemplatesCatalog, DaggerfallTemplateItemDefinitions.Create(itemTemplatesCatalog, items, magic), equipmentSlots, magic, diagnostics);
             diagnostics.ThrowIfAny();
             return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles, names, rumors, biographies, grids, books, factions, terrain, itemTemplatesCatalog, questSources, cinematics, encounters)
             {
                 BuildingNames = buildingNames,
+                NewGame = newGame,
             };
         }
         catch (JsonException exception)

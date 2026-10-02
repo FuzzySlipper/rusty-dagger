@@ -4473,5 +4473,265 @@
         136
       ]
     ]
+  },
+  "newGame": {
+    "gold": 100,
+    "spellbookTemplate": 132,
+    "maleShirtTemplate": 165,
+    "malePantsTemplate": 151,
+    "femaleShirtTemplate": 206,
+    "femalePantsTemplate": 190,
+    "careers": [
+      {
+        "career": "class00",
+        "items": [
+          {
+            "template": 116,
+            "material": "steel",
+            "quantity": 1
+          }
+        ],
+        "spells": [
+          "spell.001",
+          "spell.036",
+          "spell.002",
+          "spell.087",
+          "spell.008"
+        ]
+      },
+      {
+        "career": "class01",
+        "items": [
+          {
+            "template": 119,
+            "material": "iron",
+            "quantity": 1
+          }
+        ],
+        "spells": [
+          "spell.008",
+          "spell.042",
+          "spell.036"
+        ]
+      },
+      {
+        "career": "class02",
+        "items": [
+          {
+            "template": 119,
+            "material": "iron",
+            "quantity": 1
+          }
+        ],
+        "spells": [
+          "spell.008",
+          "spell.002",
+          "spell.036"
+        ]
+      },
+      {
+        "career": "class03",
+        "items": [
+          {
+            "template": 116,
+            "material": "steel",
+            "quantity": 1
+          }
+        ],
+        "spells": [
+          "spell.001",
+          "spell.036",
+          "spell.002",
+          "spell.087",
+          "spell.008"
+        ]
+      },
+      {
+        "career": "class04",
+        "items": [
+          {
+            "template": 124,
+            "material": "iron",
+            "quantity": 1
+          }
+        ],
+        "spells": [
+          "spell.087",
+          "spell.002",
+          "spell.001",
+          "spell.036"
+        ]
+      },
+      {
+        "career": "class05",
+        "items": [
+          {
+            "template": 116,
+            "material": "iron",
+            "quantity": 1
+          }
+        ],
+        "spells": [
+          "spell.042",
+          "spell.002"
+        ]
+      },
+      {
+        "career": "class06",
+        "items": [
+          {
+            "template": 116,
+            "material": "iron",
+            "quantity": 1
+          }
+        ],
+        "spells": [
+          "spell.036"
+        ]
+      },
+      {
+        "career": "class07",
+        "items": [
+          {
+            "template": 114,
+            "material": "steel",
+            "quantity": 1
+          }
+        ],
+        "spells": []
+      },
+      {
+        "career": "class08",
+        "items": [
+          {
+            "template": 119,
+            "material": "iron",
+            "quantity": 1
+          }
+        ],
+        "spells": []
+      },
+      {
+        "career": "class09",
+        "items": [
+          {
+            "template": 116,
+            "material": "iron",
+            "quantity": 1
+          }
+        ],
+        "spells": []
+      },
+      {
+        "career": "class10",
+        "items": [
+          {
+            "template": 116,
+            "material": "iron",
+            "quantity": 1
+          }
+        ],
+        "spells": []
+      },
+      {
+        "career": "class11",
+        "items": [
+          {
+            "template": 120,
+            "material": "iron",
+            "quantity": 1
+          }
+        ],
+        "spells": []
+      },
+      {
+        "career": "class12",
+        "items": [
+          {
+            "template": 115,
+            "material": "steel",
+            "quantity": 1
+          }
+        ],
+        "spells": []
+      },
+      {
+        "career": "class13",
+        "items": [
+          {
+            "template": 130,
+            "material": "iron",
+            "quantity": 1
+          },
+          {
+            "template": 127,
+            "material": "steel",
+            "quantity": 1
+          },
+          {
+            "template": 131,
+            "material": null,
+            "quantity": 24
+          }
+        ],
+        "spells": []
+      },
+      {
+        "career": "class14",
+        "items": [
+          {
+            "template": 127,
+            "material": "steel",
+            "quantity": 1
+          }
+        ],
+        "spells": []
+      },
+      {
+        "career": "class15",
+        "items": [
+          {
+            "template": 126,
+            "material": "iron",
+            "quantity": 1
+          }
+        ],
+        "spells": []
+      },
+      {
+        "career": "class16",
+        "items": [
+          {
+            "template": 118,
+            "material": "iron",
+            "quantity": 1
+          }
+        ],
+        "spells": []
+      },
+      {
+        "career": "class17",
+        "items": [
+          {
+            "template": 120,
+            "material": "iron",
+            "quantity": 1
+          }
+        ],
+        "spells": []
+      }
+    ],
+    "customItems": [
+      {
+        "template": 120,
+        "material": "iron",
+        "quantity": 1
+      }
+    ],
+    "customMagicSpells": [
+      "spell.008",
+      "spell.042",
+      "spell.036"
+    ]
   }
 }

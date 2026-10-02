@@ -1,3 +1,4 @@
+using Rusty.Engine;
 using WorldRpg.Kit;
 using Xunit;
 
@@ -21,6 +22,39 @@ internal sealed class CapturingDaggerfallRuleset : ISaveableGameRuleset
     private IGameSession Capture(IGameSession session)
     {
         Session = Assert.IsType<DaggerfallSession>(session);
-        return session;
+        return new CapturingSession(Session, this);
     }
+    private sealed class CapturingSession(DaggerfallSession inner, CapturingDaggerfallRuleset owner)
+        : IGameSession, ICharacterCreationSession, IEntryScreenSession, IEntryScreenStartupSession,
+        IModeAwareGameSession, ISaveableGameSession, ISaveRequestingGameSession, IPlayerPreferencesSession,
+        IPlayerDefeatOutcomeSession, IPlaytestGameSession
+    {
+        public bool RequiresCharacterInitialization => inner.RequiresCharacterInitialization;
+        public IGameSession CreateNewGame() => owner.Capture(inner.CreateNewGame());
+        public void PublishInitial() => inner.PublishInitial();
+        public ProductUpdateResult Update(ProductUpdate update) => inner.Update(update);
+        public void Dispose() => inner.Dispose();
+        public bool RequestsBegin(ReadOnlySpan<Rusty.Engine.ProductInputEvent> input) => inner.RequestsBegin(input);
+        public EntryScreenStartupResult StartEntry() => inner.StartEntry();
+        public bool TakeEntryReadyForPlay() => inner.TakeEntryReadyForPlay();
+        public void ApplyProductMode(ProductMode mode) => inner.ApplyProductMode(mode);
+        public ProductMode? PendingModeRequest => inner.PendingModeRequest;
+        public bool PendingModeRequestClosesModal => inner.PendingModeRequestClosesModal;
+        public RulesetSavePayload CaptureSave() => inner.CaptureSave();
+        public SaveSlotRequest? TakeSaveSlotRequest() => inner.TakeSaveSlotRequest();
+        public void ReportSaveOutcome(string message) => inner.ReportSaveOutcome(message);
+        public void ReportSaveSlots(IReadOnlyList<SaveSlotSummary> slots, string? diagnostic) => inner.ReportSaveSlots(slots, diagnostic);
+        public string CapturePlayerPreferences() => inner.CapturePlayerPreferences();
+        public void ApplyPlayerPreferences(string? serialized) => inner.ApplyPlayerPreferences(serialized);
+        public string? TakePlayerPreferencesSave() => inner.TakePlayerPreferencesSave();
+        public void ReportPlayerPreferencesOutcome(string message) => inner.ReportPlayerPreferencesOutcome(message);
+        public PlayerDefeatOutcomeRequest? TakePlayerDefeatOutcomeRequest() => inner.TakePlayerDefeatOutcomeRequest();
+        public void ReportPlayerDefeatOutcome(string message) => inner.ReportPlayerDefeatOutcome(message);
+        public IReadOnlyList<string> PlaytestActions => inner.PlaytestActions;
+        public Rusty.Engine.Debugging.DebugCommandResult ReadPlaytestObservation() => inner.ReadPlaytestObservation();
+        public Rusty.Engine.Debugging.PlaytestAction InspectPlaytestAction(string id) => inner.InspectPlaytestAction(id);
+        public Rusty.Engine.Debugging.DebugCommandResult InspectPlaytestLook(double yaw, double pitch) => inner.InspectPlaytestLook(yaw, pitch);
+        public Rusty.Engine.Debugging.DebugCommandResult ReadPlaytestTargets() => inner.ReadPlaytestTargets();
+    }
+
 }

@@ -144,6 +144,7 @@ public sealed class HostSaveSlotTests
         CapturingDaggerfallRuleset ruleset = new();
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.privateers-hold"));
         product.Start();
+        NewGameSessionTests.Commit(ruleset.RequireSession());
         product.Begin();
         DaggerfallSession session = ruleset.RequireSession();
         TrackId staminaId = TrackId.Parse("stamina");
@@ -275,9 +276,11 @@ public sealed class HostSaveSlotTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), persistence: persistence);
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
         string preferenceKey = DaggerfallRuleset.Identity.Value;
-        using (WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), new CapturingDaggerfallRuleset(), new GameBundleId("daggerfall.privateers-hold")))
+        CapturingDaggerfallRuleset scopedRuleset = new();
+        using (WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), scopedRuleset, new GameBundleId("daggerfall.privateers-hold")))
         {
             product.Start();
+            NewGameSessionTests.Commit(scopedRuleset.RequireSession());
             product.Begin();
             // A control rebind is a player preference and a named save is a slot: the ordinary actions
             // that write each of the two Host stores.

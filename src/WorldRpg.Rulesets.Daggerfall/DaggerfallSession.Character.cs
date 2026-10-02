@@ -10,7 +10,7 @@ internal sealed partial class DaggerfallSession
     private void ChangeCharacter(DaggerfallPlayerUiAction action)
     {
         ArgumentNullException.ThrowIfNull(action);
-        if (action.Kind != DaggerfallUiActionKind.CharacterCancel && _mode != ProductMode.Title)
+        if (_mode != ProductMode.Title || _newGameInitialized)
         {
             Presentation.SetOutcome("Character creation is available from the title screen.");
             return;
@@ -21,7 +21,7 @@ internal sealed partial class DaggerfallSession
             {
                 case DaggerfallUiActionKind.CharacterBegin:
                     if (State.Character.Pending is not null) throw new ArgumentException("Character choices are already open.");
-                    State.Character.BeginChoices(_random);
+                    State.Character.BeginFreshChoices(_random);
                     Presentation.SetOutcome("Character choices opened.");
                     break;
                 case DaggerfallUiActionKind.CharacterClassQuestions:
@@ -39,7 +39,7 @@ internal sealed partial class DaggerfallSession
                     Presentation.SetOutcome("Returned to character choices.");
                     break;
                 case DaggerfallUiActionKind.CharacterCancel:
-                    State.Character.CancelChoices();
+                    State.Character.AbandonCreation();
                     Presentation.SetOutcome("Character choices cancelled.");
                     break;
                 case DaggerfallUiActionKind.CharacterUpdate:
@@ -56,10 +56,9 @@ internal sealed partial class DaggerfallSession
                 case DaggerfallUiActionKind.CharacterCommit:
                     RequireCharacterDraft();
                     State.Character.ReplacePending(Choices(action, State.Character.Pending!.Background));
-                    DaggerfallCharacterBackgroundSave? committedBackground = State.Character.CommitChoices();
-                    if (committedBackground is not null) ApplyBackground(committedBackground);
-                    int unequipped = _equipmentMoves.UnequipForbidden();
-                    Presentation.SetOutcome(unequipped == 0 ? "Character identity committed." : $"Character identity committed; removed {unequipped} forbidden equipped item(s).");
+                    if (State.Character.Pending!.Background is null) throw new ArgumentException("Complete a character background before starting a new game.");
+                    State.Character.CommitChoices(replaceCommitted: true);
+                    Presentation.SetOutcome("Character committed. Review the final summary, then begin the new game.");
                     break;
                 default:
                     throw new ArgumentException($"'{action.Action}' is not a character action.", nameof(action));
@@ -130,7 +129,8 @@ internal sealed partial class DaggerfallSession
                 throw new ArgumentException("Character background fields are incomplete.", nameof(action));
             DaggerfallCareerDefinition career = action.Career == DaggerfallCustomCareerPolicy.CareerId
                 ? DaggerfallCustomCareerPolicy.Compile(_definitions, custom!, State.Character.Career).Career
-                : _definitions.Catalogs.RequireCareer(action.Career);
+                : _definitions.Catalogs.TryGetCareer(action.Career, out var publishedCareer) ? publishedCareer
+                    : throw new ArgumentException($"Career '{action.Career}' is not published.");
             background = action.Kind == DaggerfallUiActionKind.CharacterBackgroundReroll ? background : DaggerfallCharacterBackgroundPolicy.Update(_definitions, career, identity, background!,
                 Answers(action.BackgroundAnswers), Allocations(action.AttributeAllocations, "attribute"), Allocations(action.SkillAllocations, "skill"));
         }
@@ -176,19 +176,5 @@ internal sealed partial class DaggerfallSession
         foreach ((int group, int amount) in DaggerfallCharacterBackgroundPolicy.SocialReputations(_definitions, State.Character.Career, background))
             State.Social.ChangePersonalReputation(group, amount);
 
-        DaggerfallItemFactory factory = new(_definitions, _random);
-        foreach ((DaggerfallStartingGrant grant, int ordinal) in background.StartingGrants.Select((grant, ordinal) => (grant, ordinal)))
-        {
-            DaggerfallItemDefinition definition = _definitions.RequireItem(new DaggerfallItemId(grant.ItemId));
-            DaggerfallItemTemplateDefinition template = definition.Template ?? throw new InvalidOperationException($"Background grant '{grant.ItemId}' is not a normalized template.");
-            bool appearance = template.Groups.Contains("Armor", StringComparer.Ordinal) || template.Groups.Contains("MensClothing", StringComparer.Ordinal) || template.Groups.Contains("WomensClothing", StringComparer.Ordinal);
-            DaggerfallCreatedItem item = factory.Create(new DaggerfallItemCreateRequest(template.Groups[0], $"character.background.{ordinal}.{template.Index}", DaggerfallItemOwner.Player,
-                Quantity: grant.Quantity, TemplateIndex: template.Index, Material: definition.Weapon?.Material ?? definition.Armor?.Material,
-                Race: appearance ? State.Character.Identity.RaceId : null,
-                Gender: appearance ? (State.Character.Identity.Gender == DaggerfallCharacterGender.Female ? "female" : "male") : null));
-            factory.Materialize(item, State.Inventory, State.ItemInstances,
-                item.Stackable ? DaggerfallInventoryStackIds.ForBiography(ordinal) : null,
-                item.Stackable ? null : _uniqueItems.AllocateReference());
-        }
     }
 }

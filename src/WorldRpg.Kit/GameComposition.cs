@@ -264,6 +264,13 @@ public sealed class GameSessionContext(IEngineContext engine, ResolvedGameCompos
 public interface IGameRuleset { RulesetId Id { get; } IGameSession CreateSession(GameSessionContext context); }
 public interface IGameSession : IDisposable { void PublishInitial(); ProductUpdateResult Update(ProductUpdate update); }
 
+/// <summary>Optional entry flow that constructs a fresh session from committed character choices.</summary>
+public interface ICharacterCreationSession
+{
+    bool RequiresCharacterInitialization { get; }
+    IGameSession CreateNewGame();
+}
+
 /// <summary>Optional ruleset seam for recognizing its own entry-screen action.</summary>
 public interface IEntryScreenSession
 {

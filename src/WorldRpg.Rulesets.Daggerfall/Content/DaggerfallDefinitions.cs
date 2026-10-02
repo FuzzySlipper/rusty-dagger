@@ -269,6 +269,8 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     internal DaggerfallCinematicSet Cinematics { get; } = cinematics;
 
     internal DaggerfallVocabulary Vocabulary { get; } = vocabulary;
+    internal DaggerfallNewGameDefinition NewGame { get; init; } = null!;
+
     internal DaggerfallBuildingNameInputs BuildingNames { get; init; } = new([]);
     internal IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> Actors { get; } = new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors.ToDictionary());
     internal IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> Items { get; } = new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items.ToDictionary());
