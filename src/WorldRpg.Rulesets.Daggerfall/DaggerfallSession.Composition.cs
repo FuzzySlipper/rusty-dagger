@@ -272,7 +272,7 @@ internal sealed partial class DaggerfallSession
             _heldEnchantments = new DaggerfallHeldEnchantments(equipmentCoordinator, itemInstances, definitions.Magic,
                 playerStats, actors.Entities, playerEntity, () => _time.Calendar,
                 () => assembled.PlayerControl.Position, () => DaggerfallActorRoster.NearbyCreatures(actors, authored), InSunlight, _itemCondition, InHolyPlace,
-                amount => _vitality.ResolveHeldEnchantmentDamage(actors.Player.Actor, amount), social);
+                amount => AppendEffectDamage(new(_vitality.ResolveHeldEnchantmentDamage(actors.Player.Actor, amount))), social, DrainNearbyHealth);
             effects.UseHeldDefense(actors.Player.DurableId, _heldEnchantments);
             partiallyConstructed.Add(_heldEnchantments);
             _equipmentMoves.Changed += _ =>
@@ -448,7 +448,12 @@ internal sealed partial class DaggerfallSession
                     _facts.Append(new EquipmentWornFact(owner, result.DurableItemId, result.Metadata.ItemId,
                         DaggerfallTemplateItemDefinitions.BreaksInPlural(template), result.PreviousCondition, result.Metadata.CurrentCondition,
                         result.Outcome == DaggerfallItemConditionOutcome.Broken, _latestUpdateGeneration ?? 0, _latestSimulationStep ?? 0));
-                });
+                }, enemyGroup: id => authored.TryGetValue(id, out var enemy) && enemy.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass
+                    ? DaggerfallFormulaPolicy.EnemyGroupFor(enemy) : null,
+                damageSource: (id, amount) => AppendEffectDamage(new(_vitality.ResolveHeldEnchantmentDamage(RequireEffectActor(id), amount))),
+                restoreSource: (id, amount) => _vitality.RestoreSpellTrack(RequireEffectActor(id), TrackId.Parse("health"), amount),
+                strikeTuning: tuning.StrikeEnchantments);
+            _itemCondition.Enchanted += _itemCastTriggers.Enchanted;
             effects.Completed += _itemCastTriggers.EffectCompleted;
             _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, _dungeonText, CapturePropertyStorage, QuestTravelOrigin, authored, () => Casting.NextSequence);
             _roster = new DaggerfallActorRoster(State, definitions, _random, assembled.Mechanics, _actorIdentities, _uniqueItems,

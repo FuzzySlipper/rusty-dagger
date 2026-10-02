@@ -60,7 +60,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
 
     private readonly Func<long, DaggerfallMagicDefense> _magicDefense;
     private readonly Func<long, bool> _physicalAttacksBlocked;
-    private readonly Action<long, long, DaggerfallItemStrikeSource, int>? _itemStrike;
+    private readonly Func<long, long, DaggerfallItemStrikeSource, int, int>? _itemStrike;
     internal DaggerCombatRules(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment,
         Func<long, MechanicsInventoryCoordinator?> actorInventories, DaggerfallItemInstances itemInstances,
         DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity,
@@ -73,7 +73,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         Action<long, ulong>? deliverWeaponPoison = null, Func<int>? attackChanceModifier = null,
         Func<long, long, ulong, ulong, ulong, DaggerfallWabbajackResult>? transformActor = null, Func<long, DaggerfallMagicDefense>? magicDefense = null,
         Func<long, bool>? physicalAttacksBlocked = null,
-        Func<long, long, ulong, int, int, ulong, ulong, (double Magicka, int Strength)>? molagBalStrike = null, Action<long, long, DaggerfallItemStrikeSource, int>? itemStrike = null)
+        Func<long, long, ulong, int, int, ulong, ulong, (double Magicka, int Strength)>? molagBalStrike = null, Func<long, long, DaggerfallItemStrikeSource, int, int>? itemStrike = null)
     {
         _physicalAttacksBlocked = physicalAttacksBlocked ?? (_ => false);
         _molagBalStrike = molagBalStrike;
@@ -210,18 +210,23 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
                 facts.Append(new ActorDiedFact(target, request.AttackerId, DaggerfallDamageCause.Effect, 0, 0, request.Generation, request.SimulationStep));
             return;
         }
+        int strikeDamage = outcome.Hit ? outcome.Damage : 0;
+        if (attack is DaggerfallPreparedAttack { ItemStrikeSource: { } sourceItem })
+            strikeDamage = _itemStrike?.Invoke(request.AttackerId, target, sourceItem, strikeDamage) ?? strikeDamage;
         if (!outcome.Hit)
         { facts.Append(new AttackMissedFact(request.AttackerId, target, outcome.Roll, outcome.Chance, enemyAttack, request.Generation, request.SimulationStep) { Feedback = feedback });
             if (transformation is not null) facts.Append(transformation);
+            if (strikeDamage > 0)
+                ApplyDamage(Participants(request.AttackerId, target, request.Action ?? "attack"), request.AttackerId, target,
+                    strikeDamage, outcome.Body, enemyAttack, request.Generation, request.SimulationStep, feedback, facts, null, emitHitFact: false, admittedBaseDamage: 0);
             return; }
         string action = request.Action ?? _definitions[request.AttackerId].ActionId ?? "attack";
         // Capture the weapon skill at the admitted operation boundary. Applying the hit may break
         // the weapon through physical wear and unequip it before the skill-use reaction runs.
         string? playerWeaponSkill = request.AttackerId == PlayerId ? PlayerWeaponSkill() : null;
-        if (outcome.Damage > 0 && attack is DaggerfallPreparedAttack { ItemStrikeSource: { } sourceItem })
-            _itemStrike?.Invoke(request.AttackerId, target, sourceItem, outcome.Damage);
-        ApplyDamage(Participants(request.AttackerId, target, action), request.AttackerId, target, outcome.Damage, outcome.Body,
-            enemyAttack, request.Generation, request.SimulationStep, feedback, facts, (attack as DaggerfallPreparedAttack)?.MolagBalSource);
+        ApplyDamage(Participants(request.AttackerId, target, action), request.AttackerId, target, strikeDamage, outcome.Body,
+            enemyAttack, request.Generation, request.SimulationStep, feedback, facts, (attack as DaggerfallPreparedAttack)?.MolagBalSource,
+            admittedBaseDamage: strikeDamage != outcome.Damage ? outcome.Damage : null);
         if (request.AttackerId == PlayerId)
         {
             RecordPlayerWeaponHit(playerWeaponSkill!);
@@ -626,13 +631,13 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
 
     private void ApplyDamage(CombatParticipants participants, long attacker, long target, int damage, int body, bool enemy,
         ulong generation, ulong step, DaggerfallStrikeFeedback feedback, FactBuffer<IProductFact> facts,
-        (WorldRpg.Kit.Inventory.UniqueInventoryItem Weapon, ulong Identity)? mace)
+        (WorldRpg.Kit.Inventory.UniqueInventoryItem Weapon, ulong Identity)? mace, bool emitHitFact = true, int? admittedBaseDamage = null)
     {
         Track health = participants.TargetStats.GetTrack(TrackId.Parse(HealthTrack));
         int physicalDamage = damage;
         damage = ApplyRazor(attacker, target, damage, health, enemy, generation, step, facts, out var razorWeapon, out int razorWear);
         ApplyHitEvent applied = Rules.ApplyToHealth(participants, damage, body, health);
-        facts.Append(new AttackHitFact(attacker, target, applied.CalculatedDamage, applied.ActualHealthLost, body, enemy, generation, step) { Feedback = feedback });
+        if (emitHitFact) facts.Append(new AttackHitFact(attacker, target, applied.CalculatedDamage, applied.ActualHealthLost, body, enemy, generation, step) { Feedback = feedback });
         facts.Append(new DamageAppliedFact(attacker, target, DaggerfallDamageCause.PhysicalAttack,
             applied.CalculatedDamage, applied.ActualHealthLost, body, generation, step));
         // The donor delivers a poisoned weapon only on a strike that actually took health, and the strike
@@ -640,7 +645,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         // target's resistance stops it.
         if (applied.ActualHealthLost > 0)
         {
-            if (_deliverWeaponPoison is not null
+            if (admittedBaseDamage is not 0 && _deliverWeaponPoison is not null
                 && EquippedWeapon(attacker) is WorldRpg.Kit.Inventory.UniqueInventoryItem weapon
                 && weapon.EntityId is ulong carried)
             {
@@ -658,7 +663,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         // Revalidate the admitted source before wear can break and remove it.
         bool acceptedMace = mace is { } admittedMace
             && CaptureMolagBalSource(attacker) is { } impactMace && impactMace.Identity == admittedMace.Identity;
-        int physicalWearDamage = razorWear > 0 ? physicalDamage : applied.Damage;
+        int physicalWearDamage = admittedBaseDamage ?? (razorWear > 0 ? physicalDamage : applied.Damage);
         if (physicalWearDamage > 0) ApplyPhysicalWear(attacker, target, body, physicalWearDamage, enemy, generation, step, facts);
         if (acceptedMace && mace is { } maceSource && applied.Damage > 0)
             ApplyMolagBal(attacker, target, maceSource, applied.Damage, enemy, generation, step, facts);

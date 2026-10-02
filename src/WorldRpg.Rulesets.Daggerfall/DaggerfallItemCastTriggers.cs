@@ -12,10 +12,12 @@ internal sealed record DaggerfallItemStrikeSource(ulong ItemId, string Enchantme
 internal sealed record DaggerfallHeldCastState(long CasterId, long LastRerollMinute, string[] ActiveEffectInstances, bool RerollPending = false);
 
 /// <summary>Item trigger policy; casting, equipment, calendar, condition and effects keep their one owners.</summary>
-internal sealed class DaggerfallItemCastTriggers(DaggerfallMagicCatalogSet magic, DaggerfallItemInstances instances,
+internal sealed partial class DaggerfallItemCastTriggers(DaggerfallMagicCatalogSet magic, DaggerfallItemInstances instances,
     DaggerfallCasting casting, DaggerfallEffectLifecycle effects, EntityDirectory entities,
     Func<long, MechanicsEquipmentCoordinator?> equipmentFor, DaggerfallItemConditionService condition,
-    Func<long> minuteIndex, Action<long, DaggerfallItemConditionResult>? worn = null)
+    Func<long> minuteIndex, Action<long, DaggerfallItemConditionResult>? worn = null,
+    Func<long, DaggerfallEnemyGroup?>? enemyGroup = null, Action<long, int>? damageSource = null,
+    Action<long, int>? restoreSource = null, DaggerfallStrikeEnchantmentTuning? strikeTuning = null)
 {
     private const int HeldType = 1, StrikeType = 2, UsedType = 0;
     private const int ActivationWear = 10, RerollMinutes = 6 * 60;
@@ -79,13 +81,15 @@ internal sealed class DaggerfallItemCastTriggers(DaggerfallMagicCatalogSet magic
         ulong id = entities.IdentityOf(new EntityId(item.EntityId)).Value;
         var metadata = instances.RequireUnique(id);
         var payloads = Payloads(metadata, UsedType);
-        if (payloads.Count == 0) return new(false, "This enchantment has no use effect.");
+        bool leech = Enchantments(metadata).Any(value => value.Type == DaggerfallEnchantmentSettings.HealthLeechType);
+        if (payloads.Count == 0 && !leech) return new(false, "This enchantment has no use effect.");
         if (!Available(id))
         {
             Wear(metadata.Owner.Id, item, ActivationWear); // The condition owner reports AlreadyBroken.
             return new(false, "This magic item is broken.");
         }
-        bool accepted = false;
+        bool accepted = leech;
+        ApplyLeechUse(metadata.Owner.Id, id, Enchantments(metadata), strike: false);
         DaggerfallCastOutcome outcome = DaggerfallCastOutcome.UnknownSpell;
         foreach (var payload in payloads)
         {
@@ -101,7 +105,7 @@ internal sealed class DaggerfallItemCastTriggers(DaggerfallMagicCatalogSet magic
             Wear(metadata.Owner.Id, item, ActivationWear);
         }
         return new(accepted, !Available(id) ? "The magic item broke." : outcome == DaggerfallCastOutcome.Ready
-            ? "Item spell ready." : accepted ? "Item spell cast." : $"Item spell unavailable: {outcome}.");
+            ? "Item spell ready." : accepted ? payloads.Count == 0 ? "Item used." : "Item spell cast." : $"Item spell unavailable: {outcome}.");
     }
 
     /// <summary>The accepted attack retains this source before equipment or wear can change.</summary>
@@ -113,19 +117,39 @@ internal sealed class DaggerfallItemCastTriggers(DaggerfallMagicCatalogSet magic
         if (!instances.ContainsUnique(id)) return null;
         var metadata = instances.RequireUnique(id);
         return metadata.CurrentCondition > 0 && metadata.Enchantment is { } key && magic.TryEnchantments(key, out var payloads)
-            && payloads.Any(value => value.Type == StrikeType) ? new(id, key) : null;
+            && payloads.Any(value => value.Type is StrikeType or DaggerfallEnchantmentSettings.HealthLeechType or DaggerfallEnchantmentSettings.LowDamageVsType or DaggerfallEnchantmentSettings.PotentVsType or DaggerfallEnchantmentSettings.VampiricType) ? new(id, key) : null;
     }
 
-    internal void Strike(long casterId, long targetId, DaggerfallItemStrikeSource source, int sourceDamage)
+    internal int Strike(long casterId, long targetId, DaggerfallItemStrikeSource source, int sourceDamage)
     {
         ulong id = source.ItemId;
-        if (sourceDamage <= 0 || !OwnsItem(casterId, id) || instances.RequireUnique(id).Enchantment != source.Enchantment || !Available(id) || Equipped(casterId, id) is not { } item) return;
-        foreach (var payload in Payloads(instances.RequireUnique(id), StrikeType))
+        if (sourceDamage < 0 || !OwnsItem(casterId, id) || instances.RequireUnique(id).Enchantment != source.Enchantment || !Available(id) || Equipped(casterId, id) is not { } item) return sourceDamage;
+        var payloads = Enchantments(instances.RequireUnique(id));
+        int adjusted = sourceDamage;
+        foreach (var payload in payloads)
         {
             if (!Available(id)) break;
-            var result = Trigger(casterId, id, payload, DaggerfallCastSource.ItemStrike, targetId);
-            if (result.Bundle is not null) Wear(casterId, item, ActivationWear);
+            switch (payload.Type)
+            {
+                case StrikeType when sourceDamage > 0:
+                    var result = Trigger(casterId, id, payload, DaggerfallCastSource.ItemStrike, targetId);
+                    if (result.Bundle is not null) Wear(casterId, item, ActivationWear);
+                    break;
+                case DaggerfallEnchantmentSettings.HealthLeechType:
+                    ApplyLeechUse(casterId, id, [payload], strike: true);
+                    break;
+                case DaggerfallEnchantmentSettings.VampiricType when payload.Param == 1 && sourceDamage > 0:
+                    (restoreSource ?? throw new InvalidOperationException("Vampiric strikes require the vitality owner."))(casterId, sourceDamage);
+                    break;
+                case DaggerfallEnchantmentSettings.LowDamageVsType:
+                case DaggerfallEnchantmentSettings.PotentVsType:
+                    if (MatchesEnemy(payload.Param, enemyGroup?.Invoke(targetId)))
+                        adjusted = checked(adjusted + (payload.Type == DaggerfallEnchantmentSettings.PotentVsType ? 1 : -1)
+                            * (strikeTuning ?? new(5, 2.25d)).DamageAdjustment);
+                    break;
+            }
         }
+        return Math.Max(0, adjusted);
     }
 
     /// <summary>Called by the one calendar fan-out. Synthetic intervals reroll but do not deteriorate held items.</summary>

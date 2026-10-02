@@ -161,6 +161,8 @@ internal static class DaggerfallMagicCostPolicy
         ArgumentNullException.ThrowIfNull(item);
         int capacity = ItemEnchantmentPower(item, metadata);
         int cost = setting.Cost;
+        if (setting.Type is DaggerfallEnchantmentSettings.LowDamageVsType or DaggerfallEnchantmentSettings.PotentVsType && item.Weapon is null)
+            return new(capacity, cost, false, "This enchantment requires a weapon.");
         // As with a published magic item, a detriment's negative cost is retained rather than refused.
         return cost <= capacity ? new(capacity, cost, true, null) : new(capacity, cost, false, "The item lacks enchantment capacity.");
     }

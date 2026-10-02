@@ -114,7 +114,7 @@ internal sealed class DaggerfallInventoryUseService(
                 consume();
                 return new(true, "Oghma Infinium grants 30 attribute points. Allocate them on your character sheet.");
             }
-            if (definitions.Magic.TryEnchantments(enchantment, out var spellPayloads) && spellPayloads.Any(effect => effect.Type == 0))
+            if (definitions.Magic.TryEnchantments(enchantment, out var spellPayloads) && spellPayloads.Any(effect => effect.Type is 0 or DaggerfallEnchantmentSettings.HealthLeechType))
                 return unique is { } spellSource && useItemSpell is not null ? useItemSpell(spellSource)
                     : new(false, "Item casting requires an available unique source.");
             return new(false, "This enchantment has no use effect.");

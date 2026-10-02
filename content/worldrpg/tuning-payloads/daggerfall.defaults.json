@@ -128,6 +128,7 @@
     "pointsPerSecond": 5.0,
     "delayAfterAttackSeconds": 2.0
   },
+  "strikeEnchantments": { "damageAdjustment": 5, "vampiricRange": 2.25 },
   "music": {
     "alternatePlaylists": false
   },
