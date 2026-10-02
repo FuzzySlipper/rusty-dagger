@@ -51,12 +51,24 @@ public sealed class ApplyHitEvent(CombatParticipants participants, int damage, i
 public readonly record struct DamageResult(Actor Source, Actor Target, string Cause, int CalculatedDamage,
     double ActualHealthLost, bool Defeated);
 
+/// <summary>An otherwise lethal application, after damage contributions and before canonical health changes.</summary>
+public sealed class DefeatEvent(ApplyHitEvent application, double currentHealth, double minimumHealth)
+{
+    public ApplyHitEvent Application { get; } = application;
+    public CombatParticipants Participants => Application.Participants;
+    public double CurrentHealth { get; } = currentHealth;
+    public double MinimumHealth { get; } = minimumHealth;
+    /// <summary>A participant may retain living health; application bounds it to the health already held.</summary>
+    public double RetainedHealth { get; set; } = minimumHealth;
+}
+
 /// <summary>Explicit participant contributions, in registration order after each base calculation and before application.</summary>
 public interface ICombatContribution
 {
     void Hit(TryHitEvent interaction) { }
     void Damage(DamageEvent interaction) { }
     void Applying(ApplyHitEvent interaction) { }
+    void Defeating(DefeatEvent interaction) { }
 }
 
 /// <summary>Attached contributions belong to their actor/item. Effect owners add/remove their own active contributions here.</summary>
@@ -105,8 +117,15 @@ public sealed class CombatResolution
         {
             double before = health.Current;
             if (before <= health.Minimum) return;
-            health.SetCurrent(interaction.Mode == HealthApplicationMode.Terminal ? health.Minimum
-                : Math.Max(health.Minimum, before - Math.Max(0d, interaction.Damage)), clamp: true);
+            double after = interaction.Mode == HealthApplicationMode.Terminal ? health.Minimum
+                : Math.Max(health.Minimum, before - Math.Max(0d, interaction.Damage));
+            if (after <= health.Minimum)
+            {
+                DefeatEvent defeat = new(interaction, before, health.Minimum);
+                foreach (ICombatContribution rule in Gather(participants).ToArray()) rule.Defeating(defeat);
+                after = Math.Min(before, defeat.RetainedHealth);
+            }
+            health.SetCurrent(after, clamp: true);
             interaction.ActualHealthLost = before - health.Current;
             interaction.Defeated = before > health.Minimum && health.Current <= health.Minimum;
         }, mode);
