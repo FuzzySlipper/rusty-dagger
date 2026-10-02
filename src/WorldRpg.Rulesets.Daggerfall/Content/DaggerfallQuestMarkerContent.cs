@@ -32,6 +32,9 @@ internal static class DaggerfallQuestMarkerContent
             WorldPoint position = new(DaggerfallBaseContent.Number(point, "x", diagnostics), DaggerfallBaseContent.Number(point, "y", diagnostics), DaggerfallBaseContent.Number(point, "z", diagnostics));
             DaggerfallSiteMarker marker = new(id, kind, position)
             {
+                SourceKey = DaggerfallBaseContent.Text(value, "sourceKey", diagnostics),
+                BuildingIndex = value.TryGetProperty("buildingIndex", out JsonElement building) && building.ValueKind != JsonValueKind.Null
+                    ? DaggerfallBaseContent.Integer(value, "buildingIndex", diagnostics) : null,
                 SourceOrdinal = DaggerfallBaseContent.Integer(value, "sourceOrdinal", diagnostics),
                 BlockX = DaggerfallBaseContent.Integer(value, "blockX", diagnostics),
                 BlockZ = DaggerfallBaseContent.Integer(value, "blockZ", diagnostics),

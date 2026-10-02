@@ -18,6 +18,8 @@ internal sealed record DaggerfallSiteMarker(
     WorldPoint Position,
     string? DestinationLogicalProfile = null)
 {
+    internal string? SourceKey { get; init; }
+    internal int? BuildingIndex { get; init; }
     internal int? SourceOrdinal { get; init; }
     internal int BlockX { get; init; }
     internal int BlockZ { get; init; }
@@ -26,8 +28,9 @@ internal sealed record DaggerfallSiteMarker(
         if (!DaggerfallBaseContent.ValidId(Id))
             throw new ArgumentException("Site markers must use stable source ids.", nameof(Id));
         if (!Enum.IsDefined(Kind)) throw new ArgumentOutOfRangeException(nameof(Kind));
-        if (Kind is DaggerfallSiteMarkerKind.QuestSpawn or DaggerfallSiteMarkerKind.QuestItem && SourceOrdinal is null or < 0)
-            throw new ArgumentException("A quest marker requires its source flat ordinal.");
+        if (Kind is DaggerfallSiteMarkerKind.QuestSpawn or DaggerfallSiteMarkerKind.QuestItem
+            && (string.IsNullOrWhiteSpace(SourceKey) || SourceOrdinal is null or < 0 || BuildingIndex is < 0))
+            throw new ArgumentException("A quest marker requires its source block and flat ordinal.");
         if (!float.IsFinite(Position.X) || !float.IsFinite(Position.Y) || !float.IsFinite(Position.Z))
             throw new ArgumentOutOfRangeException(nameof(Position));
 

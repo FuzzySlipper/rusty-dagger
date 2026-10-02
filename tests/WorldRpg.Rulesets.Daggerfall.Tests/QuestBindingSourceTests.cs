@@ -46,8 +46,8 @@ public sealed class QuestBindingSourceTests
     {
         byte[] bytes = Encoding.UTF8.GetBytes("""
             {"world":{"questMarkers":[
-              {"id":"quest/source/5","kind":"item","position":{"x":2,"y":3,"z":-4},"sourceOrdinal":5,"blockX":-2,"blockZ":1},
-              {"id":"quest/source/1","kind":"spawn","position":{"x":7,"y":8,"z":-9},"sourceOrdinal":1,"blockX":-2,"blockZ":1}
+              {"id":"quest/source/5","kind":"item","position":{"x":2,"y":3,"z":-4},"sourceKey":"SOURCE.RDB","buildingIndex":null,"sourceOrdinal":5,"blockX":-2,"blockZ":1},
+              {"id":"quest/source/1","kind":"spawn","position":{"x":7,"y":8,"z":-9},"sourceKey":"SOURCE.RDB","buildingIndex":null,"sourceOrdinal":1,"blockX":-2,"blockZ":1}
             ]}}
             """);
         DaggerfallContentDiagnostics diagnostics = new();
@@ -57,13 +57,15 @@ public sealed class QuestBindingSourceTests
         Assert.Equal([DaggerfallSiteMarkerKind.QuestItem, DaggerfallSiteMarkerKind.QuestSpawn], markers.Select(value => value.Kind));
         Assert.Equal(new WorldPoint(2, 3, -4), markers[0].Position);
         Assert.Equal((-2, 1), (markers[0].BlockX, markers[0].BlockZ));
+        Assert.Equal("SOURCE.RDB", markers[0].SourceKey);
+        Assert.Null(markers[0].BuildingIndex);
     }
 
     [Fact]
     public void Unknown_marker_kind_is_a_content_error()
     {
         byte[] bytes = Encoding.UTF8.GetBytes("""
-            {"world":{"questMarkers":[{"id":"quest/0","kind":"invented","position":{"x":0,"y":0,"z":0},"sourceOrdinal":0,"blockX":0,"blockZ":0}]}}
+            {"world":{"questMarkers":[{"id":"quest/0","kind":"invented","position":{"x":0,"y":0,"z":0},"sourceKey":"SOURCE.RDB","buildingIndex":null,"sourceOrdinal":0,"blockX":0,"blockZ":0}]}}
             """);
         DaggerfallContentDiagnostics diagnostics = new();
         _ = DaggerfallQuestMarkerContent.ReadWorld(bytes, diagnostics);

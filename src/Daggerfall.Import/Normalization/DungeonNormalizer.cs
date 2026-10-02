@@ -366,9 +366,10 @@ public static class DungeonNormalizer
             {
                 RdbFlatSource flat = block.Flats[index];
                 NormalizedVector3 position = MeshGeometry.ToRightHanded(Place(flat.X, flat.Y, flat.Z, reference));
-                if (QuestMarkerNormalization.Read($"quest/{blockPlacementId}/{index}", flat.TextureArchive, flat.TextureRecord, position) is { } marker)
+                if (QuestMarkerNormalization.Read($"quest/{blockPlacementId}/{index}", flat.TextureArchive, flat.TextureRecord, position,
+                    reference.SourceName, null, index, reference.X, reference.Z) is { } marker)
                 {
-                    questMarkers.Add(marker with { SourceOrdinal = index, BlockX = reference.X, BlockZ = reference.Z });
+                    questMarkers.Add(marker);
                     AddProvenance(marker.Id, "rdb-quest-marker", blocks.Source, index);
                     continue;
                 }
