@@ -103,6 +103,7 @@ internal sealed record DaggerfallQuestResourceState(string Symbol, DaggerfallQue
 {
     public DaggerfallCreatedItem? SelectedItem { get; init; }
     public DaggerfallQuestFoeSelection? SelectedFoe { get; init; }
+    public DaggerfallQuestPersonSelection? SelectedPerson { get; init; }
     /// <summary>Actual selected display values outlive a consumed item or unloaded actor.</summary>
     public DaggerfallQuestResourceTextContext? Text { get; init; }
 }
@@ -123,6 +124,8 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
     public DaggerfallQuestClockState[] Clocks { get; init; } = [];
     /// <summary>The optional Daggerfall faction supplied by a quest giver; zero is the donor's unscoped value.</summary>
     public int FactionId { get; init; }
+    /// <summary>The explicit canonical quest giver, supplied by the accepting dialogue/service caller.</summary>
+    public long? QuestorId { get; init; }
     /// <summary>The quest that invoked this child, if this was started by a run-quest operation.</summary>
     public string? ParentInstanceId { get; init; }
     /// <summary>Whether the retained terminal result satisfies a run-quest success branch.</summary>
@@ -139,7 +142,7 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
                 : string.IsNullOrWhiteSpace(Outcome) || Succeeded is null
                     || (Lifecycle == DaggerfallQuestLifecycle.Tombstoned ? TombstoneAtSeconds is null or < 0 : TombstoneAtSeconds is not null)))
             throw new ArgumentException($"Quest instance '{InstanceId}' has an incompatible lifecycle/outcome.");
-        if (FactionId < 0 || (ParentInstanceId is not null && string.IsNullOrWhiteSpace(ParentInstanceId)))
+        if (QuestorId is <= 0 || FactionId < 0 || (ParentInstanceId is not null && string.IsNullOrWhiteSpace(ParentInstanceId)))
             throw new ArgumentException($"Quest instance '{InstanceId}' has invalid faction or parent state.");
         ArgumentNullException.ThrowIfNull(Resources);
         ArgumentNullException.ThrowIfNull(Symbols);
@@ -160,13 +163,20 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
             if (resource.SelectedItem is { } item)
             {
                 item.Metadata.Validate();
-                if (resource.SelectedFoe is not null || item.Quantity == 0 || item.TemplateIndex is < 0 or > 287
+                if (resource.SelectedFoe is not null || resource.SelectedPerson is not null || item.Quantity == 0 || item.TemplateIndex is < 0 or > 287
                     || item.Item.Value != item.Metadata.ItemId || item.Metadata.QuestId != InstanceId || item.Metadata.QuestItemSymbol != symbol)
                     throw new ArgumentException($"Quest resource '{symbol}' has invalid selected item meaning.");
             }
-            if (resource.SelectedFoe is { } foe && (string.IsNullOrWhiteSpace(foe.Definition) || foe.Count is < 1 or > 8))
+            if (resource.SelectedFoe is { } foe && (resource.SelectedPerson is not null || string.IsNullOrWhiteSpace(foe.Definition) || foe.Count is < 1 or > 8))
                 throw new ArgumentException($"Quest resource '{symbol}' has invalid selected foe meaning.");
-            if (resource.Binding.Kind == DaggerfallQuestResourceBindingKind.Pending && resource.SelectedItem is null && resource.SelectedFoe is null)
+            if (resource.SelectedPerson is { } person && (person.FactionId < 0 || string.IsNullOrWhiteSpace(person.Race)
+                || person.Gender is not ("Male" or "Female") || person.HudFace is < 0 or > 9
+                || string.IsNullOrWhiteSpace(person.DisplayName) || person.QuestorId is <= 0 || person.VampireClanFactionId is <= 0
+                || person.Appearance is { } appearance && (appearance.Race != person.Race || appearance.Gender != person.Gender
+                    || appearance.FactionId != person.FactionId || appearance.NameSeed != person.NameSeed
+                    || appearance.BillboardArchive < 0 || appearance.BillboardRecord is < 0 or > 127)))
+                throw new ArgumentException($"Quest resource '{symbol}' has invalid selected Person meaning.");
+            if (resource.Binding.Kind == DaggerfallQuestResourceBindingKind.Pending && resource.SelectedItem is null && resource.SelectedFoe is null && resource.SelectedPerson is null)
                 throw new ArgumentException($"Pending quest resource '{symbol}' has no selected meaning.");
         }
 
@@ -214,6 +224,14 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
             {
                 if (declared.Kind != "foe") throw new ArgumentException($"Quest resource '{symbol}' selects a foe for a different declaration kind.");
                 _ = definitions.RequireActor(new(selectedFoe.Definition));
+            }
+            if (resource.SelectedPerson is { } person)
+            {
+                if (declared.Kind != "person" || !definitions.Factions.Factions.ContainsKey(person.FactionId)
+                    || !definitions.Catalogs.TryGetRace(person.Race, out _)
+                    || person.VampireClanFactionId is int clan && (!definitions.Factions.Factions.TryGetValue(clan, out var faction) || faction.Type != 6)
+                    || person.QuestorId is long questor && !resource.Binding.ActorIds.Contains(questor))
+                    throw new ArgumentException($"Quest resource '{symbol}' has incompatible selected Person meaning.");
             }
             if (resource.Binding.Building is { } claim)
             {
@@ -263,9 +281,10 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
 
 internal sealed record DaggerfallQuestStartSave(string InstanceId, string SourceFile, string? ParentInstanceId, int FactionId)
 {
+    public long? QuestorId { get; init; }
     internal void Validate()
     {
-        if (string.IsNullOrWhiteSpace(InstanceId) || string.IsNullOrWhiteSpace(SourceFile) || FactionId < 0
+        if (string.IsNullOrWhiteSpace(InstanceId) || string.IsNullOrWhiteSpace(SourceFile) || FactionId < 0 || QuestorId is <= 0
             || (ParentInstanceId is not null && string.IsNullOrWhiteSpace(ParentInstanceId)))
             throw new ArgumentException("A pending quest start has invalid identity, source, parent, or faction state.");
     }
@@ -376,6 +395,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
         TerminalMessageId = saved.TerminalMessageId;
         PendingEndPasses = saved.PendingEndPasses;
         FactionId = saved.FactionId;
+        QuestorId = saved.QuestorId;
         ParentInstanceId = saved.ParentInstanceId;
         Succeeded = saved.Succeeded;
         TombstoneAtSeconds = saved.TombstoneAtSeconds;
@@ -393,6 +413,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
     internal int? TerminalMessageId { get; set; }
     internal int PendingEndPasses { get; set; }
     internal int FactionId { get; }
+    internal long? QuestorId { get; }
     internal string? ParentInstanceId { get; }
     internal bool? Succeeded { get; set; }
     internal long? TombstoneAtSeconds { get; set; }
@@ -433,6 +454,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
         Tasks = [.. Tasks.Select(task => task.Capture())],
         Clocks = [.. Clocks],
         FactionId = FactionId,
+        QuestorId = QuestorId,
         ParentInstanceId = ParentInstanceId,
         Succeeded = Succeeded,
         TombstoneAtSeconds = TombstoneAtSeconds,
@@ -457,6 +479,7 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
     private Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestMessageContext> _textContext = _ => DaggerfallQuestMessageContext.Empty;
     private Action<string, string>? _appendNote;
     private DaggerfallQuestPlaceAllocator? _placeAllocator;
+    private DaggerfallQuestPersonAllocator? _personAllocator;
     private DaggerfallQuestResourceAllocator? _resourceAllocator;
     private const long TombstoneRetentionSeconds = 7 * 24 * 60 * 60;
 
@@ -494,6 +517,9 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
 
     internal void BindPlaceAllocator(DaggerfallQuestPlaceAllocator allocator) =>
         _placeAllocator = allocator ?? throw new ArgumentNullException(nameof(allocator));
+
+    internal void BindPersonAllocator(DaggerfallQuestPersonAllocator allocator) =>
+        _personAllocator = allocator ?? throw new ArgumentNullException(nameof(allocator));
 
     internal void BindResourceAllocator(DaggerfallQuestResourceAllocator allocator) =>
         _resourceAllocator = allocator ?? throw new ArgumentNullException(nameof(allocator));
@@ -593,6 +619,16 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
                 if (!resources.Any(resource => DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "quest start resource") == declared.CanonicalId))
                     resources.Add(_placeAllocator.Allocate(instance.InstanceId, declared, resources,
                         _instances.Values.Where(value => value.Lifecycle == DaggerfallQuestLifecycle.Active).SelectMany(value => value.Resources)));
+            instance = instance with { Resources = [.. resources] };
+            instance.Validate(_definitions, validateClockState: false);
+        }
+        if (_personAllocator is not null)
+        {
+            List<DaggerfallQuestResourceState> resources = [.. instance.Resources];
+            foreach (var declaration in _definitions.QuestSources.Resources
+                .Where(value => value.SourceFile == instance.SourceFile && value.Kind == "person").OrderBy(value => value.SourceLine))
+                if (!resources.Any(resource => DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "quest start resource") == declaration.CanonicalId))
+                    resources.Add(_personAllocator.Allocate(instance, declaration));
             instance = instance with { Resources = [.. resources] };
             instance.Validate(_definitions, validateClockState: false);
         }
@@ -779,7 +815,7 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
         string source = ResolveSource(sourceReference);
         if (WouldCreateCycle(parent.InstanceId, source))
             throw new ArgumentException($"Daggerfall policy rejects a child cycle through '{source}'.");
-        ScheduleStart(source, parent.InstanceId, factionId, childInstanceId);
+        ScheduleStart(source, parent.InstanceId, factionId, childInstanceId, parent.QuestorId);
     }
 
     string IDaggerfallQuestTaskLifecycle.Pick(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation, int operationIndex, DaggerfallQuestTaskRuntimeState state)
@@ -805,7 +841,7 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
 
     void IDaggerfallQuestTaskLifecycle.Schedule(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) =>
         ScheduleStart(ResolveSource(operation.Targets.Single()), null, instance.FactionId,
-            $"{instance.InstanceId}:start:{operation.SourceLine}");
+            $"{instance.InstanceId}:start:{operation.SourceLine}", instance.QuestorId);
 
 
     string? IDaggerfallQuestTaskLifecycle.RunChild(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskDefinition task,
@@ -818,7 +854,7 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
             if (!TryResolveSource(operation.Targets[0], out string? source)) return operation.Targets[2];
             if (WouldCreateCycle(instance.InstanceId, source!))
                 throw new ArgumentException($"Quest child action at line {operation.SourceLine} rejects a child cycle through '{source}'.");
-            ScheduleStart(source!, instance.InstanceId, instance.FactionId, childId);
+            ScheduleStart(source!, instance.InstanceId, instance.FactionId, childId, instance.QuestorId);
             state.OperationState[operationIndex] = receipt with { ChildInstanceId = childId };
             return null;
         }
@@ -831,11 +867,11 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
         return child.Succeeded == true ? operation.Targets[1] : operation.Targets[2];
     }
 
-    private void ScheduleStart(string sourceFile, string? parentInstanceId, int factionId, string instanceId)
+    private void ScheduleStart(string sourceFile, string? parentInstanceId, int factionId, string instanceId, long? questorId)
     {
         if (factionId < 0) throw new ArgumentOutOfRangeException(nameof(factionId));
         if (_instances.ContainsKey(instanceId) || _pendingStarts.ContainsKey(instanceId)) return;
-        _pendingStarts.Add(instanceId, new(instanceId, sourceFile, parentInstanceId, factionId));
+        _pendingStarts.Add(instanceId, new(instanceId, sourceFile, parentInstanceId, factionId) { QuestorId = questorId });
     }
 
     private void AdmitPendingStarts()
@@ -848,6 +884,7 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
             {
                 ParentInstanceId = start.ParentInstanceId,
                 FactionId = start.FactionId,
+                QuestorId = start.QuestorId,
             });
             _pendingStarts.Remove(start.InstanceId);
         }

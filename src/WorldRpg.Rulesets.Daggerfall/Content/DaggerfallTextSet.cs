@@ -152,4 +152,13 @@ internal sealed record DaggerfallTextSet(
             DaggerfallTextResolution.Malformed => throw new InvalidOperationException($"Daggerfall text '{key}' is published as malformed: {value!.Reason}"),
             _ => throw new InvalidOperationException($"Daggerfall text does not contain '{key}'."),
         };
+
+    internal string RequireInternalEntry(string key, int index)
+    {
+        string[] entries = string.Concat(Require(new(DaggerfallTextKind.Internal, key)).TextRuns)
+            .Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        if (index < 0 || index >= entries.Length || string.IsNullOrWhiteSpace(entries[index]))
+            throw new InvalidOperationException($"Published internal text '{key}' has no entry {index}.");
+        return entries[index];
+    }
 }

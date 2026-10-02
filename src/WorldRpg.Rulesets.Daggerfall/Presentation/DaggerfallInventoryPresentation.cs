@@ -314,8 +314,29 @@ internal sealed class DaggerfallInventoryPresentation
     private int CurrentValue(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata? metadata) =>
         valuation is null ? definition.Value : valuation.CurrentValue(definition, metadata ?? throw new InvalidOperationException("Valued inventory rows require durable metadata."));
 
-    internal string DescribeCreatedItem(DaggerfallCreatedItem item) =>
-        Display(definitions.RequireItem(new DaggerfallItemId(item.Item.Value)), item.Metadata).Label;
+    internal string DescribeCreatedItem(DaggerfallCreatedItem item) => DescribeCreatedItem(definitions, item);
+
+    internal static string DescribeCreatedItem(DaggerfallDefinitions definitions, DaggerfallCreatedItem item)
+    {
+        var definition = definitions.RequireItem(new DaggerfallItemId(item.Item.Value));
+        var metadata = item.Metadata;
+        string label = definition.Template?.Name ?? Label(definition.Id.Value);
+        if (!metadata.Identified) return label;
+        if (metadata.Enchantment is { } magicId && definitions.Magic.MagicItems.TryGetValue(magicId, out var magic))
+        {
+            if (magic.Type != 0) return magic.Name;
+            label = magic.Name.Replace("%it", label, StringComparison.Ordinal);
+        }
+        if (metadata.BookId is int book)
+            return definitions.Books.Books[book] is { Disposition: DaggerfallBookDisposition.Read, Title.Length: > 0 } readable ? readable.Title : label;
+        bool weapon = definition.Template?.Groups.Contains("Weapons") == true && item.TemplateIndex != 131;
+        bool armor = definition.Template?.Groups.Contains("Armor") == true && item.TemplateIndex != 107 && definition.Shield is null;
+        if (!weapon && !armor) return label;
+        string material = string.Concat(definitions.Text.Require(new(DaggerfallTextKind.Internal, metadata.Material)).TextRuns);
+        string format = string.Concat(definitions.Text.Require(new(DaggerfallTextKind.Internal,
+            weapon ? "longWeaponNameFormatString" : "longArmorNameFormatString")).TextRuns);
+        return string.Format(CultureInfo.InvariantCulture, format, material, label);
+    }
 
     private ItemDisplay Display(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata? metadata)
     {

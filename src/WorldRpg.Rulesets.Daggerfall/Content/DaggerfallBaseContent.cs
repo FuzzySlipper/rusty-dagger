@@ -1921,6 +1921,13 @@ internal static partial class DaggerfallBaseContent
                 continue;
             }
 
+            DaggerfallFactionFlatDefinition[] visuals = faction.TryGetProperty("flatVisuals", out var visualRows)
+                ? [.. visualRows.EnumerateArray().Select(value => new DaggerfallFactionFlatDefinition(
+                    Integer(value, "id", diagnostics), Integer(value, "archive", diagnostics), Integer(value, "record", diagnostics)))] : [];
+            if (visuals.Any(value => value.Id < 0 || value.Archive < 0 || value.Record is < 0 or > 127)
+                || visuals.Length != 0 && !visuals.Select(value => value.Id).SequenceEqual(flats))
+                diagnostics.Add($"Faction {id} has malformed normalized billboard addresses.");
+
             if (!factions.TryAdd(id, new DaggerfallFactionDefinition(
                 id, filedId, name, parent, parentDisposition, children, type, typeName, region,
                 Integer(faction, "power", diagnostics), Integer(faction, "flags", diagnostics), Integer(faction, "ruler", diagnostics),
@@ -1930,7 +1937,7 @@ internal static partial class DaggerfallBaseContent
                 Integer(faction, "guildGroup", diagnostics), OptionalText(faction, "guildGroupName") ?? string.Empty,
                 Integer(faction, "reputation", diagnostics), Integer(faction, "summon", diagnostics),
                 Integer(faction, "minimumFame", diagnostics), Integer(faction, "maximumFame", diagnostics),
-                Integer(faction, "vampire", diagnostics), Integer(faction, "rank", diagnostics))))
+                Integer(faction, "vampire", diagnostics), Integer(faction, "rank", diagnostics)) { FlatVisuals = visuals }))
             {
                 diagnostics.Add($"Faction catalog names faction {id} twice, so one of them is unreachable.");
             }
@@ -2381,8 +2388,8 @@ internal static partial class DaggerfallBaseContent
                         OptionalInteger(i, "key", diagnostics), OptionalInteger(i, "rangeLow", diagnostics),
                         OptionalInteger(i, "rangeHigh", diagnostics), OptionalText(i, "usedMessage"), OptionalText(i, "anyInfoMessage"));
                 if (declaration.TryGetProperty("person", out JsonElement p) && p.ValueKind == JsonValueKind.Object)
-                    person = new(OptionalText(p, "named"), OptionalText(p, "faction"), OptionalText(p, "factionType"),
-                        OptionalText(p, "group"), OptionalInteger(p, "face", diagnostics), OptionalText(p, "gender"), OptionalText(p, "scope"), p.GetProperty("atHome").GetBoolean());
+                    person = new(OptionalText(p, "named", diagnostics), OptionalText(p, "faction", diagnostics), OptionalText(p, "factionType", diagnostics),
+                        OptionalText(p, "group", diagnostics), OptionalInteger(p, "face", diagnostics), OptionalText(p, "gender", diagnostics), OptionalText(p, "scope", diagnostics), p.GetProperty("atHome").GetBoolean());
                 if (declaration.TryGetProperty("place", out JsonElement place) && place.ValueKind == JsonValueKind.Object)
                     sites = [.. Array(place, "sites", diagnostics).Select(site => Text(site, "canonicalId", diagnostics))];
                 resources.Add(new DaggerfallQuestResourceDefinition(

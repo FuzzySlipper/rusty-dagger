@@ -21,6 +21,9 @@ public enum DaggerfallRegionFactionDisposition
     Unclaimed,
 }
 
+/// <summary>Normalized billboard address decoded offline from the faction flat field.</summary>
+public sealed record DaggerfallFactionFlat(int Id, int Archive, int Record);
+
 /// <summary>One published faction: its filed identity, relations and bindings.</summary>
 /// <param name="Id">The faction's identity.</param>
 /// <param name="FiledId">The identity the file states, before duplicate resolution.</param>
@@ -82,6 +85,8 @@ public sealed record DaggerfallFaction(
     int Vampire,
     int Rank)
 {
+    public IReadOnlyList<DaggerfallFactionFlat> FlatVisuals { get; init; } = [];
+
     public void Validate()
     {
         if (Id < 0)
@@ -305,7 +310,10 @@ public static class DaggerfallFactionsBuilder
                 faction.MinimumFame,
                 faction.MaximumFame,
                 faction.Vampire,
-                faction.Rank));
+                faction.Rank)
+            {
+                FlatVisuals = faction.Flats.Select(flat => new DaggerfallFactionFlat(flat, flat >> 7, flat & 0x7f)).ToArray(),
+            });
         }
 
         List<DaggerfallRegionFactions> regions = [];

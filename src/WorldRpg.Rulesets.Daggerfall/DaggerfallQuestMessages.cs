@@ -42,7 +42,7 @@ internal sealed record DaggerfallQuestMessagesSave(
 /// <summary>Every non-global resource spelling the retained quest message grammar selects.</summary>
 internal sealed record DaggerfallQuestResourceTextContext(
     string? Name = null, string? NameTwo = null, string? NameThree = null, string? NameFour = null,
-    string? Details = null, string? Binding = null, string? Faction = null);
+    string? Details = null, string? Binding = null, string? Faction = null, string? NpcVampireClan = null);
 
 /// <summary>The only text values a quest delivery may read: global session context and explicit bound resources.</summary>
 internal sealed record DaggerfallQuestMessageContext(
@@ -77,7 +77,7 @@ internal sealed class DaggerfallQuestMessages
     // The donor tests the long name forms first. Keeping that order stops '__foo_' being consumed as
     // a shorter spelling and makes every retained name, faction, binding, and detail arm explicit.
     private static readonly Regex ResourceMacro = new(
-        "(?<token>____(?<name4>[a-zA-Z0-9.]+)_|___(?<name3>[a-zA-Z0-9.]+)_|__(?<name2>[a-zA-Z0-9.]+)_|_(?<name1>[a-zA-Z0-9.]+)_|==(?<faction>[a-zA-Z0-9.]+)_|=#(?<binding>[a-zA-Z0-9.]+)_|=(?<details>[a-zA-Z0-9.]+)_)",
+        "(?<token>____(?<name4>[a-zA-Z0-9.]+)_|___(?<name3>[a-zA-Z0-9.]+)_|__(?<name2>[a-zA-Z0-9.]+)_|_(?<name1>[a-zA-Z0-9.]+)_|==(?<faction>[a-zA-Z0-9.]+)_|=#(?<binding>[a-zA-Z0-9.]+)_|=(?<details>[a-zA-Z0-9.]+)_)|(?<npcClan>%vcn)(?![a-zA-Z0-9])",
         RegexOptions.CultureInvariant);
     private readonly DaggerfallTextResolver _text;
     private readonly IReadOnlyDictionary<string, DaggerfallQuestSourceDefinition> _sources;
@@ -412,9 +412,26 @@ internal sealed class DaggerfallQuestMessages
         List<string> issues = [];
         string text = string.Join('\n', Variant(message.Lines, variant)).Replace("<ce>", string.Empty, StringComparison.Ordinal);
 
-        text = ResourceMacro.Replace(text, match => ExpandResource(match, context.Resources, delivery, issues));
         DaggerfallTextKey key = new(DaggerfallTextKind.Resource, $"quest:{sourceFile}:{messageId}");
-        DaggerfallTextRenderResult global = _text.ResolveRaw(text, key, context.Text);
+        string? referencedClan = null;
+        text = ResourceMacro.Replace(text, match =>
+        {
+            if (match.Groups["npcClan"].Success)
+            {
+                if (referencedClan is null) return match.Value;
+                var clanText = _text.ResolveRaw(match.Value, key,
+                    context.Text with { Faction = context.Text.Faction with { NpcVampireClan = referencedClan } });
+                issues.AddRange(clanText.Diagnostics.Select(diagnostic => $"{diagnostic.Kind}: {diagnostic.Detail}"));
+                return clanText.Text;
+            }
+            string symbol = DaggerfallQuestInstanceSave.Canonical(match.Groups.Cast<Group>()
+                .First(group => group.Success && group.Name is "name4" or "name3" or "name2" or "name1" or "faction" or "binding" or "details").Value,
+                "quest message resource");
+            referencedClan = context.Resources.TryGetValue(symbol, out var resource) ? resource.NpcVampireClan : null;
+            return ExpandResource(match, context.Resources, delivery, issues);
+        });
+        DaggerfallTextRenderResult global = _text.ResolveRaw(text, key,
+            context.Text with { Faction = context.Text.Faction with { NpcVampireClan = null } });
         issues.AddRange(global.Diagnostics.Select(diagnostic => $"{diagnostic.Kind}: {diagnostic.Detail}"));
         string rendered = global.Text;
 

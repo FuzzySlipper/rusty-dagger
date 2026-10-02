@@ -14,6 +14,8 @@ internal enum DaggerfallRegionFactionDisposition
     Unclaimed,
 }
 
+internal sealed record DaggerfallFactionFlatDefinition(int Id, int Archive, int Record);
+
 /// <summary>One published faction: its filed identity, relations and bindings.</summary>
 /// <param name="Id">The faction's identity.</param>
 /// <param name="FiledId">The identity the file states, before duplicate resolution.</param>
@@ -73,7 +75,10 @@ internal sealed record DaggerfallFactionDefinition(
     int MinimumFame,
     int MaximumFame,
     int Vampire,
-    int Rank);
+    int Rank)
+{
+    internal IReadOnlyList<DaggerfallFactionFlatDefinition> FlatVisuals { get; init; } = [];
+}
 
 /// <summary>One politic region with the factions that claim it.</summary>
 /// <param name="Region">The zero-based region.</param>

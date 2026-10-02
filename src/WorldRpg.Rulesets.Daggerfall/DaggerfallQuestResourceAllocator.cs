@@ -39,7 +39,7 @@ internal sealed class DaggerfallQuestResourceAllocator(
             return new(declaration.CanonicalId, DaggerfallQuestResourceBinding.Pending())
             {
                 SelectedFoe = new(definition.Id.Value, Math.Clamp(declaration.Foe?.Count ?? 1, 1, 8), female),
-                Text = new(Name: mobile.DonorName.Replace('_', ' '), Details: display),
+                Text = new(Name: definitions.Text.RequireInternalEntry("enemyNames", mobileId < 128 ? mobileId : 43 + mobileId - 128), Details: display),
             };
         }
         if (declaration.Kind != "item") throw new ArgumentException("Resource allocation requires an Item or Foe declaration.");
@@ -97,8 +97,10 @@ internal sealed class DaggerfallQuestResourceAllocator(
             }
         }
         DaggerfallCreatedItem selectedItem = items.Create(request);
+        string itemDisplay = selectedItem.TemplateIndex == 276
+            ? selectedItem.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture) : itemName(selectedItem);
         return new(declaration.CanonicalId, DaggerfallQuestResourceBinding.Pending())
-        { SelectedItem = selectedItem, Text = new(Name: itemName(selectedItem)) };
+        { SelectedItem = selectedItem, Text = new(Name: itemDisplay, Details: itemDisplay) };
     }
 
     private ulong Gold(string key, int factionId, DaggerfallQuestItemOptions options, DaggerfallQuestSelectionContext context)

@@ -60,7 +60,10 @@ public sealed record DaggerfallNpc(
     DaggerfallNpcPresence Presence,
     int? X,
     int? Y,
-    int? Z);
+    int? Z)
+{
+    public string? DisplayName { get; init; }
+}
 
 /// <summary>
 /// Static NPC, questor and civilian identity with site binding: one durable identity per person
@@ -127,6 +130,13 @@ public sealed class DaggerfallNpcRegistry
     /// <summary>Every registered NPC.</summary>
     public IReadOnlyList<DaggerfallNpc> All => [.. _npcs.Values.OrderBy(npc => npc.DurableId)];
 
+    /// <summary>Retains the selected display name on the canonical NPC identity.</summary>
+    public void SetDisplayName(long durableId, string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        _npcs[durableId] = Require(durableId) with { DisplayName = name };
+    }
+
     /// <summary>Hides or reveals one NPC without duplicating it.</summary>
     public void SetPresence(long durableId, DaggerfallNpcPresence presence)
     {
@@ -156,6 +166,7 @@ public sealed class DaggerfallNpcRegistry
             ArgumentNullException.ThrowIfNull(npc);
             ValidateSite(npc.Site);
             ValidateAppearance(npc.Appearance);
+            if (npc.DisplayName is not null) ArgumentException.ThrowIfNullOrWhiteSpace(npc.DisplayName);
             if (!Enum.IsDefined(npc.Kind) || !Enum.IsDefined(npc.Presence))
             {
                 throw new ArgumentOutOfRangeException(nameof(npcs), npc.Kind, "A saved NPC names a kind or presence the contract does not declare.");

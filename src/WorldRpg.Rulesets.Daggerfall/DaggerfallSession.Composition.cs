@@ -421,6 +421,9 @@ internal sealed partial class DaggerfallSession
                     State.Character.Identity.Gender.ToString().ToLowerInvariant(), _site.ActiveSite?.Region
                         ?? throw new NotSupportedException("Quest resource generation requires the current region.")),
                 State.Social.GuildEligibility, State.RegionalPrices.AdjustmentForRegion, _inventoryUi.DescribeCreatedItem));
+            State.Quests.BindPersonAllocator(new(definitions, engine.Random, questNames,
+                instance => new(_site.ActiveSite ?? throw new NotSupportedException("Quest Person selection requires the current site."),
+                    instance.QuestorId is long giver ? State.Npcs.Require(giver) : null), State.Npcs.SetDisplayName));
             _inventoryUi.UseBank(State.Bank, ActiveBankRegion);
             _inventoryUi.UseLoans(State.Loans, () => _time.Calendar, () => State.Progression.Level);
             _inventoryUi.UseItemValuation(new DaggerfallItemValuation(definitions), State.ItemInstances, DaggerfallItemOwner.Player,
