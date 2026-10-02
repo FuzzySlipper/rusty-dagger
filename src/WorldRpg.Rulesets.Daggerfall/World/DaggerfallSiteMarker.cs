@@ -45,4 +45,3 @@ internal sealed record DaggerfallSiteMarker(
         return this;
     }
 }
-
