@@ -7,6 +7,7 @@ namespace Daggerfall.Import.Normalized;
 /// <summary>The exact classic region mapping used when a building-name fragment expands %ef.</summary>
 public sealed record DaggerfallBuildingNameInputs(PublishedSource Source, IReadOnlyList<int> RegionNameBanks)
 {
+    public IReadOnlyList<string> RegionNames { get; init; } = [];
     public void Validate()
     {
         ArgumentNullException.ThrowIfNull(Source);
@@ -22,6 +23,11 @@ public sealed record DaggerfallBuildingNameInputs(PublishedSource Source, IReadO
 /// <summary>Extracts the exact FALL.EXE-derived regionRaces array from the consulted MapsFile donor.</summary>
 public static partial class DaggerfallBuildingNameInputsBuilder
 {
+    [GeneratedRegex(@"regionNames\s*=\s*\{(?<values>.*?)\};", RegexOptions.Singleline | RegexOptions.CultureInvariant)]
+    private static partial Regex RegionNames();
+
+    [GeneratedRegex("\"(?<name>[^\"]+)\"", RegexOptions.CultureInvariant)]
+    private static partial Regex QuotedName();
     [GeneratedRegex(@"regionRaces\s*=\s*\{(?<values>.*?)\};", RegexOptions.Singleline | RegexOptions.CultureInvariant)]
     private static partial Regex RegionRaces();
 
@@ -49,7 +55,11 @@ public static partial class DaggerfallBuildingNameInputsBuilder
         }
 
         int[] banks = [.. Number().Matches(match.Groups["values"].Value).Select(value => int.Parse(value.Value, System.Globalization.CultureInfo.InvariantCulture))];
-        DaggerfallBuildingNameInputs published = new(PublishedSource.Of(label, bytes), banks);
+        Match names = RegionNames().Match(source);
+        string[] regionNames = names.Success ? [.. QuotedName().Matches(names.Groups["values"].Value).Select(value => value.Groups["name"].Value)] : [];
+        if (names.Success && regionNames.Length != banks.Length)
+            throw new InvalidOperationException($"Building-name source '{label}' carries {regionNames.Length} names for {banks.Length} region banks.");
+        DaggerfallBuildingNameInputs published = new(PublishedSource.Of(label, bytes), banks) { RegionNames = regionNames };
         published.Validate();
         return published;
     }

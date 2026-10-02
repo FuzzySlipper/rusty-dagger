@@ -99,6 +99,7 @@ internal sealed record DaggerfallSiteRecord(
     bool Discovered,
     DaggerfallSiteExterior? Exterior = null)
 {
+    internal IReadOnlyList<DaggerfallSiteDungeonBlock> DungeonBlocks { get; init; } = [];
     internal int Region => Id.Region;
 
     internal int Index => Id.Index;
@@ -107,6 +108,8 @@ internal sealed record DaggerfallSiteRecord(
     internal int MapPixelX => Longitude / 128;
     internal int MapPixelY => 499 - (Latitude / 128);
 }
+
+internal sealed record DaggerfallSiteDungeonBlock(string SourceKey, int X, int Z);
 
 /// <summary>Normalized terrain footprint of one exterior location, in its map pixel's terrain tiles.</summary>
 internal sealed record DaggerfallSiteExterior(
@@ -131,7 +134,7 @@ internal sealed record DaggerfallSiteExterior(
 }
 
 internal sealed record DaggerfallSiteBlock(string SourceName, int X, int Y);
-internal sealed record DaggerfallSiteBuildingReference(int LocationId, int Sector);
+internal sealed record DaggerfallSiteBuildingReference(int LocationId, int Sector, int? BuildingType = null);
 
 /// <summary>A placement identity is local to a site; an RMB source slot can repeat in its grid.</summary>
 internal readonly record struct DaggerfallSiteBuildingId(int BlockX, int BlockY, int Index)

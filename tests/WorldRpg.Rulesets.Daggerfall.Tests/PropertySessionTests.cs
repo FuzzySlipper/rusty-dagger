@@ -19,6 +19,31 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class PropertySessionTests
 {
     [Fact]
+    public void Ordinary_source_place_start_claims_only_its_selected_monthly_house_and_releases_after_save_unload()
+    {
+        using Fixture f = new(questBuildingScenario: true, automaticQuest: true); f.OpenBank();
+        var session = f.Session; var site = session.Site.ActiveSite!;
+        var before = session.ReadPropertyPresentation().Offers;
+        var started = session.State.Quests.Start(new("allocated-house", "allocation.txt", "allocation", DaggerfallQuestLifecycle.Active, null, [], []));
+        var resource = Assert.Single(started.Resources); var claim = resource.Binding.Building!;
+        var building = site.Exterior!.Buildings[new(claim.BlockX, claim.BlockY, claim.Index)];
+        string key = HouseKey(site.Id, building);
+        Assert.Contains(before, offer => offer.Key == key);
+        Assert.DoesNotContain(session.ReadPropertyPresentation().Offers, offer => offer.Key == key);
+        Assert.Contains(session.ReadPropertyPresentation().Offers, offer => offer.Key == HouseKey(site.Id,
+            site.Exterior.Buildings.Values.First(value => value.Source.BuildingType == 1 && value.ModelRadius > 0)));
+        Assert.True(session.TryTransitionTo(f.Destination.ProfileKey));
+        using var restored = f.Restore(session.CaptureSave());
+        Assert.True(restored.State.Quests.ClaimsBuilding(site.Id, building));
+        Assert.True(restored.State.Quests.TryGet("allocated-house", out var restoredQuest));
+        Assert.Equal(resource.Text, restoredQuest!.Resources[0].Text);
+        restored.State.Quests.Complete("allocated-house", "complete");
+        Assert.False(restored.State.Quests.ClaimsBuilding(site.Id, building));
+        Assert.True(restored.TryTransitionTo(f.Land.ProfileKey)); f.OpenBank(restored);
+        Assert.Contains(restored.ReadPropertyPresentation().Offers, offer => offer.Key == key);
+    }
+
+    [Fact]
     public void Quest_claim_preserves_existing_owned_ordinary_house_entry_and_sale()
     {
         using Fixture f = new(questBuildingScenario: true, ordinaryHouse: true); f.OpenBank();
@@ -358,8 +383,9 @@ public sealed class PropertySessionTests
         internal DaggerfallSiteProfile Small { get; }
         internal DaggerfallSiteProfile Large { get; }
         internal DaggerfallHouseIdentity HouseIdentity { get; }
-        internal Fixture(bool admitShips = true, bool questBuildingScenario = false, bool ordinaryHouse = false)
+        internal Fixture(bool admitShips = true, bool questBuildingScenario = false, bool ordinaryHouse = false, bool automaticQuest = false)
         {
+            if (automaticQuest) definitions = QuestPlaceAllocationTests.Definitions();
             string root = TestData.RepositoryRoot;
             var content = FullContent(root); var source = ReadInputs(root);
             identity = GameCompositionResolver.Resolve(content, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
@@ -369,7 +395,15 @@ public sealed class PropertySessionTests
                 && exterior.Buildings.Values.Any(building => building.Source.BuildingType == 1 && building.ModelRadius > 0)
                 && (!questBuildingScenario || (exterior.Buildings.Values.Count(building => building.Source.BuildingType == 1)
                     < Math.Min(exterior.Buildings.Count / 10, 20)
-                    && exterior.Buildings.Values.Count(building => building.Source.BuildingType is >= 17 and <= 20 && building.ModelRadius > 0) >= 2)));
+                    && exterior.Buildings.Values.Count(building => building.Source.BuildingType is >= 17 and <= 20 && building.ModelRadius > 0) >= 2))
+                && (!automaticQuest || EligibleLastHouse(value)));
+            bool EligibleLastHouse(DaggerfallSiteRecord candidate)
+            {
+                var last = candidate.Exterior!.Buildings.Values.Where(building => building.Source.BuildingType is >= 17 and <= 20)
+                    .OrderBy(building => building.Id.BlockY).ThenBy(building => building.Id.BlockX).ThenBy(building => building.Id.Index).LastOrDefault();
+                return last is { ModelRadius: > 0 } && last.Source.FactionId is not (42 or 108)
+                    && blocks.QuestMarkers.TryGetValue(new(last.Source.Id.SourceKey, last.Source.Id.Index), out var markers) && markers.Count > 0;
+            }
             var ordered = site.Exterior!.Buildings.Values.Where(value => value.ModelRadius > 0
                 && (ordinaryHouse ? value.Source.BuildingType is >= 17 and <= 20 : value.Source.BuildingType == 1))
                 .OrderBy(value => value.Id.BlockY).ThenBy(value => value.Id.BlockX).ThenBy(value => value.Id.Index);

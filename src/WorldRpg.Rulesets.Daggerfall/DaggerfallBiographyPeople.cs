@@ -19,25 +19,10 @@ internal static class DaggerfallBiographyPeople
             "high-elf" => 4, "wood-elf" => 5, "khajiit" => 6, "argonian" => 7,
             _ => throw new ArgumentException($"Race '{race}' supplies no biography name bank."),
         };
-        var table = definitions.Names.Banks.Single(value => value.Bank == bank);
         int Draw(string key, int maximum) => checked((int)random.DrawKeyed(new KeyedRngRequest(
             CombatRandomKey.Seed, "daggerfall.character-creation.v1", $"{sequence}.biography.{key}", 0, maximum)).Value);
-        string Part(int set, string key)
-        {
-            var values = table.Sets.Single(value => value.Set == set).Keys;
-            return string.Concat(definitions.Text.Require(values[Draw(key, values.Count - 1)]).TextRuns);
-        }
-        string Name(string scope, bool female)
-        {
-            if (table.Kind == DaggerfallNameBankKind.Redguard)
-                return Part(0, scope + ".0") + Part(1, scope + ".1") + Part(2, scope + ".2")
-                    + (female || Draw(scope + ".suffix-chance", 99) < 75 ? Part(female ? 4 : 3, scope + ".suffix") : "");
-            string first = Part(female ? 2 : 0, scope + ".first.0") + Part(female ? 3 : 1, scope + ".first.1");
-            string last = table.Kind == DaggerfallNameBankKind.Nord
-                ? Part(0, scope + ".last.0") + Part(1, scope + ".last.1") + Localized(definitions, "nordSurnameImmutableSuffix")
-                : Part(4, scope + ".last.0") + Part(5, scope + ".last.1");
-            return first + " " + last;
-        }
+        DaggerfallNames names = new(definitions, random, (key, count) => Draw(key, count - 1));
+        string Name(string scope, bool female) => names.FullName(bank, female, scope);
         return new(race, Name("name", false), Name("female", true), Name("male", false), ImperialNames[Draw("imperial", ImperialNames.Length - 1)]);
     }
 

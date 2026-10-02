@@ -390,6 +390,11 @@ internal sealed partial class DaggerfallSession
                 dungeonActions: dungeonActions);
             _travelMessage = State.Travel.LastResult?.Message;
             State.Quests.BindTextContext(QuestTextContext);
+            DaggerfallNames questNames = new(definitions, engine.Random);
+            State.Quests.BindPlaceAllocator(new(definitions, _site, engine.Random,
+                (site, building) => State.Property.OwnsHouse(new(site, building.Source.Id, building.Id.BlockX, building.Id.BlockY)),
+                region => region >= 0 && region < definitions.BuildingNames.RegionNames.Count ? definitions.BuildingNames.RegionNames[region] : null,
+                questNames.Residence));
             _corpseLoot = new DaggerfallCorpseLootModule(
                 engine.Perception,
                 _spatial,

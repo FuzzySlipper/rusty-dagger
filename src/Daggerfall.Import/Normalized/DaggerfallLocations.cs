@@ -92,7 +92,13 @@ public sealed record DaggerfallDungeonRecord(
     string Name,
     uint ExteriorLocationId,
     uint DungeonLocationId,
-    IReadOnlyList<string> Blocks);
+    IReadOnlyList<string> Blocks)
+{
+    /// <summary>The source placements needed to distinguish repeated RDB blocks.</summary>
+    public IReadOnlyList<DaggerfallDungeonBlockPlacement> BlockPlacements { get; init; } = [];
+}
+
+public sealed record DaggerfallDungeonBlockPlacement(string SourceKey, int X, int Z);
 
 /// <summary>
 /// The published locations of every region, for the site and world consumers that place things on
@@ -299,7 +305,8 @@ public static class DaggerfallLocationBuilder
                     dungeon.Name,
                     dungeon.ExteriorLocationId,
                     dungeon.DungeonLocationId,
-                    [.. dungeon.Blocks.Select(block => block.SourceName)]));
+                    [.. dungeon.Blocks.Select(block => block.SourceName)])
+                { BlockPlacements = [.. dungeon.Blocks.Select(block => new DaggerfallDungeonBlockPlacement(block.SourceName, block.X, block.Z))] });
             }
         }
 
