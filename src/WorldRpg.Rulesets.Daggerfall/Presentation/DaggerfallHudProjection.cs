@@ -39,7 +39,7 @@ internal sealed record DaggerfallHudFrame(
     DaggerfallTravelPresentation? Travel = null,
     string? SiteName = null,
     DaggerfallLodgingView? Lodging = null,
-    DaggerfallMapPresentation? Map = null, DaggerfallDispelView? Dispel = null, DaggerfallIdentifyView? Identify=null, IReadOnlyList<DaggerfallDetectorView>? Detectors = null, DaggerfallSpellbookView? Spells=null, bool CharacterCreationAvailable = true, DaggerfallPropertyView? Property = null, DaggerfallTeleportView? Teleport = null);
+    DaggerfallMapPresentation? Map = null, DaggerfallDispelView? Dispel = null, DaggerfallIdentifyView? Identify=null, IReadOnlyList<DaggerfallDetectorView>? Detectors = null, DaggerfallSpellbookView? Spells=null, bool CharacterCreationAvailable = true, DaggerfallPropertyView? Property = null, DaggerfallTeleportView? Teleport = null, DaggerfallCreateItemView? CreateItem = null);
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
 internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<DaggerfallHudResourceDefinition> resources, ResolvedCompositionIdentity? compositionIdentity, DaggerfallUiArt? uiArt = null) : IDisposable
@@ -60,7 +60,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ArgumentNullException.ThrowIfNull(frame);
         var (player, progression, presentation, mode, controls, slots, inventory, loot, character, panelRequest,
             saveSlots, saveSlotDiagnostic, controlSettings, controlDiagnostic, activation, quests, notebook, transport,
-            dungeonText, death, rest, travel, siteName, lodging, map, dispel, identifyView, detectors, spells, _, _, _) = frame;
+            dungeonText, death, rest, travel, siteName, lodging, map, dispel, identifyView, detectors, spells, _, _, _, _) = frame;
         UiValueBuilder builder = new();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
         (string Key, uint Value)[] fields =
@@ -154,6 +154,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("dialogue", activation.Dialogue is null ? builder.Null() : Dialogue(builder, activation.Dialogue))))];
         if (quests is not null) fields = [.. fields, ("quests", Quests(builder, quests))];
         if (notebook is not null) fields = [.. fields, ("notebook", Notebook(builder, notebook))];
+        if (frame.CreateItem is { } createItem) fields = [.. fields, ("createItem", builder.Object(("revision", builder.String(createItem.Revision)),
+            ("options", builder.Array(createItem.Options.Select(option => builder.Object(("id", builder.String(option.Id)), ("label", builder.String(option.Label)))).ToArray()))))];
         if (frame.Teleport is { } teleport) fields = [.. fields, ("teleport", builder.Object(("revision", builder.String(teleport.Revision)), ("anchorSet", builder.Boolean(teleport.AnchorSet))))];
         if (frame.Property is { } property) fields = [.. fields, ("property", Property(builder, property))];
         if (transport is not null) fields = [.. fields, ("transport", Transport(builder, transport))];

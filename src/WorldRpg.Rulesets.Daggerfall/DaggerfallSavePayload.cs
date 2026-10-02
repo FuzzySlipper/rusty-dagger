@@ -58,6 +58,7 @@ internal sealed record DaggerfallSavePayload(
     [JsonRequired] public string? PendingTeleport { get; init; }
     [JsonRequired] public DaggerfallTeleportAnchor? TeleportAnchor { get; init; }
     [JsonRequired] public DaggerfallIdentifyRequest? PendingIdentify { get; init; }
+    [JsonRequired] public DaggerfallCreateItemRequest? PendingCreateItem { get; init; }
     [JsonRequired]
     public long[] BanishedActors { get; init; } = [];
 
@@ -582,6 +583,7 @@ internal sealed record DaggerfallSavePayload(
         if (PendingTeleport is not null && string.IsNullOrWhiteSpace(PendingTeleport)) throw new ArgumentException("Saved teleport choice requires its paid cast identity.");
         TeleportAnchor?.Validate();
         PendingIdentify?.Validate();
+        PendingCreateItem?.Validate();
         ArgumentNullException.ThrowIfNull(Actors);
         ArgumentNullException.ThrowIfNull(DynamicActors);
         if(Actors.Any(actor=>actor.ForcedHostile && actor.MagicallyPacified) || DynamicActors.Any(actor=>actor.ForcedHostile && actor.MagicallyPacified))
@@ -886,6 +888,10 @@ internal sealed record DaggerfallSavePayload(
         {
             throw new ArgumentException($"Book item '{itemId}' has no selected book identity.");
         }
+        if (restored.CapturedSoulMobileId is int soul && !definitions.Actors.Values.Any(actor => actor.Kind == DaggerfallActorKinds.Monster && actor.MobileId == soul))
+            throw new ArgumentException($"Saved item {itemId} names unpublished creature soul {soul}.");
+        if (restored.CapturedSoulMobileId is not null && !DaggerfallSoulGems.IsTrap(restored, definitions.Magic))
+            throw new ArgumentException($"Saved item {itemId} cannot hold a soul.");
         if (restored.Enchantment is not { } enchantment) return restored;
         // An item maker's setting is a legitimate enchantment with no published magic item, so it is
         // stored on the item as it stands rather than being required to name a template.
@@ -1010,7 +1016,7 @@ internal sealed record DaggerfallItemMetadataSave(
     int? BookId = null,
     int? PotionRecipeKey = null,
     ulong? CreditValue = null,
-    int? PoisonVariant = null, DaggerfallHeldCastState? HeldCast = null, long HealthLeechLastUsedMinute = 0);
+    int? PoisonVariant = null, DaggerfallHeldCastState? HeldCast = null, long HealthLeechLastUsedMinute = 0, int? CapturedSoulMobileId = null, DaggerfallConjuredItem? Conjuration = null);
 internal sealed record DaggerfallEquipmentSave(string SlotId, ulong ItemEntityId);
 internal sealed record DaggerfallCombatCooldownSave(long AttackerId, ulong RemainingSteps);
 
@@ -1401,6 +1407,7 @@ internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definiti
 [JsonSerializable(typeof(DaggerfallDispelRequest))]
 [JsonSerializable(typeof(DaggerfallTeleportAnchor))]
 [JsonSerializable(typeof(DaggerfallIdentifyRequest))]
+[JsonSerializable(typeof(DaggerfallSoulTrapState))]
 [JsonSerializable(typeof(DaggerfallCastEffectState))]
 [JsonSerializable(typeof(DaggerfallShieldState))]
 [JsonSerializable(typeof(DaggerfallPeriodicCastState))]

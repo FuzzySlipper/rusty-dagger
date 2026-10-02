@@ -1077,3 +1077,16 @@ test('live banking dialogue emits bank-open with its actual revision', () => {
     assert.equal(f.root.querySelector('[data-bank-open]'), null);
   } finally { f.dispose(); }
 });
+
+test('create item presents authoritative paid choices and submits selection without cancellation or optimistic inventory', () => {
+  const f = fixture();
+  try {
+    f.publish({mode:'modal', createItem:{revision:'cast.42', options:[{id:'steel-102',label:'Steel Cuirass'},{id:'robes',label:'Robes'}]}});
+    const panel=f.root.querySelector('.dagger-create-item');
+    assert.equal(panel.hidden,false); assert.equal(panel.querySelectorAll('button').length,2);
+    panel.querySelectorAll('button')[1].click();
+    assert.deepEqual(f.actions.at(-1),{action:'create-item-select',revision:'cast.42',key:'robes'});
+    assert.equal(panel.hidden,false);
+    f.publish({createItem:null}); assert.equal(panel.hidden,true); assert.equal(panel.children.length,0);
+  } finally { f.dispose(); }
+});

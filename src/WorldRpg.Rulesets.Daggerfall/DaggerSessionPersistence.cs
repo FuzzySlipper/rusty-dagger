@@ -48,6 +48,7 @@ internal sealed class DaggerSessionPersistence
     private readonly IReadOnlyDictionary<long, DaggerfallActorDefinition> _actorDefinitions;
     private readonly Func<long> _nextCastSequence;
     internal Func<DaggerfallReadySpell?> ReadySpell {get;set;}=()=>null;
+    internal Func<DaggerfallCreateItemRequest?> PendingCreateItem { get; set; } = () => null;
     internal Func<DaggerfallIdentifyRequest?> PendingIdentify { get; set; } = () => null;
     internal Func<DaggerfallDispelRequest?> PendingDispel { get; set; } = () => null;
     internal Func<string?> PendingTeleport { get; set; } = () => null;
@@ -153,6 +154,7 @@ internal sealed class DaggerSessionPersistence
             MagicRounds = State.Effects.MagicRounds,
             NextCastSequence = _nextCastSequence(),
             ReadySpell=ReadySpell(),
+            PendingCreateItem = PendingCreateItem(),
             PendingDispel = PendingDispel(),
             PendingTeleport = PendingTeleport(),
             TeleportAnchor = TeleportAnchor(),

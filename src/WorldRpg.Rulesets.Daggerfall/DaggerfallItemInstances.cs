@@ -50,7 +50,7 @@ internal sealed record DaggerfallItemInstanceMetadata(
     int? BookId = null,
     int? PotionRecipeKey = null,
     ulong? CreditValue = null,
-    int? PoisonVariant = null, DaggerfallHeldCastState? HeldCast = null, long HealthLeechLastUsedMinute = 0)
+    int? PoisonVariant = null, DaggerfallHeldCastState? HeldCast = null, long HealthLeechLastUsedMinute = 0, int? CapturedSoulMobileId = null, DaggerfallConjuredItem? Conjuration = null)
 {
     internal DaggerfallItemInstanceMetadata Validate()
     {
@@ -78,6 +78,8 @@ internal sealed record DaggerfallItemInstanceMetadata(
             || held.ActiveEffectInstances is null || held.ActiveEffectInstances.Any(string.IsNullOrWhiteSpace)
             || held.ActiveEffectInstances.Distinct().Count() != held.ActiveEffectInstances.Length))
             throw new ArgumentException("Held spell cadence requires a positive caster, nonnegative calendar/cadence, and enchantment.");
+        if (CapturedSoulMobileId is < 0 or > 42) throw new ArgumentOutOfRangeException(nameof(CapturedSoulMobileId));
+        Conjuration?.Validate();
         Owner.Validate();
         return this;
     }
@@ -102,6 +104,7 @@ internal sealed record DaggerfallItemInstanceMetadata(
             && PotionRecipeKey == other.PotionRecipeKey
             && CreditValue == other.CreditValue
             && HealthLeechLastUsedMinute == other.HealthLeechLastUsedMinute
+            && CapturedSoulMobileId == other.CapturedSoulMobileId && Conjuration == other.Conjuration
             && HeldCast is null && other.HeldCast is null;
     }
 
@@ -111,13 +114,13 @@ internal sealed record DaggerfallItemInstanceMetadata(
 
     internal DaggerfallItemMetadataSave Capture() => new(Material, Variant, CurrentCondition, MaximumCondition,
         Identified, Stolen, QuestId, QuestItemSymbol, Enchantment, new DaggerfallItemOwnerSave(Owner.Scope, Owner.Id), Race, Gender, Dye, BookId, PotionRecipeKey, CreditValue,
-        PoisonVariant, HeldCast, HealthLeechLastUsedMinute);
+        PoisonVariant, HeldCast, HealthLeechLastUsedMinute, CapturedSoulMobileId, Conjuration);
 
     internal static DaggerfallItemInstanceMetadata Restore(string itemId, DaggerfallItemMetadataSave saved) =>
         new DaggerfallItemInstanceMetadata(itemId, saved.Material, saved.Variant, saved.CurrentCondition, saved.MaximumCondition,
             saved.Identified, saved.Stolen, saved.QuestId, saved.QuestItemSymbol, saved.Enchantment,
             new DaggerfallItemOwner(saved.Owner.Scope, saved.Owner.Id), saved.Race, saved.Gender, saved.Dye, saved.BookId, saved.PotionRecipeKey, saved.CreditValue,
-            saved.PoisonVariant, saved.HeldCast, saved.HealthLeechLastUsedMinute).Validate();
+            saved.PoisonVariant, saved.HeldCast, saved.HealthLeechLastUsedMinute, saved.CapturedSoulMobileId, saved.Conjuration).Validate();
 }
 
 /// <summary>
@@ -129,6 +132,8 @@ internal sealed class DaggerfallItemInstances
 {
     internal event Action<ulong>? SourceUnavailable;
     internal IEnumerable<KeyValuePair<ulong, DaggerfallItemInstanceMetadata>> UniqueItems => _unique;
+    internal IEnumerable<(DaggerfallItemOwner Owner, InventoryStackId Stack, DaggerfallItemInstanceMetadata Metadata)> StackItems =>
+        _stacks.Select(value => (value.Key.Owner, InventoryStackId.Parse(value.Key.Stack), value.Value));
 
     private readonly Dictionary<(DaggerfallItemOwner Owner, string Stack), DaggerfallItemInstanceMetadata> _stacks = [];
     private readonly Dictionary<ulong, DaggerfallItemInstanceMetadata> _unique = [];

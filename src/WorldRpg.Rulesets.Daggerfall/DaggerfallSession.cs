@@ -171,6 +171,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         RetireDepartingSwing(source);
         _combat.ClearRangedFlight();
         CancelDungeonTextOnUnload();
+        // The destination is committed; restored item lifetimes settle before any presentation.
+        ExpireConjuredItems();
     }
 
     /// <summary>
@@ -337,8 +339,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         // can see the mode they are in.
         Cinematics?.Poll();
         _openingCinematics.Poll();
-        bool playing = _mode == ProductMode.Playing && Cinematics?.ActiveSource is null && _pendingDispel is null && _pendingIdentify is null;
-        bool modal = _mode == ProductMode.Modal || _pendingDispel is not null || _pendingIdentify is not null;
+        bool playing = _mode == ProductMode.Playing && Cinematics?.ActiveSource is null && _pendingDispel is null && _pendingIdentify is null && _pendingCreateItem is null;
+        bool modal = _mode == ProductMode.Modal || _pendingDispel is not null || _pendingIdentify is not null || _pendingCreateItem is not null;
         DaggerfallUiPhases phase = _mode == ProductMode.Dead ? DaggerfallUiPhases.Dead
             : playing ? DaggerfallUiPhases.Playing
             : modal ? DaggerfallUiPhases.Modal
@@ -603,7 +605,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         }
         if (fact is ActorDiedFact died)
         {
-            if (died.ActorId==DaggerfallActorIdentity.PlayerEntityId) _pendingIdentify=null;
+            if (died.ActorId==DaggerfallActorIdentity.PlayerEntityId) { _pendingIdentify=null; _pendingCreateItem=null; }
             DaggerfallMolagBalEffects.EndOnDeath(State.Effects, died.ActorId);
             DaggerfallParalysisEffects.EndOnDeath(State.Effects, died.ActorId);
             DaggerfallContinuousDestructionEffects.EndOnDeath(State.Effects, died.ActorId);
@@ -650,7 +652,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             Lodging: LodgingView,
             Travel: ReadTravelPresentation(),
             SiteName: Site.ActiveSite?.Name,
-            Map: _mapOpen ? ReadMapPresentation() : null, Teleport: TeleportView, Dispel: DispelView, Identify: IdentifyView, Spells: ReadSpells(), Detectors: ReadDetectors()));
+            Map: _mapOpen ? ReadMapPresentation() : null, CreateItem: CreateItemView, Teleport: TeleportView, Dispel: DispelView, Identify: IdentifyView, Spells: ReadSpells(), Detectors: ReadDetectors()));
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors, _groundContainers.All,

@@ -80,6 +80,7 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.Inventory:
             case DaggerfallUiActionKind.Character:
                 break;
+            case DaggerfallUiActionKind.CreateItemSelect: ChooseCreateItem(action.Revision!, action.Key!); break;
             case DaggerfallUiActionKind.IdentifySelect: ChooseIdentify(action.Revision!,action.Key); break;
             case DaggerfallUiActionKind.IdentifyCancel: ChooseIdentify(action.Revision!,null); break;
             case DaggerfallUiActionKind.TeleportSelect: ChooseTeleport(action.Revision!, action.Key!); break;

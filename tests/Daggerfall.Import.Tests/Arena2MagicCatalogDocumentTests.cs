@@ -152,7 +152,8 @@ public sealed class Arena2MagicCatalogDocumentTests
         HashSet<(int, int)> used = [.. document["spells"]!.AsArray().SelectMany(spell => spell!["effects"]!.AsArray())
             .Select(effect => (effect!["type"]!.GetValue<int>(), effect["subType"]!.GetValue<int>()))];
 
-        Assert.Equal(88, rows.Count);
+        Assert.Equal(89, rows.Count);
+        used.Add((2, -1)); used.Add((12, -1));
         used.Add((4, 1));
         used.Add((13, 1)); used.Add((23, 1)); used.Add((24, 1));
         for (int subtype = 0; subtype < 8; subtype++) { used.Add((10, subtype)); used.Add((11, subtype)); }
