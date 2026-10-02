@@ -14,6 +14,20 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallTransportTests
 {
     [Fact]
+    public void Ship_return_pose_rebases_and_restores_in_the_current_frame()
+    {
+        DaggerfallTransportPolicy policy = new(DaggerfallTuning.Defaults.Transport);
+        Assert.True(policy.BoardShip(true, new(), new(new WorldPoint(1002, 3, 1004), .3f, .1f)).Applied);
+        policy.Rebase(new System.Numerics.Vector3(-1000, 0, -1000));
+        DaggerfallTransportPolicy restored = new(DaggerfallTuning.Defaults.Transport);
+        restored.Restore(policy.Capture());
+        DaggerfallTransportPose left = Assert.IsType<DaggerfallTransportPose>(restored.LeaveShip().Relocation);
+        Assert.Equal(new WorldPoint(2, 3, 4), left.Position);
+        Assert.Equal(.3f, left.YawRadians);
+        Assert.Equal(.1f, left.PitchRadians);
+    }
+
+    [Fact]
     public void Toggle_mount_prefers_horse_and_interior_transition_removes_mount()
     {
         using Fixture fixture = new();

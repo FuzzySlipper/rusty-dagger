@@ -1,3 +1,4 @@
+using System.Numerics;
 using Rusty.Engine;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -60,6 +61,19 @@ internal sealed class DaggerfallEncounterRuntime(DaggerfallDefinitions definitio
             created.Add(actorId);
         }
         return created;
+    }
+
+    /// <summary>Pending spawns share the active profile's local frame with current actors.</summary>
+    internal void RebasePending(string activeProfileId, Vector3 delta)
+    {
+        for (int index = 0; index < _resolved.Count; index++)
+        {
+            DaggerfallEncounterResolution current = _resolved[index];
+            if (current.SpawnedActorId is not null || current.ActorDefinition is null
+                || !StringComparer.Ordinal.Equals(current.ProfileId, activeProfileId)) continue;
+            _resolved[index] = current with { Pose = new ActorPose(
+                DaggerfallExteriorSessionOrigin.Shift(current.Pose.Position, delta), current.Pose.HeadingYawRadians) };
+        }
     }
 
     internal DaggerfallEncounterRuntimeSave Capture() => new([.. _resolved]);

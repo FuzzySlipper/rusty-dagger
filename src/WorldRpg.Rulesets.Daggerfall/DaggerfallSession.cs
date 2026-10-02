@@ -149,7 +149,14 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
 
     void IDaggerfallSiteTransitionHost.RebuildActivation() => InitializeActivation(_engine, _tuning.LootInteraction);
 
-    void IDaggerfallSiteTransitionHost.RebaseTransientWorld(Vector3 delta) => _combat.RebaseRangedFlight(delta);
+    void IDaggerfallSiteTransitionHost.RebaseTransientWorld(Vector3 delta)
+    {
+        _combat.RebaseRangedFlight(delta);
+        Casting.Rebase(delta);
+        _encounters.RebasePending(_activeProfileKey.LogicalId, delta);
+        _dialogue?.Rebase(delta);
+        State.Transport.Rebase(delta);
+    }
 
     void IDaggerfallSiteTransitionHost.EnteredSite() { Casting.ClearTransient(); ChangeMusicSite(); }
 

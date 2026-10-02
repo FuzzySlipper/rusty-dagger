@@ -224,12 +224,13 @@ internal sealed class DaggerfallSiteLifecycle
     private bool TryTransitionTo(DaggerfallWorldProfileKey destination, DaggerfallSiteAnchor? arrival, bool useReturnDestination)
     {
         DaggerfallSiteProfile target = RequireProfiles().Require(destination);
+        PlayerControlState player = _state.PlayerControl;
+        _ = player.Position ?? throw new InvalidOperationException("A site transition requires a player position.");
         // Detached site state and return poses use the profile's authored frame. Restore that
         // frame before capture and before replacing the native artifact (which retains its origin).
         if (ActiveProfile.Kind == DaggerfallWorldProfileKind.Exterior)
             NormalizeExteriorOrigin();
-        PlayerControlState player = _state.PlayerControl;
-        WorldPoint sourcePosition = player.Position ?? throw new InvalidOperationException("A site transition requires a player position.");
+        WorldPoint sourcePosition = player.Position.Value;
         DaggerfallSiteReturnDestination? returnDestination = useReturnDestination && ReturnProfile == destination
             ? _site.RequireReturnDestination()
             : null;
@@ -558,7 +559,7 @@ internal sealed class DaggerfallSiteLifecycle
         long z = checked(origin.CellZ + (long)Math.Floor(position.Z));
         using WorldOriginPrepared prepared = _engine.WorldOrigin.Prepare(new(_spatial.Session,
             x, origin.CellY, z, ReadOnlyMemory<WorldOriginEntityRow>.Empty));
-        ApplyExteriorOriginCommit(_engine.WorldOrigin.Commit(new(prepared)));
+        CommitExteriorOrigin(prepared);
     }
 
     private void NormalizeExteriorOrigin()
@@ -568,7 +569,25 @@ internal sealed class DaggerfallSiteLifecycle
         if (origin.CellX == 0 && origin.CellY == 0 && origin.CellZ == 0) return;
         using WorldOriginPrepared prepared = _engine.WorldOrigin.Prepare(new(_spatial.Session,
             0, 0, 0, ReadOnlyMemory<WorldOriginEntityRow>.Empty));
-        ApplyExteriorOriginCommit(_engine.WorldOrigin.Commit(new(prepared)));
+        CommitExteriorOrigin(prepared);
+    }
+
+    private void CommitExteriorOrigin(WorldOriginPrepared prepared)
+    {
+        RequireExteriorProfile();
+        if (_state.PlayerControl.Position is not WorldPoint position)
+            throw new InvalidOperationException("An origin commit requires a player pose; otherwise world positions would be lost.");
+        _ = DaggerfallExteriorSessionOrigin.Shift(position, Vector3.Zero);
+        if (_exteriorResidency is not { IsInitialized: true })
+            throw new InvalidOperationException("An origin commit requires admitted exterior residency; otherwise world coordinates would detach from their cell.");
+        WorldOriginCommitReceipt receipt = _engine.WorldOrigin.Commit(new(prepared));
+        try { ApplyExteriorOriginCommit(receipt); }
+        catch (Exception error)
+        {
+            // A native commit is immediate. Reporting a recoverable transition refusal here
+            // would continue with potentially mismatched collision and product poses.
+            throw new InvalidOperationException("The Engine origin was committed but product rebasing failed; the session cannot continue with inconsistent world coordinates.", error);
+        }
     }
 
     private void RequireOriginPair(WorldOriginReadout origin)

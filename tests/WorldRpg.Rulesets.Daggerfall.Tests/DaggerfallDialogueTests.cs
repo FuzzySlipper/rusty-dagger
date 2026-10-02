@@ -43,6 +43,21 @@ public sealed class DaggerfallDialogueTests
         Assert.Equal(1, restored.State.Progression.SkillUses["etiquette"]);
     }
 
+    [Fact]
+    public void Rebased_talk_target_preserves_the_open_choice_but_still_rejects_real_movement()
+    {
+        using ConditionSessionFixture fixture = new();
+        TalkTarget talk = new(fixture.Session, fixture.Definitions);
+        Assert.True(talk.Service.ActivateNpc(new(DaggerfallActivationMode.Talk, talk.Target)).Applied);
+        string revision = Assert.IsType<DaggerfallDialogueView>(talk.View).Revision;
+        var delta = new System.Numerics.Vector3(-1000, 0, -1000);
+        talk.Actor.ApplyPose(new ActorPose(DaggerfallExteriorSessionOrigin.Shift(talk.Actor.Position, delta), talk.Actor.HeadingYawRadians));
+        talk.Service.Rebase(delta);
+        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: "directions")).Applied);
+        talk.Actor.ApplyPose(new ActorPose(new WorldPoint(talk.Actor.Position.X + 1, talk.Actor.Position.Y, talk.Actor.Position.Z), talk.Actor.HeadingYawRadians));
+        Assert.False(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: "news")).Applied);
+    }
+
     [Theory]
     [InlineData("moved")]
     [InlineData("removed")]

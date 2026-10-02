@@ -125,6 +125,30 @@ public sealed class DaggerfallEncounterPolicyTests
     }
 
     [Fact]
+    public void Pending_encounter_keeps_local_pose_through_rebase_save_and_materialization()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        RecordingRandom recording = RecordingRandom.Create();
+        DaggerfallEncounterRuntime runtime = new(definitions, recording.Service);
+        ActorPose pose = new(new WorldPoint(1003, 4, 1005), .5f);
+        runtime.Select(new DaggerfallEncounterRequest(DaggerfallEncounterContext.Dungeon, 1,
+            DungeonType: 2, EnemyAlert: true), 4, "active", pose);
+        runtime.RebasePending("other", new System.Numerics.Vector3(-1000, 0, -1000));
+        Assert.Equal(pose, Assert.Single(runtime.Resolved).Pose);
+        runtime.RebasePending("active", new System.Numerics.Vector3(-1000, 0, -1000));
+        DaggerfallEncounterRuntime restored = new(definitions, recording.Service);
+        restored.Restore(runtime.Capture(), new Dictionary<long, string>());
+        Assert.Single(restored.MaterializePending("active", (_, actual, _) =>
+        {
+            Assert.Equal(new ActorPose(new WorldPoint(3, 4, 5), .5f), actual);
+            return 7000;
+        }));
+        restored.RebasePending("active", new System.Numerics.Vector3(1000, 0, 1000));
+        Assert.Empty(restored.MaterializePending("active", (_, _, _) => throw new Exception("duplicate spawn")));
+        Assert.Equal(3, recording.Requests.Count);
+    }
+
+    [Fact]
     public void RejectsRestoredSelectionsThatDoNotMatchTheCanonicalTableOrSpawnedActor()
     {
         DaggerfallDefinitions definitions = Definitions();
