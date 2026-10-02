@@ -124,7 +124,7 @@ internal sealed class DaggerfallQuestPlaceAllocator(
         DaggerfallQuestResourceBinding binding = building is null ? DaggerfallQuestResourceBinding.Place(new(site.Region, site.Index))
             : DaggerfallQuestResourceBinding.PlaceBuilding(sites, site.MapId, key!.Value);
         binding = binding with { PlaceSelection = new(kind, site.MapId, key, magic) };
-        string? display = building is null ? null : building.Source.BuildingType is >= 17 and <= 22
+        string? display = building is null ? null : building.Source.BuildingType is >= 17 and <= 20
             ? residenceName(identity, site.Region) : sites.RequireBuilding(site.Id, building.Id).Name;
         return new(resource.CanonicalId, binding)
         { Text = new(Name: display, NameTwo: site.Name, NameThree: site.Name, NameFour: regionName(site.Region)) };

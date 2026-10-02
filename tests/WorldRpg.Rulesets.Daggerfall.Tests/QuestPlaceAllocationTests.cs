@@ -76,6 +76,32 @@ public sealed class QuestPlaceAllocationTests
     }
 
     [Theory]
+    [InlineData(17, "house1", true)]
+    [InlineData(20, "house4", true)]
+    [InlineData(21, "house5", false)]
+    [InlineData(22, "house6", false)]
+    public void Only_house_one_to_four_receive_a_generated_residence_name(int type, string tableName, bool residence)
+    {
+        var definitions = TestPayload.Definitions;
+        var blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
+        bool Eligible(DaggerfallSiteBuildingSource value) => value.Source.BuildingType == 17 && value.Source.FactionId == 0
+            && blocks.QuestMarkers.TryGetValue(new(value.Source.Id.SourceKey, value.Source.Id.Index), out var markers) && markers.Count > 0;
+        var original = definitions.Locations.Records.First(site => site.Exterior?.Buildings.Values.Any(Eligible) == true);
+        var source = original.Exterior!.Buildings.Values.First(Eligible);
+        var building = source with { Source = source.Source with { BuildingType = type } };
+        var site = original with { Exterior = original.Exterior with {
+            Buildings = new Dictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource> { [building.Id] = building } } };
+        DaggerfallSiteContext sites = new(definitions.Locations with { Records = [site] }, site.Id, null, []);
+        sites.AdmitBuildingNames(RandomMinimum.Create(), definitions, blocks);
+        DaggerfallQuestPlaceAllocator allocator = new(definitions, sites, RandomMinimum.Create(), (_, _) => false,
+            _ => null, (_, _) => residence ? "Selected Residence" : throw new InvalidOperationException("Not a donor residence."));
+        var declaration = definitions.QuestSources.Resources.First(value => value.Kind == "place") with
+        { CanonicalId = "selected", TargetSourceSpelling = tableName, PlaceKind = "local" };
+        var selected = allocator.Allocate("house-kind", declaration, [], []);
+        Assert.Equal(residence ? "Selected Residence" : sites.RequireBuilding(site.Id, building.Id).Name, selected.Text!.Name);
+    }
+
+    [Theory]
     [InlineData(false, false, false)]
     [InlineData(true, true, false)]
     [InlineData(true, false, true)]
