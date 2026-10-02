@@ -128,28 +128,28 @@ public sealed class ItemSoulEffectsSessionTests
         var savedTrap = DaggerfallSavePayload.Read(restored.CaptureSave()).ActiveEffects.Single(value => value.EffectKey == "soul-trap");
         Assert.Equal(1, savedTrap.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallSoulTrapState)!.Attempts);
     }
-    [Fact]
-    public void All_29_paid_choices_materialize_normal_items_with_transferable_lifetime_and_arrow_quantity()
+    public static IEnumerable<object[]> CreateItemChoiceIndexes() => Enumerable.Range(0, 29).Select(index => new object[] { index });
+
+    [Theory]
+    [MemberData(nameof(CreateItemChoiceIndexes))]
+    public void All_29_paid_choices_materialize_normal_items_with_transferable_lifetime_and_arrow_quantity(int index)
     {
         using var f = new SanguineRoseSessionTests.Fixture(); var s = f.Session;
-        for (int index = 0; index < 29; index++)
+        Create(s, $"create-{index}");
+        var view = s.CreateItemView!; Assert.Equal(29, view.Options.Count);
+        s.ChooseCreateItem("stale", view.Options[index].Id); Assert.NotNull(s.CreateItemView);
+        f.Submit(new { action = "create-item-select", revision = view.Revision, key = view.Options[index].Id });
+        Assert.Null(s.CreateItemView);
+        if (index == 26)
         {
-            Create(s, $"create-{index}");
-            var view = s.CreateItemView!; Assert.Equal(29, view.Options.Count);
-            s.ChooseCreateItem("stale", view.Options[index].Id); Assert.NotNull(s.CreateItemView);
-            f.Submit(new { action = "create-item-select", revision = view.Revision, key = view.Options[index].Id });
-            Assert.Null(s.CreateItemView);
-            if (index == 26)
-            {
-                var arrow = Assert.Single(s.State.Inventory.Read().Stacks.Where(stack => stack.Id.Value == $"daggerfall.conjured.create-{index}"));
-                Assert.InRange(arrow.Quantity, 1UL, 20UL);
-                Assert.NotNull(s.State.ItemInstances.RequireStack(DaggerfallItemOwner.Player, arrow.Id).Conjuration);
-            }
-            else Assert.Single(s.State.ItemInstances.UniqueItems.Where(item => item.Value.Conjuration?.Source == $"create-{index}"));
+            var arrow = Assert.Single(s.State.Inventory.Read().Stacks, stack => stack.Id.Value == $"daggerfall.conjured.create-{index}");
+            Assert.InRange(arrow.Quantity, 1UL, 20UL);
+            Assert.NotNull(s.State.ItemInstances.RequireStack(DaggerfallItemOwner.Player, arrow.Id).Conjuration);
         }
-        f.Update(); Assert.Equal(29, s.State.ItemInstances.UniqueItems.Count(item => item.Value.Conjuration is not null) + 1);
+        else Assert.Single(s.State.ItemInstances.UniqueItems, item => item.Value.Conjuration?.Source == $"create-{index}");
         using var restored = f.Restore();
-        Assert.Equal(28, restored.State.ItemInstances.UniqueItems.Count(item => item.Value.Conjuration is not null));
+        Assert.Equal(index == 26 ? 0 : 1, restored.State.ItemInstances.UniqueItems.Count(item => item.Value.Conjuration is not null));
+        if (index == 26) Assert.Single(restored.State.ItemInstances.StackItems, item => item.Metadata.Conjuration is not null);
     }
 
     [Fact]
