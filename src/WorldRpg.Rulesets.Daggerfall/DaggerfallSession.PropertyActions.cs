@@ -37,7 +37,7 @@ internal sealed partial class DaggerfallSession
             selected.Add(ordinary[index]); ordinary.RemoveAt(index);
         }
         if (includeOwned) selected.AddRange(candidates.Where(value => State.Property.OwnsHouse(value.Identity)));
-        return [.. ReadPropertyHouseOffers(selected.DistinctBy(value => value.Identity))];
+        return [.. ReadPropertyHouseOffers(selected.DistinctBy(value => value.Identity), includeOwned)];
     }
 
     private DaggerfallShipOffer[] CurrentShipOffers() => _site.ActiveSite is { Exterior.PortTownAndUnknown: > 0 }

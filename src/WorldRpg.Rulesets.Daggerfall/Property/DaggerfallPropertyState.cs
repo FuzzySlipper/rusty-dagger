@@ -396,7 +396,7 @@ internal sealed class DaggerfallPropertyState
     {
         ArgumentNullException.ThrowIfNull(offer);
         ArgumentNullException.ThrowIfNull(settlement);
-        try { offer.Validate(_tuning); }
+        try { offer.Validate(_tuning, OwnsHouse(offer.Identity)); }
         catch (ArgumentException exception)
         {
             return DaggerfallPropertyTransactionResult.Refused(DaggerfallPropertyTransactionKind.Sale,

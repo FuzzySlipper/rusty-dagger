@@ -113,13 +113,13 @@ internal sealed record DaggerfallHouseOffer(DaggerfallHouseCandidate Candidate, 
     internal DaggerfallHouseIdentity Identity => Candidate.Identity;
     internal DaggerfallPropertyStorageKey StorageKey => DaggerfallPropertyStorageKey.ForHouse(Identity);
 
-    internal DaggerfallHouseOffer Validate(DaggerfallPropertyTuning tuning)
+    internal DaggerfallHouseOffer Validate(DaggerfallPropertyTuning tuning, bool owned = false)
     {
         DaggerfallPropertyTuning values = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
         Candidate.Validate();
-        if (!DaggerfallPropertyPolicy.IsEligibleHouse(Candidate))
+        if (!DaggerfallPropertyPolicy.IsEligibleHouse(Candidate, owned))
             throw new ArgumentException("The supplied building is not an eligible Daggerfall house candidate.", nameof(Candidate));
-        ulong expected = DaggerfallPropertyPolicy.HousePrice(Candidate, values);
+        ulong expected = DaggerfallPropertyPolicy.HousePrice(Candidate, values, owned);
         if (Price != expected || SalePrice != DaggerfallPropertyPolicy.SalePrice(expected, values))
             throw new ArgumentException("A house offer does not retain its source-derived price.", nameof(Price));
         return this;
@@ -238,26 +238,26 @@ internal static class DaggerfallPropertyPolicy
     private const int House1 = 17;
     private const int House4 = 20;
 
-    internal static bool IsEligibleHouse(DaggerfallHouseCandidate candidate)
+    internal static bool IsEligibleHouse(DaggerfallHouseCandidate candidate, bool owned = false)
     {
         ArgumentNullException.ThrowIfNull(candidate);
         candidate.Validate();
         return candidate.SiteKind is DaggerfallSiteKind.TownCity or DaggerfallSiteKind.TownHamlet or DaggerfallSiteKind.TownVillage
-            && (candidate.BuildingType == HouseForSale || (!candidate.IsQuestBuilding && candidate.BuildingType is >= House1 and <= House4))
+            && (candidate.BuildingType == HouseForSale || ((owned || !candidate.IsQuestBuilding) && candidate.BuildingType is >= House1 and <= House4))
             && candidate.ModelRadius > 0f;
     }
 
     internal static IReadOnlyList<DaggerfallHouseOffer> HousesForSale(IEnumerable<DaggerfallHouseCandidate> candidates,
-        DaggerfallPropertyTuning tuning)
+        DaggerfallPropertyTuning tuning, IReadOnlySet<DaggerfallHouseIdentity>? ownedHouses = null)
     {
         ArgumentNullException.ThrowIfNull(candidates);
         DaggerfallPropertyTuning values = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
         DaggerfallHouseOffer[] offers = candidates
             .Select(candidate => candidate.Validate())
-            .Where(IsEligibleHouse)
+            .Where(candidate => IsEligibleHouse(candidate, ownedHouses?.Contains(candidate.Identity) == true))
             .Select(candidate =>
             {
-                ulong price = HousePrice(candidate, values);
+                ulong price = HousePrice(candidate, values, ownedHouses?.Contains(candidate.Identity) == true);
                 return new DaggerfallHouseOffer(candidate, price, SalePrice(price, values));
             })
             .OrderBy(offer => offer.Identity.Site.Region)
@@ -286,12 +286,12 @@ internal static class DaggerfallPropertyPolicy
         return Array.AsReadOnly(offers);
     }
 
-    internal static ulong HousePrice(DaggerfallHouseCandidate candidate, DaggerfallPropertyTuning tuning)
+    internal static ulong HousePrice(DaggerfallHouseCandidate candidate, DaggerfallPropertyTuning tuning, bool owned = false)
     {
         ArgumentNullException.ThrowIfNull(candidate);
         DaggerfallPropertyTuning values = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
         candidate.Validate();
-        if (!IsEligibleHouse(candidate))
+        if (!IsEligibleHouse(candidate, owned))
             throw new ArgumentException("The supplied building is not an eligible house candidate.", nameof(candidate));
         double price = Math.Truncate(candidate.ModelRadius * values.HousePricePerModelRadius);
         if (!double.IsFinite(price) || price <= 0d || price > ulong.MaxValue)

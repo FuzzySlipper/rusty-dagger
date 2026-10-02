@@ -32,7 +32,7 @@ internal sealed partial class DaggerfallSession
     /// identity.
     /// </summary>
     internal IReadOnlyList<DaggerfallHouseOffer> ReadPropertyHouseOffers(
-        IEnumerable<DaggerfallHouseCandidate> candidates)
+        IEnumerable<DaggerfallHouseCandidate> candidates, bool includeOwned = false)
     {
         ArgumentNullException.ThrowIfNull(candidates);
         DaggerfallSiteId site = _site.Active
@@ -40,7 +40,8 @@ internal sealed partial class DaggerfallSession
         DaggerfallHouseCandidate[] admitted = candidates.Select(candidate => candidate.Validate()).ToArray();
         if (admitted.Any(candidate => candidate.Site != site))
             throw new ArgumentException("House offers must name the active geographic site.", nameof(candidates));
-        return DaggerfallPropertyPolicy.HousesForSale(admitted, State.Property.Tuning);
+        return DaggerfallPropertyPolicy.HousesForSale(admitted, State.Property.Tuning,
+            includeOwned ? State.Property.OwnedHouses.ToHashSet() : null);
     }
 
     /// <summary>Reads source-backed ship deeds from an explicitly admitted port-town fact.</summary>

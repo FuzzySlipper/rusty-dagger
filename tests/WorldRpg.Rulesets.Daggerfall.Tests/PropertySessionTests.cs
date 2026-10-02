@@ -19,6 +19,31 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class PropertySessionTests
 {
     [Fact]
+    public void Quest_claim_preserves_existing_owned_ordinary_house_entry_and_sale()
+    {
+        using Fixture f = new(questBuildingScenario: true, ordinaryHouse: true); f.OpenBank();
+        var s = f.Session; var site = s.Site.ActiveSite!;
+        var house = site.Exterior!.Buildings.Values.Single(building => HouseKey(site.Id, building)
+            == DaggerfallPropertyStorageKey.ForHouse(f.HouseIdentity).Value);
+        var offer = s.ReadPropertyPresentation().Offers.Single(value => value.Key == HouseKey(site.Id, house));
+        Assert.True(s.State.Bank.TryCreditAccount(site.Region, ulong.Parse(offer.Price)));
+        f.Submit(new { action = "property-buy", key = offer.Key });
+        Assert.True(s.State.Property.OwnsHouse(f.HouseIdentity));
+        StartBuilding(s, "owned-claim", house);
+        Assert.True(s.State.Quests.ClaimsBuilding(site.Id, house));
+        Assert.True(s.ReadPropertyPresentation().Offers.Single(value => value.Key == offer.Key).CanEnter);
+        f.Submit(new { action = "property-enter", key = offer.Key });
+        Assert.Equal(f.House.ProfileKey, s.Sites.ActiveProfile);
+        using var restored = f.Restore(s.CaptureSave());
+        Assert.True(restored.State.Property.OwnsHouse(f.HouseIdentity));
+        Assert.True(s.TryTransitionTo(f.Land.ProfileKey)); f.OpenBank();
+        f.Submit(new { action = "property-sell", key = offer.Key });
+        Assert.False(s.State.Property.OwnsHouse(f.HouseIdentity));
+        Assert.All(s.ReadPropertyPresentation().Offers.Where(value => value.Key == offer.Key), value =>
+        { Assert.False(value.Owned); Assert.False(value.CanSell); Assert.False(value.CanEnter); });
+    }
+
+    [Fact]
     public void Quest_building_claim_filters_only_that_monthly_house_and_survives_unload_and_save()
     {
         using Fixture f = new(questBuildingScenario: true); f.OpenBank();
@@ -333,7 +358,7 @@ public sealed class PropertySessionTests
         internal DaggerfallSiteProfile Small { get; }
         internal DaggerfallSiteProfile Large { get; }
         internal DaggerfallHouseIdentity HouseIdentity { get; }
-        internal Fixture(bool admitShips = true, bool questBuildingScenario = false)
+        internal Fixture(bool admitShips = true, bool questBuildingScenario = false, bool ordinaryHouse = false)
         {
             string root = TestData.RepositoryRoot;
             var content = FullContent(root); var source = ReadInputs(root);
@@ -345,13 +370,15 @@ public sealed class PropertySessionTests
                 && (!questBuildingScenario || (exterior.Buildings.Values.Count(building => building.Source.BuildingType == 1)
                     < Math.Min(exterior.Buildings.Count / 10, 20)
                     && exterior.Buildings.Values.Count(building => building.Source.BuildingType is >= 17 and <= 20 && building.ModelRadius > 0) >= 2)));
-            var building = site.Exterior!.Buildings.Values.Where(value => value.Source.BuildingType == 1)
-                .OrderBy(value => value.Id.BlockY).ThenBy(value => value.Id.BlockX).ThenBy(value => value.Id.Index).First();
+            var ordered = site.Exterior!.Buildings.Values.Where(value => value.ModelRadius > 0
+                && (ordinaryHouse ? value.Source.BuildingType is >= 17 and <= 20 : value.Source.BuildingType == 1))
+                .OrderBy(value => value.Id.BlockY).ThenBy(value => value.Id.BlockX).ThenBy(value => value.Id.Index);
+            var building = ordinaryHouse ? ordered.Last() : ordered.First();
             HouseIdentity = new(site.Id, building.Source.Id, building.Id.BlockX, building.Id.BlockY);
             House = new(new ProjectFacts(new WorldPoint(3, 1, 1), new Dictionary<long, AuthoredActor>()), source.SpatialArtifact,
                 source.StaticMesh, source.WorldAppearance, source.InitialLook, source.Materials, new Dictionary<long, NormalizedActorSprite>(),
                 source.MobileSprites, source.Audio, source.ClassicPresentation, site.Id, profileKind: DaggerfallWorldProfileKind.Interior,
-                logicalProfileId: "property-house", interiorBuilding: new(building.Id.BlockX, building.Id.BlockY, building.Source.Id, 1, building.Source.FactionId));
+                logicalProfileId: "property-house", interiorBuilding: new(building.Id.BlockX, building.Id.BlockY, building.Source.Id, building.Source.BuildingType, building.Source.FactionId));
             Land = new(new ProjectFacts(new WorldPoint(1, 1, 1), new Dictionary<long, AuthoredActor>()), source.SpatialArtifact,
                 source.StaticMesh, source.WorldAppearance, source.InitialLook, source.Materials, new Dictionary<long, NormalizedActorSprite>(),
                 source.MobileSprites, source.Audio, source.ClassicPresentation, site.Id, profileKind: DaggerfallWorldProfileKind.Exterior,
