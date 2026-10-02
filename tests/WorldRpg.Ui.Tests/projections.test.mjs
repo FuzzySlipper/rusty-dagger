@@ -963,3 +963,19 @@ test('spell selection uses projected known rows and sends ready unready and cast
     assert.equal(panel.querySelector('[data-spell]'),null);
   } finally {f.dispose();}
 });
+
+test('identify formats authoritative choices and sends a semantic batch selection without optimistic item changes', () => {
+  const f=fixture();
+  try {
+    f.publish({identify:{revision:'cast:9',cost:5,options:[{id:'409',label:'Unidentified sword'}]}});
+    const panel=f.root.querySelector('.dagger-identify');
+    assert.equal(panel.hidden,false);
+    assert.match(panel.querySelector('h2').textContent,/5 magicka/);
+    [...panel.querySelectorAll('button')].find(button=>button.textContent==='All unidentified items').click();
+    assert.deepEqual(f.actions.at(-1),{action:'identify-select',revision:'cast:9',key:'all'});
+    assert.equal(panel.querySelectorAll('button').length,3);
+    [...panel.querySelectorAll('button')].find(button=>button.textContent==='Cancel').click();
+    assert.deepEqual(f.actions.at(-1),{action:'identify-cancel',revision:'cast:9'});
+    f.publish({identify:null});assert.equal(panel.hidden,true);assert.equal(panel.children.length,0);
+  } finally {f.dispose();}
+});

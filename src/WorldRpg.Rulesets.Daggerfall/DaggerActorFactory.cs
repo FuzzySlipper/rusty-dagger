@@ -134,6 +134,7 @@ internal static class DaggerActorFactory
                 if (prior is not null) RestoreStats(actor.Actor, prior.Stats);
                 DaggerfallWabbajack.Restore(actor.Actor, prior?.WabbajackDefinition);
                 actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(prior?.ForcedHostile ?? false);
+                actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified = prior?.MagicallyPacified ?? false;
                 authored.Add(source.EntityId, definition);
                 RegisterActorInventory(actor, inventoryStore);
                 // A placed actor whose definition declares a loadout carries it in a managed
@@ -218,6 +219,7 @@ internal static class DaggerActorFactory
         if (restored is not null) RestoreStats(actor.Actor, restored.Stats);
         DaggerfallWabbajack.Restore(actor.Actor, restored?.WabbajackDefinition);
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(restored?.ForcedHostile ?? false);
+        actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified = restored?.MagicallyPacified ?? false;
         RegisterActorInventory(actor, inventoryStore);
         if (restored is null)
         {
@@ -322,6 +324,7 @@ internal static class DaggerActorFactory
         RestoreStats(actor.Actor, saved.Stats);
         DaggerfallWabbajack.Restore(actor.Actor, saved.WabbajackActive ? saved.Definition : null);
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(saved.ForcedHostile);
+        actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified = saved.MagicallyPacified;
         definitionsByActor.Add(saved.EntityId, definition);
         RegisterActorInventory(actor, inventoryStore);
         return actor;
@@ -360,6 +363,7 @@ internal static class DaggerActorFactory
             RestoreStats(actor.Actor, spawned.Stats);
             DaggerfallWabbajack.Restore(actor.Actor, spawned.WabbajackActive ? spawned.Definition : null);
             actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(spawned.ForcedHostile);
+            actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified = spawned.MagicallyPacified;
             definitionsByActor.Add(spawned.EntityId, definition);
             RegisterActorInventory(actor, inventoryStore);
         }

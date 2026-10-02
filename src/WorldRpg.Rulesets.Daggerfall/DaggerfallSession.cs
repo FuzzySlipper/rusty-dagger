@@ -326,8 +326,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         // can see the mode they are in.
         Cinematics?.Poll();
         _openingCinematics.Poll();
-        bool playing = _mode == ProductMode.Playing && Cinematics?.ActiveSource is null && _pendingDispel is null;
-        bool modal = _mode == ProductMode.Modal || _pendingDispel is not null;
+        bool playing = _mode == ProductMode.Playing && Cinematics?.ActiveSource is null && _pendingDispel is null && _pendingIdentify is null;
+        bool modal = _mode == ProductMode.Modal || _pendingDispel is not null || _pendingIdentify is not null;
         DaggerfallUiPhases phase = _mode == ProductMode.Dead ? DaggerfallUiPhases.Dead
             : playing ? DaggerfallUiPhases.Playing
             : modal ? DaggerfallUiPhases.Modal
@@ -583,9 +583,15 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
     {
         ObservePlaytestCombatFact(fact);
         _staminaRecovery.React(fact);
-        if (fact is AttackHitFact hit) DaggerfallConcealmentEffects.AfterPhysicalHit(State.Effects, hit);
+        if (fact is AttackHitFact hit)
+        {
+            DaggerfallConcealmentEffects.AfterPhysicalHit(State.Effects, hit);
+            if(hit.AttackerId==DaggerfallActorIdentity.PlayerEntityId && hit.TargetId!=hit.AttackerId)
+                ReactToSpellAttack(hit.AttackerId,hit.TargetId);
+        }
         if (fact is ActorDiedFact died)
         {
+            if (died.ActorId==DaggerfallActorIdentity.PlayerEntityId) _pendingIdentify=null;
             DaggerfallParalysisEffects.EndOnDeath(State.Effects, died.ActorId);
             DaggerfallContinuousDestructionEffects.EndOnDeath(State.Effects, died.ActorId);
             DaggerfallConcealmentEffects.End(State.Effects, died.ActorId);
@@ -629,7 +635,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             Lodging: LodgingView,
             Travel: ReadTravelPresentation(),
             SiteName: Site.ActiveSite?.Name,
-            Map: _mapOpen ? ReadMapPresentation() : null, Dispel: DispelView, Spells: ReadSpells(), Detectors: ReadDetectors()));
+            Map: _mapOpen ? ReadMapPresentation() : null, Dispel: DispelView, Identify: IdentifyView, Spells: ReadSpells(), Detectors: ReadDetectors()));
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors, _groundContainers.All,

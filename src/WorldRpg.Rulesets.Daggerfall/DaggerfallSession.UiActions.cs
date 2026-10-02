@@ -80,6 +80,8 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.Inventory:
             case DaggerfallUiActionKind.Character:
                 break;
+            case DaggerfallUiActionKind.IdentifySelect: ChooseIdentify(action.Revision!,action.Key); break;
+            case DaggerfallUiActionKind.IdentifyCancel: ChooseIdentify(action.Revision!,null); break;
             case DaggerfallUiActionKind.DispelSelect: ChooseDispel(action.Revision!, action.Key); break;
             case DaggerfallUiActionKind.DispelCancel: ChooseDispel(action.Revision!, null); break;
             case DaggerfallUiActionKind.MapOpen: _mapOpen = action.Open; break;

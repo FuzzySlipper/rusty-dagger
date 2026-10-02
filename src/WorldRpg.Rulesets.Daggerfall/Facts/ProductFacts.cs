@@ -12,6 +12,7 @@ internal sealed record SpellTrackRestoredFact(long TargetId, string Track, int R
 /// <summary>One delivered transfer reports requested loss, bounded loss, bounded recovery and terminal target outcome.</summary>
 internal sealed record VitalTransferredFact(long CasterId, long TargetId, string Track, int AdmittedAmount,
     double ActualLoss, double ActualRecovery, bool TargetDefeated, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
+internal sealed record MagicItemIdentifiedFact(ulong ItemId,bool Success) : IProductFact;
 internal enum DaggerfallDamageCause { PhysicalAttack, Fall, Hazard, Effect }
 /// <summary>One accepted live health application. Calculated damage and actual health lost intentionally differ at bounds or contributions.</summary>
 internal sealed record DamageAppliedFact(long SourceActorId, long TargetActorId, DaggerfallDamageCause Cause,

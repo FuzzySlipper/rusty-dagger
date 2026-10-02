@@ -81,12 +81,14 @@ internal sealed record DaggerfallEnemyPerceptionSource(
     }
 }
 
-/// <summary>One enemy's retained classic senses state. It is cleared with the live site.</summary>
+/// <summary>One enemy's senses and durable disposition. Site changes clear only transient perception.</summary>
 internal sealed class DaggerfallEnemyPerceptionMemory
 {
     internal bool Detected { get; set; }
     internal bool HasEncounteredPlayer { get; set; }
-    internal bool Pacified { get; set; }
+    private bool _languagePacified;
+    internal bool MagicallyPacified { get; set; }
+    internal bool Pacified { get=>_languagePacified || MagicallyPacified; set=>_languagePacified=value; }
     internal bool ForcedHostile { get; set; }
     internal long? LastStealthCheckMinute { get; set; }
     internal long? LastDirectSightMinute { get; set; }
@@ -97,6 +99,7 @@ internal sealed class DaggerfallEnemyPerceptionMemory
         if (hostile)
         {
             Pacified = false;
+            MagicallyPacified = false;
             // Attacking is already an encounter; language cannot pacify the same actor on its next detection.
             HasEncounteredPlayer = true;
         }

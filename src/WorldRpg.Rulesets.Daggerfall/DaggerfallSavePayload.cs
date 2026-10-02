@@ -54,6 +54,7 @@ internal sealed record DaggerfallSavePayload(
     public string? ReadySpell {get;init;}
     [JsonRequired]
     public DaggerfallDispelRequest? PendingDispel { get; init; }
+    [JsonRequired] public DaggerfallIdentifyRequest? PendingIdentify { get; init; }
     [JsonRequired]
     public long[] BanishedActors { get; init; } = [];
 
@@ -454,6 +455,11 @@ internal sealed record DaggerfallSavePayload(
             throw new ArgumentException("Saved active and inactive site actors must not share durable identities.");
         if (!actorInventories.SetEquals(allActors))
             throw new ArgumentException("Current save must carry one actor inventory section for every saved actor.");
+        if (PendingIdentify?.SourceItem is ulong identifySource
+            && (!Inventory.UniqueItems.Any(item => item.EntityId == identifySource)
+                || !uniqueItems.TryGetValue(identifySource, out var identifyMetadata)
+                || (identifyMetadata.MaximumCondition > 0 && identifyMetadata.CurrentCondition == 0)))
+            throw new ArgumentException("Pending identify requires an available item source in the player inventory.");
         RequireLiveUniqueItems(savedLedger, uniqueItems.Keys);
         Encounters.Validate();
         HashSet<string> admittedEncounterProfiles = profiles is null
@@ -528,8 +534,11 @@ internal sealed record DaggerfallSavePayload(
         if (NextCastSequence < 1) throw new ArgumentException("Saved next cast sequence must be positive.");
         ArgumentNullException.ThrowIfNull(Player);
         PendingDispel?.Validate();
+        PendingIdentify?.Validate();
         ArgumentNullException.ThrowIfNull(Actors);
         ArgumentNullException.ThrowIfNull(DynamicActors);
+        if(Actors.Any(actor=>actor.ForcedHostile && actor.MagicallyPacified) || DynamicActors.Any(actor=>actor.ForcedHostile && actor.MagicallyPacified))
+            throw new ArgumentException("An actor cannot be forced hostile and magically pacified together.");
         ArgumentNullException.ThrowIfNull(Inventory);
         ArgumentNullException.ThrowIfNull(Corpses);
         ArgumentNullException.ThrowIfNull(GroundContainers);
@@ -1248,6 +1257,7 @@ internal sealed record DaggerfallActorSave(long EntityId, float X, float Y, floa
 {
     public string? WabbajackDefinition { get; init; }
     public bool ForcedHostile { get; init; }
+    [JsonRequired] public bool MagicallyPacified { get; init; }
     internal void Validate()
     {
         if (!float.IsFinite(X) || !float.IsFinite(Y) || !float.IsFinite(Z) || !float.IsFinite(HeadingRadians))
@@ -1277,6 +1287,8 @@ internal sealed record DaggerfallSiteDeltaSave(
         ArgumentNullException.ThrowIfNull(Profile); Profile.Validate();
         ArgumentNullException.ThrowIfNull(Actors);
         ArgumentNullException.ThrowIfNull(DynamicActors);
+        if(Actors.Any(actor=>actor.ForcedHostile && actor.MagicallyPacified) || DynamicActors.Any(actor=>actor.ForcedHostile && actor.MagicallyPacified))
+            throw new ArgumentException("An actor cannot be forced hostile and magically pacified together.");
         ArgumentNullException.ThrowIfNull(ActorInventories);
         ArgumentNullException.ThrowIfNull(Corpses);
         ArgumentNullException.ThrowIfNull(Doors);
@@ -1301,6 +1313,7 @@ internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definiti
 {
     public bool WabbajackActive { get; init; }
     public bool ForcedHostile { get; init; }
+    [JsonRequired] public bool MagicallyPacified { get; init; }
     public bool PlayerAllied { get; init; }
     internal void Validate()
     {
@@ -1314,6 +1327,7 @@ internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definiti
 
 [JsonSourceGenerationOptions(WriteIndented = false)]
 [JsonSerializable(typeof(DaggerfallDispelRequest))]
+[JsonSerializable(typeof(DaggerfallIdentifyRequest))]
 [JsonSerializable(typeof(DaggerfallCastEffectState))]
 [JsonSerializable(typeof(DaggerfallShieldState))]
 [JsonSerializable(typeof(DaggerfallPeriodicCastState))]

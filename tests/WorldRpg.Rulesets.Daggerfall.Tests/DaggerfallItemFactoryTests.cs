@@ -81,6 +81,8 @@ public sealed class DaggerfallItemFactoryTests
 
         DaggerfallMagicItemDefinition regularDefinition = definitions.Magic.MagicItems["magic-item.0010"];
         Assert.False(regular.Stackable);
+        Assert.False(regular.Metadata.Identified);
+        Assert.True(artifact.Metadata.Identified);
         Assert.Equal((regularDefinition.Key, regularDefinition.Uses), (regular.Metadata.Enchantment, regular.Metadata.MaximumCondition));
         Assert.Equal(regularDefinition.Value, definitions.RequireItem(new DaggerfallItemId(regular.Item.Value)).Value);
         Assert.Equal(("template-113-orcish-magic-magic-item-0001", "orcish"), (artifact.Item.Value, artifact.Metadata.Material));

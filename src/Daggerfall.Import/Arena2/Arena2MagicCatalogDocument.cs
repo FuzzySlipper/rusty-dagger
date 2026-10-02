@@ -225,6 +225,8 @@ public static class Arena2MagicCatalogDocument
                 // All attribute transfers remain available to compiled constructed spells.
                 .Concat(Enumerable.Range(0, 8).Select(subtype => (Type: 11, SubType: subtype)))
                 .Concat(Enumerable.Range(0, 3).Select(subtype => (Type: 39, SubType: subtype)))
+                .Concat(Enumerable.Range(0, 4).Select(subtype => (Type: 33, SubType: subtype)))
+                .Concat([(Type:34,SubType:-1),(Type:40,SubType:-1)])
                 .Distinct()
                 .Order()
                 .Select(variant => effectCosts.Resolve(variant.Type, variant.SubType))
