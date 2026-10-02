@@ -164,7 +164,8 @@ internal static class DaggerfallSiteContent
             actionModels,
             ReadInteriorBuilding(normalizedWorld, profileKind, diagnostics),
             music,
-            audioBundle);
+            audioBundle,
+            DaggerfallQuestMarkerContent.ReadWorld(normalizedWorld, diagnostics));
     }
 
     private static DaggerfallInteriorBuilding? ReadInteriorBuilding(ReadOnlyMemory<byte>? bytes,
@@ -1078,7 +1079,7 @@ internal static class DaggerfallSiteContent
                     diagnostics.Add($"Normalized dungeon world mesh '{meshId}' has no source geometry placement.");
             }
 
-            List<DaggerfallDungeonMapMarker> markers = [];
+            List<DaggerfallSiteMarker> markers = [];
             if (world.TryGetProperty("enterMarker", out JsonElement entranceValue) && entranceValue.ValueKind != JsonValueKind.Null)
             {
                 JsonElement entrance = DaggerfallBaseContent.Object(entranceValue, "normalized dungeon entrance marker", diagnostics);
@@ -1090,9 +1091,9 @@ internal static class DaggerfallSiteContent
                     diagnostics);
                 try
                 {
-                    markers.Add(new DaggerfallDungeonMapMarker(
+                    markers.Add(new DaggerfallSiteMarker(
                         id,
-                        DaggerfallDungeonMapMarkerKind.Entrance,
+                        DaggerfallSiteMarkerKind.Entrance,
                         new WorldPoint(position.X, position.Y, position.Z)).Validate());
                 }
                 catch (ArgumentException exception)
@@ -1105,9 +1106,9 @@ internal static class DaggerfallSiteContent
             {
                 try
                 {
-                    markers.Add(new DaggerfallDungeonMapMarker(
+                    markers.Add(new DaggerfallSiteMarker(
                         portal.Id,
-                        DaggerfallDungeonMapMarkerKind.Portal,
+                        DaggerfallSiteMarkerKind.Portal,
                         portal.Position,
                         portal.DestinationLogicalProfile).Validate());
                 }
@@ -2291,7 +2292,7 @@ internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 T
     internal NormalizedAttackSequence? RangedAttackSequence { get; init; }
     internal NormalizedActorSprite? Corpse { get; init; }
 }
-internal sealed class DaggerfallSiteProfile(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyDictionary<int, NormalizedActorSprite>? mobileSprites = null, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null, IReadOnlyList<DaggerfallRdbDoorDefinition>? doors = null, DaggerfallWorldProfileKind profileKind = DaggerfallWorldProfileKind.Dungeon, string? logicalProfileId = null, IReadOnlyList<DaggerfallSitePortal>? portals = null, IReadOnlyList<DaggerfallSiteAnchor>? anchors = null, IReadOnlyList<DaggerfallSiteLight>? lights = null, NormalizedGroundContainerSprite? groundContainerSprite = null, DaggerfallDungeonMapContent? dungeonMap = null, IReadOnlyList<DaggerfallDungeonActionDefinition>? dungeonActions = null, IReadOnlyList<DaggerfallDungeonActionModelDefinition>? dungeonActionModels = null, DaggerfallInteriorBuilding? interiorBuilding = null, IReadOnlyList<NormalizedMusicCue>? music = null, string? audioBundle = null)
+internal sealed class DaggerfallSiteProfile(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyDictionary<int, NormalizedActorSprite>? mobileSprites = null, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null, IReadOnlyList<DaggerfallRdbDoorDefinition>? doors = null, DaggerfallWorldProfileKind profileKind = DaggerfallWorldProfileKind.Dungeon, string? logicalProfileId = null, IReadOnlyList<DaggerfallSitePortal>? portals = null, IReadOnlyList<DaggerfallSiteAnchor>? anchors = null, IReadOnlyList<DaggerfallSiteLight>? lights = null, NormalizedGroundContainerSprite? groundContainerSprite = null, DaggerfallDungeonMapContent? dungeonMap = null, IReadOnlyList<DaggerfallDungeonActionDefinition>? dungeonActions = null, IReadOnlyList<DaggerfallDungeonActionModelDefinition>? dungeonActionModels = null, DaggerfallInteriorBuilding? interiorBuilding = null, IReadOnlyList<NormalizedMusicCue>? music = null, string? audioBundle = null, IReadOnlyList<DaggerfallSiteMarker>? questMarkers = null)
 {
     internal ProjectFacts Project { get; } = project;
     internal SpatialContentArtifact SpatialArtifact { get; } = spatialArtifact;
@@ -2331,6 +2332,7 @@ internal sealed class DaggerfallSiteProfile(ProjectFacts project, SpatialContent
     internal NormalizedGroundContainerSprite? GroundContainerSprite { get; } = groundContainerSprite;
     /// <summary>Normalized per-placement bounds, visibility samples, and source markers used by dungeon discovery; absent on non-dungeons.</summary>
     internal DaggerfallDungeonMapContent? DungeonMap { get; } = dungeonMap;
+    internal IReadOnlyList<DaggerfallSiteMarker> QuestMarkers { get; } = Array.AsReadOnly((questMarkers ?? []).ToArray());
     /// <summary>Normalized RDB action nodes; runtime trigger and action-family policy remain in the graph owner.</summary>
     internal IReadOnlyList<DaggerfallDungeonActionDefinition> DungeonActions { get; } = Array.AsReadOnly((dungeonActions ?? [])
         .OrderBy(action => action.Id, StringComparer.Ordinal)

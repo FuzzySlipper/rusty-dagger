@@ -784,6 +784,9 @@ public sealed record NormalizedWorld(
     /// <summary>Source-selected building instance; absent for worlds without a building selection.</summary>
     public NormalizedInteriorBuilding? InteriorBuilding { get; init; }
 
+    /// <summary>Source-order spawn/item points retained for quest allocation.</summary>
+    public IReadOnlyList<NormalizedQuestMarker> QuestMarkers { get; init; } = [];
+
     /// <summary>Source action nodes and their normalized forward links.</summary>
     public IReadOnlyList<NormalizedDungeonAction> Actions { get; init; } = [];
 
@@ -838,6 +841,9 @@ public sealed record NormalizedWorld(
         StartMarker?.Validate();
         EnterMarker?.Validate();
         InteriorBuilding?.Validate();
+        ArgumentNullException.ThrowIfNull(QuestMarkers);
+        NormalizedImportDocument.ValidateUnique(QuestMarkers, marker => marker.Id, "quest marker");
+        foreach (NormalizedQuestMarker marker in QuestMarkers) marker.Validate();
         ArgumentNullException.ThrowIfNull(Lights);
         ArgumentNullException.ThrowIfNull(Billboards);
         ArgumentNullException.ThrowIfNull(Actors);

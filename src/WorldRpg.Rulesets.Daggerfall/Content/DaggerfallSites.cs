@@ -123,12 +123,15 @@ internal sealed record DaggerfallSiteExterior(
     int MinY,
     int MaxY)
 {
+    internal int? SourceLocationId { get; init; }
     internal IReadOnlyList<DaggerfallSiteBlock> Blocks { get; init; } = [];
+    internal IReadOnlyList<DaggerfallSiteBuildingReference> BuildingReferences { get; init; } = [];
     internal int PortTownAndUnknown { get; init; }
     internal IReadOnlyDictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource> Buildings { get; init; } = new Dictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource>();
 }
 
 internal sealed record DaggerfallSiteBlock(string SourceName, int X, int Y);
+internal sealed record DaggerfallSiteBuildingReference(int LocationId, int Sector);
 
 /// <summary>A placement identity is local to a site; an RMB source slot can repeat in its grid.</summary>
 internal readonly record struct DaggerfallSiteBuildingId(int BlockX, int BlockY, int Index)
@@ -139,6 +142,7 @@ internal readonly record struct DaggerfallSiteBuildingId(int BlockX, int BlockY,
 internal sealed record DaggerfallSiteBuildingSource(DaggerfallSiteBuildingId Id,
     DaggerfallRmbBuildingSource Source, int Quality)
 {
+    internal int? SourceLocationId { get; init; }
     internal string? ModelId { get; init; }
     internal float? ModelRadius { get; init; }
 }

@@ -34,7 +34,7 @@ internal static class DaggerfallMapProjection
         List<DaggerfallMapLabel> labels = [];
         foreach (string id in known.DiscoveredMarkerIds)
         {
-            DaggerfallDungeonMapMarker marker = content.RequireMarker(id);
+            DaggerfallSiteMarker marker = content.RequireMarker(id);
             labels.Add(new(id, marker.Kind.ToString(), marker.Position.X, marker.Position.Y, marker.Position.Z));
         }
         labels.AddRange(known.NoteMarkers.Select(note => new DaggerfallMapLabel(note.Id, note.Text, note.Position.X, note.Position.Y, note.Position.Z)));

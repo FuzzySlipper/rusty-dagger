@@ -97,7 +97,7 @@ internal sealed class DaggerfallLocationExteriorBuilder
                 string? modelId = placements[block.SourceName].Buildings[building.Index].Exterior.Models.FirstOrDefault()?.ModelId;
                 float? radius = modelId is null || models is null ? null : ReadRadius(modelId);
                 buildings.Add(new(block.SourceName, block.X, block.Y, building.Index, type, faction, seed, quality)
-                { ModelId = modelId, ModelRadius = radius });
+                { SourceLocationId = building.LocationId, ModelId = modelId, ModelRadius = radius });
             }
 
             foreach (RmbGroundTile tile in summary.GroundTiles)
@@ -143,6 +143,7 @@ internal sealed class DaggerfallLocationExteriorBuilder
             [.. layout.Blocks.Select(block => new DaggerfallLocationExteriorBlock(block.SourceName, block.X, block.Y))])
         {
             Buildings = buildings,
+            BuildingReferences = [.. layout.Buildings.Select(building => new DaggerfallLocationBuildingReference(building.LocationId, building.Sector))],
             PortTownAndUnknown = layout.PortTownAndUnknown,
             MissingCityBuildings = missingCityBuildings,
         };

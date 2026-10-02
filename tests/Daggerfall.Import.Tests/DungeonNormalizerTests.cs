@@ -35,6 +35,22 @@ public sealed class DungeonNormalizerTests
         Assert.DoesNotContain("encounter", Encoding.UTF8.GetString(NormalizedImportSerializer.Serialize(result.Document)), StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData(11, NormalizedQuestMarkerKind.Spawn)]
+    [InlineData(18, NormalizedQuestMarkerKind.Item)]
+    public void Publishes_quest_editor_markers_in_the_selected_dungeon_frame(ushort record, NormalizedQuestMarkerKind kind)
+    {
+        DungeonLogicalSource[] sources = CreateSources();
+        Replace(sources, "BLOCKS.BSA", CreateNamedBsa(("S0000007.RDB", CreateRdbFixture(flatTextureRecord: record))));
+        DungeonNormalizationResult result = DungeonNormalizer.Normalize(Request(sources));
+        NormalizedQuestMarker marker = Assert.Single(result.Document.World.QuestMarkers);
+        Assert.Equal(kind, marker.Kind);
+        Assert.Equal((1, 1, 0), (marker.BlockX, marker.BlockZ, marker.SourceOrdinal));
+        Assert.Equal("quest/s0000007-rdb/1/1/0", marker.Id);
+        Assert.Empty(result.Document.World.Billboards);
+        Assert.Equal(marker, Assert.Single(NormalizedImportSerializer.Deserialize(NormalizedImportSerializer.Serialize(result.Document)).World.QuestMarkers));
+    }
+
     [Fact]
     public void Preserves_unrecognized_negative_rdb_action_link_sentinels_as_source_facts()
     {

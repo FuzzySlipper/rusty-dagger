@@ -409,8 +409,8 @@ internal sealed class DaggerfallSiteLifecycle
         if (_state.DungeonDiscoveries.TryGetValue(sourceProfile, out DaggerfallDungeonDiscovery? sourceDiscovery)
             && source.Inputs.DungeonMap is { } sourceMap)
         {
-            DaggerfallDungeonMapMarker? usedPortal = sourceMap.Markers
-                .Where(marker => marker.Kind == DaggerfallDungeonMapMarkerKind.Portal
+            DaggerfallSiteMarker? usedPortal = sourceMap.Markers
+                .Where(marker => marker.Kind == DaggerfallSiteMarkerKind.Portal
                     && marker.DestinationLogicalProfile == destination.LogicalId)
                 .OrderBy(marker => Vector3.DistanceSquared(marker.Position.ToVector(), sourcePosition.ToVector()))
                 .FirstOrDefault();

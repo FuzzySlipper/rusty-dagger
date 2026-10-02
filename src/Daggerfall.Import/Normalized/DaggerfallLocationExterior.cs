@@ -74,6 +74,8 @@ public sealed record DaggerfallLocationExterior(
 {
     /// <summary>Placed building facts specialized for this location, in donor traversal order.</summary>
     public IReadOnlyList<DaggerfallLocationBuilding> Buildings { get; init; } = [];
+    /// <summary>Raw MAPPITEM building references, distinct from named-building policy assignment.</summary>
+    public IReadOnlyList<DaggerfallLocationBuildingReference> BuildingReferences { get; init; } = [];
     public byte PortTownAndUnknown { get; init; }
 
     /// <summary>Recoverable exhausted city-pool placements; their donor zero values remain published.</summary>
@@ -125,6 +127,10 @@ public sealed record DaggerfallLocationExterior(
 public sealed record DaggerfallLocationBuilding(string SourceKey, int BlockX, int BlockY, int BuildingIndex,
     int BuildingType, int FactionId, int NameSeed, int Quality)
 {
+    public ushort SourceLocationId { get; init; }
     public string? ModelId { get; init; }
     public float? ModelRadius { get; init; }
 }
+
+/// <summary>A source quest building id and its MAPS sector ordinal, before RMB matching.</summary>
+public sealed record DaggerfallLocationBuildingReference(ushort LocationId, short Sector);
