@@ -62,6 +62,17 @@ public sealed class DaggerfallFactionsTests
         factions.Validate();
 
         Assert.Equal(366, factions.Factions.Count);
+        foreach (var faction in factions.Factions)
+        {
+            Assert.Equal(faction.Flats.Count, faction.FlatVisuals.Count);
+            for (int i = 0; i < faction.Flats.Count; i++)
+            {
+                var visual = faction.FlatVisuals[i];
+                Assert.Equal(faction.Flats[i], visual.Id);
+                Assert.Equal(visual.Id, (visual.Archive << 7) | visual.Record);
+                Assert.InRange(visual.Record, 0, 127);
+            }
+        }
         // Every relation the file states resolves; nothing is missing.
         Assert.DoesNotContain(factions.Factions, faction => faction.ParentDisposition == DaggerfallFactionLinkDisposition.Unresolved);
         Assert.DoesNotContain(factions.Factions, faction => faction.AllyDisposition == DaggerfallFactionLinkDisposition.Unresolved);

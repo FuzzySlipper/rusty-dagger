@@ -108,7 +108,7 @@ public sealed class PropertySessionTests
         using Fixture f = new(questBuildingScenario: true); var s = f.Session; var site = s.Site.ActiveSite!;
         var houses = site.Exterior!.Buildings.Values.Where(building => building.Source.BuildingType is >= 17 and <= 20).Take(2).ToArray();
         StartBuilding(s, "first", houses[0]); StartBuilding(s, "second", houses[0]);
-        s.State.Quests.SetResource("first", new("_mondung_", Binding(s, houses[1])));
+        s.State.Quests.SetResource("first", new("house", Binding(s, houses[1])));
         Assert.True(s.State.Quests.ClaimsBuilding(site.Id, houses[0]));
         Assert.True(s.State.Quests.ClaimsBuilding(site.Id, houses[1]));
         s.State.Quests.Complete("second", "finished");
@@ -132,7 +132,8 @@ public sealed class PropertySessionTests
         Assert.Contains("no building", Assert.Throws<InvalidOperationException>(() => DaggerfallQuestResourceBinding.PlaceBuilding(s.Site, originSite.MapId, 0xffffff)).Message);
         var house = s.Site.ActiveSite!.Exterior!.Buildings.Values.First(); StartBuilding(s, "malformed", house);
         var saved = DaggerfallSavePayload.Read(s.CaptureSave());
-        var quest = saved.Quests.Instances.Single(); var resource = quest.Resources.Single();
+        var quest = saved.Quests.Instances.Single(value => value.InstanceId == "malformed");
+        var resource = quest.Resources.Single(value => value.Symbol == "house");
         var bad = saved with { Quests = saved.Quests with { Instances = [quest with { Resources = [resource with
             { Binding = resource.Binding with { Building = resource.Binding.Building! with { SourceKey = "MISSING.RMB" } } }] }] } };
         Assert.Contains("missing building", Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(bad))).Message);
@@ -146,8 +147,8 @@ public sealed class PropertySessionTests
         return DaggerfallQuestResourceBinding.PlaceBuilding(session.Site, session.Site.ActiveSite!.MapId, key == 0 ? 1 << 24 : key);
     }
     private static void StartBuilding(DaggerfallSession session, string instance, DaggerfallSiteBuildingSource building) =>
-        session.State.Quests.Start(new(instance, "00B00Y00.txt", "00B00Y00", DaggerfallQuestLifecycle.Active, null,
-            [new("_mondung_", Binding(session, building))], []));
+        session.State.Quests.Start(new(instance, "allocation.txt", "allocation", DaggerfallQuestLifecycle.Active, null,
+            [new("house", Binding(session, building))], []));
 
     [Fact]
     public void Teleport_ship_anchor_restores_owned_boarding_context_and_refuses_a_sold_ship()
@@ -369,7 +370,7 @@ public sealed class PropertySessionTests
 
     private sealed class Fixture : IDisposable
     {
-        private readonly DaggerfallDefinitions definitions = TestPayload.Definitions;
+        private readonly DaggerfallDefinitions definitions = QuestPlaceAllocationTests.Definitions();
         private readonly List<string> releases = [];
         private readonly DaggerfallSiteProfiles profiles;
         private readonly DaggerfallBlocksSnapshot blocks;

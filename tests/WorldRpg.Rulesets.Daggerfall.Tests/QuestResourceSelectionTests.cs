@@ -31,6 +31,9 @@ public sealed class QuestResourceSelectionTests
                 Assert.True(definitions.TryResolveItem(new(item.Item.Value), out _));
                 Assert.Equal(source.CanonicalId, item.Metadata.QuestItemSymbol);
                 Assert.True(item.Quantity > 0);
+                Assert.Equal(selected.Text!.Name, selected.Text.Details);
+                if (item.TemplateIndex == 276)
+                    Assert.Equal(item.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture), selected.Text.Name);
             }
             else
             {
@@ -38,6 +41,7 @@ public sealed class QuestResourceSelectionTests
                 var mobile = definitions.QuestSources.Tables.ActorItemTables.Foes.Resolve(source.TargetSourceSpelling!).Id;
                 Assert.Equal(mobile, definitions.RequireActor(new(foe.Definition)).MobileId);
                 Assert.InRange(foe.Count, 1, 8);
+                Assert.Equal(definitions.Text.RequireInternalEntry("enemyNames", mobile < 128 ? mobile : 43 + mobile - 128), selected.Text!.Name);
             }
         }
     }
@@ -102,5 +106,27 @@ public sealed class QuestResourceSelectionTests
             new(definitions, maximum ? RandomMaximum.Create() : RandomMinimum.Create()),
             new(definitions, maximum ? RandomMaximum.Create() : RandomMinimum.Create()),
             () => new(4, "breton", "male", 17), _ => default, _ => 0,
-            item => definitions.ItemTemplateCatalog.Resolve(item.TemplateIndex).Name);
+            item => Presentation.DaggerfallInventoryPresentation.DescribeCreatedItem(definitions, item));
+
+    [Theory]
+    [InlineData(5, "Sabretooth Tiger")]
+    [InlineData(30, "Ancient Vampire")]
+    public void Foe_type_names_use_the_published_localized_enemy_list(int mobile, string name)
+    {
+        var definitions = TestPayload.Definitions;
+        var declaration = definitions.QuestSources.Resources.First(value => value.Kind == "foe"
+            && definitions.QuestSources.Tables.ActorItemTables.Foes.Resolve(value.TargetSourceSpelling!).Id == mobile);
+        Assert.Equal(name, Allocator(definitions).Allocate("names", 0, declaration).Text!.Name);
+    }
+
+    [Fact]
+    public void Item_presentation_retains_book_title_and_material_names()
+    {
+        var definitions = TestPayload.Definitions;
+        DaggerfallItemFactory factory = new(definitions, RandomMinimum.Create());
+        var weapon = factory.Create(new("Weapons", "names/weapon", DaggerfallItemOwner.Player, TemplateIndex: 113, Material: "steel"));
+        Assert.Equal("Steel Dagger", Presentation.DaggerfallInventoryPresentation.DescribeCreatedItem(definitions, weapon));
+        var book = factory.Create(new("Books", "names/book", DaggerfallItemOwner.Player, TemplateIndex: 277, BookId: 1));
+        Assert.Equal(definitions.Books.Books[1].Title, Presentation.DaggerfallInventoryPresentation.DescribeCreatedItem(definitions, book));
+    }
 }
