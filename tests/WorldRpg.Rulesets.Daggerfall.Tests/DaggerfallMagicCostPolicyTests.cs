@@ -13,7 +13,8 @@ public sealed class DaggerfallMagicCostPolicyTests
         (int Type, int SubType)[] retainedEffects = definitions.Magic.Spells.Values.SelectMany(spell => spell.Effects)
             .Select(effect => (effect.Type, effect.SubType)).Distinct().Order().ToArray();
         Assert.Equal(60, retainedEffects.Length);
-        Assert.Equal(retainedEffects, definitions.Magic.EffectCosts.Keys.Order().ToArray());
+        // Crafted/potion variants without stock spells still need their published coefficient rows.
+        Assert.Equal(retainedEffects.Concat([(26, -1), (7, 4), (7, 7)]).Distinct().Order(), definitions.Magic.EffectCosts.Keys.Order());
 
         DaggerfallSpellDefinition doorJam = definitions.Magic.Spells["spell.001"];
         Assert.Equal(28, DaggerfallMagicCostPolicy.QuoteCasting(definitions.Magic, doorJam, new Dictionary<string, int>(), enchantingItem: true).SpellPoints);

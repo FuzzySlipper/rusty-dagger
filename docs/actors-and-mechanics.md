@@ -48,7 +48,11 @@ Player progression is attached, while Dagger retains XP and level-up policy.
 `PassiveTrackRecovery` in Kit implements rate, quiet delay and fractional carry;
 Dagger decides which admitted actions delay stamina recovery and when recovery
 is allowed. The active-effect lifecycle is described below; individual spell and
-effect families remain separate gameplay work.
+effect families remain separate gameplay work. Attribute drains keep one permanent, target-owned
+incumbent per attribute and an additive Engine stat source, with a floor of one relative to
+the permanent base. Matching partial healing updates that source; complete healing removes
+it through the effect lifecycle. Historical cast provenance survives source retirement
+without retaining a living caster or item dependency. Disease and poison use separate cure scopes.
 
 `DaggerSessionPersistence` captures and restores the current source-generated
 payload. It rebuilds authored sources before applying saved track currents, so

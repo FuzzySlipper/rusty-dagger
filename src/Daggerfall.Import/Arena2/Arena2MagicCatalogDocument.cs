@@ -216,7 +216,8 @@ public static class Arena2MagicCatalogDocument
                 .SelectMany(spell => spell.Effects)
                 .Select(effect => (effect.Type, effect.SubType))
                 // Free Action has no stock SPELLS.STD entry, but normalized crafted spells and potions need its row.
-                .Concat([(Type: 26, SubType: -1)])
+                // Endurance and Luck drains also have no stock spell; crafted spells still require their costs.
+                .Concat([(Type: 26, SubType: -1), (Type: 7, SubType: 4), (Type: 7, SubType: 7)])
                 .Distinct()
                 .Order()
                 .Select(variant => effectCosts.Resolve(variant.Type, variant.SubType))
