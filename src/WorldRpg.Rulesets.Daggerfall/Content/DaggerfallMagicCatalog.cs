@@ -91,7 +91,7 @@ internal static class DaggerfallMagicCostMetadata
         (10, >= 0 and <= 7) => Magnitude(D(40, 28)),
         (10, 8) => Magnitude(D(20, 28)),
         (10, 9) => Magnitude(D(8, 28)),
-        (11, 8) or (11, 9) => Magnitude(D(60, 100, 40)),
+        (11, >= 0 and <= 9) => Magnitude(D(60, 100, 40)),
         (12, -1) => DurationChance(D(60, 68), D(40, 68)),
         (13, 0) => Duration(D(40, 120)),
         (13, 1) => Duration(D(60, 140)),

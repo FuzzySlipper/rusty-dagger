@@ -278,8 +278,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                     }))
                 {
                     string? actual = incumbent == DaggerfallEffectAdmissionOutcome.Refreshed
-                        ? effects.Active.First(effect => checked((long)effect.Context.Target.Value) == targetId
-                            && effects.IsLikeKind(effect, definition, targetId, preliminary, operationalCaster, operationalItem)).Context.Instance.Value : null;
+                        ? effects.IncumbentFor(definition, targetId, preliminary, operationalCaster, operationalItem)!.Context.Instance.Value : null;
                     bundle.Results.Add(new(i, targetId, incumbent == DaggerfallEffectAdmissionOutcome.Refreshed
                         ? DaggerfallCastOutcome.Refreshed : DaggerfallCastOutcome.IncumbentRejected, permanentPercent, Instance: actual));
                     continue;
@@ -295,7 +294,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                 JsonElement payload = binding.CreateState?.Invoke(state)
                     ?? JsonSerializer.SerializeToElement(state, DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
                 var admission = effects.Start(new(instance, definition.Key, $"spell.{bundle.Spell.Key}", operationalCaster,
-                    targetId, setting.Key, bundle.Element.ToString(), operationalItem, 1, duration, payload) { BundleId = $"cast.{bundle.Sequence}", BundleName = bundle.Spell.Name, BundleKind = bundle.Source == DaggerfallCastSource.ItemHeld ? DaggerfallEffectBundleKind.HeldMagicItem : DaggerfallEffectBundleKind.Spell });
+                    targetId, setting.Key, bundle.Element.ToString(), operationalItem, 1, duration, payload) { BundleId = $"cast.{bundle.Sequence}", BundleSequence = bundle.Sequence, BundleName = bundle.Spell.Name, BundleKind = bundle.Source == DaggerfallCastSource.ItemHeld ? DaggerfallEffectBundleKind.HeldMagicItem : DaggerfallEffectBundleKind.Spell });
                 outcome = admission switch
                 {
                     DaggerfallEffectAdmissionOutcome.TargetUnavailable => DaggerfallCastOutcome.TargetUnavailable,
@@ -307,8 +306,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                     _ => DaggerfallCastOutcome.Applied,
                 };
                 if (admission == DaggerfallEffectAdmissionOutcome.Refreshed)
-                    instance = effects.Active.Single(effect => checked((long)effect.Context.Target.Value) == targetId
-                        && effects.IsLikeKind(effect, definition, targetId, payload, operationalCaster, operationalItem)).Context.Instance.Value;
+                    instance = effects.IncumbentFor(definition, targetId, payload, operationalCaster, operationalItem)!.Context.Instance.Value;
                 bundle.Results.Add(new(i, targetId, outcome, percent, outcome is DaggerfallCastOutcome.NoMatch or DaggerfallCastOutcome.SourceUnavailable or DaggerfallCastOutcome.TargetUnavailable ? null : instance));
                 continue;
             }

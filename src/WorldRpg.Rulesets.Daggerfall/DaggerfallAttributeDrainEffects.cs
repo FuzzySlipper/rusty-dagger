@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Rusty.Engine.Mechanics;
+using Rusty.Engine.Entities;
 using WorldRpg.Kit.Effects;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Policies;
@@ -18,37 +19,56 @@ internal static class DaggerfallAttributeDrainEffects
     internal static JsonElement Encode(DaggerfallAttributeDrainState state) =>
         JsonSerializer.SerializeToElement(state, DaggerfallSaveJsonContext.Default.DaggerfallAttributeDrainState);
 
-    internal static IEnumerable<DaggerfallEffectDefinition> Definitions(Func<DaggerfallCareerDefinition> career, Action<long, long> attacked)
+    internal static IEnumerable<DaggerfallEffectDefinition> Definitions(Func<DaggerfallCareerDefinition> career, Action<long, long> attacked) =>
+        DefinitionsFor(7, career, attacked, null);
+
+    internal static IEnumerable<DaggerfallEffectDefinition> TransferDefinitions(Func<DaggerfallCareerDefinition> career,
+        Action<long, long> attacked, Func<long, Actor?> actor, Func<DaggerfallEffectLifecycle> effects) =>
+        DefinitionsFor(11, career, attacked, incoming =>
+        {
+            long casterId = incoming.Cast.Origin!.CasterId;
+            Actor? caster = actor(casterId);
+            if (caster is null || caster.Get<StatsComponent>().GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0) return;
+            Heal(effects(), casterId, Attributes[incoming.Cast.Settings.SubType], incoming.Cast.Amount, career);
+        });
+
+    private static IEnumerable<DaggerfallEffectDefinition> DefinitionsFor(int type, Func<DaggerfallCareerDefinition> career,
+        Action<long, long> attacked, Action<DaggerfallAttributeDrainState>? healCaster)
     {
         for (int subtype = 0; subtype < Attributes.Length; subtype++)
         {
             int selected = subtype;
-            yield return new(Key(selected), Key(selected), DaggerfallEffectStacking.RefreshDuration, 1, 1,
+            string key = type == 7 ? Key(selected) : $"transfer-{Attributes[selected].Value}";
+            yield return new(key, key, DaggerfallEffectStacking.RefreshDuration, 1, 1,
                 Apply: effect =>
                 {
-                    var incoming = Read(effect.State, selected);
+                    var incoming = Read(effect.State, selected, type);
                     Update(effect, incoming with { Magnitude = Bounded(effect, selected, incoming.Magnitude) }, selected, career);
                     attacked(incoming.Cast.Origin!.CasterId, checked((long)effect.Context.Target.Value));
+                    healCaster?.Invoke(incoming);
                     return Cleanup(effect, selected, career);
                 },
                 Resume: effect =>
                 {
-                    var state = Read(effect.State, selected);
+                    var state = Read(effect.State, selected, type);
                     VerifySources(effect, selected, state.Magnitude);
                     return Cleanup(effect, selected, career);
                 },
                 RefreshState: (effect, payload) =>
                 {
-                    var incoming = Read(payload, selected);
-                    var incumbent = Read(effect.State, selected);
+                    var incoming = Read(payload, selected, type);
+                    var incumbent = Read(effect.State, selected, effect.Definition.Spell!.Type);
                     Update(effect, incumbent with { Magnitude = Bounded(effect, selected, (long)incumbent.Magnitude + incoming.Magnitude) }, selected, career);
                     attacked(incoming.Cast.Origin!.CasterId, checked((long)effect.Context.Target.Value));
+                    healCaster?.Invoke(incoming);
                 },
-                Spell: new(7, selected, SupportsMagnitude: true, UntilHealed: true,
-                    AllowedElements: DaggerfallMagicAllowedElements.Fire | DaggerfallMagicAllowedElements.Cold
+                Spell: new(type, selected, SupportsMagnitude: true, UntilHealed: true,
+                    AllowedElements: type == 11 ? DaggerfallMagicAllowedElements.Magic : DaggerfallMagicAllowedElements.Fire | DaggerfallMagicAllowedElements.Cold
                         | DaggerfallMagicAllowedElements.Poison | DaggerfallMagicAllowedElements.Shock | DaggerfallMagicAllowedElements.Magic,
                     AllowedTargets: DaggerfallMagicAllowedTargets.Other,
-                    CreateState: cast => Encode(new(cast, cast.Amount))), ShowSpellIcon: false);
+                    CreateState: cast => Encode(new(cast, cast.Amount))), ShowSpellIcon: false,
+                IncumbentDefinitionMatch: incoming => incoming.Spell is { } binding && binding.SubType == selected
+                    && (type == 7 ? binding.Type is 7 or 11 : binding.Type == 11));
         }
     }
 
@@ -59,20 +79,29 @@ internal static class DaggerfallAttributeDrainEffects
         if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount));
         int subtype = Array.IndexOf(Attributes, attribute);
         if (subtype < 0) throw new ArgumentException("Drain healing requires an attribute.", nameof(attribute));
-        var effect = effects.Active.SingleOrDefault(effect => effect.Context.Target.Value == checked((ulong)targetId)
-            && effect.Definition.Spell is { Type: 7 } binding && binding.SubType == subtype);
-        if (effect is null || amount == 0) return 0;
-        var state = Read(effect.State, subtype);
-        int healed = Math.Min(amount, state.Magnitude);
-        if (state.Magnitude == healed) effects.Cure(effect.Context.Instance);
-        else Update(effect, state with { Magnitude = state.Magnitude - healed }, subtype, career);
-        return healed;
+        int remaining = amount;
+        // Match the admitted bundle order: consume each matching source without healing another attribute.
+        foreach (var effect in effects.Active.Where(effect => effect.Context.Target.Value == checked((ulong)targetId)
+            && IsAttributeDamage(effect.Definition, subtype)).OrderBy(effect => effect.BundleSequence)
+            .ThenBy(effect => effect.Context.Instance.Value, StringComparer.Ordinal).ToArray())
+        {
+            if (remaining == 0) break;
+            var state = Read(effect.State, subtype, effect.Definition.Spell!.Type);
+            int healed = Math.Min(remaining, state.Magnitude);
+            if (state.Magnitude == healed) effects.Cure(effect.Context.Instance);
+            else Update(effect, state with { Magnitude = state.Magnitude - healed }, subtype, career);
+            remaining -= healed;
+        }
+        return amount - remaining;
     }
 
-    internal static DaggerfallAttributeDrainState Read(JsonElement payload, int subtype)
+    internal static bool IsAttributeDamage(DaggerfallEffectDefinition definition, int subtype) =>
+        definition.Spell is { Type: 7 or 11 } binding && binding.SubType == subtype;
+
+    internal static DaggerfallAttributeDrainState Read(JsonElement payload, int subtype, int type = 7)
     {
         var state = payload.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallAttributeDrainState);
-        if (state?.Cast is not { } cast || cast.Settings is not { Type: 7 } setting || setting.SubType != subtype
+        if (state?.Cast is not { } cast || cast.Settings is not { } setting || setting.Type != type || type is not (7 or 11) || setting.SubType != subtype
             || cast.CasterLevel < 1 || cast.Amount < 0 || cast.SavePercent is < 1 or > 100 || state.Magnitude < 0
             || cast.Origin is not { CasterId: > 0 } origin || origin.ItemId == 0 || !Enum.IsDefined(origin.Source)
             || (origin.Source == DaggerfallCastSource.Spell) != (origin.ItemId is null))
