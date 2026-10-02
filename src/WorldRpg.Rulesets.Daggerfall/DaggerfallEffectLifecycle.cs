@@ -18,6 +18,8 @@ internal enum DaggerfallEffectAdmissionOutcome
     Replaced,
     Rejected,
     NoMatch,
+    SourceUnavailable,
+    TargetUnavailable,
 }
 
 /// <summary>The narrow completed-change signal cast, item, time, combat, and presentation owners consume.</summary>
@@ -28,6 +30,8 @@ internal enum DaggerfallEffectOutcomeKind
     Replaced,
     Rejected,
     NoMatch,
+    SourceUnavailable,
+    TargetUnavailable,
     Cancelled,
     Cured,
     Expired,
@@ -160,7 +164,7 @@ internal sealed record DaggerfallEffectRequest(
 /// <summary>One live Daggerfall effect's policy state and its Kit lifecycle entry.</summary>
 internal sealed class DaggerfallActiveEffect
 {
-    internal DaggerfallActiveEffect(DaggerfallEffectDefinition definition, ActiveEffectContext context, ushort stacks, JsonElement state, Func<Actor> source, Actor target)
+    internal DaggerfallActiveEffect(DaggerfallEffectDefinition definition, ActiveEffectContext context, ushort stacks, JsonElement state, Func<Actor?> source, Actor target)
     {
         Definition = definition;
         Context = context;
@@ -177,14 +181,16 @@ internal sealed class DaggerfallActiveEffect
     internal JsonElement State { get; set; }
     /// <summary>Requested stack count available to compiled policy before the Engine state is attached.</summary>
     internal ushort Stacks { get; }
-    private readonly Func<Actor> _source;
+    private readonly Func<Actor?> _source;
     /// <summary>The live caster resolved at application time, or the target if that caster was retired.</summary>
-    internal Actor Source => _source();
+    internal Actor Source => _source() ?? Target;
+    /// <summary>The actual current caster, without substituting the target when the caster is absent.</summary>
+    internal Actor? Caster => _source();
     internal Actor Target { get; }
     /// <summary>Compiled policy requests ordinary Engine expiry after the current magic-round payload.</summary>
     internal bool ExpireAfterCurrentRound { get; set; }
-    /// <summary>The compiled initial payload found no condition in its selected cure scope.</summary>
-    internal bool NoMatchingCondition { get; set; }
+    /// <summary>Explicit one-shot payload refusal/no-match after its operational admission.</summary>
+    internal DaggerfallEffectAdmissionOutcome? InitialOutcome { get; set; }
 
     internal void Attach(ActiveEffectState lifecycle)
     {
@@ -326,21 +332,26 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
             : DaggerfallEffectAdmissionOutcome.Started;
         // The donor applies a newly assigned effect once before the next minute tick. Restore does
         // not come through Start(), so it never repeats this work.
-        bool noMatch = false;
+        DaggerfallEffectAdmissionOutcome? initialOutcome = null;
         ActiveEffectLifecycleReceipt? initial = LifecycleFor(request.TargetId).AdvanceInitialMagicRound(context.Instance, state =>
         {
             if (_effects.TryGetValue(state.Context.Instance, out DaggerfallActiveEffect? effect))
             {
                 ApplyRound(effect);
-                noMatch = effect.NoMatchingCondition;
+                initialOutcome = effect.InitialOutcome;
             }
         });
         if (initial is not null)
             foreach (ActiveEffectState removed in initial.Removed) _effects.Remove(removed.Context.Instance);
-        if (noMatch) outcome = DaggerfallEffectAdmissionOutcome.NoMatch;
-        Publish(noMatch ? DaggerfallEffectOutcomeKind.NoMatch : outcome == DaggerfallEffectAdmissionOutcome.Replaced
-            ? DaggerfallEffectOutcomeKind.Replaced
-            : DaggerfallEffectOutcomeKind.Started, context.Instance.Value, definition.Key, request.TargetId);
+        if (initialOutcome is { } payloadOutcome) outcome = payloadOutcome;
+        Publish(outcome switch
+        {
+            DaggerfallEffectAdmissionOutcome.NoMatch => DaggerfallEffectOutcomeKind.NoMatch,
+            DaggerfallEffectAdmissionOutcome.SourceUnavailable => DaggerfallEffectOutcomeKind.SourceUnavailable,
+            DaggerfallEffectAdmissionOutcome.TargetUnavailable => DaggerfallEffectOutcomeKind.TargetUnavailable,
+            DaggerfallEffectAdmissionOutcome.Replaced => DaggerfallEffectOutcomeKind.Replaced,
+            _ => DaggerfallEffectOutcomeKind.Started,
+        }, context.Instance.Value, definition.Key, request.TargetId);
         if (initial is not null)
             foreach (ActiveEffectState removed in initial.Removed)
                 Publish(DaggerfallEffectOutcomeKind.Expired, removed.Context.Instance.Value, definition.Key, request.TargetId);
@@ -540,7 +551,7 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
         {
             Actor target = ActorFor(checked((long)context.Target.Value));
             active = new DaggerfallActiveEffect(definition, context, stacks, state,
-                () => SourceFor(context, target), target);
+                () => SourceFor(context), target);
             contributions.AddRange(Apply(active, resumed));
             ActiveEffectLifecycleReceipt receipt = lifecycle.Admit(definition.ToEngineDefinition(context.Source.Key), admission, context,
                 Provenance(checked((long)context.Target.Value), context), stacks, remainingRounds, contributions);
@@ -570,12 +581,12 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
         ? _actors.Player.Actor
         : _actors.Get(targetId).Actor;
 
-    private Actor SourceFor(ActiveEffectContext context, Actor target)
+    private Actor? SourceFor(ActiveEffectContext context)
     {
-        if (context.Caster is not { } caster) return target;
+        if (context.Caster is not { } caster) return null;
         long casterId = checked((long)caster.Value);
         if (casterId == _actors.Player.DurableId) return _actors.Player.Actor;
-        return _actors.TryGet(casterId, out ActorState actor) ? actor.Actor : target;
+        return _actors.TryGet(casterId, out ActorState actor) ? actor.Actor : null;
     }
 
     private static List<IActiveEffectContribution> Apply(DaggerfallActiveEffect effect, bool resumed = false)

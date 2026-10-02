@@ -541,6 +541,15 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         _enemyBehavior.MakeHostile(target);
     }
 
+    private void AppendSpellTransfer(DaggerfallSpellTransferResult result)
+    {
+        if (result.HealthDamage is { } health) AppendEffectDamage(new(health));
+        if (result.TrackDamage is { } fatigue) AppendSpellTrackLoss(fatigue);
+        _facts.Append(new VitalTransferredFact(checked((long)result.Caster.Get<DurableEntityIdentity>().Identity.Value),
+            checked((long)result.Target.Get<DurableEntityIdentity>().Identity.Value), result.Track.Value, result.Amount,
+            result.ActualLoss, result.Restored, result.TargetDefeated, _latestUpdateGeneration ?? 1UL, _latestSimulationStep ?? 1UL));
+    }
+
     private void AppendSpellTrackLoss(DaggerfallSpellTrackResult result)
     {
         long source = checked((long)result.Source.Get<DurableEntityIdentity>().Identity.Value);

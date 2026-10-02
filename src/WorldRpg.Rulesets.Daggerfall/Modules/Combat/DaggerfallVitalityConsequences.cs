@@ -22,13 +22,27 @@ internal sealed class DaggerfallVitalityConsequences
             calculated, 0, health, terminal ? HealthApplicationMode.Terminal : HealthApplicationMode.Damage).Result;
     }
 
-    internal DaggerfallSpellTrackResult ResolveSpellTrack(Actor caster, Actor target, TrackId trackId, int amount)
+    internal DaggerfallSpellTrackResult ResolveSpellTrack(Actor caster, Actor target, TrackId trackId, int amount, bool permitted = true)
     {
         Track track = target.Get<StatsComponent>().GetTrack(trackId);
         double before = track.Current;
-        if (target.Get<StatsComponent>().GetTrack(HealthTrack).Current > 0)
+        if (permitted && target.Get<StatsComponent>().GetTrack(HealthTrack).Current > 0)
             track.SetCurrent(before - Math.Max(0, amount), clamp: true);
         return new(caster, target, trackId, amount, before - track.Current);
+    }
+
+    /// <summary>Direct loss precedes bounded caster recovery; classic transfer restores the admitted amount, not the bounded loss.</summary>
+    internal DaggerfallSpellTransferResult ResolveSpellTransfer(Actor caster, Actor target, int magnitude, bool fatigue, bool permitsFatigueLoss)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(magnitude);
+        int amount = fatigue ? DaggerfallFormulaPolicy.SpellFatigueDamage(magnitude) : magnitude;
+        TrackId track = fatigue ? TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value) : HealthTrack;
+        DamageResult? health = fatigue ? null : ResolveSpellHealth(caster, target, amount, terminal: false);
+        DaggerfallSpellTrackResult? loss = fatigue ? ResolveSpellTrack(caster, target, track, amount, permitsFatigueLoss) : null;
+        // A reflected terminal self-hit cannot resurrect its caster after accepted death.
+        double restored = caster.Get<StatsComponent>().GetTrack(HealthTrack).Current > 0
+            ? caster.Get<StatsComponent>().GetTrack(track).Restore(amount) : 0;
+        return new(caster, target, track, amount, health, loss, restored);
     }
 
     /// <summary>
@@ -69,3 +83,10 @@ internal sealed class DaggerfallVitalityConsequences
 }
 
 internal sealed record DaggerfallSpellTrackResult(Actor Source, Actor Target, TrackId Track, int CalculatedLoss, double ActualLoss);
+
+internal sealed record DaggerfallSpellTransferResult(Actor Caster, Actor Target, TrackId Track, int Amount,
+    DamageResult? HealthDamage, DaggerfallSpellTrackResult? TrackDamage, double Restored)
+{
+    internal double ActualLoss => HealthDamage?.ActualHealthLost ?? TrackDamage?.ActualLoss ?? 0;
+    internal bool TargetDefeated => HealthDamage?.Defeated == true;
+}

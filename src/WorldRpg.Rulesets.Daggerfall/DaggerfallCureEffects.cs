@@ -25,7 +25,7 @@ internal static class DaggerfallCureEffects
                         2 => cureParalysis(target) > 0,
                         _ => throw new InvalidOperationException("Unknown compiled cure scope."),
                     };
-                    effect.NoMatchingCondition = !cured;
+                    if (!cured) effect.InitialOutcome = DaggerfallEffectAdmissionOutcome.NoMatch;
                     effect.ExpireAfterCurrentRound = true;
                 },
                 Spell: new(3, selected, RollChanceOnCast: true));
