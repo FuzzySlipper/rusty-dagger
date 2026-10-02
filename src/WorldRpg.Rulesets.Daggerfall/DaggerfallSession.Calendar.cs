@@ -136,7 +136,7 @@ internal sealed partial class DaggerfallSession
         }
 
         _ = State.Effects.AdvanceElapsedRounds(minutes);
-        State.HeldEnchantments.AdvanceRounds(checked((int)Math.Min(minutes, int.MaxValue)));
+        State.HeldEnchantments.AdvanceRounds(checked((int)Math.Min(minutes, int.MaxValue)), synthetic: !ordinaryPlay && !resting);
         _itemCastTriggers.AdvanceRounds(minutes, synthetic: !ordinaryPlay && !resting, resting: resting, roundBefore: roundBefore);
     }
 

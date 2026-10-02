@@ -24,6 +24,7 @@ internal sealed record DaggerfallTuning(
     DaggerfallPropertyTuning Property,
     DaggerfallTransportTuning Transport)
 {
+    internal DaggerfallStrikeEnchantmentTuning StrikeEnchantments { get; init; } = new(5, 2.25d);
     internal DaggerfallDetectionTuning Detection { get; init; } = new(14d);
     internal DaggerfallMusicTuning Music { get; init; } = new(AlternatePlaylists: false);
 
@@ -96,6 +97,7 @@ internal sealed record DaggerfallTuning(
         Property = Property.Validate(),
         Transport = Transport.Validate(),
         Detection = Detection.Validate(),
+        StrikeEnchantments = StrikeEnchantments.Validate(),
     };
 
     internal static DaggerfallTuning Read(ReadOnlySpan<byte> payload)
@@ -229,6 +231,8 @@ internal sealed record DaggerfallTuning(
                 transport.GetProperty("wagonCapacityClassicUnits").GetInt32(),
                 transport.GetProperty("wagonAccessRange").GetSingle()))
         {
+            StrikeEnchantments = new(root.GetProperty("strikeEnchantments").GetProperty("damageAdjustment").GetInt32(),
+                root.GetProperty("strikeEnchantments").GetProperty("vampiricRange").GetDouble()),
             Detection = new(root.GetProperty("detection").GetProperty("maximumDistance").GetDouble()),
             Music = new DaggerfallMusicTuning(root.GetProperty("music").GetProperty("alternatePlaylists").GetBoolean()),
         }.Validate();

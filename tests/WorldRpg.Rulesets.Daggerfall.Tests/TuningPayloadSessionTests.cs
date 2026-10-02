@@ -10,6 +10,23 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class TuningPayloadSessionTests
 {
     [Fact]
+    public void Strike_enchantment_values_load_from_tuning_and_reject_invalid_ranges()
+    {
+        string root = TestData.RepositoryRoot;
+        var loaded = DaggerfallTuning.Read(File.ReadAllBytes(Path.Combine(root,
+            "content/worldrpg/tuning-payloads/daggerfall.defaults.json")));
+        Assert.Equal(new DaggerfallStrikeEnchantmentTuning(5, 2.25), loaded.StrikeEnchantments);
+        var adjusted = DaggerfallTuning.Read(MutatedTuning(root, tuning =>
+        {
+            tuning["strikeEnchantments"]!["damageAdjustment"] = 7;
+            tuning["strikeEnchantments"]!["vampiricRange"] = 3;
+        }));
+        Assert.Equal(new DaggerfallStrikeEnchantmentTuning(7, 3), adjusted.StrikeEnchantments);
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallTuning.Read(MutatedTuning(root,
+            tuning => tuning["strikeEnchantments"]!["vampiricRange"] = 0)));
+    }
+
+    [Fact]
     public void Music_playlist_tuning_defaults_to_standard_and_requires_a_boolean()
     {
         string root = TestData.RepositoryRoot;

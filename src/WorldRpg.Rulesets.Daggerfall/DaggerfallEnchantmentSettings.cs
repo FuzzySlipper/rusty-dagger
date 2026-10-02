@@ -10,6 +10,10 @@ internal readonly record struct DaggerfallEnchantmentSetting(
 /// <summary>Retained payload vocabulary and content admission; settings themselves come from the pack.</summary>
 internal static class DaggerfallEnchantmentSettings
 {
+    internal const int HealthLeechType = 21;
+    internal const int LowDamageVsType = 20;
+    internal const int PotentVsType = 4;
+    internal const int VampiricType = 6;
     internal const int AbsorbsSpellsType = 9;
     internal const int RegeneratesHealthType = 5;
     internal const int ExtraSpellPointsType = 3;
@@ -80,6 +84,9 @@ internal static class DaggerfallEnchantmentSettings
     {
         10 => ["medical", "etiquette", "streetwise", "jumping", "orcish", "harpy", "giantish", "dragonish", "nymph", "daedric", "spriggan", "centaurian", "impish", "lockpicking", "mercantile", "pickpocket", "stealth", "swimming", "climbing", "backstabbing", "dodging", "running", "destruction", "restoration", "illusion", "alteration", "thaumaturgy", "mysticism", "short-blade", "long-blade", "hand-to-hand", "axe", "blunt-weapon", "archery", "critical-strike"],
         3 => ["during-winter", "during-spring", "during-summer", "during-fall", "during-full-moon", "during-half-moon", "during-new-moon", "near-undead", "near-daedra", "near-humanoids", "near-animals"],
+        4 or 20 => ["undead", "daedra", "humanoid", "animals"],
+        21 => ["whenever-used", "unless-used-daily", "unless-used-weekly"],
+        6 => ["at-range", "when-strikes"],
         5 => ["all-the-time", "in-sunlight", "in-darkness"],
         9 => ["spell-absorption"],
         12 => ["strengthened-armor"],

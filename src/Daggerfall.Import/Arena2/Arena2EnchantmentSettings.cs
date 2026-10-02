@@ -138,6 +138,10 @@ internal static class Arena2EnchantmentSettings
         AddSpellFamily(2, "CastWhenStrikes", "cast-when-strikes",
             [50, 53, 52, 54, 56, 33, 20, 25, 16, 7, 55, 67],
             [1620, 780, 1380, 930, 1830, 1020, 840, 840, 990, 480, 4230, 1260]);
+        AddFamily(21, "HealthLeech", "Health leech", [(0, -4000, "whenever-used", "wheneverUsed", "whenever used"), (1, -500, "unless-used-daily", "unlessUsedDaily", "unless used daily"), (2, -200, "unless-used-weekly", "unlessUsedWeekly", "unless used weekly")]);
+        AddFamily(20, "LowDamageVs", "Low damage vs", [(0, -800, "undead", "undead", "undead"), (1, -900, "daedra", "daedra", "Daedra"), (2, -1000, "humanoid", "humanoid", "humanoid"), (3, -1200, "animals", "animalsUpper", "animals")]);
+        AddFamily(4, "PotentVs", "Potent vs", [(0, 800, "undead", "undead", "undead"), (1, 900, "daedra", "daedra", "Daedra"), (2, 1000, "humanoid", "humanoid", "humanoid"), (3, 1200, "animals", "animalsUpper", "animals")]);
+        AddFamily(6, "VampiricEffect", "Vampiric effect", [(0, 2000, "at-range", "atRange", "at range"), (1, 1000, "when-strikes", "whenStrikes", "when strikes")]);
         return settings;
 
         void AddSpellFamily(int type, string sourceClass, string meaning, int[] identities, int[] costs)

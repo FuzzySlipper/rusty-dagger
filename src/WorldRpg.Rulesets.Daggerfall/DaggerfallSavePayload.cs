@@ -534,6 +534,8 @@ internal sealed record DaggerfallSavePayload(
             AddQuestStacks(questStacks, DaggerfallItemOwner.Actor(inventory.EntityId), inventory.Inventory.Stacks);
         Quests.ValidateBindings(combatants, savedLedger, locations, questStacks);
         DaggerfallActiveEffectSave[] allEffects = [.. ActiveEffects, .. SiteDeltas.SelectMany(delta => delta.Effects)];
+        if (uniqueItems.Values.Any(item => item.HealthLeechLastUsedMinute > new World.DaggerfallCalendar(Calendar.Year, Calendar.Month, Calendar.Day, Calendar.Hour, Calendar.Minute, Calendar.Second).ToAbsoluteSeconds() / 60))
+            throw new ArgumentException("Saved health-leech last use is later than the current calendar.");
         ValidateActiveEffects(allEffects, combatants, uniqueItems, definitions.Magic);
         Social.Validate(definitions.Factions);
         Character?.Validate(definitions);
@@ -1008,7 +1010,7 @@ internal sealed record DaggerfallItemMetadataSave(
     int? BookId = null,
     int? PotionRecipeKey = null,
     ulong? CreditValue = null,
-    int? PoisonVariant = null, DaggerfallHeldCastState? HeldCast = null);
+    int? PoisonVariant = null, DaggerfallHeldCastState? HeldCast = null, long HealthLeechLastUsedMinute = 0);
 internal sealed record DaggerfallEquipmentSave(string SlotId, ulong ItemEntityId);
 internal sealed record DaggerfallCombatCooldownSave(long AttackerId, ulong RemainingSteps);
 

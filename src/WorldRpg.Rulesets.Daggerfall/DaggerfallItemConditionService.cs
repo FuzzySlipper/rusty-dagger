@@ -41,6 +41,8 @@ internal sealed class DaggerfallItemConditionService(
     DaggerfallItemInstances instances,
     DaggerfallEquipmentMoves equipment)
 {
+    internal event Action<ulong>? Enchanted;
+
     internal DaggerfallItemCondition Read(ulong durableItemId) => Condition(instances.RequireUnique(durableItemId));
 
     /// <summary>Returns the item-maker's pure capacity and spell-cost quotation without changing item condition or equipment.</summary>
@@ -228,6 +230,8 @@ internal sealed class DaggerfallItemConditionService(
                 MaximumCondition = magic.Uses,
             };
         instances.ReplaceUnique(durableItemId, enchanted);
+        Enchanted?.Invoke(durableItemId);
+        enchanted = instances.RequireUnique(durableItemId);
         return new(DaggerfallItemConditionOutcome.Enchanted, durableItemId, enchanted, metadata.CurrentCondition, unequipped.Change);
     }
 

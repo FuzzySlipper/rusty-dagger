@@ -33,7 +33,7 @@ internal readonly record struct DaggerfallNearbyCreature(DaggerfallEnemyGroup Gr
 /// param carries its meaning: a skill index for EnhancesSkill, and the donor's own param order for the
 /// rest.
 /// </remarks>
-internal sealed class DaggerfallHeldEnchantments : IDisposable
+internal sealed partial class DaggerfallHeldEnchantments : IDisposable
 {
     // Classic EnchantmentTypes (API/ItemsFile.cs): ExtraSpellPts = 3, IncreasedWeightAllowance = 7,
     // EnhancesSkill = 10, ImprovesTalents = 13. Potent-vs, regeneration and the cast-when-* payloads
@@ -120,6 +120,7 @@ internal sealed class DaggerfallHeldEnchantments : IDisposable
     private readonly DaggerfallItemConditionService? _itemCondition;
     private readonly Func<bool>? _playerInHolyPlace;
     private readonly Action<int>? _damageWearer;
+    private readonly Action? _drainNearby;
     private readonly List<AppliedContribution> _applied = [];
     private readonly DaggerfallSocialState? _social;
     private readonly List<EffectSourceIdentity> _socialSources = [];
@@ -140,7 +141,7 @@ internal sealed class DaggerfallHeldEnchantments : IDisposable
         DaggerfallMagicCatalogSet magic, StatsComponent playerStats, EntityDirectory entities, EntityId actor,
         Func<DaggerfallCalendar> calendar, Func<WorldPoint?> playerPosition, Func<IReadOnlyList<DaggerfallNearbyCreature>> nearby,
         Func<bool>? playerInSunlight = null, DaggerfallItemConditionService? itemCondition = null,
-        Func<bool>? playerInHolyPlace = null, Action<int>? damageWearer = null, DaggerfallSocialState? social = null)
+        Func<bool>? playerInHolyPlace = null, Action<int>? damageWearer = null, DaggerfallSocialState? social = null, Action? drainNearby = null)
     {
         _equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
@@ -156,6 +157,7 @@ internal sealed class DaggerfallHeldEnchantments : IDisposable
         _playerInHolyPlace = playerInHolyPlace;
         _damageWearer = damageWearer;
         _social = social;
+        _drainNearby = drainNearby;
     }
 
     /// <summary>Current equipped absorption sources. Item/equipment persistence owns them; no held flag is cached or saved.</summary>
@@ -332,25 +334,22 @@ internal sealed class DaggerfallHeldEnchantments : IDisposable
     /// rather than once.
     /// </summary>
     /// <param name="minutes">How many magic rounds that interval covered.</param>
-    internal void AdvanceRounds(int minutes)
+    internal void AdvanceRounds(int minutes, bool synthetic = false)
     {
-        if (minutes <= 0) return;
-        // Equipment can change in a modal action immediately before rest advances the calendar.
+        if (minutes <= 0 || !_entities.Store.IsAlive(_actor)) return;
         Refresh();
-        // The donor bounds its own catch-up well below a year of minutes; the effect lifecycle's cap is
-        // that same bound, reused here so a held payload cannot out-heal the effects beside it.
         int rounds = Math.Min(minutes, checked((int)DaggerfallEffectLifecycle.MaximumElapsedCatchupRounds));
-        int ticks = 0;
-        for (int round = 1; round <= rounds; round++)
-            // The donor increments its counter after raising the round, so the round being served reads
-            // the count that preceded it: the session's first round is a beat, not its fourth.
-            if ((_roundsSinceStart + round - 1) % RoundsPerRegeneration == 0) ticks++;
-        _roundsSinceStart += rounds;
-        if (ticks == 0) return;
-
+        long endMinute = _calendar().ToAbsoluteSeconds() / 60;
         bool sunlight = _playerInSunlight();
-        RegenerateHealth(ticks, sunlight);
-        if (_conditionPayloads) ApplyWornPayloads(ticks, sunlight);
+        for (int round = 1; round <= rounds; round++)
+        {
+            if (_stats.GetTrack(TrackId.Parse("health")).Current <= 0) break;
+            if ((_roundsSinceStart + round - 1) % RoundsPerRegeneration != 0) continue;
+            RegenerateHealth(1, sunlight);
+            if (_conditionPayloads) ApplyWornPayloads(1, sunlight);
+            ApplyStrikeEnchantmentRound(endMinute - rounds + round, synthetic);
+        }
+        _roundsSinceStart += rounds;
     }
 
     /// <summary>Raises health for the regeneration sources a beat's sunlight leaves active.</summary>
