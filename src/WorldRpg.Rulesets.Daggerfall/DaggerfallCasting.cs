@@ -61,7 +61,7 @@ internal sealed class DaggerfallLiveSpell(long sequence, long casterId, ulong? i
     int cost, int level, DaggerfallEffectDefinition[] definitions, DaggerfallCastSource source, Vector3? origin, Vector3? direction)
 {
     internal DaggerfallCastSource Source { get; } = source;
-    internal Vector3? ReleaseOrigin { get; } = origin;
+    internal Vector3? ReleaseOrigin { get; set; } = origin;
     internal Vector3? ReleaseDirection { get; } = direction;
     internal bool BypassSave => Source == DaggerfallCastSource.ItemHeld || Source == DaggerfallCastSource.ItemUse && Target == DaggerfallSpellTarget.CasterOnly;
     internal bool BypassChance => Source == DaggerfallCastSource.ItemUse && Target == DaggerfallSpellTarget.CasterOnly;
@@ -89,6 +89,12 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
     private readonly HashSet<DaggerfallLiveSpell> _pending = [];
     private readonly HashSet<DaggerfallSpellReadiness> _armed = [];
     private DaggerfallSpellReadiness? Readiness(long id) => resolveActor(id)?.Get<DaggerfallSpellReadiness>();
+    internal void Rebase(Vector3 delta)
+    {
+        foreach (var bundle in _pending)
+            if (bundle.ReleaseOrigin is { } position) bundle.ReleaseOrigin = position + delta;
+    }
+
     internal void ClearTransient()
     {
         foreach (var state in _armed) state.Ready = null;

@@ -8,6 +8,8 @@ using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
+using WorldRpg.Rulesets.Daggerfall.Policies;
+using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
@@ -164,6 +166,84 @@ public sealed class ExteriorOriginSessionTests
         Assert.Equal(playerPosition, restored.State.PlayerControl.Position);
         Assert.Equal(actorPosition, restored.State.Actors.Get(actorId).Position);
         Assert.Equal(Vector3.Zero, restored.Sites.LocalCompensation);
+    }
+
+    [Fact]
+    public void Session_rebase_keeps_pending_encounter_and_ship_return_local_through_save_restore()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        ProductContent admitted = FullContent(root);
+        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, exterior);
+        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        var composition = new DaggerfallSessionComposition(definitions, exterior, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+        session.State.PlayerControl.MoveTo(new Vector3(1000, 1, 5));
+        session.State.PlayerControl.YawRadians = .3f;
+        var encounter = session.QueueEncounter(new(DaggerfallEncounterContext.WildernessDay, 1, Climate: 224));
+        Assert.NotNull(encounter.ActorDefinition);
+        Assert.True(session.State.Transport.BoardShip(true, new(),
+            new DaggerfallTransportPose(new WorldPoint(1002, 3, 7), .3f, .1f)).Applied);
+        session.Sites.RebaseExteriorIfNeeded();
+        Vector3 delta = session.Sites.LocalCompensation;
+        RulesetSavePayload saved = session.CaptureSave();
+        var payload = DaggerfallSavePayload.Read(saved);
+        Assert.Equal(encounter.Pose.Position.ToVector() + delta, Assert.Single(payload.Encounters.Resolved).Pose.Position.ToVector());
+        Assert.Equal(.3f, Assert.Single(payload.Encounters.Resolved).Pose.HeadingYawRadians);
+        Assert.Null(Assert.Single(payload.Encounters.Resolved).SpawnedActorId);
+        Assert.Equal(1002 + delta.X, payload.Transport.ShipReturnX);
+        List<string> restoredReleases = [];
+        ContentFake restoredContent = new(restoredReleases);
+        PopulateContent(restoredContent, exterior);
+        SpatialFake restoredSpatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, restoredReleases);
+        restoredSpatial.KeepPosition = true;
+        EngineContextFake restoredEngine = EngineContextFake.Create(restoredContent, restoredSpatial.Service,
+            new AppearanceFake(restoredReleases));
+        using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, composition, saved);
+        Assert.Equal(new WorldPoint(1002 + delta.X, 3 + delta.Y, 7 + delta.Z), restored.State.Transport.LeaveShip().Relocation!.Position);
+        restored.Update(new ProductUpdate(OuterUpdate(1), []));
+        var materialized = Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).Encounters.Resolved);
+        Assert.NotNull(materialized.SpawnedActorId);
+        // Actor materialization grounds the selected mobile through Spatial. Its horizontal
+        // position must still use the saved local frame exactly once.
+        WorldPoint live = restored.State.Actors.Get(materialized.SpawnedActorId!.Value).Position;
+        Assert.Equal(materialized.Pose.Position.X, live.X);
+        Assert.Equal(materialized.Pose.Position.Z, live.Z);
+        Assert.Equal(encounter.Pose.Position.ToVector() + delta, materialized.Pose.Position.ToVector());
+    }
+
+    [Fact]
+    public void Post_commit_camera_failure_is_explicit_and_cannot_be_reported_as_a_recoverable_transition()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        ProductContent admitted = FullContent(root);
+        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
+        DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, exterior);
+        PopulateContent(content, interior);
+        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context,
+            new(definitions, exterior, DaggerfallTuning.Defaults) { Profiles = new([exterior, interior]) });
+        session.State.PlayerControl.MoveTo(new Vector3(1000, 1, 5));
+        session.Sites.RebaseExteriorIfNeeded();
+        Assert.Single(engine.OriginCommits);
+        engine.FailNextCameraUpdate();
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => session.TryTransitionTo(interior.ProfileKey));
+        Assert.Contains("origin was committed", failure.Message);
+        Assert.Contains("inconsistent world coordinates", failure.Message);
+        Assert.IsType<InvalidOperationException>(failure.InnerException);
+        Assert.Equal(2, engine.OriginCommits.Count);
+        Assert.Equal(Vector3.Zero, session.Sites.LocalCompensation);
+        Assert.Equal(exterior.ProfileKey, session.Sites.ActiveProfile);
+        Assert.Equal(new WorldPoint(1000, 1, 5), session.State.PlayerControl.Position);
     }
 
     [Fact]

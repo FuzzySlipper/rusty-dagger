@@ -164,6 +164,12 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         return ResolveTopic(npc!, actor!, site!, topic);
     }
 
+    internal void Rebase(System.Numerics.Vector3 delta)
+    {
+        if (_current is { } current)
+            current.Position = DaggerfallExteriorSessionOrigin.Shift(current.Position, delta);
+    }
+
     internal void Close()
     {
         _current = null;
@@ -486,7 +492,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     {
         internal long TargetId { get; } = targetId;
         internal EntityId Actor { get; } = actor;
-        internal WorldPoint Position { get; } = position;
+        internal WorldPoint Position { get; set; } = position;
         internal DaggerfallNpcSite Site { get; } = site;
         internal string Revision { get; } = revision;
         internal string Greeting { get; } = greeting;

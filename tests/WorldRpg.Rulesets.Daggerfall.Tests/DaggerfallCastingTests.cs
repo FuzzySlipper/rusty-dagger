@@ -16,6 +16,22 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallCastingTests
 {
     [Fact]
+    public void Pending_cast_rebases_its_origin_without_changing_direction_or_redelivering()
+    {
+        using Harness h = new(range: 3);
+        h.Casting.Ready(1, "spell");
+        var bundle = Assert.IsType<DaggerfallLiveSpell>(h.Casting.Release(1, true,
+            new System.Numerics.Vector3(1001, 2, 1003), System.Numerics.Vector3.UnitZ).Bundle);
+        h.Casting.Rebase(new System.Numerics.Vector3(-1000, 0, -1000));
+        Assert.Equal(new System.Numerics.Vector3(1, 2, 3), bundle.ReleaseOrigin);
+        Assert.Equal(System.Numerics.Vector3.UnitZ, bundle.ReleaseDirection);
+        Assert.False(bundle.Delivered);
+        h.Casting.Deliver(bundle, [2]);
+        Assert.True(bundle.Delivered);
+        Assert.Equal(DaggerfallCastOutcome.AlreadyDelivered, h.Casting.Deliver(bundle, [2]).Outcome);
+    }
+
+    [Fact]
     public void Actual_release_charges_latched_skills_once_and_records_each_effect_without_cancel_or_replay_use()
     {
         using Harness h = new(range: 0, count: 2);

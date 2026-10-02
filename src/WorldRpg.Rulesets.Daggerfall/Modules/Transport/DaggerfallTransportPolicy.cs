@@ -308,6 +308,12 @@ internal sealed class DaggerfallTransportPolicy
         return (liveSpeed + MovementBaseClassicUnits()) / classicToEngineRatio;
     }
 
+    internal void Rebase(System.Numerics.Vector3 delta)
+    {
+        if (_shipReturnPose is { } pose)
+            _shipReturnPose = pose with { Position = DaggerfallExteriorSessionOrigin.Shift(pose.Position, delta) };
+    }
+
     internal DaggerfallTransportSave Capture() => (_onShip
         ? new DaggerfallTransportSave(DaggerfallTransportMode.Foot, true, _shipReturnPose!.Position.X,
             _shipReturnPose.Position.Y, _shipReturnPose.Position.Z, _shipReturnPose.YawRadians, _shipReturnPose.PitchRadians)

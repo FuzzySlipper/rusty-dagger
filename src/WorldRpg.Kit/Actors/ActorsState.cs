@@ -87,6 +87,7 @@ public sealed class PlayerActorState(Actor actor)
 /// </summary>
 public readonly record struct ActorPose
 {
+    [System.Text.Json.Serialization.JsonConstructor]
     public ActorPose(WorldPoint position, float headingYawRadians)
     {
         position.Validate();

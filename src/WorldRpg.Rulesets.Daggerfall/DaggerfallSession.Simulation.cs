@@ -123,7 +123,7 @@ internal sealed partial class DaggerfallSession
         _camera.Update(State.PlayerControl);
         if (!alive || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d) return;
         _ = _encounters.MaterializePending(_activeProfileKey.LogicalId, (definition, pose, level) =>
-            SpawnActor(definition, new ActorPose(_sites.ProfileToLocal(pose.Position), pose.HeadingYawRadians), level));
+            SpawnActor(definition, pose, level));
         _enemyBehavior.Update(State.PlayerControl, generation, simulationStep, update.DeltaSeconds, _facts);
         // Enemy attack-start facts must reach presentation before the post-enemy actions below.
         // A hit marker is consumed by the outer admitted update after this simulation step; if
