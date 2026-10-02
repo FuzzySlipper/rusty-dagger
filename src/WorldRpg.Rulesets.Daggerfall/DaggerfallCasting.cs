@@ -324,7 +324,8 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                 // Active channel admission already ran above; do not charge a second resistance roll.
                 liveProfile = liveProfile with { ActiveResistances = [] };
                 string instance = $"cast.{bundle.Sequence}.{targetId}.{i}.{(reflected ? "reflected" : "direct")}";
-                var bundleKind = bundle.Source == DaggerfallCastSource.ItemHeld ? DaggerfallEffectBundleKind.HeldMagicItem : DaggerfallEffectBundleKind.Spell;
+                var bundleKind = bundle.Source == DaggerfallCastSource.ItemHeld && !binding.UntilHealed
+                    ? DaggerfallEffectBundleKind.HeldMagicItem : DaggerfallEffectBundleKind.Spell;
                 uint? baseDuration = bundle.Source == DaggerfallCastSource.ItemHeld || binding.UntilHealed || binding.UntilTriggered ? null : binding.SupportsDuration ? checked((uint)Math.Max(1,
                     DaggerfallMagicAdmissionPolicy.CalculateEffectDuration(setting, bundle.CasterLevel))) : 1u;
                 // Permanent attribute damage rolls its incoming payload/save even when an incumbent exists.
@@ -366,7 +367,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                 JsonElement payload = binding.CreateState?.Invoke(state)
                     ?? JsonSerializer.SerializeToElement(state, DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
                 var admission = effects.Start(new(instance, definition.Key, $"spell.{bundle.Spell.Key}", operationalCaster,
-                    targetId, setting.Key, bundle.Element.ToString(), operationalItem, 1, duration, payload) { BundleId = $"cast.{bundle.Sequence}", BundleSequence = bundle.Sequence, BundleName = bundle.Spell.Name, BundleKind = bundle.Source == DaggerfallCastSource.ItemHeld ? DaggerfallEffectBundleKind.HeldMagicItem : DaggerfallEffectBundleKind.Spell });
+                    targetId, setting.Key, bundle.Element.ToString(), operationalItem, 1, duration, payload) { BundleId = $"cast.{bundle.Sequence}", BundleSequence = bundle.Sequence, BundleName = bundle.Spell.Name, BundleKind = bundleKind });
                 outcome = admission switch
                 {
                     DaggerfallEffectAdmissionOutcome.TargetUnavailable => DaggerfallCastOutcome.TargetUnavailable,

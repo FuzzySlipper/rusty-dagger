@@ -119,6 +119,27 @@ public sealed class HeldAbsorptionSessionTests
     }
 
     [Fact]
+    public void Permanent_damage_cast_by_a_held_item_keeps_target_owned_lifetime_and_historical_origin()
+    {
+        using Fixture f = new(); var s = f.Session; var item = Stock(s); Equip(s, item); Fund(s, 1);
+        ulong id = Id(s, item);
+        Assert.Equal(DaggerfallCastOutcome.Ready, s.Casting.Ready(1, "spell.009", id, DaggerfallCastSource.ItemHeld).Outcome);
+        var cast = s.Casting.Release(1, true).Bundle!; s.Casting.Deliver(cast, [1]);
+        Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(cast.Results).Outcome);
+        Assert.Empty(cast.Absorptions);
+        var effect = Assert.Single(s.State.Effects.Active.Where(value => value.Definition.Spell?.UntilHealed == true));
+        var state = DaggerfallAttributeDrainEffects.Read(effect.State, 0);
+        Assert.Equal(new DaggerfallCastOrigin(1, id, DaggerfallCastSource.ItemHeld), state.Cast.Origin);
+        Assert.Null(effect.Context.Caster); Assert.Null(effect.Context.Item);
+        Assert.Null(effect.Lifecycle.RemainingRounds);
+        s.State.Equipment.Unequip(item);
+        Assert.Contains(s.State.Effects.Active, value => value.Context.Instance == effect.Context.Instance);
+        using var restored = f.Restore(s.CaptureSave());
+        var resumed = Assert.Single(restored.State.Effects.Active.Where(value => value.Definition.Spell?.UntilHealed == true));
+        Assert.Equal(state, DaggerfallAttributeDrainEffects.Read(resumed.State, 0));
+    }
+
+    [Fact]
     public void Removing_canonical_item_metadata_and_player_death_remove_held_defense_immediately()
     {
         using Fixture f=new(); var s=f.Session; var item=Stock(s); Equip(s,item);
