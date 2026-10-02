@@ -50,7 +50,7 @@ internal sealed record DaggerfallItemInstanceMetadata(
     int? BookId = null,
     int? PotionRecipeKey = null,
     ulong? CreditValue = null,
-    int? PoisonVariant = null)
+    int? PoisonVariant = null, DaggerfallHeldCastState? HeldCast = null)
 {
     internal DaggerfallItemInstanceMetadata Validate()
     {
@@ -72,6 +72,8 @@ internal sealed record DaggerfallItemInstanceMetadata(
             throw new ArgumentOutOfRangeException(nameof(CreditValue), "A letter of credit must carry a positive amount.");
         if (ItemId != "template-275" && CreditValue is not null)
             throw new ArgumentException("Only a letter of credit can carry a credit amount.", nameof(CreditValue));
+        if (HeldCast is { } held && (held.CasterId <= 0 || held.CasterId != Owner.Id || Owner.Scope is not ("player" or "actor") || held.LastRerollMinute < 0 || Enchantment is null))
+            throw new ArgumentException("Held spell cadence requires a positive caster, nonnegative calendar/cadence, and enchantment.");
         Owner.Validate();
         return this;
     }
@@ -103,13 +105,13 @@ internal sealed record DaggerfallItemInstanceMetadata(
 
     internal DaggerfallItemMetadataSave Capture() => new(Material, Variant, CurrentCondition, MaximumCondition,
         Identified, Stolen, QuestId, QuestItemSymbol, Enchantment, new DaggerfallItemOwnerSave(Owner.Scope, Owner.Id), Race, Gender, Dye, BookId, PotionRecipeKey, CreditValue,
-        PoisonVariant);
+        PoisonVariant, HeldCast);
 
     internal static DaggerfallItemInstanceMetadata Restore(string itemId, DaggerfallItemMetadataSave saved) =>
         new DaggerfallItemInstanceMetadata(itemId, saved.Material, saved.Variant, saved.CurrentCondition, saved.MaximumCondition,
             saved.Identified, saved.Stolen, saved.QuestId, saved.QuestItemSymbol, saved.Enchantment,
             new DaggerfallItemOwner(saved.Owner.Scope, saved.Owner.Id), saved.Race, saved.Gender, saved.Dye, saved.BookId, saved.PotionRecipeKey, saved.CreditValue,
-            saved.PoisonVariant).Validate();
+            saved.PoisonVariant, saved.HeldCast).Validate();
 }
 
 /// <summary>
@@ -120,6 +122,7 @@ internal sealed record DaggerfallItemInstanceMetadata(
 internal sealed class DaggerfallItemInstances
 {
     internal event Action<ulong>? SourceUnavailable;
+    internal IEnumerable<KeyValuePair<ulong, DaggerfallItemInstanceMetadata>> UniqueItems => _unique;
 
     private readonly Dictionary<(DaggerfallItemOwner Owner, string Stack), DaggerfallItemInstanceMetadata> _stacks = [];
     private readonly Dictionary<ulong, DaggerfallItemInstanceMetadata> _unique = [];
@@ -248,8 +251,10 @@ internal sealed class DaggerfallItemInstances
 
     internal void MoveUnique(ulong itemId, DaggerfallItemOwner owner)
     {
-        _unique[itemId] = MetadataFor(owner, RequireUnique(itemId)).Validate();
+        var previous = RequireUnique(itemId);
+        _unique[itemId] = MetadataFor(owner, previous) with { HeldCast = previous.Owner == owner ? previous.HeldCast : null };
         _revision++;
+        if (previous.Owner != owner) SourceUnavailable?.Invoke(itemId);
     }
 
     /// <summary>Retires all stack meaning whose Engine owner has been removed.</summary>

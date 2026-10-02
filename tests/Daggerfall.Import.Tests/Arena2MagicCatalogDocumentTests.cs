@@ -55,13 +55,13 @@ public sealed class Arena2MagicCatalogDocumentTests
     {
         JsonArray settings = JsonNode.Parse(Arena2MagicCatalogDocument.Build(
             SpellTable(), MagicItemTable(), "arena2/SPELLS.STD", "arena2/MAGIC.DEF").Json)!["enchantmentSettings"]!.AsArray();
-        Assert.Equal(78, settings.Count);
+        Assert.Equal(151, settings.Count);
         var absorption=Assert.Single(settings,row=>row!["type"]!.GetValue<int>()==9)!;
         Assert.Equal(-1,absorption["param"]!.GetValue<int>());
         Assert.Equal(1500,absorption["cost"]!.GetValue<int>());
         Assert.Equal("spell-absorption",absorption["meaning"]!.GetValue<string>());
         Assert.Equal("AbsorbsSpells",absorption["textKey"]!.GetValue<string>());
-        Assert.Equal(78, settings.Select(row => row!["key"]!.GetValue<string>()).Distinct().Count());
+        Assert.Equal(151, settings.Select(row => row!["key"]!.GetValue<string>()).Distinct().Count());
         foreach ((int type, int count, string source) in new[] {
             (10, 35, "EnhancesSkill"), (3, 11, "ExtraSpellPts"),
             (7, 2, "IncreasedWeightAllowance"), (13, 3, "ImprovesTalents"),
@@ -173,6 +173,37 @@ public sealed class Arena2MagicCatalogDocumentTests
     /// A donor-shaped excerpt of the four spell-cost tables covering the two effect types the spell table
     /// uses: type 16 reads coefficient row 1 and type 31 row 2.
     /// </summary>
+    [CorpusAndDonorFact(["SPELLS.STD", "MAGIC.DEF"], ["Assets/Scripts/Game/MagicAndEffects/Effects/Enchanting/CastWhenUsed.cs", "Assets/Scripts/Game/MagicAndEffects/Effects/Enchanting/CastWhenHeld.cs", "Assets/Scripts/Game/MagicAndEffects/Effects/Enchanting/CastWhenStrikes.cs"])]
+    public void Every_retained_trigger_setting_matches_exact_donor_identity_cost_and_normalized_spell_link()
+    {
+        var document = JsonNode.Parse(Arena2MagicCatalogDocument.Build(
+            File.ReadAllBytes(TestData.Corpus("SPELLS.STD")), File.ReadAllBytes(TestData.Corpus("MAGIC.DEF")), "arena2/SPELLS.STD", "arena2/MAGIC.DEF").Json)!;
+        var spells = document["spells"]!.AsArray();
+        var settings = document["enchantmentSettings"]!.AsArray();
+        foreach (var (type, source, count) in new[] { (0, "CastWhenUsed", 36), (1, "CastWhenHeld", 25), (2, "CastWhenStrikes", 12) })
+        {
+            var donor = File.ReadAllText(TestData.Donor($"Assets/Scripts/Game/MagicAndEffects/Effects/Enchanting/{source}.cs"));
+            int[] ReadArray(string name)
+            {
+                string body = System.Text.RegularExpressions.Regex.Match(donor, $@"static short\[\] {name}\s*=\s*\{{(.*?)\}}", System.Text.RegularExpressions.RegexOptions.Singleline).Groups[1].Value;
+                return System.Text.RegularExpressions.Regex.Matches(body, @"^\s*(\d+),", System.Text.RegularExpressions.RegexOptions.Multiline)
+                    .Select(match => int.Parse(match.Groups[1].Value)).ToArray();
+            }
+            int[] ids = ReadArray("classicSpellIDs"), costs = ReadArray("classicSpellCosts");
+            var rows = settings.Where(value => value!["type"]!.GetValue<int>() == type).ToArray();
+            Assert.Equal(count, rows.Length); Assert.Equal(count, ids.Length);
+            for (int index = 0; index < ids.Length; index++)
+            {
+                Assert.Equal(ids[index], rows[index]!["param"]!.GetValue<int>());
+                Assert.Equal(costs[index], rows[index]!["cost"]!.GetValue<int>());
+                Assert.Equal(ids, rows[index]!["parameterVariants"]!.AsArray().Select(value => value!.GetValue<int>()));
+                var spell = spells.First(value => value!["identity"]!.GetValue<int>() == ids[index])!;
+                Assert.Equal(spell["key"]!.GetValue<string>(), rows[index]!["spell"]!.GetValue<string>());
+                Assert.Equal(spell["identityShared"]!.GetValue<bool>(), rows[index]!["spellIdentityShared"]!.GetValue<bool>());
+            }
+        }
+    }
+
     private static string Formulas()
     {
         int[] indices = new int[51 * 12];

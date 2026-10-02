@@ -194,7 +194,7 @@ internal sealed partial class DaggerfallSession
                 && CurrentInteriorBuilding() is { BuildingType: DaggerfallLodgingState.TavernBuildingType } tavern)
                 slice = Math.Min(slice, State.Lodging.RemainingSeconds(_activeProfileKey.Site,
                     new(tavern.BlockX, tavern.BlockY, tavern.Building.Index), _time.Calendar.ToAbsoluteSeconds()));
-            DaggerfallCalendarAdvance advance = AdvanceElapsedTime(slice, deferSkillAdvancement: true);
+            DaggerfallCalendarAdvance advance = AdvanceElapsedTime(slice, deferSkillAdvancement: true, resting: true);
             applied = checked(applied + advance.AppliedSeconds);
             if (State.Actors.Player.IsDefeated)
                 return new(requestedSeconds, applied, DaggerfallRestInterruption.Defeated);

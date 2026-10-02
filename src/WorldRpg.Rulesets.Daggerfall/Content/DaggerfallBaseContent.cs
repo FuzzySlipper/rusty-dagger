@@ -2537,7 +2537,11 @@ internal static partial class DaggerfallBaseContent
                 Text(row, "meaning", diagnostics), Text(row, "displayName", diagnostics),
                 Text(row, "textKey", diagnostics),
                 row.TryGetProperty("parameterTextKey", out JsonElement textKey) && textKey.ValueKind == JsonValueKind.String ? textKey.GetString() : null,
-                Text(row, "sourceClass", diagnostics), variants.AsReadOnly());
+                Text(row, "sourceClass", diagnostics), variants.AsReadOnly(),
+                row.TryGetProperty("spell", out var spellLink) && spellLink.ValueKind == JsonValueKind.String ? spellLink.GetString() : null,
+                row.TryGetProperty("spellIdentityShared", out var sharedLink) && sharedLink.GetBoolean());
+            if (setting.SpellKey is { } linkedKey && (!spells.TryGetValue(linkedKey, out var linkedSpell) || linkedSpell.Identity != setting.Param))
+                diagnostics.Add($"Enchantment setting '{key}' has an invalid spell identity link.");
             if (!settings.TryAdd(key, setting))
                 diagnostics.Add($"Enchantment setting '{key}' is published twice, so a consumer cannot resolve it to one setting.");
         }

@@ -109,7 +109,7 @@ internal sealed class DaggerfallItemConditionService(
         {
             removed = removeBroken(item);
         }
-        DaggerfallItemInstanceMetadata changed = metadata with { CurrentCondition = current };
+        DaggerfallItemInstanceMetadata changed = metadata with { CurrentCondition = current, HeldCast = current == 0 ? null : metadata.HeldCast };
         instances.ReplaceUnique(durableItemId, changed);
         if (current != 0)
             return new(DaggerfallItemConditionOutcome.Damaged, durableItemId, changed, metadata.CurrentCondition);

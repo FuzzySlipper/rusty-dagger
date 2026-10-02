@@ -5,7 +5,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>A loaded item-maker setting with its donor meaning, display and source.</summary>
 internal readonly record struct DaggerfallEnchantmentSetting(
     string Key, int Type, int Param, int Cost, string Meaning, string DisplayName, string TextKey,
-    string? ParameterTextKey, string SourceClass, IReadOnlyList<int> ParameterVariants);
+    string? ParameterTextKey, string SourceClass, IReadOnlyList<int> ParameterVariants, string? SpellKey = null, bool SpellIdentityShared = false);
 
 /// <summary>Retained payload vocabulary and content admission; settings themselves come from the pack.</summary>
 internal static class DaggerfallEnchantmentSettings
@@ -32,6 +32,18 @@ internal static class DaggerfallEnchantmentSettings
         HashSet<(int Type, int Param)> seen = [];
         foreach (DaggerfallEnchantmentSetting setting in settings)
         {
+            if (setting.Type is 0 or 1 or 2)
+            {
+                int[] variants = TriggerVariants(setting.Type);
+                string meaning = setting.Type == 0 ? "cast-when-used" : setting.Type == 1 ? "cast-when-held" : "cast-when-strikes";
+                if (!variants.Contains(setting.Param) || !setting.ParameterVariants.SequenceEqual(variants)
+                    || setting.Meaning != meaning || setting.Cost <= 0 || setting.Key != $"enchantment.{setting.Type}.{setting.Param}"
+                    || string.IsNullOrWhiteSpace(setting.DisplayName) || string.IsNullOrWhiteSpace(setting.SourceClass)
+                    || string.IsNullOrWhiteSpace(setting.TextKey) || string.IsNullOrWhiteSpace(setting.ParameterTextKey))
+                    problems.Add($"Enchantment setting '{setting.Key}' has invalid classic spell trigger metadata.");
+                if (!seen.Add((setting.Type, setting.Param))) problems.Add($"Enchantment setting '{setting.Key}' is duplicated.");
+                continue;
+            }
             string[] meanings = Meanings(setting.Type);
             int firstParam = setting.Type is 8 or 9 or 12 or 24 ? -1 : 0;
             int index = setting.Param - firstParam;
@@ -81,12 +93,20 @@ internal static class DaggerfallEnchantmentSettings
         _ => [],
     };
 
+    private static int[] TriggerVariants(int type) => type switch
+    {
+        0 => [4, 5, 6, 7, 8, 9, 10, 18, 11, 12, 13, 19, 14, 15, 16, 17, 22, 23, 24, 20, 25, 26, 33, 27, 28, 29, 34, 30, 31, 35, 36, 32, 40, 64, 60, 94],
+        1 => [37, 39, 41, 10, 42, 11, 12, 26, 13, 6, 44, 45, 46, 24, 47, 4, 49, 82, 83, 84, 85, 86, 87, 88, 89],
+        2 => [50, 53, 52, 54, 56, 33, 20, 25, 16, 7, 55, 67],
+        _ => [],
+    };
+
     internal static DaggerfallMagicEnchantmentDefinition ToEffect(DaggerfallEnchantmentSetting setting) => new(
         $"{setting.Key}.enchantment.1",
         setting.Type,
         setting.Param,
         setting.Meaning,
-        SpellKey: null,
-        SpellIdentityShared: false);
+        SpellKey: setting.SpellKey,
+        SpellIdentityShared: setting.SpellIdentityShared);
 
 }
