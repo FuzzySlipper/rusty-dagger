@@ -117,15 +117,16 @@ public sealed class Arena2MagicCatalogDocumentTests
         JsonArray costs = JsonNode.Parse(publication.Json)!["effectCosts"]!.AsArray();
 
         // Both spells carry one effect without a subtype, so each type resolves through its first slot.
-        Assert.Equal([4, 7, 7, 10, 10, 10, 10, 10, 10, 10, 10, 13, 16, 23, 24, 26, 31], costs.Select(cost => cost!["type"]!.GetValue<int>()));
-        JsonObject first = costs[12]!.AsObject();
+        Assert.Equal([4, 7, 7, 10, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 13, 16, 23, 24, 26, 31], costs.Select(cost => cost!["type"]!.GetValue<int>()));
+        JsonObject first = costs.Single(cost => cost!["type"]!.GetValue<int>() == 16)!.AsObject();
         Assert.Equal(-1, first["subType"]!.GetValue<int>());
         Assert.Equal(3, first["settingsType"]!.GetValue<int>());
         Assert.Equal("mysticism", first["school"]!.GetValue<string>());
         Assert.Equal(5, first["coefficients"]!["first"]!.GetValue<int>());
         Assert.Equal(25, first["coefficients"]!["second"]!.GetValue<int>());
-        Assert.Equal("illusion", costs[16]!["school"]!.GetValue<string>());
-        Assert.Equal(2, costs[16]!["coefficients"]!["first"]!.GetValue<int>());
+        JsonObject illusion = costs.Single(cost => cost!["type"]!.GetValue<int>() == 31)!.AsObject();
+        Assert.Equal("illusion", illusion["school"]!.GetValue<string>());
+        Assert.Equal(2, illusion["coefficients"]!["first"]!.GetValue<int>());
 
         // Without the donor's tables the catalog states no cost rather than inventing one.
         Assert.Null(JsonNode.Parse(Arena2MagicCatalogDocument.Build(
@@ -145,10 +146,10 @@ public sealed class Arena2MagicCatalogDocumentTests
         HashSet<(int, int)> used = [.. document["spells"]!.AsArray().SelectMany(spell => spell!["effects"]!.AsArray())
             .Select(effect => (effect!["type"]!.GetValue<int>(), effect["subType"]!.GetValue<int>()))];
 
-        Assert.Equal(75, rows.Count);
+        Assert.Equal(83, rows.Count);
         used.Add((4, 1));
         used.Add((13, 1)); used.Add((23, 1)); used.Add((24, 1));
-        for (int subtype = 0; subtype < 8; subtype++) used.Add((10, subtype));
+        for (int subtype = 0; subtype < 8; subtype++) { used.Add((10, subtype)); used.Add((11, subtype)); }
         Assert.Contains((26, -1), rows);
         used.Add((26, -1));
         used.Add((7, 4)); used.Add((7, 7));

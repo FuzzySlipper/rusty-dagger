@@ -34,7 +34,7 @@ internal static class DaggerfallHealingEffects
                     {
                         long target = checked((long)effect.Context.Target.Value);
                         bool matching = effects().Active.Any(active => active.Context.Target == effect.Context.Target
-                            && active.Definition.Spell is { Type: 7 } binding && binding.SubType == selected);
+                            && DaggerfallAttributeDrainEffects.IsAttributeDamage(active.Definition, selected));
                         DaggerfallAttributeDrainEffects.Heal(effects(), target, DaggerfallAttributeDrainEffects.Attributes[selected], state.Amount, career);
                         if (!matching) effect.InitialOutcome = DaggerfallEffectAdmissionOutcome.NoMatch;
                     }

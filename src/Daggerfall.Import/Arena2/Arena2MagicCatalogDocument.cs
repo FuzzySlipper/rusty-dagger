@@ -222,6 +222,8 @@ public static class Arena2MagicCatalogDocument
                 // True-power concealment and immediate fatigue damage have no stock spell but are retained crafted effects.
                 .Concat([(Type: 13, SubType: 1), (Type: 23, SubType: 1), (Type: 24, SubType: 1), (Type: 4, SubType: 1)])
                 .Concat(Enumerable.Range(0, 8).Select(subtype => (Type: 10, SubType: subtype)))
+                // All attribute transfers remain available to compiled constructed spells.
+                .Concat(Enumerable.Range(0, 8).Select(subtype => (Type: 11, SubType: subtype)))
                 .Distinct()
                 .Order()
                 .Select(variant => effectCosts.Resolve(variant.Type, variant.SubType))

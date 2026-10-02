@@ -946,12 +946,14 @@ internal sealed record DaggerfallActiveEffectSave(
     public string? BundleId { get; init; }
     public string? BundleName { get; init; }
     public DaggerfallEffectBundleKind BundleKind { get; init; }
+    public long BundleSequence { get; init; }
     internal void Validate()
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(Instance);
         ArgumentException.ThrowIfNullOrWhiteSpace(EffectKey);
         ArgumentException.ThrowIfNullOrWhiteSpace(Source);
         ArgumentException.ThrowIfNullOrWhiteSpace(Settings);
+        if (BundleSequence < 0) throw new ArgumentOutOfRangeException(nameof(BundleSequence));
         if (!Enum.IsDefined(BundleKind)) throw new ArgumentException("Saved effect bundle kind is not recognized.");
         if (TargetId <= 0 || CasterId is <= 0 || ItemId == 0 || Stacks == 0)
             throw new ArgumentOutOfRangeException(nameof(TargetId), "Saved effect identities and stacks must be positive.");
@@ -960,7 +962,7 @@ internal sealed record DaggerfallActiveEffectSave(
     }
 
     internal DaggerfallEffectRequest ToRequest() => new(
-        Instance, EffectKey, Source, CasterId, TargetId, Settings, Element, ItemId, Stacks, RemainingRounds, State.Clone()) { BundleId = BundleId, BundleName = BundleName, BundleKind = BundleKind };
+        Instance, EffectKey, Source, CasterId, TargetId, Settings, Element, ItemId, Stacks, RemainingRounds, State.Clone()) { BundleId = BundleId, BundleName = BundleName, BundleKind = BundleKind, BundleSequence = BundleSequence };
 }
 
 internal sealed record DaggerfallCorpseSave(long ActorId, ulong ContainerId, ulong OriginatingSequence, bool IsRegistered, bool IsInteractable, DaggerfallStackSave[] Stacks, DaggerfallUniqueSave[] UniqueItems)
