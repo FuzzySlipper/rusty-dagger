@@ -164,6 +164,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         return ResolveTopic(npc!, actor!, site!, topic);
     }
 
+    internal DaggerfallNpc? CurrentNpc(string? revision = null) =>
+        (revision is null || MatchesRevision(revision)) && ValidateCurrent(out var npc, out _, out _) ? npc : null;
+
     internal void Rebase(System.Numerics.Vector3 delta)
     {
         if (_current is { } current)

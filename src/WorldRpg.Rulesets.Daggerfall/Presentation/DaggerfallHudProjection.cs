@@ -79,9 +79,19 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("options",builder.Array(identify.Options.Select(option=>builder.Object(("id",builder.String(option.Id)),("label",builder.String(option.Label)))).ToArray())))),
             ("spells",frame.Spells is null ? builder.Null() : builder.Object(
                 ("available",builder.Array(frame.Spells.Available.Select(spell=>builder.Object(("key",builder.String(spell.Key)),
-                    ("name",builder.String(spell.Name)),("cost",builder.Number(spell.Cost)))).ToArray())),
+                    ("name",builder.String(spell.Name)),("cost",builder.Number(spell.Cost)),("canCast",builder.Boolean(spell.CanCast)))).ToArray())),
                 ("ready",frame.Spells.Ready is null ? builder.Null() : builder.String(frame.Spells.Ready)),
-                ("result",builder.String(frame.Spells.Result)))),
+                ("result",builder.String(frame.Spells.Result)),
+                ("sale", frame.Spells.Sale is not { } sale ? builder.Null() : builder.Object(
+                    ("revision", builder.String(sale.Revision)), ("provider", builder.String(sale.Provider)),
+                    ("offers", builder.Array(sale.Offers.Select(offer => builder.Object(
+                        ("key", builder.String(offer.Key)), ("name", builder.String(offer.Name)),
+                        ("castingCost", builder.Number(offer.CastingCost)), ("price", builder.Number(checked((long)offer.Price))),
+                        ("known", builder.Boolean(offer.Known)))).ToArray())))),
+                ("information", frame.Spells.Information is not { } information ? builder.Null() : builder.Object(
+                    ("key", builder.String(information.Key)), ("name", builder.String(information.Name)),
+                    ("element", builder.Number(information.Element)), ("target", builder.String(information.Target)),
+                    ("details", builder.Array(information.Details.Select(builder.String).ToArray())))))),
             ("resources", builder.Array(rows)),
             ("experience", builder.Number(progression.Experience)),
             ("lastOutcome", builder.String(presentation.LastOutcome)),

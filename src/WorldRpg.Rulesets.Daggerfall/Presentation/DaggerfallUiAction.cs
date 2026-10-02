@@ -20,7 +20,7 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
 /// <summary>Every player action the <c>dagger.ui.action.v1</c> contract carries, by meaning.</summary>
 internal enum DaggerfallUiActionKind
 {
-    Begin, CinematicSkip, ArtRequest, SpellReady, SpellUnready, SpellCast,
+    Begin, CinematicSkip, ArtRequest, SpellReady, SpellUnready, SpellCast, SpellBuy, SpellDelete, SpellInfo,
     ControlsRebind, ControlsReset,
     CharacterClassQuestions, CharacterClassAnswer, CharacterClassBack,
     CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel,
@@ -158,6 +158,9 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.SpellReady,"spell-ready",DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.SpellUnready,"spell-unready",DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.SpellCast,"spell-cast",DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.SpellBuy,"spell-buy",DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.SpellDelete,"spell-delete",DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.SpellInfo,"spell-info",DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.Attack, "attack", DaggerfallUiPhases.Playing),
         new(DaggerfallUiActionKind.Loot, "loot", DaggerfallUiPhases.Playing),
         // The DOM owns its panels; these name a panel the DOM opened and the session does nothing with.
@@ -329,7 +332,7 @@ internal static class DaggerfallUiAction
                     default: return null;
                 }
             }
-            if (amount == 0 && action is not ("lodging-book" or "travel-accept")) return null;
+            if (amount == 0 && action is not ("lodging-book" or "travel-accept" or "spell-buy")) return null;
             if (action == "travel-accept")
                 return fields.SetEquals(["action", "key", "amount"]) && !string.IsNullOrWhiteSpace(key) && amount is not null
                     ? new(action, Key: key, Amount: amount) : null;
@@ -370,6 +373,15 @@ internal static class DaggerfallUiAction
                 return fields.SetEquals(["action", "revision", "note", "destination"]) && !string.IsNullOrWhiteSpace(revision)
                     && !string.IsNullOrWhiteSpace(note) && destination is >= 0
                     ? new(action, Revision: revision, Note: note, Destination: destination) : null;
+            if (action == "spell-buy")
+                return fields.SetEquals(["action", "key", "revision", "amount", "confirm"]) && !string.IsNullOrWhiteSpace(key)
+                    && !string.IsNullOrWhiteSpace(revision) && amount is not null
+                    ? new(action, Key: key, Revision: revision, Amount: amount, Confirm: confirm) : null;
+            if (action == "spell-delete")
+                return fields.SetEquals(["action", "key", "confirm"]) && !string.IsNullOrWhiteSpace(key)
+                    ? new(action, Key: key, Confirm: confirm) : null;
+            if (action == "spell-info")
+                return fields.SetEquals(["action", "key"]) && !string.IsNullOrWhiteSpace(key) ? new(action, Key: key) : null;
             if (action=="spell-ready")
                 return fields.SetEquals(["action","key"]) && !string.IsNullOrWhiteSpace(key) ? new(action,Key:key) : null;
             if (action is "spell-unready" or "spell-cast")
