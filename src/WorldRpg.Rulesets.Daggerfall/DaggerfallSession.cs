@@ -601,6 +601,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         _staminaRecovery.React(fact);
         if (fact is AttackHitFact hit)
         {
+            ObserveCrimeHit(hit);
             DaggerfallConcealmentEffects.AfterPhysicalHit(State.Effects, hit);
             if(hit.AttackerId==DaggerfallActorIdentity.PlayerEntityId && hit.TargetId!=hit.AttackerId)
                 ReactToSpellAttack(hit.AttackerId,hit.TargetId);

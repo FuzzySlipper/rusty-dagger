@@ -62,6 +62,7 @@ internal interface IDaggerfallContainerActivationOwner
 internal interface IDaggerfallNpcActivationOwner
 {
     IEnumerable<DaggerfallActivationTarget> NpcTargets();
+    IEnumerable<DaggerfallActivationTarget> NpcTargets(DaggerfallActivationMode mode) => NpcTargets();
     DaggerfallActivationOutcome ActivateNpc(DaggerfallActivationSelection selection);
 }
 
@@ -93,13 +94,13 @@ internal sealed class DaggerfallActivationContributions(
     private readonly IDaggerfallNpcActivationOwner? _npc = npc;
     private readonly IDaggerfallItemActivationOwner? _item = item;
 
-    internal IEnumerable<DaggerfallActivationTarget> Targets()
+    internal IEnumerable<DaggerfallActivationTarget> Targets(DaggerfallActivationMode mode = DaggerfallActivationMode.Grab)
     {
         foreach (DaggerfallActivationTarget target in _corpse.CorpseTargets()) yield return RequireKind(target, DaggerfallActivationTargetKind.Corpse);
         if (_door is not null) foreach (DaggerfallActivationTarget target in _door.DoorTargets()) yield return RequireKind(target, DaggerfallActivationTargetKind.Door);
         if (_portal is not null) foreach (DaggerfallActivationTarget target in _portal.PortalTargets()) yield return RequireKind(target, DaggerfallActivationTargetKind.Portal);
         if (_container is not null) foreach (DaggerfallActivationTarget target in _container.ContainerTargets()) yield return RequireKind(target, DaggerfallActivationTargetKind.Container);
-        if (_npc is not null) foreach (DaggerfallActivationTarget target in _npc.NpcTargets()) yield return RequireKind(target, DaggerfallActivationTargetKind.Npc);
+        if (_npc is not null) foreach (DaggerfallActivationTarget target in _npc.NpcTargets(mode)) yield return RequireKind(target, DaggerfallActivationTargetKind.Npc);
         if (_item is not null) foreach (DaggerfallActivationTarget target in _item.ItemTargets()) yield return RequireKind(target, DaggerfallActivationTargetKind.Item);
     }
 
@@ -132,12 +133,12 @@ internal sealed class DaggerfallActivationModule(InteractionTargetingService tar
     internal DaggerfallActivationMode Mode { get; private set; } = DaggerfallActivationMode.Grab;
     internal InteractionTargetingEvidence? LastEvidence => _targeting.LastEvidence;
 
-    internal IEnumerable<DaggerfallActivationTarget> InspectTargets() => _contributions.Targets();
+    internal IEnumerable<DaggerfallActivationTarget> InspectTargets() => _contributions.Targets(Mode);
 
     internal WorldInteractionReadout? Inspect(EntityId player, PlayerControlState control, LookReceipt look) =>
         control.Position is WorldPoint origin ? _targeting.Inspect(player, origin, look.Forward,
             _reach.MaximumDistance, _reach.MinimumFacingCosine,
-            _contributions.Targets().Select(target => target.ToKitCandidate())) : null;
+            _contributions.Targets(Mode).Select(target => target.ToKitCandidate())) : null;
 
     internal bool ChangeMode(DaggerfallActivationMode mode)
     {
@@ -153,7 +154,7 @@ internal sealed class DaggerfallActivationModule(InteractionTargetingService tar
         LookReceipt look)
     {
         ArgumentNullException.ThrowIfNull(control);
-        DaggerfallActivationTarget[] declared = _contributions.Targets().ToArray();
+        DaggerfallActivationTarget[] declared = _contributions.Targets(Mode).ToArray();
         Dictionary<DurableIdentityReference, DaggerfallActivationTarget> byIdentity = declared
             .GroupBy(target => target.Identity)
             .ToDictionary(group => group.Key, group => group.Single());

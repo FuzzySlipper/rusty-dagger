@@ -49,7 +49,7 @@ internal sealed partial class DaggerfallSession
                 new DaggerfallDoorActivationOwner(_doors, TriggerDungeonDoorActions, ActivateDoorForce, ActivateDoorMagic),
                 new DaggerfallPortalActivationOwner(_sites.Projection.Portals, ResolvePortalDestination, TryTransitionTo),
                 new DaggerfallGroundActivationOwner(_groundContainers, _lootUi),
-                npc: _dialogue));
+                npc: new DaggerfallCrimeActivationOwner(_dialogue, State.Actors, IsPickpocketTarget, PickpocketActor)));
     }
 
     private DaggerfallWorldProfileKey ResolvePortalDestination(string logicalProfile) =>
