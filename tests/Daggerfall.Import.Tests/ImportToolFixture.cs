@@ -101,6 +101,7 @@ internal sealed partial class ImportToolFixture : IDisposable
             ["--document"] = At("blocks.json"), ["--buildings"] = At("buildings.json"), ["--blocks"] = At("blocks.json"),
             ["--quest-text"] = Donor("Assets/StreamingAssets/Quests"), ["--tables"] = Donor("Assets/StreamingAssets/Tables"),
             ["--item-templates"] = Donor("Assets/Resources/ItemTemplates.txt"), ["--magic-templates"] = Donor("Assets/Resources/MagicItemTemplates.txt"),
+            ["--item-enums"] = Donor("Assets/Scripts/Game/Items/ItemEnums.cs"), ["--item-helper"] = Donor("Assets/Scripts/Game/Items/ItemHelper.cs"),
             ["--maps-file"] = Donor("Assets/Scripts/API/MapsFile.cs"), ["--label"] = PublishedSourcePath.Donor("Assets/Scripts/API/MapsFile.cs"),
             ["--source"] = Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv"),
             ["--output"] = At("report.json"), ["--repository"] = TestData.RepositoryRoot, ["--publication"] = Publication,
@@ -187,6 +188,12 @@ internal sealed partial class ImportToolFixture : IDisposable
                 var templates = File.ReadAllBytes(Donor("Assets/Resources/ItemTemplates.txt"));
                 string label = PublishedSourcePath.Donor("Assets/Resources/ItemTemplates.txt");
                 var items = DaggerfallItemTemplatesBuilder.Build(ItemTemplateReader.ReadTemplates(Encoding.UTF8.GetString(templates), label), ItemTemplateReader.ReadMagic(File.ReadAllText(Donor("Assets/Resources/MagicItemTemplates.txt")), PublishedSourcePath.Donor("Assets/Resources/MagicItemTemplates.txt")), label, templates, Rows);
+                byte[] groupEnums = File.ReadAllBytes(Donor("Assets/Scripts/Game/Items/ItemEnums.cs"));
+                byte[] groupHelper = File.ReadAllBytes(Donor("Assets/Scripts/Game/Items/ItemHelper.cs"));
+                items = items with { GroupTable = new(
+                    PublishedSource.Of(PublishedSourcePath.Donor("Assets/Scripts/Game/Items/ItemEnums.cs"), groupEnums),
+                    PublishedSource.Of(PublishedSourcePath.Donor("Assets/Scripts/Game/Items/ItemHelper.cs"), groupHelper),
+                    ItemTemplateBaseline.ReadGroupEnumerations(Encoding.UTF8.GetString(groupEnums), Encoding.UTF8.GetString(groupHelper), "fixture item groups")) };
                 Section("itemTemplates", items);
                 sections.Add(ItemTemplateLedgerBuilder.SectionName, ItemTemplateLedgerBuilder.WithSubstituteTargets(JsonNode.Parse(File.ReadAllText(Pack))![ItemTemplateLedgerBuilder.SectionName]!.AsObject(), items).ToJsonString(PublishedJson.Section)); break;
             case "videos": Section("cinematics", DaggerfallCinematicPackBuilder.Build(Directory.EnumerateFiles(Arena2).Order(StringComparer.OrdinalIgnoreCase)

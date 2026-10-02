@@ -24,6 +24,9 @@ public sealed record ItemTemplateTarget(
 /// </summary>
 public sealed record ItemTemplateRule(string Id, string Rule, string Evidence);
 
+/// <summary>The exact GetEnumArray order, retaining aliases and implicit members.</summary>
+public sealed record ItemGroupEnumeration(int Id, string Name, bool TemplateIndices, IReadOnlyList<int> Values);
+
 /// <summary>
 /// The donor's item-template baseline: which of the classic 288 template indices the
 /// donor's group enumerations reference, read from the donor's own sources rather than
@@ -73,6 +76,28 @@ public sealed class ItemTemplateBaseline
 
     /// <summary>The targets no donor group names as a template index.</summary>
     public IEnumerable<ItemTemplateTarget> Unreferenced => Targets.Where(target => !target.IsReferenced);
+
+    /// <summary>Reads the donor group ordinals using the same source parser as the template baseline.</summary>
+    public static IReadOnlyList<ItemGroupEnumeration> ReadGroupEnumerations(string itemEnumsSource, string itemHelperSource, string source)
+    {
+        Dictionary<string, (List<(string Name, int Value)> Members, string DeclarationComment)> enums = ParseEnums(itemEnumsSource, source);
+        if (!enums.TryGetValue("ItemGroups", out var groups))
+            throw new Arena2FormatException(source, 0, "the donor declares no ItemGroups enumeration");
+        Dictionary<string, int> ids = groups.Members.ToDictionary(member => member.Name, member => member.Value, StringComparer.Ordinal);
+        List<ItemGroupEnumeration> result = [];
+        foreach ((string group, string enumName) in ParseGroupMapping(itemHelperSource, source))
+        {
+            if (!ids.TryGetValue(group, out int id) || id < 0 || !enums.TryGetValue(enumName, out var declaration) || declaration.Members.Count == 0)
+                throw new Arena2FormatException(source, 0, $"group '{group}' has no declared identity or member enumeration '{enumName}'");
+            // Enum.GetValues sorts by the unsigned magnitude of each underlying value,
+            // including repeated aliases. Declaration order alone is not its ordinal contract.
+            result.Add(new(id, group, !IsReferenceSpace(declaration.DeclarationComment),
+                declaration.Members.Select(member => member.Value).OrderBy(value => unchecked((uint)value)).ToArray()));
+        }
+        if (result.Count == 0 || result.Select(group => group.Id).Distinct().Count() != result.Count)
+            throw new Arena2FormatException(source, 0, "the donor group mapping is empty or repeats an identity");
+        return result.OrderBy(group => group.Id).ToArray();
+    }
 
     /// <summary>
     /// Reads the baseline from the donor's item enumerations and its group-to-enumeration

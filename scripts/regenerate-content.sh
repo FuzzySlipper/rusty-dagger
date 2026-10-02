@@ -142,6 +142,8 @@ tool factions --arena2 "$arena2" --pack "$imported" --inventory "$inventory" --u
 tool terrain --arena2 "$arena2" --pack "$imported" --inventory "$inventory" --update
 tool items --arena2 "$arena2" --pack "$imported" --inventory "$inventory" \
   --item-templates "$donor/Assets/Resources/ItemTemplates.txt" \
+  --item-enums "$donor/Assets/Scripts/Game/Items/ItemEnums.cs" \
+  --item-helper "$donor/Assets/Scripts/Game/Items/ItemHelper.cs" \
   --magic-templates "$donor/Assets/Resources/MagicItemTemplates.txt" --update
 tool quests --arena2 "$arena2" --quest-text "$donor/Assets/StreamingAssets/Quests" \
   --tables "$donor/Assets/StreamingAssets/Tables" --pack "$imported" --records "$records" --inventory "$inventory" --update
