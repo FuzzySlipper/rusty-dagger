@@ -165,7 +165,7 @@ internal sealed class DaggerfallGroundContainers
             _instances.TransferStack(DaggerfallItemOwner.Player, DaggerfallItemOwner.Ground(checked((long)groundId)), stack.SourceStack, stack.DestinationStack, exhausted);
         }
         foreach (InventoryContainerUniqueTransfer unique in transfer.UniqueItems)
-            _instances.MoveUnique(unique.EntityId, DaggerfallItemOwner.Ground(checked((long)groundId)));
+            _instances.MoveUnique(_containers.Entities.IdentityOf(new EntityId(unique.EntityId)).Value, DaggerfallItemOwner.Ground(checked((long)groundId)));
     }
 
     private void SyncToPlayer(InventoryContainerTransferReceipt transfer, long groundId)
@@ -178,7 +178,7 @@ internal sealed class DaggerfallGroundContainers
             _instances.TransferStack(DaggerfallItemOwner.Ground(groundId), DaggerfallItemOwner.Player, stack.SourceStack, stack.DestinationStack, exhausted);
         }
         foreach (InventoryContainerUniqueTransfer unique in transfer.UniqueItems)
-            _instances.MoveUnique(unique.EntityId, DaggerfallItemOwner.Player);
+            _instances.MoveUnique(_containers.Entities.IdentityOf(new EntityId(unique.EntityId)).Value, DaggerfallItemOwner.Player);
     }
 
     private void RegisterMetadata(DaggerfallGroundContainerSave value)

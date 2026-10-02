@@ -158,6 +158,20 @@ internal sealed class DaggerfallHeldEnchantments : IDisposable
         _social = social;
     }
 
+    /// <summary>Current equipped absorption sources. Item/equipment persistence owns them; no held flag is cached or saved.</summary>
+    internal DaggerfallMagicDefense MagicDefense
+    {
+        get
+        {
+            if (!_entities.Store.IsAlive(_actor) || _stats.GetTrack(TrackId.Parse("health")).Current <= 0) return DaggerfallMagicDefense.None;
+            var sources = _equipment.Read().Assignments.DistinctBy(value => value.Item.EntityId)
+                .Where(assignment => TryEnchantments(assignment, out var enchantments)
+                    && enchantments.Any(enchantment => enchantment.Type == DaggerfallEnchantmentSettings.AbsorbsSpellsType && enchantment.Param == -1))
+                .Select(assignment => _entities.IdentityOf(new EntityId(assignment.Item.EntityId)).Value).Order().ToArray();
+            return sources.Length == 0 ? DaggerfallMagicDefense.None : new(100, 0, [], AbsorptionItems: sources);
+        }
+    }
+
     /// <summary>The talents the worn items improve right now.</summary>
     internal DaggerfallHeldTalents Talents { get; private set; }
 

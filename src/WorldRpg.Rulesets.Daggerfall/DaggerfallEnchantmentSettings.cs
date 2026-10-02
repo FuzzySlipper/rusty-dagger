@@ -10,6 +10,7 @@ internal readonly record struct DaggerfallEnchantmentSetting(
 /// <summary>Retained payload vocabulary and content admission; settings themselves come from the pack.</summary>
 internal static class DaggerfallEnchantmentSettings
 {
+    internal const int AbsorbsSpellsType = 9;
     internal const int RegeneratesHealthType = 5;
     internal const int ExtraSpellPointsType = 3;
     internal const int IncreasedWeightAllowanceType = 7;
@@ -32,7 +33,7 @@ internal static class DaggerfallEnchantmentSettings
         foreach (DaggerfallEnchantmentSetting setting in settings)
         {
             string[] meanings = Meanings(setting.Type);
-            int firstParam = setting.Type is 8 or 12 or 24 ? -1 : 0;
+            int firstParam = setting.Type is 8 or 9 or 12 or 24 ? -1 : 0;
             int index = setting.Param - firstParam;
             if (setting.Key != $"enchantment.{setting.Type}.{setting.Param}")
                 problems.Add($"Enchantment setting '{setting.Key}' does not name type {setting.Type} and param {setting.Param}.");
@@ -67,6 +68,7 @@ internal static class DaggerfallEnchantmentSettings
         10 => ["medical", "etiquette", "streetwise", "jumping", "orcish", "harpy", "giantish", "dragonish", "nymph", "daedric", "spriggan", "centaurian", "impish", "lockpicking", "mercantile", "pickpocket", "stealth", "swimming", "climbing", "backstabbing", "dodging", "running", "destruction", "restoration", "illusion", "alteration", "thaumaturgy", "mysticism", "short-blade", "long-blade", "hand-to-hand", "axe", "blunt-weapon", "archery", "critical-strike"],
         3 => ["during-winter", "during-spring", "during-summer", "during-fall", "during-full-moon", "during-half-moon", "during-new-moon", "near-undead", "near-daedra", "near-humanoids", "near-animals"],
         5 => ["all-the-time", "in-sunlight", "in-darkness"],
+        9 => ["spell-absorption"],
         12 => ["strengthened-armor"],
         8 => ["repairs-objects"],
         24 => ["weakened-armor"],

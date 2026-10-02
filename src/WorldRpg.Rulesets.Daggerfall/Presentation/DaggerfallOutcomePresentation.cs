@@ -23,6 +23,11 @@ internal sealed class DaggerfallOutcomePresentation(
     {
         switch (fact)
         {
+            case SpellCastFact { Outcome: DaggerfallCastOutcome.DeliveryCompleted, Absorptions: not null } cast
+                when cast.Absorptions.Any(value => value.TargetId == DaggerfallActorIdentity.PlayerEntityId):
+                _lineIsResult = true;
+                presentation.SetOutcome($"Spell absorbed; restored {cast.Absorptions.Where(value => value.TargetId == DaggerfallActorIdentity.PlayerEntityId).Sum(value => value.RestoredSpellPoints):0} magicka.");
+                break;
             case ActorTransformedFact changed:
                 _lineIsResult = true;
                 presentation.SetOutcome(changed.Outcome switch

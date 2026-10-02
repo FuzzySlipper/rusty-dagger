@@ -7,6 +7,20 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallMagicCostPolicyTests
 {
     [Fact]
+    public void Stock_absorption_quote_uses_the_same_normalized_setting_as_item_maker()
+    {
+        var magic=TestPayload.Definitions.Magic;
+        var settings=magic.EnchantmentSettings.ToDictionary();
+        settings["enchantment.9.-1"]=settings["enchantment.9.-1"] with {Cost=1234};
+        var catalog=magic with {EnchantmentSettings=settings};
+        var enchantment=Assert.Single(magic.MagicItems["magic-item.0022"].Enchantments);
+        Assert.True(DaggerfallMagicCostPolicy.TryGetNonSpellEnchantmentCost(catalog,enchantment,out int cost));
+        Assert.Equal(1234,cost);
+        settings.Remove("enchantment.9.-1");
+        Assert.False(DaggerfallMagicCostPolicy.TryGetNonSpellEnchantmentCost(catalog,enchantment,out _));
+    }
+
+    [Fact]
     public void Published_spell_effects_have_explicit_donor_cost_rows_and_quote_with_classic_ordering()
     {
         DaggerfallDefinitions definitions = Load();
@@ -14,7 +28,7 @@ public sealed class DaggerfallMagicCostPolicyTests
             .Select(effect => (effect.Type, effect.SubType)).Distinct().Order().ToArray();
         Assert.Equal(60, retainedEffects.Length);
         // Crafted/potion variants without stock spells still need their published coefficient rows.
-        Assert.Equal(retainedEffects.Concat([(26, -1), (7, 4), (7, 7), (13, 1), (23, 1), (24, 1), (4, 1)]).Concat(Enumerable.Range(0, 8).Select(subtype => (10, subtype))).Distinct().Order(), definitions.Magic.EffectCosts.Keys.Order());
+        Assert.Equal(retainedEffects.Concat([(26, -1), (7, 4), (7, 7), (13, 1), (23, 1), (24, 1), (4, 1)]).Concat(Enumerable.Range(0, 8).Select(subtype => (10, subtype))).Concat(Enumerable.Range(0, 8).Select(subtype => (11, subtype))).Concat(Enumerable.Range(0, 3).Select(subtype => (39, subtype))).Distinct().Order(), definitions.Magic.EffectCosts.Keys.Order());
 
         DaggerfallSpellDefinition doorJam = definitions.Magic.Spells["spell.001"];
         Assert.Equal(28, DaggerfallMagicCostPolicy.QuoteCasting(definitions.Magic, doorJam, new Dictionary<string, int>(), enchantingItem: true).SpellPoints);
