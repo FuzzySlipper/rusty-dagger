@@ -85,6 +85,7 @@ internal sealed class DaggerfallActorRoster
         if (oldDefinition.Team == "player-ally") definition = definition with { Team = "player-ally" };
         if (!_projection().Inputs.MobileSprites.TryGetValue(selectedMobile, out var sprite))
             return new(DaggerfallWabbajackOutcome.UnavailableAppearance, durableId);
+        DaggerfallCorruptionOrigin? origin = original.Actor.TryGet<DaggerfallCorruptionOrigin>(out var copiedFrom) ? copiedFrom : null;
         ActorPose pose = original.Pose;
         Track health = original.Stats.GetTrack(TrackId.Parse(oldDefinition.Combat.Health.Value));
         double wounds = health.Maximum.Value - health.Current;
@@ -102,6 +103,7 @@ internal sealed class DaggerfallActorRoster
         ActorState replacement = DaggerActorFactory.CreateNonPlayerActor(_state.Actors, durableId, definition, stats, pose);
         DaggerActorFactory.RegisterActorInventory(replacement, _state.InventoryStore);
         DaggerfallWabbajack.Restore(replacement.Actor, definition.Id.Value);
+        if (origin is not null) replacement.Actor.Add(origin);
         GrantSpawnLoadout(replacement, definition);
         _definitionsByActor[durableId] = definition;
         if (_dynamicActors.ContainsKey(durableId)) _dynamicActors[durableId] = definition.Id;

@@ -323,6 +323,7 @@ internal static class DaggerActorFactory
             new ActorPose(new WorldPoint(saved.X, saved.Y, saved.Z), saved.HeadingRadians));
         RestoreStats(actor.Actor, saved.Stats);
         DaggerfallWabbajack.Restore(actor.Actor, saved.WabbajackActive ? saved.Definition : null);
+        if (saved.CorruptionOrigin is { } origin) actor.Actor.Add(origin);
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(saved.ForcedHostile);
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified = saved.MagicallyPacified;
         definitionsByActor.Add(saved.EntityId, definition);
@@ -362,6 +363,7 @@ internal static class DaggerActorFactory
                 new ActorPose(new WorldPoint(spawned.X, spawned.Y, spawned.Z), spawned.HeadingRadians));
             RestoreStats(actor.Actor, spawned.Stats);
             DaggerfallWabbajack.Restore(actor.Actor, spawned.WabbajackActive ? spawned.Definition : null);
+            if (spawned.CorruptionOrigin is { } origin) actor.Actor.Add(origin);
             actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(spawned.ForcedHostile);
             actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified = spawned.MagicallyPacified;
             definitionsByActor.Add(spawned.EntityId, definition);

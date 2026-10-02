@@ -30,7 +30,8 @@ internal sealed class DaggerfallInventoryUseService(
     DaggerfallBookNotebook? notebook = null,
     Func<int, bool>? useDrug = null,
     Func<bool>? useOghma = null,
-    Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useSanguineRose = null)
+    Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useSanguineRose = null,
+    Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useSkullCorruption = null)
 {
     private const int FirstDrugTemplate = 78;
     private const int LastDrugTemplate = 81;
@@ -96,6 +97,13 @@ internal sealed class DaggerfallInventoryUseService(
                 if (metadata.CurrentCondition <= 0) return new(false, "The Sanguine Rose is broken.");
                 if (unique is not { } source) return new(false, "Sanguine Rose requires a unique item source.");
                 return useSanguineRose?.Invoke(source) ?? new(false, "Sanguine Rose summoning is unavailable.");
+            }
+            if (definitions.Magic.TryEnchantments(enchantment, out var skullPayloads)
+                && skullPayloads.Any(effect => effect.Type == 26 && effect.Param == 8))
+            {
+                if (metadata.CurrentCondition <= 0) return new(false, "The Skull of Corruption is broken.");
+                if (unique is not { } source) return new(false, "Skull of Corruption requires a unique item source.");
+                return useSkullCorruption?.Invoke(source) ?? new(false, "Skull of Corruption copying is unavailable.");
             }
             if (definitions.Magic.MagicItems.TryGetValue(enchantment, out DaggerfallMagicItemDefinition? magic)
                 && magic.Enchantments.Any(effect => effect.ParamMeaning == "artifact-effect" && effect.Param == 5))

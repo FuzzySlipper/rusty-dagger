@@ -1315,6 +1315,7 @@ internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definiti
     public bool ForcedHostile { get; init; }
     [JsonRequired] public bool MagicallyPacified { get; init; }
     public bool PlayerAllied { get; init; }
+    public DaggerfallCorruptionOrigin? CorruptionOrigin { get; init; }
     internal void Validate()
     {
         if (!float.IsFinite(X) || !float.IsFinite(Y) || !float.IsFinite(Z) || !float.IsFinite(HeadingRadians))
@@ -1322,6 +1323,7 @@ internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definiti
         if (string.IsNullOrWhiteSpace(Definition))
             throw new ArgumentException("A saved dynamic actor must name its definition.", nameof(Definition));
         ArgumentNullException.ThrowIfNull(Stats);
+        CorruptionOrigin?.Validate();
     }
 }
 
