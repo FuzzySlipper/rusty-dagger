@@ -95,7 +95,9 @@ public sealed class AzurasStarSessionTests
     public void Full_star_does_not_bypass_common_soul_traps_no_empty_gem_death_refusal()
     {
         using var f = Star(); var s = f.Session; Equip(f); Assert.True(s.SoulGems.Capture(0)); Trap(s, f.Enemy);
-        s.State.Actors.Get(f.Enemy).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(30);
+        var health = s.State.Actors.Get(f.Enemy).Stats.GetTrack(TrackId.Parse("health"));
+        health.Maximum.BaseValue = 30;
+        health.SetCurrent(30);
         s.ResolveExplicitMelee(new(1, f.Enemy, 1, 10000, .125)); f.Update();
         Assert.False(s.State.Actors.Get(f.Enemy).IsDefeated);
         Assert.Equal(1d, s.State.Actors.Get(f.Enemy).Stats.GetTrack(TrackId.Parse("health")).Current);
