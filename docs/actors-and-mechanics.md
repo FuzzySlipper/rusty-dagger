@@ -79,7 +79,7 @@ and terminal delivery each emit one fact; repeated callbacks apply nothing.
 
 The shipped catalog composes disease, poison, five elemental resistance variants,
 Shield, paralysis, Free Action, Regenerate, Spell Absorption, immediate
-health/fatigue/spell-point damage and Disintegrate.
+and continuous health/fatigue/spell-point damage and Disintegrate.
 Additional spell families add their bindings through that same composition seam;
 unmapped effects refuse before payment or skill use. UI selection, spell flight
 presentation and item-trigger policy remain separate consumers.
@@ -98,6 +98,14 @@ use the same accepted health owner and death notifications; Disintegrate bypasse
 Shield without spending its pool. Fatigue uses classic fatigue units and protects
 peaceful non-player targets. Fatigue and spell-point outcomes report bounded live
 loss, while saves retain the resulting tracks and affected enemy hostility.
+
+Continuous destruction shares those health/track consequences and source-scoped
+incumbents. An initial payload and each admitted ordinary or elapsed round use
+the saved cast settings and next draw identity. Same-kind effects from the same
+caster/item extend duration without an extra tick; other sources keep their own
+lifetime. Current saves resume without repeating the initial payload. Expiry,
+cure, target death and source retirement stop future ticks. Peaceful non-player
+fatigue targets remain protected.
 
 Paralysis retains independent source-scoped durations. Its live control projection
 blocks movement, jump and physical attacks without suppressing look, casting or

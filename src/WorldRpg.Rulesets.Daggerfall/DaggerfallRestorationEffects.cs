@@ -1,15 +1,10 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Effects;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall;
-
-internal sealed record DaggerfallRegenerationState(
-    [property: JsonRequired] DaggerfallCastEffectState Cast,
-    [property: JsonRequired] long NextRound);
 
 /// <summary>Recovery and defensive policy over active effects, canonical tracks and cast admission.</summary>
 internal static class DaggerfallRestorationEffects
@@ -36,15 +31,8 @@ internal static class DaggerfallRestorationEffects
                 var state = ReadRegeneration(effect.State);
                 Track health = effect.Target.Get<StatsComponent>().GetTrack(TrackId.Parse("health"));
                 if (health.Current <= 0) { effect.ExpireAfterCurrentRound = true; return; }
-                int draw = 0;
-                int Roll(int low, int high) => checked((int)random.DrawKeyed(new(0, "daggerfall.regenerate.v1",
-                    $"{effect.Context.Instance.Value}:round:{state.NextRound}:draw:{++draw}", low, high)).Value);
-                // The admitted level survives an unloaded caster site; no runtime lookup is needed to tick.
-                int casterLevel = state.Cast.CasterLevel;
-                int amount = DaggerfallMagicAdmissionPolicy.RollEffectMagnitude(state.Cast.Settings, casterLevel, Roll);
-                amount = (int)(amount * (state.Cast.SavePercent / 100f));
+                int amount = DaggerfallPeriodicCast.RollMagnitude(effect, random, 18, -1, "daggerfall.regenerate.v1", "");
                 health.SetCurrent(health.Current + amount, clamp: true);
-                effect.State = RegenerationState(state with { NextRound = checked(state.NextRound + 1) });
             },
             Spell: new(18, -1, SupportsDuration: true, SupportsMagnitude: true,
                 CreateState: state => RegenerationState(new(state, 0)), MagnitudePerRound: true),
@@ -56,16 +44,8 @@ internal static class DaggerfallRestorationEffects
     private static bool SameSettings(DaggerfallCastEffectState prior, DaggerfallCastEffectState incoming) =>
         prior.Settings with { Key = "settings" } == incoming.Settings with { Key = "settings" };
 
-    internal static JsonElement RegenerationState(DaggerfallRegenerationState state) =>
-        JsonSerializer.SerializeToElement(state, DaggerfallSaveJsonContext.Default.DaggerfallRegenerationState);
-    internal static DaggerfallRegenerationState ReadRegeneration(JsonElement state)
-    {
-        var value = state.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallRegenerationState)
-            ?? throw new ArgumentException("Regeneration state is missing.");
-        if (value.NextRound < 0 || value.Cast is null) throw new ArgumentException("Regeneration round state is invalid.");
-        Validate(value.Cast, 18);
-        return value;
-    }
+    internal static JsonElement RegenerationState(DaggerfallPeriodicCastState state) => DaggerfallPeriodicCast.Encode(state);
+    internal static DaggerfallPeriodicCastState ReadRegeneration(JsonElement state) => DaggerfallPeriodicCast.Read(state, 18, -1);
     private static IEnumerable<IActiveEffectContribution> ValidateRegeneration(DaggerfallActiveEffect effect)
     { ReadRegeneration(effect.State); return []; }
     private static IEnumerable<IActiveEffectContribution> ValidateCast(DaggerfallActiveEffect effect, int type)

@@ -1286,7 +1286,7 @@ internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definiti
 [JsonSourceGenerationOptions(WriteIndented = false)]
 [JsonSerializable(typeof(DaggerfallCastEffectState))]
 [JsonSerializable(typeof(DaggerfallShieldState))]
-[JsonSerializable(typeof(DaggerfallRegenerationState))]
+[JsonSerializable(typeof(DaggerfallPeriodicCastState))]
 [JsonSerializable(typeof(DaggerfallSavePayload))]
 [JsonSerializable(typeof(DaggerfallStatsSave))]
 [JsonSerializable(typeof(DaggerfallNotebookSave))]
