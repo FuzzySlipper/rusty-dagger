@@ -118,7 +118,8 @@ internal sealed record DaggerfallEffectDefinition(
     Func<JsonElement, JsonElement, bool>? IncumbentSettingsMatch = null,
     bool SourceScopedIncumbent = false,
     Func<DaggerfallActiveEffect, DaggerfallPerceptionEffectState>? LivePerception = null,
-    bool ShowSpellIcon = true)
+    bool ShowSpellIcon = true,
+    DaggerfallDoorMagic DoorMagic = DaggerfallDoorMagic.None)
 {
     internal EffectDefinition ToEngineDefinition(string source) => new(
         EffectDefinitionId.Parse($"daggerfall.{Key}"),
@@ -382,6 +383,8 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
 
     private static void ValidateLifetime(DaggerfallEffectDefinition definition, DaggerfallEffectRequest request)
     {
+        if (definition.Spell?.UntilTriggered == true && request.RemainingRounds is not null)
+            throw new ArgumentException("Ready world operations must remain active until their target consumes them.", nameof(request));
         if (definition.Spell?.UntilHealed == true
             && (request.RemainingRounds is not null || request.CasterId is not null || request.ItemId is not null))
             throw new ArgumentException("Permanent attribute damage must retain target-owned lifetime and historical cast origin in its state.");

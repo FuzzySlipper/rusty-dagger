@@ -601,6 +601,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
     {
         _heldEnchantments.Refresh();
         DaggerfallConcealmentEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);
+        DaggerfallDoorMagicEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);
         _hud.Publish(new DaggerfallHudFrame(State.Actors.Player, State.Progression, Presentation, _mode, State.PlayerControl, Slots,
             Inventory: _inventoryUi.Read(),
             Loot: _lootUi.Read(),

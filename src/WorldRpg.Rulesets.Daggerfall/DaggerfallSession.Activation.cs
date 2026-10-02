@@ -46,7 +46,7 @@ internal sealed partial class DaggerfallSession
             reach,
             new DaggerfallActivationContributions(
                 new DaggerfallCorpseActivationOwner(_corpseLoot, _lootUi, State.Actors, _facts),
-                new DaggerfallDoorActivationOwner(_doors, TriggerDungeonDoorActions, ActivateDoorForce),
+                new DaggerfallDoorActivationOwner(_doors, TriggerDungeonDoorActions, ActivateDoorForce, ActivateDoorMagic),
                 new DaggerfallPortalActivationOwner(_sites.Projection.Portals, ResolvePortalDestination, TryTransitionTo),
                 new DaggerfallGroundActivationOwner(_groundContainers, _lootUi),
                 npc: _dialogue));
@@ -503,11 +503,13 @@ internal sealed partial class DaggerfallSession
         internal DaggerfallDoorActivationOwner(
             DaggerfallDoorRuntime doors,
             Action<DaggerfallRdbDoorId> triggerDungeonActions,
-            Func<DaggerfallRdbDoorId, DaggerfallActivationMode, DaggerfallActivationOutcome> activateForce)
+            Func<DaggerfallRdbDoorId, DaggerfallActivationMode, DaggerfallActivationOutcome> activateForce,
+            Func<DaggerfallRdbDoorId, DaggerfallActivationOutcome?> activateMagic)
         {
             _doors = doors ?? throw new ArgumentNullException(nameof(doors));
             _triggerDungeonActions = triggerDungeonActions ?? throw new ArgumentNullException(nameof(triggerDungeonActions));
             _activateForce = activateForce ?? throw new ArgumentNullException(nameof(activateForce));
+            _activateMagic = activateMagic ?? throw new ArgumentNullException(nameof(activateMagic));
             Dictionary<DaggerfallRdbDoorId, DurableIdentityReference> identities = [];
             HashSet<DurableIdentityReference> assigned = [];
             foreach (DaggerfallDoorView door in _doors.All)
@@ -522,6 +524,7 @@ internal sealed partial class DaggerfallSession
 
         private readonly Action<DaggerfallRdbDoorId> _triggerDungeonActions;
         private readonly Func<DaggerfallRdbDoorId, DaggerfallActivationMode, DaggerfallActivationOutcome> _activateForce;
+        private readonly Func<DaggerfallRdbDoorId, DaggerfallActivationOutcome?> _activateMagic;
 
         public IEnumerable<DaggerfallActivationTarget> DoorTargets()
         {
@@ -545,6 +548,11 @@ internal sealed partial class DaggerfallSession
                 return new(true, Describe(door));
             if (selection.Mode == DaggerfallActivationMode.Talk)
                 return new(false, "The door does not answer.");
+            if (_activateMagic(id) is { } magic)
+            {
+                if (magic.Applied) _triggerDungeonActions(id);
+                return magic;
+            }
             if (selection.Mode is DaggerfallActivationMode.Steal or DaggerfallActivationMode.Bash)
             {
                 DaggerfallActivationOutcome forced = _activateForce(id, selection.Mode);
