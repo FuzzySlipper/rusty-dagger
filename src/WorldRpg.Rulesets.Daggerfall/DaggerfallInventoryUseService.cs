@@ -32,7 +32,8 @@ internal sealed class DaggerfallInventoryUseService(
     Func<bool>? useOghma = null,
     Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useSanguineRose = null,
     Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useSkullCorruption = null,
-    Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useItemSpell = null)
+    Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useItemSpell = null,
+    Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useAzurasStar = null)
 {
     private const int FirstDrugTemplate = 78;
     private const int LastDrugTemplate = 81;
@@ -92,6 +93,12 @@ internal sealed class DaggerfallInventoryUseService(
     {
         if (metadata.Enchantment is { } enchantment)
         {
+            if (DaggerfallSoulGems.IsStar(metadata, definitions.Magic))
+            {
+                if (metadata.CurrentCondition <= 0) return new(false, "Azura's Star is broken.");
+                if (unique is not { } star) return new(false, "Azura's Star requires a unique item source.");
+                return useAzurasStar?.Invoke(star) ?? new(false, "Azura's Star soul release is unavailable.");
+            }
             if (definitions.Magic.TryEnchantments(enchantment, out var payloads)
                 && payloads.Any(effect => effect.Type == 26 && effect.Param == 4))
             {

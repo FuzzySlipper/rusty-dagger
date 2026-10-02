@@ -605,6 +605,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         }
         if (fact is ActorDiedFact died)
         {
+            CaptureHeldSoul(died);
             if (died.ActorId==DaggerfallActorIdentity.PlayerEntityId) { _pendingIdentify=null; _pendingCreateItem=null; }
             DaggerfallMolagBalEffects.EndOnDeath(State.Effects, died.ActorId);
             DaggerfallItemSoulEffects.EndOnDeath(State.Effects, died.ActorId);
