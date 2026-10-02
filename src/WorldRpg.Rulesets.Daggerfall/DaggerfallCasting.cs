@@ -293,7 +293,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                 JsonElement payload = binding.CreateState?.Invoke(state)
                     ?? JsonSerializer.SerializeToElement(state, DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
                 var admission = effects.Start(new(instance, definition.Key, $"spell.{bundle.Spell.Key}", operationalCaster,
-                    targetId, setting.Key, bundle.Element.ToString(), operationalItem, 1, duration, payload));
+                    targetId, setting.Key, bundle.Element.ToString(), operationalItem, 1, duration, payload) { BundleId = $"cast.{bundle.Sequence}", BundleName = bundle.Spell.Name, BundleKind = bundle.Source == DaggerfallCastSource.ItemHeld ? DaggerfallEffectBundleKind.HeldMagicItem : DaggerfallEffectBundleKind.Spell });
                 outcome = admission switch
                 {
                     DaggerfallEffectAdmissionOutcome.TargetUnavailable => DaggerfallCastOutcome.TargetUnavailable,

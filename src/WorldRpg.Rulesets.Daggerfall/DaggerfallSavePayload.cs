@@ -50,6 +50,10 @@ internal sealed record DaggerfallSavePayload(
 {
     [JsonRequired]
     public long NextCastSequence { get; init; } = 1;
+    [JsonRequired]
+    public DaggerfallDispelRequest? PendingDispel { get; init; }
+    [JsonRequired]
+    public long[] BanishedActors { get; init; } = [];
 
     /// <summary>Every current quest instance; an empty collection is meaningful current state.</summary>
     [JsonRequired]
@@ -282,7 +286,8 @@ internal sealed record DaggerfallSavePayload(
                     throw new ArgumentException("Saved inactive site state must name each non-active profile once.");
                 DaggerfallSiteProfile profile = profiles.Require(key);
                 HashSet<long> selectedActors = [.. profile.Project.Actors.Keys];
-                HashSet<long> savedActors = [.. delta.Actors.Select(actor => actor.EntityId)];
+                ValidateBanished(delta.BanishedActors, selectedActors, delta.Actors.Select(actor => actor.EntityId));
+                HashSet<long> savedActors = [.. delta.Actors.Select(actor => actor.EntityId), .. delta.BanishedActors];
                 if (!savedActors.SetEquals(selectedActors))
                     throw new ArgumentException($"Saved inactive site '{site}' does not carry exactly its authored actors.");
                 foreach (DaggerfallActorSave actor in delta.Actors)
@@ -302,7 +307,7 @@ internal sealed record DaggerfallSavePayload(
                     if (actor.WabbajackActive) _ = DaggerfallWabbajack.RequireDefinition(definitions, actor.Definition);
                 }
                 HashSet<long> inventoryOwners = [.. delta.ActorInventories.Select(inventory => inventory.EntityId)];
-                HashSet<long> selectedSiteActors = [.. selectedActors, .. delta.DynamicActors.Select(actor => actor.EntityId)];
+                HashSet<long> selectedSiteActors = [.. selectedActors.Except(delta.BanishedActors), .. delta.DynamicActors.Select(actor => actor.EntityId)];
                 if (!inventoryOwners.SetEquals(selectedSiteActors))
                     throw new ArgumentException($"Saved inactive site '{site}' does not carry exactly its actor inventories.");
                 if (delta.Corpses.Any(corpse => !selectedSiteActors.Contains(corpse.ActorId)))
@@ -328,9 +333,10 @@ internal sealed record DaggerfallSavePayload(
             if (!savedActorIds.Add(actor.EntityId))
                 throw new ArgumentException($"Saved actor {actor.EntityId} appears more than once.");
         }
+        ValidateBanished(BanishedActors, inputs.Project.Actors.Keys, savedActorIds);
         foreach (AuthoredActor placement in inputs.Project.Actors.Values)
         {
-            if (!savedActorIds.Contains(placement.EntityId))
+            if (!savedActorIds.Contains(placement.EntityId) && !BanishedActors.Contains(placement.EntityId))
                 throw new ArgumentException($"Current save is missing authored actor {placement.EntityId}.");
         }
         // Dynamic actors are spawn-time registrations, not content placements: each one names
@@ -345,7 +351,7 @@ internal sealed record DaggerfallSavePayload(
             if (actor.WabbajackActive) _ = DaggerfallWabbajack.RequireDefinition(definitions, actor.Definition);
             if (inactiveDynamicActorIds.Contains(actor.EntityId))
                 throw new ArgumentException($"Saved dynamic actor {actor.EntityId} is active and inactive at once.");
-            if (savedActorIds.Contains(actor.EntityId))
+            if (savedActorIds.Contains(actor.EntityId) || BanishedActors.Contains(actor.EntityId))
                 throw new ArgumentException($"Saved dynamic actor {actor.EntityId} collides with an authored actor.");
             if (!IsAdmittedDynamicDefinition(definitions, actor.Definition))
                 throw new ArgumentException($"Saved dynamic actor {actor.EntityId} refers to missing definition '{actor.Definition}'.");
@@ -503,10 +509,19 @@ internal sealed record DaggerfallSavePayload(
 
     internal DurableIdentityState RestoredIdentities() => Identities.Validate().RequireKinds(PersistedKinds);
 
+    private static void ValidateBanished(long[] removed, IEnumerable<long> placements, IEnumerable<long> live)
+    {
+        ArgumentNullException.ThrowIfNull(removed);
+        HashSet<long> admitted = [.. placements], active = [.. live];
+        if (removed.Distinct().Count() != removed.Length || removed.Any(id => !admitted.Contains(id) || active.Contains(id)))
+            throw new ArgumentException("Banished actors must name unique admitted placements absent from the live actor state.");
+    }
+
     internal DaggerfallSavePayload Validate()
     {
         if (NextCastSequence < 1) throw new ArgumentException("Saved next cast sequence must be positive.");
         ArgumentNullException.ThrowIfNull(Player);
+        PendingDispel?.Validate();
         ArgumentNullException.ThrowIfNull(Actors);
         ArgumentNullException.ThrowIfNull(DynamicActors);
         ArgumentNullException.ThrowIfNull(Inventory);
@@ -928,12 +943,16 @@ internal sealed record DaggerfallActiveEffectSave(
     ushort Stacks,
     JsonElement State)
 {
+    public string? BundleId { get; init; }
+    public string? BundleName { get; init; }
+    public DaggerfallEffectBundleKind BundleKind { get; init; }
     internal void Validate()
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(Instance);
         ArgumentException.ThrowIfNullOrWhiteSpace(EffectKey);
         ArgumentException.ThrowIfNullOrWhiteSpace(Source);
         ArgumentException.ThrowIfNullOrWhiteSpace(Settings);
+        if (!Enum.IsDefined(BundleKind)) throw new ArgumentException("Saved effect bundle kind is not recognized.");
         if (TargetId <= 0 || CasterId is <= 0 || ItemId == 0 || Stacks == 0)
             throw new ArgumentOutOfRangeException(nameof(TargetId), "Saved effect identities and stacks must be positive.");
         if (State.ValueKind == JsonValueKind.Undefined)
@@ -941,7 +960,7 @@ internal sealed record DaggerfallActiveEffectSave(
     }
 
     internal DaggerfallEffectRequest ToRequest() => new(
-        Instance, EffectKey, Source, CasterId, TargetId, Settings, Element, ItemId, Stacks, RemainingRounds, State.Clone());
+        Instance, EffectKey, Source, CasterId, TargetId, Settings, Element, ItemId, Stacks, RemainingRounds, State.Clone()) { BundleId = BundleId, BundleName = BundleName, BundleKind = BundleKind };
 }
 
 internal sealed record DaggerfallCorpseSave(long ActorId, ulong ContainerId, ulong OriginatingSequence, bool IsRegistered, bool IsInteractable, DaggerfallStackSave[] Stacks, DaggerfallUniqueSave[] UniqueItems)
@@ -1242,6 +1261,8 @@ internal sealed record DaggerfallSiteDeltaSave(
     /// <summary>Detached current motion phases for this unloaded profile.</summary>
     [JsonRequired]
     public DaggerfallDungeonMotionSnapshot Motion { get; init; } = null!;
+    [JsonRequired]
+    public long[] BanishedActors { get; init; } = [];
 
     internal void Validate()
     {
@@ -1284,6 +1305,7 @@ internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definiti
 }
 
 [JsonSourceGenerationOptions(WriteIndented = false)]
+[JsonSerializable(typeof(DaggerfallDispelRequest))]
 [JsonSerializable(typeof(DaggerfallCastEffectState))]
 [JsonSerializable(typeof(DaggerfallShieldState))]
 [JsonSerializable(typeof(DaggerfallPeriodicCastState))]

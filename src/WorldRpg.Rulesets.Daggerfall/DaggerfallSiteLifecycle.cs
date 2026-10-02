@@ -117,7 +117,7 @@ internal sealed class DaggerfallSiteLifecycle
     {
         foreach (DaggerfallSiteDeltaSave delta in saved)
             _deltas.Add(delta.Profile.Require(), new DaggerfallSiteRuntimeDelta(delta.Actors, delta.DynamicActors, delta.ActorInventories,
-                delta.Corpses, delta.Doors, delta.Effects, delta.Motion));
+                delta.Corpses, delta.Doors, delta.Effects, delta.Motion) { BanishedActors = delta.BanishedActors });
     }
 
     /// <summary>Replaces one inactive site's delta after an owner edited its detached state.</summary>

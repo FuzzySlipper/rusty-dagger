@@ -47,6 +47,7 @@ internal sealed record DaggerfallEffectOutcome(
 }
 
 internal enum DaggerfallEffectFeedback { None, MagicSparkle }
+internal enum DaggerfallEffectBundleKind { None, Spell, HeldMagicItem, Potion }
 
 /// <summary>How Daggerfall treats another active effect of the same compiled kind on one target.</summary>
 internal enum DaggerfallEffectStacking
@@ -115,7 +116,9 @@ internal sealed record DaggerfallEffectDefinition(
     bool ExtendIncumbentDuration = false,
     WorldRpg.Kit.Controls.ActorControlRestrictions ControlRestrictions = default,
     Func<JsonElement, JsonElement, bool>? IncumbentSettingsMatch = null,
-    bool SourceScopedIncumbent = false)
+    bool SourceScopedIncumbent = false,
+    Func<DaggerfallActiveEffect, DaggerfallPerceptionEffectState>? LivePerception = null,
+    bool ShowSpellIcon = true)
 {
     internal EffectDefinition ToEngineDefinition(string source) => new(
         EffectDefinitionId.Parse($"daggerfall.{Key}"),
@@ -170,7 +173,12 @@ internal sealed record DaggerfallEffectRequest(
     ulong? ItemId,
     ushort Stacks,
     uint? RemainingRounds,
-    JsonElement State);
+    JsonElement State)
+{
+    internal string? BundleId { get; init; }
+    internal string? BundleName { get; init; }
+    internal DaggerfallEffectBundleKind BundleKind { get; init; }
+}
 
 /// <summary>One live Daggerfall effect's policy state and its Kit lifecycle entry.</summary>
 internal sealed class DaggerfallActiveEffect
@@ -185,6 +193,9 @@ internal sealed class DaggerfallActiveEffect
         Target = target ?? throw new ArgumentNullException(nameof(target));
     }
 
+    internal string? BundleId { get; init; }
+    internal string? BundleName { get; init; }
+    internal DaggerfallEffectBundleKind BundleKind { get; init; }
     internal DaggerfallEffectDefinition Definition { get; private set; }
     internal ActiveEffectContext Context { get; private set; }
     internal ActiveEffectState Lifecycle { get; private set; } = null!;
@@ -275,7 +286,7 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
         foreach (DaggerfallActiveEffect effect in Active)
         {
             if (checked((long)effect.Lifecycle.Context.Target.Value) != targetId) continue;
-            perception = perception.Combine(effect.Definition.Perception);
+            perception = perception.Combine(effect.Definition.LivePerception?.Invoke(effect) ?? effect.Definition.Perception);
         }
         return perception.Validate();
     }
@@ -337,7 +348,7 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
         ActiveEffectAdmissionKind admission = definition.Stacking == DaggerfallEffectStacking.Replace
             ? ActiveEffectAdmissionKind.Replace
             : ActiveEffectAdmissionKind.Apply;
-        Admit(definition, context, request.Stacks, request.RemainingRounds, request.State, admission);
+        Admit(definition, context, request.Stacks, request.RemainingRounds, request.State, admission, bundleId: request.BundleId, bundleName: request.BundleName, bundleKind: request.BundleKind);
         DaggerfallEffectAdmissionOutcome outcome = admission == ActiveEffectAdmissionKind.Replace && likeKind.Length != 0
             ? DaggerfallEffectAdmissionOutcome.Replaced
             : DaggerfallEffectAdmissionOutcome.Started;
@@ -387,7 +398,7 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
             ActiveEffectContext context = Context(request);
             if (_effects.ContainsKey(context.Instance))
                 throw new ArgumentException($"Saved effect instance '{request.Instance}' appears more than once.", nameof(saved));
-            Admit(definition, context, request.Stacks, request.RemainingRounds, request.State, ActiveEffectAdmissionKind.Apply, resumed: true);
+            Admit(definition, context, request.Stacks, request.RemainingRounds, request.State, ActiveEffectAdmissionKind.Apply, resumed: true, bundleId: request.BundleId, bundleName: request.BundleName, bundleKind: request.BundleKind);
         }
     }
 
@@ -522,7 +533,7 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
         effect.Lifecycle.Context.Item?.Value,
         effect.Lifecycle.RemainingRounds,
         effect.Lifecycle.Stacks,
-        effect.State.Clone());
+        effect.State.Clone()) { BundleId = effect.BundleId, BundleName = effect.BundleName, BundleKind = effect.BundleKind };
 
     private void AdvanceRounds(uint rounds)
     {
@@ -553,7 +564,7 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
     }
 
     private void Admit(DaggerfallEffectDefinition definition, ActiveEffectContext context, ushort stacks, uint? remainingRounds,
-        JsonElement state, ActiveEffectAdmissionKind admission, bool resumed = false)
+        JsonElement state, ActiveEffectAdmissionKind admission, bool resumed = false, string? bundleId = null, string? bundleName = null, DaggerfallEffectBundleKind bundleKind = DaggerfallEffectBundleKind.None)
     {
         ActiveEffectLifecycle lifecycle = LifecycleFor(checked((long)context.Target.Value));
         DaggerfallActiveEffect? active = null;
@@ -562,7 +573,7 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
         {
             Actor target = ActorFor(checked((long)context.Target.Value));
             active = new DaggerfallActiveEffect(definition, context, stacks, state,
-                () => SourceFor(context), target);
+                () => SourceFor(context), target) { BundleId = bundleId, BundleName = bundleName, BundleKind = bundleKind };
             contributions.AddRange(Apply(active, resumed));
             ActiveEffectLifecycleReceipt receipt = lifecycle.Admit(definition.ToEngineDefinition(context.Source.Key), admission, context,
                 Provenance(checked((long)context.Target.Value), context), stacks, remainingRounds, contributions);

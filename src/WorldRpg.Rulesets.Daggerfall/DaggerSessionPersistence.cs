@@ -47,6 +47,8 @@ internal sealed class DaggerSessionPersistence
     private readonly Func<DaggerfallTravelMapPixel> _travelPosition;
     private readonly IReadOnlyDictionary<long, DaggerfallActorDefinition> _actorDefinitions;
     private readonly Func<long> _nextCastSequence;
+    internal Func<DaggerfallDispelRequest?> PendingDispel { get; set; } = () => null;
+    internal Func<IReadOnlySet<long>> BanishedActors { get; set; } = () => new HashSet<long>();
     internal DaggerSessionPersistence(DaggerfallState state, DaggerfallCorpseLootModule corpses, DaggerfallGroundContainers groundContainers, DaggerfallBookNotebook notebook,
         DaggerfallUniqueItemAllocator uniqueItems, FirstPersonCameraSystem camera, DaggerfallWorldTime time, DaggerfallSiteContext site,
         DaggerfallEffectLifecycle effects, Func<DaggerfallDoorRuntime> doors, DaggerfallLocomotionPolicy locomotion,
@@ -145,11 +147,14 @@ internal sealed class DaggerSessionPersistence
             LevelUp: State.LevelUps.Capture())
         {
             NextCastSequence = _nextCastSequence(),
+            PendingDispel = PendingDispel(),
+            BanishedActors = [.. BanishedActors().Order()],
             Quests = State.Quests.Capture(),
             Doors = _doors().Capture(),
             SiteDeltas = [.. siteDeltas.OrderBy(entry => entry.Key.Site.Region).ThenBy(entry => entry.Key.Site.Index).ThenBy(entry => entry.Key.LogicalId, StringComparer.Ordinal).Select(entry => new DaggerfallSiteDeltaSave(
                 DaggerfallWorldProfileKeySave.Capture(entry.Key), entry.Value.Actors, entry.Value.DynamicActors, entry.Value.ActorInventories, entry.Value.Corpses, entry.Value.Doors, entry.Value.Effects)
             {
+                BanishedActors = entry.Value.BanishedActors,
                 Motion = entry.Value.Motion
                     ?? throw new InvalidOperationException($"Inactive site '{entry.Key.LogicalId}' has no captured dungeon motion snapshot."),
             })],
@@ -195,7 +200,7 @@ internal sealed class DaggerSessionPersistence
         ArgumentNullException.ThrowIfNull(doors);
         ArgumentNullException.ThrowIfNull(motion);
         ArgumentNullException.ThrowIfNull(dynamicActors);
-        long[] authoredIds = [.. inputs.Project.Actors.Keys.OrderBy(id => id)];
+        long[] authoredIds = [.. inputs.Project.Actors.Keys.Where(id => !BanishedActors().Contains(id)).OrderBy(id => id)];
         DaggerfallActorSave[] actors = authoredIds.Select(id =>
         {
             ActorState actor = State.Actors.TryGet(id, out ActorState? current)
@@ -215,22 +220,8 @@ internal sealed class DaggerSessionPersistence
             id,
             CaptureInventory(State.ActorInventories.InventoryFor(id) ?? throw new InvalidOperationException($"Site actor {id} has no inventory."),
                 State.ActorInventories.EquipmentFor(id), DaggerfallItemOwner.Actor(id)))).ToArray();
-        DaggerfallActiveEffectSave[] effects = State.Effects.Active
-            .Where(effect => ids.Contains(checked((long)effect.Lifecycle.Context.Target.Value)))
-            .Select(effect => new DaggerfallActiveEffectSave(
-                effect.Lifecycle.Context.Instance.Value,
-                effect.Definition.Key,
-                effect.Lifecycle.Context.Source.Key,
-                effect.Lifecycle.Context.Caster?.Value is ulong caster ? checked((long)caster) : null,
-                checked((long)effect.Lifecycle.Context.Target.Value),
-                effect.Lifecycle.Context.Settings,
-                effect.Lifecycle.Context.Element,
-                effect.Lifecycle.Context.Item?.Value,
-                effect.Lifecycle.RemainingRounds,
-                effect.Lifecycle.Stacks,
-                effect.State.Clone()))
-            .ToArray();
-        return new DaggerfallSiteRuntimeDelta(actors, spawned, inventories, CaptureCorpses(ids), doors.Capture(), effects, motion.Capture());
+        DaggerfallActiveEffectSave[] effects = State.Effects.Capture().Where(effect => ids.Contains(effect.TargetId)).ToArray();
+        return new DaggerfallSiteRuntimeDelta(actors, spawned, inventories, CaptureCorpses(ids), doors.Capture(), effects, motion.Capture()) { BanishedActors = [.. BanishedActors().Order()] };
     }
 
     /// <summary>Reapplies detached values after the destination has created fresh authored actors.</summary>

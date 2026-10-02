@@ -213,6 +213,8 @@ internal sealed partial class DaggerfallSession
                 .. DaggerfallCureEffects.Definitions(
                     target => DaggerfallDiseasePolicy.CureAllDiseases(effects, target),
                     CurePoison, target => DaggerfallParalysisEffects.Cure(effects, target)),
+                .. DaggerfallMysticismEffects.Definitions(id => id == actors.Player.DurableId ? actors.Player.Progression.Level : authored[id].Level ?? 1,
+                    request => _pendingDispel = request, BanishNearby),
                 .. DaggerfallConcealmentEffects.Definitions(),
                 .. DaggerfallFortifyEffects.Definitions(() => character.Career),
                 .. DaggerfallHealingEffects.Definitions(() => effects, () => character.Career, _vitality),
@@ -410,7 +412,7 @@ internal sealed partial class DaggerfallSession
                 dialogueOpen: () => _activationPresentation.View.Dialogue is not null,
                 characterCreationOpen: () => State.Character.Pending is not null,
                 levelUpOpen: () => State.LevelUps.Pending is not null,
-                bankOpen: () => ActiveBankRegion() is not null);
+                bankOpen: () => ActiveBankRegion() is not null, dispelOpen: () => _pendingDispel is not null);
             itemInstances.SourceUnavailable += item => effects.CancelItemReferences(item);
             Casting = new(definitions.Magic, effects, CastActor, MagicProfile, item => itemInstances.ContainsUnique(item)
                     && (itemInstances.RequireUnique(item).MaximumCondition == 0 || itemInstances.RequireUnique(item).CurrentCondition > 0),
@@ -421,6 +423,10 @@ internal sealed partial class DaggerfallSession
             _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, _dungeonText, CapturePropertyStorage, QuestTravelOrigin, authored, () => Casting.NextSequence);
             _roster = new DaggerfallActorRoster(State, definitions, _random, assembled.Mechanics, _actorIdentities, _uniqueItems,
                 _authoredEntityIds, authored, saved?.DynamicActors ?? [], _grounding, () => _sites.Projection, _lootUi, _corpseLoot);
+            _pendingDispel = saved?.PendingDispel;
+            _persistence.PendingDispel = () => _pendingDispel;
+            _roster.BanishedActors.UnionWith(saved?.BanishedActors ?? []);
+            _persistence.BanishedActors = () => _roster.BanishedActors;
             _sites = new DaggerfallSiteLifecycle(engine, State, definitions, tuning, _time, _site, _spatial, _camera, audioBundles,
                 _roster, _persistence, _groundContainers, _enemyBehavior, ExecuteDungeonFamilyAction, this,
                 projection, actionTriggers, profiles, activeProfile, saved?.Site.ReturnProfile?.Require());

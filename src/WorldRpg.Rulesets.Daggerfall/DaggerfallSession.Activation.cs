@@ -58,11 +58,15 @@ internal sealed partial class DaggerfallSession
 
     internal DaggerfallActivationMode ActivationMode => _activation?.Mode ?? DaggerfallActivationMode.Grab;
     internal InteractionTargetingEvidence? LastActivationTargeting => _activation?.LastEvidence;
-    internal DaggerfallActivationView ActivationView => _activationPresentation.View;
+    internal DaggerfallActivationView ActivationView => _activationPresentation.View with
+    {
+        Dialogue = _activationPresentation.View.Dialogue is { } dialogue ? dialogue with
+        { ComprehendLanguagesBonus = State.Effects.PerceptionFor(DaggerfallActorIdentity.PlayerEntityId).ComprehendLanguagesBonus } : null,
+    };
     internal DaggerfallDialogueService Dialogue => _dialogue ?? throw new InvalidOperationException("The session has no dialogue owner.");
 
     /// <summary>Lets the ordinary HUD projection callback carry activation state with its snapshot.</summary>
-    internal void PublishActivationView(Action<DaggerfallActivationView> publish) => _activationPresentation.Publish(publish);
+    internal void PublishActivationView(Action<DaggerfallActivationView> publish) => publish(ActivationView);
 
     /// <summary>Consumes one parsed mode action; it does not turn into a world activation.</summary>
     private bool ApplyActivationMode(DaggerfallPlayerUiAction action)

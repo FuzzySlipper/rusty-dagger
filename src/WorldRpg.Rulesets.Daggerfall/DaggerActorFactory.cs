@@ -123,6 +123,7 @@ internal static class DaggerActorFactory
             Dictionary<long, DaggerfallActorDefinition> authored = [];
             foreach (AuthoredActor source in inputs.Project.Actors.Values)
             {
+                if (saved?.BanishedActors.Contains(source.EntityId) == true) continue;
                 if (!definitions.Actors.TryGetValue(source.ActorId, out DaggerfallActorDefinition? definition))
                     throw new InvalidOperationException($"Site placement '{source.EntityId}' refers to missing actor '{source.ActorId.Value}'.");
                 DaggerfallActorSave? prior = saved?.Actors.Single(value => value.EntityId == source.EntityId);

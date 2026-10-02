@@ -205,4 +205,7 @@ internal sealed record DaggerfallSiteRuntimeDelta(
     DaggerfallCorpseSave[] Corpses,
     DaggerfallDoorSave[] Doors,
     DaggerfallActiveEffectSave[] Effects,
-    DaggerfallDungeonMotionSnapshot? Motion = null);
+    DaggerfallDungeonMotionSnapshot? Motion = null)
+{
+    internal long[] BanishedActors { get; init; } = [];
+}
