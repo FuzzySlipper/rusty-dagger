@@ -103,7 +103,7 @@ internal class SpatialFake : DispatchProxy
     };
 
     private static NavigationStepResult NoNavigationPath(NavigationStepRequest request) => new(
-        ReadOnlyMemory<PlanarNavCell>.Empty, NavigationPathOutcome.NoPath, request.Target, default, 0, 0, 0, 0, 0);
+        ReadOnlyMemory<PlanarNavCell>.Empty, NavigationPathOutcome.NoPath, request.Target, default, 0, 0, 0, 0, 0, false, default, default);
 
     private SpatialContentArtifactReplaceReceipt Replace(SpatialContentArtifactReplaceRequest request)
     {

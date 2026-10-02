@@ -143,7 +143,7 @@ public sealed class ActorNavigationAndCameraTests
     }
 
     private static NavigationStepResult Receipt(NavigationPathOutcome outcome, Vector3 waypoint) => new(
-        ReadOnlyMemory<PlanarNavCell>.Empty, outcome, waypoint, default, 0, 0, 0, 0, 0);
+        ReadOnlyMemory<PlanarNavCell>.Empty, outcome, waypoint, default, 0, 0, 0, 0, 0, false, default, default);
 
     private static ActorsState CreateActors(ActorPose pose)
     {

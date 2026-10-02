@@ -159,6 +159,7 @@ public sealed class DaggerfallAudioBundleTests
         {
             nameof(IContentService.ListBundles) => (ReadOnlyMemory<ContentBundleInfo>)new[] { new ContentBundleInfo(SiteBundle, 1, 1) },
             nameof(IContentService.OpenBundle) => Open((ContentBundleOpenRequest)arguments![0]!),
+            nameof(IContentService.ReadBundleIdentity) => TestSessions.Digest(Encoding.UTF8.GetBytes(bundlePath)),
             nameof(IContentService.ReadBundleFiles) => (ReadOnlyMemory<ContentReferenceInfo>)new[] { new ContentReferenceInfo(bundlePath, default, 1) },
             nameof(IContentService.OpenBundleReference) => OpenReference((ContentBundleReferenceRequest)arguments![0]!),
             nameof(IContentService.ReadBytes) => ReadBytes(),

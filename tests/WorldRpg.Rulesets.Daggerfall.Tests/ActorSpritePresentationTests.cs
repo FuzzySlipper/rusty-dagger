@@ -280,9 +280,10 @@ public sealed class ActorSpritePresentationTests
         Assert.Equal(.25F, emitted.Descriptor.Volume);
         Assert.Equal(1.5F, emitted.Descriptor.Pitch);
         Assert.Equal(.75F, emitted.Descriptor.SpatialBlend);
-        Assert.Equal(12F, emitted.Descriptor.Attenuation);
-        Assert.True(float.IsFinite(emitted.Descriptor.Attenuation));
-        Assert.True(emitted.Descriptor.Attenuation > 0F);
+        Assert.Equal(12F, emitted.Descriptor.MaxDistance);
+        Assert.Equal(AudioRolloff.Linear, emitted.Descriptor.Rolloff);
+        Assert.True(float.IsFinite(emitted.Descriptor.MaxDistance));
+        Assert.True(emitted.Descriptor.MaxDistance > 0F);
     }
 
     [Fact]

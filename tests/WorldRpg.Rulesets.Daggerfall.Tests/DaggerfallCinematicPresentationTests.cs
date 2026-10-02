@@ -129,6 +129,7 @@ public sealed class DaggerfallCinematicPresentationTests
             {
                 nameof(IContentService.ListBundles) => (ReadOnlyMemory<ContentBundleInfo>)new[] { new ContentBundleInfo(DaggerfallCinematicPresentation.BundleId, 1, 1) },
                 nameof(IContentService.OpenBundle) => OpenBundle((ContentBundleOpenRequest)args![0]!),
+                nameof(IContentService.ReadBundleIdentity) => TestSessions.Digest(System.Text.Encoding.UTF8.GetBytes("anim0000.webm\nanim0011.webm\ndag2.webm")),
                 nameof(IContentService.ReadBundleFiles) => (ReadOnlyMemory<ContentReferenceInfo>)new[]
                 {
                     new ContentReferenceInfo("anim0000.webm", default, 1),

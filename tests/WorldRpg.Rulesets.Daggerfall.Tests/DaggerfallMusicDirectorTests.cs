@@ -160,14 +160,15 @@ public sealed class DaggerfallMusicDirectorTests
         Assert.Equal("song_dungeon", music.Update(DaggerfallMusicContext.Dungeon));
 
         // The Engine validates every descriptor a voice is created with and refuses the call otherwise, so
-        // the ranges are pinned here: an attenuation of zero is a refused voice, not a silent one — it was
+        // the ranges are pinned here: a maximum distance of zero is a refused voice, not a silent one — it was
         // the difference between a score that plays and an update that ends the runtime incarnation.
         AudioSourceDescriptor descriptor = Assert.Single(audio.Descriptors);
         Assert.InRange(descriptor.Volume, 0f, 1f);
         Assert.InRange(descriptor.Pitch, 0.25f, 4f);
         Assert.InRange(descriptor.SpatialBlend, 0f, 1f);
         Assert.InRange(descriptor.Pan, -1f, 1f);
-        Assert.True(float.IsFinite(descriptor.Attenuation) && descriptor.Attenuation > 0f, $"attenuation {descriptor.Attenuation}");
+        Assert.True(float.IsFinite(descriptor.MaxDistance) && descriptor.MaxDistance > 0f, $"maximum distance {descriptor.MaxDistance}");
+        Assert.Equal(AudioRolloff.LinearDecibels, descriptor.Rolloff);
         Assert.Equal(AudioEmitterKind.Global2d, descriptor.EmitterKind);
         Assert.True(descriptor.Looping);
     }
