@@ -32,6 +32,15 @@ internal sealed class DaggerfallOutcomePresentation(
                 _lineIsResult = true;
                 presentation.SetOutcome($"Restored {restored.Restored:0} {restored.Track}.");
                 break;
+            case VitalTransferredFact transferred when transferred.CasterId == DaggerfallActorIdentity.PlayerEntityId
+                || transferred.TargetId == DaggerfallActorIdentity.PlayerEntityId:
+                _lineIsResult = true;
+                string transferLine = transferred.CasterId == DaggerfallActorIdentity.PlayerEntityId
+                    ? $"Drained {transferred.ActualLoss:0} {transferred.Track} from {Name(transferred.TargetId)}; restored {transferred.ActualRecovery:0} {transferred.Track}."
+                    : $"{Name(transferred.CasterId)} drained {transferred.ActualLoss:0} {transferred.Track} from you; restored {transferred.ActualRecovery:0} {transferred.Track}.";
+                if (transferred.TargetDefeated) presentation.AppendOutcome(transferLine);
+                else presentation.SetOutcome(transferLine);
+                break;
             case SpellCastFact cast when cast.CasterId == DaggerfallActorIdentity.PlayerEntityId:
                 _lineIsResult = true;
                 presentation.SetOutcome(cast.Outcome == DaggerfallCastOutcome.DeliveryCompleted
