@@ -159,6 +159,8 @@ internal sealed class DaggerfallEffectCatalog
             .ToDictionary(value => (value.Spell!.Type, value.Spell.SubType));
     }
 
+    internal IEnumerable<DaggerfallEffectDefinition> SpellDefinitions => _spells.Values;
+
     internal bool TryResolveSpell(DaggerfallSpellEffectDefinition effect, out DaggerfallEffectDefinition definition) =>
         _spells.TryGetValue((effect.Type, effect.SubType), out definition!);
 

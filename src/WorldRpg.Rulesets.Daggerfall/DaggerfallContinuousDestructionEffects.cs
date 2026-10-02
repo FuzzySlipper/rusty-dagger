@@ -33,7 +33,7 @@ internal static class DaggerfallContinuousDestructionEffects
                     if (effect.Context.Caster is { } caster) attacked(checked((long)caster.Value), target);
                     if (health.Current <= 0) effect.ExpireAfterCurrentRound = true;
                 },
-                Spell: new(1, selected, SupportsDuration:true, SupportsMagnitude:true,
+                Spell: new(1, selected, SpellMaker: true, SupportsDuration:true, SupportsMagnitude:true,
                     AllowedElements:DaggerfallMagicAllowedElements.Fire | DaggerfallMagicAllowedElements.Cold
                         | DaggerfallMagicAllowedElements.Poison | DaggerfallMagicAllowedElements.Shock | DaggerfallMagicAllowedElements.Magic,
                     AllowedTargets:DaggerfallMagicAllowedTargets.Other,

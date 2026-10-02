@@ -22,7 +22,7 @@ internal static class DaggerfallParalysisEffects
             return [];
         },
         Feedback: DaggerfallEffectFeedback.MagicSparkle,
-        Spell: new(0, -1, SupportsDuration: true, RollChanceOnCast: true, IsParalysis: true,
+        Spell: new(0, -1, SpellMaker: true, SupportsDuration: true, RollChanceOnCast: true, IsParalysis: true,
             AllowedElements: DaggerfallMagicAllowedElements.Fire | DaggerfallMagicAllowedElements.Cold
                 | DaggerfallMagicAllowedElements.Poison | DaggerfallMagicAllowedElements.Shock | DaggerfallMagicAllowedElements.Magic,
             AllowedTargets: DaggerfallMagicAllowedTargets.Other),

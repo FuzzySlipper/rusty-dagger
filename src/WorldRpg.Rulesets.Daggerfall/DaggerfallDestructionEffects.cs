@@ -40,7 +40,7 @@ internal static class DaggerfallDestructionEffects
                     }
                     attacked(caster, target);
                 },
-                Spell: new(type, subtype, SupportsMagnitude: type == 4, RollChanceOnCast: type == 5,
+                Spell: new(type, subtype, SpellMaker: true, SupportsMagnitude: type == 4, RollChanceOnCast: type == 5,
                     AllowedElements: DaggerfallMagicAllowedElements.Fire | DaggerfallMagicAllowedElements.Cold
                         | DaggerfallMagicAllowedElements.Poison | DaggerfallMagicAllowedElements.Shock | DaggerfallMagicAllowedElements.Magic));
         }

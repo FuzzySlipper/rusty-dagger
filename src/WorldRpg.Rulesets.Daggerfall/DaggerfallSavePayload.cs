@@ -24,7 +24,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="Payload">The validated payload.</param>
 /// <param name="Identities">The persisted durable identity ledger, rebuilt once for validation and play.</param>
 /// <param name="TombstonedActors">Actor identities the ledger had already retired when the save was made.</param>
-internal sealed record DaggerfallResolvedRestore(DaggerfallSavePayload Payload, DurableIdentityAllocator Identities, IReadOnlySet<long> TombstonedActors);
+internal sealed record DaggerfallResolvedRestore(DaggerfallSavePayload Payload, DurableIdentityAllocator Identities, IReadOnlySet<long> TombstonedActors, DaggerfallDefinitions Definitions);
 
 /// <summary>Daggerfall's complete current state. The Host stores its encoded bytes without interpreting them.</summary>
 internal sealed record DaggerfallSavePayload(
@@ -48,6 +48,8 @@ internal sealed record DaggerfallSavePayload(
     DaggerfallCharacterSave? Character = null,
     DaggerfallLevelUpSave? LevelUp = null)
 {
+    [JsonRequired]
+    public DaggerfallSpellDefinition[] CustomSpells { get; init; } = [];
     [JsonRequired]
     public long MagicRounds { get; init; }
     public long NextCastSequence { get; init; } = 1;
@@ -174,6 +176,10 @@ internal sealed record DaggerfallSavePayload(
     {
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(inputs);
+        ArgumentNullException.ThrowIfNull(CustomSpells);
+        if (CustomSpells.Any(spell => spell is null || !spell.IsPlayerCreated))
+            throw new ArgumentException("Saved custom spells must be actual player-created definitions.");
+        definitions = definitions.ForSession(CustomSpells);
         TeleportAnchor?.Resolve(definitions, inputs, profiles, tuning ?? DaggerfallTuning.Defaults);
         Notebook.Validate(definitions, definitions.TextPresentation);
         Lodging.Validate(definitions.Locations);
@@ -561,7 +567,7 @@ internal sealed record DaggerfallSavePayload(
         IReadOnlySet<long> tombstonedActors = savedLedger.RemovedIdentities(DurableIdentityKind.Actor)
             .Select(value => checked((long)value))
             .ToHashSet();
-        return new DaggerfallResolvedRestore(this, savedLedger, tombstonedActors);
+        return new DaggerfallResolvedRestore(this, savedLedger, tombstonedActors, definitions);
     }
 
     internal DurableIdentityState RestoredIdentities() => Identities.Validate().RequireKinds(PersistedKinds);

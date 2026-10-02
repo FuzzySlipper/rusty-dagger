@@ -56,10 +56,26 @@ interface DaggerHud {
   readonly lodging?: LodgingProjection | null;
 }
 
+interface SpellMakerSetting {
+  readonly key:string; readonly type:number; readonly subType:number;
+  readonly durationBase:number; readonly durationMod:number; readonly durationPerLevel:number;
+  readonly chanceBase:number; readonly chanceMod:number; readonly chancePerLevel:number;
+  readonly magnitudeBaseLow:number; readonly magnitudeBaseHigh:number; readonly magnitudeLevelBase:number;
+  readonly magnitudeLevelHigh:number; readonly magnitudePerLevel:number;
+}
+interface SpellMakerDraft { readonly name:string;readonly element:number;readonly rangeType:number;readonly icon:number;readonly effects:readonly SpellMakerSetting[]; }
+interface SpellMakerProjection {
+  readonly revision:string;readonly provider:string;readonly draft:SpellMakerDraft;
+  readonly effects:readonly {readonly key:string;readonly type:number;readonly subType:number;readonly school:string;
+    readonly duration:boolean;readonly chance:boolean;readonly magnitude:boolean;readonly targets:number;readonly elements:number}[];
+  readonly quote:{readonly key:string;readonly gold:number;readonly spellPoints:number;readonly eligible:boolean;readonly reason:string|null}|null;
+}
+
 interface SpellbookProjection {
   readonly available: readonly {readonly key:string;readonly name:string;readonly cost:number;readonly canCast?:boolean}[];
   readonly ready:string|null;readonly result:string;
   readonly sale?: {readonly revision:string;readonly provider:string;readonly offers:readonly {readonly key:string;readonly name:string;readonly castingCost:number;readonly price:number;readonly known:boolean}[]} | null;
+  readonly maker?:SpellMakerProjection|null;
   readonly information?: {readonly key:string;readonly name:string;readonly element:number;readonly target:string;readonly details:readonly string[]} | null;
 }
 
@@ -315,6 +331,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       <p class="dagger-dialogue-reply" aria-live="polite"></p>
       <div class="dagger-dialogue-topics"></div>
       <section class="dagger-dialogue-spells" aria-label="Spells for sale"></section>
+      <section class="dagger-dialogue-spellmaker" aria-label="Spell construction"></section>
       <ul class="dagger-dialogue-diagnostics" aria-label="Text diagnostics"></ul>
       <button class="dagger-dialogue-close" type="button">End conversation</button>
     </dialog>`;
@@ -544,6 +561,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   };
   const spellsRoot=shell.querySelector<HTMLElement>('.dagger-spells-root')!;
   const spellSalesRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-spells')!;
+  const spellMakerRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-spellmaker')!;
   let activePanel: 'spells' | 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings' | null = null;
   const showHome = (): void => {
     reportMap(false);
@@ -986,6 +1004,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     const spellbook = isSpellbookProjection(value.spells) ? value.spells : null;
     renderSpells(spellsRoot,spellbook);
     renderSpellSales(spellSalesRoot,spellbook);
+    renderSpellMaker(spellMakerRoot,spellbook?.maker ?? null,action =>
+      context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:action}));
     if (value.inventory) inventoryView.update(value.inventory);
     propertyView.update(value.property ?? null, value.inventory);
     transportView.update(isTransportProjection(value.transport) ? value.transport : null, value.inventory);
@@ -1398,6 +1418,7 @@ export function isSpellbookProjection(value:unknown):value is SpellbookProjectio
     && (v.sale==null || typeof v.sale.revision==='string' && typeof v.sale.provider==='string' && Array.isArray(v.sale.offers)
       && v.sale.offers.every(offer=>offer && typeof offer==='object' && typeof offer.key==='string' && typeof offer.name==='string' && Number.isSafeInteger(offer.price)
         && offer.price>=0 && Number.isInteger(offer.castingCost) && offer.castingCost>=0 && typeof offer.known==='boolean'))
+    && (v.maker==null || isSpellMakerProjection(v.maker))
     && (v.information==null || typeof v.information.key==='string' && typeof v.information.name==='string'
       && typeof v.information.target==='string' && Number.isInteger(v.information.element)
       && Array.isArray(v.information.details) && v.information.details.every(line=>typeof line==='string'));
@@ -1446,6 +1467,87 @@ function renderSpellSales(root:HTMLElement,view:SpellbookProjection|null):void {
     info.textContent=`Info ${offer.name}`;root.append(info);
   }
   renderSpellInformation(root,view);
+}
+
+export function isSpellMakerProjection(value:unknown):value is SpellMakerProjection {
+  if(!value || typeof value!=='object') return false;
+  const v=value as Partial<SpellMakerProjection>;const draft=v.draft;
+  return typeof v.revision==='string' && typeof v.provider==='string' && Array.isArray(v.effects)
+    && v.effects.every(e=>e && typeof e.key==='string' && typeof e.school==='string' && Number.isInteger(e.type)
+      && Number.isInteger(e.subType) && typeof e.duration==='boolean' && typeof e.chance==='boolean' && typeof e.magnitude==='boolean'
+      && Number.isInteger(e.targets) && Number.isInteger(e.elements))
+    && !!draft && typeof draft.name==='string' && Number.isInteger(draft.element) && Number.isInteger(draft.rangeType)
+    && Number.isInteger(draft.icon) && Array.isArray(draft.effects)
+    && draft.effects.every(e=>e && typeof e.key==='string'
+      && ['type','subType','durationBase','durationMod','durationPerLevel','chanceBase','chanceMod','chancePerLevel',
+        'magnitudeBaseLow','magnitudeBaseHigh','magnitudeLevelBase','magnitudeLevelHigh','magnitudePerLevel']
+        .every(key=>Number.isInteger(e[key as keyof SpellMakerSetting])))
+    && (v.quote===null || !!v.quote && typeof v.quote.key==='string' && Number.isSafeInteger(v.quote.gold)
+      && v.quote.gold>=0 && Number.isSafeInteger(v.quote.spellPoints) && v.quote.spellPoints>=0
+      && typeof v.quote.eligible==='boolean' && (v.quote.reason===null || typeof v.quote.reason==='string'));
+}
+
+export function renderSpellMaker(root:HTMLElement,view:SpellMakerProjection|null,claim:(action:UiAction)=>void):void {
+  const stamp=JSON.stringify(view);
+  // Admitted modal updates can publish the same projection while the player types.
+  if(root.dataset.spellMaker===stamp) return;
+  root.dataset.spellMaker=stamp;root.replaceChildren();if(!view) return;
+  const title=document.createElement('h3');title.textContent=`Make a spell with ${view.provider}`;root.append(title);
+  const form=document.createElement('form');root.append(form);
+  const input=(parent:HTMLElement,label:string,name:string,value:string|number,max?:number):HTMLInputElement=>{
+    const wrap=document.createElement('label');wrap.textContent=`${label} `;
+    const field=document.createElement('input');field.name=name;field.value=String(value);
+    if(max!==undefined) {field.type='number';field.min='1';field.max=String(max);field.step='1';} else field.maxLength=31;
+    wrap.append(field);parent.append(wrap);return field;
+  };
+  const name=input(form,'Name','name',view.draft.name);name.required=true;
+  const select=(label:string,name:string,values:readonly string[],selected:number):HTMLSelectElement=>{
+    const wrap=document.createElement('label');wrap.textContent=`${label} `;const field=document.createElement('select');field.name=name;
+    values.forEach((value,index)=>{const option=document.createElement('option');option.value=String(index);option.textContent=value;field.append(option);});
+    field.value=String(selected);wrap.append(field);form.append(wrap);return field;
+  };
+  const target=select('Target','target',['Self','Touch','Single target at range','Area around self','Area at range'],view.draft.rangeType);
+  const element=select('Element','element',['Fire','Cold','Poison','Shock','Magic'],view.draft.element);
+  const icon=select('Icon','icon',Array.from({length:69},(_,i)=>String(i+1)),view.draft.icon);
+  const slots:{select:HTMLSelectElement;fields:HTMLElement}[]=[];
+  for(let slot=0;slot<3;slot++) {
+    const section=document.createElement('fieldset');const legend=document.createElement('legend');legend.textContent=`Effect ${slot+1}`;section.append(legend);form.append(section);
+    const picker=document.createElement('select');picker.setAttribute('aria-label',`Effect ${slot+1}`);
+    const empty=document.createElement('option');empty.value='';empty.textContent='No effect';picker.append(empty);
+    for(const effect of view.effects) {const option=document.createElement('option');option.value=effect.key;option.textContent=`${effect.school}: ${effect.key.replaceAll('-',' ')}`;picker.append(option);}
+    const saved=view.draft.effects[slot];picker.value=saved?.key ?? '';section.append(picker);
+    const fields=document.createElement('div');section.append(fields);slots.push({select:picker,fields});
+    const settings=():void=>{
+      fields.replaceChildren();const effect=view.effects.find(e=>e.key===picker.value);if(!effect) return;
+      const add=(label:string,key:keyof SpellMakerSetting,max:number):void=>{input(fields,label,key,saved?.key===effect.key ? Number(saved[key]) : 1,max);};
+      if(effect.duration) {add('Duration base','durationBase',60);add('Duration increase','durationMod',60);add('Duration per levels','durationPerLevel',20);}
+      if(effect.chance) {add('Chance base','chanceBase',100);add('Chance increase','chanceMod',100);add('Chance per levels','chancePerLevel',20);}
+      if(effect.magnitude) {add('Magnitude minimum','magnitudeBaseLow',100);add('Magnitude maximum','magnitudeBaseHigh',100);
+        add('Magnitude increase minimum','magnitudeLevelBase',100);add('Magnitude increase maximum','magnitudeLevelHigh',100);add('Magnitude per levels','magnitudePerLevel',20);}
+    };
+    picker.addEventListener('change',settings);settings();
+  }
+  const preview=document.createElement('button');preview.type='submit';preview.textContent='Update cost preview';form.append(preview);
+  form.addEventListener('submit',event=>{
+    event.preventDefault();
+    const effects=slots.flatMap(slot=>{
+      const option=view.effects.find(e=>e.key===slot.select.value);if(!option) return [];
+      const values:Record<string,string|number>={key:option.key,type:option.type,subType:option.subType,
+        durationBase:1,durationMod:1,durationPerLevel:1,chanceBase:1,chanceMod:1,chancePerLevel:1,
+        magnitudeBaseLow:1,magnitudeBaseHigh:1,magnitudeLevelBase:1,magnitudeLevelHigh:1,magnitudePerLevel:1};
+      for(const field of slot.fields.querySelectorAll<HTMLInputElement>('input')) values[field.name]=Number(field.value);
+      return [values];
+    });
+    claim({action:'spellmaker-draft',revision:view.revision,text:JSON.stringify({name:name.value,element:Number(element.value),
+      rangeType:Number(target.value),icon:Number(icon.value),effects})});
+  });
+  const status=document.createElement('p');status.setAttribute('role','status');
+  status.textContent=view.quote?.eligible ? `${view.quote.gold} gold · ${view.quote.spellPoints} magicka to cast` : 'Update the preview with valid settings.';root.append(status);
+  const buy=document.createElement('button');buy.type='button';buy.textContent='Buy constructed spell';buy.disabled=!view.quote?.eligible;root.append(buy);
+  const stale=():void=>{buy.disabled=true;status.textContent='Update the cost preview after editing.';};
+  form.addEventListener('input',stale);form.addEventListener('change',stale);
+  buy.addEventListener('click',()=>{if(!buy.disabled && view.quote?.eligible && window.confirm(`Make this spell for ${view.quote.gold} gold?`))
+    claim({action:'spellmaker-buy',revision:view.revision,key:view.quote.key,amount:view.quote.gold,confirm:true});});
 }
 
 function renderQuestMessages(root: HTMLElement, value: QuestPresentation | undefined, claim: (action: UiAction) => void): void {

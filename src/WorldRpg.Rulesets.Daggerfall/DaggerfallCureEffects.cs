@@ -28,7 +28,7 @@ internal static class DaggerfallCureEffects
                     if (!cured) effect.InitialOutcome = DaggerfallEffectAdmissionOutcome.NoMatch;
                     effect.ExpireAfterCurrentRound = true;
                 },
-                Spell: new(3, selected, RollChanceOnCast: true));
+                Spell: new(3, selected, SpellMaker: true, RollChanceOnCast: true));
         }
     }
 

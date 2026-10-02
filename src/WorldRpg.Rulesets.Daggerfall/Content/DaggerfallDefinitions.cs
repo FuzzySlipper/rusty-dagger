@@ -195,7 +195,16 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     /// The published spells and magic-item templates, loaded from the pack alone: a spell resolves by key
     /// to its source identity and effects, and an item enchantment resolves to the spell it names.
     /// </summary>
-    internal DaggerfallMagicCatalogSet Magic { get; } = magic;
+    internal DaggerfallMagicCatalogSet Magic { get; private set; } = magic;
+
+    /// <summary>Session-owned spell rows over immutable admitted content; every consumer keeps this same catalog.</summary>
+    internal DaggerfallDefinitions ForSession(IReadOnlyList<DaggerfallSpellDefinition> constructed)
+    {
+        // Loaded catalogs remain immutable and shared. Only the current spell rows are session state.
+        var session = (DaggerfallDefinitions)MemberwiseClone();
+        session.Magic = Magic.ForSession(constructed);
+        return session;
+    }
 
     /// <summary>
     /// The published donor mobile parameters, loaded from the pack alone: each record resolves to the

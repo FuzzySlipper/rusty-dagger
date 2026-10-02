@@ -139,6 +139,30 @@ public sealed class DaggerfallMagicCatalogTests
         Assert.Contains(error.Diagnostics, message => message.Contains("Enchantment setting", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void Normalized_custom_offer_requires_explicit_source_sale_eligibility_and_keeps_classic_rows()
+    {
+        var payload = JsonNode.Parse(PayloadJson())!.AsObject();
+        var spells = payload["magic"]!["spells"]!.AsArray();
+        var source = spells[0]!.DeepClone();
+        var entry = source["effects"]![0]!.DeepClone(); entry["type"] = 26; entry["subType"] = -1;
+        source["effects"] = new JsonArray(entry);
+        source["key"] = "authored.custom.freedom"; source["identity"] = -1; source["identityShared"] = false;
+        source["name"] = "Authored freedom"; source["isCustom"] = true; source["spellsForSale"] = true;
+        var effect = source["effects"]![0]!;
+        source["element"] = 4; source["rangeType"] = 0; source["icon"] = 1;
+        effect["duration"] = new JsonObject { ["base"] = 1, ["mod"] = 1, ["perLevel"] = 1 };
+        spells.Add(source);
+        var privateRow = source.DeepClone(); privateRow["key"] = "authored.custom.private";
+        privateRow.AsObject().Remove("spellsForSale"); spells.Add(privateRow);
+        var definitions = DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()));
+        var session = definitions.ForSession([]);
+        Assert.True(session.Magic.Spells["authored.custom.freedom"].SpellsForSale);
+        Assert.False(session.Magic.Spells["authored.custom.private"].SpellsForSale);
+        Assert.False(session.Magic.Spells["authored.custom.freedom"].IsPlayerCreated);
+        Assert.True(session.Magic.Spells["spell.023"].SpellsForSale);
+    }
+
     private static byte[] Payload() => System.Text.Encoding.UTF8.GetBytes(PayloadJson());
 
     private static string PayloadJson() => TestPayload.CombinedText;

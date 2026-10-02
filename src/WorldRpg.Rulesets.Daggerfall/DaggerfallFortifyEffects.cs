@@ -32,7 +32,7 @@ internal static class DaggerfallFortifyEffects
                     VerifySources(effect, selected, state.Amount);
                     return Cleanup(effect, selected, career);
                 },
-                Spell: new(9, selected, SupportsDuration: true, SupportsMagnitude: true),
+                Spell: new(9, selected, SpellMaker: true, SupportsDuration: true, SupportsMagnitude: true),
                 ExtendIncumbentDuration: true,
                 IncumbentSettingsMatch: (prior, incoming) =>
                     Read(prior, selected).Settings with { Key = "settings" } == Read(incoming, selected).Settings with { Key = "settings" });

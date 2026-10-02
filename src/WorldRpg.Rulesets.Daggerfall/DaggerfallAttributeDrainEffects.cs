@@ -73,7 +73,7 @@ internal static class DaggerfallAttributeDrainEffects
                     attacked(incoming.Cast.Origin!.CasterId, checked((long)effect.Context.Target.Value));
                     healCaster?.Invoke(incoming);
                 },
-                Spell: new(type, selected, SupportsMagnitude: true, UntilHealed: true,
+                Spell: new(type, selected, SpellMaker: true, SupportsMagnitude: true, UntilHealed: true,
                     AllowedElements: type == 11 ? DaggerfallMagicAllowedElements.Magic : DaggerfallMagicAllowedElements.Fire | DaggerfallMagicAllowedElements.Cold
                         | DaggerfallMagicAllowedElements.Poison | DaggerfallMagicAllowedElements.Shock | DaggerfallMagicAllowedElements.Magic,
                     AllowedTargets: DaggerfallMagicAllowedTargets.Other,

@@ -1090,3 +1090,31 @@ test('create item presents authoritative paid choices and submits selection with
     f.publish({createItem:null}); assert.equal(panel.hidden,true); assert.equal(panel.children.length,0);
   } finally { f.dispose(); }
 });
+
+
+test('spellmaker edits supported settings, preserves typing on repeated projection, previews and confirms one semantic purchase', () => {
+  const f=fixture();
+  try {
+    let confirmed=false;window.confirm=()=>confirmed;
+    const settings={key:'free-action',type:26,subType:-1,durationBase:3,durationMod:7,durationPerLevel:2,
+      chanceBase:1,chanceMod:1,chancePerLevel:1,magnitudeBaseLow:1,magnitudeBaseHigh:1,magnitudeLevelBase:1,magnitudeLevelHigh:1,magnitudePerLevel:1};
+    const maker={revision:'maker-1',provider:'Mage',effects:[{key:'free-action',type:26,subType:-1,school:'restoration',duration:true,chance:false,magnitude:false,targets:31,elements:16}],
+      draft:{name:'Freedom',element:4,rangeType:0,icon:68,effects:[settings]},quote:{key:'draft-2',gold:300,spellPoints:15,eligible:true,reason:null}};
+    const publish=()=>f.publish({spells:{available:[],ready:null,result:'',maker},activation:{mode:'talk',message:'',applied:true,
+      dialogue:{revision:'maker-1',targetLabel:'Mage',greeting:'Welcome',tone:'normal',question:null,reply:null,topics:[],diagnostics:[]}}});
+    publish();const root=f.root.querySelector('.dagger-dialogue-spellmaker');
+    assert.match(root.textContent,/300 gold · 15 magicka/);
+    const buy=[...root.querySelectorAll('button')].find(b=>b.textContent==='Buy constructed spell');
+    buy.click();assert.equal(f.actions.some(a=>a.action==='spellmaker-buy'),false);
+    confirmed=true;buy.click();assert.deepEqual(f.actions.at(-1),{action:'spellmaker-buy',revision:'maker-1',key:'draft-2',amount:300,confirm:true});
+    const form=root.querySelector('form');const name=form.querySelector('[name="name"]');name.value='New name';
+    name.dispatchEvent(new window.Event('input',{bubbles:true}));assert.equal(buy.disabled,true);
+    publish();assert.equal(root.querySelector('[name="name"]'),name);assert.equal(name.value,'New name');
+    assert.equal(root.querySelector('[name="chanceBase"]'),null);
+    form.dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true}));
+    const action=f.actions.at(-1);assert.equal(action.action,'spellmaker-draft');assert.equal(action.revision,'maker-1');
+    assert.deepEqual(JSON.parse(action.text),{name:'New name',element:4,rangeType:0,icon:68,effects:[settings]});
+    assert.equal(root.querySelectorAll('[name="icon"] option').length,69);
+    f.publish({spells:{available:[],ready:null,result:'',maker:null}});assert.equal(root.childElementCount,0);
+  } finally {f.dispose();}
+});

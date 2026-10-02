@@ -16,7 +16,7 @@ internal sealed record DaggerfallSpellBinding(int Type, int SubType, bool Suppor
     Func<DaggerfallCastEffectState, JsonElement>? CreateState = null,
     DaggerfallMagicAllowedTargets AllowedTargets = DaggerfallMagicAllowedTargets.All,
     bool MagnitudePerRound = false, bool UntilHealed = false,
-    bool UntilTriggered = false, bool BypassItemChance = false);
+    bool UntilTriggered = false, bool BypassItemChance = false, bool SpellMaker = false);
 
 /// <summary>Meaningful settings retained with an admitted effect, never a runtime handle.</summary>
 internal sealed record DaggerfallCastEffectState(DaggerfallSpellEffectDefinition Settings, int CasterLevel,
@@ -130,7 +130,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
         if (actor is null) return Finish(DaggerfallCastOutcome.SourceUnavailable);
         if (itemId is null && effects.MagicDefenseFor(casterId).BlocksCasting) return Finish(DaggerfallCastOutcome.Silenced);
         if (casterId == playerId && itemId is null && playerKnowsSpell is not null && !playerKnowsSpell(spellKey)) return Finish(DaggerfallCastOutcome.UnknownSpell);
-        if (!catalog.Spells.TryGetValue(spellKey, out var spell) || spell.Name.StartsWith('!') || spell.Effects.Count == 0)
+        if (!catalog.Spells.TryGetValue(spellKey, out var spell) || (!spell.IsCustom && spell.Name.StartsWith('!')) || spell.Effects.Count == 0)
             return Finish(DaggerfallCastOutcome.UnknownSpell);
         if (!TryDefinitions(spell, out _)) return Finish(DaggerfallCastOutcome.UnsupportedEffect);
         int cost = itemId is null ? Quote(actor, spell) : 0;
@@ -144,7 +144,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
     {
         var actor=ResolveSource(casterId,null);
         return actor is not null && catalog.Spells.TryGetValue(key,out var spell)
-            && !spell.Name.StartsWith('!') && spell.Effects.Count>0 && TryDefinitions(spell,out _)
+            && !(!spell.IsCustom && spell.Name.StartsWith('!')) && spell.Effects.Count>0 && TryDefinitions(spell,out _)
             ? Quote(actor,spell) : null;
     }
 
@@ -154,7 +154,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
             || (ready.ItemId is null) != (ready.Source == DaggerfallCastSource.Spell)
             || ready.Cost < 0 || ready.ItemId is not null && ready.Cost != 0
             || ResolveSource(playerId, ready.ItemId) is null
-            || !catalog.Spells.TryGetValue(ready.SpellKey, out var spell) || spell.Name.StartsWith('!') || !TryDefinitions(spell, out _)
+            || !catalog.Spells.TryGetValue(ready.SpellKey, out var spell) || (!spell.IsCustom && spell.Name.StartsWith('!')) || !TryDefinitions(spell, out _)
             || ready.ItemId is null && playerKnowsSpell?.Invoke(ready.SpellKey) == false)
             throw new ArgumentException($"Saved ready spell '{ready.SpellKey}' has an unavailable source or effect.");
         var state = Readiness(playerId)!;
@@ -174,7 +174,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
         if (source == DaggerfallCastSource.Spell) throw new ArgumentException("An item trigger requires item provenance.", nameof(source));
         var actor = ResolveSource(casterId, itemId);
         if (actor is null) return Finish(DaggerfallCastOutcome.SourceUnavailable);
-        if (!catalog.Spells.TryGetValue(key, out var spell) || spell.Name.StartsWith('!') || spell.Effects.Count == 0)
+        if (!catalog.Spells.TryGetValue(key, out var spell) || (!spell.IsCustom && spell.Name.StartsWith('!')) || spell.Effects.Count == 0)
             return Finish(DaggerfallCastOutcome.UnknownSpell);
         if (!TryDefinitions(spell, out var definitions)) return Finish(DaggerfallCastOutcome.UnsupportedEffect);
         var release = CreateBundle(actor, casterId, new(key, itemId, 0, source), spell, definitions, null, null, publishRelease: false);
@@ -416,15 +416,19 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
         List<DaggerfallEffectDefinition> resolved = [];
         var element = (DaggerfallMagicAllowedElements)(1 << spell.Element);
         var target = (DaggerfallMagicAllowedTargets)(1 << (int)DaggerfallMagicCostPolicy.TargetForRangeType(spell.RangeType));
+        var allowedElements = DaggerfallMagicAllowedElements.Magic;
         foreach (var setting in spell.Effects)
         {
-            if (!effects.Catalog.TryResolveSpell(setting, out var definition) || (definition.Spell!.AllowedElements & element) == 0
-                || (definition.Spell.AllowedTargets & target) == 0
+            if (!effects.Catalog.TryResolveSpell(setting, out var definition) || (!spell.IsCustom && (definition.Spell!.AllowedElements & element) == 0)
+                || (definition.Spell!.AllowedTargets & target) == 0
                 || definition.Apply is null && definition.MagicRound is null && definition.MagicDefense is null
                     && definition.MovementProtection == default && definition.Perception == default && definition.ControlRestrictions == default)
             { definitions = []; return false; }
+            if (spell.IsCustom && !definition.Spell!.SpellMaker) { definitions = []; return false; }
+            allowedElements |= definition.Spell!.AllowedElements;
             resolved.Add(definition);
         }
+        if (spell.IsCustom && (allowedElements & element) == 0) { definitions = []; return false; }
         definitions = resolved.ToArray(); return true;
     }
     private int Quote(Actor actor, DaggerfallSpellDefinition spell) => DaggerfallMagicAdmissionPolicy.CalculateCastingCost(catalog, spell, Schools(actor), enchantingItem: false);

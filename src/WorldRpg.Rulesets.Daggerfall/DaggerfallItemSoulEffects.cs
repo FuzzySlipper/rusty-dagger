@@ -55,11 +55,11 @@ internal static class DaggerfallItemSoulEffects
                 else requestItem(new(effect.Context.Instance.Value, effect.Lifecycle.RemainingRounds ?? 1));
                 effect.ExpireAfterCurrentRound = true;
             }, Resume: _ => throw new ArgumentException("Create Item is an immediate paid selection."),
-            Spell: new(2, -1, SupportsDuration: true, AllowedTargets: DaggerfallMagicAllowedTargets.CasterOnly), ShowSpellIcon: false);
+            Spell: new(2, -1, SpellMaker: true, SupportsDuration: true, AllowedTargets: DaggerfallMagicAllowedTargets.CasterOnly), ShowSpellIcon: false);
         yield return new("soul-trap", "soul-trap", DaggerfallEffectStacking.RefreshDuration, 1, 1,
             Apply: effect => Attach(effect, monsterMobile, captureSoul, random, outcome),
             Resume: effect => Attach(effect, monsterMobile, captureSoul, random, outcome, resumed: true),
-            Spell: new(12, -1, SupportsDuration: true, AllowedElements: DaggerfallMagicAllowedElements.Fire | DaggerfallMagicAllowedElements.Cold
+            Spell: new(12, -1, SpellMaker: true, SupportsDuration: true, AllowedElements: DaggerfallMagicAllowedElements.Fire | DaggerfallMagicAllowedElements.Cold
                 | DaggerfallMagicAllowedElements.Poison | DaggerfallMagicAllowedElements.Shock | DaggerfallMagicAllowedElements.Magic,
                 AllowedTargets: DaggerfallMagicAllowedTargets.Other, CreateState: state => Serialize(new(state))),
             ExtendIncumbentDuration: true, IncumbentSettingsMatch: (_, _) => true, ShowSpellIcon: false);

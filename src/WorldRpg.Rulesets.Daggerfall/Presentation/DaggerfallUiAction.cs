@@ -20,7 +20,7 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
 /// <summary>Every player action the <c>dagger.ui.action.v1</c> contract carries, by meaning.</summary>
 internal enum DaggerfallUiActionKind
 {
-    Begin, CinematicSkip, ArtRequest, SpellReady, SpellUnready, SpellCast, SpellBuy, SpellDelete, SpellInfo,
+    Begin, CinematicSkip, ArtRequest, SpellReady, SpellUnready, SpellCast, SpellBuy, SpellDelete, SpellInfo, SpellMakerDraft, SpellMakerBuy,
     ControlsRebind, ControlsReset,
     CharacterClassQuestions, CharacterClassAnswer, CharacterClassBack,
     CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel,
@@ -159,6 +159,8 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.SpellReady,"spell-ready",DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.SpellUnready,"spell-unready",DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.SpellCast,"spell-cast",DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.SpellMakerDraft,"spellmaker-draft",DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.SpellMakerBuy,"spellmaker-buy",DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.SpellBuy,"spell-buy",DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.SpellDelete,"spell-delete",DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.SpellInfo,"spell-info",DaggerfallUiPhases.Live),
@@ -383,7 +385,11 @@ internal static class DaggerfallUiAction
                 return fields.SetEquals(["action", "revision", "note", "destination"]) && !string.IsNullOrWhiteSpace(revision)
                     && !string.IsNullOrWhiteSpace(note) && destination is >= 0
                     ? new(action, Revision: revision, Note: note, Destination: destination) : null;
-            if (action == "spell-buy")
+            if (action == "spellmaker-draft")
+                return fields.SetEquals(["action", "revision", "text"]) && !string.IsNullOrWhiteSpace(revision)
+                    && text is { Length: > 0 and <= 3000 }
+                    ? new(action, Revision: revision, Text: text) : null;
+            if (action is "spell-buy" or "spellmaker-buy")
                 return fields.SetEquals(["action", "key", "revision", "amount", "confirm"]) && !string.IsNullOrWhiteSpace(key)
                     && !string.IsNullOrWhiteSpace(revision) && amount is not null
                     ? new(action, Key: key, Revision: revision, Amount: amount, Confirm: confirm) : null;

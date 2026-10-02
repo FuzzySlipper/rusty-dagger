@@ -41,7 +41,7 @@ internal static class DaggerfallHealingEffects
                     else vitality.RestoreSpellTrack(effect.Target,
                         TrackId.Parse(selected == 8 ? DaggerfallMechanicsIds.Health.Value : DaggerfallMechanicsIds.Stamina.Value),
                         selected == 9 ? DaggerfallFormulaPolicy.SpellFatigueDamage(state.Amount) : state.Amount);
-                }, Spell: new(10, selected, SupportsMagnitude: true));
+                }, Spell: new(10, selected, SpellMaker: true, SupportsMagnitude: true));
         }
         // HealSpellPoints is PotionMaker-only in the donor and has no ClassicKey. Recipe/drinking owners
         // supply the computed magnitude to this named self-targeted compiled definition.
