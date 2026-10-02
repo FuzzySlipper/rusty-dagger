@@ -1,4 +1,5 @@
 using Rusty.Engine.Mechanics;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
@@ -72,7 +73,7 @@ internal sealed class DaggerfallMechanicsState
         (StatId.Parse(id.Value), new Stat(
             value,
             MinimumStatValue,
-            MaximumStatValue,
+            DaggerfallMechanicsIds.Attributes.Contains(id) ? DaggerfallFormulaPolicy.MaxStatValue() : MaximumStatValue,
             quantum: 1,
             rounding: MidpointRounding.ToZero,
             integerRounding: MidpointRounding.ToZero));

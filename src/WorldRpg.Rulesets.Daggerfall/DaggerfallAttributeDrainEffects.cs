@@ -12,10 +12,7 @@ internal sealed record DaggerfallAttributeDrainState(DaggerfallCastEffectState C
 internal static class DaggerfallAttributeDrainEffects
 {
     private const string SourceDefinition = "daggerfall.attribute-drain";
-    internal static readonly DaggerfallStatId[] Attributes =
-    [DaggerfallMechanicsIds.Strength, DaggerfallMechanicsIds.Intelligence, DaggerfallMechanicsIds.Willpower,
-     DaggerfallMechanicsIds.Agility, DaggerfallMechanicsIds.Endurance, DaggerfallMechanicsIds.Personality,
-     DaggerfallMechanicsIds.Speed, DaggerfallMechanicsIds.Luck];
+    internal static readonly DaggerfallStatId[] Attributes = DaggerfallMechanicsIds.Attributes;
 
     internal static string Key(int subtype) => $"drain-{Attributes[subtype].Value}";
     internal static JsonElement Encode(DaggerfallAttributeDrainState state) =>
