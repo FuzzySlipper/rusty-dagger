@@ -19,6 +19,7 @@ interface DaggerHud {
     readonly kind: string; readonly id: string; readonly distance: number; readonly bearingRadians: number;
     readonly items: readonly { readonly id: string; readonly definition: string; readonly quantity: number }[];
   }[] }[];
+  readonly spells?: SpellbookProjection | null;
   readonly dispel?: { readonly revision: string; readonly options: readonly { readonly id: string; readonly label: string }[] } | null;
   readonly resources: readonly { readonly id: string; readonly label: string; readonly current: number; readonly maximum: number }[];
   readonly lastOutcome: string;
@@ -49,6 +50,8 @@ interface DaggerHud {
   readonly rest?: RestProjection | null;
   readonly lodging?: LodgingProjection | null;
 }
+
+interface SpellbookProjection { readonly available: readonly {readonly key:string;readonly name:string;readonly cost:number}[];readonly ready:string|null;readonly result:string; }
 
 interface RestProjection {
   readonly hasResult: boolean;
@@ -240,6 +243,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
         <button data-action="resume" autofocus>Return to game</button>
         <button data-action="inventory">Inventory &amp; equipment · I</button>
         <button data-action="character">Character · C</button>
+        <button data-action="spells">Spells</button>
         <button data-action="map">Map</button>
         <button data-action="transport">Travel &amp; transport</button>
         <button data-action="rest">Rest &amp; loiter</button>
@@ -261,6 +265,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       <div class="dagger-controls-root" hidden></div>
       <div class="dagger-inventory-root" hidden></div>
       <div class="dagger-character-root" hidden></div>
+      <section class="dagger-spells-root" hidden aria-label="Known spells"></section>
       <div class="dagger-map-root" hidden></div>
       <div class="dagger-transport-root" hidden></div>
       <section class="dagger-rest-root" hidden aria-label="Rest and loiter">
@@ -512,7 +517,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       if (host.isConnected) host.textContent = `Debug console unavailable: ${error instanceof Error ? error.message : String(error)}`;
     });
   };
-  let activePanel: 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings' | null = null;
+  const spellsRoot=shell.querySelector<HTMLElement>('.dagger-spells-root')!;
+  let activePanel: 'spells' | 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings' | null = null;
   const showHome = (): void => {
     reportMap(false);
     controlsView.cancel();
@@ -558,7 +564,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     else if (menu.open) closeMenu();
     else openMenu();
   };
-  const showPanel = (action: 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings'): void => {
+  const showPanel = (action: 'spells' | 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings'): void => {
     if (!menu.open) openMenu();
     if (activePanel === 'loot' && action !== 'loot') closeLoot();
     if (activePanel === 'debug') closeDebug();
@@ -569,6 +575,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     diagnostics.hidden = action !== 'diagnostics';
     inventoryRoot.hidden = action !== 'inventory';
     characterRoot.hidden = action !== 'character';
+    spellsRoot.hidden=action!=='spells';
     mapRoot.hidden = action !== 'map';
     transportRoot.hidden = action !== 'transport';
     restRoot.hidden = action !== 'rest';
@@ -586,7 +593,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     menu.classList.toggle('has-journal', action === 'journal');
     menu.classList.toggle('has-loot', action === 'loot');
     menu.classList.toggle('has-debug', action === 'debug');
-    menuTitle.textContent = action === 'settings' ? 'Control settings' : action === 'diagnostics' ? 'Composition diagnostics'
+    menuTitle.textContent = action === 'spells' ? 'Known spells' : action === 'settings' ? 'Control settings' : action === 'diagnostics' ? 'Composition diagnostics'
       : action === 'inventory' ? 'Inventory & equipment' : action === 'character' ? 'Character' : action === 'map' ? 'Map' : action === 'transport' ? 'Travel & transport' : action === 'rest' ? 'Rest & loiter' : action === 'journal' ? 'Journal & notes'
       : action === 'loot' ? 'Loot' : action === 'debug' ? 'Engine debug console'
       : saveSlotMode === 'save' ? 'Save game' : 'Load game';
@@ -633,11 +640,20 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     else if (action === 'loot') claim('loot');
     else if (action === 'save-game') showSaveSlots('save');
     else if (action === 'load-game') showSaveSlots('load');
-    else if (action === 'settings' || action === 'diagnostics' || action === 'inventory' || action === 'character' || action === 'map' || action === 'transport' || action === 'rest' || action === 'journal' || action === 'debug') showPanel(action);
+    else if (action === 'spells' || action === 'settings' || action === 'diagnostics' || action === 'inventory' || action === 'character' || action === 'map' || action === 'transport' || action === 'rest' || action === 'journal' || action === 'debug') showPanel(action);
   };
   const onMenuClick = (event: MouseEvent): void => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button');
+    if(button?.disabled) return;
     const action = button?.dataset.action;
+    if (action==='spell-ready' && button?.dataset.spell) {
+      context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:{action,key:button.dataset.spell}});
+      return;
+    }
+    if (action==='spell-unready' || action==='spell-cast') {
+      if(action==='spell-cast') closeMenu();
+      claim(action); return;
+    }
     if (action === 'rest' && button?.dataset.restMode) {
       submitRest(button.dataset.restMode);
       return;
@@ -893,6 +909,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       artCooldown = 0;
     }
 
+    renderSpells(spellsRoot,isSpellbookProjection(value.spells) ? value.spells : null);
     if (value.inventory) inventoryView.update(value.inventory);
     transportView.update(isTransportProjection(value.transport) ? value.transport : null, value.inventory);
     mapView.update(isMapProjection(value.map) ? value.map : null);
@@ -1283,6 +1300,32 @@ export function isHud(value: unknown): value is DaggerHud {
     && 'resources' in value && Array.isArray(value.resources) && value.resources.every(isResourceRow)
     && 'lastOutcome' in value && typeof value.lastOutcome === 'string'
     && 'composition' in value && isCompositionIdentity(value.composition);
+}
+
+export function isSpellbookProjection(value:unknown):value is SpellbookProjection {
+  if(!value || typeof value!=='object') return false;
+  const v=value as Partial<SpellbookProjection>;
+  return Array.isArray(v.available) && v.available.every(spell=>spell && typeof spell==='object'
+    && typeof spell.key==='string' && typeof spell.name==='string' && Number.isInteger(spell.cost) && spell.cost>=0)
+    && (v.ready===null || typeof v.ready==='string' && v.available.some(spell=>spell.key===v.ready)) && typeof v.result==='string';
+}
+
+function renderSpells(root:HTMLElement,view:SpellbookProjection|null):void {
+  root.replaceChildren();
+  const title=document.createElement('h2');title.textContent='Known spells';root.append(title);
+  const status=document.createElement('p');status.setAttribute('role','status');
+  status.textContent=view?.result ?? '';root.append(status);
+  if(!view) return;
+  for(const spell of view.available) {
+    const button=document.createElement('button');button.type='button';button.dataset.action='spell-ready';button.dataset.spell=spell.key;
+    button.textContent=`${spell.name} · ${spell.cost} magicka${view.ready===spell.key ? ' · Ready' : ''}`;
+    button.setAttribute('aria-pressed',String(view.ready===spell.key));root.append(button);
+  }
+  if(view.available.length===0) { const empty=document.createElement('p');empty.textContent='No available known spells.';root.append(empty); }
+  for(const [action,label] of [['spell-unready','Unready'],['spell-cast','Cast ready spell']]) {
+    const button=document.createElement('button');button.type='button';button.dataset.action=action;button.textContent=label;
+    button.disabled=view.ready===null;root.append(button);
+  }
 }
 
 function renderQuestMessages(root: HTMLElement, value: QuestPresentation | undefined, claim: (action: UiAction) => void): void {

@@ -51,6 +51,8 @@ internal sealed record DaggerfallSavePayload(
     [JsonRequired]
     public long NextCastSequence { get; init; } = 1;
     [JsonRequired]
+    public string? ReadySpell {get;init;}
+    [JsonRequired]
     public DaggerfallDispelRequest? PendingDispel { get; init; }
     [JsonRequired]
     public long[] BanishedActors { get; init; } = [];
@@ -492,6 +494,10 @@ internal sealed record DaggerfallSavePayload(
         ValidateActiveEffects(allEffects, combatants, uniqueItems);
         Social.Validate(definitions.Factions);
         Character?.Validate(definitions);
+        if (ReadySpell is not null && (Character?.KnownSpells?.Contains(ReadySpell) != true
+            || !definitions.Magic.Spells.ContainsKey(ReadySpell)))
+            throw new ArgumentException($"Saved ready spell '{ReadySpell}' is not known or published.");
+
         ValidateEffectSourceReferences(
         [
             (DaggerfallActorIdentity.PlayerEntityId, Player.Stats),

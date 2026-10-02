@@ -47,6 +47,7 @@ internal sealed class DaggerSessionPersistence
     private readonly Func<DaggerfallTravelMapPixel> _travelPosition;
     private readonly IReadOnlyDictionary<long, DaggerfallActorDefinition> _actorDefinitions;
     private readonly Func<long> _nextCastSequence;
+    internal Func<string?> ReadySpell {get;set;}=()=>null;
     internal Func<DaggerfallDispelRequest?> PendingDispel { get; set; } = () => null;
     internal Func<IReadOnlySet<long>> BanishedActors { get; set; } = () => new HashSet<long>();
     internal DaggerSessionPersistence(DaggerfallState state, DaggerfallCorpseLootModule corpses, DaggerfallGroundContainers groundContainers, DaggerfallBookNotebook notebook,
@@ -147,6 +148,7 @@ internal sealed class DaggerSessionPersistence
             LevelUp: State.LevelUps.Capture())
         {
             NextCastSequence = _nextCastSequence(),
+            ReadySpell=ReadySpell(),
             PendingDispel = PendingDispel(),
             BanishedActors = [.. BanishedActors().Order()],
             Quests = State.Quests.Capture(),

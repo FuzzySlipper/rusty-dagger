@@ -430,6 +430,9 @@ internal sealed partial class DaggerfallSession
             _roster = new DaggerfallActorRoster(State, definitions, _random, assembled.Mechanics, _actorIdentities, _uniqueItems,
                 _authoredEntityIds, authored, saved?.DynamicActors ?? [], _grounding, () => _sites.Projection, _lootUi, _corpseLoot);
             _pendingDispel = saved?.PendingDispel;
+            State.Character.SpellForgotten+=key=>
+            { if(Casting.ReadyFor(actors.Player.DurableId)?.SpellKey==key) Casting.Cancel(actors.Player.DurableId); };
+            _persistence.ReadySpell=()=>Casting.ReadyFor(actors.Player.DurableId) is {Source:DaggerfallCastSource.Spell} ready ? ready.SpellKey : null;
             _persistence.PendingDispel = () => _pendingDispel;
             _roster.BanishedActors.UnionWith(saved?.BanishedActors ?? []);
             _persistence.BanishedActors = () => _roster.BanishedActors;
@@ -452,6 +455,7 @@ internal sealed partial class DaggerfallSession
             partiallyConstructed.Add(_hud);
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments, RestoreDungeonText);
+            if (saved?.ReadySpell is { } readyKey) Casting.RestoreReadySpell(readyKey);
             _sites.AdmitInitialExterior(saved?.ExteriorResidency);
         }
         catch (Exception constructionFailure)

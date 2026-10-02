@@ -136,7 +136,12 @@ internal sealed partial class DaggerfallCharacterState
     }
 
     /// <summary>Forgets a spell the character knows, reporting whether it knew it.</summary>
-    internal bool ForgetSpell(string key) => _knownSpells.Remove(key);
+    internal event Action<string>? SpellForgotten;
+    internal bool ForgetSpell(string key)
+    {
+        if(!_knownSpells.Remove(key)) return false;
+        SpellForgotten?.Invoke(key); return true;
+    }
     /// <summary>The committed BIOG text retained with this character, distinct from an editable draft.</summary>
     internal IReadOnlyList<string> History => _background?.Biography ?? [];
     internal DaggerfallRaceDefinition Race => _definitions.Catalogs.RequireRace(Identity.RaceId);
