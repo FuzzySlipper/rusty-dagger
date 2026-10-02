@@ -128,6 +128,11 @@ internal sealed partial class DaggerfallSession
         Dictionary<string, DaggerfallQuestResourceTextContext> resources = [];
         foreach (DaggerfallQuestResourceState resource in instance.Resources)
         {
+            if (resource.Text is { } boundText)
+            {
+                resources[DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "quest presentation resource")] = boundText;
+                continue;
+            }
             DaggerfallQuestResourceDefinition? declared = _definitions.QuestSources.Resources
                 .SingleOrDefault(value => value.SourceFile == instance.SourceFile
                     && value.CanonicalId == DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "quest presentation resource"));

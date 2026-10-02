@@ -74,6 +74,16 @@ public sealed class InternalStringsReaderTests
         Assert.Equal(1, inputs.RegionNameBanks[7]);
     }
 
+    [DonorFact("Assets/Scripts/API/MapsFile.cs")]
+    public void Retains_the_donor_region_names_beside_their_bank_mapping()
+    {
+        var inputs = DaggerfallBuildingNameInputsBuilder.Build(File.ReadAllBytes(TestData.Donor("Assets/Scripts/API/MapsFile.cs")), "donor/MapsFile.cs");
+        Assert.Equal(62, inputs.RegionNames.Count);
+        Assert.Equal("Alik'r Desert", inputs.RegionNames[0]);
+        Assert.Equal("Daggerfall", inputs.RegionNames[17]);
+        Assert.Equal("Cybiades", inputs.RegionNames[61]);
+    }
+
     private static byte[] Resource(params (int Id, byte[] Text)[] records)
     {
         const int Header = TextResourceReader.HeaderLengthBytes;

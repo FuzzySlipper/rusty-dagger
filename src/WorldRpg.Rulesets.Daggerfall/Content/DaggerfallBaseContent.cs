@@ -461,6 +461,23 @@ internal static partial class DaggerfallBaseContent
                 diagnostics.Add($"Published dungeon '{name}' lists no blocks, so it describes no structure.");
             }
 
+            if (dungeon.TryGetProperty("blockPlacements", out JsonElement placements))
+            {
+                List<DaggerfallSiteDungeonBlock> sourceBlocks = [];
+                foreach (JsonElement placement in placements.EnumerateArray())
+                {
+                    string sourceKey = Text(placement, "sourceKey", diagnostics);
+                    int x = Integer(placement, "x", diagnostics), z = Integer(placement, "z", diagnostics);
+                    if (sourceKey.Length == 0 || x is < sbyte.MinValue or > sbyte.MaxValue || z is < sbyte.MinValue or > sbyte.MaxValue)
+                        diagnostics.Add($"Published dungeon '{name}' has an invalid source block placement.");
+                    sourceBlocks.Add(new(sourceKey, x, z));
+                }
+                if (sourceBlocks.Count != blocks)
+                    diagnostics.Add($"Published dungeon '{name}' has {sourceBlocks.Count} placements for {blocks} source blocks.");
+                int recordIndex = records.FindIndex(record => record.Id == new DaggerfallSiteId(region, index));
+                if (recordIndex >= 0) records[recordIndex] = records[recordIndex] with { DungeonBlocks = sourceBlocks };
+            }
+
             dungeons++;
         }
 
@@ -582,9 +599,10 @@ internal static partial class DaggerfallBaseContent
         {
             int locationId = Integer(value, "locationId", diagnostics);
             int sector = Integer(value, "sector", diagnostics);
-            if (locationId is < 0 or > ushort.MaxValue || sector is < short.MinValue or > short.MaxValue)
+            int? buildingType = value.TryGetProperty("buildingType", out JsonElement type) ? type.GetInt32() : null;
+            if (locationId is < 0 or > ushort.MaxValue || sector is < short.MinValue or > short.MaxValue || buildingType is < 0 or > byte.MaxValue)
                 diagnostics.Add("Location building reference carries invalid source values.");
-            result.Add(new(locationId, sector));
+            result.Add(new(locationId, sector, buildingType));
         }
         return result.AsReadOnly();
     }
@@ -1045,7 +1063,11 @@ internal static partial class DaggerfallBaseContent
             return -1;
         })];
         if (banks.Count != regionCount) diagnostics.Add($"Building-name inputs publish {banks.Count} regions for the {regionCount} published regions.");
-        return new DaggerfallBuildingNameInputs(banks);
+        string[] names = section.TryGetProperty("regionNames", out JsonElement regionNames)
+            ? [.. regionNames.EnumerateArray().Select(name => name.GetString() ?? string.Empty)] : [];
+        if (names.Length > 0 && (names.Length != regionCount || names.Any(string.IsNullOrWhiteSpace)))
+            diagnostics.Add("Building-name region names must name each published region.");
+        return new DaggerfallBuildingNameInputs(banks, names);
     }
 
     /// <summary>

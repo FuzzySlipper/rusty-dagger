@@ -133,4 +133,7 @@ public sealed record DaggerfallLocationBuilding(string SourceKey, int BlockX, in
 }
 
 /// <summary>A source quest building id and its MAPS sector ordinal, before RMB matching.</summary>
-public sealed record DaggerfallLocationBuildingReference(ushort LocationId, short Sector);
+public sealed record DaggerfallLocationBuildingReference(ushort LocationId, short Sector)
+{
+    public int BuildingType { get; init; }
+}

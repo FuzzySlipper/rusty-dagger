@@ -28,6 +28,7 @@ internal sealed record DaggerfallQuestResourceBinding(DaggerfallQuestResourceBin
     DaggerfallQuestStackBinding[] Stacks, DaggerfallSiteIdSave[] Places)
 {
     public DaggerfallQuestBuildingClaim? Building { get; init; }
+    public DaggerfallQuestPlaceSelection? PlaceSelection { get; init; }
     internal static DaggerfallQuestResourceBinding Actors(params long[] actorIds) => new(DaggerfallQuestResourceBindingKind.Actor, actorIds, [], [], []);
     internal static DaggerfallQuestResourceBinding UniqueItem(ulong itemId) => new(DaggerfallQuestResourceBindingKind.Item, [], [itemId], [], []);
     internal static DaggerfallQuestResourceBinding Stack(DaggerfallItemOwnerSave owner, string stackId) => new(DaggerfallQuestResourceBindingKind.Item, [], [], [new(owner, stackId)], []);
@@ -56,6 +57,11 @@ internal sealed record DaggerfallQuestResourceBinding(DaggerfallQuestResourceBin
         ArgumentNullException.ThrowIfNull(UniqueItemIds);
         ArgumentNullException.ThrowIfNull(Stacks);
         ArgumentNullException.ThrowIfNull(Places);
+        if (PlaceSelection is { } selection && (Kind != DaggerfallQuestResourceBindingKind.Place
+            || !Enum.IsDefined(selection.Kind) || selection.MapId < 0 || selection.MagicNumberIndex is < 0 or > 255
+            || (selection.Kind == DaggerfallWorldProfileKind.Interior) != (Building is not null && selection.BuildingKey is > 0)
+            || (selection.Kind != DaggerfallWorldProfileKind.Interior && selection.BuildingKey is not null)))
+            throw new ArgumentException($"Quest resource '{owner}' has an invalid selected place.");
         if (Building is { } building)
         {
             if (Kind != DaggerfallQuestResourceBindingKind.Place || Places.Length != 1
@@ -90,7 +96,11 @@ internal sealed record DaggerfallQuestResourceBinding(DaggerfallQuestResourceBin
 internal sealed record DaggerfallQuestBuildingClaim(string SourceKey, int Index, int BlockX, int BlockY);
 
 /// <summary>Durable state belonging to one declared resource.</summary>
-internal sealed record DaggerfallQuestResourceState(string Symbol, DaggerfallQuestResourceBinding Binding, bool IsHidden = false, bool HasPlayerClicked = false);
+internal sealed record DaggerfallQuestResourceState(string Symbol, DaggerfallQuestResourceBinding Binding, bool IsHidden = false, bool HasPlayerClicked = false)
+{
+    /// <summary>Actual selected display values outlive a consumed item or unloaded actor.</summary>
+    public DaggerfallQuestResourceTextContext? Text { get; init; }
+}
 
 /// <summary>Symbols can name resources, tasks, or textual values, so they are not resource-restricted.</summary>
 internal sealed record DaggerfallQuestSymbolState(string Symbol, string Value);
@@ -183,6 +193,15 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
                     || building.Source.Id != new DaggerfallRmbBuildingId(claim.SourceKey, claim.Index))
                     throw new ArgumentException($"Quest instance '{InstanceId}' resource '{symbol}' refers to missing building {claim.SourceKey}/{claim.Index} at site {site}, block {claim.BlockX}/{claim.BlockY}.");
             }
+        }
+        foreach (DaggerfallQuestResourceState resource in Resources.Where(resource => resource.Binding.PlaceSelection is not null))
+        {
+            var selection = resource.Binding.PlaceSelection!;
+            DaggerfallSiteId site = resource.Binding.Places[0].Require();
+            DaggerfallSiteRecord? record = definitions.Locations.Records.SingleOrDefault(value => value.Id == site);
+            if (record?.MapId != selection.MapId || (resource.Binding.Building is { } building
+                && selection.BuildingKey != DaggerfallQuestPlaceAllocator.BuildingKey(new(building.BlockX, building.BlockY, building.Index))))
+                throw new ArgumentException($"Quest instance '{InstanceId}' resource '{resource.Symbol}' has an incompatible selected map/building identity.");
         }
         if (validateClockState)
             ValidateClocks(DaggerfallQuestClockCompiler.Compile(definition));
@@ -406,6 +425,7 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
     private Func<DaggerfallSiteId, long>? _travelMinutes;
     private Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestMessageContext> _textContext = _ => DaggerfallQuestMessageContext.Empty;
     private Action<string, string>? _appendNote;
+    private DaggerfallQuestPlaceAllocator? _placeAllocator;
     private const long TombstoneRetentionSeconds = 7 * 24 * 60 * 60;
 
     internal DaggerfallQuestInstances(DaggerfallDefinitions definitions, IRandomService random, DaggerfallQuestRuntimeAdmission? admission = null, DaggerfallDisabledQuestSelection? disabledSelection = null)
@@ -439,6 +459,9 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
     internal void BindRuntime(DaggerfallQuestRuntime runtime) => _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
     internal void BindTextContext(Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestMessageContext> context) =>
         _textContext = context ?? throw new ArgumentNullException(nameof(context));
+
+    internal void BindPlaceAllocator(DaggerfallQuestPlaceAllocator allocator) =>
+        _placeAllocator = allocator ?? throw new ArgumentNullException(nameof(allocator));
 
     internal void BindNotebook(Action<string, string> appendNote) => _appendNote = appendNote ?? throw new ArgumentNullException(nameof(appendNote));
 
@@ -517,6 +540,17 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
         if (Messages.Journal.Any(entry => entry.InstanceId == instance.InstanceId && entry.SourceFile is not null))
             throw new ArgumentException($"Quest instance '{instance.InstanceId}' already owns a finished journal; reusing it would overwrite readable history.", nameof(instance));
         instance.Validate(_definitions, validateClockState: false);
+        if (_placeAllocator is not null)
+        {
+            List<DaggerfallQuestResourceState> resources = [.. instance.Resources];
+            foreach (DaggerfallQuestResourceDefinition declared in _definitions.QuestSources.Resources
+                .Where(value => value.SourceFile == instance.SourceFile && value.Kind == "place").OrderBy(value => value.SourceLine))
+                if (!resources.Any(resource => DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "quest start resource") == declared.CanonicalId))
+                    resources.Add(_placeAllocator.Allocate(instance.InstanceId, declared, resources,
+                        _instances.Values.Where(value => value.Lifecycle == DaggerfallQuestLifecycle.Active).SelectMany(value => value.Resources)));
+            instance = instance with { Resources = [.. resources] };
+            instance.Validate(_definitions, validateClockState: false);
+        }
         if (instance.Tasks.Length != 0) throw new ArgumentException("A newly started quest instance cannot supply prior task state.", nameof(instance));
         DaggerfallQuestTaskProgram program = Program(instance.SourceFile);
         DaggerfallQuestClockDefinition[] clocks = DaggerfallQuestClockCompiler.Compile(_definitions.QuestSources.Resolve(instance.SourceFile));

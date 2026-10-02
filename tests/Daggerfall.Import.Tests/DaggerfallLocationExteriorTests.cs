@@ -34,6 +34,14 @@ public sealed class DaggerfallLocationExteriorTests
 
         BsaArchive models = BsaArchive.Parse(File.ReadAllBytes(TestData.Corpus("ARCH3D.BSA")), "arena2/ARCH3D.BSA");
         DaggerfallLocations locations = DaggerfallLocationBuilder.Build(maps, blocks, models);
+        foreach (var group in locations.Dungeons.GroupBy(dungeon => dungeon.Region))
+        {
+            var raw = MapsDecoder.DecodeRegionDungeons(maps, group.Key).Where(value => value.State == MapsDungeonState.Read)
+                .ToDictionary(value => value.Index);
+            foreach (var dungeon in group)
+                Assert.Equal(raw[dungeon.Index].Blocks.Select(value => (value.SourceName, (int)value.X, (int)value.Z)),
+                    dungeon.BlockPlacements.Select(value => (value.SourceKey, value.X, value.Z)));
+        }
 
         Assert.Equal(15251, locations.Locations.Count);
         Assert.Equal(15251, locations.Locations.Count(location => location.Exterior is not null));
@@ -45,8 +53,8 @@ public sealed class DaggerfallLocationExteriorTests
         Assert.Equal((4, 3, 510, 15941, 16), (reusedArmorer[0].BlockX, reusedArmorer[0].BlockY, reusedArmorer[0].FactionId, reusedArmorer[0].NameSeed, reusedArmorer[0].Quality));
         Assert.Equal((3, 5, 510, 18089, 15), (reusedArmorer[1].BlockX, reusedArmorer[1].BlockY, reusedArmorer[1].FactionId, reusedArmorer[1].NameSeed, reusedArmorer[1].Quality));
         MapsExteriorLayout rawLayout = MapsDecoder.DecodeExteriorLayout(maps, charing.Region, charing.Index);
-        Assert.Equal(rawLayout.Buildings.Select(value => (value.LocationId, value.Sector)),
-            charing.Exterior!.BuildingReferences.Select(value => (value.LocationId, value.Sector)));
+        Assert.Equal(rawLayout.Buildings.Select(value => (value.LocationId, value.Sector, (int)value.BuildingType)),
+            charing.Exterior!.BuildingReferences.Select(value => (value.LocationId, value.Sector, value.BuildingType)));
         foreach (DaggerfallLocationBuilding building in charing.Exterior.Buildings)
         {
             Assert.True(blocks.TryGetByName(building.SourceKey, out BsaRecord? rawBlock));
