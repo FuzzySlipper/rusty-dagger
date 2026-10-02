@@ -111,7 +111,8 @@ tool() {
 while IFS= read -r entry; do
   [[ -z "$entry" || "$entry" == \#* ]] && continue
   # shellcheck disable=SC2086 # the entry is a glob
-  rm -rf -- ${entry#/}
+  generated=${entry#/}
+  rm -rf -- ${generated%/}
 done < scripts/generated-content-paths.txt
 
 # 1. Product-wide media. The site closures name the music cues this publishes.

@@ -3,13 +3,14 @@ using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Effects;
 using WorldRpg.Rulesets.Daggerfall.Policies;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Recovery and defensive policy over active effects, canonical tracks and cast admission.</summary>
 internal static class DaggerfallRestorationEffects
 {
-    internal static IEnumerable<DaggerfallEffectDefinition> Definitions(IRandomService random, Func<long, int> level)
+    internal static IEnumerable<DaggerfallEffectDefinition> Definitions(IRandomService random, Func<long, int> level, DaggerfallVitalityConsequences vitality)
     {
         yield return new("free-action", "free-action", DaggerfallEffectStacking.Stack, ushort.MaxValue, 1,
             Apply: effect => ValidateCast(effect, 26), Resume: effect => ValidateCast(effect, 26),
@@ -32,7 +33,7 @@ internal static class DaggerfallRestorationEffects
                 Track health = effect.Target.Get<StatsComponent>().GetTrack(TrackId.Parse("health"));
                 if (health.Current <= 0) { effect.ExpireAfterCurrentRound = true; return; }
                 int amount = DaggerfallPeriodicCast.RollMagnitude(effect, random, 18, -1, "daggerfall.regenerate.v1", "");
-                health.SetCurrent(health.Current + amount, clamp: true);
+                vitality.RestoreSpellTrack(effect.Target, TrackId.Parse("health"), amount);
             },
             Spell: new(18, -1, SupportsDuration: true, SupportsMagnitude: true,
                 CreateState: state => RegenerationState(new(state, 0)), MagnitudePerRound: true),

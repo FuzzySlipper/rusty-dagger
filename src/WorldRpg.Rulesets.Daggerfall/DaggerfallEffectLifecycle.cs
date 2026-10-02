@@ -44,6 +44,9 @@ internal sealed record DaggerfallEffectOutcome(
     long TargetId)
 {
     internal DaggerfallEffectFeedback Feedback { get; init; }
+    internal long? CasterId { get; init; }
+    internal ulong? ItemId { get; init; }
+    internal bool CompletedImmediately { get; init; }
 }
 
 internal enum DaggerfallEffectFeedback { None, MagicSparkle }
@@ -390,7 +393,7 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
             DaggerfallEffectAdmissionOutcome.TargetUnavailable => DaggerfallEffectOutcomeKind.TargetUnavailable,
             DaggerfallEffectAdmissionOutcome.Replaced => DaggerfallEffectOutcomeKind.Replaced,
             _ => DaggerfallEffectOutcomeKind.Started,
-        }, context.Instance.Value, definition.Key, request.TargetId);
+        }, context.Instance.Value, definition.Key, request.TargetId, request.CasterId, request.ItemId, initial?.Removed.Any(removed => removed.Context.Instance == context.Instance) == true);
         if (initial is not null)
             foreach (ActiveEffectState removed in initial.Removed)
                 Publish(DaggerfallEffectOutcomeKind.Expired, removed.Context.Instance.Value, definition.Key, request.TargetId);
@@ -669,8 +672,20 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
         1,
         SourceDefinitionId.Parse($"daggerfall.{context.Source.Key}"));
 
-    private void Publish(DaggerfallEffectOutcomeKind kind, string instance, string effectKey, long targetId) =>
-        Completed?.Invoke(new DaggerfallEffectOutcome(kind, instance, effectKey, targetId) { Feedback = _catalog.Require(effectKey).Feedback });
+    private void Publish(DaggerfallEffectOutcomeKind kind, string instance, string effectKey, long targetId,
+        long? casterId = null, ulong? itemId = null, bool completedImmediately = false)
+    {
+        _effects.TryGetValue(EffectInstanceId.Parse(instance), out DaggerfallActiveEffect? active);
+        DaggerfallEffectDefinition definition = _catalog.Require(effectKey);
+        Completed?.Invoke(new DaggerfallEffectOutcome(kind, instance, effectKey, targetId)
+        {
+            Feedback = definition.Feedback != DaggerfallEffectFeedback.None ? definition.Feedback
+                : definition.Spell is not null ? DaggerfallEffectFeedback.MagicSparkle : DaggerfallEffectFeedback.None,
+            CasterId = active?.Context.Caster is { } caster ? checked((long)caster.Value) : casterId,
+            ItemId = active?.Context.Item?.Value ?? itemId,
+            CompletedImmediately = completedImmediately,
+        });
+    }
 
 
 }
