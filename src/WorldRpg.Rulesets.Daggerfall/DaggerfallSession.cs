@@ -522,7 +522,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         _disposed = true;
         // DisposeAll walks backward: projection door entities must release before the actor store.
         Exception? failure = null;
-        try { DisposeAll([Infections, _hud, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.ActionTriggers, .. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }]); }
+        try { DisposeAll([.. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }, _hud, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.ActionTriggers, Infections]); }
         catch (Exception exception) { failure = exception; }
         try { _sites.RetireExteriorAppearance(); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
