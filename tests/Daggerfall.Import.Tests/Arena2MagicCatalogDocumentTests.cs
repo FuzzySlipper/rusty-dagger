@@ -117,7 +117,7 @@ public sealed class Arena2MagicCatalogDocumentTests
         JsonArray costs = JsonNode.Parse(publication.Json)!["effectCosts"]!.AsArray();
 
         // Both spells carry one effect without a subtype, so each type resolves through its first slot.
-        Assert.Equal([4, 7, 7, 10, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 13, 16, 23, 24, 26, 31], costs.Select(cost => cost!["type"]!.GetValue<int>()));
+        Assert.Equal([4, 7, 7, 10, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 13, 16, 23, 24, 26, 31, 39, 39, 39], costs.Select(cost => cost!["type"]!.GetValue<int>()));
         JsonObject first = costs.Single(cost => cost!["type"]!.GetValue<int>() == 16)!.AsObject();
         Assert.Equal(-1, first["subType"]!.GetValue<int>());
         Assert.Equal(3, first["settingsType"]!.GetValue<int>());
@@ -146,10 +146,11 @@ public sealed class Arena2MagicCatalogDocumentTests
         HashSet<(int, int)> used = [.. document["spells"]!.AsArray().SelectMany(spell => spell!["effects"]!.AsArray())
             .Select(effect => (effect!["type"]!.GetValue<int>(), effect["subType"]!.GetValue<int>()))];
 
-        Assert.Equal(83, rows.Count);
+        Assert.Equal(86, rows.Count);
         used.Add((4, 1));
         used.Add((13, 1)); used.Add((23, 1)); used.Add((24, 1));
         for (int subtype = 0; subtype < 8; subtype++) { used.Add((10, subtype)); used.Add((11, subtype)); }
+        for (int subtype = 0; subtype < 3; subtype++) used.Add((39, subtype));
         Assert.Contains((26, -1), rows);
         used.Add((26, -1));
         used.Add((7, 4)); used.Add((7, 7));

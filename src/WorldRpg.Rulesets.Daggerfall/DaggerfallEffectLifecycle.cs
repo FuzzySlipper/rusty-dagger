@@ -120,7 +120,8 @@ internal sealed record DaggerfallEffectDefinition(
     Func<DaggerfallActiveEffect, DaggerfallPerceptionEffectState>? LivePerception = null,
     bool ShowSpellIcon = true,
     DaggerfallDoorMagic DoorMagic = DaggerfallDoorMagic.None,
-    Func<DaggerfallEffectDefinition, bool>? IncumbentDefinitionMatch = null)
+    Func<DaggerfallEffectDefinition, bool>? IncumbentDefinitionMatch = null,
+    DaggerfallDetection Detection = DaggerfallDetection.None)
 {
     internal EffectDefinition ToEngineDefinition(string source) => new(
         EffectDefinitionId.Parse($"daggerfall.{Key}"),

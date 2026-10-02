@@ -919,3 +919,21 @@ test('dispel choice renders published bundles and sends current select and cance
     assert.equal(panel.querySelectorAll('button').length, 0);
   } finally { f.dispose(); }
 });
+
+
+test('detectors render only resolved contacts and clear retired sources without scanning', () => {
+  const f = fixture();
+  try {
+    f.publish({ detectors: [{ source: 'cast.2', kind: 'magic', contacts: [{ kind: 'actor', id: '2000', distance: 4.5, bearingRadians: Math.PI / 2, items: [] }] },
+      { source: 'cast.3', kind: 'treasure', contacts: [] }] });
+    const panel = f.root.querySelector('.dagger-detectors');
+    assert.equal(panel.hidden, false);
+    assert.equal(panel.children.length, 2);
+    assert.match(panel.textContent, /Detect magic: actor 2000, 4.5 m, bearing 90°/);
+    assert.match(panel.textContent, /Detect treasure: none nearby/);
+    f.publish({ detectors: [] });
+    assert.equal(panel.hidden, true);
+    assert.equal(panel.children.length, 0);
+    assert.equal(f.actions.length, 0);
+  } finally { f.dispose(); }
+});
