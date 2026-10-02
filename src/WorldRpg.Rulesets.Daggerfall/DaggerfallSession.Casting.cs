@@ -20,12 +20,14 @@ internal sealed partial class DaggerfallSession
     }
 
     private string _spellResult="";
-    internal DaggerfallSpellbookView ReadSpells()=>new(
-        State.Character.KnownSpells.Order(StringComparer.Ordinal).Select(key=>
-            Casting.AvailableSpellCost(State.Actors.Player.DurableId,key) is int cost
-            ? new DaggerfallKnownSpellView(key,_definitions.Magic.Spells[key].Name,cost) : null)
-            .OfType<DaggerfallKnownSpellView>().ToArray(),
-        Casting.ReadyFor(State.Actors.Player.DurableId) is {Source:DaggerfallCastSource.Spell} ready ? ready.SpellKey : null,_spellResult);
+    internal DaggerfallSpellbookView ReadSpells() => new(
+        State.Character.KnownSpells.Order(StringComparer.Ordinal).Select(key =>
+        {
+            int? cost = Casting.AvailableSpellCost(State.Actors.Player.DurableId, key);
+            return new DaggerfallKnownSpellView(key, _definitions.Magic.Spells[key].Name, cost ?? 0, cost is not null);
+        }).ToArray(),
+        Casting.ReadyFor(State.Actors.Player.DurableId) is { Source: DaggerfallCastSource.Spell } ready ? ready.SpellKey : null,
+        _spellResult, ReadSpellSale(), ReadSpellInformation());
     private void ChangeSpell(WorldRpg.Rulesets.Daggerfall.Presentation.DaggerfallPlayerUiAction action)
     {
         var result=action.Kind switch
@@ -149,5 +151,6 @@ internal sealed partial class DaggerfallSession
         && float.IsFinite(value.Z) && value.LengthSquared() > .000001f;
 }
 
-internal sealed record DaggerfallKnownSpellView(string Key,string Name,int Cost);
-internal sealed record DaggerfallSpellbookView(DaggerfallKnownSpellView[] Available,string? Ready,string Result);
+internal sealed record DaggerfallKnownSpellView(string Key, string Name, int Cost, bool CanCast = true);
+internal sealed record DaggerfallSpellbookView(DaggerfallKnownSpellView[] Available, string? Ready, string Result,
+    DaggerfallSpellSaleView? Sale = null, DaggerfallSpellInformation? Information = null);

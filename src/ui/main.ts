@@ -52,7 +52,12 @@ interface DaggerHud {
   readonly lodging?: LodgingProjection | null;
 }
 
-interface SpellbookProjection { readonly available: readonly {readonly key:string;readonly name:string;readonly cost:number}[];readonly ready:string|null;readonly result:string; }
+interface SpellbookProjection {
+  readonly available: readonly {readonly key:string;readonly name:string;readonly cost:number;readonly canCast?:boolean}[];
+  readonly ready:string|null;readonly result:string;
+  readonly sale?: {readonly revision:string;readonly provider:string;readonly offers:readonly {readonly key:string;readonly name:string;readonly castingCost:number;readonly price:number;readonly known:boolean}[]} | null;
+  readonly information?: {readonly key:string;readonly name:string;readonly element:number;readonly target:string;readonly details:readonly string[]} | null;
+}
 
 interface RestProjection {
   readonly hasResult: boolean;
@@ -303,6 +308,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       <p class="dagger-dialogue-question" aria-live="polite"></p>
       <p class="dagger-dialogue-reply" aria-live="polite"></p>
       <div class="dagger-dialogue-topics"></div>
+      <section class="dagger-dialogue-spells" aria-label="Spells for sale"></section>
       <ul class="dagger-dialogue-diagnostics" aria-label="Text diagnostics"></ul>
       <button class="dagger-dialogue-close" type="button">End conversation</button>
     </dialog>`;
@@ -521,6 +527,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     });
   };
   const spellsRoot=shell.querySelector<HTMLElement>('.dagger-spells-root')!;
+  const spellSalesRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-spells')!;
   let activePanel: 'spells' | 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings' | null = null;
   const showHome = (): void => {
     reportMap(false);
@@ -649,6 +656,13 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button');
     if(button?.disabled) return;
     const action = button?.dataset.action;
+    if ((action==='spell-buy' || action==='spell-delete' || action==='spell-info') && button?.dataset.spell) {
+      if (action !== 'spell-info' && !window.confirm(action==='spell-buy' ? `Buy this spell for ${button.dataset.price} gold?` : 'Forget this spell?')) return;
+      const data = action==='spell-buy'
+        ? {action,key:button.dataset.spell,revision:button.dataset.revision,amount:Number(button.dataset.price),confirm:true}
+        : action==='spell-delete' ? {action,key:button.dataset.spell,confirm:true} : {action,key:button.dataset.spell};
+      context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data});return;
+    }
     if (action==='spell-ready' && button?.dataset.spell) {
       context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:{action,key:button.dataset.spell}});
       return;
@@ -687,6 +701,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     }
     runMenuAction(action);
   };
+  spellSalesRoot.addEventListener('click', onMenuClick);
   saveSlotsSelect.addEventListener('change', () => {
     saveConfirm = false;
     deleteConfirm = false;
@@ -927,7 +942,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       artCooldown = 0;
     }
 
-    renderSpells(spellsRoot,isSpellbookProjection(value.spells) ? value.spells : null);
+    const spellbook = isSpellbookProjection(value.spells) ? value.spells : null;
+    renderSpells(spellsRoot,spellbook);
+    renderSpellSales(spellSalesRoot,spellbook);
     if (value.inventory) inventoryView.update(value.inventory);
     transportView.update(isTransportProjection(value.transport) ? value.transport : null, value.inventory);
     mapView.update(isMapProjection(value.map) ? value.map : null);
@@ -1325,8 +1342,15 @@ export function isSpellbookProjection(value:unknown):value is SpellbookProjectio
   if(!value || typeof value!=='object') return false;
   const v=value as Partial<SpellbookProjection>;
   return Array.isArray(v.available) && v.available.every(spell=>spell && typeof spell==='object'
-    && typeof spell.key==='string' && typeof spell.name==='string' && Number.isInteger(spell.cost) && spell.cost>=0)
-    && (v.ready===null || typeof v.ready==='string' && v.available.some(spell=>spell.key===v.ready)) && typeof v.result==='string';
+    && typeof spell.key==='string' && typeof spell.name==='string' && Number.isInteger(spell.cost) && spell.cost>=0
+    && (spell.canCast===undefined || typeof spell.canCast==='boolean'))
+    && (v.ready===null || typeof v.ready==='string' && v.available.some(spell=>spell.key===v.ready)) && typeof v.result==='string'
+    && (v.sale==null || typeof v.sale.revision==='string' && typeof v.sale.provider==='string' && Array.isArray(v.sale.offers)
+      && v.sale.offers.every(offer=>offer && typeof offer==='object' && typeof offer.key==='string' && typeof offer.name==='string' && Number.isSafeInteger(offer.price)
+        && offer.price>=0 && Number.isInteger(offer.castingCost) && offer.castingCost>=0 && typeof offer.known==='boolean'))
+    && (v.information==null || typeof v.information.key==='string' && typeof v.information.name==='string'
+      && typeof v.information.target==='string' && Number.isInteger(v.information.element)
+      && Array.isArray(v.information.details) && v.information.details.every(line=>typeof line==='string'));
 }
 
 function renderSpells(root:HTMLElement,view:SpellbookProjection|null):void {
@@ -1337,14 +1361,41 @@ function renderSpells(root:HTMLElement,view:SpellbookProjection|null):void {
   if(!view) return;
   for(const spell of view.available) {
     const button=document.createElement('button');button.type='button';button.dataset.action='spell-ready';button.dataset.spell=spell.key;
-    button.textContent=`${spell.name} · ${spell.cost} magicka${view.ready===spell.key ? ' · Ready' : ''}`;
+    button.textContent=`${spell.name} · ${spell.canCast===false ? 'Unavailable' : `${spell.cost} magicka`}${view.ready===spell.key ? ' · Ready' : ''}`;
+    button.disabled=spell.canCast===false;
     button.setAttribute('aria-pressed',String(view.ready===spell.key));root.append(button);
+    for(const [action,label] of [['spell-info','Info'],['spell-delete','Forget']]) {
+      const control=document.createElement('button');control.type='button';control.dataset.action=action;control.dataset.spell=spell.key;
+      control.textContent=`${label} ${spell.name}`;root.append(control);
+    }
   }
+  renderSpellInformation(root,view);
   if(view.available.length===0) { const empty=document.createElement('p');empty.textContent='No available known spells.';root.append(empty); }
   for(const [action,label] of [['spell-unready','Unready'],['spell-cast','Cast ready spell']]) {
     const button=document.createElement('button');button.type='button';button.dataset.action=action;button.textContent=label;
     button.disabled=view.ready===null;root.append(button);
   }
+}
+
+function renderSpellInformation(root:HTMLElement,view:SpellbookProjection):void {
+  if(!view.information) return;
+  const section=document.createElement('section');const title=document.createElement('h3');title.textContent=view.information.name;section.append(title);
+  const target=document.createElement('p');target.textContent=`Target: ${({CasterOnly:'Self',ByTouch:'Touch',SingleTargetAtRange:'Single target at range',AreaAroundCaster:'Area around self',AreaAtRange:'Area at range'} as Record<string,string>)[view.information.target] ?? view.information.target}; element: ${['none','fire','cold','poison','shock','magic'][view.information.element] ?? 'unknown'}`;section.append(target);
+  for(const line of view.information.details) { const p=document.createElement('p');p.textContent=line;section.append(p); } root.append(section);
+}
+
+function renderSpellSales(root:HTMLElement,view:SpellbookProjection|null):void {
+  root.replaceChildren();if(!view?.sale) return;
+  const heading=document.createElement('h3');heading.textContent=`Spells offered by ${view.sale.provider}`;root.append(heading);
+  const status=document.createElement('p');status.setAttribute('role','status');status.textContent=view.result;root.append(status);
+  for(const offer of view.sale.offers) {
+    const buy=document.createElement('button');buy.type='button';buy.dataset.action='spell-buy';buy.dataset.spell=offer.key;
+    buy.dataset.revision=view.sale.revision;buy.dataset.price=String(offer.price);buy.disabled=offer.known;
+    buy.textContent=`${offer.name} · ${offer.price} gold · ${offer.castingCost} magicka${offer.known ? ' · Known' : ''}`;root.append(buy);
+    const info=document.createElement('button');info.type='button';info.dataset.action='spell-info';info.dataset.spell=offer.key;
+    info.textContent=`Info ${offer.name}`;root.append(info);
+  }
+  renderSpellInformation(root,view);
 }
 
 function renderQuestMessages(root: HTMLElement, value: QuestPresentation | undefined, claim: (action: UiAction) => void): void {

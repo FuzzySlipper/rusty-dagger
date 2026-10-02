@@ -997,3 +997,29 @@ test('committed character summary stays at the entry screen and sends launch res
     f.root.querySelector('[data-testid="new-game-abandon"]').click(); assert.deepEqual(f.actions.at(-1), { action: 'character-cancel' });
   } finally { f.dispose(); }
 });
+
+test('spell seller and spellbook use confirmed semantic changes and source settings', () => {
+  const f=fixture();
+  try {
+    let accepted=false; window.confirm=()=>accepted;
+    const spells={available:[{key:'spell.023',name:'Heal',cost:15},{key:'spell.001',name:'Unavailable spell',cost:0,canCast:false}],
+      ready:'spell.023',result:'',sale:{revision:'seller-1',provider:'Mage',offers:[
+        {key:'spell.002',name:'Cure',castingCost:12,price:48,known:false},
+        {key:'spell.023',name:'Heal',castingCost:15,price:60,known:true}]},
+      information:{key:'spell.023',name:'Heal',target:'CasterOnly',element:4,details:['restoration: magnitude 1–10.']}};
+    f.publish({spells,activation:{mode:'talk',message:'',applied:true,dialogue:{revision:'seller-1',targetLabel:'Mage',greeting:'Welcome',tone:'normal',question:null,reply:null,topics:[],diagnostics:[]}}});
+    const sales=f.root.querySelector('.dagger-dialogue-spells');
+    assert.equal(sales.querySelector('[data-action="spell-buy"][data-spell="spell.023"]').disabled,true);
+    const buy=sales.querySelector('[data-action="spell-buy"][data-spell="spell.002"]');
+    buy.click(); assert.equal(f.actions.some(action=>action.action==='spell-buy'),false);
+    accepted=true; buy.click();assert.deepEqual(f.actions.at(-1),{action:'spell-buy',key:'spell.002',revision:'seller-1',amount:48,confirm:true});
+    sales.querySelector('[data-action="spell-info"]').click();assert.deepEqual(f.actions.at(-1),{action:'spell-info',key:'spell.002'});
+    f.root.querySelector('[data-action="spells"]').click();
+    const book=f.root.querySelector('.dagger-spells-root');
+    assert.equal(book.querySelector('[data-action="spell-ready"][data-spell="spell.001"]').disabled,true);
+    assert.match(book.textContent,/Unavailable spell · Unavailable/);assert.match(book.textContent,/magnitude 1–10/);
+    book.querySelector('[data-action="spell-delete"]').click();assert.deepEqual(f.actions.at(-1),{action:'spell-delete',key:'spell.023',confirm:true});
+    accepted=false;book.querySelector('[data-action="spell-delete"]').click();
+    assert.equal(f.actions.filter(action=>action.action==='spell-delete').length,1);
+  } finally { f.dispose(); }
+});

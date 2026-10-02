@@ -107,6 +107,9 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.SpellReady:
             case DaggerfallUiActionKind.SpellUnready:
                 if (!opensInteraction) ChangeSpell(action); break;
+            case DaggerfallUiActionKind.SpellBuy:
+            case DaggerfallUiActionKind.SpellDelete:
+            case DaggerfallUiActionKind.SpellInfo: ChangeSpellbook(action); break;
             case DaggerfallUiActionKind.SpellCast:
                 if (!opensInteraction && !_interactions.HoldsWorldOpen) ChangeSpell(action); break;
             case DaggerfallUiActionKind.Attack: if (!opensInteraction) firstStep.Request(DaggerfallInput.Attack); break;

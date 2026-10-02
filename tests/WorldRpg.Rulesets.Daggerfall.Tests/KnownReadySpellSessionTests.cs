@@ -43,7 +43,7 @@ public sealed class KnownReadySpellSessionTests
         var unavailable=TestPayload.Definitions.Magic.Spells.Values.First(spell=>!spell.Name.StartsWith('!')
             && s.Casting.AvailableSpellCost(1,spell.Key) is null);
         s.State.Character.LearnSpell(unavailable.Key);
-        Assert.DoesNotContain(s.ReadSpells().Available,row=>row.Key==unavailable.Key);
+        Assert.False(Assert.Single(s.ReadSpells().Available,row=>row.Key==unavailable.Key).CanCast);
         f.Submit(new{action="spell-ready",key=unavailable.Key});
         Assert.Equal("UnsupportedEffect",s.ReadSpells().Result);Assert.Null(s.Casting.ReadyFor(1));
         f.Submit(new{action="spell-ready",key="spell.023"});
@@ -93,7 +93,7 @@ public sealed class KnownReadySpellSessionTests
 
     private static Track Magicka(DaggerfallSession s)=>s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka"));
     private static void Fund(DaggerfallSession s){var track=Magicka(s);track.Maximum.BaseValue=10000;track.SetCurrent(10000);}
-    private sealed class Fixture:IDisposable
+    internal sealed class Fixture:IDisposable
     {
         private readonly DaggerfallSessionComposition composition=new(TestPayload.Definitions,ReadInputs(TestData.RepositoryRoot),DaggerfallTuning.Defaults);
         internal DaggerfallSession Session{get;}internal EngineContextFake Engine{get;}private ulong step;
