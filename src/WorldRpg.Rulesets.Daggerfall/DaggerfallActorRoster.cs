@@ -178,6 +178,23 @@ internal sealed class DaggerfallActorRoster
     /// can never retire. The actor's inventory and equipment registrations, and its corpse
     /// container's, leave the shared inventory store with it.
     /// </summary>
+    internal HashSet<long> BanishedActors { get; } = [];
+
+    internal void Banish(long durableId)
+    {
+        if (!_state.Actors.TryGet(durableId, out var actor) || actor.IsDefeated) return;
+        if (_dynamicActors.ContainsKey(durableId)) { Retire(durableId); return; }
+        if (durableId == DaggerfallActorIdentity.PlayerEntityId) throw new InvalidOperationException("The player cannot be banished.");
+        _definitionsByActor.Remove(durableId);
+        Appearance.RetireActor(durableId);
+        _lootUi.CloseActor(durableId);
+        _state.Effects.CancelActorReferences(durableId);
+        DestroyOwnedItems(durableId);
+        _corpseLoot.Retire(durableId);
+        _state.Actors.Entities.Destroy(ActorsState.Identity(durableId));
+        BanishedActors.Add(durableId);
+    }
+
     internal void Retire(long durableId)
     {
         if (durableId == DaggerfallActorIdentity.PlayerEntityId)
@@ -269,9 +286,12 @@ internal sealed class DaggerfallActorRoster
     /// </summary>
     internal void MaterializeSite(DaggerfallSiteProfile destination, DaggerfallSiteRuntimeDelta? delta)
     {
+        BanishedActors.Clear();
+        BanishedActors.UnionWith(delta?.BanishedActors ?? []);
         Dictionary<long, DaggerfallActorSave> saved = delta?.Actors.ToDictionary(value => value.EntityId) ?? [];
         foreach (AuthoredActor placement in destination.Project.Actors.Values.OrderBy(value => value.EntityId))
         {
+            if (BanishedActors.Contains(placement.EntityId)) continue;
             saved.TryGetValue(placement.EntityId, out DaggerfallActorSave? prior);
             DaggerfallActorDefinition definition = prior?.WabbajackDefinition is { } transformed
                 ? DaggerfallWabbajack.RequireDefinition(_definitions, transformed) : _definitions.RequireActor(placement.ActorId);

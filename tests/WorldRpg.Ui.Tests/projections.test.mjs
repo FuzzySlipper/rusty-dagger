@@ -900,3 +900,22 @@ test('character draft screens consume the published mode art and every pick part
     assert.equal(entry.hidden, true);
   } finally { f.dispose(); }
 });
+
+
+test('dispel choice renders published bundles and sends current select and cancel actions', () => {
+  const f = fixture();
+  try {
+    f.publish({ mode: 'modal', dispel: { revision: 'cast.8', options: [{ id: 'cast.2', label: 'True invisibility' }] } });
+    const panel = f.root.querySelector('.dagger-dispel');
+    assert.equal(panel.hidden, false);
+    const buttons = panel.querySelectorAll('button');
+    assert.equal(buttons[0].textContent, 'True invisibility');
+    buttons[0].click();
+    assert.deepEqual(f.actions.at(-1), { action: 'dispel-select', revision: 'cast.8', key: 'cast.2' });
+    buttons[1].click();
+    assert.deepEqual(f.actions.at(-1), { action: 'dispel-cancel', revision: 'cast.8' });
+    f.publish({ dispel: null });
+    assert.equal(panel.hidden, true);
+    assert.equal(panel.querySelectorAll('button').length, 0);
+  } finally { f.dispose(); }
+});

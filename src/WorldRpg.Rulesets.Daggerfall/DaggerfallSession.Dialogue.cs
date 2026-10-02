@@ -26,7 +26,10 @@ internal sealed record DaggerfallDialogueView(
     string? Question,
     string? Reply,
     IReadOnlyList<DaggerfallDialogueTopicOption> Topics,
-    IReadOnlyList<string> Diagnostics);
+    IReadOnlyList<string> Diagnostics)
+{
+    internal int ComprehendLanguagesBonus { get; init; }
+}
 
 /// <summary>
 /// Daggerfall talk policy over the existing NPC identity and actor owners. The owner admits only a

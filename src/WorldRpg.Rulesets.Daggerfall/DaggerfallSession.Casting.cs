@@ -90,12 +90,12 @@ internal sealed partial class DaggerfallSession
         if (State.Actors.Player.Actor.Entity.Value == hit.Entity) return State.Actors.Player.DurableId;
         return State.Actors.All.Where(actor => actor.Actor.Entity.Value == hit.Entity).Select(actor => (long?)actor.DurableId).SingleOrDefault();
     }
-    private long[] AreaSpellTargets(long caster, Vector3 center, bool excludeCaster)
+    private long[] AreaSpellTargets(long caster, Vector3 center, bool excludeCaster, double radius = 4d, bool exclusive = false)
     {
         var candidates = CurrentPositions().Where(pair => !excludeCaster || pair.Key != caster)
             .Select(pair => new PerceptionTarget(checked((ulong)pair.Key), pair.Value.ToVector())).ToArray();
         PerceptionQueryRequest request = new(_spatial.Session,
-            new[] { new PerceptionObserver(checked((ulong)caster), center, Vector3.UnitZ, 4d, -1d, 1d) }, candidates,
+            new[] { new PerceptionObserver(checked((ulong)caster), center, Vector3.UnitZ, radius, -1d, 1d) }, candidates,
             ReadOnlyMemory<SpatialEntityCollider>.Empty, 0, 0, 64);
         HashSet<long> targets = [];
         PerceptionReadoutResult receipt;
@@ -103,7 +103,7 @@ internal sealed partial class DaggerfallSession
         {
             receipt = _engine.Perception.QueryVisibility(request);
             // Classic blast radius does not test line of sight. Engine supplies distance, not product policy.
-            foreach (var pair in receipt.Pairs.ToArray()) if (pair.Distance <= 4d) targets.Add(checked((long)pair.Target));
+            foreach (var pair in receipt.Pairs.ToArray()) if (exclusive ? pair.Distance < radius : pair.Distance <= radius) targets.Add(checked((long)pair.Target));
             if (receipt.HasNextPairCursor) request = request with { PairCursor = receipt.NextPairCursor, ExpectedProjectionIdentity = receipt.ProjectionIdentity };
         } while (receipt.HasNextPairCursor);
         return targets.Order().ToArray();

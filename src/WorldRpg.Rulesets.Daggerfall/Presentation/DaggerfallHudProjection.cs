@@ -39,7 +39,7 @@ internal sealed record DaggerfallHudFrame(
     DaggerfallTravelPresentation? Travel = null,
     string? SiteName = null,
     DaggerfallLodgingView? Lodging = null,
-    DaggerfallMapPresentation? Map = null);
+    DaggerfallMapPresentation? Map = null, DaggerfallDispelView? Dispel = null);
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
 internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<DaggerfallHudResourceDefinition> resources, ResolvedCompositionIdentity? compositionIdentity, DaggerfallUiArt? uiArt = null) : IDisposable
@@ -60,11 +60,13 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ArgumentNullException.ThrowIfNull(frame);
         var (player, progression, presentation, mode, controls, slots, inventory, loot, character, panelRequest,
             saveSlots, saveSlotDiagnostic, controlSettings, controlDiagnostic, activation, quests, notebook, transport,
-            dungeonText, death, rest, travel, siteName, lodging, map) = frame;
+            dungeonText, death, rest, travel, siteName, lodging, map, dispel) = frame;
         UiValueBuilder builder = new();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
         (string Key, uint Value)[] fields =
         [
+            ("dispel", dispel is null ? builder.Null() : builder.Object(("revision", builder.String(dispel.Revision)),
+                ("options", builder.Array(dispel.Options.Select(option => builder.Object(("id", builder.String(option.Id)), ("label", builder.String(option.Label)))).ToArray())))),
             ("resources", builder.Array(rows)),
             ("experience", builder.Number(progression.Experience)),
             ("lastOutcome", builder.String(presentation.LastOutcome)),
@@ -236,6 +238,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("revision", builder.String(dialogue.Revision)),
         ("targetLabel", builder.String(dialogue.TargetLabel)),
         ("greeting", builder.String(dialogue.Greeting)),
+        ("comprehendLanguagesBonus", builder.Number(dialogue.ComprehendLanguagesBonus)),
         ("tone", builder.String(dialogue.Tone)),
         ("question", dialogue.Question is null ? builder.Null() : builder.String(dialogue.Question)),
         ("reply", dialogue.Reply is null ? builder.Null() : builder.String(dialogue.Reply)),

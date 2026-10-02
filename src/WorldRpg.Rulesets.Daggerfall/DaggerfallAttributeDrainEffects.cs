@@ -48,7 +48,7 @@ internal static class DaggerfallAttributeDrainEffects
                     AllowedElements: DaggerfallMagicAllowedElements.Fire | DaggerfallMagicAllowedElements.Cold
                         | DaggerfallMagicAllowedElements.Poison | DaggerfallMagicAllowedElements.Shock | DaggerfallMagicAllowedElements.Magic,
                     AllowedTargets: DaggerfallMagicAllowedTargets.Other,
-                    CreateState: cast => Encode(new(cast, cast.Amount))));
+                    CreateState: cast => Encode(new(cast, cast.Amount))), ShowSpellIcon: false);
         }
     }
 

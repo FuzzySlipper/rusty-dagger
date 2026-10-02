@@ -18,6 +18,7 @@ internal enum DaggerfallInteractionScreen
     LevelUp,
     /// <summary>A banking service opened at a live provider.</summary>
     Bank,
+    Dispel,
     /// <summary>
     /// The DOM's game menu and every panel it hosts: inventory, character sheet, notebook, travel,
     /// rest, transport and wagon, save and load, and settings. The DOM reports whether it is open.
@@ -43,7 +44,7 @@ internal sealed class DaggerfallOpenInteractions(
     Func<bool> dialogueOpen,
     Func<bool> characterCreationOpen,
     Func<bool> levelUpOpen,
-    Func<bool> bankOpen)
+    Func<bool> bankOpen, Func<bool>? dispelOpen = null)
 {
     /// <summary>Admitted world seconds a panel request stands before the DOM is assumed not to need it.</summary>
     private const double PanelRequestLifetimeSeconds = 1d;
@@ -78,6 +79,7 @@ internal sealed class DaggerfallOpenInteractions(
         DaggerfallInteractionScreen.CharacterCreation => characterCreationOpen(),
         DaggerfallInteractionScreen.LevelUp => levelUpOpen(),
         DaggerfallInteractionScreen.Bank => bankOpen(),
+        DaggerfallInteractionScreen.Dispel => dispelOpen?.Invoke() == true,
         DaggerfallInteractionScreen.Menu => _menuOpen,
         _ => throw new ArgumentOutOfRangeException(nameof(screen), screen, "Unknown interaction screen."),
     };

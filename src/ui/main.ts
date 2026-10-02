@@ -15,6 +15,7 @@ import type { RustyApplicationUiContext } from '@rusty-engine/product-ui';
 interface UiAction { readonly action: string; readonly [field: string]: string | number | boolean | undefined; }
 
 interface DaggerHud {
+  readonly dispel?: { readonly revision: string; readonly options: readonly { readonly id: string; readonly label: string }[] } | null;
   readonly resources: readonly { readonly id: string; readonly label: string; readonly current: number; readonly maximum: number }[];
   readonly lastOutcome: string;
   readonly mode?: string;
@@ -73,6 +74,7 @@ interface DeathProjection {
 }
 
 interface DialogueProjection {
+  readonly comprehendLanguagesBonus?: number;
   readonly revision: string;
   readonly targetLabel: string;
   readonly greeting: string;
@@ -304,6 +306,10 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const siteName = shell.querySelector<HTMLElement>('.dagger-title .dagger-site')!;
   const outcome = shell.querySelector<HTMLParagraphElement>('.dagger-outcome')!;
   const quests = shell.querySelector<HTMLElement>('.dagger-quests')!;
+  const dispel = document.createElement('section');
+  dispel.className = 'dagger-dispel';
+  dispel.hidden = true;
+  quests.before(dispel);
   const view = shell.querySelector<HTMLParagraphElement>('.dagger-view')!;
   const status = shell.querySelector<HTMLElement>('.dagger-status')!;
   const focusClose = shell.querySelector<HTMLButtonElement>('.dagger-focus-close')!;
@@ -841,6 +847,28 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const unsubscribe = context.projection?.subscribe((projection) => {
     if (projection?.contract !== 'dagger.ui.snapshot.v1' || !isHud(projection.value)) return;
     const value = projection.value;
+    dispel.hidden = !value.dispel;
+    dispel.replaceChildren();
+    if (value.dispel) {
+      const choice = value.dispel;
+      const heading = document.createElement('h2');
+      heading.textContent = 'Dispel magic';
+      dispel.append(heading);
+      const choose = (key?: string): void => { context.intents?.claim('dagger.ui', {
+        kind: 'product-payload', contract: UI_ACTION_CONTRACT,
+        data: key ? { action: 'dispel-select', revision: choice.revision, key } : { action: 'dispel-cancel', revision: choice.revision },
+      }); };
+      for (const option of choice.options) {
+        const button = document.createElement('button');
+        button.textContent = option.label;
+        button.addEventListener('click', () => choose(option.id));
+        dispel.append(button);
+      }
+      const cancel = document.createElement('button');
+      cancel.textContent = 'Cancel';
+      cancel.addEventListener('click', () => choose());
+      dispel.append(cancel);
+    }
     const adopted = value.uiArt ? adopt(value.uiArt) : '';
     if (adopted.length > 0 && adopted !== artRevision) {
       artRevision = adopted;
@@ -940,7 +968,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       if (dialogueWindow.open) dialogueWindow.close();
     } else {
       dialogueTarget.textContent = dialogue.targetLabel;
-      dialogueGreeting.textContent = dialogue.greeting;
+      dialogueGreeting.textContent = dialogue.greeting + (dialogue.comprehendLanguagesBonus ? ` Language comprehension: +${dialogue.comprehendLanguagesBonus}.` : '');
       dialogueTone.value = dialogue.tone;
       dialogueQuestion.textContent = dialogue.question ?? '';
       dialogueReply.textContent = dialogue.reply ?? '';

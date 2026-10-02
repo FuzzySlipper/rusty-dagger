@@ -242,6 +242,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
     }
 
     /// <summary>Retires one spawned actor through the roster's lifetime policy.</summary>
+    internal void BanishActor(long durableId) => _roster.Banish(durableId);
+
     internal void RetireActor(long durableId)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -324,8 +326,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         // can see the mode they are in.
         Cinematics?.Poll();
         _openingCinematics.Poll();
-        bool playing = _mode == ProductMode.Playing && Cinematics?.ActiveSource is null;
-        bool modal = _mode == ProductMode.Modal;
+        bool playing = _mode == ProductMode.Playing && Cinematics?.ActiveSource is null && _pendingDispel is null;
+        bool modal = _mode == ProductMode.Modal || _pendingDispel is not null;
         DaggerfallUiPhases phase = _mode == ProductMode.Dead ? DaggerfallUiPhases.Dead
             : playing ? DaggerfallUiPhases.Playing
             : modal ? DaggerfallUiPhases.Modal
@@ -619,7 +621,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             Lodging: LodgingView,
             Travel: ReadTravelPresentation(),
             SiteName: Site.ActiveSite?.Name,
-            Map: _mapOpen ? ReadMapPresentation() : null));
+            Map: _mapOpen ? ReadMapPresentation() : null, Dispel: DispelView));
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors, _groundContainers.All,
