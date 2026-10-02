@@ -123,7 +123,7 @@ public sealed class Arena2MagicCatalogDocumentTests
         JsonArray costs = JsonNode.Parse(publication.Json)!["effectCosts"]!.AsArray();
 
         // Both spells carry one effect without a subtype, so each type resolves through its first slot.
-        Assert.Equal([4, 7, 7, 10, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 13, 16, 23, 24, 26, 31, 33, 33, 33, 33, 34, 39, 39, 39, 40], costs.Select(cost => cost!["type"]!.GetValue<int>()));
+        Assert.Equal([2, 4, 7, 7, 10, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 12, 13, 16, 23, 24, 26, 31, 33, 33, 33, 33, 34, 39, 39, 39, 40], costs.Select(cost => cost!["type"]!.GetValue<int>()));
         JsonObject first = costs.Single(cost => cost!["type"]!.GetValue<int>() == 16)!.AsObject();
         Assert.Equal(-1, first["subType"]!.GetValue<int>());
         Assert.Equal(3, first["settingsType"]!.GetValue<int>());
@@ -166,7 +166,7 @@ public sealed class Arena2MagicCatalogDocumentTests
         for (int subtype = 0; subtype < 8; subtype++) Assert.Contains((7, subtype), rows);
         Assert.True(used.SetEquals(rows));
         // Paralysis: settings type 1, alteration, the donor's first coefficient row.
-        JsonObject paralysis = document["effectCosts"]!.AsArray()[0]!.AsObject();
+        JsonObject paralysis = document["effectCosts"]!.AsArray().Single(row => row!["type"]!.GetValue<int>() == 4)!.AsObject();
         Assert.Equal((0, -1, 1, "alteration"), (paralysis["type"]!.GetValue<int>(), paralysis["subType"]!.GetValue<int>(), paralysis["settingsType"]!.GetValue<int>(), paralysis["school"]!.GetValue<string>()));
         Assert.Equal([7, 25, 7, 25], paralysis["coefficients"]!.AsObject().Select(pair => pair.Value!.GetValue<int>()));
     }

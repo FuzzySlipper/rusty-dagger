@@ -32,6 +32,13 @@ internal sealed record DaggerfallSoulTrapState([property: JsonRequired] Daggerfa
 
 internal static class DaggerfallItemSoulEffects
 {
+    internal static void EndOnDeath(DaggerfallEffectLifecycle effects, long target)
+    {
+        foreach (var instance in effects.Active.Where(effect => effect.Definition.Key == "soul-trap"
+            && checked((long)effect.Context.Target.Value) == target).Select(effect => effect.Context.Instance).ToArray())
+            effects.Cancel(instance);
+    }
+
     internal static IEnumerable<DaggerfallEffectDefinition> Definitions(Action<DaggerfallCreateItemRequest> requestItem,
         Func<long, int?> monsterMobile, Func<int, bool> captureSoul, IRandomService random, Action<long, string, bool> outcome)
     {

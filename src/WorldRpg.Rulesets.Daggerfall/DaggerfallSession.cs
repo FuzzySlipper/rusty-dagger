@@ -607,6 +607,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         {
             if (died.ActorId==DaggerfallActorIdentity.PlayerEntityId) { _pendingIdentify=null; _pendingCreateItem=null; }
             DaggerfallMolagBalEffects.EndOnDeath(State.Effects, died.ActorId);
+            DaggerfallItemSoulEffects.EndOnDeath(State.Effects, died.ActorId);
             DaggerfallParalysisEffects.EndOnDeath(State.Effects, died.ActorId);
             DaggerfallContinuousDestructionEffects.EndOnDeath(State.Effects, died.ActorId);
             DaggerfallConcealmentEffects.End(State.Effects, died.ActorId);
