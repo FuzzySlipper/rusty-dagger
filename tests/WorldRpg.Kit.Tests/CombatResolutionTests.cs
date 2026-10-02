@@ -9,6 +9,55 @@ namespace WorldRpg.Kit.Tests;
 
 public sealed class CombatResolutionTests
 {
+    [Theory]
+    [InlineData(HealthApplicationMode.Damage)]
+    [InlineData(HealthApplicationMode.Terminal)]
+    public void A_defeat_contribution_retains_living_health_before_one_canonical_application(HealthApplicationMode mode)
+    {
+        using ActorsState actors = Actors(); var target = actors.Get(3);
+        var health = target.Stats.GetTrack(TrackId.Parse("health")); health.SetCurrent(3.75);
+        var contributions = new CombatContributions(); target.Actor.Add(contributions);
+        int decisions = 0;
+        var protection = new DefeatingContribution(value =>
+        {
+            decisions++;
+            Assert.Equal(3.75, health.Current); // No provisional death or resurrection.
+            Assert.Equal(mode, value.Application.Mode);
+            Assert.Equal(3.75, value.CurrentHealth);
+            value.RetainedHealth = 1;
+        });
+        contributions.Rules.Add(protection);
+        var resolution = new CombatResolution();
+        var participants = new CombatParticipants(actors.Get(2).Actor, target.Actor, "lethal");
+        var result = resolution.ApplyToHealth(participants, 10, 0, health, mode);
+        Assert.Equal(1, health.Current); Assert.Equal(2.75, result.ActualHealthLost); Assert.False(result.Defeated);
+        Assert.Equal(1, decisions);
+        contributions.Rules.Remove(protection);
+        var unprotected = resolution.ApplyToHealth(participants, 10, 0, health, mode);
+        Assert.Equal(1, unprotected.ActualHealthLost); Assert.True(unprotected.Defeated);
+        var repeated = resolution.ApplyToHealth(participants, 10, 0, health, mode);
+        Assert.Equal(0, repeated.ActualHealthLost); Assert.False(repeated.Defeated);
+    }
+
+    [Fact]
+    public void Defeat_policy_observes_all_damage_reduction_and_never_heals_a_fractional_target()
+    {
+        using ActorsState actors = Actors(); var target = actors.Get(3);
+        var health = target.Stats.GetTrack(TrackId.Parse("health")); health.SetCurrent(3.75);
+        var contributions = new CombatContributions(); target.Actor.Add(contributions);
+        int decisions = 0;
+        contributions.Rules.Add(new DefeatingContribution(value => { decisions++; value.RetainedHealth = 1; }));
+        contributions.Rules.Add(new ApplyingContribution(value => value.Damage = 1));
+        var resolution = new CombatResolution();
+        var participants = new CombatParticipants(actors.Get(2).Actor, target.Actor, "warded");
+        var reduced = resolution.ApplyToHealth(participants, 10, 0, health);
+        Assert.Equal(0, decisions); Assert.Equal(1, reduced.ActualHealthLost); Assert.Equal(2.75, health.Current);
+        health.SetCurrent(.5);
+        var retained = resolution.ApplyToHealth(participants, 10, 0, health);
+        Assert.Equal(1, decisions); Assert.Equal(.5, health.Current); Assert.Equal(0, retained.ActualHealthLost);
+        Assert.False(retained.Defeated);
+    }
+
     [Fact]
     public void Terminal_health_application_retains_one_death_transition_despite_damage_reduction()
     {
@@ -216,5 +265,9 @@ public sealed class CombatResolutionTests
     private sealed class ApplyingContribution(Action<ApplyHitEvent> apply) : ICombatContribution
     {
         public void Applying(ApplyHitEvent interaction) => apply(interaction);
+    }
+    private sealed class DefeatingContribution(Action<DefeatEvent> apply) : ICombatContribution
+    {
+        public void Defeating(DefeatEvent interaction) => apply(interaction);
     }
 }
