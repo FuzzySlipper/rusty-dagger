@@ -166,7 +166,7 @@ public sealed class Arena2MagicCatalogDocumentTests
         for (int subtype = 0; subtype < 8; subtype++) Assert.Contains((7, subtype), rows);
         Assert.True(used.SetEquals(rows));
         // Paralysis: settings type 1, alteration, the donor's first coefficient row.
-        JsonObject paralysis = document["effectCosts"]!.AsArray().Single(row => row!["type"]!.GetValue<int>() == 4)!.AsObject();
+        JsonObject paralysis = document["effectCosts"]!.AsArray().Single(row => row!["type"]!.GetValue<int>() == 0 && row["subType"]!.GetValue<int>() == -1)!.AsObject();
         Assert.Equal((0, -1, 1, "alteration"), (paralysis["type"]!.GetValue<int>(), paralysis["subType"]!.GetValue<int>(), paralysis["settingsType"]!.GetValue<int>(), paralysis["school"]!.GetValue<string>()));
         Assert.Equal([7, 25, 7, 25], paralysis["coefficients"]!.AsObject().Select(pair => pair.Value!.GetValue<int>()));
     }
