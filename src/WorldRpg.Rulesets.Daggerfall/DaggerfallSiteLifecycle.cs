@@ -222,6 +222,11 @@ internal sealed class DaggerfallSiteLifecycle
         if (profile == ActiveProfile)
         {
             _host.RelocatePlayer(ProfileToLocal(pose.Position), pose.YawRadians, pose.PitchRadians);
+            if (profile.Kind == DaggerfallWorldProfileKind.Exterior)
+            {
+                RebaseExteriorIfNeeded();
+                UpdateExteriorResidency();
+            }
             return true;
         }
         return TryTransitionTo(profile, pose, useReturnDestination: false);
@@ -576,13 +581,16 @@ internal sealed class DaggerfallSiteLifecycle
         if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior
             || _state.PlayerControl.Position is not WorldPoint position) return;
         float cellSize = DaggerfallExteriorCellResidency.CellSize;
-        if (MathF.Abs(position.X) < cellSize && MathF.Abs(position.Z) < cellSize) return;
+        bool horizontal = MathF.Abs(position.X) >= cellSize || MathF.Abs(position.Z) >= cellSize;
+        bool vertical = MathF.Abs(position.Y) > _tuning.WorldOrigin.VerticalRebaseDistance;
+        if (!horizontal && !vertical) return;
         WorldOriginReadout origin = _engine.WorldOrigin.Read(new(_spatial.Session));
         RequireOriginPair(origin);
-        long x = checked(origin.CellX + (long)Math.Floor(position.X));
-        long z = checked(origin.CellZ + (long)Math.Floor(position.Z));
+        long x = horizontal ? checked(origin.CellX + (long)Math.Floor(position.X)) : origin.CellX;
+        long y = vertical ? checked(origin.CellY + (long)Math.Floor(position.Y)) : origin.CellY;
+        long z = horizontal ? checked(origin.CellZ + (long)Math.Floor(position.Z)) : origin.CellZ;
         using WorldOriginPrepared prepared = _engine.WorldOrigin.Prepare(new(_spatial.Session,
-            x, origin.CellY, z, ReadOnlyMemory<WorldOriginEntityRow>.Empty));
+            x, y, z, ReadOnlyMemory<WorldOriginEntityRow>.Empty));
         CommitExteriorOrigin(prepared);
     }
 
@@ -610,7 +618,7 @@ internal sealed class DaggerfallSiteLifecycle
         {
             // A native commit is immediate. Reporting a recoverable transition refusal here
             // would continue with potentially mismatched collision and product poses.
-            throw new InvalidOperationException("The Engine origin was committed but product rebasing failed; the session cannot continue with inconsistent world coordinates.", error);
+            throw new DaggerfallOriginCommitException(error);
         }
     }
 

@@ -3,9 +3,11 @@ using System.Text.Json;
 using System.Reflection;
 using Rusty.Engine;
 using Rusty.Engine.Testing;
+using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Policies;
@@ -162,6 +164,31 @@ public sealed class ExteriorOriginSessionTests
         Assert.Equal(playerPosition.X, inside.Site.ReturnPose!.X);
         Assert.Equal(actorPosition.X, Assert.Single(inside.SiteDeltas).DynamicActors.Single(actor => actor.EntityId == actorId).X);
         Assert.Equal(playerPosition.X, inside.GroundContainers[0].X);
+        DurableIdentityReference actorIdentity = new(DurableIdentityKind.Actor, checked((ulong)actorId));
+        Assert.Equal(DurableEntityResolution.Unloaded,
+            restored.State.Actors.Entities.Classify(actorIdentity, restored.State.Npcs.Identities!));
+
+        // Saving inside the destination must retain the boundary site's issued identity without
+        // a native entity. A fresh session distinguishes it from an ID the session never issued.
+        List<string> insideReleases = [];
+        ContentFake insideContent = new(insideReleases);
+        PopulateContent(insideContent, exterior);
+        PopulateContent(insideContent, interior);
+        SpatialFake insideSpatial = SpatialFake.Create(interior.SpatialArtifact.Sha256, insideReleases);
+        EngineContextFake insideEngine = EngineContextFake.Create(insideContent, insideSpatial.Service,
+            new AppearanceFake(insideReleases));
+        using DaggerfallSession fromInside = DaggerfallSession.Restore(insideEngine.Context,
+            new(definitions, exterior, DaggerfallTuning.Defaults, identity) { Profiles = profiles }, restored.CaptureSave());
+        Assert.Equal(DurableEntityResolution.Unloaded,
+            fromInside.State.Actors.Entities.Classify(actorIdentity, fromInside.State.Npcs.Identities!));
+        Assert.Equal(DurableEntityResolution.NeverIssued,
+            fromInside.State.Actors.Entities.Classify(new(DurableIdentityKind.Actor, ulong.MaxValue), fromInside.State.Npcs.Identities!));
+        Assert.True(fromInside.TryTransitionTo(exterior.ProfileKey));
+        Assert.Equal(DurableEntityResolution.Materialized,
+            fromInside.State.Actors.Entities.Classify(actorIdentity, fromInside.State.Npcs.Identities!));
+        Assert.Equal(actorPosition, fromInside.State.Actors.Get(actorId).Position);
+        Assert.Single(fromInside.DynamicActors, actor => actor.Key == actorId);
+        Assert.Equal(playerPosition, fromInside.State.PlayerControl.Position);
         Assert.True(restored.TryTransitionTo(exterior.ProfileKey));
         Assert.Equal(playerPosition, restored.State.PlayerControl.Position);
         Assert.Equal(actorPosition, restored.State.Actors.Get(actorId).Position);
@@ -213,6 +240,103 @@ public sealed class ExteriorOriginSessionTests
     }
 
     [Fact]
+    public void Same_profile_relocation_updates_the_exterior_window_and_rebases_before_returning()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior.json");
+        List<string> releases = [];
+        ContentFake content = new(releases); PopulateContent(content, exterior);
+        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
+        var before = session.Sites.CaptureExteriorResidency()!.Value;
+        WorldPoint destination = new(4 * DaggerfallExteriorCellResidency.CellSize, 1, 1);
+        Assert.True(session.Sites.TryRelocatePlayer(exterior.ProfileKey, new("recall", destination, .7f, .1f)));
+        Assert.Single(engine.OriginCommits);
+        var after = session.Sites.CaptureExteriorResidency()!.Value;
+        Assert.Equal(new DaggerfallExteriorCellId(before.Origin.X + 4, before.Origin.Y), after.Center);
+        Assert.Equal(after.Center, session.Sites.CurrentExteriorCell());
+        Assert.Equal(destination.ToVector(), session.Sites.LocalToProfile(session.State.PlayerControl.Position!.Value.ToVector()));
+        var saved = DaggerfallSavePayload.Read(session.CaptureSave());
+        _ = saved.ResolveRestore(definitions, exterior);
+        var malformed = saved with { ExteriorResidency = after with { Center = before.Center } };
+        Assert.Throws<ArgumentException>(() => malformed.ResolveRestore(definitions, exterior));
+    }
+
+    [Theory]
+    [InlineData(501f)]
+    [InlineData(-501f)]
+    public void Vertical_origin_commit_preserves_world_height_and_does_not_move_the_horizontal_cell(float height)
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior.json");
+        List<string> releases = [];
+        ContentFake content = new(releases); PopulateContent(content, exterior);
+        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
+        var before = session.Sites.CaptureExteriorResidency()!.Value;
+        WorldPoint start = session.State.PlayerControl.Position!.Value;
+        session.State.PlayerControl.MoveTo(new Vector3(start.X, height, start.Z));
+        session.Sites.RebaseExteriorIfNeeded();
+        Assert.Single(engine.OriginCommits);
+        Assert.Equal(before.Center, session.Sites.CurrentExteriorCell());
+        Assert.Equal(new Vector3(start.X, height, start.Z), session.Sites.LocalToProfile(session.State.PlayerControl.Position!.Value.ToVector()));
+        Assert.Equal(0f, session.State.PlayerControl.Position.Value.Y);
+        Assert.Equal(-height, session.Sites.LocalCompensation.Y);
+    }
+
+    [Fact]
+    public void Teleport_recall_does_not_convert_a_committed_origin_failure_into_a_recoverable_refusal()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        ProductContent admitted = FullContent(root);
+        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
+        DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, exterior);
+        PopulateContent(content, interior);
+        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context,
+            new(definitions, exterior, DaggerfallTuning.Defaults) { Profiles = new([exterior, interior]) });
+
+        long nextSequence = 1;
+        void RequestTeleport()
+        {
+            DaggerfallSpellEffectDefinition setting = new("teleport", 43, -1, 10, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1);
+            DaggerfallSpellDefinition spell = new("test.teleport", 1, false, "Mysticism", 4, 0, 0, 0, [setting]);
+            var magicka = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka"));
+            magicka.Maximum.BaseValue = 10000; magicka.SetCurrent(10000);
+            DaggerfallCasting casting = new(definitions.Magic with { Spells = new Dictionary<string, DaggerfallSpellDefinition> { [spell.Key] = spell } },
+                session.State.Effects, _ => session.State.Actors.Player.Actor, session.MagicProfile,
+                _ => true, _ => { }, _ => { }, RandomMaximum.Create(), 1,
+                nextSequence: nextSequence, playerKnowsSpell: _ => true, casterLevel: _ => 1);
+            Assert.Equal(DaggerfallCastOutcome.Ready, casting.Ready(1, spell.Key).Outcome);
+            casting.Deliver(casting.Release(1, true).Bundle!, [1]);
+            nextSequence = casting.NextSequence;
+        }
+
+        Assert.True(session.TryTransitionTo(interior.ProfileKey));
+        RequestTeleport();
+        session.ChooseTeleport(session.TeleportView!.Revision, "anchor");
+        Assert.True(session.TryTransitionTo(exterior.ProfileKey));
+        session.State.PlayerControl.MoveTo(new Vector3(1000, 1, 5));
+        session.Sites.RebaseExteriorIfNeeded();
+        RequestTeleport();
+        engine.FailNextCameraUpdate();
+        DaggerfallOriginCommitException failure = Assert.Throws<DaggerfallOriginCommitException>(
+            () => session.ChooseTeleport(session.TeleportView!.Revision, "recall"));
+        Assert.Contains("inconsistent world coordinates", failure.Message);
+        Assert.Equal(exterior.ProfileKey, session.Sites.ActiveProfile);
+        Assert.Equal(2, engine.OriginCommits.Count);
+    }
+
+    [Fact]
     public void Post_commit_camera_failure_is_explicit_and_cannot_be_reported_as_a_recoverable_transition()
     {
         string root = TestData.RepositoryRoot;
@@ -232,7 +356,7 @@ public sealed class ExteriorOriginSessionTests
         session.Sites.RebaseExteriorIfNeeded();
         Assert.Single(engine.OriginCommits);
         engine.FailNextCameraUpdate();
-        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => session.TryTransitionTo(interior.ProfileKey));
+        DaggerfallOriginCommitException failure = Assert.Throws<DaggerfallOriginCommitException>(() => session.TryTransitionTo(interior.ProfileKey));
         Assert.Contains("origin was committed", failure.Message);
         Assert.Contains("inconsistent world coordinates", failure.Message);
         Assert.IsType<InvalidOperationException>(failure.InnerException);
