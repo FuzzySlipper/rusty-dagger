@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
@@ -1069,15 +1070,23 @@ public sealed class SpriteWorkbenchProductTests
             NormalizedMediaDescriptor font = Descriptor("font.classic", NormalizedMediaKind.Font, "media/classic/font.bin", fontBytes, 1);
             DungeonMediaFrameLayout[] layouts = Enumerable.Range(0, actor.Frames.Count)
                 .Select(index => new DungeonMediaFrameLayout(index, 0, index / 3, index / 3, false, actor.Frames[index], index == 1 ? new(2F, 3F) : new(1F, 1F))).ToArray();
+            Assert.True(MobileSourceMetadata.TryGet(new Arena2MobileId(1), out var mobile));
+            string Cue(string name) => $"sound.{DaggerfallSoundNames.ForName(name)}";
+            DungeonActorFeedback feedback = new(1, Cue(mobile.Links.MoveSoundCue), Cue(mobile.Links.BarkSoundCue),
+                Cue(mobile.Links.AttackSoundCue), mobile.Links.ParrySounds, mobile.Links.BloodIndex);
+            GeneratedMediaArtifact[] audio = new[] { feedback.MoveCue, feedback.BarkCue, feedback.AttackCue }
+                .Distinct(StringComparer.Ordinal).Select(cue => new GeneratedMediaArtifact(cue, NormalizedMediaKind.Audio,
+                    $"media/classic/{cue}.wav", "audio"u8.ToArray(), 0, 0, null, "audio/wav")).ToArray();
+            NormalizedMediaManifest audioMedia = MediaManifestNormalizer.Normalize(audio);
             DungeonActorMediaManifest actorManifest = new(
                 "actor/rat", 1, "Rat", DungeonActorSpriteState.Move, new([0, -1], []), "sprite/rat", new(.5F, 0F), new(1F, 1F), new(1F, 1F),
-                [new(DungeonActorSpriteState.Move, new(6F, true), new(6F, true), 0, 3, layouts)], null, actor.Id);
+                [new(DungeonActorSpriteState.Move, new(6F, true), new(6F, true), 0, 3, layouts)], null, actor.Id) { Feedback = feedback };
             DungeonMediaManifestSidecar dungeon = new(new([actor]), [], [], [actorManifest]);
             ClassicMediaManifestSidecar classic = new(
-                new([weapon, effect, font]),
+                new([weapon, effect, font, .. audioMedia.Resources]),
                 [new ClassicWeaponMediaManifest(weapon.Id, Enum.GetValues<ClassicDaggerWeaponAction>().Select((action, index) => new ClassicWeaponActionManifest(action, index, index, 1, ClassicWeaponScreenAlignment.Right, 0F, new(10F, true), 0, 0)).ToArray())],
                 Enum.GetValues<ClassicEffect>().Select((effectValue, index) => new ClassicEffectManifest(effectValue, effect.Id, index, new(10F, false))).ToArray(),
-                [], [], [], new(font.Id, "default", 1, 1, Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, checked((ushort)index))).ToArray()),
+                audio.Select((clip, index) => new ClassicAudioManifest(clip.Id, clip.Id, index, checked((uint)index), SoundArchive.SampleRate)).ToArray(), [], [], new(font.Id, "default", 1, 1, Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, checked((ushort)index))).ToArray()),
                 [new(font.Id, "default", 1, 1, Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, checked((ushort)index))).ToArray())],
                 [],
                 Enumerable.Range(0, 62).Select(region => new ClassicMapRegionManifest(region, [])).ToArray(), [], [], []);
@@ -1090,8 +1099,9 @@ public sealed class SpriteWorkbenchProductTests
                 new(weapon.RelativePath, weaponBytes),
                 new(effect.RelativePath, effectBytes),
                 new(font.RelativePath, fontBytes),
+                .. audio.Select(clip => new ImportPublicationArtifact(clip.RelativePath, clip.Bytes)),
                 new(Arena2MediaBundlePublication.DungeonMediaManifestRelativePath, dungeonBytes, [actor.RelativePath]),
-                new(Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, classicBytes, [weapon.RelativePath, effect.RelativePath, font.RelativePath]),
+                new(Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, classicBytes, [weapon.RelativePath, effect.RelativePath, font.RelativePath, .. audio.Select(clip => clip.RelativePath)]),
             ];
             ImportPublicationPlan plan = ImportPublicationPlan.Create(provenance, artifacts);
             SpritePublicationSnapshot snapshot = SpritePublicationReader.FromPlan(plan);
