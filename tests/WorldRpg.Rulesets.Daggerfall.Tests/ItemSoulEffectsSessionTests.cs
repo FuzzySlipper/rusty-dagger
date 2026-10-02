@@ -9,6 +9,30 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class ItemSoulEffectsSessionTests
 {
     [Fact]
+    public void Full_inventory_refuses_creation_without_item_or_identity_and_keeps_paid_selection_for_retry()
+    {
+        using var f = new SanguineRoseSessionTests.Fixture(); var s = f.Session;
+        var coins = InventoryStackId.Parse("test.create.capacity");
+        ulong amount = checked((ulong)s.State.Encumbrance.Read().RemainingClassicUnits);
+        s.State.Inventory.Grant(new(new("gold-piece"), coins, amount));
+        s.State.ItemInstances.RegisterDefaultStack(DaggerfallItemOwner.Player,
+            s.State.Inventory.Read().Stacks.Single(value => value.Id == coins), TestPayload.Definitions.RequireItem(new("gold-piece")));
+        Create(s, "full");
+        var before = DaggerfallSavePayload.Read(s.CaptureSave());
+        s.ChooseCreateItem("full", "weapon-113");
+        Assert.NotNull(s.CreateItemView);
+        Assert.Contains("cannot carry", s.Presentation.LastOutcome);
+        Assert.DoesNotContain(s.State.ItemInstances.UniqueItems, value => value.Value.Conjuration is not null);
+        var after = DaggerfallSavePayload.Read(s.CaptureSave());
+        Assert.Equal(JsonSerializer.Serialize(before.Identities, DaggerfallSaveJsonContext.Default.DurableIdentityState),
+            JsonSerializer.Serialize(after.Identities, DaggerfallSaveJsonContext.Default.DurableIdentityState));
+        s.State.Inventory.Consume(new(coins, amount)); s.State.ItemInstances.RemoveStack(DaggerfallItemOwner.Player, coins);
+        s.ChooseCreateItem("full", "weapon-113");
+        Assert.Null(s.CreateItemView);
+        Assert.Single(s.State.ItemInstances.UniqueItems, value => value.Value.Conjuration is not null);
+    }
+
+    [Fact]
     public void Soul_trap_zero_chance_attaches_through_real_delivery_and_humanoid_admission_does_not_attach()
     {
         using var f = new SanguineRoseSessionTests.Fixture(); var s = f.Session;

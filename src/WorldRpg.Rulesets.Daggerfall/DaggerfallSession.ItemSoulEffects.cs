@@ -45,6 +45,11 @@ internal sealed partial class DaggerfallSession
             TemplateIndex: option.Template, Material: option.Material,
             Race: appearance ? State.Character.Identity.RaceId : null,
             Gender: appearance ? State.Character.Identity.Gender.ToString().ToLowerInvariant() : null));
+        if (!State.Encumbrance.CanCarry(_definitions.RequireItem(new DaggerfallItemId(created.Item.Value)), created.Quantity))
+        {
+            Presentation.SetOutcome("Cannot create that item: you cannot carry any more.");
+            return;
+        }
         created = created with { Metadata = created.Metadata with { Conjuration = new(request.Instance, checked(MinuteIndex(_time.Calendar) + request.Duration)) } };
         var identity = created.Stackable ? (WorldRpg.Kit.World.DurableIdentityReference?)null : _uniqueItems.AllocateReference();
         try
