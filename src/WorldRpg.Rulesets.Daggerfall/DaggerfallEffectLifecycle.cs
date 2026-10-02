@@ -10,13 +10,14 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-/// <summary>The ruleset-owned outcome of applying its like-kind policy.</summary>
+/// <summary>The ruleset-owned outcome of admission and the initial payload.</summary>
 internal enum DaggerfallEffectAdmissionOutcome
 {
     Started,
     Refreshed,
     Replaced,
     Rejected,
+    NoMatch,
 }
 
 /// <summary>The narrow completed-change signal cast, item, time, combat, and presentation owners consume.</summary>
@@ -26,6 +27,7 @@ internal enum DaggerfallEffectOutcomeKind
     Refreshed,
     Replaced,
     Rejected,
+    NoMatch,
     Cancelled,
     Cured,
     Expired,
@@ -181,6 +183,8 @@ internal sealed class DaggerfallActiveEffect
     internal Actor Target { get; }
     /// <summary>Compiled policy requests ordinary Engine expiry after the current magic-round payload.</summary>
     internal bool ExpireAfterCurrentRound { get; set; }
+    /// <summary>The compiled initial payload found no condition in its selected cure scope.</summary>
+    internal bool NoMatchingCondition { get; set; }
 
     internal void Attach(ActiveEffectState lifecycle)
     {
@@ -321,13 +325,19 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
             : DaggerfallEffectAdmissionOutcome.Started;
         // The donor applies a newly assigned effect once before the next minute tick. Restore does
         // not come through Start(), so it never repeats this work.
+        bool noMatch = false;
         ActiveEffectLifecycleReceipt? initial = LifecycleFor(request.TargetId).AdvanceInitialMagicRound(context.Instance, state =>
         {
-            if (_effects.TryGetValue(state.Context.Instance, out DaggerfallActiveEffect? effect)) ApplyRound(effect);
+            if (_effects.TryGetValue(state.Context.Instance, out DaggerfallActiveEffect? effect))
+            {
+                ApplyRound(effect);
+                noMatch = effect.NoMatchingCondition;
+            }
         });
         if (initial is not null)
             foreach (ActiveEffectState removed in initial.Removed) _effects.Remove(removed.Context.Instance);
-        Publish(outcome == DaggerfallEffectAdmissionOutcome.Replaced
+        if (noMatch) outcome = DaggerfallEffectAdmissionOutcome.NoMatch;
+        Publish(noMatch ? DaggerfallEffectOutcomeKind.NoMatch : outcome == DaggerfallEffectAdmissionOutcome.Replaced
             ? DaggerfallEffectOutcomeKind.Replaced
             : DaggerfallEffectOutcomeKind.Started, context.Instance.Value, definition.Key, request.TargetId);
         if (initial is not null)
