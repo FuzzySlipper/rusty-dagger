@@ -5,7 +5,10 @@ namespace WorldRpg.Rulesets.Daggerfall.Facts;
 
 internal interface IProductFact : IWorldRpgFact;
 internal sealed record SpellCastFact(DaggerfallCastOutcome Outcome, long? Sequence, long? CasterId,
-    string? SpellKey, int Cost, DaggerfallCastEffectResult[] Effects, DaggerfallSpellAbsorptionResult[]? Absorptions = null) : IProductFact;
+    string? SpellKey, int Cost, DaggerfallCastEffectResult[] Effects, DaggerfallSpellAbsorptionResult[]? Absorptions = null,
+    string? SpellName = null, int Element = 0, ulong? SourceItem = null) : IProductFact;
+internal sealed record MagicEffectFact(DaggerfallEffectOutcome Outcome) : IProductFact;
+internal sealed record SpellTrackRestoredFact(long TargetId, string Track, int Requested, double Restored) : IProductFact;
 /// <summary>One delivered transfer reports requested loss, bounded loss, bounded recovery and terminal target outcome.</summary>
 internal sealed record VitalTransferredFact(long CasterId, long TargetId, string Track, int AdmittedAmount,
     double ActualLoss, double ActualRecovery, bool TargetDefeated, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;

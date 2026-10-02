@@ -456,11 +456,14 @@ internal static class DaggerfallPoisonArms
             case DaggerfallPoisonTarget.Health when !arm.IsPositive && amount > 0:
                 _ = vitality.ResolvePoisonDamage(effect.Target, amount);
                 return;
+            case DaggerfallPoisonTarget.Health when arm.IsPositive:
+                vitality.RestoreSpellTrack(effect.Target,TrackId.Parse("health"),amount);
+                return;
             case DaggerfallPoisonTarget.Fatigue:
-                Adjust(effect.Target, DaggerfallMechanicsIds.Stamina, arm.IsPositive ? amount : -amount);
+                vitality.AdjustConditionTrack(effect.Source,effect.Target, TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value), arm.IsPositive ? amount : -amount);
                 return;
             case DaggerfallPoisonTarget.Magicka:
-                Adjust(effect.Target, DaggerfallMechanicsIds.Magicka, arm.IsPositive ? amount : -amount);
+                vitality.AdjustConditionTrack(effect.Source,effect.Target, TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value), arm.IsPositive ? amount : -amount);
                 return;
             case DaggerfallPoisonTarget.Attribute:
                 Accumulate(effect, AttributeId(arm.Attribute!), amount, totals, playerCareer);
@@ -468,16 +471,6 @@ internal static class DaggerfallPoisonArms
             default:
                 return;
         }
-    }
-
-    /// <summary>
-    /// Moves a vital track by the arm's own sign, which is how the donor's draining and restoring arms read:
-    /// a negative arm takes what is there and no more, a positive one does not pass the maximum.
-    /// </summary>
-    private static void Adjust(Actor actor, DaggerfallTrackId track, int amount)
-    {
-        Track value = actor.Get<StatsComponent>().GetTrack(TrackId.Parse(track.Value));
-        value.SetCurrent(value.Current + amount, clamp: true);
     }
 
     private static int Draw(IRandomService random, DaggerfallActiveEffect effect, long ordinal, DaggerfallPoisonEffect arm)

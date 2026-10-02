@@ -66,6 +66,9 @@ public sealed class Arena2ClassicMediaPublicationTests
         Assert.Equal(
             [(1, ClassicWeaponScreenAlignment.Right, 0.2F), (2, ClassicWeaponScreenAlignment.Right, 0F), (3, ClassicWeaponScreenAlignment.Right, 0F), (4, ClassicWeaponScreenAlignment.Right, 0F), (5, ClassicWeaponScreenAlignment.Left, 0F), (6, ClassicWeaponScreenAlignment.Left, 0.2F)],
             werecreature.Actions.Where(action => action.Action != ClassicDaggerWeaponAction.Idle).Select(action => (action.SourceRecordOrdinal, action.Alignment, action.ScreenOffset)));
+        Assert.Equal(new[] { 349, 350, 351, 352, 353 }, new[] { ClassicDaggerAudioClip.MagicCast,
+            ClassicDaggerAudioClip.PoisonCast, ClassicDaggerAudioClip.ShockCast, ClassicDaggerAudioClip.FireCast,
+            ClassicDaggerAudioClip.ColdCast }.Select(kind => first.Audio.Single(clip => clip.Clip == char.ToLowerInvariant(kind.ToString()[0]) + kind.ToString()[1..]).SourceRecordOrdinal));
         Assert.Equal(4, first.Effects.Count);
         Assert.All(first.Effects, effect => Assert.False(effect.Timing.Loop));
         Assert.All(MobileSourceMetadata.All, mobile =>

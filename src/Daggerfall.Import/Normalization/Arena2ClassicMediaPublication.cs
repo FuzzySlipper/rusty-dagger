@@ -222,6 +222,11 @@ public enum ClassicDaggerAudioClip
     Hit5,
     /// <summary>Classic player death pain cue (donor sound ID 405).</summary>
     PlayerDeath,
+    MagicCast,
+    PoisonCast,
+    ShockCast,
+    FireCast,
+    ColdCast,
 }
 
 /// <summary>The classic chrome images preserved by the compact UI pack.</summary>
@@ -1076,6 +1081,12 @@ public sealed record Arena2ClassicMediaPublication(
         new(ClassicDaggerAudioClip.Hit4, "audio.melee.hit.4", 111),
         new(ClassicDaggerAudioClip.Hit5, "audio.melee.hit.5", 112),
         new(ClassicDaggerAudioClip.PlayerDeath, "audio.player.death", 405),
+        // EntityEffectManager.GetCastSoundID selects these DAGGER.SND ordinals by element.
+        new(ClassicDaggerAudioClip.MagicCast, "audio.magic.cast", 349),
+        new(ClassicDaggerAudioClip.PoisonCast, "audio.magic.poison", 350),
+        new(ClassicDaggerAudioClip.ShockCast, "audio.magic.shock", 351),
+        new(ClassicDaggerAudioClip.FireCast, "audio.magic.fire", 352),
+        new(ClassicDaggerAudioClip.ColdCast, "audio.magic.cold", 353),
     ];
 
     private static readonly UiImageSource[] UiImageSources =

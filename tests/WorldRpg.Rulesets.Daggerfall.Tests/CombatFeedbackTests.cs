@@ -200,7 +200,7 @@ public sealed class CombatFeedbackTests
         Assert.Single(outcomes);
         Assert.Equal(1, EffectCount(presentation));
         Assert.True(effects.Cancel(Rusty.Engine.Mechanics.EffectInstanceId.Parse("sparkle-a")));
-        Assert.Equal(1, EffectCount(presentation));
+        Assert.Equal(0, EffectCount(presentation));
     }
 
     private static DaggerfallSiteProfile FeedbackInputs(int mobile, bool parry = false) => MediaInputs(

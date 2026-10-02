@@ -225,7 +225,7 @@ internal sealed partial class DaggerfallSession
                     id => id == actors.Player.DurableId ? actors.Player.Actor : actors.TryGet(id, out var actor) ? actor.Actor : null,
                     () => effects),
                 .. DaggerfallRestorationEffects.Definitions(engine.Random,
-                    id => id == actors.Player.DurableId ? actors.Player.Progression.Level : authored[id].Level ?? 1),
+                    id => id == actors.Player.DurableId ? actors.Player.Progression.Level : authored[id].Level ?? 1, _vitality),
                 .. DaggerfallContinuousDestructionEffects.Definitions(_random, _vitality, AppendEffectDamage, AppendSpellTrackLoss,
                     id => authored.TryGetValue(id, out var definition) && IsHostileActor(id, definition), ReactToSpellAttack),
                 .. DaggerfallTransferEffects.Definitions(_vitality, AppendSpellTransfer,
@@ -238,7 +238,7 @@ internal sealed partial class DaggerfallSession
                     () => _time.Calendar.DayNumber,
                     () => character.Career,
                     combatRules,
-                    AppendEffectDamage),
+                    AppendEffectDamage, (effect,track,amount)=>_vitality.AdjustConditionTrack(effect.Source,effect.Target,track,amount)),
                 .. DaggerfallPoisonEffects.Definitions(_random, _vitality, () => character.Career),
             ]));
             partiallyConstructed.Add(effects);
@@ -423,7 +423,8 @@ internal sealed partial class DaggerfallSession
             Casting = new(definitions.Magic, effects, CastActor, MagicProfile, item => itemInstances.ContainsUnique(item)
                     && (itemInstances.RequireUnique(item).MaximumCondition == 0 || itemInstances.RequireUnique(item).CurrentCondition > 0),
                 use => State.SkillUses.Record(use), result => _facts.Append(new SpellCastFact(result.Outcome, result.Bundle?.Sequence, result.Bundle?.CasterId,
-                    result.Bundle?.Spell.Key, result.Bundle?.Cost ?? 0, result.Bundle?.Results.ToArray() ?? [], result.Bundle?.Absorptions.ToArray() ?? [])),
+                    result.Bundle?.Spell.Key, result.Bundle?.Cost ?? 0, result.Bundle?.Results.ToArray() ?? [], result.Bundle?.Absorptions.ToArray() ?? [],
+                    result.Bundle?.Spell.Name, result.Bundle?.Spell.Element ?? 0, result.Bundle?.ItemId)),
                 _random, actors.Player.DurableId, saved?.NextCastSequence ?? 1, State.Character.KnownSpells.Contains,
                 id => id == actors.Player.DurableId ? actors.Player.Progression.Level : authored[id].Level ?? 1);
             _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, _dungeonText, CapturePropertyStorage, QuestTravelOrigin, authored, () => Casting.NextSequence);
@@ -439,8 +440,12 @@ internal sealed partial class DaggerfallSession
             _sites = new DaggerfallSiteLifecycle(engine, State, definitions, tuning, _time, _site, _spatial, _camera, audioBundles,
                 _roster, _persistence, _groundContainers, _enemyBehavior, ExecuteDungeonFamilyAction, this,
                 projection, actionTriggers, profiles, activeProfile, saved?.Site.ReturnProfile?.Require());
-            effects.Completed += outcome => _appearance.ReactEffectOutcome(outcome, actors,
-                State.PlayerControl.Position, _latestUpdateGeneration ?? 1UL, _latestSimulationStep ?? 1UL);
+            effects.Completed += outcome => _facts.Append(new MagicEffectFact(outcome));
+            _vitality.PoisonDamageApplied += result=>AppendEffectDamage(new(result));
+            _vitality.ConditionTrackLost += AppendSpellTrackLoss;
+            _vitality.SpellTrackRestored += (target, track, requested, restored) =>
+                _facts.Append(new SpellTrackRestoredFact(checked((long)actors.Entities.IdentityOf(target.Entity).Value),
+                    track.Value, requested, restored));
             InitializeActivation(engine, tuning.LootInteraction);
             _characterUi = new DaggerfallCharacterPresentation(definitions, State.Character, playerDefinition, equipmentCoordinator, State.LevelUps, State.Social, State.SkillUses);
             _characterUi.UseGuildMembership(State.GuildMembership, () => checked((int)_time.Calendar.DayNumber));

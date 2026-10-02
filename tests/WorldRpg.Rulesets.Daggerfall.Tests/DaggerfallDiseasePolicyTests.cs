@@ -545,7 +545,7 @@ public sealed class DaggerfallDiseasePolicyTests
             DaggerfallMechanicsIds.Speed, DaggerfallMechanicsIds.Luck,
         })
         {
-            stats.AddStat(StatId.Parse(id.Value), new Stat(50, 0, 10_000, quantum: 1, rounding: MidpointRounding.ToZero, integerRounding: MidpointRounding.ToZero));
+            stats.AddStat(StatId.Parse(id.Value), new Stat(50, 0, 100, quantum: 1, rounding: MidpointRounding.ToZero, integerRounding: MidpointRounding.ToZero));
         }
         stats.AddStat(StatId.Parse(DaggerfallMechanicsIds.ResistanceDiseaseOrPoison.Value), new Stat(0, -10_000, 10_000, quantum: 1, rounding: MidpointRounding.ToZero, integerRounding: MidpointRounding.ToZero));
         stats.AddStat(StatId.Parse(DaggerfallMechanicsIds.ImmunityDisease.Value), new Stat(0, 0, 1, quantum: 1, rounding: MidpointRounding.ToZero, integerRounding: MidpointRounding.ToZero));

@@ -12,6 +12,10 @@ internal sealed class DaggerfallVitalityConsequences
     private static readonly TrackId HealthTrack = TrackId.Parse(DaggerfallMechanicsIds.Health.Value);
     private readonly CombatResolution _combat;
 
+    internal event Action<Actor, TrackId, int, double>? SpellTrackRestored;
+    internal event Action<DamageResult>? PoisonDamageApplied;
+    internal event Action<DaggerfallSpellTrackResult>? ConditionTrackLost;
+
     internal DaggerfallVitalityConsequences(CombatResolution combat) => _combat = combat ?? throw new ArgumentNullException(nameof(combat));
 
     internal DamageResult ResolveSpellHealth(Actor caster, Actor target, int amount, bool terminal)
@@ -35,8 +39,18 @@ internal sealed class DaggerfallVitalityConsequences
     internal double RestoreSpellTrack(Actor target, TrackId track, int amount)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(amount);
-        return target.Get<StatsComponent>().GetTrack(HealthTrack).Current > 0
+        double restored = target.Get<StatsComponent>().GetTrack(HealthTrack).Current > 0
             ? target.Get<StatsComponent>().GetTrack(track).Restore(amount) : 0;
+        SpellTrackRestored?.Invoke(target, track, amount, restored);
+        return restored;
+    }
+
+    internal void AdjustConditionTrack(Actor source, Actor target, TrackId track, int amount)
+    {
+        if(amount>=0){RestoreSpellTrack(target,track,amount);return;}
+        Track value=target.Get<StatsComponent>().GetTrack(track);
+        double before=value.Current;value.SetCurrent(before+amount,clamp:true);
+        ConditionTrackLost?.Invoke(new(source,target,track,-amount,before-value.Current));
     }
 
     /// <summary>Direct loss precedes bounded caster recovery; classic transfer restores the admitted amount, not the bounded loss.</summary>
@@ -76,7 +90,9 @@ internal sealed class DaggerfallVitalityConsequences
         ArgumentNullException.ThrowIfNull(victim);
         if (damage <= 0) throw new ArgumentOutOfRangeException(nameof(damage));
         Track health = victim.Get<StatsComponent>().GetTrack(HealthTrack);
-        return _combat.ApplyToHealth(new CombatParticipants(victim, victim, "poison"), damage, 0, health).Result;
+        var result = _combat.ApplyToHealth(new CombatParticipants(victim, victim, "poison"), damage, 0, health).Result;
+        PoisonDamageApplied?.Invoke(result);
+        return result;
     }
 
     /// <summary>Applies only the Engine-reported landing, never an input or a locally integrated trajectory.</summary>

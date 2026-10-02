@@ -772,15 +772,53 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     internal void ReactEffectOutcome(DaggerfallEffectOutcome outcome, ActorsState actors, WorldPoint? player,
         ulong generation, ulong step)
     {
+        if (outcome.Kind is DaggerfallEffectOutcomeKind.Cancelled or DaggerfallEffectOutcomeKind.Cured or DaggerfallEffectOutcomeKind.Expired)
+        {
+            RetireMagic(effect => effect.ActiveInstance == outcome.Instance);
+            effectFeedback.RemoveWhere(key => key.Instance == outcome.Instance);
+            return;
+        }
         if (disposed || outcome.Feedback != DaggerfallEffectFeedback.MagicSparkle
             || outcome.Kind is not (DaggerfallEffectOutcomeKind.Started or DaggerfallEffectOutcomeKind.Refreshed or DaggerfallEffectOutcomeKind.Replaced)) return;
         WorldPoint? position = outcome.TargetId == DaggerfallActorIdentity.PlayerEntityId ? player
             : actors.TryGet(outcome.TargetId, out ActorState target) ? target.Position : null;
         if (position is not WorldPoint targetPosition || !effectFeedback.Add((outcome.Instance, outcome.Kind, generation, step))) return;
-        SpawnEffect("magicSparkle", targetPosition, Event(0, outcome.TargetId, generation, step, "effect"));
+        SpawnEffect("magicSparkle", targetPosition, Event(0, outcome.TargetId, generation, step, "effect"),
+            outcome.CompletedImmediately ? null : outcome.Instance, outcome.TargetId, outcome.CasterId, outcome.ItemId);
     }
 
-    private void SpawnEffect(string name, WorldPoint position, PresentationEventIdentity identity)
+    internal void ReactSpellCast(SpellCastFact cast, ActorsState actors, WorldPoint? player)
+    {
+        if (disposed || cast.Outcome != DaggerfallCastOutcome.Released || cast.Sequence is not long sequence || cast.CasterId is not long caster) return;
+        var identity = Event(caster, caster, checked((ulong)sequence), 0, "spell-release");
+        if (!deliveredEvents.Add(identity)) return;
+        WorldPoint? position = caster == DaggerfallActorIdentity.PlayerEntityId ? player
+            : actors.TryGet(caster, out ActorState source) ? source.Position : null;
+        if (position is null) return;
+        string clip = cast.Element switch { 0 => "fireCast", 1 => "coldCast", 2 => "poisonCast", 3 => "shockCast", 4 => "magicCast", _ => "" };
+        Emit(clip, identity, 0, position);
+    }
+
+    internal void RetireUnavailableMagic(ActorsState actors, Func<ulong, bool> itemAvailable)
+    {
+        bool Alive(long id) => id == actors.Player.DurableId ? !actors.Player.IsDefeated
+            : actors.TryGet(id, out ActorState actor) && !actor.IsDefeated;
+        RetireMagic(effect => effect.TargetActor is long target && !Alive(target)
+            || effect.SourceActor is long source && !Alive(source)
+            || effect.SourceItem is ulong item && !itemAvailable(item));
+    }
+
+    private void RetireMagic(Func<EffectVisual, bool> predicate)
+    {
+        foreach (var effect in effects.Where(predicate).ToArray())
+        {
+            effects.Remove(effect);
+            Retire(effect);
+        }
+    }
+
+    private void SpawnEffect(string name, WorldPoint position, PresentationEventIdentity identity,
+        string? activeInstance = null, long? target = null, long? source = null, ulong? item = null)
     {
         if (!classicEffects.TryGetValue(name, out NormalizedClassicEffect? effect)) return;
         SpriteAtlas? atlas = null;
@@ -797,7 +835,8 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
             SpritePlaybackFrame[] playbackFrames = SpriteAtlasAdapter.ToPlaybackFrames(effect.Sequence.Select(index => effect.Frames.Single(frame => frame.Id == index).Id).ToArray(), effect.FramesPerSecond);
             playback = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(visual, atlas, playbackFrames, Array.Empty<SpritePlaybackMarker>(), effect.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
             appearance.ControlSpritePlayback(new SpritePlaybackControlRequest(playback, SpritePlaybackControl.Start));
-            effects.Add(new EffectVisual(NextVisualEntityId(), position, atlas, visual, playback));
+            effects.Add(new EffectVisual(NextVisualEntityId(), position, atlas, visual, playback)
+            { ActiveInstance = activeInstance, TargetActor = target, SourceActor = source, SourceItem = item });
         }
         catch
         {
@@ -1103,6 +1142,10 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     internal sealed class EffectVisual(ulong entityId, WorldPoint position, SpriteAtlas atlas, Appearance appearance, SpritePlayback playback) : IDisposable
     {
         internal ulong EntityId { get; } = entityId;
+        internal string? ActiveInstance { get; init; }
+        internal long? TargetActor { get; init; }
+        internal long? SourceActor { get; init; }
+        internal ulong? SourceItem { get; init; }
         internal WorldPoint Position { get; } = position;
         internal SpriteAtlas Atlas { get; } = atlas;
         internal Appearance Appearance { get; } = appearance;

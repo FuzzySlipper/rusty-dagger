@@ -592,6 +592,11 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             _corpseLoot.Create(died);
             _rewards.React(died, _facts);
         }
+        if (fact is MagicEffectFact magic)
+            _appearance.ReactEffectOutcome(magic.Outcome, State.Actors, State.PlayerControl.Position,
+                _latestUpdateGeneration ?? 1UL, _latestSimulationStep ?? 1UL);
+        if (fact is SpellCastFact cast)
+            _appearance.ReactSpellCast(cast, State.Actors, State.PlayerControl.Position);
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.React(fact, State.Actors);
         _outcomes.React(fact);
@@ -602,6 +607,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         _heldEnchantments.Refresh();
         DaggerfallConcealmentEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);
         DaggerfallDoorMagicEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);
+        DaggerfallMagicPresentation.Publish(State.Effects, State.Actors.Player, Slots);
+        _appearance.RetireUnavailableMagic(State.Actors, State.ItemInstances.ContainsUnique);
         _hud.Publish(new DaggerfallHudFrame(State.Actors.Player, State.Progression, Presentation, _mode, State.PlayerControl, Slots,
             Inventory: _inventoryUi.Read(),
             Loot: _lootUi.Read(),

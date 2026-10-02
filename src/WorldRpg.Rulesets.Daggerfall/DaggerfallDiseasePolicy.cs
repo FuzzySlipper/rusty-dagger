@@ -127,7 +127,7 @@ internal static class DaggerfallDiseasePolicy
         Func<long> currentDay,
         Func<DaggerfallCareerDefinition> playerCareer,
         CombatResolution? combat = null,
-        Action<DaggerfallEffectDamage>? damageApplied = null)
+        Action<DaggerfallEffectDamage>? damageApplied = null, Action<DaggerfallActiveEffect,TrackId,int>? conditionTrack = null)
     {
         ArgumentNullException.ThrowIfNull(random);
         ArgumentNullException.ThrowIfNull(currentDay);
@@ -140,7 +140,7 @@ internal static class DaggerfallDiseasePolicy
             ushort.MaxValue,
             1,
             Apply: effect => [Removal(effect, playerCareer)],
-            MagicRound: effect => AdvanceDisease(effect, data, random, currentDay, playerCareer, selectedCombat, damageApplied),
+            MagicRound: effect => AdvanceDisease(effect, data, random, currentDay, playerCareer, selectedCombat, damageApplied, conditionTrack),
             Resume: effect =>
             {
                 VerifyRestoredAttributeContributions(effect, ReadState(effect.State));
@@ -291,7 +291,7 @@ internal static class DaggerfallDiseasePolicy
     }
 
     private static void AdvanceDisease(DaggerfallActiveEffect effect, DiseaseData data, IRandomService random, Func<long> currentDay,
-        Func<DaggerfallCareerDefinition> playerCareer, CombatResolution combat, Action<DaggerfallEffectDamage>? damageApplied)
+        Func<DaggerfallCareerDefinition> playerCareer, CombatResolution combat, Action<DaggerfallEffectDamage>? damageApplied, Action<DaggerfallActiveEffect,TrackId,int>? conditionTrack)
     {
         DiseaseState state = ReadState(effect.State);
         long today = currentDay();
@@ -302,7 +302,7 @@ internal static class DaggerfallDiseasePolicy
 
         for (long day = checked(state.LastDay + 1); day <= today; day++)
             state = ApplyDailyDamage(effect, data, state,
-                playerCareer, combat, damageApplied,
+                playerCareer, combat, damageApplied, conditionTrack,
                 Draw(random, $"daily:{effect.Context.Instance.Value}:{day}", data.MinimumDamage, data.MaximumDamage));
 
         int? symptoms = state.DaysOfSymptomsLeft is int remaining
@@ -315,7 +315,7 @@ internal static class DaggerfallDiseasePolicy
     }
 
     private static DiseaseState ApplyDailyDamage(DaggerfallActiveEffect effect, DiseaseData data, DiseaseState state,
-        Func<DaggerfallCareerDefinition> playerCareer, CombatResolution combat, Action<DaggerfallEffectDamage>? damageApplied, int amount)
+        Func<DaggerfallCareerDefinition> playerCareer, CombatResolution combat, Action<DaggerfallEffectDamage>? damageApplied, Action<DaggerfallActiveEffect,TrackId,int>? conditionTrack, int amount)
     {
         StatsComponent stats = effect.Target.Get<StatsComponent>();
         Dictionary<string, int> losses = new(state.AttributeLosses, StringComparer.Ordinal);
@@ -329,8 +329,8 @@ internal static class DaggerfallDiseasePolicy
         AddAttributeLoss(losses, DaggerfallMechanicsIds.Luck, data.Luck, amount);
         ApplyAttributeContributions(effect, stats, losses, playerCareer);
         ApplyHealth(combat, effect, stats, data, amount, damageApplied);
-        ApplyTrack(stats, DaggerfallMechanicsIds.Stamina, data.Fatigue, amount);
-        ApplyTrack(stats, DaggerfallMechanicsIds.Magicka, data.SpellPoints, amount);
+        ApplyTrack(effect, stats, DaggerfallMechanicsIds.Stamina, data.Fatigue, amount, conditionTrack);
+        ApplyTrack(effect, stats, DaggerfallMechanicsIds.Magicka, data.SpellPoints, amount, conditionTrack);
         return state with { AttributeLosses = losses };
     }
 
@@ -428,9 +428,10 @@ internal static class DaggerfallDiseasePolicy
         damageApplied?.Invoke(new DaggerfallEffectDamage(applied.Result));
     }
 
-    private static void ApplyTrack(StatsComponent stats, DaggerfallTrackId id, int multiplier, int amount)
+    private static void ApplyTrack(DaggerfallActiveEffect effect, StatsComponent stats, DaggerfallTrackId id, int multiplier, int amount, Action<DaggerfallActiveEffect,TrackId,int>? conditionTrack)
     {
         if (multiplier == 0) return;
+        if(conditionTrack is not null){conditionTrack(effect,TrackId.Parse(id.Value),-checked(multiplier*amount));return;}
         Track track = stats.GetTrack(TrackId.Parse(id.Value));
         track.SetCurrent(Math.Max(track.Minimum, checked(track.Current - checked((long)multiplier * amount))), clamp: true);
     }
