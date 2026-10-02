@@ -107,7 +107,8 @@ internal sealed class DaggerfallEnemyPerceptionMemory
         Detected = false;
         HasEncounteredPlayer = false;
         Pacified = false;
-        ForcedHostile = false;
+        // Hostility is durable gameplay state; site resets clear only transient perception.
+        SetForcedHostile(ForcedHostile);
         LastStealthCheckMinute = null;
         LastDirectSightMinute = null;
     }

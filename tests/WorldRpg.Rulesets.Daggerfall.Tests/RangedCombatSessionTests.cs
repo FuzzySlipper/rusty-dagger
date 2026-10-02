@@ -261,6 +261,57 @@ public sealed class RangedCombatSessionTests
         Assert.Contains("missed", engine.PublishedField("lastOutcome"), StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Paralysis_stops_an_unreleased_arrow_but_preserves_an_already_released_flight(bool released)
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
+        using SpatialMovementSystem targetingSpatial = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
+        Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
+            placement => placement.EntityId, placement => definitions.RequireActor(placement.ActorId));
+        authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
+        TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors,
+            new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
+        DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment,
+            session.State.ActorInventories.InventoryFor, session.State.ItemInstances, definitions, authored, targeting,
+            physicalAttacksBlocked: id => session.State.Effects.ControlsFor(id).PhysicalAttacks);
+        const long archer = 2004;
+        const ulong generation = 77;
+        const ulong releaseStep = 400;
+        Dictionary<long, WorldPoint> positions = new()
+        {
+            [archer] = new WorldPoint(0, 0, 0),
+            [DaggerfallActorIdentity.PlayerEntityId] = new WorldPoint(10, 0, 0),
+        };
+        FactBuffer<IProductFact> facts = new();
+        double healthBefore = PlayerHealth(session);
+        Assert.True(combat.Attacks.TryBeginEnemyAttack(archer, DaggerfallActorIdentity.PlayerEntityId, generation, releaseStep, .125, facts));
+        if (!released) DaggerfallParalysisEffectsTests.Start(session, "blocked-release", 1, archer, 1000);
+        combat.Execution.ApplyImpacts([new AttackImpactNotice(archer, DaggerfallActorIdentity.PlayerEntityId, generation, releaseStep, Expired: false)], generation, facts);
+        combat.AdvanceRangedFlight(generation, releaseStep, .125, positions, facts);
+        if (released)
+        {
+            Assert.Single(combat.ReadRangedFlights(generation, releaseStep));
+            DaggerfallParalysisEffectsTests.Start(session, "after-release", 1, archer, 1000);
+        }
+        else Assert.Empty(combat.ReadRangedFlights(generation, releaseStep));
+        combat.AdvanceRangedFlight(generation, releaseStep + 100, .125, positions, facts);
+        Assert.Empty(combat.ReadRangedFlights(generation, releaseStep + 100));
+        if (released) Assert.True(PlayerHealth(session) < healthBefore);
+        else Assert.Equal(healthBefore, PlayerHealth(session));
+        Assert.False(combat.Attacks.TryBeginEnemyAttack(archer, DaggerfallActorIdentity.PlayerEntityId, generation, releaseStep + 200, .125, facts));
+    }
+
     [Fact]
     public void Ranged_flight_discards_stale_generations_and_retires_missing_attackers()
     {

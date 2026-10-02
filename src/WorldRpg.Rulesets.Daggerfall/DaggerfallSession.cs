@@ -573,6 +573,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         _staminaRecovery.React(fact);
         if (fact is ActorDiedFact died)
         {
+            DaggerfallParalysisEffects.EndOnDeath(State.Effects, died.ActorId);
             _corpseLoot.Create(died);
             _rewards.React(died, _facts);
         }

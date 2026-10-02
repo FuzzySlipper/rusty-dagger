@@ -95,7 +95,8 @@ internal sealed record DaggerfallEffectDefinition(
     DaggerfallSpellBinding? Spell = null,
     Func<DaggerfallActiveEffect, DaggerfallMagicDefense>? MagicDefense = null,
     Action<DaggerfallActiveEffect, JsonElement>? RefreshState = null,
-    bool ExtendIncumbentDuration = false)
+    bool ExtendIncumbentDuration = false,
+    WorldRpg.Kit.Controls.ActorControlRestrictions ControlRestrictions = default)
 {
     internal EffectDefinition ToEngineDefinition(string source) => new(
         EffectDefinitionId.Parse($"daggerfall.{Key}"),
@@ -216,6 +217,14 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
     internal DaggerfallMagicDefense MagicDefenseFor(long targetId) => DaggerfallMagicDefense.Combine(
         _effects.Values.Where(effect => checked((long)effect.Context.Target.Value) == targetId)
             .Select(effect => effect.Definition.MagicDefense?.Invoke(effect) ?? DaggerfallMagicDefense.None));
+
+    internal WorldRpg.Kit.Controls.ActorControlRestrictions ControlsFor(long targetId)
+    {
+        WorldRpg.Kit.Controls.ActorControlRestrictions restrictions = default;
+        foreach (var effect in Active.Where(effect => checked((long)effect.Context.Target.Value) == targetId))
+            restrictions = restrictions.Combine(effect.Definition.ControlRestrictions);
+        return restrictions;
+    }
 
     /// <summary>Reads current compiled effect meaning for one target without retaining an independent movement-effect cache.</summary>
     internal bool PreventsFallDamage(long targetId) => _effects.Values.Any(effect =>

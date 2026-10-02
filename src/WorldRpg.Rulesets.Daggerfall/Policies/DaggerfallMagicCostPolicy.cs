@@ -4,6 +4,18 @@ namespace WorldRpg.Rulesets.Daggerfall.Policies;
 
 internal enum DaggerfallSpellTarget { CasterOnly, ByTouch, SingleTargetAtRange, AreaAroundCaster, AreaAtRange }
 
+[Flags]
+internal enum DaggerfallMagicAllowedTargets
+{
+    CasterOnly = 1 << (int)DaggerfallSpellTarget.CasterOnly,
+    ByTouch = 1 << (int)DaggerfallSpellTarget.ByTouch,
+    SingleTargetAtRange = 1 << (int)DaggerfallSpellTarget.SingleTargetAtRange,
+    AreaAroundCaster = 1 << (int)DaggerfallSpellTarget.AreaAroundCaster,
+    AreaAtRange = 1 << (int)DaggerfallSpellTarget.AreaAtRange,
+    Other = ByTouch | SingleTargetAtRange | AreaAroundCaster | AreaAtRange,
+    All = CasterOnly | Other,
+}
+
 internal readonly record struct DaggerfallMagicCost(int Gold, int SpellPoints)
 {
     internal DaggerfallMagicCost Validate()

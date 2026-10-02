@@ -233,8 +233,8 @@ public sealed class DaggerfallCastingTests
 
     [Theory]
     [InlineData(true, 7, 2u)]
-    [InlineData(false, 0, 1u)]
-    public void Returned_save_percentage_scales_amount_or_duration_at_real_delivery(bool magnitude, int expectedAmount, uint remaining)
+    [InlineData(false, 0, 2u)]
+    public void Returned_save_percentage_scales_magnitude_while_nonzero_nonmagnitude_saves_keep_full_duration(bool magnitude, int expectedAmount, uint remaining)
     {
         using Harness h = new(magnitude:magnitude,random:SaveDice.Create(50));
         h.Profile = h.Profile with { CareerTolerances = h.Profile.CareerTolerances with { Magic = DaggerfallMagicTolerance.Normal } };

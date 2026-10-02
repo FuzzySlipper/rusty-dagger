@@ -29,7 +29,7 @@ internal sealed record SpellPointsAppliedFact(long SourceActorId, long TargetAct
 /// <summary>One accepted dungeon action magicka drain on a canonical actor track.</summary>
 internal sealed record DungeonMagickaDrainedFact(long TargetActorId, string ActionId, double ActualMagickaLost,
     ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
-internal enum AttackRejection { MissingPlayerPosition, NoTargetInReach, UnknownExplicitCombatant, TargetDefeated, Cooldown, NoAttackPolicy, InsufficientStamina, StaminaSpendNotAccepted, InsufficientWeaponMaterial, EmptyQuiver }
+internal enum AttackRejection { MissingPlayerPosition, NoTargetInReach, UnknownExplicitCombatant, TargetDefeated, Cooldown, NoAttackPolicy, InsufficientStamina, StaminaSpendNotAccepted, InsufficientWeaponMaterial, EmptyQuiver, Incapacitated }
 internal sealed record AttackRejectedFact(AttackRejection Reason, long? ActorId = null) : IProductFact;
 /// <summary>
 /// One player melee swing passed cooldown and stamina admission, independently of its target outcome.

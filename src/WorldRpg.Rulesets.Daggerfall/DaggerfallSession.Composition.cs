@@ -209,6 +209,7 @@ internal sealed partial class DaggerfallSession
             effects = new(actors, composition.Effects ?? new DaggerfallEffectCatalog(
             [
                 .. DaggerfallAlterationEffects.Definitions(effect => effects.Cancel(effect.Context.Instance)),
+                DaggerfallParalysisEffects.Definition(ReactToSpellAttack),
                 .. DaggerfallDestructionEffects.Definitions(_vitality, AppendEffectDamage, AppendSpellTrackLoss,
                     id => authored.TryGetValue(id, out var definition) && IsHostileActor(id, definition),
                     ReactToSpellAttack),
@@ -256,7 +257,8 @@ internal sealed partial class DaggerfallSession
                     && character.CustomCareer?.Advantages.Any(trait => trait.Id == "adrenaline-rush") == true
                     ? new DaggerfallAdrenalineRush(Enabled: true, Improved: _heldEnchantments.Talents.AdrenalineRush) : default,
                 () => assembled.PlayerControl.Position, () => character, _playerSwings.TryGesture, ShotBlockedByCover,
-                () => _heldEnchantments.ArmorValueModifier, DeliverWeaponPoison, () => _heldEnchantments.AttackChanceModifier, TransformWithWabbajack, effects.MagicDefenseFor);
+                () => _heldEnchantments.ArmorValueModifier, DeliverWeaponPoison, () => _heldEnchantments.AttackChanceModifier, TransformWithWabbajack, effects.MagicDefenseFor,
+                actorId => effects.ControlsFor(actorId).PhysicalAttacks);
             GameplayServices<IProductFact> kit = new(actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, inventory, equipmentCoordinator);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
                 engine.Perception,
@@ -268,7 +270,7 @@ internal sealed partial class DaggerfallSession
                 contextProvider: BuildEnemyPerceptionContext,
                 recordSkillUse: use => skillUses.Record(use),
                 isPlayerAllied: id => authored.TryGetValue(id, out var actor) && actor.Team == "player-ally",
-                selectAllyTarget: SelectAllyTarget);
+                selectAllyTarget: SelectAllyTarget, controlRestrictions: effects.ControlsFor);
             _authoredEntityIds = DaggerActorFactory.AdmittedAuthoredEntityIds(inputs, playerDefinition.Loadout);
             if (restore is null)
             {

@@ -13,7 +13,8 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed record DaggerfallSpellBinding(int Type, int SubType, bool SupportsDuration = false,
     bool RollChanceOnCast = false, bool SupportsMagnitude = false, bool IsParalysis = false,
     bool IsDisease = false, DaggerfallMagicAllowedElements AllowedElements = DaggerfallMagicAllowedElements.Magic,
-    Func<DaggerfallCastEffectState, JsonElement>? CreateState = null);
+    Func<DaggerfallCastEffectState, JsonElement>? CreateState = null,
+    DaggerfallMagicAllowedTargets AllowedTargets = DaggerfallMagicAllowedTargets.All);
 
 /// <summary>Meaningful settings retained with an admitted effect, never a runtime handle.</summary>
 internal sealed record DaggerfallCastEffectState(DaggerfallSpellEffectDefinition Settings, int CasterLevel,
@@ -270,9 +271,8 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                 int amount = binding.SupportsMagnitude ? DaggerfallMagicAdmissionPolicy.RollEffectMagnitude(setting, bundle.CasterLevel, roll) : 0;
                 int percent = bundle.BypassSave || bundle.Target == DaggerfallSpellTarget.CasterOnly ? 100 : DaggerfallMagicAdmissionPolicy.SavingThrow(source, liveProfile, () => roll(1, 100));
                 if (percent == 0) { bundle.Results.Add(new(i, targetId, DaggerfallCastOutcome.Resisted, percent)); continue; }
-                uint? duration = binding.SupportsDuration ? checked((uint)Math.Max(1,
-                    (int)(DaggerfallMagicAdmissionPolicy.CalculateEffectDuration(setting, bundle.CasterLevel) * (percent / 100f)))) : 1u;
-                // Magnitude saves affect magnitude; duration-only saves affect duration.
+                uint? duration = baseDuration;
+                // Non-magnitude saves reject at zero and otherwise retain the full duration.
                 if (binding.SupportsMagnitude)
                 { amount = (int)(amount * (percent / 100f)); duration = binding.SupportsDuration ? checked((uint)Math.Max(1, DaggerfallMagicAdmissionPolicy.CalculateEffectDuration(setting, bundle.CasterLevel))) : 1u; }
                 var state = new DaggerfallCastEffectState(setting, bundle.CasterLevel, amount, percent);
@@ -318,11 +318,13 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
     {
         List<DaggerfallEffectDefinition> resolved = [];
         var element = (DaggerfallMagicAllowedElements)(1 << spell.Element);
+        var target = (DaggerfallMagicAllowedTargets)(1 << (int)DaggerfallMagicCostPolicy.TargetForRangeType(spell.RangeType));
         foreach (var setting in spell.Effects)
         {
             if (!effects.Catalog.TryResolveSpell(setting, out var definition) || (definition.Spell!.AllowedElements & element) == 0
+                || (definition.Spell.AllowedTargets & target) == 0
                 || definition.Apply is null && definition.MagicRound is null && definition.MagicDefense is null
-                    && definition.MovementProtection == default && definition.Perception == default)
+                    && definition.MovementProtection == default && definition.Perception == default && definition.ControlRestrictions == default)
             { definitions = []; return false; }
             resolved.Add(definition);
         }

@@ -11,6 +11,7 @@ using WorldRpg.Kit.World;
 using WorldRpg.Kit.Effects;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
@@ -21,6 +22,37 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// <summary>Site transitions: admission, portals, relocation, return sites and their save/restore.</summary>
 public sealed class SiteTransitionSessionTests
 {
+    [Fact]
+    public void Player_cast_paralysis_restores_hostile_response_through_site_return_and_current_save()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile source = ReadInputs(root);
+        DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(FullContent(root),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, source); PopulateContent(content, destination);
+        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        DaggerfallSessionComposition composition = new(definitions, source, DaggerfallTuning.Defaults) { Profiles = new DaggerfallSiteProfiles([source, destination]) };
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+        const long target = 2000;
+        DaggerfallParalysisEffectsTests.Start(session, "hostile-paralysis", 1, target, 100);
+        uint? remaining = Assert.Single(session.State.Effects.Active).Lifecycle.RemainingRounds;
+        Assert.True(session.State.Actors.Get(target).Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile);
+        Assert.True(session.TryTransitionTo(destination.ProfileKey));
+        Assert.True(session.TryTransitionTo(source.ProfileKey));
+        var memory = session.State.Actors.Get(target).Actor.Get<DaggerfallEnemyPerceptionMemory>();
+        Assert.True(memory.ForcedHostile); Assert.True(memory.HasEncounteredPlayer); Assert.False(memory.Pacified);
+        Assert.True(session.State.Effects.ControlsFor(target).Movement);
+        Assert.Equal(remaining, Assert.Single(session.State.Effects.Active).Lifecycle.RemainingRounds);
+        using DaggerfallSession restored = DaggerfallSession.Restore(engine.Context, composition, session.CaptureSave());
+        Assert.True(restored.State.Actors.Get(target).Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile);
+        Assert.True(restored.State.Effects.ControlsFor(target).PhysicalAttacks);
+        Assert.Equal(remaining, Assert.Single(restored.State.Effects.Active).Lifecycle.RemainingRounds);
+    }
+
     [Fact]
     public void Site_transition_replaces_the_admitted_world_and_restores_the_source_pose_on_return()
     {
