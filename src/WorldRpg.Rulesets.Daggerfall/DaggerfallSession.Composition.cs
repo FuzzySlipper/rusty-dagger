@@ -210,6 +210,9 @@ internal sealed partial class DaggerfallSession
             [
                 .. DaggerfallAlterationEffects.Definitions(effect => effects.Cancel(effect.Context.Instance)),
                 DaggerfallParalysisEffects.Definition(ReactToSpellAttack),
+                .. DaggerfallCureEffects.Definitions(
+                    target => DaggerfallDiseasePolicy.CureAllDiseases(effects, target),
+                    CurePoison, target => DaggerfallParalysisEffects.Cure(effects, target)),
                 .. DaggerfallRestorationEffects.Definitions(engine.Random,
                     id => id == actors.Player.DurableId ? actors.Player.Progression.Level : authored[id].Level ?? 1),
                 .. DaggerfallContinuousDestructionEffects.Definitions(_random, _vitality, AppendEffectDamage, AppendSpellTrackLoss,

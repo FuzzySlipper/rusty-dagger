@@ -41,7 +41,7 @@ internal enum DaggerfallCastOutcome
 {
     Ready, Released, Cancelled, Unready, UnknownSpell, UnsupportedEffect, SourceUnavailable,
     InsufficientMagicka, Silenced, InvalidTarget, Immune, Absorbed, Reflected, Resisted, ChanceFailed,
-    Missed, Applied, Refreshed, Replaced, DeliveryCompleted, IncumbentRejected, AlreadyDelivered, TargetUnavailable,
+    Missed, Applied, NoMatch, Refreshed, Replaced, DeliveryCompleted, IncumbentRejected, AlreadyDelivered, TargetUnavailable,
 }
 internal sealed record DaggerfallCastResult(DaggerfallCastOutcome Outcome, DaggerfallLiveSpell? Bundle = null);
 internal sealed record DaggerfallCastEffectResult(int EffectIndex, long? TargetId, DaggerfallCastOutcome Outcome,
@@ -284,6 +284,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                     targetId, setting.Key, bundle.Element.ToString(), bundle.ItemId, 1, duration, payload));
                 outcome = admission switch
                 {
+                    DaggerfallEffectAdmissionOutcome.NoMatch => DaggerfallCastOutcome.NoMatch,
                     DaggerfallEffectAdmissionOutcome.Rejected => DaggerfallCastOutcome.IncumbentRejected,
                     DaggerfallEffectAdmissionOutcome.Refreshed => DaggerfallCastOutcome.Refreshed,
                     DaggerfallEffectAdmissionOutcome.Replaced => DaggerfallCastOutcome.Replaced,
@@ -292,7 +293,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                 if (admission == DaggerfallEffectAdmissionOutcome.Refreshed)
                     instance = effects.Active.Single(effect => checked((long)effect.Context.Target.Value) == targetId
                         && effects.IsLikeKind(effect, definition, targetId, payload, bundle.CasterId, bundle.ItemId)).Context.Instance.Value;
-                bundle.Results.Add(new(i, targetId, outcome, percent, instance));
+                bundle.Results.Add(new(i, targetId, outcome, percent, outcome == DaggerfallCastOutcome.NoMatch ? null : instance));
                 continue;
             }
             bundle.Results.Add(new(i, targetId, outcome));

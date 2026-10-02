@@ -79,7 +79,8 @@ and terminal delivery each emit one fact; repeated callbacks apply nothing.
 
 The shipped catalog composes disease, poison, five elemental resistance variants,
 Shield, paralysis, Free Action, Regenerate, Spell Absorption, immediate
-and continuous health/fatigue/spell-point damage and Disintegrate.
+and continuous health/fatigue/spell-point damage, Disintegrate, and disease, poison
+and paralysis cures.
 Additional spell families add their bindings through that same composition seam;
 unmapped effects refuse before payment or skill use. UI selection, spell flight
 presentation and item-trigger policy remain separate consumers.
@@ -116,6 +117,14 @@ replaying the initial magic round. Site perception resets retain saved hostility
 Nonzero non-magnitude saving throws retain the admitted duration; full resistance
 prevents attachment. Cure spells compose the same lifecycle cleanup in their own
 spell family.
+
+Compiled cures run once through casting and the initial effect round, then expire.
+They use Magic-only chance admission and all target shapes. Each condition owner
+selects its matching disease, poison/drug or paralysis instances on that target
+and invokes canonical cleanup, preserving other conditions and other targets.
+No match has a distinct cast result and completed-change signal. Cleanup removes
+condition modifiers and restrictions without healing previously spent vitals;
+current saves retain the post-cure state.
 
 Free Action releases active paralysis restrictions while its immunity lasts and
 rejects new paralysis; it does not erase another source's remaining condition.

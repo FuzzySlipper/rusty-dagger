@@ -100,5 +100,7 @@ internal sealed partial class DaggerfallSession
     }
 
     /// <summary>Cures every poison the player carries, taking back what they still hold.</summary>
-    internal bool CurePoison() => State.Poisons.Cure(State.Actors.Player.Actor);
+    internal bool CurePoison() => CurePoison(State.Actors.Player.Actor);
+
+    private bool CurePoison(Actor actor) => _poisons.Cure(actor);
 }
