@@ -36,6 +36,23 @@ public sealed class DaggerfallPropertyTests
     }
 
     [Fact]
+    public void Existing_owned_quest_house_keeps_its_real_claim_and_can_be_sold()
+    {
+        var house = Candidate(new(17, 4), "TOWN00.RMB", 2, 2f, buildingType: 17, blockX: 0, blockY: 0);
+        var state = new DaggerfallPropertyState(Tuning); var settlement = new Settlement(accept: true);
+        var offer = Assert.Single(DaggerfallPropertyPolicy.HousesForSale([house], Tuning));
+        Assert.True(state.PurchaseHouse(offer, settlement).Applied);
+        var claimed = house with { IsQuestBuilding = true };
+        Assert.Empty(DaggerfallPropertyPolicy.HousesForSale([claimed], Tuning));
+        var owned = Assert.Single(DaggerfallPropertyPolicy.HousesForSale([claimed], Tuning, state.OwnedHouses.ToHashSet()));
+        Assert.True(owned.Candidate.IsQuestBuilding);
+        Assert.Equal(offer.Price, owned.Price);
+        Assert.True(state.SellHouse(owned, settlement).Applied);
+        Assert.False(state.OwnsHouse(house.Identity));
+        Assert.Empty(DaggerfallPropertyPolicy.HousesForSale([claimed], Tuning, state.OwnedHouses.ToHashSet()));
+    }
+
+    [Fact]
     public void Ship_offers_require_a_port_and_retain_donor_prices_and_arrival_anchors()
     {
         Assert.Empty(DaggerfallPropertyPolicy.ShipsForSale(atPortTown: false, region: 17, Tuning));
