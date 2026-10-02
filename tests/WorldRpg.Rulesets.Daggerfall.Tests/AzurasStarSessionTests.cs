@@ -89,6 +89,20 @@ public sealed class AzurasStarSessionTests
         Assert.Null(s.State.ItemInstances.RequireUnique(gemId.Value).CapturedSoulMobileId);
         Assert.Single(s.State.ItemInstances.UniqueItems, item => item.Value.CapturedSoulMobileId is not null);
         Assert.DoesNotContain(s.State.Effects.Active, effect => effect.Definition.Key == "soul-trap");
+        Assert.DoesNotContain("already full", s.Presentation.LastOutcome);
+    }
+
+    [Fact]
+    public void Player_poison_death_does_not_emit_a_star_capture_outcome()
+    {
+        using var f = Star(); var s = f.Session; Equip(f);
+        s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1);
+        Assert.True(s.State.Poisons.Afflict(s.State.Actors.Player.Actor, 130));
+        s.State.Effects.AdvanceElapsedRounds(1);
+        f.Update(); f.Update();
+        Assert.True(s.State.Actors.Player.IsDefeated);
+        Assert.Null(s.State.ItemInstances.RequireUnique(f.Source).CapturedSoulMobileId);
+        Assert.DoesNotContain("cannot capture", s.Presentation.LastOutcome);
     }
 
     [Fact]
