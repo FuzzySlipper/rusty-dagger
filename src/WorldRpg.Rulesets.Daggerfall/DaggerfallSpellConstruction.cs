@@ -21,7 +21,8 @@ internal static class DaggerfallSpellConstruction
         .Select(definition =>
         {
             var binding = definition.Spell!;
-            var costs = magic.EffectCosts[(binding.Type, binding.SubType)];
+            var costs = magic.RequireEffectCost(new(definition.Key, binding.Type, binding.SubType,
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1));
             return new DaggerfallSpellMakerEffect(definition.Key, binding.Type, binding.SubType, costs.School,
                 costs.RegularComponents?.Duration is not null, costs.RegularComponents?.Chance is not null,
                 costs.RegularComponents?.Magnitude is not null, (int)binding.AllowedTargets, (int)binding.AllowedElements);

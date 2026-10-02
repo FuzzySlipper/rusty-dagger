@@ -18,6 +18,9 @@ public sealed class SpellMakerSessionTests
         NewGameSessionTests.Commit(f.Session, "class07");
         using var game = Assert.IsType<DaggerfallSession>(f.Session.CreateNewGame());
         Fund(game); var provider = Provider(game);
+        Assert.True(game.SpellMaker.Effects.Single(effect => effect.Key == "free-action").Duration);
+        Assert.True(game.SpellMaker.Effects.Single(effect => effect.Key == "heal-health").Magnitude);
+        Assert.True(game.SpellMaker.Effects.Single(effect => effect.Key == "identify").Chance);
         var draft = Draft("!Custom freedom", 68, Effect(game, "free-action") with { DurationBase = 3, DurationMod = 7, DurationPerLevel = 2 });
         game.SpellMaker.SetDraft(draft);
         var quote = Assert.IsType<DaggerfallSpellConstructionQuote>(game.SpellMaker.Quote(provider));
@@ -118,6 +121,7 @@ public sealed class SpellMakerSessionTests
             raw with { CustomSpells = [row with { Key = "custom-spell.bad" }] },
             raw with { CustomSpells = [row with { Effects = [row.Effects[0] with { DurationBase = 61 }] }] },
             raw with { CustomSpells = [row with { Effects = [row.Effects[0] with { Type = 999 }] }] },
+            raw with { CustomSpells = [row with { Effects = [Effect(game, "identify")], RangeType = 1 }] },
             raw with { CustomSpells = [row with { IsPlayerCreated = false }] },
             raw with { CustomSpells = [row with { SpellsForSale = true }] } })
             Assert.ThrowsAny<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(bad)));
