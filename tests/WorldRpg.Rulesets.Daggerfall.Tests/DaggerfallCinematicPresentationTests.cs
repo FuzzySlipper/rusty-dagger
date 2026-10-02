@@ -106,7 +106,7 @@ public sealed class DaggerfallCinematicPresentationTests
         Assert.False(disabled.TakeReady());
     }
 
-    private sealed class Harness
+    internal sealed class Harness
     {
         internal readonly List<string> Paths = [];
         internal readonly List<VideoRealizationFact> Facts = [];
@@ -114,8 +114,11 @@ public sealed class DaggerfallCinematicPresentationTests
         internal bool FailPlay;
         private ulong nextHandle;
         internal DaggerfallCinematicPresentation Presentation { get; }
+        internal IVideoService Video { get; }
+        internal ProductContent Content { get; }
+        internal DaggerfallCinematicSet Catalog { get; }
 
-        internal Harness()
+        internal Harness(bool infections = false)
         {
             IVideoService video = Proxy.Create<IVideoService>((method, args) => method switch
             {
@@ -135,6 +138,9 @@ public sealed class DaggerfallCinematicPresentationTests
                     new ContentReferenceInfo("anim0000.webm", default, 1),
                     new ContentReferenceInfo("anim0011.webm", default, 1),
                     new ContentReferenceInfo("dag2.webm", default, 1),
+                    new ContentReferenceInfo("anim0002.webm", default, 1),
+                    new ContentReferenceInfo("anim0004.webm", default, 1),
+                    new ContentReferenceInfo("anim0012.webm", default, 1),
                 },
                 nameof(IContentService.OpenBundleReference) => OpenReference((ContentBundleReferenceRequest)args![0]!),
                 _ => throw new NotSupportedException(method),
@@ -143,14 +149,20 @@ public sealed class DaggerfallCinematicPresentationTests
             DaggerfallCinematicDefinition Published(string source) => new(source, DaggerfallCinematicKind.Vid, 1, "source-digest", DaggerfallCinematicBinding.Bound, "new-game opening", null, "")
             { Artifact = new($"worldrpg/media/cinematics/{Path.GetFileNameWithoutExtension(source).ToLowerInvariant()}.webm", "video/webm", 1, "artifact-digest", 320, 200, 35, 5.562, true) };
             DaggerfallCinematicDefinition published = Published("ANIM0011.VID");
-            DaggerfallCinematicSet catalog = new(new Dictionary<string, DaggerfallCinematicDefinition>
+            Dictionary<string, DaggerfallCinematicDefinition> definitions = new()
             {
                 ["ANIM0000.VID"] = Published("ANIM0000.VID"),
                 [published.FileName] = published,
                 ["DAG2.VID"] = Published("DAG2.VID"),
                 ["AZURA.FLC"] = new("AZURA.FLC", DaggerfallCinematicKind.Flc, 1, "source-digest", DaggerfallCinematicBinding.Bound, "Daedric summons", 16, "T0C00Y00"),
-            });
-            Presentation = new(engine, new ProductContent(Array.Empty<ProductContentFile>(), content), catalog);
+            };
+            if (infections)
+                foreach (string source in new[] { "ANIM0002.VID", "ANIM0004.VID", "ANIM0012.VID" }) definitions.Add(source, Published(source));
+            DaggerfallCinematicSet catalog = new(definitions);
+            Video = video;
+            Content = new ProductContent(Array.Empty<ProductContentFile>(), content);
+            Catalog = catalog;
+            Presentation = new(engine, Content, Catalog);
         }
 
         private ContentBundle OpenBundle(ContentBundleOpenRequest request)

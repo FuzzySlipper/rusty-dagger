@@ -47,6 +47,7 @@ internal sealed class DaggerSessionPersistence
     private readonly Func<DaggerfallTravelMapPixel> _travelPosition;
     private readonly IReadOnlyDictionary<long, DaggerfallActorDefinition> _actorDefinitions;
     private readonly Func<long> _nextCastSequence;
+    internal Func<DaggerfallInfectionsSave> Infections { get; set; } = () => DaggerfallInfectionsSave.Empty;
     internal Func<DaggerfallReadySpell?> ReadySpell {get;set;}=()=>null;
     internal Func<DaggerfallCreateItemRequest?> PendingCreateItem { get; set; } = () => null;
     internal Func<DaggerfallIdentifyRequest?> PendingIdentify { get; set; } = () => null;
@@ -153,6 +154,7 @@ internal sealed class DaggerSessionPersistence
         {
             CustomSpells = State.Character.CaptureConstructedSpells(),
             MagicRounds = State.Effects.MagicRounds,
+            Infections = Infections(),
             NextCastSequence = _nextCastSequence(),
             ReadySpell=ReadySpell(),
             PendingCreateItem = PendingCreateItem(),

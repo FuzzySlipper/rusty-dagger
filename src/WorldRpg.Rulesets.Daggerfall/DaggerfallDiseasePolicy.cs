@@ -277,13 +277,13 @@ internal static class DaggerfallDiseasePolicy
         return instances.Length;
     }
 
-    /// <summary>Cures all currently compiled classic diseases on the named target.</summary>
+    /// <summary>Cures all currently compiled ordinary and staged transformation diseases on the named target.</summary>
     internal static int CureAllDiseases(DaggerfallEffectLifecycle effects, long targetId)
     {
         ArgumentNullException.ThrowIfNull(effects);
         HashSet<string> keys = Data.Values.Select(value => value.Key).ToHashSet(StringComparer.Ordinal);
         EffectInstanceId[] instances = effects.Active
-            .Where(effect => effect.Context.Target.Value == checked((ulong)targetId) && keys.Contains(effect.Definition.Key))
+            .Where(effect => effect.Context.Target.Value == checked((ulong)targetId) && (keys.Contains(effect.Definition.Key) || DaggerfallTransformationInfectionPolicy.IsInfection(effect.Definition.Key)))
             .Select(effect => effect.Context.Instance)
             .ToArray();
         foreach (EffectInstanceId instance in instances) _ = effects.Cure(instance);

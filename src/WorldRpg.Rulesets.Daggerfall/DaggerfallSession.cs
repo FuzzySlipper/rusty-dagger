@@ -119,6 +119,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
 
     internal DaggerfallCinematicPresentation? Cinematics { get; }
     private readonly DaggerfallOpeningCinematics _openingCinematics;
+    internal DaggerfallTransformationInfections Infections { get; }
 
     internal DaggerfallState State { get; }
     internal PresentationState Presentation { get; }
@@ -339,6 +340,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         // can see the mode they are in.
         Cinematics?.Poll();
         _openingCinematics.Poll();
+        if (_mode == ProductMode.Playing) Infections.Poll(_openingCinematics.IsActive);
         bool playing = _mode == ProductMode.Playing && Cinematics?.ActiveSource is null && _pendingDispel is null && _pendingIdentify is null && _pendingCreateItem is null;
         bool modal = _mode == ProductMode.Modal || _pendingDispel is not null || _pendingIdentify is not null || _pendingCreateItem is not null;
         DaggerfallUiPhases phase = _mode == ProductMode.Dead ? DaggerfallUiPhases.Dead
@@ -520,7 +522,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         _disposed = true;
         // DisposeAll walks backward: projection door entities must release before the actor store.
         Exception? failure = null;
-        try { DisposeAll([_hud, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.ActionTriggers, .. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }]); }
+        try { DisposeAll([Infections, _hud, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.ActionTriggers, .. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }]); }
         catch (Exception exception) { failure = exception; }
         try { _sites.RetireExteriorAppearance(); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }

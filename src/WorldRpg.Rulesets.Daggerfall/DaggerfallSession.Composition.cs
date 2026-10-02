@@ -240,6 +240,7 @@ internal sealed partial class DaggerfallSession
                 .. DaggerfallDestructionEffects.Definitions(_vitality, AppendEffectDamage, AppendSpellTrackLoss,
                     id => authored.TryGetValue(id, out var definition) && IsHostileActor(id, definition),
                     ReactToSpellAttack),
+                .. DaggerfallTransformationInfectionPolicy.Definitions(effect => Infections!.Advance(effect)),
                 .. DaggerfallDiseasePolicy.Definitions(
                     _random,
                     () => _time.Calendar.DayNumber,
@@ -249,6 +250,9 @@ internal sealed partial class DaggerfallSession
                 .. DaggerfallPoisonEffects.Definitions(_random, _vitality, () => character.Career),
             ]));
             effects.RestoreMagicRounds(saved?.MagicRounds ?? 0);
+            Infections = new(effects, () => _time.Calendar.DayNumber, Cinematics, composition.VideosEnabled,
+                message => Presentation.SetOutcome(message), saved?.Infections);
+            partiallyConstructed.Add(Infections);
             partiallyConstructed.Add(effects);
             _rewards = new DaggerfallRewardReactions(
                 progression,
@@ -469,6 +473,7 @@ internal sealed partial class DaggerfallSession
             _pendingIdentify = saved?.PendingIdentify;
             State.Character.SpellForgotten+=key=>
             { if(Casting.ReadyFor(actors.Player.DurableId)?.SpellKey==key) Casting.Cancel(actors.Player.DurableId); };
+            _persistence.Infections = Infections.Capture;
             _persistence.ReadySpell=()=>Casting.ReadyFor(actors.Player.DurableId);
             _persistence.PendingCreateItem = () => _pendingCreateItem;
             _persistence.PendingDispel = () => _pendingDispel;
