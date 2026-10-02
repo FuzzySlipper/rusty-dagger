@@ -126,9 +126,32 @@ public sealed class StrikeEnchantmentSessionTests
         Assert.Equal(outsideBefore, Health(s, outside).Current); Assert.Equal(before + 2, player.Current);
         s.AdvanceElapsedTime(3 * 60); Assert.Equal(before + 2, player.Current);
         s.AdvanceElapsedTime(60); Assert.Equal(before + 4, player.Current);
+        f.Update();
+        Assert.Contains("Drained 1 health", s.Presentation.LastOutcome, StringComparison.Ordinal);
+        Assert.Contains("restored 1 health", s.Presentation.LastOutcome, StringComparison.Ordinal);
+        var published = Assert.IsType<Dictionary<string, object?>>(f.Engine.Published());
+        Assert.Equal(s.Presentation.LastOutcome, published["lastOutcome"]);
         Assert.Equal(DaggerfallItemConditionOutcome.Broken, s.ItemCondition.Damage(source.Item, int.MaxValue).Outcome);
         s.AdvanceElapsedTime(4 * 60); Assert.Equal(before + 4, player.Current);
         using var restored = f.Restore(); restored.AdvanceElapsedTime(4 * 60); Assert.Equal(before + 4, Health(restored, 1).Current);
+    }
+
+    [Fact]
+    public void Vampiric_range_preserves_a_real_Sanguine_Rose_ally_while_draining_the_hostile_actor()
+    {
+        using var f = new SanguineRoseSessionTests.Fixture(); var s = f.Session;
+        f.Use();
+        long ally = Assert.Single(f.Allies());
+        var origin = s.State.PlayerControl.Position!.Value;
+        s.State.Actors.Get(ally).ApplyPose(new(origin with { X = origin.X + 1 }, 0));
+        s.State.Actors.Get(f.Enemy).ApplyPose(new(origin with { Z = origin.Z - 1 }, 0));
+        var source = Add(f, 6, 0); Equip(s, source.Item);
+        var player = Health(s, 1); player.SetCurrent(player.Maximum.Value - 10);
+        double allyBefore = Health(s, ally).Current, enemyBefore = Health(s, f.Enemy).Current, before = player.Current;
+        s.AdvanceElapsedTime(60);
+        Assert.Equal(allyBefore, Health(s, ally).Current);
+        Assert.Equal(enemyBefore - 1, Health(s, f.Enemy).Current);
+        Assert.Equal(before + 1, player.Current);
     }
 
     [Fact]
