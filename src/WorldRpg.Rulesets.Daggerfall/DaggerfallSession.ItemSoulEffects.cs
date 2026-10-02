@@ -1,6 +1,7 @@
 using WorldRpg.Rulesets.Daggerfall.Content;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Inventory;
+using WorldRpg.Rulesets.Daggerfall.Facts;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -9,6 +10,22 @@ internal sealed partial class DaggerfallSession
     private DaggerfallCreateItemRequest? _pendingCreateItem;
     internal DaggerfallSoulGems SoulGems => new(State.Inventory, State.ItemInstances, _definitions.Magic, _uniqueItems);
     internal DaggerfallCreateItemView? CreateItemView => _pendingCreateItem is { } request ? new(request.Instance, CreateItemOptions()) : null;
+
+    private DaggerfallInventoryUseResult UseAzurasStar(WorldRpg.Kit.Inventory.UniqueInventoryItem item)
+    {
+        ulong id = State.Inventory.GetDurableItemId(new(item.EntityId)).Value;
+        int? released = SoulGems.ReleaseStar(id);
+        return released is { } mobile ? new(true, $"Released {_definitions.Actors.Values.First(actor => actor.Kind == DaggerfallActorKinds.Monster && actor.MobileId == mobile).Id.Value} from Azura's Star.")
+            : new(false, "Azura's Star has no soul to release.");
+    }
+
+    private void CaptureHeldSoul(ActorDiedFact death)
+    {
+        if (death.KillerId != DaggerfallActorIdentity.PlayerEntityId || !State.HeldEnchantments.AzurasStarEquipped) return;
+        int? mobile = DefinitionsByActor.TryGetValue(death.ActorId, out var actor) && actor.Kind == DaggerfallActorKinds.Monster ? actor.MobileId : null;
+        var result = SoulGems.CaptureStar(mobile);
+        _facts.Append(new AzurasStarCaptureFact(death.ActorId, result.ItemId, result.Outcome));
+    }
 
     private void RequestCreateItem(DaggerfallCreateItemRequest request)
     {

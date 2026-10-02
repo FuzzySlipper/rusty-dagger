@@ -21,6 +21,7 @@ internal sealed record ActorDamagedFact(long ActorId, long SourceActorId, Dagger
     int CalculatedDamage, double ActualHealthLost) : IProductFact;
 internal sealed record ActorDiedFact(long ActorId, long KillerId, DaggerfallDamageCause Cause,
     int CalculatedDamage, double ActualHealthLost, ulong OriginatingGeneration, ulong OriginatingSequence) : IProductFact;
+internal sealed record AzurasStarCaptureFact(long TargetId, ulong? ItemId, DaggerfallStarCaptureOutcome Outcome) : IProductFact;
 /// <summary>One ring's accepted reflection, tied to its durable item source and ordinary damage result.</summary>
 internal sealed record ArtifactDamageReflectedFact(ulong SourceItemId, long SourceActorId, long TargetActorId,
     int ReflectedDamage, double ActualHealthLost, ulong OriginatingGeneration, ulong OriginatingSequence) : IProductFact;

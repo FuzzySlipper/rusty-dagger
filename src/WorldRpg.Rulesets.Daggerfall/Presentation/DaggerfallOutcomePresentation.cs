@@ -24,6 +24,15 @@ internal sealed class DaggerfallOutcomePresentation(
     {
         switch (fact)
         {
+            case AzurasStarCaptureFact star:
+                presentation.AppendOutcome(star.Outcome switch
+                {
+                    DaggerfallStarCaptureOutcome.Captured => "Soul captured in Azura's Star.",
+                    DaggerfallStarCaptureOutcome.Occupied => "Azura's Star is already full.",
+                    DaggerfallStarCaptureOutcome.Ineligible => "Azura's Star cannot capture this soul.",
+                    _ => "Azura's Star is unavailable.",
+                });
+                break;
             case SoulTrapResolvedFact trapped:
                 _soulTrap = trapped;
                 presentation.SetOutcome(trapped.Message);

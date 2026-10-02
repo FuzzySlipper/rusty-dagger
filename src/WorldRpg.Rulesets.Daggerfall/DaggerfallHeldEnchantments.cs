@@ -177,6 +177,11 @@ internal sealed partial class DaggerfallHeldEnchantments : IDisposable
     /// <summary>The talents the worn items improve right now.</summary>
     internal DaggerfallHeldTalents Talents { get; private set; }
 
+    internal bool AzurasStarEquipped => _entities.Store.IsAlive(_actor)
+        && _stats.GetTrack(TrackId.Parse("health")).Current > 0
+        && _equipment.Read().Assignments.Any(assignment => TryEnchantments(assignment, out var enchantments)
+            && enchantments.Any(value => value.Type == ArtifactEffectType && value.Param == 9));
+
     /// <summary>What the worn items add to the player's carry allowance, ×1 when nothing does.</summary>
     internal double CarryMultiplier { get; private set; } = 1d;
 

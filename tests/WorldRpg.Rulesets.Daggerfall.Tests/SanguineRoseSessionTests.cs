@@ -305,8 +305,13 @@ public sealed class SanguineRoseSessionTests
             var appearance = new AppearanceFake(releases);
             return (EngineContextFake.Create(content, spatial.Service, appearance, perception.Service), spatial, perception, appearance);
         }
-        internal DaggerfallSession Restore(DaggerfallSiteProfiles? profiles = null) => DaggerfallSession.Restore(CreateEngine().Item1.Context,
-            profiles is null ? Composition : Composition with { Profiles = profiles }, Session.CaptureSave());
+        internal DaggerfallSession Restore(DaggerfallSiteProfiles? profiles = null) => Restore(out _, profiles);
+        internal DaggerfallSession Restore(out EngineContextFake engine, DaggerfallSiteProfiles? profiles = null)
+        {
+            engine = CreateEngine().Item1;
+            return DaggerfallSession.Restore(engine.Context,
+                profiles is null ? Composition : Composition with { Profiles = profiles }, Session.CaptureSave());
+        }
         internal void Use() => Submit(new { action = "inventory-use", revision = Engine.PublishedNested("inventory", "revision"), item = $"unique:{Item.EntityId}" });
         internal void Update(double? fixedDelta = null) => Session.Update(new ProductUpdate(OuterUpdate(++_step) with { FixedDeltaSeconds = fixedDelta ?? 1d / 60d }, []));
         internal void Submit(object action) => Session.Update(new ProductUpdate(OuterUpdate(++_step), [Ui(JsonSerializer.Serialize(action))]));
