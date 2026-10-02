@@ -15,11 +15,14 @@ internal sealed record DaggerfallSpellBinding(int Type, int SubType, bool Suppor
     bool IsDisease = false, DaggerfallMagicAllowedElements AllowedElements = DaggerfallMagicAllowedElements.Magic,
     Func<DaggerfallCastEffectState, JsonElement>? CreateState = null,
     DaggerfallMagicAllowedTargets AllowedTargets = DaggerfallMagicAllowedTargets.All,
-    bool MagnitudePerRound = false);
+    bool MagnitudePerRound = false, bool UntilHealed = false);
 
 /// <summary>Meaningful settings retained with an admitted effect, never a runtime handle.</summary>
 internal sealed record DaggerfallCastEffectState(DaggerfallSpellEffectDefinition Settings, int CasterLevel,
-    int Amount, int SavePercent);
+    int Amount, int SavePercent, DaggerfallCastOrigin? Origin = null);
+
+/// <summary>Historical admission provenance, not a dependency on a living actor or item.</summary>
+internal sealed record DaggerfallCastOrigin(long CasterId, ulong? ItemId, DaggerfallCastSource Source);
 
 /// <summary>Computed from actual active effects; no independently retained defense state.</summary>
 internal sealed record DaggerfallMagicDefense(int AbsorptionChance, int ReflectionChance,
@@ -248,40 +251,49 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                 // Active channel admission already ran above; do not charge a second resistance roll.
                 liveProfile = liveProfile with { ActiveResistances = [] };
                 string instance = $"cast.{bundle.Sequence}.{targetId}.{i}.{(reflected ? "reflected" : "direct")}";
-                uint? baseDuration = binding.SupportsDuration ? checked((uint)Math.Max(1,
+                uint? baseDuration = binding.UntilHealed ? null : binding.SupportsDuration ? checked((uint)Math.Max(1,
                     DaggerfallMagicAdmissionPolicy.CalculateEffectDuration(setting, bundle.CasterLevel))) : 1u;
-                var preliminaryState = new DaggerfallCastEffectState(setting, bundle.CasterLevel, 0, 100);
+                // Permanent attribute damage rolls its incoming payload/save even when an incumbent exists.
+                int permanentAmount = binding.UntilHealed ? DaggerfallMagicAdmissionPolicy.RollEffectMagnitude(setting, bundle.CasterLevel, roll) : 0;
+                int permanentPercent = !binding.UntilHealed || bundle.BypassSave || bundle.Target == DaggerfallSpellTarget.CasterOnly
+                    ? 100 : DaggerfallMagicAdmissionPolicy.SavingThrow(source, liveProfile, () => roll(1, 100));
+                if (permanentPercent == 0) { bundle.Results.Add(new(i, targetId, DaggerfallCastOutcome.Resisted, 0)); continue; }
+                permanentAmount = (int)(permanentAmount * (permanentPercent / 100f));
+                DaggerfallCastOrigin? origin = binding.UntilHealed ? new(bundle.CasterId, bundle.ItemId, bundle.Source) : null;
+                long? operationalCaster = binding.UntilHealed ? null : bundle.CasterId;
+                ulong? operationalItem = binding.UntilHealed ? null : bundle.ItemId;
+                var preliminaryState = new DaggerfallCastEffectState(setting, bundle.CasterLevel, permanentAmount, permanentPercent, origin);
                 JsonElement preliminary = binding.CreateState?.Invoke(preliminaryState)
                     ?? JsonSerializer.SerializeToElement(preliminaryState, DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
-                if (effects.TryAdmitIncumbent(new(instance, definition.Key, $"spell.{bundle.Spell.Key}", bundle.CasterId,
-                    targetId, setting.Key, bundle.Element.ToString(), bundle.ItemId, 1, baseDuration, preliminary), out var incumbent,
+                if (effects.TryAdmitIncumbent(new(instance, definition.Key, $"spell.{bundle.Spell.Key}", operationalCaster,
+                    targetId, setting.Key, bundle.Element.ToString(), operationalItem, 1, baseDuration, preliminary), out var incumbent,
                     () =>
                     {
                         var incoming = new DaggerfallCastEffectState(setting, bundle.CasterLevel,
-                            binding.SupportsMagnitude && !binding.MagnitudePerRound ? DaggerfallMagicAdmissionPolicy.RollEffectMagnitude(setting, bundle.CasterLevel, roll) : 0, 100);
+                            binding.UntilHealed ? permanentAmount : binding.SupportsMagnitude && !binding.MagnitudePerRound ? DaggerfallMagicAdmissionPolicy.RollEffectMagnitude(setting, bundle.CasterLevel, roll) : 0, permanentPercent, origin);
                         return binding.CreateState?.Invoke(incoming)
                             ?? JsonSerializer.SerializeToElement(incoming, DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
                     }))
                 {
                     string? actual = incumbent == DaggerfallEffectAdmissionOutcome.Refreshed
                         ? effects.Active.First(effect => checked((long)effect.Context.Target.Value) == targetId
-                            && effects.IsLikeKind(effect, definition, targetId, preliminary, bundle.CasterId, bundle.ItemId)).Context.Instance.Value : null;
+                            && effects.IsLikeKind(effect, definition, targetId, preliminary, operationalCaster, operationalItem)).Context.Instance.Value : null;
                     bundle.Results.Add(new(i, targetId, incumbent == DaggerfallEffectAdmissionOutcome.Refreshed
-                        ? DaggerfallCastOutcome.Refreshed : DaggerfallCastOutcome.IncumbentRejected, Instance: actual));
+                        ? DaggerfallCastOutcome.Refreshed : DaggerfallCastOutcome.IncumbentRejected, permanentPercent, Instance: actual));
                     continue;
                 }
-                int amount = binding.SupportsMagnitude && !binding.MagnitudePerRound ? DaggerfallMagicAdmissionPolicy.RollEffectMagnitude(setting, bundle.CasterLevel, roll) : 0;
-                int percent = bundle.BypassSave || bundle.Target == DaggerfallSpellTarget.CasterOnly ? 100 : DaggerfallMagicAdmissionPolicy.SavingThrow(source, liveProfile, () => roll(1, 100));
+                int amount = binding.UntilHealed ? permanentAmount : binding.SupportsMagnitude && !binding.MagnitudePerRound ? DaggerfallMagicAdmissionPolicy.RollEffectMagnitude(setting, bundle.CasterLevel, roll) : 0;
+                int percent = binding.UntilHealed ? permanentPercent : bundle.BypassSave || bundle.Target == DaggerfallSpellTarget.CasterOnly ? 100 : DaggerfallMagicAdmissionPolicy.SavingThrow(source, liveProfile, () => roll(1, 100));
                 if (percent == 0) { bundle.Results.Add(new(i, targetId, DaggerfallCastOutcome.Resisted, percent)); continue; }
                 uint? duration = baseDuration;
                 // Non-magnitude saves reject at zero and otherwise retain the full duration.
-                if (binding.SupportsMagnitude)
+                if (binding.SupportsMagnitude && !binding.UntilHealed)
                 { amount = (int)(amount * (percent / 100f)); duration = binding.SupportsDuration ? checked((uint)Math.Max(1, DaggerfallMagicAdmissionPolicy.CalculateEffectDuration(setting, bundle.CasterLevel))) : 1u; }
-                var state = new DaggerfallCastEffectState(setting, bundle.CasterLevel, amount, percent);
+                var state = new DaggerfallCastEffectState(setting, bundle.CasterLevel, amount, percent, origin);
                 JsonElement payload = binding.CreateState?.Invoke(state)
                     ?? JsonSerializer.SerializeToElement(state, DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
-                var admission = effects.Start(new(instance, definition.Key, $"spell.{bundle.Spell.Key}", bundle.CasterId,
-                    targetId, setting.Key, bundle.Element.ToString(), bundle.ItemId, 1, duration, payload));
+                var admission = effects.Start(new(instance, definition.Key, $"spell.{bundle.Spell.Key}", operationalCaster,
+                    targetId, setting.Key, bundle.Element.ToString(), operationalItem, 1, duration, payload));
                 outcome = admission switch
                 {
                     DaggerfallEffectAdmissionOutcome.NoMatch => DaggerfallCastOutcome.NoMatch,
@@ -292,7 +304,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                 };
                 if (admission == DaggerfallEffectAdmissionOutcome.Refreshed)
                     instance = effects.Active.Single(effect => checked((long)effect.Context.Target.Value) == targetId
-                        && effects.IsLikeKind(effect, definition, targetId, payload, bundle.CasterId, bundle.ItemId)).Context.Instance.Value;
+                        && effects.IsLikeKind(effect, definition, targetId, payload, operationalCaster, operationalItem)).Context.Instance.Value;
                 bundle.Results.Add(new(i, targetId, outcome, percent, outcome == DaggerfallCastOutcome.NoMatch ? null : instance));
                 continue;
             }

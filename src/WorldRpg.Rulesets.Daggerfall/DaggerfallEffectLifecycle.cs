@@ -290,6 +290,7 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
     {
         ArgumentNullException.ThrowIfNull(request);
         DaggerfallEffectDefinition definition = _catalog.Require(request.EffectKey);
+        ValidateLifetime(definition, request);
         ActiveEffectContext context = Context(request);
         if (_effects.ContainsKey(context.Instance))
             throw new ArgumentException($"Effect instance '{request.Instance}' is already active.", nameof(request));
@@ -346,6 +347,13 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
         return outcome;
     }
 
+    private static void ValidateLifetime(DaggerfallEffectDefinition definition, DaggerfallEffectRequest request)
+    {
+        if (definition.Spell?.UntilHealed == true
+            && (request.RemainingRounds is not null || request.CasterId is not null || request.ItemId is not null))
+            throw new ArgumentException("Permanent attribute damage must retain target-owned lifetime and historical cast origin in its state.");
+    }
+
     internal void Restore(IEnumerable<DaggerfallActiveEffectSave> saved)
     {
         ArgumentNullException.ThrowIfNull(saved);
@@ -353,6 +361,7 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
         {
             DaggerfallEffectDefinition definition = _catalog.Require(entry.EffectKey);
             DaggerfallEffectRequest request = entry.ToRequest();
+            ValidateLifetime(definition, request);
             ActiveEffectContext context = Context(request);
             if (_effects.ContainsKey(context.Instance))
                 throw new ArgumentException($"Saved effect instance '{request.Instance}' appears more than once.", nameof(saved));
