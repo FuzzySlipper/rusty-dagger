@@ -115,6 +115,11 @@ public sealed class DaggerfallTransformationInfectionTests
         var active = Assert.Single(save.ActiveEffects);
         var wrong = new DaggerfallInfectionState(DaggerfallInfectionKind.Vampire, State(s).StartingDay, 3, DaggerfallInfectionStage.DeathPending);
         Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Encode(save with { ActiveEffects = [active with { State = JsonSerializer.SerializeToElement(wrong, DaggerfallSaveJsonContext.Default.DaggerfallInfectionState) }] }));
+        Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Encode(save with { ActiveEffects = [active with { CasterId = 2000 }] }));
+        Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Encode(save with { ActiveEffects = [active with { ItemId = 123 }] }));
+        Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Encode(save with { ActiveEffects = [active with { BundleKind = DaggerfallEffectBundleKind.HeldMagicItem }] }));
+        var stuck = State(s) with { Unavailable = "Impossible incubating failure." };
+        Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Encode(save with { ActiveEffects = [active with { State = JsonSerializer.SerializeToElement(stuck, DaggerfallSaveJsonContext.Default.DaggerfallInfectionState) }] }));
         Assert.True(s.State.Effects.Cancel(Assert.Single(s.State.Effects.Active).Context.Instance));
         using var restored = f.Restore(s.CaptureSave());
         Assert.Equal(DaggerfallInfectionCleanup.Cancelled, Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).Infections.LastOutcomes).Outcome);

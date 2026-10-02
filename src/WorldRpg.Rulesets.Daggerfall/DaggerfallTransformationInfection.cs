@@ -18,7 +18,8 @@ internal sealed record DaggerfallInfectionState(DaggerfallInfectionKind Kind, lo
         if (!Enum.IsDefined(Kind) || !Enum.IsDefined(Stage) || StartingDay < 0 || InfectionRegion is < 0 or > 61
             || Kind != DaggerfallInfectionKind.Vampire && Stage == DaggerfallInfectionStage.DeathPending
             || OriginActorId is <= 0
-            || Unavailable is not null && string.IsNullOrWhiteSpace(Unavailable))
+            || Unavailable is not null && (string.IsNullOrWhiteSpace(Unavailable)
+                || Stage is DaggerfallInfectionStage.Incubating or DaggerfallInfectionStage.Warned))
             throw new ArgumentException("Transformation infection state is malformed.");
         return this;
     }
@@ -77,7 +78,8 @@ internal static class DaggerfallTransformationInfectionPolicy
             ?? throw new ArgumentException("Infection state is missing.")).Validate();
         long elapsed = day - state.StartingDay;
         if (effect.EffectKey != Key(state.Kind) || effect.TargetId != DaggerfallActorIdentity.PlayerEntityId
-            || effect.RemainingRounds is not null || elapsed < 0
+            || effect.RemainingRounds is not null || effect.CasterId is not null || effect.ItemId is not null
+            || effect.BundleKind != DaggerfallEffectBundleKind.None || elapsed < 0
             || state.Stage != DaggerfallInfectionStage.Incubating && elapsed <= 0
             || state.Stage is DaggerfallInfectionStage.DeathPending or DaggerfallInfectionStage.ReadyForTransformation && elapsed <= 3)
             throw new ArgumentException("Saved infection kind, target, lifetime or elapsed milestone is malformed.");
