@@ -52,6 +52,7 @@ internal sealed record DaggerfallSavePayload(
     public DaggerfallSpellDefinition[] CustomSpells { get; init; } = [];
     [JsonRequired]
     public long MagicRounds { get; init; }
+    [JsonRequired] public DaggerfallInfectionsSave Infections { get; init; } = DaggerfallInfectionsSave.Empty;
     public long NextCastSequence { get; init; } = 1;
     [JsonRequired]
     public DaggerfallReadySpell? ReadySpell {get;init;}
@@ -618,6 +619,12 @@ internal sealed record DaggerfallSavePayload(
         ArgumentNullException.ThrowIfNull(Npcs);
         Npcs.Validate();
         ArgumentNullException.ThrowIfNull(ActiveEffects);
+        ArgumentNullException.ThrowIfNull(Infections);
+        Infections.Validate();
+        long infectionDay = new DaggerfallCalendar(Calendar.Year, Calendar.Month, Calendar.Day, Calendar.Hour, Calendar.Minute, Calendar.Second).DayNumber;
+        if (Infections.LastOutcomes.Any(value => value.Day > infectionDay))
+            throw new ArgumentException("Saved infection cleanup is later than the calendar.");
+        foreach (var effect in ActiveEffects) DaggerfallTransformationInfectionPolicy.ValidateSaved(effect, infectionDay);
         ArgumentNullException.ThrowIfNull(SkillUses);
         SkillUses.Validate();
         ArgumentNullException.ThrowIfNull(Social);
@@ -1415,6 +1422,8 @@ internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definiti
 [JsonSerializable(typeof(DaggerfallIdentifyRequest))]
 [JsonSerializable(typeof(DaggerfallSoulTrapState))]
 [JsonSerializable(typeof(DaggerfallCastEffectState))]
+[JsonSerializable(typeof(DaggerfallInfectionState))]
+[JsonSerializable(typeof(DaggerfallInfectionsSave))]
 [JsonSerializable(typeof(DaggerfallShieldState))]
 [JsonSerializable(typeof(DaggerfallPeriodicCastState))]
 [JsonSerializable(typeof(DaggerfallAttributeDrainState))]
