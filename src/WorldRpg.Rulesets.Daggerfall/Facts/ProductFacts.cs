@@ -90,3 +90,5 @@ internal readonly record struct DaggerfallStrikeFeedback(bool Weapon, string Swi
 {
     internal static DaggerfallStrikeFeedback Unarmed => new(false, "swing");
 }
+
+internal sealed record SoulTrapResolvedFact(long TargetId, string Message, bool AllowsDeath) : IProductFact;

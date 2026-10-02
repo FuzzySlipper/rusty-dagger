@@ -18,11 +18,17 @@ internal sealed class DaggerfallOutcomePresentation(
 {
     // Whether the published line reports something that happened rather than something that did not.
     private bool _lineIsResult;
+    private SoulTrapResolvedFact? _soulTrap;
 
     internal void React(IProductFact fact)
     {
         switch (fact)
         {
+            case SoulTrapResolvedFact trapped:
+                _soulTrap = trapped;
+                presentation.SetOutcome(trapped.Message);
+                _lineIsResult = true;
+                break;
             case SpellCastFact { Outcome: DaggerfallCastOutcome.DeliveryCompleted, Absorptions: not null } cast
                 when cast.Absorptions.Any(value => value.TargetId == DaggerfallActorIdentity.PlayerEntityId):
                 _lineIsResult = true;
@@ -114,10 +120,15 @@ internal sealed class DaggerfallOutcomePresentation(
                 presentation.SetOutcome(hit.EnemyAttack && hit.TargetId != DaggerfallActorIdentity.PlayerEntityId
                     ? $"{Name(hit.AttackerId)} hit {Name(hit.TargetId)} for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage"
                     : hit.EnemyAttack ? $"{definition.Id.Value} hit you for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage" : $"Hit {definition.Id.Value} for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage");
+                if (_soulTrap is { AllowsDeath: false } tethered && tethered.TargetId == hit.TargetId)
+                { presentation.AppendOutcome(tethered.Message); _soulTrap = null; }
                 break;
+                // Soul resolution was completed before the canonical health write.
             case ActorDiedFact died when Actor(died.ActorId, out DaggerfallActorDefinition definition):
                 _lineIsResult = true;
                 presentation.SetOutcome($"Defeated {definition.Id} for {DaggerfallFormulaPolicy.DisplayDamage(died.ActualHealthLost)} damage; gained {definition.Rewards.ExperienceReward} XP");
+                if (_soulTrap is { } deathTrap && deathTrap.TargetId == died.ActorId)
+                { presentation.AppendOutcome(deathTrap.Message); _soulTrap = null; }
                 break;
             case LootAwardedFact loot:
                 presentation.AppendOutcome($"looted {loot.Quantity} {loot.ItemId}");

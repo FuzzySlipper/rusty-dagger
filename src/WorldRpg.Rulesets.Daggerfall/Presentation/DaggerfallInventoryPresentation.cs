@@ -323,6 +323,8 @@ internal sealed class DaggerfallInventoryPresentation
         DaggerfallItemCondition condition = itemCondition.Condition(metadata);
         ItemConditionPresentation presentedCondition = new(condition.Current, condition.Maximum, condition.Percentage, condition.IsBroken);
         string conditionDetail = condition.Maximum == 0 ? string.Empty : $"Condition: {condition.Current}/{condition.Maximum} ({condition.Percentage}%); ";
+        if (metadata.CapturedSoulMobileId is int soul) conditionDetail += $"Captured soul: {definitions.Actors.Values.FirstOrDefault(actor => actor.MobileId == soul)?.Id.Value ?? soul.ToString()}; ";
+        if (metadata.Conjuration is { } conjured) conditionDetail += $"Conjured until minute {conjured.ExpiresAtMinute}; ";
         if (metadata.Enchantment is null) return new(baseLabel, conditionDetail + Details(definition), presentedCondition, true);
         if (!definitions.Magic.MagicItems.TryGetValue(metadata.Enchantment, out DaggerfallMagicItemDefinition? magic))
         {

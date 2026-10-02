@@ -217,6 +217,9 @@ internal sealed partial class DaggerfallSession
                     CurePoison, target => DaggerfallParalysisEffects.Cure(effects, target)),
                 .. DaggerfallMysticismEffects.Definitions(id => id == actors.Player.DurableId ? actors.Player.Progression.Level : authored[id].Level ?? 1,
                     request => _pendingDispel = request, BanishNearby, ReactToSpellAttack, request => _pendingTeleport = request),
+                .. DaggerfallItemSoulEffects.Definitions(RequestCreateItem,
+                    id => authored.TryGetValue(id, out var actorDefinition) && actorDefinition.Kind == DaggerfallActorKinds.Monster ? actorDefinition.MobileId : null,
+                    mobile => SoulGems.Capture(mobile), _random, (target, message, dies) => _facts.Append(new SoulTrapResolvedFact(target, message, dies))),
                 .. DaggerfallSocialMagicEffects.Definitions(ApplyPacify,RequestIdentify),
                 .. DaggerfallConcealmentEffects.Definitions(),
                 .. DaggerfallDetectionEffects.Definitions(),
@@ -428,7 +431,7 @@ internal sealed partial class DaggerfallSession
                 dialogueOpen: () => _activationPresentation.View.Dialogue is not null,
                 characterCreationOpen: () => State.Character.Pending is not null,
                 levelUpOpen: () => State.LevelUps.Pending is not null,
-                bankOpen: () => ActiveBankRegion() is not null, dispelOpen: () => _pendingDispel is not null, identifyOpen: () => _pendingIdentify is not null, teleportOpen: () => _pendingTeleport is not null);
+                bankOpen: () => ActiveBankRegion() is not null, dispelOpen: () => _pendingDispel is not null, identifyOpen: () => _pendingIdentify is not null, teleportOpen: () => _pendingTeleport is not null, createItemOpen: () => _pendingCreateItem is not null);
             itemInstances.SourceUnavailable += item =>
             { effects.CancelItemReferences(item); Casting?.CancelItemReferences(item); if (_pendingIdentify?.SourceItem==item) _pendingIdentify=null; };
             Casting = new(definitions.Magic, effects, CastActor, MagicProfile, item => itemInstances.ContainsUnique(item)
@@ -458,6 +461,7 @@ internal sealed partial class DaggerfallSession
             _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, _dungeonText, CapturePropertyStorage, QuestTravelOrigin, authored, () => Casting.NextSequence);
             _roster = new DaggerfallActorRoster(State, definitions, _random, assembled.Mechanics, _actorIdentities, _uniqueItems,
                 _authoredEntityIds, authored, saved?.DynamicActors ?? [], _grounding, () => _sites.Projection, _lootUi, _corpseLoot);
+            _pendingCreateItem = saved?.PendingCreateItem;
             _pendingDispel = saved?.PendingDispel;
             _pendingTeleport = saved?.PendingTeleport;
             _teleportAnchor = saved?.TeleportAnchor;
@@ -465,6 +469,7 @@ internal sealed partial class DaggerfallSession
             State.Character.SpellForgotten+=key=>
             { if(Casting.ReadyFor(actors.Player.DurableId)?.SpellKey==key) Casting.Cancel(actors.Player.DurableId); };
             _persistence.ReadySpell=()=>Casting.ReadyFor(actors.Player.DurableId);
+            _persistence.PendingCreateItem = () => _pendingCreateItem;
             _persistence.PendingDispel = () => _pendingDispel;
             _persistence.PendingTeleport = () => _pendingTeleport;
             _persistence.TeleportAnchor = () => _teleportAnchor;
@@ -495,6 +500,7 @@ internal sealed partial class DaggerfallSession
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments, RestoreDungeonText);
             if (saved?.ReadySpell is { } readyKey) Casting.RestoreReadySpell(readyKey);
+            ExpireConjuredItems();
             _sites.AdmitInitialExterior(saved?.ExteriorResidency);
             _itemCastTriggers.Refresh();
         }

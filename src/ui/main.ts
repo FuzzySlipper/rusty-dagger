@@ -21,6 +21,7 @@ interface DaggerHud {
     readonly items: readonly { readonly id: string; readonly definition: string; readonly quantity: number }[];
   }[] }[];
   readonly spells?: SpellbookProjection | null;
+  readonly createItem?: { readonly revision:string; readonly options:readonly { readonly id:string; readonly label:string }[] } | null;
   readonly identify?: { readonly revision:string; readonly cost:number; readonly options:readonly { readonly id:string; readonly label:string }[] } | null;
   readonly teleport?: { readonly revision:string; readonly anchorSet:boolean } | null;
   readonly dispel?: { readonly revision: string; readonly options: readonly { readonly id: string; readonly label: string }[] } | null;
@@ -327,6 +328,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const siteName = shell.querySelector<HTMLElement>('.dagger-title .dagger-site')!;
   const outcome = shell.querySelector<HTMLParagraphElement>('.dagger-outcome')!;
   const quests = shell.querySelector<HTMLElement>('.dagger-quests')!;
+  const createItem = document.createElement('section');
+  createItem.className = 'dagger-create-item'; createItem.hidden = true; quests.before(createItem);
   const identify = document.createElement('section');
   identify.className = 'dagger-identify'; identify.hidden = true; quests.before(identify);
   const teleport = document.createElement('section');
@@ -899,6 +902,18 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const unsubscribe = context.projection?.subscribe((projection) => {
     if (projection?.contract !== 'dagger.ui.snapshot.v1' || !isHud(projection.value)) return;
     const value = projection.value;
+    createItem.hidden = !value.createItem;
+    createItem.replaceChildren();
+    if (value.createItem) {
+      const choice = value.createItem;
+      const title = document.createElement('h2'); title.textContent = 'Create Item'; createItem.append(title);
+      for (const option of choice.options) {
+        const button = document.createElement('button'); button.textContent = option.label;
+        button.addEventListener('click', () => context.intents?.claim('dagger.ui', {kind:'product-payload', contract:UI_ACTION_CONTRACT,
+          data:{action:'create-item-select', revision:choice.revision, key:option.id}}));
+        createItem.append(button);
+      }
+    }
     identify.hidden = !value.identify;
     identify.replaceChildren();
     if (value.identify) {

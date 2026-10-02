@@ -80,6 +80,7 @@ internal sealed partial class DaggerfallSession
         }
         State.Social.AdvanceElapsedMinutes(minuteBefore, MinuteIndex(_time.Calendar));
         AdvanceLoans();
+        ExpireConjuredItems();
         AdvanceEffectsForCalendar(before, ordinaryPlay, resting);
         if (encounter is not null) QueueEncounter(encounter);
         AnnounceHoliday();
