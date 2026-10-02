@@ -27,10 +27,28 @@ internal sealed record DaggerfallQuestStackBinding(DaggerfallItemOwnerSave Owner
 internal sealed record DaggerfallQuestResourceBinding(DaggerfallQuestResourceBindingKind Kind, long[] ActorIds, ulong[] UniqueItemIds,
     DaggerfallQuestStackBinding[] Stacks, DaggerfallSiteIdSave[] Places)
 {
+    public DaggerfallQuestBuildingClaim? Building { get; init; }
     internal static DaggerfallQuestResourceBinding Actors(params long[] actorIds) => new(DaggerfallQuestResourceBindingKind.Actor, actorIds, [], [], []);
     internal static DaggerfallQuestResourceBinding UniqueItem(ulong itemId) => new(DaggerfallQuestResourceBindingKind.Item, [], [itemId], [], []);
     internal static DaggerfallQuestResourceBinding Stack(DaggerfallItemOwnerSave owner, string stackId) => new(DaggerfallQuestResourceBindingKind.Item, [], [], [new(owner, stackId)], []);
     internal static DaggerfallQuestResourceBinding Place(DaggerfallSiteIdSave place) => new(DaggerfallQuestResourceBindingKind.Place, [], [], [], [place]);
+
+    /// <summary>Normalizes the source place's exact building through the admitted directory.</summary>
+    internal static DaggerfallQuestResourceBinding PlaceBuilding(DaggerfallSiteContext sites, int mapId, int buildingKey)
+    {
+        DaggerfallSiteRecord[] matches = [.. sites.Records.Where(site => site.MapId == mapId)];
+        if (matches.Length != 1)
+            throw new ArgumentException($"Quest building map {mapId} resolves to {matches.Length} admitted locations.");
+        // DFU reserves this key for the otherwise-zero first building in the first block.
+        const int originBuildingKey = 1 << 24;
+        if (buildingKey <= 0 || buildingKey > originBuildingKey)
+            throw new ArgumentException($"Quest building map {mapId} has invalid building key {buildingKey}.");
+        DaggerfallSiteBuildingId placement = buildingKey == originBuildingKey ? new(0, 0, 0)
+            : new(buildingKey >> 16, (buildingKey >> 8) & 255, buildingKey & 255);
+        DaggerfallSiteBuildingSource source = sites.RequireBuildingSource(matches[0].Id, placement);
+        return Place(new(matches[0].Id.Region, matches[0].Id.Index)) with
+        { Building = new(source.Source.Id.SourceKey, source.Source.Id.Index, placement.BlockX, placement.BlockY) };
+    }
 
     internal void Validate(string owner)
     {
@@ -38,6 +56,13 @@ internal sealed record DaggerfallQuestResourceBinding(DaggerfallQuestResourceBin
         ArgumentNullException.ThrowIfNull(UniqueItemIds);
         ArgumentNullException.ThrowIfNull(Stacks);
         ArgumentNullException.ThrowIfNull(Places);
+        if (Building is { } building)
+        {
+            if (Kind != DaggerfallQuestResourceBindingKind.Place || Places.Length != 1
+                || string.IsNullOrWhiteSpace(building.SourceKey) || building.Index is < 0 or > 255
+                || building.BlockX is < 0 or > 255 || building.BlockY is < 0 or > 255)
+                throw new ArgumentException($"Quest resource '{owner}' has an invalid building claim.");
+        }
         switch (Kind)
         {
             case DaggerfallQuestResourceBindingKind.Actor when ActorIds.Length > 0 && UniqueItemIds.Length == 0 && Stacks.Length == 0 && Places.Length == 0 && ActorIds.All(id => id > 0):
@@ -60,6 +85,9 @@ internal sealed record DaggerfallQuestResourceBinding(DaggerfallQuestResourceBin
         }
     }
 }
+
+/// <summary>Current place identity; names, prices and other authored inputs stay in content.</summary>
+internal sealed record DaggerfallQuestBuildingClaim(string SourceKey, int Index, int BlockX, int BlockY);
 
 /// <summary>Durable state belonging to one declared resource.</summary>
 internal sealed record DaggerfallQuestResourceState(string Symbol, DaggerfallQuestResourceBinding Binding, bool IsHidden = false, bool HasPlayerClicked = false);
@@ -146,6 +174,15 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
                 throw new ArgumentException($"Quest instance '{InstanceId}' refers to missing resource '{symbol}' in '{SourceFile}'.");
             if (resource.Binding.Kind != BindingKind(declared.Kind))
                 throw new ArgumentException($"Quest instance '{InstanceId}' binds resource '{symbol}' as {resource.Binding.Kind}, but '{SourceFile}' declares it as {declared.Kind}.");
+            if (resource.Binding.Building is { } claim)
+            {
+                DaggerfallSiteId site = resource.Binding.Places[0].Require();
+                var location = definitions.Locations.Records.SingleOrDefault(value => value.Id == site);
+                if (location?.Exterior is not { } exterior
+                    || !exterior.Buildings.TryGetValue(new(claim.BlockX, claim.BlockY, claim.Index), out var building)
+                    || building.Source.Id != new DaggerfallRmbBuildingId(claim.SourceKey, claim.Index))
+                    throw new ArgumentException($"Quest instance '{InstanceId}' resource '{symbol}' refers to missing building {claim.SourceKey}/{claim.Index} at site {site}, block {claim.BlockX}/{claim.BlockY}.");
+            }
         }
         if (validateClockState)
             ValidateClocks(DaggerfallQuestClockCompiler.Compile(definition));
@@ -390,6 +427,12 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
         instance.Lifecycle == DaggerfallQuestLifecycle.Active
         && instance.Resources.Any(resource => resource.Binding.Kind == DaggerfallQuestResourceBindingKind.Actor
             && resource.Binding.ActorIds.Contains(actorId)));
+    internal bool ClaimsBuilding(DaggerfallSiteId site, DaggerfallSiteBuildingSource building) =>
+        _instances.Values.Any(instance => instance.Lifecycle == DaggerfallQuestLifecycle.Active
+            && instance.Resources.Any(resource => resource.Binding.Building is { } claim
+                && resource.Binding.Places[0].Require() == site
+                && claim.SourceKey == building.Source.Id.SourceKey && claim.Index == building.Source.Id.Index
+                && claim.BlockX == building.Id.BlockX && claim.BlockY == building.Id.BlockY));
     internal DaggerfallQuestMessages Messages { get; }
 
     /// <summary>Binds the one session's live player and elapsed-time owners after composition completes.</summary>
