@@ -13,6 +13,39 @@ internal sealed partial class DaggerCombatRules
     private const int SpecialArtifactEffect = 26;
     private const int NamiraArtifact = 7;
     private const string NamiraDamage = "artifact.namira";
+    private readonly Func<long, long, ulong, int, int, ulong, ulong, (double Magicka, int Strength)>? _molagBalStrike;
+
+    private (WorldRpg.Kit.Inventory.UniqueInventoryItem Weapon, ulong Identity)? CaptureMolagBalSource(long attacker)
+    {
+        if (_molagBalStrike is null || EquippedWeapon(attacker) is not { } weapon) return null;
+        var equipment = attacker == PlayerId ? _equipment : _actorEquipment(attacker);
+        ulong identity = equipment.GetDurableItemId(new EntityId(weapon.EntityId)).Value;
+        if (!_itemInstances.ContainsUnique(identity)) return null;
+        var item = _itemInstances.RequireUnique(identity);
+        return item.CurrentCondition > 0 && item.Enchantment is { } key
+            && _catalog.Magic.TryEnchantments(key, out var payloads)
+            && payloads.Any(payload => payload.Type == SpecialArtifactEffect && payload.Param == 2)
+            ? (weapon, identity) : null;
+    }
+
+    private void ApplyMolagBal(long attacker, long target,
+        (WorldRpg.Kit.Inventory.UniqueInventoryItem Weapon, ulong Identity) source,
+        int damage, bool enemy, ulong generation, ulong step, FactBuffer<IProductFact> facts)
+    {
+        if (!TryResolve(target, out var victim)) return;
+        var profile = DaggerfallMagicProfiles.Create(victim.Stats, victim.Definition,
+            target == PlayerId ? _character() : null, _catalog, _magicDefense(target));
+        ExplicitMeleeRequest request = new(attacker, target, generation, step, 1d);
+        if (DaggerfallMagicAdmissionPolicy.SavingThrow(DaggerfallMagicResistanceElement.Magic,
+            DaggerfallMagicEffectFlags.Magic, profile, 0,
+            () => Draw(request, attacker, target, CombatRandomKey.MolagBalSavingThrowSalt, 1, 100, enemy)) == 0) return;
+        int strength = victim.Stats.GetTrack(TrackId.Parse("magicka")).Current <= 0
+            ? Draw(request, attacker, target, CombatRandomKey.MolagBalStrengthSalt, 1, 6, enemy) : 0;
+        var transferred = _molagBalStrike!(attacker, target, source.Identity, damage, strength, generation, step);
+        facts.Append(new ArtifactResourceTransferredFact(source.Identity, attacker, target,
+            transferred.Magicka, transferred.Strength, generation, step));
+        DamageCondition(source.Weapon, attacker, damage, generation, step, facts);
+    }
 
     private ulong? CaptureWabbajackSource(long attacker)
     {

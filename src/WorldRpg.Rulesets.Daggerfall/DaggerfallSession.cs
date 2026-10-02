@@ -275,6 +275,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         // A modal equipment action can be saved before another playing step. Capture the worn set
         // that actually owns the items, rather than a prior frame's held stat sources.
         Casting.ClearPending();
+        DaggerfallMolagBalEffects.Reconcile(State.Effects, MolagBalEquipped);
         _heldEnchantments.Refresh();
         return _persistence.Capture(_latestUpdateGeneration, _latestSimulationStep, _roster.Dynamic, _encounters,
             _sites.Deltas, _activeProfileKey, _sites.ReturnProfile, State.DungeonDiscoveries, State.DungeonActions,
@@ -601,6 +602,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         if (fact is ActorDiedFact died)
         {
             if (died.ActorId==DaggerfallActorIdentity.PlayerEntityId) _pendingIdentify=null;
+            DaggerfallMolagBalEffects.EndOnDeath(State.Effects, died.ActorId);
             DaggerfallParalysisEffects.EndOnDeath(State.Effects, died.ActorId);
             DaggerfallContinuousDestructionEffects.EndOnDeath(State.Effects, died.ActorId);
             DaggerfallConcealmentEffects.End(State.Effects, died.ActorId);

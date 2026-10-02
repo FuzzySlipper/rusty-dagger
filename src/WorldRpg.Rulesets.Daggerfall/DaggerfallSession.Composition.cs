@@ -220,6 +220,7 @@ internal sealed partial class DaggerfallSession
                 .. DaggerfallDetectionEffects.Definitions(),
                 .. DaggerfallDoorMagicEffects.Definitions(),
                 .. DaggerfallFortifyEffects.Definitions(() => character.Career),
+                DaggerfallMolagBalEffects.Definition(() => _time.Calendar, () => character.Career, MolagBalEquipped),
                 .. DaggerfallHealingEffects.Definitions(() => effects, () => character.Career, _vitality),
                 .. DaggerfallAttributeDrainEffects.Definitions(() => character.Career, ReactToSpellAttack),
                 .. DaggerfallAttributeDrainEffects.TransferDefinitions(() => character.Career, ReactToSpellAttack,
@@ -271,7 +272,11 @@ internal sealed partial class DaggerfallSession
                 amount => _vitality.ResolveHeldEnchantmentDamage(actors.Player.Actor, amount), social);
             effects.UseHeldDefense(actors.Player.DurableId, _heldEnchantments);
             partiallyConstructed.Add(_heldEnchantments);
-            _equipmentMoves.Changed += _ => _heldEnchantments.Refresh();
+            _equipmentMoves.Changed += _ =>
+            {
+                _heldEnchantments.Refresh();
+                DaggerfallMolagBalEffects.Reconcile(effects, MolagBalEquipped);
+            };
             DaggerfallActorInventories actorInventories = assembled.ActorInventories;
             _combat = new DaggerCombatRules(_random, actors, equipmentCoordinator, actorInventories.InventoryFor, itemInstances, definitions, authored, targeting, use => skillUses.Record(use),
                 () => character.Background?.Modifiers.AvoidHit ?? 0, actorInventories.EquipmentFor, _itemCondition, combatRules,
@@ -280,7 +285,7 @@ internal sealed partial class DaggerfallSession
                     ? new DaggerfallAdrenalineRush(Enabled: true, Improved: _heldEnchantments.Talents.AdrenalineRush) : default,
                 () => assembled.PlayerControl.Position, () => character, _playerSwings.TryGesture, ShotBlockedByCover,
                 () => _heldEnchantments.ArmorValueModifier, DeliverWeaponPoison, () => _heldEnchantments.AttackChanceModifier, TransformWithWabbajack, effects.MagicDefenseFor,
-                actorId => effects.ControlsFor(actorId).PhysicalAttacks);
+                actorId => effects.ControlsFor(actorId).PhysicalAttacks, TransferMolagBal);
             GameplayServices<IProductFact> kit = new(actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, inventory, equipmentCoordinator);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
                 engine.Perception,

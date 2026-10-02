@@ -87,9 +87,11 @@ internal static class DaggerfallStatsSaveBoundary
         Dictionary<string, IReadOnlyList<StatModifierHandle>> handles = new(StringComparer.Ordinal);
         StatsComponent rebuilt = StatsComponentCapture.Rebuild(saved.Snapshot, (captured, stat, restoredHandles) =>
         {
+            double maximum = captured.Id == DaggerfallMechanicsIds.Strength.Value
+                ? DaggerfallMolagBalEffects.SavedStrengthMaximum(saved.Sources) : DaggerfallFormulaPolicy.MaxStatValue();
             if (DaggerfallMechanicsIds.Attributes.Any(attribute => attribute.Value == captured.Id)
-                && (stat.Minimum != 0 || stat.Maximum != DaggerfallFormulaPolicy.MaxStatValue()))
-                throw new ArgumentException($"Saved attribute '{captured.Id}' must use the canonical live bounds 0..{DaggerfallFormulaPolicy.MaxStatValue()}.", nameof(saved));
+                && (stat.Minimum != 0 || stat.Maximum != maximum))
+                throw new ArgumentException($"Saved attribute '{captured.Id}' must use the canonical live bounds and admitted artifact bonuses 0..{maximum}.", nameof(saved));
             handles.Add(captured.Id, restoredHandles);
             if (!sources.TryGetValue(captured.Id, out DaggerfallStatSourceSave[]? statSources)) return;
             string sourceStatId = statSources[0].SourceStatId;

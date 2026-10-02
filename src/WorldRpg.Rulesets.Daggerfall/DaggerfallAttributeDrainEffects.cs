@@ -19,6 +19,17 @@ internal static class DaggerfallAttributeDrainEffects
     internal static JsonElement Encode(DaggerfallAttributeDrainState state) =>
         JsonSerializer.SerializeToElement(state, DaggerfallSaveJsonContext.Default.DaggerfallAttributeDrainState);
 
+    /// <summary>The accepted artifact strike already supplied its save; retain only historical provenance.</summary>
+    internal static void DrainArtifactStrength(DaggerfallEffectLifecycle effects, string instance,
+        long caster, long target, ulong item, int amount)
+    {
+        if (amount is < 1 or > 6) throw new ArgumentOutOfRangeException(nameof(amount));
+        DaggerfallSpellEffectDefinition settings = new("artifact-strength-drain", 7, 0,
+            0, 0, 1, 0, 0, 1, amount, amount, 0, 0, 1);
+        effects.Start(new(instance, Key(0), "artifact-molag-bal-drain", null, target, settings.Key, "Magic", null, 1, null,
+            Encode(new(new(settings, 1, amount, 100, new(caster, item, DaggerfallCastSource.ItemStrike)), amount))));
+    }
+
     internal static IEnumerable<DaggerfallEffectDefinition> Definitions(Func<DaggerfallCareerDefinition> career, Action<long, long> attacked) =>
         DefinitionsFor(7, career, attacked, null);
 

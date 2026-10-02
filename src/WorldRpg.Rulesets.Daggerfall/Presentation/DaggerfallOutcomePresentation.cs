@@ -38,6 +38,12 @@ internal sealed class DaggerfallOutcomePresentation(
                     ? $"{cast.SpellName ?? cast.SpellKey}: {string.Join(", ", cast.Effects.Select(effect => effect.Outcome).Distinct())}."
                     : $"{cast.SpellName ?? cast.SpellKey ?? "Spell"}: {cast.Outcome}.");
                 break;
+            case ArtifactResourceTransferredFact transferred:
+                _lineIsResult = true;
+                presentation.SetOutcome(transferred.Magicka > 0
+                    ? $"Mace of Molag Bal transferred {transferred.Magicka:0} magicka."
+                    : $"Mace of Molag Bal transferred {transferred.Strength} Strength.");
+                break;
             case ActorTransformedFact changed:
                 _lineIsResult = true;
                 presentation.SetOutcome(changed.Outcome switch
