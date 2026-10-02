@@ -31,6 +31,7 @@ internal sealed record DaggerfallItemEnchantmentQuote(int Capacity, int Required
 internal static class DaggerfallMagicCostPolicy
 {
     private const int CastingFloor = 5;
+    private static readonly string[] EffectSchools = ["destruction", "restoration", "illusion", "alteration", "thaumaturgy", "mysticism"];
 
     /// <summary>
     /// FORM-11's ordinary effect-bundle quotation.  This is deliberately separate from
@@ -84,6 +85,9 @@ internal static class DaggerfallMagicCostPolicy
     {
         ArgumentNullException.ThrowIfNull(catalog); ArgumentNullException.ThrowIfNull(spell); ArgumentNullException.ThrowIfNull(schoolSkills);
         DaggerfallSpellTarget target = TargetForRangeType(spell.RangeType);
+        if (spell.IsCustom)
+            return CalculateTotalEffectCosts(catalog, spell.Effects, target,
+                enchantingItem ? EffectSchools.ToDictionary(school => school, _ => 50) : schoolSkills);
         ValidateElement(spell.Element);
         long total = 0;
         foreach (DaggerfallSpellEffectDefinition effect in spell.Effects)

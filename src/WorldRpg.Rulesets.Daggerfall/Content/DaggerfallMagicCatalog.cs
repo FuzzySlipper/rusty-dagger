@@ -135,7 +135,12 @@ internal sealed record DaggerfallSpellDefinition(
     int RangeType,
     int Cost,
     int Icon,
-    IReadOnlyList<DaggerfallSpellEffectDefinition> Effects);
+    IReadOnlyList<DaggerfallSpellEffectDefinition> Effects)
+{
+    public bool IsCustom { get; init; }
+    public bool IsPlayerCreated { get; init; }
+    public bool SpellsForSale { get; init; } = true;
+}
 
 /// <summary>One enchantment of a published magic item, with what its parameter names.</summary>
 internal sealed record DaggerfallMagicEnchantmentDefinition(
@@ -174,6 +179,25 @@ internal sealed record DaggerfallMagicCatalogSet(
     IReadOnlyDictionary<(int Type, int SubType), DaggerfallMagicEffectCostDefinition> EffectCosts,
     IReadOnlyDictionary<string, DaggerfallEnchantmentSetting> EnchantmentSettings)
 {
+    private Dictionary<string, DaggerfallSpellDefinition>? _sessionSpells;
+
+    internal DaggerfallMagicCatalogSet ForSession(IReadOnlyList<DaggerfallSpellDefinition> constructed)
+    {
+        ArgumentNullException.ThrowIfNull(constructed);
+        var rows = Spells.ToDictionary(row => row.Key, row => row.Value, StringComparer.Ordinal);
+        var session = this with { Spells = rows, _sessionSpells = rows };
+        foreach (var spell in rows.Values.Where(spell => spell.IsCustom)) DaggerfallSpellConstruction.ValidateDefinition(session, spell);
+        foreach (var spell in constructed) session.AddConstructedSpell(spell);
+        return session;
+    }
+
+    internal void AddConstructedSpell(DaggerfallSpellDefinition spell)
+    {
+        if (_sessionSpells is null) throw new InvalidOperationException("Only a session catalog admits constructed spells.");
+        DaggerfallSpellConstruction.ValidateDefinition(this, spell);
+        if (!_sessionSpells.TryAdd(spell.Key, spell with { Effects = Array.AsReadOnly(spell.Effects.ToArray()) })) throw new ArgumentException($"Constructed spell identity '{spell.Key}' collides with a current definition.");
+    }
+
     /// <summary>The loaded payloads owned by one item key, including maker-authored settings.</summary>
     internal bool TryEnchantments(string key, out IReadOnlyList<DaggerfallMagicEnchantmentDefinition> enchantments)
     {

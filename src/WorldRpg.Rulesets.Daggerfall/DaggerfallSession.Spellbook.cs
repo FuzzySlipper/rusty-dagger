@@ -14,13 +14,13 @@ internal sealed partial class DaggerfallSession
     internal DaggerfallSpellSales SpellSales => _spellSales ??= new(_definitions, State,
         key => Casting.AvailableSpellCost(State.Actors.Player.DurableId, key), () => _time.Calendar);
 
-    private (DaggerfallServiceProvider Provider, int Quality)? CurrentSpellProvider(string? revision = null)
+    private (DaggerfallServiceProvider Provider, int Quality)? CurrentSpellProvider(string? revision = null, string service = "buy-spells")
     {
         var npc = _dialogue?.CurrentNpc(revision);
         var building = CurrentInteriorBuilding();
-        if (npc is null || building is null || !npc.Services.Contains("buy-spells", StringComparer.Ordinal)) return null;
+        if (npc is null || building is null || !npc.Services.Contains(service, StringComparer.Ordinal)) return null;
         var source = _site.RequireBuildingSource(_activeProfileKey.Site, new(building.BlockX, building.BlockY, building.Building.Index));
-        return (new(npc.DurableId, npc.Site, "buy-spells"), source.Quality);
+        return (new(npc.DurableId, npc.Site, service), source.Quality);
     }
 
     private DaggerfallSpellSaleView? ReadSpellSale()

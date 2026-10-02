@@ -95,9 +95,9 @@ public sealed class KnownReadySpellSessionTests
     private static void Fund(DaggerfallSession s){var track=Magicka(s);track.Maximum.BaseValue=10000;track.SetCurrent(10000);}
     internal sealed class Fixture:IDisposable
     {
-        private readonly DaggerfallSessionComposition composition=new(TestPayload.Definitions,ReadInputs(TestData.RepositoryRoot),DaggerfallTuning.Defaults);
+        private readonly DaggerfallSessionComposition composition;
         internal DaggerfallSession Session{get;}internal EngineContextFake Engine{get;}private ulong step;
-        internal Fixture(){Engine=CreateEngine();Session=DaggerfallSession.StartNew(Engine.Context,composition);}
+        internal Fixture(Content.DaggerfallDefinitions? definitions=null){composition=new(definitions ?? TestPayload.Definitions,ReadInputs(TestData.RepositoryRoot),DaggerfallTuning.Defaults);Engine=CreateEngine();Session=DaggerfallSession.StartNew(Engine.Context,composition);}
         private EngineContextFake CreateEngine()
         {
             List<string> releases=[];ContentFake content=new(releases);PopulateContent(content,composition.StartSite);

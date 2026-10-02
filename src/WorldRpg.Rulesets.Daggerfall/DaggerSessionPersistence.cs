@@ -151,6 +151,7 @@ internal sealed class DaggerSessionPersistence
             Character: State.Character.Capture(),
             LevelUp: State.LevelUps.Capture())
         {
+            CustomSpells = State.Character.CaptureConstructedSpells(),
             MagicRounds = State.Effects.MagicRounds,
             NextCastSequence = _nextCastSequence(),
             ReadySpell=ReadySpell(),

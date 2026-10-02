@@ -31,7 +31,7 @@ internal static class DaggerfallMysticismEffects
                 if (effect.Context.Caster is { } caster) attacked?.Invoke(checked((long)caster.Value), checked((long)effect.Context.Target.Value));
                 return [];
             }, Resume: effect => Validate(effect, 19, -1),
-            Spell: new(19, -1, SupportsDuration: true, RollChanceOnCast: true,
+            Spell: new(19, -1, SpellMaker: true, SupportsDuration: true, RollChanceOnCast: true,
                 AllowedElements: DaggerfallMagicAllowedElements.Fire | DaggerfallMagicAllowedElements.Cold
                     | DaggerfallMagicAllowedElements.Poison | DaggerfallMagicAllowedElements.Shock | DaggerfallMagicAllowedElements.Magic,
                 AllowedTargets: DaggerfallMagicAllowedTargets.All),
@@ -46,10 +46,10 @@ internal static class DaggerfallMysticismEffects
                 else requestTeleport(effect.Context.Instance.Value);
                 return [];
             }, Resume: _ => throw new ArgumentException("Teleport is an immediate paid choice, not an ongoing effect."),
-            Spell: new(43, -1, AllowedTargets: DaggerfallMagicAllowedTargets.CasterOnly), ShowSpellIcon: false);
+            Spell: new(43, -1, SpellMaker: true, AllowedTargets: DaggerfallMagicAllowedTargets.CasterOnly), ShowSpellIcon: false);
         yield return new("comprehend-languages", "comprehend-languages", DaggerfallEffectStacking.Stack, ushort.MaxValue, 1,
             Apply: effect => Validate(effect, 44, -1), Resume: effect => Validate(effect, 44, -1),
-            Spell: new(44, -1, SupportsDuration: true, AllowedTargets: DaggerfallMagicAllowedTargets.CasterOnly),
+            Spell: new(44, -1, SpellMaker: true, SupportsDuration: true, AllowedTargets: DaggerfallMagicAllowedTargets.CasterOnly),
             ExtendIncumbentDuration: true, IncumbentSettingsMatch: (_, _) => true,
             LivePerception: effect => new(ComprehendLanguagesBonus: DaggerfallMagicAdmissionPolicy.CalculateEffectChance(
                 Read(effect, 44, -1).Settings, level(checked((long)effect.Context.Target.Value)))));
@@ -61,7 +61,7 @@ internal static class DaggerfallMysticismEffects
                 else requestDispel(new(effect.Context.Instance.Value, DaggerfallMagicAdmissionPolicy.CalculateEffectChance(state.Settings, state.CasterLevel)));
                 return [];
             }, Resume: _ => throw new ArgumentException("Dispel Magic is an immediate request, not an ongoing effect."),
-            Spell: new(6, 0, AllowedTargets: DaggerfallMagicAllowedTargets.CasterOnly), ShowSpellIcon: false);
+            Spell: new(6, 0, SpellMaker: true, AllowedTargets: DaggerfallMagicAllowedTargets.CasterOnly), ShowSpellIcon: false);
         foreach (int subtype in new[] { 1, 2 })
         {
             int variant = subtype;
@@ -69,7 +69,7 @@ internal static class DaggerfallMysticismEffects
                 DaggerfallEffectStacking.Stack, ushort.MaxValue, 1,
                 Apply: effect => { Read(effect, 6, variant); banish(effect, variant == 2); return []; },
                 Resume: _ => throw new ArgumentException("Creature dispel is an immediate action, not an ongoing effect."),
-                Spell: new(6, variant, AllowedTargets: DaggerfallMagicAllowedTargets.CasterOnly));
+                Spell: new(6, variant, SpellMaker: true, AllowedTargets: DaggerfallMagicAllowedTargets.CasterOnly));
         }
     }
     internal static DaggerfallCastEffectState Read(DaggerfallActiveEffect effect, int type, int subtype)

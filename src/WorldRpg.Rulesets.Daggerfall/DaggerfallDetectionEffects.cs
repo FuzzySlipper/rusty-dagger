@@ -23,7 +23,7 @@ internal static class DaggerfallDetectionEffects
             string key = Key(variant);
             yield return new(key, key, DaggerfallEffectStacking.Stack, ushort.MaxValue, 1,
                 Apply: effect => Validate(effect, variant), Resume: effect => Validate(effect, variant),
-                Spell: new(39, variant, SupportsDuration: true, AllowedTargets: DaggerfallMagicAllowedTargets.CasterOnly),
+                Spell: new(39, variant, SpellMaker: true, SupportsDuration: true, AllowedTargets: DaggerfallMagicAllowedTargets.CasterOnly),
                 ExtendIncumbentDuration: true, IncumbentSettingsMatch: (_, _) => true,
                 Detection: variant == 0 ? DaggerfallDetection.Magic : variant == 1 ? DaggerfallDetection.Enemy : DaggerfallDetection.Treasure);
         }

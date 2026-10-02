@@ -14,12 +14,12 @@ internal static class DaggerfallRestorationEffects
     {
         yield return new("free-action", "free-action", DaggerfallEffectStacking.Stack, ushort.MaxValue, 1,
             Apply: effect => ValidateCast(effect, 26), Resume: effect => ValidateCast(effect, 26),
-            Spell: new(26, -1, SupportsDuration: true),
+            Spell: new(26, -1, SpellMaker: true, SupportsDuration: true),
             MagicDefense: _ => new(0, 0, [], PreventsParalysis: true), ExtendIncumbentDuration: true,
             IncumbentSettingsMatch: (_, _) => true, SourceScopedIncumbent: true);
         yield return new("spell-absorption", "spell-absorption", DaggerfallEffectStacking.Stack, ushort.MaxValue, 1,
             Apply: effect => ValidateCast(effect, 20), Resume: effect => ValidateCast(effect, 20),
-            Spell: new(20, -1, SupportsDuration: true),
+            Spell: new(20, -1, SpellMaker: true, SupportsDuration: true),
             MagicDefense: effect => new(Math.Clamp(DaggerfallMagicAdmissionPolicy.CalculateEffectChance(
                 ReadCast(effect.State).Settings, level(checked((long)effect.Context.Target.Value))), 0, 100), 0, []),
             ExtendIncumbentDuration: true, IncumbentSettingsMatch: (_, _) => true, SourceScopedIncumbent: true);
@@ -35,7 +35,7 @@ internal static class DaggerfallRestorationEffects
                 int amount = DaggerfallPeriodicCast.RollMagnitude(effect, random, 18, -1, "daggerfall.regenerate.v1", "");
                 vitality.RestoreSpellTrack(effect.Target, TrackId.Parse("health"), amount);
             },
-            Spell: new(18, -1, SupportsDuration: true, SupportsMagnitude: true,
+            Spell: new(18, -1, SpellMaker: true, SupportsDuration: true, SupportsMagnitude: true,
                 CreateState: state => RegenerationState(new(state, 0)), MagnitudePerRound: true),
             ExtendIncumbentDuration: true,
             IncumbentSettingsMatch: (prior, incoming) => SameSettings(ReadRegeneration(prior).Cast, ReadRegeneration(incoming).Cast),

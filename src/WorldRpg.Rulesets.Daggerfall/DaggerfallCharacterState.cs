@@ -112,6 +112,9 @@ internal sealed partial class DaggerfallCharacterState
     /// is the same as learning it once; a key nothing publishes is refused rather than stored as a spell that
     /// can never be cast.
     /// </summary>
+    internal DaggerfallSpellDefinition[] CaptureConstructedSpells() =>
+        [.. _definitions.Magic.Spells.Values.Where(spell => spell.IsPlayerCreated).OrderBy(spell => spell.Key, StringComparer.Ordinal)];
+
     internal bool LearnSpell(string key)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);

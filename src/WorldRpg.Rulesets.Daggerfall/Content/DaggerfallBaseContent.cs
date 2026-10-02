@@ -2444,12 +2444,17 @@ internal static partial class DaggerfallBaseContent
             spells[key] = new DaggerfallSpellDefinition(
                 key, identity, identityShared, Text(spell, "name", diagnostics),
                 Integer(spell, "element", diagnostics), Integer(spell, "rangeType", diagnostics),
-                Integer(spell, "cost", diagnostics), Integer(spell, "icon", diagnostics), effects);
+                Integer(spell, "cost", diagnostics), Integer(spell, "icon", diagnostics), effects)
+            {
+                IsCustom = spell.TryGetProperty("isCustom", out var custom) && custom.GetBoolean(),
+                SpellsForSale = spell.TryGetProperty("spellsForSale", out var forSale) ? forSale.GetBoolean()
+                    : !spell.TryGetProperty("isCustom", out var customRow) || !customRow.GetBoolean(),
+            };
         }
 
         foreach ((string key, DaggerfallSpellDefinition spell) in spells)
         {
-            bool actuallyShared = identityUse.TryGetValue(spell.Identity, out int uses) && uses > 1;
+            bool actuallyShared = !spell.IsCustom && identityUse.TryGetValue(spell.Identity, out int uses) && uses > 1;
             if (spell.IdentityShared != actuallyShared)
             {
                 // The flag is what tells a consumer whether an identity is ambiguous; disagreeing with the

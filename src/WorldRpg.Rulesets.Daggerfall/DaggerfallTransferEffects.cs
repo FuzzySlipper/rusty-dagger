@@ -34,7 +34,7 @@ internal static class DaggerfallTransferEffects
                         target == DaggerfallActorIdentity.PlayerEntityId || hostile(target)));
                     attacked(caster, target);
                 },
-                Spell: new(11, selected, SupportsMagnitude: true, AllowedTargets: DaggerfallMagicAllowedTargets.Other));
+                Spell: new(11, selected, SpellMaker: true, SupportsMagnitude: true, AllowedTargets: DaggerfallMagicAllowedTargets.Other));
         }
     }
 

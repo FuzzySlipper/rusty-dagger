@@ -24,7 +24,7 @@ internal sealed class DaggerfallSpellSales(DaggerfallDefinitions definitions, Da
     internal DaggerfallSpellOffer[] Offers(DaggerfallServiceProvider provider, int quality)
     {
         if (!CanUse(provider)) return [];
-        return definitions.Magic.Spells.Values.OrderBy(spell => spell.Name, StringComparer.Ordinal)
+        return definitions.Magic.Spells.Values.Where(spell => spell.SpellsForSale).OrderBy(spell => spell.Name, StringComparer.Ordinal)
             .Select(spell => Offer(spell.Key, quality)).OfType<DaggerfallSpellOffer>().ToArray();
     }
 
@@ -61,7 +61,7 @@ internal sealed class DaggerfallSpellSales(DaggerfallDefinitions definitions, Da
 
     private DaggerfallSpellOffer? Offer(string key, int quality)
     {
-        if (!definitions.Magic.Spells.TryGetValue(key, out var spell) || castingCost(key) is not int cost) return null;
+        if (!definitions.Magic.Spells.TryGetValue(key, out var spell) || !spell.SpellsForSale || castingCost(key) is not int cost) return null;
         int presented = checked(cost * 4);
         if (calendar().GetHolidayId(0) == WitchesFestival) presented = Math.Max(1, presented >> 1);
         var stats = state.Actors.Player.Stats;

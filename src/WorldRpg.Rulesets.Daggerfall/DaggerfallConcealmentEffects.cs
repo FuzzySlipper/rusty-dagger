@@ -27,7 +27,7 @@ internal static class DaggerfallConcealmentEffects
             yield return new(key, key, DaggerfallEffectStacking.Stack, ushort.MaxValue, 1,
                 Apply: effect => Validate(effect, selectedType, selectedSubtype), Resume: effect => Validate(effect, selectedType, selectedSubtype),
                 Perception: new(Invisible: type == 13, Blending: type == 23, Shade: type == 24, Concealment: flag),
-                Spell: new(type, subtype, SupportsDuration: true), ExtendIncumbentDuration: true,
+                Spell: new(type, subtype, SpellMaker: true, SupportsDuration: true), ExtendIncumbentDuration: true,
                 IncumbentSettingsMatch: (_, _) => true);
         }
     }

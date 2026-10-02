@@ -23,7 +23,7 @@ internal static class DaggerfallAlterationEffects
             yield return new(key, key, DaggerfallEffectStacking.Stack, ushort.MaxValue, 1,
                 Apply: effect => ValidateResistance(effect, selected), Resume: effect => ValidateResistance(effect, selected),
                 Feedback: DaggerfallEffectFeedback.MagicSparkle,
-                Spell: new(8, (int)element, SupportsDuration: true),
+                Spell: new(8, (int)element, SpellMaker: true, SupportsDuration: true),
                 MagicDefense: effect =>
                 {
                     var state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)
@@ -35,7 +35,7 @@ internal static class DaggerfallAlterationEffects
         yield return new("shield", "shield", DaggerfallEffectStacking.RefreshDuration, 1, 1,
             Apply: effect => AttachShield(effect, depleted), Resume: effect => AttachShield(effect, depleted, resumed: true),
             Feedback: DaggerfallEffectFeedback.MagicSparkle,
-            Spell: new(35, -1, SupportsDuration: true, SupportsMagnitude: true,
+            Spell: new(35, -1, SpellMaker: true, SupportsDuration: true, SupportsMagnitude: true,
                 CreateState: state => ShieldState(new(state.Amount, state.Amount))),
             RefreshState: (incumbent, incoming) =>
             {

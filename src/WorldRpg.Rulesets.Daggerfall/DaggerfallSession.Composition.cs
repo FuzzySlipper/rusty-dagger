@@ -79,7 +79,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallResolvedRestore? restore)
     {
         DaggerfallSavePayload? saved = restore?.Payload;
-        DaggerfallDefinitions definitions = composition.Definitions;
+        DaggerfallDefinitions definitions = restore?.Definitions ?? composition.Definitions.ForSession([]);
         DaggerfallTuning tuning = composition.Tuning;
         DaggerfallSiteAudioBundles? audioBundles = composition.Audio;
         DaggerfallMusicBundle? music = composition.Music;
@@ -500,6 +500,9 @@ internal sealed partial class DaggerfallSession
             partiallyConstructed.Add(_hud);
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments, RestoreDungeonText);
+            foreach (var spell in definitions.Magic.Spells.Values.Where(spell => spell.IsCustom))
+                if (Casting.AvailableSpellCost(actors.Player.DurableId, spell.Key) is null)
+                    throw new ArgumentException($"Custom spell '{spell.Key}' contains an unavailable compiled construction effect or combination.");
             if (saved?.ReadySpell is { } readyKey) Casting.RestoreReadySpell(readyKey);
             ExpireConjuredItems();
             _sites.AdmitInitialExterior(saved?.ExteriorResidency);

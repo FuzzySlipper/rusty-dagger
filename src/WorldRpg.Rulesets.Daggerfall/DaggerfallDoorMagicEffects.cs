@@ -29,7 +29,7 @@ internal static class DaggerfallDoorMagicEffects
             string key = kind == DaggerfallDoorMagic.Lock ? "lock" : "open";
             yield return new(key, key, DaggerfallEffectStacking.Reject, 1, 1,
                 Apply: effect => Validate(effect, variant), Resume: effect => Validate(effect, variant),
-                Spell: new(type, -1, RollChanceOnCast: true, AllowedTargets: DaggerfallMagicAllowedTargets.CasterOnly,
+                Spell: new(type, -1, SpellMaker: true, RollChanceOnCast: true, AllowedTargets: DaggerfallMagicAllowedTargets.CasterOnly,
                     UntilTriggered: true, BypassItemChance: kind == DaggerfallDoorMagic.Open),
                 ShowSpellIcon: false, DoorMagic: kind);
         }
