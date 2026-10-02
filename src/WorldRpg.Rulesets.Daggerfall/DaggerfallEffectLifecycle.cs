@@ -239,6 +239,11 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
     private readonly Dictionary<EffectInstanceId, DaggerfallActiveEffect> _effects = [];
     private readonly Dictionary<long, ActiveEffectLifecycle> _lifecycles = [];
 
+    private DaggerfallHeldEnchantments? _heldDefense;
+    private long _heldDefenseActor;
+    internal void UseHeldDefense(long actorId, DaggerfallHeldEnchantments held)
+    { _heldDefenseActor = actorId; _heldDefense = held ?? throw new ArgumentNullException(nameof(held)); }
+
     internal event Action<DaggerfallEffectOutcome>? Completed;
 
     internal DaggerfallEffectLifecycle(ActorsState actors, DaggerfallEffectCatalog catalog)
@@ -255,7 +260,8 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
 
     internal DaggerfallMagicDefense MagicDefenseFor(long targetId) => DaggerfallMagicDefense.Combine(
         _effects.Values.Where(effect => checked((long)effect.Context.Target.Value) == targetId)
-            .Select(effect => effect.Definition.MagicDefense?.Invoke(effect) ?? DaggerfallMagicDefense.None));
+            .Select(effect => effect.Definition.MagicDefense?.Invoke(effect) ?? DaggerfallMagicDefense.None)
+            .Append(targetId == _heldDefenseActor ? _heldDefense?.MagicDefense ?? DaggerfallMagicDefense.None : DaggerfallMagicDefense.None));
 
     internal WorldRpg.Kit.Controls.ActorControlRestrictions ControlsFor(long targetId)
     {

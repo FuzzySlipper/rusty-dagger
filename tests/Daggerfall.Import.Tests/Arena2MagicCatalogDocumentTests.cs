@@ -55,8 +55,13 @@ public sealed class Arena2MagicCatalogDocumentTests
     {
         JsonArray settings = JsonNode.Parse(Arena2MagicCatalogDocument.Build(
             SpellTable(), MagicItemTable(), "arena2/SPELLS.STD", "arena2/MAGIC.DEF").Json)!["enchantmentSettings"]!.AsArray();
-        Assert.Equal(77, settings.Count);
-        Assert.Equal(77, settings.Select(row => row!["key"]!.GetValue<string>()).Distinct().Count());
+        Assert.Equal(78, settings.Count);
+        var absorption=Assert.Single(settings,row=>row!["type"]!.GetValue<int>()==9)!;
+        Assert.Equal(-1,absorption["param"]!.GetValue<int>());
+        Assert.Equal(1500,absorption["cost"]!.GetValue<int>());
+        Assert.Equal("spell-absorption",absorption["meaning"]!.GetValue<string>());
+        Assert.Equal("AbsorbsSpells",absorption["textKey"]!.GetValue<string>());
+        Assert.Equal(78, settings.Select(row => row!["key"]!.GetValue<string>()).Distinct().Count());
         foreach ((int type, int count, string source) in new[] {
             (10, 35, "EnhancesSkill"), (3, 11, "ExtraSpellPts"),
             (7, 2, "IncreasedWeightAllowance"), (13, 3, "ImprovesTalents"),

@@ -276,7 +276,6 @@ internal static class DaggerfallMagicCostPolicy
         // VampiricEffect: param 0 at range, param 1 when strikes. DFU offers both at the item maker.
         if ((value.Type, value.Param) is (6, 0)) { cost = 2000; return true; }
         if ((value.Type, value.Param) is (6, 1)) { cost = 1000; return true; }
-        if ((value.Type, value.Param) is (9, -1)) { cost = 1500; return true; }  // AbsorbsSpells
         if (magic.EnchantmentSettings.TryGetValue($"enchantment.{value.Type}.{value.Param}", out DaggerfallEnchantmentSetting setting))
         {
             cost = setting.Cost;

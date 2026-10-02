@@ -27,7 +27,7 @@ internal sealed record DaggerfallCastOrigin(long CasterId, ulong? ItemId, Dagger
 
 /// <summary>Computed from actual active effects; no independently retained defense state.</summary>
 internal sealed record DaggerfallMagicDefense(int AbsorptionChance, int ReflectionChance,
-    DaggerfallMagicActiveResistance[] Resistances, bool BlocksCasting = false, bool PreventsParalysis = false)
+    DaggerfallMagicActiveResistance[] Resistances, bool BlocksCasting = false, bool PreventsParalysis = false, ulong[]? AbsorptionItems = null)
 {
     internal static DaggerfallMagicDefense None { get; } = new(0, 0, []);
     internal static DaggerfallMagicDefense Combine(IEnumerable<DaggerfallMagicDefense> defenses)
@@ -37,7 +37,8 @@ internal sealed record DaggerfallMagicDefense(int AbsorptionChance, int Reflecti
             values.Select(value => value.ReflectionChance).DefaultIfEmpty().Max(),
             values.SelectMany(value => value.Resistances).GroupBy(value => value.Element)
                 .Select(group => new DaggerfallMagicActiveResistance(group.Key, checked((int)Math.Min(100L, group.Sum(value => (long)value.Chance))))).ToArray(),
-            values.Any(value => value.BlocksCasting), values.Any(value => value.PreventsParalysis));
+            values.Any(value => value.BlocksCasting), values.Any(value => value.PreventsParalysis),
+            values.SelectMany(value => value.AbsorptionItems ?? []).Distinct().Order().ToArray());
     }
 }
 
@@ -50,6 +51,7 @@ internal enum DaggerfallCastOutcome
 internal sealed record DaggerfallCastResult(DaggerfallCastOutcome Outcome, DaggerfallLiveSpell? Bundle = null);
 internal sealed record DaggerfallCastEffectResult(int EffectIndex, long? TargetId, DaggerfallCastOutcome Outcome,
     int SavePercent = 100, string? Instance = null);
+internal sealed record DaggerfallSpellAbsorptionResult(long TargetId, int AdmittedSpellPoints, double RestoredSpellPoints, ulong[] SourceItems);
 internal enum DaggerfallCastSource { Spell, ItemUse, ItemHeld, ItemStrike }
 internal sealed record DaggerfallReadySpell(string SpellKey, ulong? ItemId, int Cost, DaggerfallCastSource Source);
 internal sealed class DaggerfallSpellReadiness { internal DaggerfallReadySpell? Ready { get; set; } }
@@ -73,6 +75,7 @@ internal sealed class DaggerfallLiveSpell(long sequence, long casterId, ulong? i
     internal int CasterLevel { get; } = level;
     internal DaggerfallEffectDefinition[] Definitions { get; } = definitions;
     internal List<DaggerfallCastEffectResult> Results { get; } = [];
+    internal List<DaggerfallSpellAbsorptionResult> Absorptions { get; } = [];
     internal bool Delivered { get; set; }
     internal bool Reflected { get; set; }
 }
@@ -208,6 +211,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
         }
         var stats = target.Get<StatsComponent>();
         int absorbed = 0;
+        HashSet<ulong> absorptionItems = [];
         for (int i = 0; i < bundle.Definitions.Length; i++)
         {
             // An earlier payload or reflected bundle may have retired a participant synchronously.
@@ -236,8 +240,8 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
             else if (bundle.Source != DaggerfallCastSource.ItemHeld && catalog.RequireEffectCost(setting).School == "destruction" && defense.AbsorptionChance > 0
                 && stats.TryGetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value), out var magicka)
                 && AbsorptionCost(target, bundle, setting) is int refund && magicka.Current + absorbed + refund <= magicka.Maximum.Value
-                && roll(1, 100) <= defense.AbsorptionChance)
-            { absorbed = checked(absorbed + refund); outcome = DaggerfallCastOutcome.Absorbed; }
+                && (defense.AbsorptionItems is { Length: > 0 } || roll(1, 100) <= defense.AbsorptionChance))
+            { absorbed = checked(absorbed + refund); absorptionItems.UnionWith(defense.AbsorptionItems ?? []); outcome = DaggerfallCastOutcome.Absorbed; }
             else if (!bundle.BypassSave && targetId != bundle.CasterId && !bundle.Reflected && defense.ReflectionChance > 0 && roll(1, 100) <= defense.ReflectionChance)
             {
                 bundle.Reflected = true;
@@ -312,11 +316,18 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
             }
             bundle.Results.Add(new(i, targetId, outcome));
         }
-        if (absorbed > 0 && ResolveSource(targetId, null)?.Entity == target.Entity)
+        if (absorbed > 0)
         {
-            Track magicka = stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value));
-            if (targetId == bundle.CasterId && bundle.Cost > 0) absorbed = Math.Min(absorbed, bundle.Cost);
-            magicka.SetCurrent(magicka.Current + absorbed, clamp: true);
+            double restored = 0;
+            if (ResolveSource(targetId, null)?.Entity == target.Entity)
+            {
+                Track magicka = stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value));
+                int refund = targetId == bundle.CasterId && bundle.Cost > 0 ? Math.Min(absorbed, bundle.Cost) : absorbed;
+                double before = magicka.Current;
+                magicka.SetCurrent(before + refund, clamp: true);
+                restored = magicka.Current - before;
+            }
+            bundle.Absorptions.Add(new(targetId, absorbed, restored, absorptionItems.Order().ToArray()));
         }
     }
 

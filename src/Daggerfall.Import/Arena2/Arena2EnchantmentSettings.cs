@@ -74,6 +74,7 @@ internal static class Arena2EnchantmentSettings
         [
             (-1, 700, "strengthened-armor", null, null),
         ]);
+        AddFamily(9, "AbsorbsSpells", "Absorbs spells", [(-1, 1500, "spell-absorption", null, null)]);
         AddFamily(8, "RepairsObjects", "Repairs objects",
         [
             (-1, 900, "repairs-objects", null, null),

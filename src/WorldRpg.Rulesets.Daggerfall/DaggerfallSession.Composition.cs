@@ -268,6 +268,7 @@ internal sealed partial class DaggerfallSession
                 playerStats, actors.Entities, playerEntity, () => _time.Calendar,
                 () => assembled.PlayerControl.Position, () => DaggerfallActorRoster.NearbyCreatures(actors, authored), InSunlight, _itemCondition, InHolyPlace,
                 amount => _vitality.ResolveHeldEnchantmentDamage(actors.Player.Actor, amount), social);
+            effects.UseHeldDefense(actors.Player.DurableId, _heldEnchantments);
             partiallyConstructed.Add(_heldEnchantments);
             _equipmentMoves.Changed += _ => _heldEnchantments.Refresh();
             DaggerfallActorInventories actorInventories = assembled.ActorInventories;
@@ -422,7 +423,7 @@ internal sealed partial class DaggerfallSession
             Casting = new(definitions.Magic, effects, CastActor, MagicProfile, item => itemInstances.ContainsUnique(item)
                     && (itemInstances.RequireUnique(item).MaximumCondition == 0 || itemInstances.RequireUnique(item).CurrentCondition > 0),
                 use => State.SkillUses.Record(use), result => _facts.Append(new SpellCastFact(result.Outcome, result.Bundle?.Sequence, result.Bundle?.CasterId,
-                    result.Bundle?.Spell.Key, result.Bundle?.Cost ?? 0, result.Bundle?.Results.ToArray() ?? [])),
+                    result.Bundle?.Spell.Key, result.Bundle?.Cost ?? 0, result.Bundle?.Results.ToArray() ?? [], result.Bundle?.Absorptions.ToArray() ?? [])),
                 _random, actors.Player.DurableId, saved?.NextCastSequence ?? 1, State.Character.KnownSpells.Contains,
                 id => id == actors.Player.DurableId ? actors.Player.Progression.Level : authored[id].Level ?? 1);
             _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, _dungeonText, CapturePropertyStorage, QuestTravelOrigin, authored, () => Casting.NextSequence);
