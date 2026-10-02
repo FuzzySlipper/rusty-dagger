@@ -28,10 +28,15 @@ internal sealed record DaggerfallCreateItemRequest([property: JsonRequired] stri
 }
 internal sealed record DaggerfallCreateItemOption(string Id, string Label, string Category, int Template, string? Material);
 internal sealed record DaggerfallCreateItemView(string Revision, IReadOnlyList<DaggerfallCreateItemOption> Options);
-internal sealed record DaggerfallSoulTrapState([property: JsonRequired] DaggerfallCastEffectState Cast, [property: JsonRequired] long Attempts = 0);
+internal sealed record DaggerfallSoulTrapState([property: JsonRequired] DaggerfallCastEffectState Cast, [property: JsonRequired] long Attempts = 0,
+    [property: JsonRequired] bool Captured = false);
 
 internal static class DaggerfallItemSoulEffects
 {
+    internal static bool WasSoulCaptured(DaggerfallEffectLifecycle effects, long target) =>
+        effects.Active.Any(effect => effect.Definition.Key == "soul-trap"
+            && checked((long)effect.Context.Target.Value) == target && Read(effect).Captured);
+
     internal static void EndOnDeath(DaggerfallEffectLifecycle effects, long target)
     {
         foreach (var instance in effects.Active.Where(effect => effect.Definition.Key == "soul-trap"
@@ -97,6 +102,7 @@ internal static class DaggerfallItemSoulEffects
                 $"{effect.Context.Instance.Value}:attempt:{state.Attempts}", 1, 100)).Value
                 <= DaggerfallMagicAdmissionPolicy.CalculateEffectChance(state.Cast.Settings, state.Cast.CasterLevel);
             bool filled = success && capture(mobile);
+            effect.State = Serialize(state with { Attempts = checked(state.Attempts + 1), Captured = filled });
             if (success && !filled) interaction.RetainedHealth = Math.Max(interaction.MinimumHealth, 1);
             outcome(checked((long)effect.Context.Target.Value), filled ? "Soul trapped." : success ? "No empty soul gem; the creature remains alive." : "Soul trap failed.", !success || filled);
         }

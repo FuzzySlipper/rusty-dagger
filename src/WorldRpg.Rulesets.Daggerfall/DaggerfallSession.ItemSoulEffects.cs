@@ -21,7 +21,10 @@ internal sealed partial class DaggerfallSession
 
     private void CaptureHeldSoul(ActorDiedFact death)
     {
-        if (death.KillerId != DaggerfallActorIdentity.PlayerEntityId || !State.HeldEnchantments.AzurasStarEquipped) return;
+        if (death.ActorId == DaggerfallActorIdentity.PlayerEntityId
+            || death.KillerId != DaggerfallActorIdentity.PlayerEntityId
+            || !State.HeldEnchantments.AzurasStarEquipped
+            || DaggerfallItemSoulEffects.WasSoulCaptured(State.Effects, death.ActorId)) return;
         int? mobile = DefinitionsByActor.TryGetValue(death.ActorId, out var actor) && actor.Kind == DaggerfallActorKinds.Monster ? actor.MobileId : null;
         var result = SoulGems.CaptureStar(mobile);
         _facts.Append(new AzurasStarCaptureFact(death.ActorId, result.ItemId, result.Outcome));
