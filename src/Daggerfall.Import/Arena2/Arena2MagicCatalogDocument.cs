@@ -206,7 +206,7 @@ public static class Arena2MagicCatalogDocument
                 JsonSerializer.SerializeToNode(PublishedSource.Of(magicLabel, magicBytes), PublishedJson.Section)),
             ["spells"] = publishedSpells,
             ["magicItems"] = publishedItems,
-            ["enchantmentSettings"] = Arena2EnchantmentSettings.Build(),
+            ["enchantmentSettings"] = Arena2EnchantmentSettings.Build(publishedSpells),
             ["unresolvedLinks"] = unresolved,
             ["dispositions"] = dispositions,
         };

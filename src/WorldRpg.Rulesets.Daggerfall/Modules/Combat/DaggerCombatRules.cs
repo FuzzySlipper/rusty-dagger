@@ -60,6 +60,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
 
     private readonly Func<long, DaggerfallMagicDefense> _magicDefense;
     private readonly Func<long, bool> _physicalAttacksBlocked;
+    private readonly Action<long, long, DaggerfallItemStrikeSource, int>? _itemStrike;
     internal DaggerCombatRules(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment,
         Func<long, MechanicsInventoryCoordinator?> actorInventories, DaggerfallItemInstances itemInstances,
         DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity,
@@ -72,10 +73,11 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         Action<long, ulong>? deliverWeaponPoison = null, Func<int>? attackChanceModifier = null,
         Func<long, long, ulong, ulong, ulong, DaggerfallWabbajackResult>? transformActor = null, Func<long, DaggerfallMagicDefense>? magicDefense = null,
         Func<long, bool>? physicalAttacksBlocked = null,
-        Func<long, long, ulong, int, int, ulong, ulong, (double Magicka, int Strength)>? molagBalStrike = null)
+        Func<long, long, ulong, int, int, ulong, ulong, (double Magicka, int Strength)>? molagBalStrike = null, Action<long, long, DaggerfallItemStrikeSource, int>? itemStrike = null)
     {
         _physicalAttacksBlocked = physicalAttacksBlocked ?? (_ => false);
         _molagBalStrike = molagBalStrike;
+        _itemStrike = itemStrike;
         _magicDefense = magicDefense ?? (_ => DaggerfallMagicDefense.None);
         _random = random;
         _transformActor = transformActor;
@@ -146,8 +148,9 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         DaggerfallStrikeFeedback feedback = StrikeFeedback(request.AttackerId);
         ulong? wabbajackSource = CaptureWabbajackSource(request.AttackerId);
         var molagBalSource = CaptureMolagBalSource(request.AttackerId);
+        var strikeSource = DaggerfallItemCastTriggers.CaptureStrike(_catalog.Magic, _itemInstances, _actors.Entities, EquippedWeapon(request.AttackerId));
         if (request.TargetId is not long targetId)
-        { prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, default, feedback, wabbajackSource, MolagBalSource: molagBalSource); return true; }
+        { prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, default, feedback, wabbajackSource, MolagBalSource: molagBalSource, ItemStrikeSource: strikeSource); return true; }
         if (!TryResolve(targetId, out Combatant target)) { Refused(AttackRefusal.UnknownActor, facts); return false; }
         ExplicitMeleeRequest explicitRequest = new(request.AttackerId, targetId, request.Generation, request.SimulationStep, request.FixedDeltaSeconds);
         CombatParticipants participants = Participants(attacker.Id, targetId, request.Action ?? attacker.Definition.ActionId ?? "attack");
@@ -163,12 +166,12 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         int body = DaggerfallFormulaPolicy.CalculateStruckBodyPart(Draw(explicitRequest, attacker.Id, target.Id, CombatRandomKey.BodySalt, 0, 19, enemyAttack));
         if (attacker.Definition.Kind == DaggerfallActorKinds.Monster && attack.Skill == DaggerfallMechanicsIds.HandToHand.Value)
         {
-            prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, MonsterAttackSet(participants, explicitRequest, attacker, target, attack, body, enemyAttack), feedback, wabbajackSource, MolagBalSource: molagBalSource);
+            prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, MonsterAttackSet(participants, explicitRequest, attacker, target, attack, body, enemyAttack), feedback, wabbajackSource, MolagBalSource: molagBalSource, ItemStrikeSource: strikeSource);
             return true;
         }
         TryHitEvent hit = ResolveHit(participants, explicitRequest, attacker, target, attack, body, enemyAttack, modifiers.ToHit, backstabChance);
         DamageEvent? damage = hit.Hit ? ResolveDamage(participants, explicitRequest, attacker, target, attack, body, enemyAttack, modifiers.Damage, backstabChance) : null;
-        prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, new(hit.Hit, damage?.Allowed ?? true, body, damage?.Damage ?? 0, hit.Roll, hit.Chance), feedback, wabbajackSource, MolagBalSource: molagBalSource);
+        prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, new(hit.Hit, damage?.Allowed ?? true, body, damage?.Damage ?? 0, hit.Roll, hit.Chance), feedback, wabbajackSource, MolagBalSource: molagBalSource, ItemStrikeSource: strikeSource);
         return true;
     }
     public void Started(AttackRequest request, PreparedAttack attack, FactBuffer<IProductFact> facts)
@@ -215,6 +218,8 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         // Capture the weapon skill at the admitted operation boundary. Applying the hit may break
         // the weapon through physical wear and unequip it before the skill-use reaction runs.
         string? playerWeaponSkill = request.AttackerId == PlayerId ? PlayerWeaponSkill() : null;
+        if (outcome.Damage > 0 && attack is DaggerfallPreparedAttack { ItemStrikeSource: { } sourceItem })
+            _itemStrike?.Invoke(request.AttackerId, target, sourceItem, outcome.Damage);
         ApplyDamage(Participants(request.AttackerId, target, action), request.AttackerId, target, outcome.Damage, outcome.Body,
             enemyAttack, request.Generation, request.SimulationStep, feedback, facts, (attack as DaggerfallPreparedAttack)?.MolagBalSource);
         if (request.AttackerId == PlayerId)
@@ -738,7 +743,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
 
     internal sealed record DaggerfallPreparedAttack(double CooldownSeconds, AttackOutcome Outcome,
         DaggerfallStrikeFeedback Feedback, ulong? WabbajackSource = null, bool ReleasedProjectile = false,
-        (WorldRpg.Kit.Inventory.UniqueInventoryItem Weapon, ulong Identity)? MolagBalSource = null) : PreparedAttack(CooldownSeconds, Outcome);
+        (WorldRpg.Kit.Inventory.UniqueInventoryItem Weapon, ulong Identity)? MolagBalSource = null, DaggerfallItemStrikeSource? ItemStrikeSource = null) : PreparedAttack(CooldownSeconds, Outcome);
 
     private static DaggerfallStrikeFeedback PreparedFeedback(PreparedAttack attack) => attack is DaggerfallPreparedAttack accepted
         ? accepted.Feedback : throw new InvalidOperationException("A Daggerfall strike requires its accepted source feedback; re-reading changed equipment would misidentify the strike.");

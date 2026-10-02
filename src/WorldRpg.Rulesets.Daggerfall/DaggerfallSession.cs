@@ -78,6 +78,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
     internal const ulong GroundContainerFirstIdentity = 2_000_000_000_000UL;
     private readonly DurableIdentityAllocator _actorIdentities;
     private readonly DaggerfallHeldEnchantments _heldEnchantments;
+    private readonly DaggerfallItemCastTriggers _itemCastTriggers = null!;
     private readonly DaggerfallActorRoster _roster;
     private readonly DaggerfallActorGrounding _grounding;
     private readonly DaggerfallDefinitions _definitions;
@@ -381,6 +382,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         // The worn set is recomputed before the round advances, so a payload that ticks with the clock
         // reads the body the player is wearing now rather than the one the previous update saw.
         State.HeldEnchantments.Refresh();
+        _itemCastTriggers.Refresh();
 
         // A standing panel request ages on the same admitted world time as everything else.
         _interactions.AgePanelRequest(deltaSeconds * facts.AdmittedStepCount);

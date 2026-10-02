@@ -31,7 +31,8 @@ internal sealed class DaggerfallInventoryUseService(
     Func<int, bool>? useDrug = null,
     Func<bool>? useOghma = null,
     Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useSanguineRose = null,
-    Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useSkullCorruption = null)
+    Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useSkullCorruption = null,
+    Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useItemSpell = null)
 {
     private const int FirstDrugTemplate = 78;
     private const int LastDrugTemplate = 81;
@@ -113,7 +114,10 @@ internal sealed class DaggerfallInventoryUseService(
                 consume();
                 return new(true, "Oghma Infinium grants 30 attribute points. Allocate them on your character sheet.");
             }
-            return new(false, "Used enchantment effects are not available yet.", DaggerfallInventoryUseReceiver.UsedEnchantment);
+            if (definitions.Magic.TryEnchantments(enchantment, out var spellPayloads) && spellPayloads.Any(effect => effect.Type == 0))
+                return unique is { } spellSource && useItemSpell is not null ? useItemSpell(spellSource)
+                    : new(false, "Item casting requires an available unique source.");
+            return new(false, "This enchantment has no use effect.");
         }
         if (metadata.BookId is int bookId)
         {

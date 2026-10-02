@@ -47,7 +47,7 @@ internal sealed class DaggerSessionPersistence
     private readonly Func<DaggerfallTravelMapPixel> _travelPosition;
     private readonly IReadOnlyDictionary<long, DaggerfallActorDefinition> _actorDefinitions;
     private readonly Func<long> _nextCastSequence;
-    internal Func<string?> ReadySpell {get;set;}=()=>null;
+    internal Func<DaggerfallReadySpell?> ReadySpell {get;set;}=()=>null;
     internal Func<DaggerfallIdentifyRequest?> PendingIdentify { get; set; } = () => null;
     internal Func<DaggerfallDispelRequest?> PendingDispel { get; set; } = () => null;
     internal Func<IReadOnlySet<long>> BanishedActors { get; set; } = () => new HashSet<long>();
@@ -148,6 +148,7 @@ internal sealed class DaggerSessionPersistence
             Character: State.Character.Capture(),
             LevelUp: State.LevelUps.Capture())
         {
+            MagicRounds = State.Effects.MagicRounds,
             NextCastSequence = _nextCastSequence(),
             ReadySpell=ReadySpell(),
             PendingDispel = PendingDispel(),

@@ -58,7 +58,7 @@ internal sealed partial class DaggerfallSession
     /// <param name="encounter">An elapsed interval's encounter request, selected after effects advance.</param>
     /// <param name="simulate">Ordinary play's admitted simulation steps, which run between the fan-out and locomotion.</param>
     private void AdvanceCalendar(DaggerfallCalendar before, DaggerfallCalendarAdvanceKind kind,
-        DaggerfallEncounterRequest? encounter = null, Action? simulate = null)
+        DaggerfallEncounterRequest? encounter = null, Action? simulate = null, bool resting = false)
     {
         bool ordinaryPlay = kind == DaggerfallCalendarAdvanceKind.OrdinaryPlay;
         if (ordinaryPlay != simulate is not null)
@@ -80,7 +80,7 @@ internal sealed partial class DaggerfallSession
         }
         State.Social.AdvanceElapsedMinutes(minuteBefore, MinuteIndex(_time.Calendar));
         AdvanceLoans();
-        AdvanceEffectsForCalendar(before, ordinaryPlay);
+        AdvanceEffectsForCalendar(before, ordinaryPlay, resting);
         if (encounter is not null) QueueEncounter(encounter);
         AnnounceHoliday();
         if (!ordinaryPlay) return;
@@ -97,13 +97,13 @@ internal sealed partial class DaggerfallSession
     internal DaggerfallCalendarAdvance AdvanceElapsedTime(long gameSeconds,
         IReadOnlyList<(int Identity, long SecondsFromNow)>? consequences = null,
         DaggerfallEncounterRequest? encounter = null,
-        bool deferSkillAdvancement = false)
+        bool deferSkillAdvancement = false, bool resting = false)
     {
         DaggerfallCalendar calendarBefore = _time.Calendar;
         DaggerfallCalendarAdvance advance = _time.AdvanceInterval(gameSeconds, consequences ?? []);
         AdvanceCalendar(calendarBefore,
             deferSkillAdvancement ? DaggerfallCalendarAdvanceKind.ElapsedDeferringSkills : DaggerfallCalendarAdvanceKind.Elapsed,
-            advance.AppliedSeconds > 0 ? encounter : null);
+            advance.AppliedSeconds > 0 ? encounter : null, resting: resting);
         return advance;
     }
 
@@ -115,12 +115,13 @@ internal sealed partial class DaggerfallSession
         AdvanceCalendar(calendarBefore, DaggerfallCalendarAdvanceKind.QuestTraining);
     }
 
-    private void AdvanceEffectsForCalendar(DaggerfallCalendar before, bool ordinaryPlay)
+    private void AdvanceEffectsForCalendar(DaggerfallCalendar before, bool ordinaryPlay, bool resting)
     {
         long minuteBefore = MinuteIndex(before);
         long minutes = MinuteIndex(_time.Calendar) - minuteBefore;
         if (minutes <= 0) return;
 
+        long roundBefore = State.Effects.MagicRounds;
         // The normal path is expressed as its normal one-round operation.  Multiple minutes (whether
         // an unusually long admitted update or an elapsed interval) retain the donor's bounded
         // catch-up policy inside the lifecycle.
@@ -128,11 +129,13 @@ internal sealed partial class DaggerfallSession
         {
             State.Effects.AdvanceOrdinaryRound();
             State.HeldEnchantments.AdvanceRounds(1);
+            _itemCastTriggers.AdvanceRounds(1, synthetic: false, roundBefore: roundBefore);
             return;
         }
 
         _ = State.Effects.AdvanceElapsedRounds(minutes);
         State.HeldEnchantments.AdvanceRounds(checked((int)Math.Min(minutes, int.MaxValue)));
+        _itemCastTriggers.AdvanceRounds(minutes, synthetic: !ordinaryPlay && !resting, resting: resting, roundBefore: roundBefore);
     }
 
     private static long MinuteIndex(DaggerfallCalendar calendar) =>

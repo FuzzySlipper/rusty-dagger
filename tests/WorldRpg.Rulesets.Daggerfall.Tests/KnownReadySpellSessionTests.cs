@@ -58,7 +58,7 @@ public sealed class KnownReadySpellSessionTests
         s.State.Actors.Player.Stats.GetStat(StatId.Parse("restoration")).BaseValue=80;
         s.State.Character.LearnSpell("spell.023");f.Submit(new{action="spell-ready",key="spell.023"});
         int quoted=s.Casting.ReadyFor(1)!.Cost;Magicka(s).SetCurrent(0);
-        var save=s.CaptureSave();Assert.Equal("spell.023",DaggerfallSavePayload.Read(save).ReadySpell);
+        var save=s.CaptureSave();Assert.Equal("spell.023",DaggerfallSavePayload.Read(save).ReadySpell!.SpellKey);
         Assert.Equal("spell.023",s.Casting.ReadyFor(1)!.SpellKey);
         using var restored=f.Restore(save);
         Assert.Equal("spell.023",restored.Casting.ReadyFor(1)!.SpellKey);
@@ -69,11 +69,11 @@ public sealed class KnownReadySpellSessionTests
         Assert.Equal(0,Magicka(restored).Current);Assert.Single(restored.State.Effects.Active);
         Assert.Null(restored.Casting.ReadyFor(1));
         var raw=DaggerfallSavePayload.Read(save);
-        Assert.Throws<ArgumentException>(()=>f.Restore(DaggerfallSavePayload.Encode(raw with{ReadySpell="missing"})));
+        Assert.Throws<ArgumentException>(()=>f.Restore(DaggerfallSavePayload.Encode(raw with{ReadySpell=new("missing",null,0,DaggerfallCastSource.Spell)})));
     }
 
     [Fact]
-    public void Save_does_not_persist_item_readiness_and_held_UI_cast_is_refused()
+    public void Save_persists_item_readiness_and_held_UI_cast_is_refused()
     {
         using Fixture f=new();var s=f.Session;Fund(s);
         s.State.Character.LearnSpell("spell.023");f.Submit(new{action="spell-ready",key="spell.023"});
@@ -87,8 +87,8 @@ public sealed class KnownReadySpellSessionTests
         var item=s.State.Inventory.Read().UniqueItems.First();
         ulong id=s.State.Inventory.GetDurableItemId(item.Entity).Value;
         s.Casting.Ready(1,"spell.023",id);Assert.NotNull(s.Casting.ReadyFor(1));
-        Assert.Null(DaggerfallSavePayload.Read(s.CaptureSave()).ReadySpell);
-        using var restored=f.Restore(s.CaptureSave());Assert.Null(restored.Casting.ReadyFor(1));
+        Assert.Equal(id,DaggerfallSavePayload.Read(s.CaptureSave()).ReadySpell!.ItemId);
+        using var restored=f.Restore(s.CaptureSave());Assert.Equal(s.Casting.ReadyFor(1),restored.Casting.ReadyFor(1));
     }
 
     private static Track Magicka(DaggerfallSession s)=>s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka"));

@@ -634,7 +634,7 @@ public sealed class DaggerfallHeldEnchantmentTests
         // regeneration 4000/3000/3000 for always/sunlight/darkness, StrengthensArmor and RepairsObjects
         // are single settings at param -1, and the detriments are priced negatively: ItemDeteriorates
         // -3000/-1500/-500, UserTakesDamage -6000/-1000, WeakensArmor -700.
-        Assert.Equal(35 + 11 + 2 + 3 + 3 + 1 + 1 + 1 + 3 + 2 + 6 + 6 + 3 + 1, TestPayload.Definitions.Magic.EnchantmentSettings.Count);
+        Assert.Equal(151, TestPayload.Definitions.Magic.EnchantmentSettings.Count);
         Assert.All(TestPayload.Definitions.Magic.EnchantmentSettings.Values, setting => Assert.Equal(setting.Key, $"enchantment.{setting.Type}.{setting.Param}"));
 
         Assert.Equal(900, SettingCost(10, 29));                       // long blade, the donor's flat price

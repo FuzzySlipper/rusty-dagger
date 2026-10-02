@@ -126,9 +126,9 @@ internal sealed record DaggerfallEffectDefinition(
     Func<DaggerfallEffectDefinition, bool>? IncumbentDefinitionMatch = null,
     DaggerfallDetection Detection = DaggerfallDetection.None)
 {
-    internal EffectDefinition ToEngineDefinition(string source) => new(
+    internal EffectDefinition ToEngineDefinition(string source, ulong? heldItem = null) => new(
         EffectDefinitionId.Parse($"daggerfall.{Key}"),
-        StackingGroupId.Parse($"daggerfall.{LikeKind}"),
+        StackingGroupId.Parse(heldItem is ulong item ? $"daggerfall.{LikeKind}.held.{item}" : $"daggerfall.{LikeKind}"),
         Stacking switch
         {
             DaggerfallEffectStacking.Stack or DaggerfallEffectStacking.Reject => EffectStackingPolicy.IndependentByProvenance,
@@ -306,13 +306,15 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
     }
 
     internal bool IsLikeKind(DaggerfallActiveEffect effect, DaggerfallEffectDefinition definition, long targetId, JsonElement incoming,
-        long? casterId = null, ulong? itemId = null) =>
+        long? casterId = null, ulong? itemId = null, DaggerfallEffectBundleKind bundleKind = DaggerfallEffectBundleKind.None) =>
         checked((long)effect.Context.Target.Value) == targetId && (effect.Definition.IncumbentDefinitionMatch?.Invoke(definition) ?? effect.Definition.LikeKind == definition.LikeKind)
+        && ((effect.BundleKind == DaggerfallEffectBundleKind.HeldMagicItem) == (bundleKind == DaggerfallEffectBundleKind.HeldMagicItem))
+        && (bundleKind != DaggerfallEffectBundleKind.HeldMagicItem || effect.Context.Item?.Value == itemId)
         && (!definition.SourceScopedIncumbent || effect.Context.Caster?.Value == (ulong?)casterId && effect.Context.Item?.Value == itemId)
         && (definition.IncumbentSettingsMatch?.Invoke(effect.State, incoming) ?? true);
 
     internal DaggerfallActiveEffect? IncumbentFor(DaggerfallEffectDefinition definition, long targetId, JsonElement state,
-        long? casterId = null, ulong? itemId = null) => Active.Where(effect => IsLikeKind(effect, definition, targetId, state, casterId, itemId))
+        long? casterId = null, ulong? itemId = null, DaggerfallEffectBundleKind bundleKind = DaggerfallEffectBundleKind.None) => Active.Where(effect => IsLikeKind(effect, definition, targetId, state, casterId, itemId, bundleKind))
         .OrderBy(effect => effect.BundleSequence).ThenBy(effect => effect.Context.Instance.Value, StringComparer.Ordinal).FirstOrDefault();
 
     /// <summary>Incoming like-kind effects settle their incumbent before a new effect's saving throw.</summary>
@@ -322,7 +324,7 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
         DaggerfallEffectDefinition definition = _catalog.Require(request.EffectKey);
         if ((definition.Stacking is DaggerfallEffectStacking.RefreshDuration or DaggerfallEffectStacking.Reject
                 || definition.IncumbentSettingsMatch is not null)
-            && Active.Any(effect => IsLikeKind(effect, definition, request.TargetId, request.State, request.CasterId, request.ItemId)))
+            && Active.Any(effect => IsLikeKind(effect, definition, request.TargetId, request.State, request.CasterId, request.ItemId, request.BundleKind)))
         {
             outcome = Start(definition.RefreshState is not null && incomingState is not null
                 ? request with { State = incomingState() } : request);
@@ -342,7 +344,7 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
         if (_effects.ContainsKey(context.Instance))
             throw new ArgumentException($"Effect instance '{request.Instance}' is already active.", nameof(request));
         ActiveEffectLifecycle lifecycle = LifecycleFor(request.TargetId);
-        DaggerfallActiveEffect[] likeKind = Active.Where(effect => IsLikeKind(effect, definition, request.TargetId, request.State, request.CasterId, request.ItemId)).ToArray();
+        DaggerfallActiveEffect[] likeKind = Active.Where(effect => IsLikeKind(effect, definition, request.TargetId, request.State, request.CasterId, request.ItemId, request.BundleKind)).ToArray();
         if (definition.Stacking == DaggerfallEffectStacking.Reject && likeKind.Length != 0)
         {
             Publish(DaggerfallEffectOutcomeKind.Rejected, request.Instance, definition.Key, request.TargetId);
@@ -402,6 +404,9 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
 
     private static void ValidateLifetime(DaggerfallEffectDefinition definition, DaggerfallEffectRequest request)
     {
+        if (request.BundleKind == DaggerfallEffectBundleKind.HeldMagicItem
+            && (request.ItemId is null || request.CasterId is null || request.TargetId != request.CasterId || request.RemainingRounds is not null))
+            throw new ArgumentException("Held magic bundles require one equipped item, its caster, and a source-owned lifetime.");
         if (definition.Spell?.UntilTriggered == true && request.RemainingRounds is not null)
             throw new ArgumentException("Ready world operations must remain active until their target consumes them.", nameof(request));
         if (definition.Spell?.UntilHealed == true
@@ -507,6 +512,9 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
     }
 
     /// <summary>Ends effects that would retain a unique item identity before that item is destroyed.</summary>
+    internal int CancelHeldItem(ulong itemId) => CancelMatching(effect =>
+        effect.Context.Item?.Value == itemId && effect.BundleKind == DaggerfallEffectBundleKind.HeldMagicItem);
+
     internal int CancelItemReferences(ulong itemId) => CancelMatching(effect =>
         effect.Lifecycle.Context.Item?.Value == itemId);
 
@@ -558,6 +566,9 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
         effect.Lifecycle.Stacks,
         effect.State.Clone()) { BundleId = effect.BundleId, BundleName = effect.BundleName, BundleKind = effect.BundleKind, BundleSequence = effect.BundleSequence };
 
+    internal long MagicRounds { get; private set; }
+    internal void RestoreMagicRounds(long rounds) => MagicRounds = rounds >= 0 ? rounds : throw new ArgumentOutOfRangeException(nameof(rounds));
+
     private void AdvanceRounds(uint rounds)
     {
         // A catch-up can complete effects on several targets.  Actor identity, then each
@@ -577,6 +588,7 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
                             checked((long)removed.Context.Target.Value));
                 }
         }
+        MagicRounds = checked(MagicRounds + rounds);
     }
 
     private void ApplyRound(DaggerfallActiveEffect active)
@@ -598,7 +610,7 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
             active = new DaggerfallActiveEffect(definition, context, stacks, state,
                 () => SourceFor(context), target) { BundleId = bundleId, BundleName = bundleName, BundleKind = bundleKind, BundleSequence = bundleSequence };
             contributions.AddRange(Apply(active, resumed));
-            ActiveEffectLifecycleReceipt receipt = lifecycle.Admit(definition.ToEngineDefinition(context.Source.Key), admission, context,
+            ActiveEffectLifecycleReceipt receipt = lifecycle.Admit(definition.ToEngineDefinition(context.Source.Key, bundleKind == DaggerfallEffectBundleKind.HeldMagicItem ? context.Item?.Value : null), admission, context,
                 Provenance(checked((long)context.Target.Value), context), stacks, remainingRounds, contributions);
             active.Attach(receipt.Current!);
             _effects.Add(context.Instance, active);

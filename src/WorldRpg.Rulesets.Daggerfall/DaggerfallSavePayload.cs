@@ -49,9 +49,10 @@ internal sealed record DaggerfallSavePayload(
     DaggerfallLevelUpSave? LevelUp = null)
 {
     [JsonRequired]
+    public long MagicRounds { get; init; }
     public long NextCastSequence { get; init; } = 1;
     [JsonRequired]
-    public string? ReadySpell {get;init;}
+    public DaggerfallReadySpell? ReadySpell {get;init;}
     [JsonRequired]
     public DaggerfallDispelRequest? PendingDispel { get; init; }
     [JsonRequired] public DaggerfallIdentifyRequest? PendingIdentify { get; init; }
@@ -500,9 +501,14 @@ internal sealed record DaggerfallSavePayload(
         ValidateActiveEffects(allEffects, combatants, uniqueItems);
         Social.Validate(definitions.Factions);
         Character?.Validate(definitions);
-        if (ReadySpell is not null && (Character?.KnownSpells?.Contains(ReadySpell) != true
-            || !definitions.Magic.Spells.ContainsKey(ReadySpell)))
-            throw new ArgumentException($"Saved ready spell '{ReadySpell}' is not known or published.");
+        if (ReadySpell is { } ready && (!Enum.IsDefined(ready.Source) || ready.Cost < 0
+            || ready.Source is DaggerfallCastSource.ItemHeld or DaggerfallCastSource.ItemStrike
+            || (ready.ItemId is null) != (ready.Source == DaggerfallCastSource.Spell)
+            || !definitions.Magic.Spells.ContainsKey(ready.SpellKey)
+            || ready.ItemId is null && Character?.KnownSpells?.Contains(ready.SpellKey) != true
+            || ready.ItemId is ulong item && !Inventory.UniqueItems.Any(value => value.EntityId == item
+                && value.Metadata.CurrentCondition > 0)))
+            throw new ArgumentException($"Saved ready spell '{ready.SpellKey}' has an invalid spell or item source.");
 
         ValidateEffectSourceReferences(
         [
@@ -531,6 +537,7 @@ internal sealed record DaggerfallSavePayload(
 
     internal DaggerfallSavePayload Validate()
     {
+        if (MagicRounds < 0) throw new ArgumentException("Saved magic-round cadence cannot be negative.");
         if (NextCastSequence < 1) throw new ArgumentException("Saved next cast sequence must be positive.");
         ArgumentNullException.ThrowIfNull(Player);
         PendingDispel?.Validate();
@@ -764,6 +771,15 @@ internal sealed record DaggerfallSavePayload(
     private static void ValidateInventory(DaggerfallInventorySave inventory, DaggerfallDefinitions definitions, Dictionary<ulong, DaggerfallItemMetadataSave> allUnique, DaggerfallItemOwner owner, bool requireEquipment)
     {
         inventory.Validate();
+        foreach (var item in inventory.UniqueItems.Where(value => value.Metadata.HeldCast is not null))
+        {
+            var held = item.Metadata.HeldCast!;
+            if (held.CasterId != owner.Id || !requireEquipment || item.Metadata.CurrentCondition <= 0
+                || !inventory.Equipment.Any(slot => slot.ItemEntityId == item.EntityId)
+                || item.Metadata.Enchantment is not { } key || !definitions.Magic.TryEnchantments(key, out var payloads)
+                || !payloads.Any(effect => effect.Type == 1))
+                throw new ArgumentException($"Saved held spell cadence on item {item.EntityId} has no equipped cast source.");
+        }
         foreach (DaggerfallStackSave stack in inventory.Stacks) RequireFungible(definitions, stack, owner);
         Dictionary<ulong, DaggerfallItemDefinition> unique = [];
         foreach (DaggerfallUniqueSave saved in inventory.UniqueItems)
@@ -875,9 +891,14 @@ internal sealed record DaggerfallSavePayload(
             if (!instances.Add(effect.Instance)) throw new ArgumentException($"Saved effect instance '{effect.Instance}' appears more than once.");
             if (!actors.Contains(effect.TargetId)) throw new ArgumentException($"Saved effect instance '{effect.Instance}' targets missing actor {effect.TargetId}.");
             if (effect.CasterId is long caster && !actors.Contains(caster)) throw new ArgumentException($"Saved effect instance '{effect.Instance}' names missing caster {caster}.");
+            if (effect.BundleKind == DaggerfallEffectBundleKind.HeldMagicItem && effect.ItemId is null)
+                throw new ArgumentException($"Saved held effect '{effect.Instance}' has no item source.");
             if (effect.ItemId is ulong item)
             {
                 if (!uniqueItems.TryGetValue(item, out var metadata)) throw new ArgumentException($"Saved effect instance '{effect.Instance}' names missing item {item}.");
+                if (effect.BundleKind == DaggerfallEffectBundleKind.HeldMagicItem
+                    && (metadata.HeldCast is not { } held || effect.CasterId != held.CasterId || effect.TargetId != held.CasterId || effect.RemainingRounds is not null))
+                    throw new ArgumentException($"Saved held effect '{effect.Instance}' has no matching held source or lifetime.");
                 if (metadata.MaximumCondition > 0 && metadata.CurrentCondition == 0)
                     throw new ArgumentException($"Saved effect instance '{effect.Instance}' names broken item {item}.");
             }
@@ -940,7 +961,7 @@ internal sealed record DaggerfallItemMetadataSave(
     int? BookId = null,
     int? PotionRecipeKey = null,
     ulong? CreditValue = null,
-    int? PoisonVariant = null);
+    int? PoisonVariant = null, DaggerfallHeldCastState? HeldCast = null);
 internal sealed record DaggerfallEquipmentSave(string SlotId, ulong ItemEntityId);
 internal sealed record DaggerfallCombatCooldownSave(long AttackerId, ulong RemainingSteps);
 

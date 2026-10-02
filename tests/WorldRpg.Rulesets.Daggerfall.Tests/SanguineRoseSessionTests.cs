@@ -278,7 +278,7 @@ public sealed class SanguineRoseSessionTests
             Session.State.Actors.Get(Enemy).ApplyPose(new(new WorldPoint(0, 0, -6), 0));
             Perception.Responder = request => Respond(request);
             var created = new DaggerfallItemFactory(TestPayload.Definitions, Engine.Context.Random)
-                .Create(new("Magic", "sanguine-rose", DaggerfallItemOwner.Player, MagicItemKey: magicItemKey));
+                .Create(new("Magic", "sanguine-rose", DaggerfallItemOwner.Player, MagicItemKey: magicItemKey, Race: "breton", Gender: "male"));
             var identityItem = Session.UniqueItemAllocator.AllocateReference(); Source = identityItem.Value;
             Item = Session.State.Equipment.Materialize(identityItem, created.Item);
             Session.State.ItemInstances.RegisterUnique(Source, created.Metadata);
@@ -308,8 +308,8 @@ public sealed class SanguineRoseSessionTests
         internal DaggerfallSession Restore(DaggerfallSiteProfiles? profiles = null) => DaggerfallSession.Restore(CreateEngine().Item1.Context,
             profiles is null ? Composition : Composition with { Profiles = profiles }, Session.CaptureSave());
         internal void Use() => Submit(new { action = "inventory-use", revision = Engine.PublishedNested("inventory", "revision"), item = $"unique:{Item.EntityId}" });
-        internal void Update() => Session.Update(new ProductUpdate(OuterUpdate(++_step), []));
-        private void Submit(object action) => Session.Update(new ProductUpdate(OuterUpdate(++_step), [Ui(JsonSerializer.Serialize(action))]));
+        internal void Update(double? fixedDelta = null) => Session.Update(new ProductUpdate(OuterUpdate(++_step) with { FixedDeltaSeconds = fixedDelta ?? 1d / 60d }, []));
+        internal void Submit(object action) => Session.Update(new ProductUpdate(OuterUpdate(++_step), [Ui(JsonSerializer.Serialize(action))]));
         public void Dispose() => Session.Dispose();
     }
 }

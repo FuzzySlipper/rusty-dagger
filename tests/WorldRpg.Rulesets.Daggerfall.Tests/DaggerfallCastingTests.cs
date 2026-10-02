@@ -277,6 +277,40 @@ public sealed class DaggerfallCastingTests
         }
     }
 
+    [Fact]
+    public void Held_bundles_keep_independent_item_and_finite_spell_lifetimes_without_replacing_readiness()
+    {
+        using Harness h = new(range: 0, stacking: DaggerfallEffectStacking.RefreshDuration);
+        var ordinary = h.Release(); h.Casting.Deliver(ordinary, [1]);
+        h.Casting.Ready(1, "spell");
+        var ready = h.Casting.ReadyFor(1);
+        var first = h.Casting.Trigger(1, "spell", 101, DaggerfallCastSource.ItemHeld, 1);
+        var second = h.Casting.Trigger(1, "spell", 102, DaggerfallCastSource.ItemHeld, 1);
+        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, first.Outcome);
+        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, second.Outcome);
+        Assert.Equal(ready, h.Casting.ReadyFor(1));
+        Assert.Equal(3, h.Effects.Active.Count);
+        Assert.All(h.Effects.Capture().Where(value => value.BundleKind == DaggerfallEffectBundleKind.HeldMagicItem), value => Assert.Null(value.RemainingRounds));
+        var captured = h.Effects.Capture();
+        foreach (var effect in captured) h.Effects.Cancel(Rusty.Engine.Mechanics.EffectInstanceId.Parse(effect.Instance));
+        h.Effects.Restore(captured);
+        Assert.Equal(3, h.Effects.Active.Count);
+        h.Effects.AdvanceElapsedRounds(100);
+        Assert.Equal(2, h.Effects.Active.Count);
+        h.Effects.CancelHeldItem(101);
+        Assert.Equal((ulong)102, Assert.Single(h.Effects.Capture()).ItemId);
+    }
+
+    [Fact]
+    public void Held_bundle_without_item_identity_is_rejected_before_Engine_admission()
+    {
+        using Harness h = new();
+        using var state = JsonDocument.Parse("{}");
+        Assert.Throws<ArgumentException>(() => h.Effects.Start(new("missing-item", "compiled", "spell.spell", 1, 1,
+            "settings", null, null, 1, null, state.RootElement) { BundleKind = DaggerfallEffectBundleKind.HeldMagicItem }));
+        Assert.Empty(h.Effects.Active);
+    }
+
     private sealed class Harness : IDisposable
     {
         internal ActorsState Actors { get; } = new();
