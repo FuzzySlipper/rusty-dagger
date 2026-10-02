@@ -92,6 +92,7 @@ internal sealed record DaggerfallItemTemplateSet(
     IReadOnlyDictionary<int, DaggerfallItemTemplateDefinition> Templates,
     IReadOnlyDictionary<int, DaggerfallMagicTemplateDefinition> Magic)
 {
+    internal IReadOnlyDictionary<int, DaggerfallItemGroupDefinition> Groups { get; init; } = new Dictionary<int, DaggerfallItemGroupDefinition>();
     /// <summary>
     /// Resolves a native template index to the record inventory coordination reads: its stack
     /// rule, base condition and presentation references. Instance condition and enchantment
@@ -99,3 +100,6 @@ internal sealed record DaggerfallItemTemplateSet(
     /// </summary>
     internal DaggerfallItemTemplateDefinition Resolve(int index) => Templates[index];
 }
+
+/// <summary>GetEnumArray ordinals from the donor, including aliases and implicit holes.</summary>
+internal sealed record DaggerfallItemGroupDefinition(int Id, string Name, bool TemplateIndices, IReadOnlyList<int> Values);

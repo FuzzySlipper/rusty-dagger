@@ -395,6 +395,7 @@ internal sealed partial class DaggerfallSession
                 (site, building) => State.Property.OwnsHouse(new(site, building.Source.Id, building.Id.BlockX, building.Id.BlockY)),
                 region => region >= 0 && region < definitions.BuildingNames.RegionNames.Count ? definitions.BuildingNames.RegionNames[region] : null,
                 questNames.Residence));
+
             _corpseLoot = new DaggerfallCorpseLootModule(
                 engine.Perception,
                 _spatial,
@@ -415,6 +416,11 @@ internal sealed partial class DaggerfallSession
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored, () => State.Kit.Targeting.LastEvidence, definitions.Text);
             _inventoryUi = new DaggerfallInventoryPresentation(_equipmentMoves, definitions, inputs.ClassicPresentation.InventoryIcons,
                 State.Encumbrance, State.Currency);
+            State.Quests.BindResourceAllocator(new(definitions, engine.Random, new DaggerfallItemFactory(definitions, engine.Random), questNames,
+                () => new(State.Progression.Level, State.Character.Identity.RaceId,
+                    State.Character.Identity.Gender.ToString().ToLowerInvariant(), _site.ActiveSite?.Region
+                        ?? throw new NotSupportedException("Quest resource generation requires the current region.")),
+                State.Social.GuildEligibility, State.RegionalPrices.AdjustmentForRegion, _inventoryUi.DescribeCreatedItem));
             _inventoryUi.UseBank(State.Bank, ActiveBankRegion);
             _inventoryUi.UseLoans(State.Loans, () => _time.Calendar, () => State.Progression.Level);
             _inventoryUi.UseItemValuation(new DaggerfallItemValuation(definitions), State.ItemInstances, DaggerfallItemOwner.Player,

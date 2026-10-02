@@ -314,6 +314,9 @@ internal sealed class DaggerfallInventoryPresentation
     private int CurrentValue(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata? metadata) =>
         valuation is null ? definition.Value : valuation.CurrentValue(definition, metadata ?? throw new InvalidOperationException("Valued inventory rows require durable metadata."));
 
+    internal string DescribeCreatedItem(DaggerfallCreatedItem item) =>
+        Display(definitions.RequireItem(new DaggerfallItemId(item.Item.Value)), item.Metadata).Label;
+
     private ItemDisplay Display(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata? metadata)
     {
         string baseLabel = definition.Template?.Name ?? Label(definition.Id.Value);

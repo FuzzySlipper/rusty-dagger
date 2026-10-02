@@ -2124,9 +2124,22 @@ internal static partial class DaggerfallBaseContent
             }
         }
 
+        Dictionary<int, DaggerfallItemGroupDefinition> groupDefinitions = [];
+        if (section.TryGetProperty("groupTable", out JsonElement groupTable) && groupTable.ValueKind == JsonValueKind.Object)
+            foreach (JsonElement group in Array(groupTable, "groups", diagnostics))
+            {
+                int id = Integer(group, "id", diagnostics);
+                int[] values = [.. Array(group, "values", diagnostics).Select(value => value.GetInt32())];
+                bool templateIndices = Boolean(group, "templateIndices", diagnostics);
+                if (id is < 0 or > 28 || values.Length == 0 || (templateIndices && values.Any(value => value is < 0 or > 287))
+                    || !values.SequenceEqual(values.OrderBy(value => unchecked((uint)value)))
+                    || !groupDefinitions.TryAdd(id, new(id, Text(group, "name", diagnostics), templateIndices, values)))
+                    diagnostics.Add($"Item group {id} has invalid or repeated identity, values or runtime ordinal ordering.");
+            }
         return new DaggerfallItemTemplateSet(
             new ReadOnlyDictionary<int, DaggerfallItemTemplateDefinition>(templates),
-            new ReadOnlyDictionary<int, DaggerfallMagicTemplateDefinition>(magic));
+            new ReadOnlyDictionary<int, DaggerfallMagicTemplateDefinition>(magic))
+        { Groups = new ReadOnlyDictionary<int, DaggerfallItemGroupDefinition>(groupDefinitions) };
     }
 
     /// <summary>

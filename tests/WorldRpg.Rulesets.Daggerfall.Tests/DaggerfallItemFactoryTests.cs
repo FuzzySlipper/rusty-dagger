@@ -89,6 +89,26 @@ public sealed class DaggerfallItemFactoryTests
         Assert.Equal(1UL, definitions.RequireItem(new DaggerfallItemId(artifact.Item.Value)).MaximumQuantity);
     }
 
+    [Theory]
+    [InlineData("magic-item.0051", "mithril")]
+    [InlineData("magic-item.0054", "ebony")]
+    [InlineData("magic-item.0055", "ebony")]
+    [InlineData("magic-item.0056", "dwarven")]
+    public void Artifact_armor_material_is_the_source_metal_ordinal(string key, string material)
+    {
+        var definitions = LoadDefinitions();
+        var artifact = new DaggerfallItemFactory(definitions, RandomMinimum.Create()).Create(
+            new("Magic", key, DaggerfallItemOwner.Player, MagicItemKey: key, Race: "breton", Gender: "male"));
+        Assert.Equal(material, artifact.Metadata.Material);
+        var definition = definitions.RequireItem(new(artifact.Item.Value));
+        if (definition.Armor is { } armor) Assert.Equal(material, armor.Material);
+        else
+        {
+            Assert.NotNull(definition.Shield);
+            Assert.Contains("-" + material + "-magic-", definition.Id.Value);
+        }
+    }
+
     [Fact]
     public void Creation_preserves_donor_appearance_book_and_arrow_rules_through_metadata_capture()
     {

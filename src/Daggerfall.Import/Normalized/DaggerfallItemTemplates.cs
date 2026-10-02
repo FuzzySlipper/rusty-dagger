@@ -124,6 +124,7 @@ public sealed record DaggerfallItemTemplates(
     IReadOnlyList<DaggerfallItemTemplate> Templates,
     IReadOnlyList<DaggerfallMagicTemplate> Magic)
 {
+    public DaggerfallItemGroupTable? GroupTable { get; init; }
     public void Validate()
     {
         ArgumentNullException.ThrowIfNull(Source);
@@ -145,6 +146,10 @@ public sealed record DaggerfallItemTemplates(
         }
     }
 }
+
+/// <summary>Source ordinals, distinct from the template catalog's group membership.</summary>
+public sealed record DaggerfallItemGroupTable(PublishedSource EnumsSource, PublishedSource HelperSource,
+    IReadOnlyList<ItemGroupEnumeration> Groups);
 
 /// <summary>
 /// Builds the normalized item template catalog from the donor's exported tables. Groups follow

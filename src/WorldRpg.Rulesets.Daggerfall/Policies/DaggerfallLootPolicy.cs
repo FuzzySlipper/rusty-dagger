@@ -166,6 +166,8 @@ internal static class DaggerfallLootPolicy
 
     internal static bool IsClassicPotionRecipeKey(int key) => PotionRecipeKeys.Contains(key);
 
+    internal static int ChooseClassicPotionRecipe(Func<int, int, int> draw) => PotionRecipeKeys[draw(0, PotionRecipeKeys.Length - 1)];
+
     internal static string GoldRollId(string tableKey) => $"loot.{tableKey}.gold";
     internal static string SuccessRollId(string tableKey, string category, int slot) => $"loot.{tableKey}.{category}.{slot}";
     internal static string PickRollId(string tableKey, string category, int slot) => $"{SuccessRollId(tableKey, category, slot)}.pick";

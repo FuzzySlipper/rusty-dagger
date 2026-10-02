@@ -11,6 +11,21 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 public sealed class DaggerfallItemTemplatesTests
 {
+    [DonorFact("Assets/Scripts/Game/Items/ItemEnums.cs", "Assets/Scripts/Game/Items/ItemHelper.cs")]
+    public void Retains_runtime_group_ordinals_with_aliases_and_implicit_members()
+    {
+        var groups = ItemTemplateBaseline.ReadGroupEnumerations(
+            File.ReadAllText(TestData.Donor("Assets/Scripts/Game/Items/ItemEnums.cs")),
+            File.ReadAllText(TestData.Donor("Assets/Scripts/Game/Items/ItemHelper.cs")), "donor item groups");
+        Assert.Equal(29, groups.Count);
+        Assert.Equal([277, 277, 277, 277], groups.Single(group => group.Id == 7).Values);
+        Assert.Equal([132, 274, 275, 276, 278, 281, 285, 286, 287], groups.Single(group => group.Id == 27).Values);
+        Assert.Equal([0, 1, 2], groups.Single(group => group.Id == 24).Values);
+        Assert.False(groups.Single(group => group.Id == 5).TemplateIndices);
+        Assert.Equal(-1, groups.Single(group => group.Id == 5).Values[^1]);
+        Assert.Equal(54, groups.Single(group => group.Id == 17).Values[13]);
+    }
+
     [Fact]
     public void Refuses_malformed_substitute_tables()
     {

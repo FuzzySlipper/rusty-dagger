@@ -134,9 +134,8 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
     private static string? MagicMaterial(DaggerfallMagicItemDefinition magic, string category) => category switch
     {
         "Weapons" when magic.Material is >= 0 and < 10 => DaggerfallItemMaterialPolicy.WeaponMaterials[magic.Material],
-        "Armor" when magic.Material == 0 => "leather",
-        "Armor" when magic.Material == 0x100 => "chain",
-        "Armor" when magic.Material is >= 0x200 and <= 0x209 => DaggerfallItemMaterialPolicy.WeaponMaterials[magic.Material - 0x200],
+        // SetArtifact adds 0x200 to the MAGIC.DEF material; its stored value is the metal ordinal.
+        "Armor" when magic.Material is >= 0 and < 10 => DaggerfallItemMaterialPolicy.WeaponMaterials[magic.Material],
         "Armor" => throw new InvalidOperationException($"Magic armor '{magic.Key}' has unknown material {magic.Material}."),
         _ => null,
     };
