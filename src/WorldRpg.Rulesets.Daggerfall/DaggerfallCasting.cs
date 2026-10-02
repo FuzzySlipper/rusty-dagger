@@ -15,7 +15,8 @@ internal sealed record DaggerfallSpellBinding(int Type, int SubType, bool Suppor
     bool IsDisease = false, DaggerfallMagicAllowedElements AllowedElements = DaggerfallMagicAllowedElements.Magic,
     Func<DaggerfallCastEffectState, JsonElement>? CreateState = null,
     DaggerfallMagicAllowedTargets AllowedTargets = DaggerfallMagicAllowedTargets.All,
-    bool MagnitudePerRound = false, bool UntilHealed = false);
+    bool MagnitudePerRound = false, bool UntilHealed = false,
+    bool UntilTriggered = false, bool BypassItemChance = false);
 
 /// <summary>Meaningful settings retained with an admitted effect, never a runtime handle.</summary>
 internal sealed record DaggerfallCastEffectState(DaggerfallSpellEffectDefinition Settings, int CasterLevel,
@@ -245,13 +246,14 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
             }
             else if (!bundle.BypassSave && bundle.Target != DaggerfallSpellTarget.CasterOnly && defense.Resistances.FirstOrDefault(value => value.Element == DaggerfallMagicAdmissionPolicy.GetElementType(source))
                 is { } resistance && roll(1, 100) <= resistance.Chance) outcome = DaggerfallCastOutcome.Resisted;
-            else if (!bundle.BypassChance && binding.RollChanceOnCast && roll(1, 100) > DaggerfallMagicAdmissionPolicy.CalculateEffectChance(setting, bundle.CasterLevel)) outcome = DaggerfallCastOutcome.ChanceFailed;
+            else if (!bundle.BypassChance && !(binding.BypassItemChance && bundle.ItemId is not null)
+                && binding.RollChanceOnCast && roll(1, 100) > DaggerfallMagicAdmissionPolicy.CalculateEffectChance(setting, bundle.CasterLevel)) outcome = DaggerfallCastOutcome.ChanceFailed;
             else
             {
                 // Active channel admission already ran above; do not charge a second resistance roll.
                 liveProfile = liveProfile with { ActiveResistances = [] };
                 string instance = $"cast.{bundle.Sequence}.{targetId}.{i}.{(reflected ? "reflected" : "direct")}";
-                uint? baseDuration = binding.UntilHealed ? null : binding.SupportsDuration ? checked((uint)Math.Max(1,
+                uint? baseDuration = binding.UntilHealed || binding.UntilTriggered ? null : binding.SupportsDuration ? checked((uint)Math.Max(1,
                     DaggerfallMagicAdmissionPolicy.CalculateEffectDuration(setting, bundle.CasterLevel))) : 1u;
                 // Permanent attribute damage rolls its incoming payload/save even when an incumbent exists.
                 int permanentAmount = binding.UntilHealed ? DaggerfallMagicAdmissionPolicy.RollEffectMagnitude(setting, bundle.CasterLevel, roll) : 0;

@@ -3,6 +3,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// <summary>Stable Engine definition identity for one magic template over one selected base item.</summary>
 internal static class DaggerfallMagicItemIds
 {
+    // Stable published MAGIC.DEF template identity, not a localized display-name test.
+    internal const string SkeletonKey = "magic-item.0057";
+
     internal static string For(string baseItemId, string magicKey)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(baseItemId);

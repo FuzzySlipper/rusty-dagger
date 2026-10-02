@@ -216,6 +216,7 @@ internal sealed partial class DaggerfallSession
                 .. DaggerfallMysticismEffects.Definitions(id => id == actors.Player.DurableId ? actors.Player.Progression.Level : authored[id].Level ?? 1,
                     request => _pendingDispel = request, BanishNearby),
                 .. DaggerfallConcealmentEffects.Definitions(),
+                .. DaggerfallDoorMagicEffects.Definitions(),
                 .. DaggerfallFortifyEffects.Definitions(() => character.Career),
                 .. DaggerfallHealingEffects.Definitions(() => effects, () => character.Career, _vitality),
                 .. DaggerfallAttributeDrainEffects.Definitions(() => character.Career, ReactToSpellAttack),

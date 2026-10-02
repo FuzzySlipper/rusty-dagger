@@ -291,10 +291,31 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         if (door.LockValue == 0) return DaggerfallDoorOperationResult.AlreadyUnlocked;
         if (source != DaggerfallDoorOperationSource.DungeonAction && door.LockValue >= 20)
             return DaggerfallDoorOperationResult.MagicallyHeld;
-        door.LockValue = 0;
-        door.FailedLockpickingSkill = null;
+        ClearLock(door);
         Apply(door);
         return DaggerfallDoorOperationResult.Started;
+    }
+
+    /// <summary>The spell's level admission and resulting motion share this canonical door state.</summary>
+    internal DaggerfallDoorOperationResult OpenByMagic(DaggerfallRdbDoorId id, int actorLevel, bool skeletonKey)
+    {
+        if (actorLevel < 1) throw new ArgumentOutOfRangeException(nameof(actorLevel));
+        Door door = Require(id);
+        if (door.Definition.Kind == DaggerfallDoorKind.Special) return DaggerfallDoorOperationResult.SpecialDoor;
+        if (!skeletonKey && door.LockValue > actorLevel)
+            return door.LockValue >= 20 ? DaggerfallDoorOperationResult.MagicallyHeld : DaggerfallDoorOperationResult.Locked;
+        bool unlocked = door.LockValue > 0;
+        ClearLock(door);
+        Apply(door);
+        DaggerfallDoorOperationResult result = door.Motion == DaggerfallDoorMotion.Closed
+            ? Open(id, DaggerfallDoorOperationSource.Spell) : DaggerfallDoorOperationResult.AlreadyOpen;
+        return unlocked && result == DaggerfallDoorOperationResult.AlreadyOpen ? DaggerfallDoorOperationResult.Started : result;
+    }
+
+    private static void ClearLock(Door door)
+    {
+        door.LockValue = 0;
+        door.FailedLockpickingSkill = null;
     }
 
     internal DaggerfallDoorOperationResult Bash(DaggerfallRdbDoorId id)
